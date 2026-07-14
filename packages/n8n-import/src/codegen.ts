@@ -619,7 +619,8 @@ function emitMapConfig(
 
 function emitGraphFile(
   parsed: ParsedWorkflow,
-  targets: Map<string, string>
+  targets: Map<string, string>,
+  agentNames?: Map<string, AgentNaming>
 ): string {
   const topo = buildTopology(parsed)
   const fanout = planFanout(topo)
@@ -629,13 +630,12 @@ function emitGraphFile(
     .filter((n) => !fanout.absorbed.has(n.nodeId))
     .map((n) => {
       // An embedded agent is a native graph node (#910), referenced by its
-      // registered agent name — the exported const (`<slug>Agent`), which is the
-      // AgentMap key — not a stub rpc. A sub-workflow (executeWorkflow) node
-      // references the target workflow by its registered name (self-recursion →
-      // this workflow's own name).
+      // exported const (the AgentMap key) — not a stub rpc. A sub-workflow
+      // (executeWorkflow) node references the target workflow by its registered
+      // name (self-recursion → this workflow's own name).
       const value =
         n.role === 'agent'
-          ? `${parsed.slug}Agent`
+          ? (agentNames?.get(n.nodeId)?.constName ?? `${parsed.slug}Agent`)
           : n.role === 'subworkflow'
             ? targets.get(n.nodeId)!
             : n.rpcName
@@ -1087,12 +1087,59 @@ function chainAgentSpec(node: ParsedNode): {
   }
 }
 
+interface AgentNaming {
+  /** Exported const + AgentMap key — the value a graph node references. */
+  constName: string
+  /** The agent's `name:` field. */
+  registeredName: string
+}
+
+/**
+ * Assign each agent node a unique exported const + registered name. A single
+ * agent keeps the workflow slug (`<slug>Agent` / `<slug>`); with several agents
+ * (a multi-chain pipeline) each is namespaced by its node id so the consts,
+ * AgentMap keys, and graph-node references stay distinct.
+ */
+function agentNaming(parsed: ParsedWorkflow): Map<string, AgentNaming> {
+  const agents = parsed.nodes.filter((n) => n.role === 'agent')
+  const multi = agents.length > 1
+  const map = new Map<string, AgentNaming>()
+  for (const a of agents) {
+    const registeredName = multi ? `${parsed.slug}_${a.nodeId}` : parsed.slug
+    map.set(a.nodeId, { registeredName, constName: `${registeredName}Agent` })
+  }
+  return map
+}
+
+/** Agent-tool nodes attached to a specific agent via an `ai_tool` connection. */
+function agentToolsFor(
+  parsed: ParsedWorkflow,
+  agentName: string
+): ParsedNode[] {
+  const sources = new Set<string>()
+  for (const [source, ports] of Object.entries(parsed.connections)) {
+    const targetsAgent = ports.ai_tool?.some(
+      (slot) => Array.isArray(slot) && slot.some((t) => t?.node === agentName)
+    )
+    if (targetsAgent) sources.add(source)
+  }
+  return parsed.nodes.filter(
+    (n) => n.role === 'agentTool' && sources.has(n.name)
+  )
+}
+
 function emitAgentFile(
   parsed: ParsedWorkflow,
+  agent: ParsedNode,
+  names: AgentNaming,
   targets: Map<string, string>
 ): string {
-  const agent = parsed.agentNode!
-  const agentTools = parsed.nodes.filter((n) => n.role === 'agentTool')
+  const multiAgent = parsed.nodes.filter((n) => n.role === 'agent').length > 1
+  // With one agent, every agent-tool belongs to it; with several, attribute each
+  // tool to the agent its `ai_tool` connection targets.
+  const agentTools = multiAgent
+    ? agentToolsFor(parsed, agent.name)
+    : parsed.nodes.filter((n) => n.role === 'agentTool')
   // A tool backed by a sub-workflow (self `toolWorkflow` lifted into its own
   // graph, or an executeWorkflow target) is an agent *workflow* capability, not
   // an rpc tool — workflow graphs are not rpc-registered.
@@ -1150,16 +1197,16 @@ function emitAgentFile(
   // An agent `output` must reference an exported schema variable — inline
   // schemas are rejected (PKU489). Emit the Zod as a top-level const.
   const outputConst = outputZod
-    ? `${toPascalCase(parsed.slug)}Output`
+    ? `${toPascalCase(names.registeredName)}Output`
     : undefined
 
   return [
     imports.join('\n'),
     ``,
     ...(outputZod ? [`export const ${outputConst} = ${outputZod}`, ``] : []),
-    `export const ${parsed.slug}Agent = pikkuAIAgent({`,
-    `  name: ${q(parsed.slug)},`,
-    `  description: ${q(parsed.name)},`,
+    `export const ${names.constName} = pikkuAIAgent({`,
+    `  name: ${q(names.registeredName)},`,
+    `  description: ${q(multiAgent ? agent.name : parsed.name)},`,
     `  goal: ${q(systemPrompt)},`,
     ...modelLines,
     ...(memoryNode ? [emitMemory(memoryNode)] : []),
@@ -1326,12 +1373,27 @@ export function generateWorkflowFromN8n(
         })()
       : parsed
 
+  const agentNames = agentNaming(mainParsed)
+  const agentNodes = mainParsed.nodes.filter((n) => n.role === 'agent')
+
   const emitGraph = mainParsed.shape !== 'agent-only'
   if (emitGraph) {
-    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(mainParsed, targets)
+    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(
+      mainParsed,
+      targets,
+      agentNames
+    )
   }
-  if (mainParsed.agentNode) {
-    files[`${dir}/${parsed.slug}.agent.ts`] = emitAgentFile(mainParsed, targets)
+  for (const agent of agentNodes) {
+    const names = agentNames.get(agent.nodeId)!
+    // Single agent keeps `<slug>.agent.ts`; several share the dir, one file each.
+    const fileBase = agentNodes.length > 1 ? names.registeredName : parsed.slug
+    files[`${dir}/${fileBase}.agent.ts`] = emitAgentFile(
+      mainParsed,
+      agent,
+      names,
+      targets
+    )
   }
 
   const emittedStubRpc = new Set<string>()

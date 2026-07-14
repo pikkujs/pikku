@@ -1062,3 +1062,36 @@ test('a lone textClassifier maps to an agent whose output is a category enum', (
   assert.match(agent, /output: EmailClassifierOutput,/)
   assert.match(agent, /tools: \[\]/)
 })
+
+test('multi-chain pipeline → graph wiring N distinct tools-less agents (one .agent.ts each)', () => {
+  const parsed = parseN8n(loadFixture('ai-multi-chain.json'))
+  assert.equal(parsed.shape, 'graph-with-agent')
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  // one graph + one agent file per chain, namespaced by node id
+  const graph = files['twoStepChain/twoStepChain.graph.ts']
+  assert.ok(graph, 'graph emitted')
+  const draft = files['twoStepChain/twoStepChain_draft.agent.ts']
+  const polish = files['twoStepChain/twoStepChain_polish.agent.ts']
+  assert.ok(draft && polish, 'one agent file per chain')
+
+  // graph references each agent by its own const, wired in sequence
+  assert.match(graph, /draft: "twoStepChain_draftAgent"/)
+  assert.match(graph, /polish: "twoStepChain_polishAgent"/)
+  assert.match(graph, /draft: \{[^}]*next: "polish"/s)
+
+  // each agent has its own name, prompt, and model (no collision)
+  assert.match(draft, /export const twoStepChain_draftAgent = pikkuAIAgent/)
+  assert.match(draft, /name: "twoStepChain_draft"/)
+  assert.match(draft, /goal: "Draft a reply to: \{\{ \$json\.msg \}\}"/)
+  assert.match(draft, /model: "openai\/gpt-4o-mini"/)
+  assert.match(polish, /export const twoStepChain_polishAgent = pikkuAIAgent/)
+  assert.match(polish, /model: "anthropic\/claude-3-5-sonnet"/)
+
+  // no throwing chain stub
+  assert.ok(
+    !Object.keys(files).some(
+      (k) => k.includes('/functions/') && /chainLlm/i.test(k)
+    )
+  )
+})

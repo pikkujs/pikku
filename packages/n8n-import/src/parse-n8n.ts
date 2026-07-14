@@ -178,7 +178,11 @@ export function decideShape(nodes: ParsedNode[]): WorkflowShape {
       !isAbsorbedRole(n.role) &&
       n.role !== 'trigger'
   )
-  return mainFlow.length === 0 ? 'agent-only' : 'graph-with-agent'
+  // Only a single agent with no other flow collapses to a lone `.agent.ts`.
+  // Multiple agents must be wired together in a graph.
+  return agents.length === 1 && mainFlow.length === 0
+    ? 'agent-only'
+    : 'graph-with-agent'
 }
 
 /**
@@ -301,17 +305,17 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     })
   }
 
-  // A lone LangChain chain node (chainLlm, informationExtractor, …) with no
-  // real Agent node maps onto a tools-less agent. Promote it in place so it
-  // flows through the existing single-agent machinery. Multiple chains, or a
-  // chain alongside a real agent, are left as stubs (the graph model wires one
-  // agent per workflow) — a v2 concern.
+  // LangChain chain nodes (chainLlm, informationExtractor, …) each map onto a
+  // tools-less agent. Promote them in place so they flow through the agent
+  // machinery — one or many per workflow. A chain alongside a *real* Agent node
+  // is left a stub (tool attribution across mixed agents is a v2.1 concern); the
+  // real agent still emits on its own.
   const realAgents = nodes.filter((n) => n.role === 'agent')
   const chainNodes = nodes.filter(
     (n) => n.role === 'integration' && isChainAgentType(n.typeShort)
   )
-  if (realAgents.length === 0 && chainNodes.length === 1) {
-    chainNodes[0]!.role = 'agent'
+  if (realAgents.length === 0) {
+    for (const chain of chainNodes) chain.role = 'agent'
   }
 
   const shape = decideShape(nodes)
