@@ -109,11 +109,50 @@ function conditionsOf(node: BranchNode): {
   return null
 }
 
+/**
+ * v1 Switch: a shared left operand (`value1`) and `dataType` at the node level,
+ * with each `rules.rules[]` row supplying an `operation` + `value2` and an
+ * optional `output` slot (defaulting to the row index). `fallbackOutput` names
+ * the default slot. Each row lowers to a single-condition case keyed by its
+ * output slot, so it lines up with the graph `next` Record.
+ */
+function switchV1Spec(node: BranchNode): BranchSpec | null {
+  const p = node.parameters
+  const rules = (p.rules as { rules?: unknown } | undefined)?.rules
+  if (!Array.isArray(rules) || rules.length === 0) return null
+  const type = typeof p.dataType === 'string' ? p.dataType : 'string'
+  const cases: RawCase[] = []
+  rules.forEach((raw, i) => {
+    const rule = (raw ?? {}) as Record<string, unknown>
+    const output = typeof rule.output === 'number' ? rule.output : i
+    cases.push({
+      key: String(output),
+      combinator: 'and',
+      conditions: [
+        {
+          left: p.value1,
+          right: rule.value2,
+          type,
+          operation: mapOperation(String(rule.operation ?? 'equal')),
+        },
+      ],
+    })
+  })
+  const fb = p.fallbackOutput
+  const fallback =
+    typeof fb === 'number' && fb >= 0
+      ? String(fb)
+      : fb === 'extra'
+        ? String(rules.length)
+        : undefined
+  return { cases, fallback }
+}
+
 function switchSpec(node: BranchNode): BranchSpec | null {
   const p = node.parameters
   if (p.mode === 'expression') return null
   const rules = (p.rules as { values?: unknown } | undefined)?.values
-  if (!Array.isArray(rules)) return null
+  if (!Array.isArray(rules)) return switchV1Spec(node)
   const cases: RawCase[] = []
   rules.forEach((rule, i) => {
     const conditions = fromFilterValue(
