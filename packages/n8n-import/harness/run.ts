@@ -28,7 +28,7 @@ import {
 } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, relative, resolve } from 'node:path'
-import { parseN8n } from '../src/parse-n8n.js'
+import { parseN8n, UnsupportedTopologyError } from '../src/parse-n8n.js'
 import { generateWorkflowFromN8n } from '../src/codegen.js'
 import type { ParsedWorkflow } from '../src/types.js'
 
@@ -36,12 +36,14 @@ const harnessDir = dirname(fileURLToPath(import.meta.url))
 const packageDir = resolve(harnessDir, '..')
 const repoRoot = resolve(packageDir, '../..')
 
-type Outcome = 'clean' | 'partial' | 'failed'
+type Outcome = 'clean' | 'partial' | 'failed' | 'skipped'
 type FailKind =
   | 'parse-error'
   | 'codegen-error'
   | 'tsc-error'
   | 'empty-emit'
+  | 'external-subworkflow'
+  | 'unsupported-topology'
   | null
 
 interface WorkflowResult {
@@ -187,7 +189,14 @@ function main() {
       result.nodeRoles = parsed.nodes.map((n) => n.role)
       result.nodeTypes = parsed.nodes.map((n) => n.typeShort)
     } catch (err) {
-      result.failKind = 'parse-error'
+      // A by-design unsupported topology (e.g. mid-flow respondToWebhook) is a
+      // deliberate skip, not an importer defect — account for it as such.
+      if (err instanceof UnsupportedTopologyError) {
+        result.outcome = 'skipped'
+        result.failKind = 'unsupported-topology'
+      } else {
+        result.failKind = 'parse-error'
+      }
       result.message = (err as Error).message
       results.push(result)
       return
@@ -198,11 +207,29 @@ function main() {
     dirToIndex.set(projSlug, index)
 
     try {
-      const { files: emitted } = generateWorkflowFromN8n(parsed)
+      const { files: emitted, diagnostics } = generateWorkflowFromN8n(parsed)
       const keys = Object.keys(emitted)
       result.fileCount = keys.length
       if (keys.length === 0) {
-        result.failKind = 'empty-emit'
+        // A workflow that emits nothing solely because it calls a sub-workflow
+        // living in the author's n8n instance (not exported here) or chosen at
+        // runtime is un-importable by design, not an importer defect — n8n
+        // workflows reference each other by instance-local id. Account for it
+        // as skipped/external, distinct from real failures.
+        const errs = diagnostics.filter((d) => d.type === 'error')
+        const allSubflow =
+          errs.length > 0 &&
+          errs.every(
+            (d) =>
+              d.reason === 'missing-subworkflow' ||
+              d.reason === 'dynamic-subworkflow-target'
+          )
+        if (allSubflow) {
+          result.outcome = 'skipped'
+          result.failKind = 'external-subworkflow'
+        } else {
+          result.failKind = 'empty-emit'
+        }
         results.push(result)
         return
       }
@@ -268,7 +295,10 @@ function main() {
       r.outcome = 'failed'
       r.failKind = 'tsc-error'
     }
-    if (r.failKind !== null) r.outcome = 'failed'
+    // By-design skips (external-subworkflow, unsupported-topology) carry a
+    // failKind but are not failures — leave their 'skipped' outcome. Every
+    // other failKind means a real failure.
+    if (r.failKind !== null && r.outcome !== 'skipped') r.outcome = 'failed'
   }
 
   // ---- Roll-up ---------------------------------------------------------------
@@ -276,10 +306,12 @@ function main() {
   const clean = results.filter((r) => r.outcome === 'clean').length
   const partial = results.filter((r) => r.outcome === 'partial').length
   const failed = results.filter((r) => r.outcome === 'failed').length
+  const skipped = results.filter((r) => r.outcome === 'skipped').length
 
   const failTax: Record<string, number> = {}
   for (const r of results)
-    if (r.failKind) failTax[r.failKind] = (failTax[r.failKind] ?? 0) + 1
+    if (r.failKind && r.outcome === 'failed')
+      failTax[r.failKind] = (failTax[r.failKind] ?? 0) + 1
 
   const typeFreq = new Map<string, number>()
   const typeStatus = new Map<string, string>()
@@ -305,9 +337,11 @@ function main() {
     clean,
     partial,
     failed,
+    skipped,
     cleanPct: pct(clean),
     partialPct: pct(partial),
     failedPct: pct(failed),
+    skippedPct: pct(skipped),
     failureTaxonomy: failTax,
     nodeTypes: typeTable,
     failures: results
@@ -327,8 +361,8 @@ function main() {
   writeFileSync(join(outDir, 'harness-report.md'), renderMarkdown(report))
 
   console.log(
-    `\n${clean} clean / ${partial} partial / ${failed} failed  ` +
-      `(${pct(clean)}% / ${pct(partial)}% / ${pct(failed)}%) of ${total}`
+    `\n${clean} clean / ${partial} partial / ${failed} failed / ${skipped} skipped  ` +
+      `(${pct(clean)}% / ${pct(partial)}% / ${pct(failed)}% / ${pct(skipped)}%) of ${total}`
   )
   console.log(`Reports: ${join(outDir, 'harness-report.md')}`)
 
@@ -357,6 +391,9 @@ function renderMarkdown(report: ReturnType<typeof buildReport>): string {
   lines.push(`| clean | ${report.clean} | ${report.cleanPct}% |`)
   lines.push(`| partial | ${report.partial} | ${report.partialPct}% |`)
   lines.push(`| failed | ${report.failed} | ${report.failedPct}% |`)
+  lines.push(
+    `| skipped (external subflow) | ${report.skipped} | ${report.skippedPct}% |`
+  )
   lines.push(`| **total** | **${report.total}** | |`)
   lines.push('')
   lines.push(`## Failure taxonomy`)
@@ -394,9 +431,11 @@ function buildReport() {
     clean: number
     partial: number
     failed: number
+    skipped: number
     cleanPct: string
     partialPct: string
     failedPct: string
+    skippedPct: string
     failureTaxonomy: Record<string, number>
     nodeTypes: { type: string; count: number; status: string }[]
     failures: { file: string; failKind: FailKind; message?: string }[]

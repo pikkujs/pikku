@@ -1,4 +1,4 @@
-export { parseN8n } from './parse-n8n.js'
+export { parseN8n, UnsupportedTopologyError } from './parse-n8n.js'
 export { buildTopology } from './topology.js'
 export { classifyExpression } from './expressions.js'
 export { generateWorkflowFromN8n } from './codegen.js'

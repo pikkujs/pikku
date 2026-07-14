@@ -19,6 +19,21 @@ import {
 import { normalizeBranch } from './branch.js'
 import { nativeSpecFor } from './native-map.js'
 
+/**
+ * A workflow whose topology has no Pikku equivalent by design (not a malformed
+ * input or an importer bug) — e.g. a respondToWebhook that responds mid-flow.
+ * Distinct from a generic parse error so callers can account for it as a
+ * deliberate skip rather than a failure.
+ */
+export class UnsupportedTopologyError extends Error {
+  readonly reason: string
+  constructor(reason: string, message: string) {
+    super(message)
+    this.name = 'UnsupportedTopologyError'
+    this.reason = reason
+  }
+}
+
 /** Classify an n8n node by its type string. */
 function classifyByType(type: string): NodeRole {
   const short = typeShort(type).toLowerCase()
@@ -191,7 +206,8 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
         Array.isArray(out) &&
         out.some((slot) => Array.isArray(slot) && slot.length > 0)
       if (hasSuccessors) {
-        throw new Error(
+        throw new UnsupportedTopologyError(
+          'midflow-response',
           `Cannot import "${name}": respondToWebhook node "${node.name}" responds mid-workflow (it has downstream nodes). Pikku graphs produce their response at the end, so respond-early-then-continue is unsupported.`
         )
       }
