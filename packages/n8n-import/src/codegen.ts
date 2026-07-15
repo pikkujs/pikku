@@ -29,10 +29,14 @@ import {
   type CredentialInstance,
 } from './credentials.js'
 import { findAgentSubNode } from './ai-subnodes.js'
-import { mapModel } from './model-map.js'
+import { mapModel, mapOpenAiNodeModel } from './model-map.js'
 import { outputParserToZod } from './output-schema.js'
 import { planSubWorkflows, subWorkflowParsed } from './subworkflow.js'
-import { decideShape, isChainAgentType } from './parse-n8n.js'
+import {
+  decideShape,
+  isChainAgentType,
+  isOpenAiAgentNode,
+} from './parse-n8n.js'
 
 export interface ManifestEntry {
   rpcName: string
@@ -1109,6 +1113,43 @@ function chainAgentSpec(node: ParsedNode): {
   }
 }
 
+/**
+ * Derive an agent `goal` from a base n8n `openAi` node promoted to a tools-less
+ * agent. The prompt lives in different parameters per resource/operation:
+ *  - chat: `prompt.messages[]` — each message's `content` is joined in order.
+ *  - text edit: `instruction` describes the transformation.
+ *  - text completion: `prompt` is the raw prompt string.
+ */
+function openAiAgentSpec(node: ParsedNode): {
+  goal?: string
+  outputZod?: string
+} {
+  const p = node.parameters
+  const prompt = p.prompt
+
+  if (prompt && typeof prompt === 'object' && 'messages' in prompt) {
+    const messages = (prompt as { messages?: unknown }).messages
+    if (Array.isArray(messages)) {
+      const parts = messages
+        .map((m) =>
+          stripExprMarker(
+            (m as { content?: unknown } | null | undefined)?.content
+          )
+        )
+        .filter((c): c is string => !!c)
+      if (parts.length > 0) return { goal: parts.join('\n\n') }
+    }
+  }
+
+  const instruction = stripExprMarker(p.instruction)
+  if (instruction) return { goal: instruction }
+
+  const promptText = stripExprMarker(prompt)
+  if (promptText) return { goal: promptText }
+
+  return {}
+}
+
 interface AgentNaming {
   /** Exported const + AgentMap key — the value a graph node references. */
   constName: string
@@ -1168,10 +1209,13 @@ function emitAgentFile(
   const tools = agentTools.filter((n) => !n.workflowRef)
   const workflowTools = agentTools.filter((n) => n.workflowRef)
   // A chain node promoted to a tools-less agent carries its instruction and
-  // schema in type-specific parameters; a real Agent node uses text/systemMessage.
+  // schema in type-specific parameters; an openAi text/chat node carries its
+  // prompt inline; a real Agent node uses text/systemMessage.
   const chainSpec = isChainAgentType(agent.typeShort)
     ? chainAgentSpec(agent)
-    : {}
+    : isOpenAiAgentNode(agent.typeShort, agent.parameters)
+      ? openAiAgentSpec(agent)
+      : {}
   const systemPrompt =
     chainSpec.goal ??
     stripExprMarker(agent.parameters.text) ??
@@ -1183,7 +1227,11 @@ function emitAgentFile(
     `You are ${parsed.name}.`
 
   const modelNode = findAgentSubNode(parsed, agent.name, 'ai_languageModel')
-  const model = modelNode ? mapModel(modelNode) : undefined
+  const model = modelNode
+    ? mapModel(modelNode)
+    : isOpenAiAgentNode(agent.typeShort, agent.parameters)
+      ? mapOpenAiNodeModel(agent)
+      : undefined
   const memoryNode = findAgentSubNode(parsed, agent.name, 'ai_memory')
   const outputZod =
     chainSpec.outputZod ?? resolveOutputSchema(parsed, agent.name)

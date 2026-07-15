@@ -27,14 +27,20 @@ function isDynamic(v: string): boolean {
   return v.startsWith('=') || v.includes('{{')
 }
 
-/** Read the model id from a chat-model node (resource-locator, `model`, or `modelName`). */
+/**
+ * Read the model id from a chat-model or `openAi` node. Handles a resource
+ * locator (`{ value }`), a plain string, `modelName`, and the base `openAi`
+ * node's `modelId` — in either resource-locator or string form.
+ */
 function readModelId(parameters: Record<string, unknown>): string | undefined {
-  const model = parameters.model
-  if (model && typeof model === 'object' && 'value' in model) {
-    const v = (model as { value?: unknown }).value
-    if (typeof v === 'string' && v && !isDynamic(v)) return v
+  for (const key of ['model', 'modelId'] as const) {
+    const value = parameters[key]
+    if (value && typeof value === 'object' && 'value' in value) {
+      const v = (value as { value?: unknown }).value
+      if (typeof v === 'string' && v && !isDynamic(v)) return v
+    }
+    if (typeof value === 'string' && value && !isDynamic(value)) return value
   }
-  if (typeof model === 'string' && model && !isDynamic(model)) return model
   const modelName = parameters.modelName
   if (typeof modelName === 'string' && modelName && !isDynamic(modelName)) {
     // Gemini reports `models/gemini-1.5-flash`; the provider prefix is added below.
@@ -62,4 +68,25 @@ export function mapModel(
     typeof temperatureRaw === 'number' ? temperatureRaw : undefined
 
   return { model: `${provider}/${modelId}`, temperature }
+}
+
+/**
+ * Map a base n8n `openAi` node's INLINE model to a Pikku agent model. Unlike a
+ * LangChain chat-model sub-node (see `mapModel`), the `openAi` node carries its
+ * model in its own `model` / `modelId` parameter and its provider is always
+ * `openai`. Returns undefined when no static model id is present so the caller
+ * falls back to the TODO default — the same contract as `mapModel`.
+ */
+export function mapOpenAiNodeModel(
+  node: ParsedNode
+): { model: string; temperature?: number } | undefined {
+  const modelId = readModelId(node.parameters)
+  if (!modelId) return undefined
+
+  const options = node.parameters.options as Record<string, unknown> | undefined
+  const temperatureRaw = options?.temperature ?? node.parameters.temperature
+  const temperature =
+    typeof temperatureRaw === 'number' ? temperatureRaw : undefined
+
+  return { model: `openai/${modelId}`, temperature }
 }

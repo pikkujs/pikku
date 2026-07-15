@@ -1145,3 +1145,22 @@ test('chain + real Agent → two agents; tools attributed to the Agent, none to 
   // the real Agent keeps its own tool, not cross-wired to the chain
   assert.match(replyAgent, /tools: \[\s*ref\("toolHttpRequest__search"\)/)
 })
+
+test('openAi chat node → agent-only pikkuAIAgent with inline model + goal', () => {
+  const parsed = parseN8n(loadFixture('openai-chat-agent.json'))
+  assert.equal(parsed.shape, 'agent-only')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const agent = files['summarizer/summarizer.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+  assert.match(agent, /pikkuAIAgent\(/)
+  // inline model read from the node's own `model` param (not a sub-node)
+  assert.match(agent, /model: "openai\/gpt-4o"/)
+  assert.match(agent, /temperature: 0\.8/)
+  // goal built from the chat messages
+  assert.match(agent, /goal: "You are a concise assistant/)
+  // no leftover TODO for a missing chat-model sub-node
+  assert.doesNotMatch(agent, /TODO\(n8n\): map the connected chat-model/)
+  // openAi text/chat must NOT emit an @pikku/addon-openai wireAddon
+  assert.doesNotMatch(agent, /addon-openai/)
+})

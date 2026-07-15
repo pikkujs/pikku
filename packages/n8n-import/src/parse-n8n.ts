@@ -54,6 +54,22 @@ export function isChainAgentType(typeShort: string): boolean {
   return CHAIN_AGENT_TYPES.has(typeShort.toLowerCase())
 }
 
+/**
+ * The base n8n `openAi` node's text/chat/completion path — a prompt + model with
+ * no tools — maps onto a tools-less `pikkuAIAgent`, exactly like a chain node.
+ * Only the language resources qualify: `image`, `audio`, `assistant`, and `file`
+ * are non-text capabilities (deferred) and stay integration/native stubs. An
+ * absent resource is the legacy text-completion default.
+ */
+export function isOpenAiAgentNode(
+  typeShort: string,
+  parameters: Record<string, unknown>
+): boolean {
+  if (typeShort.toLowerCase() !== 'openai') return false
+  const resource = parameters.resource
+  return resource === undefined || resource === 'text' || resource === 'chat'
+}
+
 /** Classify an n8n node by its type string. */
 function classifyByType(type: string): NodeRole {
   const short = typeShort(type).toLowerCase()
@@ -279,9 +295,12 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     }
 
     // A node whose type maps 1:1 onto an @pikku/addon-graph function (e.g.
-    // Stop And Error → graph:stopAndError) becomes a native addon call.
+    // Stop And Error → graph:stopAndError) becomes a native addon call. An
+    // openAi text/chat node is excluded here: it is an agent (promoted below),
+    // not a native `openai:chatComplete` addon call.
     if (
       (role === 'integration' || role === 'control') &&
+      !isOpenAiAgentNode(typeShort(node.type), node.parameters ?? {}) &&
       nativeSpecFor(typeShort(node.type), node.parameters ?? {})
     ) {
       role = 'native'
@@ -330,7 +349,11 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
   // Each agent's tools are attributed by its own `ai_tool` connections, so a
   // chain (which has none) and a real Agent coexist without cross-wiring.
   for (const node of nodes) {
-    if (node.role === 'integration' && isChainAgentType(node.typeShort)) {
+    if (
+      node.role === 'integration' &&
+      (isChainAgentType(node.typeShort) ||
+        isOpenAiAgentNode(node.typeShort, node.parameters))
+    ) {
       node.role = 'agent'
     }
   }

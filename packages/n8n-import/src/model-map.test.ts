@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mapModel } from './model-map.js'
+import { mapModel, mapOpenAiNodeModel } from './model-map.js'
 import type { ParsedNode } from './types.js'
 
 const node = (parameters: Record<string, unknown>): ParsedNode =>
@@ -32,4 +32,36 @@ test('mapModel rejects a dynamic (expression) model id → undefined (TODO defau
     undefined
   )
   assert.equal(mapModel(node({ modelName: '={{ $json.m }}' })), undefined)
+})
+
+const openAiNode = (parameters: Record<string, unknown>): ParsedNode =>
+  ({ typeShort: 'openAi', parameters }) as unknown as ParsedNode
+
+test('mapOpenAiNodeModel reads an inline `model` string → openai/<id>', () => {
+  assert.deepEqual(mapOpenAiNodeModel(openAiNode({ model: 'gpt-4o' })), {
+    model: 'openai/gpt-4o',
+    temperature: undefined,
+  })
+})
+
+test('mapOpenAiNodeModel reads a `modelId` resource-locator', () => {
+  const r = mapOpenAiNodeModel(
+    openAiNode({ modelId: { __rl: true, value: 'gpt-4o-mini', mode: 'list' } })
+  )
+  assert.equal(r?.model, 'openai/gpt-4o-mini')
+})
+
+test('mapOpenAiNodeModel reads temperature from options', () => {
+  const r = mapOpenAiNodeModel(
+    openAiNode({ model: 'gpt-4o', options: { temperature: 0.8 } })
+  )
+  assert.equal(r?.temperature, 0.8)
+})
+
+test('mapOpenAiNodeModel with no static model id → undefined (TODO default)', () => {
+  assert.equal(mapOpenAiNodeModel(openAiNode({})), undefined)
+  assert.equal(
+    mapOpenAiNodeModel(openAiNode({ model: '={{ $json.model }}' })),
+    undefined
+  )
 })

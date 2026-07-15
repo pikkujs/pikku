@@ -138,3 +138,56 @@ test('an OAuth2 httpRequest has no recipe and stays an integration stub', () => 
   assert.equal(node.role, 'integration')
   assert.equal(node.httpAuth, undefined)
 })
+
+const openAiWorkflow = (parameters: Record<string, unknown>) => ({
+  name: 'OpenAI Flow',
+  nodes: [
+    {
+      id: 't',
+      name: 'Manual',
+      type: 'n8n-nodes-base.manualTrigger',
+      parameters: {},
+    },
+    { id: 'o', name: 'OpenAI', type: 'n8n-nodes-base.openAi', parameters },
+  ],
+  connections: {
+    Manual: { main: [[{ node: 'OpenAI', type: 'main', index: 0 }]] },
+  },
+})
+
+test('an openAi text-completion node is promoted to an agent', () => {
+  const parsed = parseN8n(
+    openAiWorkflow({ prompt: '={{ $json.text }}\n\nTl;dr:', model: 'gpt-4o' })
+  )
+  const node = parsed.nodes.find((n) => n.name === 'OpenAI')!
+  assert.equal(node.role, 'agent')
+  assert.equal(parsed.shape, 'agent-only')
+})
+
+test('an openAi chat node (messages) is promoted to an agent', () => {
+  const parsed = parseN8n(
+    openAiWorkflow({
+      resource: 'chat',
+      prompt: { messages: [{ content: '=Summarize {{ $json.text }}' }] },
+    })
+  )
+  assert.equal(parsed.nodes.find((n) => n.name === 'OpenAI')!.role, 'agent')
+})
+
+test('an openAi image node is NOT an agent (deferred, stays a native/stub node)', () => {
+  const parsed = parseN8n(
+    openAiWorkflow({
+      resource: 'image',
+      operation: 'generate',
+      prompt: 'a cat',
+    })
+  )
+  assert.notEqual(parsed.nodes.find((n) => n.name === 'OpenAI')!.role, 'agent')
+})
+
+test('an openAi assistant node is NOT an agent in v1 (deferred)', () => {
+  const parsed = parseN8n(
+    openAiWorkflow({ resource: 'assistant', operation: 'message' })
+  )
+  assert.notEqual(parsed.nodes.find((n) => n.name === 'OpenAI')!.role, 'agent')
+})
