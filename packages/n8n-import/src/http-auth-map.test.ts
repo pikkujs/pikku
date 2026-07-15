@@ -125,6 +125,99 @@ test('predefined wordpressApi → basic', () => {
   assert.equal(r?.mode, 'basic')
 })
 
+test('predefined header-key APIs → apiKeyHeader with the right header name', () => {
+  const cases: Array<[string, string]> = [
+    ['qdrantApi', 'api-key'],
+    ['n8nApi', 'X-N8N-API-KEY'],
+    ['clockifyApi', 'X-Api-Key'],
+    ['virusTotalApi', 'x-apikey'],
+    ['shopifyAccessTokenApi', 'X-Shopify-Access-Token'],
+    ['nocoDbApiToken', 'xc-token'],
+    ['googlePalmApi', 'x-goog-api-key'],
+    ['dropcontactApi', 'X-Access-Token'],
+  ]
+  for (const [credType, headerName] of cases) {
+    const r = httpAuthRecipe(
+      httpNode({
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: credType,
+      })
+    )
+    assert.equal(r?.mode, 'apiKeyHeader', credType)
+    assert.equal(r?.headerName, headerName, credType)
+  }
+})
+
+test('predefined bearer-token APIs → bearer', () => {
+  for (const credType of [
+    'cloudflareApi',
+    'todoistApi',
+    'mistralCloudApi',
+    'stripeApi',
+    'githubApi',
+    'whatsAppApi',
+    'hubspotAppToken',
+    'huggingFaceApi',
+    'mailerLiteApi',
+  ]) {
+    const r = httpAuthRecipe(
+      httpNode({
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: credType,
+      })
+    )
+    assert.equal(r?.mode, 'bearer', credType)
+  }
+})
+
+test('predefined query-key APIs → apiKeyQuery with the right param name', () => {
+  const cases: Array<[string, string]> = [
+    ['serpApi', 'api_key'],
+    ['pipedriveApi', 'api_token'],
+    ['facebookGraphApi', 'access_token'],
+    ['calApi', 'apiKey'],
+  ]
+  for (const [credType, queryName] of cases) {
+    const r = httpAuthRecipe(
+      httpNode({
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: credType,
+      })
+    )
+    assert.equal(r?.mode, 'apiKeyQuery', credType)
+    assert.equal(r?.queryName, queryName, credType)
+  }
+})
+
+test('predefined basic-auth APIs → basic', () => {
+  for (const credType of [
+    'qualysApi',
+    'zendeskApi',
+    'lemlistApi',
+    'wooCommerceApi',
+  ]) {
+    const r = httpAuthRecipe(
+      httpNode({
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: credType,
+      })
+    )
+    assert.equal(r?.mode, 'basic', credType)
+  }
+})
+
+test('predefined anthropicApi → apiKeyHeader x-api-key + anthropic-version', () => {
+  const r = httpAuthRecipe(
+    httpNode({
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'anthropicApi',
+    })
+  )
+  assert.equal(r?.mode, 'apiKeyHeader')
+  assert.equal(r?.headerName, 'x-api-key')
+  assert.equal(r?.extraHeaders?.['anthropic-version'], '2023-06-01')
+})
+
 test('predefined *OAuth2Api → undefined (stub in v1)', () => {
   assert.equal(
     httpAuthRecipe(

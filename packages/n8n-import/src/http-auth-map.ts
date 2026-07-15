@@ -50,16 +50,57 @@ const GENERIC: Record<string, Recipe | undefined> = {
   oauth2api: undefined,
 }
 
-/** Predefined credential types (`authentication === 'predefinedCredentialType'`). */
+/**
+ * Predefined credential types (`authentication === 'predefinedCredentialType'`).
+ * Each row encodes the API's documented static-key auth scheme; OAuth1/OAuth2
+ * types are excluded by the suffix rule in `predefinedRecipe`.
+ */
 const PREDEFINED: Record<string, Recipe> = {
+  // Bearer token in the Authorization header.
   openaiapi: { mode: 'bearer' },
   airtabletokenapi: { mode: 'bearer' },
   slackapi: { mode: 'bearer' },
+  cloudflareapi: { mode: 'bearer' },
+  todoistapi: { mode: 'bearer' },
+  mistralcloudapi: { mode: 'bearer' },
+  stripeapi: { mode: 'bearer' },
+  githubapi: { mode: 'bearer' },
+  whatsappapi: { mode: 'bearer' },
+  hubspotapptoken: { mode: 'bearer' },
+  huggingfaceapi: { mode: 'bearer' },
+  mailerliteapi: { mode: 'bearer' },
   notionapi: {
     mode: 'bearer',
     extraHeaders: { 'Notion-Version': '2022-06-28' },
   },
+  anthropicapi: {
+    mode: 'apiKeyHeader',
+    headerName: 'x-api-key',
+    extraHeaders: { 'anthropic-version': '2023-06-01' },
+  },
+  // API key in a named header.
+  qdrantapi: { mode: 'apiKeyHeader', headerName: 'api-key' },
+  n8napi: { mode: 'apiKeyHeader', headerName: 'X-N8N-API-KEY' },
+  clockifyapi: { mode: 'apiKeyHeader', headerName: 'X-Api-Key' },
+  virustotalapi: { mode: 'apiKeyHeader', headerName: 'x-apikey' },
+  shopifyaccesstokenapi: {
+    mode: 'apiKeyHeader',
+    headerName: 'X-Shopify-Access-Token',
+  },
+  nocodbapitoken: { mode: 'apiKeyHeader', headerName: 'xc-token' },
+  googlepalmapi: { mode: 'apiKeyHeader', headerName: 'x-goog-api-key' },
+  dropcontactapi: { mode: 'apiKeyHeader', headerName: 'X-Access-Token' },
+  // API key in a query parameter.
+  serpapi: { mode: 'apiKeyQuery', queryName: 'api_key' },
+  pipedriveapi: { mode: 'apiKeyQuery', queryName: 'api_token' },
+  facebookgraphapi: { mode: 'apiKeyQuery', queryName: 'access_token' },
+  calapi: { mode: 'apiKeyQuery', queryName: 'apiKey' },
+  // Basic auth (credentials provisioned as `user:pass`).
   wordpressapi: { mode: 'basic' },
+  qualysapi: { mode: 'basic' },
+  zendeskapi: { mode: 'basic' },
+  lemlistapi: { mode: 'basic' },
+  woocommerceapi: { mode: 'basic' },
 }
 
 /** Legacy top-level auth modes map onto their generic equivalents. */
