@@ -1725,13 +1725,81 @@ export async function runValidate(
 
   // ── packages/theme + packages/components ──────────────────────────────
   const designDocUrl = 'https://pikkufabric.dev/docs/design'
-  if (!existsSync(join(root, 'packages', 'mantine-theme'))) {
+  const themePkgDir = join(root, 'packages', 'mantine-theme')
+  if (!existsSync(themePkgDir)) {
     info(
       'theme-missing',
       'packages/mantine-theme/ not found — Fabric design features require a theme package',
-      join(root, 'packages', 'mantine-theme'),
+      themePkgDir,
       `Create packages/mantine-theme/ with your Mantine theme tokens. See ${designDocUrl}`
     )
+  } else {
+    // The Fabric console's Design tab lists a theme only when it can read a
+    // themes/<id>.json spec (+ active.json pointing at one) — that spec is the
+    // single source of truth the app runtime and the console both consume. A
+    // package that only hand-writes createTheme() renders fine but the console
+    // reports "no theme set" and cannot edit it. Mirror getSandboxThemes' file
+    // logic (themes/<id>.json where id matches THEME_ID_RE, + active.json.id).
+    const themeIdRe = /^[a-z][a-z0-9-]{0,38}$/
+    const themesDir = join(themePkgDir, 'themes')
+    let specIds: string[] = []
+    if (existsSync(themesDir)) {
+      try {
+        specIds = (await readdir(themesDir))
+          .filter((f) => f.endsWith('.json'))
+          .map((f) => f.slice(0, -'.json'.length))
+          .filter((id) => themeIdRe.test(id))
+      } catch {
+        // readdir failure — treat as no specs
+      }
+    }
+    if (specIds.length === 0) {
+      info(
+        'theme-no-spec',
+        'packages/mantine-theme/ has no themes/<id>.json spec — the Fabric console Design tab reports "no theme set" (and cannot edit the theme) even if the app is branded via a hand-written createTheme()',
+        themesDir,
+        lines(
+          'Add a theme spec the console can read:',
+          '1. Create packages/mantine-theme/themes/<id>.json (id is kebab-case), e.g.:',
+          '{',
+          '  "name": "My Brand",',
+          '  "brand": { "colors": { "primary": "#4f46e5" }, "fonts": { "body": "Inter" } },',
+          '  "structure": { "defaultRadius": "md", "defaultColorScheme": "light" }',
+          '}',
+          '2. Create packages/mantine-theme/active.json: { "id": "<id>" }',
+          '3. Build the Mantine theme from the active spec in index.ts.',
+          `See ${designDocUrl}`
+        )
+      )
+    } else {
+      // A spec exists — active.json must point at one, else the console has no
+      // active theme (getSandboxThemes falls back to a "default" id that may
+      // not exist among the specs).
+      const activePath = join(themePkgDir, 'active.json')
+      const active = await readJsonSafe<{ id?: unknown }>(activePath)
+      const activeId = typeof active?.id === 'string' ? active.id : null
+      if (!activeId) {
+        info(
+          'theme-no-active',
+          'packages/mantine-theme/active.json is missing or has no string "id" — the Fabric console falls back to the "default" theme id, which may not match any themes/<id>.json',
+          activePath,
+          lines(
+            'Create packages/mantine-theme/active.json pointing at an existing spec:',
+            `{ "id": "${specIds[0]}" }`
+          )
+        )
+      } else if (!specIds.includes(activeId)) {
+        info(
+          'theme-active-mismatch',
+          `packages/mantine-theme/active.json points at "${activeId}" but no themes/${activeId}.json exists — the Fabric console has no active theme`,
+          activePath,
+          lines(
+            `Point active.json at an existing spec (${specIds.join(', ')}):`,
+            `{ "id": "${specIds[0]}" }`
+          )
+        )
+      }
+    }
   }
   if (!existsSync(join(root, 'packages', 'components'))) {
     info(

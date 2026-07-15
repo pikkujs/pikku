@@ -87,8 +87,15 @@ async function makeValidProject(root: string) {
     'utf8'
   )
   await writeFile(join(root, 'db', 'sqlite-seed.sql'), '-- seed data\n', 'utf8')
-  await mkdir(join(root, 'packages', 'mantine-theme'), {
+  await mkdir(join(root, 'packages', 'mantine-theme', 'themes'), {
     recursive: true,
+  })
+  await writeJson(
+    join(root, 'packages', 'mantine-theme', 'themes', 'default.json'),
+    { name: 'Default', brand: { colors: { primary: '#4f46e5' } } }
+  )
+  await writeJson(join(root, 'packages', 'mantine-theme', 'active.json'), {
+    id: 'default',
   })
   await mkdir(join(root, 'packages', 'components'), {
     recursive: true,
@@ -1048,6 +1055,82 @@ describe('pikku fabric validate', () => {
         )
         assert.ok(finding, 'expected components-missing finding')
         assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('theme package but no themes/<id>.json spec → theme-no-spec info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // Drop the spec + active.json but keep the package (a hand-written
+        // createTheme() with no console-readable spec).
+        await rm(join(tmp, 'packages', 'mantine-theme', 'themes'), {
+          recursive: true,
+          force: true,
+        })
+        await rm(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-no-spec')
+        assert.ok(finding, 'expected theme-no-spec finding')
+        assert.strictEqual(finding!.severity, 'info')
+        assert.ok(
+          !result.findings.some((f) => f.id === 'theme-missing'),
+          'theme-missing should not fire when the package exists'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('theme spec present but active.json missing → theme-no-active info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-no-active')
+        assert.ok(finding, 'expected theme-no-active finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('active.json points at a missing spec → theme-active-mismatch info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+          id: 'nope',
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'theme-active-mismatch'
+        )
+        assert.ok(finding, 'expected theme-active-mismatch finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('valid theme spec + active.json → no theme findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id.startsWith('theme-')),
+          `unexpected theme finding: ${JSON.stringify(
+            result.findings.map((f) => f.id)
+          )}`
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
