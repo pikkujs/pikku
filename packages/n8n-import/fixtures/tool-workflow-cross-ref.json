@@ -1,0 +1,45 @@
+{
+  "name": "Router Bot",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "ag",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "text": "Route the request to the right sub-workflow." }
+    },
+    {
+      "id": "m",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o" }
+    },
+    {
+      "id": "tw",
+      "name": "Enrich Lead Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1,
+      "position": [400, 200],
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "TARGET123", "mode": "list" },
+        "name": "enrich_lead"
+      }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Enrich Lead Tool": { "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]] }
+  }
+}

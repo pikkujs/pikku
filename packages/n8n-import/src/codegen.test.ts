@@ -1185,3 +1185,38 @@ test('toolHttpRequest agent tool → a real http function (not a stub)', () => {
   const agent = files['tokenBot/tokenBot.agent.ts']
   assert.match(agent, /ref\("toolHttpRequest__fetchTokens"\)/)
 })
+
+test('toolWorkflow: a static cross-workflow ref resolves to agent workflows:[ref], no stub', () => {
+  const parsed = parseN8n(loadFixture('tool-workflow-cross-ref.json'))
+  const { files, diagnostics } = generateWorkflowFromN8n(parsed, {
+    resolveWorkflowRef: (id) =>
+      id === 'TARGET123' ? 'Enrich Lead' : undefined,
+  })
+  assert.equal(diagnostics.length, 0)
+
+  const agent = files['routerBot/routerBot.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+  // the cross-workflow tool is wired as an agent workflow capability
+  assert.match(agent, /workflows: \[\s*ref\("Enrich Lead"\),?\s*\]/)
+  // it is NOT a broken rpc tool ref and leaves no throwing stub behind
+  assert.doesNotMatch(agent, /tools: \[\s*ref\("toolWorkflow/)
+  assert.equal(
+    Object.keys(files).filter((f) => /\/functions\//.test(f)).length,
+    0,
+    'no stub function emitted for the workflow-backed tool'
+  )
+})
+
+test('toolWorkflow: a cross-workflow ref with no resolver skips the workflow (external)', () => {
+  const parsed = parseN8n(loadFixture('tool-workflow-cross-ref.json'))
+  const { files, diagnostics } = generateWorkflowFromN8n(parsed, {
+    resolveWorkflowRef: () => undefined,
+  })
+  assert.equal(Object.keys(files).length, 0, 'no files — skipped')
+  assert.ok(
+    diagnostics.some(
+      (d) => d.type === 'error' && d.reason === 'missing-subworkflow'
+    ),
+    'missing-subworkflow diagnostic'
+  )
+})

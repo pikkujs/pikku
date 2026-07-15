@@ -401,12 +401,14 @@ function main() {
     // A pure mapped graph is included strictly (100%-wired, no stubs). An
     // agent-only workflow is included to validate the agent codegen — its tools
     // emit local stubs (which compile), so it needn't be fully mapped.
-    // `graph-with-agent` is deferred: it inherits the graph-ref-typing problem
-    // (a Set node reading a path off a mapped-native node whose typed output
-    // doesn't expose it), which is orthogonal to the agent codegen.
+    // `graph-with-agent` is included the same way as agent-only: it emits a graph
+    // + agent file whose stub nodes compile. (The historical graph-ref-typing
+    // deferral was disproven — a graph node referencing an agent's output
+    // type-checks; the remaining partials are ordinary stub nodes.)
     let kind: 'graph' | 'agent' | undefined
     if (p.shape === 'pure-graph' && wire) kind = 'graph'
-    else if (p.shape === 'agent-only') kind = 'agent'
+    else if (p.shape === 'agent-only' || p.shape === 'graph-with-agent')
+      kind = 'agent'
     if (!kind) continue
     // uniquify so graph/agent const / name / dir never collide across the project
     const uid = `w${idx.toString().padStart(4, '0')}`
