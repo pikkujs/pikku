@@ -78,6 +78,29 @@ export interface WorkflowRef {
   targetId?: string
 }
 
+/**
+ * How an authenticated n8n HTTP Request node injects its auth into the native
+ * `graph:httpRequest` call. Carries only NAMES and static constants — never the
+ * secret value — so it is safe to serialize into the node's declarative input
+ * (which is persisted to durable step state). The function resolves the actual
+ * secret at request time via the SecretService.
+ */
+export interface HttpAuthDescriptor {
+  mode: 'bearer' | 'apiKeyHeader' | 'apiKeyQuery' | 'basic' | 'oauth2'
+  /** Secret KEY the value is provisioned under (out of band). */
+  credential: string
+  /** apiKeyHeader — the header name (defaults to `Authorization`). */
+  headerName?: string
+  /** apiKeyQuery — the query-param name (defaults to `api_key`). */
+  queryName?: string
+  /** Static, non-secret headers always sent (e.g. `Notion-Version`). */
+  extraHeaders?: Record<string, string>
+  /** Where the value comes from. `secret` (default) today; `credential` is a follow-up. */
+  source?: 'secret' | 'credential'
+  /** Importer-only note rendered as a comment; NOT emitted into the auth object. */
+  todo?: string
+}
+
 export interface ParsedNode {
   /** Original n8n node id */
   id: string
@@ -99,6 +122,8 @@ export interface ParsedNode {
   rpcName: string
   /** Set on executeWorkflow / toolWorkflow nodes — their sub-workflow target. */
   workflowRef?: WorkflowRef
+  /** Set on an authenticated HTTP Request node mapped to `graph:httpRequest`. */
+  httpAuth?: HttpAuthDescriptor
 }
 
 /**

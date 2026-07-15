@@ -6,7 +6,9 @@ import type {
   NodeRole,
   WorkflowShape,
   WorkflowRef,
+  HttpAuthDescriptor,
 } from './types.js'
+import { httpAuthRecipe } from './http-auth-map.js'
 import {
   sanitizeIdentifier,
   sanitizeDisplayName,
@@ -242,9 +244,25 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       role = 'agentTool'
     }
 
-    // A no-auth HTTP Request node is @pikku/addon-graph's native httpRequest.
-    if (role === 'integration' && isNoAuthHttpRequest(node)) {
-      role = 'http'
+    // An HTTP Request node maps to @pikku/addon-graph's native httpRequest. A
+    // no-auth one is a plain call; an authenticated one with a static auth
+    // recipe (bearer/basic/api-key) carries an `httpAuth` descriptor the runtime
+    // resolves from a secret. OAuth2 / custom / unknown auth has no static
+    // recipe and stays an integration stub.
+    let httpAuth: HttpAuthDescriptor | undefined
+    if (
+      role === 'integration' &&
+      typeShort(node.type).toLowerCase() === 'httprequest'
+    ) {
+      if (isNoAuthHttpRequest(node)) {
+        role = 'http'
+      } else {
+        const recipe = httpAuthRecipe(node)
+        if (recipe) {
+          role = 'http'
+          httpAuth = recipe
+        }
+      }
     }
 
     // An IF / Filter / Switch whose conditions we can normalize maps to
@@ -302,6 +320,7 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       role,
       rpcName,
       workflowRef,
+      httpAuth,
     })
   }
 

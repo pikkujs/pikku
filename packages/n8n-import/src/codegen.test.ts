@@ -139,11 +139,40 @@ test('no-auth httpRequest → graph:httpRequest with mapped input; authed httpRe
     undefined
   )
 
-  // the authenticated http node cannot be a random addon call — it stays a stub
-  // (addon-map territory) and keeps its integration rpc name
+  // a genericCredentialType node with no resolvable auth subtype has no static
+  // recipe, so it stays a stub (addon-map territory) with its integration rpc
   assert.match(graph, /authFetch: "httpRequest__authFetch"/)
   assert.ok(files['httpDemo/functions/httpRequest__authFetch.function.ts'])
   assert.ok(manifest.find((m) => m.rpcName === 'httpRequest__authFetch'))
+})
+
+test('authed httpRequest with a recipe → graph:httpRequest + auth descriptor, no wireAddon', () => {
+  const parsed = parseN8n(loadFixture('http-authed.json'))
+  const { files, manifest } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['authedHttp/authedHttp.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // predefined openAiApi → a real graph:httpRequest node with a bearer descriptor
+  assert.match(graph, /callOpenAi: "graph:httpRequest"/)
+  assert.match(graph, /auth: \{/)
+  assert.match(graph, /mode: "bearer"/)
+  assert.match(graph, /credential: "my-open-ai"/)
+
+  // generic httpHeaderAuth (header name absent from export) → bearer + a TODO
+  assert.match(graph, /callCustom: "graph:httpRequest"/)
+  assert.match(graph, /\/\/ TODO\(n8n-import\):/)
+  assert.match(graph, /credential: "other-header"/)
+
+  // the auth is resolved at runtime from a secret — NOT a wireAddon credential
+  // instance, and no addons file with a bogus @pikku/addon-open-ai package
+  const addons = files['authedHttp/authedHttp.addons.gen.ts']
+  if (addons)
+    assert.doesNotMatch(addons, /addon-open-ai|addon-http-header-auth/)
+  assert.equal(
+    manifest.find((m) => m.rpcName === 'graph:httpRequest'),
+    undefined
+  )
 })
 
 test('duplicate header / query param names collapse last-wins (no duplicate object keys)', () => {

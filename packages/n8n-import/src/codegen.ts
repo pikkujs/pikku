@@ -317,6 +317,28 @@ function emitHttpInput(node: ParsedNode, ctx: ExprContext): string | null {
     if (body !== null) lines.push(`      body: ${body},`)
   }
 
+  // An authenticated node carries a static auth descriptor (names + constants,
+  // no secret value) the runtime resolves from a secret. `todo` is a codegen
+  // hint only — rendered as a comment, never emitted into the auth object.
+  if (node.httpAuth) {
+    const a = node.httpAuth
+    if (a.todo) lines.push(`      // TODO(n8n-import): ${a.todo}`)
+    const authLines: string[] = [
+      `        mode: ${q(a.mode)},`,
+      `        credential: ${q(a.credential)},`,
+    ]
+    if (a.headerName) authLines.push(`        headerName: ${q(a.headerName)},`)
+    if (a.queryName) authLines.push(`        queryName: ${q(a.queryName)},`)
+    if (a.extraHeaders) {
+      const eh = Object.entries(a.extraHeaders)
+        .map(([k, v]) => `          ${q(k)}: ${q(v)},`)
+        .join('\n')
+      authLines.push(`        extraHeaders: {\n${eh}\n        },`)
+    }
+    if (a.source) authLines.push(`        source: ${q(a.source)},`)
+    lines.push(`      auth: {\n${authLines.join('\n')}\n      },`)
+  }
+
   if (lines.length === 0) return null
   return [`(ref) => ({`, ...lines, `    })`].join('\n')
 }

@@ -12,8 +12,22 @@
  * pointer — so we can provision the instance + its credential NAME automatically
  * and the user fills the secret in once, out of band.
  */
-import type { ParsedWorkflow } from './types.js'
+import type { ParsedWorkflow, N8nCredentialRef } from './types.js'
 import { toCamelCase, toKebabCase } from './naming.js'
+
+/**
+ * Stable secret/credential name for an n8n credential pointer. A named ref wins
+ * (kebabed) — consistent with the `instanceName` `deriveCredentialInstances`
+ * derives — otherwise fall back to a per-node name so distinct nodes don't
+ * collide onto one generic key.
+ */
+export function credentialNameForRef(
+  ref: N8nCredentialRef | undefined,
+  fallback: string
+): string {
+  if (ref?.name) return toKebabCase(ref.name)
+  return toKebabCase(fallback)
+}
 
 export interface CredentialInstance {
   /** Addon instance name — the `wireAddon` name / RPC namespace. */
@@ -91,6 +105,10 @@ export function deriveCredentialInstances(
 
   for (const node of parsed.nodes) {
     if (node.disabled || !node.credentials) continue
+    // An authenticated HTTP Request node resolves its own auth from a secret at
+    // runtime (via the `httpAuth` descriptor) — it is not a credentialed addon
+    // instance, so it must not spawn a bogus `@pikku/addon-<authtype>` wireAddon.
+    if (node.role === 'http') continue
     for (const [credType, ref] of Object.entries(node.credentials)) {
       const key = dedupeKey(credType, ref)
       const existing = byKey.get(key)

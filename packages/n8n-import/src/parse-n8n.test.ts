@@ -72,3 +72,69 @@ test('a terminal respondToWebhook is a transparent drop (no throw)', () => {
   // the respond node is dropped to a noop; parsing succeeds
   assert.ok(parsed.nodes.some((n) => n.name === 'Webhook'))
 })
+
+const httpWorkflow = (
+  httpParams: Record<string, unknown>,
+  credentials?: Record<string, { id?: string; name?: string }>
+) => ({
+  name: 'HTTP Flow',
+  nodes: [
+    {
+      id: 't',
+      name: 'Manual',
+      type: 'n8n-nodes-base.manualTrigger',
+      parameters: {},
+    },
+    {
+      id: 'h',
+      name: 'Call API',
+      type: 'n8n-nodes-base.httpRequest',
+      parameters: httpParams,
+      credentials,
+    },
+  ],
+  connections: {
+    Manual: { main: [[{ node: 'Call API', type: 'main', index: 0 }]] },
+  },
+})
+
+test('a no-auth httpRequest maps to graph:httpRequest with no auth descriptor', () => {
+  const parsed = parseN8n(
+    httpWorkflow({ url: 'https://x.test', authentication: 'none' })
+  )
+  const node = parsed.nodes.find((n) => n.name === 'Call API')!
+  assert.equal(node.role, 'http')
+  assert.equal(node.rpcName, 'graph:httpRequest')
+  assert.equal(node.httpAuth, undefined)
+})
+
+test('an authenticated httpRequest with a recipe maps to http + sets httpAuth', () => {
+  const parsed = parseN8n(
+    httpWorkflow(
+      {
+        url: 'https://x.test',
+        authentication: 'predefinedCredentialType',
+        nodeCredentialType: 'openAiApi',
+      },
+      { openAiApi: { name: 'My OpenAI' } }
+    )
+  )
+  const node = parsed.nodes.find((n) => n.name === 'Call API')!
+  assert.equal(node.role, 'http')
+  assert.equal(node.rpcName, 'graph:httpRequest')
+  assert.equal(node.httpAuth?.mode, 'bearer')
+  assert.equal(node.httpAuth?.credential, 'my-open-ai')
+})
+
+test('an OAuth2 httpRequest has no recipe and stays an integration stub', () => {
+  const parsed = parseN8n(
+    httpWorkflow({
+      url: 'https://x.test',
+      authentication: 'genericCredentialType',
+      genericAuthType: 'oAuth2Api',
+    })
+  )
+  const node = parsed.nodes.find((n) => n.name === 'Call API')!
+  assert.equal(node.role, 'integration')
+  assert.equal(node.httpAuth, undefined)
+})

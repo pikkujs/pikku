@@ -1,0 +1,45 @@
+{
+  "name": "Authed HTTP",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "o",
+      "name": "Call OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [200, 0],
+      "parameters": {
+        "url": "https://api.openai.com/v1/models",
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
+      },
+      "credentials": { "openAiApi": { "id": "c1", "name": "My OpenAI" } }
+    },
+    {
+      "id": "h",
+      "name": "Call Custom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [400, 0],
+      "parameters": {
+        "url": "https://api.other.test/thing",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": { "httpHeaderAuth": { "id": "c2", "name": "Other Header" } }
+    }
+  ],
+  "connections": {
+    "Manual": { "main": [[{ "node": "Call OpenAI", "type": "main", "index": 0 }]] },
+    "Call OpenAI": { "main": [[{ "node": "Call Custom", "type": "main", "index": 0 }]] }
+  }
+}
