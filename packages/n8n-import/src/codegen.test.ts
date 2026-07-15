@@ -1164,3 +1164,24 @@ test('openAi chat node → agent-only pikkuAIAgent with inline model + goal', ()
   // openAi text/chat must NOT emit an @pikku/addon-openai wireAddon
   assert.doesNotMatch(agent, /addon-openai/)
 })
+
+test('toolHttpRequest agent tool → a real http function (not a stub)', () => {
+  const parsed = parseN8n(loadFixture('tool-http-request.json'))
+  assert.equal(parsed.shape, 'agent-only')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const toolFile =
+    files['tokenBot/functions/toolHttpRequest__fetchTokens.function.ts']
+  assert.ok(toolFile, 'tool function file emitted')
+  // real function: performs the fetch, carries the tool description, no stub marker
+  assert.doesNotMatch(toolFile, /implement me/)
+  assert.match(toolFile, /await fetch\(/)
+  assert.match(
+    toolFile,
+    /https:\/\/api\.dexscreener\.com\/token-profiles\/latest\/v1/
+  )
+  assert.match(toolFile, /Fetch the latest token profiles from DexScreener\./)
+  // the agent still references it as a tool
+  const agent = files['tokenBot/tokenBot.agent.ts']
+  assert.match(agent, /ref\("toolHttpRequest__fetchTokens"\)/)
+})

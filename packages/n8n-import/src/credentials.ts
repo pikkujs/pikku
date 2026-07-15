@@ -14,6 +14,7 @@
  */
 import type { ParsedWorkflow, N8nCredentialRef } from './types.js'
 import { toCamelCase, toKebabCase } from './naming.js'
+import { httpToolSpec } from './http-tool.js'
 
 /**
  * Stable secret/credential name for an n8n credential pointer. A named ref wins
@@ -109,6 +110,9 @@ export function deriveCredentialInstances(
     // runtime (via the `httpAuth` descriptor) — it is not a credentialed addon
     // instance, so it must not spawn a bogus `@pikku/addon-<authtype>` wireAddon.
     if (node.role === 'http') continue
+    // A static HTTP Request tool resolves its own auth from a secret at call
+    // time (like an authed http node) — not a credentialed addon instance.
+    if (node.role === 'agentTool' && httpToolSpec(node)) continue
     for (const [credType, ref] of Object.entries(node.credentials)) {
       const key = dedupeKey(credType, ref)
       const existing = byKey.get(key)

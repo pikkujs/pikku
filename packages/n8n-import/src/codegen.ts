@@ -29,6 +29,7 @@ import {
   type CredentialInstance,
 } from './credentials.js'
 import { findAgentSubNode } from './ai-subnodes.js'
+import { httpToolSpec, type HttpToolSpec } from './http-tool.js'
 import { mapModel, mapOpenAiNodeModel } from './model-map.js'
 import { outputParserToZod } from './output-schema.js'
 import { planSubWorkflows, subWorkflowParsed } from './subworkflow.js'
@@ -809,6 +810,86 @@ function emitIntegrationStub(node: ParsedNode): string {
   ].join('\n')
 }
 
+/**
+ * Emit a real Pikku function for a static `toolHttpRequest` agent tool — the
+ * agent-tool sibling of the main-flow `graph:httpRequest` mapping. The URL,
+ * method, headers and query are baked in as literals; auth is resolved from a
+ * secret at call time (mirroring `graph:httpRequest`'s injection), so no
+ * credential value is ever emitted. The agent references it unchanged via
+ * `tools: [ref(<rpcName>)]`.
+ */
+function emitHttpToolFunction(node: ParsedNode, spec: HttpToolSpec): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+  const svc = spec.auth ? '{ secrets }' : ''
+
+  const body: string[] = [`    const url = new URL(${q(spec.url)})`]
+  for (const [key, value] of Object.entries(spec.query))
+    body.push(`    url.searchParams.set(${q(key)}, ${q(value)})`)
+  body.push(`    const headers: Record<string, string> = ${q(spec.headers)}`)
+
+  if (spec.auth) {
+    const auth = spec.auth
+    body.push(
+      `    const secret = await secrets.getSecret(${q(auth.credential)})`
+    )
+    for (const [key, value] of Object.entries(auth.extraHeaders ?? {}))
+      body.push(
+        `    if (!(${q(key)} in headers)) headers[${q(key)}] = ${q(value)}`
+      )
+    switch (auth.mode) {
+      case 'bearer':
+        body.push(`    headers['Authorization'] = \`Bearer \${secret}\``)
+        break
+      case 'apiKeyHeader':
+        body.push(
+          `    headers[${q(auth.headerName ?? 'Authorization')}] = secret`
+        )
+        break
+      case 'apiKeyQuery':
+        body.push(
+          `    url.searchParams.set(${q(auth.queryName ?? 'api_key')}, secret)`
+        )
+        break
+      case 'basic':
+        body.push(
+          `    headers['Authorization'] = \`Basic \${Buffer.from(secret).toString('base64')}\``
+        )
+        break
+    }
+  }
+
+  body.push(
+    `    const response = await fetch(url, { method: ${q(spec.method)}, headers })`,
+    `    const text = await response.text()`,
+    `    try {`,
+    `      const parsed = JSON.parse(text)`,
+    `      return parsed !== null && typeof parsed === 'object' ? parsed : { data: parsed }`,
+    `    } catch {`,
+    `      return { data: text }`,
+    `    }`
+  )
+
+  return [
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    envelopeSchemas(inputName, outputName),
+    ``,
+    `/** Ported from n8n HTTP Request tool ${q(node.name)}. */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  description: ${q(spec.description)},`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async (${svc}) => {`,
+    ...body,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
 function emitCodeStub(node: ParsedNode): string {
   const Pascal = toPascalCase(node.rpcName)
   const inputName = `${Pascal}Input`
@@ -1483,7 +1564,14 @@ export function generateWorkflowFromN8n(
     )
       continue
     if (emittedStubRpc.has(node.rpcName)) continue
-    if (
+    const toolSpec = node.role === 'agentTool' ? httpToolSpec(node) : undefined
+    if (toolSpec) {
+      // A static HTTP Request tool becomes a real function performing the call,
+      // not a throwing stub — the agent still references it as a tool.
+      files[`${dir}/functions/${node.rpcName}.function.ts`] =
+        emitHttpToolFunction(node, toolSpec)
+      emittedStubRpc.add(node.rpcName)
+    } else if (
       node.role === 'integration' ||
       node.role === 'agentTool' ||
       node.role === 'control'

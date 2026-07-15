@@ -1,0 +1,47 @@
+{
+  "name": "Token Bot",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "ag",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "text": "Answer questions about tokens using the tool." }
+    },
+    {
+      "id": "m1",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o" }
+    },
+    {
+      "id": "tl",
+      "name": "Fetch Tokens",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1,
+      "position": [400, 200],
+      "parameters": {
+        "url": "https://api.dexscreener.com/token-profiles/latest/v1",
+        "toolDescription": "Fetch the latest token profiles from DexScreener.",
+        "sendHeaders": true,
+        "parametersHeaders": { "values": [{ "name": "Accept", "value": "*/*" }] }
+      }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Fetch Tokens": { "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]] }
+  }
+}
