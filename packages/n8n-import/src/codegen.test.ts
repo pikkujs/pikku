@@ -835,15 +835,26 @@ test('extractFromFile / convertToFile multiplex to the right parse addon by file
   assert.match(graph, /base64: ref\("load", "data"\)/)
   // xlsx → spreadsheet parser
   assert.match(graph, /parseSheet: "spreadsheet:xlsxToJson"/)
-  // unmapped extract op (text) → honest stub
-  assert.match(graph, /parseText: "extractFromFile__parseText"/)
+  // text → the dep-free binary addon (base64 from the item's binaryPropertyName)
+  assert.match(graph, /parseText: "binary:extractText"/)
   assert.ok(
-    files['fileMultiplexers/functions/extractFromFile__parseText.function.ts']
+    !files['fileMultiplexers/functions/extractFromFile__parseText.function.ts'],
+    'text extract no longer leaves a stub'
   )
 
-  // convertToFile xlsx → spreadsheet writer; toText has no target → stub
+  // convertToFile xlsx → spreadsheet writer; toText → binary:toTextFile
   assert.match(graph, /makeSheet: "spreadsheet:jsonToXlsx"/)
-  assert.match(graph, /makeText: "convertToFile__makeText"/)
+  assert.match(graph, /makeText: "binary:toTextFile"/)
+  assert.match(graph, /text: ref\("makeSheet", "body"\)/)
+  assert.ok(
+    !files['fileMultiplexers/functions/convertToFile__makeText.function.ts'],
+    'toText convert no longer leaves a stub'
+  )
+
+  // moveBinaryData → binary:moveBinaryData with the mode pinned as a const
+  assert.match(graph, /moveData: "binary:moveBinaryData"/)
+  assert.match(graph, /mode: "binaryToJson"/)
+  assert.match(graph, /base64: ref\("makeText", "data"\)/)
 })
 
 test('cron/interval are triggers; terminal respondToWebhook is dropped', () => {

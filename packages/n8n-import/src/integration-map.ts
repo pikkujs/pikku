@@ -1125,8 +1125,10 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
   },
   // n8n extractFromFile — a file-type multiplexer over the item's binary
   // (carried inline as base64 at `binaryPropertyName`, default `data`). Each
-  // file type routes to the addon that parses it; ops with no clean single-addon
-  // target (text / fromJson / binaryToProperty / xml) stay stubs.
+  // file type routes to the addon that parses it; the heavy formats go to their
+  // own addons (read-pdf / spreadsheet) and the dep-free text/json ops go to
+  // @pikku/addon-binary. `binaryToProperty` / `xml` (which want decoded text,
+  // not raw bytes) stay stubs.
   extractfromfile: {
     defaultResource: 'default',
     resources: {
@@ -1151,13 +1153,21 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
             rpc: 'spreadsheet:xlsxToJson',
             fields: { base64: EXTRACT_BINARY_SOURCE },
           },
+          text: {
+            rpc: 'binary:extractText',
+            fields: { base64: EXTRACT_BINARY_SOURCE },
+          },
+          fromJson: {
+            rpc: 'binary:extractJson',
+            fields: { base64: EXTRACT_BINARY_SOURCE },
+          },
         },
       },
     },
   },
   // n8n convertToFile — produces a file from item data. The spreadsheet output
-  // (xlsx/csv/ods) maps to spreadsheet:jsonToXlsx; the raw toBinary/toText/toJson
-  // "make an in-memory attachment" ops have no single-addon target → stubs.
+  // (xlsx) maps to spreadsheet:jsonToXlsx; the dep-free toText/toJson ops go to
+  // @pikku/addon-binary. `toBinary` (a straight base64 passthrough) stays a stub.
   converttofile: {
     defaultResource: 'default',
     resources: {
@@ -1167,6 +1177,50 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
           xlsx: {
             rpc: 'spreadsheet:jsonToXlsx',
             fields: { data: { fromPredecessor: true } },
+          },
+          toText: {
+            rpc: 'binary:toTextFile',
+            fields: {
+              text: {
+                fromPredecessorPath: {
+                  param: 'sourceProperty',
+                  default: 'data',
+                },
+              },
+            },
+          },
+          toJson: {
+            rpc: 'binary:toJsonFile',
+            fields: { data: { fromPredecessor: true } },
+          },
+        },
+      },
+    },
+  },
+  // n8n Move Binary Data — shuttles a value between the JSON and binary
+  // channels. `mode` selects the direction; both land on binary:moveBinaryData
+  // with the mode pinned as a const. jsonToBinary reads the whole predecessor
+  // item; binaryToJson reads the item's binary property (base64).
+  movebinarydata: {
+    operationParam: 'mode',
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'binaryToJson',
+        operations: {
+          jsonToBinary: {
+            rpc: 'binary:moveBinaryData',
+            fields: {
+              mode: { default: 'jsonToBinary', asConst: true },
+              data: { fromPredecessor: true },
+            },
+          },
+          binaryToJson: {
+            rpc: 'binary:moveBinaryData',
+            fields: {
+              mode: { default: 'binaryToJson', asConst: true },
+              base64: EXTRACT_BINARY_SOURCE,
+            },
           },
         },
       },

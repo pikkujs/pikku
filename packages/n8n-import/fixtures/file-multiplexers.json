@@ -48,6 +48,13 @@
       "typeVersion": 1,
       "parameters": { "operation": "toText", "sourceProperty": "body" },
       "position": [1200, 0]
+    },
+    {
+      "name": "MoveData",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "parameters": { "mode": "binaryToJson", "binaryPropertyName": "data" },
+      "position": [1400, 0]
     }
   ],
   "connections": {
@@ -56,6 +63,7 @@
     "ParsePdf": { "main": [[{ "node": "ParseSheet", "type": "main", "index": 0 }]] },
     "ParseSheet": { "main": [[{ "node": "ParseText", "type": "main", "index": 0 }]] },
     "ParseText": { "main": [[{ "node": "MakeSheet", "type": "main", "index": 0 }]] },
-    "MakeSheet": { "main": [[{ "node": "MakeText", "type": "main", "index": 0 }]] }
+    "MakeSheet": { "main": [[{ "node": "MakeText", "type": "main", "index": 0 }]] },
+    "MakeText": { "main": [[{ "node": "MoveData", "type": "main", "index": 0 }]] }
   }
 }
