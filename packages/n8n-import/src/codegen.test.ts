@@ -340,6 +340,38 @@ test('graph-with-agent: graph references the agent by its registered name (#910)
   assert.doesNotMatch(graph, /agent__/)
 })
 
+test('addon-backed agent tools ref the per-service addon rpc directly (no stub)', () => {
+  const parsed = parseN8n(loadFixture('agent-addon-tools.json'))
+  assert.equal(parsed.shape, 'agent-only')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const agent = files['opsAssistant/opsAssistant.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+
+  // gmailTool / googleCalendarTool resolve to their addon rpc and are refs,
+  // not stubs.
+  assert.match(agent, /ref\("gmail:messageSend"\)/)
+  assert.match(agent, /ref\("google-calendar:eventsInsert"\)/)
+  assert.ok(
+    !files['opsAssistant/functions/gmailTool__sendEmail.function.ts'],
+    'gmailTool no longer leaves a stub'
+  )
+  assert.ok(
+    !files['opsAssistant/functions/googleCalendarTool__addEvent.function.ts'],
+    'googleCalendarTool no longer leaves a stub'
+  )
+
+  // the addon packages are wired for deployment
+  const addons = files['opsAssistant/opsAssistant.addons.gen.ts']
+  assert.ok(addons, 'addons file emitted')
+  assert.match(addons, /@pikku\/addon-gmail/)
+  assert.match(addons, /@pikku\/addon-google-calendar/)
+
+  // a tool with no addon (mcpClientTool) still refs + emits a stub
+  assert.match(agent, /ref\("mcpClientTool__mcp"\)/)
+  assert.ok(files['opsAssistant/functions/mcpClientTool__mcp.function.ts'])
+})
+
 test('agent + tool workflow → agent-only, no graph', () => {
   const parsed = parseN8n(loadFixture('agent-with-tool.json'))
   assert.equal(parsed.shape, 'agent-only')

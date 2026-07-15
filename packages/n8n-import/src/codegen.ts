@@ -1401,7 +1401,11 @@ function mappedAddonPackages(
 ): { namespace: string; package: string }[] {
   const byNs = new Map<string, { namespace: string; package: string }>()
   for (const node of parsed.nodes) {
-    if (node.disabled || node.role !== 'native') continue
+    if (node.disabled) continue
+    // native nodes and addon-backed agent tools both ref a per-service addon rpc.
+    const isAddonBackedTool =
+      node.role === 'agentTool' && node.rpcName.includes(':')
+    if (node.role !== 'native' && !isAddonBackedTool) continue
     const split = splitAddonRpc(node.rpcName)
     if (!split || byNs.has(split.namespace)) continue
     byNs.set(split.namespace, {
@@ -1563,6 +1567,9 @@ export function generateWorkflowFromN8n(
       node.role === 'native'
     )
       continue
+    // An agent tool backed by a per-service addon refs the addon rpc directly
+    // (`ref('gmail:messageSend')`) — a shared addon function, no stub.
+    if (node.role === 'agentTool' && node.rpcName.includes(':')) continue
     if (emittedStubRpc.has(node.rpcName)) continue
     const toolSpec = node.role === 'agentTool' ? httpToolSpec(node) : undefined
     if (toolSpec) {

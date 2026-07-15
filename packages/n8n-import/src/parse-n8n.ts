@@ -307,6 +307,14 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     }
 
     const nodeId = dedupe(sanitizeIdentifier(node.name), seenNodeIds)
+    // An agent tool whose service+resource+operation resolves to a per-service
+    // addon function (gmailTool → gmail:messageSend) refs that addon rpc
+    // directly — the addon's own schema/description drive the LLM tool, so no
+    // stub. Like a native rpc it's a shared addon function, never deduped.
+    const agentToolAddonRpc =
+      role === 'agentTool'
+        ? nativeSpecFor(typeShort(node.type), node.parameters ?? {})?.rpc
+        : undefined
     // Set / Edit Fields, no-auth HTTP, branch, and other native addon nodes all
     // share a @pikku/addon-graph RPC — a shared addon function, never deduped.
     const rpcName =
@@ -315,7 +323,7 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       role === 'branch' ||
       role === 'native'
         ? rpcNameFor(role, node)
-        : dedupe(rpcNameFor(role, node), seenRpcNames)
+        : (agentToolAddonRpc ?? dedupe(rpcNameFor(role, node), seenRpcNames))
 
     // executeWorkflow (graph node) and toolWorkflow (agent tool) both carry a
     // sub-workflow target we resolve at codegen time.
