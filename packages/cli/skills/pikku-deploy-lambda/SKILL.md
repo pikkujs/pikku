@@ -1,8 +1,11 @@
 ---
 name: pikku-deploy-lambda
-description: 'Use when deploying a Pikku app to AWS Lambda. Covers HTTP handlers, scheduled tasks, SQS queue workers, WebSocket via API Gateway, and cold start caching.
-TRIGGER when: code imports @pikku/lambda, user mentions Lambda/serverless/AWS deployment, or handler files export Lambda-typed functions.
-DO NOT TRIGGER when: just defining functions/wirings without Lambda-specific code.'
+description: >-
+  Use when deploying a Pikku app to AWS Lambda. Covers HTTP handlers, scheduled tasks, SQS queue
+  workers, WebSocket via API Gateway, and cold start caching. TRIGGER when: code imports
+  @pikku/lambda, user mentions Lambda/serverless/AWS deployment, or handler files export
+  Lambda-typed functions. DO NOT TRIGGER when: just defining functions/wirings without
+  Lambda-specific code.
 ---
 
 # Pikku AWS Lambda Deployment

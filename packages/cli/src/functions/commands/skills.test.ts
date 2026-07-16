@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, test } from 'node:test'
+import { parse } from 'yaml'
 import { pikkuSkillsInstall } from './skills.js'
 
 const skillsDir = join(
@@ -32,10 +33,19 @@ const FABRIC_SKILLS = [
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
+type Frontmatter = {
+  name?: unknown
+  description?: unknown
+  installGroups?: unknown
+}
+
 type Skill = {
   name: string
   dir: string
-  frontmatter: string
+  /** Parsed frontmatter, or null when absent/unparseable. */
+  frontmatter: Frontmatter | null
+  /** Why parsing failed, for a useful assertion message. */
+  parseError: string | null
   body: string
 }
 
@@ -47,33 +57,56 @@ async function readSkills(): Promise<Skill[]> {
 
   const skills: Skill[] = []
   for (const name of entries) {
-    const skillPath = join(skillsDir, name, 'SKILL.md')
+    const dir = join(skillsDir, name)
+    const skillPath = join(dir, 'SKILL.md')
     if (!existsSync(skillPath)) {
       skills.push({
         name,
-        dir: join(skillsDir, name),
-        frontmatter: '',
+        dir,
+        frontmatter: null,
+        parseError: 'SKILL.md not found',
         body: '',
       })
       continue
     }
     const content = await readFile(skillPath, 'utf-8')
     const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
-    skills.push({
-      name,
-      dir: join(skillsDir, name),
-      frontmatter: match?.[1] ?? '',
-      body: match?.[2] ?? content,
-    })
+    if (!match) {
+      skills.push({
+        name,
+        dir,
+        frontmatter: null,
+        parseError: 'no --- frontmatter block',
+        body: content,
+      })
+      continue
+    }
+
+    let frontmatter: Frontmatter | null = null
+    let parseError: string | null = null
+    try {
+      const parsed: unknown = parse(match[1])
+      if (
+        parsed === null ||
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed)
+      ) {
+        parseError = `expected a mapping, got ${Array.isArray(parsed) ? 'a list' : typeof parsed}`
+      } else {
+        frontmatter = parsed as Frontmatter
+      }
+    } catch (e) {
+      parseError = (e as Error).message.split('\n')[0]
+    }
+    skills.push({ name, dir, frontmatter, parseError, body: match[2] })
   }
   return skills
 }
 
-function field(frontmatter: string, key: string): string | undefined {
-  const match = frontmatter.match(
-    new RegExp(`^\\s*${key}\\s*:\\s*(.+?)\\s*$`, 'm')
-  )
-  return match?.[1]?.replace(/^['"]|['"]$/g, '')
+function installGroupsOf(skill: Skill): string[] {
+  const raw = skill.frontmatter?.installGroups
+  if (raw === undefined || raw === null) return []
+  return (Array.isArray(raw) ? raw : [raw]).map((g) => String(g).trim())
 }
 
 /**
@@ -114,16 +147,27 @@ describe('bundled skills corpus', () => {
     }
   })
 
-  test('every skill has parseable frontmatter with name and description', async () => {
+  test("every skill parses under the agent runtime's YAML parser", async () => {
     for (const skill of await readSkills()) {
-      assert.ok(
-        skill.frontmatter.length > 0,
-        `${skill.name}: SKILL.md has no --- frontmatter block`
+      // pi.dev parses SKILL.md frontmatter with this same `yaml` package, then
+      // silently drops the skill on a parse error (a warning diagnostic, and
+      // `skill: null`). A lenient parser (js-yaml) accepts frontmatter this one
+      // rejects, so the corpus must be validated with the strict one or broken
+      // skills ship invisibly.
+      assert.equal(
+        skill.parseError,
+        null,
+        `${skill.name}: frontmatter did not parse — ${skill.parseError}. ` +
+          `pi.dev would silently drop this skill.`
       )
-      const description = field(skill.frontmatter, 'description')
+      const description = skill.frontmatter?.description
       assert.ok(
-        description && description.length > 20,
+        typeof description === 'string' && description.length > 20,
         `${skill.name}: description missing or too short to route on`
+      )
+      assert.ok(
+        typeof description === 'string' && description.length <= 1024,
+        `${skill.name}: description exceeds pi's 1024-char limit`
       )
     }
   })
@@ -131,7 +175,7 @@ describe('bundled skills corpus', () => {
   test('frontmatter name matches the directory name', async () => {
     for (const skill of await readSkills()) {
       assert.equal(
-        field(skill.frontmatter, 'name'),
+        skill.frontmatter?.name,
         skill.name,
         `${skill.name}: frontmatter name must match its directory`
       )
@@ -149,14 +193,7 @@ describe('bundled skills corpus', () => {
 
   test('installGroups only reference known groups', async () => {
     for (const skill of await readSkills()) {
-      const raw = field(skill.frontmatter, 'installGroups')
-      if (!raw) continue
-      const groups = raw
-        .replace(/^\[|\]$/g, '')
-        .split(',')
-        .map((g) => g.trim().replace(/^['"]|['"]$/g, ''))
-        .filter(Boolean)
-      for (const group of groups) {
+      for (const group of installGroupsOf(skill)) {
         assert.ok(
           KNOWN_INSTALL_GROUPS.has(group),
           `${skill.name}: unknown installGroup "${group}" — it would never be installed by any flag`
@@ -168,13 +205,7 @@ describe('bundled skills corpus', () => {
   test('the fabric group holds exactly the intended skills', async () => {
     const tagged: string[] = []
     for (const skill of await readSkills()) {
-      const raw = field(skill.frontmatter, 'installGroups')
-      if (!raw) continue
-      const groups = raw
-        .replace(/^\[|\]$/g, '')
-        .split(',')
-        .map((g) => g.trim().replace(/^['"]|['"]$/g, ''))
-      if (groups.includes('fabric')) tagged.push(skill.name)
+      if (installGroupsOf(skill).includes('fabric')) tagged.push(skill.name)
     }
     assert.deepEqual(
       tagged.sort(),
@@ -211,13 +242,7 @@ const logger = {
 async function skillsWithGroup(group: string): Promise<string[]> {
   const matching: string[] = []
   for (const skill of await readSkills()) {
-    const raw = field(skill.frontmatter, 'installGroups')
-    if (!raw) continue
-    const groups = raw
-      .replace(/^\[|\]$/g, '')
-      .split(',')
-      .map((g) => g.trim().replace(/^['"]|['"]$/g, ''))
-    if (groups.includes(group)) matching.push(skill.name)
+    if (installGroupsOf(skill).includes(group)) matching.push(skill.name)
   }
   return matching.sort()
 }

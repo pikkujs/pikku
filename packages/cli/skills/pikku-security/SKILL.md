@@ -1,8 +1,12 @@
 ---
 name: pikku-security
-description: 'Use when adding authentication or session management to a Pikku app — pikkuAuth, session lifecycle (setSession/clearSession), built-in auth strategies (authBearer, authCookie, authAPIKey), or JWT setup.
-TRIGGER when: user asks about login, logout, session, bearer tokens, cookie auth, API keys, or JWT.
-DO NOT TRIGGER when: user asks about middleware (use pikku-middleware), permissions/authorization checks (use pikku-permissions), or secrets/env vars (use pikku-config).'
+description: >-
+  Use when adding authentication or session management to a Pikku app — pikkuAuth, session
+  lifecycle (setSession/clearSession), built-in auth strategies (authBearer, authCookie,
+  authAPIKey), or JWT setup. TRIGGER when: user asks about login, logout, session, bearer tokens,
+  cookie auth, API keys, or JWT. DO NOT TRIGGER when: user asks about middleware (use
+  pikku-middleware), permissions/authorization checks (use pikku-permissions), or secrets/env vars
+  (use pikku-config).
 installGroups: [core]
 ---
 

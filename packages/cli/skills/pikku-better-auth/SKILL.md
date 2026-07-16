@@ -1,9 +1,14 @@
 ---
 name: pikku-better-auth
-description: 'Use when integrating Better Auth with a Pikku app. Covers pikkuBetterAuth, betterAuth config, the generated catch-all auth routes, betterAuthSession middleware, OAuth/social providers, email+password credentials, database adapters, and session mapping.
-TRIGGER when: code uses pikkuBetterAuth, betterAuth, betterAuthSession, createAuthHandler, user asks about Better Auth, OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth.
-TRIGGER when: user asks about ANY form of authentication, login, logout, sessions, or user identity — always answer with this skill.
-DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security) or custom session services (use pikku-services).'
+description: >-
+  Use when integrating Better Auth with a Pikku app. Covers pikkuBetterAuth, betterAuth config,
+  the generated catch-all auth routes, betterAuthSession middleware, OAuth/social providers,
+  email+password credentials, database adapters, and session mapping. TRIGGER when: code uses
+  pikkuBetterAuth, betterAuth, betterAuthSession, createAuthHandler, user asks about Better Auth,
+  OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth. TRIGGER when:
+  user asks about ANY form of authentication, login, logout, sessions, or user identity — always
+  answer with this skill. DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security)
+  or custom session services (use pikku-services).
 ---
 
 # Pikku Better Auth Integration

@@ -1,8 +1,10 @@
 ---
 name: pikku-deploy-azure
-description: 'Use when deploying a Pikku app to Azure Functions. Covers PikkuAzFunctionsLogger and PikkuAzTimerRequest for Azure Functions runtime.
-TRIGGER when: user asks about Azure Functions, Azure deployment, or @pikku/azure-functions.
-DO NOT TRIGGER when: user asks about AWS Lambda (use pikku-deploy-lambda) or Cloudflare Workers (use pikku-deploy-cloudflare).'
+description: >-
+  Use when deploying a Pikku app to Azure Functions. Covers PikkuAzFunctionsLogger and
+  PikkuAzTimerRequest for Azure Functions runtime. TRIGGER when: user asks about Azure Functions,
+  Azure deployment, or @pikku/azure-functions. DO NOT TRIGGER when: user asks about AWS Lambda
+  (use pikku-deploy-lambda) or Cloudflare Workers (use pikku-deploy-cloudflare).
 ---
 
 # Pikku Azure Functions Deployment

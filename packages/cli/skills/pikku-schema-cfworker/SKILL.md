@@ -1,8 +1,11 @@
 ---
 name: pikku-schema-cfworker
-description: 'Use when setting up JSON schema validation for Cloudflare Workers in a Pikku app. Covers CFWorkerSchemaService as a lightweight alternative to AJV.
-TRIGGER when: code uses CFWorkerSchemaService, user asks about schema validation on Cloudflare Workers, or @pikku/schema-cfworker.
-DO NOT TRIGGER when: user asks about AJV schema validation (use pikku-schema-ajv).'
+description: >-
+  Use when setting up JSON schema validation for Cloudflare Workers in a Pikku app. Covers
+  CFWorkerSchemaService as a lightweight alternative to AJV. TRIGGER when: code uses
+  CFWorkerSchemaService, user asks about schema validation on Cloudflare Workers, or
+  @pikku/schema-cfworker. DO NOT TRIGGER when: user asks about AJV schema validation (use
+  pikku-schema-ajv).
 installGroups: [core, fabric]
 ---
 

@@ -1,8 +1,11 @@
 ---
 name: pikku-gateway-slack
-description: 'Use when integrating Slack with a Pikku app. Covers SlackGatewayAdapter, slash commands, OAuth flow, message handling, and signature verification.
-TRIGGER when: code uses SlackGatewayAdapter, parseSlashCommand, buildSlackInstallUrl, or user asks about Slack integration, Slack bots, or @pikku/gateway-slack.
-DO NOT TRIGGER when: user asks about general gateway/webhook patterns (use pikku-trigger).'
+description: >-
+  Use when integrating Slack with a Pikku app. Covers SlackGatewayAdapter, slash commands, OAuth
+  flow, message handling, and signature verification. TRIGGER when: code uses SlackGatewayAdapter,
+  parseSlashCommand, buildSlackInstallUrl, or user asks about Slack integration, Slack bots, or
+  @pikku/gateway-slack. DO NOT TRIGGER when: user asks about general gateway/webhook patterns (use
+  pikku-trigger).
 ---
 
 # Pikku Gateway Slack

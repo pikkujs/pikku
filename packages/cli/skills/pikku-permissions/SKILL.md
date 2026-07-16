@@ -1,8 +1,12 @@
 ---
 name: pikku-permissions
-description: 'Use when adding authorization checks to Pikku functions or routes — pikkuPermission, pikkuAuth, per-function permissions, pattern-based permissions, or understanding OR/AND permission logic.
-TRIGGER when: user wants to restrict who can call a function, check resource ownership, add role-based access, or understand where permission checks belong.
-DO NOT TRIGGER when: user asks about middleware or request interception (use pikku-middleware), authentication strategies (use pikku-security), or session management.'
+description: >-
+  Use when adding authorization checks to Pikku functions or routes — pikkuPermission, pikkuAuth,
+  per-function permissions, pattern-based permissions, or understanding OR/AND permission logic.
+  TRIGGER when: user wants to restrict who can call a function, check resource ownership, add
+  role-based access, or understand where permission checks belong. DO NOT TRIGGER when: user asks
+  about middleware or request interception (use pikku-middleware), authentication strategies (use
+  pikku-security), or session management.
 installGroups: [core]
 ---
 

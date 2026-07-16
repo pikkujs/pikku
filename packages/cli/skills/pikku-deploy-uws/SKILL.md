@@ -1,8 +1,11 @@
 ---
 name: pikku-deploy-uws
-description: 'Use when deploying a Pikku app with uWebSockets.js. Covers PikkuUWSServer with built-in HTTP and WebSocket support, and pikkuWebsocketHandler for standalone ws library.
-TRIGGER when: code imports @pikku/uws or @pikku/ws, user mentions uWebSockets or high-performance server, or start.ts creates a PikkuUWSServer.
-DO NOT TRIGGER when: just defining functions/wirings without uWS-specific code.'
+description: >-
+  Use when deploying a Pikku app with uWebSockets.js. Covers PikkuUWSServer with built-in HTTP and
+  WebSocket support, and pikkuWebsocketHandler for standalone ws library. TRIGGER when: code
+  imports @pikku/uws or @pikku/ws, user mentions uWebSockets or high-performance server, or
+  start.ts creates a PikkuUWSServer. DO NOT TRIGGER when: just defining functions/wirings without
+  uWS-specific code.
 ---
 
 # Pikku uWebSockets.js Deployment

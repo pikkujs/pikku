@@ -1,8 +1,11 @@
 ---
 name: pikku-redis
-description: 'Use when setting up Redis-backed services in a Pikku app. Covers channel stores, workflow services, secret services, event hubs, agent runs, and deployment services backed by Redis.
-TRIGGER when: code uses RedisChannelStore, RedisWorkflowService, RedisSecretService, or user asks about Redis setup with Pikku.
-DO NOT TRIGGER when: user asks about BullMQ queues (use pikku-queue) or SQL databases (use pikku-kysely).'
+description: >-
+  Use when setting up Redis-backed services in a Pikku app. Covers channel stores, workflow
+  services, secret services, event hubs, agent runs, and deployment services backed by Redis.
+  TRIGGER when: code uses RedisChannelStore, RedisWorkflowService, RedisSecretService, or user
+  asks about Redis setup with Pikku. DO NOT TRIGGER when: user asks about BullMQ queues (use
+  pikku-queue) or SQL databases (use pikku-kysely).
 ---
 
 # Pikku Redis

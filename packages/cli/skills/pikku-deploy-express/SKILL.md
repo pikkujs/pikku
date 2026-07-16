@@ -1,8 +1,11 @@
 ---
 name: pikku-deploy-express
-description: 'Use when deploying a Pikku app with Express. Covers PikkuExpressServer standalone and pikkuExpressMiddleware for existing Express apps.
-TRIGGER when: code imports @pikku/express or @pikku/express-middleware, user mentions Express deployment, or start.ts creates a PikkuExpressServer.
-DO NOT TRIGGER when: just defining functions/wirings without Express-specific code.'
+description: >-
+  Use when deploying a Pikku app with Express. Covers PikkuExpressServer standalone and
+  pikkuExpressMiddleware for existing Express apps. TRIGGER when: code imports @pikku/express or
+  @pikku/express-middleware, user mentions Express deployment, or start.ts creates a
+  PikkuExpressServer. DO NOT TRIGGER when: just defining functions/wirings without
+  Express-specific code.
 ---
 
 # Pikku Express Deployment

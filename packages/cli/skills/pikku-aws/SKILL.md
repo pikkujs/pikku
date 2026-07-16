@@ -1,8 +1,11 @@
 ---
 name: pikku-aws
-description: 'Use when setting up AWS services (S3, SQS, Secrets Manager) in a Pikku app. Covers S3Content for file storage, SQSQueueService for queues, and AWSSecrets for secret management.
-TRIGGER when: code uses S3Content, SQSQueueService, AWSSecrets, or user asks about AWS integration, S3 uploads, SQS queues, or AWS Secrets Manager with Pikku.
-DO NOT TRIGGER when: user asks about AWS Lambda runtime (use pikku-deploy-lambda).'
+description: >-
+  Use when setting up AWS services (S3, SQS, Secrets Manager) in a Pikku app. Covers S3Content for
+  file storage, SQSQueueService for queues, and AWSSecrets for secret management. TRIGGER when:
+  code uses S3Content, SQSQueueService, AWSSecrets, or user asks about AWS integration, S3
+  uploads, SQS queues, or AWS Secrets Manager with Pikku. DO NOT TRIGGER when: user asks about AWS
+  Lambda runtime (use pikku-deploy-lambda).
 ---
 
 # Pikku AWS Services

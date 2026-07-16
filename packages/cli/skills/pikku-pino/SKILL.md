@@ -1,8 +1,10 @@
 ---
 name: pikku-pino
-description: 'Use when setting up structured logging with Pino in a Pikku app. Covers PinoLogger setup and log levels.
-TRIGGER when: code uses PinoLogger, user asks about structured logging, Pino, or @pikku/pino.
-DO NOT TRIGGER when: user asks about ConsoleLogger (use pikku-services) or general service setup.'
+description: >-
+  Use when setting up structured logging with Pino in a Pikku app. Covers PinoLogger setup and log
+  levels. TRIGGER when: code uses PinoLogger, user asks about structured logging, Pino, or
+  @pikku/pino. DO NOT TRIGGER when: user asks about ConsoleLogger (use pikku-services) or general
+  service setup.
 ---
 
 # Pikku Pino (Structured Logging)

@@ -1,8 +1,12 @@
 ---
 name: pikku-versioning
-description: 'Use when versioning Pikku function contracts, detecting breaking changes, or managing API backward compatibility. Covers the version property, versions.pikku.json manifest, contract hashing, and CI integration.
-TRIGGER when: code uses version: on a pikkuFunc, user asks about API versioning, breaking changes, contract hashes, backward compatibility, or "pikku versions" CLI commands.
-DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config) or general function definitions (use pikku-concepts).'
+description: >-
+  Use when versioning Pikku function contracts, detecting breaking changes, or managing API
+  backward compatibility. Covers the version property, versions.pikku.json manifest, contract
+  hashing, and CI integration. TRIGGER when: code uses version: on a pikkuFunc, user asks about
+  API versioning, breaking changes, contract hashes, backward compatibility, or "pikku versions"
+  CLI commands. DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config)
+  or general function definitions (use pikku-concepts).
 installGroups: [core]
 ---
 

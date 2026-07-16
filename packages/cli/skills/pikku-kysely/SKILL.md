@@ -1,8 +1,16 @@
 ---
 name: pikku-kysely
-description: 'Use when WRITING KYSELY QUERIES (select/join/aggregate/insert/update/delete) inside a Pikku function body, or when setting up SQL database services with Kysely. Covers the query builder API (joins, aggregates + groupBy/having, returning, sql template, expression builder, $if, transactions, jsonArrayFrom relation helpers) AND @pikku/kysely service setup (channel stores, workflow services, secret services, AI storage, deployment services).
-TRIGGER when: writing any non-trivial kysely query (a join, an aggregate/count/sum, groupBy, subquery, transaction, or conditional query), the injected `kysely` service is used in a function body, or code uses PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, or the user asks about SQL setup with Pikku.
-DO NOT TRIGGER when: user asks about MongoDB (use pikku-mongodb) or Redis (use pikku-redis).'
+description: >-
+  Use when WRITING KYSELY QUERIES (select/join/aggregate/insert/update/delete) inside a Pikku
+  function body, or when setting up SQL database services with Kysely. Covers the query builder
+  API (joins, aggregates + groupBy/having, returning, sql template, expression builder, $if,
+  transactions, jsonArrayFrom relation helpers) AND @pikku/kysely service setup (channel stores,
+  workflow services, secret services, AI storage, deployment services). TRIGGER when: writing any
+  non-trivial kysely query (a join, an aggregate/count/sum, groupBy, subquery, transaction, or
+  conditional query), the injected `kysely` service is used in a function body, or code uses
+  PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, or the user asks
+  about SQL setup with Pikku. DO NOT TRIGGER when: user asks about MongoDB (use pikku-mongodb) or
+  Redis (use pikku-redis).
 installGroups: [core]
 ---
 
