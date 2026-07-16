@@ -5799,7 +5799,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.61, @pikku/cli@npm:^0.12.71, @pikku/cli@npm:^0.12.76, @pikku/cli@npm:^0.12.81, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.61, @pikku/cli@npm:^0.12.71, @pikku/cli@npm:^0.12.82, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -5888,7 +5888,7 @@ __metadata:
     "@mantine/spotlight": "npm:^8.3.18"
     "@pikku/addon-console": "npm:^0.12.26"
     "@pikku/assistant-ui": "npm:^0.12.7"
-    "@pikku/cli": "npm:^0.12.76"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.54"
     "@pikku/fetch": "npm:^0.12.6"
     "@pikku/websocket": "npm:^0.12.2"
@@ -6635,7 +6635,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cli@workspace:templates/cli"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/uws": "npm:^0.12.7"
     "@pikku/websocket": "npm:^0.12.3"
@@ -6676,7 +6676,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/express-middleware": "npm:^0.12.4"
     "@pikku/jose": "npm:^0.12.4"
@@ -6741,7 +6741,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-function-addon@workspace:templates/function-addon"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     typescript: "npm:^6.0.3"
     zod: "npm:^4"
@@ -6760,7 +6760,7 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/better-auth": "npm:^0.12.17"
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/deploy-cloudflare": "workspace:*"
@@ -6798,7 +6798,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-mcp-server@workspace:templates/mcp-server"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/modelcontextprotocol": "npm:^0.12.7"
     "@types/node": "npm:^24.11.0"
@@ -6813,7 +6813,7 @@ __metadata:
   dependencies:
     "@next/swc-darwin-arm64": "npm:^16.2.6"
     "@pikku/better-auth": "npm:^0.12.17"
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/fetch": "npm:^0.12.7"
     "@pikku/jose": "npm:^0.12.4"
@@ -6850,7 +6850,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/express": "npm:^0.12.7"
     "@pikku/jose": "npm:^0.12.4"
@@ -6871,7 +6871,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/express": "npm:^0.12.7"
     "@pikku/jose": "npm:^0.12.4"
@@ -6906,7 +6906,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/express": "npm:^0.12.7"
     "@pikku/inspector": "npm:^0.12.42"
@@ -6923,7 +6923,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"
   dependencies:
-    "@pikku/cli": "npm:^0.12.81"
+    "@pikku/cli": "npm:^0.12.82"
     "@pikku/core": "npm:^0.12.63"
     "@pikku/express": "npm:^0.12.7"
     "@pikku/inspector": "npm:^0.12.42"
