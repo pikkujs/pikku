@@ -1,5 +1,7 @@
 ---
 '@pikku/core': patch
+'@pikku/inspector': patch
+'@pikku/cli': patch
 '@pikku/cloudflare': patch
 ---
 
@@ -20,7 +22,9 @@ const decision = await workflow.approval('Approve invoice', {
 if (decision.status === 'expired') return { skipped: true }
 ```
 
-Decisions are recorded with `workflowService.approveStep(runId, reason, decision)`.
+Decisions are recorded with `workflowService.approveStep(runId, reason, decision)`, or over the
+generated `POST /workflow/:workflowName/approve/:runId` route. Approver identity is not modelled —
+gate that route with your own auth to control who may approve.
 
 Notes:
 
