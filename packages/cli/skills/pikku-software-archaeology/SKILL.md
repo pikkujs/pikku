@@ -137,7 +137,7 @@ Run each lens over the surveyed material. Rules that counter the classic failure
 ### Phase 4 — Cross-check, validate, synthesize
 
 1. Cross-checks before writing: every command has an actor and at least one precondition or policy (or you explain why it is genuinely unguarded); every state transition appears in some command/workflow — if a state is only reachable by manual/DB intervention, record the transition with trigger `"none (manual/DB-only)"` AND add a gaps.json entry; every event has a producer; every api surface maps to a defined concept; every integration is used by some command/workflow.
-2. Write all 14 JSON files, sorting every array by `name` (or `path`) — on first extraction too, not just re-runs. Run the validator: done means `0 error(s)` and exit 0, and every WARN explicitly reviewed and either fixed or justified in your summary.
+2. Write all 14 JSON files, sorting **unordered identity collections** by `name` (or `path`) — on first extraction too, not just re-runs. Arrays whose order carries meaning (`workflows[].steps`, and any other observed sequence) stay in their observed order: sorting them would rewrite the behavior you extracted. Run the validator: done means `0 error(s)` and exit 0, and every WARN explicitly reviewed and either fixed or justified in your summary.
 3. Write `blueprint.md`: product summary → domain map → per-domain narrative (entities/commands/events with the interesting rules) → workflows → integrations/architecture → invariants → gaps and open decisions → rebuild recommendation. Write it for the engineer who will rebuild the product and has never seen the legacy code.
 
 ## Evidence & Confidence Discipline

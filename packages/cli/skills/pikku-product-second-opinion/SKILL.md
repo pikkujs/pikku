@@ -65,7 +65,7 @@ Write these three parts in order. A reader can stop after Part 1.
 
 ## Rewire vs rebuild (say which)
 
-The blueprint's `migration.json`/keep-list tells you which is which; the reader needs to know because the cost is 10× different.
+The blueprint's `migration.json` tells you which is which — `mappings[]` is what survives (each with its `recommendation`), `dropped[]` is what goes. The reader needs to know because the cost is 10× different.
 - **Rewire** — the valuable machinery exists; you're connecting pieces or turning something on. Cheap, low-risk. (Most "it should be automatic but isn't" findings are this.)
 - **Rebuild** — the capability doesn't exist or is fundamentally wrong. Expensive, risky. Reserve the word for when it's true; founders hear "rewrite" and panic or overspend.
 
@@ -126,7 +126,7 @@ Produce **both**:
 | A problem with no "what it means for you" | Incomplete — add the business impact or delete it. |
 | All problems, no credit | You'll lose the reader's trust. Name what's genuinely good. |
 | A recommendation with no effort + payoff | Not decision-useful. Add both. |
-| "Rewrite the app" | Almost always wrong. Separate rewire (cheap) from rebuild (dear); lean on the keep-list. |
+| "Rewrite the app" | Almost always wrong. Separate rewire (cheap) from rebuild (dear); lean on what `migration.json.mappings` says survives. |
 | A guess stated as fact | Mark confidence. "I'm certain" and "I'd need to check" are different sentences. |
 | Only listed the upsides of a technology choice | Not honest. Every bet has a cost — name it in business terms, don't soften it to sound positive. |
 | Trashed a technology as "the wrong choice" | Equally lazy. Most choices are defensible; frame as tradeoff + "what to watch," not a verdict. |
