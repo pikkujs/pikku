@@ -374,6 +374,15 @@ test('addon-backed agent tools ref the per-service addon rpc directly (no stub)'
     'toolCalculator no longer leaves a stub'
   )
 
+  // a `<service>Tool` variant (baserowTool / openWeatherMapTool) whose base node
+  // is mapped resolves to the same base addon rpc — no per-tool map entry needed.
+  assert.match(agent, /ref\("baserow:rowGetAll"\)/)
+  assert.match(agent, /ref\("open-weather-map:currentWeather"\)/)
+  assert.ok(
+    !files['opsAssistant/functions/baserow__getAllRows.function.ts'],
+    'baserowTool no longer leaves a stub'
+  )
+
   // the addon packages are wired for deployment
   const addons = files['opsAssistant/opsAssistant.addons.gen.ts']
   assert.ok(addons, 'addons file emitted')
@@ -381,6 +390,8 @@ test('addon-backed agent tools ref the per-service addon rpc directly (no stub)'
   assert.match(addons, /@pikku\/addon-google-calendar/)
   assert.match(addons, /@pikku\/addon-wikipedia/)
   assert.match(addons, /@pikku\/addon-math/)
+  assert.match(addons, /@pikku\/addon-baserow/)
+  assert.match(addons, /@pikku\/addon-open-weather-map/)
 
   // a tool with no addon (mcpClientTool) still refs + emits a stub
   assert.match(agent, /ref\("mcpClientTool__mcp"\)/)

@@ -7585,7 +7585,14 @@ export function integrationSpecFor(
   typeShort: string,
   parameters?: Record<string, unknown>
 ): NativeNodeSpec | undefined {
-  const node = INTEGRATION_NODES[typeShort.toLowerCase()]
+  const key = typeShort.toLowerCase()
+  // An n8n `<service>Tool` agent-tool variant (baserowTool, openWeatherMapTool,
+  // …) shares the base service node's resource/operation surface — fall back to
+  // the base entry so the tool refs the same addon rpc. The langchain `tool*`
+  // (prefix) nodes are unaffected — this only strips a trailing `tool`.
+  const node =
+    INTEGRATION_NODES[key] ??
+    (key.endsWith('tool') ? INTEGRATION_NODES[key.slice(0, -4)] : undefined)
   if (!node) return undefined
   const p = parameters ?? {}
   const resourceKey = (p.resource as string) || node.defaultResource
