@@ -4,7 +4,8 @@
 > Worked example for the pikku-product-second-opinion skill. Shows the voice and the
 > layered structure on one real area (competitor tracking), drawn from a
 > pikku-software-archaeology blueprint + parity report. A full report would repeat
-> Part 2 for each major area.
+> Part 2 for each major area, and cover every significant technology bet — not just
+> the one shown here.
 
 **How to read this:** no technical background needed. I'll explain what you have,
 what's solid, and what I'd change — and for each change, what it costs and what
@@ -67,8 +68,23 @@ surprises** — which is the entire promise of the product.
 
 ---
 
+### The technology bets
+
+**Pikku — the framework I'm suggesting you rebuild onto.** *Buys you:* one way to
+write a capability and drive it from anywhere — web, timers, background jobs,
+assistants — so the tracking rule is written once instead of three times, which is
+exactly the sprawl above. *Costs you:* it hasn't shipped a stable 1.0 (it's 0.12.x;
+0.13 is the first release promising backwards compatibility), so until then
+upgrades can break you — pin the version and budget for upgrade work. Its community
+and hiring pool are far smaller than the mainstream default's. That's normal for a
+young framework and survivable, but it's a real cost and it's yours to weigh.
+*Usually:* worth it when the problem is genuinely sprawl, as it is here — and worth
+waiting if nobody has capacity to own upgrades.
+
+---
+
 ## Part 3 — The fine print
 
 **How confident am I.** High on both problems — I can see them directly. The fix
-is a well-understood pattern, not a gamble. I'd want one live test against your
-real data before calling it done.
+is a well-understood pattern rather than an experiment, though I'd want one live
+test against your real data before calling it done.
