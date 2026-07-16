@@ -33,4 +33,27 @@ describe('serializeWorkflowRoutes', () => {
     assert.match(authEnabled, /auth: true/)
     assert.match(authDisabled, /auth: false/)
   })
+
+  test('emits an approve route wired to approveStep', () => {
+    const result = serializeWorkflowRoutes('#pikku', true)
+
+    assert.match(result, /route: '\/workflow\/:workflowName\/approve\/:runId'/)
+    assert.match(result, /func: workflowApprover/)
+    assert.match(
+      result,
+      /await workflowService\.approveStep\(runId, reason, decision\)/
+    )
+  })
+
+  test('the approver destructures workflowService so the analyzer grants workflow-state', () => {
+    const result = serializeWorkflowRoutes('#pikku', true)
+
+    // Mirrors workflowStarter/graphStarter: the analyzer infers the
+    // workflow-state capability from this destructure, so losing it silently
+    // strips the route's access rather than failing the build.
+    assert.match(
+      result,
+      /func: async \(\{ workflowService \}, \{ runId, reason, decision \}\)/
+    )
+  })
 })
