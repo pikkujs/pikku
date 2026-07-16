@@ -1235,6 +1235,21 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
       },
     },
   },
+  // n8n executeCommand runs a shell command on the host → @pikku/addon-execution.
+  executecommand: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'execute',
+        operations: {
+          execute: {
+            rpc: 'execution:execute',
+            fields: { command: { from: 'command' } },
+          },
+        },
+      },
+    },
+  },
   spreadsheetfile: {
     defaultResource: 'default',
     resources: {

@@ -1318,3 +1318,21 @@ test('computed Set node (transform field) → generated function, not editFields
   // nothing dropped anywhere
   assert.doesNotMatch(graph, /TODO\(n8n expr\)/)
 })
+
+test('executeCommand → execution:execute addon call, wireAddon @pikku/addon-execution', () => {
+  const parsed = parseN8n(loadFixture('execute-command.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['executeCommand/executeCommand.graph.ts']
+  assert.ok(graph, 'graph emitted')
+  // the executeCommand node maps to the addon rpc directly — no stub
+  assert.match(graph, /run: "execution:execute"/)
+  assert.match(graph, /command: "ls -la \/tmp"/)
+  assert.ok(
+    !files['executeCommand/functions/executeCommand__run.function.ts'],
+    'no stub for executeCommand'
+  )
+  // the addon package is wired
+  const addons = files['executeCommand/executeCommand.addons.gen.ts']
+  assert.ok(addons, 'addons file emitted')
+  assert.match(addons, /@pikku\/addon-execution/)
+})
