@@ -108,6 +108,9 @@ export const flagDefs: Record<string, FlagBadgeDef> = {
 
 export const statusDefs: Record<string, EnumBadgeDef> = {
   running: { color: 'blue', label: 'running' },
+  // Yellow to match the canvas (FlowNode) and timeline (WorkflowTimelineDrawer),
+  // which already treat suspended as its own state rather than a failure.
+  suspended: { color: 'yellow', label: 'suspended' },
   completed: { color: 'green', label: 'completed' },
   succeeded: { color: 'green', label: 'succeeded' },
   failed: { color: 'red', label: 'failed' },

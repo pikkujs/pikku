@@ -10,6 +10,11 @@ import { PikkuBadge } from '../../ui/PikkuBadge'
 import { wiringTypeColor } from '../../ui/badge-defs'
 import { SectionLabel } from '../../ui/SectionLabel'
 import { DataViewer } from '../../ui/DataViewer'
+import {
+  isSuspendReason,
+  suspendReasonCopy,
+  suspendReasonText,
+} from '../../../lib/workflow-suspend'
 import { CommonDetails } from './shared/CommonDetails'
 import { EmptyState } from './shared/EmptyState'
 import classes from '../../ui/console.module.css'
@@ -549,7 +554,29 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
         </Stack>
       )}
 
-      {runData.error && (
+      {isSuspendReason(runData.status, runData.error) && (
+        <Stack gap={6}>
+          <SectionLabel>
+            {asI18n(suspendReasonCopy(runData.error).title)}
+          </SectionLabel>
+          <Card withBorder radius="md" padding={0}>
+            <Card.Section p="md">
+              <Stack gap={6}>
+                <Text size="sm" ff="monospace">
+                  {asI18n(suspendReasonText(runData.error))}
+                </Text>
+                {suspendReasonCopy(runData.error).hint && (
+                  <Text size="xs" c="dimmed">
+                    {asI18n(suspendReasonCopy(runData.error).hint!)}
+                  </Text>
+                )}
+              </Stack>
+            </Card.Section>
+          </Card>
+        </Stack>
+      )}
+
+      {runData.error && !isSuspendReason(runData.status, runData.error) && (
         <Stack gap={6}>
           <SectionLabel>{asI18n('Error')}</SectionLabel>
           <Card withBorder radius="md" padding={0}>
