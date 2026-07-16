@@ -124,6 +124,12 @@ export interface ParsedNode {
   workflowRef?: WorkflowRef
   /** Set on an authenticated HTTP Request node mapped to `graph:httpRequest`. */
   httpAuth?: HttpAuthDescriptor
+  /**
+   * Set on a Set / Edit Fields node whose assignments carry a non-declarative
+   * transform: its synthesized function body (`role` is flipped to `code`), run
+   * through the same translation path as a Code node instead of `editFields`.
+   */
+  computedSetSource?: string
 }
 
 /**

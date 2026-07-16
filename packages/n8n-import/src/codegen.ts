@@ -17,6 +17,7 @@ import {
   codeRefKey,
   type CodeTranslation,
 } from './code-translate.js'
+import { setAssignments } from './set-translate.js'
 import { normalizeBranch } from './branch.js'
 import {
   nativeSpecFor,
@@ -167,58 +168,6 @@ function emitValue(value: unknown, ctx: ExprContext): string | null {
       .join(', ')}])`
   }
   return null
-}
-
-/** Top-level Set/Edit-Fields parameters that are node config, never fields. */
-const SET_CONFIG_KEYS = new Set([
-  'mode',
-  'options',
-  'assignments',
-  'values',
-  'include',
-  'includeOtherFields',
-  'keepOnlySet',
-  'duplicateItem',
-])
-
-/**
- * Extract a Set / Edit Fields node's assignments as a flat `{ field, value }`
- * list, normalizing across the node's format versions:
- *  - v3.4 "Edit Fields (Set)": `parameters.assignments.assignments[]` ({ name, value })
- *  - v2 "Set": `parameters.values.{string,number,boolean,…}[]` ({ name, value })
- *  - simplified/flat: each remaining top-level parameter key is a field
- */
-function setAssignments(
-  parameters: Record<string, unknown>
-): { field: string; value: unknown }[] {
-  const container = parameters.assignments as
-    | { assignments?: unknown }
-    | undefined
-  if (container && Array.isArray(container.assignments)) {
-    return container.assignments
-      .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
-      .map((a) => ({ field: String(a.name ?? ''), value: a.value }))
-      .filter((a) => a.field)
-  }
-
-  const values = parameters.values
-  if (values && typeof values === 'object') {
-    const out: { field: string; value: unknown }[] = []
-    for (const group of Object.values(values as Record<string, unknown>)) {
-      if (!Array.isArray(group)) continue
-      for (const entry of group) {
-        if (entry && typeof entry === 'object' && 'name' in entry) {
-          const e = entry as Record<string, unknown>
-          out.push({ field: String(e.name ?? ''), value: e.value })
-        }
-      }
-    }
-    if (out.length > 0) return out.filter((a) => a.field)
-  }
-
-  return Object.entries(parameters)
-    .filter(([key]) => !SET_CONFIG_KEYS.has(key))
-    .map(([field, value]) => ({ field, value }))
 }
 
 /**
@@ -942,6 +891,9 @@ function emitCodeFunction(
   const Pascal = toPascalCase(node.rpcName)
   const inputName = `${Pascal}Input`
   const outputName = `${Pascal}Output`
+  // A computed Set node reaches this path with a synthesized body; label it as
+  // the Set node it came from rather than a Code node.
+  const origin = node.computedSetSource !== undefined ? 'Set' : 'Code'
 
   // n8n's `$env` is the process environment; Pikku reads it through the
   // variables service. Resolve it once up front (getAll is sync-or-async, so
@@ -965,7 +917,7 @@ function emitCodeFunction(
     `        : v == null`,
     `          ? []`,
     `          : [{ json: v }]`,
-    `    const $items: any[] = toItems((data as any)?.items)`,
+    `    const $items: any[] = toItems(data?.items)`,
   ]
 
   // Each `$("X")` / `$node["X"]` reference is wired in as its own ref key; the
@@ -983,7 +935,7 @@ function emitCodeFunction(
           `    const $node: Record<string, any> = {`,
           ...translation.refs.map(
             (name) =>
-              `      ${q(name)}: wrapRef(toItems((data as any)?.${codeRefKey(name)})),`
+              `      ${q(name)}: wrapRef(toItems(data?.${codeRefKey(name)})),`
           ),
           `    }`,
           `    const $ = (name: string): any => $node[name]`,
@@ -1039,9 +991,9 @@ function emitCodeFunction(
     `export const ${inputName} = z.any()`,
     `export const ${outputName} = z.any()`,
     ``,
-    `/** Ported from n8n Code node ${q(node.name)}. */`,
+    `/** Ported from n8n ${origin} node ${q(node.name)}. */`,
     `export const ${node.rpcName} = pikkuSessionlessFunc({`,
-    `  description: ${q(`Ported from n8n Code node "${node.name}"`)},`,
+    `  description: ${q(`Ported from n8n ${origin} node "${node.name}"`)},`,
     `  input: ${inputName},`,
     `  output: ${outputName},`,
     `  func: async (${servicesParam}, data) => {`,

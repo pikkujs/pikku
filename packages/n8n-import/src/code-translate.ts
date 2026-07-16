@@ -79,23 +79,33 @@ function hasTsSyntaxError(source: string): boolean {
  * function. Pure module — no fs, no codegen — so it can drive both naming
  * (a translatable node is not a stub) and emission.
  */
+/**
+ * Why a raw JavaScript body can't be lowered 1:1 into a Pikku function, or null
+ * when it can. Shared by Code-node translation and computed Set-node synthesis
+ * so a Set node is only functionized when the result would actually translate.
+ */
+export function untranslatableReason(source: string): string | null {
+  const code = source.trim()
+  if (!code) return 'empty code'
+  for (const [pattern, reason] of BAIL) if (pattern.test(code)) return reason
+  if (hasTsSyntaxError(code)) return 'not valid TypeScript syntax'
+  return null
+}
+
 export function translateCodeNode(node: ParsedNode): CodeTranslation {
   const source =
+    node.computedSetSource ??
     (node.parameters.jsCode as string | undefined) ??
     (node.parameters.functionCode as string | undefined) ??
     ''
   const code = source.trim()
-  if (!code) return { translatable: false, reason: 'empty code' }
 
   const language = node.parameters.language
   if (typeof language === 'string' && language !== 'javaScript')
     return { translatable: false, reason: `unsupported language "${language}"` }
 
-  for (const [pattern, reason] of BAIL)
-    if (pattern.test(code)) return { translatable: false, reason }
-
-  if (hasTsSyntaxError(code))
-    return { translatable: false, reason: 'not valid TypeScript syntax' }
+  const reason = untranslatableReason(code)
+  if (reason) return { translatable: false, reason }
 
   const mode: 'all' | 'each' =
     node.parameters.mode === 'runOnceForEachItem' ||

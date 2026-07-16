@@ -305,7 +305,7 @@ test('translated Code nodes wire their input: predecessor stream + cross-node re
   assert.match(combine, /const \$node: Record<string, any> = \{/)
   assert.match(
     combine,
-    /"Doubler": wrapRef\(toItems\(\(data as any\)\?\.__node_Doubler\)\)/
+    /"Doubler": wrapRef\(toItems\(data\?\.__node_Doubler\)\)/
   )
   assert.match(combine, /const \$ = \(name: string\): any => \$node\[name\]/)
   assert.match(combine, /\$\('Doubler'\)\.all\(\)/)
@@ -1281,5 +1281,31 @@ test('cross-node ref: $(name).first().json.<path> lowers to ref(), not a dropped
     /field: "greeting"[^\n]*template\("at \$0!", \[ref\("config", "apiBase"\)\]\)/
   )
   // nothing dropped
+  assert.doesNotMatch(graph, /TODO\(n8n expr\)/)
+})
+
+test('computed Set node (transform field) → generated function, not editFields', () => {
+  const parsed = parseN8n(loadFixture('computed-set.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['computedSet/computedSet.graph.ts']
+  assert.ok(graph, 'graph emitted')
+
+  // Build has a `$json.a * 1.2` transform → it is functionized, not editFields.
+  assert.doesNotMatch(graph, /build: "graph:editFields"/)
+  assert.match(graph, /build: "codeStubBuild"/)
+  // Use is pure-ref/static → it stays a declarative editFields node.
+  assert.match(graph, /use: "graph:editFields"/)
+  // the downstream ref into Build still resolves by node id + field
+  assert.match(graph, /ref\("build", "total"\)/)
+
+  // Build's function file computes the object with the raw expression, no drop.
+  const fn = files['computedSet/functions/codeStubBuild.function.ts']
+  assert.ok(fn, 'Build function emitted')
+  assert.match(fn, /Ported from n8n Set node "Build"/)
+  assert.match(fn, /"total": \$json\.a \* 1\.2/)
+  assert.match(fn, /"endpoint": "https:\/\/api\.example\.com"/)
+  assert.doesNotMatch(fn, /data as any/)
+
+  // nothing dropped anywhere
   assert.doesNotMatch(graph, /TODO\(n8n expr\)/)
 })

@@ -20,6 +20,7 @@ import {
 } from './naming.js'
 import { normalizeBranch } from './branch.js'
 import { nativeSpecFor } from './native-map.js'
+import { computedSetSource } from './set-translate.js'
 
 /**
  * A workflow whose topology has no Pikku equivalent by design (not a malformed
@@ -306,6 +307,17 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       role = 'native'
     }
 
+    // A Set / Edit Fields node whose assignments include a value the expression
+    // classifier can't lower declaratively (arithmetic, method chains,
+    // `new Date()`, `$env`, …) is emitted as a generated function returning its
+    // computed field object — the same path a Code node takes — rather than a
+    // `graph:editFields` call that would drop the field.
+    let computedSet: string | undefined
+    if (role === 'set') {
+      computedSet = computedSetSource(node.parameters ?? {}) ?? undefined
+      if (computedSet) role = 'code'
+    }
+
     const nodeId = dedupe(sanitizeIdentifier(node.name), seenNodeIds)
     // An agent tool whose service+resource+operation resolves to a per-service
     // addon function (gmailTool → gmail:messageSend) refs that addon rpc
@@ -348,6 +360,7 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       rpcName,
       workflowRef,
       httpAuth,
+      computedSetSource: computedSet,
     })
   }
 
