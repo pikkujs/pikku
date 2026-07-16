@@ -84,7 +84,11 @@ describe('deriveWorkflowPlan', () => {
       } as WorkflowStepMeta,
     ])
     assert.equal(plan.deterministic, false)
-    assert.equal(plan.plannedSteps, undefined, 'loop count is runtime-dependent')
+    assert.equal(
+      plan.plannedSteps,
+      undefined,
+      'loop count is runtime-dependent'
+    )
   })
 
   test('a fanout nested inside a branch still suppresses the plan', () => {
@@ -133,8 +137,42 @@ describe('deriveWorkflowPlan', () => {
       { stepName: 'build' },
       { stepName: '__workflow_suspend:building', displayName: 'Building' },
       { stepName: 'publish' },
-      { stepName: '__workflow_suspend:awaiting_approval', displayName: 'Awaiting approval' },
-      { stepName: '__workflow_suspend:building-image', displayName: 'Building image' },
+      {
+        stepName: '__workflow_suspend:awaiting_approval',
+        displayName: 'Awaiting approval',
+      },
+      {
+        stepName: '__workflow_suspend:building-image',
+        displayName: 'Building image',
+      },
     ])
+  })
+
+  test('approval steps appear in the plan with __workflow_approval: key and sentence-case displayName', () => {
+    const plan = deriveWorkflowPlan([
+      rpc('build'),
+      { type: 'approval', reason: 'awaiting_approval' } as WorkflowStepMeta,
+      rpc('publish'),
+    ])
+    assert.equal(plan.deterministic, true)
+    assert.deepEqual(plan.plannedSteps, [
+      { stepName: 'build' },
+      {
+        stepName: '__workflow_approval:awaiting_approval',
+        displayName: 'Awaiting approval',
+      },
+      { stepName: 'publish' },
+    ])
+  })
+
+  test('an approval is namespaced apart from a suspend sharing its reason', () => {
+    const plan = deriveWorkflowPlan([
+      { type: 'suspend', reason: 'sign_off' } as WorkflowStepMeta,
+      { type: 'approval', reason: 'sign_off' } as WorkflowStepMeta,
+    ])
+    assert.deepEqual(
+      plan.plannedSteps.map((s) => s.stepName),
+      ['__workflow_suspend:sign_off', '__workflow_approval:sign_off']
+    )
   })
 })
