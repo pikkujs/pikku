@@ -1,0 +1,625 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Blueprint (.knowledge/) contract",
+  "description": "One schema per output file, keyed by filename under the `files` map. Every extracted concept carries evidence[] and confidence. Facts (observed in code) and inferences (reconstructed intent) must never be merged silently: confidence expresses how directly the evidence supports the claim.",
+  "$defs": {
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["file"],
+        "properties": {
+          "file": { "type": "string", "description": "repo-relative path" },
+          "lines": { "type": "string", "description": "e.g. '42' or '42-58'" },
+          "note": { "type": "string", "description": "what this location shows" }
+        }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "high = behavior directly observed in code/schema; medium = strong inference from multiple signals; low = plausible guess, needs human confirmation"
+    },
+    "conceptName": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]*$",
+      "description": "PascalCase domain-language name (SendInvoice, InvoicePaid), never a route or filename"
+    }
+  },
+  "files": {
+    "product.json": {
+      "type": "object",
+      "required": ["name", "purpose", "actors", "capabilities", "terminology", "evidence", "confidence"],
+      "properties": {
+        "name": { "type": "string" },
+        "purpose": { "type": "string", "description": "1-3 sentences: what problem, for whom" },
+        "targetUsers": { "type": "array", "items": { "type": "string" } },
+        "actors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "description"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string", "enum": ["human", "system", "external"] },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "capabilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "terminology": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["term", "meaning"],
+            "properties": { "term": { "type": "string" }, "meaning": { "type": "string" } }
+          }
+        },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "domains.json": {
+      "type": "object",
+      "required": ["domains"],
+      "properties": {
+        "domains": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "entities", "commands", "queries", "events", "evidence", "confidence"],
+            "properties": {
+              "name": { "$ref": "#/$defs/conceptName" },
+              "description": { "type": "string" },
+              "entities": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "commands": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "queries": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "events": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "policies": { "type": "array", "items": { "$ref": "#/$defs/conceptName" }, "description": "policy names from policies.json owned by this domain" },
+              "sourcePaths": { "type": "array", "items": { "type": "string" }, "description": "where this domain currently lives (usually scattered)" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "entities.json": {
+      "type": "object",
+      "required": ["entities"],
+      "properties": {
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "domain", "description", "attributes", "evidence", "confidence"],
+            "properties": {
+              "name": { "$ref": "#/$defs/conceptName" },
+              "domain": { "$ref": "#/$defs/conceptName" },
+              "description": { "type": "string" },
+              "attributes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "type"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": "string" },
+                    "required": { "type": "boolean" },
+                    "notes": { "type": "string" }
+                  }
+                }
+              },
+              "relationships": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["kind", "target"],
+                  "properties": {
+                    "kind": { "type": "string", "enum": ["belongs-to", "has-many", "has-one", "references", "many-to-many"] },
+                    "target": { "$ref": "#/$defs/conceptName" },
+                    "description": { "type": "string" }
+                  }
+                }
+              },
+              "states": { "type": "array", "items": { "type": "string" } },
+              "transitions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["from", "to", "trigger"],
+                  "properties": {
+                    "from": { "type": "string" },
+                    "to": { "type": "string" },
+                    "trigger": { "type": "string", "description": "command or event name that causes it" }
+                  }
+                }
+              },
+              "ownership": { "type": "string", "description": "which actor/tenant owns rows of this entity" },
+              "constraints": { "type": "array", "items": { "type": "string" } },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "commands.json": {
+      "type": "object",
+      "required": ["commands"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "domain", "actor", "input", "preconditions", "effects", "eventsProduced", "evidence", "confidence"],
+            "properties": {
+              "name": { "$ref": "#/$defs/conceptName", "description": "imperative VerbNoun: ApproveInvoice" },
+              "domain": { "$ref": "#/$defs/conceptName" },
+              "actor": { "type": "string" },
+              "trigger": { "type": "string", "description": "how it is invoked today (route, job, webhook, cron)" },
+              "input": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "type"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": "string" },
+                    "required": { "type": "boolean" }
+                  }
+                }
+              },
+              "preconditions": { "type": "array", "items": { "type": "string" } },
+              "effects": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "eventsProduced": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "policies": { "type": "array", "items": { "type": "string" }, "description": "policy names from policies.json enforced here" },
+              "currentImplementation": { "type": "array", "items": { "type": "string" }, "description": "file paths implementing it today" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "queries.json": {
+      "type": "object",
+      "required": ["queries"],
+      "properties": {
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "domain", "actor", "description", "returns", "evidence", "confidence"],
+            "properties": {
+              "name": { "$ref": "#/$defs/conceptName", "description": "GetX / ListX / SearchX" },
+              "domain": { "$ref": "#/$defs/conceptName" },
+              "actor": { "type": "string" },
+              "description": { "type": "string" },
+              "input": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "type"],
+                  "properties": { "name": { "type": "string" }, "type": { "type": "string" }, "required": { "type": "boolean" } }
+                }
+              },
+              "returns": { "type": "string" },
+              "scoping": { "type": "string", "description": "tenancy/visibility rule applied (e.g. 'rows owned by caller only')" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "events.json": {
+      "type": "object",
+      "required": ["events"],
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "domain", "description", "producedBy", "evidence", "confidence"],
+            "properties": {
+              "name": { "$ref": "#/$defs/conceptName", "description": "past-tense business fact: InvoicePaid. No technical events (ButtonClicked)." },
+              "domain": { "$ref": "#/$defs/conceptName" },
+              "description": { "type": "string" },
+              "producedBy": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "command/workflow names" },
+              "consumedBy": { "type": "array", "items": { "type": "string" }, "description": "what reacts today (email send, status flip, webhook out)" },
+              "payloadHints": { "type": "array", "items": { "type": "string" } },
+              "explicit": { "type": "boolean", "description": "true if the code emits a real event; false if reconstructed from inline side-effects" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "policies.json": {
+      "type": "object",
+      "required": ["policies"],
+      "properties": {
+        "policies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "rule", "type", "domain", "evidence", "confidence"],
+            "properties": {
+              "name": { "$ref": "#/$defs/conceptName" },
+              "rule": { "type": "string", "description": "plain-language statement: 'Only the invoice owner can send it'" },
+              "type": { "type": "string", "enum": ["authorization", "validation", "state", "business-constraint", "rate-limit"] },
+              "domain": { "$ref": "#/$defs/conceptName" },
+              "enforcedAt": { "type": "array", "items": { "type": "string" }, "description": "every code location enforcing it — multiple locations = divergence risk, note in gaps.json" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "workflows.json": {
+      "type": "object",
+      "required": ["workflows"],
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "actor", "trigger", "steps", "result", "evidence", "confidence"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string", "enum": ["user", "admin", "system"] },
+              "actor": { "type": "string" },
+              "trigger": { "type": "string" },
+              "steps": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "result": { "type": "string" },
+              "commandsInvolved": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "eventsInvolved": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "schedule": { "type": "string", "description": "cron expression for system workflows, if any" },
+              "scenarios": {
+                "type": "array",
+                "description": "concrete use cases, primarily excavated from the test suite (describe/it names, fixtures, assertions). A scenario sourced from a test is high-confidence by definition.",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "outcome"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "given": { "type": "string" },
+                    "when": { "type": "string" },
+                    "outcome": { "type": "string" },
+                    "fromTest": { "type": "string", "description": "test file path + test name, when sourced from a test" }
+                  }
+                }
+              },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "api.json": {
+      "type": "object",
+      "required": ["surfaces"],
+      "properties": {
+        "surfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "path", "auth", "mapsTo", "evidence"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["rest", "graphql", "rpc", "webhook-in", "webhook-out", "page", "cli", "websocket", "sse"] },
+              "method": { "type": "string" },
+              "path": { "type": "string" },
+              "auth": { "type": "string", "description": "none | session | jwt | api-key | signature | capability-url | ..." },
+              "mapsTo": {
+                "type": "object",
+                "required": ["type", "name"],
+                "properties": {
+                  "type": { "type": "string", "enum": ["command", "query", "event-ingress"], "description": "command/query for normal surfaces. event-ingress ONLY for surfaces that relay an external event without a domain command of their own; its name must be an events.json event. A webhook whose handler changes state maps to a command (usual case)." },
+                  "name": { "$ref": "#/$defs/conceptName" }
+                }
+              },
+              "notes": { "type": "string" },
+              "confidence": { "$ref": "#/$defs/confidence" },
+              "evidence": { "$ref": "#/$defs/evidence" }
+            }
+          }
+        }
+      }
+    },
+    "integrations.json": {
+      "type": "object",
+      "required": ["integrations"],
+      "properties": {
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "category", "purpose", "direction", "importance", "replacementDifficulty", "evidence", "confidence"],
+            "properties": {
+              "name": { "type": "string" },
+              "category": { "type": "string", "description": "payments | email | auth | storage | analytics | llm | sms | ..." },
+              "purpose": { "type": "string" },
+              "dataExchanged": { "type": "array", "items": { "type": "string" } },
+              "direction": { "type": "string", "enum": ["outbound", "inbound", "both"] },
+              "importance": { "type": "string", "enum": ["critical", "important", "peripheral"] },
+              "replacementDifficulty": { "type": "string", "enum": ["trivial", "moderate", "hard"] },
+              "configVia": { "type": "array", "items": { "type": "string" }, "description": "env vars / secrets used" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "architecture.json": {
+      "type": "object",
+      "required": ["components", "datastores"],
+      "properties": {
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "responsibility", "evidence"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string", "enum": ["frontend", "api", "worker", "job", "webhook-handler", "cli", "service", "proxy", "other"] },
+              "responsibility": { "type": "string" },
+              "dependsOn": { "type": "array", "items": { "type": "string" } },
+              "runtime": { "type": "string", "description": "how it runs today (process, cron, lambda, ...)" },
+              "confidence": { "$ref": "#/$defs/confidence" },
+              "evidence": { "$ref": "#/$defs/evidence" }
+            }
+          }
+        },
+        "datastores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "evidence"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string" },
+              "usedBy": { "type": "array", "items": { "type": "string" } },
+              "notes": { "type": "string" },
+              "confidence": { "$ref": "#/$defs/confidence" },
+              "evidence": { "$ref": "#/$defs/evidence" }
+            }
+          }
+        },
+        "notes": { "type": "array", "items": { "type": "string" }, "description": "deployment constraints worth preserving (ports, raw-body routes, ordering)" }
+      }
+    },
+    "invariants.json": {
+      "type": "object",
+      "required": ["invariants"],
+      "properties": {
+        "invariants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["statement", "domain", "enforcedBy", "evidence", "confidence"],
+            "properties": {
+              "statement": { "type": "string", "description": "must ALWAYS hold: 'Invoice numbers are sequential per user with no gaps'" },
+              "domain": { "$ref": "#/$defs/conceptName" },
+              "enforcedBy": { "type": "string", "description": "db-constraint | code-guard | convention | nothing (!)" },
+              "atRiskBecause": { "type": "string", "description": "why current enforcement is fragile, if it is" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "gaps.json": {
+      "type": "object",
+      "required": ["gaps"],
+      "properties": {
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["problem", "kind", "impact", "recommendation", "evidence"],
+            "properties": {
+              "problem": { "type": "string" },
+              "kind": { "type": "string", "enum": ["incomplete-feature", "todo", "duplication", "bug", "hack", "dead-code", "unclear-ownership", "architecture", "security", "open-product-decision"] },
+              "impact": { "type": "string" },
+              "recommendation": { "type": "string" },
+              "evidence": { "$ref": "#/$defs/evidence" }
+            }
+          }
+        }
+      }
+    },
+    "migration.json": {
+      "type": "object",
+      "required": ["mappings", "decisionsNeeded"],
+      "properties": {
+        "mappings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["current", "future", "recommendation"],
+            "properties": {
+              "current": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "file paths in the existing repo" },
+              "future": {
+                "type": "object",
+                "required": ["domain"],
+                "properties": {
+                  "domain": { "$ref": "#/$defs/conceptName" },
+                  "concepts": { "type": "array", "items": { "type": "string" }, "description": "commands/queries/events/entities this code becomes" }
+                }
+              },
+              "recommendation": { "type": "string" }
+            }
+          }
+        },
+        "dropped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "reason"],
+            "properties": { "path": { "type": "string", "description": "file path; for sub-file drops use 'path (symbolName)' when part of a file survives" }, "reason": { "type": "string" } }
+          }
+        },
+        "decisionsNeeded": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["question"],
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "blockedConcepts": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "interfaces.json": {
+      "x-optional": true,
+      "type": "object",
+      "description": "Every way the product is CONSUMED, one entry per channel. The web UI is one channel (detailed further in frontend*.json); CLI, MCP server (for AI agents), OpenAPI/REST, generated SDK, realtime, and webhooks are others. Answers 'who can drive this product and how'.",
+      "required": ["interfaces"],
+      "properties": {
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "audience", "purpose", "evidence", "confidence"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string", "enum": ["web-ui", "cli", "mcp", "openapi-rest", "graphql", "sdk", "websocket-realtime", "webhook-in", "webhook-out", "email", "other"] },
+              "audience": { "type": "string", "enum": ["human", "developer", "ai-agent", "external-system", "internal"] },
+              "purpose": { "type": "string" },
+              "surfaceCount": { "type": "number", "description": "how many ops/tools/commands/routes this channel exposes" },
+              "generated": { "type": "boolean", "description": "true if generated from another source (OpenAPI from routes, typed SDK, MCP tools from funcs) rather than hand-written" },
+              "domainsServed": { "type": "array", "items": { "$ref": "#/$defs/conceptName" } },
+              "status": { "type": "string", "enum": ["complete", "partial", "stub", "deprecated"] },
+              "notes": { "type": "string" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "frontend.json": {
+      "x-optional": true,
+      "type": "object",
+      "description": "Web-UI app-level shape. Names the framework/router/styling/data/auth so the rebuild can weigh their tradeoffs (e.g. TanStack Start + better-auth + Mantine).",
+      "required": ["framework", "styling", "dataLayer", "auth", "evidence", "confidence"],
+      "properties": {
+        "framework": { "type": "string", "description": "e.g. TanStack Start, Next.js, Remix, Vite SPA" },
+        "rendering": { "type": "string", "enum": ["spa", "ssr", "ssg", "streaming-ssr", "mixed"] },
+        "router": { "type": "string", "description": "e.g. TanStack Router (file-based), React Router" },
+        "styling": { "type": "string", "description": "the design system, e.g. Mantine, Tailwind, MUI, CSS modules" },
+        "designSystemConsistency": { "type": "string", "enum": ["single-system", "mostly-consistent", "mixed", "ad-hoc"], "description": "how uniformly ONE component/theme system is used — the rebuild target is 'everything Mantine', so divergence is porting work" },
+        "designFindings": {
+          "type": "array",
+          "description": "Concrete broken/inconsistent design patterns observed across the UI. Each is a specific, cited observation of a consistency defect — not a taste opinion. These become the design recommendations in the second-opinion report.",
+          "items": {
+            "type": "object",
+            "required": ["pattern", "observation", "recommendation", "evidence"],
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "enum": [
+                  "interaction-inconsistency",
+                  "theming-not-tokenized",
+                  "cross-page-inconsistency",
+                  "component-duplication",
+                  "spacing-typography-scale",
+                  "design-system-bypass",
+                  "accessibility",
+                  "responsive",
+                  "other"
+                ],
+                "description": "interaction-inconsistency = same job done different ways (modal here, drawer there; inconsistent confirm dialogs). theming-not-tokenized = hardcoded colors/spacing/fonts instead of theme tokens/variables. cross-page-inconsistency = the same element (button/header/card) styled differently across pages. component-duplication = several near-identical components for one purpose. spacing-typography-scale = ad-hoc magic numbers off any scale. design-system-bypass = raw HTML/CSS where a design-system component exists. accessibility / responsive = a11y or breakpoint defects."
+              },
+              "observation": { "type": "string", "description": "what is inconsistent, with concrete examples (e.g. 'Add-site uses a Drawer, Edit-site uses a Modal for the same task')" },
+              "impact": { "type": "string", "description": "what it does to the user (feels unpolished/confusing) or to maintenance (a color change means hunting every file)" },
+              "recommendation": { "type": "string", "description": "the fix — usually standardize on one pattern, move values to theme tokens, or extract one shared component" },
+              "severity": { "type": "string", "enum": ["minor", "worth-fixing", "serious"] },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        },
+        "stateManagement": { "type": "string" },
+        "dataLayer": { "type": "string", "description": "how the UI talks to the backend: e.g. pikku-react-query, REST fetch helpers, tRPC, GraphQL client" },
+        "auth": { "type": "string", "description": "client auth mechanism: e.g. better-auth, next-auth, custom JWT" },
+        "buildTool": { "type": "string" },
+        "i18n": { "type": "string", "description": "internationalization approach, or 'none'" },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "frontend-routes.json": {
+      "x-optional": true,
+      "type": "object",
+      "description": "The page/route tree — what a user can navigate to and do, mapped back to the data (queries/commands) each route uses and the components it renders.",
+      "required": ["routes"],
+      "properties": {
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "purpose", "evidence"],
+            "properties": {
+              "path": { "type": "string", "description": "URL path, e.g. /app/sites/:id" },
+              "kind": { "type": "string", "enum": ["page", "layout", "index", "modal-or-drawer", "redirect"] },
+              "purpose": { "type": "string", "description": "what the user does/sees here, in product terms" },
+              "auth": { "type": "string", "description": "none | authenticated | admin | role:xyz" },
+              "dataFrom": { "type": "array", "items": { "type": "string" }, "description": "query/command names (from queries.json/commands.json) this route reads/calls" },
+              "usesComponents": { "type": "array", "items": { "type": "string" }, "description": "component names from frontend-components.json" },
+              "userFlows": { "type": "array", "items": { "type": "string" }, "description": "workflows.json (kind=user) names this route participates in" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    },
+    "frontend-components.json": {
+      "x-optional": true,
+      "type": "object",
+      "description": "Component inventory. The load-bearing field is `rebuild`: it separates components that are trivially rebuildable in the target design system (Mantine) from those carrying bespoke logic that must be carefully PORTED (custom charts, complex tables, canvas, drag/drop). That split is the frontend's real migration cost.",
+      "required": ["components"],
+      "properties": {
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "role", "rebuild", "evidence", "confidence"],
+            "properties": {
+              "name": { "type": "string" },
+              "role": { "type": "string", "enum": ["layout", "navigation", "presentational", "feature", "form", "data-display", "chart", "table", "overlay", "provider", "other"] },
+              "purpose": { "type": "string" },
+              "reuse": { "type": "string", "enum": ["shared", "one-off"], "description": "used across features vs single-use" },
+              "rebuild": {
+                "type": "string",
+                "enum": ["mantine-standard", "mantine-composition", "custom-style", "custom-logic"],
+                "description": "mantine-standard = maps 1:1 to a Mantine component (trivial); mantine-composition = built from Mantine primitives (straightforward); custom-style = diverges visually from the design system (normalize to Mantine); custom-logic = bespoke behavior (chart/table/canvas/drag/editor) that must be PORTED, not re-skinned"
+              },
+              "customLogic": { "type": "string", "description": "REQUIRED when rebuild=custom-logic: what the bespoke behavior is and why a stock component can't replace it" },
+              "dependencies": { "type": "array", "items": { "type": "string" }, "description": "notable libs it pulls in (charting/table/editor) — replacement considerations for the port" },
+              "usedBy": { "type": "array", "items": { "type": "string" }, "description": "routes/components that use it" },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "confidence": { "$ref": "#/$defs/confidence" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
