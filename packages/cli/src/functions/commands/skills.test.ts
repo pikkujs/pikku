@@ -1,9 +1,11 @@
 import assert from 'node:assert'
 import { existsSync } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, test } from 'node:test'
+import { afterEach, describe, test } from 'node:test'
+import { pikkuSkillsInstall } from './skills.js'
 
 const skillsDir = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -164,5 +166,149 @@ describe('bundled skills corpus', () => {
         }
       }
     }
+  })
+})
+
+const logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+}
+
+async function skillsWithGroup(group: string): Promise<string[]> {
+  const matching: string[] = []
+  for (const skill of await readSkills()) {
+    const raw = field(skill.frontmatter, 'installGroups')
+    if (!raw) continue
+    const groups = raw
+      .replace(/^\[|\]$/g, '')
+      .split(',')
+      .map((g) => g.trim().replace(/^['"]|['"]$/g, ''))
+    if (groups.includes(group)) matching.push(skill.name)
+  }
+  return matching.sort()
+}
+
+async function installed(root: string, agent = 'claude'): Promise<string[]> {
+  const dir = join(
+    root,
+    agent === 'opencode' ? '.opencode' : '.claude',
+    'skills'
+  )
+  if (!existsSync(dir)) return []
+  return (await readdir(dir, { withFileTypes: true }))
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort()
+}
+
+describe('pikku skills install', () => {
+  const cwd = process.cwd()
+  const temps: string[] = []
+
+  afterEach(async () => {
+    process.chdir(cwd)
+    process.exitCode = undefined
+    for (const dir of temps.splice(0)) {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  async function inTemp(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-skills-install-'))
+    temps.push(dir)
+    process.chdir(dir)
+    return dir
+  }
+
+  const run = (data: Record<string, unknown>) =>
+    (pikkuSkillsInstall as any).func({ logger }, data)
+
+  test('--only installs exactly the named skills', async () => {
+    const dir = await inTemp()
+    await run({ only: 'software-archaeology,product-second-opinion' })
+    assert.deepEqual(await installed(dir), [
+      'product-second-opinion',
+      'software-archaeology',
+    ])
+    assert.equal(process.exitCode, undefined)
+  })
+
+  test('--only copies the whole skill directory, not just SKILL.md', async () => {
+    const dir = await inTemp()
+    await run({ only: 'software-archaeology' })
+    const root = join(dir, '.claude', 'skills', 'software-archaeology')
+    for (const file of [
+      'SKILL.md',
+      join('references', 'blueprint.schema.json'),
+      join('scripts', 'validate.mjs'),
+    ]) {
+      assert.ok(existsSync(join(root, file)), `missing ${file} after install`)
+    }
+  })
+
+  test('--only with an unknown skill errors and installs nothing', async () => {
+    const dir = await inTemp()
+    await run({ only: 'software-archaeology,definitely-not-a-skill' })
+    assert.equal(process.exitCode, 1)
+    assert.deepEqual(await installed(dir), [])
+  })
+
+  test('an unsupported agent errors and installs nothing', async () => {
+    const dir = await inTemp()
+    await run({ agent: 'emacs', only: 'software-archaeology' })
+    assert.equal(process.exitCode, 1)
+    assert.deepEqual(await installed(dir), [])
+  })
+
+  test('--agent opencode installs into .opencode/skills', async () => {
+    const dir = await inTemp()
+    await run({ agent: 'opencode', only: 'software-archaeology' })
+    assert.deepEqual(await installed(dir, 'opencode'), ['software-archaeology'])
+    assert.deepEqual(await installed(dir, 'claude'), [])
+  })
+
+  test('--core installs the core-tagged skills, not the whole corpus', async () => {
+    const dir = await inTemp()
+    await run({ core: true })
+
+    const core = await skillsWithGroup('core')
+    const all = (await readSkills()).map((s) => s.name)
+    assert.deepEqual(await installed(dir), core)
+    assert.ok(
+      core.length < all.length,
+      'expected --core to be a strict subset; if every skill were core-tagged ' +
+        'this assertion could not distinguish the group filter from the ' +
+        'install-everything fallback'
+    )
+  })
+
+  test('a second install skips existing skills unless --update is passed', async () => {
+    const dir = await inTemp()
+    await run({ only: 'software-archaeology' })
+
+    const skillMd = join(
+      dir,
+      '.claude',
+      'skills',
+      'software-archaeology',
+      'SKILL.md'
+    )
+    await writeFile(skillMd, 'locally edited', 'utf-8')
+
+    await run({ only: 'software-archaeology' })
+    assert.equal(
+      await readFile(skillMd, 'utf-8'),
+      'locally edited',
+      'install without --update must not clobber an existing skill'
+    )
+
+    await run({ only: 'software-archaeology', update: true })
+    assert.notEqual(
+      await readFile(skillMd, 'utf-8'),
+      'locally edited',
+      '--update must overwrite an existing skill'
+    )
   })
 })
