@@ -1,18 +1,18 @@
-# product-second-opinion
+# pikku-product-second-opinion
 
-Turns a `software-archaeology` blueprint into a **plain-language report for a
+Turns a `pikku-software-archaeology` blueprint into a **plain-language report for a
 non-technical owner** — a founder/PM stuck with an app they didn't build.
 Explains how it works and how it could be better, in business terms.
 
 ```
-Existing repo → software-archaeology → .knowledge/ blueprint → product-second-opinion → founder report
+Existing repo → pikku-software-archaeology → .knowledge/ blueprint → pikku-product-second-opinion → founder report
    (facts)              (extract)          (machine-readable)         (translate + advise)   (markdown + web page)
 ```
 
-## The split from software-archaeology
+## The split from pikku-software-archaeology
 
-- **software-archaeology** extracts *facts* into `.knowledge/` for a machine (Pikku) to rebuild from. Engineer/generator audience.
-- **product-second-opinion** reads that blueprint and writes an *opinionated report* for a human to decide from. Non-technical audience.
+- **pikku-software-archaeology** extracts *facts* into `.knowledge/` for a machine (Pikku) to rebuild from. Engineer/generator audience.
+- **pikku-product-second-opinion** reads that blueprint and writes an *opinionated report* for a human to decide from. Non-technical audience.
 
 One extracts; one advises. This skill consumes the other's output — it doesn't re-read the code.
 
@@ -35,7 +35,7 @@ One extracts; one advises. This skill consumes the other's output — it doesn't
 ## Files
 
 ```
-product-second-opinion/
+pikku-product-second-opinion/
 ├── SKILL.md                      # method + voice rules + red flags
 ├── README.md                     # this file
 ├── references/report-template.md # the layered structure to fill in

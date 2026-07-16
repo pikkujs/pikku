@@ -1,6 +1,6 @@
 ---
-name: product-second-opinion
-description: 'Use when a non-technical owner (founder, PM, operator) wants a plain-language report on an app they hold but did not build — explaining how it works and how it could be better. Reads the .knowledge/ blueprint from software-archaeology and produces a layered, jargon-free report that credits what works, names what does not (with business impact + effort), and argues an opinionated better design. TRIGGER: "explain how my app works", "what would you do differently", "review my app for a non-technical audience", "I inherited/am stuck with an agency-built app", "is this built well?". DO NOT TRIGGER for: extracting the machine-readable blueprint itself (use software-archaeology), or an engineer-facing technical code review.'
+name: pikku-product-second-opinion
+description: 'Use when a non-technical owner (founder, PM, operator) wants a plain-language report on an app they hold but did not build — explaining how it works and how it could be better. Reads the .knowledge/ blueprint from pikku-software-archaeology and produces a layered, jargon-free report that credits what works, names what does not (with business impact + effort), and argues an opinionated better design. TRIGGER: "explain how my app works", "what would you do differently", "review my app for a non-technical audience", "I inherited/am stuck with an agency-built app", "is this built well?". DO NOT TRIGGER for: extracting the machine-readable blueprint itself (use pikku-software-archaeology), or an engineer-facing technical code review.'
 installGroups: [fabric]
 ---
 
@@ -12,7 +12,7 @@ Turn an extracted product blueprint into a **report a non-technical owner can ac
 
 The reader is a founder/PM/operator, not an engineer. If they finish a section and don't know what it means for their business or what to do about it, the report failed — no matter how correct it is.
 
-**REQUIRED INPUT:** the `.knowledge/` blueprint produced by **software-archaeology**. If none exists, run that skill first — this one consumes its output (`product.json`, `domains.json`, `workflows.json`, `gaps.json`, `invariants.json`, `migration.json`, and any `parity-*.md`), it does not re-derive facts from the code. When the optional consumer-surface files are present (`interfaces.json`, `frontend.json`, `frontend-routes.json`, `frontend-components.json`), cover them too — see "The frontend and the other ways your app is used" and "Technology choices" below.
+**REQUIRED INPUT:** the `.knowledge/` blueprint produced by **pikku-software-archaeology**. If none exists, run that skill first — this one consumes its output (`product.json`, `domains.json`, `workflows.json`, `gaps.json`, `invariants.json`, `migration.json`, and any `parity-*.md`), it does not re-derive facts from the code. When the optional consumer-surface files are present (`interfaces.json`, `frontend.json`, `frontend-routes.json`, `frontend-components.json`), cover them too — see "The frontend and the other ways your app is used" and "Technology choices" below.
 
 ## The cardinal rule: translate, don't dump
 
@@ -134,6 +134,6 @@ Produce **both**:
 | A design point with no "why it matters" | Taste, not advice. Tie every design finding to user perception (polish/trust) or maintenance cost (change-once vs hunt-everywhere), plus effort. |
 | Reads like a code review | Wrong audience. Would a founder know what to *do* after this paragraph? |
 
-## Relationship to software-archaeology
+## Relationship to pikku-software-archaeology
 
-`software-archaeology` = facts → `.knowledge/` blueprint, for a machine to rebuild from. **This skill** = blueprint → opinionated report, for a human to decide from. One extracts; one advises. Run archaeology first (or point this skill at an existing `.knowledge/`), then translate its `gaps.json` + `invariants.json` + `migration.json` into the business-language report above.
+`pikku-software-archaeology` = facts → `.knowledge/` blueprint, for a machine to rebuild from. **This skill** = blueprint → opinionated report, for a human to decide from. One extracts; one advises. Run archaeology first (or point this skill at an existing `.knowledge/`), then translate its `gaps.json` + `invariants.json` + `migration.json` into the business-language report above.

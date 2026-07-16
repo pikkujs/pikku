@@ -27,8 +27,8 @@ const FABRIC_SKILLS = [
   'pikku-deploy-cloudflare',
   'pikku-fabric',
   'pikku-schema-cfworker',
-  'product-second-opinion',
-  'software-archaeology',
+  'pikku-product-second-opinion',
+  'pikku-software-archaeology',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
@@ -259,18 +259,20 @@ describe('pikku skills install', () => {
 
   test('--only installs exactly the named skills', async () => {
     const dir = await inTemp()
-    await run({ only: 'software-archaeology,product-second-opinion' })
+    await run({
+      only: 'pikku-software-archaeology,pikku-product-second-opinion',
+    })
     assert.deepEqual(await installed(dir), [
-      'product-second-opinion',
-      'software-archaeology',
+      'pikku-product-second-opinion',
+      'pikku-software-archaeology',
     ])
     assert.equal(process.exitCode, undefined)
   })
 
   test('--only copies the whole skill directory, not just SKILL.md', async () => {
     const dir = await inTemp()
-    await run({ only: 'software-archaeology' })
-    const root = join(dir, '.claude', 'skills', 'software-archaeology')
+    await run({ only: 'pikku-software-archaeology' })
+    const root = join(dir, '.claude', 'skills', 'pikku-software-archaeology')
     for (const file of [
       'SKILL.md',
       join('references', 'blueprint.schema.json'),
@@ -282,22 +284,24 @@ describe('pikku skills install', () => {
 
   test('--only with an unknown skill errors and installs nothing', async () => {
     const dir = await inTemp()
-    await run({ only: 'software-archaeology,definitely-not-a-skill' })
+    await run({ only: 'pikku-software-archaeology,definitely-not-a-skill' })
     assert.equal(process.exitCode, 1)
     assert.deepEqual(await installed(dir), [])
   })
 
   test('an unsupported agent errors and installs nothing', async () => {
     const dir = await inTemp()
-    await run({ agent: 'emacs', only: 'software-archaeology' })
+    await run({ agent: 'emacs', only: 'pikku-software-archaeology' })
     assert.equal(process.exitCode, 1)
     assert.deepEqual(await installed(dir), [])
   })
 
   test('--agent opencode installs into .opencode/skills', async () => {
     const dir = await inTemp()
-    await run({ agent: 'opencode', only: 'software-archaeology' })
-    assert.deepEqual(await installed(dir, 'opencode'), ['software-archaeology'])
+    await run({ agent: 'opencode', only: 'pikku-software-archaeology' })
+    assert.deepEqual(await installed(dir, 'opencode'), [
+      'pikku-software-archaeology',
+    ])
     assert.deepEqual(await installed(dir, 'claude'), [])
   })
 
@@ -344,25 +348,25 @@ describe('pikku skills install', () => {
 
   test('a second install skips existing skills unless --update is passed', async () => {
     const dir = await inTemp()
-    await run({ only: 'software-archaeology' })
+    await run({ only: 'pikku-software-archaeology' })
 
     const skillMd = join(
       dir,
       '.claude',
       'skills',
-      'software-archaeology',
+      'pikku-software-archaeology',
       'SKILL.md'
     )
     await writeFile(skillMd, 'locally edited', 'utf-8')
 
-    await run({ only: 'software-archaeology' })
+    await run({ only: 'pikku-software-archaeology' })
     assert.equal(
       await readFile(skillMd, 'utf-8'),
       'locally edited',
       'install without --update must not clobber an existing skill'
     )
 
-    await run({ only: 'software-archaeology', update: true })
+    await run({ only: 'pikku-software-archaeology', update: true })
     assert.notEqual(
       await readFile(skillMd, 'utf-8'),
       'locally edited',

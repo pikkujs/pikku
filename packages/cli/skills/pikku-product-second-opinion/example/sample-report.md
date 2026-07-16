@@ -1,9 +1,9 @@
 # Your app, in plain English — and where it could get better
 *A second opinion on the competitor-tracking system*
 
-> Worked example for the product-second-opinion skill. Shows the voice and the
+> Worked example for the pikku-product-second-opinion skill. Shows the voice and the
 > layered structure on one real area (competitor tracking), drawn from a
-> software-archaeology blueprint + parity report. A full report would repeat
+> pikku-software-archaeology blueprint + parity report. A full report would repeat
 > Part 2 for each major area.
 
 **How to read this:** no technical background needed. I'll explain what you have,
