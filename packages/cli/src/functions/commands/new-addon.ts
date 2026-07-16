@@ -404,8 +404,6 @@ export class ${pascalName}Service {
   private oauth: OAuth2Client
 
   constructor(secrets: TypedSecretService) {
-    // Config comes from wireCredential in ${name}.credential.ts via codegen —
-    // never redeclare it here, or the two silently drift (#950).
     const oauth2 = CREDENTIAL_OAUTH2_CONFIGS['${camelName}']
     this.oauth = new OAuth2Client(
       oauth2,

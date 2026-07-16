@@ -52,9 +52,6 @@ export const serializeCredentialsTypes = ({
     ]
     if (meta.oauth2) {
       metaParts.push(`oauth2: true`)
-      // Emit the whole declared config, not just the flag: generated addon
-      // services import this instead of hand-rolling a duplicate const that
-      // silently drifts from wireCredential (#950).
       const config = JSON.stringify(meta.oauth2, null, 2).replace(/\n/g, '\n  ')
       oauth2Entries.push(`  '${name}': ${config}`)
     }
