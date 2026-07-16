@@ -51,10 +51,10 @@ const secrets = new RedisSecretService(
   config: { kekSecret: string; salt: string }
 )
 
-await secrets.getSecret(key: string): Promise<string>
-await secrets.getSecretJSON<R>(key: string): Promise<R>
+await secrets.getSecret<T = string>(key: string): Promise<T>
+await secrets.getSecrets<T>(keys: (keyof T & string)[]): Promise<Partial<T>>
 await secrets.hasSecret(key: string): Promise<boolean>
-await secrets.setSecretJSON(key: string, value: unknown): Promise<void>
+await secrets.setSecret(key: string, value: unknown): Promise<void>
 await secrets.deleteSecret(key: string): Promise<void>
 await secrets.rotateKEK(): Promise<number>
 await secrets.close(): Promise<void>

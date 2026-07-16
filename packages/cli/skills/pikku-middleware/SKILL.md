@@ -13,7 +13,7 @@ installGroups: [core]
 1. Discover before editing. Run `pikku info middleware --verbose` and `pikku info tags --json` to understand the existing middleware and tag landscape.
 2. Identify the source files that own the behavior — wirings files, not generated output.
 3. Register middleware at module load time — in a `wirings/*.ts` file, never inside a function body.
-4. Validate: run `pikku all` after adding or changing middleware; run `pikku tsc` to confirm type safety.
+4. Validate: run `pikku all --tsc` after adding or changing middleware — it regenerates and then confirms type safety in one pass.
 
 ## The `pikkuMiddleware` Factory
 
@@ -221,6 +221,6 @@ export const myFunc = pikkuSessionlessFunc({
 ## After Changes
 
 ```bash
-pikku all        # regenerate metadata so new tags are picked up
-pikku tsc        # type-check
+pikku all              # regenerate metadata so new tags are picked up
+pikku all --tsc        # regenerate, then type-check (fails on type errors)
 ```

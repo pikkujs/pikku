@@ -12,7 +12,7 @@ installGroups: [core]
 
 1. Discover before editing. Run `pikku info middleware --verbose` and `pikku info functions --verbose` to understand existing auth setup.
 2. Auth strategies live in wirings files — do not put `addHTTPMiddleware` calls inside function bodies.
-3. Validate with `pikku tsc` after changes; run `pikku all` if wirings changed.
+3. Validate with `pikku all --tsc` after changes — it regenerates and then type-checks in one pass, and fails on type errors. Use `--tsc-summary` for a compact one-line-per-error report.
 
 For **middleware** (including tag middleware and service-to-service bearer auth) see `pikku-middleware`.
 For **permissions** (pikkuPermission, pikkuAuth, per-function authorization) see `pikku-permissions`.

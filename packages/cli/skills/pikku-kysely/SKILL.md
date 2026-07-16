@@ -156,8 +156,8 @@ const secrets = new PgKyselySecretService(db.kysely, {
 })
 await secrets.init()
 
-await secrets.setSecretJSON('api-key', { key: 'sk-...' })
-const value = await secrets.getSecretJSON<{ key: string }>('api-key')
+await secrets.setSecret('api-key', { key: 'sk-...' })
+const value = await secrets.getSecret<{ key: string }>('api-key')
 await secrets.rotateKEK() // Re-encrypt all secrets with new KEK
 ```
 

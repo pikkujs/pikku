@@ -128,7 +128,7 @@ in-app features don't.
 - **Secrets and env-vars: NEVER `process.env`.** Declare them with
   `wireSecret` (sensitive) or `wireVariable` (non-sensitive) — both with a
   zod schema for type-safe access. Read with
-  `services.secrets.getSecretJSON('NAME')` or `services.variables.get('NAME')`.
+  `services.secrets.getSecret('NAME')` or `services.variables.get('NAME')`.
   See the **pikku-config** skill for the full pattern (including
   OAuth2 credentials). This applies even in `config.ts` and singleton
   service factories.

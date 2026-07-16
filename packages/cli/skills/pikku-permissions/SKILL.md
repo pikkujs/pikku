@@ -39,7 +39,7 @@ export const deleteBook = pikkuFunc({
 1. Discover before editing. Run `pikku info permissions --verbose` and `pikku info functions --verbose` to understand what permissions are already defined and applied.
 2. Define permission checkers in a `src/permissions.ts` or domain-specific `src/lib/*-permissions.ts` file.
 3. Apply them via the `permissions` field on the function, or via `addHTTPPermission` / `addPermission` for pattern/tag-based application.
-4. Validate: run `pikku tsc` to confirm permission checker signatures are correct.
+4. Validate: run `pikku all --tsc` to confirm permission checker signatures are correct.
 
 ## Permission Factories
 
@@ -160,6 +160,6 @@ export const deleteOrg = pikkuFunc({
 ## After Changes
 
 ```bash
-pikku tsc        # verify permission checker types are correct
-pikku all        # regenerate if wirings changed
+pikku all              # regenerate if wirings changed
+pikku all --tsc        # regenerate, then verify permission checker types (fails on type errors)
 ```

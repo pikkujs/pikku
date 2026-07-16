@@ -21,9 +21,10 @@ installGroups: [core]
    `SecuritySeverity` / `SecurityUpdateLevel`) are exported from **@pikku/core**.
    The CLI writes it, the addon reads it, the UI renders it — never redeclare
    the type at a call site.
-3. Validate with `pikku tsc` after changes; the command never fails a build
-   (advisories are informational; a missing/failed audit yields an
-   empty-but-valid report).
+3. Validate with `pikku all --tsc` after changes — it type-checks and **fails on
+   type errors**, like any real build gate. Separately, `pikku audit` never fails
+   a build: advisories are informational, and a missing/failed audit yields an
+   empty-but-valid report.
 
 ## The `pikku audit` command
 
