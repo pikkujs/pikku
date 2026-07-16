@@ -8,7 +8,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["file"],
+        "required": ["file", "lines"],
         "properties": {
           "file": { "type": "string", "description": "repo-relative path" },
           "lines": { "type": "string", "description": "e.g. '42' or '42-58'" },

@@ -10,7 +10,7 @@ This is **not** a code indexer or doc generator. It extracts *intent over implem
 
 ## Design decision: the AI is the parser
 
-There is deliberately **no scanner/AST tooling** in this skill. Static extraction is brittle and per-language (the first prototype's regex scanner broke before it ran once); the analyzing model already reads every language — JS, TS, Ruby, Python, PHP, Go — follows indirection, and understands intent. Determinism lives in the **output contract** instead: fixed file names, schema-validated shapes, sorted arrays, and stable concept names, all enforced by a dumb JSON validator (`scripts/validate.mjs`). The audit is expensive; that's the trade we chose.
+There is deliberately **no scanner/AST tooling** in this skill. Static extraction is brittle and per-language (the first prototype's regex scanner broke before it ran once); the analyzing model already reads every language — JS, TS, Ruby, Python, PHP, Go — follows indirection, and understands intent. Determinism lives in the **output contract** instead: fixed file names, schema-validated shapes, sorted unordered collections (sequence-bearing arrays keep their observed order), and stable concept names, all enforced by a dumb JSON validator (`scripts/validate.mjs`). The audit is expensive; that's the trade we chose.
 
 ## How to run it
 
@@ -33,7 +33,7 @@ Output lands in `<repo>/.knowledge/` — 14 core JSON files + `blueprint.md` (se
 
 ### Incremental re-analysis
 
-Concept names are the stable IDs. On re-run after code changes, re-extract only the affected lens/domain, diff against the existing `.knowledge/`, and leave unrelated entries verbatim. Arrays are sorted so diffs stay reviewable.
+Concept names are the stable IDs. On re-run after code changes, re-extract only the affected lens/domain, diff against the existing `.knowledge/`, and leave unrelated entries verbatim. Unordered collections are sorted so diffs stay reviewable; sequence-bearing arrays stay in observed order.
 
 ## How Pikku consumes the blueprint
 
