@@ -3,6 +3,23 @@ export { buildTopology } from './topology.js'
 export { classifyExpression } from './expressions.js'
 export { generateWorkflowFromN8n } from './codegen.js'
 
+/**
+ * Naming helpers. Engine-agnostic — a second importer that normalizes onto this
+ * IR needs the identical identifier/rpc-name rules, so both can emit into one
+ * project without colliding. First piece of the shared core; see
+ * `@pikku/make-import`.
+ */
+export {
+  sanitizeIdentifier,
+  sanitizeDisplayName,
+  dedupe,
+  integrationRpcName,
+  codeRpcName,
+  toCamelCase,
+  toPascalCase,
+  toKebabCase,
+} from './naming.js'
+
 export type {
   N8nWorkflow,
   N8nNode,
