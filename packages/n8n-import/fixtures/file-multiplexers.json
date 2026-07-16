@@ -55,6 +55,13 @@
       "typeVersion": 1,
       "parameters": { "mode": "binaryToJson", "binaryPropertyName": "data" },
       "position": [1400, 0]
+    },
+    {
+      "name": "MakeBinary",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "toBinary" },
+      "position": [1600, 0]
     }
   ],
   "connections": {
@@ -64,6 +71,7 @@
     "ParseSheet": { "main": [[{ "node": "ParseText", "type": "main", "index": 0 }]] },
     "ParseText": { "main": [[{ "node": "MakeSheet", "type": "main", "index": 0 }]] },
     "MakeSheet": { "main": [[{ "node": "MakeText", "type": "main", "index": 0 }]] },
-    "MakeText": { "main": [[{ "node": "MoveData", "type": "main", "index": 0 }]] }
+    "MakeText": { "main": [[{ "node": "MoveData", "type": "main", "index": 0 }]] },
+    "MoveData": { "main": [[{ "node": "MakeBinary", "type": "main", "index": 0 }]] }
   }
 }

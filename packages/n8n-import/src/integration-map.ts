@@ -1166,8 +1166,8 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
     },
   },
   // n8n convertToFile — produces a file from item data. The spreadsheet output
-  // (xlsx) maps to spreadsheet:jsonToXlsx; the dep-free toText/toJson ops go to
-  // @pikku/addon-binary. `toBinary` (a straight base64 passthrough) stays a stub.
+  // (xlsx) maps to spreadsheet:jsonToXlsx; the dep-free toText/toJson/toBinary
+  // ops go to @pikku/addon-binary.
   converttofile: {
     defaultResource: 'default',
     resources: {
@@ -1177,6 +1177,15 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
           xlsx: {
             rpc: 'spreadsheet:jsonToXlsx',
             fields: { data: { fromPredecessor: true } },
+          },
+          // toBinary writes the item's JSON into a binary property — the same
+          // JSON→binary shuttle as moveBinaryData's jsonToBinary mode.
+          toBinary: {
+            rpc: 'binary:moveBinaryData',
+            fields: {
+              mode: { default: 'jsonToBinary', asConst: true },
+              data: { fromPredecessor: true },
+            },
           },
           toText: {
             rpc: 'binary:toTextFile',

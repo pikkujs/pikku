@@ -887,6 +887,15 @@ test('extractFromFile / convertToFile multiplex to the right parse addon by file
   assert.match(graph, /moveData: "binary:moveBinaryData"/)
   assert.match(graph, /mode: "binaryToJson"/)
   assert.match(graph, /base64: ref\("makeText", "data"\)/)
+
+  // convertToFile toBinary (JSON item → binary property) → binary:moveBinaryData
+  // in jsonToBinary mode, fed the whole predecessor item — no stub.
+  assert.match(graph, /makeBinary: "binary:moveBinaryData"/)
+  assert.match(graph, /mode: "jsonToBinary"/)
+  assert.ok(
+    !files['fileMultiplexers/functions/convertToFile__makeBinary.function.ts'],
+    'toBinary convert no longer leaves a stub'
+  )
 })
 
 test('cron/interval are triggers; terminal respondToWebhook is dropped', () => {
