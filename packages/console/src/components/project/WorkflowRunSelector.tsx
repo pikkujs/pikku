@@ -135,6 +135,7 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
               data={[
                 { value: 'all', label: asI18n('All') },
                 { value: 'running', label: asI18n('Running') },
+                { value: 'suspended', label: asI18n('Suspended') },
                 { value: 'completed', label: asI18n('Completed') },
                 { value: 'failed', label: asI18n('Failed') },
               ]}

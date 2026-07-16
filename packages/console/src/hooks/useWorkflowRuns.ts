@@ -8,7 +8,12 @@ export interface WorkflowRunData {
   status: string
   input?: unknown
   output?: Record<string, unknown>
-  error?: { message: string }
+  /**
+   * A suspended run also carries an `error` — core stores the suspend reason in
+   * this field with `code: 'WORKFLOW_SUSPENDED'` or `'RPC_NOT_FOUND'`. Read
+   * `code` before presenting this as a failure; see {@link isSuspendReason}.
+   */
+  error?: { message: string; code?: string }
   startedAt?: string
   completedAt?: string
   graphHash?: string
