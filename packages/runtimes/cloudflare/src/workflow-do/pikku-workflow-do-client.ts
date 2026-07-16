@@ -147,6 +147,14 @@ export class PikkuWorkflowDoClient implements WorkflowService {
     return Promise.reject(notSupported('resumeWorkflow'))
   }
 
+  approveStep(
+    _runId: string,
+    _reason: string,
+    _decision: unknown
+  ): Promise<void> {
+    return Promise.reject(notSupported('approveStep'))
+  }
+
   async runToCompletion<I>(
     _name: string,
     _input: I,
