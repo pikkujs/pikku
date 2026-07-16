@@ -1,5 +1,6 @@
 ---
 '@pikku/cli': patch
+'@pikku/inspector': patch
 '@pikku/openapi-parser': patch
 ---
 
@@ -20,5 +21,11 @@ the service then looked for the token under a name nothing had written.
 - The OpenAPI importer emits a `wireCredential` using the spec's real
   `authorizationUrl` / `tokenUrl` / `scopes`, and marks placeholder URLs with a TODO
   when the spec declares no oauth2 flow.
+- The inspector now extracts `oauth2.additionalParams`. It read every other field
+  and silently dropped this one, so provider-specific flags never reached runtime
+  even though `OAuth2Client` honours them — `access_type=offline` (Google),
+  `token_access_type=offline` (Dropbox) and `duration=permanent` (Reddit) all
+  control whether a refresh token is issued at all, so an addon declaring them
+  would connect successfully and then break at the first token expiry.
 
 Existing addons pick this up on regeneration.
