@@ -56,6 +56,7 @@ interface WorkflowResult {
   message?: string
   fileCount: number
   hasStub: boolean
+  droppedExprs: number
   nodeRoles: string[]
   nodeTypes: string[]
 }
@@ -178,6 +179,7 @@ function main() {
       failKind: null,
       fileCount: 0,
       hasStub: false,
+      droppedExprs: 0,
       nodeRoles: [],
       nodeTypes: [],
     }
@@ -239,6 +241,10 @@ function main() {
       // workflows can reach `clean`.
       result.hasStub = Object.entries(emitted).some(
         ([k, c]) => k.includes('/functions/') && c.includes('implement me')
+      )
+      result.droppedExprs = Object.values(emitted).reduce(
+        (n, c) => n + (c.match(/\/\/ TODO\(n8n expr\):/g)?.length ?? 0),
+        0
       )
       for (const [path, content] of Object.entries(emitted)) {
         // Re-root every workflow under its own namespaced dir.
@@ -313,6 +319,14 @@ function main() {
     if (r.failKind && r.outcome === 'failed')
       failTax[r.failKind] = (failTax[r.failKind] ?? 0) + 1
 
+  // Expressions the classifier could not lower declaratively, dropped to a
+  // `// TODO(n8n expr)` comment at emit time. A field-level coverage signal
+  // orthogonal to clean/partial (a clean workflow can still shed a transform).
+  const droppedExprTotal = results.reduce((n, r) => n + r.droppedExprs, 0)
+  const workflowsWithDroppedExprs = results.filter(
+    (r) => r.droppedExprs > 0
+  ).length
+
   const typeFreq = new Map<string, number>()
   const typeStatus = new Map<string, string>()
   for (const r of results) {
@@ -342,6 +356,8 @@ function main() {
     partialPct: pct(partial),
     failedPct: pct(failed),
     skippedPct: pct(skipped),
+    droppedExprTotal,
+    workflowsWithDroppedExprs,
     failureTaxonomy: failTax,
     nodeTypes: typeTable,
     failures: results
@@ -363,6 +379,9 @@ function main() {
   console.log(
     `\n${clean} clean / ${partial} partial / ${failed} failed / ${skipped} skipped  ` +
       `(${pct(clean)}% / ${pct(partial)}% / ${pct(failed)}% / ${pct(skipped)}%) of ${total}`
+  )
+  console.log(
+    `${droppedExprTotal} dropped n8n expressions across ${workflowsWithDroppedExprs} workflows`
   )
   console.log(`Reports: ${join(outDir, 'harness-report.md')}`)
 
@@ -395,6 +414,11 @@ function renderMarkdown(report: ReturnType<typeof buildReport>): string {
     `| skipped (external subflow) | ${report.skipped} | ${report.skippedPct}% |`
   )
   lines.push(`| **total** | **${report.total}** | |`)
+  lines.push('')
+  lines.push(
+    `Dropped n8n expressions: **${report.droppedExprTotal}** across ` +
+      `**${report.workflowsWithDroppedExprs}** workflows.`
+  )
   lines.push('')
   lines.push(`## Failure taxonomy`)
   lines.push('')

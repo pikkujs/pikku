@@ -1263,3 +1263,23 @@ test('toolWorkflow: a cross-workflow ref with no resolver skips the workflow (ex
     'missing-subworkflow diagnostic'
   )
 })
+
+test('cross-node ref: $(name).first().json.<path> lowers to ref(), not a dropped TODO', () => {
+  const parsed = parseN8n(loadFixture('cross-node-ref.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['crossNodeRef/crossNodeRef.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+  // Build's `endpoint` reads Config.first().json.apiBase — a non-adjacent node —
+  // and must resolve to a declarative cross-node ref, not vanish to a comment.
+  assert.match(
+    graph,
+    /field: "endpoint", operation: "set" as const, value: ref\("config", "apiBase"\)/
+  )
+  // the same ref inside surrounding text lowers to a template
+  assert.match(
+    graph,
+    /field: "greeting"[^\n]*template\("at \$0!", \[ref\("config", "apiBase"\)\]\)/
+  )
+  // nothing dropped
+  assert.doesNotMatch(graph, /TODO\(n8n expr\)/)
+})

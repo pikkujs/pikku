@@ -49,12 +49,21 @@ export interface ExprContext {
 
 const DOT_PATH = String.raw`(?:\.[A-Za-z_$][\w$]*|\[['"][^'"\]]+['"]\])*`
 
+/**
+ * The item selector between a node reference and `.json`. A Pikku node output is
+ * a single object, so every accessor that means "this node's output object" —
+ * `.item`, `.first()`, or the bare shorthand — collapses to the same pathed ref.
+ * `.last()` / `.all()` / indexed accessors assume item-array semantics the graph
+ * output doesn't carry, so they're intentionally excluded (stay a transform).
+ */
+const ITEM_SELECT = String.raw`(?:\.item|\.first\(\))?`
+
 const RE_JSON = new RegExp(`^\\$json(${DOT_PATH})$`)
 const RE_NODE = new RegExp(
-  `^\\$node\\[['"]([^'"\\]]+)['"]\\]\\.json(${DOT_PATH})$`
+  `^\\$node\\[['"]([^'"\\]]+)['"]\\]${ITEM_SELECT}\\.json(${DOT_PATH})$`
 )
 const RE_PAREN = new RegExp(
-  `^\\$\\(['"]([^'"\\]]+)['"]\\)\\.item\\.json(${DOT_PATH})$`
+  `^\\$\\(['"]([^'"\\]]+)['"]\\)${ITEM_SELECT}\\.json(${DOT_PATH})$`
 )
 
 /** Normalize a `.a["b"].c` accessor tail into a dotted path `a.b.c`. */
