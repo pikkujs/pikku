@@ -37,6 +37,7 @@ import type {
   NodeRole,
 } from '../../n8n-import/src/types.js'
 import { bridgeMapper, hasNestedRef } from './iml.js'
+import { lowerFilter } from './filter.js'
 import {
   BUILTIN_NAMESPACES,
   splitModule,
@@ -49,6 +50,8 @@ import {
 export interface MakeParseWarning {
   kind:
     | 'router-filter-dropped'
+    | 'router-filter-unlowerable'
+    | 'router-filter-lossy'
     | 'ifelse-not-exclusive'
     | 'onerror-dropped'
     | 'nested-ref'
@@ -62,6 +65,11 @@ export interface ParsedMakeWorkflow extends ParsedWorkflow {
   warnings: MakeParseWarning[]
   /** Distinct `app:operation` module ids seen, for coverage reporting. */
   modulesSeen: string[]
+  /**
+   * The blueprint carries semantics we cannot reproduce, and no safe degradation
+   * exists (an un-lowerable route gate). The workflow must NOT be emitted.
+   */
+  fatal: boolean
 }
 
 export class UnsupportedBlueprintError extends Error {}
@@ -103,10 +111,21 @@ function roleFor(mod: MakeModule, index: number): NodeRole {
   return 'integration'
 }
 
+/**
+ * Module id of a Filter node we synthesize (not a real Make module). Route gates
+ * are hoisted onto these; see `filter.ts`.
+ */
+const SYNTHETIC_FILTER = 'make:filter'
+
 interface Walked {
   mod: MakeModule
   /** Ids this module hands control to. */
   next: number[]
+}
+
+/** Synthetic ids count DOWN from -1 so they can never collide with Make's own. */
+interface SynthIds {
+  next: number
 }
 
 /**
@@ -116,7 +135,8 @@ interface Walked {
 function walk(
   flow: MakeModule[],
   out: Map<number, Walked>,
-  warnings: MakeParseWarning[]
+  warnings: MakeParseWarning[],
+  synth: SynthIds
 ): { head?: number; tail?: number } {
   let head: number | undefined
   let prev: Walked | undefined
@@ -132,20 +152,29 @@ function walk(
     const { app, operation } = splitModule(mod.module)
 
     if (mod.routes?.length) {
-      // Router: every route head fires for the same bundle (non-exclusive).
+      // Router: every route head fires for the same bundle (non-exclusive) —
+      // which is exactly n8n's `main[0] = [a, b, c]` fan-out. But a route whose
+      // head carries a `filter` is GATED, and fan-out alone would run it
+      // unconditionally. Each gate is hoisted into a synthesized Filter node
+      // spliced between the router and the route head, so a false result
+      // dead-ends the route instead of firing it.
       for (const route of mod.routes) {
         if (!route.flow?.length) continue
-        const sub = walk(route.flow, out, warnings)
-        if (sub.head !== undefined) node.next.push(sub.head)
-        // The route head's `filter` is the per-route gate. v1 does not lower it.
+        const sub = walk(route.flow, out, warnings, synth)
+        if (sub.head === undefined) continue
+
         const gate = route.flow[0]?.filter
-        if (gate) {
-          warnings.push({
-            kind: 'router-filter-dropped',
-            module: mod.module,
-            detail: gate.name ?? 'unnamed',
-          })
+        if (!gate?.conditions?.length) {
+          node.next.push(sub.head)
+          continue
         }
+
+        const id = synth.next--
+        out.set(id, {
+          mod: { id, module: SYNTHETIC_FILTER, filter: gate },
+          next: [sub.head],
+        })
+        node.next.push(id)
       }
       // Routes are terminal — a router cannot merge back.
       prev = undefined
@@ -155,7 +184,7 @@ function walk(
     if (mod.branches?.length) {
       for (const br of mod.branches) {
         if (!br.flow?.length) continue
-        const sub = walk(br.flow, out, warnings)
+        const sub = walk(br.flow, out, warnings, synth)
         if (sub.head !== undefined) node.next.push(sub.head)
       }
       warnings.push({
@@ -188,9 +217,10 @@ function walk(
 export function parseMake(raw: unknown, fallbackName = 'workflow'): ParsedMakeWorkflow {
   const bp = toBlueprint(raw)
   const warnings: MakeParseWarning[] = []
+  let fatal = false
 
   const walked = new Map<number, Walked>()
-  walk(bp.flow!, walked, warnings)
+  walk(bp.flow!, walked, warnings, { next: -1 })
   if (walked.size === 0) throw new UnsupportedBlueprintError('no modules')
 
   // --- name every module (IML addresses modules by id, so build id → name) ---
@@ -208,13 +238,59 @@ export function parseMake(raw: unknown, fallbackName = 'workflow'): ParsedMakeWo
   // --- build ParsedNodes ---
   const nodes: ParsedNode[] = []
   const modulesSeen = new Set<string>()
+  /** Synthetic gates we could not lower — their edges collapse through. */
+  const droppedGates = new Set<number>()
   let index = 0
   for (const id of order) {
     const { mod } = walked.get(id)!
     const { app, operation } = splitModule(mod.module)
-    modulesSeen.add(mod.module)
+    if (mod.module !== SYNTHETIC_FILTER) modulesSeen.add(mod.module)
 
     const name = idToName.get(id)!
+
+    // A synthesized Filter carrying a hoisted route gate. Emitted as an n8n
+    // Filter node (`typeShort: 'filter'`) so `branch.ts` normalizes it to a
+    // single case on slot 0 with no fallback — false dead-ends the route.
+    if (mod.module === SYNTHETIC_FILTER) {
+      const lowered = mod.filter ? lowerFilter(mod.filter, idToName) : null
+      if (!lowered) {
+        // We cannot reproduce this gate's truth table. There is no safe fallback:
+        // emitting the route UNGATED makes it fire on every bundle, and a gated
+        // route is often destructive (`deleteAnEvent`, `updateRow`). Dropping the
+        // route silently loses behaviour. So the workflow is un-importable —
+        // fail loudly rather than emit something that corrupts data.
+        warnings.push({
+          kind: 'router-filter-unlowerable',
+          module: SYNTHETIC_FILTER,
+          detail: mod.filter?.name ?? 'unnamed',
+        })
+        fatal = true
+        droppedGates.add(id)
+        continue
+      }
+      if (lowered.lossy) {
+        warnings.push({
+          kind: 'router-filter-lossy',
+          module: SYNTHETIC_FILTER,
+          detail: lowered.lossy,
+        })
+      }
+      nodes.push({
+        id: String(id),
+        name,
+        nodeId: name,
+        type: SYNTHETIC_FILTER,
+        typeShort: 'filter',
+        parameters: lowered.parameters,
+        notes: mod.filter?.name,
+        disabled: false,
+        role: 'branch',
+        rpcName: name,
+      })
+      index++
+      continue
+    }
+
     const role = roleFor(mod, index++)
 
     // Make splits config (`parameters`) from data inputs (`mapper`). n8n has one
@@ -244,14 +320,20 @@ export function parseMake(raw: unknown, fallbackName = 'workflow'): ParsedMakeWo
   }
 
   // --- synthesize n8n-shaped connections (keyed by SOURCE NAME) ---
+  /** Collapse an edge through a gate we refused to emit: router → gate → head. */
+  const resolveTarget = (t: number): number[] =>
+    droppedGates.has(t) ? (walked.get(t)?.next ?? []) : [t]
+
   const connections: N8nConnections = {}
   for (const id of order) {
     const w = walked.get(id)!
+    if (droppedGates.has(id)) continue
     if (w.next.length === 0) continue
     const from = idToName.get(id)!
     connections[from] = {
       main: [
         w.next
+          .flatMap(resolveTarget)
           .filter((t) => idToName.has(t))
           .map((t) => ({ node: idToName.get(t)!, type: 'main', index: 0 })),
       ],
@@ -267,6 +349,7 @@ export function parseMake(raw: unknown, fallbackName = 'workflow'): ParsedMakeWo
     stickyNotes: [],
     shape: 'pure-graph',
     warnings,
+    fatal,
     modulesSeen: [...modulesSeen],
   }
 }
