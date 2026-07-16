@@ -132,6 +132,21 @@ function convertStepToNode(
       return [node]
     }
 
+    case 'approval': {
+      // Unlike `suspend` — which has no output and so is deliberately absent
+      // from the graph — an approval yields a value a later step can reference,
+      // so it must be a real node for $ref resolution and graphHash to see it.
+      const node: FlowNode = {
+        nodeId,
+        flow: 'approval',
+        reason: step.reason,
+        outputVar: step.outputVar,
+        expiry: step.expiry,
+        next: nextNodeId,
+      }
+      return [node]
+    }
+
     case 'inline': {
       const node: FlowNode = {
         nodeId,

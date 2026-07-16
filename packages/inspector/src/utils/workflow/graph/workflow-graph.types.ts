@@ -94,6 +94,7 @@ export interface NodeOptions {
  */
 export type FlowType =
   | 'sleep'
+  | 'approval'
   | 'branch'
   | 'parallel'
   | 'fanout'
