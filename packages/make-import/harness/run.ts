@@ -81,6 +81,20 @@ for (const file of files) {
   for (const m of parsed.modulesSeen) moduleFreq.set(m, (moduleFreq.get(m) ?? 0) + 1)
   for (const w of parsed.warnings) warnFreq.set(w.kind, (warnFreq.get(w.kind) ?? 0) + 1)
 
+  // An un-lowerable route gate has no safe degradation — emitting the workflow
+  // would run gated (often destructive) routes unconditionally. Skip it.
+  if (parsed.fatal) {
+    rows.push({
+      file,
+      outcome: 'skipped',
+      modules: parsed.nodes.length,
+      stubs: 0,
+      reason: 'un-lowerable route gate',
+      warnings: parsed.warnings.map((w) => w.kind),
+    })
+    continue
+  }
+
   try {
     const res = generateWorkflowFromN8n(parsed, { rpcPrefix: 'make' })
     if (res.diagnostics.some((d) => d.type === 'error')) {

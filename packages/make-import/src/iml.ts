@@ -128,6 +128,29 @@ export function bridgeMapper(
   return imlToN8n(value, idToName)
 }
 
+/**
+ * Will every `{{ … }}` in this bridged value lower to a declarative ref?
+ *
+ * `bridgeBlock` rewrites a pure module-field reference to `$node["…"].json…` and
+ * passes anything else through as raw IML. So a bridged block that does NOT start
+ * with `$node[` is one `classifyExpression` will call a `transform` — it cannot
+ * become a `ref`/`template`.
+ *
+ * This matters for FILTER OPERANDS specifically. A transform in a mapper field is
+ * harmless: codegen drops the field and leaves a TODO. A transform in a filter
+ * operand is not — `emitBranchInput` falls back to `left: undefined` and silently
+ * emits a gate with the wrong truth table.
+ */
+export function isFullyBridged(value: unknown): boolean {
+  if (typeof value !== 'string') return true
+  if (!value.startsWith('=')) return true
+  const blocks = value.matchAll(/\{\{([\s\S]*?)\}\}/g)
+  for (const b of blocks) {
+    if (!(b[1] ?? '').trim().startsWith('$node[')) return false
+  }
+  return true
+}
+
 /** Does this value contain an expression string anywhere inside it? */
 function containsExpr(value: unknown): boolean {
   if (typeof value === 'string') return value.startsWith('=')
