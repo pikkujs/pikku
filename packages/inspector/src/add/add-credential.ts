@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import {
   getPropertyValue,
   getArrayPropertyValue,
+  getRecordPropertyValue,
   assertStringLiteralProperty,
 } from '../utils/get-property-value.js'
 import type { AddWiring } from '../types.js'
@@ -133,6 +134,14 @@ export const addCredential: AddWiring = (
       const tokenUrl = getPropertyValue(oauth2Obj, 'tokenUrl') as string | null
       const scopes = getArrayPropertyValue(oauth2Obj, 'scopes')
       const pkce = getPropertyValue(oauth2Obj, 'pkce') as boolean | null
+      // OAuth2Client honours additionalParams at runtime, so dropping them here
+      // silently loses provider-specific flags — `access_type=offline`,
+      // `duration=permanent` — whose absence means no refresh token is ever
+      // issued and the addon dies when the first access token expires.
+      const additionalParams = getRecordPropertyValue(
+        oauth2Obj,
+        'additionalParams'
+      )
 
       if (appCredentialSecretId && authorizationUrl && tokenUrl && scopes) {
         oauth2 = {
@@ -142,6 +151,7 @@ export const addCredential: AddWiring = (
           tokenUrl,
           scopes,
           pkce: pkce || undefined,
+          additionalParams: additionalParams || undefined,
         }
       }
     }
