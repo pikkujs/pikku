@@ -361,11 +361,26 @@ test('addon-backed agent tools ref the per-service addon rpc directly (no stub)'
     'googleCalendarTool no longer leaves a stub'
   )
 
+  // langchain toolWikipedia / toolCalculator resolve to their dep-free addon
+  // rpc and are refs, not stubs — the LLM drives the input via the addon schema.
+  assert.match(agent, /ref\("wikipedia:search"\)/)
+  assert.match(agent, /ref\("math:evaluate"\)/)
+  assert.ok(
+    !files['opsAssistant/functions/wikipedia__search.function.ts'],
+    'toolWikipedia no longer leaves a stub'
+  )
+  assert.ok(
+    !files['opsAssistant/functions/calculator__evaluate.function.ts'],
+    'toolCalculator no longer leaves a stub'
+  )
+
   // the addon packages are wired for deployment
   const addons = files['opsAssistant/opsAssistant.addons.gen.ts']
   assert.ok(addons, 'addons file emitted')
   assert.match(addons, /@pikku\/addon-gmail/)
   assert.match(addons, /@pikku\/addon-google-calendar/)
+  assert.match(addons, /@pikku\/addon-wikipedia/)
+  assert.match(addons, /@pikku\/addon-math/)
 
   // a tool with no addon (mcpClientTool) still refs + emits a stub
   assert.match(agent, /ref\("mcpClientTool__mcp"\)/)

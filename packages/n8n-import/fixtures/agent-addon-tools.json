@@ -42,6 +42,20 @@
       "typeVersion": 1,
       "parameters": {},
       "position": [440, 420]
+    },
+    {
+      "name": "Wikipedia",
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [440, 520]
+    },
+    {
+      "name": "Calculator",
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [440, 620]
     }
   ],
   "connections": {
@@ -49,6 +63,8 @@
     "Model": { "ai_languageModel": [[{ "node": "Agent", "type": "ai_languageModel", "index": 0 }]] },
     "Send Email": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
     "Add Event": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "MCP": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] }
+    "MCP": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Wikipedia": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Calculator": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] }
   }
 }

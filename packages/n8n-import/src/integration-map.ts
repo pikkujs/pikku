@@ -1250,6 +1250,33 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
       },
     },
   },
+  // n8n's LangChain Wikipedia tool (empty params — the LLM supplies the query)
+  // → @pikku/addon-wikipedia's search function, referenced directly as an agent
+  // tool.
+  toolwikipedia: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'search',
+        operations: {
+          search: { rpc: 'wikipedia:search', fields: {} },
+        },
+      },
+    },
+  },
+  // n8n's LangChain Calculator tool (empty params — the LLM supplies the
+  // expression) → @pikku/addon-math's evaluate function.
+  toolcalculator: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'evaluate',
+        operations: {
+          evaluate: { rpc: 'math:evaluate', fields: {} },
+        },
+      },
+    },
+  },
   spreadsheetfile: {
     defaultResource: 'default',
     resources: {
