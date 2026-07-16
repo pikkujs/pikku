@@ -45,5 +45,5 @@ The `.knowledge/` blueprint is designed so each concept maps onto exactly one Pi
 ## Uncertainty handling
 
 - `confidence: high` concepts generate directly.
-- `confidence: medium` concepts generate with a `// BLUEPRINT-MEDIUM-CONFIDENCE: <evidence summary>` marker for review.
+- `confidence: medium` concepts generate, but are listed for review in the pre-generation report — id, evidence summary, and what is uncertain — rather than carrying a marker comment in the generated code. The report is the review surface; the generated code stays clean.
 - `confidence: low` concepts are NOT generated automatically — they surface in the pre-generation review along with `decisionsNeeded`.
