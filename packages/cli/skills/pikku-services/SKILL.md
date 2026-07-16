@@ -72,7 +72,7 @@ export const createWireServices = pikkuWireServices(
 
 ### Auto-Generated Service Manifest
 
-After `npx pikku prebuild`, Pikku generates `.pikku/pikku-services.gen.ts`, a manifest of which services are actually used by wired functions:
+After `npx pikku all`, Pikku generates `.pikku/pikku-services.gen.ts`, a manifest of which services are actually used by wired functions:
 
 ```typescript
 export const requiredSingletonServices = {

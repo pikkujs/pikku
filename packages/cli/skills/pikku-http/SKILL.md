@@ -178,7 +178,7 @@ const getTodos = pikkuFunc({
 
 ### Generated Fetch Client
 
-After `npx pikku prebuild`, a type-safe client is generated:
+After `npx pikku all`, a type-safe client is generated:
 
 ```typescript
 import { pikkuFetch } from '.pikku/pikku-fetch.gen.js'

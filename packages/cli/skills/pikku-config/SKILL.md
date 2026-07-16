@@ -57,7 +57,7 @@ wireVariable({
 
 ```typescript
 // Secrets — encrypted, sensitive values
-const config = await services.secrets.getSecretJSON('SECRET_NAME')
+const config = await services.secrets.getSecret('SECRET_NAME')
 
 // Variables — plain-text configuration
 const flags = await services.variables.getVariableJSON('VARIABLE_NAME')
@@ -90,7 +90,7 @@ wireSecret({
 })
 
 // In your function — fully typed
-const config = await secrets.getSecretJSON('STRIPE_CONFIG')
+const config = await secrets.getSecret('STRIPE_CONFIG')
 // config.apiKey       → string (autocompleted)
 // config.webhookSecret → string (autocompleted)
 

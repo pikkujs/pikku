@@ -149,7 +149,7 @@ await server.start()
 
 ## Code Generation
 
-Run `npx pikku prebuild` to generate:
+Run `npx pikku all` to generate:
 
 - `pikku-types.gen.ts` — Typed function factories and wiring functions
 - `pikku-fetch.gen.ts` — Type-safe HTTP client

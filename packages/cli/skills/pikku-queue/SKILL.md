@@ -151,7 +151,7 @@ const jobId = await queue.add(
 
 ### Type-Safe Queue Publishing
 
-After `npx pikku prebuild`:
+After `npx pikku all`:
 
 ```typescript
 import { PikkuQueue } from '.pikku/pikku-queue.gen.js'
