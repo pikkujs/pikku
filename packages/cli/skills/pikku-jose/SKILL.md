@@ -1,8 +1,11 @@
 ---
 name: pikku-jose
-description: 'Use when setting up JWT authentication with the jose library in a Pikku app. Covers JoseJWTService constructor, secret rotation, token encoding/decoding/verification.
-TRIGGER when: code uses JoseJWTService, user asks about JWT setup, token signing, token verification, or @pikku/jose.
-DO NOT TRIGGER when: user asks about session middleware (use pikku-security) or general service setup (use pikku-services).'
+description: >-
+  Use when setting up JWT authentication with the jose library in a Pikku app. Covers
+  JoseJWTService constructor, secret rotation, token encoding/decoding/verification. TRIGGER when:
+  code uses JoseJWTService, user asks about JWT setup, token signing, token verification, or
+  @pikku/jose. DO NOT TRIGGER when: user asks about session middleware (use pikku-security) or
+  general service setup (use pikku-services).
 ---
 
 # Pikku Jose (JWT Service)

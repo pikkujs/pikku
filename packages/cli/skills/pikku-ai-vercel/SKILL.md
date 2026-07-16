@@ -1,8 +1,11 @@
 ---
 name: pikku-ai-vercel
-description: 'Use when setting up AI agent execution with the Vercel AI SDK in a Pikku app. Covers VercelAIAgentRunner for streaming and non-streaming AI agent steps.
-TRIGGER when: code uses VercelAIAgentRunner, user asks about Vercel AI SDK integration, AI agent runners, or @pikku/ai-vercel.
-DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-ai-agent) or voice I/O (use pikku-ai-voice).'
+description: >-
+  Use when setting up AI agent execution with the Vercel AI SDK in a Pikku app. Covers
+  VercelAIAgentRunner for streaming and non-streaming AI agent steps. TRIGGER when: code uses
+  VercelAIAgentRunner, user asks about Vercel AI SDK integration, AI agent runners, or
+  @pikku/ai-vercel. DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-ai-agent) or
+  voice I/O (use pikku-ai-voice).
 ---
 
 # Pikku AI Vercel (Agent Runner)

@@ -1,8 +1,14 @@
 ---
 name: pikku-deps
-description: 'Use for the Pikku dependency security audit: the `pikku audit` CLI command, the `.pikku/audit.json` artifact, the `SecurityAuditReport` type in @pikku/core, and the console Security screen (getSecurityAudit / runSecurityAudit / updateDependency + SecurityAuditView).
-TRIGGER when: user asks about `pikku audit`, dependency vulnerabilities/advisories, outdated dependencies, the Security screen/page in the console, updating a vulnerable dependency, or reading/rendering audit.json.
-DO NOT TRIGGER when: user asks about authentication/sessions/JWT (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use pikku-config).'
+description: >-
+  Use for the Pikku dependency security audit: the `pikku audit` CLI command, the
+  `.pikku/audit.json` artifact, the `SecurityAuditReport` type in @pikku/core, and the console
+  Security screen (getSecurityAudit / runSecurityAudit / updateDependency + SecurityAuditView).
+  TRIGGER when: user asks about `pikku audit`, dependency vulnerabilities/advisories, outdated
+  dependencies, the Security screen/page in the console, updating a vulnerable dependency, or
+  reading/rendering audit.json. DO NOT TRIGGER when: user asks about authentication/sessions/JWT
+  (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use
+  pikku-config).
 installGroups: [core]
 ---
 

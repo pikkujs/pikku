@@ -1,8 +1,11 @@
 ---
 name: pikku-schedule
-description: 'Use when setting up in-memory cron scheduling in a Pikku app. Covers InMemorySchedulerService for running scheduled tasks.
-TRIGGER when: code uses InMemorySchedulerService, PikkuTaskScheduler, or user asks about in-memory scheduling, cron jobs without external dependencies, or @pikku/schedule.
-DO NOT TRIGGER when: user asks about cron wiring (use pikku-cron) or queue-based scheduling with BullMQ/PgBoss (use pikku-queue).'
+description: >-
+  Use when setting up in-memory cron scheduling in a Pikku app. Covers InMemorySchedulerService
+  for running scheduled tasks. TRIGGER when: code uses InMemorySchedulerService,
+  PikkuTaskScheduler, or user asks about in-memory scheduling, cron jobs without external
+  dependencies, or @pikku/schedule. DO NOT TRIGGER when: user asks about cron wiring (use
+  pikku-cron) or queue-based scheduling with BullMQ/PgBoss (use pikku-queue).
 installGroups: [core]
 ---
 

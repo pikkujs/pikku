@@ -1,8 +1,11 @@
 ---
 name: pikku-ai-voice
-description: 'Use when adding voice input (speech-to-text) or voice output (text-to-speech) to AI agents in a Pikku app. Covers voiceInput/voiceOutput middleware hooks and STT/TTS service interfaces.
-TRIGGER when: code uses voiceInput, voiceOutput, STTService, TTSService, or user asks about voice, speech-to-text, text-to-speech, or @pikku/ai-voice.
-DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-ai-agent) or Vercel AI SDK (use pikku-ai-vercel).'
+description: >-
+  Use when adding voice input (speech-to-text) or voice output (text-to-speech) to AI agents in a
+  Pikku app. Covers voiceInput/voiceOutput middleware hooks and STT/TTS service interfaces.
+  TRIGGER when: code uses voiceInput, voiceOutput, STTService, TTSService, or user asks about
+  voice, speech-to-text, text-to-speech, or @pikku/ai-voice. DO NOT TRIGGER when: user asks about
+  AI agent wiring (use pikku-ai-agent) or Vercel AI SDK (use pikku-ai-vercel).
 ---
 
 # Pikku AI Voice (Speech I/O)

@@ -1,8 +1,13 @@
 ---
 name: pikku-middleware
-description: 'Use when adding any middleware to a Pikku app — global HTTP middleware, tag-scoped middleware (including service-to-service bearer auth), per-route middleware, session-setting middleware, or understanding middleware execution order and priority.
-TRIGGER when: user wants middleware on some or all routes, machine-to-machine auth, tag-scoped cross-cutting concerns, global interceptors, or middleware priority/order questions.
-DO NOT TRIGGER when: user asks about permissions/authorization checks (use pikku-permissions), auth strategies like authBearer/authCookie (use pikku-security), or deployment.'
+description: >-
+  Use when adding any middleware to a Pikku app — global HTTP middleware, tag-scoped middleware
+  (including service-to-service bearer auth), per-route middleware, session-setting middleware, or
+  understanding middleware execution order and priority. TRIGGER when: user wants middleware on
+  some or all routes, machine-to-machine auth, tag-scoped cross-cutting concerns, global
+  interceptors, or middleware priority/order questions. DO NOT TRIGGER when: user asks about
+  permissions/authorization checks (use pikku-permissions), auth strategies like
+  authBearer/authCookie (use pikku-security), or deployment.
 installGroups: [core]
 ---
 

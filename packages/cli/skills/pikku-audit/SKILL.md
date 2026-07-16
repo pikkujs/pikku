@@ -1,8 +1,15 @@
 ---
 name: pikku-audit
-description: 'Use when adding audit / activity-history / change-tracking to a Pikku app, or when a function needs to record who changed what. Covers the built-in AuditService sink, the per-invocation auditLog buffer (createInvocationAudit / pikkuWireServices), the `audit: true` function flag, explicit `auditLog.write()` domain events, automatic query-level capture via createAuditedKysely, and the durable KyselyAuditService sink.
-TRIGGER when: user asks for an audit log, change history, activity feed, "who did this", or a custom audit/history table; code uses auditLog, createInvocationAudit, createAuditedKysely, or AuditService.
-DO NOT TRIGGER when: user wants app logging/telemetry (use the logger) or DB migrations in general (use pikku-kysely).'
+description: >-
+  Use when adding audit / activity-history / change-tracking to a Pikku app, or when a function
+  needs to record who changed what. Covers the built-in AuditService sink, the per-invocation
+  auditLog buffer (createInvocationAudit / pikkuWireServices), the `audit: true` function flag,
+  explicit `auditLog.write()` domain events, automatic query-level capture via
+  createAuditedKysely, and the durable KyselyAuditService sink. TRIGGER when: user asks for an
+  audit log, change history, activity feed, "who did this", or a custom audit/history table; code
+  uses auditLog, createInvocationAudit, createAuditedKysely, or AuditService. DO NOT TRIGGER when:
+  user wants app logging/telemetry (use the logger) or DB migrations in general (use
+  pikku-kysely).
 installGroups: [core]
 ---
 

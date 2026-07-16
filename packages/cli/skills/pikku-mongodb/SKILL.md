@@ -1,8 +1,11 @@
 ---
 name: pikku-mongodb
-description: 'Use when setting up MongoDB database services in a Pikku app. Covers PikkuMongoDB connection, channel stores, workflow services, secret services, AI storage, agent runs, and deployment services.
-TRIGGER when: code uses PikkuMongoDB, MongoDBChannelStore, MongoDBWorkflowService, MongoDBSecretService, or user asks about MongoDB setup with Pikku.
-DO NOT TRIGGER when: user asks about SQL databases (use pikku-kysely) or Redis (use pikku-redis).'
+description: >-
+  Use when setting up MongoDB database services in a Pikku app. Covers PikkuMongoDB connection,
+  channel stores, workflow services, secret services, AI storage, agent runs, and deployment
+  services. TRIGGER when: code uses PikkuMongoDB, MongoDBChannelStore, MongoDBWorkflowService,
+  MongoDBSecretService, or user asks about MongoDB setup with Pikku. DO NOT TRIGGER when: user
+  asks about SQL databases (use pikku-kysely) or Redis (use pikku-redis).
 ---
 
 # Pikku MongoDB

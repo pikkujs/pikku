@@ -1,8 +1,10 @@
 ---
 name: pikku-deploy-nextjs
-description: 'Use when deploying a Pikku app with Next.js. Covers API route handlers, server-side data fetching, and RPC calls from Server Components.
-TRIGGER when: code imports @pikku/next, user mentions Next.js integration, or app/api route files use pikkuAPIRequest.
-DO NOT TRIGGER when: just defining functions/wirings without Next.js-specific code.'
+description: >-
+  Use when deploying a Pikku app with Next.js. Covers API route handlers, server-side data
+  fetching, and RPC calls from Server Components. TRIGGER when: code imports @pikku/next, user
+  mentions Next.js integration, or app/api route files use pikkuAPIRequest. DO NOT TRIGGER when:
+  just defining functions/wirings without Next.js-specific code.
 ---
 
 # Pikku Next.js Deployment
