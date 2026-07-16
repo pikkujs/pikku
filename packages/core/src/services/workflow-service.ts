@@ -50,6 +50,13 @@ export interface WorkflowService {
 
   // Orchestration operations
   resumeWorkflow(runId: string): Promise<void>
+  /**
+   * Record a human decision against a `workflow.approval()` gate and wake the
+   * run. The payload is stored as given and validated on replay, inside the
+   * workflow body — so an invalid one re-closes the gate rather than failing the
+   * run. `reason` addresses the gate's first reach.
+   */
+  approveStep(runId: string, reason: string, decision: unknown): Promise<void>
   startWorkflow<I>(
     name: string,
     input: I,

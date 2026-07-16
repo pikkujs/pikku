@@ -3,6 +3,8 @@
  * These types define the step-based workflow format extracted by the inspector
  */
 
+import type { StandardSchemaV1 } from '@standard-schema/spec'
+
 import type { WorkflowRun } from '../workflow.types.js'
 import type { ScenarioActor } from '../../../services/scenario-actors-service.js'
 
@@ -86,6 +88,48 @@ export type WorkflowWireSleep = (
  * loops, like dynamic `do()` step names.
  */
 export type WorkflowWireSuspend = (reason: string) => Promise<void>
+
+/**
+ * Options for workflow.approval().
+ */
+export interface WorkflowApprovalOptions<
+  TSchema extends StandardSchemaV1 = StandardSchemaV1,
+> {
+  /**
+   * Schema the decision payload is validated against. This is a VALUE, not a
+   * type generic: the payload arrives from an untrusted caller over the approve
+   * wire, and a generic is erased at compile time — it would validate nothing.
+   * Any standard-schema library (zod, valibot, arktype) satisfies this.
+   */
+  schema: TSchema
+  /**
+   * Give up waiting after this long (e.g. '3d'), yielding `{ status: 'expired' }`
+   * instead of waiting forever. Evaluated on replay from a recorded deadline, so
+   * the answer is correct even if the wake-up timer is never delivered.
+   */
+  expiry?: string | number
+}
+
+/**
+ * The result of an approval gate. A union rather than a throw so that callers
+ * must handle the deadline case, and so "skip it and carry on" stays trivial.
+ * `decided` means a human answered — whether that answer was yes or no is
+ * carried in `data` and is the application's business, not the framework's.
+ */
+export type ApprovalOutcome<T> =
+  | { status: 'decided'; data: T }
+  | { status: 'expired' }
+
+/**
+ * Type signature for workflow.approval() - used by inspector.
+ * Like {@link WorkflowWireSuspend}, `reason` is the approval point's stable
+ * durable identity. Unlike suspend, the gate stays closed until a decision is
+ * recorded against it, and the decision is handed back to the caller.
+ */
+export type WorkflowWireApproval = <TSchema extends StandardSchemaV1>(
+  reason: string,
+  options: WorkflowApprovalOptions<TSchema>
+) => Promise<ApprovalOutcome<StandardSchemaV1.InferOutput<TSchema>>>
 
 /**
  * Input source for step arguments in DSL workflows
@@ -286,6 +330,19 @@ export interface SuspendStepMeta {
 }
 
 /**
+ * Approval step metadata (workflow.approval())
+ */
+export interface ApprovalStepMeta {
+  type: 'approval'
+  /** Reason string passed to workflow.approval() — becomes the durable step key */
+  reason: string
+  /** Output variable name (if assigned) */
+  outputVar?: string
+  /** Expiry duration, when one was given */
+  expiry?: string | number
+}
+
+/**
  * Filter step metadata (array.filter)
  */
 export interface FilterStepMeta {
@@ -330,6 +387,7 @@ export type WorkflowStepMeta =
   | SleepStepMeta
   | CancelStepMeta
   | SuspendStepMeta
+  | ApprovalStepMeta
   | SwitchStepMeta
   | FilterStepMeta
   | ArrayPredicateStepMeta
@@ -388,6 +446,9 @@ export interface PikkuWorkflowWire {
 
   /** Suspend workflow until explicitly resumed */
   suspend: WorkflowWireSuspend
+
+  /** Suspend workflow until a human records a decision against this gate */
+  approval: WorkflowWireApproval
 }
 
 export interface PikkuScenarioWire extends PikkuWorkflowWire {

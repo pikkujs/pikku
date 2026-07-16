@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
@@ -461,5 +462,297 @@ describe('pikku-workflow-service suspend', () => {
     delete metaState[workflowName]
     delete functionMetaState[workflowName]
     pikkuState(null, 'workflows', 'registrations').delete(workflowName)
+  })
+})
+
+/**
+ * A minimal StandardSchemaV1 — the same interface zod/valibot/arktype expose via
+ * `~standard`. Hand-rolled here because @pikku/core deliberately has no zod
+ * dependency: schemas reach it through the standard-schema spec only.
+ */
+const approvalDecisionSchema: StandardSchemaV1<
+  { approved: boolean; comment?: string },
+  { approved: boolean; comment?: string }
+> = {
+  '~standard': {
+    version: 1,
+    vendor: 'test',
+    validate: (value: unknown) => {
+      if (typeof value !== 'object' || value === null) {
+        return { issues: [{ message: 'expected an object' }] }
+      }
+      const { approved, comment } = value as Record<string, unknown>
+      if (typeof approved !== 'boolean') {
+        return {
+          issues: [
+            { message: 'approved must be a boolean', path: ['approved'] },
+          ],
+        }
+      }
+      if (comment !== undefined && typeof comment !== 'string') {
+        return {
+          issues: [{ message: 'comment must be a string', path: ['comment'] }],
+        }
+      }
+      return { value: { approved, ...(comment ? { comment } : {}) } }
+    },
+  },
+}
+
+const registerApprovalWorkflow = (
+  workflowName: string,
+  graphHash: string,
+  func: (
+    services: any,
+    data: any,
+    wire: { workflow: PikkuWorkflowWire }
+  ) => Promise<any>
+) => {
+  pikkuState(null, 'package', 'singletonServices', {
+    queueService: {
+      add: async () => {},
+    },
+  } as any)
+
+  const metaState = pikkuState(null, 'workflows', 'meta')
+  metaState[workflowName] = {
+    name: workflowName,
+    pikkuFuncId: workflowName,
+    source: 'dsl',
+    graphHash,
+  }
+  const functionMetaState = pikkuState(null, 'function', 'meta')
+  functionMetaState[workflowName] = {
+    name: workflowName,
+    sessionless: true,
+    permissions: [],
+  } as any
+
+  addWorkflow(workflowName, { func })
+
+  return () => {
+    delete metaState[workflowName]
+    delete functionMetaState[workflowName]
+    pikkuState(null, 'workflows', 'registrations').delete(workflowName)
+  }
+}
+
+describe('pikku-workflow-service approval', () => {
+  test('resuming without a decision must NOT fall through the approval', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalNoFallthrough'
+    const graphHash = 'approval-no-fallthrough'
+    let bodyRuns = 0
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        bodyRuns++
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        return { decision }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+    assert.equal((await ws.getRun(runId))?.status, 'suspended')
+
+    // THE point of an approval vs a suspend: a bare resume with no decision
+    // recorded must re-suspend, not walk past the gate.
+    await ws.resumeWorkflow(runId)
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+    assert.equal((await ws.getRun(runId))?.status, 'suspended')
+    assert.equal(bodyRuns, 2)
+
+    cleanup()
+  })
+
+  test('approveStep records a decision the workflow then returns', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalDecision'
+    const graphHash = 'approval-decision'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        return { decision }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    await ws.approveStep(runId, 'Approve invoice', {
+      approved: true,
+      comment: 'lgtm',
+    })
+    await ws.runWorkflowJob(runId, {})
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, {
+      decision: {
+        status: 'decided',
+        data: { approved: true, comment: 'lgtm' },
+      },
+    })
+
+    cleanup()
+  })
+
+  test('approveStep rejects a payload that fails the schema', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalSchema'
+    const graphHash = 'approval-schema'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+        })
+        return { decision }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    // The resume payload crosses an HTTP boundary from an untrusted caller.
+    // approveStep only records it; validation happens on replay, inside the
+    // workflow body, which is the only place the schema value is in scope.
+    await ws.approveStep(runId, 'Approve invoice', { approved: 'yes-please' })
+
+    // An invalid decision must leave the gate closed rather than fail the run.
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+    assert.equal((await ws.getRun(runId))?.status, 'suspended')
+
+    // ...and the rejection is legible to whoever tries to approve next.
+    const state = await ws.getRunState(runId)
+    assert.match(
+      JSON.stringify(state),
+      /approved/,
+      'expected the validation failure to be recorded in run state'
+    )
+
+    // A subsequent valid decision still lands.
+    await ws.approveStep(runId, 'Approve invoice', { approved: false })
+    await ws.runWorkflowJob(runId, {})
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, {
+      decision: { status: 'decided', data: { approved: false } },
+    })
+
+    cleanup()
+  })
+
+  test('an expired approval returns { status: expired } instead of hanging', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalExpiry'
+    const graphHash = 'approval-expiry'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+          expiry: '10ms',
+        })
+        return { decision }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 25))
+
+    await ws.resumeWorkflow(runId)
+    await ws.runWorkflowJob(runId, {})
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, { decision: { status: 'expired' } })
+
+    cleanup()
+  })
+
+  test('a decision that landed before expiry wins over the expiry', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalExpiryRace'
+    const graphHash = 'approval-expiry-race'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+          expiry: '10ms',
+        })
+        return { decision }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    await ws.approveStep(runId, 'Approve invoice', { approved: true })
+
+    // Expiry fires unconditionally (an enqueued durable timer can't be
+    // retracted), so it must no-op once a decision has landed.
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    await ws.resumeWorkflow(runId)
+    await ws.runWorkflowJob(runId, {})
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, {
+      decision: { status: 'decided', data: { approved: true } },
+    })
+
+    cleanup()
   })
 })
