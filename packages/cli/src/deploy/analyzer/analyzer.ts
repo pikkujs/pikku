@@ -96,6 +96,7 @@ export function analyzeDeployment(
       funcId.startsWith('workflowStart:') ||
       funcId.startsWith('workflow:') ||
       funcId.startsWith('workflowStatus:') ||
+      funcId.startsWith('workflowApprove:') ||
       funcId.startsWith('pikkuWorkflowWorker:') ||
       funcId.startsWith('pikkuWorkflowOrchestrator:')
     ) {
@@ -570,6 +571,11 @@ function buildWorkflows(
         method: 'get',
         route: `/workflow/${graph.name}/status/:runId`,
         pikkuFuncId: `workflowStatus:${graph.name}`,
+      },
+      {
+        method: 'post',
+        route: `/workflow/${graph.name}/approve/:runId`,
+        pikkuFuncId: `workflowApprove:${graph.name}`,
       },
       {
         method: 'post',
