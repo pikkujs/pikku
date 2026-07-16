@@ -1,9 +1,9 @@
-# software-archaeology
+# pikku-software-archaeology
 
 Reverse-engineers an existing repository into a **Product Blueprint**: the product intelligence hidden inside an implementation (domains, entities, commands, queries, events, policies, workflows, invariants, integrations, gaps), extracted as schema-validated JSON that a generator — in our case Pikku — can rebuild from.
 
 ```
-Existing Repository → software-archaeology → .knowledge/ blueprint → new Pikku application
+Existing Repository → pikku-software-archaeology → .knowledge/ blueprint → new Pikku application
 ```
 
 This is **not** a code indexer or doc generator. It extracts *intent over implementation*: `POST /api/users/:id/status` becomes the command `ActivateUser`; three scattered `if (inv.user_id !== req.user.id)` checks become one `InvoiceOwnerOnly` policy with three `enforcedAt` citations.
@@ -16,7 +16,7 @@ There is deliberately **no scanner/AST tooling** in this skill. Static extractio
 
 In Claude Code, from (or pointing at) the target repo:
 
-> Use the software-archaeology skill to extract a product blueprint from /path/to/repo
+> Use the pikku-software-archaeology skill to extract a product blueprint from /path/to/repo
 
 The agent then:
 1. **Surveys** the repo (manifests, entry points, routes, jobs, webhooks, schema, config, TODO/HACK markers) — facts only.
@@ -24,7 +24,7 @@ The agent then:
 3. **Extracts** through twelve lenses (domains, entities, commands, …) per the pipeline in `SKILL.md`. Large repos fan out subagents per lens and merge.
 4. **Cross-checks and validates**:
    ```bash
-   node .claude/skills/software-archaeology/scripts/validate.mjs <repo>/.knowledge
+   node .claude/skills/pikku-software-archaeology/scripts/validate.mjs <repo>/.knowledge
    ```
    The validator checks every file against `references/blueprint.schema.json` plus referential integrity across files (commands reference defined domains, api surfaces map to defined commands/queries, events have producers, …).
 5. Writes `blueprint.md`, the human synthesis.
@@ -59,7 +59,7 @@ Two further distinctions keep facts and guesses separate:
 ## Repo layout
 
 ```
-software-archaeology/
+pikku-software-archaeology/
 ├── SKILL.md                          # skill definition + extraction pipeline
 ├── README.md                         # this file
 ├── references/
