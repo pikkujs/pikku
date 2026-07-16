@@ -16,6 +16,20 @@ const skillsDir = join(
 )
 
 const KNOWN_INSTALL_GROUPS = new Set(['core', 'fabric'])
+
+/**
+ * Fabric group membership is deliberate and small, so it is pinned here rather
+ * than derived from the corpus — deriving it would make the assertion vacuous
+ * (dropping a tag would shrink both sides and still pass). Adding a skill to
+ * the Fabric set means updating this list on purpose.
+ */
+const FABRIC_SKILLS = [
+  'pikku-deploy-cloudflare',
+  'pikku-fabric',
+  'pikku-schema-cfworker',
+  'product-second-opinion',
+  'software-archaeology',
+]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
 type Skill = {
@@ -151,6 +165,24 @@ describe('bundled skills corpus', () => {
     }
   })
 
+  test('the fabric group holds exactly the intended skills', async () => {
+    const tagged: string[] = []
+    for (const skill of await readSkills()) {
+      const raw = field(skill.frontmatter, 'installGroups')
+      if (!raw) continue
+      const groups = raw
+        .replace(/^\[|\]$/g, '')
+        .split(',')
+        .map((g) => g.trim().replace(/^['"]|['"]$/g, ''))
+      if (groups.includes('fabric')) tagged.push(skill.name)
+    }
+    assert.deepEqual(
+      tagged.sort(),
+      [...FABRIC_SKILLS].sort(),
+      'fabric group membership changed — update FABRIC_SKILLS if this is intended'
+    )
+  })
+
   test('relative paths referenced in a skill resolve on disk', async () => {
     for (const skill of await readSkills()) {
       const docs = [skill.body]
@@ -282,6 +314,32 @@ describe('pikku skills install', () => {
         'this assertion could not distinguish the group filter from the ' +
         'install-everything fallback'
     )
+  })
+
+  test('--fabric installs the fabric-tagged skills, not the whole corpus', async () => {
+    const dir = await inTemp()
+    await run({ fabric: true })
+
+    const fabric = await skillsWithGroup('fabric')
+    const all = (await readSkills()).map((s) => s.name)
+    assert.deepEqual(await installed(dir), fabric)
+    assert.ok(
+      fabric.length < all.length,
+      'expected --fabric to be a strict subset'
+    )
+  })
+
+  test('--core and --fabric together install the union of both groups', async () => {
+    const dir = await inTemp()
+    await run({ core: true, fabric: true })
+
+    const union = [
+      ...new Set([
+        ...(await skillsWithGroup('core')),
+        ...(await skillsWithGroup('fabric')),
+      ]),
+    ].sort()
+    assert.deepEqual(await installed(dir), union)
   })
 
   test('a second install skips existing skills unless --update is passed', async () => {

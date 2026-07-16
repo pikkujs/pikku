@@ -1,6 +1,7 @@
 ---
 name: software-archaeology
 description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app). TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", or points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules, or a rebuild plan. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or code review.'
+installGroups: [fabric]
 ---
 
 # Software Archaeology

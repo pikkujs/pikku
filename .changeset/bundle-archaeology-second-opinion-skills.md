@@ -8,4 +8,4 @@ Bundle two new skills: `software-archaeology` and `product-second-opinion`.
 
 `product-second-opinion` consumes that `.knowledge/` blueprint and produces a plain-language report for a non-technical owner: how the app they hold actually works, what's solid, what's holding them back (with business impact and effort), and an opinionated argument for a better design.
 
-Both install via `pikku skills install`. Neither declares an `installGroups`, so they are excluded from `--core` and `--fabric` and install with the default (install-everything) invocation or an explicit `--only`.
+Both are tagged `installGroups: [fabric]`, so `pikku skills install --fabric` picks them up alongside the existing Fabric set while `--core` leaves them out.
