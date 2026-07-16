@@ -449,7 +449,6 @@ export function generateAddonFromOpenAPI(
     flags
   )
 
-  // Declare the oauth2 credential the service resolves its config from.
   if (flags.oauth || flags.credential === 'oauth2') {
     files[`src/${name}.credential.ts`] = generateCredentialFile(spec, vars)
   }
@@ -1288,9 +1287,6 @@ function generateServiceFile(
   lines.push('')
 
   if (flags.oauth) {
-    // The config is declared once by wireCredential in `<name>.credential.ts`
-    // and reaches us through codegen. Redeclaring it here is what let the two
-    // drift apart silently (#950).
     lines.push(
       `import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'`
     )
