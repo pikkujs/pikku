@@ -777,7 +777,7 @@ wireCLI({
     },
     skills: {
       description:
-        'Install bundled agent skills (Claude Code today; Codex/Gemini coming soon)',
+        'Install bundled agent skills (Claude Code, opencode, pi; Codex/Gemini coming soon)',
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuSkillsList,
@@ -790,7 +790,7 @@ wireCLI({
           options: {
             agent: {
               description:
-                'Target agent (claude | opencode | codex | gemini). Default: claude',
+                'Target agent (claude | opencode | pi). Default: claude',
               default: 'claude',
             },
             only: {

@@ -247,12 +247,14 @@ async function skillsWithGroup(group: string): Promise<string[]> {
   return matching.sort()
 }
 
+const AGENT_DIRS: Record<string, string> = {
+  claude: '.claude',
+  opencode: '.opencode',
+  pi: '.pi',
+}
+
 async function installed(root: string, agent = 'claude'): Promise<string[]> {
-  const dir = join(
-    root,
-    agent === 'opencode' ? '.opencode' : '.claude',
-    'skills'
-  )
+  const dir = join(root, AGENT_DIRS[agent]!, 'skills')
   if (!existsSync(dir)) return []
   return (await readdir(dir, { withFileTypes: true }))
     .filter((e) => e.isDirectory())
@@ -328,6 +330,37 @@ describe('pikku skills install', () => {
       'pikku-software-archaeology',
     ])
     assert.deepEqual(await installed(dir, 'claude'), [])
+  })
+
+  test('--agent pi installs into .pi/skills, where pi.dev reads project skills', async () => {
+    const dir = await inTemp()
+    await run({ agent: 'pi', only: 'pikku-software-archaeology' })
+    assert.deepEqual(await installed(dir, 'pi'), ['pikku-software-archaeology'])
+    assert.deepEqual(await installed(dir, 'claude'), [])
+    assert.deepEqual(await installed(dir, 'opencode'), [])
+    assert.equal(process.exitCode, undefined)
+  })
+
+  test('--agent pi copies the whole skill directory', async () => {
+    const dir = await inTemp()
+    await run({ agent: 'pi', only: 'pikku-software-archaeology' })
+    const root = join(dir, '.pi', 'skills', 'pikku-software-archaeology')
+    for (const file of [
+      'SKILL.md',
+      join('references', 'blueprint.schema.json'),
+      join('scripts', 'validate.mjs'),
+    ]) {
+      assert.ok(existsSync(join(root, file)), `missing ${file} after install`)
+    }
+  })
+
+  test('--agent pi honours group filters', async () => {
+    const dir = await inTemp()
+    await run({ agent: 'pi', fabric: true })
+    assert.deepEqual(
+      await installed(dir, 'pi'),
+      await skillsWithGroup('fabric')
+    )
   })
 
   test('--core installs the core-tagged skills, not the whole corpus', async () => {
