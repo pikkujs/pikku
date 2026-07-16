@@ -1,0 +1,23 @@
+{
+  "name": "@pikku/make-import",
+  "version": "0.0.1",
+  "description": "Make (Integromat) blueprint importer for Pikku — normalizes blueprints onto the n8n-import IR and reuses its codegen",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc -b",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "harness": "node --import tsx harness/run.ts",
+    "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "@pikku/n8n-import": "workspace:*"
+  }
+}

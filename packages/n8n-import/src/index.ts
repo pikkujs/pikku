@@ -1,4 +1,6 @@
 export { parseN8n, UnsupportedTopologyError } from './parse-n8n.js'
+export { buildTopology } from './topology.js'
+export { classifyExpression } from './expressions.js'
 export { generateWorkflowFromN8n } from './codegen.js'
 
 /**
@@ -7,9 +9,30 @@ export { generateWorkflowFromN8n } from './codegen.js'
  * project without colliding. First piece of the shared core; see
  * `@pikku/make-import`.
  */
-export { dedupe, toCamelCase, toKebabCase } from './naming.js'
+export {
+  sanitizeIdentifier,
+  sanitizeDisplayName,
+  dedupe,
+  integrationRpcName,
+  codeRpcName,
+  toCamelCase,
+  toPascalCase,
+  toKebabCase,
+} from './naming.js'
 
-export type { ParsedWorkflow } from './types.js'
-export type { Topology } from './topology.js'
-export type { ClassifiedExpression, ExprContext } from './expressions.js'
-export type { GenerateResult } from './codegen.js'
+export type {
+  N8nWorkflow,
+  N8nNode,
+  N8nConnections,
+  ParsedWorkflow,
+  ParsedNode,
+  NodeRole,
+  WorkflowShape,
+} from './types.js'
+export type { NextValue, Topology, NodeTopology } from './topology.js'
+export type {
+  ClassifiedExpression,
+  ExprContext,
+  RefPart,
+} from './expressions.js'
+export type { GenerateResult, ManifestEntry } from './codegen.js'
