@@ -27,6 +27,7 @@ export const serializeCredentialsTypes = ({
 
   const mapEntries: string[] = []
   const metaEntries: string[] = []
+  const oauth2Entries: string[] = []
 
   for (const [name, meta] of credentialEntries) {
     if (meta.schema && typeof meta.schema === 'string') {
@@ -51,6 +52,11 @@ export const serializeCredentialsTypes = ({
     ]
     if (meta.oauth2) {
       metaParts.push(`oauth2: true`)
+      // Emit the whole declared config, not just the flag: generated addon
+      // services import this instead of hand-rolling a duplicate const that
+      // silently drifts from wireCredential (#950).
+      const config = JSON.stringify(meta.oauth2, null, 2).replace(/\n/g, '\n  ')
+      oauth2Entries.push(`  '${name}': ${config}`)
     }
     metaEntries.push(`  '${name}': { ${metaParts.join(', ')} }`)
   }
@@ -61,6 +67,12 @@ export const serializeCredentialsTypes = ({
     `import { TypedCredentialService as CoreTypedCredentialService, type CredentialMetaInfo } from '@pikku/core/services'`
   )
   imports.push(`import type { CredentialService } from '@pikku/core/services'`)
+
+  if (oauth2Entries.length > 0) {
+    imports.push(
+      `import type { OAuth2CredentialConfig } from '@pikku/core/secret'`
+    )
+  }
 
   if (needsZod) {
     imports.push(`import type { z } from 'zod'`)
@@ -76,6 +88,15 @@ export const serializeCredentialsTypes = ({
     imports.push(`import { ${vars} } from '${importPath}'`)
   }
 
+  const oauth2Configs =
+    oauth2Entries.length > 0
+      ? `
+export const CREDENTIAL_OAUTH2_CONFIGS = {
+${oauth2Entries.join(',\n')}
+} satisfies Record<string, OAuth2CredentialConfig & { appCredentialSecretId: string }>
+`
+      : ''
+
   return `${imports.join('\n')}
 
 export interface CredentialsMap {
@@ -87,6 +108,7 @@ export type CredentialName = keyof CredentialsMap
 const CREDENTIALS_META: Record<string, CredentialMetaInfo> = {
 ${metaEntries.join(',\n')}
 }
+${oauth2Configs}
 
 export class TypedCredentialService extends CoreTypedCredentialService<CredentialsMap> {
   constructor(credentials: CredentialService) {
