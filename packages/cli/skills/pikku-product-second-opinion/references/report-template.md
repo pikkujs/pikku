@@ -48,6 +48,21 @@ off. Say whether it's a cheap rewire or an expensive rebuild.}
 
 {repeat per area}
 
+### The technology bets
+
+{One entry per significant choice — framework, sign-in, hosting, database, key
+libraries — AND anything a rebuild would move them ONTO. Each gets both sides.}
+
+**{Technology}.**
+- *Buys you:* {in business terms}
+- *Costs you:* {in business terms — bills, hiring, shipping speed, upgrade work,
+  the risk of betting on something young. Don't soften it. If it hasn't shipped a
+  stable 1.0, say so and say what that means: pin the version, budget upgrades.}
+- *Usually:* {recommendation tied to their stage — normally "keep it, watch this"}
+
+{The same bar applies to anything you're recommending they move to. A stack you
+propose with no cons listed is a pitch, not a second opinion.}
+
 ---
 
 ## Part 3 — The fine print (optional)

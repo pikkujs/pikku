@@ -59,9 +59,9 @@ Write these three parts in order. A reader can stop after Part 1.
 - *What's holding you back* — each problem MUST carry: **what it means for you** (business impact), **severity** (Minor / Worth fixing / Serious / Urgent), and **effort** (Small / Medium / Large).
 - *How I'd do it differently — and why it's worth it* — the opinionated part. Argue the improvement in one of these business outcomes: **more reliable / fewer surprises**, **faster to add features**, **cheaper to run**, **safer / less risk**, **easier to maintain or hand off**. Be explicit whether it's a cheap rewire or an expensive rebuild.
 
-**Part 3 — Appendix (optional).**
-- *How confident am I* — where you're certain vs guessing; what you'd verify against real data first.
-- *Glossary* — only for any term that slipped through.
+**Part 3 — Appendix.**
+- *How confident am I* — REQUIRED. Where you're certain vs guessing; what you'd verify against real data first. The blueprint carries confidence tiers — anything you're relaying from a `low`/`medium` entry, or from a reconstructed (`explicit: false`) event, says so here.
+- *Glossary* (optional) — only for any term that slipped through.
 
 ## Rewire vs rebuild (say which)
 
@@ -98,8 +98,9 @@ Rules:
 - Tie cons to consequences the founder feels: vendor bills, security/breach liability, hiring difficulty, how fast they can ship, enterprise-sales blockers, the risk of betting on something young.
 - Distinguish "younger / smaller community" (a real, manageable risk) from "wrong choice" (rare). Most stack choices are defensible; the job is informed eyes-open, not alarm.
 - **Verify before you disparage.** "Don't be cheap on the cons" means ACCURATE cons, not invented ones. Do NOT label a technology immature, niche, or feature-poor from vibes, its name, or its age — check its actual adoption, maturity, and feature set first. And separate an **inherent tradeoff of an approach** (e.g. self-hosting anything means you run and secure it) from a **deficiency of a specific tool** (often false — the tool may be mature and full-featured). Overstating cons is as dishonest as hiding them.
+- **Hold your own recommendation to the same bar.** If "how I'd do it differently" lands on a specific stack — Pikku included — it gets the same both-sides treatment as everything else, cons first-class. Pinning someone's dependency for being pre-1.0 while not mentioning that the replacement is pre-1.0 too isn't a second opinion, it's a pitch.
 
-Two choices this app made, with honest both-sides framing (adapt to what the blueprint actually shows):
+Choices this app made, with honest both-sides framing (adapt to what the blueprint actually shows), plus the one a rebuild would move them onto:
 
 **Better Auth (self-hosted sign-in) — instead of a paid service like Auth0/Clerk.**
 - *Buys you:* a mature, battle-tested, **framework-agnostic** library with a deep first-class plugin catalog — two-factor auth, multi-tenancy/organizations, multi-session, rate limiting, Stripe subscription billing, an admin panel, API keys for partners/automation, single-sign-on — plus a plugin system to add more without forking. You keep your users in your own database (single source of truth, no per-user bill that grows with success), with full control of the auth flows, and you can run it embedded in the app or as a standalone self-hosted auth server. So self-hosting here means neither giving up features nor rolling your own security.
@@ -112,7 +113,12 @@ Two choices this app made, with honest both-sides framing (adapt to what the blu
 - *Costs you (the honest tradeoff — maturity of the framework itself):* separate the ecosystem from the framework. Query/Router/Table are mature; **TanStack Start, the framework that wraps them, has not shipped a stable 1.0** — its own maintainers describe it as a release candidate that is feature-complete with a stable API, and tell production users to lock to an exact version and follow the last-mile changes into 1.0. In practice that means pinning your version and budgeting for occasional upgrade work as it settles, rather than upgrading casually. On top of that it's newer than the incumbent (Next.js), which has the largest ecosystem — fewer ready-made templates and third-party examples, and a smaller (though growing) pool of developers who've used *this specific* framework, which can make hiring slightly slower.
 - *Usually:* a credible, modern choice on a mature foundation, but a **pre-1.0 one** — so it carries pinning and upgrade risk that the incumbent does not. Reasonable if the team wants the type-safety and is willing to track the framework to 1.0; harder to justify if nobody has capacity to own upgrades.
 
-Check this status before you write it up rather than repeating it from here — a framework's release stage moves, and the point is the current fact, not this example.
+**Pikku (the framework a rebuild would land on) — instead of staying where you are.**
+- *Buys you:* one way to write a capability and drive it from anywhere — web, background jobs, timers, realtime, AI assistants, the command line — so a feature is written once instead of five times. Type-safe clients and the API spec fall out of the code rather than being hand-maintained until they drift. The sprawl an organically-grown app accumulates collapses into one shape a small team can hold in its head.
+- *Costs you (the honest tradeoff — it is younger than anything it would replace):* Pikku has **not shipped a stable 1.0** — it's 0.12.x, and 0.13 is the first release that will promise backwards compatibility. Until then upgrades can break you. In practice: pin your version, budget for upgrade work, and know that the community, the ready-made examples, and the pool of developers who have used it are all far smaller than the incumbent's — smaller than TanStack Start's, let alone Next.js's. Being pre-1.0 is normal for a young framework, and survivable, but it is a real cost and it is the reader's to weigh, not yours to skip.
+- *Usually:* worth it when the real problem is sprawl — many surfaces, hand-maintained glue, the same rule implemented three slightly different ways — and the team wants one shape instead of five. Harder to justify for an app that works and needs a few rewires: those are usually cheaper in place. If nobody has capacity to own upgrades, that's a real reason to wait.
+
+Check these statuses before you write them up rather than repeating them from here — a framework's release stage moves, and the point is the current fact, not this example.
 
 ## Delivery
 
@@ -131,6 +137,7 @@ Produce **both**:
 | "Rewrite the app" | Almost always wrong. Separate rewire (cheap) from rebuild (dear); lean on what `migration.json.mappings` says survives. |
 | A guess stated as fact | Mark confidence. "I'm certain" and "I'd need to check" are different sentences. |
 | Only listed the upsides of a technology choice | Not honest. Every bet has a cost — name it in business terms, don't soften it to sound positive. |
+| Recommended a stack (including ours) without its cons | You applied a maturity bar to their technology and exempted your own. Both sides, or cut the recommendation. |
 | Trashed a technology as "the wrong choice" | Equally lazy. Most choices are defensible; frame as tradeoff + "what to watch," not a verdict. |
 | "The frontend is just screens, it'll be quick" | Wrong. The custom-logic pieces (charts, complex tables, editors) are real work — flag them separately from the cheap standard pieces. |
 | A design point with no "why it matters" | Taste, not advice. Tie every design finding to user perception (polish/trust) or maintenance cost (change-once vs hunt-everywhere), plus effort. |
