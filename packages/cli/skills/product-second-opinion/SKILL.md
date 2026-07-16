@@ -1,6 +1,7 @@
 ---
 name: product-second-opinion
 description: 'Use when a non-technical owner (founder, PM, operator) wants a plain-language report on an app they hold but did not build — explaining how it works and how it could be better. Reads the .knowledge/ blueprint from software-archaeology and produces a layered, jargon-free report that credits what works, names what does not (with business impact + effort), and argues an opinionated better design. TRIGGER: "explain how my app works", "what would you do differently", "review my app for a non-technical audience", "I inherited/am stuck with an agency-built app", "is this built well?". DO NOT TRIGGER for: extracting the machine-readable blueprint itself (use software-archaeology), or an engineer-facing technical code review.'
+installGroups: [fabric]
 ---
 
 # Product Second Opinion
