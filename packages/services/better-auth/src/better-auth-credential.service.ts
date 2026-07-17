@@ -121,12 +121,43 @@ export class BetterAuthCredentialService implements CredentialService {
   }
 
   async delete(name: string, userId?: string): Promise<void> {
-    if (this.ownerOf(name, userId)) {
+    const owner = this.ownerOf(name, userId)
+    if (!owner) {
+      return this.fallback.delete(name, userId)
+    }
+    return this.unlinkAccount(name, owner)
+  }
+
+  /**
+   * Removes the account row holding the token.
+   *
+   * Not `auth.api.unlinkAccount`: that endpoint acts on the *caller's session*
+   * (its body takes only a providerId), so it can revoke a credential only for
+   * whoever is currently signed in. Two legitimate server-side revocations have
+   * no session to act on — a platform credential, whose owner is a banned user
+   * that never signs in, and an admin revoking someone else's. Both are removed
+   * through the same internal adapter the link callback writes the row with.
+   */
+  private async unlinkAccount(
+    providerId: string,
+    userId: string
+  ): Promise<void> {
+    const auth = await this.getAuth()
+    if (!auth.$context) {
       throw new Error(
-        `Cannot delete OAuth2 credential '${name}' server-side — better-auth's unlink endpoint acts on the caller's session. Call authClient.unlinkAccount({ providerId: '${name}' }) from the client.`
+        `Cannot delete OAuth2 credential '${providerId}': the better-auth instance exposes no $context to remove the account row with.`
       )
     }
-    return this.fallback.delete(name, userId)
+    const context = await auth.$context
+    const account = (
+      await context.internalAdapter.findAccounts(userId)
+    ).find((candidate: { providerId: string }) => candidate.providerId === providerId)
+    // Already unlinked — deleting a credential that isn't there is a no-op, not
+    // an error, so a retried revoke stays safe.
+    if (!account) {
+      return
+    }
+    await context.internalAdapter.deleteAccount(account.id)
   }
 
   async has(name: string, userId?: string): Promise<boolean> {

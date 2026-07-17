@@ -58,8 +58,17 @@ const makeAuth = (options: {
   tokens?: Record<string, string>
   onGetAccessToken?: (body: any) => void
   throwOnGetAccessToken?: unknown
+  accounts?: Array<{ id: string; providerId: string; userId: string }>
+  onDeleteAccount?: (id: string) => void
 }) => ({
   handler: async () => new Response(),
+  $context: Promise.resolve({
+    internalAdapter: {
+      findAccounts: async (userId: string) =>
+        (options.accounts ?? []).filter((a) => a.userId === userId),
+      deleteAccount: async (id: string) => options.onDeleteAccount?.(id),
+    },
+  }),
   api: {
     getAccessToken: async ({ body }: any) => {
       options.onGetAccessToken?.(body)
@@ -213,12 +222,36 @@ describe('BetterAuthCredentialService', () => {
     )
   })
 
-  test('deleting an oauth2 credential points at the client unlink', async () => {
-    const service = build(makeAuth({}), new FakeFallback())
-    await assert.rejects(
-      () => service.delete('youtube', 'user-1'),
-      /unlinkAccount/
+  // Server-side revoke is the admin's path (console:credentialDelete) and the
+  // only possible path for a platform credential, whose owner never has a
+  // session for better-auth's own unlink endpoint to act on.
+  test('deleting an oauth2 credential removes that user\'s account row', async () => {
+    const deleted: string[] = []
+    const service = build(
+      makeAuth({
+        accounts: [
+          { id: 'acc-1', providerId: 'youtube', userId: 'user-1' },
+          // Same provider, different user, and a different provider for the
+          // same user: neither may be touched.
+          { id: 'acc-2', providerId: 'youtube', userId: 'user-2' },
+          { id: 'acc-3', providerId: 'google-docs', userId: 'user-1' },
+        ],
+        onDeleteAccount: (id) => deleted.push(id),
+      }),
+      new FakeFallback()
     )
+    await service.delete('youtube', 'user-1')
+    assert.deepStrictEqual(deleted, ['acc-1'])
+  })
+
+  test('deleting an unlinked oauth2 credential is a no-op', async () => {
+    const deleted: string[] = []
+    const service = build(
+      makeAuth({ accounts: [], onDeleteAccount: (id) => deleted.push(id) }),
+      new FakeFallback()
+    )
+    await service.delete('youtube', 'user-1')
+    assert.deepStrictEqual(deleted, [])
   })
 
   test('set and delete still work for non-oauth2 credentials', async () => {
