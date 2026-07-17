@@ -180,6 +180,28 @@ export async function loadAddonFunctionsMeta(
         // No secrets meta — that's fine
       }
 
+      // Load addon scopes meta. Without this an addon's own scopes never reach
+      // the host's ScopeId union or its declared set, so the pikku_scopes FK
+      // would refuse to grant one.
+      try {
+        const scopesMetaPath = require.resolve(
+          `${decl.package}/.pikku/scopes/pikku-scopes-meta.gen.json`
+        )
+        const scopesRaw = await readFile(scopesMetaPath, 'utf-8')
+        const scopesMeta = JSON.parse(scopesRaw)
+        for (const [key, def] of Object.entries<any>(scopesMeta)) {
+          const existing = state.scopes.definitions.find(
+            (d: any) => d.name === key
+          )
+          if (!existing) {
+            state.scopes.definitions.push(def)
+            logger.debug(`Loaded addon scope '${key}' from ${decl.package}`)
+          }
+        }
+      } catch {
+        // No scopes meta — that's fine
+      }
+
       // Load addon variables meta
       try {
         const variablesMetaPath = require.resolve(

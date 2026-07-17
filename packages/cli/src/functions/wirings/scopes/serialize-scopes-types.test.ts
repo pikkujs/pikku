@@ -58,7 +58,10 @@ describe('serializeScopesTypes', () => {
     )
   })
 
-  test('emits metadata including descriptions', () => {
+  // Descriptions ride in the metadata sidecar (see 'shipping the declared set'
+  // below), so SCOPES_META carries them through rather than restating them.
+  // Display names have no sidecar of their own and stay inlined.
+  test('emits metadata carrying display names and descriptions', () => {
     const definitions: ScopeDefinitions = [
       {
         name: 'admin',
@@ -70,8 +73,12 @@ describe('serializeScopesTypes', () => {
     const output = serializeScopesTypes({ definitions })
 
     assert.match(output, /SCOPES_META/)
-    assert.ok(output.includes('Administrative access'))
-    assert.ok(output.includes('Administration'))
+    assert.ok(output.includes('Administration'), 'expected the display name')
+    assert.match(
+      output,
+      /description: scope\.description/,
+      'expected SCOPES_META to carry the description through from the sidecar'
+    )
   })
 
   test('emits a never union when nothing is declared', () => {
@@ -105,5 +112,33 @@ describe('serializeScopesTypes', () => {
       [...union.matchAll(/'([^']+)'/g)].map((m) => m[1]).sort(),
       ['admin', 'admin:*', 'admin:invoices', 'admin:users'].sort()
     )
+  })
+})
+
+describe('serializeScopesTypes — shipping the declared set', () => {
+  // The generated file must *import* its metadata sidecar rather than inlining
+  // it. tsc only copies a .json into dist when something imports it, and an
+  // addon publishes only dist — so without this import an addon's scopes never
+  // reach a host that installs it, and the pikku_scopes FK refuses to grant
+  // them.
+  test('imports the metadata sidecar so tsc ships it', () => {
+    const output = serializeScopesTypes({ definitions: [{ name: 'admin' }] })
+
+    assert.match(
+      output,
+      /import .* from '\.\/pikku-scopes-meta\.gen\.json' with \{ type: 'json' \}/
+    )
+  })
+
+  test('derives the declared set from the sidecar rather than duplicating it', () => {
+    const output = serializeScopesTypes({ definitions: [{ name: 'admin' }] })
+
+    assert.match(output, /flattenScopeDefinitions/)
+  })
+
+  test('still emits the union as a literal type', () => {
+    const output = serializeScopesTypes({ definitions: [{ name: 'admin' }] })
+
+    assert.match(output, /export type ScopeId =\s*\|\s*'admin'/)
   })
 })
