@@ -684,7 +684,7 @@ wireCLI({
         n8n: pikkuCLICommand({
           func: pikkuImportN8n,
           description:
-            'Import an n8n workflow JSON export into a Pikku workflow graph + stub functions',
+            'Import an n8n workflow JSON export (a single workflow, an export array, or a directory of exports) into Pikku workflow graphs + stub functions',
           parameters: '<file>',
           options: {
             out: {
