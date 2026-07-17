@@ -41,6 +41,7 @@ import type { EmailService } from '../services/email-service.js'
 import type { MetaService } from '../services/meta-service.js'
 import type { CoverageService } from '../services/v8-coverage-service.js'
 import type { SessionStore } from '../services/session-store.js'
+import type { ScopeService } from '../services/scope-service.js'
 import type {
   AuditDurability,
   AuditLog,
@@ -116,6 +117,8 @@ export type FunctionRuntimeMeta = {
   pikkuFuncId: string
   inputSchemaName: string | null
   outputSchemaName: string | null
+  /** Scopes the session must hold to run this function. All are required (AND). */
+  scopes?: string[]
   expose?: boolean
   remote?: boolean
   mcp?: boolean
@@ -254,6 +257,12 @@ export interface CoreUserSession {
   orgId?: string
   /** True when the session belongs to a synthetic scenario actor — lets audits/analytics address synthetic traffic */
   actor?: boolean
+  /**
+   * Scopes granted to this session, checked against a function's `scopes`.
+   * Populated by whoever builds the session (e.g. better-auth's `mapSession`
+   * resolving them via a ScopeService) — core reads them and never fetches.
+   */
+  scopes?: string[]
 }
 
 /**
@@ -315,6 +324,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   auditLog?: AuditLog
   /** Session store for persisting user sessions keyed by pikkuUserId */
   sessionStore?: SessionStore
+  /**
+   * Resolves and administers user scopes. Called when building a session (e.g.
+   * better-auth's `mapSession`), never by the function runner.
+   */
+  scopeService?: ScopeService
 }
 
 /**

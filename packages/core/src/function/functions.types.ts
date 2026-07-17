@@ -309,6 +309,12 @@ export type CorePikkuFunctionConfig<
   approvalDescription?: any
   func: PikkuFunction
   auth?: boolean
+  /**
+   * Scopes the session must hold to run this function. All of them are
+   * required (AND), and they are checked before `permissions` — unlike
+   * permissions, which OR together, a scope can only narrow access.
+   */
+  scopes?: string[]
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
   input?: InputSchema

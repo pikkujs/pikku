@@ -6,12 +6,16 @@ import {
   getFunctionNames,
   runPikkuFunc,
 } from './function-runner.js'
-import { addTagMiddleware, addTagPermission } from '../index.js'
+import {
+  addGlobalPermission,
+  addTagMiddleware,
+  addTagPermission,
+} from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
-import { ReadonlySessionError } from '../errors/errors.js'
+import { MissingScopeError, ReadonlySessionError } from '../errors/errors.js'
 import { createInvocationAudit } from '../services/audit-service.js'
 
 beforeEach(() => {
@@ -1212,7 +1216,10 @@ describe('runPikkuFunc - Integration Tests', () => {
     addTestFunction('auditedInner', {
       audit: true,
       func: async (services: any) => {
-        await services.auditLog.write({ type: 'booking.update', source: 'explicit' })
+        await services.auditLog.write({
+          type: 'booking.update',
+          source: 'explicit',
+        })
         return 'inner-ok'
       },
     })
@@ -1223,15 +1230,20 @@ describe('runPikkuFunc - Integration Tests', () => {
       },
     })
 
-    const result = await runPikkuFunc('http', 'exposed-rpc-route', 'rpcCallerLike', {
-      singletonServices,
-      data: () => ({}),
-      auth: false,
-      wire: {},
-      createWireServices: async (services: any, wire: any) => ({
-        auditLog: createInvocationAudit(services.audit, wire),
-      }),
-    })
+    const result = await runPikkuFunc(
+      'http',
+      'exposed-rpc-route',
+      'rpcCallerLike',
+      {
+        singletonServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+        createWireServices: async (services: any, wire: any) => ({
+          auditLog: createInvocationAudit(services.audit, wire),
+        }),
+      }
+    )
 
     assert.equal(result, 'inner-ok')
     assert.equal(events.length, 1)
@@ -1249,7 +1261,10 @@ describe('runPikkuFunc - Integration Tests', () => {
     addTestFunction('auditedChildWriter', {
       audit: true,
       func: async (services: any) => {
-        await services.auditLog.write({ type: 'child.event', source: 'explicit' })
+        await services.auditLog.write({
+          type: 'child.event',
+          source: 'explicit',
+        })
         return 'child-ok'
       },
     })
@@ -1257,17 +1272,25 @@ describe('runPikkuFunc - Integration Tests', () => {
     addTestFunction('auditedParentWriter', {
       audit: true,
       func: async (services: any, _data: any, wire: any) => {
-        await services.auditLog.write({ type: 'parent.event', source: 'explicit' })
+        await services.auditLog.write({
+          type: 'parent.event',
+          source: 'explicit',
+        })
         return wire.rpc.invoke('auditedChildWriter', {})
       },
     })
 
-    const result = await runPikkuFunc('rpc', 'audited-parent-child', 'auditedParentWriter', {
-      singletonServices,
-      data: () => ({}),
-      auth: false,
-      wire: {},
-    })
+    const result = await runPikkuFunc(
+      'rpc',
+      'audited-parent-child',
+      'auditedParentWriter',
+      {
+        singletonServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      }
+    )
 
     assert.equal(result, 'child-ok')
     const byType = Object.fromEntries(events.map((e) => [e.type, e.functionId]))
@@ -1279,26 +1302,41 @@ describe('runPikkuFunc - Integration Tests', () => {
     const warnings: any[] = []
     const singletonServices = {
       ...mockSingletonServices,
-      logger: { ...mockSingletonServices.logger, warn: (msg: any) => warnings.push(msg) },
+      logger: {
+        ...mockSingletonServices.logger,
+        warn: (msg: any) => warnings.push(msg),
+      },
       audit: { audit: async () => {} },
     }
 
     addTestFunction('unauditedWriter', {
       func: async (services: any) => {
-        await services.auditLog.write({ type: 'dropped.event', source: 'explicit' })
+        await services.auditLog.write({
+          type: 'dropped.event',
+          source: 'explicit',
+        })
         return 'ok'
       },
     })
 
-    const result = await runPikkuFunc('rpc', 'unaudited-writer', 'unauditedWriter', {
-      singletonServices,
-      data: () => ({}),
-      auth: false,
-      wire: {},
-      createWireServices: async (services: any, wire: any) => ({
-        auditLog: createInvocationAudit(services.audit, wire, services.logger),
-      }),
-    })
+    const result = await runPikkuFunc(
+      'rpc',
+      'unaudited-writer',
+      'unauditedWriter',
+      {
+        singletonServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+        createWireServices: async (services: any, wire: any) => ({
+          auditLog: createInvocationAudit(
+            services.audit,
+            wire,
+            services.logger
+          ),
+        }),
+      }
+    )
 
     assert.equal(result, 'ok')
     assert.equal(warnings.length, 1)
@@ -1359,5 +1397,173 @@ describe('function-runner helpers', () => {
       'rootFunc',
       'stripe:addonFunc',
     ])
+  })
+})
+
+describe('runPikkuFunc - scopes', () => {
+  const runWithScopes = (
+    funcName: string,
+    {
+      scopes,
+      sessionScopes,
+      data = () => ({}),
+    }: {
+      scopes?: string[]
+      sessionScopes?: string[]
+      data?: () => any
+    }
+  ) =>
+    runPikkuFunc('rpc', Math.random().toString(), funcName, {
+      singletonServices: mockSingletonServices,
+      data,
+      auth: false,
+      wire: { session: { userId: 'u1', scopes: sessionScopes } as any },
+    })
+
+  test('runs the function when the session holds the required scope', async () => {
+    addTestFunction('scoped', {
+      func: async () => 'ok',
+      scopes: ['invoices:create'],
+    })
+
+    const result = await runWithScopes('scoped', {
+      sessionScopes: ['invoices:create'],
+    })
+
+    assert.equal(result, 'ok')
+  })
+
+  test('throws MissingScopeError when the session lacks the scope', async () => {
+    addTestFunction('scoped', {
+      func: async () => 'ok',
+      scopes: ['invoices:create'],
+    })
+
+    await assert.rejects(
+      () => runWithScopes('scoped', { sessionScopes: ['billing:read'] }),
+      MissingScopeError
+    )
+  })
+
+  test('honours wildcards held by the session', async () => {
+    addTestFunction('scoped', {
+      func: async () => 'ok',
+      scopes: ['admin:invoices:create'],
+    })
+
+    const result = await runWithScopes('scoped', { sessionScopes: ['admin:*'] })
+
+    assert.equal(result, 'ok')
+  })
+
+  test('does not gate a function that declares no scopes', async () => {
+    addTestFunction('unscoped', { func: async () => 'ok' })
+
+    const result = await runWithScopes('unscoped', { sessionScopes: [] })
+
+    assert.equal(result, 'ok')
+  })
+
+  test('reads scopes from function meta when the config omits them', async () => {
+    addTestFunction('metaScoped', { func: async () => 'ok' })
+    pikkuState(null, 'function', 'meta').metaScoped.scopes = ['invoices:create']
+
+    await assert.rejects(
+      () => runWithScopes('metaScoped', { sessionScopes: [] }),
+      MissingScopeError
+    )
+  })
+
+  // The load-bearing test. runPermissions ORs global/wire/tag/func permissions
+  // and returns on the first pass, so a scope check placed inside that pool
+  // would be satisfied by any passing permission anywhere in the app.
+  test('a passing global permission does not satisfy a scope', async () => {
+    addGlobalPermission([async () => true])
+    addTestFunction('scoped', { func: async () => 'ok', scopes: ['admin'] })
+
+    await assert.rejects(
+      () => runWithScopes('scoped', { sessionScopes: [] }),
+      MissingScopeError
+    )
+  })
+
+  test('a passing function permission does not satisfy a scope', async () => {
+    addTestFunction('scoped', {
+      func: async () => 'ok',
+      scopes: ['admin'],
+      permissions: { allow: [async () => true] },
+    })
+
+    await assert.rejects(
+      () => runWithScopes('scoped', { sessionScopes: [] }),
+      MissingScopeError
+    )
+  })
+
+  test('a held scope does not bypass a failing permission', async () => {
+    addTestFunction('scoped', {
+      func: async () => 'ok',
+      scopes: ['admin'],
+      permissions: { deny: [async () => false] },
+    })
+
+    await assert.rejects(
+      () => runWithScopes('scoped', { sessionScopes: ['admin'] }),
+      { message: 'Permission denied' }
+    )
+  })
+
+  test('a failing scope short-circuits before permissions run', async () => {
+    let permissionRan = false
+    addTestFunction('scoped', {
+      func: async () => 'ok',
+      scopes: ['admin'],
+      permissions: {
+        allow: [
+          async () => {
+            permissionRan = true
+            return true
+          },
+        ],
+      },
+    })
+
+    await assert.rejects(
+      () => runWithScopes('scoped', { sessionScopes: [] }),
+      MissingScopeError
+    )
+    assert.equal(permissionRan, false)
+  })
+
+  // Scopes depend only on the session, so a denied request must never pay to
+  // parse or validate its body.
+  test('a failing scope short-circuits before the data is evaluated', async () => {
+    addTestFunction('scoped', { func: async () => 'ok', scopes: ['admin'] })
+
+    await assert.rejects(
+      () =>
+        runWithScopes('scoped', {
+          sessionScopes: [],
+          data: () => {
+            throw new Error('data should not have been evaluated')
+          },
+        }),
+      MissingScopeError
+    )
+  })
+
+  test('fails closed when there is no session at all', async () => {
+    addTestFunction('scoped', { func: async () => 'ok', scopes: ['admin'] })
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'scoped', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: false,
+          wire: {},
+        }),
+      MissingScopeError
+    )
   })
 })

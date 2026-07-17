@@ -121,6 +121,30 @@ addError(MissingCredentialError, {
 })
 
 /**
+ * The session does not hold a scope required by the function. The payload
+ * names the missing scope so the client can surface what to request.
+ * @group Error
+ */
+export class MissingScopeError extends PikkuError {
+  public payload: {
+    error: 'missing_scope'
+    scope: string
+  }
+
+  constructor(scope: string) {
+    super(`Missing required scope: ${scope}`)
+    this.payload = {
+      error: 'missing_scope',
+      scope,
+    }
+  }
+}
+addError(MissingScopeError, {
+  status: 403,
+  message: 'The session does not hold a scope required by this function.',
+})
+
+/**
  * The session is readonly and cannot access a non-readonly function.
  * @group Error
  */

@@ -196,6 +196,7 @@ export {
   addGlobalPermission,
   checkAuthPermissions,
 } from './permissions.js'
+export { verifyScopes } from './scopes.js'
 export {
   isSerializable,
   stopSingletonServices,
