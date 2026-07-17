@@ -227,19 +227,63 @@ Then('the link should be forbidden', function () {
  * A platform credential is read with NO userId — that is what makes it the
  * platform's rather than any one user's.
  */
+const resolvePlatformCredential = async (name: string) => {
+  const res = await fetch(`${config.apiUrl}/rpc/getCredential`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { name } }),
+  })
+  const body = await res.json()
+  return body.valueJson as string | null
+}
+
 Then(
   'the platform credential {string} should resolve',
   async function (name: string) {
-    const res = await fetch(`${config.apiUrl}/rpc/getCredential`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { name } }),
-    })
-    const body = await res.json()
     expect(
-      body.valueJson,
+      await resolvePlatformCredential(name),
       `platform credential ${name} did not resolve`
     ).toBeTruthy()
+  }
+)
+
+Then(
+  'the platform credential {string} should not resolve',
+  async function (name: string) {
+    expect(await resolvePlatformCredential(name)).toBeNull()
+  }
+)
+
+/**
+ * Goes through credentialService.delete with no session anywhere — the seam an
+ * admin console revokes through (console:credentialDelete), and the only seam a
+ * platform credential can be disconnected through at all.
+ */
+const revokeCredential = async (name: string, userId?: string) => {
+  const res = await fetch(`${config.apiUrl}/rpc/deleteCredential`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { name, userId } }),
+  })
+  const body = await res.json()
+  expect(
+    res.status,
+    `revoke failed for ${name}: ${JSON.stringify(body)}`
+  ).toBe(200)
+  expect(body.success, `revoke did not report success for ${name}`).toBe(true)
+}
+
+When(
+  'the credential {string} is revoked server-side for {string}',
+  async function (name: string, userName: string) {
+    await revokeCredential(name, users.get(userName)!.userId)
+  }
+)
+
+When(
+  'the platform credential {string} is revoked server-side',
+  async function (name: string) {
+    await revokeCredential(name)
   }
 )
 

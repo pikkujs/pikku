@@ -4,6 +4,12 @@ import { pikkuState } from '@pikku/core/internal'
 export interface BetterAuthInstance {
   handler: (request: Request) => Promise<Response>
   api: Record<string, any>
+  /**
+   * better-auth's resolved context. Optional because a hand-built instance may
+   * omit it; credential unlinking needs it, since better-auth exposes no
+   * session-free way to remove an account row.
+   */
+  $context?: Promise<any>
 }
 
 export const PIKKU_BETTER_AUTH = Symbol.for('pikku.betterAuth')
