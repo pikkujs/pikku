@@ -10,6 +10,7 @@ import {
   resolveImpersonatedSession,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
+import { withResolvedScopes } from './auth-session-scopes.js'
 
 type BetterAuthSessionResult = { user: any; session: any }
 
@@ -48,6 +49,11 @@ type BetterAuthSessionOptions = {
      * services so callers can resolve current scope (e.g. look up the owning
      * resource row) rather than trusting only what is baked into the key.
      * Return `null`/`undefined` to reject the caller.
+     *
+     * Set `scopes` here to mint a *restricted* key: an explicit set (including
+     * an empty one) is authoritative and is never widened back out to
+     * everything the owning user holds. Leave it unset for a key that acts with
+     * its owner's full rights.
      */
     mapKey: (
       key: any,
@@ -93,7 +99,9 @@ export const betterAuthSession = (
                 services as CoreServices
               )
               if (mapped) {
-                setSession(mapped)
+                setSession(
+                  await withResolvedScopes(mapped, services as CoreServices)
+                )
               }
             }
           } catch (e: any) {
@@ -141,14 +149,23 @@ export const betterAuthSession = (
             mapSession
           )
           if (impersonated) {
-            setSession(impersonated)
+            // Scopes resolve for the impersonated userId, not the admin's — an
+            // impersonated session runs as the target, with the target's rights.
+            setSession(
+              await withResolvedScopes(impersonated, services as CoreServices)
+            )
             return next()
           }
         }
         const mapped = mapSession
           ? await mapSession(result, services as CoreServices)
           : ({ userId: result.user.id } as CoreUserSession)
-        setSession(stampActorFlag(mapped, result.user))
+        setSession(
+          await withResolvedScopes(
+            stampActorFlag(mapped, result.user),
+            services as CoreServices
+          )
+        )
       }
 
       return next()
