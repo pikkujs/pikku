@@ -194,28 +194,29 @@ Feature: Credential Service API
 
   Scenario: OAuth API returns 200 after OAuth connect
     Given the mock OAuth server is running
-    When user "oauth-alice" initiates OAuth connect for "user-oauth"
-    And the OAuth callback is completed for "user-oauth"
-    And I call the OAuth API profile as user "oauth-alice"
+    And a signed-in user "oauth-alice"
+    When "oauth-alice" links the "user-oauth" provider
+    And I call the OAuth API profile as linked user "oauth-alice"
     Then the OAuth API response status should be 200
     And the OAuth API profile should be authenticated
 
   Scenario: OAuth API per-user isolation - one connected, one not
     Given the mock OAuth server is running
-    When user "connected-user" initiates OAuth connect for "user-oauth"
-    And the OAuth callback is completed for "user-oauth"
-    When I call the OAuth API profile as user "connected-user"
+    And a signed-in user "connected-user"
+    And a signed-in user "disconnected-user"
+    When "connected-user" links the "user-oauth" provider
+    And I call the OAuth API profile as linked user "connected-user"
     Then the OAuth API response status should be 200
-    When I call the OAuth API profile as user "disconnected-user"
+    When I call the OAuth API profile as linked user "disconnected-user"
     Then the OAuth API response status should be 403
 
   # --- Workflow credential propagation ---
 
   Scenario: Workflow step accesses user credentials via pikkuUserId
     Given the mock OAuth server is running
-    When user "wf-user" initiates OAuth connect for "user-oauth"
-    And the OAuth callback is completed for "user-oauth"
-    When I run the credential workflow as user "wf-user"
+    And a signed-in user "wf-user"
+    When "wf-user" links the "user-oauth" provider
+    And I run the credential workflow as linked user "wf-user"
     Then the credential workflow should return an authenticated profile
 
   Scenario: Workflow step fails without user credentials
