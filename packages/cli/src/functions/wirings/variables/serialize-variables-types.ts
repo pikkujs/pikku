@@ -54,6 +54,12 @@ export const serializeVariablesTypes = ({
     `import { TypedVariablesService as CoreTypedVariablesService, type VariableMeta } from '@pikku/core/services'`
   )
   imports.push(`import type { VariablesService } from '@pikku/core/services'`)
+  imports.push(
+    `import type { VariableDefinitionsMeta } from '@pikku/core/variable'`
+  )
+  imports.push(
+    `import variablesMeta from './pikku-variables-meta.gen.json' with { type: 'json' }`
+  )
 
   if (needsZod) {
     imports.push(`import type { z } from 'zod'`)
@@ -71,19 +77,30 @@ export const serializeVariablesTypes = ({
 
   return `${imports.join('\n')}
 
+/**
+ * Every variable declared in this package.
+ *
+ * Read from the metadata sidecar rather than inlined, so that the import above
+ * forces tsc to emit the .json alongside this file. An addon publishes only its
+ * compiled output, and a host reads that .json to discover the addon's declared
+ * variables — an uncopied sidecar leaves them invisible to the host.
+ */
+export const VARIABLES_META: VariableDefinitionsMeta =
+  variablesMeta as VariableDefinitionsMeta
+
 export interface VariablesMap {
 ${mapEntries.join('\n')}
 }
 
 export type VariableId = keyof VariablesMap
 
-const VARIABLES_META: Record<string, VariableMeta> = {
+const TYPED_VARIABLES_META: Record<string, VariableMeta> = {
 ${metaEntries.join(',\n')}
 }
 
 export class TypedVariablesService extends CoreTypedVariablesService<VariablesMap> {
   constructor(variables: VariablesService) {
-    super(variables, VARIABLES_META)
+    super(variables, TYPED_VARIABLES_META)
   }
 }
 `
