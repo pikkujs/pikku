@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Box, Group, Stack, Text, Badge } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { Route, Check, X, Loader } from 'lucide-react'
+import { Route, Check, X, Loader, Pause } from 'lucide-react'
 import { FlowCast } from './FlowCast'
 import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import type { FlowEntry } from './flow-types'
@@ -26,6 +26,7 @@ const STATUS_META: Record<
   failed: { tone: 'red', label: 'failed', Icon: X },
   cancelled: { tone: 'red', label: 'cancelled', Icon: X },
   running: { tone: 'blue', label: 'running', Icon: Loader },
+  suspended: { tone: 'yellow', label: 'suspended', Icon: Pause },
 }
 
 type FlowCardProps = {

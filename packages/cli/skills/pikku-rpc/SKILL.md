@@ -108,7 +108,7 @@ RPC calls go through Pikku's middleware and permission pipeline. Direct imports 
 
 ### Generated RPC Client
 
-After `npx pikku prebuild`:
+After `npx pikku all`:
 
 ```typescript
 import { pikkuRPC } from '.pikku/pikku-rpc.gen.js'

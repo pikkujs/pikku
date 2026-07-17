@@ -172,7 +172,7 @@ wireChannel({
 
 ### Generated WebSocket Client
 
-After `npx pikku prebuild`:
+After `npx pikku all`:
 
 ```typescript
 import { PikkuWebSocket } from '.pikku/pikku-websocket.gen.js'

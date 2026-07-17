@@ -74,9 +74,10 @@ const secrets = new AWSSecrets(config: AWSConfig)
 
 **Methods:**
 
-- `getSecret<R>(SecretId: string): Promise<R>` — Get a secret value
-- `getSecretJSON<R>(SecretId: string): Promise<R>` — Get and parse a JSON secret
+- `getSecret<T = string>(SecretId: string): Promise<T>` — Get a secret value; a JSON secret is parsed automatically, so pass a shape as `T` (a non-JSON value comes back as the raw string)
+- `getSecrets<T>(SecretIds: (keyof T & string)[]): Promise<Partial<T>>` — Batch fetch; missing keys are omitted rather than thrown
 - `hasSecret(SecretId: string): Promise<boolean>` — Check if secret exists
+- `setSecret` / `deleteSecret` — **not implemented** for `AWSSecrets`; it throws. Manage AWS secrets out of band.
 
 ## Usage Patterns
 

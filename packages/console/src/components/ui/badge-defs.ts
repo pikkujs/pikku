@@ -108,6 +108,7 @@ export const flagDefs: Record<string, FlagBadgeDef> = {
 
 export const statusDefs: Record<string, EnumBadgeDef> = {
   running: { color: 'blue', label: 'running' },
+  suspended: { color: 'yellow', label: 'suspended' },
   completed: { color: 'green', label: 'completed' },
   succeeded: { color: 'green', label: 'succeeded' },
   failed: { color: 'red', label: 'failed' },

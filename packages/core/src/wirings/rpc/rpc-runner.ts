@@ -6,7 +6,8 @@ import type {
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import type { AddonInstance } from '../../function/function-runner.js'
+import type { AddonInstance } from './addon-runner.js'
+import { addonInstanceForNamespace } from './addon-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
@@ -55,26 +56,6 @@ export const resolveNamespace = (
     package: pkgConfig.package,
     function: functionName,
     addonConfig: pkgConfig,
-  }
-}
-
-/**
- * Build the addon instance descriptor (namespace + per-instance overrides) for
- * a bare intra-addon call, using the namespace currently executing on the wire.
- * Returns undefined unless that namespace maps to the resolved package.
- */
-const addonInstanceForNamespace = (
-  namespace: string | undefined,
-  expectedPackage: string
-): AddonInstance | undefined => {
-  if (!namespace) return undefined
-  const cfg = pikkuState(null, 'addons', 'packages').get(namespace)
-  if (!cfg || cfg.package !== expectedPackage) return undefined
-  return {
-    namespace,
-    secretOverrides: cfg.secretOverrides,
-    variableOverrides: cfg.variableOverrides,
-    credentialOverrides: cfg.credentialOverrides,
   }
 }
 
