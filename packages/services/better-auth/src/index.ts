@@ -28,6 +28,15 @@ export type {
   PikkuBetterAuthFactory,
   BetterAuthInstance,
 } from './define-auth.js'
+export { BetterAuthCredentialService } from './better-auth-credential.service.js'
+export type { BetterAuthCredentialServiceOptions } from './better-auth-credential.service.js'
+export { credentialOAuthProviders } from './credential-oauth-providers.js'
+export type {
+  CredentialOAuth2Configs,
+  CredentialOAuthApp,
+  CredentialOAuthProvider,
+  CredentialOAuthSecretReader,
+} from './credential-oauth-providers.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'
 export type {
   AuthProvider,
