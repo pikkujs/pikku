@@ -139,12 +139,69 @@ describe('BetterAuthCredentialService', () => {
     })
   })
 
-  test('a singleton oauth2 credential (no userId) uses the fallback', async () => {
+  // A wire credential is the caller's, so with no caller there is no account to
+  // read — it must not silently resolve someone else's token.
+  test('a wire oauth2 credential without a userId uses the fallback', async () => {
     const fallback = new FakeFallback()
-    await fallback.set('google-docs', { accessToken: 'platform' }, undefined)
-    const service = build(makeAuth({ tokens: { 'google-docs': 'user-tok' } }), fallback)
+    await fallback.set('google-docs', { accessToken: 'seeded' }, undefined)
+    const service = build(
+      makeAuth({ tokens: { 'google-docs': 'user-tok' } }),
+      fallback
+    )
     assert.deepStrictEqual(await service.get('google-docs'), {
-      accessToken: 'platform',
+      accessToken: 'seeded',
+    })
+  })
+
+  const buildWithSingleton = (auth: any, fallback: CredentialService) =>
+    new BetterAuthCredentialService({
+      getAuth: async () => auth as any,
+      oauth2Names: ['company-slack', 'youtube'],
+      singletonOAuth2Names: ['company-slack'],
+      platformUserId: 'platform-user',
+      fallback,
+    })
+
+  test('a singleton credential resolves against the platform user', async () => {
+    const seen: any[] = []
+    const service = buildWithSingleton(
+      makeAuth({
+        tokens: { 'company-slack': 'platform-tok' },
+        onGetAccessToken: (body) => seen.push(body),
+      }),
+      new FakeFallback()
+    )
+    assert.deepStrictEqual(await service.get('company-slack'), {
+      accessToken: 'platform-tok',
+    })
+    assert.deepStrictEqual(seen, [
+      { providerId: 'company-slack', userId: 'platform-user' },
+    ])
+  })
+
+  // The platform's token is the same token for everyone: a caller's own id must
+  // never be used to look it up, or each user would see their own empty account.
+  test('a singleton ignores the calling user and stays platform-owned', async () => {
+    const seen: any[] = []
+    const service = buildWithSingleton(
+      makeAuth({
+        tokens: { 'company-slack': 'platform-tok' },
+        onGetAccessToken: (body) => seen.push(body.userId),
+      }),
+      new FakeFallback()
+    )
+    await service.get('company-slack', 'user-7')
+    assert.deepStrictEqual(seen, ['platform-user'])
+  })
+
+  test('getAll reads a singleton from the platform user, not the caller', async () => {
+    const service = buildWithSingleton(
+      makeAuth({ tokens: { 'company-slack': 'platform-tok', youtube: 'yt' } }),
+      new FakeFallback()
+    )
+    assert.deepStrictEqual(await service.getAll('user-7'), {
+      'company-slack': { accessToken: 'platform-tok' },
+      youtube: { accessToken: 'yt' },
     })
   })
 

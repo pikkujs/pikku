@@ -1,5 +1,6 @@
 import type { CredentialService } from '@pikku/core/services'
 import type { BetterAuthInstance } from './define-auth.js'
+import { PLATFORM_USER_ID } from './credential-oauth.plugin.js'
 
 export interface BetterAuthCredentialServiceOptions {
   /**
@@ -14,9 +15,16 @@ export interface BetterAuthCredentialServiceOptions {
    */
   oauth2Names: Iterable<string>
   /**
+   * The subset of `oauth2Names` declared `type: 'singleton'`. These belong to
+   * the platform, so they resolve against the reserved platform user rather
+   * than the caller.
+   */
+  singletonOAuth2Names?: Iterable<string>
+  /** Owner of singleton credentials. Defaults to the plugin's PLATFORM_USER_ID. */
+  platformUserId?: string
+  /**
    * Handles every credential better-auth does not own: API keys, HMAC signers,
-   * and any `type: 'singleton'` credential (better-auth's account table is
-   * keyed by userId, so platform-level tokens have nothing to link to).
+   * and anything without an oauth2 declaration.
    */
   fallback: CredentialService
 }
@@ -39,28 +47,40 @@ const isAccountNotFound = (error: unknown): boolean =>
 export class BetterAuthCredentialService implements CredentialService {
   private readonly getAuth: () => Promise<BetterAuthInstance>
   private readonly oauth2Names: Set<string>
+  private readonly singletonOAuth2Names: Set<string>
+  private readonly platformUserId: string
   private readonly fallback: CredentialService
 
   constructor(options: BetterAuthCredentialServiceOptions) {
     this.getAuth = options.getAuth
     this.oauth2Names = new Set(options.oauth2Names)
+    this.singletonOAuth2Names = new Set(options.singletonOAuth2Names ?? [])
+    this.platformUserId = options.platformUserId ?? PLATFORM_USER_ID
     this.fallback = options.fallback
   }
 
   /**
-   * A credential is better-auth's only when it is oauth2 AND scoped to a user.
-   * `type: 'singleton'` has no userId, and better-auth's account table is keyed
-   * by one — so platform-level tokens stay with the fallback.
+   * Whose account holds this credential's token, or null if better-auth does
+   * not own it. A singleton belongs to the platform regardless of who is
+   * asking; a wire credential belongs to the caller, so without a userId there
+   * is no account to read and it falls through.
    */
-  private ownsOAuth2(name: string, userId?: string): userId is string {
-    return this.oauth2Names.has(name) && !!userId
+  private ownerOf(name: string, userId?: string): string | null {
+    if (!this.oauth2Names.has(name)) {
+      return null
+    }
+    if (this.singletonOAuth2Names.has(name)) {
+      return this.platformUserId
+    }
+    return userId ?? null
   }
 
   async get<T = unknown>(name: string, userId?: string): Promise<T | null> {
-    if (!this.ownsOAuth2(name, userId)) {
+    const owner = this.ownerOf(name, userId)
+    if (!owner) {
       return this.fallback.get<T>(name, userId)
     }
-    return (await this.readToken(name, userId)) as T | null
+    return (await this.readToken(name, owner)) as T | null
   }
 
   /**
@@ -92,7 +112,7 @@ export class BetterAuthCredentialService implements CredentialService {
   }
 
   async set(name: string, value: unknown, userId?: string): Promise<void> {
-    if (this.ownsOAuth2(name, userId)) {
+    if (this.ownerOf(name, userId)) {
       throw new Error(
         `Cannot set OAuth2 credential '${name}' directly — better-auth owns its tokens. Link the account via the OAuth flow instead.`
       )
@@ -101,7 +121,7 @@ export class BetterAuthCredentialService implements CredentialService {
   }
 
   async delete(name: string, userId?: string): Promise<void> {
-    if (this.ownsOAuth2(name, userId)) {
+    if (this.ownerOf(name, userId)) {
       throw new Error(
         `Cannot delete OAuth2 credential '${name}' server-side — better-auth's unlink endpoint acts on the caller's session. Call authClient.unlinkAccount({ providerId: '${name}' }) from the client.`
       )
@@ -110,10 +130,11 @@ export class BetterAuthCredentialService implements CredentialService {
   }
 
   async has(name: string, userId?: string): Promise<boolean> {
-    if (!this.ownsOAuth2(name, userId)) {
+    const owner = this.ownerOf(name, userId)
+    if (!owner) {
       return this.fallback.has(name, userId)
     }
-    return (await this.readToken(name, userId)) !== null
+    return (await this.readToken(name, owner)) !== null
   }
 
   /**
@@ -130,11 +151,14 @@ export class BetterAuthCredentialService implements CredentialService {
       return this.fallback.getAll(userId)
     }
 
+    // Resolved through ownerOf so a singleton reads from the platform user
+    // rather than the caller, who has no account for it.
     const [fallbackCredentials, tokens] = await Promise.all([
       this.fallback.getAll(userId),
       Promise.all(
         [...this.oauth2Names].map(
-          async (name) => [name, await this.readToken(name, userId)] as const
+          async (name) =>
+            [name, await this.readToken(name, this.ownerOf(name, userId)!)] as const
         )
       ),
     ])

@@ -191,6 +191,9 @@ export const createSingletonServices = pikkuServices(
           pikkuState(null, 'package', 'authFactory') as any
         )(singletonServices)),
       oauth2Names: Object.keys(CREDENTIAL_OAUTH2_CONFIGS),
+      singletonOAuth2Names: Object.entries(CREDENTIAL_OAUTH2_CONFIGS)
+        .filter(([, config]) => config.type === 'singleton')
+        .map(([name]) => name),
       fallback: new LocalCredentialService(),
     })
 

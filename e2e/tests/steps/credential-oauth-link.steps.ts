@@ -47,7 +47,7 @@ const makeClient = (actor: Actor) =>
     fetchOptions: { customFetchImpl: actor.cookieFetch },
   })
 
-Given('a signed-in user {string}', async function (name: string) {
+const signIn = async function (name: string) {
   const existing = users.get(name)
   if (existing) {
     current = existing
@@ -71,18 +71,24 @@ Given('a signed-in user {string}', async function (name: string) {
 
   current = { actor, client, userId: session!.user.id }
   users.set(name, current)
-})
+}
+
+Given('a signed-in user {string}', signIn)
+
+// The suite's auth config treats the user named 'root' as the one who may
+// connect a platform-wide credential (see canLinkSingleton in auth.ts).
+Given('a signed-in admin {string}', signIn)
+
+const requestLink = (user: LinkedUser, providerId: string) =>
+  user.actor.cookieFetch(`${config.apiUrl}/api/auth/credential-oauth/link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ providerId, callbackURL: config.apiUrl }),
+  })
 
 /** Ask better-auth to start the link and return its redirect target. */
 const startLink = async (user: LinkedUser, providerId: string) => {
-  const res = await user.actor.cookieFetch(
-    `${config.apiUrl}/api/auth/credential-oauth/link`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ providerId, callbackURL: config.apiUrl }),
-    }
-  )
+  const res = await requestLink(user, providerId)
   const body = await res.json()
   expect(
     res.status,
@@ -200,6 +206,40 @@ Then(
   async function (name: string, userName: string) {
     const value = await resolveCredential(name, users.get(userName)!.userId)
     expect(value).toBeNull()
+  }
+)
+
+let lastLinkStatus: number | undefined
+
+When(
+  '{string} tries to link the {string} provider',
+  async function (name: string, providerId: string) {
+    const res = await requestLink(users.get(name)!, providerId)
+    lastLinkStatus = res.status
+  }
+)
+
+Then('the link should be forbidden', function () {
+  expect(lastLinkStatus).toBe(403)
+})
+
+/**
+ * A platform credential is read with NO userId — that is what makes it the
+ * platform's rather than any one user's.
+ */
+Then(
+  'the platform credential {string} should resolve',
+  async function (name: string) {
+    const res = await fetch(`${config.apiUrl}/rpc/getCredential`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { name } }),
+    })
+    const body = await res.json()
+    expect(
+      body.valueJson,
+      `platform credential ${name} did not resolve`
+    ).toBeTruthy()
   }
 )
 

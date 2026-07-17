@@ -52,7 +52,13 @@ export const serializeCredentialsTypes = ({
     ]
     if (meta.oauth2) {
       metaParts.push(`oauth2: true`)
-      const config = JSON.stringify(meta.oauth2, null, 2).replace(/\n/g, '\n  ')
+      // `type` rides along so consumers can tell a platform-wide credential from
+      // a per-user one without a second lookup — they own different accounts.
+      const config = JSON.stringify(
+        { ...meta.oauth2, type: meta.type },
+        null,
+        2
+      ).replace(/\n/g, '\n  ')
       oauth2Entries.push(`  '${name}': ${config}`)
     }
     metaEntries.push(`  '${name}': { ${metaParts.join(', ')} }`)
@@ -90,7 +96,13 @@ export const serializeCredentialsTypes = ({
       ? `
 export const CREDENTIAL_OAUTH2_CONFIGS = {
 ${oauth2Entries.join(',\n')}
-} satisfies Record<string, OAuth2CredentialConfig & { appCredentialSecretId: string }>
+} satisfies Record<
+  string,
+  OAuth2CredentialConfig & {
+    appCredentialSecretId: string
+    type: 'singleton' | 'wire'
+  }
+>
 `
       : ''
 
