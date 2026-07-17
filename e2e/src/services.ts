@@ -9,6 +9,9 @@ import {
 } from '@pikku/core/services'
 import type { EmailService } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
+import { pikkuState } from '@pikku/core/internal'
+import { BetterAuthCredentialService } from '@pikku/better-auth'
+import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import { JoseJWTService } from '@pikku/jose'
@@ -176,7 +179,20 @@ export const createSingletonServices = pikkuServices(
     const webhookService = new KyselyWebhookService(queueService, webhookDb)
     await webhookService.init()
 
-    const credentialService = new LocalCredentialService()
+    // OAuth2 credentials resolve through better-auth's account table (linked via
+    // authClient.oauth2.link), everything else stays local. getAuth must be lazy
+    // and singletonServices assigned late: the auth factory is built FROM these
+    // services, so resolving it here would deadlock on itself.
+    let singletonServices: any
+    let authPromise: Promise<any> | undefined
+    const credentialService = new BetterAuthCredentialService({
+      getAuth: () =>
+        (authPromise ??= (
+          pikkuState(null, 'package', 'authFactory') as any
+        )(singletonServices)),
+      oauth2Names: Object.keys(CREDENTIAL_OAUTH2_CONFIGS),
+      fallback: new LocalCredentialService(),
+    })
 
     const jwt = new JoseJWTService(async () => [
       { id: 'e2e-key', value: 'e2e-test-jwt-secret-key-at-least-32-chars' },
@@ -218,7 +234,7 @@ export const createSingletonServices = pikkuServices(
         })
       : emailService
 
-    return {
+    singletonServices = {
       config,
       variables,
       secrets,
@@ -239,5 +255,6 @@ export const createSingletonServices = pikkuServices(
       queueService,
       webhookService,
     }
+    return singletonServices
   }
 )
