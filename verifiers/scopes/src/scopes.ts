@@ -6,6 +6,7 @@ wireScope({
     description: 'Administrative access',
     scopes: {
       invoices: {
+        displayName: 'Invoice Management',
         description: 'Invoice management',
         scopes: {
           create: { description: 'Create invoices' },

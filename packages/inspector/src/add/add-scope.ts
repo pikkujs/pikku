@@ -87,6 +87,12 @@ const extractScopeNodes = (
     }
 
     const node: ScopeNodeMeta = {}
+    const displayName = getPropertyValue(prop.initializer, 'displayName') as
+      | string
+      | null
+    if (displayName) {
+      node.displayName = displayName
+    }
     const description = getPropertyValue(prop.initializer, 'description') as
       | string
       | null

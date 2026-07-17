@@ -59,6 +59,34 @@ describe('addScope inspector', () => {
     )
   })
 
+  test('extracts a displayName at every depth', async () => {
+    const { state, criticals } = await inspectSource(
+      [
+        "import { wireScope } from '@pikku/core/scope'",
+        'wireScope({',
+        '  admin: {',
+        "    displayName: 'Administration',",
+        '    scopes: {',
+        '      invoices: {',
+        "        displayName: 'Invoice Management',",
+        '        scopes: {',
+        "          create: { displayName: 'Create Invoices' },",
+        '        },',
+        '      },',
+        '    },',
+        '  },',
+        '})',
+      ].join('\n')
+    )
+
+    assert.equal(criticals.length, 0)
+    const admin = state.scopes.definitions[0]!
+    assert.equal(admin.displayName, 'Administration')
+    const invoices = admin.scopes!.invoices!
+    assert.equal(invoices.displayName, 'Invoice Management')
+    assert.equal(invoices.scopes!.create!.displayName, 'Create Invoices')
+  })
+
   test('extracts a nested scope tree', async () => {
     const { state, criticals } = await inspectSource(
       [

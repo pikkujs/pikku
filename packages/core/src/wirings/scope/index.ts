@@ -5,7 +5,6 @@ export {
 } from './validate-scope-definitions.js'
 export type {
   CoreScopes,
-  CoreScopeRoot,
   CoreScopeNode,
   FlatScope,
   ScopeDefinitionMeta,
