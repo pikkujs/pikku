@@ -59,8 +59,16 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap inspect', async () =>
         getInspectorState(false, true, true)
       )
-      // Before function types: they import ScopeId from the scopes codegen.
-      await workflow.do('Bootstrap scopes', 'pikkuScopes', null)
+      // Both before function types: pikku-types.gen.ts re-exports the scope
+      // definition types and imports ScopeId from the scopes codegen, so any
+      // later import of '#pikku' — the inspector reading a project's zod
+      // schemas, for one — fails until these two files exist.
+      await workflow.do(
+        'Bootstrap scope definition types',
+        'pikkuScopeDefinitionTypes',
+        null
+      )
+      await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
       await workflow.do(
         'Bootstrap function types split',
         'pikkuFunctionTypesSplit',
@@ -202,7 +210,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Secrets', 'pikkuSecrets', null),
       workflow.do('Credentials', 'pikkuCredentials', null),
       workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
-      workflow.do('Scopes', 'pikkuScopes', null),
+      workflow.do('Scopes', 'pikkuScopes', {}),
       workflow.do(
         'Variable definition types',
         'pikkuVariableDefinitionTypes',

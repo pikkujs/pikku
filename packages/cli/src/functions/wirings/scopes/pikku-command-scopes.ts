@@ -4,15 +4,21 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeScopesTypes } from './serialize-scopes-types.js'
 import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
 
-export const pikkuScopes = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const { scopesFile, scopesMetaJsonFile } = config
 
     if (!scopesFile) {
       return
     }
 
-    const state = await getInspectorState()
+    // On a cold .pikku this runs before pikku-types.gen.ts exists, so it must
+    // take the zero state rather than a full inspect — inspecting here would
+    // try to import the project's zod schemas, which resolve '#pikku' and fail.
+    // The file only has to exist so function types can import ScopeId; the real
+    // Scopes step regenerates it with the declarations once setup has run.
+    const bootstrap = data?.bootstrap ?? false
+    const state = await getInspectorState(false, bootstrap, bootstrap)
 
     const content = serializeScopesTypes({
       definitions: state.scopes.definitions,
