@@ -12,6 +12,7 @@ import type { FunctionServicesMeta } from '@pikku/core'
 import { formatVersionedId, parseVersionedId } from '@pikku/core'
 import {
   getPropertyValue,
+  getArrayPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { canonicalJSON, hashString } from '../utils/hash.js'
@@ -426,6 +427,7 @@ export const addFunctions: AddWiring = (
   let workflowQueued: boolean | undefined
   let workflowRetries: number | undefined
   let workflowTimeout: string | undefined
+  let scopes: string[] | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
@@ -530,6 +532,7 @@ export const addFunctions: AddWiring = (
     workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as
       | string
       | undefined
+    scopes = getArrayPropertyValue(firstArg, 'scopes') ?? undefined
 
     // Extract approvalDescription identifier reference
     for (const prop of firstArg.properties) {
@@ -1094,6 +1097,7 @@ export const addFunctions: AddWiring = (
     workflowQueued: workflowQueued === true ? true : undefined,
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
+    scopes: scopes ?? undefined,
     implementationHash,
     version,
     title,

@@ -18,6 +18,7 @@ import {
   validateSecretOverrides,
   validateVariableOverrides,
   validateCredentialOverrides,
+  validateScopeReferences,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
@@ -163,6 +164,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     credentials: {
+      definitions: [],
+      files: new Set(),
+    },
+    scopes: {
       definitions: [],
       files: new Set(),
     },
@@ -416,6 +421,7 @@ export const inspect = async (
     validateSecretOverrides(logger, state)
     validateVariableOverrides(logger, state)
     validateCredentialOverrides(logger, state)
+    validateScopeReferences(logger, state)
   }
 
   state.program = program

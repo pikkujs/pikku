@@ -203,6 +203,10 @@ export interface SerializableInspectorState {
     definitions: InspectorState['credentials']['definitions']
     files: string[]
   }
+  scopes: {
+    definitions: InspectorState['scopes']['definitions']
+    files: string[]
+  }
   variables: {
     definitions: InspectorState['variables']['definitions']
     files: string[]
@@ -423,6 +427,10 @@ export function serializeInspectorState(
       definitions: state.credentials.definitions,
       files: Array.from(state.credentials.files),
     },
+    scopes: {
+      definitions: state.scopes.definitions,
+      files: Array.from(state.scopes.files),
+    },
     variables: {
       definitions: state.variables.definitions,
       files: Array.from(state.variables.files),
@@ -612,6 +620,10 @@ export function deserializeInspectorState(
     credentials: {
       definitions: data.credentials?.definitions || [],
       files: new Set(data.credentials?.files || []),
+    },
+    scopes: {
+      definitions: data.scopes?.definitions || [],
+      files: new Set(data.scopes?.files || []),
     },
     variables: {
       definitions: data.variables?.definitions || [],

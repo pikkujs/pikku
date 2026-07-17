@@ -26,6 +26,7 @@ import { addCLI, addCLIRenderers } from './add/add-cli.js'
 import { addAuth } from './add/add-auth.js'
 import { addSecret } from './add/add-secret.js'
 import { addCredential } from './add/add-credential.js'
+import { addScope } from './add/add-scope.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addAIAgent } from './add/add-ai-agent.js'
@@ -147,6 +148,7 @@ export const visitRoutes = (
   addAuth(logger, node, checker, state, nextOptions)
   addSecret(logger, node, checker, state, nextOptions)
   addCredential(logger, node, checker, state, nextOptions)
+  addScope(logger, node, checker, state, nextOptions)
   addVariable(logger, node, checker, state, nextOptions)
 
   addHTTPRoute(logger, node, checker, state, nextOptions)
