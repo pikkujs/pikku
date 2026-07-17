@@ -30,6 +30,15 @@ export interface ScopeService {
   /** Every scope a user holds, unioned across their roles. */
   resolveScopes(userId: string): Promise<string[]>
 
+  /**
+   * The scope vocabulary in the store: everything a role can be composed from.
+   *
+   * `declared: false` marks a scope that is still present but no longer
+   * declared in code — inert (no function can require it) and awaiting
+   * `pikku scopes prune`.
+   */
+  listScopes(): Promise<Array<FlatScope & { declared: boolean }>>
+
   createRole(role: Role): Promise<void>
   deleteRole(name: string): Promise<void>
   setRoleScopes(name: string, scopes: string[]): Promise<void>

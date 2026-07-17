@@ -148,6 +148,19 @@ export class KyselyScopeService implements ScopeService {
     return rows.map((row) => row.scope)
   }
 
+  async listScopes(): Promise<Array<FlatScope & { declared: boolean }>> {
+    const rows = await this.db
+      .selectFrom('pikkuScopes')
+      .select(['name', 'description', 'declared'])
+      .execute()
+
+    return rows.map((row) => ({
+      id: row.name,
+      description: row.description ?? undefined,
+      declared: !!row.declared,
+    }))
+  }
+
   async createRole(role: Role): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       await trx

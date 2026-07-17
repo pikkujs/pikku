@@ -90,6 +90,30 @@ describe('KyselyScopeService — syncScopes', () => {
     assert.deepEqual(await service.resolveScopes('u1'), ['billing:read'])
   })
 
+  test('lists the declared vocabulary with descriptions', async () => {
+    const scopes = await service.listScopes()
+
+    assert.deepEqual(
+      scopes.map((s) => s.id).sort(),
+      SCOPES.map((s) => s.id).sort()
+    )
+    assert.equal(
+      scopes.find((s) => s.id === 'admin:invoices')!.description,
+      'Invoice management'
+    )
+    assert.ok(scopes.every((s) => s.declared))
+  })
+
+  test('lists an undeclared scope as undeclared rather than hiding it', async () => {
+    await service.syncScopes([{ id: 'admin' }])
+
+    const scopes = await service.listScopes()
+    const billing = scopes.find((s) => s.id === 'billing:read')
+
+    assert.ok(billing, 'an undeclared scope is still in the vocabulary')
+    assert.equal(billing!.declared, false)
+  })
+
   test('updates a description in place', async () => {
     await service.syncScopes([{ id: 'admin', description: 'Changed' }])
     const row = await db
