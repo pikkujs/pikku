@@ -24,3 +24,25 @@ export function findAgentSubNode(
   }
   return undefined
 }
+
+/**
+ * Follow a chain of reverse `ai_*` ports hop by hop, returning the terminal
+ * sub-node (or `undefined` if any hop is missing). A RAG retrieval chain nests
+ * its sub-nodes — `chainRetrievalQa —ai_retriever→ retriever —ai_vectorStore→
+ * store —ai_embedding→ embeddings` — so resolving the store namespace from the
+ * chain node means walking `['ai_retriever', 'ai_vectorStore']`.
+ */
+export function walkAiChain(
+  parsed: ParsedWorkflow,
+  fromName: string,
+  ports: string[]
+): ParsedNode | undefined {
+  let current: ParsedNode | undefined
+  let name = fromName
+  for (const port of ports) {
+    current = findAgentSubNode(parsed, name, port)
+    if (!current) return undefined
+    name = current.name
+  }
+  return current
+}

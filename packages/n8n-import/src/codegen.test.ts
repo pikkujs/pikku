@@ -1362,3 +1362,100 @@ test('executeCommand → execution:execute addon call, wireAddon @pikku/addon-ex
   assert.ok(addons, 'addons file emitted')
   assert.match(addons, /@pikku\/addon-execution/)
 })
+
+test('a retrieve-as-tool vector store becomes an addon-backed agent tool', () => {
+  const parsed = parseN8n(loadFixture('rag-tool-vectorstore.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  // the store node refs the addon's query rpc directly — no throwing #902 stub
+  const agent = files['ragToolVectorStore/ragToolVectorStore.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+  assert.match(agent, /ref\("qdrant:query"\)/)
+  assert.ok(
+    !files[
+      'ragToolVectorStore/functions/vectorStub__qdrantVectorStore.function.ts'
+    ],
+    'no vector stub emitted for a retrieve-as-tool store'
+  )
+
+  // the qdrant addon is wired
+  const addons = files['ragToolVectorStore/ragToolVectorStore.addons.gen.ts']
+  assert.ok(addons, 'addons file emitted')
+  assert.match(addons, /@pikku\/addon-qdrant/)
+  // <store>:query embeds via openai:textEmbedding at runtime, so the openai
+  // addon must be wired alongside the vector store
+  assert.match(addons, /@pikku\/addon-openai/)
+})
+
+test('chainRetrievalQa becomes a deterministic retrieve-then-answer pipeline', () => {
+  const parsed = parseN8n(loadFixture('rag-chain-retrievalqa.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  // the store is a main-flow retrieval step feeding the promoted agent
+  const graph = files['retrievalQaChain/retrievalQaChain.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+  assert.match(graph, /qdrantVectorStore: "qdrant:query"/)
+  assert.match(graph, /collection: "handbook"/)
+  assert.match(graph, /query: ref\("trigger", "body\.question"\)/)
+  // retrieval flows INTO the agent
+  assert.match(graph, /qdrantVectorStore: \{[\s\S]*next: "qaChain"/)
+  // no throwing #902 vector stub for the retrieve store
+  assert.ok(
+    !files[
+      'retrievalQaChain/functions/vectorStub__qdrantVectorStore.function.ts'
+    ]
+  )
+
+  // the chain is a tools-less agent with a retrieval-QA goal
+  const agent = files['retrievalQaChain/retrievalQaChain.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+  assert.match(agent, /retrieved context/)
+  assert.match(agent, /tools: \[\]/)
+
+  // qdrant addon wired, plus openai for the embedding step
+  const addons = files['retrievalQaChain/retrievalQaChain.addons.gen.ts']
+  assert.match(addons, /@pikku\/addon-qdrant/)
+  assert.match(addons, /@pikku\/addon-openai/)
+})
+
+test('vectorStore insert becomes a split → ingest pipeline', () => {
+  const parsed = parseN8n(loadFixture('rag-ingestion-qdrant.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['ingestHandbook/ingestHandbook.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // the store node becomes the fat `<ns>:ingest` (embeds chunks + upserts)
+  assert.match(graph, /qdrantVectorStore: "qdrant:ingest"/)
+
+  // a graph:splitText node is synthesized ahead of the ingest
+  assert.match(graph, /"graph:splitText"/)
+
+  // the splitter reads the main predecessor's payload, strategy + chunk sizes
+  // come from the n8n text-splitter sub-node
+  assert.match(graph, /text: ref\("trigger"\)/)
+  assert.match(graph, /strategy: "recursive"/)
+  assert.match(graph, /chunkSize: 800/)
+  assert.match(graph, /chunkOverlap: 80/)
+
+  // main flow: trigger → splitText → ingest
+  const splitId = graph.match(/(\w+): "graph:splitText"/)?.[1]
+  assert.ok(splitId, 'split node id')
+  assert.match(
+    graph,
+    new RegExp(`${splitId}: \\{[\\s\\S]*next: "qdrantVectorStore"`)
+  )
+
+  // ingest consumes the split node's chunks + the static collection
+  assert.match(graph, /collection: "handbook"/)
+  assert.match(graph, new RegExp(`texts: ref\\("${splitId}", "chunks"\\)`))
+
+  // no throwing #902 vector stub for the ingested store
+  assert.ok(
+    !files['ingestHandbook/functions/vectorStub__qdrantVectorStore.function.ts']
+  )
+
+  // qdrant addon wired
+  const addons = files['ingestHandbook/ingestHandbook.addons.gen.ts']
+  assert.match(addons, /@pikku\/addon-qdrant/)
+})

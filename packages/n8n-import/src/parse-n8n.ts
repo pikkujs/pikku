@@ -21,6 +21,8 @@ import {
 import { normalizeBranch } from './branch.js'
 import { nativeSpecFor } from './native-map.js'
 import { computedSetSource } from './set-translate.js'
+import { vectorStoreNamespace, splitterStrategy } from './rag-map.js'
+import { findAgentSubNode, walkAiChain } from './ai-subnodes.js'
 
 /**
  * A workflow whose topology has no Pikku equivalent by design (not a malformed
@@ -261,6 +263,23 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       role = 'agentTool'
     }
 
+    // A vector-store node in `retrieve-as-tool` mode is attached to an agent as a
+    // tool: it embeds the query and searches the store in one call. It refs the
+    // store addon's `query` rpc directly (like gmailTool → gmail:messageSend), so
+    // it becomes an agentTool rather than a stubbed vectorStore graph node. Its
+    // own type gives the addon namespace; the `ai_embedding` sub-node is absorbed.
+    let ragToolRpc: string | undefined
+    if (
+      role === 'vectorStore' &&
+      node.parameters?.mode === 'retrieve-as-tool'
+    ) {
+      const ns = vectorStoreNamespace(typeShort(node.type))
+      if (ns) {
+        role = 'agentTool'
+        ragToolRpc = `${ns}:query`
+      }
+    }
+
     // An HTTP Request node maps to @pikku/addon-graph's native httpRequest. A
     // no-auth one is a plain call; an authenticated one with a static auth
     // recipe (bearer/basic/api-key) carries an `httpAuth` descriptor the runtime
@@ -335,7 +354,9 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       role === 'branch' ||
       role === 'native'
         ? rpcNameFor(role, node)
-        : (agentToolAddonRpc ?? dedupe(rpcNameFor(role, node), seenRpcNames))
+        : (ragToolRpc ??
+          agentToolAddonRpc ??
+          dedupe(rpcNameFor(role, node), seenRpcNames))
 
     // executeWorkflow (graph node) and toolWorkflow (agent tool) both carry a
     // sub-workflow target we resolve at codegen time.
@@ -379,6 +400,130 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     }
   }
 
+  // chainRetrievalQa is a deterministic retrieve-then-answer chain. Model it as a
+  // retrieval step (the vector store's `<ns>:query`, which embeds + searches in
+  // one call) feeding a tools-less agent, so the search ALWAYS runs before the
+  // LLM — unlike an agent tool the model can skip. Splice the store node onto the
+  // main flow between the chain's input and the chain, promote the chain to an
+  // agent, and absorb the now-redundant retriever wrapper. An unmapped store (or a
+  // retrieverWorkflow) leaves the chain as its integration stub.
+  const connections = wf.connections ?? {}
+  const parsedForWalk = { nodes, connections } as ParsedWorkflow
+  for (const chain of nodes) {
+    if (chain.typeShort.toLowerCase() !== 'chainretrievalqa') continue
+    const store = walkAiChain(parsedForWalk, chain.name, [
+      'ai_retriever',
+      'ai_vectorStore',
+    ])
+    const ns = store ? vectorStoreNamespace(store.typeShort) : undefined
+    if (!store || !ns) continue
+
+    const retriever = findAgentSubNode(
+      parsedForWalk,
+      chain.name,
+      'ai_retriever'
+    )
+    if (retriever) retriever.role = 'model'
+
+    store.role = 'retrieval'
+    store.rpcName = `${ns}:query`
+    const question = chain.parameters.text ?? chain.parameters.query
+    if (typeof question === 'string') store.ragQuery = question
+    chain.role = 'agent'
+
+    for (const ports of Object.values(connections)) {
+      for (const slot of ports.main ?? []) {
+        for (const t of slot ?? []) {
+          if (t?.node === chain.name) t.node = store.name
+        }
+      }
+    }
+    connections[store.name] = {
+      ...(connections[store.name] ?? {}),
+      main: [[{ node: chain.name, type: 'main', index: 0 }]],
+    }
+  }
+
+  // A vector-store node in `insert` mode is an offline ingestion pipeline:
+  // load → split → embed → upsert. Model it as an explicit two-node graph — a
+  // synthesized `graph:splitText` fed by the store's main predecessor, whose
+  // `chunks` flow into the fat `<ns>:ingest` (embeds each chunk via the
+  // aiEmbedding service + upserts in one call). Split strategy/chunk sizes come
+  // from the n8n `ai_textSplitter` sub-node; the loader/splitter/embedding
+  // spokes are absorbed. An unmapped store keeps its throwing #902 stub.
+  for (const store of [...nodes]) {
+    if (store.role !== 'vectorStore') continue
+    if (store.parameters?.mode !== 'insert') continue
+    const ns = vectorStoreNamespace(store.typeShort)
+    if (!ns) continue
+
+    let mainPred: string | undefined
+    for (const [from, ports] of Object.entries(connections)) {
+      for (const slot of ports.main ?? []) {
+        for (const t of slot ?? []) {
+          if (t?.node === store.name) mainPred = from
+        }
+      }
+    }
+    if (!mainPred) continue
+
+    const loader = findAgentSubNode(parsedForWalk, store.name, 'ai_document')
+    const splitter =
+      (loader &&
+        findAgentSubNode(parsedForWalk, loader.name, 'ai_textSplitter')) ||
+      findAgentSubNode(parsedForWalk, store.name, 'ai_textSplitter')
+    const embeddings = findAgentSubNode(
+      parsedForWalk,
+      store.name,
+      'ai_embedding'
+    )
+    for (const spoke of [loader, splitter, embeddings]) {
+      if (spoke) spoke.role = 'noop'
+    }
+
+    const strategy = splitter
+      ? (splitterStrategy(splitter.typeShort) ?? 'recursive')
+      : 'recursive'
+    const splitParams: Record<string, unknown> = { strategy }
+    const chunkSize = splitter?.parameters?.chunkSize
+    const chunkOverlap = splitter?.parameters?.chunkOverlap
+    if (typeof chunkSize === 'number') splitParams.chunkSize = chunkSize
+    if (typeof chunkOverlap === 'number')
+      splitParams.chunkOverlap = chunkOverlap
+
+    const splitNodeId = dedupe(
+      sanitizeIdentifier(`${store.name} Split`),
+      seenNodeIds
+    )
+    const splitNode: ParsedNode = {
+      id: `${store.id}-split`,
+      name: `${store.name} Split`,
+      nodeId: splitNodeId,
+      type: 'pikku.graphSplitText',
+      typeShort: 'graphSplitText',
+      parameters: splitParams,
+      disabled: false,
+      role: 'splitText',
+      rpcName: 'graph:splitText',
+    }
+    nodes.push(splitNode)
+
+    store.role = 'ingestion'
+    store.rpcName = `${ns}:ingest`
+    store.ingestChunksFrom = splitNodeId
+
+    for (const ports of Object.values(connections)) {
+      for (const slot of ports.main ?? []) {
+        for (const t of slot ?? []) {
+          if (t?.node === store.name) t.node = splitNode.name
+        }
+      }
+    }
+    connections[splitNode.name] = {
+      main: [[{ node: store.name, type: 'main', index: 0 }]],
+    }
+  }
+
   const shape = decideShape(nodes)
   const agentNode = nodes.find((n) => n.role === 'agent')
 
@@ -386,7 +531,7 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     name,
     slug,
     nodes,
-    connections: wf.connections ?? {},
+    connections,
     stickyNotes,
     shape,
     agentNode,

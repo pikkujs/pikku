@@ -1,0 +1,58 @@
+{
+  "name": "Ingest Handbook",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {}
+    },
+    {
+      "id": "v",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": { "__rl": true, "value": "handbook" }
+      }
+    },
+    {
+      "id": "d",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "parameters": {}
+    },
+    {
+      "id": "s",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "parameters": { "chunkSize": 800, "chunkOverlap": 80 }
+    },
+    {
+      "id": "e",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Qdrant Vector Store", "type": "main", "index": 0 }]]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [{ "node": "Qdrant Vector Store", "type": "ai_document", "index": 0 }]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [{ "node": "Default Data Loader", "type": "ai_textSplitter", "index": 0 }]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [{ "node": "Qdrant Vector Store", "type": "ai_embedding", "index": 0 }]
+      ]
+    }
+  }
+}

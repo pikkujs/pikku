@@ -18,6 +18,7 @@ import {
   type CodeTranslation,
 } from './code-translate.js'
 import { setAssignments } from './set-translate.js'
+import { collectionName } from './rag-map.js'
 import { normalizeBranch } from './branch.js'
 import {
   nativeSpecFor,
@@ -530,6 +531,9 @@ function emitInput(node: ParsedNode, ctx: ExprContext): string | null {
   if (node.role === 'http') return emitHttpInput(node, ctx)
   if (node.role === 'branch') return emitBranchInput(node, ctx)
   if (node.role === 'native') return emitNativeInput(node, ctx)
+  if (node.role === 'retrieval') return emitRetrievalInput(node, ctx)
+  if (node.role === 'splitText') return emitSplitTextInput(node, ctx)
+  if (node.role === 'ingestion') return emitIngestInput(node, ctx)
   const lines: string[] = []
   for (const [key, value] of Object.entries(node.parameters)) {
     const classified = classifyExpression(value, ctx)
@@ -544,6 +548,55 @@ function emitInput(node: ParsedNode, ctx: ExprContext): string | null {
     }
   }
   if (lines.length === 0) return null
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Emit the input for a `retrieval` node — the vector store's `<ns>:query`, which
+ * embeds the question and searches in one call. `collection` is static (from the
+ * store's own params); `query` is the chain's question expression lowered against
+ * this node's main predecessor (the same data source the chain saw), falling back
+ * to the whole predecessor payload when the chain used the auto prompt.
+ */
+function emitRetrievalInput(node: ParsedNode, ctx: ExprContext): string {
+  const lines = [`      collection: ${q(collectionName(node.parameters))},`]
+  const query = node.ragQuery ? emitValue(node.ragQuery, ctx) : null
+  if (query) {
+    lines.push(`      query: ${query},`)
+  } else if (ctx.predecessorNodeId) {
+    lines.push(`      query: ref(${q(ctx.predecessorNodeId)}),`)
+  }
+  lines.push(`      topK: 4,`)
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Emit the input for a synthesized `graph:splitText` node (the head of a vector
+ * ingestion pipeline). It splits the main predecessor's payload into chunks;
+ * `strategy` and chunk sizes come from the absorbed n8n text-splitter sub-node.
+ */
+function emitSplitTextInput(node: ParsedNode, ctx: ExprContext): string {
+  const lines = [`      text: ref(${q(ctx.predecessorNodeId ?? 'trigger')}),`]
+  const { strategy, chunkSize, chunkOverlap } = node.parameters
+  if (typeof strategy === 'string')
+    lines.push(`      strategy: ${q(strategy)},`)
+  if (typeof chunkSize === 'number')
+    lines.push(`      chunkSize: ${chunkSize},`)
+  if (typeof chunkOverlap === 'number')
+    lines.push(`      chunkOverlap: ${chunkOverlap},`)
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Emit the input for an `ingestion` node — the vector store's fat `<ns>:ingest`,
+ * which embeds each chunk (via the aiEmbedding service) and upserts in one call.
+ * `collection` is static (from the store's own params); `texts` is the `chunks`
+ * output of the synthesized `graph:splitText` node feeding it.
+ */
+function emitIngestInput(node: ParsedNode, _ctx: ExprContext): string {
+  const lines = [`      collection: ${q(collectionName(node.parameters))},`]
+  if (node.ingestChunksFrom)
+    lines.push(`      texts: ref(${q(node.ingestChunksFrom)}, "chunks"),`)
   return [`(ref) => ({`, ...lines, `    })`].join('\n')
 }
 
@@ -654,7 +707,10 @@ function emitGraphFile(
       node.role === 'set' ||
       node.role === 'http' ||
       node.role === 'branch' ||
-      node.role === 'native'
+      node.role === 'native' ||
+      node.role === 'retrieval' ||
+      node.role === 'splitText' ||
+      node.role === 'ingestion'
 
     const parts: string[] = []
     const input = wantsInput ? emitInput(node, ctx) : null
@@ -1249,7 +1305,15 @@ function emitAgentFile(
     : isOpenAiAgentNode(agent.typeShort, agent.parameters)
       ? openAiAgentSpec(agent)
       : {}
+  // A promoted chainRetrievalQa agent receives the retrieved context (and the
+  // question) as its input; its `text` param is the question expression, not a
+  // system prompt, so give it a fixed retrieval-QA instruction instead.
+  const retrievalQaGoal =
+    agent.typeShort.toLowerCase() === 'chainretrievalqa'
+      ? 'Answer the user question using only the retrieved context provided in the input. If the answer is not in the context, say you do not know.'
+      : undefined
   const systemPrompt =
+    retrievalQaGoal ??
     chainSpec.goal ??
     stripExprMarker(agent.parameters.text) ??
     stripExprMarker(agent.parameters.systemMessage) ??
@@ -1357,13 +1421,30 @@ function mappedAddonPackages(
     // native nodes and addon-backed agent tools both ref a per-service addon rpc.
     const isAddonBackedTool =
       node.role === 'agentTool' && node.rpcName.includes(':')
-    if (node.role !== 'native' && !isAddonBackedTool) continue
+    if (
+      node.role !== 'native' &&
+      node.role !== 'retrieval' &&
+      node.role !== 'ingestion' &&
+      !isAddonBackedTool
+    )
+      continue
     const split = splitAddonRpc(node.rpcName)
     if (!split || byNs.has(split.namespace)) continue
     byNs.set(split.namespace, {
       namespace: split.namespace,
       package: `@pikku/addon-${split.namespace}`,
     })
+  }
+  // A vector-store `<ns>:query` embeds its text via `openai:textEmbedding` at
+  // runtime (the fat retrieval call), so the openai addon must be wired too.
+  const usesRetrievalQuery = parsed.nodes.some(
+    (n) =>
+      !n.disabled &&
+      (n.role === 'retrieval' || n.role === 'agentTool') &&
+      /:query$/.test(n.rpcName)
+  )
+  if (usesRetrievalQuery && !byNs.has('openai')) {
+    byNs.set('openai', { namespace: 'openai', package: '@pikku/addon-openai' })
   }
   return [...byNs.values()]
 }
@@ -1516,7 +1597,10 @@ export function generateWorkflowFromN8n(
       node.role === 'set' ||
       node.role === 'http' ||
       node.role === 'branch' ||
-      node.role === 'native'
+      node.role === 'native' ||
+      node.role === 'retrieval' ||
+      node.role === 'splitText' ||
+      node.role === 'ingestion'
     )
       continue
     // An agent tool backed by a per-service addon refs the addon rpc directly

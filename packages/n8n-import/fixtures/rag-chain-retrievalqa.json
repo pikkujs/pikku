@@ -1,0 +1,73 @@
+{
+  "name": "Retrieval QA Chain",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {}
+    },
+    {
+      "id": "c",
+      "name": "QA Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "parameters": { "text": "={{ $json.body.question }}", "promptType": "define" }
+    },
+    {
+      "id": "r",
+      "name": "Vector Store Retriever",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "parameters": {}
+    },
+    {
+      "id": "v",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "parameters": { "qdrantCollection": { "__rl": true, "value": "handbook" } }
+    },
+    {
+      "id": "e",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "parameters": {}
+    },
+    {
+      "id": "m",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "parameters": {}
+    },
+    {
+      "id": "o",
+      "name": "Set Answer",
+      "type": "n8n-nodes-base.set",
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "QA Chain", "type": "main", "index": 0 }]] },
+    "QA Chain": {
+      "main": [[{ "node": "Set Answer", "type": "main", "index": 0 }]]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [{ "node": "QA Chain", "type": "ai_retriever", "index": 0 }]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "ai_vectorStore": [
+        [{ "node": "Vector Store Retriever", "type": "ai_vectorStore", "index": 0 }]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [{ "node": "Qdrant Vector Store", "type": "ai_embedding", "index": 0 }]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "QA Chain", "type": "ai_languageModel", "index": 0 }]
+      ]
+    }
+  }
+}

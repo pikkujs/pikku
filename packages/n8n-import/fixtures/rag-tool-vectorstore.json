@@ -1,0 +1,57 @@
+{
+  "name": "RAG Tool VectorStore",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "parameters": {}
+    },
+    {
+      "id": "a",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "parameters": {}
+    },
+    {
+      "id": "m",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "parameters": {}
+    },
+    {
+      "id": "v",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "company_docs",
+        "qdrantCollection": { "__rl": true, "value": "docs" }
+      }
+    },
+    {
+      "id": "e",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [{ "node": "Qdrant Vector Store", "type": "ai_embedding", "index": 0 }]
+      ]
+    }
+  }
+}

@@ -54,6 +54,9 @@ export type NodeRole =
   | 'memory'
   | 'outputParser'
   | 'vectorStore'
+  | 'retrieval'
+  | 'ingestion'
+  | 'splitText'
   | 'set'
   | 'http'
   | 'branch'
@@ -130,6 +133,18 @@ export interface ParsedNode {
    * through the same translation path as a Code node instead of `editFields`.
    */
   computedSetSource?: string
+  /**
+   * Set on a `retrieval` node (a vector store spliced onto the main flow to feed
+   * a chainRetrievalQa agent): the raw n8n expression for the question text,
+   * lowered to the `query` input of `<ns>:query` at codegen time.
+   */
+  ragQuery?: string
+  /**
+   * Set on an `ingestion` node (a vector store in `insert` mode): the node id of
+   * the synthesized `graph:splitText` node whose `chunks` output feeds this
+   * node's `texts` input (`<ns>:ingest` embeds the chunks + upserts in one call).
+   */
+  ingestChunksFrom?: string
 }
 
 /**
