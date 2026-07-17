@@ -9,6 +9,7 @@ import {
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import { ensureInlineWiringFunction } from '../utils/ensure-function-metadata.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
@@ -82,6 +83,16 @@ const addWireTrigger: (
   if (!nameValue) {
     return
   }
+
+  // Register metadata for a func inlined into the wiring (see helper).
+  ensureInlineWiringFunction(
+    state,
+    pikkuFuncId,
+    nameValue,
+    funcInitializer,
+    checker,
+    extracted.isHelper
+  )
 
   // --- resolve middleware ---
   const middleware = resolveMiddleware(state, obj, tags, checker)
