@@ -8,6 +8,7 @@ export {
   WorkflowDispatchException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
+  WorkflowApprovalResolvedError,
   DEFAULT_STEP_RETRIES,
 } from './pikku-workflow-service.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'

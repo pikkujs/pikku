@@ -32,6 +32,10 @@ Notes:
   scope — so an invalid decision re-closes the gate rather than failing the run.
 - Expiry is evaluated against a recorded deadline, not by a timer firing, so a duplicate, late, or
   dropped wake-up all produce the same answer.
+- A decision arriving after the gate resolved — most obviously one that lost the race with expiry —
+  is rejected with `WorkflowApprovalResolvedError` (409). A resolved gate returns its cached step
+  result and never re-reads run state, so accepting it would report success to the approver and then
+  discard the decision.
 - Approval state lives in the existing run-state blob; no schema migration.
 - Assignee, notification medium, reminders, and escalation are deliberately app code, not framework
   surface.

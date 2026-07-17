@@ -6,6 +6,7 @@ import { InMemoryWorkflowService } from '../../services/in-memory-workflow-servi
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import {
+  WorkflowApprovalResolvedError,
   WorkflowSuspendedException,
   type PikkuWorkflowWire,
 } from './pikku-workflow-service.js'
@@ -709,6 +710,53 @@ describe('pikku-workflow-service approval', () => {
 
     const run = await ws.getRun(runId)
     assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, { decision: { status: 'expired' } })
+
+    cleanup()
+  })
+
+  test('a decision arriving after the gate resolved is rejected, not dropped', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testApprovalAfterResolved'
+    const graphHash = 'approval-after-resolved'
+
+    const cleanup = registerApprovalWorkflow(
+      workflowName,
+      graphHash,
+      async (_services, _data, { workflow }) => {
+        const decision = await workflow.approval('Approve invoice', {
+          schema: approvalDecisionSchema,
+          expiry: '10ms',
+        })
+        return { decision }
+      }
+    )
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+
+    // Let the gate expire and resolve.
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    await ws.resumeWorkflow(runId)
+    await ws.runWorkflowJob(runId, {})
+    assert.equal((await ws.getRun(runId))?.status, 'completed')
+
+    // The gate caches its outcome and never re-reads state, so accepting this
+    // would discard it silently. The approver must be told it did not land.
+    await assert.rejects(
+      ws.approveStep(runId, 'Approve invoice', { approved: true }),
+      (error: unknown) =>
+        error instanceof WorkflowApprovalResolvedError &&
+        error.payload.outcome === 'expired'
+    )
+
+    // The resolved outcome stands.
+    const run = await ws.getRun(runId)
     assert.deepEqual(run?.output, { decision: { status: 'expired' } })
 
     cleanup()
