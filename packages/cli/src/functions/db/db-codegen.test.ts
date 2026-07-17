@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { generateSchemaTypes } from './db-codegen.js'
@@ -23,6 +23,12 @@ function fakeIntrospector(columns: ColumnInfo[]): DbIntrospector {
     },
     async getForeignKeys() {
       return []
+    },
+    async getAllColumns() {
+      return new Map([['app.widget', columns]])
+    },
+    async getAllForeignKeys() {
+      return new Map()
     },
     async listEnums() {
       return []
@@ -105,6 +111,29 @@ test('does not warn when a json column has a concrete tsType', async () => {
   assert.ok(
     !hasJsonWarning(result.warnings, 'spec'),
     `expected no json-type warning, got: ${JSON.stringify(result.warnings)}`
+  )
+})
+
+test('array columns keep their array-ness (text[] → string[], int[] → number[])', async () => {
+  const result = await run([
+    col({ name: 'tags', type: 'text[]', notNull: false }),
+    col({ name: 'scores', type: 'int4[]', notNull: false }),
+  ])
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.match(
+    schema,
+    /Private<string\[\]>/,
+    `text[] should type as string[], got:\n${schema}`
+  )
+  assert.match(
+    schema,
+    /Private<number\[\]>/,
+    `int4[] should type as number[], got:\n${schema}`
+  )
+  assert.doesNotMatch(
+    schema,
+    /tags:[^\n]*Private<string>[^[]/,
+    `text[] must not flatten to a scalar string, got:\n${schema}`
   )
 })
 

@@ -10,6 +10,8 @@ import {
   parseOpenAPISpec,
   computeContractHash,
   generateAddonFromOpenAPI,
+  loadAuthConfig,
+  type AuthConfig,
 } from '@pikku/openapi-parser'
 
 function toCamelCase(str: string): string {
@@ -135,6 +137,8 @@ function getAddonFiles(
       tokenUrl: string
       scopes: string[]
     }
+    /** Delegated login: credential is the upstream token + expiry, checked per call. */
+    delegated?: boolean
   }
 ): Record<string, string> {
   const {
@@ -195,6 +199,8 @@ function getAddonFiles(
       devDependencies: {
         '@pikku/cli': '*',
         '@pikku/core': '*',
+        '@pikku/inspector': '*',
+        '@standard-schema/spec': '^1.1.0',
         typescript: '^5.7.2',
         zod: '^4',
       },
@@ -272,7 +278,33 @@ ${description}
 `
 
   // src/services.ts
-  if (flags.credential && flags.credential !== 'oauth2') {
+  if (flags.delegated) {
+    // Delegated login: the credential is the upstream token captured at
+    // sign-in; an expired token is the re-auth signal (UnauthorizedError).
+    files['src/services.ts'] =
+      `import { UnauthorizedError } from '@pikku/core/errors'
+import { ${pascalName}Service } from './${name}-api.service.js'
+import { pikkuAddonWireServices } from '#pikku'
+
+export const createWireServices = pikkuAddonWireServices(
+  async ({ variables }, wire) => {
+    if (!wire.getCredential) {
+      throw new Error('Credential resolution is not available in this runtime')
+    }
+    const cred = await wire.getCredential<{ token: string; expiresAt?: number }>('${camelName}')
+    if (!cred?.token) {
+      throw new UnauthorizedError('No ${displayName} session — sign in again')
+    }
+    if (cred.expiresAt && cred.expiresAt * 1000 < Date.now()) {
+      throw new UnauthorizedError('${displayName} session expired — sign in again')
+    }
+    const ${camelName} = new ${pascalName}Service(cred, variables)
+
+    return { ${camelName} }
+  }
+)
+`
+  } else if (flags.credential && flags.credential !== 'oauth2') {
     // Per-user credential: use createWireServices with wire.getCredential()
     const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
     files['src/services.ts'] =
@@ -605,11 +637,16 @@ wireCredential({
 })
 `
   } else if (flags.credential === 'bearer') {
+    const credentialFields = flags.delegated
+      ? `  token: z.string().describe('${displayName} session token captured at delegated sign-in'),
+  expiresAt: z.number().optional().describe('Token expiry (epoch seconds)'),
+  tenantId: z.string().optional().describe('Upstream tenant id'),`
+      : `  token: z.string().describe('${displayName} bearer token'),`
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
 import { wireCredential } from '@pikku/core/credential'
 
 export const ${camelName}CredentialSchema = z.object({
-  token: z.string().describe('${displayName} bearer token'),
+${credentialFields}
 })
 
 wireCredential({
@@ -909,6 +946,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     credential?: string
     test?: boolean
     openapi?: string
+    authConfig?: string
     mcp?: boolean
     camelCase?: boolean
   },
@@ -928,6 +966,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       credential,
       test = true,
       openapi,
+      authConfig,
       mcp = false,
       camelCase = false,
     }
@@ -963,6 +1002,23 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       displayName: resolvedDisplayName,
       description: resolvedDescription,
       category,
+    }
+
+    // Load the auth config (custom auth header / delegated login overrides)
+    let loadedAuthConfig: AuthConfig | undefined
+    if (authConfig) {
+      loadedAuthConfig = await loadAuthConfig(authConfig)
+      if (loadedAuthConfig.delegated) {
+        // Delegated login stores the upstream token per-user — bearer is the
+        // only coherent credential mode.
+        if (credential && credential !== 'bearer') {
+          logger.error(
+            `--auth-config with delegated login requires --credential bearer (got "${credential}")`
+          )
+          process.exit(1)
+        }
+        credential = 'bearer'
+      }
     }
 
     // Validate credential type if provided
@@ -1020,6 +1076,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       oauth: effectiveOAuth,
       credential: credentialType,
       oauthConfig,
+      delegated: Boolean(loadedAuthConfig?.delegated),
     })
 
     // If openapi spec provided, generate typed files and merge over scaffold
@@ -1030,6 +1087,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         credential: credentialType,
         mcp,
         camelCase,
+        authConfig: loadedAuthConfig,
       })
       Object.assign(addonFiles, openapiFiles)
 
@@ -1042,6 +1100,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         version: spec.info.version,
         hash: computeContractHash(spec),
         ...(camelCase ? { camelCase: true } : {}),
+        ...(loadedAuthConfig ? { authConfig: true } : {}),
       }
       addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
     }

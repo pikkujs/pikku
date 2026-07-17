@@ -1,3 +1,62 @@
+## 0.12.42
+
+### Patch Changes
+
+- 854c342: Fix workspace addon integration: exclude nested pikku projects from inspection (prevents "More than one CoreUserSession/CoreConfig found" when a workspace addon is linked), widen the generated addon service `call()` data param to `unknown` so schema-less function inputs compile, and add `@pikku/inspector` + `@standard-schema/spec` to the generated addon devDependencies so its `.pikku` gen files typecheck.
+
+## 0.12.41
+
+### Patch Changes
+
+- bb65430: Fail codegen with a clear error when the installed `@pikku/core` violates the CLI's peer range (PKU718).
+
+  Some package managers (bun, yarn) install straight past an unsatisfied `peerDependencies` range instead of failing, so `@pikku/cli` could end up next to a `@pikku/core` outside the range it declares — and the only symptom was a cryptic missing-export crash deep in codegen or at runtime (e.g. `The requested module '@pikku/core/dev' does not provide an export named 'reloadGeneratedMeta'`).
+
+  The existing preflight that catches a _split_ core (two installed versions, `PKU717`) now also validates the _single_ installed core's version against the CLI's own `@pikku/core` peer range, and fails with the exact versions and the fix (`@pikku/cli` and `@pikku/core` move together — bump both to the same release, update any overrides/resolutions pins, reinstall). Set `PIKKU_ALLOW_CORE_SKEW=1` to downgrade the failure to a warning if you have verified the installed pair is compatible, mirroring `PIKKU_ALLOW_DUPLICATE_CORE`.
+
+- 982d3f5: Webhook gateway routes are now fully compiled instead of runtime-registered. The inspector projects `wireGateway` into the generated HTTP and function meta (deterministic `gateway__<name>__post`/`__verify` ids), and the gateway runner no longer mutates meta state at runtime — it only registers the handler implementations at module load, like every other wire. Previously the runtime-only meta was invisible to codegen and the dev-server meta reload wiped it, 500ing every gateway request.
+
+  Also fixes the GET verification echo: string challenges return as a raw body (platforms compare byte-for-byte; the old JSON quoting failed Meta's check), object responses stay JSON, and failed verification now throws `UnauthorizedError` (401) instead of returning 200 with an error body.
+
+- Updated dependencies [982d3f5]
+  - @pikku/core@0.12.61
+
+## 0.12.40
+
+### Patch Changes
+
+- 1f3f510: Warn when a Pikku function body performs a runtime dynamic `import(...)`.
+
+  The inspector now flags any `pikkuFunc`/`pikkuSessionlessFunc` (and friends) whose handler body contains a dynamic `import(...)` call — including nested callbacks — with the new `PKU498` diagnostic. Function bodies run on every invocation, so a dynamic import there adds per-call latency and defeats bundling/tree-shaking; the import belongs at the top of the module or in your services/`wireServices` setup instead.
+
+  Type-only positions like `import('x').Foo` are not flagged. The rule defaults to `warn` — a printed yellow warning that does not fail the build — and is configurable via `lint.functionDynamicImport` in `pikku.config.json` (`'off'` to silence, `'error'` to make it a hard build failure), matching the existing `servicesNotDestructured`/`wiresNotDestructured` lints.
+
+- Updated dependencies [1f3f510]
+  - @pikku/core@0.12.59
+
+## 0.12.39
+
+### Patch Changes
+
+- 4f92e6f: `pikku db` schema-codegen warnings are now coded diagnostics routed through the CLI logger instead of raw `console.warn`, so they participate in the existing `--fail-on-warn` gate.
+
+  Each warning now carries a PKU code and `warn` severity: `PKU481` (JSON/JSONB column with no concrete `tsType`, degrading to `unknown`), `PKU480` (column named like a date/bool but whose DB type contradicts it), and `PKU482` (a `format` annotation ignored on a non-string column). Running `pikku db migrate --fail-on-warn` (e.g. in CI) now turns these into a hard failure, forcing the `db/annotations.ts` entry — closing the loophole where an untyped jsonb column silently degrades type-safety. Default behaviour is unchanged: the warnings still print, and only fail the build when `--fail-on-warn` is set.
+
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- ad26273: Remove 16 dormant `ErrorCode` enum entries that were defined but never emitted anywhere in the framework. These were placeholder registrations that were never wired to a diagnostic, or codes whose emission sites were removed in later refactors (e.g. `PKU901`, `PKU431`). A whole-repo audit found zero emission sites — no user could ever see them — so they only cluttered the registry and demanded docs pages for errors that cannot occur.
+
+  Removed: `PKU300`, `PKU426`, `PKU427`, `PKU431`, `PKU488`, `PKU529`, `PKU568`, `PKU685`, `PKU715`, `PKU736`, `PKU787`, `PKU835`, `PKU836`, `PKU901`, `PKU937`, `PKU975`.
+
+  A new guard test (`error-codes-emitted.test.ts`) fails if any `ErrorCode` value has no `ErrorCode.<NAME>` or raw `PKU###` reference in the source, so dead entries can't silently accumulate again.
+
+- Updated dependencies [7b17b14]
+- Updated dependencies [daec082]
+- Updated dependencies [e0fd352]
+  - @pikku/core@0.12.58
+
 ## 0.12.38
 
 ### Patch Changes

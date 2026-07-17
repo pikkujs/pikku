@@ -46,8 +46,9 @@ const toKebab = (s: string) =>
   s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 import type { PikkuWire, SerializedError } from '../../types/core.types.js'
 import type { QueueService } from '../queue/queue.types.js'
+import { runScheduledTask } from '../scheduler/scheduler-runner.js'
 import type {
-  PikkuWorkflowWire,
+  PikkuScenarioWire,
   StepState,
   StepStatus,
   WorkflowPlannedStep,
@@ -1391,6 +1392,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowWire.pikkuUserId = run.wire?.pikkuUserId
       const wire: PikkuWire = {
         workflow: workflowWire,
+        scenario:
+          workflowMeta?.source === 'scenario' ? workflowWire : undefined,
         pikkuUserId: run.wire?.pikkuUserId,
         session: rpcService?.wire?.session,
         rpc: rpcService?.wire?.rpc,
@@ -1732,7 +1735,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: any
   ): Promise<any> {
+    // Carry the run's pikkuUserId onto the step wire so authed steps rehydrate their
+    // session on the queued path too (the bare job wire lacks it; inline already has it).
+    const run = await this.getRun(runId)
     return rpcService.rpcWithWire(rpcName, data, {
+      ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
       workflowStep: {
         runId,
         stepId: stepState.stepId,
@@ -2146,8 +2153,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     rpcService: any,
     addonNamespace?: string | null
-  ): PikkuWorkflowWire {
-    const workflowWire: PikkuWorkflowWire = {
+  ): PikkuScenarioWire {
+    const workflowWire: PikkuScenarioWire = {
       name,
       runId,
       getRun: async () => (await this.getRun(runId)) as WorkflowRun,
@@ -2336,6 +2343,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       suspend: async (reason: string) => {
         this.verifyStepName(reason)
         await this.suspendStep(runId, reason)
+      },
+
+      runScheduledTask: async (taskName: string) => {
+        await runScheduledTask({ name: taskName })
       },
     }
     return workflowWire

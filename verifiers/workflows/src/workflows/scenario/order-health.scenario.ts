@@ -6,7 +6,7 @@ export const orderHealthScenario = pikkuScenario<
 >({
   title: 'Order health (scenario)',
   tags: ['scenario', 'ecommerce'],
-  func: async ({ logger }, data, { workflow, actors }) => {
+  func: async ({ logger }, data, { scenario, actors }) => {
     if (!actors?.customer || !actors?.ops) {
       throw new Error(
         'orderHealthScenario needs run actors (customer + ops) — pass them via startWorkflow options or `pikku scenario run`'
@@ -14,18 +14,18 @@ export const orderHealthScenario = pikkuScenario<
     }
     logger.debug(`order-health flow starting for ${data.orderId}`)
 
-    const order = await workflow.do(
+    const order = await scenario.do(
       'customer fetches the order',
       'orderGet',
       { orderId: data.orderId },
       { actor: actors.customer }
     )
 
-    const internal = await workflow.do('internal re-read', 'orderGet', {
+    const internal = await scenario.do('internal re-read', 'orderGet', {
       orderId: data.orderId,
     })
 
-    const settled = await workflow.expectEventually(
+    const settled = await scenario.expectEventually(
       'ops sees the order settle',
       'orderGet',
       { orderId: data.orderId },

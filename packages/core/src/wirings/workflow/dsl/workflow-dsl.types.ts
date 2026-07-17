@@ -383,9 +383,17 @@ export interface PikkuWorkflowWire {
   /** Execute a workflow step (overloaded - RPC or inline form) */
   do: WorkflowWireDoRPC & WorkflowWireDoInline
 
+  /** Sleep for a duration */
+  sleep: WorkflowWireSleep
+
+  /** Suspend workflow until explicitly resumed */
+  suspend: WorkflowWireSuspend
+}
+
+export interface PikkuScenarioWire extends PikkuWorkflowWire {
   /**
-   * Durable polling step (scenarios): invoke `rpcName` (as an actor when
-   * `options.as` is set) until `predicate` passes or `options.within` elapses.
+   * Durable polling step: invoke `rpcName` (as an actor when `options.actor`
+   * is set) until `predicate` passes or `options.within` elapses.
    */
   expectEventually: <TOutput = any, TInput = any>(
     stepName: string,
@@ -395,7 +403,7 @@ export interface PikkuWorkflowWire {
     options?: WorkflowExpectEventuallyOptions
   ) => Promise<TOutput>
 
-  /** Error-path step (scenarios): succeeds only when the RPC throws; returns the message */
+  /** Error-path step: succeeds only when the RPC throws; returns the message */
   expectError: <TInput = any>(
     stepName: string,
     rpcName: string,
@@ -403,16 +411,12 @@ export interface PikkuWorkflowWire {
     options?: WorkflowExpectErrorOptions
   ) => Promise<string>
 
-  /** Stub-assertion step (scenarios): asserts `service.method` was called on the target server */
+  /** Stub-assertion step: asserts `service.method` was called on the target server */
   expectService: (
     stepName: string,
     serviceMethod: string,
     options?: WorkflowExpectServiceOptions
   ) => Promise<void>
 
-  /** Sleep for a duration */
-  sleep: WorkflowWireSleep
-
-  /** Suspend workflow until explicitly resumed */
-  suspend: WorkflowWireSuspend
+  runScheduledTask: (name: string) => Promise<unknown>
 }

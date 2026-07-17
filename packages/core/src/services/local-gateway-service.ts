@@ -1,7 +1,10 @@
 import type { GatewayService } from './gateway-service.js'
 import type { GatewayAdapter } from '../wirings/gateway/gateway.types.js'
 import { pikkuState, getSingletonServices } from '../pikku-state.js'
-import { createListenerMessageHandler } from '../wirings/gateway/gateway-runner.js'
+import {
+  createListenerMessageHandler,
+  resolveGatewayAdapter,
+} from '../wirings/gateway/gateway-runner.js'
 
 /**
  * Local GatewayService implementation.
@@ -36,8 +39,9 @@ export class LocalGatewayService implements GatewayService {
         singletonServices
       )
 
-      await config.adapter.init(handleMessage)
-      this.activeAdapters.set(name, config.adapter)
+      const adapter = await resolveGatewayAdapter(config, singletonServices)
+      await adapter.init(handleMessage)
+      this.activeAdapters.set(name, adapter)
       singletonServices.logger.info(`Started listener gateway: ${name}`)
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.76",
+  "version": "0.12.82",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -28,18 +28,18 @@
     "@electric-sql/pglite": "^0.5.1",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
-    "@pikku/better-auth": "^0.12.15",
+    "@pikku/better-auth": "^0.12.17",
     "@pikku/bun-server": "^0.12.4",
     "@pikku/deploy-cloudflare": "^0.12.8",
-    "@pikku/fetch": "^0.12.6",
-    "@pikku/inspector": "^0.12.38",
+    "@pikku/fetch": "^0.12.7",
+    "@pikku/inspector": "^0.12.42",
     "@pikku/kysely": "^0.13.0",
     "@pikku/kysely-node-sqlite": "^0.12.3",
     "@pikku/n8n-import": "^0.0.1",
-    "@pikku/node-http-server": "^0.12.5",
-    "@pikku/openapi-parser": "^0.12.11",
-    "@pikku/schedule": "^0.12.3",
-    "@pikku/ws": "^0.12.3",
+    "@pikku/node-http-server": "^0.12.6",
+    "@pikku/openapi-parser": "^0.12.15",
+    "@pikku/schedule": "^0.12.4",
+    "@pikku/ws": "^0.12.4",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
     "chalk": "^5.6.2",
@@ -60,10 +60,10 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.57"
+    "@pikku/core": "^0.12.62"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.57",
+    "@pikku/core": "^0.12.62",
     "@types/istanbul-lib-instrument": "^1.7.7",
     "@types/node": "^24.11.0",
     "@types/pg": "^8.11.0",

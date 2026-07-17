@@ -10,6 +10,7 @@ import type {
 } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
+import { createNestedProjectFilter } from './utils/nested-project-filter.js'
 import {
   aggregateRequiredServices,
   stampAuthHandlerServices,
@@ -75,6 +76,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       meta: {},
       files: new Map(),
       approvalDescriptions: {},
+      dynamicImportIds: new Set(),
     },
     http: {
       metaInputTypes: new Map(),
@@ -272,19 +274,24 @@ export const inspect = async (
   const startSourceFiles = performance.now()
   // node_modules under rootDir (e.g. a locally-installed addon) is a
   // dependency, not project source — scanning it double-counts the addon's
-  // own application types (CoreConfig/Services/SingletonServices).
+  // own application types (CoreConfig/Services/SingletonServices). Nested
+  // pikku projects (a workspace addon at packages/<addon>) are the same case:
+  // TS resolves the node_modules symlink to its realpath under rootDir, so
+  // the node_modules check alone misses them.
   // Sort by file name so the sweeps populate state in a stable order. The
   // program's own file order depends on glob + import-graph resolution, which
   // varies run to run — leaving generated meta keys (and anything serialized
   // in insertion order) non-reproducible across identical `pikku all` runs.
   // Safe because function registration is a dedicated pass (visitFunctions)
   // that completes before any order-sensitive wiring resolution in visitRoutes.
+  const isNestedProjectFile = createNestedProjectFilter(rootDir)
   const sourceFiles = program
     .getSourceFiles()
     .filter(
       (sf) =>
         sf.fileName.startsWith(rootDir) &&
-        !sf.fileName.includes('/node_modules/')
+        !sf.fileName.includes('/node_modules/') &&
+        !isNestedProjectFile(sf.fileName)
     )
     .sort((a, b) =>
       a.fileName < b.fileName ? -1 : a.fileName > b.fileName ? 1 : 0

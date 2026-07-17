@@ -801,7 +801,8 @@ describe('function description synthesis', () => {
       secret: false,
       mcp: true,
     })
-    const funcFile = files['src/functions/contactsControllerGetContacts.function.ts']
+    const funcFile =
+      files['src/functions/contactsControllerGetContacts.function.ts']
     assert.ok(funcFile, 'function file should exist')
     assert.ok(
       funcFile.includes('description: "Contacts get contacts"'),
@@ -812,7 +813,9 @@ describe('function description synthesis', () => {
 
   test('falls back to "METHOD /path" when operationId is absent', () => {
     const spec = makeSpec({
-      operations: [makeOp({ operationId: undefined, method: 'get', path: '/health' })],
+      operations: [
+        makeOp({ operationId: undefined, method: 'get', path: '/health' }),
+      ],
     })
 
     const files = generateAddonFromOpenAPI(spec, makeVars(), {
@@ -830,7 +833,10 @@ describe('function description synthesis', () => {
   test('prefers the spec description over synthesis', () => {
     const spec = makeSpec({
       operations: [
-        makeOp({ operationId: 'getPet', description: 'Fetch a single pet by id' }),
+        makeOp({
+          operationId: 'getPet',
+          description: 'Fetch a single pet by id',
+        }),
       ],
     })
 
@@ -843,5 +849,125 @@ describe('function description synthesis', () => {
       funcFile.includes('description: "Fetch a single pet by id"'),
       'the real spec description should win over the synthesized one'
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Auth-config: custom headers + delegated login
+// ---------------------------------------------------------------------------
+describe('auth config', () => {
+  const delegatedConfig = {
+    headerName: 'authentication',
+    headerFormat: 'raw' as const,
+    delegated: {
+      loginPath: '/users/login-ai-plugin',
+      loginMethod: 'post',
+      credentials: ['email', 'password'] as ('email' | 'password' | 'apiKey')[],
+      apiKeyHeader: 'x-api-key',
+      tokenPath: 'token',
+      claims: {
+        source: 'jwt' as const,
+        externalId: 'user._id',
+        email: 'user.email',
+        name: ['user.first_name', 'user.last_name'],
+        role: 'user.role',
+        tenantId: 'user.company',
+      },
+    },
+  }
+
+  test('custom raw header replaces Authorization Bearer in the bearer-credential service', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      credential: 'bearer',
+      authConfig: delegatedConfig,
+    })
+    const service = files['src/test-api-api.service.ts']
+    assert.ok(
+      service.includes('headers["authentication"] = this.creds.token'),
+      'custom raw header should carry the bare token'
+    )
+    assert.ok(
+      !service.includes('headers.Authorization'),
+      'default Authorization header must not be emitted'
+    )
+  })
+
+  test('custom header with bearer format keeps the Bearer prefix', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      credential: 'bearer',
+      authConfig: { headerName: 'x-auth', headerFormat: 'bearer' as const },
+    })
+    const service = files['src/test-api-api.service.ts']
+    assert.ok(
+      service.includes('headers["x-auth"] = `Bearer ${this.creds.token}`'),
+      'bearer format should keep the prefix on the custom header'
+    )
+  })
+
+  test('delegated config emits the upstream-auth file and exports it', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      credential: 'bearer',
+      authConfig: delegatedConfig,
+    })
+    const authFile = files['src/test-api-upstream-auth.ts']
+    assert.ok(authFile, 'upstream auth file should be generated')
+    assert.ok(authFile.includes('export const authenticateTestApiUpstream'))
+    assert.ok(
+      authFile.includes('/users/login-ai-plugin'),
+      'login path baked in'
+    )
+    assert.ok(authFile.includes('"user._id"'), 'externalId claim path baked in')
+    assert.ok(
+      authFile.includes("pick(claims, 'exp')"),
+      'jwt source defaults expiry to the exp claim'
+    )
+    assert.ok(
+      files['src/index.ts'].includes(
+        "export { authenticateTestApiUpstream } from './test-api-upstream-auth.js'"
+      ),
+      'index should export the authenticate function'
+    )
+  })
+
+  test('extraHeaders are baked into the service and the upstream-auth login', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      credential: 'bearer',
+      authConfig: {
+        ...delegatedConfig,
+        extraHeaders: { Origin: 'https://tenant.example.com' },
+      },
+    })
+    const service = files['src/test-api-api.service.ts']
+    assert.ok(
+      service.includes('"Origin": "https://tenant.example.com",'),
+      'service headers init should carry the static header'
+    )
+    const authFile = files['src/test-api-upstream-auth.ts']
+    assert.ok(
+      authFile.includes('"Origin": "https://tenant.example.com",'),
+      'login fetch should carry the static header'
+    )
+  })
+
+  test('no delegated config → no upstream-auth file', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      credential: 'bearer',
+    })
+    assert.equal(files['src/test-api-upstream-auth.ts'], undefined)
   })
 })

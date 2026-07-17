@@ -1,5 +1,23 @@
 # @pikku/openapi-parser
 
+## 0.12.15
+
+### Patch Changes
+
+- 854c342: Fix workspace addon integration: exclude nested pikku projects from inspection (prevents "More than one CoreUserSession/CoreConfig found" when a workspace addon is linked), widen the generated addon service `call()` data param to `unknown` so schema-less function inputs compile, and add `@pikku/inspector` + `@standard-schema/spec` to the generated addon devDependencies so its `.pikku` gen files typecheck.
+
+## 0.12.14
+
+### Patch Changes
+
+- a10e88d: auth-config: new `extraHeaders` field — static headers baked into every generated request (the delegated login call and all proxied service calls), for upstreams that route on a header such as multi-tenant APIs resolving the tenant from `Origin`.
+
+## 0.12.13
+
+### Patch Changes
+
+- 0f3edd3: Support an operator-supplied auth config that overrides/augments a spec's securitySchemes: custom auth header name/format (e.g. a raw token in `authentication:` instead of `Authorization: Bearer`), and a delegated-login descriptor (login path, credential fields, token dot-path, claims mapping from the decoded JWT payload or response body) that emits a self-contained `src/<name>-upstream-auth.ts` `authenticate<Name>Upstream()` for wiring into `@pikku/better-auth`'s `delegatedAuth()` plugin.
+
 ## 0.12.12
 
 ### Patch Changes

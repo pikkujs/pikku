@@ -164,7 +164,7 @@ async function main(): Promise<void> {
     const response = await fetch(request)
     assertEqual(response.status, 200, 'HTTP status')
 
-    const body = await response.json()
+    const body = await response.text()
     assertEqual(body, 'my-challenge', 'challenge response')
   })
 
@@ -175,10 +175,7 @@ async function main(): Promise<void> {
     )
 
     const response = await fetch(request)
-    assertEqual(response.status, 200, 'HTTP status')
-
-    const body = await response.json()
-    assertEqual(body.error, 'Verification failed', 'rejection error')
+    assertEqual(response.status, 401, 'HTTP status')
   })
 
   await runTest('POST populates wire.gateway for middleware', async () => {

@@ -4,7 +4,10 @@ import type {
   GatewayOutboundMessage,
   WebhookVerificationResult,
 } from '@pikku/core/gateway'
+import type { PikkuHTTPRequest } from '@pikku/core/http'
+import { UnauthorizedError } from '@pikku/core/errors'
 import { WebClient } from '@slack/web-api'
+import { verifySlackSignature } from './slack-signature.js'
 
 /**
  * Slack event payload types
@@ -101,10 +104,18 @@ export class SlackGatewayAdapter implements GatewayAdapter {
   }
 
   /**
-   * Handle Slack's url_verification challenge.
-   * Slack POSTs { type: 'url_verification', challenge: '...' } and expects the challenge back.
+   * Verify the request signature, then handle Slack's url_verification challenge.
+   *
+   * Every Slack webhook (including url_verification) is HMAC-signed with the
+   * app's signing secret; any request that fails verification is rejected
+   * with UnauthorizedError before it can reach parse/handler.
    */
-  verifyWebhook(data: unknown): WebhookVerificationResult {
+  async verifyWebhook(
+    data: unknown,
+    request?: PikkuHTTPRequest
+  ): Promise<WebhookVerificationResult> {
+    await this.assertValidSignature(request)
+
     const payload = data as Record<string, unknown>
     if (payload?.type === 'url_verification') {
       return {
@@ -115,6 +126,36 @@ export class SlackGatewayAdapter implements GatewayAdapter {
       }
     }
     return { verified: false }
+  }
+
+  /**
+   * Fail-closed signature check: no request access, missing headers, stale
+   * timestamp, or HMAC mismatch all reject the request.
+   */
+  private async assertValidSignature(
+    request?: PikkuHTTPRequest
+  ): Promise<void> {
+    if (!request) {
+      throw new UnauthorizedError(
+        'Slack signature cannot be verified without HTTP request access'
+      )
+    }
+    const signature = request.header('x-slack-signature')
+    const timestamp = request.header('x-slack-request-timestamp')
+    if (!signature || !timestamp) {
+      throw new UnauthorizedError('Missing Slack signature headers')
+    }
+    const rawBody = new TextDecoder().decode(await request.arrayBuffer())
+    if (
+      !verifySlackSignature(
+        this.options.signingSecret,
+        signature,
+        timestamp,
+        rawBody
+      )
+    ) {
+      throw new UnauthorizedError('Invalid Slack request signature')
+    }
   }
 
   /**

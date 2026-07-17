@@ -529,6 +529,7 @@ export function deserializeInspectorState(
       meta: data.functions.meta,
       files: new Map(data.functions.files),
       approvalDescriptions: (data.functions as any).approvalDescriptions || {},
+      dynamicImportIds: new Set(),
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),

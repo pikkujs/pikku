@@ -2,6 +2,7 @@ import type {
   CommonWireMeta,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
+  CoreSingletonServices,
 } from '../../types/core.types.js'
 import type {
   CorePikkuFunctionConfig,
@@ -84,6 +85,19 @@ export interface GatewayAdapter {
 }
 
 /**
+ * Factory that builds a GatewayAdapter from singleton services.
+ *
+ * Real platform adapters (WhatsApp Cloud API, Slack, …) need secrets or
+ * services that only exist after boot, while `wireGateway` runs at module
+ * load. Pass a factory instead of an instance and it is resolved lazily on
+ * the first inbound request (webhook/websocket) or on gateway start
+ * (listener), then cached for the lifetime of the gateway.
+ */
+export type GatewayAdapterFactory = (
+  services: CoreSingletonServices
+) => GatewayAdapter | Promise<GatewayAdapter>
+
+/**
  * The gateway wire object available on wire.gateway inside handler functions and middleware
  */
 export interface PikkuGateway {
@@ -122,8 +136,9 @@ export type CoreGateway<
   /** HTTP route for webhook/websocket types */
   route?: string
   platform?: string
-  /** The gateway adapter (parse inbound, send outbound) */
-  adapter: GatewayAdapter
+  /** The gateway adapter (parse inbound, send outbound), or a factory
+   *  resolved lazily from singleton services (for adapters needing secrets) */
+  adapter: GatewayAdapter | GatewayAdapterFactory
   /** The handler function that processes parsed messages */
   func: PikkuFunctionConfig
   /** Optional middleware chain (e.g., auth) */

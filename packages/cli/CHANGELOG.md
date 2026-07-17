@@ -1,3 +1,87 @@
+## 0.12.82
+
+### Patch Changes
+
+- 398e83b: `pikku fabric validate` now flags a `packages/mantine-theme/` package that has no console-readable theme spec. It mirrors the Fabric console's `getSandboxThemes` file logic: a package with only a hand-written `createTheme()` (no `themes/<id>.json` + `active.json`) renders fine but makes the console Design tab report "no theme set" and leaves it uneditable. New info findings: `theme-no-spec` (no `themes/<id>.json`), `theme-no-active` (spec present but `active.json` missing/id-less), and `theme-active-mismatch` (`active.json.id` points at a non-existent spec).
+
+## 0.12.81
+
+### Patch Changes
+
+- 854c342: Fix workspace addon integration: exclude nested pikku projects from inspection (prevents "More than one CoreUserSession/CoreConfig found" when a workspace addon is linked), widen the generated addon service `call()` data param to `unknown` so schema-less function inputs compile, and add `@pikku/inspector` + `@standard-schema/spec` to the generated addon devDependencies so its `.pikku` gen files typecheck.
+- Updated dependencies [854c342]
+  - @pikku/inspector@0.12.42
+  - @pikku/openapi-parser@0.12.15
+
+## 0.12.80
+
+### Patch Changes
+
+- b226948: Scenario context: scenarios now receive a `scenario` wire (was `workflow`) with the scenario-only helpers `expectEventually`/`expectError`/`expectService` plus a new `scenario.runScheduledTask(name)` that fires a cron inline with the system session. `PikkuWorkflowWire` is trimmed to the plain DSL (`do`/`sleep`/`suspend`); the scenario surface lives on the new `PikkuScenarioWire`. Actor calls (`invoke`/`converse`) stay on the `actors` registry. Scenarios are now excluded from `pikku scenario --coverage` totals.
+- Updated dependencies [b226948]
+  - @pikku/core@0.12.62
+
+## 0.12.79
+
+### Patch Changes
+
+- bb65430: Fail codegen with a clear error when the installed `@pikku/core` violates the CLI's peer range (PKU718).
+
+  Some package managers (bun, yarn) install straight past an unsatisfied `peerDependencies` range instead of failing, so `@pikku/cli` could end up next to a `@pikku/core` outside the range it declares — and the only symptom was a cryptic missing-export crash deep in codegen or at runtime (e.g. `The requested module '@pikku/core/dev' does not provide an export named 'reloadGeneratedMeta'`).
+
+  The existing preflight that catches a _split_ core (two installed versions, `PKU717`) now also validates the _single_ installed core's version against the CLI's own `@pikku/core` peer range, and fails with the exact versions and the fix (`@pikku/cli` and `@pikku/core` move together — bump both to the same release, update any overrides/resolutions pins, reinstall). Set `PIKKU_ALLOW_CORE_SKEW=1` to downgrade the failure to a warning if you have verified the installed pair is compatible, mirroring `PIKKU_ALLOW_DUPLICATE_CORE`.
+
+- Updated dependencies [bb65430]
+- Updated dependencies [982d3f5]
+  - @pikku/inspector@0.12.41
+  - @pikku/core@0.12.61
+
+## 0.12.78
+
+### Patch Changes
+
+- 1f3f510: Warn when a Pikku function body performs a runtime dynamic `import(...)`.
+
+  The inspector now flags any `pikkuFunc`/`pikkuSessionlessFunc` (and friends) whose handler body contains a dynamic `import(...)` call — including nested callbacks — with the new `PKU498` diagnostic. Function bodies run on every invocation, so a dynamic import there adds per-call latency and defeats bundling/tree-shaking; the import belongs at the top of the module or in your services/`wireServices` setup instead.
+
+  Type-only positions like `import('x').Foo` are not flagged. The rule defaults to `warn` — a printed yellow warning that does not fail the build — and is configurable via `lint.functionDynamicImport` in `pikku.config.json` (`'off'` to silence, `'error'` to make it a hard build failure), matching the existing `servicesNotDestructured`/`wiresNotDestructured` lints.
+
+- Updated dependencies [1f3f510]
+  - @pikku/inspector@0.12.40
+  - @pikku/core@0.12.59
+
+## 0.12.77
+
+### Patch Changes
+
+- 7b17b14: Allow a workflow-graph node's `func` to reference a registered AI agent by name, dispatched as an agent run — exactly like sub-workflows. `executeGraphStep`/`executeGraphNodeInline` now check the agent registry and dispatch matching nodes via the agent-run path (`rpc.agent.run`), so the node's result is the agent's declared output and downstream nodes can `ref()` it. The generated `pikkuWorkflowGraph` wrapper widens its node-func union to also accept `keyof FlattenedWorkflowMap` and `keyof FlattenedAgentMap`, and `ref()` resolves an agent node's output keys.
+- 4f92e6f: `pikku db` schema-codegen warnings are now coded diagnostics routed through the CLI logger instead of raw `console.warn`, so they participate in the existing `--fail-on-warn` gate.
+
+  Each warning now carries a PKU code and `warn` severity: `PKU481` (JSON/JSONB column with no concrete `tsType`, degrading to `unknown`), `PKU480` (column named like a date/bool but whose DB type contradicts it), and `PKU482` (a `format` annotation ignored on a non-string column). Running `pikku db migrate --fail-on-warn` (e.g. in CI) now turns these into a hard failure, forcing the `db/annotations.ts` entry — closing the loophole where an untyped jsonb column silently degrades type-safety. Default behaviour is unchanged: the warnings still print, and only fail the build when `--fail-on-warn` is set.
+
+- 746abda: Fix pathologically slow `pikku db migrate` schema introspection on Postgres. Column and foreign-key introspection previously fanned out one query per table via `Promise.all` on a single `pg.Client`, which serialized every round-trip (emitting the `client.query() while already executing` deprecation warning) and scaled O(tables). It now issues a single set-based `information_schema` sweep for all columns and all foreign keys, turning introspection into a constant number of round-trips regardless of schema size. SQLite is unaffected (its introspection is synchronous and in-process).
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- 08bb644: Fix `pikku db` schema codegen flattening Postgres array columns to scalar types. `text[]`/`int[]`/`uuid[]` columns now generate as `string[]`/`number[]`/`string[]` in `schema.gen.ts` instead of `string`/`number`. The introspector now captures the array element type from `udt_name` (previously every array column was recorded as the opaque `ARRAY`), and `mapType` preserves the `[]` suffix rather than matching the element substring and dropping the array-ness.
+- c8aa272: `pikku new addon --auth-config <path>`: pass an auth-config JSON that overrides the spec's securitySchemes (custom auth header, delegated login). With a `delegated` section the credential mode is forced to `bearer`, the generated per-user services check token expiry (`UnauthorizedError` re-auth signal), the credential schema carries `{ token, expiresAt?, tenantId? }`, and the addon exports a ready `authenticate<Name>Upstream()` for `@pikku/better-auth`'s `delegatedAuth()` plugin.
+- Updated dependencies [7b17b14]
+- Updated dependencies [4f92e6f]
+- Updated dependencies [ac4c3f4]
+- Updated dependencies [daec082]
+- Updated dependencies [e0fd352]
+- Updated dependencies [0f3edd3]
+- Updated dependencies [ad26273]
+  - @pikku/core@0.12.58
+  - @pikku/inspector@0.12.39
+  - @pikku/better-auth@0.12.17
+  - @pikku/fetch@0.12.7
+  - @pikku/schedule@0.12.4
+  - @pikku/node-http-server@0.12.6
+  - @pikku/ws@0.12.4
+  - @pikku/openapi-parser@0.12.13
+
 ## 0.12.76
 
 ### Patch Changes

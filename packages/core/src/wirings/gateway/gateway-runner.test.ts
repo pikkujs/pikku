@@ -86,6 +86,31 @@ const setupState = () => {
   } as any)
 }
 
+// Mirrors the inspector's wireGateway -> compiled HTTP/function meta projection
+const seedCompiledMeta = () => {
+  const httpMeta = pikkuState(null, 'http', 'meta') as any
+  const funcMeta = pikkuState(null, 'function', 'meta') as any
+  for (const config of pikkuState(null, 'gateway', 'gateways').values()) {
+    if (config.type !== 'webhook' || !config.route) continue
+    for (const [method, funcId] of [
+      ['post', `gateway__${config.name}__post`],
+      ['get', `gateway__${config.name}__verify`],
+    ] as const) {
+      httpMeta[method][config.route] = {
+        pikkuFuncId: funcId,
+        route: config.route,
+        method,
+      }
+      funcMeta[funcId] = {
+        pikkuFuncId: funcId,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sessionless: true,
+      }
+    }
+  }
+}
+
 // --- Tests ------------------------------------------------------------------
 
 describe('wireGateway', () => {
@@ -111,6 +136,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/test', {
@@ -139,6 +165,78 @@ describe('wireGateway', () => {
       assert.equal(adapter.sentMessages[0].message.text, 'reply')
     })
 
+    test('adapter factory resolves lazily from services and is cached', async () => {
+      const adapter = createMockAdapter({ name: 'factory-mock' })
+      const factoryCalls: any[] = []
+
+      wireGateway({
+        name: 'test-factory',
+        type: 'webhook',
+        route: '/webhooks/factory',
+        adapter: (services: any) => {
+          factoryCalls.push(services)
+          return adapter
+        },
+        func: {
+          func: async () => ({ text: 'pong' }),
+        },
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      // Factory must NOT run at wiring time
+      assert.equal(factoryCalls.length, 0)
+
+      const makeRequest = () =>
+        fetch(
+          new Request('http://localhost/webhooks/factory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ senderId: 'user-9', text: 'ping' }),
+          })
+        )
+
+      const first = await makeRequest()
+      assert.equal(first.status, 200)
+      const second = await makeRequest()
+      assert.equal(second.status, 200)
+
+      // Factory ran exactly once, with the singleton services
+      assert.equal(factoryCalls.length, 1)
+      assert.equal(typeof factoryCalls[0].logger.info, 'function')
+
+      // Messages flowed through the resolved adapter (auto-send reply)
+      assert.equal(adapter.sentMessages.length, 2)
+      assert.equal(adapter.sentMessages[0].message.text, 'pong')
+    })
+
+    test('factory adapter registers GET verify route unconditionally', async () => {
+      const adapter = createMockAdapter({
+        verifyResult: { verified: true, response: { challenge: 'abc' } },
+      })
+
+      wireGateway({
+        name: 'test-factory-verify',
+        type: 'webhook',
+        route: '/webhooks/factory-verify',
+        adapter: async () => adapter,
+        func: { func: async () => {} },
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      const response = await fetch(
+        new Request('http://localhost/webhooks/factory-verify?token=x', {
+          method: 'GET',
+        })
+      )
+      assert.equal(response.status, 200)
+      const body = await response.json()
+      assert.deepEqual(body, { challenge: 'abc' })
+    })
+
     test('returns 200 OK for ignored events (adapter returns null)', async () => {
       const adapter = createMockAdapter({ parseResult: null })
       const funcCalls: any[] = []
@@ -155,6 +253,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/ignore', {
@@ -200,6 +299,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/mw', {
@@ -230,6 +330,7 @@ describe('wireGateway', () => {
         func: { func: async () => {} },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request(
@@ -240,8 +341,33 @@ describe('wireGateway', () => {
       const response = await fetch(request)
       assert.equal(response.status, 200)
 
-      const body = await response.json()
+      const body = await response.text()
       assert.equal(body, 'challenge-token-123')
+    })
+
+    test('failed webhook verification returns 401', async () => {
+      const adapter = createMockAdapter({
+        verifyResult: { verified: false },
+      })
+
+      wireGateway({
+        name: 'test-verify-fail',
+        type: 'webhook',
+        route: '/webhooks/verify-fail',
+        adapter,
+        func: { func: async () => {} },
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      const request = new Request(
+        'http://localhost/webhooks/verify-fail?hub.mode=subscribe&hub.verify_token=wrong',
+        { method: 'GET' }
+      )
+
+      const response = await fetch(request)
+      assert.equal(response.status, 401)
     })
 
     test('handles POST-based verification (Slack style)', async () => {
@@ -261,6 +387,7 @@ describe('wireGateway', () => {
         func: { func: async () => {} },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/slack', {
@@ -298,6 +425,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/proactive', {

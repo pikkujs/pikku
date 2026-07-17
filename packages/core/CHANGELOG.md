@@ -1,3 +1,52 @@
+## 0.12.63
+
+### Patch Changes
+
+- ae65588: `fetchData` now defaults `exposeErrors` to `!isProduction()`, so a non-production HTTP server returns the error `message` and `stack` on unexpected 500s instead of a bare `{ errorId }`. A dev/sandbox RPC that 500s is now debuggable from the response alone; production (NODE_ENV=production) still returns only the errorId.
+
+## 0.12.62
+
+### Patch Changes
+
+- b226948: Scenario context: scenarios now receive a `scenario` wire (was `workflow`) with the scenario-only helpers `expectEventually`/`expectError`/`expectService` plus a new `scenario.runScheduledTask(name)` that fires a cron inline with the system session. `PikkuWorkflowWire` is trimmed to the plain DSL (`do`/`sleep`/`suspend`); the scenario surface lives on the new `PikkuScenarioWire`. Actor calls (`invoke`/`converse`) stay on the `actors` registry. Scenarios are now excluded from `pikku scenario --coverage` totals.
+
+## 0.12.61
+
+### Patch Changes
+
+- 982d3f5: Webhook gateway routes are now fully compiled instead of runtime-registered. The inspector projects `wireGateway` into the generated HTTP and function meta (deterministic `gateway__<name>__post`/`__verify` ids), and the gateway runner no longer mutates meta state at runtime — it only registers the handler implementations at module load, like every other wire. Previously the runtime-only meta was invisible to codegen and the dev-server meta reload wiped it, 500ing every gateway request.
+
+  Also fixes the GET verification echo: string challenges return as a raw body (platforms compare byte-for-byte; the old JSON quoting failed Meta's check), object responses stay JSON, and failed verification now throws `UnauthorizedError` (401) instead of returning 200 with an error body.
+
+## 0.12.60
+
+### Patch Changes
+
+- a3a49f2: fix(workflow): carry `pikkuUserId` onto queued workflow step wires so authed steps rehydrate their session
+
+  A workflow step invoked on the queued (pg-boss) executor received the bare job wire (payload is just `{ runId }`), so `pikkuUserId` was never on the step wire and an authed step (`pikkuFunc`) threw `Authentication required` — even though the run wire persisted the acting user's id and the inline executor worked. `invokeStepRpc` now reads `pikkuUserId` from the persisted run wire and merges it into the step wire override, so authed steps rehydrate their session via the `SessionStore` on both the inline and queued paths.
+
+## 0.12.59
+
+### Patch Changes
+
+- 1f3f510: Warn when a Pikku function body performs a runtime dynamic `import(...)`.
+
+  The inspector now flags any `pikkuFunc`/`pikkuSessionlessFunc` (and friends) whose handler body contains a dynamic `import(...)` call — including nested callbacks — with the new `PKU498` diagnostic. Function bodies run on every invocation, so a dynamic import there adds per-call latency and defeats bundling/tree-shaking; the import belongs at the top of the module or in your services/`wireServices` setup instead.
+
+  Type-only positions like `import('x').Foo` are not flagged. The rule defaults to `warn` — a printed yellow warning that does not fail the build — and is configurable via `lint.functionDynamicImport` in `pikku.config.json` (`'off'` to silence, `'error'` to make it a hard build failure), matching the existing `servicesNotDestructured`/`wiresNotDestructured` lints.
+
+## 0.12.58
+
+### Patch Changes
+
+- 7b17b14: Allow a workflow-graph node's `func` to reference a registered AI agent by name, dispatched as an agent run — exactly like sub-workflows. `executeGraphStep`/`executeGraphNodeInline` now check the agent registry and dispatch matching nodes via the agent-run path (`rpc.agent.run`), so the node's result is the agent's declared output and downstream nodes can `ref()` it. The generated `pikkuWorkflowGraph` wrapper widens its node-func union to also accept `keyof FlattenedWorkflowMap` and `keyof FlattenedAgentMap`, and `ref()` resolves an agent node's output keys.
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- e0fd352: wireGateway: allow `adapter` to be a factory `(services) => GatewayAdapter | Promise<GatewayAdapter>`, resolved lazily on first inbound request (webhook/websocket) or gateway start (listener) and cached. Real platform adapters (WhatsApp Cloud API, Slack) need secrets that only exist after boot, while wireGateway runs at module load — a factory bridges that. Factory adapters register the GET verify route unconditionally since verifyWebhook can't be probed before first resolve.
+
 ## 0.12.57
 
 ### Patch Changes

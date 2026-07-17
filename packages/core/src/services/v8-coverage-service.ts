@@ -65,6 +65,7 @@ export interface CoverageFunctionMeta {
   description?: string | null
   bodyStart?: number
   bodyEnd?: number
+  funcWrapper?: string
 }
 
 export interface CoverageService {

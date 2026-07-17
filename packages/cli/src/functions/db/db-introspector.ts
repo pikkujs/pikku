@@ -37,6 +37,19 @@ export interface DbIntrospector {
   listTables(): Promise<string[]>
   getColumns(table: string): Promise<ColumnInfo[]>
   getForeignKeys(table: string): Promise<ForeignKeyInfo[]>
+  /**
+   * Columns for every table in one sweep, keyed by the same table name that
+   * {@link listTables} returns (schema-qualified for non-`public` tables). On
+   * Postgres this is a single set-based query — introspecting a large schema
+   * must not fan out one round-trip per table, which both scales O(tables) and
+   * overlaps queries on a single connection.
+   */
+  getAllColumns(): Promise<Map<string, ColumnInfo[]>>
+  /**
+   * Foreign keys for every table in one sweep, keyed like {@link getAllColumns}.
+   * Tables with no foreign keys may be omitted from the map.
+   */
+  getAllForeignKeys(): Promise<Map<string, ForeignKeyInfo[]>>
   listEnums(): Promise<EnumInfo[]>
   close(): Promise<void>
 }

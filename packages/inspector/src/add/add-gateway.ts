@@ -90,6 +90,29 @@ export const addGateway: AddWiring = (
     state.serviceAggregation.usedMiddleware.add(name)
   )
 
+  // Project webhook POST/GET wrappers into compiled http + function meta.
+  if (typeValue === 'webhook' && routeValue) {
+    const wrappers = [
+      { method: 'post', funcId: `gateway__${nameValue}__post` },
+      { method: 'get', funcId: `gateway__${nameValue}__verify` },
+    ] as const
+    for (const { method, funcId } of wrappers) {
+      // no middleware here — the gateway POST wrapper runs it itself
+      state.http.meta[method][routeValue] = {
+        pikkuFuncId: funcId,
+        route: routeValue,
+        method,
+      }
+      state.functions.meta[funcId] = {
+        pikkuFuncId: funcId,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sessionless: true,
+      }
+    }
+    state.http.files.add(node.getSourceFile().fileName)
+  }
+
   state.gateways.files.add(node.getSourceFile().fileName)
   state.gateways.meta[nameValue] = {
     pikkuFuncId,

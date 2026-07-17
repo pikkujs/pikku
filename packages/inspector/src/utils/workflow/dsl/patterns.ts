@@ -5,6 +5,18 @@ import * as ts from 'typescript'
  */
 
 /**
+ * The wire object handed to a DSL func is named `workflow` in a workflow and
+ * `scenario` in a scenario — both carry the same `do`/`sleep`/`suspend` DSL, so
+ * step extraction accepts either identifier.
+ */
+export function isWorkflowWireIdentifier(expr: ts.Expression): boolean {
+  return (
+    ts.isIdentifier(expr) &&
+    (expr.text === 'workflow' || expr.text === 'scenario')
+  )
+}
+
+/**
  * Check if a call expression is workflow.do() or workflow.expectEventually()
  * (both are RPC steps; expectEventually is the polling variant used by scenarios)
  */
@@ -20,8 +32,7 @@ export function isWorkflowDoCall(
   return (
     (propAccess.name.text === 'do' ||
       propAccess.name.text === 'expectEventually') &&
-    ts.isIdentifier(propAccess.expression) &&
-    propAccess.expression.text === 'workflow'
+    isWorkflowWireIdentifier(propAccess.expression)
   )
 }
 
@@ -34,8 +45,7 @@ export function isWorkflowExpectEventuallyCall(
   return (
     ts.isPropertyAccessExpression(node.expression) &&
     node.expression.name.text === 'expectEventually' &&
-    ts.isIdentifier(node.expression.expression) &&
-    node.expression.expression.text === 'workflow'
+    isWorkflowWireIdentifier(node.expression.expression)
   )
 }
 
@@ -83,8 +93,7 @@ export function isWorkflowSleepCall(
   const propAccess = node.expression
   return (
     propAccess.name.text === 'sleep' &&
-    ts.isIdentifier(propAccess.expression) &&
-    propAccess.expression.text === 'workflow'
+    isWorkflowWireIdentifier(propAccess.expression)
   )
 }
 
@@ -102,8 +111,7 @@ export function isWorkflowSuspendCall(
   const propAccess = node.expression
   return (
     propAccess.name.text === 'suspend' &&
-    ts.isIdentifier(propAccess.expression) &&
-    propAccess.expression.text === 'workflow'
+    isWorkflowWireIdentifier(propAccess.expression)
   )
 }
 

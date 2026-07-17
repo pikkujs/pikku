@@ -22,6 +22,7 @@ export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   bearer: { displayName: 'Bearer' },
   captcha: { displayName: 'Captcha' },
   customSession: { displayName: 'Custom Session' },
+  delegatedAuth: { displayName: 'Delegated Auth' },
   deviceAuthorization: { displayName: 'Device Authorization' },
   emailOTP: { displayName: 'Email OTP' },
   fabric: { displayName: 'Fabric' },

@@ -36,6 +36,7 @@ export type {
   WorkflowStepMeta,
   WorkflowStepWire,
   PikkuWorkflowWire,
+  PikkuScenarioWire,
 } from './dsl/workflow-dsl.types.js'
 
 import type { WorkflowStepMeta } from './dsl/workflow-dsl.types.js'

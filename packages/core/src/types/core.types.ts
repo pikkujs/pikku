@@ -17,6 +17,7 @@ import type { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import type { PikkuCLI } from '../wirings/cli/cli.types.js'
 import type {
   PikkuWorkflowWire,
+  PikkuScenarioWire,
   WorkflowService,
   WorkflowServiceConfig,
   WorkflowStepWire,
@@ -329,6 +330,7 @@ export type PikkuWire<
   MCPTools extends string | never = never,
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
+  TypedScenario extends PikkuScenarioWire | never = PikkuScenarioWire,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
   rpc: TypedRPC
@@ -350,7 +352,7 @@ export type PikkuWire<
   queue: PikkuQueue
   cli: PikkuCLI
   workflow: TypedWorkflow
-  /** Scenario actor registry (scenario runs only) — pass into workflow.do as `{ actor: actors.x }` */
+  scenario: TypedScenario
   actors: ScenarioActors
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire

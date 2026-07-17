@@ -26,6 +26,8 @@ type Dialect = 'sqlite' | 'postgres'
 function realKind(dialect: Dialect, sqlType: string): ColumnKind | null {
   if (dialect !== 'postgres') return null
   const u = sqlType.toUpperCase()
+  // Array types carry no scalar kind — an array of timestamps is not a `date`.
+  if (u.endsWith('[]')) return null
   if (u.includes('TIMESTAMP') || u === 'DATE') return 'date'
   if (u === 'BOOLEAN' || u === 'BOOL') return 'bool'
   if (u === 'UUID') return 'uuid'
@@ -61,6 +63,9 @@ function escapeTsString(value: string): string {
 
 function mapType(sqlType: string): string {
   const upper = sqlType.toUpperCase()
+  // Preserve array-ness — map the element type and re-apply the `[]` suffix
+  // rather than letting the element's substring match flatten it to a scalar.
+  if (upper.endsWith('[]')) return `${mapType(sqlType.slice(0, -2))}[]`
   if (upper.includes('INT')) return 'number'
   if (
     upper.includes('CHAR') ||
@@ -521,12 +526,11 @@ export async function generateSchemaTypes(
   const dialect: Dialect = options.dialect ?? 'sqlite'
 
   const tableNames = await introspector.listTables()
-  const tables: TableSchema[] = await Promise.all(
-    tableNames.map(async (name) => ({
-      name,
-      columns: await introspector.getColumns(name),
-    }))
-  )
+  const columnsByTable = await introspector.getAllColumns()
+  const tables: TableSchema[] = tableNames.map((name) => ({
+    name,
+    columns: columnsByTable.get(name) ?? [],
+  }))
 
   const explicitAnnotations = options.rootDir
     ? loadAnnotations(options.rootDir)
@@ -647,10 +651,7 @@ export async function generateSchemaTypes(
   // ── pikku-db-schema.gen.json ─────────────────────────────────────────────────
   let schemaJsonBody: string | null = null
   if (options.schemaJsonFile) {
-    const fkResults = await Promise.all(
-      tableNames.map((name) => introspector.getForeignKeys(name))
-    )
-    const fkMap = new Map(tableNames.map((name, i) => [name, fkResults[i]!]))
+    const fkMap = await introspector.getAllForeignKeys()
     const jsonTables = tables.map((t) => ({
       name: t.name,
       columns: t.columns.map((c) => {
