@@ -150,47 +150,70 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
     return
   }
 
-  const obj = unwrapped
-  const nameValue = getPropertyValue(obj, 'name') as string | null
-
-  if (!nameValue) {
-    logger.critical(
-      ErrorCode.MISSING_NAME,
-      "Scope is missing the required 'name' property."
-    )
-    return
-  }
-
-  if (!isValidSegment(nameValue, nameValue, logger)) {
-    return
-  }
-
-  const displayNameValue = getPropertyValue(obj, 'displayName') as string | null
-  const descriptionValue = getPropertyValue(obj, 'description') as string | null
-
-  let scopes: Record<string, ScopeNodeMeta> | undefined
-  const scopesProp = obj.properties.find(
-    (p) =>
-      ts.isPropertyAssignment(p) &&
-      ts.isIdentifier(p.name) &&
-      p.name.text === 'scopes'
-  )
-  if (
-    scopesProp &&
-    ts.isPropertyAssignment(scopesProp) &&
-    ts.isObjectLiteralExpression(scopesProp.initializer)
-  ) {
-    scopes = extractScopeNodes(scopesProp.initializer, nameValue, logger)
-  }
-
   const sourceFile = node.getSourceFile().fileName
-  state.scopes.files.add(sourceFile)
 
-  state.scopes.definitions.push({
-    name: nameValue,
-    displayName: displayNameValue || undefined,
-    description: descriptionValue || undefined,
-    scopes,
-    sourceFile,
-  })
+  // Roots are keyed exactly like the nodes beneath them, so each property of
+  // the call's single argument is one tree.
+  for (const prop of unwrapped.properties) {
+    if (!ts.isPropertyAssignment(prop)) {
+      continue
+    }
+
+    let name: string | undefined
+    if (ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name)) {
+      name = prop.name.text
+    }
+
+    if (name === undefined) {
+      logger.critical(
+        ErrorCode.NON_LITERAL_WIRE_NAME,
+        'A scope is declared with a key that is not a literal.'
+      )
+      continue
+    }
+
+    if (!isValidSegment(name, name, logger)) {
+      continue
+    }
+
+    if (!ts.isObjectLiteralExpression(prop.initializer)) {
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `Scope '${name}' must be an object literal.`
+      )
+      continue
+    }
+
+    const root = prop.initializer
+    const displayNameValue = getPropertyValue(root, 'displayName') as
+      | string
+      | null
+    const descriptionValue = getPropertyValue(root, 'description') as
+      | string
+      | null
+
+    let scopes: Record<string, ScopeNodeMeta> | undefined
+    const scopesProp = root.properties.find(
+      (p) =>
+        ts.isPropertyAssignment(p) &&
+        ts.isIdentifier(p.name) &&
+        p.name.text === 'scopes'
+    )
+    if (
+      scopesProp &&
+      ts.isPropertyAssignment(scopesProp) &&
+      ts.isObjectLiteralExpression(scopesProp.initializer)
+    ) {
+      scopes = extractScopeNodes(scopesProp.initializer, name, logger)
+    }
+
+    state.scopes.files.add(sourceFile)
+    state.scopes.definitions.push({
+      name,
+      displayName: displayNameValue || undefined,
+      description: descriptionValue || undefined,
+      scopes,
+      sourceFile,
+    })
+  }
 }

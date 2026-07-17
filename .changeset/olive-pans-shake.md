@@ -10,8 +10,9 @@ gate that runs before them, so adding one can only ever narrow access.
 
 ```ts
 wireScope({
-  name: 'admin',
-  scopes: { invoices: { scopes: { create: {} } } },
+  admin: {
+    scopes: { invoices: { scopes: { create: {} } } },
+  },
 })
 
 export const createInvoice = pikkuFunc({

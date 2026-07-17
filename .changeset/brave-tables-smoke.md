@@ -12,7 +12,7 @@ descendants. A project's generated `pikkuFunc` narrows `scopes` to that union,
 so an undeclared scope is a compile error with editor autocomplete:
 
 ```ts
-wireScope({ name: 'admin', scopes: { invoices: { scopes: { create: {} } } } })
+wireScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
 
 pikkuFunc({
   scopes: ['admin:invoices:create'],  // ✓ autocompleted

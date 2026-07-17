@@ -1,4 +1,4 @@
-import type { CoreScope } from './scope.types.js'
+import type { CoreScopes } from './scope.types.js'
 
 /**
  * No-op function for declaring scopes.
@@ -6,25 +6,29 @@ import type { CoreScope } from './scope.types.js'
  * The CLI extracts metadata via AST parsing and generates a `ScopeId` union,
  * so a function referencing an undeclared scope fails the build.
  *
- * Every node is grantable: the declaration below yields `admin`,
- * `admin:invoices`, `admin:invoices:create` and `admin:invoices:void`.
+ * Scopes are keyed by segment at every level: a scope is named by its key, and
+ * its value describes it. Every node is grantable — the declaration below
+ * yields `admin`, `admin:invoices`, `admin:invoices:create`,
+ * `admin:invoices:void` and `billing`.
  *
  * @example
  * ```typescript
  * wireScope({
- *   name: 'admin',
- *   displayName: 'Administration',
- *   description: 'Administrative access',
- *   scopes: {
- *     invoices: {
- *       description: 'Invoice management',
- *       scopes: {
- *         create: { description: 'Create invoices' },
- *         void: { description: 'Void invoices' },
+ *   admin: {
+ *     displayName: 'Administration',
+ *     description: 'Administrative access',
+ *     scopes: {
+ *       invoices: {
+ *         description: 'Invoice management',
+ *         scopes: {
+ *           create: { description: 'Create invoices' },
+ *           void: { description: 'Void invoices' },
+ *         },
  *       },
  *     },
  *   },
+ *   billing: {},
  * })
  * ```
  */
-export const wireScope = (_config: CoreScope): void => {}
+export const wireScope = (_config: CoreScopes): void => {}

@@ -4,7 +4,8 @@ export {
   validateAndBuildScopeDefinitionsMeta,
 } from './validate-scope-definitions.js'
 export type {
-  CoreScope,
+  CoreScopes,
+  CoreScopeRoot,
   CoreScopeNode,
   FlatScope,
   ScopeDefinitionMeta,

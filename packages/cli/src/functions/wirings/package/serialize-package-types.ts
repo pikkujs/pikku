@@ -6,7 +6,7 @@ export type { CoreSecret, SecretDefinitionMeta, SecretDefinitionsMeta } from '@p
 
 export const serializeScopeDefinitionTypes = () => {
   return `export { wireScope } from '@pikku/core/scope'
-export type { CoreScope, CoreScopeNode, FlatScope, ScopeDefinitionMeta, ScopeDefinitionsMeta } from '@pikku/core/scope'
+export type { CoreScopes, CoreScopeRoot, CoreScopeNode, FlatScope, ScopeDefinitionMeta, ScopeDefinitionsMeta } from '@pikku/core/scope'
 `
 }
 

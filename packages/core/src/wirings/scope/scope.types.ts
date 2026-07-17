@@ -11,16 +11,19 @@ export type CoreScopeNode = {
 }
 
 /**
- * A top-level scope declaration.
+ * A root of a scope tree. A root is just a node that may also carry a display
+ * name — it is named by its key, exactly like every node beneath it.
  */
-export type CoreScope = {
-  /** Root segment of the scope, e.g. `admin`. Must not contain `:` or be `*`. */
-  name: string
+export type CoreScopeRoot = CoreScopeNode & {
   /** Short human-readable name, e.g. "Administration". */
   displayName?: string
-  description?: string
-  scopes?: Record<string, CoreScopeNode>
 }
+
+/**
+ * Scope trees to declare, keyed by their root segment. A key must not contain
+ * `:` or be `*`.
+ */
+export type CoreScopes = Record<string, CoreScopeRoot>
 
 export type ScopeNodeMeta = {
   description?: string

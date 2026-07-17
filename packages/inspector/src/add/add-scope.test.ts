@@ -41,9 +41,10 @@ describe('addScope inspector', () => {
       [
         "import { wireScope } from '@pikku/core/scope'",
         'wireScope({',
-        "  name: 'admin',",
-        "  displayName: 'Administration',",
-        "  description: 'Administrative access',",
+        '  admin: {',
+        "    displayName: 'Administration',",
+        "    description: 'Administrative access',",
+        '  },',
         '})',
       ].join('\n')
     )
@@ -63,12 +64,13 @@ describe('addScope inspector', () => {
       [
         "import { wireScope } from '@pikku/core/scope'",
         'wireScope({',
-        "  name: 'admin',",
-        '  scopes: {',
-        '    invoices: {',
-        "      description: 'Invoice management',",
-        '      scopes: {',
-        "        create: { description: 'Create invoices' },",
+        '  admin: {',
+        '    scopes: {',
+        '      invoices: {',
+        "        description: 'Invoice management',",
+        '        scopes: {',
+        "          create: { description: 'Create invoices' },",
+        '        },',
         '      },',
         '    },',
         '  },',
@@ -91,7 +93,7 @@ describe('addScope inspector', () => {
     const { state, file } = await inspectSource(
       [
         "import { wireScope } from '@pikku/core/scope'",
-        "wireScope({ name: 'admin' })",
+        'wireScope({ admin: {} })',
       ].join('\n')
     )
 
@@ -99,12 +101,30 @@ describe('addScope inspector', () => {
     assert.ok(state.scopes.files.has(file))
   })
 
+  // The point of the keyed form: one call declares as many roots as you like,
+  // and a root reads exactly like the nodes beneath it.
+  test('extracts several roots from one declaration', async () => {
+    const { state, criticals } = await inspectSource(
+      [
+        "import { wireScope } from '@pikku/core/scope'",
+        'wireScope({ admin: {}, billing: { scopes: { read: {} } } })',
+      ].join('\n')
+    )
+
+    assert.equal(criticals.length, 0)
+    assert.deepEqual(
+      state.scopes.definitions.map((d) => d.name),
+      ['admin', 'billing']
+    )
+    assert.deepEqual(state.scopes.definitions[1]!.scopes, { read: {} })
+  })
+
   test('extracts several declarations', async () => {
     const { state } = await inspectSource(
       [
         "import { wireScope } from '@pikku/core/scope'",
-        "wireScope({ name: 'admin' })",
-        "wireScope({ name: 'billing' })",
+        'wireScope({ admin: {} })',
+        'wireScope({ billing: {} })',
       ].join('\n')
     )
 
@@ -114,25 +134,11 @@ describe('addScope inspector', () => {
     )
   })
 
-  test('is critical when name is missing', async () => {
+  test('is critical when a root embeds the separator', async () => {
     const { criticals } = await inspectSource(
       [
         "import { wireScope } from '@pikku/core/scope'",
-        "wireScope({ displayName: 'Administration' } as any)",
-      ].join('\n')
-    )
-
-    assert.ok(
-      criticals.some((c) => c.code === ErrorCode.MISSING_NAME),
-      `expected a MISSING_NAME critical, got ${JSON.stringify(criticals)}`
-    )
-  })
-
-  test('is critical when a name embeds the separator', async () => {
-    const { criticals } = await inspectSource(
-      [
-        "import { wireScope } from '@pikku/core/scope'",
-        "wireScope({ name: 'admin:users' })",
+        "wireScope({ 'admin:users': {} })",
       ].join('\n')
     )
 
@@ -142,11 +148,40 @@ describe('addScope inspector', () => {
     )
   })
 
-  test('is critical when a name is the wildcard', async () => {
+  test('is critical when a root is the wildcard', async () => {
     const { criticals } = await inspectSource(
       [
         "import { wireScope } from '@pikku/core/scope'",
-        "wireScope({ name: '*' })",
+        "wireScope({ '*': {} })",
+      ].join('\n')
+    )
+
+    assert.ok(
+      criticals.some((c) => c.code === ErrorCode.INVALID_VALUE),
+      `expected an INVALID_VALUE critical, got ${JSON.stringify(criticals)}`
+    )
+  })
+
+  test('is critical when a root key is not a literal', async () => {
+    const { criticals } = await inspectSource(
+      [
+        "import { wireScope } from '@pikku/core/scope'",
+        'const k = String(1)',
+        'wireScope({ [k]: {} } as any)',
+      ].join('\n')
+    )
+
+    assert.ok(
+      criticals.some((c) => c.code === ErrorCode.NON_LITERAL_WIRE_NAME),
+      `expected a NON_LITERAL_WIRE_NAME critical, got ${JSON.stringify(criticals)}`
+    )
+  })
+
+  test('is critical when a root is not an object literal', async () => {
+    const { criticals } = await inspectSource(
+      [
+        "import { wireScope } from '@pikku/core/scope'",
+        "wireScope({ admin: 'nope' } as any)",
       ].join('\n')
     )
 
@@ -173,8 +208,9 @@ describe('validateScopeReferences', () => {
     const { criticals } = await inspectSource(
       funcSource("['admin:invoices:create']", [
         'wireScope({',
-        "  name: 'admin',",
-        '  scopes: { invoices: { scopes: { create: {} } } },',
+        '  admin: {',
+        '    scopes: { invoices: { scopes: { create: {} } } },',
+        '  },',
         '})',
       ])
     )
@@ -186,8 +222,9 @@ describe('validateScopeReferences', () => {
     const { criticals } = await inspectSource(
       funcSource("['admin:invoices']", [
         'wireScope({',
-        "  name: 'admin',",
-        '  scopes: { invoices: { scopes: { create: {} } } },',
+        '  admin: {',
+        '    scopes: { invoices: { scopes: { create: {} } } },',
+        '  },',
         '})',
       ])
     )
@@ -197,7 +234,7 @@ describe('validateScopeReferences', () => {
 
   test('rejects an undeclared scope', async () => {
     const { criticals } = await inspectSource(
-      funcSource("['billing:read']", ["wireScope({ name: 'admin' })"])
+      funcSource("['billing:read']", ['wireScope({ admin: {} })'])
     )
 
     assert.ok(
@@ -212,7 +249,7 @@ describe('validateScopeReferences', () => {
 
   test('lists the available scopes when one is undeclared', async () => {
     const { criticals } = await inspectSource(
-      funcSource("['nope']", ["wireScope({ name: 'admin' })"])
+      funcSource("['nope']", ['wireScope({ admin: {} })'])
     )
 
     assert.ok(
@@ -225,8 +262,9 @@ describe('validateScopeReferences', () => {
     const { criticals } = await inspectSource(
       funcSource("['admin:invoice:create']", [
         'wireScope({',
-        "  name: 'admin',",
-        '  scopes: { invoices: { scopes: { create: {} } } },',
+        '  admin: {',
+        '    scopes: { invoices: { scopes: { create: {} } } },',
+        '  },',
         '})',
       ])
     )
@@ -239,7 +277,7 @@ describe('validateScopeReferences', () => {
 
   test('accepts a wildcard requirement whose node is declared', async () => {
     const { criticals } = await inspectSource(
-      funcSource("['admin:*']", ["wireScope({ name: 'admin' })"])
+      funcSource("['admin:*']", ['wireScope({ admin: {} })'])
     )
 
     assert.deepEqual(criticals, [])
@@ -247,7 +285,7 @@ describe('validateScopeReferences', () => {
 
   test('rejects a wildcard requirement whose node is undeclared', async () => {
     const { criticals } = await inspectSource(
-      funcSource("['billing:*']", ["wireScope({ name: 'admin' })"])
+      funcSource("['billing:*']", ['wireScope({ admin: {} })'])
     )
 
     assert.ok(
@@ -258,7 +296,7 @@ describe('validateScopeReferences', () => {
 
   test('rejects a bare wildcard requirement', async () => {
     const { criticals } = await inspectSource(
-      funcSource("['*']", ["wireScope({ name: 'admin' })"])
+      funcSource("['*']", ['wireScope({ admin: {} })'])
     )
 
     assert.ok(
