@@ -39,6 +39,7 @@ import {
   Moon,
   UserCog,
   ShieldCheck,
+  Shield,
 } from 'lucide-react'
 import { useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -96,6 +97,7 @@ export function useDefaultNavSections(): NavSection[] {
       title: m.nav_users(),
       items: [
         { label: m.nav_users(), href: '/users', icon: Users, matchPrefix: '/users' },
+        { label: asI18n('Scopes'), href: '/scopes', icon: Shield, matchPrefix: '/scopes' },
         { label: m.nav_oauth(), href: '/auth-providers', icon: KeyRound, matchPrefix: '/auth-providers' },
         { label: m.nav_credentials(), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
       ],

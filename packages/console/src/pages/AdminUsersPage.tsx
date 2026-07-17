@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Text, Button, Center, Loader, Alert } from '@pikku/mantine/core'
+import { Text, Button, Center, Loader, Alert, Group } from '@pikku/mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-import { AlertTriangle, UserCog } from 'lucide-react'
+import { AlertTriangle, UserCog, ShieldCheck } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { UsersTable } from '../components/users/UsersTable'
+import { UserRolesDrawer } from '../components/users/UserRolesDrawer'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
@@ -17,6 +18,9 @@ export const AdminUsersPage: React.FC = () => {
   const { setTarget, target } = useImpersonation()
   const [search, setSearch] = useState('')
   const [debounced] = useDebouncedValue(search, 250)
+  const [rolesFor, setRolesFor] = useState<{ id: string; label: string } | null>(
+    null
+  )
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', debounced],
@@ -64,31 +68,52 @@ export const AdminUsersPage: React.FC = () => {
             banned: m.users_banned(),
           }}
           renderActions={(u) => {
-            if (u.id === currentUser?.id) return null
             const full = users.find((x) => x.id === u.id) ?? null
-            return target?.id === u.id ? (
-              <Button
-                size="compact-sm"
-                variant="light"
-                color="yellow"
-                leftSection={<UserCog size={14} />}
-                onClick={() => setTarget(null)}
-              >
-                {m.impersonate_stop()}
-              </Button>
-            ) : (
-              <Button
-                size="compact-sm"
-                variant="subtle"
-                leftSection={<UserCog size={14} />}
-                onClick={() => setTarget(full)}
-              >
-                {m.impersonate_button()}
-              </Button>
+            const isSelf = u.id === currentUser?.id
+            return (
+              <Group gap={6} justify="flex-end" wrap="nowrap">
+                <Button
+                  size="compact-sm"
+                  variant="subtle"
+                  leftSection={<ShieldCheck size={14} />}
+                  onClick={() =>
+                    setRolesFor({ id: u.id, label: u.email ?? u.id })
+                  }
+                >
+                  {asI18n('Roles')}
+                </Button>
+                {!isSelf &&
+                  (target?.id === u.id ? (
+                    <Button
+                      size="compact-sm"
+                      variant="light"
+                      color="yellow"
+                      leftSection={<UserCog size={14} />}
+                      onClick={() => setTarget(null)}
+                    >
+                      {m.impersonate_stop()}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="compact-sm"
+                      variant="subtle"
+                      leftSection={<UserCog size={14} />}
+                      onClick={() => setTarget(full)}
+                    >
+                      {m.impersonate_button()}
+                    </Button>
+                  ))}
+              </Group>
             )
           }}
         />
       )}
+      <UserRolesDrawer
+        opened={rolesFor !== null}
+        onClose={() => setRolesFor(null)}
+        userId={rolesFor?.id}
+        userLabel={rolesFor?.label ?? ''}
+      />
     </PageContainer>
   )
 }
