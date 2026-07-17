@@ -81,7 +81,7 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
     const stubCount = written.filter((f) => f.includes('/functions/')).length
     if (stubCount > 0) {
       logger.info(
-        `  ${stubCount} stub function(s) to implement — run the pikku-n8n-addon-map / pikku-n8n-code-translate skills to fill them in`
+        `  ${stubCount} stub function(s) to implement — run the pikku-n8n-import skill to fill them in`
       )
     }
   },
