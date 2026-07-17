@@ -1,5 +1,5 @@
 import { createAuthClient } from 'better-auth/client'
-import { adminClient, genericOAuthClient } from 'better-auth/client/plugins'
+import { adminClient } from 'better-auth/client/plugins'
 import { AUTH_BASE_PATH } from '../context/serverUrl'
 
 export type ConsoleAuthClient = ReturnType<typeof createConsoleAuthClient>
@@ -9,8 +9,6 @@ export type ConsoleAuthClient = ReturnType<typeof createConsoleAuthClient>
  * is currently connected to (`serverUrl`). The `adminClient` plugin adds the
  * admin/impersonation endpoints (`admin.listUsers`, `admin.impersonateUser`,
  * `admin.stopImpersonating`) and the `role`/`banned` fields on the session user.
- * `genericOAuthClient` adds `oauth2.link`, used to connect per-user OAuth2
- * credentials declared via `wireCredential`.
  *
  * `credentials: 'include'` sends the session cookie on every request so the
  * cookie round-trips across the console ↔ backend origins — the same cookie the
@@ -20,6 +18,6 @@ export const createConsoleAuthClient = (serverUrl: string) =>
   createAuthClient({
     baseURL: serverUrl,
     basePath: AUTH_BASE_PATH,
-    plugins: [adminClient(), genericOAuthClient()],
+    plugins: [adminClient()],
     fetchOptions: { credentials: 'include' },
   })

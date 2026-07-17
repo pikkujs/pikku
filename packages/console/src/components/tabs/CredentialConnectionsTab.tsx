@@ -28,9 +28,10 @@ interface ConnectableCredential {
 
 /**
  * Per-user OAuth2 connections, backed by better-auth account linking. A
- * `wireCredential({ type: 'wire', oauth2 })` is registered as a genericOAuth
- * provider whose providerId is the credential name, so linking an account here
- * is what makes `getCredential(name)` resolve for this user.
+ * `wireCredential({ type: 'wire', oauth2 })` is registered by the
+ * `credentialOAuth` plugin under a providerId equal to the credential name, so
+ * linking an account here is what makes `getCredential(name)` resolve for this
+ * user.
  *
  * Distinct from the Global tab, which connects `type: 'singleton'` credentials
  * at the platform level — those have no user to link an account to.
@@ -127,15 +128,25 @@ const ConnectionCard: React.FC<{
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      // Full-page redirect rather than a popup: better-auth sets the session
-      // cookie on its own callback, which a popup cannot hand back to us.
-      const { error } = await auth!.client.oauth2.link({
-        providerId: credential.name,
-        callbackURL: window.location.href,
-      })
+      const { data, error } = await auth!.client.$fetch<{ url?: string }>(
+        '/credential-oauth/link',
+        {
+          method: 'POST',
+          body: {
+            providerId: credential.name,
+            callbackURL: window.location.href,
+          },
+        }
+      )
       if (error) {
         throw new Error(error.message ?? m.credentials_connect_failed())
       }
+      if (!data?.url) {
+        throw new Error(m.credentials_connect_failed())
+      }
+      // Full-page redirect rather than a popup: the callback lands back on
+      // better-auth's own origin, which a popup cannot hand back to us.
+      window.location.href = data.url
     },
   })
 
