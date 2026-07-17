@@ -1,7 +1,11 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
-import { admin, bearer, genericOAuth } from 'better-auth/plugins'
-import { actor, credentialOAuthProviders } from '@pikku/better-auth'
+import { admin, bearer } from 'better-auth/plugins'
+import {
+  actor,
+  credentialOAuth,
+  credentialOAuthProviders,
+} from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
 
@@ -50,7 +54,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
       }),
       // Every wireCredential oauth2 declaration becomes a provider here, so
       // linking an account is what makes getCredential(name) resolve.
-      genericOAuth({
+      credentialOAuth({
         config: await credentialOAuthProviders(
           CREDENTIAL_OAUTH2_CONFIGS,
           secrets

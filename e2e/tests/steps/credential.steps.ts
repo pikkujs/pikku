@@ -2,6 +2,7 @@ import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { config } from '../support/types.js'
 import type { AgentWorld } from '../support/world.js'
+import { linkedUserId } from './credential-oauth-link.steps.js'
 
 async function rpc(name: string, data: Record<string, unknown> = {}) {
   const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
@@ -280,6 +281,25 @@ Then(
 
 // --- OAuth API addon steps ---
 
+const callProfile = async (userId: string) => {
+  const res = await fetch(`${config.apiUrl}/api/oauth/profile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    body: JSON.stringify({}),
+  })
+  state.lastOAuthApiStatus = res.status
+  state.lastOAuthApiBody = await res.json()
+}
+
+// Addresses a user created by 'a signed-in user {string}', whose credential is
+// keyed by their real better-auth id rather than the name used in the step.
+When(
+  'I call the OAuth API profile as linked user {string}',
+  async function (name: string) {
+    await callProfile(linkedUserId(name))
+  }
+)
+
 When(
   'I call the OAuth API profile as user {string}',
   async function (userId: string) {
@@ -308,28 +328,36 @@ Then('the OAuth API profile should be authenticated', async function () {
 // --- Workflow credential propagation steps ---
 
 When(
-  'I run the credential workflow as user {string}',
-  async function (userId: string) {
-    const res = await fetch(
-      `${config.apiUrl}/workflow/credentialWorkflow/run`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-        body: JSON.stringify({ data: {} }),
-      }
-    )
-    if (res.ok) {
-      state.lastWorkflowResult = await res.json()
-    } else {
-      const text = await res.text()
-      try {
-        state.lastWorkflowResult = JSON.parse(text)
-      } catch {
-        state.lastWorkflowResult = { error: text, status: 'failed' }
-      }
-    }
+  'I run the credential workflow as linked user {string}',
+  async function (name: string) {
+    await runCredentialWorkflow(linkedUserId(name))
   }
 )
+
+When(
+  'I run the credential workflow as user {string}',
+  async function (userId: string) {
+    await runCredentialWorkflow(userId)
+  }
+)
+
+async function runCredentialWorkflow(userId: string) {
+  const res = await fetch(`${config.apiUrl}/workflow/credentialWorkflow/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    body: JSON.stringify({ data: {} }),
+  })
+  if (res.ok) {
+    state.lastWorkflowResult = await res.json()
+  } else {
+    const text = await res.text()
+    try {
+      state.lastWorkflowResult = JSON.parse(text)
+    } catch {
+      state.lastWorkflowResult = { error: text, status: 'failed' }
+    }
+  }
+}
 
 Then(
   'the credential workflow should return an authenticated profile',
