@@ -38,11 +38,10 @@ describe('isSuspendReason', () => {
   })
 
   test('a suspended run with an unrecognised code is treated as a real error', () => {
-    // Better to over-report an error than to hide a genuine one behind a
-    // reassuring "waiting" card.
     assert.equal(
       isSuspendReason('suspended', { message: 'boom', code: 'SOMETHING_ELSE' }),
-      false
+      false,
+      'better to over-report an error than to hide a genuine one behind a reassuring "waiting" card'
     )
   })
 
