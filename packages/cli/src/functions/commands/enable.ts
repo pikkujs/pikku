@@ -3,7 +3,8 @@ import { join } from 'path'
 import { pikkuVoidFunc } from '#pikku'
 import type { PikkuScaffoldFeature } from '../../../types/config.js'
 
-type Feature =
+/** Features that scaffold a surface, and so have an auth dimension. */
+type AuthFeature =
   | 'rpc'
   | 'console'
   | 'scenarios'
@@ -11,9 +12,13 @@ type Feature =
   | 'workflow'
   | 'events'
   | 'remoteRpc'
-  | 'webhook'
 
-const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
+/** Features that are simply on or off — no endpoint, nothing to authenticate. */
+type BooleanFeature = 'webhook'
+
+type Feature = AuthFeature | BooleanFeature
+
+const FEATURE_DEFAULTS: Record<AuthFeature, 'auth' | 'no-auth'> = {
   rpc: 'auth',
   agent: 'auth',
   console: 'auth',
@@ -21,7 +26,6 @@ const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   workflow: 'auth',
   events: 'auth',
   remoteRpc: 'no-auth',
-  webhook: 'no-auth',
 }
 
 async function enableFeature(
@@ -45,12 +49,14 @@ async function enableFeature(
 
   // The console is an admin surface — every RPC requires a session, so it can
   // never be scaffolded no-auth (the --no-auth flag is ignored for it).
-  const value: PikkuScaffoldFeature =
-    feature === 'console'
-      ? 'auth'
-      : noAuth
-        ? 'no-auth'
-        : FEATURE_DEFAULTS[feature]
+  const value: PikkuScaffoldFeature | true =
+    feature === 'webhook'
+      ? true
+      : feature === 'console'
+        ? 'auth'
+        : noAuth
+          ? 'no-auth'
+          : FEATURE_DEFAULTS[feature]
   json.scaffold[feature] = value
 
   await writeFile(configPath, JSON.stringify(json, null, 2) + '\n', 'utf-8')

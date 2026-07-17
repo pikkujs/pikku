@@ -4,6 +4,6 @@
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "scaffold": {
-    "webhook": "no-auth"
+    "webhook": true
   }
 }

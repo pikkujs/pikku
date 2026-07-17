@@ -131,14 +131,15 @@ export const serve = pikkuSessionlessFunc<
       : undefined
 
     const eventHub = await devServerRunner.createEventHub()
+    const serveQueueService = new InMemoryQueueService()
     const inMemoryServices = {
       logger: devLogger,
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
       emailService: new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
       schedulerService,
-      queueService: new InMemoryQueueService(),
-      webhookService: new QueueWebhookService(),
+      queueService: serveQueueService,
+      webhookService: new QueueWebhookService(serveQueueService),
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),

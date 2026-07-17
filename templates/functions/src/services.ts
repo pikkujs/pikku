@@ -58,6 +58,8 @@ export const createSingletonServices = pikkuServices(
       return keys
     })
 
+    const queueService = existingServices?.queueService
+
     return {
       config,
       logger,
@@ -74,9 +76,12 @@ export const createSingletonServices = pikkuServices(
       eventHub: existingServices?.eventHub || new LocalEventHubService(),
       workflowService: existingServices?.workflowService,
       workflowRunService: existingServices?.workflowRunService,
-      queueService: existingServices?.queueService,
+      queueService,
+      // Outgoing webhooks are delivered through the queue, so there is no
+      // webhook service to offer without one.
       webhookService:
-        existingServices?.webhookService || new QueueWebhookService(),
+        existingServices?.webhookService ??
+        (queueService ? new QueueWebhookService(queueService) : undefined),
       schedulerService: existingServices?.schedulerService,
       deploymentService: existingServices?.deploymentService,
       credentialService:

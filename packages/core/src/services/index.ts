@@ -27,7 +27,6 @@ export {
   pikkuWebhookWorkerFunc,
   DEFAULT_WEBHOOK_RETRIES,
 } from './queue-webhook-service.js'
-export { signWebhookBody, verifyWebhookSignature } from './webhook-signature.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
@@ -63,11 +62,12 @@ export type {
   SendTextEmailInput,
 } from './email-service.js'
 export {
-  PIKKU_WEBHOOK_QUEUE_NAME,
+  DEFAULT_WEBHOOK_SIGNATURE_HEADER,
+  PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
+  WebhookService,
   type SendWebhookInput,
   type SendWebhookResult,
   type WebhookJobData,
-  type WebhookService,
   type WebhookServiceConfig,
 } from './webhook-service.js'
 export type { Logger } from './logger.js'

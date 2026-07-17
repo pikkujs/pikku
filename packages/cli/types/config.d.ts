@@ -355,7 +355,11 @@ export type PikkuCLIInput = {
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature
     remoteRpc?: PikkuScaffoldFeature
-    webhook?: PikkuScaffoldFeature
+    /**
+     * The outgoing webhook delivery worker exposes no endpoint of its own, so
+     * it has no auth dimension — it is on or off.
+     */
+    webhook?: boolean
   }
 
   /**

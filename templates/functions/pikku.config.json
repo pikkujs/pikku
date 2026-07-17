@@ -30,7 +30,7 @@
     "console": "auth",
     "events": "no-auth",
     "remoteRpc": "no-auth",
-    "webhook": "no-auth",
+    "webhook": true,
     "pikkuDir": "pikku"
   },
   "cli": {

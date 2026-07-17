@@ -1,3 +1,5 @@
+import { hmacSha256Hex, timingSafeStringEqual } from '../utils/hmac.js'
+
 export interface SendWebhookInput {
   /** The endpoint the webhook is delivered to via HTTP POST. */
   url: string
@@ -9,7 +11,7 @@ export interface SendWebhookInput {
   headers?: Record<string, string>
   /**
    * Raw HMAC signing key for this delivery. Overrides the config-level
-   * secret. When present, the body is signed into `X-Pikku-Signature`.
+   * secret. When present, the body is signed into the signature header.
    */
   secret?: string
   /** Retry count for failed deliveries. Overrides `config.webhook.retries`. */
@@ -25,10 +27,6 @@ export interface SendWebhookResult {
   jobId: string
 }
 
-export interface WebhookService {
-  send(input: SendWebhookInput): Promise<SendWebhookResult>
-}
-
 export interface WebhookServiceConfig {
   /** Default retry count for failed deliveries. */
   retries?: number
@@ -36,9 +34,14 @@ export interface WebhookServiceConfig {
   retryDelay?: string | number
   /**
    * Name of a secret (resolved through the secret service) used as the
-   * default HMAC signing key for all webhooks.
+   * default HMAC signing key for all outgoing webhooks.
    */
   secret?: string
+  /**
+   * Header the body signature is sent in. Defaults to
+   * {@link DEFAULT_WEBHOOK_SIGNATURE_HEADER}.
+   */
+  signatureHeader?: string
 }
 
 export interface WebhookJobData {
@@ -48,4 +51,31 @@ export interface WebhookJobData {
   headers: Record<string, string>
 }
 
-export const PIKKU_WEBHOOK_QUEUE_NAME = 'pikku-webhooks'
+export const PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME = 'pikku-outgoing-webhooks'
+
+export const DEFAULT_WEBHOOK_SIGNATURE_HEADER = 'X-Pikku-Signature'
+
+/**
+ * Outgoing webhook delivery. {@link QueueWebhookService} is the default
+ * implementation; apps can extend this to deliver directly, or through a
+ * provider such as Svix.
+ */
+export abstract class WebhookService {
+  abstract send(input: SendWebhookInput): Promise<SendWebhookResult>
+
+  /**
+   * Sign a body with HMAC-SHA256, producing the signature header value
+   * (e.g. `sha256=abc123...`).
+   */
+  protected sign(secret: string, body: string): string {
+    return `sha256=${hmacSha256Hex(secret, body)}`
+  }
+
+  /**
+   * Verify a signature produced by {@link WebhookService.sign} — for
+   * receivers, which share the signing scheme.
+   */
+  public verify(secret: string, signature: string, body: string): boolean {
+    return timingSafeStringEqual(this.sign(secret, body), signature)
+  }
+}

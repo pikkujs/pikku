@@ -9,6 +9,7 @@ import {
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
@@ -80,6 +81,33 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
         `No 'name' provided for queue processor function '${pikkuFuncId}'.`
       )
       return
+    }
+
+    // An inline `func:` has no exported name to register itself under, so
+    // addFunctions skips it (it bails on `__temp_` ids) and only the
+    // context-based id above exists. Register the metadata here — as the HTTP
+    // and MCP wirings do — or the worker resolves to nothing at runtime.
+    ensureFunctionMetadata(
+      state,
+      pikkuFuncId,
+      name,
+      funcInitializer,
+      checker,
+      extracted.isHelper
+    )
+
+    // The stub above carries no session info, so an inline worker would be
+    // treated as session-required and every job would fail with
+    // "Authentication required". Derive it from the helper that built the
+    // function, the same rule addFunctions applies to named ones.
+    const inlineMeta = state.functions.meta[pikkuFuncId]
+    if (
+      inlineMeta &&
+      inlineMeta.sessionless === undefined &&
+      ts.isCallExpression(funcInitializer) &&
+      ts.isIdentifier(funcInitializer.expression)
+    ) {
+      inlineMeta.sessionless = funcInitializer.expression.text !== 'pikkuFunc'
     }
 
     // --- resolve middleware ---

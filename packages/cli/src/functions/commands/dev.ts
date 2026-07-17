@@ -284,6 +284,7 @@ export const dev = pikkuSessionlessFunc<
     // services.ts. Its EventHub is shared into the singleton services so
     // function-side broadcasts reach the sockets the transport holds.
     const eventHub = await devServerRunner.createEventHub()
+    const devQueueService = new InMemoryQueueService()
     const inMemoryServices = {
       logger: devLogger,
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
@@ -293,8 +294,8 @@ export const dev = pikkuSessionlessFunc<
       metaService: new LocalMetaService(pikkuDir),
       ...(coverageService ? { coverageService } : {}),
       schedulerService,
-      queueService: new InMemoryQueueService(),
-      webhookService: new QueueWebhookService(),
+      queueService: devQueueService,
+      webhookService: new QueueWebhookService(devQueueService),
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),

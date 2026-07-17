@@ -14,6 +14,9 @@ export const createConfig = pikkuConfig(async () => {
     webhook: {
       retries: 3,
       secret: 'WEBHOOK_SIGNING_KEY',
+      // Non-default on purpose, so the verifier proves the header is
+      // config-driven rather than hardcoded.
+      signatureHeader: 'X-Verifier-Signature',
     },
   }
 })
@@ -25,6 +28,8 @@ export const createSingletonServices = pikkuServices(
       existingServices?.secrets || new LocalSecretService(variables)
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
+    const queueService =
+      existingServices?.queueService || new InMemoryQueueService()
 
     return {
       config,
@@ -32,10 +37,10 @@ export const createSingletonServices = pikkuServices(
       logger,
       variables,
       schema,
-      queueService:
-        existingServices?.queueService || new InMemoryQueueService(),
+      queueService,
       webhookService:
-        existingServices?.webhookService || new QueueWebhookService(),
+        existingServices?.webhookService ||
+        new QueueWebhookService(queueService),
     }
   }
 )

@@ -7,10 +7,9 @@ import {
   pikkuWebhookWorkerFunc,
 } from './queue-webhook-service.js'
 import {
-  PIKKU_WEBHOOK_QUEUE_NAME,
+  PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type WebhookJobData,
 } from './webhook-service.js'
-import { signWebhookBody, verifyWebhookSignature } from './webhook-signature.js'
 import { InMemoryQueueService } from './in-memory-queue-service.js'
 import { wireQueueWorker } from '../wirings/queue/queue-runner.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
@@ -57,21 +56,9 @@ beforeEach(() => {
 })
 
 describe('QueueWebhookService.send', () => {
-  test('throws a clear error when no queueService is configured', async () => {
-    pikkuState(null, 'package', 'singletonServices', {
-      logger: noopLogger,
-      config: {},
-    } as any)
-    const webhookService = new QueueWebhookService()
-    await assert.rejects(
-      webhookService.send({ url: 'https://example.com/hook', data: { a: 1 } }),
-      /queue/i
-    )
-  })
-
-  test('enqueues with defaults: pikku-webhooks queue, 3 retries, exponential backoff', async () => {
-    const { added } = setupServices()
-    const webhookService = new QueueWebhookService()
+  test('enqueues with defaults: pikku-outgoing-webhooks queue, 3 retries, exponential backoff', async () => {
+    const { added, queueService } = setupServices()
+    const webhookService = new QueueWebhookService(queueService as any)
 
     const result = await webhookService.send({
       url: 'https://example.com/hook',
@@ -82,8 +69,8 @@ describe('QueueWebhookService.send', () => {
     assert.equal(result.jobId, 'job-1')
     assert.equal(added.length, 1)
     const { queueName, data, options } = added[0]!
-    assert.equal(queueName, PIKKU_WEBHOOK_QUEUE_NAME)
-    assert.equal(queueName, 'pikku-webhooks')
+    assert.equal(queueName, PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME)
+    assert.equal(queueName, 'pikku-outgoing-webhooks')
     assert.equal(data.url, 'https://example.com/hook')
     assert.equal(data.body, JSON.stringify({ id: 'u1' }))
     assert.equal(data.headers['Content-Type'], 'application/json')
@@ -93,10 +80,10 @@ describe('QueueWebhookService.send', () => {
   })
 
   test('applies config defaults for retries and fixed retryDelay', async () => {
-    const { added } = setupServices({
+    const { added, queueService } = setupServices({
       config: { webhook: { retries: 1, retryDelay: '30s' } },
     })
-    const webhookService = new QueueWebhookService()
+    const webhookService = new QueueWebhookService(queueService as any)
 
     await webhookService.send({ url: 'https://example.com/hook', data: {} })
 
@@ -106,8 +93,10 @@ describe('QueueWebhookService.send', () => {
   })
 
   test('per-call retries override config defaults', async () => {
-    const { added } = setupServices({ config: { webhook: { retries: 5 } } })
-    const webhookService = new QueueWebhookService()
+    const { added, queueService } = setupServices({
+      config: { webhook: { retries: 5 } },
+    })
+    const webhookService = new QueueWebhookService(queueService as any)
 
     await webhookService.send({
       url: 'https://example.com/hook',
@@ -121,8 +110,8 @@ describe('QueueWebhookService.send', () => {
   })
 
   test('per-call secret signs the body and never enters the job data', async () => {
-    const { added } = setupServices()
-    const webhookService = new QueueWebhookService()
+    const { added, queueService } = setupServices()
+    const webhookService = new QueueWebhookService(queueService as any)
 
     await webhookService.send({
       url: 'https://example.com/hook',
@@ -138,7 +127,7 @@ describe('QueueWebhookService.send', () => {
   })
 
   test('config secret is a secret NAME resolved through the secrets service', async () => {
-    const { added } = setupServices({
+    const { added, queueService } = setupServices({
       config: { webhook: { secret: 'WEBHOOK_SIGNING_KEY' } },
       secrets: {
         getSecret: async (key: string) => {
@@ -147,20 +136,46 @@ describe('QueueWebhookService.send', () => {
         },
       },
     })
-    const webhookService = new QueueWebhookService()
+    const webhookService = new QueueWebhookService(queueService as any)
 
     await webhookService.send({ url: 'https://example.com/hook', data: {} })
 
     const { data } = added[0]!
-    assert.equal(
-      data.headers['X-Pikku-Signature'],
-      signWebhookBody('resolved-key', data.body)
+    assert.ok(
+      webhookService.verify(
+        'resolved-key',
+        data.headers['X-Pikku-Signature']!,
+        data.body
+      )
     )
   })
 
+  test('config.webhook.signatureHeader overrides the default header', async () => {
+    const { added, queueService } = setupServices({
+      config: { webhook: { signatureHeader: 'X-Acme-Signature' } },
+    })
+    const webhookService = new QueueWebhookService(queueService as any)
+
+    await webhookService.send({
+      url: 'https://example.com/hook',
+      data: {},
+      secret: 'shhh',
+    })
+
+    const { data } = added[0]!
+    assert.ok(
+      webhookService.verify(
+        'shhh',
+        data.headers['X-Acme-Signature']!,
+        data.body
+      )
+    )
+    assert.equal(data.headers['X-Pikku-Signature'], undefined)
+  })
+
   test('no secret anywhere means no signature header', async () => {
-    const { added } = setupServices()
-    const webhookService = new QueueWebhookService()
+    const { added, queueService } = setupServices()
+    const webhookService = new QueueWebhookService(queueService as any)
 
     await webhookService.send({ url: 'https://example.com/hook', data: {} })
 
@@ -168,14 +183,22 @@ describe('QueueWebhookService.send', () => {
   })
 })
 
-describe('webhook signature helpers', () => {
+describe('WebhookService signing', () => {
   test('sign/verify round-trips and rejects tampering', () => {
-    const signature = signWebhookBody('key', '{"a":1}')
+    const { queueService } = setupServices()
+    // sign() is protected — reach it the way a subclass would.
+    const webhookService = new (class extends QueueWebhookService {
+      public signBody = (secret: string, body: string) =>
+        this.sign(secret, body)
+    })(queueService as any)
+
+    const signature = webhookService.signBody('key', '{"a":1}')
+
     assert.ok(signature.startsWith('sha256='))
-    assert.equal(verifyWebhookSignature('key', signature, '{"a":1}'), true)
-    assert.equal(verifyWebhookSignature('key', signature, '{"a":2}'), false)
-    assert.equal(verifyWebhookSignature('other', signature, '{"a":1}'), false)
-    assert.equal(verifyWebhookSignature('key', 'sha256=nope', '{"a":1}'), false)
+    assert.equal(webhookService.verify('key', signature, '{"a":1}'), true)
+    assert.equal(webhookService.verify('key', signature, '{"a":2}'), false)
+    assert.equal(webhookService.verify('other', signature, '{"a":1}'), false)
+    assert.equal(webhookService.verify('key', 'sha256=nope', '{"a":1}'), false)
   })
 })
 
@@ -262,10 +285,10 @@ describe('pikkuWebhookWorkerFunc', () => {
       createWireServices: async () => ({}),
     } as any)
 
-    const funcId = `queue_${PIKKU_WEBHOOK_QUEUE_NAME}`
-    pikkuState(null, 'queue', 'meta')[PIKKU_WEBHOOK_QUEUE_NAME] = {
+    const funcId = `queue_${PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME}`
+    pikkuState(null, 'queue', 'meta')[PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME] = {
       pikkuFuncId: funcId,
-      name: PIKKU_WEBHOOK_QUEUE_NAME,
+      name: PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
     }
     pikkuState(null, 'function', 'meta')[funcId] = {
       pikkuFuncId: funcId,
@@ -274,11 +297,11 @@ describe('pikkuWebhookWorkerFunc', () => {
       sessionless: true,
     } as any
     wireQueueWorker({
-      name: PIKKU_WEBHOOK_QUEUE_NAME,
+      name: PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
       func: { auth: false, func: pikkuWebhookWorkerFunc },
     } as any)
 
-    const webhookService = new QueueWebhookService()
+    const webhookService = new QueueWebhookService(queueService)
     await webhookService.send({
       url: 'https://example.com/hook',
       data: { id: 'u1' },

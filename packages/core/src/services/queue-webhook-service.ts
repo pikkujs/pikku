@@ -2,28 +2,36 @@ import { getSingletonServices } from '../pikku-state.js'
 import { getDurationInMilliseconds } from '../time-utils.js'
 import type { JobOptions, QueueService } from '../wirings/queue/queue.types.js'
 import {
-  PIKKU_WEBHOOK_QUEUE_NAME,
+  DEFAULT_WEBHOOK_SIGNATURE_HEADER,
+  PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type SendWebhookInput,
   type SendWebhookResult,
   type WebhookJobData,
-  type WebhookService,
+  WebhookService,
 } from './webhook-service.js'
-import { signWebhookBody } from './webhook-signature.js'
 
 export const DEFAULT_WEBHOOK_RETRIES = 3
 
 /**
  * Default {@link WebhookService} implementation: serializes and signs the
- * payload, then enqueues a delivery job onto the `pikku-webhooks` queue.
- * The signature is computed at enqueue time so the signing key never enters
- * the queue payload; the actual HTTP POST happens in
+ * payload, then enqueues a delivery job onto the `pikku-outgoing-webhooks`
+ * queue. The signature is computed at enqueue time so the signing key never
+ * enters the queue payload; the actual HTTP POST happens in
  * {@link pikkuWebhookWorkerFunc}, and the queue's `attempts`/`backoff`
  * options drive retries.
  */
-export class QueueWebhookService implements WebhookService {
+export class QueueWebhookService extends WebhookService {
+  /**
+   * The queue is a constructor dependency rather than a `getSingletonServices()`
+   * lookup so that a project wiring up outgoing webhooks without a queue fails
+   * to compile, instead of throwing on the first `send()`.
+   */
+  constructor(private queueService: QueueService) {
+    super()
+  }
+
   public async send(input: SendWebhookInput): Promise<SendWebhookResult> {
     const services = getSingletonServices()
-    const queueService = this.verifyQueueService()
     const webhookConfig = services.config?.webhook
 
     const body = JSON.stringify(input.data)
@@ -38,7 +46,9 @@ export class QueueWebhookService implements WebhookService {
       secret = await services.secrets.getSecret(webhookConfig.secret)
     }
     if (secret) {
-      headers['X-Pikku-Signature'] = signWebhookBody(secret, body)
+      const signatureHeader =
+        webhookConfig?.signatureHeader ?? DEFAULT_WEBHOOK_SIGNATURE_HEADER
+      headers[signatureHeader] = this.sign(secret, body)
     }
 
     const jobData: WebhookJobData = {
@@ -48,8 +58,8 @@ export class QueueWebhookService implements WebhookService {
       headers,
     }
 
-    const jobId = await queueService.add(
-      PIKKU_WEBHOOK_QUEUE_NAME,
+    const jobId = await this.queueService.add(
+      PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
       jobData,
       this.resolveJobOptions(input)
     )
@@ -76,20 +86,10 @@ export class QueueWebhookService implements WebhookService {
           : undefined
     return { attempts: retries + 1, ...(backoff ? { backoff } : {}) }
   }
-
-  private verifyQueueService(): QueueService {
-    const queueService = getSingletonServices()?.queueService
-    if (!queueService) {
-      throw new Error(
-        'QueueService not configured. Outgoing webhooks require a queue service.'
-      )
-    }
-    return queueService
-  }
 }
 
 /**
- * Queue worker for the `pikku-webhooks` queue: POSTs the delivery to its
+ * Queue worker for the `pikku-outgoing-webhooks` queue: POSTs the delivery to its
  * target URL. Any non-2xx response (or network error) throws so the queue
  * retries the job according to the `attempts`/`backoff` set at enqueue time;
  * the queue runner logs each failed attempt.

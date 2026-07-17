@@ -563,12 +563,6 @@ wireCLI({
           func: enableWebhook,
           description:
             'Enable the outgoing webhook delivery queue worker (scaffolds webhook.gen.ts)',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
       },
     },

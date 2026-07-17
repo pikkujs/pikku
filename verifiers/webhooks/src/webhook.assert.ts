@@ -47,8 +47,8 @@ beforeEach(() => {
   receiver.received.length = 0
 })
 
-describe('outgoing webhook delivery (scaffolded pikku-webhooks queue worker)', () => {
-  test('delivers a POST with the payload and a valid X-Pikku-Signature', async () => {
+describe('outgoing webhook delivery (scaffolded pikku-outgoing-webhooks queue worker)', () => {
+  test('delivers a POST with the payload and a valid signature', async () => {
     receiver.respondWith([200])
 
     await webhookService.send({
@@ -64,10 +64,16 @@ describe('outgoing webhook delivery (scaffolded pikku-webhooks queue worker)', (
     assert.equal(request.headers['content-type'], 'application/json')
     assert.equal(request.headers['x-pikku-event'], 'user.created')
 
+    // config.webhook.signatureHeader — not the X-Pikku-Signature default.
     const expectedSignature =
       'sha256=' +
       createHmac('sha256', SIGNING_KEY).update(request.body).digest('hex')
-    assert.equal(request.headers['x-pikku-signature'], expectedSignature)
+    assert.equal(request.headers['x-verifier-signature'], expectedSignature)
+    assert.equal(request.headers['x-pikku-signature'], undefined)
+    assert.ok(
+      webhookService.verify(SIGNING_KEY, expectedSignature, request.body),
+      'the receiver-side verify() accepts the signature it sent'
+    )
   })
 
   test('retries with backoff on non-2xx until the delivery succeeds', async () => {

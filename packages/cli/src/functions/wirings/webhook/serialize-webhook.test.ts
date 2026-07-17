@@ -3,15 +3,15 @@ import assert from 'node:assert'
 import { serializeWebhook } from './serialize-webhook.js'
 
 describe('serializeWebhook', () => {
-  test('wires the pikku-webhooks queue worker around the core delivery function', () => {
+  test('wires the pikku-outgoing-webhooks queue worker around the core delivery function', () => {
     const output = serializeWebhook('./pikku-types.gen.js')
     assert.ok(
       output.includes('wireQueueWorker'),
       'expected wireQueueWorker to be imported and called'
     )
     assert.ok(
-      output.includes("name: 'pikku-webhooks'"),
-      'expected a queue worker for the pikku-webhooks queue'
+      output.includes("name: 'pikku-outgoing-webhooks'"),
+      'expected a queue worker for the pikku-outgoing-webhooks queue'
     )
     assert.ok(
       output.includes('pikkuWebhookWorkerFunc'),
@@ -30,6 +30,14 @@ describe('serializeWebhook', () => {
     assert.ok(
       !output.includes('wireHTTP'),
       'outgoing webhooks have no HTTP surface'
+    )
+  })
+
+  test('inlines the delivery function into the single wiring that uses it', () => {
+    const output = serializeWebhook('./pikku-types.gen.js')
+    assert.ok(
+      !output.includes('export const'),
+      'the worker is wired once, so it needs no named export to reference'
     )
   })
 

@@ -7,6 +7,9 @@
  * would fail schema generation before the wiring gets rewritten. TS-based
  * schema generation goes through the type checker instead, so it never
  * imports this file.
+ *
+ * The handler is inlined: it is wired exactly once, so a named export would
+ * only be indirection.
  */
 export const serializeWebhook = (pathToPikkuTypes: string) => {
   return `/**
@@ -16,18 +19,16 @@ export const serializeWebhook = (pathToPikkuTypes: string) => {
 import { pikkuSessionlessFunc, wireQueueWorker } from '${pathToPikkuTypes}'
 import { pikkuWebhookWorkerFunc } from '@pikku/core/services'
 
-export const webhookDeliveryHandler = pikkuSessionlessFunc<
-  { url: string, event?: string, body: string, headers: Record<string, string> },
-  void
->({
-  tags: ['pikku'],
-  func: async (services, data) => pikkuWebhookWorkerFunc(services, data),
-})
-
 wireQueueWorker({
-  name: 'pikku-webhooks',
+  name: 'pikku-outgoing-webhooks',
   tags: ['pikku'],
-  func: webhookDeliveryHandler,
+  func: pikkuSessionlessFunc<
+    { url: string, event?: string, body: string, headers: Record<string, string> },
+    void
+  >({
+    tags: ['pikku'],
+    func: async (services, data) => pikkuWebhookWorkerFunc(services, data),
+  }),
 })
 `
 }
