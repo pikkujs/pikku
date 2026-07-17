@@ -205,6 +205,27 @@ addError(WorkflowRunCancelledError, {
   message: 'Workflow was cancelled.',
 })
 
+/**
+ * A decision arrived for an approval gate that has already resolved. The gate
+ * caches its outcome as the step result and never re-reads run state, so the
+ * decision could not take effect — it is rejected rather than accepted and
+ * dropped.
+ */
+export class WorkflowApprovalResolvedError extends PikkuError {
+  public payload: {
+    reason: string
+    outcome: ApprovalOutcome<unknown>['status']
+  }
+  constructor(reason: string, outcome: ApprovalOutcome<unknown>['status']) {
+    super(`Approval already ${outcome}: ${reason}`)
+    this.payload = { reason, outcome }
+  }
+}
+addError(WorkflowApprovalResolvedError, {
+  status: 409,
+  message: 'Approval has already been resolved.',
+})
+
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: any) {
@@ -2219,6 +2240,26 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<void> {
     const stepName = this.getApprovalStepName(reason)
     const stateKey = this.approvalStateKey(stepName)
+
+    // A resolved gate returns its cached step result and never re-reads state,
+    // so a decision recorded now would be silently discarded — most obviously
+    // when it loses the race with expiry. Reject instead, so the approver
+    // learns their decision did not land.
+    let resolved: StepState | undefined
+    try {
+      resolved = await this.getStepState(runId, stepName)
+    } catch {
+      // No step row yet: the run has not reached the gate. Recording a decision
+      // ahead of it is legitimate — the gate picks it up on arrival.
+    }
+    if (resolved?.stepId && resolved.status === 'succeeded') {
+      const outcome = resolved.result as ApprovalOutcome<unknown> | undefined
+      throw new WorkflowApprovalResolvedError(
+        reason,
+        outcome?.status ?? 'decided'
+      )
+    }
+
     const state = await this.getRunState(runId)
     const record = (state[stateKey] ?? {}) as Record<string, unknown>
     await this.updateRunState(runId, stateKey, {
