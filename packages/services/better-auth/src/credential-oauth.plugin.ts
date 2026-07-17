@@ -8,10 +8,39 @@ import type { CredentialOAuthProvider } from './credential-oauth-providers.js'
 
 const CALLBACK_PATH = '/credential-oauth/callback'
 
+/**
+ * Owner of every `type: 'singleton'` credential. A platform credential belongs
+ * to the app, not to whoever happened to click Connect — but better-auth keys
+ * accounts by user, so the platform needs a user to be. Reserved, never
+ * sign-in-able (no password account, and `banned` blocks session creation);
+ * account rows hang off it exactly like a real user's, so storage, refresh and
+ * unlink are the same code path.
+ */
+export const PLATFORM_USER_ID = 'pikku-platform'
+const PLATFORM_USER_EMAIL = 'platform@pikku.internal'
+
 export interface CredentialOAuthOptions {
   /** Built by `credentialOAuthProviders(CREDENTIAL_OAUTH2_CONFIGS, secrets)`. */
   config: CredentialOAuthProvider[]
+  /**
+   * Decides who may connect a `type: 'singleton'` credential — it rebinds the
+   * token for EVERY user, so this cannot be left to any signed-in caller.
+   * Defaults to better-auth's admin role.
+   */
+  canLinkSingleton?: (session: CredentialOAuthSession) => boolean | Promise<boolean>
 }
+
+export interface CredentialOAuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role?: string | null
+  }
+}
+
+const isAdmin = (session: CredentialOAuthSession) =>
+  session.user.role === 'admin'
 
 /**
  * Links OAuth2 *credentials* — API access tokens — to a user, storing them in
@@ -42,6 +71,29 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
   const base = genericOAuth({ config: options.config })
   const findConfig = (providerId: string) =>
     options.config.find((provider) => provider.providerId === providerId)
+  const canLinkSingleton = options.canLinkSingleton ?? isAdmin
+
+  /**
+   * Created on demand rather than at startup: an app with no singleton
+   * credentials should never grow a user row it does not use.
+   */
+  const ensurePlatformUser = async (ctx: any) => {
+    const existing = await ctx.context.internalAdapter.findUserById(
+      PLATFORM_USER_ID
+    )
+    if (existing) {
+      return PLATFORM_USER_ID
+    }
+    await ctx.context.internalAdapter.createUser({
+      id: PLATFORM_USER_ID,
+      email: PLATFORM_USER_EMAIL,
+      name: 'Platform',
+      emailVerified: false,
+      // Nothing may sign in as the platform: it owns tokens, not sessions.
+      banned: true,
+    })
+    return PLATFORM_USER_ID
+  }
 
   const link = createAuthEndpoint(
     '/credential-oauth/link',
@@ -74,11 +126,25 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
         })
       }
 
-      // Carries the linking user through the redirect; the callback trusts this
-      // signed state rather than the (cross-site) callback request's cookies.
+      // A singleton credential is the platform's, so it hangs off the reserved
+      // platform user rather than whoever clicked Connect — otherwise it would
+      // silently become that person's, and vanish when they unlinked it.
+      let ownerId = session.user.id
+      if (config.type === 'singleton') {
+        if (!(await canLinkSingleton(session as any))) {
+          throw new APIError('FORBIDDEN', {
+            message: `Connecting '${config.providerId}' rebinds it for every user — that is an admin action`,
+            code: 'SINGLETON_LINK_FORBIDDEN',
+          })
+        }
+        ownerId = await ensurePlatformUser(ctx)
+      }
+
+      // Carries the owner through the redirect; the callback trusts this signed
+      // state rather than the (cross-site) callback request's cookies.
       const state = await generateState(
         ctx,
-        { userId: session.user.id, email: session.user.email },
+        { userId: ownerId, email: session.user.email },
         undefined
       )
 

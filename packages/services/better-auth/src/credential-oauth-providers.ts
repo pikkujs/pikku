@@ -2,7 +2,10 @@ import type { OAuth2CredentialConfig } from '@pikku/core/secret'
 
 export type CredentialOAuth2Configs = Record<
   string,
-  OAuth2CredentialConfig & { appCredentialSecretId: string }
+  OAuth2CredentialConfig & {
+    appCredentialSecretId: string
+    type?: 'singleton' | 'wire'
+  }
 >
 
 /** The subset of better-auth's genericOAuth provider config that a credential maps onto. */
@@ -15,6 +18,11 @@ export interface CredentialOAuthProvider {
   scopes?: string[]
   pkce?: boolean
   authorizationUrlParams?: Record<string, string>
+  /**
+   * 'singleton' credentials belong to the platform, not to whoever connects
+   * them, so their account hangs off the reserved platform user instead.
+   */
+  type?: 'singleton' | 'wire'
 }
 
 export interface CredentialOAuthApp {
@@ -68,6 +76,7 @@ export const credentialOAuthProviders = async (
         // Provider-specific flags that decide whether a refresh token is issued
         // at all (access_type=offline, duration=permanent).
         authorizationUrlParams: config.additionalParams,
+        type: config.type,
       }
     })
   )

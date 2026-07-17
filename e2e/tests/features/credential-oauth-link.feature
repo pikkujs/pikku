@@ -48,3 +48,22 @@ Feature: Per-user OAuth2 credentials via Better Auth account linking
     When "erin" links the "user-oauth" provider
     Then the credential "user-oauth" should resolve for "erin"
     And the resolved credential should carry an access token from the provider
+
+  # A type: 'singleton' credential is the platform's, not the connector's: an
+  # admin connects it once and it resolves for everyone, with no userId.
+  Scenario: An admin connects a platform-wide credential once for everyone
+    Given a signed-in admin "root"
+    And a signed-in user "frank"
+    When "root" links the "mock-oauth" provider
+    Then the platform credential "mock-oauth" should resolve
+    And the credential "mock-oauth" should resolve for "frank"
+
+  # Connecting a singleton rebinds the token for every user, so it cannot be
+  # left to any signed-in caller. The 403 is the whole assertion: it is refused
+  # before any state is generated, so nothing can be written. Asserting the
+  # credential stays unresolved would instead assert global state that the
+  # scenario above owns.
+  Scenario: A non-admin cannot connect a platform-wide credential
+    Given a signed-in user "mallory"
+    When "mallory" tries to link the "mock-oauth" provider
+    Then the link should be forbidden

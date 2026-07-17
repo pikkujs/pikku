@@ -59,6 +59,11 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
           CREDENTIAL_OAUTH2_CONFIGS,
           secrets
         ),
+        // The suite has no admin-provisioning flow, so it names its own rule
+        // rather than using the default admin role — which is the point of the
+        // option: connecting a singleton rebinds it for everyone, so the app
+        // decides who may.
+        canLinkSingleton: (session) => session.user.name === 'root',
       }),
     ],
   })
