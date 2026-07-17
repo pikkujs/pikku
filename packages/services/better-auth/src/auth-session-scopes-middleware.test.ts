@@ -26,6 +26,7 @@ async function run(opts: {
   mapKey?: (key: any) => any
   mapSession?: (result: any) => any
   withScopeService?: boolean
+  scopeServiceError?: Error
 }) {
   const captured: any[] = []
   const services: any = {
@@ -45,7 +46,12 @@ async function run(opts: {
   }
   if (opts.withScopeService !== false) {
     services.scopeService = {
-      resolveScopes: async (userId: string) => GRANTS[userId] ?? [],
+      resolveScopes: async (userId: string) => {
+        if (opts.scopeServiceError) {
+          throw opts.scopeServiceError
+        }
+        return GRANTS[userId] ?? []
+      },
     }
   }
 
@@ -106,6 +112,16 @@ describe('betterAuthSession scopes — human path', () => {
       withScopeService: false,
     })
     assert.equal(session.scopes, undefined)
+  })
+
+  test('a scope-store failure surfaces rather than degrading to anonymous', async () => {
+    await assert.rejects(
+      run({
+        caller: USERS.u_guest,
+        scopeServiceError: new Error('scope store down'),
+      }),
+      /scope store down/
+    )
   })
 })
 
@@ -169,5 +185,17 @@ describe('betterAuthSession scopes — machine path', () => {
     })
 
     assert.deepEqual(session.scopes, [])
+  })
+
+  test('a scope-store failure surfaces rather than serving the key anonymously', async () => {
+    await assert.rejects(
+      run({
+        apiKeyHeader: 'raw-key',
+        verifiedKey: { userId: 'u_guest' },
+        mapKey: (key) => ({ userId: key.userId }),
+        scopeServiceError: new Error('scope store down'),
+      }),
+      /scope store down/
+    )
   })
 })

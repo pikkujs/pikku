@@ -21,15 +21,27 @@ type Logger = {
  * `prune` deletes everything not in this set, so conflating the two would wipe
  * every scope in the database.
  */
+const isScopeDefinitionsMeta = (
+  value: unknown
+): value is ScopeDefinitionsMeta =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.values(value).every(
+    (def) =>
+      typeof def === 'object' &&
+      def !== null &&
+      !Array.isArray(def) &&
+      typeof (def as { name?: unknown }).name === 'string'
+  )
+
 export const loadDeclaredScopes = async (
   scopesMetaJsonFile: string,
   logger: Logger
 ): Promise<FlatScope[] | null> => {
-  let meta: ScopeDefinitionsMeta
+  let parsed: unknown
   try {
-    meta = JSON.parse(
-      await readFile(scopesMetaJsonFile, 'utf8')
-    ) as ScopeDefinitionsMeta
+    parsed = JSON.parse(await readFile(scopesMetaJsonFile, 'utf8'))
   } catch {
     logger.error(
       `pikku scopes: no scope metadata at ${scopesMetaJsonFile}.\n` +
@@ -38,7 +50,15 @@ export const loadDeclaredScopes = async (
     return null
   }
 
-  return flattenScopeDefinitions(Object.values(meta))
+  if (!isScopeDefinitionsMeta(parsed)) {
+    logger.error(
+      `pikku scopes: the scope metadata at ${scopesMetaJsonFile} is malformed.\n` +
+        `  Run \`pikku all\` to regenerate it.`
+    )
+    return null
+  }
+
+  return flattenScopeDefinitions(Object.values(parsed))
 }
 
 export type OpenedScopeService = {
@@ -93,11 +113,15 @@ export const openScopeService = async (
   }
 
   const db = await createKysely<KyselyPikkuDB>(resolved)
-  const service = new KyselyScopeService(db)
-  await service.init()
-  await service.syncScopes(declared)
-
-  return { service, destroy: () => db.destroy() }
+  try {
+    const service = new KyselyScopeService(db)
+    await service.init()
+    await service.syncScopes(declared)
+    return { service, destroy: () => db.destroy() }
+  } catch (e) {
+    await db.destroy()
+    throw e
+  }
 }
 
 /**

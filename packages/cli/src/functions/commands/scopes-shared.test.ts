@@ -91,4 +91,20 @@ describe('loadDeclaredScopes', () => {
     assert.equal(await loadDeclaredScopes(file, logger), null)
     assert.equal(errors.length, 1)
   })
+
+  test('returns null when the JSON parses but is not a definition map', async () => {
+    for (const notAMap of [[], 'admin', 42, null]) {
+      errors = []
+      assert.equal(await loadDeclaredScopes(write(notAMap), logger), null)
+      assert.equal(errors.length, 1)
+    }
+  })
+
+  test('returns null when a definition is not shaped like a scope', async () => {
+    assert.equal(
+      await loadDeclaredScopes(write({ admin: 'yes' }), logger),
+      null
+    )
+    assert.equal(errors.length, 1)
+  })
 })

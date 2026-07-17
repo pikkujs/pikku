@@ -16,7 +16,11 @@ wireScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
 
 pikkuFunc({
   scopes: ['admin:invoices:create'],  // ✓ autocompleted
-  scopes: ['admin:invoice:create'],   // ✗ compile error
+  func: ...,
+})
+
+pikkuFunc({
+  scopes: ['admin:invoice:create'],   // ✗ compile error (typo)
   func: ...,
 })
 ```

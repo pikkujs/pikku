@@ -87,6 +87,11 @@ export const betterAuthSession = (
       if (apiKey) {
         const rawKey = request.header(apiKeyHeader)
         if (rawKey) {
+          // Only key verification is caught here: an unusable key is an
+          // ordinary "not authenticated", not an outage. Scope resolution sits
+          // outside so a scope-store failure surfaces as an error rather than
+          // silently serving the request anonymously.
+          let mapped: CoreUserSession | null | undefined
           try {
             const auth = (await (services as any).auth()) as BetterAuthInstance
             const verified = (await auth.api.verifyApiKey({
@@ -94,19 +99,19 @@ export const betterAuthSession = (
             })) as VerifiedApiKey | null
 
             if (verified?.valid && verified.key) {
-              const mapped = await apiKey.mapKey(
+              mapped = await apiKey.mapKey(
                 verified.key,
                 services as CoreServices
               )
-              if (mapped) {
-                setSession(
-                  await withResolvedScopes(mapped, services as CoreServices)
-                )
-              }
             }
           } catch (e: any) {
             services.logger?.warn(
               `better-auth api-key verify failed: ${e?.message}`
+            )
+          }
+          if (mapped) {
+            setSession(
+              await withResolvedScopes(mapped, services as CoreServices)
             )
           }
           // The api-key header is authoritative for this request — never fall

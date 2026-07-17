@@ -300,4 +300,24 @@ describe('KyselyScopeService — audit and prune', () => {
 
     assert.deepEqual(await service.resolveScopes('u1'), ['billing:read'])
   })
+
+  test('prune ignores a scope a concurrent sync redeclared between select and delete', async () => {
+    await service.syncScopes([{ id: 'admin' }])
+
+    const racy = new (class extends KyselyScopeService {
+      async findStaleScopes() {
+        const stale = await super.findStaleScopes()
+        await this.syncScopes([{ id: 'admin' }, { id: 'billing:read' }])
+        return stale
+      }
+    })(db)
+
+    await racy.pruneScopes()
+
+    assert.deepEqual(
+      await service.resolveScopes('u1'),
+      ['billing:read'],
+      'a scope redeclared before the delete must keep its grants'
+    )
+  })
 })

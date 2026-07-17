@@ -138,6 +138,17 @@ describe('pikku scopes prune', () => {
     await db.destroy()
   })
 
+  test('counts distinct roles, not stale scopes, in the blast radius', async () => {
+    const db = await openDb()
+    const service = new KyselyScopeService(db)
+    await service.setRoleScopes('billing', ['billing', 'billing:read'])
+    await db.destroy()
+
+    await run(scopesPrune, { yes: true })
+
+    assert.match(logs.join('\n'), /Revoked from 1 role\(s\)/)
+  })
+
   test('reports nothing to do when the code and database agree', async () => {
     await run(scopesPrune, { yes: true })
     logs = []

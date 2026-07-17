@@ -287,8 +287,13 @@ export class KyselyScopeService implements ScopeService {
     }
 
     const names = stale.map((s) => s.scope)
-    await this.db.deleteFrom('pikkuScopes').where('name', 'in', names).execute()
+    const deleted = await this.db
+      .deleteFrom('pikkuScopes')
+      .where('name', 'in', names)
+      .where('declared', '=', false)
+      .returning('name')
+      .execute()
 
-    return names
+    return deleted.map((r) => r.name)
   }
 }
