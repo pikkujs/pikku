@@ -23,6 +23,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
       cliTypesFile,
       nodeTypesFile,
       secretTypesFile,
+      scopeTypesFile,
       addonTypesFile,
       authTypesFile,
     } = config
@@ -73,7 +74,8 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
       getAlwaysImportPath(nodeTypesFile),
       getAlwaysImportPath(secretTypesFile),
       config.addon ? getAlwaysImportPath(addonTypesFile) : null,
-      authTypesImportPath
+      authTypesImportPath,
+      getAlwaysImportPath(scopeTypesFile)
     )
 
     await writeFileInDir(logger, typesFile, content)

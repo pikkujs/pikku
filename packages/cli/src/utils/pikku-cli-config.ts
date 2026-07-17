@@ -648,6 +648,18 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Scopes (ScopeId union + declared scope set)
+    const scopesDir = join(result.outDir, 'scopes')
+    if (!result.scopeTypesFile) {
+      result.scopeTypesFile = join(scopesDir, 'pikku-scope-types.gen.ts')
+    }
+    if (!result.scopesFile) {
+      result.scopesFile = join(scopesDir, 'pikku-scopes.gen.ts')
+    }
+    if (!result.scopesMetaJsonFile) {
+      result.scopesMetaJsonFile = join(scopesDir, 'pikku-scopes-meta.gen.json')
+    }
+
     // Variables (typed wrapper for VariablesService)
     const variablesDir = join(result.outDir, 'variables')
     if (!result.variableTypesFile) {

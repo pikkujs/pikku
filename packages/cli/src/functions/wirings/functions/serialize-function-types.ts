@@ -13,7 +13,8 @@ export const serializeFunctionTypes = (
   configTypeImport: string,
   packageName?: string,
   workflowTypesImport?: string,
-  nodeCategories?: string[]
+  nodeCategories?: string[],
+  scopesTypeImport?: string
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
   const nodeCategoryType = nodeCategories?.length
@@ -22,6 +23,9 @@ export const serializeFunctionTypes = (
   const workflowImport =
     workflowTypesImport ||
     `import type { TypedWorkflow, TypedScenario } from '../workflow/pikku-workflow-types.gen.js'`
+  // Falls back to `string` when a project has no scopes codegen, so that
+  // `scopes` stays usable rather than resolving to an unbound type name.
+  const scopesImport = scopesTypeImport || `type ScopeId = string`
 
   return `/**
  * Core function, middleware, and permission types for all wirings
@@ -38,6 +42,7 @@ import {
 } from '@pikku/core/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
 import type { NodeType } from '@pikku/core/node'
+${scopesImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
@@ -344,7 +349,7 @@ export type PikkuFunctionConfig<
   PikkuFunc extends PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>
+> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>
 
 /**
  * Configuration object for Pikku functions with Zod schema validation.
@@ -366,7 +371,12 @@ export type PikkuFunctionConfigWithSchema<
 > = Omit<
   CorePikkuFunctionConfig<
     | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
-    | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
+    | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>,
+    CorePikkuPermission<any>,
+    PikkuMiddleware,
+    undefined,
+    undefined,
+    ScopeId
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
 > & {

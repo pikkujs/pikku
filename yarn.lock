@@ -7215,6 +7215,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-scopes@workspace:verifiers/scopes":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-scopes@workspace:verifiers/scopes"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-secrets@workspace:verifiers/secrets":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-secrets@workspace:verifiers/secrets"

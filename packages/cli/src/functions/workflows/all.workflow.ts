@@ -59,6 +59,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap inspect', async () =>
         getInspectorState(false, true, true)
       )
+      // Before function types: they import ScopeId from the scopes codegen.
+      await workflow.do('Bootstrap scopes', 'pikkuScopes', null)
       await workflow.do(
         'Bootstrap function types split',
         'pikkuFunctionTypesSplit',
@@ -199,6 +201,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Auth', 'pikkuAuth', {}),
       workflow.do('Secrets', 'pikkuSecrets', null),
       workflow.do('Credentials', 'pikkuCredentials', null),
+      workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
+      workflow.do('Scopes', 'pikkuScopes', null),
       workflow.do(
         'Variable definition types',
         'pikkuVariableDefinitionTypes',

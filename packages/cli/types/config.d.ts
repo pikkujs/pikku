@@ -152,6 +152,15 @@ export interface PikkuCLICoreOutputFiles {
   // Credentials metadata JSON
   credentialsMetaJsonFile: string
 
+  // Scopes
+  scopeTypesFile: string
+
+  // Scopes (ScopeId union + declared scope set)
+  scopesFile: string
+
+  // Scopes metadata JSON
+  scopesMetaJsonFile: string
+
   // Variables
   variableTypesFile: string
 

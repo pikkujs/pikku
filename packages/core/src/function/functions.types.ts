@@ -280,6 +280,7 @@ export type CorePikkuFunctionConfig<
   >,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  Scope extends string = string,
 > = {
   /** Short human-readable name (e.g. "Create Todo") */
   title?: string
@@ -313,8 +314,11 @@ export type CorePikkuFunctionConfig<
    * Scopes the session must hold to run this function. All of them are
    * required (AND), and they are checked before `permissions` — unlike
    * permissions, which OR together, a scope can only narrow access.
+   *
+   * Narrowed to the generated `ScopeId` union in a project's own
+   * `pikku-types.gen.ts`, so an undeclared scope is a compile error.
    */
-  scopes?: string[]
+  scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
   input?: InputSchema
