@@ -5,10 +5,11 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { CredentialsOverviewTab } from '../components/tabs/CredentialsOverviewTab'
 import { CredentialUsersTab } from '../components/tabs/CredentialUsersTab'
+import { CredentialConnectionsTab } from '../components/tabs/CredentialConnectionsTab'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-type CredentialsTab = 'credentials' | 'users'
+type CredentialsTab = 'credentials' | 'connections' | 'users'
 
 export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   useLocale()
@@ -16,7 +17,9 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
   const [searchQuery, setSearchQuery] = useState('')
   const rawTab = searchParams.get('tab')
   const tab: CredentialsTab =
-    rawTab === 'users' || rawTab === 'credentials' ? rawTab : 'credentials'
+    rawTab === 'users' || rawTab === 'connections' || rawTab === 'credentials'
+      ? rawTab
+      : 'credentials'
 
   const handleTabChange = (value: CredentialsTab) => {
     setSearchQuery('')
@@ -32,7 +35,12 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
             description={m.credentials_description()}
             docsHref="https://pikku.dev/docs/core-features/credentials"
             search={{
-              placeholder: tab === 'users' ? m.credentials_search_users() : m.credentials_search_credentials(),
+              placeholder:
+                tab === 'users'
+                  ? m.credentials_search_users()
+                  : tab === 'connections'
+                    ? m.credentials_search_connections()
+                    : m.credentials_search_credentials(),
               value: searchQuery,
               onChange: setSearchQuery,
               width: 240,
@@ -43,16 +51,22 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
               onChange: handleTabChange,
               options: [
                 { value: 'credentials', label: m.credentials_tab_global() },
+                { value: 'connections', label: m.credentials_tab_connections() },
                 { value: 'users', label: m.credentials_tab_users() },
               ],
             }}
           />
         }
         emptyPanelMessage={m.credentials_select_user()}
-        hidePanel={tab === 'credentials'}
+        hidePanel={tab !== 'users'}
       >
         {tab === 'users' ? (
           <CredentialUsersTab searchQuery={searchQuery} />
+        ) : tab === 'connections' ? (
+          <CredentialConnectionsTab
+            searchQuery={searchQuery}
+            emptyHero={emptyHero}
+          />
         ) : (
           <CredentialsOverviewTab searchQuery={searchQuery} emptyHero={emptyHero} />
         )}
