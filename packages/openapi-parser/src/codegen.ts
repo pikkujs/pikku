@@ -1575,11 +1575,6 @@ function generateServiceFile(
   return lines.join('\n')
 }
 
-/**
- * OAuth2 credential declaration. This is the single source of truth for the
- * addon's oauth2 config — the generated service imports it back through
- * codegen rather than redeclaring it (#950).
- */
 function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
   const { camelName, screamingName } = vars
   const displayName = vars.displayName.replace(/'/g, '')
