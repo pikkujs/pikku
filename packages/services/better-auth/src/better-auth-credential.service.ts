@@ -22,6 +22,16 @@ export interface BetterAuthCredentialServiceOptions {
 }
 
 /**
+ * better-auth signals an unlinked account by throwing an APIError whose
+ * `body.code` is ACCOUNT_NOT_FOUND. Matched on the code rather than the
+ * message, which is display text and free to change.
+ */
+const isAccountNotFound = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  (error as { body?: { code?: string } }).body?.code === 'ACCOUNT_NOT_FOUND'
+
+/**
  * Reads OAuth2 credentials out of better-auth's `account` table, so a token is
  * refreshed on read rather than served stale. Everything else falls through to
  * `fallback`.
@@ -37,8 +47,13 @@ export class BetterAuthCredentialService implements CredentialService {
     this.fallback = options.fallback
   }
 
+  /**
+   * A credential is better-auth's only when it is oauth2 AND scoped to a user.
+   * `type: 'singleton'` has no userId, and better-auth's account table is keyed
+   * by one — so platform-level tokens stay with the fallback.
+   */
   private ownsOAuth2(name: string, userId?: string): userId is string {
-    return this.oauth2Names.has(name) && userId !== undefined
+    return this.oauth2Names.has(name) && !!userId
   }
 
   async get<T = unknown>(name: string, userId?: string): Promise<T | null> {
@@ -58,9 +73,18 @@ export class BetterAuthCredentialService implements CredentialService {
     userId: string
   ): Promise<{ accessToken: string } | null> {
     const auth = await this.getAuth()
-    const result = await auth.api.getAccessToken({
-      body: { providerId, userId },
-    })
+    let result: { accessToken?: string } | undefined
+    try {
+      result = await auth.api.getAccessToken({ body: { providerId, userId } })
+    } catch (error) {
+      // better-auth throws ACCOUNT_NOT_FOUND rather than returning empty. Only
+      // that one means "not linked" — anything else (a failed refresh, a
+      // misconfigured provider) is a real error and must not read as null.
+      if (!isAccountNotFound(error)) {
+        throw error
+      }
+      return null
+    }
     if (!result?.accessToken) {
       return null
     }
@@ -89,37 +113,31 @@ export class BetterAuthCredentialService implements CredentialService {
     if (!this.ownsOAuth2(name, userId)) {
       return this.fallback.has(name, userId)
     }
-    const linked = await this.linkedProviders(userId)
-    return linked.has(name)
-  }
-
-  private async linkedProviders(userId: string): Promise<Set<string>> {
-    const auth = await this.getAuth()
-    const accounts = await auth.api.listUserAccounts({ body: { userId } })
-    const providers = new Set<string>()
-    for (const account of (accounts ?? []) as Array<{ providerId?: string }>) {
-      if (account.providerId) {
-        providers.add(account.providerId)
-      }
-    }
-    return providers
+    return (await this.readToken(name, userId)) !== null
   }
 
   /**
-   * Only linked providers are fetched — an unlinked one has no token and would
-   * cost a round trip to learn that. Tokens resolve concurrently because each
-   * one may trigger a refresh against the provider.
+   * Reading every declared oauth2 credential is the only way to learn which are
+   * linked: `listUserAccounts` is session-bound (it ignores a userId and throws
+   * UNAUTHORIZED when called server-side), whereas `getAccessToken` takes one.
+   * They resolve concurrently since each may refresh against its provider.
    */
   async getAll(userId: string): Promise<Record<string, unknown>> {
-    const [fallbackCredentials, linked] = await Promise.all([
-      this.fallback.getAll(userId),
-      this.linkedProviders(userId),
-    ])
+    // Never reach for better-auth when there is nothing for it to own: an app
+    // with no oauth2 credentials must not have every credential read fail just
+    // because an auth instance cannot be resolved.
+    if (this.oauth2Names.size === 0 || !userId) {
+      return this.fallback.getAll(userId)
+    }
 
-    const wanted = [...this.oauth2Names].filter((name) => linked.has(name))
-    const tokens = await Promise.all(
-      wanted.map(async (name) => [name, await this.readToken(name, userId)] as const)
-    )
+    const [fallbackCredentials, tokens] = await Promise.all([
+      this.fallback.getAll(userId),
+      Promise.all(
+        [...this.oauth2Names].map(
+          async (name) => [name, await this.readToken(name, userId)] as const
+        )
+      ),
+    ])
 
     const result: Record<string, unknown> = { ...fallbackCredentials }
     for (const [name, token] of tokens) {

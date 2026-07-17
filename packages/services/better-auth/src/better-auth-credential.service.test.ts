@@ -42,20 +42,36 @@ class FakeFallback implements CredentialService {
   }
 }
 
+/** Mirrors better-auth's APIError: an unlinked account THROWS, it is not empty. */
+const accountNotFound = () =>
+  Object.assign(new Error('Account not found'), {
+    status: 'BAD_REQUEST',
+    body: { code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' },
+  })
+
+/**
+ * Deliberately exposes ONLY getAccessToken: `listUserAccounts` is session-bound
+ * and throws UNAUTHORIZED when called server-side with a userId, so a fake of it
+ * could only ever lie. A token here means the account is linked.
+ */
 const makeAuth = (options: {
   tokens?: Record<string, string>
-  linked?: string[]
   onGetAccessToken?: (body: any) => void
+  throwOnGetAccessToken?: unknown
 }) => ({
   handler: async () => new Response(),
   api: {
     getAccessToken: async ({ body }: any) => {
       options.onGetAccessToken?.(body)
+      if (options.throwOnGetAccessToken) {
+        throw options.throwOnGetAccessToken
+      }
       const token = options.tokens?.[body.providerId]
-      return token ? { accessToken: token } : {}
+      if (!token) {
+        throw accountNotFound()
+      }
+      return { accessToken: token }
     },
-    listUserAccounts: async () =>
-      (options.linked ?? []).map((providerId) => ({ providerId })),
   },
 })
 
@@ -70,7 +86,7 @@ describe('BetterAuthCredentialService', () => {
   test('reads an oauth2 token out of better-auth', async () => {
     const fallback = new FakeFallback()
     const service = build(
-      makeAuth({ tokens: { 'google-docs': 'tok-1' }, linked: ['google-docs'] }),
+      makeAuth({ tokens: { 'google-docs': 'tok-1' } }),
       fallback
     )
     const result = await service.get('google-docs', 'user-1')
@@ -83,7 +99,6 @@ describe('BetterAuthCredentialService', () => {
     const service = build(
       makeAuth({
         tokens: { youtube: 't' },
-        linked: ['youtube'],
         onGetAccessToken: (body) => seen.push(body),
       }),
       new FakeFallback()
@@ -93,8 +108,26 @@ describe('BetterAuthCredentialService', () => {
   })
 
   test('an unlinked provider is null, not an error', async () => {
-    const service = build(makeAuth({ linked: [] }), new FakeFallback())
+    const service = build(makeAuth({}), new FakeFallback())
     assert.strictEqual(await service.get('google-docs', 'user-1'), null)
+  })
+
+  // A failed refresh or a misconfigured provider must not be indistinguishable
+  // from "the user hasn't connected yet" — that would silently show a connect
+  // button for an account that is already linked but broken.
+  test('an error other than ACCOUNT_NOT_FOUND propagates', async () => {
+    const service = build(
+      makeAuth({
+        throwOnGetAccessToken: Object.assign(new Error('refresh failed'), {
+          body: { code: 'PROVIDER_NOT_SUPPORTED' },
+        }),
+      }),
+      new FakeFallback()
+    )
+    await assert.rejects(
+      () => service.get('google-docs', 'user-1'),
+      /refresh failed/
+    )
   })
 
   test('non-oauth2 credentials fall through to the fallback', async () => {
@@ -141,7 +174,7 @@ describe('BetterAuthCredentialService', () => {
   })
 
   test('has() reflects whether the account is linked', async () => {
-    const service = build(makeAuth({ linked: ['youtube'] }), new FakeFallback())
+    const service = build(makeAuth({ tokens: { youtube: 'yt' } }), new FakeFallback())
     assert.strictEqual(await service.has('youtube', 'user-1'), true)
     assert.strictEqual(await service.has('google-docs', 'user-1'), false)
   })
@@ -150,10 +183,7 @@ describe('BetterAuthCredentialService', () => {
     const fallback = new FakeFallback()
     await fallback.set('stripe', { apiKey: 'sk' }, 'user-1')
     const service = build(
-      makeAuth({
-        tokens: { 'google-docs': 'tok', youtube: 'yt' },
-        linked: ['google-docs'],
-      }),
+      makeAuth({ tokens: { 'google-docs': 'tok' } }),
       fallback
     )
     const all = await service.getAll('user-1')
@@ -163,17 +193,54 @@ describe('BetterAuthCredentialService', () => {
     })
   })
 
-  test('getAll does not fetch tokens for unlinked providers', async () => {
-    const fetched: any[] = []
+  // An app with no oauth2 credentials must never touch better-auth: resolving
+  // an auth instance that does not exist would fail every credential read.
+  test('getAll never resolves auth when no oauth2 credentials are declared', async () => {
+    const fallback = new FakeFallback()
+    await fallback.set('stripe', { apiKey: 'sk' }, 'user-1')
+    const service = new BetterAuthCredentialService({
+      getAuth: async () => {
+        throw new Error('auth must not be resolved')
+      },
+      oauth2Names: [],
+      fallback,
+    })
+    assert.deepStrictEqual(await service.getAll('user-1'), {
+      stripe: { apiKey: 'sk' },
+    })
+  })
+
+  test('getAll never resolves auth without a userId', async () => {
+    const service = new BetterAuthCredentialService({
+      getAuth: async () => {
+        throw new Error('auth must not be resolved')
+      },
+      oauth2Names: ['google-docs'],
+      fallback: new FakeFallback(),
+    })
+    assert.deepStrictEqual(await service.getAll(''), {})
+  })
+
+  // credential-agent.feature seeds `user-oauth` with no userId; that must keep
+  // working through the fallback rather than being claimed by better-auth.
+  test('a platform-level write of an oauth2 credential is allowed', async () => {
+    const fallback = new FakeFallback()
+    const service = build(makeAuth({}), fallback)
+    await service.set('google-docs', { accessToken: 'seeded' })
+    assert.deepStrictEqual(await service.get('google-docs'), {
+      accessToken: 'seeded',
+    })
+  })
+
+  // Only linked providers land in the result; an unlinked one is read (that is
+  // how we learn it is unlinked) but must not appear as an empty credential.
+  test('getAll omits unlinked providers', async () => {
     const service = build(
-      makeAuth({
-        tokens: { 'google-docs': 'tok', youtube: 'yt' },
-        linked: ['google-docs'],
-        onGetAccessToken: (body) => fetched.push(body.providerId),
-      }),
+      makeAuth({ tokens: { 'google-docs': 'tok' } }),
       new FakeFallback()
     )
-    await service.getAll('user-1')
-    assert.deepStrictEqual(fetched, ['google-docs'])
+    assert.deepStrictEqual(await service.getAll('user-1'), {
+      'google-docs': { accessToken: 'tok' },
+    })
   })
 })
