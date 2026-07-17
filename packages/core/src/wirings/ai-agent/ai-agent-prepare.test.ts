@@ -237,6 +237,51 @@ describe('ai-agent-prepare', () => {
     assert.equal(afterCalls.length, 1)
   })
 
+  test('buildToolDefs logs a tool execute() failure even without aiMiddleware hooks, then rethrows', async () => {
+    addAgent('ops-agent')
+    pikkuState(null, 'agent', 'agentsMeta')['ops-agent'] = {
+      ...pikkuState(null, 'agent', 'agentsMeta')['ops-agent'],
+      tools: ['searchInventory'],
+    } as any
+    pikkuState(null, 'rpc', 'meta').searchInventory = 'searchInventory'
+    pikkuState(null, 'function', 'meta').searchInventory = {
+      description: 'Search inventory',
+      inputSchemaName: 'SearchInput',
+      sessionless: true,
+    }
+    pikkuState(null, 'misc', 'schemas').set('SearchInput', { type: 'object' })
+    pikkuState(null, 'function', 'functions').set('searchInventory', {
+      func: async () => {
+        throw new Error('db unreachable')
+      },
+    })
+
+    const errorCalls: unknown[][] = []
+    const singletonServices = {
+      logger: {
+        warn: () => {},
+        error: (...args: unknown[]) => errorCalls.push(args),
+      },
+    } as any
+    pikkuState(null, 'package', 'singletonServices', singletonServices)
+
+    const { tools } = await buildToolDefs(
+      {},
+      new Map<string, string>(),
+      'resource-1',
+      'ops-agent',
+      null
+    )
+
+    assert.equal(tools.length, 1)
+    await assert.rejects(
+      () => tools[0].execute({}),
+      /db unreachable/
+    )
+    assert.equal(errorCalls.length, 1)
+    assert.match(String(errorCalls[0][0]), /searchInventory.*execute/)
+  })
+
   test('buildToolDefs skips permissioned tools without a session and adds sub-agent tools', async () => {
     addAgent('manager', {
       agents: ['assistant'],
