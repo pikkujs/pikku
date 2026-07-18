@@ -1,7 +1,9 @@
 import { getSingletonServices } from '../pikku-state.js'
 import { getDurationInMilliseconds } from '../time-utils.js'
+import type { CoreSingletonServices } from '../types/core.types.js'
 import type { JobOptions, QueueService } from '../wirings/queue/queue.types.js'
 import {
+  DEFAULT_WEBHOOK_RETRIES,
   DEFAULT_WEBHOOK_SIGNATURE_HEADER,
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type SendWebhookInput,
@@ -9,8 +11,6 @@ import {
   type WebhookJobData,
   WebhookService,
 } from './webhook-service.js'
-
-export const DEFAULT_WEBHOOK_RETRIES = 3
 
 /**
  * Default {@link WebhookService} implementation: serializes and signs the
@@ -26,6 +26,9 @@ export class QueueWebhookService extends WebhookService {
    * lookup so that a project wiring up outgoing webhooks without a queue fails
    * to compile, instead of throwing on the first `send()`.
    */
+  /** Resolved config secrets, keyed by secret name, to avoid re-resolving. */
+  private resolvedSecrets = new Map<string, string>()
+
   constructor(private queueService: QueueService) {
     super()
   }
@@ -43,7 +46,7 @@ export class QueueWebhookService extends WebhookService {
 
     let secret = input.secret
     if (secret === undefined && webhookConfig?.secret) {
-      secret = await services.secrets.getSecret(webhookConfig.secret)
+      secret = await this.resolveConfigSecret(services, webhookConfig.secret)
     }
     if (secret) {
       const signatureHeader =
@@ -64,6 +67,32 @@ export class QueueWebhookService extends WebhookService {
       this.resolveJobOptions(input)
     )
     return { jobId }
+  }
+
+  /**
+   * Resolve the config-level signing secret by name, caching it so repeated
+   * `send()` calls don't re-hit the secret service. A configured secret that
+   * resolves to nothing is a misconfiguration — the delivery would go out
+   * unsigned and the receiver reject it — so it's logged loudly (and not
+   * cached, so a later fix takes effect without a restart).
+   */
+  private async resolveConfigSecret(
+    services: CoreSingletonServices,
+    secretName: string
+  ): Promise<string | undefined> {
+    const cached = this.resolvedSecrets.get(secretName)
+    if (cached !== undefined) {
+      return cached
+    }
+    const secret = await services.secrets.getSecret(secretName)
+    if (!secret) {
+      services.logger.error(
+        `Webhook signing secret '${secretName}' (config.webhook.secret) resolved to nothing — outgoing webhooks will be sent UNSIGNED.`
+      )
+      return undefined
+    }
+    this.resolvedSecrets.set(secretName, secret)
+    return secret
   }
 
   /**

@@ -55,6 +55,9 @@ export const PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME = 'pikku-outgoing-webhooks'
 
 export const DEFAULT_WEBHOOK_SIGNATURE_HEADER = 'X-Pikku-Signature'
 
+/** Fallback when neither the per-call nor `config.webhook.retries` is set. */
+export const DEFAULT_WEBHOOK_RETRIES = 3
+
 /**
  * Outgoing webhook delivery. {@link QueueWebhookService} is the default
  * implementation; apps can extend this to deliver directly, or through a

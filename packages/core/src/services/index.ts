@@ -25,7 +25,6 @@ export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 export {
   QueueWebhookService,
   pikkuWebhookWorkerFunc,
-  DEFAULT_WEBHOOK_RETRIES,
 } from './queue-webhook-service.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
@@ -62,6 +61,7 @@ export type {
   SendTextEmailInput,
 } from './email-service.js'
 export {
+  DEFAULT_WEBHOOK_RETRIES,
   DEFAULT_WEBHOOK_SIGNATURE_HEADER,
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   WebhookService,
