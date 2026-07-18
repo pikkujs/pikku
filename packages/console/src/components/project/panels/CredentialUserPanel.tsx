@@ -41,23 +41,6 @@ export const CredentialUserPanel: React.FC<{
     },
   })
 
-  const connectMutation = useMutation({
-    mutationFn: async (credName: string) => {
-      const result = await rpc.invoke('console:oauthConnect', {
-        credentialName: credName,
-        userId,
-      })
-      const popup = window.open(
-        result.authUrl,
-        'oauth-connect',
-        'width=600,height=700'
-      )
-      if (!popup) {
-        window.location.href = result.authUrl
-      }
-    },
-  })
-
   return (
     <Stack gap="md" pt="md">
       <Badge
@@ -146,17 +129,6 @@ export const CredentialUserPanel: React.FC<{
                     {asI18n(cred.displayName)}
                   </Text>
                 </Group>
-                {cred.isOAuth2 && (
-                  <Button
-                    size="compact-xs"
-                    variant="light"
-                    leftSection={<Link2 size={12} />}
-                    onClick={() => connectMutation.mutate(cred.name)}
-                    loading={connectMutation.isPending}
-                  >
-                    {asI18n('Connect')}
-                  </Button>
-                )}
               </Group>
             ))}
           </Stack>
@@ -169,12 +141,10 @@ export const CredentialUserPanel: React.FC<{
         </Text>
       )}
 
-      {(revokeMutation.isError || connectMutation.isError) && (
+      {revokeMutation.isError && (
         <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
           {asI18n(String(
-            (revokeMutation.error as any)?.message ||
-              (connectMutation.error as any)?.message ||
-              'An error occurred'
+            (revokeMutation.error as any)?.message || 'An error occurred'
           ))}
         </Alert>
       )}
