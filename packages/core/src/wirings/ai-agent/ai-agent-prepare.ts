@@ -13,6 +13,7 @@ import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service
 import { PikkuError } from '../../errors/error-handler.js'
 import { checkAuthPermissions } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import { ForbiddenError } from '../../errors/errors.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
@@ -34,6 +35,35 @@ export type RunAIAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   /** Credential accessor for the current request — used to read per-user overrides (e.g. AI_API_KEY). */
   getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
+}
+
+/**
+ * The ownership key for a thread/run. When the caller is authenticated their own
+ * user id is authoritative, so a client-supplied `resourceId` can never widen
+ * access to another user's threads or runs. Sessionless wirings fall back to the
+ * requested `resourceId` as a best-effort partition key.
+ */
+export function resolveOwnerResourceId(
+  params: RunAIAgentParams,
+  requestedResourceId: string
+): string {
+  const session = params.sessionService?.get()
+  return session?.userId ?? requestedResourceId
+}
+
+/**
+ * Enforce that a stored thread/run belongs to the caller's owner resource,
+ * throwing {@link ForbiddenError} (without echoing the id, to avoid an
+ * existence oracle) on a mismatch.
+ */
+export function assertResourceOwner(
+  ownerResourceId: string,
+  storedResourceId: string,
+  kind: 'thread' | 'run'
+): void {
+  if (storedResourceId !== ownerResourceId) {
+    throw new ForbiddenError(`Not authorized to access this ${kind}`)
+  }
 }
 
 export type StreamAIAgentOptions = {
@@ -735,9 +765,17 @@ export async function prepareAgentRun(
     : undefined
 
   if (storage) {
+    // `input.resourceId` is normalised to the owner resource by the entry point
+    // (runAIAgent / streamAIAgent) before we get here.
+    let thread: Awaited<ReturnType<typeof storage.getThread>> | null = null
     try {
-      await storage.getThread(threadId)
+      thread = await storage.getThread(threadId)
     } catch {
+      thread = null
+    }
+    if (thread) {
+      assertResourceOwner(input.resourceId, thread.resourceId, 'thread')
+    } else {
       await storage.createThread(input.resourceId, { threadId })
     }
   }

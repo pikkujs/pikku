@@ -9,7 +9,10 @@ import type {
   PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
 import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
-import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import {
+  AIProviderNotConfiguredError,
+  ForbiddenError,
+} from '../../errors/errors.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -1097,5 +1100,49 @@ describe('getCredential API key override', () => {
     )
 
     assert.equal(originalRunCalls.length, 1)
+  })
+})
+
+describe('C2 resume run ownership', () => {
+  const suspendedRun = (resourceId: string) => ({
+    runId: 'run-owned',
+    agentName: 'resume-owner-agent',
+    threadId: 't',
+    resourceId,
+    status: 'suspended',
+    pendingApprovals: [],
+    usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  const withSession = (userId: string) => ({
+    sessionService: { get: () => ({ userId }) } as never,
+  })
+
+  test('rejects resuming a run owned by another user', async () => {
+    addTestAgent('resume-owner-agent')
+    pikkuState(null, 'package', 'singletonServices', {
+      aiRunState: { getRun: async () => suspendedRun('user-a') },
+    } as any)
+
+    await assert.rejects(
+      () => resumeAIAgentSync('run-owned', [], withSession('user-b')),
+      (e: unknown) => e instanceof ForbiddenError
+    )
+  })
+
+  test('allows the owning user past the ownership gate', async () => {
+    addTestAgent('resume-owner-agent')
+    pikkuState(null, 'package', 'singletonServices', {
+      // No aiAgentRunner, so a passing ownership gate surfaces the provider
+      // error instead of ForbiddenError — proving the gate did not block.
+      aiRunState: { getRun: async () => suspendedRun('user-a') },
+    } as any)
+
+    await assert.rejects(
+      () => resumeAIAgentSync('run-owned', [], withSession('user-a')),
+      (e: unknown) => e instanceof AIProviderNotConfiguredError
+    )
   })
 })

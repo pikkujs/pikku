@@ -34,6 +34,8 @@ import {
   buildInstructions,
   buildToolDefs,
   createScopedChannel,
+  resolveOwnerResourceId,
+  assertResourceOwner,
   ToolApprovalRequired,
   ToolCredentialRequired,
   type RunAIAgentParams,
@@ -583,7 +585,10 @@ export async function streamAIAgent(
 ): Promise<string> {
   const sessionMap = agentSessionMap ?? new Map<string, string>()
 
-  const normalizedInput = input
+  const normalizedInput = {
+    ...input,
+    resourceId: resolveOwnerResourceId(params, input.resourceId),
+  }
 
   const streamContext: StreamContext = { channel, options }
   // delegateState is attached after prepareAgentRun resolves the agent config
@@ -858,6 +863,11 @@ export async function resumeAIAgent(
   if (!run) {
     throw new Error(`No run found for runId ${input.runId}`)
   }
+  assertResourceOwner(
+    resolveOwnerResourceId(params, run.resourceId),
+    run.resourceId,
+    'run'
+  )
 
   const pending = run.pendingApprovals?.find(
     (p) => p.toolCallId === input.toolCallId
