@@ -606,6 +606,26 @@ export async function buildToolDefs(
     }
   }
 
+  // A tool's execute() can throw (bad input, RPC failure, DB error, ...). The AI
+  // SDK catches that at the tool-call boundary and turns it into a conversational
+  // "tool error" reply — without this, the exception never reaches pikku's own
+  // logger, so a failing tool is undiagnosable server-side. Log unconditionally,
+  // even when no aiMiddleware afterToolCall hook is registered to see it.
+  for (const tool of tools) {
+    const originalExecute = tool.execute
+    tool.execute = async (toolInput: unknown) => {
+      try {
+        return await originalExecute(toolInput)
+      } catch (err) {
+        singletonServices.logger.error(
+          `AI agent tool '${tool.name}' threw during execute()`,
+          err
+        )
+        throw err
+      }
+    }
+  }
+
   const hasToolHooks = aiMiddlewares?.some(
     (mw) => mw.beforeToolCall || mw.afterToolCall
   )
