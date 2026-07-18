@@ -25,10 +25,10 @@ import {
 } from '@assistant-ui/react'
 import {
   usePikkuAgentRuntime,
-  usePikkuAgentNonStreamingRuntime,
   PikkuApprovalContext,
   usePikkuApproval,
   resolvePikkuToolStatus,
+  convertDbMessages,
   type PikkuToolStatus,
   type MissingCredentialPayload,
 } from '@pikku/assistant-ui'
@@ -93,10 +93,15 @@ const ToolCallDisplay: React.FC<{
   )
   const isCredentialRequest = !!credentialPayload || !!pendingCredential
   const isApproval = status.type === 'requires-action' && !isCredentialRequest
-  const approvalReason = (args as any)?.__approvalReason
+  const approvalReason =
+    (args as any)?.__approvalReason ??
+    pendingApprovals.find(
+      (a) => a.toolCallId === toolCallId && a.type !== 'credential-request'
+    )?.reason
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
+  const [popupBlocked, setPopupBlocked] = useState(false)
   const oauthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -108,16 +113,18 @@ const ToolCallDisplay: React.FC<{
     }
   }, [])
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     setResponded('approved')
-    handleApproval(toolCallId, true)
-    addResult?.({ approved: true })
+    if (await handleApproval(toolCallId, true)) {
+      addResult?.({ approved: true })
+    }
   }
 
-  const handleDeny = () => {
+  const handleDeny = async () => {
     setResponded('denied')
-    handleApproval(toolCallId, false)
-    addResult?.({ approved: false })
+    if (await handleApproval(toolCallId, false)) {
+      addResult?.({ approved: false })
+    }
   }
 
   if (isApproval && !responded) {
@@ -190,6 +197,13 @@ const ToolCallDisplay: React.FC<{
       ? `${serverUrl}${rawConnectUrl}`
       : rawConnectUrl
 
+    const approveCredential = async () => {
+      setResponded('approved')
+      if (await handleApproval(toolCallId, true)) {
+        addResult?.({ approved: true })
+      }
+    }
+
     const handleConnect = () => {
       if (cred?.credentialType === 'oauth2' && connectUrl) {
         const popup = window.open(
@@ -197,26 +211,29 @@ const ToolCallDisplay: React.FC<{
           'oauth-connect',
           'width=600,height=700'
         )
+        // A blocked popup returns null — don't treat that as "connected", or
+        // the run resumes with no credential and the tool fails again.
+        if (!popup) {
+          setPopupBlocked(true)
+          return
+        }
         oauthTimerRef.current = setInterval(() => {
-          if (!popup || popup.closed) {
+          if (popup.closed) {
             clearInterval(oauthTimerRef.current!)
             oauthTimerRef.current = null
-            setResponded('approved')
-            handleApproval(toolCallId, true)
-            addResult?.({ approved: true })
+            void approveCredential()
           }
         }, 500)
       } else {
-        setResponded('approved')
-        handleApproval(toolCallId, true)
-        addResult?.({ approved: true })
+        void approveCredential()
       }
     }
 
-    const handleIgnore = () => {
+    const handleIgnore = async () => {
       setResponded('denied')
-      handleApproval(toolCallId, false)
-      addResult?.({ approved: false })
+      if (await handleApproval(toolCallId, false)) {
+        addResult?.({ approved: false })
+      }
     }
 
     return (
@@ -241,6 +258,13 @@ const ToolCallDisplay: React.FC<{
           <strong>{asI18n(cred?.credentialName ?? 'OAuth')}</strong>{' '}
           {m.agent_credential_to_be_connected()}
         </Box>
+        {popupBlocked && (
+          <Text size="xs" c="red" mb="xs">
+            {asI18n(
+              'Popup blocked — allow popups for this site, then click Connect again.'
+            )}
+          </Text>
+        )}
         <Group gap="xs">
           <Button size="xs" variant="light" onClick={handleConnect}>
             {asI18n(`Connect ${cred?.credentialName ?? 'OAuth'}`)}
@@ -442,19 +466,18 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   )
 }
 
-export const AgentChat: React.FC<{
-  streaming?: boolean
-}> = ({ streaming = false }) => {
+export const AgentChat: React.FC = () => {
   useLocale()
-  const {
-    agentId,
-    threadId,
-    setThreadId,
-    refetchThreads,
-    dbMessages,
-    model,
-    temperature,
-  } = useAgentPlayground()
+  const { agentId, threadId, refetchThreads, model, temperature, dbMessages } =
+    useAgentPlayground()
+
+  const initialMessages = useMemo(
+    () =>
+      dbMessages && dbMessages.length
+        ? convertDbMessages(dbMessages)
+        : undefined,
+    [dbMessages]
+  )
 
   const onStreamDone = useCallback(() => {
     refetchThreads()
@@ -480,18 +503,16 @@ export const AgentChat: React.FC<{
     agentName: agentId,
     threadId: effectiveThreadId,
     resourceId: 'default',
-    initialMessages: dbMessages,
     onFinish: onStreamDone,
     model,
     temperature,
     headers,
+    credentials: 'include' as RequestCredentials,
+    initialMessages,
   }
 
-  const streamingHook = usePikkuAgentRuntime(runtimeOptions)
-  const nonStreamingHook = usePikkuAgentNonStreamingRuntime(runtimeOptions)
-
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
-    streaming ? streamingHook : nonStreamingHook
+    usePikkuAgentRuntime(runtimeOptions)
 
   return (
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>

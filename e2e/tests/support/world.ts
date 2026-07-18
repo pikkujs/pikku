@@ -29,10 +29,32 @@ export class AgentWorld extends World {
     this.browser = await chromium.launch({
       headless: !headed,
       slowMo: headed ? 200 : 0,
+      ...(process.env.PIKKU_E2E_BROWSER_LOG === '1' ? { dumpio: true } : {}),
     })
     this.context = await this.browser.newContext()
     this.page = await this.context.newPage()
     this.page.setDefaultTimeout(config.responseTimeout)
+    if (process.env.PIKKU_E2E_BROWSER_LOG === '1') {
+      this.page.on('console', (msg) => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+          process.stdout.write(`[browser:${msg.type()}] ${msg.text()}\n`)
+        }
+      })
+      this.page.on('pageerror', (err) => {
+        process.stdout.write(
+          `[browser:pageerror] ${err.stack ?? err.message}\n`
+        )
+      })
+      this.page.on('crash', () => {
+        process.stdout.write(`[browser:CRASH] page crashed\n`)
+      })
+      this.page.on('close', () => {
+        process.stdout.write(`[browser:close] page closed\n`)
+      })
+      this.page.on('popup', (p) => {
+        process.stdout.write(`[browser:popup] ${p.url()}\n`)
+      })
+    }
     // Point the Pikku Console at the e2e backend
     await this.page.addInitScript((apiUrl: string) => {
       localStorage.setItem('pikku-server-url', apiUrl)
@@ -49,6 +71,7 @@ export class AgentWorld extends World {
   // the API level with a Better Auth session cookie (an Actor cookie jar) rather
   // than a browser login. Mirrors tests/steps/auth.steps.ts. Cached per scenario.
   private consoleActor?: Actor
+  private consoleUserId?: string
 
   private async authenticatedActor(): Promise<Actor> {
     if (!this.consoleActor) {
@@ -57,7 +80,7 @@ export class AgentWorld extends World {
         baseURL: config.apiUrl,
         fetchOptions: { customFetchImpl: actor.cookieFetch },
       })
-      const { error } = await authClient.signIn.email({
+      const { data, error } = await authClient.signIn.email({
         email: ADMIN_USER.email,
         password: ADMIN_USER.password,
       })
@@ -65,8 +88,24 @@ export class AgentWorld extends World {
         throw new Error(`console auth sign-in failed: ${JSON.stringify(error)}`)
       }
       this.consoleActor = actor
+      this.consoleUserId =
+        (data as any)?.user?.id ??
+        (await authClient.getSession()).data?.user?.id
     }
     return this.consoleActor
+  }
+
+  // The authenticated console user's id. The Actor signs in as the same seeded
+  // admin the browser logs in as (@console Before hook), so this is the userId
+  // the playground's per-user credential check runs under. Credentials must be
+  // stored under it — a global (userId-less) credential is invisible to the
+  // check and leaves the playground stuck on "Connect your accounts".
+  async currentUserId(): Promise<string> {
+    await this.authenticatedActor()
+    if (!this.consoleUserId) {
+      throw new Error('could not resolve authenticated console user id')
+    }
+    return this.consoleUserId
   }
 
   // Invoke a console RPC over HTTP carrying the Better Auth session cookie.
@@ -120,7 +159,9 @@ export class AgentWorld extends World {
     )
     // Wait for either the chat input or a credential prompt to be ready
     await Promise.race([
-      this.page.getByPlaceholder('Message...').waitFor({ state: 'visible' }),
+      this.page
+        .getByPlaceholder('Type a message…')
+        .waitFor({ state: 'visible' }),
       this.page
         .getByText('Connect your accounts')
         .waitFor({ state: 'visible' }),
@@ -131,37 +172,88 @@ export class AgentWorld extends World {
    * Type a message and send it.
    * Waits for the textarea to be enabled first (in case a previous response is completing).
    * After submitting, verifies the runtime accepted the message by checking the textarea was cleared.
-   * Retries submission if the runtime didn't pick it up (happens after approval-resume cycles).
+   * Retries submission if the runtime didn't pick it up: assistant-ui silently
+   * drops composer.send() while a run is in flight, and the textarea's enabled
+   * state doesn't track thread.isRunning — so the first submit after an
+   * approval-resume cycle can land mid-resume-run and be discarded.
    */
   async sendMessage(message: string) {
-    const input = this.page.getByPlaceholder('Message...')
+    const debug = process.env.PIKKU_E2E_BROWSER_LOG === '1'
+    const dump = async (label: string) => {
+      if (!debug) return
+      const state = await this.page.evaluate(() => {
+        const ta = document.querySelector('textarea')
+        return {
+          value: ta?.value,
+          disabled: ta?.disabled,
+          placeholder: ta?.placeholder,
+          forms: document.querySelectorAll('form').length,
+        }
+      })
+      process.stdout.write(
+        `[sendMessage ${Date.now() % 100000}] ${label}: ${JSON.stringify(state)}\n`
+      )
+    }
+    const input = this.page.getByPlaceholder('Type a message…')
     // Wait for textarea to be enabled (runtime back to idle)
     await this.waitForTextareaEnabled()
+    await dump('after-enabled-wait')
 
     // Try submitting, with retries if the runtime doesn't process the message
     for (let attempt = 0; attempt < 5; attempt++) {
       // Brief settle for assistant-ui runtime after approval-resume cycles
       await this.page.waitForTimeout(1_000)
 
+      await dump(`attempt-${attempt}-before-click`)
       await input.click()
       await input.fill(message)
-      await this.page.evaluate(() => {
-        const form = document.querySelector('form')
-        if (form) form.requestSubmit()
-      })
+      await dump(`attempt-${attempt}-after-fill`)
+      const submitResult = await Promise.race([
+        this.page
+          .evaluate(() => {
+            const form = document.querySelector('form')
+            if (form) form.requestSubmit()
+            return 'submitted'
+          })
+          .catch((e) => `submit-error: ${e}`),
+        new Promise<string>((r) =>
+          setTimeout(() => r('SUBMIT-EVALUATE-FROZEN'), 5_000)
+        ),
+      ])
+      if (debug) {
+        process.stdout.write(`[sendMessage] submit: ${submitResult}\n`)
+      }
 
-      // Wait for textarea to be cleared (runtime consumed the message)
+      // Wait for textarea to be cleared (runtime consumed the message).
+      // Raced node-side: the page-side poll never fires if the main thread
+      // is frozen, so the timeout alone can hang far past 5s.
       try {
-        await this.page.waitForFunction(
-          () => {
-            const ta = document.querySelector('textarea')
-            return ta && ta.value === ''
-          },
-          { timeout: 5_000 }
-        )
+        await Promise.race([
+          this.page.waitForFunction(
+            () => {
+              const ta = document.querySelector('textarea')
+              return ta && ta.value === ''
+            },
+            { timeout: 5_000 }
+          ),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('cleared-wait timed out')), 6_000)
+          ),
+        ])
         return // Message accepted
       } catch {
         // Textarea still has text — runtime didn't consume it. Retry.
+        if (debug) {
+          const alive = await Promise.race([
+            this.page.evaluate(() => 'alive').catch((e) => `dead: ${e}`),
+            new Promise<string>((r) =>
+              setTimeout(() => r('PAGE-FROZEN'), 3_000)
+            ),
+          ])
+          process.stdout.write(
+            `[sendMessage] attempt-${attempt}-not-consumed page=${alive}\n`
+          )
+        }
         await this.waitForTextareaEnabled()
       }
     }

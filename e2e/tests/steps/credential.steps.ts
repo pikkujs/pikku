@@ -1,6 +1,7 @@
 import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { config } from '../support/types.js'
+import type { AgentWorld } from '../support/world.js'
 
 async function rpc(name: string, data: Record<string, unknown> = {}) {
   const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
@@ -63,6 +64,18 @@ When(
 When(
   'I set credential {string} for user {string} with value:',
   async function (name: string, userId: string, docString: string) {
+    await rpc('setCredential', { name, valueJson: docString, userId })
+  }
+)
+
+// Store a credential under the authenticated console user — the identity the
+// browser is logged in as and that the agent playground's per-user credential
+// check runs under. Use this (not the userId-less "I set credential") whenever
+// a browser scenario opens the playground, so the gate actually sees it.
+When(
+  'I connect credential {string} with value:',
+  async function (this: AgentWorld, name: string, docString: string) {
+    const userId = await this.currentUserId()
     await rpc('setCredential', { name, valueJson: docString, userId })
   }
 )
@@ -338,5 +351,21 @@ Then(
       state.lastWorkflowResult.payload?.error ||
       JSON.stringify(state.lastWorkflowResult).includes(expectedError)
     expect(hasError).toBeTruthy()
+  }
+)
+
+When(
+  'I connect the OAuth credential via the popup',
+  async function (this: AgentWorld) {
+    const popupPromise = this.page.waitForEvent('popup')
+    await this.page
+      .getByRole('button', { name: /^Connect / })
+      .last()
+      .click()
+    const popup = await popupPromise
+    await popup
+      .getByText('success', { exact: false })
+      .waitFor({ state: 'visible', timeout: 15_000 })
+    await popup.close()
   }
 )

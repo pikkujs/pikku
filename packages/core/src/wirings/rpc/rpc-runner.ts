@@ -30,6 +30,7 @@ import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
 import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
 import { runAIAgent, resumeAIAgentSync } from '../ai-agent/ai-agent-runner.js'
 import { streamAIAgent, resumeAIAgent } from '../ai-agent/ai-agent-stream.js'
+import { wrapChannelWithAGUI } from '../ai-agent/ai-agent-agui.js'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -368,16 +369,26 @@ export class ContextAwareRPCService {
       ) => {
         const channel = this.wire.channel as unknown as AIStreamChannel
         if (!channel) throw new Error('No channel available for streaming')
+        let currentRunId: string | undefined
         await streamAIAgent(
           agentName,
           input,
-          channel,
+          wrapChannelWithAGUI(channel, {
+            threadId: input.threadId,
+            getRunId: () => currentRunId,
+          }),
           {
             sessionService: this.options.sessionService,
             getCredential: this.wire.getCredential?.bind(this.wire),
           },
           undefined,
-          options
+          {
+            ...options,
+            onRunCreated: (runId) => {
+              currentRunId = runId
+              options?.onRunCreated?.(runId)
+            },
+          }
         )
       },
       resume: async (
@@ -389,7 +400,7 @@ export class ContextAwareRPCService {
         if (!channel) throw new Error('No channel available for streaming')
         await resumeAIAgent(
           { runId, ...input },
-          channel,
+          wrapChannelWithAGUI(channel, { runId }),
           {
             sessionService: this.options.sessionService,
             getCredential: this.wire.getCredential?.bind(this.wire),

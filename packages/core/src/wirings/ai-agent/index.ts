@@ -4,6 +4,7 @@ export {
   agentResume,
   agentApprove,
 } from './ai-agent-helpers.js'
+export { wrapChannelWithAGUI, type AGUIEvent } from './ai-agent-agui.js'
 export { runAIAgent, resumeAIAgentSync } from './ai-agent-runner.js'
 export { streamAIAgent, resumeAIAgent } from './ai-agent-stream.js'
 export { voiceInput } from './voice-input.js'
