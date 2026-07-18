@@ -1,5 +1,6 @@
 import { getSingletonServices } from '../pikku-state.js'
 import { getDurationInMilliseconds } from '../time-utils.js'
+import { safeFetch } from '../utils/safe-fetch.js'
 import type { JobOptions, QueueService } from '../wirings/queue/queue.types.js'
 import type { Logger } from './logger.js'
 import {
@@ -131,13 +132,25 @@ export async function pikkuWebhookWorkerFunc(
   let error: string | undefined
   let delivered = false
 
+  let allowedHosts: string[] | undefined
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body,
-      signal: AbortSignal.timeout(30_000),
-    })
+    allowedHosts = getSingletonServices().config?.webhook?.allowedHosts
+  } catch {
+    // Singleton services not initialised (e.g. a bare worker invocation) — fall
+    // back to the default private-host block with no allowlist.
+  }
+
+  try {
+    const response = await safeFetch(
+      url,
+      {
+        method: 'POST',
+        headers,
+        body,
+        signal: AbortSignal.timeout(30_000),
+      },
+      { allowedHosts }
+    )
     statusCode = response.status
     delivered = response.status >= 200 && response.status < 300
     if (!delivered) {
