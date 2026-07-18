@@ -3,12 +3,15 @@ import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import {
+  assertResourceOwner,
   buildInstructions,
   buildToolDefs,
   createScopedChannel,
   getAddonCredentialRequirements,
   resolveAgent,
+  resolveOwnerResourceId,
 } from './ai-agent-prepare.js'
+import { ForbiddenError } from '../../errors/errors.js'
 import type {
   AIStreamChannel,
   AIStreamEvent,
@@ -421,5 +424,37 @@ describe('ai-agent-prepare', () => {
 
     assert.equal(tools.length, 0)
     assert.deepEqual(missingRpcs, ['ghost'])
+  })
+})
+
+describe('C2 thread/run ownership', () => {
+  const sessionParams = (userId?: string) => ({
+    sessionService: {
+      get: () => (userId ? { userId } : undefined),
+    } as never,
+  })
+
+  test('resolveOwnerResourceId uses the session user id when authenticated', () => {
+    assert.equal(
+      resolveOwnerResourceId(sessionParams('user-a'), 'client-supplied'),
+      'user-a'
+    )
+  })
+
+  test('resolveOwnerResourceId falls back to the requested resourceId when sessionless', () => {
+    assert.equal(resolveOwnerResourceId({}, 'resource-1'), 'resource-1')
+    assert.equal(
+      resolveOwnerResourceId(sessionParams(undefined), 'resource-1'),
+      'resource-1'
+    )
+  })
+
+  test('assertResourceOwner throws ForbiddenError on an owner mismatch', () => {
+    assert.throws(
+      () => assertResourceOwner('user-a', 'user-b', 'thread'),
+      (e: unknown) =>
+        e instanceof ForbiddenError && !/user-a|user-b/.test(e.message)
+    )
+    assert.doesNotThrow(() => assertResourceOwner('user-a', 'user-a', 'run'))
   })
 })

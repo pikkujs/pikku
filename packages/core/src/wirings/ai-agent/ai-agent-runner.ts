@@ -27,6 +27,8 @@ import {
   resolveAgent,
   buildInstructions,
   buildToolDefs,
+  resolveOwnerResourceId,
+  assertResourceOwner,
   type RunAIAgentParams,
 } from './ai-agent-prepare.js'
 import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
@@ -70,6 +72,11 @@ export async function runAIAgent(
   agentSessionMap?: Map<string, string>
 ): Promise<AIAgentOutput> {
   const sessionMap = agentSessionMap ?? new Map<string, string>()
+
+  input = {
+    ...input,
+    resourceId: resolveOwnerResourceId(params, input.resourceId),
+  }
 
   const {
     agent,
@@ -385,6 +392,11 @@ export async function resumeAIAgentSync(
 
   const run = await aiRunState.getRun(runId)
   if (!run) throw new Error(`No run found for runId ${runId}`)
+  assertResourceOwner(
+    resolveOwnerResourceId(params, run.resourceId),
+    run.resourceId,
+    'run'
+  )
   if (expectedAgentName && run.agentName !== expectedAgentName) {
     throw new Error(
       `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
