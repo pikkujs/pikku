@@ -8,7 +8,6 @@ import {
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type SendWebhookInput,
   type SendWebhookResult,
-  type WebhookDeliveryStore,
   type WebhookJobData,
   WebhookService,
 } from './webhook-service.js'
@@ -117,12 +116,14 @@ export class QueueWebhookService extends WebhookService {
  * retries the job according to the `attempts`/`backoff` set at enqueue time;
  * the queue runner logs each failed attempt.
  *
- * When the job carries a `deliveryId` and a `webhookDeliveryStore` is wired,
- * each attempt (success or failure) is persisted before the throw, so the
- * delivery history in the console reflects every try — not just the outcome.
+ * A `deliveryId` is only present when a store-backed `webhookService` (e.g.
+ * `KyselyWebhookService`) enqueued the job, so each attempt (success or failure)
+ * is persisted via `webhookService.recordAttempt` before the throw — the console
+ * delivery history reflects every try, not just the outcome. The queue-only
+ * default never sets a `deliveryId`, so its base `recordAttempt` is never hit.
  */
 export async function pikkuWebhookWorkerFunc(
-  services: { logger: Logger; webhookDeliveryStore?: WebhookDeliveryStore },
+  services: { logger: Logger; webhookService?: WebhookService },
   { url, body, headers, deliveryId }: WebhookJobData
 ): Promise<void> {
   let statusCode: number | undefined
@@ -150,9 +151,9 @@ export async function pikkuWebhookWorkerFunc(
     error = e instanceof Error ? e.message : String(e)
   }
 
-  if (deliveryId && services.webhookDeliveryStore) {
+  if (deliveryId && services.webhookService) {
     // Best-effort history: a store failure must not mask the delivery result.
-    await services.webhookDeliveryStore
+    await services.webhookService
       .recordAttempt(deliveryId, { statusCode, responseBody, error, delivered })
       .catch((storeError) =>
         services.logger.error(

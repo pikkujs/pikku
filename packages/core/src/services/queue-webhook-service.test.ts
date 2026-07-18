@@ -247,7 +247,7 @@ describe('pikkuWebhookWorkerFunc', () => {
     const recorded: any[] = []
     const services = {
       logger: noopLogger,
-      webhookDeliveryStore: {
+      webhookService: {
         recordAttempt: async (id: string, result: any) =>
           recorded.push({ id, result }),
       },
@@ -272,7 +272,7 @@ describe('pikkuWebhookWorkerFunc', () => {
     const recorded: any[] = []
     const services = {
       logger: noopLogger,
-      webhookDeliveryStore: {
+      webhookService: {
         recordAttempt: async (id: string, result: any) =>
           recorded.push({ id, result }),
       },
@@ -299,7 +299,7 @@ describe('pikkuWebhookWorkerFunc', () => {
     let called = false
     const services = {
       logger: noopLogger,
-      webhookDeliveryStore: {
+      webhookService: {
         recordAttempt: async () => {
           called = true
         },

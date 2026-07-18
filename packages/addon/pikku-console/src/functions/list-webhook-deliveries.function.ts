@@ -10,10 +10,10 @@ export const listWebhookDeliveries = pikkuFunc<
   description:
     'Lists outgoing webhook deliveries (most recent first), optionally scoped to an organization.',
   expose: true,
-  func: async ({ webhookDeliveryStore }, input) => {
-    if (!webhookDeliveryStore) {
-      throw new MissingServiceError('WebhookDeliveryStore is not configured')
+  func: async ({ webhookService }, input) => {
+    if (!webhookService) {
+      throw new MissingServiceError('webhookService is not configured')
     }
-    return webhookDeliveryStore.listDeliveries(input ?? undefined)
+    return webhookService.listDeliveries(input ?? undefined)
   },
 })

@@ -70,7 +70,6 @@ export {
   type WebhookAttemptRecord,
   type WebhookAttemptResult,
   type WebhookDeliveryRecord,
-  type WebhookDeliveryStore,
   type WebhookDeliveryWithAttempts,
   type WebhookJobData,
   type WebhookServiceConfig,

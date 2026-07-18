@@ -5,7 +5,6 @@ import {
   type SendWebhookResult,
   type WebhookAttemptResult,
   type WebhookDeliveryRecord,
-  type WebhookDeliveryStore,
   type WebhookDeliveryWithAttempts,
 } from '@pikku/core/services'
 import type { QueueService } from '@pikku/core/queue'
@@ -16,14 +15,11 @@ import type { KyselyPikkuDB } from './kysely-tables.js'
 /**
  * Durable {@link QueueWebhookService}: still delivers through the
  * `pikku-outgoing-webhooks` queue, but records a `webhook_delivery` row per
- * `send()` and one `webhook_delivery_attempt` row per try. Register the same
- * instance as both `webhookService` and `webhookDeliveryStore` so the queue
- * worker persists each attempt through {@link recordAttempt}.
+ * `send()` and one `webhook_delivery_attempt` row per try. Register it as the
+ * `webhookService` singleton; the queue worker persists each attempt through
+ * {@link recordAttempt}, overriding the base's throwing default.
  */
-export class KyselyWebhookService
-  extends QueueWebhookService
-  implements WebhookDeliveryStore
-{
+export class KyselyWebhookService extends QueueWebhookService {
   private initialized = false
 
   constructor(

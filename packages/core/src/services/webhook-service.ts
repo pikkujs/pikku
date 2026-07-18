@@ -1,3 +1,4 @@
+import { NotImplementedError } from '../errors/errors.js'
 import { hmacSha256Hex, timingSafeStringEqual } from '../utils/hmac.js'
 
 export interface SendWebhookInput {
@@ -63,7 +64,7 @@ export interface WebhookJobData {
   deliveryId?: string
 }
 
-/** Outcome of one delivery attempt, reported to a {@link WebhookDeliveryStore}. */
+/** Outcome of one delivery attempt, recorded against a delivery. */
 export interface WebhookAttemptResult {
   /** HTTP status of the response, absent if the request never completed. */
   statusCode?: number
@@ -105,29 +106,6 @@ export interface WebhookDeliveryWithAttempts {
   attempts: WebhookAttemptRecord[]
 }
 
-/**
- * Persistence for webhook delivery history. A store-backed
- * {@link WebhookService} inserts the delivery row on `send()`; the queue worker
- * appends one attempt per try through {@link WebhookDeliveryStore.recordAttempt}.
- * The read methods back the console's webhooks view. Kept abstract so core
- * carries no database dependency — see `KyselyWebhookService` in `@pikku/kysely`
- * for the default implementation.
- */
-export interface WebhookDeliveryStore {
-  /**
-   * Record a delivery attempt and roll the delivery's status/attempt-count
-   * forward. Keyed by the delivery id carried in {@link WebhookJobData}.
-   */
-  recordAttempt(deliveryId: string, result: WebhookAttemptResult): Promise<void>
-  /** List deliveries, most recent first, optionally scoped to an org. */
-  listDeliveries(opts?: {
-    organizationId?: string
-    limit?: number
-  }): Promise<WebhookDeliveryRecord[]>
-  /** A single delivery with its attempt history, or null if unknown. */
-  getDelivery(deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
-}
-
 export const PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME = 'pikku-outgoing-webhooks'
 
 export const DEFAULT_WEBHOOK_SIGNATURE_HEADER = 'X-Pikku-Signature'
@@ -157,5 +135,39 @@ export abstract class WebhookService {
    */
   public verify(secret: string, signature: string, body: string): boolean {
     return timingSafeStringEqual(this.sign(secret, body), signature)
+  }
+
+  /**
+   * Record a delivery attempt and roll the delivery's status/attempt-count
+   * forward, keyed by the delivery id carried in {@link WebhookJobData}. The
+   * default queue-only service keeps no history, so this throws — a store-backed
+   * implementation (e.g. `KyselyWebhookService` in `@pikku/kysely`) overrides it.
+   */
+  public recordAttempt(
+    _deliveryId: string,
+    _result: WebhookAttemptResult
+  ): Promise<void> {
+    throw new NotImplementedError(
+      'webhook delivery persistence is not configured'
+    )
+  }
+
+  /** List deliveries, most recent first, optionally scoped to an org. */
+  public listDeliveries(_opts?: {
+    organizationId?: string
+    limit?: number
+  }): Promise<WebhookDeliveryRecord[]> {
+    throw new NotImplementedError(
+      'webhook delivery persistence is not configured'
+    )
+  }
+
+  /** A single delivery with its attempt history, or null if unknown. */
+  public getDelivery(
+    _deliveryId: string
+  ): Promise<WebhookDeliveryWithAttempts | null> {
+    throw new NotImplementedError(
+      'webhook delivery persistence is not configured'
+    )
   }
 }

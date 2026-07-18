@@ -40,7 +40,6 @@ import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
 import type {
-  WebhookDeliveryStore,
   WebhookService,
   WebhookServiceConfig,
 } from '../services/webhook-service.js'
@@ -309,14 +308,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   credentialService?: CredentialService
   /** Email service for outbound messages and template-backed delivery */
   emailService?: EmailService
-  /** Webhook service for outgoing webhook delivery via a queue */
-  webhookService?: WebhookService
   /**
-   * Optional persistence for webhook delivery history. When present, the
-   * outgoing-webhook queue worker records each attempt through it. Provided by
-   * a store-backed service such as `KyselyWebhookService`.
+   * Webhook service for outgoing webhook delivery via a queue. A store-backed
+   * implementation (e.g. `KyselyWebhookService`) additionally records delivery
+   * history; the queue-only default throws on the delivery-read methods.
    */
-  webhookDeliveryStore?: WebhookDeliveryStore
+  webhookService?: WebhookService
   /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */

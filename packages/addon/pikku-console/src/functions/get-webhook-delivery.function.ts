@@ -9,10 +9,10 @@ export const getWebhookDelivery = pikkuFunc<
   title: 'Get Webhook Delivery',
   description: 'Returns a single webhook delivery with its full attempt history.',
   expose: true,
-  func: async ({ webhookDeliveryStore }, { deliveryId }) => {
-    if (!webhookDeliveryStore) {
-      throw new MissingServiceError('WebhookDeliveryStore is not configured')
+  func: async ({ webhookService }, { deliveryId }) => {
+    if (!webhookService) {
+      throw new MissingServiceError('webhookService is not configured')
     }
-    return webhookDeliveryStore.getDelivery(deliveryId)
+    return webhookService.getDelivery(deliveryId)
   },
 })
