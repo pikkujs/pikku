@@ -289,6 +289,7 @@ export const createSingletonServices: CreateSingletonServices<
       const scaffoldFiles = [
         config.consoleFunctionsFile,
         config.remoteRpcWorkersFile,
+        config.webhookWorkersFile,
         config.workflowRoutesFile,
         config.publicRpcFile,
         config.publicAgentFile,

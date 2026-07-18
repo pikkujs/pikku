@@ -309,6 +309,48 @@ export function ensureFunctionMetadata(
   }
 }
 
+/**
+ * Register metadata for a `func:` inlined into a wiring (queue/scheduler/
+ * trigger/gateway/…).
+ *
+ * An inline function has no exported name, so `addFunctions` skips it (it bails
+ * on `__temp_` ids) and only the wiring's context-based id exists. Without this
+ * the wiring points at a function that was never registered and the worker
+ * resolves to nothing at runtime ("Missing generated metadata for ...").
+ *
+ * The stub also carries no session info, so the runtime would treat it as
+ * session-required and every invocation would fail with "Authentication
+ * required". Derive `sessionless` from the helper the function was built with —
+ * the same rule `addFunctions` applies to named ones (`!== 'pikkuFunc'`).
+ */
+export function ensureInlineWiringFunction(
+  state: InspectorState,
+  pikkuFuncId: string,
+  fallbackName: string | undefined,
+  funcInitializer: ts.Node,
+  checker: ts.TypeChecker,
+  isHelper?: boolean
+): void {
+  ensureFunctionMetadata(
+    state,
+    pikkuFuncId,
+    fallbackName,
+    funcInitializer,
+    checker,
+    isHelper
+  )
+
+  const meta = state.functions.meta[pikkuFuncId]
+  if (
+    meta &&
+    meta.sessionless === undefined &&
+    ts.isCallExpression(funcInitializer) &&
+    ts.isIdentifier(funcInitializer.expression)
+  ) {
+    meta.sessionless = funcInitializer.expression.text !== 'pikkuFunc'
+  }
+}
+
 function populateTypesLookup(
   state: InspectorState,
   pikkuFuncId: string,

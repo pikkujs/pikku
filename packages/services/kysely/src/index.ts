@@ -12,6 +12,7 @@ export type { KyselySecretServiceConfig } from './kysely-secret-service.js'
 export { KyselyCredentialService } from './kysely-credential-service.js'
 export type { KyselyCredentialServiceConfig } from './kysely-credential-service.js'
 export { KyselySessionStore } from './kysely-session-store.js'
+export { KyselyWebhookService } from './kysely-webhook-service.js'
 export {
   createAuditedKysely,
   type CreateAuditedKyselyOptions,

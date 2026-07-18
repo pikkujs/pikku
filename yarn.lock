@@ -7389,6 +7389,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-webhooks@workspace:verifiers/webhooks":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-webhooks@workspace:verifiers/webhooks"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-workflows@workspace:verifiers/workflows":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-workflows@workspace:verifiers/workflows"

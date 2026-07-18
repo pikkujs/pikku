@@ -39,6 +39,7 @@ import {
   Moon,
   UserCog,
   ShieldCheck,
+  Webhook,
 } from 'lucide-react'
 import { useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -81,6 +82,7 @@ export function useDefaultNavSections(): NavSection[] {
         { label: m.nav_jobs(), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
         { label: m.nav_runtime(), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
         { label: m.nav_emails(), href: '/emails', icon: Mail, matchPrefix: '/emails' },
+        { label: asI18n('Webhooks'), href: '/webhooks', icon: Webhook, matchPrefix: '/webhooks' },
       ],
     },
     {

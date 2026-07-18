@@ -187,6 +187,28 @@ export interface UserSessionsTable {
   updatedAt: Generated<Date>
 }
 
+export interface WebhookDeliveryTable {
+  deliveryId: string
+  organizationId: string | null
+  url: string
+  event: string | null
+  status: Generated<'pending' | 'delivered' | 'failed'>
+  attempts: Generated<number>
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
+  deliveredAt: Date | null
+}
+
+export interface WebhookDeliveryAttemptTable {
+  attemptId: string
+  deliveryId: string
+  attemptNumber: number
+  statusCode: number | null
+  responseBody: string | null
+  error: string | null
+  createdAt: Generated<Date>
+}
+
 export interface KyselyPikkuDB {
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
@@ -206,4 +228,6 @@ export interface KyselyPikkuDB {
   credentials: CredentialsTable
   credentialsAudit: CredentialsAuditTable
   pikkuUserSessions: UserSessionsTable
+  webhookDelivery: WebhookDeliveryTable
+  webhookDeliveryAttempt: WebhookDeliveryAttemptTable
 }

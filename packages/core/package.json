@@ -53,6 +53,7 @@
     "./services/temporary-file-service": "./dist/services/temporary-file-service.js",
     "./services/gopass-secrets": "./dist/services/gopass-secrets.js",
     "./crypto-utils": "./dist/crypto-utils.js",
+    "./hmac": "./dist/utils/hmac.js",
     "./internal": "./dist/internal.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
