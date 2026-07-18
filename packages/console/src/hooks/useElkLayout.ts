@@ -34,18 +34,19 @@ export function useElkLayout(
     nodes: [],
     edges: [],
   })
-  const [isLayouting, setIsLayouting] = useState(false)
 
   const nodeIds = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
   const edgeIds = useMemo(() => edges.map((e) => e.id).join(','), [edges])
 
   useEffect(() => {
+    // Cancellation flag (not state): a state guard would drop a dep change
+    // that lands mid-layout with no retry, sticking the old layout forever.
+    let cancelled = false
+
     const applyLayout = async () => {
-      if (nodes.length === 0 || isLayouting) {
+      if (nodes.length === 0) {
         return
       }
-
-      setIsLayouting(true)
 
       const graph = {
         id: 'root',
@@ -105,6 +106,7 @@ export function useElkLayout(
 
       try {
         const layout = await elk.layout(graph)
+        if (cancelled) return
 
         const minY = Math.min(...(layout.children?.map((n) => n.y || 0) || [0]))
         const yOffset = 75 - minY
@@ -160,13 +162,15 @@ export function useElkLayout(
 
         setResult({ nodes: newNodes, edges: newEdges })
       } catch {
-        setResult({ nodes, edges })
-      } finally {
-        setIsLayouting(false)
+        if (!cancelled) setResult({ nodes, edges })
       }
     }
 
     applyLayout()
+
+    return () => {
+      cancelled = true
+    }
   }, [nodeIds, edgeIds, direction])
 
   return result.nodes.length > 0 ? result : { nodes, edges }
