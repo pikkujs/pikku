@@ -20,6 +20,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { CommunityGallery } from '../components/packages/CommunityGallery'
 import { isOfficialAddon } from '../components/packages/addonCategoryMeta'
+import { deriveNamespace } from '../components/packages/deriveNamespace'
 import { PanelProvider } from '../context/PanelContext'
 
 type AddonFilter = 'all' | 'official' | 'installed'
@@ -71,19 +72,6 @@ const installedToPackageMeta = (a: InstalledAddonRow): PackageMeta => ({
   agents: {},
 })
 
-const deriveNamespace = (packageName: string) => {
-  const base = packageName
-    .replace('@pikku/addon-', '')
-    .replace(/^@[^/]+\//, '')
-    .toLowerCase()
-  const namespace = base.replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
-  if (!namespace) {
-    throw new Error(
-      `Unable to derive namespace from package name: ${packageName}`
-    )
-  }
-  return namespace
-}
 
 const AddonsList: React.FC<{
   searchQuery: string
@@ -115,15 +103,24 @@ const AddonsList: React.FC<{
   })
 
   const installMutation = useMutation({
-    mutationFn: async (addon: PackageMeta) =>
+    mutationFn: async ({
+      addon,
+      namespace,
+    }: {
+      addon: PackageMeta
+      namespace?: string
+    }) =>
       rpc.invoke('console:installAddon', {
         packageName: addon.name,
-        namespace: deriveNamespace(addon.name),
+        namespace: namespace?.trim() || deriveNamespace(addon.name),
         version: addon.version,
       }),
-    onSuccess: () => {
+    onSuccess: (_result, { addon }) => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+      // Land the user on the freshly installed addon's setup surface so they
+      // can immediately connect its integrations / set its secrets.
+      onSelect(addon.name, 'installed')
     },
   })
 
@@ -179,13 +176,13 @@ const AddonsList: React.FC<{
       editable={editable}
       installingName={
         installMutation.isPending
-          ? (installMutation.variables?.name ?? null)
+          ? (installMutation.variables?.addon.name ?? null)
           : null
       }
       actionError={
         installMutation.isError
           ? {
-              name: installMutation.variables?.name ?? '',
+              name: installMutation.variables?.addon.name ?? '',
               message:
                 installMutation.error instanceof Error
                   ? installMutation.error.message
@@ -193,7 +190,9 @@ const AddonsList: React.FC<{
             }
           : null
       }
-      onInstall={(addon) => installMutation.mutate(addon)}
+      onInstall={(addon, namespace) =>
+        installMutation.mutate({ addon, namespace })
+      }
       onOpenInstalled={(addon) => onSelect(addon.name, 'installed')}
     />
   )

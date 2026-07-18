@@ -30,7 +30,8 @@ interface CommunityGalleryProps {
   actionError?: { name: string; message: string } | null
   /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
-  onInstall: (addon: PackageMeta) => void
+  /** `namespace` is the user-chosen wireAddon name (addons only); APIs ignore it. */
+  onInstall: (addon: PackageMeta, namespace?: string) => void
   /**
    * Opening an *installed* addon: routes to its full detail page (which carries
    * the Setup/OAuth + secrets requirements and richer surfaces) instead of the

@@ -15,6 +15,7 @@ import {
   Divider,
   Avatar,
   Alert,
+  TextInput,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -41,6 +42,7 @@ import {
   addonPrimaryCategory,
   isOfficialAddon,
 } from './addonCategoryMeta'
+import { deriveNamespace, isValidNamespace } from './deriveNamespace'
 
 interface CommunityPackage {
   name: string
@@ -80,7 +82,8 @@ interface AddonDetailDrawerProps {
   /** 'api' fetches OpenAPI detail instead of a community package and swaps the CTA to Import. */
   kind?: 'addon' | 'api'
   onClose: () => void
-  onInstall: (addon: PackageMeta) => void
+  /** `namespace` is the user-chosen wireAddon name (addons only). */
+  onInstall: (addon: PackageMeta, namespace?: string) => void
 }
 
 const countHttpRoutes = (routes?: CommunityPackage['httpRoutes']) =>
@@ -104,9 +107,17 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
   const [tab, setTab] = useState<string | null>('overview')
   const isApi = kind === 'api'
 
+  // The wireAddon name for this install — defaults to the derived slug, editable
+  // so the same package can be wired under a distinct name. Reset per addon.
+  const [name, setName] = useState('')
   useEffect(() => {
-    if (addon) setTab('overview')
+    if (addon) {
+      setTab('overview')
+      setName(isApi ? '' : deriveNamespace(addon.name))
+    }
   }, [addon?.id])
+
+  const nameValid = isApi || isValidNamespace(name)
 
   const { data: pkg } = useQuery<CommunityPackage | null>({
     queryKey: ['addon', 'community', addon?.id],
@@ -329,7 +340,23 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
               </Group>
             )}
 
-            <Group gap="sm" mt="lg">
+            {!installed && !isApi && editable && (
+              <TextInput
+                mt="lg"
+                label={m.packages_install_name_label()}
+                description={m.packages_install_name_description()}
+                value={name}
+                onChange={(e) => setName(e.currentTarget.value)}
+                error={
+                  name.length > 0 && !nameValid
+                    ? m.packages_install_name_invalid()
+                    : null
+                }
+                styles={{ input: { fontFamily: 'monospace' } }}
+              />
+            )}
+
+            <Group gap="sm" mt={!installed && !isApi && editable ? 'sm' : 'lg'}>
               {installed ? (
                 <Button
                   variant="light"
@@ -344,7 +371,8 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                   <Button
                     leftSection={<Download size={15} />}
                     loading={installing}
-                    onClick={() => onInstall(addon)}
+                    disabled={!nameValid}
+                    onClick={() => onInstall(addon, isApi ? undefined : name)}
                   >
                     {isApi ? m.packages_import_to_project() : m.packages_add_to_project()}
                   </Button>
