@@ -32,6 +32,12 @@ export interface AddonPackageInfo {
   functions: FunctionsMeta
   agents: Record<string, unknown>
   secrets: Record<string, unknown>
+  /**
+   * OAuth2 + wire credentials the addon declares (from its own
+   * `credentials/pikku-credentials-meta.gen.json`). Entries with an `oauth2`
+   * field are OAuth integrations to connect; the rest are wire credentials.
+   */
+  credentials: Record<string, unknown>
   variables: Record<string, unknown>
   httpRoutes: HTTPWiringsMeta
   channels: ChannelsMeta

@@ -19,14 +19,24 @@ export const getAddonInstalledPackage = pikkuFunc<
     const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
     const agents = agentsMeta ? { ...agentsMeta } : {}
 
+    // Read from the ADDON PACKAGE's own `.pikku` (resolved from node_modules),
+    // not the app's — otherwise every addon returns the app-wide secrets/wirings
+    // and the requirements view can't show what THIS addon actually needs.
+    const readPkgFile = (rel: string) =>
+      metaService.readPackageFile?.(packageName, rel) ?? Promise.resolve(null)
     const readJson = async <T>(path: string): Promise<T | null> => {
-      const content = await metaService.readFile(path)
+      const content = await readPkgFile(path)
       return content ? (JSON.parse(content) as T) : null
     }
 
     const secrets =
       (await readJson<Record<string, unknown>>(
         'secrets/pikku-secrets-meta.gen.json'
+      )) ?? {}
+
+    const credentials =
+      (await readJson<Record<string, unknown>>(
+        'credentials/pikku-credentials-meta.gen.json'
       )) ?? {}
 
     const variables =
@@ -47,18 +57,14 @@ export const getAddonInstalledPackage = pikkuFunc<
 
     const mcp = await readJson('mcp/pikku-mcp-wirings-meta.gen.json')
 
-    // Read all schemas from the schemas directory
+    // Read all schemas from the addon's schemas directory
     const schemas: Record<string, unknown> = {}
-    let schemaFiles: string[] = []
-    try {
-      schemaFiles = (await metaService.readDir('schemas/schemas')) || []
-    } catch {
-      // fallback to empty array
-    }
+    const schemaFiles =
+      (await metaService.readPackageDir?.(packageName, 'schemas/schemas')) ?? []
     for (const file of schemaFiles) {
       if (file.endsWith('.schema.json')) {
         const name = file.replace('.schema.json', '')
-        const content = await metaService.readFile(`schemas/schemas/${file}`)
+        const content = await readPkgFile(`schemas/schemas/${file}`)
         if (content) {
           schemas[name] = JSON.parse(content)
         }
@@ -69,9 +75,9 @@ export const getAddonInstalledPackage = pikkuFunc<
       package?: { icon?: string; displayName?: string; description?: string }
     }>('console/pikku-addon-meta.gen.json')
 
-    // README and package.json are in the parent directory (one level up from .pikku)
-    const readme = await metaService.readFile('../README.md')
-    const pkgJsonContent = await metaService.readFile('../package.json')
+    // README and package.json are in the package root (one level up from .pikku)
+    const readme = await readPkgFile('../README.md')
+    const pkgJsonContent = await readPkgFile('../package.json')
     let pkgJson: {
       version?: string
       author?: string | { name: string }
@@ -115,6 +121,7 @@ export const getAddonInstalledPackage = pikkuFunc<
       functions,
       agents,
       secrets,
+      credentials,
       variables,
       httpRoutes,
       channels,

@@ -1,4 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import type { JSONSchema7 } from 'json-schema'
 import type { HTTPWiringsMeta } from '../wirings/http/http.types.js'
@@ -157,6 +159,20 @@ export interface MetaService {
   readDir(relativePath: string): Promise<string[]>
   /** Read a project source file relative to the project root (one level above .pikku). */
   readProjectFile(relativePath: string): Promise<string | null>
+  /**
+   * Read a file from an *installed addon package's* own `.pikku` directory
+   * (resolved from node_modules), NOT the app's `.pikku`. `relativePath` is
+   * relative to that package's `.pikku` root (use `../` to reach the package
+   * root itself, e.g. `../README.md`). Returns null if the package or file is
+   * absent. Only local/Node implementations resolve packages; remote impls omit
+   * this and callers guard with `?.`.
+   */
+  readPackageFile?(
+    packageName: string,
+    relativePath: string
+  ): Promise<string | null>
+  /** List a directory inside an installed addon package's `.pikku`. */
+  readPackageDir?(packageName: string, relativePath: string): Promise<string[]>
 
   // -- Typed metadata accessors --
 
@@ -247,6 +263,57 @@ export class LocalMetaService implements MetaService {
       return await readFile(join(this.basePath, '..', relativePath), 'utf-8')
     } catch {
       return null
+    }
+  }
+
+  // Resolve an installed addon package's root dir from the app's node_modules.
+  // The addon packages have no main `exports` entry, so `require.resolve(pkg)`
+  // throws; instead we walk the node_modules search paths (anchored at the app
+  // root, one level above `.pikku`) and pick the first that contains the package.
+  private packageRootCache = new Map<string, string | null>()
+  private resolvePackageRoot(packageName: string): string | null {
+    const cached = this.packageRootCache.get(packageName)
+    if (cached !== undefined) return cached
+    let root: string | null = null
+    try {
+      const require = createRequire(join(this.basePath, '..', 'index.js'))
+      for (const dir of require.resolve.paths(packageName) ?? []) {
+        const candidate = join(dir, packageName)
+        if (existsSync(join(candidate, 'package.json'))) {
+          root = candidate
+          break
+        }
+      }
+    } catch {
+      root = null
+    }
+    this.packageRootCache.set(packageName, root)
+    return root
+  }
+
+  async readPackageFile(
+    packageName: string,
+    relativePath: string
+  ): Promise<string | null> {
+    const root = this.resolvePackageRoot(packageName)
+    if (!root) return null
+    try {
+      return await readFile(join(root, '.pikku', relativePath), 'utf-8')
+    } catch {
+      return null
+    }
+  }
+
+  async readPackageDir(
+    packageName: string,
+    relativePath: string
+  ): Promise<string[]> {
+    const root = this.resolvePackageRoot(packageName)
+    if (!root) return []
+    try {
+      return await readdir(join(root, '.pikku', relativePath))
+    } catch {
+      return []
     }
   }
 
