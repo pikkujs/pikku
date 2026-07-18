@@ -88,7 +88,8 @@ const deriveNamespace = (packageName: string) => {
 const AddonsList: React.FC<{
   searchQuery: string
   filter: AddonFilter
-}> = ({ searchQuery, filter }) => {
+  onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
+}> = ({ searchQuery, filter, onSelect }) => {
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
@@ -193,6 +194,7 @@ const AddonsList: React.FC<{
           : null
       }
       onInstall={(addon) => installMutation.mutate(addon)}
+      onOpenInstalled={(addon) => onSelect(addon.name, 'installed')}
     />
   )
 }
@@ -426,7 +428,11 @@ const PackagesList: React.FC<{
       {tab === 'apis' ? (
         <ApisList searchQuery={searchQuery} />
       ) : (
-        <AddonsList searchQuery={searchQuery} filter={effectiveFilter} />
+        <AddonsList
+          searchQuery={searchQuery}
+          filter={effectiveFilter}
+          onSelect={onSelect}
+        />
       )}
     </ResizablePanelLayout>
   )

@@ -31,6 +31,13 @@ interface CommunityGalleryProps {
   /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
   onInstall: (addon: PackageMeta) => void
+  /**
+   * Opening an *installed* addon: routes to its full detail page (which carries
+   * the Setup/OAuth + secrets requirements and richer surfaces) instead of the
+   * lightweight browse drawer. Omitted for the API gallery, which has no such
+   * page, so those cards always open the drawer.
+   */
+  onOpenInstalled?: (addon: PackageMeta) => void
 }
 
 type SortKey = 'name' | 'functions' | 'agents'
@@ -47,11 +54,22 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   actionError,
   kind = 'addon',
   onInstall,
+  onOpenInstalled,
 }) => {
   useLocale()
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState<SortKey>('name')
   const [selected, setSelected] = useState<PackageMeta | null>(null)
+
+  // An installed addon opens its full detail page (Setup/OAuth lives there); a
+  // not-yet-installed one opens the browse drawer to preview before installing.
+  const openAddon = (addon: PackageMeta) => {
+    if (onOpenInstalled && installedNames.has(addon.name)) {
+      onOpenInstalled(addon)
+    } else {
+      setSelected(addon)
+    }
+  }
 
   const categories = useMemo(() => deriveCategories(addons), [addons])
 
@@ -164,7 +182,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
                     addon={addon}
                     installed={installedNames.has(addon.name)}
                     kind={kind}
-                    onOpen={setSelected}
+                    onOpen={openAddon}
                   />
                 ))}
               </SimpleGrid>
