@@ -6,7 +6,7 @@ import type {
 } from '@pikku/core'
 import type { LogLevel } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { KyselyPikkuDB, KyselyScopeService } from '@pikku/kysely'
 
 export interface UserSession extends CoreUserSession {}
 
@@ -18,6 +18,7 @@ export interface Config extends CoreConfig {
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   kysely: Kysely<KyselyPikkuDB>
+  scopeService: KyselyScopeService
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

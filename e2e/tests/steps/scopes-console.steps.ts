@@ -1,0 +1,95 @@
+import { When, Then } from '@cucumber/cucumber'
+import { expect } from '@playwright/test'
+import type { AgentWorld } from '../support/world.js'
+import { config } from '../support/types.js'
+
+// The @console Before hook already opened the browser and signed in as the
+// admin (admin@e2e.test), who holds pikku:scopes:read/manage via the seeded
+// console-admin role — so the scope RPCs behind this UI return 200.
+
+When(
+  'I open the scopes page in the console',
+  async function (this: AgentWorld) {
+    await this.page.goto(`${config.consoleUrl}/scopes`)
+    await expect(this.page.getByRole('table')).toBeVisible()
+  }
+)
+
+Then(
+  'I should see the role {string}',
+  async function (this: AgentWorld, role: string) {
+    await expect(
+      this.page.getByRole('cell', { name: role, exact: true })
+    ).toBeVisible()
+  }
+)
+
+When('I view the scope vocabulary', async function (this: AgentWorld) {
+  await this.page
+    .getByRole('radiogroup')
+    .locator('label')
+    .filter({ hasText: 'Scopes' })
+    .click()
+})
+
+Then(
+  'I should see the declared scope {string}',
+  async function (this: AgentWorld, scope: string) {
+    await expect(
+      this.page.getByRole('cell', { name: scope, exact: true })
+    ).toBeVisible()
+  }
+)
+
+When(
+  'I create a role {string} granting the {string} scope',
+  async function (this: AgentWorld, role: string, scopeLabel: string) {
+    await this.page.getByRole('button', { name: 'Create role' }).click()
+    const drawer = this.page.getByRole('dialog')
+    await drawer.getByRole('textbox', { name: 'Name' }).fill(role)
+    await drawer.getByRole('checkbox', { name: new RegExp(scopeLabel) }).check()
+    await drawer.getByRole('button', { name: 'Save' }).click()
+    await expect(drawer).toBeHidden()
+  }
+)
+
+When(
+  'I open the roles drawer for {string}',
+  async function (this: AgentWorld, email: string) {
+    await this.page.goto(`${config.consoleUrl}/users`)
+    await expect(this.page.getByRole('table')).toBeVisible()
+    await this.page
+      .locator('tr', { hasText: email })
+      .getByRole('button', { name: 'Roles' })
+      .click()
+    await expect(
+      this.page.getByRole('heading', { name: `Roles — ${email}` })
+    ).toBeVisible()
+  }
+)
+
+Then(
+  'the user should hold the role {string}',
+  async function (this: AgentWorld, role: string) {
+    await expect(
+      this.page.getByRole('dialog').getByText(role, { exact: true })
+    ).toBeVisible()
+  }
+)
+
+Then(
+  "the user's resolved scopes should include {string}",
+  async function (this: AgentWorld, scope: string) {
+    await expect(
+      this.page.getByRole('dialog').getByText(scope, { exact: true })
+    ).toBeVisible()
+  }
+)
+
+When(
+  'I add the role {string} to the user',
+  async function (this: AgentWorld, role: string) {
+    await this.page.getByRole('button', { name: 'Add role' }).click()
+    await this.page.getByRole('menuitem', { name: role }).click()
+  }
+)

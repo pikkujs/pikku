@@ -31,6 +31,8 @@
     "test:emails-console": "cucumber-js --config tests/cucumber.mjs --tags @emails-console",
     "test:security-console": "cucumber-js --config tests/cucumber.mjs --tags @security-console",
     "test:impersonation": "cucumber-js --config tests/cucumber.mjs --tags @impersonation",
+    "test:scopes": "cucumber-js --config tests/cucumber.mjs --tags @scopes",
+    "test:scopes-console": "cucumber-js --config tests/cucumber.mjs --tags @scopes-console",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {

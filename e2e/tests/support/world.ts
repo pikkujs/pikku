@@ -50,21 +50,53 @@ export class AgentWorld extends World {
   // than a browser login. Mirrors tests/steps/auth.steps.ts. Cached per scenario.
   private consoleActor?: Actor
 
+  // Sign in as an arbitrary seeded user and return an Actor owning that user's
+  // session cookie jar. Used by the scope-gate suite to exercise the same
+  // endpoint as two callers with different scopes.
+  async signInAs(user: SeedUser): Promise<Actor> {
+    const actor = new Actor('console', {}, config.apiUrl)
+    const authClient = createAuthClient({
+      baseURL: config.apiUrl,
+      fetchOptions: { customFetchImpl: actor.cookieFetch },
+    })
+    const { error } = await authClient.signIn.email({
+      email: user.email,
+      password: user.password,
+    })
+    if (error) {
+      throw new Error(
+        `sign-in failed for ${user.email}: ${JSON.stringify(error)}`
+      )
+    }
+    return actor
+  }
+
+  // POST an RPC carrying an actor's session cookie and return the raw status +
+  // parsed body WITHOUT throwing — the scope gate's whole point is the status
+  // code, so a 403 is an expected outcome to assert on, not an error.
+  async rpcResponse(
+    actor: Actor,
+    name: string,
+    data: unknown = null
+  ): Promise<{ status: number; body: any }> {
+    const res = await actor.cookieFetch(`${config.apiUrl}/rpc/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    })
+    const text = await res.text()
+    let body: any = text
+    try {
+      body = JSON.parse(text)
+    } catch {
+      // non-JSON body — leave as text
+    }
+    return { status: res.status, body }
+  }
+
   private async authenticatedActor(): Promise<Actor> {
     if (!this.consoleActor) {
-      const actor = new Actor('console', {}, config.apiUrl)
-      const authClient = createAuthClient({
-        baseURL: config.apiUrl,
-        fetchOptions: { customFetchImpl: actor.cookieFetch },
-      })
-      const { error } = await authClient.signIn.email({
-        email: ADMIN_USER.email,
-        password: ADMIN_USER.password,
-      })
-      if (error) {
-        throw new Error(`console auth sign-in failed: ${JSON.stringify(error)}`)
-      }
-      this.consoleActor = actor
+      this.consoleActor = await this.signInAs(ADMIN_USER)
     }
     return this.consoleActor
   }
