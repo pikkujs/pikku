@@ -111,6 +111,14 @@ export interface AIAgentToolDef {
   execute: (input: unknown) => Promise<unknown>
   needsApproval?: boolean
   approvalDescriptionFn?: (input: unknown) => Promise<string>
+  /**
+   * Set only by the framework on sub-agent delegating tools. Such a tool may
+   * legitimately return an `__approvalRequired` marker to forward a nested
+   * sub-agent approval. The marker is honored ONLY from a tool with this flag —
+   * a plain tool's output (which an attacker may influence) can never forge an
+   * approval request. See `checkForApprovals`.
+   */
+  forwardsApproval?: boolean
 }
 
 export interface PikkuAIMiddlewareHooks<
