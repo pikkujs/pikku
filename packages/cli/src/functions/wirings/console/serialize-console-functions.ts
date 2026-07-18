@@ -102,7 +102,12 @@ export const consoleRoutes = defineHTTPRoutes({
   },
 })
 
-wireAddon({ name: 'console', package: '@pikku/addon-console' })
+// Every console-addon function carries the 'console:admin' tag so an app can
+// gate the whole privileged surface (credential read/write, source editing,
+// package install) with a single addTagPermission('console:admin', [...],
+// '@pikku/addon-console'). Backwards-compatible: a tag with no registered
+// checker resolves to allow, so apps that don't opt in are unaffected.
+wireAddon({ name: 'console', package: '@pikku/addon-console', tags: ['console:admin'] })
 wireHTTPRoutes({ basePath: '${globalHTTPPrefix}', routes: { console: consoleRoutes } })
 `
 }
