@@ -241,6 +241,21 @@ describe('pikkuWebhookWorkerFunc', () => {
     )
   })
 
+  test('refuses to deliver to a private/internal host without fetching it (SSRF)', async (t) => {
+    t.after(restoreFetch)
+    const requests = stubFetch(() => ({ status: 200 }))
+
+    await assert.rejects(
+      pikkuWebhookWorkerFunc({} as any, {
+        url: 'http://169.254.169.254/latest/meta-data/',
+        body: '{}',
+        headers: {},
+      }),
+      /private\/internal host/
+    )
+    assert.equal(requests.length, 0, 'must never issue the request')
+  })
+
   test('records a delivered attempt via the store when a deliveryId is present', async (t) => {
     t.after(restoreFetch)
     stubFetch(() => ({ status: 200 }))

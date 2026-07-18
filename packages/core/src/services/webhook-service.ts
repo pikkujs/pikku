@@ -49,6 +49,13 @@ export interface WebhookServiceConfig {
    * {@link DEFAULT_WEBHOOK_SIGNATURE_HEADER}.
    */
   signatureHeader?: string
+  /**
+   * SSRF allowlist of hostnames outgoing webhooks may be delivered to. When set,
+   * a delivery target must be on this list. When omitted, obvious private and
+   * internal hosts (loopback, private ranges, cloud metadata) are blocked and
+   * all other public hosts are permitted.
+   */
+  allowedHosts?: string[]
 }
 
 export interface WebhookJobData {

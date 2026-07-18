@@ -69,17 +69,17 @@ describe('combineChannelMiddleware', () => {
     void execution
   })
 
-  test('deduplicates middleware and returns cached results until the cache is cleared', () => {
+  test('caches the statically-resolved inherited middleware until the cache is cleared', () => {
     const shared = async () => {}
     addChannelMiddleware('chat:outbound', [shared])
 
     const first = combineChannelMiddleware('channel', 'cached-1', {
       wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
-      wireChannelMiddleware: [shared],
     })
 
     assert.deepEqual(first, [shared])
 
+    // Re-registering after the first resolve does not change the cached result.
     addChannelMiddleware('chat:outbound', [async () => {}])
 
     const cached = combineChannelMiddleware('channel', 'cached-1', {
@@ -95,6 +95,35 @@ describe('combineChannelMiddleware', () => {
     assert.notStrictEqual(refreshed, first)
     assert.equal(refreshed.length, 1)
     assert.notStrictEqual(refreshed[0], shared)
+  })
+
+  test('does not cache per-run wireChannelMiddleware across calls (C4 cross-run leak)', () => {
+    const shared = async () => {}
+    addChannelMiddleware('chat:outbound', [shared])
+
+    // Run A of an agent stream, with its own per-invocation middleware closure.
+    const runA = async () => {}
+    const first = combineChannelMiddleware('agent', 'stream:bot', {
+      wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
+      wireChannelMiddleware: [runA],
+    })
+    assert.deepEqual(first, [shared, runA])
+
+    // Run B of the SAME agent must get ITS closure, never run A's.
+    const runB = async () => {}
+    const second = combineChannelMiddleware('agent', 'stream:bot', {
+      wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
+      wireChannelMiddleware: [runB],
+    })
+    assert.deepEqual(second, [shared, runB])
+    assert.strictEqual(second[1], runB)
+    assert.notStrictEqual(second[1], runA)
+
+    // A run with no per-run middleware still gets the cached inherited set.
+    const third = combineChannelMiddleware('agent', 'stream:bot', {
+      wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
+    })
+    assert.deepEqual(third, [shared])
   })
 
   test('ignores missing named middleware references', () => {

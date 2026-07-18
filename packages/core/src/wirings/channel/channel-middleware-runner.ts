@@ -49,41 +49,47 @@ export const combineChannelMiddleware = (
     packageName?: string | null
   } = {}
 ): readonly CorePikkuChannelMiddleware[] => {
+  // Only the statically-resolved inherited middleware (tag groups + named wire
+  // middleware) is deterministic per `uid` and safe to cache. `wireChannelMiddleware`
+  // is a per-run set of closures (e.g. an AI agent's per-invocation stream
+  // middleware holding that run's thread/session state) and MUST NOT be cached —
+  // caching it lets a later run of the same `uid` reuse an earlier run's closures,
+  // leaking that run's state (and growing memory) across invocations.
   const cacheKey = `${wireType}:${uid}`
-  if (channelMiddlewareCache[cacheKey]) {
-    return channelMiddlewareCache[cacheKey]
-  }
-
-  const resolved: CorePikkuChannelMiddleware[] = []
-
-  if (wireInheritedChannelMiddleware) {
-    for (const meta of wireInheritedChannelMiddleware) {
-      if (meta.type === 'tag') {
-        const groups = getTagGroups(
-          pikkuState(packageName, 'channelMiddleware', 'tagGroup'),
-          meta.tag
-        )
-        for (const group of groups) {
-          resolved.push(...group)
-        }
-      } else if (meta.type === 'wire') {
-        const middleware = getChannelMiddlewareByName(meta.name)
-        if (middleware) {
-          resolved.push(middleware)
+  let inherited = channelMiddlewareCache[cacheKey]
+  if (!inherited) {
+    const resolved: CorePikkuChannelMiddleware[] = []
+    if (wireInheritedChannelMiddleware) {
+      for (const meta of wireInheritedChannelMiddleware) {
+        if (meta.type === 'tag') {
+          const groups = getTagGroups(
+            pikkuState(packageName, 'channelMiddleware', 'tagGroup'),
+            meta.tag
+          )
+          for (const group of groups) {
+            resolved.push(...group)
+          }
+        } else if (meta.type === 'wire') {
+          const middleware = getChannelMiddlewareByName(meta.name)
+          if (middleware) {
+            resolved.push(middleware)
+          }
         }
       }
     }
+    inherited = channelMiddlewareCache[cacheKey] = freezeDedupe(
+      resolved
+    ) as readonly CorePikkuChannelMiddleware[]
   }
 
-  if (wireChannelMiddleware) {
-    resolved.push(...wireChannelMiddleware)
+  if (!wireChannelMiddleware?.length) {
+    return inherited
   }
 
-  channelMiddlewareCache[cacheKey] = freezeDedupe(
-    resolved
-  ) as readonly CorePikkuChannelMiddleware[]
-
-  return channelMiddlewareCache[cacheKey]
+  return freezeDedupe([
+    ...inherited,
+    ...wireChannelMiddleware,
+  ]) as readonly CorePikkuChannelMiddleware[]
 }
 
 export function wrapChannelWithMiddleware<Out>(

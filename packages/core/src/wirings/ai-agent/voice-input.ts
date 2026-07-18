@@ -1,5 +1,6 @@
 import type { AIAgentRunnerService } from '../../services/ai-agent-runner-service.js'
 import { pikkuAIMiddleware } from '../../types/core.types.js'
+import { safeFetch } from '../../utils/safe-fetch.js'
 import type { AIContentPart } from './ai-agent.types.js'
 
 function base64ToUint8Array(base64: string): Uint8Array {
@@ -13,45 +14,15 @@ function base64ToUint8Array(base64: string): Uint8Array {
 
 const MAX_AUDIO_SIZE = 50 * 1024 * 1024
 
-// Portable SSRF guard: @pikku/core runs in edge runtimes (CF Workers) with no
-// Node `dns`, so we cannot resolve hostnames to check for private targets.
-// Reject the obvious internal literals; callers wanting stricter control pass
-// an explicit `allowedAudioHosts` allowlist. (Does not defend against a public
-// hostname that resolves to a private IP / DNS rebinding — out of reach here.)
-function isPrivateHost(hostname: string): boolean {
-  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
-  if (host === 'localhost' || host === '0.0.0.0' || host === '::1') return true
-  if (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd'))
-    return true
-  const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/)
-  if (v4) {
-    const [a, b] = [Number(v4[1]), Number(v4[2])]
-    if (a === 127 || a === 10 || a === 0) return true
-    if (a === 169 && b === 254) return true // link-local incl. cloud metadata
-    if (a === 172 && b >= 16 && b <= 31) return true
-    if (a === 192 && b === 168) return true
-  }
-  return false
-}
-
 async function fetchAsUint8Array(
   url: string,
   allowedAudioHosts?: string[]
 ): Promise<Uint8Array> {
-  const parsed = new URL(url)
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error('Only HTTP(S) URLs are supported for audio')
-  }
-  if (allowedAudioHosts) {
-    if (!allowedAudioHosts.includes(parsed.hostname)) {
-      throw new Error(`Audio URL host is not allowed: ${parsed.hostname}`)
-    }
-  } else if (isPrivateHost(parsed.hostname)) {
-    throw new Error(
-      `Refusing to fetch audio from a private/internal host: ${parsed.hostname}`
-    )
-  }
-  const response = await fetch(url)
+  const response = await safeFetch(
+    url,
+    {},
+    { allowedHosts: allowedAudioHosts }
+  )
   const contentLength = response.headers.get('content-length')
   if (contentLength && parseInt(contentLength, 10) > MAX_AUDIO_SIZE) {
     throw new Error('Audio file exceeds maximum size')
