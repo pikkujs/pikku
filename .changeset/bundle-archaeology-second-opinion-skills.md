@@ -2,10 +2,4 @@
 '@pikku/cli': patch
 ---
 
-Bundle two new skills: `pikku-software-archaeology` and `pikku-product-second-opinion`.
-
-`pikku-software-archaeology` reverse-engineers an existing repository into a Product Blueprint — a `.knowledge/` directory of schema-validated JSON plus a human-readable `blueprint.md`, recovering domains, entities, commands, queries, events, policies, workflows and invariants so an organically-grown app can be rebuilt cleanly (e.g. as a Pikku app). It is language-agnostic — the model reads the code rather than relying on per-language AST tooling — and ships `scripts/validate.mjs` (node, no deps) to enforce the output contract, plus `references/pikku-mapping.md` covering how a blueprint maps onto Pikku primitives.
-
-`pikku-product-second-opinion` consumes that `.knowledge/` blueprint and produces a plain-language report for a non-technical owner: how the app they hold actually works, what's solid, what's holding them back (with business impact and effort), and an opinionated argument for a better design.
-
-Both are tagged `installGroups: [fabric]`, so `pikku skills install --fabric` picks them up alongside the existing Fabric set while `--core` leaves them out.
+Bundle two new `fabric`-group skills: `pikku-software-archaeology` (reverse-engineers a repo into a `.knowledge/` Product Blueprint) and `pikku-product-second-opinion` (turns that blueprint into a plain-language owner's report).
