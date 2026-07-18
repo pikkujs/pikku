@@ -235,6 +235,31 @@ export async function loadAddonFunctionsMeta(
       } catch {
         // No variables meta — that's fine
       }
+
+      // Load addon credentials meta. Without this an addon's OAuth2/wire
+      // credentials never reach the consuming app's CREDENTIAL_OAUTH2_CONFIGS,
+      // so the credential-oauth provider and BetterAuthCredentialService can't
+      // resolve them — the addon's Connect flow and status silently no-op.
+      try {
+        const credentialsMetaPath = require.resolve(
+          `${decl.package}/.pikku/credentials/pikku-credentials-meta.gen.json`
+        )
+        const credentialsRaw = await readFile(credentialsMetaPath, 'utf-8')
+        const credentialsMeta = JSON.parse(credentialsRaw)
+        for (const [key, def] of Object.entries<any>(credentialsMeta)) {
+          const existing = state.credentials.definitions.find(
+            (d: any) => d.name === key
+          )
+          if (!existing) {
+            state.credentials.definitions.push(def)
+            logger.debug(
+              `Loaded addon credential '${key}' from ${decl.package}`
+            )
+          }
+        }
+      } catch {
+        // No credentials meta — that's fine
+      }
       // Load addon serverlessIncompatible service names from pikku-addon-meta.gen.json
       let loadedParentServices = false
       try {

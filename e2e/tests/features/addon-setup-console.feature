@@ -20,7 +20,8 @@ Feature: An addon's setup surface shows what it needs
     When I set the secret "Fake CRM API Key" to "sk-fake-123"
     Then the secret "Fake CRM API Key" should be "Set"
     # Clicking Connect runs the full OAuth round-trip (out to the mock provider
-    # and back to this page). Whether a singleton link then reads back as
-    # "Connected" is a separate better-auth concern tracked outside this feature.
+    # and back to this page). The addon's singleton credential is now registered
+    # in the app's oauth2 config, so the platform-owned link reads back as
+    # connected once the callback stores the token.
     When I connect the OAuth integration "Fake CRM"
-    Then the setup should still list the OAuth integration "Fake CRM"
+    Then the OAuth integration "Fake CRM" should be "Connected"

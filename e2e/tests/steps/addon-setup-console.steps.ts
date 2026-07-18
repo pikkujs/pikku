@@ -79,16 +79,13 @@ When(
     const card = requirementCard(this, name)
     // Clicking Connect redirects the whole page to the mock OAuth provider,
     // which auto-approves and lands back on this Setup page via the callback.
-    await Promise.all([
-      this.page.waitForURL(/\/addons/, { timeout: 30_000 }),
-      card.getByRole('button', { name: 'Connect' }).click(),
-    ])
-  }
-)
-
-Then(
-  'the setup should still list the OAuth integration {string}',
-  async function (this: AgentWorld, name: string) {
-    await expect(requirementCard(this, name)).toBeVisible({ timeout: 15_000 })
+    // The callback URL is this same page, so a `waitForURL(/\/addons/)` would
+    // match immediately without proving anything — instead wait on the end
+    // state: the card only reads "Connected" once the callback has stored the
+    // platform-owned token and the status query re-runs.
+    await card.getByRole('button', { name: 'Connect' }).click()
+    await expect(
+      requirementCard(this, name).getByText('Connected', { exact: true })
+    ).toBeVisible({ timeout: 30_000 })
   }
 )
