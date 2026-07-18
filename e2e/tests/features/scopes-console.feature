@@ -40,7 +40,7 @@ Feature: Managing scopes and roles in the console
   # revoked again so the admin is left in its seeded state.
   Scenario: Granting and revoking a scope directly on a user
     When I open the roles drawer for "admin@e2e.test"
-    And I grant the scope "reports:read" directly to the user
-    Then the user should hold the direct scope "reports:read"
-    When I revoke the direct scope "reports:read" from the user
-    Then the user should not hold the direct scope "reports:read"
+    And I grant the scope "Read reports" directly to the user
+    Then the user should hold the direct scope "Read reports"
+    When I revoke the direct scope "Read reports" from the user
+    Then the user should not hold the direct scope "Read reports"

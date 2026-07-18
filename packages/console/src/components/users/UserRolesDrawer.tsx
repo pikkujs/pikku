@@ -23,6 +23,7 @@ import {
   useAddScopeToUser,
   useRemoveScopeFromUser,
 } from '../../hooks/useScopes'
+import { ScopeTreeSelector } from '../scopes/ScopeTreeSelector'
 import { m } from '@/i18n/messages'
 
 type UserRolesDrawerProps = {
@@ -54,18 +55,25 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
   const held = userRolesQuery.data?.roles ?? []
   const scopes = userRolesQuery.data?.scopes ?? []
   const directScopes = userRolesQuery.data?.directScopes ?? []
+  const declaredScopes = declaredQuery.data?.scopes ?? []
   const available = (allRolesQuery.data?.roles ?? [])
     .map((r) => r.name)
     .filter((name) => !held.includes(name))
-  const availableScopes = (declaredQuery.data?.scopes ?? [])
-    .map((s) => s.id)
-    .filter((id) => !directScopes.includes(id))
 
   const busy =
     addRole.isPending ||
     removeRole.isPending ||
     addScope.isPending ||
     removeScope.isPending
+
+  const toggleDirectScope = (scope: string) => {
+    if (!userId) return
+    if (directScopes.includes(scope)) {
+      removeScope.mutate({ userId, scope })
+    } else {
+      addScope.mutate({ userId, scope })
+    }
+  }
 
   return (
     <Drawer
@@ -144,65 +152,14 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
           <Text size="xs" c="dimmed">
             {m.scopes_direct_scopes_hint()}
           </Text>
-          {directScopes.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              {m.scopes_no_direct_scopes()}
-            </Text>
-          ) : (
-            <Group gap={8}>
-              {directScopes.map((scope) => (
-                <Badge
-                  key={scope}
-                  variant="light"
-                  color="grape"
-                  size="lg"
-                  styles={{ label: { fontFamily: 'monospace' } }}
-                  rightSection={
-                    <CloseButton
-                      size="xs"
-                      aria-label={m.scopes_revoke_scope({ scope })}
-                      disabled={!userId || busy}
-                      onClick={() => {
-                        if (userId) {
-                          removeScope.mutate({ userId, scope })
-                        }
-                      }}
-                    />
-                  }
-                >
-                  {asI18n(scope)}
-                </Badge>
-              ))}
-            </Group>
-          )}
-
-          <Menu position="bottom-start" disabled={availableScopes.length === 0}>
-            <Menu.Target>
-              <Button
-                variant="light"
-                size="sm"
-                leftSection={<Plus size={14} />}
-                disabled={availableScopes.length === 0 || busy}
-                w="fit-content"
-              >
-                {m.scopes_add_scope()}
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {availableScopes.map((scope) => (
-                <Menu.Item
-                  key={scope}
-                  onClick={() => {
-                    if (userId) {
-                      addScope.mutate({ userId, scope })
-                    }
-                  }}
-                >
-                  {asI18n(scope)}
-                </Menu.Item>
-              ))}
-            </Menu.Dropdown>
-          </Menu>
+          <Box mah={360} style={{ overflowY: 'auto' }}>
+            <ScopeTreeSelector
+              scopes={declaredScopes}
+              selected={directScopes}
+              onToggle={toggleDirectScope}
+              disabled={!userId || busy}
+            />
+          </Box>
 
           <Divider label={m.scopes_resolved_scopes()} labelPosition="left" />
           {scopes.length === 0 ? (

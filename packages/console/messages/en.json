@@ -662,9 +662,6 @@
   "scopes_revoke_role": "Remove {role}",
   "scopes_direct_scopes": "Direct scopes",
   "scopes_direct_scopes_hint": "Granted to this user directly, outside of any role.",
-  "scopes_no_direct_scopes": "No scopes granted directly.",
-  "scopes_add_scope": "Add scope",
-  "scopes_revoke_scope": "Remove {scope}",
   "scopes_resolved_scopes": "Resolved scopes",
   "scopes_no_resolved": "No scopes — these roles grant nothing yet.",
   "scopes_user_roles_load_error": "Couldn't load this user's roles."

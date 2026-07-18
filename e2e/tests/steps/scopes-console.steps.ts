@@ -136,8 +136,10 @@ Then(
 When(
   'I grant the scope {string} directly to the user',
   async function (this: AgentWorld, scope: string) {
-    await this.page.getByRole('button', { name: 'Add scope' }).click()
-    await this.page.getByRole('menuitem', { name: scope, exact: true }).click()
+    await this.page
+      .getByRole('dialog')
+      .getByRole('checkbox', { name: new RegExp(scope) })
+      .click()
   }
 )
 
@@ -145,10 +147,10 @@ Then(
   'the user should hold the direct scope {string}',
   async function (this: AgentWorld, scope: string) {
     await expect(
-      this.page.getByRole('dialog').getByRole('button', {
-        name: `Remove ${scope}`,
-      })
-    ).toBeVisible()
+      this.page
+        .getByRole('dialog')
+        .getByRole('checkbox', { name: new RegExp(scope) })
+    ).toBeChecked()
   }
 )
 
@@ -157,7 +159,7 @@ When(
   async function (this: AgentWorld, scope: string) {
     await this.page
       .getByRole('dialog')
-      .getByRole('button', { name: `Remove ${scope}` })
+      .getByRole('checkbox', { name: new RegExp(scope) })
       .click()
   }
 )
@@ -166,10 +168,10 @@ Then(
   'the user should not hold the direct scope {string}',
   async function (this: AgentWorld, scope: string) {
     await expect(
-      this.page.getByRole('dialog').getByRole('button', {
-        name: `Remove ${scope}`,
-      })
-    ).toBeHidden()
+      this.page
+        .getByRole('dialog')
+        .getByRole('checkbox', { name: new RegExp(scope) })
+    ).not.toBeChecked()
   }
 )
 

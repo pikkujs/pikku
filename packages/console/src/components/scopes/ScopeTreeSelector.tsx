@@ -7,6 +7,7 @@ type ScopeTreeSelectorProps = {
   scopes: DeclaredScope[]
   selected: string[]
   onToggle: (id: string) => void
+  disabled?: boolean
 }
 
 /**
@@ -19,6 +20,7 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
   scopes,
   selected,
   onToggle,
+  disabled = false,
 }) => {
   const rows = toScopeTreeRows(scopes)
   const held = new Set(selected)
@@ -38,7 +40,7 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
           <Checkbox
             checked={held.has(row.id)}
             onChange={() => onToggle(row.id)}
-            disabled={!row.declared}
+            disabled={disabled || !row.declared}
             label={
               <Group gap={8} wrap="nowrap">
                 <Text size="sm" fw={row.hasChildren ? 600 : 400}>
