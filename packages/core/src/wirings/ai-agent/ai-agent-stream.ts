@@ -330,6 +330,14 @@ export function checkForApprovals(
       continue
     }
 
+    // The `__approvalRequired` marker is only trusted from a framework tool
+    // declared with `forwardsApproval` (the sub-agent delegating tools). A
+    // plain tool's output — which an attacker-influenced tool response may
+    // contain — can never forge an approval/suspension.
+    if (!toolDef?.forwardsApproval) {
+      continue
+    }
+
     const tr = stepResult.toolResults.find(
       (r) => r.toolCallId === tc.toolCallId
     )

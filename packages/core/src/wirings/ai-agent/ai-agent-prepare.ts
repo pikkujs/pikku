@@ -474,6 +474,7 @@ export async function buildToolDefs(
       tools.push({
         name: subAgentName,
         description: subMeta.description,
+        forwardsApproval: true,
         inputSchema: {
           type: 'object',
           properties: {
