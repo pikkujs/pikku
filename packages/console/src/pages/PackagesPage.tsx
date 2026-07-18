@@ -42,6 +42,35 @@ export interface PackageMeta {
   totalOperations?: number
 }
 
+// A locally-wired addon as reported by console:getInstalledAddons. It may not
+// exist in the remote catalogue at all (e.g. a private or first-party addon
+// that was never published to the gallery).
+interface InstalledAddonRow {
+  namespace: string
+  packageName: string
+  functionCount: number
+  agentCount: number
+  icon?: string
+  tags?: string[]
+}
+
+// Synthesise a gallery card for an installed addon that has no catalogue entry,
+// so the Installed view can still list it (name/version/description come from
+// the catalogue when available, otherwise we show what getInstalledAddons knows).
+const installedToPackageMeta = (a: InstalledAddonRow): PackageMeta => ({
+  id: a.packageName,
+  name: a.packageName,
+  displayName: a.namespace || a.packageName,
+  description: '',
+  version: '',
+  author: '',
+  icon: a.icon,
+  tags: a.tags ?? [],
+  categories: [],
+  functions: {},
+  agents: {},
+})
+
 const deriveNamespace = (packageName: string) => {
   const base = packageName
     .replace('@pikku/addon-', '')
@@ -75,11 +104,11 @@ const AddonsList: React.FC<{
     retry: false,
   })
 
-  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+  const { data: installedAddons } = useQuery<InstalledAddonRow[]>({
     queryKey: ['installed-addons'],
     queryFn: async () => {
       const result = await rpc.invoke('console:getInstalledAddons')
-      return (result ?? []) as Array<{ packageName: string }>
+      return (result ?? []) as InstalledAddonRow[]
     },
     staleTime: 60 * 1000,
   })
@@ -102,16 +131,23 @@ const AddonsList: React.FC<{
     [installedAddons]
   )
 
-  // All | Official | Installed narrows the same catalogue in place: 'installed'
-  // = what the project has wired, 'official' = first-party Pikku packages,
-  // 'all' = the full gallery.
+  // All | Official | Installed narrows the same catalogue in place: 'official' =
+  // first-party Pikku packages, 'all' = the full gallery. 'installed' is a
+  // left-join on what the project has actually wired, NOT an intersection with
+  // the catalogue — a local or unpublished addon (e.g. a private first-party
+  // one) is installed but absent from `data`, so intersecting would hide it.
+  // Use the catalogue entry when present, synthesise a minimal card otherwise.
   const visible = useMemo(() => {
     const list = data ?? []
-    if (filter === 'installed')
-      return list.filter((a) => installedNames.has(a.name))
+    if (filter === 'installed') {
+      const catalogByName = new Map(list.map((a) => [a.name, a]))
+      return (installedAddons ?? []).map(
+        (a) => catalogByName.get(a.packageName) ?? installedToPackageMeta(a)
+      )
+    }
     if (filter === 'official') return list.filter((a) => isOfficialAddon(a.name))
     return list
-  }, [data, filter, installedNames])
+  }, [data, filter, installedAddons])
 
   if (isLoading) {
     return (
@@ -214,11 +250,11 @@ const ApisList: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
     retry: false,
   })
 
-  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+  const { data: installedAddons } = useQuery<InstalledAddonRow[]>({
     queryKey: ['installed-addons'],
     queryFn: async () => {
       const result = await rpc.invoke('console:getInstalledAddons')
-      return (result ?? []) as Array<{ packageName: string }>
+      return (result ?? []) as InstalledAddonRow[]
     },
     staleTime: 60 * 1000,
   })
