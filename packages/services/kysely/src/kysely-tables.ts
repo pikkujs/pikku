@@ -224,11 +224,20 @@ export interface PikkuUserRoleTable {
   grantedAt: Generated<Date>
 }
 
+/** A scope granted directly to a user, outside of any role. */
+export interface PikkuUserScopeTable {
+  userId: string
+  scope: string
+  grantedBy: string | null
+  grantedAt: Generated<Date>
+}
+
 export interface KyselyPikkuDB {
   pikkuScopes: PikkuScopesTable
   pikkuRoles: PikkuRolesTable
   pikkuRoleScopes: PikkuRoleScopesTable
   pikkuUserRole: PikkuUserRoleTable
+  pikkuUserScope: PikkuUserScopeTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable

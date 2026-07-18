@@ -39,7 +39,7 @@ export function useUserRoles(userId: string | undefined, enabled: boolean) {
     queryFn: async () =>
       (await rpc.invoke('console:scopeListUserRoles', {
         userId: userId!,
-      })) as { roles: string[]; scopes: string[] },
+      })) as { roles: string[]; scopes: string[]; directScopes: string[] },
     enabled: !!userId && enabled,
   })
 }
@@ -96,6 +96,32 @@ export function useRemoveUserFromRole() {
   return useMutation({
     mutationFn: (input: { userId: string; role: string }) =>
       rpc.invoke('console:scopeRemoveUserFromRole', input),
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({
+        queryKey: userRolesKey(variables.userId),
+      }),
+  })
+}
+
+export function useAddScopeToUser() {
+  const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { userId: string; scope: string }) =>
+      rpc.invoke('console:scopeAddScopeToUser', input),
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({
+        queryKey: userRolesKey(variables.userId),
+      }),
+  })
+}
+
+export function useRemoveScopeFromUser() {
+  const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { userId: string; scope: string }) =>
+      rpc.invoke('console:scopeRemoveScopeFromUser', input),
     onSuccess: (_data, variables) =>
       queryClient.invalidateQueries({
         queryKey: userRolesKey(variables.userId),

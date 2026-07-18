@@ -254,6 +254,99 @@ describe('KyselyScopeService — user grants', () => {
   })
 })
 
+describe('KyselyScopeService — direct user scopes', () => {
+  beforeEach(async () => {
+    await service.createRole({ name: 'billing', scopes: ['billing:read'] })
+    await addUser('u1')
+  })
+
+  test('resolves a scope granted directly to a user', async () => {
+    await service.addScopeToUser('u1', 'billing:read')
+    assert.deepEqual(await service.resolveScopes('u1'), ['billing:read'])
+  })
+
+  test('unions direct grants with role-derived scopes', async () => {
+    await service.addUserToRole('u1', 'billing')
+    await service.addScopeToUser('u1', 'admin:invoices:create')
+
+    assert.deepEqual((await service.resolveScopes('u1')).sort(), [
+      'admin:invoices:create',
+      'billing:read',
+    ])
+  })
+
+  test('deduplicates a scope held both directly and via a role', async () => {
+    await service.addUserToRole('u1', 'billing')
+    await service.addScopeToUser('u1', 'billing:read')
+
+    assert.deepEqual(await service.resolveScopes('u1'), ['billing:read'])
+  })
+
+  test('lists only the directly granted scopes, not role-derived ones', async () => {
+    await service.addUserToRole('u1', 'billing')
+    await service.addScopeToUser('u1', 'admin:invoices:create')
+
+    assert.deepEqual(await service.listUserScopes('u1'), [
+      'admin:invoices:create',
+    ])
+  })
+
+  test('removing a direct grant leaves a role-derived scope intact', async () => {
+    await service.addUserToRole('u1', 'billing')
+    await service.addScopeToUser('u1', 'admin:invoices:create')
+    await service.removeScopeFromUser('u1', 'admin:invoices:create')
+
+    assert.deepEqual(await service.resolveScopes('u1'), ['billing:read'])
+  })
+
+  test('granting the same scope twice is idempotent', async () => {
+    await service.addScopeToUser('u1', 'billing:read')
+    await service.addScopeToUser('u1', 'billing:read')
+
+    assert.deepEqual(await service.listUserScopes('u1'), ['billing:read'])
+  })
+
+  // Same FK guarantee as roles: the database refuses a direct grant of a scope
+  // that was never declared, so the console cannot write one.
+  test('refuses to grant an undeclared scope directly', async () => {
+    await assert.rejects(
+      () => service.addScopeToUser('u1', 'nope:nothere'),
+      'the FK to pikku_scopes must reject an undeclared direct grant'
+    )
+  })
+
+  test('records who granted the scope', async () => {
+    await service.addScopeToUser('u1', 'billing:read', 'admin-user')
+
+    const row = await db
+      .selectFrom('pikkuUserScope')
+      .select('grantedBy')
+      .where('userId', '=', 'u1')
+      .executeTakeFirst()
+    assert.equal(row!.grantedBy, 'admin-user')
+  })
+
+  test('deleting a user cascades their direct scope grants away', async () => {
+    await service.addScopeToUser('u1', 'billing:read')
+
+    await (db as Kysely<any>)
+      .deleteFrom('user')
+      .where('id', '=', 'u1')
+      .execute()
+
+    const rows = await db.selectFrom('pikkuUserScope').selectAll().execute()
+    assert.equal(rows.length, 0, 'better-auth owns users; grants must follow')
+  })
+
+  test('pruning an undeclared scope cascades a direct grant away', async () => {
+    await service.addScopeToUser('u1', 'billing:read')
+    await service.syncScopes([{ id: 'admin' }])
+    await service.pruneScopes()
+
+    assert.deepEqual(await service.resolveScopes('u1'), [])
+  })
+})
+
 describe('KyselyScopeService — audit and prune', () => {
   beforeEach(async () => {
     await service.createRole({ name: 'billing', scopes: ['billing:read'] })

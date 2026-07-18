@@ -28,3 +28,14 @@ Feature: Managing scopes and roles in the console
     And the user's resolved scopes should include "reports:read"
     When I add the role "console-admin" to the user
     Then the user's resolved scopes should include "pikku:scopes:manage"
+    When I remove the role "console-admin" from the user
+    Then the user should not hold the role "console-admin"
+
+  # A scope can be granted to a user directly, outside of any role. The grant is
+  # revoked again so the admin is left in its seeded state.
+  Scenario: Granting and revoking a scope directly on a user
+    When I open the roles drawer for "admin@e2e.test"
+    And I grant the scope "reports:read" directly to the user
+    Then the user should hold the direct scope "reports:read"
+    When I revoke the direct scope "reports:read" from the user
+    Then the user should not hold the direct scope "reports:read"

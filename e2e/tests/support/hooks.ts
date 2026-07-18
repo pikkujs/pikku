@@ -7,6 +7,7 @@ import {
   type ITestCaseHookParameter,
 } from '@cucumber/cucumber'
 import type { AgentWorld } from './world.js'
+import { STAFF_USER } from '../../src/auth-fixtures.js'
 import { randomUUID } from 'crypto'
 import { spawn, type ChildProcess } from 'child_process'
 import { resolve, dirname } from 'path'
@@ -115,3 +116,12 @@ After(
     await this.closeBrowser()
   }
 )
+
+Before('@console-staff', async function (this: AgentWorld) {
+  await this.openBrowser()
+  await this.login(STAFF_USER)
+})
+
+After('@console-staff', async function (this: AgentWorld) {
+  await this.closeBrowser()
+})

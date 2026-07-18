@@ -3,6 +3,7 @@ import { asI18n } from '@pikku/react'
 import { Shield } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { toScopeTreeRows } from './scope-tree'
+import { isForbiddenScopeError } from './scope-error'
 import { useDeclaredScopes } from '../../hooks/useScopes'
 import { m } from '@/i18n/messages'
 
@@ -18,9 +19,17 @@ export const ScopesVocabularyTab: React.FC = () => {
   const rows = toScopeTreeRows(declaredQuery.data?.scopes ?? [])
 
   if (declaredQuery.isError) {
+    const error = declaredQuery.error
+    if (isForbiddenScopeError(error)) {
+      return (
+        <Alert color="yellow" title={m.scopes_vocab_forbidden_title()}>
+          {m.scopes_vocab_forbidden_body()}
+        </Alert>
+      )
+    }
     return (
       <Alert color="red" title={m.scopes_vocab_load_error()}>
-        {asI18n((declaredQuery.error as Error).message)}
+        {error instanceof Error ? asI18n(error.message) : null}
       </Alert>
     )
   }

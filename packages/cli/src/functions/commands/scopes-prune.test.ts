@@ -73,6 +73,13 @@ beforeEach(async () => {
   // Seed the database as a previous deploy left it: `billing:read` was declared
   // then, is granted to a role, and is no longer declared now.
   const db = await openDb()
+  // Better Auth owns and creates the `user` table before the scope service ever
+  // runs; pruning a scope cascades into direct user grants, which FK into it.
+  await (db as Kysely<any>).schema
+    .createTable('user')
+    .ifNotExists()
+    .addColumn('id', 'text', (col) => col.primaryKey())
+    .execute()
   const service = new KyselyScopeService(db)
   await service.init()
   await service.syncScopes([

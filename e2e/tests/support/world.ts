@@ -119,6 +119,43 @@ export class AgentWorld extends World {
     return res.json()
   }
 
+  // Resolve a seeded user's Better Auth id by email, via the admin list-users
+  // endpoint. Cached per scenario. Better Auth owns the user table, so ids are
+  // only knowable at runtime.
+  private userIds = new Map<string, string>()
+  async userIdByEmail(email: string): Promise<string> {
+    const cached = this.userIds.get(email)
+    if (cached) {
+      return cached
+    }
+    const actor = await this.authenticatedActor()
+    const res = await actor.cookieFetch(
+      `${config.apiUrl}/api/auth/admin/list-users?limit=100`,
+      { method: 'GET' }
+    )
+    const data = await res.json()
+    const users = Array.isArray(data) ? data : data.users
+    for (const user of users) {
+      this.userIds.set(user.email, user.id)
+    }
+    const id = this.userIds.get(email)
+    if (!id) {
+      throw new Error(`no seeded user with email ${email}`)
+    }
+    return id
+  }
+
+  // Grant / revoke a scope directly to a user (outside of any role), as the
+  // admin who holds pikku:scopes:manage.
+  async grantScopeDirectly(email: string, scope: string): Promise<void> {
+    const userId = await this.userIdByEmail(email)
+    await this.consoleRpc('console:scopeAddScopeToUser', { userId, scope })
+  }
+  async revokeScopeDirectly(email: string, scope: string): Promise<void> {
+    const userId = await this.userIdByEmail(email)
+    await this.consoleRpc('console:scopeRemoveScopeFromUser', { userId, scope })
+  }
+
   // Sign in through the LoginScreen UI so the AuthGate lets the console render.
   async login(user: SeedUser = ADMIN_USER) {
     await this.page.goto(config.consoleUrl)

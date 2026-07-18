@@ -27,7 +27,10 @@ export interface ScopeService {
    */
   syncScopes(scopes: FlatScope[]): Promise<void>
 
-  /** Every scope a user holds, unioned across their roles. */
+  /**
+   * Every scope a user holds: the union of their role-derived scopes and any
+   * scopes granted to them directly.
+   */
   resolveScopes(userId: string): Promise<string[]>
 
   /**
@@ -47,6 +50,19 @@ export interface ScopeService {
   addUserToRole(userId: string, role: string, grantedBy?: string): Promise<void>
   removeUserFromRole(userId: string, role: string): Promise<void>
   listUserRoles(userId: string): Promise<string[]>
+
+  /**
+   * Grants a scope directly to a user, outside of any role. Additive: the
+   * resolved set is the union of role-derived and directly-granted scopes.
+   */
+  addScopeToUser(
+    userId: string,
+    scope: string,
+    grantedBy?: string
+  ): Promise<void>
+  removeScopeFromUser(userId: string, scope: string): Promise<void>
+  /** Only the scopes granted directly, not those inherited from roles. */
+  listUserScopes(userId: string): Promise<string[]>
 
   /**
    * Scopes present in the store that are no longer declared in code, with the

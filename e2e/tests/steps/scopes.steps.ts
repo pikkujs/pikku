@@ -37,3 +37,17 @@ Then(
     expect(JSON.stringify(this.lastScopeResponse?.body)).toContain(expected)
   }
 )
+
+When(
+  'the scope {string} is granted directly to {string}',
+  async function (this: AgentWorld, scope: string, email: string) {
+    await this.grantScopeDirectly(email, scope)
+  }
+)
+
+When(
+  'the direct scope {string} is revoked from {string}',
+  async function (this: AgentWorld, scope: string, email: string) {
+    await this.revokeScopeDirectly(email, scope)
+  }
+)

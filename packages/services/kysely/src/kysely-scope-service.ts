@@ -73,6 +73,22 @@ export class KyselyScopeService implements ScopeService {
       .execute()
 
     await this.db.schema
+      .createTable('pikku_user_scope')
+      .ifNotExists()
+      .addColumn('user_id', 'text', (col) =>
+        col.notNull().references('user.id').onDelete('cascade')
+      )
+      .addColumn('scope', 'text', (col) =>
+        col.notNull().references('pikku_scopes.name').onDelete('cascade')
+      )
+      .addColumn('granted_by', 'text')
+      .addColumn('granted_at', 'timestamp', (col) =>
+        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
+      )
+      .addPrimaryKeyConstraint('pikku_user_scope_pk', ['user_id', 'scope'])
+      .execute()
+
+    await this.db.schema
       .createIndex('pikku_role_scopes_scope_idx')
       .ifNotExists()
       .on('pikku_role_scopes')
@@ -133,7 +149,7 @@ export class KyselyScopeService implements ScopeService {
   }
 
   async resolveScopes(userId: string): Promise<string[]> {
-    const rows = await this.db
+    const roleScopes = this.db
       .selectFrom('pikkuUserRole')
       .innerJoin(
         'pikkuRoleScopes',
@@ -142,8 +158,13 @@ export class KyselyScopeService implements ScopeService {
       )
       .select('pikkuRoleScopes.scope')
       .where('pikkuUserRole.userId', '=', userId)
-      .distinct()
-      .execute()
+
+    const directScopes = this.db
+      .selectFrom('pikkuUserScope')
+      .select('pikkuUserScope.scope')
+      .where('pikkuUserScope.userId', '=', userId)
+
+    const rows = await roleScopes.union(directScopes).execute()
 
     return rows.map((row) => row.scope)
   }
@@ -250,6 +271,36 @@ export class KyselyScopeService implements ScopeService {
       .execute()
 
     return rows.map((row) => row.role)
+  }
+
+  async addScopeToUser(
+    userId: string,
+    scope: string,
+    grantedBy?: string
+  ): Promise<void> {
+    await this.db
+      .insertInto('pikkuUserScope')
+      .values({ userId, scope, grantedBy: grantedBy ?? null })
+      .onConflict((oc) => oc.columns(['userId', 'scope']).doNothing())
+      .execute()
+  }
+
+  async removeScopeFromUser(userId: string, scope: string): Promise<void> {
+    await this.db
+      .deleteFrom('pikkuUserScope')
+      .where('userId', '=', userId)
+      .where('scope', '=', scope)
+      .execute()
+  }
+
+  async listUserScopes(userId: string): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom('pikkuUserScope')
+      .select('scope')
+      .where('userId', '=', userId)
+      .execute()
+
+    return rows.map((row) => row.scope)
   }
 
   /**

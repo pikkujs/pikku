@@ -93,3 +93,84 @@ When(
     await this.page.getByRole('menuitem', { name: role }).click()
   }
 )
+
+When(
+  'I remove the role {string} from the user',
+  async function (this: AgentWorld, role: string) {
+    await this.page
+      .getByRole('dialog')
+      .getByRole('button', { name: `Remove ${role}` })
+      .click()
+  }
+)
+
+Then(
+  'the user should not hold the role {string}',
+  async function (this: AgentWorld, role: string) {
+    await expect(
+      this.page.getByRole('dialog').getByRole('button', {
+        name: `Remove ${role}`,
+      })
+    ).toBeHidden()
+  }
+)
+
+When(
+  'I grant the scope {string} directly to the user',
+  async function (this: AgentWorld, scope: string) {
+    await this.page.getByRole('button', { name: 'Add scope' }).click()
+    await this.page.getByRole('menuitem', { name: scope, exact: true }).click()
+  }
+)
+
+Then(
+  'the user should hold the direct scope {string}',
+  async function (this: AgentWorld, scope: string) {
+    await expect(
+      this.page.getByRole('dialog').getByRole('button', {
+        name: `Remove ${scope}`,
+      })
+    ).toBeVisible()
+  }
+)
+
+When(
+  'I revoke the direct scope {string} from the user',
+  async function (this: AgentWorld, scope: string) {
+    await this.page
+      .getByRole('dialog')
+      .getByRole('button', { name: `Remove ${scope}` })
+      .click()
+  }
+)
+
+Then(
+  'the user should not hold the direct scope {string}',
+  async function (this: AgentWorld, scope: string) {
+    await expect(
+      this.page.getByRole('dialog').getByRole('button', {
+        name: `Remove ${scope}`,
+      })
+    ).toBeHidden()
+  }
+)
+
+When('I navigate to the scopes page', async function (this: AgentWorld) {
+  await this.page.goto(`${config.consoleUrl}/scopes`)
+})
+
+Then(
+  'I should see a permission-denied message for roles',
+  async function (this: AgentWorld) {
+    await expect(this.page.getByText(/permission to view roles/i)).toBeVisible()
+  }
+)
+
+Then(
+  'I should not see a service-unavailable message',
+  async function (this: AgentWorld) {
+    await expect(
+      this.page.getByText(/service may be unavailable/i)
+    ).toBeHidden()
+  }
+)

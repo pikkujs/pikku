@@ -1,5 +1,10 @@
 import type { CoreSingletonServices } from '@pikku/core'
-import { ADMIN_USER, GUEST_USER, type SeedUser } from './auth-fixtures.js'
+import {
+  ADMIN_USER,
+  GUEST_USER,
+  STAFF_USER,
+  type SeedUser,
+} from './auth-fixtures.js'
 
 type SeedServices = CoreSingletonServices & { kysely?: any }
 
@@ -20,10 +25,13 @@ export const seedAuthUsers = async (
 ) => {
   await signUp(baseUrl, ADMIN_USER)
   await signUp(baseUrl, GUEST_USER)
+  await signUp(baseUrl, STAFF_USER)
   await (services.kysely as any)
     .updateTable('user')
     .set({ role: 'admin' })
-    .where('email', '=', ADMIN_USER.email)
+    .where('email', 'in', [ADMIN_USER.email, STAFF_USER.email])
     .execute()
-  services.logger.info(`seeded console users: ${ADMIN_USER.email} (admin), ${GUEST_USER.email}`)
+  services.logger.info(
+    `seeded console users: ${ADMIN_USER.email} (admin), ${STAFF_USER.email} (admin, no scopes), ${GUEST_USER.email}`
+  )
 }

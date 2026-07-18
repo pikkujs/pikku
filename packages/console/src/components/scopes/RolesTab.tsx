@@ -4,6 +4,7 @@ import { asI18n } from '@pikku/react'
 import { Plus, UsersRound } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { RoleEditorDrawer, type EditableRole } from './RoleEditorDrawer'
+import { isForbiddenScopeError } from './scope-error'
 import { useRoles, useDeclaredScopes } from '../../hooks/useScopes'
 import { m } from '@/i18n/messages'
 
@@ -27,11 +28,18 @@ export const RolesTab: React.FC = () => {
     setDrawerOpen(true)
   }
 
-  const loadError = (rolesQuery.error || declaredQuery.error) as Error | null
+  const loadError = rolesQuery.error || declaredQuery.error
   if (loadError) {
+    if (isForbiddenScopeError(loadError)) {
+      return (
+        <Alert color="yellow" title={m.scopes_roles_forbidden_title()}>
+          {m.scopes_roles_forbidden_body()}
+        </Alert>
+      )
+    }
     return (
       <Alert color="red" title={m.scopes_roles_load_error()}>
-        {asI18n(loadError.message)}
+        {loadError instanceof Error ? asI18n(loadError.message) : null}
       </Alert>
     )
   }
