@@ -32,6 +32,7 @@ import type { AIStorageService } from '../services/ai-storage-service.js'
 import type { ContentService } from '../services/content-service.js'
 import type { ScenarioActors } from '../services/scenario-actors-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
+import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
@@ -289,6 +290,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   content?: ContentService
   /** AI agent runner service (model calls + tool loop) */
   aiAgentRunner?: AIAgentRunnerService
+  /** Dedicated embedding service (vector stores use it at index & query time) */
+  aiEmbedding?: AIEmbeddingService
   /** AI run state service (run lifecycle + approval persistence) */
   aiRunState?: AIRunStateService
   /** Agent run service (listing threads, runs, steps) */

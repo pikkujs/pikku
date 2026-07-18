@@ -95,6 +95,7 @@ export type {
   AITranscriptionResult,
   AIAgentRunnerService,
 } from './ai-agent-runner-service.js'
+export type { AIEmbeddingService } from './ai-embedding-service.js'
 export type {
   CreateRunInput,
   AIRunStateService,
