@@ -13,6 +13,7 @@ import { spawn, type ChildProcess } from 'child_process'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { config } from './types.js'
+import { GUEST_USER } from '../../src/auth-fixtures.js'
 
 // LLM calls can be slow
 setDefaultTimeout(config.responseTimeout)
@@ -44,18 +45,35 @@ BeforeAll(async function () {
     process.stdout.write(`[backend] ${d}`)
   )
 
-  // Wait for the backend to be ready
+  // Wait for the backend to be ready AND for seeding to have finished. Seeding
+  // (seedAuthUsers) runs in afterStart — async, AFTER the server starts
+  // accepting requests — so a bare connectivity check races ahead of it and UI
+  // sign-ins fail against not-yet-seeded users. Poll the seeded guest sign-in
+  // instead (guest is created last of the seed users, so a 2xx proves the
+  // server is up and seeding has finished; the admin role update runs
+  // immediately after guest creation).
   const deadline = Date.now() + 120_000
   while (Date.now() < deadline) {
     try {
-      await fetch(config.apiUrl)
-      return // server is up
+      const res = await fetch(`${config.apiUrl}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: config.apiUrl,
+        },
+        body: JSON.stringify({
+          email: GUEST_USER.email,
+          password: GUEST_USER.password,
+        }),
+      })
+      if (res.ok) return // server up and seed users present
     } catch {
-      await new Promise((r) => setTimeout(r, 500))
+      // server not accepting connections yet — keep polling
     }
+    await new Promise((r) => setTimeout(r, 500))
   }
   throw new Error(
-    `Backend did not start within 120 seconds on ${config.apiUrl}`
+    `Backend did not start / seed within 120 seconds on ${config.apiUrl}`
   )
 })
 
