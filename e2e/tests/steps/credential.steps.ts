@@ -68,6 +68,18 @@ When(
   }
 )
 
+// Store a credential under the authenticated console user — the identity the
+// browser is logged in as and that the agent playground's per-user credential
+// check runs under. Use this (not the userId-less "I set credential") whenever
+// a browser scenario opens the playground, so the gate actually sees it.
+When(
+  'I connect credential {string} with value:',
+  async function (this: AgentWorld, name: string, docString: string) {
+    const userId = await this.currentUserId()
+    await rpc('setCredential', { name, valueJson: docString, userId })
+  }
+)
+
 When('I delete credential {string}', async function (name: string) {
   await rpc('deleteCredential', { name })
 })

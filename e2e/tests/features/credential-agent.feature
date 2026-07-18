@@ -10,7 +10,7 @@ Feature: AI Agent with OAuth Credential Gating
     And I should see "User OAuth" on the page
 
   Scenario: Agent playground shows chat after credential is connected
-    Given I set credential "user-oauth" with value:
+    Given I connect credential "user-oauth" with value:
       """
       { "accessToken": "e2e-test-token" }
       """
@@ -18,7 +18,7 @@ Feature: AI Agent with OAuth Credential Gating
     Then I should not see "Connect your accounts" in the chat
 
   Scenario: Mid-chat credential request connects via OAuth popup and resumes
-    Given I set credential "user-oauth" with value:
+    Given I connect credential "user-oauth" with value:
       """
       { "accessToken": "" }
       """

@@ -71,6 +71,7 @@ export class AgentWorld extends World {
   // the API level with a Better Auth session cookie (an Actor cookie jar) rather
   // than a browser login. Mirrors tests/steps/auth.steps.ts. Cached per scenario.
   private consoleActor?: Actor
+  private consoleUserId?: string
 
   private async authenticatedActor(): Promise<Actor> {
     if (!this.consoleActor) {
@@ -79,7 +80,7 @@ export class AgentWorld extends World {
         baseURL: config.apiUrl,
         fetchOptions: { customFetchImpl: actor.cookieFetch },
       })
-      const { error } = await authClient.signIn.email({
+      const { data, error } = await authClient.signIn.email({
         email: ADMIN_USER.email,
         password: ADMIN_USER.password,
       })
@@ -87,8 +88,24 @@ export class AgentWorld extends World {
         throw new Error(`console auth sign-in failed: ${JSON.stringify(error)}`)
       }
       this.consoleActor = actor
+      this.consoleUserId =
+        (data as any)?.user?.id ??
+        (await authClient.getSession()).data?.user?.id
     }
     return this.consoleActor
+  }
+
+  // The authenticated console user's id. The Actor signs in as the same seeded
+  // admin the browser logs in as (@console Before hook), so this is the userId
+  // the playground's per-user credential check runs under. Credentials must be
+  // stored under it — a global (userId-less) credential is invisible to the
+  // check and leaves the playground stuck on "Connect your accounts".
+  async currentUserId(): Promise<string> {
+    await this.authenticatedActor()
+    if (!this.consoleUserId) {
+      throw new Error('could not resolve authenticated console user id')
+    }
+    return this.consoleUserId
   }
 
   // Invoke a console RPC over HTTP carrying the Better Auth session cookie.
