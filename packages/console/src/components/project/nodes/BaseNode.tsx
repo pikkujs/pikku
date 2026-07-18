@@ -4,6 +4,7 @@ import { asI18n } from '@pikku/react'
 import { Handle, Position } from 'reactflow'
 import { Lock, LockOpen, Shield, Layers } from 'lucide-react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
+import { useFlowDirection } from '../../../context/FlowDirectionContext'
 
 interface OutputHandle {
   id: string
@@ -41,13 +42,14 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   inFlow = true,
 }) => {
   const theme = useMantineTheme()
+  const vertical = useFlowDirection() === 'DOWN'
 
   return (
     <Paper shadow="md" radius="md" w={width} pos="relative">
       {inFlow && hasInput && (
         <Handle
           type="target"
-          position={Position.Left}
+          position={vertical ? Position.Top : Position.Left}
           style={{ cursor: 'default' }}
         />
       )}
@@ -126,21 +128,29 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
         (outputHandles && outputHandles.length > 0
           ? outputHandles.map((handle, index) => {
               const total = outputHandles.length
-              const minTop = 25
-              const maxTop = 75
-              const topPercent =
+              const minOffset = 25
+              const maxOffset = 75
+              const offsetPercent =
                 total === 1
                   ? 50
-                  : minTop + ((maxTop - minTop) / (total - 1)) * index
+                  : minOffset + ((maxOffset - minOffset) / (total - 1)) * index
 
               return (
                 <Box
                   key={handle.id}
                   pos="absolute"
-                  right={-12}
+                  {...(vertical ? { bottom: -12 } : { right: -12 })}
                   style={{
-                    top: `${topPercent}%`,
-                    transform: 'translateY(-50%)',
+                    ...(vertical
+                      ? {
+                          left: `${offsetPercent}%`,
+                          transform: 'translateX(-50%)',
+                          flexDirection: 'column' as const,
+                        }
+                      : {
+                          top: `${offsetPercent}%`,
+                          transform: 'translateY(-50%)',
+                        }),
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
@@ -151,7 +161,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                   </Text>
                   <Handle
                     type="source"
-                    position={Position.Right}
+                    position={vertical ? Position.Bottom : Position.Right}
                     id={handle.id}
                     style={{
                       position: 'relative',
@@ -166,7 +176,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
           : hasOutput && (
               <Handle
                 type="source"
-                position={Position.Right}
+                position={vertical ? Position.Bottom : Position.Right}
                 style={{ cursor: 'default' }}
               />
             ))}

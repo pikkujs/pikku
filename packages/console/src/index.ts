@@ -180,3 +180,9 @@ export { PanelContainer } from './components/panel/PanelContainer'
 // Needed by an embedder that opens the workflow panel outside a workflow page:
 // the workflow panels read their graph from this context (feed it meta.workflows[id]).
 export { WorkflowProvider } from './context/WorkflowContext'
+// Embeddable flow renderers: the reactflow+ELK workflow graph (direction-aware,
+// 'DOWN' for narrow side panels) and the scenario persona timeline.
+export { WorkflowGraphView } from './components/project/WorkflowGraphView'
+export type { WorkflowGraphViewProps } from './components/project/WorkflowGraphView'
+export { PersonaTimeline } from './components/flows/timeline/PersonaTimeline'
+export type { FlowDirection } from './context/FlowDirectionContext'

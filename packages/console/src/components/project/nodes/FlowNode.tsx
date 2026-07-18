@@ -3,6 +3,7 @@ import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Handle, Position } from 'reactflow'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
+import { useFlowDirection } from '../../../context/FlowDirectionContext'
 
 interface OutputHandle {
   id: string
@@ -119,6 +120,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
   nodeId,
 }) => {
   const theme = useMantineTheme()
+  const vertical = useFlowDirection() === 'DOWN'
   const highlightIconColor = getHighlightIconColor(highlightType, theme)
   const runContext = useWorkflowRunContextSafe()
 
@@ -168,7 +170,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         {hasInput && (
           <Handle
             type="target"
-            position={Position.Left}
+            position={vertical ? Position.Top : Position.Left}
             style={{ cursor: 'default' }}
           />
         )}
@@ -187,22 +189,24 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         {outputHandles.length > 0 &&
           outputHandles.map((handle, index) => {
             const total = outputHandles.length
-            const minTop = 25
-            const maxTop = 75
-            const topPercent =
+            const minOffset = 25
+            const maxOffset = 75
+            const offsetPercent =
               total === 1
                 ? 50
-                : minTop + ((maxTop - minTop) / (total - 1)) * index
+                : minOffset + ((maxOffset - minOffset) / (total - 1)) * index
             const showLabel = handle.label && total > 1
 
             return (
               <React.Fragment key={handle.id}>
                 <Handle
                   type="source"
-                  position={Position.Right}
+                  position={vertical ? Position.Bottom : Position.Right}
                   id={handle.id}
                   style={{
-                    top: `${topPercent}%`,
+                    ...(vertical
+                      ? { left: `${offsetPercent}%` }
+                      : { top: `${offsetPercent}%` }),
                     cursor: 'default',
                   }}
                 />
@@ -212,9 +216,17 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                     c="dimmed"
                     pos="absolute"
                     style={{
-                      right: -4,
-                      top: `${topPercent}%`,
-                      transform: 'translate(100%, -50%)',
+                      ...(vertical
+                        ? {
+                            bottom: -4,
+                            left: `${offsetPercent}%`,
+                            transform: 'translate(-50%, 100%)',
+                          }
+                        : {
+                            right: -4,
+                            top: `${offsetPercent}%`,
+                            transform: 'translate(100%, -50%)',
+                          }),
                       whiteSpace: 'nowrap',
                       backgroundColor: 'var(--mantine-color-body)',
                       padding: '2px 5px',
@@ -230,14 +242,27 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       </Paper>
       {(label || subtitle) && (
         <Box
-          style={{
-            position: 'absolute',
-            top: size + 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            width: size * 2,
-          }}
+          style={
+            vertical
+              ? {
+                  // vertical flow: outgoing edges leave the bottom, so hang the
+                  // label beside the node instead of underneath it
+                  position: 'absolute',
+                  left: size + 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  textAlign: 'left',
+                  width: size * 2,
+                }
+              : {
+                  position: 'absolute',
+                  top: size + 12,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  textAlign: 'center',
+                  width: size * 2,
+                }
+          }
         >
           {label && (
             <Text

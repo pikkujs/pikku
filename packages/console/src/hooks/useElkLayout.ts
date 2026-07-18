@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useState } from 'react'
 import ELK from 'elkjs/lib/elk.bundled.js'
 import type { Node, Edge } from 'reactflow'
+import type { FlowDirection } from '../context/FlowDirectionContext'
 
 const elk = new ELK()
 
@@ -24,7 +25,11 @@ interface ElkLayoutResult {
   edges: Edge[]
 }
 
-export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
+export function useElkLayout(
+  nodes: Node[],
+  edges: Edge[],
+  direction: FlowDirection = 'RIGHT'
+): ElkLayoutResult {
   const [result, setResult] = useState<ElkLayoutResult>({
     nodes: [],
     edges: [],
@@ -44,7 +49,7 @@ export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
 
       const graph = {
         id: 'root',
-        layoutOptions: elkOptions,
+        layoutOptions: { ...elkOptions, 'elk.direction': direction },
         children: nodes.map((node) => {
           const nodeType = node.data?.nodeType
           let width = node.width || 200
@@ -162,7 +167,7 @@ export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
     }
 
     applyLayout()
-  }, [nodeIds, edgeIds])
+  }, [nodeIds, edgeIds, direction])
 
   return result.nodes.length > 0 ? result : { nodes, edges }
 }
