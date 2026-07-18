@@ -22,6 +22,11 @@ Feature: Managing scopes and roles in the console
     And I create a role "billing-viewer" granting the "Read reports" scope
     Then I should see the role "billing-viewer"
 
+  Scenario: Saving a role with no name surfaces a validation error, not a dead button
+    When I open the scopes page in the console
+    And I try to save a new role without a name
+    Then I should see the role name required error
+
   Scenario: Assigning a role resolves its scopes onto the user
     When I open the roles drawer for "guest@e2e.test"
     Then the user should hold the role "report-viewer"

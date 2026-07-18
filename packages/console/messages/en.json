@@ -642,6 +642,7 @@
   "scopes_vocab_forbidden_body": "Viewing the scope vocabulary requires the pikku:scopes:read scope. Ask an administrator to grant you a role that includes it.",
   "scopes_name": "Name",
   "scopes_name_placeholder": "billing-admin",
+  "scopes_name_required": "Enter a name for the role",
   "scopes_description_placeholder": "What this role is for",
   "scopes_description_locked": "Description can only be set when a role is created",
   "scopes_in_this_role": "Scopes in this role",

@@ -51,6 +51,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
   const [description, setDescription] = useState('')
   const [selected, setSelected] = useState<string[]>([])
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
 
   const createRole = useCreateRole()
   const setRoleScopes = useSetRoleScopes()
@@ -62,6 +63,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
       setDescription(role?.description ?? '')
       setSelected(role?.scopes ?? [])
       setConfirmingDelete(false)
+      setNameError(null)
     }
   }, [opened, role])
 
@@ -75,6 +77,10 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
 
   const save = async () => {
     if (isNew) {
+      if (name.trim().length === 0) {
+        setNameError(m.scopes_name_required())
+        return
+      }
       await createRole.mutateAsync({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -117,8 +123,15 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
           label={m.scopes_name()}
           placeholder={m.scopes_name_placeholder()}
           value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
+          onChange={(e) => {
+            setName(e.currentTarget.value)
+            if (nameError) {
+              setNameError(null)
+            }
+          }}
           disabled={!isNew}
+          withAsterisk={isNew}
+          error={nameError}
           data-autofocus={isNew}
         />
         <Textarea
@@ -160,11 +173,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
           ) : (
             <span />
           )}
-          <Button
-            onClick={save}
-            loading={pending && !deleteRole.isPending}
-            disabled={isNew && name.trim().length === 0}
-          >
+          <Button onClick={save} loading={pending && !deleteRole.isPending}>
             {m.common_save()}
           </Button>
         </Group>

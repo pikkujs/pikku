@@ -54,6 +54,24 @@ When(
 )
 
 When(
+  'I try to save a new role without a name',
+  async function (this: AgentWorld) {
+    await this.page.getByRole('button', { name: 'Create role' }).click()
+    const drawer = this.page.getByRole('dialog')
+    await drawer.getByRole('button', { name: 'Save' }).click()
+  }
+)
+
+Then(
+  'I should see the role name required error',
+  async function (this: AgentWorld) {
+    await expect(
+      this.page.getByRole('dialog').getByText(/enter a name for the role/i)
+    ).toBeVisible()
+  }
+)
+
+When(
   'I open the roles drawer for {string}',
   async function (this: AgentWorld, email: string) {
     await this.page.goto(`${config.consoleUrl}/users`)
