@@ -15,7 +15,7 @@ wireCredential({
   name: 'fake-crm',
   displayName: 'Fake CRM',
   description: 'OAuth2 connection to the (fake) CRM this addon talks to',
-  type: 'wire',
+  type: 'singleton',
   schema: FakeCrmSchema,
   oauth2: {
     appCredentialSecretId: 'MOCK_OAUTH_APP',

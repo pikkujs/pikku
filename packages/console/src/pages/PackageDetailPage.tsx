@@ -34,6 +34,7 @@ import {
   Cpu,
   BookOpen,
   ArrowUp,
+  Wrench,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -45,6 +46,7 @@ import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { ProjectFunctions } from '../components/project/ProjectFunctions'
 import { ProjectSecrets } from '../components/project/ProjectSecrets'
 import { ProjectVariables } from '../components/project/ProjectVariables'
+import { AddonSetupTab } from '../components/packages/AddonSetupTab'
 import type { FunctionsMeta } from '@pikku/core'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ChannelsMeta } from '@pikku/core/channel'
@@ -66,6 +68,14 @@ interface SecretEntry {
   displayName: string
   description?: string
   secretId: string
+}
+
+interface CredentialEntry {
+  name: string
+  displayName?: string
+  description?: string
+  type?: string
+  oauth2?: unknown
 }
 
 interface VariableEntry {
@@ -90,6 +100,7 @@ interface PackageRegistryEntry {
   functions: FunctionsMeta
   agents: Record<string, unknown>
   secrets: Record<string, SecretEntry>
+  credentials: Record<string, CredentialEntry>
   variables: Record<string, VariableEntry>
   httpRoutes: HTTPWiringsMeta
   channels: ChannelsMeta
@@ -659,6 +670,11 @@ export const PackageDetailPage: React.FC<{
   const functionList = Object.entries(pkg.functions ?? {})
   const agentList = Object.entries(pkg.agents ?? {})
   const secretList = Object.entries(pkg.secrets ?? {})
+  const credentialList = Object.entries(pkg.credentials ?? {})
+  const oauthCredCount = credentialList.filter(([, c]) => !!c.oauth2).length
+  // "Setup" surfaces what the addon needs before it can run: OAuth integrations
+  // to connect and secrets to set. Only shown when there's something to configure.
+  const hasSetup = oauthCredCount > 0 || secretList.length > 0
   const variableList = Object.entries(pkg.variables ?? {})
   const httpRouteCount = Object.values(pkg.httpRoutes ?? {}).reduce(
     (sum, routes) => sum + Object.keys(routes).length,
@@ -674,7 +690,9 @@ export const PackageDetailPage: React.FC<{
     Object.keys(pkg.mcp?.resourcesMeta ?? {}).length +
     Object.keys(pkg.mcp?.promptsMeta ?? {}).length
 
-  const defaultTab = pkg.readme
+  const defaultTab = hasSetup
+    ? 'setup'
+    : pkg.readme
     ? 'readme'
     : functionList.length > 0
       ? 'functions'
@@ -864,6 +882,11 @@ export const PackageDetailPage: React.FC<{
               }}
             >
               <Tabs.List style={{ borderBottom: 'none' }}>
+                {hasSetup && (
+                  <Tabs.Tab value="setup" leftSection={<Wrench size={14} />}>
+                    {m.package_detail_tab_setup()}
+                  </Tabs.Tab>
+                )}
                 {pkg.readme && (
                   <Tabs.Tab value="readme" leftSection={<BookOpen size={14} />}>
                     {m.package_detail_tab_readme()}
@@ -915,6 +938,15 @@ export const PackageDetailPage: React.FC<{
                 </Tabs.Tab>
               </Tabs.List>
             </Box>
+
+            {hasSetup && (
+              <Tabs.Panel value="setup">
+                <AddonSetupTab
+                  credentials={pkg.credentials ?? {}}
+                  secrets={pkg.secrets ?? {}}
+                />
+              </Tabs.Panel>
+            )}
 
             {pkg.readme && (
               <Tabs.Panel value="readme">
