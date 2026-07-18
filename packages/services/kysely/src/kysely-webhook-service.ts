@@ -4,22 +4,14 @@ import {
   type SendWebhookInput,
   type SendWebhookResult,
   type WebhookAttemptResult,
+  type WebhookDeliveryRecord,
   type WebhookDeliveryStore,
+  type WebhookDeliveryWithAttempts,
 } from '@pikku/core/services'
 import type { QueueService } from '@pikku/core/queue'
-import type { Kysely, Selectable } from 'kysely'
+import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
-import type {
-  KyselyPikkuDB,
-  WebhookDeliveryAttemptTable,
-  WebhookDeliveryTable,
-} from './kysely-tables.js'
-
-/** A delivery with its per-attempt history, for console/list views. */
-export interface WebhookDeliveryWithAttempts {
-  delivery: Selectable<WebhookDeliveryTable>
-  attempts: Selectable<WebhookDeliveryAttemptTable>[]
-}
+import type { KyselyPikkuDB } from './kysely-tables.js'
 
 /**
  * Durable {@link QueueWebhookService}: still delivers through the
@@ -164,7 +156,7 @@ export class KyselyWebhookService
   public async listDeliveries(opts?: {
     organizationId?: string
     limit?: number
-  }): Promise<Selectable<WebhookDeliveryTable>[]> {
+  }): Promise<WebhookDeliveryRecord[]> {
     let query = this.db
       .selectFrom('webhookDelivery')
       .selectAll()

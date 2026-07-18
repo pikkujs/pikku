@@ -75,12 +75,43 @@ export interface WebhookAttemptResult {
   delivered: boolean
 }
 
+/** A persisted webhook delivery, as surfaced to the console. */
+export interface WebhookDeliveryRecord {
+  deliveryId: string
+  organizationId: string | null
+  url: string
+  event: string | null
+  status: 'pending' | 'delivered' | 'failed'
+  attempts: number
+  createdAt: Date
+  updatedAt: Date
+  deliveredAt: Date | null
+}
+
+/** A single persisted delivery attempt. */
+export interface WebhookAttemptRecord {
+  attemptId: string
+  deliveryId: string
+  attemptNumber: number
+  statusCode: number | null
+  responseBody: string | null
+  error: string | null
+  createdAt: Date
+}
+
+/** A delivery with its full attempt history. */
+export interface WebhookDeliveryWithAttempts {
+  delivery: WebhookDeliveryRecord
+  attempts: WebhookAttemptRecord[]
+}
+
 /**
  * Persistence for webhook delivery history. A store-backed
  * {@link WebhookService} inserts the delivery row on `send()`; the queue worker
  * appends one attempt per try through {@link WebhookDeliveryStore.recordAttempt}.
- * Kept abstract so core carries no database dependency — see
- * `KyselyWebhookService` in `@pikku/kysely` for the default implementation.
+ * The read methods back the console's webhooks view. Kept abstract so core
+ * carries no database dependency — see `KyselyWebhookService` in `@pikku/kysely`
+ * for the default implementation.
  */
 export interface WebhookDeliveryStore {
   /**
@@ -88,6 +119,13 @@ export interface WebhookDeliveryStore {
    * forward. Keyed by the delivery id carried in {@link WebhookJobData}.
    */
   recordAttempt(deliveryId: string, result: WebhookAttemptResult): Promise<void>
+  /** List deliveries, most recent first, optionally scoped to an org. */
+  listDeliveries(opts?: {
+    organizationId?: string
+    limit?: number
+  }): Promise<WebhookDeliveryRecord[]>
+  /** A single delivery with its attempt history, or null if unknown. */
+  getDelivery(deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
 }
 
 export const PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME = 'pikku-outgoing-webhooks'
