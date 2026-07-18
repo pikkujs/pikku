@@ -199,7 +199,12 @@ export class AgentWorld extends World {
   }
 
   // Sign in through the LoginScreen UI so the AuthGate lets the console render.
+  // Clear any existing Better Auth session cookie first so login always lands
+  // on the LoginScreen — this makes login() idempotent and lets a scenario
+  // switch users (e.g. admin → guest) after the @console Before hook has
+  // already signed in as admin.
   async login(user: SeedUser = ADMIN_USER) {
+    await this.context.clearCookies()
     await this.page.goto(config.consoleUrl)
     const instance = this.page.locator('input').first()
     await instance.waitFor({ state: 'visible' })

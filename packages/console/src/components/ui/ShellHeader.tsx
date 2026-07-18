@@ -161,17 +161,28 @@ export const ShellHeader = <T extends string = string>({
   const hiddenCount = hidden.length + (search && !searchInline ? 1 : 0)
   const showFunnel = hiddenCount > 0 || selectionInDrawer
 
-  const searchField = search ? (
-    <TextInput
-      placeholder={search.placeholder}
-      leftSection={<Search size={14} />}
-      value={search.value}
-      onChange={(e) => search.onChange(e.currentTarget.value)}
-      w={searchWidth}
-      size="sm"
-      styles={{ root: { flexShrink: 0 }, input: { height: CONTROL_H, minHeight: CONTROL_H } }}
-    />
-  ) : null
+  // `measurement` renders the offscreen width-measurement clone: it drops the
+  // placeholder (and value/handler) so it is not a second queryable/labelled
+  // input in the DOM — otherwise getByPlaceholder / by-label queries match both
+  // the real field and its hidden clone (a strict-mode collision in tests, and a
+  // duplicate control in the a11y tree). Width is fixed by `w`, so the clone
+  // still measures identically without the placeholder.
+  const renderSearchField = (measurement: boolean) =>
+    search ? (
+      <TextInput
+        placeholder={measurement ? undefined : search.placeholder}
+        leftSection={<Search size={14} />}
+        value={measurement ? undefined : search.value}
+        onChange={measurement ? undefined : (e) => search.onChange(e.currentTarget.value)}
+        readOnly={measurement}
+        tabIndex={measurement ? -1 : undefined}
+        aria-hidden={measurement || undefined}
+        w={searchWidth}
+        size="sm"
+        styles={{ root: { flexShrink: 0 }, input: { height: CONTROL_H, minHeight: CONTROL_H } }}
+      />
+    ) : null
+  const searchField = renderSearchField(false)
 
   const measureNode = (id: string, node: ReactNode) => (
     <div ref={(el) => void (measRef.current[id] = el)} style={{ flex: '0 0 auto' }}>
@@ -340,7 +351,7 @@ export const ShellHeader = <T extends string = string>({
           )}
         {selection && measureNode('selCycle', <CycleSwitch selection={selection} />)}
         {filters.map((f) => measureNode('filter:' + f.key, <FilterChip filter={f} withinPortal={false} />))}
-        {search && measureNode('search', searchField)}
+        {search && measureNode('search', renderSearchField(true))}
         {actions.length > 0 && measureNode('actLabel', <ActionCluster actions={actions} mode="label" />)}
         {actions.length > 0 && measureNode('actIcon', <ActionCluster actions={actions} mode="icon" />)}
         {actions.length > 0 && measureNode('actCompact', <ActionCluster actions={actions} mode="compact" />)}
