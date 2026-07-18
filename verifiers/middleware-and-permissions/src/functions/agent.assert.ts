@@ -86,7 +86,7 @@ class MockAIStorage implements AIStorageService {
   async getThread(threadId: string): Promise<AIThread> {
     return {
       id: threadId,
-      resourceId: 'test',
+      resourceId: 'test-resource',
       createdAt: new Date(),
       updatedAt: new Date(),
     }

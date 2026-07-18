@@ -17,6 +17,9 @@ export const createConfig = pikkuConfig(async () => {
       // Non-default on purpose, so the verifier proves the header is
       // config-driven rather than hardcoded.
       signatureHeader: 'X-Verifier-Signature',
+      // The mock receiver binds 127.0.0.1, which the SSRF guard blocks by
+      // default; the allowlist is the opt-in escape hatch for internal hosts.
+      allowedHosts: ['127.0.0.1'],
     },
   }
 })
