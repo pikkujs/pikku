@@ -241,6 +241,80 @@ describe('pikkuWebhookWorkerFunc', () => {
     )
   })
 
+  test('records a delivered attempt via the store when a deliveryId is present', async (t) => {
+    t.after(restoreFetch)
+    stubFetch(() => ({ status: 200 }))
+    const recorded: any[] = []
+    const services = {
+      logger: noopLogger,
+      webhookDeliveryStore: {
+        recordAttempt: async (id: string, result: any) =>
+          recorded.push({ id, result }),
+      },
+    }
+
+    await pikkuWebhookWorkerFunc(services as any, {
+      url: 'https://example.com/hook',
+      body: '{}',
+      headers: {},
+      deliveryId: 'del-1',
+    })
+
+    assert.equal(recorded.length, 1)
+    assert.equal(recorded[0].id, 'del-1')
+    assert.equal(recorded[0].result.delivered, true)
+    assert.equal(recorded[0].result.statusCode, 200)
+  })
+
+  test('records a failed attempt (with status) before throwing', async (t) => {
+    t.after(restoreFetch)
+    stubFetch(() => ({ status: 500 }))
+    const recorded: any[] = []
+    const services = {
+      logger: noopLogger,
+      webhookDeliveryStore: {
+        recordAttempt: async (id: string, result: any) =>
+          recorded.push({ id, result }),
+      },
+    }
+
+    await assert.rejects(
+      pikkuWebhookWorkerFunc(services as any, {
+        url: 'https://example.com/hook',
+        body: '{}',
+        headers: {},
+        deliveryId: 'del-2',
+      }),
+      /500/
+    )
+
+    assert.equal(recorded.length, 1)
+    assert.equal(recorded[0].result.delivered, false)
+    assert.equal(recorded[0].result.statusCode, 500)
+  })
+
+  test('skips the store when no deliveryId is present', async (t) => {
+    t.after(restoreFetch)
+    stubFetch(() => ({ status: 200 }))
+    let called = false
+    const services = {
+      logger: noopLogger,
+      webhookDeliveryStore: {
+        recordAttempt: async () => {
+          called = true
+        },
+      },
+    }
+
+    await pikkuWebhookWorkerFunc(services as any, {
+      url: 'https://example.com/hook',
+      body: '{}',
+      headers: {},
+    })
+
+    assert.equal(called, false)
+  })
+
   test('throws on non-2xx statuses so the queue retries', async (t) => {
     t.after(restoreFetch)
 

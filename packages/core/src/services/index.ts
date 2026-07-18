@@ -67,6 +67,8 @@ export {
   WebhookService,
   type SendWebhookInput,
   type SendWebhookResult,
+  type WebhookAttemptResult,
+  type WebhookDeliveryStore,
   type WebhookJobData,
   type WebhookServiceConfig,
 } from './webhook-service.js'

@@ -1,15 +1,20 @@
 import { getSingletonServices } from '../pikku-state.js'
 import { getDurationInMilliseconds } from '../time-utils.js'
 import type { JobOptions, QueueService } from '../wirings/queue/queue.types.js'
+import type { Logger } from './logger.js'
 import {
   DEFAULT_WEBHOOK_RETRIES,
   DEFAULT_WEBHOOK_SIGNATURE_HEADER,
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type SendWebhookInput,
   type SendWebhookResult,
+  type WebhookDeliveryStore,
   type WebhookJobData,
   WebhookService,
 } from './webhook-service.js'
+
+/** Cap on the response body captured on a failed attempt. */
+const MAX_CAPTURED_RESPONSE_BODY = 2_000
 
 /**
  * Default {@link WebhookService} implementation: serializes and signs the
@@ -25,11 +30,29 @@ export class QueueWebhookService extends WebhookService {
    * lookup so that a project wiring up outgoing webhooks without a queue fails
    * to compile, instead of throwing on the first `send()`.
    */
-  constructor(private queueService: QueueService) {
+  constructor(protected queueService: QueueService) {
     super()
   }
 
   public async send(input: SendWebhookInput): Promise<SendWebhookResult> {
+    const { jobData, options } = await this.prepareDelivery(input)
+    const jobId = await this.queueService.add(
+      PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
+      jobData,
+      options
+    )
+    return { jobId }
+  }
+
+  /**
+   * Build the signed job payload and its retry options — the shared work a
+   * `send()` does before enqueueing. Factored out (and `protected`) so a
+   * store-backed subclass can persist a delivery row and attach its
+   * `deliveryId` without re-implementing signing or the retry policy.
+   */
+  protected async prepareDelivery(
+    input: SendWebhookInput
+  ): Promise<{ jobData: WebhookJobData; options: JobOptions }> {
     const services = getSingletonServices()
     const webhookConfig = services.config?.webhook
 
@@ -63,12 +86,7 @@ export class QueueWebhookService extends WebhookService {
       headers,
     }
 
-    const jobId = await this.queueService.add(
-      PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
-      jobData,
-      this.resolveJobOptions(input)
-    )
-    return { jobId }
+    return { jobData, options: this.resolveJobOptions(input) }
   }
 
   /**
@@ -98,20 +116,53 @@ export class QueueWebhookService extends WebhookService {
  * target URL. Any non-2xx response (or network error) throws so the queue
  * retries the job according to the `attempts`/`backoff` set at enqueue time;
  * the queue runner logs each failed attempt.
+ *
+ * When the job carries a `deliveryId` and a `webhookDeliveryStore` is wired,
+ * each attempt (success or failure) is persisted before the throw, so the
+ * delivery history in the console reflects every try — not just the outcome.
  */
 export async function pikkuWebhookWorkerFunc(
-  _services: unknown,
-  { url, body, headers }: WebhookJobData
+  services: { logger: Logger; webhookDeliveryStore?: WebhookDeliveryStore },
+  { url, body, headers, deliveryId }: WebhookJobData
 ): Promise<void> {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body,
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error(
-      `Webhook delivery to ${url} failed with status ${response.status}`
-    )
+  let statusCode: number | undefined
+  let responseBody: string | undefined
+  let error: string | undefined
+  let delivered = false
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal: AbortSignal.timeout(30_000),
+    })
+    statusCode = response.status
+    delivered = response.status >= 200 && response.status < 300
+    if (!delivered) {
+      responseBody = (await response.text().catch(() => ''))?.slice(
+        0,
+        MAX_CAPTURED_RESPONSE_BODY
+      )
+      error = `Webhook delivery to ${url} failed with status ${response.status}`
+    }
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e)
+  }
+
+  if (deliveryId && services.webhookDeliveryStore) {
+    // Best-effort history: a store failure must not mask the delivery result.
+    await services.webhookDeliveryStore
+      .recordAttempt(deliveryId, { statusCode, responseBody, error, delivered })
+      .catch((storeError) =>
+        services.logger.error(
+          `Failed to record webhook delivery attempt for ${deliveryId}`,
+          storeError
+        )
+      )
+  }
+
+  if (!delivered) {
+    throw new Error(error ?? `Webhook delivery to ${url} failed`)
   }
 }

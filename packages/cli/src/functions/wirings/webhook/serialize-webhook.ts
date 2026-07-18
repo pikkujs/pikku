@@ -23,7 +23,7 @@ wireQueueWorker({
   name: 'pikku-outgoing-webhooks',
   tags: ['pikku'],
   func: pikkuSessionlessFunc<
-    { url: string, event?: string, body: string, headers: Record<string, string> },
+    { url: string, event?: string, body: string, headers: Record<string, string>, deliveryId?: string },
     void
   >({
     tags: ['pikku'],

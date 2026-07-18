@@ -21,6 +21,12 @@ export interface SendWebhookInput {
    * fixed backoff; when omitted, backoff is exponential.
    */
   retryDelay?: string | number
+  /**
+   * Organization this delivery belongs to. Persisted by a store-backed
+   * implementation (e.g. `KyselyWebhookService`) so deliveries can be
+   * queried per org; ignored by the queue-only default.
+   */
+  organizationId?: string
 }
 
 export interface SendWebhookResult {
@@ -49,6 +55,39 @@ export interface WebhookJobData {
   event?: string
   body: string
   headers: Record<string, string>
+  /**
+   * Delivery-record id, present when a store-backed implementation enqueued
+   * the job. The worker keys its per-attempt records off this (it doubles as
+   * the queue `jobId`), so it's stable across retries.
+   */
+  deliveryId?: string
+}
+
+/** Outcome of one delivery attempt, reported to a {@link WebhookDeliveryStore}. */
+export interface WebhookAttemptResult {
+  /** HTTP status of the response, absent if the request never completed. */
+  statusCode?: number
+  /** Response body (truncated) — captured on failure for debugging. */
+  responseBody?: string
+  /** Network/timeout error message, when the request threw. */
+  error?: string
+  /** Whether this attempt was a 2xx success. */
+  delivered: boolean
+}
+
+/**
+ * Persistence for webhook delivery history. A store-backed
+ * {@link WebhookService} inserts the delivery row on `send()`; the queue worker
+ * appends one attempt per try through {@link WebhookDeliveryStore.recordAttempt}.
+ * Kept abstract so core carries no database dependency — see
+ * `KyselyWebhookService` in `@pikku/kysely` for the default implementation.
+ */
+export interface WebhookDeliveryStore {
+  /**
+   * Record a delivery attempt and roll the delivery's status/attempt-count
+   * forward. Keyed by the delivery id carried in {@link WebhookJobData}.
+   */
+  recordAttempt(deliveryId: string, result: WebhookAttemptResult): Promise<void>
 }
 
 export const PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME = 'pikku-outgoing-webhooks'
