@@ -16,7 +16,6 @@ import { SecretsPage } from './pages/SecretsPage'
 import { VariablesPage } from './pages/VariablesPage'
 import { AgentsPage } from './pages/AgentsPage'
 import { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
-import { OAuthCallbackPage } from './pages/OAuthCallbackPage'
 import { PackagesPage } from './pages/PackagesPage'
 import { CredentialsPage } from './pages/CredentialsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
@@ -31,7 +30,6 @@ import { SecurityPage } from './pages/SecurityPage'
 export const App: React.FC = () => {
   return (
     <Routes>
-      <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
       <Route path="/render/workflow" element={<RenderWorkflowPage />} />
       <Route
         element={

@@ -13,6 +13,7 @@ import {
 import { KeyRound, Link2, Circle, AlertTriangle } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { useOptionalAuth } from '../../context/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import classes from '../ui/console.module.css'
@@ -113,28 +114,47 @@ const CredentialCard: React.FC<{
 }> = ({ credential, isConnected }) => {
   useLocale()
   const rpc = usePikkuRPC()
+  const auth = useOptionalAuth()
   const queryClient = useQueryClient()
 
+  // A singleton credential belongs to the platform: linking it rebinds the
+  // token for every user, so it flows through the same admin-gated
+  // /credential-oauth/link endpoint (which links it to the reserved platform
+  // user), then a full-page redirect back — a popup can't hand the callback,
+  // which lands on better-auth's own origin, back to us.
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const result = await rpc.invoke('console:oauthConnect', {
-        credentialName: credential.name,
-      })
-      window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
+      const { data, error } = await auth!.client.$fetch<{ url?: string }>(
+        '/credential-oauth/link',
+        {
+          method: 'POST',
+          body: {
+            providerId: credential.name,
+            callbackURL: window.location.href,
+          },
+        }
+      )
+      if (error) {
+        throw new Error(error.message ?? m.credentials_connect_failed())
+      }
+      if (!data?.url) {
+        throw new Error(m.credentials_connect_failed())
+      }
+      window.location.href = data.url
     },
   })
 
+  // Disconnecting a platform credential goes through credentialService.delete
+  // (console:credentialDelete) — the only seam that can revoke a token owned by
+  // the platform user rather than the current session.
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await rpc.invoke('console:oauthDisconnect', {
-        credentialName: credential.name,
-      })
+      await rpc.invoke('console:credentialDelete', { name: credential.name })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['credential-global-status'],
       })
-      queryClient.invalidateQueries({ queryKey: ['oauth-status'] })
     },
   })
 
@@ -195,6 +215,7 @@ const CredentialCard: React.FC<{
                 <Button
                   size="compact-xs"
                   variant="light"
+                  disabled={!auth?.user}
                   onClick={() => connectMutation.mutate()}
                   loading={connectMutation.isPending}
                 >
@@ -213,6 +234,7 @@ const CredentialCard: React.FC<{
             ) : (
               <Button
                 size="compact-xs"
+                disabled={!auth?.user}
                 onClick={() => connectMutation.mutate()}
                 loading={connectMutation.isPending}
                 leftSection={<Link2 size={12} />}

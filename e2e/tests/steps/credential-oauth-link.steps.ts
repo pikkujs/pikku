@@ -3,6 +3,7 @@ import { expect } from '@playwright/test'
 import { createAuthClient } from 'better-auth/client'
 import { Actor } from '@pikku/cucumber'
 import { config } from '../support/types.js'
+import { startMockOAuthServer } from '../support/mock-oauth-server.js'
 
 // Drives the REAL Better Auth client SDK over real HTTP, the same way a browser
 // would, rather than hand-rolling the link endpoints — the point of #844 is that
@@ -21,6 +22,16 @@ interface LinkedUser {
 const users = new Map<string, LinkedUser>()
 let current: LinkedUser
 let lastRedirectUrl: string | undefined
+
+// The provider both the link flow and the credential-api suite exchange codes
+// against. Started once per run (idempotent), shared across features.
+let mockServerStarted = false
+Given('the mock OAuth server is running', async function () {
+  if (!mockServerStarted) {
+    await startMockOAuthServer()
+    mockServerStarted = true
+  }
+})
 
 /**
  * The real better-auth id of a user created by `a signed-in user {string}`.
