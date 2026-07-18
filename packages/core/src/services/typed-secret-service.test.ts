@@ -78,6 +78,41 @@ describe('TypedSecretService', () => {
     assert.deepStrictEqual(ghStatus.oauth2, { tokenSecretId: 'GH_TOKEN' })
   })
 
+  test('should cache getSecret and not re-hit the underlying service', async () => {
+    let calls = 0
+    const inner = {
+      getSecret: async <T = string>(key: string): Promise<T> => {
+        calls++
+        return `v-${key}` as unknown as T
+      },
+      hasSecret: async () => true,
+      setSecret: async () => {},
+      deleteSecret: async () => {},
+    }
+    const service = new TypedSecretService(inner, {})
+    assert.strictEqual(await service.getSecret('K'), 'v-K')
+    assert.strictEqual(await service.getSecret('K'), 'v-K')
+    assert.strictEqual(calls, 1)
+  })
+
+  test('should invalidate the cache on setSecret and deleteSecret', async () => {
+    const store = new Map([['K', '"a"']])
+    const service = new TypedSecretService(createMockSecrets(store), {})
+    assert.strictEqual(await service.getSecret('K'), 'a')
+    await service.setSecret('K', 'b')
+    assert.strictEqual(await service.getSecret('K'), 'b')
+    await service.deleteSecret('K')
+    await assert.rejects(() => service.getSecret('K'))
+  })
+
+  test('should not cache a getSecret miss', async () => {
+    const store = new Map<string, string>()
+    const service = new TypedSecretService(createMockSecrets(store), {})
+    await assert.rejects(() => service.getSecret('K'))
+    store.set('K', '"now-here"')
+    assert.strictEqual(await service.getSecret('K'), 'now-here')
+  })
+
   test('should get missing credentials', async () => {
     const store = new Map([['STRIPE_KEY', '"sk-123"']])
     const meta = {
