@@ -1,9 +1,10 @@
-import { Badge, Group, Text } from '@pikku/mantine/core'
+import { Alert, Badge, Group, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Shield } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { toScopeTreeRows } from './scope-tree'
 import { useDeclaredScopes } from '../../hooks/useScopes'
+import { m } from '@/i18n/messages'
 
 const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
 
@@ -16,28 +17,34 @@ export const ScopesVocabularyTab: React.FC = () => {
   const declaredQuery = useDeclaredScopes()
   const rows = toScopeTreeRows(declaredQuery.data?.scopes ?? [])
 
+  if (declaredQuery.isError) {
+    return (
+      <Alert color="red" title={m.scopes_vocab_load_error()}>
+        {asI18n((declaredQuery.error as Error).message)}
+      </Alert>
+    )
+  }
+
   return (
     <TableListPage
       icon={Shield}
-      title={asI18n('Scopes')}
+      title={m.scopes_vocab_title()}
       docsHref={DOCS_HREF}
       data={rows}
       getKey={(row) => row.id}
       onRowClick={() => {}}
       loading={declaredQuery.isLoading}
-      searchPlaceholder={asI18n('Search scopes…')}
+      searchPlaceholder={m.scopes_search_scopes()}
       searchFilter={(row, q) =>
         row.id.toLowerCase().includes(q) ||
         (row.description ?? '').toLowerCase().includes(q)
       }
-      emptyTitle={asI18n('No scopes declared')}
-      emptyDescription={asI18n(
-        'Declare scopes in code with wireScope, then run pikku all.'
-      )}
+      emptyTitle={m.scopes_no_declared_title()}
+      emptyDescription={m.scopes_no_declared_description()}
       columns={[
         {
           key: 'id',
-          header: asI18n('Scope'),
+          header: m.scopes_col_scope(),
           render: (row) => (
             <Text
               size="sm"
@@ -51,7 +58,7 @@ export const ScopesVocabularyTab: React.FC = () => {
         },
         {
           key: 'description',
-          header: asI18n('Description'),
+          header: m.scopes_col_description(),
           render: (row) => (
             <Text size="sm" c="dimmed">
               {asI18n(row.description || '—')}
@@ -60,19 +67,19 @@ export const ScopesVocabularyTab: React.FC = () => {
         },
         {
           key: 'state',
-          header: asI18n('State'),
+          header: m.scopes_col_state(),
           align: 'right',
           width: 120,
           render: (row) =>
             row.declared ? (
               <Group justify="flex-end" gap={6}>
                 <Badge variant="dot" color="green" size="sm">
-                  {asI18n('declared')}
+                  {m.scopes_state_declared()}
                 </Badge>
               </Group>
             ) : (
               <Badge variant="light" color="orange" size="sm">
-                {asI18n('stale')}
+                {m.scopes_state_stale()}
               </Badge>
             ),
         },

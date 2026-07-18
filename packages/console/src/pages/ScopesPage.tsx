@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { SegmentedControl } from '@pikku/mantine/core'
-import { asI18n } from '@pikku/react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { RolesTab } from '../components/scopes/RolesTab'
 import { ScopesVocabularyTab } from '../components/scopes/ScopesVocabularyTab'
 import { useLocale } from '@/i18n/config'
+import { m } from '@/i18n/messages'
 
 type Tab = 'roles' | 'scopes'
 
@@ -16,12 +16,12 @@ export const ScopesPage: React.FC = () => {
     <PageContainer
       header={
         <ListPageHeader
-          title={asI18n('Scopes')}
-          description={asI18n(
+          title={m.scopes_page_title()}
+          description={
             tab === 'roles'
-              ? 'Roles composed from the declared scope vocabulary.'
-              : 'The scope vocabulary, declared in code via wireScope.'
-          )}
+              ? m.scopes_page_desc_roles()
+              : m.scopes_page_desc_vocab()
+          }
           docsHref="https://pikku.dev/docs/authentication/scopes"
           filters={
             <SegmentedControl
@@ -29,8 +29,8 @@ export const ScopesPage: React.FC = () => {
               value={tab}
               onChange={(v) => setTab(v as Tab)}
               data={[
-                { label: asI18n('Roles') as string, value: 'roles' },
-                { label: asI18n('Scopes') as string, value: 'scopes' },
+                { label: m.scopes_tab_roles() as string, value: 'roles' },
+                { label: m.scopes_tab_scopes() as string, value: 'scopes' },
               ]}
             />
           }

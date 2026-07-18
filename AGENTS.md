@@ -317,3 +317,13 @@ const StatusPill: React.FC<StatusPillProps> = ({ status }) => {
 ```
 
 Props with more than one or two fields get a named `Props` type rather than an inline object type.
+
+### Internationalization (console / any `@pikku/react` UI)
+
+**GOLDEN RULE — `asI18n` wraps VARIABLES, NEVER string literals.** `asI18n` exists to pass a *dynamic runtime value* — a role name, an error message, a scope id — through the i18n gate: `asI18n(role.name)`, `asI18n(error.message)`, `asI18n(scope)`. It must **never** wrap a hardcoded English string. `asI18n('Create role')` injects untranslatable English straight into the UI and is **always wrong**, no exceptions.
+
+- Every fixed piece of UI copy lives in `messages/en.json` and is referenced through the typed `m` namespace: `m.scopes_create_role()`. Add the key to `en.json`, then call `m.<key>()`.
+- A fixed label that contains a variable is a **parameterized message** — `m.scopes_delete_confirm({ name })` with `"scopes_delete_confirm": "Delete {name} for everyone — confirm"` — never English concatenated around an `asI18n(...)`.
+- Computed keys use `mKey(...)`.
+
+If you catch yourself typing `asI18n('` followed by a letter (not a variable), stop — it's the wrong call.

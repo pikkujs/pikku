@@ -24,6 +24,9 @@ export class AgentWorld extends World {
   /** Requests seen since recordRequests() was called, with their impersonate header. */
   recorded: { url: string; impersonate: string | null }[] = []
 
+  /** The last raw RPC response captured by the scope-gate suite, per scenario. */
+  lastScopeResponse?: { status: number; body: any }
+
   async openBrowser() {
     const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
     this.browser = await chromium.launch({

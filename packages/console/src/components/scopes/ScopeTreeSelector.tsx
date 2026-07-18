@@ -1,5 +1,6 @@
 import { Box, Checkbox, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { toScopeTreeRows, type DeclaredScope } from './scope-tree'
 
 type ScopeTreeSelectorProps = {
@@ -25,7 +26,7 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
   if (rows.length === 0) {
     return (
       <Text c="dimmed" size="sm" py="sm">
-        {asI18n('No scopes are declared. Add wireScope declarations in code.')}
+        {m.scopes_none_declared()}
       </Text>
     )
   }
@@ -50,7 +51,7 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
                 )}
                 {!row.declared && (
                   <Text size="xs" c="orange">
-                    {asI18n('stale')}
+                    {m.scopes_state_stale()}
                   </Text>
                 )}
               </Group>

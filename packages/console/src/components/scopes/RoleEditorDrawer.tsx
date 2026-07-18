@@ -12,6 +12,7 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Trash2 } from 'lucide-react'
+import { m } from '@/i18n/messages'
 import type { DeclaredScope } from './scope-tree'
 import { ScopeTreeSelector } from './ScopeTreeSelector'
 import {
@@ -49,6 +50,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const createRole = useCreateRole()
   const setRoleScopes = useSetRoleScopes()
@@ -59,6 +61,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
       setName(role?.name ?? '')
       setDescription(role?.description ?? '')
       setSelected(role?.scopes ?? [])
+      setConfirmingDelete(false)
     }
   }, [opened, role])
 
@@ -85,6 +88,10 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
 
   const remove = async () => {
     if (isNew) return
+    if (!confirmingDelete) {
+      setConfirmingDelete(true)
+      return
+    }
     await deleteRole.mutateAsync(role.name)
     onClose()
   }
@@ -101,26 +108,30 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
       onClose={onClose}
       position="right"
       size={480}
-      title={isNew ? asI18n('Create role') : asI18n(`Edit ${role.name}`)}
+      title={
+        isNew ? m.scopes_create_role() : m.scopes_edit_role({ name: role.name })
+      }
     >
       <Stack gap="md">
         <TextInput
-          label={asI18n('Name')}
-          placeholder={asI18n('billing-admin')}
+          label={m.scopes_name()}
+          placeholder={m.scopes_name_placeholder()}
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           disabled={!isNew}
           data-autofocus={isNew}
         />
         <Textarea
-          label={asI18n('Description')}
-          placeholder={asI18n('What this role is for')}
+          label={m.scopes_col_description()}
+          placeholder={m.scopes_description_placeholder()}
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
+          disabled={!isNew}
+          description={!isNew ? m.scopes_description_locked() : undefined}
           autosize
           minRows={1}
         />
-        <Divider label={asI18n('Scopes in this role')} labelPosition="left" />
+        <Divider label={m.scopes_in_this_role()} labelPosition="left" />
         <Box mah={360} style={{ overflowY: 'auto' }}>
           <ScopeTreeSelector
             scopes={declaredScopes}
@@ -137,12 +148,14 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
           {!isNew ? (
             <Button
               color="red"
-              variant="subtle"
+              variant={confirmingDelete ? 'filled' : 'subtle'}
               leftSection={<Trash2 size={14} />}
               onClick={remove}
               loading={deleteRole.isPending}
             >
-              {asI18n('Delete role')}
+              {confirmingDelete
+                ? m.scopes_delete_confirm({ name: role.name })
+                : m.scopes_delete_role()}
             </Button>
           ) : (
             <span />
@@ -152,7 +165,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
             loading={pending && !deleteRole.isPending}
             disabled={isNew && name.trim().length === 0}
           >
-            {asI18n('Save')}
+            {m.common_save()}
           </Button>
         </Group>
       </Stack>

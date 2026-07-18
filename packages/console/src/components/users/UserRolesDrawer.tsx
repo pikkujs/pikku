@@ -2,6 +2,7 @@ import {
   Badge,
   Box,
   Center,
+  CloseButton,
   Divider,
   Drawer,
   Group,
@@ -12,13 +13,14 @@ import {
   Text,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { Plus, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import {
   useRoles,
   useUserRoles,
   useAddUserToRole,
   useRemoveUserFromRole,
 } from '../../hooks/useScopes'
+import { m } from '@/i18n/messages'
 
 type UserRolesDrawerProps = {
   opened: boolean
@@ -57,7 +59,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
       onClose={onClose}
       position="right"
       size={420}
-      title={asI18n(`Roles — ${userLabel}`)}
+      title={m.scopes_user_roles_title({ label: userLabel })}
     >
       {userRolesQuery.isLoading ? (
         <Center py="xl">
@@ -66,11 +68,11 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
       ) : (
         <Stack gap="md">
           <Text size="sm" fw={500}>
-            {asI18n('Roles')}
+            {m.scopes_roles_title()}
           </Text>
           {held.length === 0 ? (
             <Text size="sm" c="dimmed">
-              {asI18n('This user holds no roles.')}
+              {m.scopes_user_no_roles()}
             </Text>
           ) : (
             <Group gap={8}>
@@ -80,14 +82,15 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                   variant="light"
                   size="lg"
                   rightSection={
-                    <X
-                      size={12}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() =>
-                        userId &&
-                        !busy &&
-                        removeRole.mutate({ userId, role })
-                      }
+                    <CloseButton
+                      size="xs"
+                      aria-label={m.scopes_revoke_role({ role })}
+                      disabled={!userId || busy}
+                      onClick={() => {
+                        if (userId) {
+                          removeRole.mutate({ userId, role })
+                        }
+                      }}
                     />
                   }
                 >
@@ -106,7 +109,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                 disabled={available.length === 0 || busy}
                 w="fit-content"
               >
-                {asI18n('Add role')}
+                {m.scopes_add_role()}
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -123,10 +126,10 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
             </Menu.Dropdown>
           </Menu>
 
-          <Divider label={asI18n('Resolved scopes')} labelPosition="left" />
+          <Divider label={m.scopes_resolved_scopes()} labelPosition="left" />
           {scopes.length === 0 ? (
             <Text size="sm" c="dimmed">
-              {asI18n('No scopes — these roles grant nothing yet.')}
+              {m.scopes_no_resolved()}
             </Text>
           ) : (
             <Box>

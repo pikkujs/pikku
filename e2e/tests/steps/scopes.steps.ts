@@ -12,8 +12,6 @@ const usersByEmail: Record<string, SeedUser> = {
   [GUEST_USER.email]: GUEST_USER,
 }
 
-let lastResponse: { status: number; body: any }
-
 When(
   'I call {string} as {string}',
   async function (this: AgentWorld, rpcName: string, email: string) {
@@ -22,14 +20,20 @@ When(
       throw new Error(`no seeded user for ${email}`)
     }
     const actor = await this.signInAs(user)
-    lastResponse = await this.rpcResponse(actor, rpcName)
+    this.lastScopeResponse = await this.rpcResponse(actor, rpcName)
   }
 )
 
-Then('the scope response status should be {int}', function (status: number) {
-  expect(lastResponse.status).toBe(status)
-})
+Then(
+  'the scope response status should be {int}',
+  function (this: AgentWorld, status: number) {
+    expect(this.lastScopeResponse?.status).toBe(status)
+  }
+)
 
-Then('the scope response should contain {string}', function (expected: string) {
-  expect(JSON.stringify(lastResponse.body)).toContain(expected)
-})
+Then(
+  'the scope response should contain {string}',
+  function (this: AgentWorld, expected: string) {
+    expect(JSON.stringify(this.lastScopeResponse?.body)).toContain(expected)
+  }
+)
