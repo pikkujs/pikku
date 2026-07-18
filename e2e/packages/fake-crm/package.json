@@ -1,0 +1,37 @@
+{
+  "name": "@pikku/addon-fake-crm",
+  "version": "0.0.1",
+  "type": "module",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./.pikku/*": "./.pikku/*"
+  },
+  "files": [
+    "dist",
+    ".pikku"
+  ],
+  "scripts": {
+    "prebuild": "pikku all",
+    "build": "tsc && cp -r .pikku dist/",
+    "pikku": "pikku all"
+  },
+  "peerDependencies": {
+    "@pikku/core": "*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "*",
+    "@pikku/core": "*",
+    "@types/node": "^22",
+    "typescript": "^6.0.3",
+    "zod": "^4"
+  },
+  "private": true
+}

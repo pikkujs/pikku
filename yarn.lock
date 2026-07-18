@@ -5668,6 +5668,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/addon-email-send@npm:0.1.2":
+  version: 0.1.2
+  resolution: "@pikku/addon-email-send@npm:0.1.2"
+  dependencies:
+    nodemailer: "npm:^6"
+  peerDependencies:
+    "@pikku/core": ^0.12.36
+    zod: ^4
+  checksum: 10/27e1320d97fe639b3fdb52ee7bc277faedb498988b74c8c50be50e2fe6b4413ddc01945bcdbf61142940fcc13308ef7b916248cdb37b3a38d0618e5e0d589b03
+  languageName: node
+  linkType: hard
+
 "@pikku/addon-emails@workspace:e2e/packages/emails":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-emails@workspace:e2e/packages/emails"
@@ -5681,6 +5693,31 @@ __metadata:
     zod: ^4
   languageName: unknown
   linkType: soft
+
+"@pikku/addon-fake-crm@workspace:e2e/packages/fake-crm":
+  version: 0.0.0-use.local
+  resolution: "@pikku/addon-fake-crm@workspace:e2e/packages/fake-crm"
+  dependencies:
+    "@pikku/cli": "npm:*"
+    "@pikku/core": "npm:*"
+    "@types/node": "npm:^22"
+    typescript: "npm:^6.0.3"
+    zod: "npm:^4"
+  peerDependencies:
+    "@pikku/core": "*"
+    zod: ^4
+  languageName: unknown
+  linkType: soft
+
+"@pikku/addon-gmail@npm:0.1.2":
+  version: 0.1.2
+  resolution: "@pikku/addon-gmail@npm:0.1.2"
+  peerDependencies:
+    "@pikku/core": ^0.12.36
+    zod: ^4
+  checksum: 10/c87a341416022f61e5c27848ec274862a5a1ea84d4b316af93afadaadf24ef3bdd046594fb5831ee3b3afc72b1a956ec106a66a72e0f0af3dc1eb3cd66dfe4aa
+  languageName: node
+  linkType: hard
 
 "@pikku/addon-graph@workspace:*, @pikku/addon-graph@workspace:packages/addon/pikku-graph":
   version: 0.0.0-use.local
@@ -6104,6 +6141,8 @@ __metadata:
     "@ai-sdk/openai": "npm:^3.0.37"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
+    "@pikku/addon-email-send": "npm:0.1.2"
+    "@pikku/addon-gmail": "npm:0.1.2"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
@@ -20509,6 +20548,13 @@ __metadata:
     long-timeout: "npm:0.1.1"
     sorted-array-functions: "npm:^1.3.0"
   checksum: 10/0b0449f8a1f784cd599a8d79b1fa404ed9e3e4e2b1a48f027c97fd0632cd86e48ad762d366d6b6f9d48a940cad5b7afbdb1b833649ee870407591a6cf1297749
+  languageName: node
+  linkType: hard
+
+"nodemailer@npm:^6":
+  version: 6.10.1
+  resolution: "nodemailer@npm:6.10.1"
+  checksum: 10/d9911701641e06143a2deb0bd5deb518310972316c6e6eabc594af24353b0d67867f26cb8d72b0cfa385abef945149ac51ae40a40d2199e1088aef5829e58a3d
   languageName: node
   linkType: hard
 
