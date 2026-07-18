@@ -18,12 +18,10 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import { useAuth, type AuthUser } from '../context/AuthContext'
-import { useImpersonation } from '../context/ImpersonationContext'
 
 export const AdminUsersPage: React.FC = () => {
   useLocale()
-  const { listUsers, user: currentUser } = useAuth()
-  const { setTarget, target } = useImpersonation()
+  const { listUsers } = useAuth()
   const [search, setSearch] = useState('')
   const [debounced] = useDebouncedValue(search, 250)
   const [rolesFor, setRolesFor] = useState<{ id: string; label: string } | null>(
@@ -123,44 +121,20 @@ export const AdminUsersPage: React.FC = () => {
               key: 'actions',
               header: '',
               align: 'right',
-              render: (u) => {
-                const isSelf = u.id === currentUser?.id
-                return (
-                  <Group gap={6} justify="flex-end" wrap="nowrap">
-                    <Button
-                      size="compact-sm"
-                      variant="subtle"
-                      leftSection={<ShieldCheck size={14} />}
-                      onClick={() =>
-                        setRolesFor({ id: u.id, label: u.email ?? u.id })
-                      }
-                    >
-                      {m.users_roles_action()}
-                    </Button>
-                    {!isSelf &&
-                      (target?.id === u.id ? (
-                        <Button
-                          size="compact-sm"
-                          variant="light"
-                          color="yellow"
-                          leftSection={<UserCog size={14} />}
-                          onClick={() => setTarget(null)}
-                        >
-                          {m.impersonate_stop()}
-                        </Button>
-                      ) : (
-                        <Button
-                          size="compact-sm"
-                          variant="subtle"
-                          leftSection={<UserCog size={14} />}
-                          onClick={() => setTarget(u)}
-                        >
-                          {m.impersonate_button()}
-                        </Button>
-                      ))}
-                  </Group>
-                )
-              },
+              render: (u) => (
+                <Group gap={6} justify="flex-end" wrap="nowrap">
+                  <Button
+                    size="compact-sm"
+                    variant="subtle"
+                    leftSection={<ShieldCheck size={14} />}
+                    onClick={() =>
+                      setRolesFor({ id: u.id, label: u.email ?? u.id })
+                    }
+                  >
+                    {m.users_roles_action()}
+                  </Button>
+                </Group>
+              ),
             },
           ]}
         />
