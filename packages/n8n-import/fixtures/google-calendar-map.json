@@ -1,0 +1,55 @@
+{
+  "name": "Calendar Ops",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "cal" }
+    },
+    {
+      "id": "c",
+      "name": "Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": { "__rl": true, "mode": "id", "value": "primary" }
+      }
+    },
+    {
+      "id": "l",
+      "name": "List Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "parameters": {
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": { "__rl": true, "mode": "id", "value": "primary" }
+      }
+    },
+    {
+      "id": "g",
+      "name": "Get Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [600, 0],
+      "parameters": {
+        "resource": "event",
+        "operation": "get",
+        "calendar": { "__rl": true, "mode": "id", "value": "primary" },
+        "eventId": { "__rl": true, "mode": "id", "value": "evt_123" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Create Event", "type": "main", "index": 0 }]] },
+    "Create Event": { "main": [[{ "node": "List Events", "type": "main", "index": 0 }]] },
+    "List Events": { "main": [[{ "node": "Get Event", "type": "main", "index": 0 }]] }
+  }
+}

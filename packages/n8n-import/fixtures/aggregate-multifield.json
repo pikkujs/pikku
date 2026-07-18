@@ -1,0 +1,34 @@
+{
+  "name": "aggregate multi field",
+  "nodes": [
+    { "name": "Trigger", "type": "n8n-nodes-base.manualTrigger", "parameters": {}, "position": [0, 0] },
+    {
+      "name": "Roll",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            { "fieldToAggregate": "text" },
+            { "fieldToAggregate": "repost.text", "renameField": true, "outputFieldName": "repost" }
+          ]
+        }
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "AllData",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "data"
+      },
+      "position": [400, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Roll", "type": "main", "index": 0 }]] },
+    "Roll": { "main": [[{ "node": "AllData", "type": "main", "index": 0 }]] }
+  }
+}

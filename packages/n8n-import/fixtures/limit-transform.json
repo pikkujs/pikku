@@ -1,0 +1,40 @@
+{
+  "name": "Top Items",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "top" }
+    },
+    {
+      "id": "h",
+      "name": "Fetch Rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [200, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.example.com/rows"
+      }
+    },
+    {
+      "id": "l",
+      "name": "Take Top 5",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "parameters": { "maxItems": 5, "keep": "firstItems" }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Fetch Rows", "type": "main", "index": 0 }]]
+    },
+    "Fetch Rows": {
+      "main": [[{ "node": "Take Top 5", "type": "main", "index": 0 }]]
+    }
+  }
+}

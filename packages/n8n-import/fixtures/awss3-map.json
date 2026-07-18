@@ -1,0 +1,1 @@
+{"name":"AwsS3","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"awss3"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.awsS3","typeVersion":2,"position":[200,0],"parameters":{"resource":"file","operation":"download"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

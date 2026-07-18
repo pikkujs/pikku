@@ -1,0 +1,50 @@
+{
+  "name": "Gmail Ops",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "gm" }
+    },
+    {
+      "id": "s",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [200, 0],
+      "parameters": {
+        "sendTo": "someone@example.com",
+        "subject": "Hello",
+        "message": "Body text"
+      }
+    },
+    {
+      "id": "l",
+      "name": "List Messages",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [400, 0],
+      "parameters": { "resource": "message", "operation": "getAll" }
+    },
+    {
+      "id": "m",
+      "name": "Mark Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [600, 0],
+      "parameters": {
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "msg_123"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]] },
+    "Send Email": { "main": [[{ "node": "List Messages", "type": "main", "index": 0 }]] },
+    "List Messages": { "main": [[{ "node": "Mark Read", "type": "main", "index": 0 }]] }
+  }
+}

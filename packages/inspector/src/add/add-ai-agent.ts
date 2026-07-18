@@ -142,6 +142,114 @@ function resolveAgentReferences(
   return resolved.length > 0 ? resolved : null
 }
 
+export function resolveWorkflowReferences(
+  obj: ts.ObjectLiteralExpression,
+  checker: ts.TypeChecker,
+  agentName: string,
+  logger: InspectorLogger
+): string[] | null {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'workflows'
+  )
+
+  if (!property || !ts.isPropertyAssignment(property)) {
+    return null
+  }
+
+  const initializer = property.initializer
+  if (!ts.isArrayLiteralExpression(initializer)) {
+    return null
+  }
+
+  const resolved: string[] = []
+
+  for (const element of initializer.elements) {
+    if (ts.isStringLiteral(element)) {
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' workflows array contains a string literal '${element.text}'. ` +
+          `Use a workflow reference instead (e.g., ref('<workflowName>') or import the pikkuWorkflowGraph variable).`
+      )
+      continue
+    }
+
+    if (ts.isCallExpression(element) && ts.isIdentifier(element.expression)) {
+      const calleeName = element.expression.text
+      if (calleeName === 'ref' || calleeName === 'workflow') {
+        const [firstArg] = element.arguments
+        if (firstArg && ts.isStringLiteral(firstArg)) {
+          resolved.push(firstArg.text)
+          continue
+        }
+      }
+    }
+
+    if (ts.isIdentifier(element)) {
+      const name = resolveIdentifierToWorkflowName(element, checker)
+      if (name) {
+        resolved.push(name)
+        continue
+      }
+
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' workflows array contains identifier '${element.text}' ` +
+          `that could not be resolved to a pikkuWorkflowGraph.`
+      )
+    }
+  }
+
+  return resolved.length > 0 ? resolved : null
+}
+
+function resolveIdentifierToWorkflowName(
+  identifier: ts.Identifier,
+  checker: ts.TypeChecker
+): string | null {
+  const symbol = checker.getSymbolAtLocation(identifier)
+  if (!symbol) return null
+
+  let resolved = symbol
+  if (resolved.flags & ts.SymbolFlags.Alias) {
+    resolved = checker.getAliasedSymbol(resolved) ?? resolved
+  }
+
+  const decl = resolved.valueDeclaration ?? resolved.declarations?.[0]
+  if (!decl) return null
+
+  if (ts.isVariableDeclaration(decl) && decl.initializer) {
+    if (
+      ts.isCallExpression(decl.initializer) &&
+      ts.isIdentifier(decl.initializer.expression) &&
+      (decl.initializer.expression.text === 'pikkuWorkflowGraph' ||
+        decl.initializer.expression.text === 'pikkuWorkflow' ||
+        decl.initializer.expression.text === 'pikkuWorkflowComplex')
+    ) {
+      const firstArg = decl.initializer.arguments[0]
+      if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
+        for (const prop of firstArg.properties) {
+          if (
+            ts.isPropertyAssignment(prop) &&
+            ts.isIdentifier(prop.name) &&
+            prop.name.text === 'name' &&
+            ts.isStringLiteral(prop.initializer)
+          ) {
+            return prop.initializer.text
+          }
+        }
+      }
+      if (ts.isIdentifier(decl.name)) {
+        return decl.name.text
+      }
+    }
+  }
+
+  return null
+}
+
 function resolveIdentifierToRpcName(
   identifier: ts.Identifier,
   checker: ts.TypeChecker
@@ -292,6 +400,19 @@ export const addAIAgent: AddWiring = (
       nameValue || '',
       logger
     )
+
+    const workflowsValue = resolveWorkflowReferences(
+      obj,
+      checker,
+      nameValue || '',
+      logger
+    )
+
+    if (workflowsValue) {
+      for (const workflowName of workflowsValue) {
+        state.workflows.invokedWorkflows.add(workflowName)
+      }
+    }
 
     if (!nameValue) {
       logger.critical(
@@ -460,6 +581,7 @@ export const addAIAgent: AddWiring = (
       }),
       ...(toolsValue !== null && { tools: toolsValue }),
       ...(agentsValue !== null && { agents: agentsValue }),
+      ...(workflowsValue !== null && { workflows: workflowsValue }),
       tags,
       inputSchema,
       outputSchema,

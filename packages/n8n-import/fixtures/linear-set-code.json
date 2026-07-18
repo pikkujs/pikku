@@ -1,0 +1,47 @@
+{
+  "name": "Lead Enrichment",
+  "nodes": [
+    {
+      "id": "a1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "lead" }
+    },
+    {
+      "id": "b2",
+      "name": "Set Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [200, 0],
+      "parameters": {
+        "email": "={{ $json.body.email }}",
+        "greeting": "=Hello {{ $json.body.name }}"
+      }
+    },
+    {
+      "id": "c3",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "parameters": { "operation": "create", "resource": "deal", "email": "={{ $node[\"Set Fields\"].json.email }}" },
+      "credentials": { "pipedriveApi": { "id": "1", "name": "Pipedrive account" } },
+      "notes": "creates the deal"
+    },
+    {
+      "id": "d4",
+      "name": "Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 0],
+      "parameters": { "jsCode": "return items.map(i => ({ json: { score: i.json.value * 2 } }))" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Set Fields", "type": "main", "index": 0 }]] },
+    "Set Fields": { "main": [[{ "node": "Create Deal", "type": "main", "index": 0 }]] },
+    "Create Deal": { "main": [[{ "node": "Score", "type": "main", "index": 0 }]] }
+  }
+}

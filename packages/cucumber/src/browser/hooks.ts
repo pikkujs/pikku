@@ -18,7 +18,12 @@ export interface BrowserHookApi {
  * servers, golden DBs) stays project-side — these hooks only manage the
  * browser and the optional data-reset call.
  */
-export function registerBrowserHooks({ Before, After, AfterAll, setDefaultTimeout }: BrowserHookApi) {
+export function registerBrowserHooks({
+  Before,
+  After,
+  AfterAll,
+  setDefaultTimeout,
+}: BrowserHookApi) {
   Before(async function () {
     setDefaultTimeout?.(this.config.timeout)
     if (this.config.resetUrl) {
@@ -32,10 +37,14 @@ export function registerBrowserHooks({ Before, After, AfterAll, setDefaultTimeou
           body,
         })
         if (!res.ok) {
-          process.stderr.write(`[e2e] WARN: reset hook ${this.config.resetUrl} returned ${res.status}\n`)
+          process.stderr.write(
+            `[e2e] WARN: reset hook ${this.config.resetUrl} returned ${res.status}\n`
+          )
         }
       } catch {
-        process.stderr.write(`[e2e] WARN: reset hook ${this.config.resetUrl} unreachable\n`)
+        process.stderr.write(
+          `[e2e] WARN: reset hook ${this.config.resetUrl} unreachable\n`
+        )
       }
     }
   })
@@ -46,9 +55,13 @@ export function registerBrowserHooks({ Before, After, AfterAll, setDefaultTimeou
         try {
           const url = actor.page.url()
           const text = (await actor.getPageText()).slice(0, 600)
-          process.stderr.write(`\n[debug] ${actor.name} — final URL: ${url}\n[debug] body text:\n${text}\n\n`)
+          process.stderr.write(
+            `\n[debug] ${actor.name} — final URL: ${url}\n[debug] body text:\n${text}\n\n`
+          )
         } catch (e) {
-          process.stderr.write(`[debug] dump for ${actor.name} failed: ${(e as Error).message}\n`)
+          process.stderr.write(
+            `[debug] dump for ${actor.name} failed: ${(e as Error).message}\n`
+          )
         }
       }
     }

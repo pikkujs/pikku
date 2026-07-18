@@ -69,6 +69,11 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
   retries?: number
   /** Delay between retries — milliseconds, duration string, or 'exponential' */
   retryDelay?: string | number
+  /**
+   * Free-text documentation for this node. Non-semantic: excluded from the
+   * graph topology hash, so editing a note never marks the workflow as changed.
+   */
+  notes?: string
 }
 
 /**

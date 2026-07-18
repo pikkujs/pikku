@@ -1,0 +1,1 @@
+{"name":"Tw","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"tw"}},{"id":"s","name":"Sms","type":"n8n-nodes-base.twilio","typeVersion":1,"position":[200,0],"parameters":{"operation":"send","from":"+1","to":"+2","message":"hi"}}],"connections":{"Webhook":{"main":[[{"node":"Sms","type":"main","index":0}]]}}}

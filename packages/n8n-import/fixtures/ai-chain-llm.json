@@ -1,0 +1,42 @@
+{
+  "name": "Theme Extractor",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "themes" }
+    },
+    {
+      "id": "c",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [200, 0],
+      "parameters": {
+        "text": "=Extract a list of themes from this: {{ $json.text }}\n\nNo preamble.",
+        "promptType": "define"
+      }
+    },
+    {
+      "id": "m",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o-mini", "options": { "temperature": 0.2 } }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Basic LLM Chain", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "Basic LLM Chain", "type": "ai_languageModel", "index": 0 }]
+      ]
+    }
+  }
+}

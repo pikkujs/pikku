@@ -1,0 +1,29 @@
+{
+  "name": "Guarded Intake",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "intake" }
+    },
+    {
+      "id": "g",
+      "name": "Reject Invalid",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "errorMessage": "={{ $json.body.reason }}",
+        "errorType": "errorMessage"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Reject Invalid", "type": "main", "index": 0 }]]
+    }
+  }
+}

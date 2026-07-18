@@ -120,9 +120,9 @@ export const delegatedAuth = (
           DELEGATED_PROVIDER_ID
         )
         if (account) {
-          const found = (await adapter.findUserById(account.userId)) as
-            | AppUser
-            | null
+          const found = (await adapter.findUserById(
+            account.userId
+          )) as AppUser | null
           if (!found) {
             throw new APIError('INTERNAL_SERVER_ERROR', {
               message: 'Delegated account has no user',

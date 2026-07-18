@@ -1,0 +1,35 @@
+{
+  "name": "cron respond terminal",
+  "nodes": [
+    {
+      "name": "Schedule",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Shape",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "name": "ok", "type": "boolean", "value": true }
+          ]
+        }
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [400, 0]
+    }
+  ],
+  "connections": {
+    "Schedule": { "main": [[{ "node": "Shape", "type": "main", "index": 0 }]] },
+    "Shape": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}

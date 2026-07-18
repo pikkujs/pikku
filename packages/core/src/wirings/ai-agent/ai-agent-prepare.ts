@@ -193,7 +193,7 @@ export async function buildInstructions(
   if (meta?.goal) parts.push(meta.goal)
   let instructions = parts.join('\n\n')
 
-  if (meta?.tools?.length) {
+  if (meta?.tools?.length || meta?.workflows?.length) {
     instructions +=
       '\n\nTool usage rules:\n' +
       '- Act immediately with the information given. Do NOT ask clarifying questions unless a required field is truly missing.\n' +
@@ -543,6 +543,64 @@ export async function buildToolDefs(
             }
           }
           return result.object ?? result.text
+        },
+      })
+    }
+  }
+
+  const metaWorkflows = meta.workflows
+  if (metaWorkflows?.length) {
+    const workflowMetaMap = pikkuState(null, 'workflows', 'meta')
+    const functionMeta = pikkuState(null, 'function', 'meta')
+    const schemas = pikkuState(null, 'misc', 'schemas')
+
+    for (const workflowName of metaWorkflows) {
+      const wfMeta = workflowMetaMap[workflowName]
+      if (!wfMeta) {
+        missingRpcs.push(workflowName)
+        continue
+      }
+
+      const inputSchemaName = wfMeta.pikkuFuncId
+        ? functionMeta[wfMeta.pikkuFuncId]?.inputSchemaName
+        : undefined
+      let inputSchema = inputSchemaName
+        ? schemas.get(inputSchemaName)
+        : undefined
+      if (
+        !inputSchema ||
+        (typeof inputSchema === 'object' &&
+          inputSchema.type === 'object' &&
+          !inputSchema.properties)
+      ) {
+        inputSchema = { type: 'object', properties: {} }
+      }
+
+      tools.push({
+        name: workflowName,
+        description: wfMeta.description || workflowName,
+        inputSchema,
+        execute: async (toolInput: unknown) => {
+          const workflowService = singletonServices.workflowService
+          if (!workflowService) {
+            throw new Error(
+              `workflowService is not configured — cannot run workflow tool '${workflowName}'`
+            )
+          }
+          const wire: PikkuRawWire = params.sessionService
+            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
+            : {}
+          const rpcService = new ContextAwareRPCService(
+            singletonServices,
+            wire,
+            { sessionService: params.sessionService }
+          )
+          return workflowService.runToCompletion(
+            workflowName,
+            toolInput,
+            rpcService,
+            { wire: { type: 'internal' } }
+          )
         },
       })
     }

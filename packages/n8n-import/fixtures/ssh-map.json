@@ -1,0 +1,1 @@
+{"name":"Ss","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"ss"}},{"id":"c","name":"Cmd","type":"n8n-nodes-base.ssh","typeVersion":1,"position":[200,0],"parameters":{"command":"ls -la","cwd":"/tmp"}}],"connections":{"Webhook":{"main":[[{"node":"Cmd","type":"main","index":0}]]}}}

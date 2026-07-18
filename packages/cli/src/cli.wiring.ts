@@ -36,6 +36,7 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import {
   pikkuInfoFunctions,
   pikkuInfoTags,
@@ -672,6 +673,24 @@ wireCLI({
               description:
                 'Convert snake_case property names to camelCase in generated Zod schemas',
               default: false,
+            },
+          },
+        }),
+      },
+    },
+    import: {
+      description: 'Import workflows from other systems',
+      subcommands: {
+        n8n: pikkuCLICommand({
+          func: pikkuImportN8n,
+          description:
+            'Import an n8n workflow JSON export (a single workflow, an export array, or a directory of exports) into Pikku workflow graphs + stub functions',
+          parameters: '<file>',
+          options: {
+            out: {
+              description:
+                'Output directory (defaults to scaffold.functionDir or cwd)',
+              short: 'o',
             },
           },
         }),

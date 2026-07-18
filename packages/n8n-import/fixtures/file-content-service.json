@@ -1,0 +1,54 @@
+{
+  "name": "file content service",
+  "nodes": [
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Read",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "reports/input.csv"
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "Write",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "write",
+        "fileName": "reports/output.csv"
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "ReadBin",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "parameters": {
+        "filePath": "assets/logo.png",
+        "dataPropertyName": "image"
+      },
+      "position": [600, 0]
+    },
+    {
+      "name": "WriteBin",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "parameters": { "fileName": "assets/copy.png" },
+      "position": [800, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] },
+    "Read": { "main": [[{ "node": "Write", "type": "main", "index": 0 }]] },
+    "Write": { "main": [[{ "node": "ReadBin", "type": "main", "index": 0 }]] },
+    "ReadBin": { "main": [[{ "node": "WriteBin", "type": "main", "index": 0 }]] }
+  }
+}

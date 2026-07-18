@@ -10,7 +10,10 @@ export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export { fabric } from './fabric-plugin.js'
 export type { FabricPluginOptions } from './fabric-plugin.js'
-export { delegatedAuth, DELEGATED_PROVIDER_ID } from './delegated-auth-plugin.js'
+export {
+  delegatedAuth,
+  DELEGATED_PROVIDER_ID,
+} from './delegated-auth-plugin.js'
 export type {
   DelegatedAuthOptions,
   DelegatedCredentials,

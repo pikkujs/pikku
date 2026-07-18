@@ -1,0 +1,18 @@
+{
+  "name": "Info Extractor",
+  "nodes": [
+    { "id": "t", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 1, "position": [0,0], "parameters": { "path": "x" } },
+    { "id": "c", "name": "Extract", "type": "@n8n/n8n-nodes-langchain.informationExtractor", "typeVersion": 1, "position": [200,0],
+      "parameters": {
+        "text": "={{ $json.body }}",
+        "options": { "systemPromptTemplate": "Pull out the person's name and age." },
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"age\":{\"type\":\"number\"}},\"required\":[\"name\"]}"
+      } },
+    { "id": "m", "name": "OpenAI Chat Model", "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi", "typeVersion": 1, "position": [200,200], "parameters": { "model": "gpt-4o-mini" } }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "Extract", "type": "ai_languageModel", "index": 0 }]] }
+  }
+}

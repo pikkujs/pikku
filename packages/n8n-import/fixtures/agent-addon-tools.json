@@ -1,0 +1,86 @@
+{
+  "name": "Ops Assistant",
+  "nodes": [
+    {
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": { "text": "Help the operator." },
+      "position": [220, 0]
+    },
+    {
+      "name": "Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "parameters": { "model": "gpt-4o" },
+      "position": [220, 220]
+    },
+    {
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2,
+      "parameters": { "resource": "message", "operation": "send" },
+      "position": [440, 220]
+    },
+    {
+      "name": "Add Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1,
+      "parameters": { "resource": "event", "operation": "create" },
+      "position": [440, 320]
+    },
+    {
+      "name": "MCP",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [440, 420]
+    },
+    {
+      "name": "Wikipedia",
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [440, 520]
+    },
+    {
+      "name": "Calculator",
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [440, 620]
+    },
+    {
+      "name": "Baserow",
+      "type": "n8n-nodes-base.baserowTool",
+      "typeVersion": 1,
+      "parameters": { "tableId": 372174, "databaseId": 146496, "additionalOptions": {} },
+      "position": [440, 720]
+    },
+    {
+      "name": "Weather",
+      "type": "n8n-nodes-base.openWeatherMapTool",
+      "typeVersion": 1,
+      "parameters": { "cityName": "London" },
+      "position": [440, 820]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": { "main": [[{ "node": "Agent", "type": "main", "index": 0 }]] },
+    "Model": { "ai_languageModel": [[{ "node": "Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Send Email": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Add Event": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "MCP": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Wikipedia": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Calculator": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Baserow": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
+    "Weather": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] }
+  }
+}

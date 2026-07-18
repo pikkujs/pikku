@@ -53,6 +53,10 @@ export interface PikkuCLICoreOutputFiles {
   // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
   remoteRpcWorkersFile?: string
 
+  // wireAddon for @pikku/addon-graph (derived from scaffold.pikkuDir when scaffold.graph is enabled).
+  // Optional: left undefined when scaffold.graph is not enabled, so consumers must guard.
+  graphWiringsFile?: string
+
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
   publicAgentFile: string
@@ -338,6 +342,8 @@ export type PikkuCLIInput = {
     middlewareDir?: string
     permissionDir?: string
     pikkuDir?: string
+    /** Wire the pikku addon-graph package so pikkuWorkflowGraph can reference its native transforms like graph:editFields. */
+    graph?: boolean
     rpc?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature

@@ -314,6 +314,12 @@ const _getPikkuCLIConfig = async (
         'rpc-remote.gen.ts'
       )
     }
+    if (result.scaffold?.graph && !result.graphWiringsFile) {
+      result.graphWiringsFile = join(
+        resolvedScaffoldDir,
+        'graph.wirings.gen.ts'
+      )
+    }
     if (result.scaffold?.workflow && !result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,

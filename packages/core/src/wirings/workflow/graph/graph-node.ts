@@ -180,6 +180,8 @@ type GraphNodeConfigMap<
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
     retries?: number
     retryDelay?: string | number
+    /** Free-text node documentation. Non-semantic — excluded from graphHash. */
+    notes?: string
   }
 }
 

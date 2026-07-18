@@ -20,12 +20,13 @@ import type { AgentMap } from '${agentMapImportPath}'
 type AIAgentConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware>, 'tools' | 'agents' | 'memory' | 'input' | 'output'> & {
+> = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware>, 'tools' | 'agents' | 'workflows' | 'memory' | 'input' | 'output'> & {
   input?: InputSchema
   output?: OutputSchema
   memory?: Omit<AIAgentMemoryConfig, 'workingMemory'> & { workingMemory?: StandardSchemaV1 }
   tools?: object[]
   agents?: AIAgentConfig<StandardSchemaV1 | undefined, StandardSchemaV1 | undefined>[]
+  workflows?: object[]
 }
 
 export const pikkuAIAgent = <

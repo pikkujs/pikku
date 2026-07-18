@@ -1,0 +1,5 @@
+{"name":"Rd","nodes":[
+{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"r"}},
+{"id":"s","name":"Set","type":"n8n-nodes-base.redis","typeVersion":1,"position":[200,0],"parameters":{"operation":"set","key":"foo","value":"bar"}},
+{"id":"g","name":"Get","type":"n8n-nodes-base.redis","typeVersion":1,"position":[400,0],"parameters":{"operation":"get","key":"foo"}}],
+"connections":{"Webhook":{"main":[[{"node":"Set","type":"main","index":0}]]},"Set":{"main":[[{"node":"Get","type":"main","index":0}]]}}}

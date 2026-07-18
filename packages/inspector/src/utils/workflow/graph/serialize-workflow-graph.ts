@@ -89,12 +89,14 @@ export function serializeWorkflowGraph(
         input?: (ref: any) => Record<string, unknown>
         next?: string | string[] | Record<string, string | string[]>
         onError?: string | string[]
+        notes?: string
       }
     >
   },
   options?: {
     description?: string
     tags?: string[]
+    notes?: string[]
   }
 ): SerializedWorkflowGraph {
   const nodes: Record<string, SerializedGraphNode> = {}
@@ -149,6 +151,9 @@ export function serializeWorkflowGraph(
       next: serializeNext(node.next),
       onError: node.onError,
     }
+    if (node.notes !== undefined) {
+      funcNode.notes = node.notes
+    }
     nodes[nodeId] = funcNode
 
     // Entry nodes have no incoming edges
@@ -163,6 +168,7 @@ export function serializeWorkflowGraph(
     source: 'graph' as const,
     description: options?.description,
     tags: options?.tags,
+    notes: options?.notes,
     nodes,
     entryNodeIds,
   }

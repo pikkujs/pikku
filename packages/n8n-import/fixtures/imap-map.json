@@ -1,0 +1,1 @@
+{"name":"Im","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"im"}},{"id":"r","name":"Read","type":"n8n-nodes-base.emailReadImap","typeVersion":2,"position":[200,0],"parameters":{"mailbox":"INBOX"}}],"connections":{"Webhook":{"main":[[{"node":"Read","type":"main","index":0}]]}}}

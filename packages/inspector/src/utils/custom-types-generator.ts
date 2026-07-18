@@ -8,7 +8,8 @@ import type { TypesMap } from '../types-map.js'
  */
 
 export function sanitizeTypeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_$]/g, '_')
+  const sanitized = name.replace(/[^a-zA-Z0-9_$]/g, '_')
+  return /^[0-9]/.test(sanitized) ? `_${sanitized}` : sanitized
 }
 
 const CLASSIFICATION_WRAPPERS = new Set(['Private', 'Pii', 'Secret'])

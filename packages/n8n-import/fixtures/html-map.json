@@ -1,0 +1,1 @@
+{"name":"Ht","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"ht"}},{"id":"e","name":"Extract","type":"n8n-nodes-base.html","typeVersion":1,"position":[200,0],"parameters":{"operation":"extractHtmlContent"}}],"connections":{"Webhook":{"main":[[{"node":"Extract","type":"main","index":0}]]}}}

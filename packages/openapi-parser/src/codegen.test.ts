@@ -801,7 +801,8 @@ describe('function description synthesis', () => {
       secret: false,
       mcp: true,
     })
-    const funcFile = files['src/functions/contactsControllerGetContacts.function.ts']
+    const funcFile =
+      files['src/functions/contactsControllerGetContacts.function.ts']
     assert.ok(funcFile, 'function file should exist')
     assert.ok(
       funcFile.includes('description: "Contacts get contacts"'),
@@ -812,7 +813,9 @@ describe('function description synthesis', () => {
 
   test('falls back to "METHOD /path" when operationId is absent', () => {
     const spec = makeSpec({
-      operations: [makeOp({ operationId: undefined, method: 'get', path: '/health' })],
+      operations: [
+        makeOp({ operationId: undefined, method: 'get', path: '/health' }),
+      ],
     })
 
     const files = generateAddonFromOpenAPI(spec, makeVars(), {
@@ -830,7 +833,10 @@ describe('function description synthesis', () => {
   test('prefers the spec description over synthesis', () => {
     const spec = makeSpec({
       operations: [
-        makeOp({ operationId: 'getPet', description: 'Fetch a single pet by id' }),
+        makeOp({
+          operationId: 'getPet',
+          description: 'Fetch a single pet by id',
+        }),
       ],
     })
 

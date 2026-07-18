@@ -1,6 +1,9 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { generateCustomTypes } from './custom-types-generator.js'
+import {
+  generateCustomTypes,
+  sanitizeTypeName,
+} from './custom-types-generator.js'
 import { TypesMap } from '../types-map.js'
 
 function makeTypesMap(
@@ -95,5 +98,27 @@ describe('generateCustomTypes — classification wrapper stripping', () => {
       !required.has('Private'),
       'Private must not be added to requiredTypes'
     )
+  })
+})
+
+describe('sanitizeTypeName — valid JS identifier', () => {
+  test('replaces disallowed characters with underscores', () => {
+    assert.equal(
+      sanitizeTypeName('Add Beehiiv subscribers'),
+      'Add_Beehiiv_subscribers'
+    )
+  })
+
+  test('prefixes an underscore when the name starts with a digit', () => {
+    // A name like "2. Add Beehiiv newsletter subscribers" otherwise produces
+    // `2__Add_...`, an invalid JS identifier that breaks the generated
+    // `import <ident> from ...` in pikku-workflow-wirings-meta.gen.ts.
+    const id = sanitizeTypeName('2. Add Beehiiv newsletter subscribers')
+    assert.equal(id, '_2__Add_Beehiiv_newsletter_subscribers')
+    assert.match(id, /^[A-Za-z_$]/, 'must start with a valid identifier char')
+  })
+
+  test('leaves an already-valid identifier unchanged', () => {
+    assert.equal(sanitizeTypeName('UserEmail'), 'UserEmail')
   })
 })

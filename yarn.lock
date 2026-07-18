@@ -5814,6 +5814,7 @@ __metadata:
     "@pikku/inspector": "npm:^0.12.42"
     "@pikku/kysely": "npm:^0.13.0"
     "@pikku/kysely-node-sqlite": "npm:^0.12.3"
+    "@pikku/n8n-import": "npm:^0.0.1"
     "@pikku/node-http-server": "npm:^0.12.6"
     "@pikku/openapi-parser": "npm:^0.12.15"
     "@pikku/schedule": "npm:^0.12.4"
@@ -6339,6 +6340,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/n8n-import@npm:^0.0.1, @pikku/n8n-import@workspace:packages/n8n-import":
+  version: 0.0.0-use.local
+  resolution: "@pikku/n8n-import@workspace:packages/n8n-import"
+  dependencies:
+    "@pikku/openapi-to-zod-schema": "npm:^0.12.5"
+    "@types/to-json-schema": "npm:^0.2.4"
+    to-json-schema: "npm:^0.2.5"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/next@npm:^0.12.7, @pikku/next@workspace:*, @pikku/next@workspace:packages/runtimes/next":
   version: 0.0.0-use.local
   resolution: "@pikku/next@workspace:packages/runtimes/next"
@@ -6387,7 +6399,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema":
+"@pikku/openapi-to-zod-schema@npm:^0.12.5, @pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema":
   version: 0.0.0-use.local
   resolution: "@pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema"
   dependencies:
@@ -11881,7 +11893,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/json-schema@npm:^7.0.15":
+"@types/json-schema@npm:*, @types/json-schema@npm:^7.0.15":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
   checksum: 10/1a3c3e06236e4c4aab89499c428d585527ce50c24fe8259e8b3926d3df4cfbbbcf306cfc73ddfb66cbafc973116efd15967020b0f738f63e09e64c7d260519e7
@@ -12084,6 +12096,15 @@ __metadata:
   version: 15.0.1
   resolution: "@types/sinonjs__fake-timers@npm:15.0.1"
   checksum: 10/9fa7a129742262ef4ea9c3253683453c42c2e210cdff1456e233bc9b59f6d60ef8121b32a00209a1c8c7759f88511862dab1ce340081e432515418fc44d8ec35
+  languageName: node
+  linkType: hard
+
+"@types/to-json-schema@npm:^0.2.4":
+  version: 0.2.4
+  resolution: "@types/to-json-schema@npm:0.2.4"
+  dependencies:
+    "@types/json-schema": "npm:*"
+  checksum: 10/830325f87ad1d46d4f6d4ce21d5db4afbd57c5fc288d875fe11f0735e470c496092d683a3d02523dbb17f47b5d1c099130383677a53956b2b07f33f93200136e
   languageName: node
   linkType: hard
 
@@ -18477,10 +18498,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lodash.isequal@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "lodash.isequal@npm:4.5.0"
+  checksum: 10/82fc58a83a1555f8df34ca9a2cd300995ff94018ac12cc47c349655f0ae1d4d92ba346db4c19bbfc90510764e0c00ddcc985a358bdcd4b3b965abf8f2a48a214
+  languageName: node
+  linkType: hard
+
 "lodash.isplainobject@npm:^4.0.6":
   version: 4.0.6
   resolution: "lodash.isplainobject@npm:4.0.6"
   checksum: 10/29c6351f281e0d9a1d58f1a4c8f4400924b4c79f18dfc4613624d7d54784df07efaff97c1ff2659f3e085ecf4fff493300adc4837553104cef2634110b0d5337
+  languageName: node
+  linkType: hard
+
+"lodash.keys@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "lodash.keys@npm:4.2.0"
+  checksum: 10/4f9c1806038219a447982a5d47fa53eb3301adb07e4043f427aea814901cfe1f19a4f1bc413bf8c5003a8680134a83ac26d6e1129947a34ca74ebe4fabf98178
   languageName: node
   linkType: hard
 
@@ -18505,6 +18540,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lodash.omit@npm:^4.5.0":
+  version: 4.18.0
+  resolution: "lodash.omit@npm:4.18.0"
+  checksum: 10/dc406ff88b793fe28ce9e615d40128bb8075b23cec8d81e91dfc37a63485f7d5a2a0986cf3c61b598ea0a9759a254bb13cf346a427ea81b7a3b8f037edf53a48
+  languageName: node
+  linkType: hard
+
 "lodash.sortby@npm:^4.7.0":
   version: 4.7.0
   resolution: "lodash.sortby@npm:4.7.0"
@@ -18523,6 +18565,20 @@ __metadata:
   version: 4.6.0
   resolution: "lodash.union@npm:4.6.0"
   checksum: 10/175f5786efc527238c1350ce561c28e5ba527b5957605f9e5b8a804fce78801d09ced7b72de0302325e5b14c711f94690b1a733c13ad3674cc1a76e1172db1f8
+  languageName: node
+  linkType: hard
+
+"lodash.without@npm:^4.4.0":
+  version: 4.4.0
+  resolution: "lodash.without@npm:4.4.0"
+  checksum: 10/61b29411f9ab8e44ff96e1c10ce58d7880ab0e595b964a1a1ce6d0ad0b898d1ed914d14c6698a3074bf8949895bdee041e1fa70346f925b59ed7f94fce9538d2
+  languageName: node
+  linkType: hard
+
+"lodash.xor@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "lodash.xor@npm:4.5.0"
+  checksum: 10/9db74ebfd455cd062f3ec4243c34b4a0d5a08ab4b6d0aacf68962ecb11160c4e022d9e8163ce16b8fd6c25f1629d3d6b2fd586204df0d270f0b425ea4577f938
   languageName: node
   linkType: hard
 
@@ -24349,6 +24405,20 @@ __metadata:
     safe-buffer: "npm:^5.2.1"
     typed-array-buffer: "npm:^1.0.3"
   checksum: 10/69d806c20524ff1e4c44d49276bc96ff282dcae484780a3974e275dabeb75651ea430b074a2a4023701e63b3e1d87811cd82c0972f35280fe5461710e4872aba
+  languageName: node
+  linkType: hard
+
+"to-json-schema@npm:^0.2.5":
+  version: 0.2.5
+  resolution: "to-json-schema@npm:0.2.5"
+  dependencies:
+    lodash.isequal: "npm:^4.5.0"
+    lodash.keys: "npm:^4.2.0"
+    lodash.merge: "npm:^4.6.2"
+    lodash.omit: "npm:^4.5.0"
+    lodash.without: "npm:^4.4.0"
+    lodash.xor: "npm:^4.5.0"
+  checksum: 10/30797b7623ec1e779d5c431e4cf3375d06d3a45c4365c95392db10a02cd5d603c46aaf7e1254368294eeea0425073c6644029fac1fa436056c22555a969ac0da
   languageName: node
   linkType: hard
 

@@ -1,0 +1,1 @@
+{"name":"Sp","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"sp"}},{"id":"s","name":"ToFile","type":"n8n-nodes-base.spreadsheetFile","typeVersion":2,"position":[200,0],"parameters":{"operation":"toFile"}}],"connections":{"Webhook":{"main":[[{"node":"ToFile","type":"main","index":0}]]}}}

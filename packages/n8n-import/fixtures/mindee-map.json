@@ -1,0 +1,1 @@
+{"name":"Mindee","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"mindee"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.mindee","typeVersion":3,"position":[200,0],"parameters":{"resource":"receipt","operation":"predict"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

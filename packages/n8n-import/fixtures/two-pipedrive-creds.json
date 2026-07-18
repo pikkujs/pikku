@@ -1,0 +1,57 @@
+{
+  "name": "Dual Pipedrive Sync",
+  "nodes": [
+    {
+      "id": "trigger1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "sync" }
+    },
+    {
+      "id": "pd1",
+      "name": "Create Marketing",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "operation": "create", "resource": "deal" },
+      "credentials": {
+        "pipedriveApi": { "id": "3", "name": "Pipedrive — Marketing" }
+      }
+    },
+    {
+      "id": "pd2",
+      "name": "Create Support",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "parameters": { "operation": "create", "resource": "deal" },
+      "credentials": {
+        "pipedriveApi": { "id": "7", "name": "Pipedrive — Support" }
+      }
+    },
+    {
+      "id": "pd3",
+      "name": "Create Marketing Again",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [600, 0],
+      "parameters": { "operation": "create", "resource": "deal" },
+      "credentials": {
+        "pipedriveApi": { "id": "3", "name": "Pipedrive — Marketing" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Create Marketing", "type": "main", "index": 0 }]]
+    },
+    "Create Marketing": {
+      "main": [[{ "node": "Create Support", "type": "main", "index": 0 }]]
+    },
+    "Create Support": {
+      "main": [[{ "node": "Create Marketing Again", "type": "main", "index": 0 }]]
+    }
+  }
+}

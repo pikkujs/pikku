@@ -1,0 +1,24 @@
+{
+  "name": "Execute Command",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "e",
+      "name": "Run",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "command": "ls -la /tmp" }
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Run", "type": "main", "index": 0 }]] }
+  }
+}

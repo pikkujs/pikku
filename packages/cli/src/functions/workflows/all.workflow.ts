@@ -14,11 +14,17 @@ type ScaffoldGenerator =
   | 'pikkuScenarioFunctions'
   | 'pikkuPublicAgent'
   | 'pikkuEventsScaffold'
+  | 'pikkuGraphWirings'
 
 const scaffoldFiles = (
   config: any
 ): { file: string; generator: ScaffoldGenerator }[] => {
   const files: { file: string; generator: ScaffoldGenerator }[] = []
+  if (config.scaffold?.graph && config.graphWiringsFile)
+    files.push({
+      file: config.graphWiringsFile,
+      generator: 'pikkuGraphWirings',
+    })
   if (config.scaffold?.rpc && config.publicRpcFile)
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.console && config.consoleFunctionsFile)
@@ -186,6 +192,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     // Scaffold and definition generators are all independent
     await Promise.all([
+      workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Scenario functions', 'pikkuScenarioFunctions', null),

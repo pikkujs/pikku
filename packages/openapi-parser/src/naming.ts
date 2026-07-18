@@ -3,18 +3,22 @@
  * Uses operationId when available, otherwise generates from path segments.
  */
 
-/** JavaScript/TypeScript reserved words that cannot be used as identifiers */
+/**
+ * Words that are illegal as a `const`/binding identifier in a strict-mode module
+ * (generated code is always ESM). Contextual keywords that are only special in a
+ * specific position — `get`/`set` (getters), `type`/`as`/`from`/`of` (type & import
+ * syntax), `any`/`number`/`object`/`string`/`symbol`/`declare`/`module`/`require`
+ * (type positions), and the legacy ES3 future-reserved words (`byte`, `char`, `int`,
+ * `long`, `short`, `float`, `double`, `boolean`, `goto`, `native`, `synchronized`,
+ * `transient`, `volatile`, `abstract`, `final`) — are all valid binding names and
+ * deliberately excluded, so `sheets.spreadsheets.get` stays `get`, not `_get`.
+ */
 const JS_RESERVED_WORDS = new Set([
-  // ECMAScript reserved words
-  'abstract',
   'arguments',
   'await',
-  'boolean',
   'break',
-  'byte',
   'case',
   'catch',
-  'char',
   'class',
   'const',
   'continue',
@@ -22,29 +26,22 @@ const JS_RESERVED_WORDS = new Set([
   'default',
   'delete',
   'do',
-  'double',
   'else',
   'enum',
   'eval',
   'export',
   'extends',
   'false',
-  'final',
   'finally',
-  'float',
   'for',
   'function',
-  'goto',
   'if',
   'implements',
   'import',
   'in',
   'instanceof',
-  'int',
   'interface',
   'let',
-  'long',
-  'native',
   'new',
   'null',
   'package',
@@ -52,40 +49,21 @@ const JS_RESERVED_WORDS = new Set([
   'protected',
   'public',
   'return',
-  'short',
   'static',
   'super',
   'switch',
-  'synchronized',
   'this',
   'throw',
   'throws',
-  'transient',
   'true',
   'try',
   'typeof',
   'undefined',
   'var',
   'void',
-  'volatile',
   'while',
   'with',
   'yield',
-  // TypeScript additional reserved words in strict mode
-  'as',
-  'any',
-  'declare',
-  'get',
-  'module',
-  'require',
-  'number',
-  'object',
-  'set',
-  'string',
-  'symbol',
-  'type',
-  'from',
-  'of',
 ])
 
 /**
@@ -234,6 +212,37 @@ interface OperationForNaming {
   operationId?: string
 }
 
+/**
+ * Find the longest shared leading run of dot-separated operationId segments,
+ * always leaving at least one trailing segment on every operation. Only applies
+ * when every operation has a dotted operationId (e.g. Google's
+ * `sheets.spreadsheets.values.get`), so specs whose ids are camelCase or absent
+ * are left untouched. The shared prefix is redundant with the addon namespace,
+ * so stripping it turns `sheetsSpreadsheetsValuesGet` into `valuesGet`.
+ */
+function commonOperationIdPrefix(operations: OperationForNaming[]): string[] {
+  if (operations.length < 2) {
+    return []
+  }
+  if (
+    !operations.every((op) => op.operationId && op.operationId.includes('.'))
+  ) {
+    return []
+  }
+  const segmented = operations.map((op) => op.operationId!.split('.'))
+  const minLen = Math.min(...segmented.map((s) => s.length))
+  const prefix: string[] = []
+  for (let i = 0; i < minLen - 1; i++) {
+    const seg = segmented[0][i]
+    if (segmented.every((s) => s[i] === seg)) {
+      prefix.push(seg)
+    } else {
+      break
+    }
+  }
+  return prefix
+}
+
 export interface NamedOperation {
   method: string
   path: string
@@ -257,11 +266,16 @@ export function generateOperationNames(
   // would produce files that collide on disk.
   const usedNamesLower = new Map<string, number>()
 
+  const opIdPrefix = commonOperationIdPrefix(operations)
+
   for (const op of operations) {
     let name: string
 
     if (op.operationId) {
-      name = fromOperationId(op.operationId)
+      const opId = opIdPrefix.length
+        ? op.operationId.split('.').slice(opIdPrefix.length).join('.')
+        : op.operationId
+      name = fromOperationId(opId)
     } else {
       name = deriveNameFromPath(op.method, op.path, commonPrefix)
     }

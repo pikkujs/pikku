@@ -1,0 +1,45 @@
+{
+  "name": "Lead Extractor",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "ag",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "text": "Extract structured lead data from the message." }
+    },
+    {
+      "id": "m1",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "modelName": "models/gemini-1.5-flash", "options": { "temperature": 0.2 } }
+    },
+    {
+      "id": "op",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [400, 200],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"domain\": { \"type\": [\"string\", \"null\"] },\n    \"cheapest_plan\": { \"type\": [\"number\", \"null\"] },\n    \"has_api\": { \"type\": \"boolean\" }\n  },\n  \"required\": [\"has_api\"]\n}"
+      }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "Gemini Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Structured Output Parser": { "ai_outputParser": [[{ "node": "AI Agent", "type": "ai_outputParser", "index": 0 }]] }
+  }
+}

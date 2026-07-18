@@ -1,0 +1,46 @@
+{
+  "name": "Http Dup Params",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "demo" }
+    },
+    {
+      "id": "h",
+      "name": "Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.example.com/items",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Sec-Fetch-Dest", "value": "empty" },
+            { "name": "Accept", "value": "application/json" },
+            { "name": "Sec-Fetch-Dest", "value": "cors" },
+            { "name": "Sec-Fetch-Dest", "value": "document" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "type", "value": "old" },
+            { "name": "type", "value": "new" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Fetch", "type": "main", "index": 0 }]]
+    }
+  }
+}
