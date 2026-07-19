@@ -5749,6 +5749,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/addon-mailgun@npm:0.1.2":
+  version: 0.1.2
+  resolution: "@pikku/addon-mailgun@npm:0.1.2"
+  peerDependencies:
+    "@pikku/core": ^0.12.36
+    zod: ^4
+  checksum: 10/734f210dbc976fbbf4dfa613fb1d231ea53723a98a5d7ec68c9efe3cbbd165dfb80ca2a3b374d2ce8c09f0a01bc061dadd0576bb602da8a468f655135bb8ca31
+  languageName: node
+  linkType: hard
+
+"@pikku/addon-mandrill@npm:0.1.2":
+  version: 0.1.2
+  resolution: "@pikku/addon-mandrill@npm:0.1.2"
+  peerDependencies:
+    "@pikku/core": ^0.12.36
+    zod: ^4
+  checksum: 10/4c1475552ddc6cd405a7c2d2bfebdb4c9f59881d65a63ccc238aa769a1833976c19ab87f99fb6ae68d65958b5ce542fbe78264c87ad85d5dac343123ed851d26
+  languageName: node
+  linkType: hard
+
 "@pikku/addon-oauth-api@workspace:e2e/packages/oauth-api":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-oauth-api@workspace:e2e/packages/oauth-api"
@@ -6145,6 +6165,8 @@ __metadata:
     "@pikku/addon-gmail": "npm:0.1.2"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
+    "@pikku/addon-mailgun": "npm:0.1.2"
+    "@pikku/addon-mandrill": "npm:0.1.2"
     "@pikku/ai-vercel": "workspace:*"
     "@pikku/better-auth": "workspace:*"
     "@pikku/cli": "workspace:*"
