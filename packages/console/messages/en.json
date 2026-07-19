@@ -188,6 +188,8 @@
   "package_detail_select_function": "Select a function to view its details",
   "package_detail_select_secret": "Select a secret to view its details",
   "package_detail_select_variable": "Select a variable to view its details",
+  "package_detail_instance_label": "Instance",
+  "package_detail_instance_description": "This package is installed more than once — pick the instance to configure",
   "package_detail_install": "Install",
   "package_detail_installed": "Installed",
   "package_detail_tab_setup": "Setup",

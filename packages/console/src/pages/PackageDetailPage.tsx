@@ -9,6 +9,7 @@ import {
   Group,
   Loader,
   Center,
+  Select,
   Stack,
   Table,
   Tabs,
@@ -334,6 +335,31 @@ export const PackageDetailPage: React.FC<{
     (a) => a.packageName === id
   )
   const isInstalled = source === 'installed' || !!installedAddon
+
+  // Every wired instance of this package, with its per-instance overrides. A
+  // package installed more than once has several — the Setup tab resolves its
+  // credential/secret names against the SELECTED instance's overrides.
+  interface AddonInstanceInfo {
+    namespace: string
+    secretOverrides?: Record<string, string>
+    variableOverrides?: Record<string, string>
+    credentialOverrides?: Record<string, string>
+  }
+  const { data: addonInstances } = useQuery<AddonInstanceInfo[]>({
+    queryKey: ['addon-instances', id],
+    queryFn: async () =>
+      (await rpc.invoke('console:getAddonInstances', {
+        packageName: id,
+      })) as AddonInstanceInfo[],
+    enabled: isInstalled,
+    staleTime: 60 * 1000,
+  })
+  const instances = addonInstances ?? []
+  const [selectedInstance, setSelectedInstance] = React.useState<string | null>(
+    null
+  )
+  const activeInstance =
+    instances.find((i) => i.namespace === selectedInstance) ?? instances[0]
 
   const { data: installedPkg } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', 'installed', id],
@@ -962,9 +988,24 @@ export const PackageDetailPage: React.FC<{
 
             {hasSetup && (
               <Tabs.Panel value="setup">
+                {instances.length > 1 && (
+                  <Box px="md" pt="md">
+                    <Select
+                      label={m.package_detail_instance_label()}
+                      description={m.package_detail_instance_description()}
+                      data={instances.map((i) => i.namespace)}
+                      value={activeInstance?.namespace ?? null}
+                      onChange={setSelectedInstance}
+                      allowDeselect={false}
+                      maw={320}
+                    />
+                  </Box>
+                )}
                 <AddonSetupTab
                   credentials={pkg.credentials ?? {}}
                   secrets={pkg.secrets ?? {}}
+                  credentialOverrides={activeInstance?.credentialOverrides}
+                  secretOverrides={activeInstance?.secretOverrides}
                 />
               </Tabs.Panel>
             )}
