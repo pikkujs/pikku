@@ -78,9 +78,10 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
     if (layoutResult.nodes.length > 0) {
       setNodes(layoutResult.nodes)
       setEdges(layoutResult.edges)
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         fitView({ padding: 0.2 })
       }, 50)
+      return () => clearTimeout(timer)
     }
   }, [layoutResult, setNodes, setEdges, fitView])
 
