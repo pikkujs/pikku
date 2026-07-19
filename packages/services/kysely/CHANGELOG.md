@@ -1,3 +1,75 @@
+## 0.13.1
+
+### Patch Changes
+
+- 13474a6: feat(scopes): grant scopes directly to a user, not only through roles
+
+  A scope can now be granted to a user directly, outside of any role.
+  `resolveScopes` returns the union of a user's role-derived scopes and their
+  direct grants, so a one-off capability no longer requires inventing a role.
+  - `@pikku/core`: `ScopeService` gains `addScopeToUser` / `removeScopeFromUser` /
+    `listUserScopes`.
+  - `@pikku/kysely`: a new `pikku_user_scope` table (FK into `pikku_scopes`, so the
+    database still refuses an undeclared grant; `ON DELETE CASCADE` from `user`,
+    so deleting a user takes their direct grants with it). `resolveScopes` unions
+    it with the role join.
+  - `@pikku/addon-console`: `scopeAddScopeToUser` / `scopeRemoveScopeFromUser`
+    (gated by `pikku:scopes:manage`), and `scopeListUserRoles` now also returns
+    `directScopes`.
+  - `@pikku/console`: a **Direct scopes** section in the user roles drawer to grant
+    and revoke scopes directly, showing them distinctly from the resolved union.
+
+  Also: the Scopes page now distinguishes a permission error (a console admin
+  without `pikku:scopes:read`) from an actual scope-service outage, instead of
+  showing "the scope service may be unavailable" for both.
+
+- 13474a6: feat: KyselyScopeService — resolve and administer user scopes
+
+  Adds `KyselyScopeService`, backing the core `ScopeService` interface with four
+  self-created tables: `pikku_scopes`, `pikku_roles`, `pikku_role_scopes` and
+  `pikku_user_role`.
+
+  Scopes are declared in code and synced additively — a scope that is no longer
+  declared is marked, never deleted, so a rename or a rolling deploy cannot
+  silently revoke a grant. `pikku scopes prune` is the deliberate removal path.
+  Roles are data, composed by admins at runtime, and `pikku_role_scopes` has a
+  foreign key into `pikku_scopes`, so the database itself refuses to grant a
+  scope that was never declared.
+
+- 13474a6: feat: ScopeService.listScopes
+
+  Exposes the scope vocabulary held in the store — everything a role can be
+  composed from — flagging any scope that is still present but no longer declared
+  in code (inert, and awaiting `pikku scopes prune`).
+
+- 70fa400: Add outgoing webhooks — `webhookService.send()` enqueues signed deliveries onto a retrying queue, `@pikku/kysely`'s `KyselyWebhookService` persists per-attempt delivery history, and `@pikku/console` gains a read-only `/webhooks` page; also caches resolved secrets in `TypedSecretService` and registers inline-`func` metadata for queue/scheduler/trigger/gateway wirings.
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [13474a6]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+
 ## 0.13.0
 
 ### Minor Changes

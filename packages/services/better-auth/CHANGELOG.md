@@ -1,5 +1,71 @@
 # @pikku/better-auth
 
+## 0.12.18
+
+### Patch Changes
+
+- 416606c: `betterAuthStatelessSession` now catches a throwing `secrets.getSecret()` (e.g. during Next.js static export), logs a warning, and skips gracefully instead of crashing.
+- 739c9f8: `betterAuthSession` now checks the live session, not the wire's stale snapshot, before re-resolving.
+
+  The middleware skipped when a session was already present, but it read the wire's
+  static `session` field — a snapshot taken at wire construction that a prior
+  middleware's `setSession` never updates (that writes the session service). So when an
+  app registered its own `betterAuthSession` first (e.g. to enrich the session with a
+  role via `mapSession`, or to resolve impersonation) and the generated
+  `betterAuthSession()` ran after it, the guard saw no session and re-resolved with the
+  default map — clobbering the enriched session with a bare `{ userId }`. The guard now
+  reads `getSession()`, so the second middleware correctly steps aside and the first
+  middleware's session survives.
+
+- c2a66dc: `credentialOAuthProviders` now skips an OAuth2 credential whose app secret is
+  UNCONFIGURED (the secret does not exist yet) instead of throwing. Previously a
+  single unconfigured provider — e.g. an installed addon's OAuth2 credential the
+  operator has not set up (now that addon credential meta is merged into the
+  consuming app's `CREDENTIAL_OAUTH2_CONFIGS`) — threw `Requested secret not
+found` while building the auth instance, which took down the ENTIRE better-auth
+  instance: every `getSession` and sign-up 500'd. Missing app secrets are logged
+  at `warn` (pass the singleton `logger` as the optional third argument) and the
+  provider is left out; a secret that IS present but malformed (no `clientId`)
+  still throws as a genuine misconfiguration.
+- 13474a6: feat: resolve session scopes from a registered ScopeService
+
+  `betterAuthSession` and `betterAuthStatelessSession` now fill `session.scopes`
+  from the registered `ScopeService` on every path — human, machine (API key), and
+  impersonation. Because the session middleware already runs per request, a grant
+  change takes effect on the next request with no re-login and nothing to
+  invalidate.
+
+  A `scopes` set by `mapSession`/`mapKey` is authoritative and is never widened,
+  so an API key can be minted with narrower rights than the user who owns it.
+  Resolution is inert when no `ScopeService` is registered.
+
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [13474a6]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+
 ## 0.12.17
 
 ### Patch Changes

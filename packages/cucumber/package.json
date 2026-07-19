@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cucumber",
-  "version": "0.12.13",
+  "version": "0.12.14",
   "description": "Cucumber test harness for Pikku function tests",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -16,10 +16,10 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@pikku/fetch": "^0.12.6"
+    "@pikku/fetch": "^0.12.8"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.54",
+    "@pikku/core": "^0.12.64",
     "@playwright/test": "^1.50.0"
   },
   "peerDependenciesMeta": {

@@ -1,5 +1,11 @@
 # @pikku/assistant-ui
 
+## 0.12.8
+
+### Patch Changes
+
+- 416606c: Replace the hand-rolled SSE parser with the AG-UI client runtime (`@ag-ui/client` + `@assistant-ui/react-ag-ui`); agent chat is now streaming-only, with the approval/resume flow preserved.
+
 ## 0.12.7
 
 ### Patch Changes

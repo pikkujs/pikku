@@ -1,3 +1,150 @@
+## 0.12.64
+
+### Patch Changes
+
+- 7ab5287: Security hardening (follow-up to the #966 C1/C3 fixes):
+  - SSRF (C1): `isPrivateHost` now also rejects alias/encoded forms that resolve to internal targets — trailing-dot FQDNs (`localhost.`), the reserved `*.localhost` name, IPv4-mapped IPv6 (`::ffff:127.0.0.1`), octal/decimal/hex-encoded IPv4 (`0177.0.0.1`, `2130706433`, `0x7f000001`), and the full `fe80::/10` link-local range. `safeFetch` also strips `Authorization` and `Cookie` headers whenever a redirect crosses origin so credentials cannot leak to a redirected host.
+  - Forgeable approval markers (C3): the sub-agent approval marker is now identified by a non-forgeable `Symbol` brand set only by framework code, instead of the plain `__approvalRequired` string key. A delegating tool's LLM-shaped `result.object` (plain JSON) can no longer conjure an approval/suspension even though the tool is allowed to forward approvals.
+
+- e86bc17: Security + feature: bind AI agent thread/run ownership to the authenticated session and add `sessionScope: 'user' | 'org'` to agents. The owner key is now the trusted principal (`session.userId`, or `session.orgId` for org-scoped agents) composed with the client `resourceId` (`principal:resourceId`), so a client-supplied `resourceId` sub-partitions within the caller's own boundary but can never widen access to another user's or org's threads. Resolution is idempotent (safe for sub-agent recursion and resume); org scope with no session org is denied; sessionless `user` wirings fall back to the bare `resourceId`.
+- a9b96a0: Security: only honor the `__approvalRequired` suspension marker from framework sub-agent tools (`forwardsApproval`), so an attacker-influenced ordinary tool result can no longer forge an approval/suspension.
+- 3f7fc54: Security: SSRF-harden outgoing webhook delivery and voice-input audio fetch (validate scheme + block private/internal hosts, re-validate every redirect hop via a shared `safeFetch`); stop the channel stream-middleware cache from reusing an earlier run's per-invocation middleware closures across runs.
+- c478794: Simplify authorization to be session + function based (#972). Permissions are now function-scoped only: global permissions AND together, a function's own permissions OR together, and the two are independent gates that both must pass — a broad global can no longer satisfy an admin-only function. Removed wire-, tag-, and HTTP-route-level permissions (`addTagPermission`, `addHTTPPermission`, wire-level `permissions` on HTTP/channel/MCP wirings). Tags are now organizational only. `auth` (session presence) and tag/HTTP middleware are unchanged.
+- 3f04ae4: Fix `pikku dev` hot-reload memory leak (#975). Changed user files were re-imported under a fresh URL on every reload (a `data:` URL on Node, a uniquely-named temp sibling on Bun), which permanently leaked a record in the native ESM loader map — the dev server climbed to `JavaScript heap out of memory` during long editing sessions (worse on Bun, which the sandbox dev server runs on). Reloading now goes through an evictable module runner that transpiles the source and runs it via `vm.compileFunction`, holding exports under a stable path key so each edit overwrites one slot and the previous module is collected. Heap stays bounded on both runtimes.
+- 90d9f04: Scope `console:getAddonInstalledPackage` to the addon's own `.pikku` metadata.
+
+  Previously every addon returned the _app's_ secrets/wirings (read from the app's
+  `.pikku` root), so the installed-package view couldn't show what a given addon
+  actually requires. `MetaService` gains optional `readPackageFile`/`readPackageDir`
+  helpers (implemented by `LocalMetaService`, which resolves the addon package's
+  root from node_modules), and `getAddonInstalledPackage` now reads secrets,
+  variables, wirings, schemas, README and package.json from the addon package
+  itself. It also reads and returns the addon's `credentials` meta (OAuth2 + wire
+  credentials), which was never surfaced before — entries with an `oauth2` field
+  are the OAuth integrations to connect.
+
+- cb079cc: A workflow-graph node's `func` can now reference a registered AI agent by name, dispatched as an agent run like sub-workflows, with `ref()` resolving the agent's output keys.
+- cb079cc: `pikkuAIAgent` gains a `workflows: []` capability: a referenced workflow is exposed to the LLM as a tool that runs inline and returns its output.
+- 0a7db82: AI agent tool `execute()` failures are now logged via `logger.error` unconditionally (then rethrown), instead of only surfacing when a tool-call middleware hook is registered.
+- 981c4db: Add a model-baked `AIEmbeddingService` interface and optional `aiEmbedding` slot on `CoreSingletonServices`, with separate `embedDocuments`/`embedQuery` methods for vector-store addons.
+- 13474a6: Generate a `ScopeId` union from `wireScope` declarations.
+
+  `pikku all` now emits `.pikku/scopes/pikku-scopes.gen.ts` with a `ScopeId` union
+  of every declared scope, plus a wildcard form for each node that has
+  descendants. A project's generated `pikkuFunc` narrows `scopes` to that union,
+  so an undeclared scope is a compile error with editor autocomplete:
+
+  ```ts
+  wireScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+
+  pikkuFunc({
+    scopes: ['admin:invoices:create'],  // ✓ autocompleted
+    func: ...,
+  })
+
+  pikkuFunc({
+    scopes: ['admin:invoice:create'],   // ✗ compile error (typo)
+    func: ...,
+  })
+  ```
+
+  The inspector independently rejects undeclared scopes, so a cast that defeats
+  the compiler is still caught at build time.
+
+  Also fixes `getArrayPropertyValue` dropping any array behind a cast — idiomatic
+  `tags: ['a'] as const` was previously invisible to the inspector and silently
+  omitted from meta.
+
+- 5a2b0d5: Prune removed addons on `pikku dev` hot-reload. Deleting an addon wiring (`*.addon.ts`) regenerated `.pikku` on disk but left its `wireAddon` entry stranded in the live `pikkuState(null,'addons','packages')` map until a full restart (the reimport path is add-only), so `getInstalledAddons` kept reporting deleted addons. `reloadGeneratedMeta`'s sibling `reconcileAddonRegistry(declaredNamespaces)` now drops any addon namespace the fresh inspection no longer declares, and the dev watcher calls it with `inspectorState.rpc.wireAddonDeclarations`. Routes already reconcile (http meta is replaced wholesale + router reset); function-impl entries are intentionally left since the workflow service registers framework internals there that aren't in the generated set.
+- 13474a6: feat(scopes): grant scopes directly to a user, not only through roles
+
+  A scope can now be granted to a user directly, outside of any role.
+  `resolveScopes` returns the union of a user's role-derived scopes and their
+  direct grants, so a one-off capability no longer requires inventing a role.
+  - `@pikku/core`: `ScopeService` gains `addScopeToUser` / `removeScopeFromUser` /
+    `listUserScopes`.
+  - `@pikku/kysely`: a new `pikku_user_scope` table (FK into `pikku_scopes`, so the
+    database still refuses an undeclared grant; `ON DELETE CASCADE` from `user`,
+    so deleting a user takes their direct grants with it). `resolveScopes` unions
+    it with the role join.
+  - `@pikku/addon-console`: `scopeAddScopeToUser` / `scopeRemoveScopeFromUser`
+    (gated by `pikku:scopes:manage`), and `scopeListUserRoles` now also returns
+    `directScopes`.
+  - `@pikku/console`: a **Direct scopes** section in the user roles drawer to grant
+    and revoke scopes directly, showing them distinctly from the resolved union.
+
+  Also: the Scopes page now distinguishes a permission error (a console admin
+  without `pikku:scopes:read`) from an actual scope-service outage, instead of
+  showing "the scope service may be unavailable" for both.
+
+- ee040dc: fix(ai-agent): resolve addon-scoped services when generating a tool's approval description. The `approvalDescription` for an addon function ran against a cold per-package services cache and silently fell back to root services, so descriptions reading addon-only services (e.g. a todo store) threw and the approval `reason` never reached the client. It now builds the addon's singleton services the same way the tool's `execute` path does (#971).
+- cb079cc: `pikkuWorkflowGraph` nodes accept an optional `notes?: string` and the graph an optional `notes?: string[]`; notes are documentation only and excluded from `graphHash`.
+- 13474a6: feat: ScopeService.listScopes
+
+  Exposes the scope vocabulary held in the store — everything a role can be
+  composed from — flagging any scope that is still present but no longer declared
+  in code (inert, and awaiting `pikku scopes prune`).
+
+- 9f0d0eb: Migrate the `--oauth` addon scaffold off `OAuth2Client`. A scaffolded OAuth2
+  addon service used to construct `new OAuth2Client(config, appCredentialSecretId,
+secrets)` and do its own token exchange/refresh — the responsibility better-auth
+  now owns via the credential service. The `pikku new addon --oauth` scaffold (and
+  the OpenAPI `--openapi` generator) now emit a service that receives a ready
+  access token: `services.ts` uses `createWireServices` + `wire.getCredential<{
+accessToken: string }>(name)` and the service does a plain `fetch` with
+  `Authorization: Bearer ${accessToken}`, matching the existing per-user
+  bearer/apikey credential scaffold. With no remaining consumers, `OAuth2Client`
+  (`@pikku/core/oauth2`) and its test are removed; the `./oauth2` export keeps the
+  `OAuth2AppCredential` / `OAuth2Token` types.
+- 13474a6: Add scopes: declared, statically-checked authorization scopes on pikkuFunc.
+
+  A scope is a capability string the session must hold. Unlike `permissions` —
+  which OR together across global/wire/tag/function levels — scopes are an AND
+  gate that runs before them, so adding one can only ever narrow access.
+
+  ```ts
+  wireScope({
+    admin: {
+      scopes: { invoices: { scopes: { create: {} } } },
+    },
+  })
+
+  export const createInvoice = pikkuFunc({
+    scopes: ['admin:invoices:create'],
+    func: async (services, data) => { ... },
+  })
+  ```
+
+  The gate runs after the auth check and before the request body is evaluated,
+  since scopes depend only on the session. A session lacking a required scope
+  gets a `MissingScopeError` (403) naming it. Wildcards grant subtrees:
+  `admin:*` satisfies `admin` and `admin:invoices:create`.
+
+  `session.scopes` is populated by whoever builds the session — core reads it and
+  never fetches, keeping the runner free of I/O. The new `ScopeService` interface
+  resolves scopes at the session boundary.
+
+- 70fa400: Add outgoing webhooks — `webhookService.send()` enqueues signed deliveries onto a retrying queue, `@pikku/kysely`'s `KyselyWebhookService` persists per-attempt delivery history, and `@pikku/console` gains a read-only `/webhooks` page; also caches resolved secrets in `TypedSecretService` and registers inline-`func` metadata for queue/scheduler/trigger/gateway wirings.
+- 7b2ea23: `wireAddon` can install one addon package as multiple named instances, each with its own per-instance singleton services and `secretOverrides`/`variableOverrides`/`credentialOverrides` that alias logical names to real project secrets/variables/credentials.
+- 1dc77d5: Remove the old, pre-better-auth OAuth2 credential runtime now that the
+  `credentialOAuth` plugin owns credential linking, storage and refresh.
+  - `@pikku/core`: drop the unused `createOAuth2Handler` HTTP-routes flow (and its
+    `CreateOAuth2HandlerOptions`) from the `./oauth2` entrypoint. The credential
+    schema types (`OAuth2AppCredential`, `OAuth2Token`) and the `OAuth2Client`
+    API helper remain exported.
+  - `@pikku/addon-console`: delete the six `oauth-*` console functions
+    (connect/disconnect/status/exchange-tokens/refresh-token/test-token) and the
+    `OAuthService` behind them — credential connections now flow through
+    better-auth's `/credential-oauth/link` + `/callback`.
+  - `@pikku/console`: the credential UI no longer calls the removed
+    `console:oauth*` RPCs. Per-user and singleton (platform) OAuth2 credentials
+    connect via the `/credential-oauth/link` full-page redirect and disconnect via
+    `console:credentialDelete`; the `/oauth/callback` popup page is removed.
+
+- 416606c: Fix a TypeScript 6 `PikkuWire` constraint collapse that made `rpc` a required field: narrow `PikkuRPC` default type params from `any` to `Function` and replace bare `any` TypedRPC args with `PikkuRPC`.
+- d2a6eea: Add `wireRemoteAddon` — consume a hosted addon's `remote: true` RPCs transparently over HTTP, with the addon installed as a devDependency (types only). `rpc('ns:fn', input)` dispatches to the host's `/remote/rpc/:rpcName`, authenticating as a client with a token bound from a local source (`{ credentialId }` per-user, `{ secretId }` platform, or a custom `resolve()`), or omitted for a public surface. This is any-machine → hosted-library client auth, distinct from the trusted mesh (`PIKKU_REMOTE_SECRET`). A new `.remote.gen.d.ts` RPC map exposes only the `remote: true` surface to consumers. `pikku` verify errors if a `wireRemoteAddon` package is a production dependency (or missing) instead of a devDependency, and if a bound `credentialId`/`secretId` isn't wired.
+- 30e62ee: Add `workflow.approval(reason, { schema, expiry })` — a return-valued, expiring human-in-the-loop gate that stays closed until a decision is recorded (via `workflowService.approveStep` or `POST /workflow/:workflowName/approve/:runId`), unlike the one-shot `workflow.suspend()`.
+
 ## 0.12.63
 
 ### Patch Changes
