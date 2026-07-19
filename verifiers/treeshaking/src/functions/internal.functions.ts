@@ -1,9 +1,15 @@
 import { pikkuFunc } from '#pikku'
+import {
+  canSendEmail,
+  canProcessPayment,
+  hasEmailQuota,
+} from './permissions.js'
 
 export const sendEmail = pikkuFunc<
   { to: string; subject: string; body: string },
   void
 >({
+  permissions: { allowed: [canSendEmail, hasEmailQuota(100)] },
   func: async ({ email, userContext }, data) => {
     await email.send(data.to, data.subject, data.body)
   },
@@ -19,6 +25,7 @@ export const processPayment = pikkuFunc<
   { amount: number; currency: string },
   { transactionId: string }
 >({
+  permissions: { canProcessPayment },
   func: async ({ payment, analytics, userPreferences }, data) => {
     const transactionId = await payment.charge(data.amount, data.currency)
     await analytics.track('payment_processed', {

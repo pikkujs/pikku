@@ -72,11 +72,6 @@ async function main(): Promise<void> {
         { name: 'inline', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'global', type: 'http-permission' },
-        { name: '/api/*', type: 'http-permission' },
-        { name: 'read', type: 'tag-permission' },
-        { name: 'wire', type: 'wire-permission' },
-        { name: 'inline', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -89,7 +84,6 @@ async function main(): Promise<void> {
         { name: 'session', type: 'tag', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'global', type: 'http-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -107,10 +101,6 @@ async function main(): Promise<void> {
         { name: 'grouped-api', type: 'wire', phase: 'before' }, // Group middleware
         { name: 'inline', type: 'wire', phase: 'before' }, // Route middleware
         { name: 'noOp', type: 'function', phase: 'before' }, // Function middleware (no function tag)
-        { name: 'global', type: 'http-permission' },
-        { name: '/api/*', type: 'http-permission' },
-        { name: 'wire', type: 'wire-permission' },
-        { name: 'inline', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -126,9 +116,6 @@ async function main(): Promise<void> {
         { name: 'api', type: 'tag', phase: 'before' }, // From defineHTTPRoutes contract
         { name: 'grouped-api', type: 'wire', phase: 'before' }, // Group middleware cascades
         { name: 'noOp', type: 'function', phase: 'before' }, // Function middleware (no function tag)
-        { name: 'global', type: 'http-permission' },
-        { name: '/api/*', type: 'http-permission' },
-        { name: 'read', type: 'tag-permission' }, // From 'api' tag
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -142,7 +129,6 @@ async function main(): Promise<void> {
         { name: 'scheduler', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'scheduler', type: 'tag-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -156,7 +142,6 @@ async function main(): Promise<void> {
         { name: 'queue', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'queue', type: 'tag-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -192,7 +177,7 @@ async function main(): Promise<void> {
     // Tags are ordered as declared on the function: ['function', 'session', 'mcp'].
     // Wire entries in inherited middleware don't resolve (misc.middleware not populated),
     // so only funcConfig.middleware provides the actual middleware functions.
-    // For permissions: functionPermission returns true, short-circuiting mcpWirePermission.
+    // Permissions are function-scoped: functionPermission runs and returns true.
     const mcpToolPassed = await testMCPToolWiring(
       [
         { name: 'function', type: 'tag', phase: 'before' },
@@ -200,7 +185,6 @@ async function main(): Promise<void> {
         { name: 'mcp', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
         { name: 'mcp', type: 'wire', phase: 'before' },
-        { name: 'mcp', type: 'tag-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -214,8 +198,6 @@ async function main(): Promise<void> {
         { name: 'mcp', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'mcp', type: 'tag-permission' },
-        { name: 'mcp-wire', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices
@@ -229,8 +211,6 @@ async function main(): Promise<void> {
         { name: 'mcp', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
-        { name: 'mcp', type: 'tag-permission' },
-        { name: 'mcp-wire', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices

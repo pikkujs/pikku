@@ -8,20 +8,14 @@ import {
 import { testAddon } from './addon.functions.js'
 import { analyzeDataV1, analyzeData } from './versioned.functions.js'
 import { logRequest, trackAnalytics, rateLimiter } from './middleware.js'
-import {
-  canSendEmail,
-  canProcessPayment,
-  hasEmailQuota,
-} from './permissions.js'
 
-// Notifications with middleware and permissions
+// Notifications with middleware (permissions live on the function)
 wireHTTP({
   method: 'post',
   route: '/api/notifications/email',
   tags: ['notifications', 'email'],
   func: sendEmail,
   middleware: [logRequest],
-  permissions: { allowed: [canSendEmail, hasEmailQuota(100)] },
 })
 
 wireHTTP({
@@ -32,14 +26,13 @@ wireHTTP({
   middleware: [logRequest],
 })
 
-// Payments with middleware and permissions
+// Payments with middleware (permissions live on the function)
 wireHTTP({
   method: 'post',
   route: '/api/payments/charge',
   tags: ['payments'],
   func: processPayment,
   middleware: [logRequest, trackAnalytics, rateLimiter(10)],
-  permissions: { canProcessPayment },
 })
 
 // Storage

@@ -37,11 +37,9 @@ wireChannel({
         auth: false,
       },
       logout,
-      // A wiring with an nested function. This is to allow permissions
-      // to be applied to the wiring.
+      // A wiring that references a function via the nested object form.
       subscribe: {
         func: subscribe,
-        permissions: {},
       },
       // A shorthand method, this is a special case in typescript
       // so figured it would be useful to include
