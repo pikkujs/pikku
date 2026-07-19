@@ -1,4 +1,4 @@
-import { pikkuPermission, addTagPermission } from '../.pikku/pikku-types.gen.js'
+import { pikkuPermission } from '../.pikku/pikku-types.gen.js'
 
 /**
  * Addon package permission that logs permission checks
@@ -12,23 +12,3 @@ export const addonPermission = pikkuPermission(
     return true // Always allow for testing
   }
 )
-
-/**
- * Tag permission for addon functions
- */
-export const tagPermission = pikkuPermission(
-  async ({ logger }, _data, _wire) => {
-    logger.info({
-      type: 'addon-tag-permission',
-      name: 'addon',
-    })
-    return true // Always allow for testing
-  }
-)
-
-/**
- * Register 'addon' tag permission
- * This will apply to all functions with the 'addon' tag
- */
-export const addonTagPermission = () =>
-  addTagPermission('addon', [tagPermission])

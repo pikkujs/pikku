@@ -2,8 +2,6 @@ import {
   wireMCPResource,
   wireMCPPrompt,
   addTagMiddleware,
-  addTagPermission,
-  pikkuPermission,
   pikkuFunc,
   pikkuMCPToolFunc,
 } from '#pikku'
@@ -13,35 +11,8 @@ import { functionMiddleware } from '../middleware/function.js'
 import { functionPermission } from '../permissions/function.js'
 import type { MCPResourceResponse, MCPPromptResponse } from '@pikku/core'
 
-const mcpPermission = pikkuPermission(
-  async ({ logger }, _data, { session }) => {
-    logger.info({
-      type: 'tag-permission',
-      name: 'mcp',
-      sessionExists: !!session,
-    })
-    return false
-  }
-)
-
 export const mcpTagMiddleware = () =>
   addTagMiddleware('mcp', [tagMiddleware('mcp')])
-
-export const mcpTagPermissions = () =>
-  addTagPermission('mcp', {
-    mcpPermission,
-  })
-
-export const mcpWirePermission = pikkuPermission(
-  async ({ logger }, _data, { session }) => {
-    logger.info({
-      type: 'wire-permission',
-      name: 'mcp-wire',
-      sessionExists: !!session,
-    })
-    return false
-  }
-)
 
 export const functionTagMiddleware = () =>
   addTagMiddleware('function', [tagMiddleware('function')])
@@ -54,7 +25,6 @@ export const mcpToolFunction = pikkuMCPToolFunc<void>({
   middleware: [functionMiddleware('noOp'), wireMiddleware('mcp')],
   permissions: {
     functionLevel: functionPermission,
-    wire: [mcpWirePermission],
   },
   func: async ({ logger }) => {
     logger.info({ type: 'function', name: 'mcpTool', phase: 'execute' })
@@ -81,7 +51,6 @@ wireMCPResource({
   description: 'Test MCP resource',
   tags: ['session', 'mcp'],
   middleware: [wireMiddleware('mcp')],
-  permissions: { wire: [mcpWirePermission] },
   func: mcpResourceFunction,
 })
 
@@ -108,6 +77,5 @@ wireMCPPrompt({
   description: 'Test MCP prompt',
   tags: ['session', 'mcp'],
   middleware: [wireMiddleware('mcp')],
-  permissions: { wire: [mcpWirePermission] },
   func: mcpPromptFunction,
 })

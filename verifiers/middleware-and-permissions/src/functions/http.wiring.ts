@@ -2,15 +2,11 @@
 import '../../.pikku/http/pikku-http-wirings-meta.gen.js'
 
 import { wireMiddleware } from '../middleware/wire.js'
-import { wirePermission } from '../permissions/wire.js'
 import { noOpFunction } from './no-op.function.js'
 import {
   addHTTPMiddleware,
-  addHTTPPermission,
   addTagMiddleware,
-  addTagPermission,
   pikkuMiddleware,
-  pikkuPermission,
   wireHTTP,
 } from '#pikku'
 import { wireHTTPRoutes, defineHTTPRoutes } from '@pikku/core/http'
@@ -19,22 +15,10 @@ import {
   httpRouteMiddleware,
 } from '../middleware/http.js'
 import { tagMiddleware } from '../middleware/tag.js'
-import {
-  httpGlobalPermission,
-  httpRoutePermission,
-} from '../permissions/http.js'
-import { permissionTagFactory, readTagPermission } from '../permissions/tag.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
 export const apiTagMiddleware = () =>
   addTagMiddleware('api', [tagMiddleware('api')])
-
-// Global tag permissions - Recommended: Use factory pattern for tree-shaking
-export const apiTagPermissions = () =>
-  addTagPermission('api', { read: readTagPermission })
-
-export const adminTagPermissions = () =>
-  addTagPermission('admin', { admin: permissionTagFactory('admin') })
 
 // Session tag middleware - applies to all wirings with 'session' tag
 export { sessionTagMiddleware } from '../middleware/fake-session.js'
@@ -43,19 +27,9 @@ export { sessionTagMiddleware } from '../middleware/fake-session.js'
 export const httpMiddleware = () =>
   addHTTPMiddleware('*', [httpGlobalMiddleware])
 
-// HTTP-specific global permissions - Also works: Direct call (no tree-shaking)
-export const httpPermissions = () =>
-  addHTTPPermission('*', {
-    global: httpGlobalPermission,
-  })
-
 // Route-pattern middleware - Recommended: Use factory pattern
 export const apiRouteMiddleware = () =>
   addHTTPMiddleware('/api/*', [httpRouteMiddleware])
-
-// Route-pattern permissions - Recommended: Use factory pattern
-export const apiRoutePermissions = () =>
-  addHTTPPermission('/api/*', { route: httpRoutePermission })
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {
@@ -65,38 +39,22 @@ const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {
   return result
 })
 
-// Wire-level inline permission (not exported, won't be in pikku-permissions.gen.ts)
-const inlineWirePermission = pikkuPermission(
-  async ({ logger }, _data, { session }) => {
-    logger.info({
-      type: 'wire-permission',
-      name: 'inline',
-      sessionExists: !!session,
-    })
-    // Return false to ensure all permissions run
-    return false
-  }
-)
-
 // HTTP endpoint with:
-// - Global tag middleware + permissions (api)
-// - HTTP-specific middleware + permissions (*)
-// - Route pattern middleware + permissions (/api/*)
-// - Wire-level middleware + permissions (exported + inline)
-// - Function-level middleware + permissions
+// - Global tag middleware (api)
+// - HTTP-specific middleware (*)
+// - Route pattern middleware (/api/*)
+// - Wire-level middleware (exported + inline)
+// - Function-level middleware + permissions (on noOpFunction)
 wireHTTP({
   method: 'get',
   route: '/api/test',
   tags: ['session', 'api'],
   middleware: [wireMiddleware('api-test'), inlineWireMiddleware],
-  permissions: {
-    wire: [wirePermission, inlineWirePermission],
-  },
   func: noOpFunction,
-  auth: true, // Session set by sessionTagMiddleware, then checked by permissions
+  auth: true, // Session set by sessionTagMiddleware
 })
 
-// HTTP endpoint with admin tag permissions
+// HTTP endpoint with an organizational-only tag
 wireHTTP({
   method: 'post',
   route: '/api/admin',
@@ -162,9 +120,6 @@ wireHTTPRoutes({
       route: '/direct',
       func: noOpFunction as any,
       middleware: [inlineWireMiddleware as any], // Route middleware runs after group
-      permissions: {
-        wire: [wirePermission as any, inlineWirePermission as any],
-      },
       auth: true,
     },
     // Nested contract - merges configs
