@@ -34,6 +34,11 @@ export interface CredentialOAuthSecretReader {
   getSecret<T = unknown>(secretId: string): Promise<T>
 }
 
+/** Minimal logger surface; the singleton `logger` satisfies it. */
+export interface CredentialOAuthLogger {
+  warn(message: string): void
+}
+
 /**
  * Turns `wireCredential({ oauth2 })` declarations into better-auth genericOAuth
  * providers, one per credential, with the credential name as the providerId.
@@ -47,22 +52,47 @@ export interface CredentialOAuthSecretReader {
  *
  * ```ts
  * genericOAuth({
- *   config: await credentialOAuthProviders(CREDENTIAL_OAUTH2_CONFIGS, services.secrets),
+ *   config: await credentialOAuthProviders(
+ *     CREDENTIAL_OAUTH2_CONFIGS,
+ *     services.secrets,
+ *     services.logger
+ *   ),
  * })
  * ```
+ *
+ * An OAuth2 credential whose app secret is simply UNCONFIGURED (the secret does
+ * not exist yet — e.g. an installed addon's provider the operator has not set
+ * up) is skipped with a warning rather than throwing: a single unconfigured
+ * provider must not brick the whole auth instance (every getSession would then
+ * 500). A secret that IS present but malformed (no clientId) is a genuine
+ * misconfiguration and still throws.
  */
 export const credentialOAuthProviders = async (
   configs: CredentialOAuth2Configs,
-  secrets: CredentialOAuthSecretReader
-): Promise<CredentialOAuthProvider[]> =>
-  Promise.all(
-    Object.entries(configs).map(async ([providerId, config]) => {
-      const app = await secrets.getSecret<CredentialOAuthApp>(
-        config.appCredentialSecretId
-      )
+  secrets: CredentialOAuthSecretReader,
+  logger?: CredentialOAuthLogger
+): Promise<CredentialOAuthProvider[]> => {
+  const providers = await Promise.all(
+    Object.entries(configs).map(
+      async ([providerId, config]): Promise<CredentialOAuthProvider | null> => {
+      let app: CredentialOAuthApp | undefined
+      try {
+        app = await secrets.getSecret<CredentialOAuthApp>(
+          config.appCredentialSecretId
+        )
+      } catch (e: any) {
+        // Not configured yet — skip this provider, don't take down all of auth.
+        if (e?.message === 'Requested secret not found') {
+          logger?.warn(
+            `OAuth2 credential '${providerId}' skipped — app secret '${config.appCredentialSecretId}' is not configured.`
+          )
+          return null
+        }
+        throw e
+      }
       if (!app?.clientId) {
         throw new Error(
-          `OAuth2 credential '${providerId}' has no clientId — secret '${config.appCredentialSecretId}' is missing or malformed.`
+          `OAuth2 credential '${providerId}' has no clientId — secret '${config.appCredentialSecretId}' is malformed.`
         )
       }
       return {
@@ -78,5 +108,8 @@ export const credentialOAuthProviders = async (
         authorizationUrlParams: config.additionalParams,
         type: config.type,
       }
-    })
+      }
+    )
   )
+  return providers.filter((p): p is CredentialOAuthProvider => p !== null)
+}

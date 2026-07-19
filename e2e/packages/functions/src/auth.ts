@@ -26,7 +26,8 @@ import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
  */
 let migrated: Promise<void> | undefined
 
-export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
+export const auth = pikkuBetterAuth(
+  async ({ secrets, variables, kysely, logger }) => {
   const baseURL = (await variables.get('API_URL')) ?? 'http://localhost:4077'
   const consoleURL =
     (await variables.get('CONSOLE_URL')) ?? 'http://localhost:7071'
@@ -57,7 +58,8 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
       credentialOAuth({
         config: await credentialOAuthProviders(
           CREDENTIAL_OAUTH2_CONFIGS,
-          secrets
+          secrets,
+          logger
         ),
         // Connecting a singleton rebinds it for everyone, so the app decides
         // who may. The seeded console admin (role: 'admin') is the realistic
@@ -72,7 +74,8 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
   migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>
     runMigrations()
   )
-  await migrated
+    await migrated
 
-  return instance
-})
+    return instance
+  }
+)
