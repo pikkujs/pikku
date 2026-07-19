@@ -222,6 +222,135 @@ describe('safeFetch', () => {
     )
   })
 
+  const withMethodCapturingFetch = async (
+    handler: (url: string) => Response,
+    run: (
+      seen: Array<{ url: string; method: string; body: unknown }>
+    ) => Promise<void>
+  ) => {
+    const original = globalThis.fetch
+    const seen: Array<{ url: string; method: string; body: unknown }> = []
+    globalThis.fetch = (async (u: any, init: any) => {
+      seen.push({
+        url: String(u),
+        method: (init?.method ?? 'GET').toUpperCase(),
+        body: init?.body,
+      })
+      return handler(String(u))
+    }) as typeof fetch
+    try {
+      await run(seen)
+    } finally {
+      globalThis.fetch = original
+    }
+  }
+
+  test('rewrites POST to GET and drops the body on a 303 redirect', async () => {
+    await withMethodCapturingFetch(
+      (url) =>
+        url.endsWith('/submit')
+          ? new Response(null, {
+              status: 303,
+              headers: { location: 'https://start.com/result' },
+            })
+          : new Response('ok', { status: 200 }),
+      async (seen) => {
+        await safeFetch('https://start.com/submit', {
+          method: 'POST',
+          body: 'payload',
+          headers: { 'content-type': 'text/plain' },
+        })
+        assert.equal(seen.length, 2)
+        assert.equal(seen[1]!.method, 'GET')
+        assert.equal(seen[1]!.body, undefined)
+      }
+    )
+  })
+
+  test('rewrites POST to GET on a 302 redirect', async () => {
+    await withMethodCapturingFetch(
+      (url) =>
+        url.endsWith('/submit')
+          ? new Response(null, {
+              status: 302,
+              headers: { location: 'https://start.com/result' },
+            })
+          : new Response('ok', { status: 200 }),
+      async (seen) => {
+        await safeFetch('https://start.com/submit', {
+          method: 'POST',
+          body: 'payload',
+        })
+        assert.equal(seen[1]!.method, 'GET')
+        assert.equal(seen[1]!.body, undefined)
+      }
+    )
+  })
+
+  test('preserves method and body on a 307/308 redirect', async () => {
+    for (const status of [307, 308]) {
+      await withMethodCapturingFetch(
+        (url) =>
+          url.endsWith('/submit')
+            ? new Response(null, {
+                status,
+                headers: { location: 'https://start.com/result' },
+              })
+            : new Response('ok', { status: 200 }),
+        async (seen) => {
+          await safeFetch('https://start.com/submit', {
+            method: 'POST',
+            body: 'payload',
+          })
+          assert.equal(seen[1]!.method, 'POST', `status ${status}`)
+          assert.equal(seen[1]!.body, 'payload', `status ${status}`)
+        }
+      )
+    }
+  })
+
+  test('does not follow non-redirect 3xx statuses even with a Location', async () => {
+    for (const status of [300, 304, 305, 306]) {
+      await withStubbedFetch(
+        () =>
+          new Response(null, {
+            status,
+            headers: { location: 'https://end.com/final' },
+          }),
+        async (calls) => {
+          const res = await safeFetch('https://start.com')
+          assert.equal(res.status, status, `status ${status}`)
+          assert.equal(calls.length, 1, `status ${status} must not follow`)
+        }
+      )
+    }
+  })
+
+  test('cancels the intermediate redirect response body before following', async () => {
+    const original = globalThis.fetch
+    let cancelled = false
+    globalThis.fetch = (async (u: any) => {
+      if (String(u).endsWith('/a')) {
+        const body = new ReadableStream({
+          cancel() {
+            cancelled = true
+          },
+        })
+        return new Response(body, {
+          status: 302,
+          headers: { location: 'https://start.com/b' },
+        })
+      }
+      return new Response('ok', { status: 200 })
+    }) as typeof fetch
+    try {
+      await safeFetch('https://start.com/a')
+    } finally {
+      globalThis.fetch = original
+    }
+    assert.equal(cancelled, true, 'intermediate body should be cancelled')
+  })
+
   test('forces redirect:manual on the underlying fetch', async () => {
     await withStubbedFetch(
       () => new Response('ok', { status: 200 }),

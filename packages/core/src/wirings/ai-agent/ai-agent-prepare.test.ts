@@ -280,10 +280,7 @@ describe('ai-agent-prepare', () => {
     )
 
     assert.equal(tools.length, 1)
-    await assert.rejects(
-      () => tools[0].execute({}),
-      /db unreachable/
-    )
+    await assert.rejects(() => tools[0].execute({}), /db unreachable/)
     assert.equal(errorCalls.length, 1)
     assert.match(String(errorCalls[0][0]), /searchInventory.*execute/)
   })
@@ -440,7 +437,7 @@ describe('C2 thread/run ownership + sessionScope', () => {
     )
   })
 
-  test("user scope is the default when sessionScope is undefined", () => {
+  test('user scope is the default when sessionScope is undefined', () => {
     assert.equal(
       resolveOwnerResourceId(params({ userId: 'user-a' }), undefined, 'p1'),
       'user-a:p1'
@@ -459,15 +456,17 @@ describe('C2 thread/run ownership + sessionScope', () => {
   })
 
   test('is idempotent: re-normalizing an already-owned key does not double-compose', () => {
-    // sub-agent recursion and resume both pass an already-composite resourceId
     assert.equal(
-      resolveOwnerResourceId(params({ userId: 'alice' }), 'user', 'alice:project-1'),
+      resolveOwnerResourceId(
+        params({ userId: 'alice' }),
+        'user',
+        'alice:project-1'
+      ),
       'alice:project-1'
     )
   })
 
   test('a client cannot forge another owner: a foreign prefix is re-scoped, not trusted', () => {
-    // bob passes alice's composite → it is re-prefixed under bob, never accepted as alice's
     assert.equal(
       resolveOwnerResourceId(params({ userId: 'bob' }), 'user', 'alice:secret'),
       'bob:alice:secret'
@@ -524,7 +523,6 @@ describe('C2 thread/run ownership + sessionScope', () => {
   })
 
   test('resume ownership: owner passes, a different user is rejected (via idempotent recompose)', () => {
-    // resume recomputes owner from run.resourceId; idempotency keeps the owner stable
     const stored = 'alice:default'
     assert.doesNotThrow(() =>
       assertResourceOwner(

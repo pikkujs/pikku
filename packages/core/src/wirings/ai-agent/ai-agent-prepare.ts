@@ -816,8 +816,6 @@ export async function prepareAgentRun(
     : undefined
 
   if (storage) {
-    // `input.resourceId` is normalised to the owner resource by the entry point
-    // (runAIAgent / streamAIAgent) before we get here.
     let thread: Awaited<ReturnType<typeof storage.getThread>> | null = null
     try {
       thread = await storage.getThread(threadId)
