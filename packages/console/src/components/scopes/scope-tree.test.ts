@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { toScopeTreeRows } from './scope-tree.js'
+import { isScopeRowDisabled, toScopeTreeRows } from './scope-tree.js'
 
 const SCOPES = [
   { id: 'admin', declared: true },
@@ -51,5 +51,27 @@ describe('toScopeTreeRows', () => {
     )
     assert.equal(rows[1]!.description, 'Invoice Management')
     assert.equal(rows[3]!.declared, false)
+  })
+})
+
+describe('isScopeRowDisabled', () => {
+  test('a declared scope is toggleable', () => {
+    assert.equal(isScopeRowDisabled({ declared: true }, false, false), false)
+    assert.equal(isScopeRowDisabled({ declared: true }, true, false), false)
+  })
+
+  test('an undeclared scope that is not held cannot be granted', () => {
+    assert.equal(isScopeRowDisabled({ declared: false }, false, false), true)
+  })
+
+  // The stale grant must stay removable — otherwise a scope the system itself
+  // flags as stale could never be revoked from the UI.
+  test('an undeclared scope that is already held stays removable', () => {
+    assert.equal(isScopeRowDisabled({ declared: false }, true, false), false)
+  })
+
+  test('a disabled tree locks every row regardless of state', () => {
+    assert.equal(isScopeRowDisabled({ declared: true }, true, true), true)
+    assert.equal(isScopeRowDisabled({ declared: false }, true, true), true)
   })
 })

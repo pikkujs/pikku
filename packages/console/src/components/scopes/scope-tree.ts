@@ -18,6 +18,18 @@ export type ScopeTreeRow = DeclaredScope & {
  * and has-children flag the tree view renders from. Input order is preserved
  * (the backend already sorts by id, so parents precede their descendants).
  */
+/**
+ * Whether a scope row's checkbox is locked. An undeclared (stale) scope can't be
+ * newly granted — the FK into pikku_scopes rejects it — but one that is already
+ * held must stay removable, otherwise a stale grant could never be revoked from
+ * the UI and would strand access.
+ */
+export const isScopeRowDisabled = (
+  row: Pick<DeclaredScope, 'declared'>,
+  held: boolean,
+  treeDisabled: boolean
+): boolean => treeDisabled || (!row.declared && !held)
+
 export const toScopeTreeRows = (scopes: DeclaredScope[]): ScopeTreeRow[] =>
   scopes.map((scope) => {
     const segments = scope.id.split(':')

@@ -1,7 +1,11 @@
 import { Box, Checkbox, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import { toScopeTreeRows, type DeclaredScope } from './scope-tree'
+import {
+  isScopeRowDisabled,
+  toScopeTreeRows,
+  type DeclaredScope,
+} from './scope-tree'
 
 type ScopeTreeSelectorProps = {
   scopes: DeclaredScope[]
@@ -40,7 +44,7 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
           <Checkbox
             checked={held.has(row.id)}
             onChange={() => onToggle(row.id)}
-            disabled={disabled || !row.declared}
+            disabled={isScopeRowDisabled(row, held.has(row.id), disabled)}
             aria-label={
               row.description ? `${row.id} — ${row.description}` : row.id
             }

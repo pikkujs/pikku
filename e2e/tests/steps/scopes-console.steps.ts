@@ -74,7 +74,7 @@ Then(
 When(
   'I open the role {string} with the keyboard',
   async function (this: AgentWorld, role: string) {
-    const row = this.page.getByRole('button', { name: new RegExp(role) })
+    const row = this.page.getByRole('row', { name: new RegExp(role) })
     await row.focus()
     await row.press('Enter')
   }
@@ -96,8 +96,8 @@ Then(
       this.page.getByRole('cell', { name: scope, exact: true })
     ).toBeVisible()
     await expect(
-      this.page.getByRole('button', { name: new RegExp(scope) })
-    ).toHaveCount(0)
+      this.page.getByRole('row', { name: new RegExp(scope) })
+    ).not.toHaveAttribute('tabindex', '0')
   }
 )
 

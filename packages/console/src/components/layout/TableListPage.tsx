@@ -175,7 +175,6 @@ export const TableListPage = <T,>({
                   key={getKey(item, index)}
                   className={onRowClick ? classes.clickableText : undefined}
                   style={{ height: '3.75rem' }}
-                  role={onRowClick ? 'button' : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
                   onKeyDown={
