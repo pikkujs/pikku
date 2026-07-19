@@ -72,7 +72,6 @@ const installedToPackageMeta = (a: InstalledAddonRow): PackageMeta => ({
   agents: {},
 })
 
-
 const AddonsList: React.FC<{
   searchQuery: string
   filter: AddonFilter
@@ -153,7 +152,8 @@ const AddonsList: React.FC<{
         (a) => catalogByName.get(a.packageName) ?? installedToPackageMeta(a)
       )
     }
-    if (filter === 'official') return list.filter((a) => isOfficialAddon(a.name))
+    if (filter === 'official')
+      return list.filter((a) => isOfficialAddon(a.name))
     return list
   }, [data, filter, installedAddons])
 
@@ -300,10 +300,7 @@ const ApisList: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
     [installedAddons]
   )
 
-  const apis = useMemo(
-    () => (data?.apis ?? []).map(apiToPackageMeta),
-    [data]
-  )
+  const apis = useMemo(() => (data?.apis ?? []).map(apiToPackageMeta), [data])
 
   const installedNames = useMemo(
     () =>

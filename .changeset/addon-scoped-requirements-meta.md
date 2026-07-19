@@ -5,7 +5,7 @@
 
 Scope `console:getAddonInstalledPackage` to the addon's own `.pikku` metadata.
 
-Previously every addon returned the *app's* secrets/wirings (read from the app's
+Previously every addon returned the _app's_ secrets/wirings (read from the app's
 `.pikku` root), so the installed-package view couldn't show what a given addon
 actually requires. `MetaService` gains optional `readPackageFile`/`readPackageDir`
 helpers (implemented by `LocalMetaService`, which resolves the addon package's

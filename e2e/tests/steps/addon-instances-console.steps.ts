@@ -33,14 +33,18 @@ When(
 
 Then(
   'the secret {string} resolves to {string}',
-  async function (this: AgentWorld, displayName: string, resolvedSecretId: string) {
+  async function (
+    this: AgentWorld,
+    displayName: string,
+    resolvedSecretId: string
+  ) {
     // The secret card renders its resolved (per-instance) secretId in monospace.
     const card = this.page
       .locator('.mantine-Card-root')
       .filter({ has: this.page.getByText(displayName, { exact: true }) })
     await expect(card).toBeVisible({ timeout: 15_000 })
-    await expect(
-      card.getByText(resolvedSecretId, { exact: true })
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(card.getByText(resolvedSecretId, { exact: true })).toBeVisible(
+      { timeout: 15_000 }
+    )
   }
 )

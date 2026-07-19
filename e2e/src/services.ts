@@ -187,9 +187,9 @@ export const createSingletonServices = pikkuServices(
     let authPromise: Promise<any> | undefined
     const credentialService = new BetterAuthCredentialService({
       getAuth: () =>
-        (authPromise ??= (
-          pikkuState(null, 'package', 'authFactory') as any
-        )(singletonServices)),
+        (authPromise ??= (pikkuState(null, 'package', 'authFactory') as any)(
+          singletonServices
+        )),
       oauth2Names: Object.keys(CREDENTIAL_OAUTH2_CONFIGS),
       singletonOAuth2Names: Object.entries(CREDENTIAL_OAUTH2_CONFIGS)
         .filter(([, config]) => config.type === 'singleton')

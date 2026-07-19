@@ -186,7 +186,10 @@ export async function loadAddonFunctionsMeta(
             (d: any) => (d.secretId ?? d.name) === resolvedSecretId
           )
           if (!existing) {
-            state.secrets.definitions.push({ ...def, secretId: resolvedSecretId })
+            state.secrets.definitions.push({
+              ...def,
+              secretId: resolvedSecretId,
+            })
             logger.debug(
               `Loaded addon secret '${resolvedSecretId}' from ${decl.package}`
             )

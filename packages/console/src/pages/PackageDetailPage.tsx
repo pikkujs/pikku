@@ -457,7 +457,8 @@ export const PackageDetailPage: React.FC<{
     // the newly-written wiring (a few seconds). Poll briefly so we don't flash
     // "Package not found" during that reload window; give up after ~20s.
     refetchInterval: (query) => {
-      if (source !== 'installed' || query.state.data || pollExpired) return false
+      if (source !== 'installed' || query.state.data || pollExpired)
+        return false
       return Date.now() - mountedAt < 20_000 ? 1500 : false
     },
   })
@@ -513,12 +514,16 @@ export const PackageDetailPage: React.FC<{
                   </Badge>
                 </Group>
                 <Text size="sm" c="dimmed">
-                  {asI18n(`${api.provider}${api.service ? ` / ${api.service}` : ''}`)}
+                  {asI18n(
+                    `${api.provider}${api.service ? ` / ${api.service}` : ''}`
+                  )}
                 </Text>
               </div>
             </Group>
 
-            {api.description && <Text size="sm">{asI18n(api.description)}</Text>}
+            {api.description && (
+              <Text size="sm">{asI18n(api.description)}</Text>
+            )}
 
             {(api.categories?.length > 0 || api.tags?.length > 0) && (
               <Group gap={6}>
@@ -740,22 +745,22 @@ export const PackageDetailPage: React.FC<{
   const defaultTab = hasSetup
     ? 'setup'
     : pkg.readme
-    ? 'readme'
-    : functionList.length > 0
-      ? 'functions'
-      : agentList.length > 0
-        ? 'agents'
-        : httpRouteCount > 0
-          ? 'http'
-          : channelList.length > 0
-            ? 'channels'
-            : cliCommandCount > 0
-              ? 'cli'
-              : mcpCount > 0
-                ? 'mcp'
-                : secretList.length > 0
-                  ? 'secrets'
-                  : 'variables'
+      ? 'readme'
+      : functionList.length > 0
+        ? 'functions'
+        : agentList.length > 0
+          ? 'agents'
+          : httpRouteCount > 0
+            ? 'http'
+            : channelList.length > 0
+              ? 'channels'
+              : cliCommandCount > 0
+                ? 'cli'
+                : mcpCount > 0
+                  ? 'mcp'
+                  : secretList.length > 0
+                    ? 'secrets'
+                    : 'variables'
 
   const currentTab = activeTab ?? defaultTab
 

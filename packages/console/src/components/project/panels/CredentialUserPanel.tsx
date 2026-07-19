@@ -1,5 +1,13 @@
 import React from 'react'
-import { Text, Badge, Group, Stack, Box, Button, Alert } from '@pikku/mantine/core'
+import {
+  Text,
+  Badge,
+  Group,
+  Stack,
+  Box,
+  Button,
+  Alert,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Trash2, AlertTriangle, KeyRound, Link2 } from 'lucide-react'
 import { usePikkuRPC } from '../../../context/PikkuRpcProvider'
@@ -48,7 +56,9 @@ export const CredentialUserPanel: React.FC<{
         variant="light"
         color={connectedCreds.length > 0 ? 'teal' : 'gray'}
       >
-        {asI18n(`${connectedCreds.length} of ${credentialsMeta.length} credentials connected`)}
+        {asI18n(
+          `${connectedCreds.length} of ${credentialsMeta.length} credentials connected`
+        )}
       </Badge>
 
       {connectedCreds.length > 0 && (
@@ -143,9 +153,11 @@ export const CredentialUserPanel: React.FC<{
 
       {revokeMutation.isError && (
         <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
-          {asI18n(String(
-            (revokeMutation.error as any)?.message || 'An error occurred'
-          ))}
+          {asI18n(
+            String(
+              (revokeMutation.error as any)?.message || 'An error occurred'
+            )
+          )}
         </Alert>
       )}
     </Stack>

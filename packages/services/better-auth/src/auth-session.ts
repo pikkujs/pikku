@@ -72,116 +72,109 @@ export const betterAuthSession = (
   const { mapSession, apiKey, impersonation } = options
   const apiKeyHeader = apiKey?.header ?? 'x-api-key'
 
-  return pikkuMiddleware(
-    async (services, wire, next) => {
-      const { http, setSession, getSession } = wire
-      // Check the LIVE session, not the wire's static `session` snapshot: that
-      // snapshot is taken at wire construction and is never updated by a prior
-      // middleware's setSession (which writes the session service, not the
-      // snapshot). Reading it stale makes this middleware re-resolve and clobber
-      // a session another middleware already set (e.g. an app's own
-      // role-enriching betterAuthSession), overwriting it with the default map.
-      const existingSession = getSession ? getSession() : wire.session
-      if (!http?.request || !setSession || existingSession) {
+  return pikkuMiddleware(async (services, wire, next) => {
+    const { http, setSession, getSession } = wire
+    // Check the LIVE session, not the wire's static `session` snapshot: that
+    // snapshot is taken at wire construction and is never updated by a prior
+    // middleware's setSession (which writes the session service, not the
+    // snapshot). Reading it stale makes this middleware re-resolve and clobber
+    // a session another middleware already set (e.g. an app's own
+    // role-enriching betterAuthSession), overwriting it with the default map.
+    const existingSession = getSession ? getSession() : wire.session
+    if (!http?.request || !setSession || existingSession) {
+      return next()
+    }
+    // Capture the narrowed request so deferred closures (the impersonation
+    // header reader below) keep the non-null type.
+    const request = http.request
+
+    // --- Machine path: stateless API key resolution -----------------------
+    // Handled before getSession because getSession would otherwise return a
+    // metadata-less mock session for the same key, masking the scoped one.
+    if (apiKey) {
+      const rawKey = request.header(apiKeyHeader)
+      if (rawKey) {
+        // Only key verification is caught here: an unusable key is an
+        // ordinary "not authenticated", not an outage. Scope resolution sits
+        // outside so a scope-store failure surfaces as an error rather than
+        // silently serving the request anonymously.
+        let mapped: CoreUserSession | null | undefined
+        try {
+          const auth = (await (services as any).auth()) as BetterAuthInstance
+          const verified = (await auth.api.verifyApiKey({
+            body: { key: rawKey },
+          })) as VerifiedApiKey | null
+
+          if (verified?.valid && verified.key) {
+            mapped = await apiKey.mapKey(verified.key, services as CoreServices)
+          }
+        } catch (e: any) {
+          services.logger?.warn(
+            `better-auth api-key verify failed: ${e?.message}`
+          )
+        }
+        if (mapped) {
+          setSession(await withResolvedScopes(mapped, services as CoreServices))
+        }
+        // The api-key header is authoritative for this request — never fall
+        // through to getSession (a bare mock session would shadow our scope).
         return next()
       }
-      // Capture the narrowed request so deferred closures (the impersonation
-      // header reader below) keep the non-null type.
-      const request = http.request
+    }
 
-      // --- Machine path: stateless API key resolution -----------------------
-      // Handled before getSession because getSession would otherwise return a
-      // metadata-less mock session for the same key, masking the scoped one.
-      if (apiKey) {
-        const rawKey = request.header(apiKeyHeader)
-        if (rawKey) {
-          // Only key verification is caught here: an unusable key is an
-          // ordinary "not authenticated", not an outage. Scope resolution sits
-          // outside so a scope-store failure surfaces as an error rather than
-          // silently serving the request anonymously.
-          let mapped: CoreUserSession | null | undefined
-          try {
-            const auth = (await (services as any).auth()) as BetterAuthInstance
-            const verified = (await auth.api.verifyApiKey({
-              body: { key: rawKey },
-            })) as VerifiedApiKey | null
+    // --- Human path: cookie / bearer session ------------------------------
+    // Read the session in its own try: a genuine getSession failure (DB down,
+    // bad secret) must surface, not silently degrade to anonymous. The normal
+    // "not logged in" path returns null here — it does not throw.
+    let result: BetterAuthSessionResult | null
+    try {
+      const auth = (await (services as any).auth()) as BetterAuthInstance
+      // getSession only needs the request headers — build them directly
+      // instead of going through toWebRequest(), which (for a POST) would
+      // otherwise read the single-use request body just to discard it,
+      // starving the route handler that actually needs it.
+      result = (await auth.api.getSession({
+        headers: new Headers(request.headers()),
+      })) as BetterAuthSessionResult | null
+    } catch (e: any) {
+      services.logger?.error(
+        `better-auth getSession failed: ${e?.message ?? e}`
+      )
+      throw e
+    }
 
-            if (verified?.valid && verified.key) {
-              mapped = await apiKey.mapKey(
-                verified.key,
-                services as CoreServices
-              )
-            }
-          } catch (e: any) {
-            services.logger?.warn(
-              `better-auth api-key verify failed: ${e?.message}`
-            )
-          }
-          if (mapped) {
-            setSession(
-              await withResolvedScopes(mapped, services as CoreServices)
-            )
-          }
-          // The api-key header is authoritative for this request — never fall
-          // through to getSession (a bare mock session would shadow our scope).
+    // mapSession / impersonation hooks are caller code — let their errors
+    // propagate (a thrown claim assertion is a deliberate signal, not a reason
+    // to silently fall back to anonymous and serve a baffling 403).
+    if (result?.user) {
+      if (impersonation) {
+        const impersonated = await resolveImpersonatedSession(
+          result,
+          impersonation,
+          services as CoreServices,
+          (name) => request.header(name),
+          mapSession
+        )
+        if (impersonated) {
+          // Scopes resolve for the impersonated userId, not the admin's — an
+          // impersonated session runs as the target, with the target's rights.
+          setSession(
+            await withResolvedScopes(impersonated, services as CoreServices)
+          )
           return next()
         }
       }
-
-      // --- Human path: cookie / bearer session ------------------------------
-      // Read the session in its own try: a genuine getSession failure (DB down,
-      // bad secret) must surface, not silently degrade to anonymous. The normal
-      // "not logged in" path returns null here — it does not throw.
-      let result: BetterAuthSessionResult | null
-      try {
-        const auth = (await (services as any).auth()) as BetterAuthInstance
-        // getSession only needs the request headers — build them directly
-        // instead of going through toWebRequest(), which (for a POST) would
-        // otherwise read the single-use request body just to discard it,
-        // starving the route handler that actually needs it.
-        result = (await auth.api.getSession({
-          headers: new Headers(request.headers()),
-        })) as BetterAuthSessionResult | null
-      } catch (e: any) {
-        services.logger?.error(
-          `better-auth getSession failed: ${e?.message ?? e}`
+      const mapped = mapSession
+        ? await mapSession(result, services as CoreServices)
+        : ({ userId: result.user.id } as CoreUserSession)
+      setSession(
+        await withResolvedScopes(
+          stampActorFlag(mapped, result.user),
+          services as CoreServices
         )
-        throw e
-      }
-
-      // mapSession / impersonation hooks are caller code — let their errors
-      // propagate (a thrown claim assertion is a deliberate signal, not a reason
-      // to silently fall back to anonymous and serve a baffling 403).
-      if (result?.user) {
-        if (impersonation) {
-          const impersonated = await resolveImpersonatedSession(
-            result,
-            impersonation,
-            services as CoreServices,
-            (name) => request.header(name),
-            mapSession
-          )
-          if (impersonated) {
-            // Scopes resolve for the impersonated userId, not the admin's — an
-            // impersonated session runs as the target, with the target's rights.
-            setSession(
-              await withResolvedScopes(impersonated, services as CoreServices)
-            )
-            return next()
-          }
-        }
-        const mapped = mapSession
-          ? await mapSession(result, services as CoreServices)
-          : ({ userId: result.user.id } as CoreUserSession)
-        setSession(
-          await withResolvedScopes(
-            stampActorFlag(mapped, result.user),
-            services as CoreServices
-          )
-        )
-      }
-
-      return next()
+      )
     }
-  )
+
+    return next()
+  })
 }

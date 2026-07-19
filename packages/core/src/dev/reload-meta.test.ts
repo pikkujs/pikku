@@ -97,7 +97,9 @@ describe('reloadGeneratedMeta', { concurrency: false }, () => {
     )
     await writeFile(
       join(tmpDir, 'queue/pikku-queue-workers-wirings-meta.gen.json'),
-      JSON.stringify({ userQueue: { pikkuFuncId: 'userFunc', name: 'userQueue' } })
+      JSON.stringify({
+        userQueue: { pikkuFuncId: 'userFunc', name: 'userQueue' },
+      })
     )
 
     await reloadGeneratedMeta({

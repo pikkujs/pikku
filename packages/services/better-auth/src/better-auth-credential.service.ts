@@ -149,9 +149,9 @@ export class BetterAuthCredentialService implements CredentialService {
       )
     }
     const context = await auth.$context
-    const account = (
-      await context.internalAdapter.findAccounts(userId)
-    ).find((candidate: { providerId: string }) => candidate.providerId === providerId)
+    const account = (await context.internalAdapter.findAccounts(userId)).find(
+      (candidate: { providerId: string }) => candidate.providerId === providerId
+    )
     // Already unlinked — deleting a credential that isn't there is a no-op, not
     // an error, so a retried revoke stays safe.
     if (!account) {
@@ -189,7 +189,10 @@ export class BetterAuthCredentialService implements CredentialService {
       Promise.all(
         [...this.oauth2Names].map(
           async (name) =>
-            [name, await this.readToken(name, this.ownerOf(name, userId)!)] as const
+            [
+              name,
+              await this.readToken(name, this.ownerOf(name, userId)!),
+            ] as const
         )
       ),
     ])

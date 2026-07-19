@@ -11,13 +11,7 @@ import {
   Text,
   TextInput,
 } from '@pikku/mantine/core'
-import {
-  AlertTriangle,
-  Check,
-  Circle,
-  KeyRound,
-  Link2,
-} from 'lucide-react'
+import { AlertTriangle, Check, Circle, KeyRound, Link2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'

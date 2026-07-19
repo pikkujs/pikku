@@ -27,7 +27,9 @@ export interface CredentialOAuthOptions {
    * token for EVERY user, so this cannot be left to any signed-in caller.
    * Defaults to better-auth's admin role.
    */
-  canLinkSingleton?: (session: CredentialOAuthSession) => boolean | Promise<boolean>
+  canLinkSingleton?: (
+    session: CredentialOAuthSession
+  ) => boolean | Promise<boolean>
 }
 
 export interface CredentialOAuthSession {
@@ -78,9 +80,8 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
    * credentials should never grow a user row it does not use.
    */
   const ensurePlatformUser = async (ctx: any) => {
-    const existing = await ctx.context.internalAdapter.findUserById(
-      PLATFORM_USER_ID
-    )
+    const existing =
+      await ctx.context.internalAdapter.findUserById(PLATFORM_USER_ID)
     if (existing) {
       return PLATFORM_USER_ID
     }
@@ -193,9 +194,16 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
       }
 
       const parsedState = await parseState(ctx)
-      const { callbackURL, codeVerifier, errorURL, link: linkState } = parsedState
+      const {
+        callbackURL,
+        codeVerifier,
+        errorURL,
+        link: linkState,
+      } = parsedState
       const onError = (code: string) =>
-        ctx.redirect(`${errorURL ?? `${ctx.context.baseURL}/error`}?error=${code}`)
+        ctx.redirect(
+          `${errorURL ?? `${ctx.context.baseURL}/error`}?error=${code}`
+        )
 
       if (ctx.query?.error || !ctx.query?.code) {
         return onError(ctx.query?.error ?? 'no_code')

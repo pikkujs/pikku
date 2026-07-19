@@ -106,7 +106,10 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
         </>
       )}
 
-      <SchemaSection label={m.secret_config_fields()} schemaName={metadata?.schema} />
+      <SchemaSection
+        label={m.secret_config_fields()}
+        schemaName={metadata?.schema}
+      />
 
       {metadata?.installed !== false && (
         <>
@@ -279,7 +282,10 @@ export const VariableConfiguration: React.FC<VariablePanelProps> = ({
         <Code>{metadata?.variableId}</Code>
       </Box>
 
-      <SchemaSection label={m.variable_config_fields()} schemaName={metadata?.schema} />
+      <SchemaSection
+        label={m.variable_config_fields()}
+        schemaName={metadata?.schema}
+      />
 
       {metadata?.installed !== false && (
         <VariableValueEditor

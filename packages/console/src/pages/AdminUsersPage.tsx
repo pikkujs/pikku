@@ -24,9 +24,10 @@ export const AdminUsersPage: React.FC = () => {
   const { listUsers } = useAuth()
   const [search, setSearch] = useState('')
   const [debounced] = useDebouncedValue(search, 250)
-  const [rolesFor, setRolesFor] = useState<{ id: string; label: string } | null>(
-    null
-  )
+  const [rolesFor, setRolesFor] = useState<{
+    id: string
+    label: string
+  } | null>(null)
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', debounced],
@@ -96,7 +97,9 @@ export const AdminUsersPage: React.FC = () => {
                     variant="light"
                     color={u.role === 'admin' ? 'blue' : 'gray'}
                   >
-                    {u.role === 'admin' ? m.users_role_admin() : m.users_role_user()}
+                    {u.role === 'admin'
+                      ? m.users_role_admin()
+                      : m.users_role_user()}
                   </Badge>
                   {u.banned && (
                     <Badge size="sm" variant="light" color="red">

@@ -75,39 +75,39 @@ export const credentialOAuthProviders = async (
   const providers = await Promise.all(
     Object.entries(configs).map(
       async ([providerId, config]): Promise<CredentialOAuthProvider | null> => {
-      let app: CredentialOAuthApp | undefined
-      try {
-        app = await secrets.getSecret<CredentialOAuthApp>(
-          config.appCredentialSecretId
-        )
-      } catch (e: any) {
-        // Not configured yet — skip this provider, don't take down all of auth.
-        if (e?.message === 'Requested secret not found') {
-          logger?.warn(
-            `OAuth2 credential '${providerId}' skipped — app secret '${config.appCredentialSecretId}' is not configured.`
+        let app: CredentialOAuthApp | undefined
+        try {
+          app = await secrets.getSecret<CredentialOAuthApp>(
+            config.appCredentialSecretId
           )
-          return null
+        } catch (e: any) {
+          // Not configured yet — skip this provider, don't take down all of auth.
+          if (e?.message === 'Requested secret not found') {
+            logger?.warn(
+              `OAuth2 credential '${providerId}' skipped — app secret '${config.appCredentialSecretId}' is not configured.`
+            )
+            return null
+          }
+          throw e
         }
-        throw e
-      }
-      if (!app?.clientId) {
-        throw new Error(
-          `OAuth2 credential '${providerId}' has no clientId — secret '${config.appCredentialSecretId}' is malformed.`
-        )
-      }
-      return {
-        providerId,
-        clientId: app.clientId,
-        clientSecret: app.clientSecret,
-        authorizationUrl: config.authorizationUrl,
-        tokenUrl: config.tokenUrl,
-        scopes: config.scopes,
-        pkce: config.pkce,
-        // Provider-specific flags that decide whether a refresh token is issued
-        // at all (access_type=offline, duration=permanent).
-        authorizationUrlParams: config.additionalParams,
-        type: config.type,
-      }
+        if (!app?.clientId) {
+          throw new Error(
+            `OAuth2 credential '${providerId}' has no clientId — secret '${config.appCredentialSecretId}' is malformed.`
+          )
+        }
+        return {
+          providerId,
+          clientId: app.clientId,
+          clientSecret: app.clientSecret,
+          authorizationUrl: config.authorizationUrl,
+          tokenUrl: config.tokenUrl,
+          scopes: config.scopes,
+          pkce: config.pkce,
+          // Provider-specific flags that decide whether a refresh token is issued
+          // at all (access_type=offline, duration=permanent).
+          authorizationUrlParams: config.additionalParams,
+          type: config.type,
+        }
       }
     )
   )

@@ -46,7 +46,10 @@ Given(
       }
       await new Promise((r) => setTimeout(r, 300))
     }
-    expect(error, `sign-in failed for ${which}: ${JSON.stringify(error)}`).toBeFalsy()
+    expect(
+      error,
+      `sign-in failed for ${which}: ${JSON.stringify(error)}`
+    ).toBeFalsy()
   }
 )
 

@@ -27,7 +27,10 @@ export interface InstanceOverrides {
 
 /** `mandrill-promo` -> `MANDRILL_PROMO`. */
 const screamingSnake = (s: string): string =>
-  s.replace(/[^a-zA-Z0-9]+/g, '_').replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()
+  s
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .toUpperCase()
 
 /** `@pikku/addon-mandrill` -> `mandrill`. */
 export const packageBase = (packageName: string): string =>
@@ -39,7 +42,11 @@ export const packageBase = (packageName: string): string =>
  * becomes `MANDRILL_PROMO_API_KEY`, not `MANDRILL_PROMO_MANDRILL_API_KEY`),
  * otherwise prefixes the whole key.
  */
-const scopedEnvName = (namespace: string, base: string, key: string): string => {
+const scopedEnvName = (
+  namespace: string,
+  base: string,
+  key: string
+): string => {
   const ns = screamingSnake(namespace)
   const basePrefix = screamingSnake(base) + '_'
   const bare = key.toUpperCase().startsWith(basePrefix)
