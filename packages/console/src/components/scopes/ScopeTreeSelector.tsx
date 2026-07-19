@@ -41,6 +41,9 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
             checked={held.has(row.id)}
             onChange={() => onToggle(row.id)}
             disabled={disabled || !row.declared}
+            aria-label={
+              row.description ? `${row.id} — ${row.description}` : row.id
+            }
             label={
               <Group gap={8} wrap="nowrap">
                 <Text size="sm" fw={row.hasChildren ? 600 : 400}>

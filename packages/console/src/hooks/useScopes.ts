@@ -8,9 +8,56 @@ export type Role = {
   scopes: string[]
 }
 
+export type UserRolesData = {
+  roles: string[]
+  scopes: string[]
+  directScopes: string[]
+}
+
 const ROLES_KEY = ['scope-roles']
 const DECLARED_KEY = ['scope-declared']
 const userRolesKey = (userId: string) => ['scope-user-roles', userId]
+
+/**
+ * Optimistically patches the cached user-roles snapshot so a grant/revoke is
+ * reflected the instant it is clicked, then reconciles against the server. The
+ * mutation reverts the snapshot on failure so a rejected authorization change
+ * never lingers on screen.
+ */
+function optimisticUserRoles<V extends { userId: string }>(
+  queryClient: ReturnType<typeof useQueryClient>,
+  patch: (data: UserRolesData, variables: V) => UserRolesData
+) {
+  return {
+    onMutate: async (variables: V) => {
+      const key = userRolesKey(variables.userId)
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<UserRolesData>(key)
+      if (previous) {
+        queryClient.setQueryData<UserRolesData>(key, patch(previous, variables))
+      }
+      return { key, previous }
+    },
+    onError: (
+      _error: unknown,
+      _variables: V,
+      context:
+        | { key: string[]; previous: UserRolesData | undefined }
+        | undefined
+    ) => {
+      if (context?.previous) {
+        queryClient.setQueryData(context.key, context.previous)
+      }
+    },
+    onSettled: (_data: unknown, _error: unknown, variables: V) =>
+      queryClient.invalidateQueries({
+        queryKey: userRolesKey(variables.userId),
+      }),
+  }
+}
+
+const withScope = (list: string[], scope: string) =>
+  list.includes(scope) ? list : [...list, scope]
 
 export function useDeclaredScopes() {
   const rpc = usePikkuRPC()
@@ -39,7 +86,7 @@ export function useUserRoles(userId: string | undefined, enabled: boolean) {
     queryFn: async () =>
       (await rpc.invoke('console:scopeListUserRoles', {
         userId: userId!,
-      })) as { roles: string[]; scopes: string[]; directScopes: string[] },
+      })) as UserRolesData,
     enabled: !!userId && enabled,
   })
 }
@@ -83,10 +130,10 @@ export function useAddUserToRole() {
   return useMutation({
     mutationFn: (input: { userId: string; role: string }) =>
       rpc.invoke('console:scopeAddUserToRole', input),
-    onSuccess: (_data, variables) =>
-      queryClient.invalidateQueries({
-        queryKey: userRolesKey(variables.userId),
-      }),
+    ...optimisticUserRoles(queryClient, (data, { role }) => ({
+      ...data,
+      roles: data.roles.includes(role) ? data.roles : [...data.roles, role],
+    })),
   })
 }
 
@@ -96,10 +143,10 @@ export function useRemoveUserFromRole() {
   return useMutation({
     mutationFn: (input: { userId: string; role: string }) =>
       rpc.invoke('console:scopeRemoveUserFromRole', input),
-    onSuccess: (_data, variables) =>
-      queryClient.invalidateQueries({
-        queryKey: userRolesKey(variables.userId),
-      }),
+    ...optimisticUserRoles(queryClient, (data, { role }) => ({
+      ...data,
+      roles: data.roles.filter((r) => r !== role),
+    })),
   })
 }
 
@@ -109,10 +156,11 @@ export function useAddScopeToUser() {
   return useMutation({
     mutationFn: (input: { userId: string; scope: string }) =>
       rpc.invoke('console:scopeAddScopeToUser', input),
-    onSuccess: (_data, variables) =>
-      queryClient.invalidateQueries({
-        queryKey: userRolesKey(variables.userId),
-      }),
+    ...optimisticUserRoles(queryClient, (data, { scope }) => ({
+      ...data,
+      directScopes: withScope(data.directScopes, scope),
+      scopes: withScope(data.scopes, scope),
+    })),
   })
 }
 
@@ -122,9 +170,9 @@ export function useRemoveScopeFromUser() {
   return useMutation({
     mutationFn: (input: { userId: string; scope: string }) =>
       rpc.invoke('console:scopeRemoveScopeFromUser', input),
-    onSuccess: (_data, variables) =>
-      queryClient.invalidateQueries({
-        queryKey: userRolesKey(variables.userId),
-      }),
+    ...optimisticUserRoles(queryClient, (data, { scope }) => ({
+      ...data,
+      directScopes: data.directScopes.filter((s) => s !== scope),
+    })),
   })
 }

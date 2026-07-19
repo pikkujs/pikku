@@ -660,6 +660,7 @@
   "scopes_user_no_roles": "This user holds no roles.",
   "scopes_add_role": "Add role",
   "scopes_revoke_role": "Remove {role}",
+  "scopes_grant_failed": "Couldn't update this user's access",
   "scopes_direct_scopes": "Direct scopes",
   "scopes_direct_scopes_hint": "Granted to this user directly, outside of any role.",
   "scopes_resolved_scopes": "Resolved scopes",

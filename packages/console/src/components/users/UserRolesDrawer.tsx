@@ -1,4 +1,5 @@
 import {
+  Alert,
   Badge,
   Box,
   Center,
@@ -60,11 +61,10 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
     .map((r) => r.name)
     .filter((name) => !held.includes(name))
 
-  const busy =
-    addRole.isPending ||
-    removeRole.isPending ||
-    addScope.isPending ||
-    removeScope.isPending
+  const mutationError = (addScope.error ||
+    removeScope.error ||
+    addRole.error ||
+    removeRole.error) as Error | null
 
   const toggleDirectScope = (scope: string) => {
     if (!userId) return
@@ -89,6 +89,11 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
         </Center>
       ) : (
         <Stack gap="md">
+          {mutationError && (
+            <Alert color="red" variant="light" title={m.scopes_grant_failed()}>
+              {asI18n(mutationError.message)}
+            </Alert>
+          )}
           <Text size="sm" fw={500}>
             {m.scopes_roles_title()}
           </Text>
@@ -107,7 +112,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                     <CloseButton
                       size="xs"
                       aria-label={m.scopes_revoke_role({ role })}
-                      disabled={!userId || busy}
+                      disabled={!userId}
                       onClick={() => {
                         if (userId) {
                           removeRole.mutate({ userId, role })
@@ -128,7 +133,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                 variant="light"
                 size="sm"
                 leftSection={<Plus size={14} />}
-                disabled={available.length === 0 || busy}
+                disabled={available.length === 0}
                 w="fit-content"
               >
                 {m.scopes_add_role()}
@@ -157,7 +162,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
               scopes={declaredScopes}
               selected={directScopes}
               onToggle={toggleDirectScope}
-              disabled={!userId || busy}
+              disabled={!userId}
             />
           </Box>
 

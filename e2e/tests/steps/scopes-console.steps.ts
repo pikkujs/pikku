@@ -72,6 +72,36 @@ Then(
 )
 
 When(
+  'I open the role {string} with the keyboard',
+  async function (this: AgentWorld, role: string) {
+    const row = this.page.getByRole('button', { name: new RegExp(role) })
+    await row.focus()
+    await row.press('Enter')
+  }
+)
+
+Then(
+  'I should see the edit drawer for the role {string}',
+  async function (this: AgentWorld, role: string) {
+    await expect(
+      this.page.getByRole('dialog').getByRole('textbox', { name: 'Name' })
+    ).toHaveValue(role)
+  }
+)
+
+Then(
+  'the scope {string} should not be an interactive row',
+  async function (this: AgentWorld, scope: string) {
+    await expect(
+      this.page.getByRole('cell', { name: scope, exact: true })
+    ).toBeVisible()
+    await expect(
+      this.page.getByRole('button', { name: new RegExp(scope) })
+    ).toHaveCount(0)
+  }
+)
+
+When(
   'I open the roles drawer for {string}',
   async function (this: AgentWorld, email: string) {
     await this.page.goto(`${config.consoleUrl}/users`)

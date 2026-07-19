@@ -41,7 +41,6 @@ export const ScopesVocabularyTab: React.FC = () => {
       docsHref={DOCS_HREF}
       data={rows}
       getKey={(row) => row.id}
-      onRowClick={() => {}}
       loading={declaredQuery.isLoading}
       searchPlaceholder={m.scopes_search_scopes()}
       searchFilter={(row, q) =>

@@ -44,3 +44,16 @@ Feature: Managing scopes and roles in the console
     Then the user should hold the direct scope "Read reports"
     When I revoke the direct scope "Read reports" from the user
     Then the user should not hold the direct scope "Read reports"
+
+  # A keyboard-only admin must be able to open a role for editing — the row is a
+  # real button, not a mouse-only click target.
+  Scenario: A role can be opened for editing from the keyboard
+    When I open the scopes page in the console
+    And I open the role "console-admin" with the keyboard
+    Then I should see the edit drawer for the role "console-admin"
+
+  # The read-only scope vocabulary must not advertise clickability it does not have.
+  Scenario: Scope vocabulary rows are not interactive
+    When I open the scopes page in the console
+    And I view the scope vocabulary
+    Then the scope "reports:read" should not be an interactive row
