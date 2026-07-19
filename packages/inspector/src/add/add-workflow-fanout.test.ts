@@ -103,4 +103,64 @@ describe('addWorkflow — Promise.all fanout RPC detection', () => {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
+
+  test('registers every RPC in a multi-step map body, including a `const`-captured step feeding the next', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-fanout-multi-'))
+    const wfFile = join(rootDir, 'digest.workflow.ts')
+    const stepFile = join(rootDir, 'digest.steps.ts')
+
+    await writeFile(
+      stepFile,
+      [
+        "import { pikkuSessionlessFunc } from '@pikku/core'",
+        'export const getDigestData = pikkuSessionlessFunc({',
+        '  func: async ({ logger }) => ({ dealsByStage: {}, totalDealValue: 0 }),',
+        '})',
+        'export const sendDigestEmail = pikkuSessionlessFunc({',
+        '  func: async ({ logger }) => ({ sent: true }),',
+        '})',
+      ].join('\n')
+    )
+    await writeFile(
+      wfFile,
+      [
+        "import { pikkuWorkflowFunc } from '@pikku/core/workflow'",
+        'export const dailyDigestWorkflow = pikkuWorkflowFunc(async (_, data, { workflow }) => {',
+        '  const users = [{ id: "1", email: "a@b.c" }]',
+        '  await Promise.all(',
+        '    users.map(async (u) => {',
+        '      const digestData = await workflow.do(',
+        '        `Get pipeline for ${u.email}`,',
+        "        'getDigestData',",
+        '        { userId: u.id },',
+        '      )',
+        "      await workflow.do(`Send digest to ${u.email}`, 'sendDigestEmail', {",
+        '        email: u.email,',
+        '        dealsByStage: digestData.dealsByStage,',
+        '        totalDealValue: digestData.totalDealValue,',
+        '      })',
+        '    }),',
+        '  )',
+        '  return { sent: users.length }',
+        '})',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: string; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [stepFile, wfFile], {
+        rootDir,
+      })
+      assert.ok(
+        state.rpc.invokedFunctions.has('sendDigestEmail'),
+        'sendDigestEmail should be registered'
+      )
+      assert.ok(
+        state.rpc.invokedFunctions.has('getDigestData'),
+        'getDigestData should be registered — a `const`-captured workflow.do inside the map body must not be dropped'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })

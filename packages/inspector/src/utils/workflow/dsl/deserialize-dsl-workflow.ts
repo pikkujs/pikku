@@ -181,6 +181,43 @@ function inputToCode(
 }
 
 /**
+ * Convert a fanout's per-iteration body into code by walking the `next` chain
+ * from the body's entry node. Steps whose result is referenced later in the
+ * same iteration are re-emitted as `const` bindings.
+ */
+function fanoutBodyToCode(
+  entryNodeId: string | undefined,
+  nodes: Record<string, any>,
+  indent: string,
+  itemVar: string
+): string[] {
+  const lines: string[] = []
+  const seen = new Set<string>()
+  let currentId = entryNodeId
+
+  while (currentId && nodes[currentId] && !seen.has(currentId)) {
+    seen.add(currentId)
+    const node = nodes[currentId]
+
+    if ('rpcName' in node && node.rpcName) {
+      const stepName = node.stepName || `Call ${node.rpcName}`
+      const input = (node.input || {}) as Record<string, unknown>
+      const inputCode = inputToCode(input, indent, itemVar)
+      const doCall = `await workflow.do('${stepName}', '${node.rpcName}', ${inputCode})`
+      lines.push(
+        node.outputVar
+          ? `${indent}const ${node.outputVar} = ${doCall}`
+          : `${indent}${doCall}`
+      )
+    }
+
+    currentId = node.next
+  }
+
+  return lines
+}
+
+/**
  * Convert options to code
  */
 function optionsToCode(options: Record<string, unknown>): string {
@@ -513,49 +550,28 @@ function nodeToCode(
         lines.push('')
         break
 
-      case 'fanout':
+      case 'fanout': {
+        const bodyLines = fanoutBodyToCode(
+          flowNode.childEntry,
+          nodes,
+          flowNode.mode === 'parallel' ? indent + '    ' : indent + '  ',
+          flowNode.itemVar
+        )
+
         if (flowNode.mode === 'parallel') {
           lines.push(`${indent}await Promise.all(`)
           lines.push(
-            `${indent}  ${flowNode.sourceVar}.map(async (${flowNode.itemVar}) =>`
+            `${indent}  ${flowNode.sourceVar}.map(async (${flowNode.itemVar}) => {`
           )
-          if (flowNode.childEntry && nodes[flowNode.childEntry]) {
-            const childNode = nodes[flowNode.childEntry]
-            if ('rpcName' in childNode && childNode.rpcName) {
-              const stepName = childNode.stepName || `Call ${childNode.rpcName}`
-              const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(
-                input,
-                indent + '    ',
-                flowNode.itemVar
-              )
-              lines.push(
-                `${indent}    await workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode})`
-              )
-            }
-          }
-          lines.push(`${indent}  )`)
+          lines.push(...bodyLines)
+          lines.push(`${indent}  })`)
           lines.push(`${indent})`)
         } else {
           // Sequential fanout
           lines.push(
             `${indent}for (const ${flowNode.itemVar} of ${flowNode.sourceVar}) {`
           )
-          if (flowNode.childEntry && nodes[flowNode.childEntry]) {
-            const childNode = nodes[flowNode.childEntry]
-            if ('rpcName' in childNode && childNode.rpcName) {
-              const stepName = childNode.stepName || `Call ${childNode.rpcName}`
-              const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(
-                input,
-                indent + '  ',
-                flowNode.itemVar
-              )
-              lines.push(
-                `${indent}  await workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode})`
-              )
-            }
-          }
+          lines.push(...bodyLines)
           if (flowNode.timeBetween) {
             lines.push(
               `${indent}  await workflow.sleep('Wait between iterations', '${flowNode.timeBetween}')`
@@ -565,6 +581,7 @@ function nodeToCode(
         }
         lines.push('')
         break
+      }
 
       case 'filter':
         lines.push(

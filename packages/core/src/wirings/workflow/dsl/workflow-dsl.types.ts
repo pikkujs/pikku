@@ -232,8 +232,8 @@ export interface FanoutStepMeta {
   itemVar: string
   /** Execution mode */
   mode: 'parallel' | 'sequential'
-  /** Child step to execute per iteration */
-  child: RpcStepMeta
+  /** Steps to execute inline per iteration, in order */
+  body: RpcStepMeta[]
   /** Time between iterations (sequential mode only) */
   timeBetween?: string
 }

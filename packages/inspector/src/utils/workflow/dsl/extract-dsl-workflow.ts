@@ -1104,6 +1104,75 @@ function extractArrayPredicate(
 }
 
 /**
+ * Extract an ordered list of workflow.do steps from a per-iteration body.
+ *
+ * Unlike if/switch blocks, a fanout body is a real per-iteration scope, so
+ * `const x = await workflow.do(...)` is meaningful here: the binding is
+ * registered on the child context so later steps in the same iteration can
+ * reference it.
+ */
+function extractFanoutBodyStep(
+  stmt: ts.Statement,
+  childContext: ExtractionContext,
+  body: RpcStepMeta[]
+): void {
+  if (ts.isVariableStatement(stmt)) {
+    const declList = stmt.declarationList
+    if (declList.declarations.length !== 1) {
+      return
+    }
+    const decl = declList.declarations[0]
+    const init = decl.initializer
+    if (
+      !init ||
+      !ts.isAwaitExpression(init) ||
+      !ts.isCallExpression(init.expression)
+    ) {
+      return
+    }
+    const call = init.expression
+    if (!isWorkflowDoCall(call, childContext.checker)) {
+      return
+    }
+    const varName = ts.isIdentifier(decl.name) ? decl.name.text : undefined
+    const step = extractRpcStep(call, childContext, varName)
+    if (!step) {
+      return
+    }
+    if (varName) {
+      const type = childContext.checker.getTypeAtLocation(decl)
+      childContext.outputVars.set(varName, { type, node: decl })
+      if (isArrayType(type, childContext.checker)) {
+        childContext.arrayVars.add(varName)
+      }
+    }
+    body.push(step)
+    return
+  }
+
+  if (ts.isExpressionStatement(stmt) || ts.isReturnStatement(stmt)) {
+    const expr = ts.isReturnStatement(stmt) ? stmt.expression : stmt.expression
+    if (!expr) {
+      return
+    }
+    const call = ts.isAwaitExpression(expr)
+      ? ts.isCallExpression(expr.expression)
+        ? expr.expression
+        : null
+      : ts.isCallExpression(expr)
+        ? expr
+        : null
+    if (!call || !isWorkflowDoCall(call, childContext.checker)) {
+      return
+    }
+    const step = extractRpcStep(call, childContext)
+    if (step) {
+      body.push(step)
+    }
+  }
+}
+
+/**
  * Extract parallel fanout from Promise.all(array.map(...))
  */
 function extractParallelFanout(
@@ -1141,66 +1210,50 @@ function extractParallelFanout(
 
   const itemVar = itemParam.name.text
 
-  // Extract workflow.do call from map body
-  let doCall: ts.CallExpression | null = null
+  // Create a temporary context for the child steps with the loop variable
+  const childContext: ExtractionContext = {
+    ...context,
+    outputVars: new Map(context.outputVars),
+    arrayVars: new Set(context.arrayVars),
+    loopVars: new Set([...context.loopVars, itemVar]),
+  }
 
-  if (ts.isCallExpression(mapFn.body)) {
-    doCall = mapFn.body
-  } else if (ts.isAwaitExpression(mapFn.body)) {
-    // Handle: async (email) => await workflow.do(...)
-    if (ts.isCallExpression(mapFn.body.expression)) {
-      doCall = mapFn.body.expression
-    }
-  } else if (ts.isBlock(mapFn.body)) {
-    // Look for workflow.do in block
+  const body: RpcStepMeta[] = []
+
+  if (ts.isBlock(mapFn.body)) {
     for (const stmt of mapFn.body.statements) {
-      if (ts.isExpressionStatement(stmt)) {
-        // Handle: await workflow.do(...)
-        if (
-          ts.isAwaitExpression(stmt.expression) &&
-          ts.isCallExpression(stmt.expression.expression)
-        ) {
-          doCall = stmt.expression.expression
-          break
-        }
-      } else if (ts.isReturnStatement(stmt) && stmt.expression) {
-        if (ts.isCallExpression(stmt.expression)) {
-          doCall = stmt.expression
-          break
-        } else if (ts.isAwaitExpression(stmt.expression)) {
-          // Handle: return await workflow.do(...)
-          if (ts.isCallExpression(stmt.expression.expression)) {
-            doCall = stmt.expression.expression
-            break
-          }
-        }
+      extractFanoutBodyStep(stmt, childContext, body)
+    }
+  } else {
+    // Concise body: (item) => workflow.do(...) / async (item) => await workflow.do(...)
+    const expr = mapFn.body
+    const doCall = ts.isAwaitExpression(expr)
+      ? ts.isCallExpression(expr.expression)
+        ? expr.expression
+        : null
+      : ts.isCallExpression(expr)
+        ? expr
+        : null
+
+    if (doCall && isWorkflowDoCall(doCall, context.checker)) {
+      const step = extractRpcStep(doCall, childContext)
+      if (step) {
+        body.push(step)
       }
     }
   }
 
-  if (!doCall || !isWorkflowDoCall(doCall, context.checker)) {
-    return null
-  }
-
-  // Create a temporary context for the child step with the loop variable
-  const childContext: ExtractionContext = {
-    ...context,
-    outputVars: new Map(context.outputVars),
-    loopVars: new Set([...context.loopVars, itemVar]),
-  }
-
-  const childStep = extractRpcStep(doCall, childContext)
-  if (!childStep) {
+  if (body.length === 0) {
     return null
   }
 
   return {
     type: 'fanout',
-    stepName: childStep.stepName,
+    stepName: body[0].stepName,
     sourceVar,
     itemVar,
     mode: 'parallel',
-    child: childStep,
+    body,
   }
 }
 
@@ -1260,59 +1313,26 @@ function extractSequentialFanout(
     return null
   }
 
-  let childStep: RpcStepMeta | null = null
+  const body: RpcStepMeta[] = []
   let timeBetween: string | undefined = undefined
 
   // Create a child context with the loop variable added
   const childContext: ExtractionContext = {
     ...context,
     outputVars: new Map(context.outputVars),
+    arrayVars: new Set(context.arrayVars),
     loopVars: new Set([...context.loopVars, itemVar]),
   }
 
-  let workflowDoCount = 0
-
   for (const stmt of statement.statement.statements) {
-    // Look for workflow.do in VariableStatement (const x = await workflow.do(...))
-    if (ts.isVariableStatement(stmt)) {
-      const declList = stmt.declarationList
-      if (declList.declarations.length === 1) {
-        const decl = declList.declarations[0]
-        const init = decl.initializer
-        if (
-          init &&
-          ts.isAwaitExpression(init) &&
-          ts.isCallExpression(init.expression)
-        ) {
-          const call = init.expression
-          if (isWorkflowDoCall(call, context.checker)) {
-            workflowDoCount++
-            const varName = ts.isIdentifier(decl.name)
-              ? decl.name.text
-              : undefined
-            const step = extractRpcStep(call, childContext, varName)
-            if (step) {
-              childStep = step
-            }
-          }
-        }
-      }
-    }
+    extractFanoutBodyStep(stmt, childContext, body)
 
-    // Look for workflow.do in ExpressionStatement (await workflow.do(...))
+    // Look for workflow.sleep in ExpressionStatement
     if (ts.isExpressionStatement(stmt)) {
       const expr = stmt.expression
 
       if (ts.isAwaitExpression(expr) && ts.isCallExpression(expr.expression)) {
         const call = expr.expression
-
-        if (isWorkflowDoCall(call, context.checker)) {
-          workflowDoCount++
-          const step = extractRpcStep(call, childContext)
-          if (step) {
-            childStep = step
-          }
-        }
 
         if (isWorkflowSleepCall(call, context.checker)) {
           // Extract duration for timeBetween
@@ -1371,26 +1391,17 @@ function extractSequentialFanout(
     }
   }
 
-  if (!childStep) {
-    return null
-  }
-
-  // If there are multiple workflow.do calls, the loop is too complex for DSL
-  if (workflowDoCount > 1) {
-    context.errors.push({
-      message: `For-of loop has ${workflowDoCount} workflow.do calls but DSL only supports 1. Use pikkuWorkflowComplexFunc for complex loops.`,
-      node: statement,
-    })
+  if (body.length === 0) {
     return null
   }
 
   return {
     type: 'fanout',
-    stepName: childStep.stepName,
+    stepName: body[0].stepName,
     sourceVar,
     itemVar,
     mode: 'sequential',
-    child: childStep,
+    body,
     timeBetween,
   }
 }

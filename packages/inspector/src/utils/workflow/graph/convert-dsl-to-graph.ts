@@ -294,13 +294,13 @@ function convertStepToNode(
     }
 
     case 'fanout': {
-      // Convert child step
-      const childNodes = convertStepToNode(
-        step.child,
-        0,
-        [step.child],
-        `${nodeId}_item`
-      )
+      // Convert the per-iteration body into a `next`-chained sequence
+      const childNodes: SerializedGraphNode[] = []
+      for (let i = 0; i < step.body.length; i++) {
+        childNodes.push(
+          ...convertStepToNode(step.body[i], i, step.body, `${nodeId}_item`)
+        )
+      }
 
       const node: FlowNode = {
         nodeId,

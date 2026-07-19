@@ -73,8 +73,8 @@ function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
         if (c.steps && hasInlineSteps(c.steps)) return true
       }
       if (step.defaultSteps && hasInlineSteps(step.defaultSteps)) return true
-    } else if (step.type === 'fanout' && step.child) {
-      if (hasInlineSteps([step.child])) return true
+    } else if (step.type === 'fanout' && step.body) {
+      if (hasInlineSteps(step.body)) return true
     } else if (step.type === 'parallel' && step.children) {
       if (hasInlineSteps(step.children)) return true
     }
@@ -102,8 +102,8 @@ export function collectInvokedRPCs(
         if (c.steps) collectInvokedRPCs(c.steps, rpcs)
       }
       if (step.defaultSteps) collectInvokedRPCs(step.defaultSteps, rpcs)
-    } else if (step.type === 'fanout' && step.child) {
-      collectInvokedRPCs([step.child], rpcs)
+    } else if (step.type === 'fanout' && step.body) {
+      collectInvokedRPCs(step.body, rpcs)
     } else if (step.type === 'parallel' && step.children) {
       collectInvokedRPCs(step.children, rpcs)
     }
