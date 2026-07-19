@@ -191,12 +191,7 @@ export {
   addTagMiddleware as addMiddleware,
   addGlobalMiddleware,
 } from './middleware-runner.js'
-export {
-  addTagPermission,
-  addTagPermission as addPermission,
-  addGlobalPermission,
-  checkAuthPermissions,
-} from './permissions.js'
+export { addGlobalPermission, checkAuthPermissions } from './permissions.js'
 export { verifyScopes } from './scopes.js'
 export {
   isSerializable,

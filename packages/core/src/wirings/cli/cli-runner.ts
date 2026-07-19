@@ -374,8 +374,6 @@ export async function runCLICommand({
       auth: false,
       inheritedMiddleware: currentCommand.middleware,
       wireMiddleware: allWireMiddleware,
-      inheritedPermissions: currentCommand.permissions,
-      wirePermissions: undefined,
       coerceDataFromSchema: true,
       tags: programData?.tags,
       wire,

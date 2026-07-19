@@ -229,7 +229,9 @@ describe('ContextAwareRPCService.rpc', () => {
       data: { amount: 10 },
       auth: 'http',
     })
-    assert.deepEqual(seenTags, [['addon-tag', 'http']])
+    // Tags are organizational only — they no longer register permissions, so the
+    // tag-group permission functions above are never invoked.
+    assert.deepEqual(seenTags, [])
   })
 
   test('falls back to deploymentService when rpc meta is missing', async () => {

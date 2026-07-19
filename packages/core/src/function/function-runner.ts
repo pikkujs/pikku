@@ -13,16 +13,11 @@ import type {
   PikkuWire,
   PikkuRawWire,
   MiddlewareMetadata,
-  PermissionMetadata,
   CoreSingletonServices,
   CreateWireServices,
 } from '../types/core.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
-import type {
-  CorePermissionGroup,
-  CorePikkuFunctionConfig,
-  CorePikkuPermission,
-} from './functions.types.js'
+import type { CorePikkuFunctionConfig } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
@@ -117,10 +112,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wireMiddleware,
     inheritedChannelMiddleware,
     wireChannelMiddleware,
-    inheritedPermissions,
-    wirePermissions,
     coerceDataFromSchema,
-    tags = [],
     wire,
     sessionService,
     credentialWireService,
@@ -135,8 +127,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wireMiddleware?: CorePikkuMiddleware[]
     inheritedChannelMiddleware?: MiddlewareMetadata[]
     wireChannelMiddleware?: CorePikkuChannelMiddleware[]
-    inheritedPermissions?: PermissionMetadata[]
-    wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     coerceDataFromSchema?: boolean
     tags?: string[]
     wire: PikkuRawWire
@@ -257,17 +247,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
     invocationWire.addonNamespace = addonInstance.namespace
   }
 
-  // Convert tags to PermissionMetadata and merge with inheritedPermissions
-  let mergedInheritedPermissions: PermissionMetadata[]
-  if (tags && tags.length > 0) {
-    mergedInheritedPermissions = [
-      ...(inheritedPermissions || []),
-      ...tags.map((tag) => ({ type: 'tag' as const, tag })),
-    ]
-  } else {
-    mergedInheritedPermissions = inheritedPermissions || []
-  }
-
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
     await resolveSession(
@@ -309,9 +288,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     // Scopes gate before the data is evaluated: they depend only on the
     // session, so a denied request never pays to parse or validate its body.
-    // Kept out of runPermissions deliberately — that ORs global/wire/tag/func
-    // permissions and returns on the first pass, so a scope checked in there
-    // would be satisfied by any passing permission anywhere in the app.
+    // Scopes are an AND gate and stay separate from runPermissions, which
+    // evaluates the function's own OR-groups against request data.
     verifyScopes(funcConfig.scopes ?? funcMeta.scopes, session)
 
     // Evaluate the data from the lazy function
@@ -334,23 +312,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
       )
     }
 
-    if (
-      mergedInheritedPermissions.length > 0 ||
-      wirePermissions ||
-      funcMeta.permissions ||
-      funcConfig.permissions
-    ) {
-      await runPermissions(wireType, wireId, {
-        wireInheritedPermissions: mergedInheritedPermissions,
-        wirePermissions: wirePermissions,
-        funcInheritedPermissions: funcMeta.permissions,
-        funcPermissions: funcConfig.permissions,
-        services: resolvedSingletonServices,
-        wire: invocationWire as any,
-        data: actualData,
-        packageName,
-      })
-    }
+    await runPermissions({
+      funcPermissions: funcConfig.permissions,
+      services: resolvedSingletonServices,
+      wire: invocationWire as any,
+      data: actualData,
+      packageName,
+    })
 
     let wireServices: Record<string, unknown> | undefined
     let invocationAuditLog: AuditLog | undefined

@@ -252,8 +252,6 @@ async function runMCPPikkuFunc(
         data: () => request.params,
         inheritedMiddleware: meta?.middleware,
         wireMiddleware: mcp?.middleware,
-        inheritedPermissions: meta?.permissions,
-        wirePermissions: mcp?.permissions,
         tags: mcp?.tags,
         wire,
         sessionService: mcpSessionService,

@@ -1,38 +1,20 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
-import { addTagPermission, runPermissions } from './permissions.js'
+import {
+  addGlobalPermission,
+  runPermissions,
+  clearPermissionsCache,
+  checkAuthPermissions,
+} from './permissions.js'
 import { pikkuState, resetPikkuState } from './pikku-state.js'
+import { pikkuAuth } from './function/functions.types.js'
 import type { CoreServices, CoreUserSession } from './types/core.types.js'
-import type {
-  CorePermissionGroup,
-  CorePikkuPermission,
-} from './function/functions.types.js'
+import type { CorePermissionGroup } from './function/functions.types.js'
 
 beforeEach(() => {
   resetPikkuState()
+  clearPermissionsCache()
 })
-
-// Test helper to get permissions for tags (not exported from core to keep it lean)
-const getPermissionsForTags = (
-  tags?: string[]
-): (CorePermissionGroup | CorePikkuPermission)[] => {
-  if (!tags || tags.length === 0) {
-    return []
-  }
-  const permissionsStore = pikkuState(null, 'permissions', 'tagGroup')
-  const result: (CorePermissionGroup | CorePikkuPermission)[] = []
-  for (const tag of new Set(tags)) {
-    const tagPermissions = permissionsStore[tag]
-    if (tagPermissions) {
-      if (Array.isArray(tagPermissions)) {
-        result.push(...tagPermissions)
-      } else {
-        result.push(tagPermissions)
-      }
-    }
-  }
-  return result
-}
 
 const mockServices: CoreServices = {
   logger: {
@@ -43,395 +25,194 @@ const mockServices: CoreServices = {
   },
 } as any
 
-const mockSession: CoreUserSession = {
-  userId: 'test-user',
-} as any
+const mockSession: CoreUserSession = { userId: 'test-user' } as any
 
-describe('addTagPermission', () => {
-  test('should add single permission for a tag', () => {
-    const mockPermission = async () => true
-
-    addTagPermission('testTag', [mockPermission])
-
-    const permissions = getPermissionsForTags(['testTag'])
-    assert.equal(permissions.length, 1)
-    assert.equal(permissions[0], mockPermission)
+const run = (opts: {
+  funcPermissions?: CorePermissionGroup | any[]
+  data?: any
+  wire?: any
+  packageName?: string | null
+}) =>
+  runPermissions({
+    funcPermissions: opts.funcPermissions,
+    services: mockServices,
+    wire: (opts.wire ?? { session: mockSession }) as any,
+    data: opts.data ?? {},
+    packageName: opts.packageName ?? null,
   })
 
-  test('should add multiple permissions for a tag', () => {
-    const mockPermission1 = async () => true
-    const mockPermission2 = async () => false
-
-    addTagPermission('multiTestTag', [mockPermission1, mockPermission2])
-
-    const permissions = getPermissionsForTags(['multiTestTag'])
-    assert.equal(permissions.length, 2)
-    assert.equal(permissions[0], mockPermission1)
-    assert.equal(permissions[1], mockPermission2)
+describe('runPermissions — function permissions (OR gate)', () => {
+  test('passes when no permissions are defined', async () => {
+    await run({})
   })
 
-  test('should add permission group object for a tag', () => {
-    const mockPermissionGroup: CorePermissionGroup = {
-      permissions: [async () => true, async () => false],
-    }
-
-    addTagPermission('groupTestTag', mockPermissionGroup)
-
-    const permissions = getPermissionsForTags(['groupTestTag'])
-    assert.equal(permissions.length, 1)
-    assert.equal(permissions[0], mockPermissionGroup)
-  })
-
-  test('should apply parent tag permission to namespaced tag via runPermissions', async () => {
-    const billingPermission = async () => true
-
-    addTagPermission('billing', [billingPermission])
-
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'billing:write' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-  })
-
-  test('should apply both parent and exact tag permissions', async () => {
-    const executionOrder: string[] = []
-    const billingPermission = async () => {
-      executionOrder.push('billing')
-      return true
-    }
-    const billingReadPermission = async () => {
-      executionOrder.push('billing:read')
-      return true
-    }
-
-    addTagPermission('billing', [billingPermission])
-    addTagPermission('billing:read', [billingReadPermission])
-
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'billing:read' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-
-    assert.deepEqual(executionOrder, ['billing:read'])
-  })
-
-  test('should resolve multi-level namespace permissions', async () => {
-    const executionOrder: string[] = []
-    const billingPermission = async () => {
-      executionOrder.push('billing')
-      return false
-    }
-    const billingReadPermission = async () => {
-      executionOrder.push('billing:read')
-      return false
-    }
-    const billingReadAdminPermission = async () => {
-      executionOrder.push('billing:read:admin')
-      return true
-    }
-
-    addTagPermission('billing', [billingPermission])
-    addTagPermission('billing:read', [billingReadPermission])
-    addTagPermission('billing:read:admin', [billingReadAdminPermission])
-
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'billing:read:admin' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-
-    assert.deepEqual(executionOrder, ['billing:read:admin'])
-  })
-
-  test('should apply parent tag permission via funcInheritedPermissions', async () => {
-    const billingPermission = async () => true
-
-    addTagPermission('billing', [billingPermission])
-
-    await runPermissions('rpc', Math.random().toString(), {
-      funcInheritedPermissions: [{ type: 'tag', tag: 'billing:delete' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-  })
-
-  test('should throw error when tag already exists', () => {
-    const mockPermission = async () => true
-
-    addTagPermission('duplicateTag', [mockPermission])
-
-    assert.throws(
-      () => {
-        addTagPermission('duplicateTag', [mockPermission])
+  test('passes when at least one group is satisfied (OR)', async () => {
+    await run({
+      funcPermissions: {
+        owner: [async () => false],
+        admin: [async () => true],
       },
-      {
-        message:
-          "Permissions for tag 'duplicateTag' already exist. Use a different tag or remove the existing permissions first.",
-      }
+    })
+  })
+
+  test('throws when every group fails', async () => {
+    await assert.rejects(
+      run({
+        funcPermissions: {
+          owner: [async () => false],
+          admin: [async () => false],
+        },
+      }),
+      { message: 'Permission denied' }
     )
+  })
+
+  test('ANDs the entries within a single branch array', async () => {
+    await assert.rejects(
+      run({ funcPermissions: { grp: [async () => true, async () => false] } }),
+      { message: 'Permission denied' }
+    )
+    await run({ funcPermissions: { grp: [async () => true, async () => true] } })
+  })
+
+  test('accepts a bare permission array as a single AND branch', async () => {
+    await run({ funcPermissions: [async () => true] })
+    await assert.rejects(run({ funcPermissions: [async () => false] }), {
+      message: 'Permission denied',
+    })
+  })
+
+  test('passes request data and wire through to permission functions', async () => {
+    let received: any
+    const wire = { session: mockSession }
+    const data = { hello: 'world' }
+    await run({
+      funcPermissions: {
+        grp: [
+          async (services: any, d: any, w: any) => {
+            received = { services, d, w }
+            return true
+          },
+        ],
+      },
+      data,
+      wire,
+    })
+    assert.equal(received.services, mockServices)
+    assert.equal(received.d, data)
+    assert.equal(received.w, wire)
   })
 })
 
-describe('runPermissions', () => {
-  test('should pass when no permissions are defined', async () => {
-    // Should not throw
-    await runPermissions('rpc', Math.random().toString(), {
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
+describe('runPermissions — global permissions (AND gate)', () => {
+  test('requires every registered global to pass', async () => {
+    addGlobalPermission([async () => true])
+    await run({})
+
+    resetPikkuState()
+    clearPermissionsCache()
+    addGlobalPermission([async () => false])
+    await assert.rejects(run({}), { message: 'Permission denied' })
   })
 
-  test('should execute wiring tag permissions first', async () => {
-    const executionOrder: string[] = []
-    const wiringTagPermission = async () => {
-      executionOrder.push('wiringTag')
-      return true
-    }
-
-    addTagPermission('wiringTag', [wiringTagPermission])
-
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-
-    assert.deepEqual(executionOrder, ['wiringTag'])
+  test('ANDs multiple registered globals', async () => {
+    addGlobalPermission([async () => true])
+    addGlobalPermission([async () => false])
+    await assert.rejects(run({}), { message: 'Permission denied' })
   })
 
-  test('should execute all permission levels in correct order', async () => {
-    const executionOrder: string[] = []
-
-    const wiringTagPermission = async () => {
-      executionOrder.push('wiringTag')
-      return true
-    }
-    const funcTagPermission = async () => {
-      executionOrder.push('funcTag')
-      return true
-    }
-
-    addTagPermission('wiringTag', [wiringTagPermission])
-    addTagPermission('funcTag', [funcTagPermission])
-
-    const wirePermissions: CorePermissionGroup = {
-      permissions: [
-        async () => {
-          executionOrder.push('wiringPermission')
-          return true
-        },
-      ],
-    }
-
-    const funcPermissions: CorePermissionGroup = {
-      permissions: [
-        async () => {
-          executionOrder.push('funcPermission')
-          return true
-        },
-      ],
-    }
-
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
-      wirePermissions,
-      funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
-      funcPermissions,
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-
-    // Order: wireInheritedPermissions (wiringTag) only (short-circuit on first passing group)
-    assert.deepEqual(executionOrder, ['wiringTag'])
+  test('a global group entry ORs internally but must still pass', async () => {
+    addGlobalPermission({
+      a: [async () => false],
+      b: [async () => true],
+    } as CorePermissionGroup)
+    await run({})
   })
+})
 
-  test('should implement "at least one must pass" logic for tag permissions', async () => {
-    const failingPermission = async () => false
-    const passingPermission = async () => true
-
-    addTagPermission('atLeastOneTestTag', [
-      failingPermission,
-      passingPermission,
-    ])
-
-    // Should not throw because at least one permission passes
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'atLeastOneTestTag' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-  })
-
-  test('should throw error when all wiring tag permissions fail', async () => {
-    const failingPermission1 = async () => false
-    const failingPermission2 = async () => false
-
-    addTagPermission('allFailTestTag', [failingPermission1, failingPermission2])
-
+describe('runPermissions — gates are independent (no escalation)', () => {
+  test('a passing global does NOT satisfy a failing function permission', async () => {
+    // The classic escalation bug: a broad global must not grant an admin-only fn.
+    addGlobalPermission([async () => true])
     await assert.rejects(
-      runPermissions('rpc', Math.random().toString(), {
-        wireInheritedPermissions: [{ type: 'tag', tag: 'allFailTestTag' }],
-        services: mockServices,
-        wire: {},
-        data: {},
-      }),
-      {
-        message: 'Permission denied',
-      }
+      run({ funcPermissions: { admin: [async () => false] } }),
+      { message: 'Permission denied' }
     )
   })
 
-  test('should throw error when wiring permissions fail', async () => {
-    const wirePermissions: CorePermissionGroup = {
-      permissions: [async () => false],
-    }
-
+  test('a passing function permission does NOT bypass a failing global', async () => {
+    addGlobalPermission([async () => false])
     await assert.rejects(
-      runPermissions('rpc', Math.random().toString(), {
-        wirePermissions,
-        services: mockServices,
-        wire: {},
-        data: {},
-      }),
-      {
-        message: 'Permission denied',
-      }
+      run({ funcPermissions: { anyone: [async () => true] } }),
+      { message: 'Permission denied' }
     )
   })
 
-  test('should throw error when all function tag permissions fail', async () => {
-    const failingPermission = async () => false
+  test('passes only when both gates pass', async () => {
+    addGlobalPermission([async () => true])
+    await run({ funcPermissions: { admin: [async () => true] } })
+  })
+})
 
-    addTagPermission('funcTag', [failingPermission])
+describe('runPermissions — package isolation', () => {
+  test('globals are scoped per package', async () => {
+    addGlobalPermission([async () => false], 'pkg-a')
+    // A different package sees no globals, so it passes.
+    await run({ packageName: 'pkg-b' })
+    // The registering package is gated.
+    await assert.rejects(run({ packageName: 'pkg-a' }), {
+      message: 'Permission denied',
+    })
+  })
+})
 
-    await assert.rejects(
-      runPermissions('rpc', Math.random().toString(), {
-        funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
-        services: mockServices,
-        wire: {},
-        data: {},
-      }),
-      {
-        message: 'Permission denied',
-      }
+describe('checkAuthPermissions', () => {
+  test('returns true when there are no auth predicates', async () => {
+    assert.equal(
+      await checkAuthPermissions(undefined, mockSession, mockServices),
+      true
     )
   })
 
-  test('should throw error when function permissions fail', async () => {
-    const funcPermissions: CorePermissionGroup = {
-      permissions: [async () => false],
-    }
+  test('honours a global pikkuAuth predicate at filter time', async () => {
+    addGlobalPermission([pikkuAuth(async () => false)])
+    assert.equal(
+      await checkAuthPermissions(undefined, mockSession, mockServices),
+      false
+    )
 
-    await assert.rejects(
-      runPermissions('rpc', Math.random().toString(), {
-        funcPermissions,
-        services: mockServices,
-        wire: {},
-        data: {},
-      }),
-      {
-        message: 'Permission denied',
-      }
+    resetPikkuState()
+    clearPermissionsCache()
+    addGlobalPermission([pikkuAuth(async () => true)])
+    assert.equal(
+      await checkAuthPermissions(undefined, mockSession, mockServices),
+      true
     )
   })
 
-  test('should evaluate all permissions and pass if at least one succeeds', async () => {
-    const executionOrder: string[] = []
-
-    const failingWiringTagPermission = async () => {
-      executionOrder.push('wiringTag')
-      return false
-    }
-
-    addTagPermission('failingWiringTag', [failingWiringTagPermission])
-
-    const wirePermissions: CorePermissionGroup = {
-      permissions: [
-        async () => {
-          executionOrder.push('wiringPermission')
-          return true
-        },
-      ],
-    }
-
-    // Should NOT throw because at least one permission (wirePermissions) passes
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'failingWiringTag' }],
-      wirePermissions,
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-
-    // Both permissions should be evaluated
-    assert.deepEqual(executionOrder, ['wiringTag', 'wiringPermission'])
+  test('resolves a function-referenced (wire) auth predicate by name', async () => {
+    const store = pikkuState(null, 'misc', 'permissions')
+    store['isAdmin'] = [pikkuAuth(async () => false)] as any
+    assert.equal(
+      await checkAuthPermissions(
+        [{ type: 'wire', name: 'isAdmin' }],
+        mockSession,
+        mockServices
+      ),
+      false
+    )
   })
 
-  test('should handle array permissions in tag-based permissions', async () => {
-    const arrayPermission = [async () => true, async () => false]
-
-    addTagPermission('arrayTestTag', arrayPermission)
-
-    // Should not throw because verifyPermissions handles array properly
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'arrayTestTag' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-  })
-
-  test('should handle permission group objects in tag-based permissions', async () => {
-    const permissionGroup: CorePermissionGroup = {
-      permissions: [async () => true],
-    }
-
-    addTagPermission('objectTestTag', permissionGroup)
-
-    // Should not throw because verifyPermissions handles objects properly
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'objectTestTag' }],
-      services: mockServices,
-      wire: {},
-      data: {},
-    })
-  })
-
-  test('should pass correct parameters to permission functions', async () => {
-    let receivedServices: any
-    let receivedWire: any
-    let receivedData: any
-
-    const testPermission = async (services: any, data: any, wire: any) => {
-      receivedServices = services
-      receivedData = data
-      receivedWire = wire
-      return true
-    }
-
-    const testData = { test: 'data' }
-
-    addTagPermission('paramTestTag', [testPermission])
-
-    await runPermissions('rpc', Math.random().toString(), {
-      wireInheritedPermissions: [{ type: 'tag', tag: 'paramTestTag' }],
-      services: mockServices,
-      wire: {},
-      data: testData,
-    })
-
-    assert.equal(receivedServices, mockServices)
-    assert.equal(receivedData, testData)
-    assert.deepEqual(receivedWire, {})
+  test('ignores data-dependent permissions (no auth marker)', async () => {
+    const store = pikkuState(null, 'misc', 'permissions')
+    store['ownsRow'] = [async () => false] as any
+    assert.equal(
+      await checkAuthPermissions(
+        [{ type: 'wire', name: 'ownsRow' }],
+        mockSession,
+        mockServices
+      ),
+      true
+    )
   })
 })

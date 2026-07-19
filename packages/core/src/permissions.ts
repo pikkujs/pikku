@@ -1,7 +1,6 @@
 import type {
   CoreServices,
   CoreUserSession,
-  PikkuWiringTypes,
   PermissionMetadata,
   PikkuWire,
 } from './types/core.types.js'
@@ -11,16 +10,25 @@ import type {
 } from './function/functions.types.js'
 import { pikkuState } from './pikku-state.js'
 import { ForbiddenError } from './errors/errors.js'
-import { freezeDedupe, getTagGroups } from './utils.js'
 
 /**
- * This function validates permissions by iterating over permission groups and executing the corresponding permission functions. If all functions in at least one group return true, the permission is considered valid.
+ * Evaluates a single permission group. A group ORs its branches together and
+ * ANDs the entries within a branch: the group passes if at least one branch
+ * (an array of permission functions, all of which must return true — or a lone
+ * function) is satisfied.
+ *
+ * This is the only place OR lives in authorization. Everything cross-cutting —
+ * global permissions, scopes, and auth — ANDs together; a function's own
+ * `permissions` group is the sole place where "owner OR admin"-style
+ * alternatives are expressed.
+ *
+ * @param permissions - The permission group to evaluate.
  * @param services - The core services required for permission validation.
- * @param data - The data to be used in the permission validation functions.
+ * @param data - The request data passed to each permission function.
  * @param wire - The wire object containing request/response context and session.
- * @returns A promise that resolves to void.
+ * @returns A promise resolving to true if the group is satisfied.
  */
-const verifyPermissions = async <Out = any>(
+const verifyPermissions = async (
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
@@ -30,7 +38,6 @@ const verifyPermissions = async <Out = any>(
     return true
   }
 
-  let valid = false
   const permissionGroups = Object.values(permissions)
   if (permissionGroups.length === 0) {
     return true
@@ -42,13 +49,12 @@ const verifyPermissions = async <Out = any>(
         funcs.map((func) => func(services, data, wire))
       )
       if (permissioned.every((result) => result)) {
-        valid = true
+        return true
       }
     } else {
-      valid = await funcs(services, data, wire as any)
-    }
-    if (valid) {
-      return true
+      if (await funcs(services, data, wire as any)) {
+        return true
+      }
     }
   }
   return false
@@ -61,12 +67,16 @@ const verifyPermissions = async <Out = any>(
  * It's used internally by the framework to resolve permission references in metadata.
  *
  * @param {string} name - The unique name (pikkuFuncId) of the permission function.
+ * @param {string | null} packageName - Optional package namespace.
  * @returns {CorePikkuPermission | undefined} The permission function, or undefined if not found.
  *
  * @internal
  */
-const getPermissionByName = (name: string): CorePikkuPermission | undefined => {
-  const permissionStore = pikkuState(null, 'misc', 'permissions')
+const getPermissionByName = (
+  name: string,
+  packageName: string | null = null
+): CorePikkuPermission | undefined => {
+  const permissionStore = pikkuState(packageName, 'misc', 'permissions')
   const permission = permissionStore[name]
   if (Array.isArray(permission) && permission.length === 1) {
     return permission[0]
@@ -74,37 +84,27 @@ const getPermissionByName = (name: string): CorePikkuPermission | undefined => {
   return undefined
 }
 
-/**
- * Registers tag-scoped permissions. Applies to any wiring that carries the
- * matching tag.
- *
- * For tree-shaking, wrap in a factory:
- * `export const x = () => addTagPermission('tag', [...])`
- *
- * @example
- * export const adminPermissions = () => addTagPermission('admin', [adminPermission])
- */
-export const addTagPermission = (
-  tag: string,
-  permissions: CorePermissionGroup | CorePikkuPermission[],
-  packageName: string | null = null
-): CorePermissionGroup | CorePikkuPermission[] => {
-  const tagGroups = pikkuState(packageName, 'permissions', 'tagGroup')
-  if (tagGroups[tag]) {
-    throw new Error(
-      `Permissions for tag '${tag}' already exist. Use a different tag or remove the existing permissions first.`
-    )
+const globalPermissionsCache: Record<
+  string,
+  readonly (CorePermissionGroup | CorePikkuPermission)[]
+> = {}
+
+export const clearPermissionsCache = () => {
+  for (const key of Object.keys(globalPermissionsCache)) {
+    delete globalPermissionsCache[key]
   }
-  tagGroups[tag] = permissions
-  return permissions
 }
 
 /**
- * Registers wire-agnostic global permissions. Runs at the top of every
- * wiring's permission resolution — before wire-, tag-, and function-level
- * entries — across all wire types.
+ * Registers wire-agnostic global permissions. Global permissions are an AND
+ * gate: every registered requirement must pass on every function invocation,
+ * regardless of transport. A requirement may be a single permission function
+ * or a permission group (in which case that group ORs internally, but the
+ * group as a whole must still pass).
  *
- * Resolution order: global → wire → tag → function.
+ * Global permissions never satisfy a function's own `permissions` — the two
+ * are independent gates that both have to pass, so a broad global can only
+ * ever narrow access.
  *
  * @example
  * addGlobalPermission([signedInUser])
@@ -122,237 +122,95 @@ export const addGlobalPermission = (
   } else {
     state.push(permissions)
   }
+  clearPermissionsCache()
   return permissions
 }
 
-const combinedPermissionsCache: Record<
-  PikkuWiringTypes,
-  Record<string, readonly (CorePermissionGroup | CorePikkuPermission)[]>
-> = {
-  http: {},
-  rpc: {},
-  channel: {},
-  queue: {},
-  scheduler: {},
-  trigger: {},
-  mcp: {},
-  agent: {},
-  cli: {},
-  workflow: {},
-  gateway: {},
-}
-
-export const clearPermissionsCache = () => {
-  for (const key of Object.keys(
-    combinedPermissionsCache
-  ) as PikkuWiringTypes[]) {
-    combinedPermissionsCache[key] = {}
-  }
-}
-
 /**
- * Combines wiring-specific permissions with function-level permissions.
- *
- * This function resolves permission metadata into actual permission functions and combines them.
- * It filters out wire permissions without tags from inheritedPermissions to avoid duplication
- * (those are passed separately as wirePermissions).
- *
- * @param {object} options - Configuration object for combining permissions.
- * @param {PermissionMetadata[] | undefined} options.wireInheritedPermissions - Metadata from wiring (HTTP + tags + wire with tags).
- * @param {CorePermissionGroup | CorePikkuPermission[] | undefined} options.wirePermissions - Inline wire permissions.
- * @param {PermissionMetadata[] | undefined} options.funcInheritedPermissions - Function permissions metadata (only tags).
- * @param {CorePermissionGroup | CorePikkuPermission[] | undefined} options.funcPermissions - Inline function permissions.
- * @returns {(CorePermissionGroup | CorePikkuPermission)[]} Combined array of resolved permissions.
- *
- * @example
- * ```typescript
- * const combined = combinePermissions(wireType, wireId, {
- *   wireInheritedPermissions: meta.permissions,
- *   wirePermissions: inlinePermissions,
- *   funcInheritedPermissions: funcMeta.permissions,
- *   funcPermissions: funcConfig.permissions
- * })
- * ```
+ * Resolves the registered global permission requirements for a package,
+ * caching the resolved array per package. The cache is keyed by package name
+ * (an empty string for the root package) so packages never collide, and it is
+ * cleared whenever globals are registered or on hot reload.
  */
-const combinePermissions = (
-  wireType: PikkuWiringTypes,
-  uid: string,
-  {
-    wireInheritedPermissions,
-    wirePermissions,
-    funcInheritedPermissions,
-    funcPermissions,
-    packageName = null,
-  }: {
-    wireInheritedPermissions?: PermissionMetadata[]
-    wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
-    funcInheritedPermissions?: PermissionMetadata[]
-    funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
-    packageName?: string | null
-  } = {}
+const resolveGlobalPermissions = (
+  packageName: string | null
 ): readonly (CorePermissionGroup | CorePikkuPermission)[] => {
-  if (combinedPermissionsCache[wireType][uid]) {
-    return combinedPermissionsCache[wireType][uid]
+  const key = packageName ?? ''
+  const cached = globalPermissionsCache[key]
+  if (cached) {
+    return cached
   }
-
-  const resolved: (CorePermissionGroup | CorePikkuPermission)[] = []
-
   const globals = pikkuState(
     packageName,
     'permissions',
     'global'
   ) as unknown as (CorePermissionGroup | CorePikkuPermission)[]
-  if (globals && globals.length > 0) {
-    resolved.push(...globals)
-  }
-
-  if (wireInheritedPermissions) {
-    for (const meta of wireInheritedPermissions) {
-      if (meta.type === 'http') {
-        // Look up HTTP permission group from pikkuState
-        const group = pikkuState(packageName, 'permissions', 'httpGroup')[
-          meta.route
-        ]
-        if (group) {
-          if (Array.isArray(group)) {
-            resolved.push(...group)
-          } else {
-            resolved.push(group)
-          }
-        }
-      } else if (meta.type === 'tag') {
-        const groups = getTagGroups(
-          pikkuState(packageName, 'permissions', 'tagGroup'),
-          meta.tag
-        )
-        for (const group of groups) {
-          if (Array.isArray(group)) {
-            resolved.push(...group)
-          } else {
-            resolved.push(group)
-          }
-        }
-      } else if (meta.type === 'wire') {
-        // Individual wire permission (exported, not inline)
-        const permission = getPermissionByName(meta.name)
-        if (permission) {
-          resolved.push(permission)
-        }
-      }
-    }
-  }
-
-  // 2. Add inline wire permissions
-  if (wirePermissions) {
-    if (Array.isArray(wirePermissions)) {
-      resolved.push(...wirePermissions)
-    } else {
-      resolved.push(wirePermissions)
-    }
-  }
-
-  // 3. Resolve function inherited permissions (only tags, wire permissions already handled)
-  if (funcInheritedPermissions) {
-    for (const meta of funcInheritedPermissions) {
-      if (meta.type === 'tag') {
-        const groups = getTagGroups(
-          pikkuState(packageName, 'permissions', 'tagGroup'),
-          meta.tag
-        )
-        for (const group of groups) {
-          if (Array.isArray(group)) {
-            resolved.push(...group)
-          } else {
-            resolved.push(group)
-          }
-        }
-      }
-      // Note: wire permissions are already handled in wireInheritedPermissions
-    }
-  }
-
-  // 4. Add inline function permissions
-  if (funcPermissions) {
-    if (Array.isArray(funcPermissions)) {
-      resolved.push(...funcPermissions)
-    } else {
-      resolved.push(funcPermissions)
-    }
-  }
-
-  // Deduplicate and freeze
-  combinedPermissionsCache[wireType][uid] = freezeDedupe(resolved) as readonly (
-    | CorePermissionGroup
-    | CorePikkuPermission
-  )[]
-
-  return combinedPermissionsCache[wireType][uid]
+  const resolved = globals && globals.length > 0 ? [...globals] : []
+  globalPermissionsCache[key] = resolved
+  return resolved
 }
 
-/**
- * Runs permission checks using combined permissions from all sources.
- * Combines permissions from wire and function levels, then validates them.
- */
-export const runPermissions = async (
-  wireType: PikkuWiringTypes,
-  uid: string,
-  {
-    wireInheritedPermissions,
-    wirePermissions,
-    funcInheritedPermissions,
-    funcPermissions,
-    services,
-    wire,
-    data,
-    packageName = null,
-  }: {
-    wireInheritedPermissions?: PermissionMetadata[]
-    wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
-    funcInheritedPermissions?: PermissionMetadata[]
-    funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
-    services: CoreServices
-    wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
-    data: any
-    packageName?: string | null
-  }
-) => {
-  // Combine all permissions: wireInheritedPermissions → wirePermissions → funcInheritedPermissions → funcPermissions
-  const allPermissions = combinePermissions(wireType, uid, {
-    wireInheritedPermissions,
-    wirePermissions,
-    funcInheritedPermissions,
-    funcPermissions,
-    packageName,
-  })
+const asGroup = (
+  entry: CorePermissionGroup | CorePikkuPermission
+): CorePermissionGroup =>
+  typeof entry === 'function' ? { permission: entry } : entry
 
-  // Check all combined permissions - at least one must pass if any exist
-  if (allPermissions.length > 0) {
-    for (const permission of allPermissions) {
-      const result = await verifyPermissions(
-        typeof permission === 'function' ? { permission } : permission,
-        services,
-        data,
-        wire
-      )
-      if (result) {
-        return
+/**
+ * Runs authorization for a function invocation. Two independent gates, both of
+ * which must pass:
+ *
+ * 1. Global permissions — AND. Every registered global requirement must pass.
+ * 2. Function permissions — OR. The function's own `permissions` group must be
+ *    satisfied (see {@link verifyPermissions}).
+ *
+ * A passing global requirement never contributes to the function gate, so a
+ * broad global like `signedIn` can't satisfy an admin-only function.
+ */
+export const runPermissions = async ({
+  funcPermissions,
+  services,
+  wire,
+  data,
+  packageName = null,
+}: {
+  funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
+  services: CoreServices
+  wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
+  data: any
+  packageName?: string | null
+}) => {
+  const globals = resolveGlobalPermissions(packageName)
+  for (const entry of globals) {
+    if (!(await verifyPermissions(asGroup(entry), services, data, wire))) {
+      services.logger.debug('Permission denied - global permission')
+      throw new ForbiddenError('Permission denied')
+    }
+  }
+
+  if (funcPermissions) {
+    const group = Array.isArray(funcPermissions)
+      ? { permissions: funcPermissions }
+      : funcPermissions
+    if (group && Object.keys(group).length > 0) {
+      if (!(await verifyPermissions(group, services, data, wire))) {
+        services.logger.debug('Permission denied - function permission')
+        throw new ForbiddenError('Permission denied')
       }
     }
-    services.logger.debug('Permission denied - combined permissions')
-    throw new ForbiddenError('Permission denied')
   }
 }
 
 /**
  * Checks whether a session passes the auth checks (pikkuAuth only) for a
  * given function/agent. Skips pikkuPermission checks since those require
- * request data which isn't available at filter time.
+ * request data which isn't available at filter time. Global auth requirements
+ * are included so a filtered list honours app-wide auth.
  *
  * @param funcPermissions - The PermissionMetadata[] from function or agent metadata
  * @param session - The user's session
  * @param services - Singleton services
  * @param packageName - Optional package namespace
- * @returns true if the session passes all auth checks (or no auth checks exist)
+ * @returns true if the session passes the auth checks (or no auth checks exist)
  */
 export const checkAuthPermissions = async (
   funcPermissions: PermissionMetadata[] | undefined,
@@ -360,19 +218,6 @@ export const checkAuthPermissions = async (
   services: CoreServices,
   packageName: string | null = null
 ): Promise<boolean> => {
-  if (!funcPermissions?.length) return true
-
-  const allPermissions = combinePermissions(
-    'agent',
-    `authcheck:${Math.random()}`,
-    {
-      funcInheritedPermissions: funcPermissions,
-      packageName,
-    }
-  )
-
-  if (allPermissions.length === 0) return true
-
   const wire = { session } as unknown as PikkuWire<
     any,
     never,
@@ -382,15 +227,18 @@ export const checkAuthPermissions = async (
     never
   >
 
-  // Extract only pikkuAuth permissions (marked with __pikkuAuth)
+  // Collect auth-only (pikkuAuth) predicates from globals and the function's
+  // referenced permissions. Data-dependent permissions are ignored — they
+  // can't be evaluated without request data at filter time.
   const authPerms: CorePikkuPermission<any, any, any>[] = []
-  for (const permission of allPermissions) {
-    if (typeof permission === 'function') {
-      if ((permission as any).__pikkuAuth) {
-        authPerms.push(permission)
+
+  const collect = (perm: CorePermissionGroup | CorePikkuPermission) => {
+    if (typeof perm === 'function') {
+      if ((perm as any).__pikkuAuth) {
+        authPerms.push(perm)
       }
-    } else if (permission && typeof permission === 'object') {
-      for (const funcs of Object.values(permission)) {
+    } else if (perm && typeof perm === 'object') {
+      for (const funcs of Object.values(perm)) {
         const arr = Array.isArray(funcs) ? funcs : [funcs]
         for (const fn of arr) {
           if (typeof fn === 'function' && (fn as any).__pikkuAuth) {
@@ -401,10 +249,24 @@ export const checkAuthPermissions = async (
     }
   }
 
+  for (const entry of resolveGlobalPermissions(packageName)) {
+    collect(entry)
+  }
+
+  if (funcPermissions?.length) {
+    for (const meta of funcPermissions) {
+      if (meta.type === 'wire') {
+        const permission = getPermissionByName(meta.name, packageName)
+        if (permission) {
+          collect(permission)
+        }
+      }
+    }
+  }
+
   // No auth permissions = allowed (only data-dependent permissions exist)
   if (authPerms.length === 0) return true
 
-  // All auth permissions must pass
   for (const perm of authPerms) {
     const result = await perm(services, null, wire)
     if (result) return true

@@ -432,8 +432,6 @@ const executeRoute = async (
         data,
         inheritedMiddleware: meta.middleware,
         wireMiddleware: route.middleware,
-        inheritedPermissions: meta.permissions,
-        wirePermissions: route.permissions,
         coerceDataFromSchema: options.coerceDataFromSchema,
         tags: route.tags,
         wire,
