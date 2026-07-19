@@ -48,9 +48,20 @@ export function useElkLayout(
         return
       }
 
+      // DOWN (side-panel) layouts: tighter layers to keep flows compact, wider
+      // in-layer gaps so the labels hung beside nodes clear their siblings.
+      const directionOptions =
+        direction === 'DOWN'
+          ? {
+              'elk.direction': direction,
+              'elk.spacing.nodeNode': '150',
+              'elk.layered.spacing.nodeNodeBetweenLayers': '70',
+            }
+          : { 'elk.direction': direction }
+
       const graph = {
         id: 'root',
-        layoutOptions: { ...elkOptions, 'elk.direction': direction },
+        layoutOptions: { ...elkOptions, ...directionOptions },
         children: nodes.map((node) => {
           const nodeType = node.data?.nodeType
           let width = node.width || 200

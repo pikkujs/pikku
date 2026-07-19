@@ -111,6 +111,7 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
         }}
         zoomOnScroll={true}
         preventScrolling={false}
+        minZoom={0.15}
         nodesConnectable={false}
         nodesDraggable={true}
         proOptions={{ hideAttribution: true }}

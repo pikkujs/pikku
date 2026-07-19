@@ -14,7 +14,7 @@ export const WorkflowPanelFlow: React.FC = () => {
     workflow?.source === 'scenario' || workflow?.scenario === true
 
   return (
-    <Box h={480} style={{ minHeight: 0 }}>
+    <Box h={560} style={{ minHeight: 0 }}>
       {isScenario ? (
         <PersonaTimeline workflow={workflow} />
       ) : (
