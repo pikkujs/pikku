@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useState } from 'react'
 import ELK from 'elkjs/lib/elk.bundled.js'
 import type { Node, Edge } from 'reactflow'
+import type { FlowDirection } from '../context/FlowDirectionContext'
 
 const elk = new ELK()
 
@@ -24,27 +25,43 @@ interface ElkLayoutResult {
   edges: Edge[]
 }
 
-export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
+export function useElkLayout(
+  nodes: Node[],
+  edges: Edge[],
+  direction: FlowDirection = 'RIGHT'
+): ElkLayoutResult {
   const [result, setResult] = useState<ElkLayoutResult>({
     nodes: [],
     edges: [],
   })
-  const [isLayouting, setIsLayouting] = useState(false)
 
   const nodeIds = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
   const edgeIds = useMemo(() => edges.map((e) => e.id).join(','), [edges])
 
   useEffect(() => {
+    // Cancellation flag (not state): a state guard would drop a dep change
+    // that lands mid-layout with no retry, sticking the old layout forever.
+    let cancelled = false
+
     const applyLayout = async () => {
-      if (nodes.length === 0 || isLayouting) {
+      if (nodes.length === 0) {
         return
       }
 
-      setIsLayouting(true)
+      // DOWN (side-panel) layouts: tighter layers to keep flows compact, wider
+      // in-layer gaps so the labels hung beside nodes clear their siblings.
+      const directionOptions =
+        direction === 'DOWN'
+          ? {
+              'elk.direction': direction,
+              'elk.spacing.nodeNode': '150',
+              'elk.layered.spacing.nodeNodeBetweenLayers': '70',
+            }
+          : { 'elk.direction': direction }
 
       const graph = {
         id: 'root',
-        layoutOptions: elkOptions,
+        layoutOptions: { ...elkOptions, ...directionOptions },
         children: nodes.map((node) => {
           const nodeType = node.data?.nodeType
           let width = node.width || 200
@@ -100,6 +117,7 @@ export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
 
       try {
         const layout = await elk.layout(graph)
+        if (cancelled) return
 
         const minY = Math.min(...(layout.children?.map((n) => n.y || 0) || [0]))
         const yOffset = 75 - minY
@@ -155,14 +173,16 @@ export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
 
         setResult({ nodes: newNodes, edges: newEdges })
       } catch {
-        setResult({ nodes, edges })
-      } finally {
-        setIsLayouting(false)
+        if (!cancelled) setResult({ nodes, edges })
       }
     }
 
     applyLayout()
-  }, [nodeIds, edgeIds])
+
+    return () => {
+      cancelled = true
+    }
+  }, [nodeIds, edgeIds, direction])
 
   return result.nodes.length > 0 ? result : { nodes, edges }
 }

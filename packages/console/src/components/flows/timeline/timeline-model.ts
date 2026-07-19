@@ -1,7 +1,6 @@
 export type FlowTimelineKind =
   | 'rpc'
   | 'eventual'
-  | 'return'
   | 'parallel'
   | 'fanout'
   | 'other'
@@ -33,7 +32,6 @@ const isStructuralBranch = (node: RawNode): boolean =>
   !node.rpcName
 
 const kindOf = (node: RawNode): FlowTimelineKind => {
-  if (node.flow === 'return') return 'return'
   if (node.flow === 'parallel') return 'parallel'
   if (node.flow === 'fanout') return 'fanout'
   if (node.rpcName) return node.expectEventually ? 'eventual' : 'rpc'
@@ -41,7 +39,6 @@ const kindOf = (node: RawNode): FlowTimelineKind => {
 }
 
 const titleOf = (node: RawNode): string => {
-  if (node.flow === 'return') return 'Return'
   if (/^step_\d+$/.test(node.nodeId)) return node.rpcName ?? node.nodeId
   return node.nodeId
 }
@@ -72,8 +69,9 @@ export function buildFlowTimeline(
     if (!visited.has(id)) walk(id)
   }
 
+  // scenarios are always void, so the compiled trailing return node is noise
   return ordered
-    .filter((node) => !isStructuralBranch(node))
+    .filter((node) => !isStructuralBranch(node) && node.flow !== 'return')
     .map((node) => ({
       nodeId: node.nodeId,
       kind: kindOf(node),

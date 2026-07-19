@@ -78,7 +78,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           }}
         >
           <Box className={classes.listSurfaceCard} style={{ height: '100%', width: 'min(520px, 42vw)' }}>
-            <PanelContainer emptyMessage={emptyPanelMessage} />
+            <PanelContainer emptyMessage={emptyPanelMessage} workflowGraph={false} />
           </Box>
         </Box>
       </Box>

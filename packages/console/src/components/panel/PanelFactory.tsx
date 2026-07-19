@@ -9,7 +9,11 @@ import { SchemaForm } from '../ui/SchemaForm'
 import type { PanelData } from '../../context/PanelContext'
 import { useWorkflowRunContextSafe } from '../../context/WorkflowRunContext'
 import { useStartWorkflowRun } from '../../hooks/useWorkflowRuns'
-import { useWorkflowNode } from '../../context/WorkflowContext'
+import {
+  useWorkflowContext,
+  useWorkflowNode,
+} from '../../context/WorkflowContext'
+import { WorkflowPanelFlow } from './WorkflowPanelFlow'
 import { useWorkflowInputSchema } from '../../hooks/useWorkflowInputSchema'
 import { FunctionTabbedPanel } from '../project/panels/FunctionDetailsForm'
 import {
@@ -183,12 +187,17 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   )
 }
 
-const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
-  workflowId,
-}) => {
+const WorkflowTabbedPanel: React.FC<{
+  workflowId: string
+  renderGraph?: boolean
+}> = ({ workflowId, renderGraph = true }) => {
   const runContext = useWorkflowRunContextSafe()
+  const { workflow } = useWorkflowContext()
   const hasRun = !!runContext?.selectedRunId
   const isCreating = !!runContext?.isCreatingRun
+  const hasNodes =
+    !!workflow?.nodes && Object.keys(workflow.nodes).length > 0
+  const showGraph = renderGraph && hasNodes
 
   return (
     <Stack gap="md">
@@ -202,8 +211,9 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
           <WorkflowRunOverview workflowId={workflowId} />
         ) : (
           <Stack gap="xl">
+            {showGraph && <WorkflowPanelFlow />}
             <WorkflowConfiguration workflowId={workflowId} />
-            <WorkflowNodes workflowId={workflowId} />
+            {!showGraph && <WorkflowNodes workflowId={workflowId} />}
             <WorkflowState workflowId={workflowId} />
           </Stack>
         )}
@@ -212,7 +222,16 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
   )
 }
 
-export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
+export interface PanelRenderOptions {
+  /** Render the workflow panel's flow visually (vertical graph / scenario
+   *  timeline). Disable when the panel sits beside a full workflow canvas. */
+  workflowGraph?: boolean
+}
+
+export const createPanelChildren = (
+  panelData: PanelData,
+  options: PanelRenderOptions = {}
+): PanelChild[] => {
   switch (panelData.type) {
     case 'function':
       return [
@@ -249,7 +268,12 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
         {
           id: 'workflow',
           title: 'Workflow',
-          content: <WorkflowTabbedPanel workflowId={panelData.id} />,
+          content: (
+            <WorkflowTabbedPanel
+              workflowId={panelData.id}
+              renderGraph={options.workflowGraph !== false}
+            />
+          ),
         },
       ]
 

@@ -10,17 +10,26 @@ import { SidePanel, SidePanelContent, SidePanelHeader } from './SidePanel'
 
 interface PanelContainerProps {
   emptyMessage?: I18nNode
+  /** Render workflow panels with their flow drawn vertically (graph /
+   *  scenario timeline). Default true; layouts that already show a full
+   *  workflow canvas next to the panel pass false. */
+  workflowGraph?: boolean
 }
 
-export const PanelContainer: React.FC<PanelContainerProps> = ({ emptyMessage }) => {
+export const PanelContainer: React.FC<PanelContainerProps> = ({
+  emptyMessage,
+  workflowGraph = true,
+}) => {
   const { panels, activePanel, closePanel, goBack } = usePanelContext()
   useLocale()
 
   const activePanelData = activePanel ? panels.get(activePanel) : null
 
   const children = useMemo(() => {
-    return activePanelData ? createPanelChildren(activePanelData.data) : []
-  }, [activePanelData])
+    return activePanelData
+      ? createPanelChildren(activePanelData.data, { workflowGraph })
+      : []
+  }, [activePanelData, workflowGraph])
 
   if (!activePanelData || children.length === 0) {
     return (

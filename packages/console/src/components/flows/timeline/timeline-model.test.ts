@@ -28,25 +28,20 @@ const ORDER_SUPPORT_NODES = {
   step_3: { nodeId: 'step_3', flow: 'return', outputs: {} },
 }
 
-test('buildFlowTimeline orders by next, drops the structural branch, and maps kinds', () => {
+test('buildFlowTimeline orders by next, drops structural branch and return nodes, and maps kinds', () => {
   const timeline = buildFlowTimeline(ORDER_SUPPORT_NODES as any, ['step_0'])
 
   assert.deepEqual(
     timeline.map((n) => n.nodeId),
-    [
-      'shopper doubles their order',
-      'support sees the greeting settle',
-      'step_3',
-    ]
+    ['shopper doubles their order', 'support sees the greeting settle']
   )
   assert.deepEqual(
     timeline.map((n) => n.kind),
-    ['rpc', 'eventual', 'return']
+    ['rpc', 'eventual']
   )
   assert.equal(timeline[0].actor, 'shopper')
   assert.equal(timeline[1].actor, 'support')
   assert.equal(timeline[1].expectEventually, true)
-  assert.equal(timeline[2].title, 'Return')
 })
 
 test('buildFlowTimeline appends nodes unreachable via next in insertion order', () => {
@@ -58,7 +53,7 @@ test('buildFlowTimeline appends nodes unreachable via next in insertion order', 
   const timeline = buildFlowTimeline(nodes as any, ['a'])
   assert.deepEqual(
     timeline.map((n) => n.nodeId),
-    ['a', 'c', 'b']
+    ['a', 'b']
   )
 })
 
