@@ -247,13 +247,21 @@ export async function loadAddonFunctionsMeta(
         const credentialsRaw = await readFile(credentialsMetaPath, 'utf-8')
         const credentialsMeta = JSON.parse(credentialsRaw)
         for (const [key, def] of Object.entries<any>(credentialsMeta)) {
+          // Each instance's credentialOverrides remap the addon's logical
+          // credential name to a project credential — same mechanic as secrets
+          // and variables above. The credential name doubles as the better-auth
+          // providerId (accounts keyed by providerId+userId), so two instances
+          // with different overrides surface two distinct OAuth providers rather
+          // than sharing one account pool. The logical name is the default when
+          // no override is given.
+          const resolvedName = decl.credentialOverrides?.[key] ?? key
           const existing = state.credentials.definitions.find(
-            (d: any) => d.name === key
+            (d: any) => d.name === resolvedName
           )
           if (!existing) {
-            state.credentials.definitions.push(def)
+            state.credentials.definitions.push({ ...def, name: resolvedName })
             logger.debug(
-              `Loaded addon credential '${key}' from ${decl.package}`
+              `Loaded addon credential '${resolvedName}' from ${decl.package}`
             )
           }
         }

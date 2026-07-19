@@ -18,6 +18,7 @@ const writeAddonFixture = (rootDir: string) => {
   mkdirSync(join(pikku, 'function'), { recursive: true })
   mkdirSync(join(pikku, 'secrets'), { recursive: true })
   mkdirSync(join(pikku, 'variables'), { recursive: true })
+  mkdirSync(join(pikku, 'credentials'), { recursive: true })
   writeFileSync(join(addonDir, 'package.json'), JSON.stringify({ name: ADDON }))
   writeFileSync(
     join(pikku, 'function', 'pikku-functions-meta.gen.json'),
@@ -31,6 +32,12 @@ const writeAddonFixture = (rootDir: string) => {
     join(pikku, 'variables', 'pikku-variables-meta.gen.json'),
     JSON.stringify({ region: { name: 'region' } })
   )
+  writeFileSync(
+    join(pikku, 'credentials', 'pikku-credentials-meta.gen.json'),
+    JSON.stringify({
+      slackOAuth: { name: 'slackOAuth', type: 'singleton' },
+    })
+  )
 }
 
 const makeState = (
@@ -43,6 +50,7 @@ const makeState = (
     addonFunctions: {},
     secrets: { definitions: [] },
     variables: { definitions: [] },
+    credentials: { definitions: [] },
     mcpEndpoints: { toolsMeta: {} },
     addonServerlessIncompatible: new Map(),
     addonRequiredParentServices: [],
@@ -80,6 +88,7 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
             package: ADDON,
             secretOverrides: { slack: 'slack_marketing_secret' },
             variableOverrides: { region: 'marketing_region' },
+            credentialOverrides: { slackOAuth: 'slack_marketing_oauth' },
           },
         ],
         [
@@ -87,6 +96,7 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
           {
             package: ADDON,
             secretOverrides: { slack: 'slack_support_secret' },
+            credentialOverrides: { slackOAuth: 'slack_support_oauth' },
           },
         ],
       ])
@@ -106,6 +116,16 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
       .map((d: any) => d.name)
       .sort()
     assert.deepEqual(variableNames, ['marketing_region', 'region'])
+
+    // Each instance's credentialOverride surfaces a distinct credential name
+    // (which doubles as the better-auth providerId) — no shared account pool.
+    const credentialNames = state.credentials.definitions
+      .map((d: any) => d.name)
+      .sort()
+    assert.deepEqual(credentialNames, [
+      'slack_marketing_oauth',
+      'slack_support_oauth',
+    ])
   })
 
   test('falls back to the addon logical name when no override is provided', async () => {
@@ -123,6 +143,10 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
     assert.deepEqual(
       state.variables.definitions.map((d: any) => d.name),
       ['region']
+    )
+    assert.deepEqual(
+      state.credentials.definitions.map((d: any) => d.name),
+      ['slackOAuth']
     )
   })
 })
