@@ -6,10 +6,14 @@ import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import {
   ContextAwareRPCService,
   RPCNotFoundError,
+  RemoteAddonRequestError,
+  assertRemoteInvocable,
   resolveNamespace,
   rpcService,
 } from './rpc-runner.js'
+import { RemoteAddonAuthError } from './remote-addon-auth.js'
 import { wireAddon } from './wire-addon.js'
+import { wireRemoteAddon } from './wire-remote-addon.js'
 
 const createLogger = () => ({
   debug: () => {},
@@ -615,6 +619,207 @@ describe('multi-instance addons', () => {
 
     assert.deepEqual(marketing, { cred: { token: 'm' } })
     assert.deepEqual(support, { cred: { token: 's' } })
+  })
+})
+
+describe('wireRemoteAddon dispatch', () => {
+  const realFetch = globalThis.fetch
+  let calls: Array<{ url: string; init: any }> = []
+
+  const stubFetch = (
+    response: { status?: number; body?: unknown } = {}
+  ): void => {
+    const { status = 200, body = { ok: true } } = response
+    calls = []
+    globalThis.fetch = (async (url: any, init: any) => {
+      calls.push({ url: String(url), init })
+      return {
+        ok: status >= 200 && status < 300,
+        status,
+        text: async () => (body === undefined ? '' : JSON.stringify(body)),
+      }
+    }) as any
+  }
+
+  const restoreFetch = () => {
+    globalThis.fetch = realFetch
+  }
+
+  const secretService = () =>
+    ({
+      getSecret: async (key: string) => `secret-value-for-${key}`,
+      getSecrets: async () => ({}),
+      hasSecret: async () => true,
+      setSecret: async () => {},
+      deleteSecret: async () => {},
+    }) as never
+
+  test('POSTs to /remote/rpc/<fn> with { rpcName, data } and a platform bearer token', async () => {
+    stubFetch({ body: { echoed: 42 } })
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkufabric/addon-registry',
+        serverUrl: 'https://api.example.com/',
+        auth: { secretId: 'REGISTRY_TOKEN' },
+      })
+
+      const service = new ContextAwareRPCService(
+        createServices({ secrets: secretService() }),
+        { traceId: 'trace-r' } as never,
+        {}
+      )
+
+      const result = await service.rpc('registry:getOpenApi', { name: 'stripe' })
+
+      assert.deepEqual(result, { echoed: 42 })
+      assert.equal(calls.length, 1)
+      assert.equal(
+        calls[0]!.url,
+        'https://api.example.com/remote/rpc/getOpenApi'
+      )
+      assert.equal(calls[0]!.init.method, 'POST')
+      assert.deepEqual(JSON.parse(calls[0]!.init.body), {
+        rpcName: 'getOpenApi',
+        data: { name: 'stripe' },
+      })
+      assert.equal(
+        calls[0]!.init.headers.authorization,
+        'Bearer secret-value-for-REGISTRY_TOKEN'
+      )
+      assert.equal(calls[0]!.init.headers['x-trace-id'], 'trace-r')
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  test('resolves a per-user credential token via wire.getCredential', async () => {
+    stubFetch()
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkufabric/addon-registry',
+        serverUrl: () => 'https://api.example.com',
+        auth: { credentialId: 'fabricRegistryToken' },
+      })
+
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {
+          pikkuUserId: 'user-9',
+          getCredential: async (name: string) =>
+            name === 'fabricRegistryToken' ? 'user-token-9' : null,
+        } as never,
+        {}
+      )
+
+      await service.rpc('registry:getOpenApi', {})
+      assert.equal(
+        calls[0]!.init.headers.authorization,
+        'Bearer user-token-9'
+      )
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  test('omits the Authorization header for a public (no auth) surface', async () => {
+    stubFetch()
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkufabric/addon-registry',
+        serverUrl: 'https://api.example.com',
+      })
+
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await service.rpc('registry:listOpenApis', {})
+      assert.equal(calls[0]!.init.headers.authorization, undefined)
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  test('fails closed when a bound credential resolves empty', async () => {
+    stubFetch()
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkufabric/addon-registry',
+        serverUrl: 'https://api.example.com',
+        auth: { credentialId: 'fabricRegistryToken' },
+      })
+
+      const service = new ContextAwareRPCService(
+        createServices(),
+        { getCredential: async () => null } as never,
+        {}
+      )
+
+      await assert.rejects(
+        () => service.rpc('registry:getOpenApi', {}),
+        RemoteAddonAuthError
+      )
+      assert.equal(calls.length, 0)
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  test('throws RemoteAddonRequestError on a non-2xx response', async () => {
+    stubFetch({ status: 503, body: { error: 'down' } })
+    try {
+      wireRemoteAddon({
+        name: 'registry',
+        package: '@pikkufabric/addon-registry',
+        serverUrl: 'https://api.example.com',
+      })
+
+      const service = new ContextAwareRPCService(
+        createServices(),
+        {} as never,
+        {}
+      )
+
+      await assert.rejects(
+        () => service.rpc('registry:getOpenApi', {}),
+        RemoteAddonRequestError
+      )
+    } finally {
+      restoreFetch()
+    }
+  })
+})
+
+describe('assertRemoteInvocable', () => {
+  test('allows a remote: true function', () => {
+    pikkuState(null, 'rpc', 'meta').getOpenApi = 'getOpenApiFunc'
+    registerFunction('getOpenApiFunc', async () => ({}))
+    pikkuState(null, 'function', 'meta').getOpenApiFunc = {
+      name: 'getOpenApiFunc',
+      sessionless: true,
+      permissions: [],
+      remote: true,
+    } as never
+
+    assert.doesNotThrow(() => assertRemoteInvocable('getOpenApi'))
+  })
+
+  test('rejects a non-remote function as if it did not exist', () => {
+    pikkuState(null, 'rpc', 'meta').secretOp = 'secretOpFunc'
+    registerFunction('secretOpFunc', async () => ({}))
+    pikkuState(null, 'function', 'meta').secretOpFunc = {
+      name: 'secretOpFunc',
+      sessionless: true,
+      permissions: [],
+    } as never
+
+    assert.throws(() => assertRemoteInvocable('secretOp'), RPCNotFoundError)
   })
 })
 

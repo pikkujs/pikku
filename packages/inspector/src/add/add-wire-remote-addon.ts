@@ -24,6 +24,13 @@ export function addWireRemoteAddon(
 
   let name: string | undefined
   let pkg: string | undefined
+  // The auth binding is a runtime closure; we only extract the statically
+  // knowable slot names so `pikku verify` can check they exist in the
+  // consumer's own wirings. `hasAuth` distinguishes "public" (omitted) from
+  // "bound via a custom resolve()" (present but no static id).
+  let hasAuth = false
+  let authCredentialId: string | undefined
+  let authSecretId: string | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -32,6 +39,26 @@ export function addWireRemoteAddon(
       name = prop.initializer.text
     } else if (key === 'package' && ts.isStringLiteral(prop.initializer)) {
       pkg = prop.initializer.text
+    } else if (
+      key === 'auth' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      hasAuth = true
+      for (const authProp of prop.initializer.properties) {
+        if (!ts.isPropertyAssignment(authProp) || !ts.isIdentifier(authProp.name))
+          continue
+        if (
+          authProp.name.text === 'credentialId' &&
+          ts.isStringLiteral(authProp.initializer)
+        ) {
+          authCredentialId = authProp.initializer.text
+        } else if (
+          authProp.name.text === 'secretId' &&
+          ts.isStringLiteral(authProp.initializer)
+        ) {
+          authSecretId = authProp.initializer.text
+        }
+      }
     }
   }
 
@@ -41,6 +68,9 @@ export function addWireRemoteAddon(
   state.rpc.wireAddonDeclarations.set(name, {
     package: pkg,
     remote: true,
+    hasAuth,
+    authCredentialId,
+    authSecretId,
   })
   state.rpc.usedAddons.add(name)
   state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)

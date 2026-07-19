@@ -40,4 +40,42 @@ describe('serializeTypedRPCMap', () => {
       /\.\.\.args: IsVoidishInput<FlattenedRPCMap\[Name\]\['input'\]> extends true/
     )
   })
+
+  test('a wireRemoteAddon namespace imports the addon .remote.gen map, not .internal.gen', () => {
+    const result = serializeTypedRPCMap(
+      logger,
+      '/tmp/pikku-rpc-map.gen.d.ts',
+      {},
+      emptyTypesMap,
+      {},
+      {},
+      new Map([
+        ['registry', { package: '@pikkufabric/addon-registry', remote: true }],
+      ])
+    )
+
+    assert.match(
+      result,
+      /import type \{ RPCMap as RegistryRPCMap \} from '@pikkufabric\/addon-registry\/\.pikku\/rpc\/pikku-rpc-wirings-map\.remote\.gen\.js'/
+    )
+    assert.doesNotMatch(result, /internal\.gen\.js'/)
+    assert.match(result, /PrefixKeys<RegistryRPCMap, 'registry'>/)
+  })
+
+  test('a local wireAddon namespace still imports the .internal.gen map', () => {
+    const result = serializeTypedRPCMap(
+      logger,
+      '/tmp/pikku-rpc-map.gen.d.ts',
+      {},
+      emptyTypesMap,
+      {},
+      {},
+      new Map([['slack', { package: '@pikku/addon-slack' }]])
+    )
+
+    assert.match(
+      result,
+      /import type \{ RPCMap as SlackRPCMap \} from '@pikku\/addon-slack\/\.pikku\/rpc\/pikku-rpc-wirings-map\.internal\.gen\.js'/
+    )
+  })
 })

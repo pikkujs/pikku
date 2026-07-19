@@ -487,6 +487,12 @@ export interface InspectorState {
         mcp?: boolean
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
+        /** wireRemoteAddon: whether an `auth` binding was supplied (vs a public surface) */
+        hasAuth?: boolean
+        /** wireRemoteAddon: statically-known `auth.credentialId`, for verify */
+        authCredentialId?: string
+        /** wireRemoteAddon: statically-known `auth.secretId`, for verify */
+        authSecretId?: string
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
         credentialOverrides?: Record<string, string>

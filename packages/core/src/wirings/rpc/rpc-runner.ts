@@ -135,6 +135,21 @@ const resolvePikkuFunction = (
   return { pikkuFuncId: rpcMeta, packageName: null }
 }
 
+/**
+ * Guard for a PUBLIC (no-auth) remote surface: only functions marked
+ * `remote: true` may be invoked from outside. Throws {@link RPCNotFoundError}
+ * (not a 403) for anything else so the endpoint never reveals which internal
+ * RPCs exist. The trusted mesh (`pikkuRemoteAuthMiddleware`) does NOT use this —
+ * it may invoke any RPC by design.
+ */
+export const assertRemoteInvocable = (rpcName: string): void => {
+  const { pikkuFuncId } = resolvePikkuFunction(rpcName)
+  const meta = pikkuState(null, 'function', 'meta')[pikkuFuncId]
+  if (!meta?.remote) {
+    throw new RPCNotFoundError(rpcName)
+  }
+}
+
 // Context-aware RPC client for use within services
 export class ContextAwareRPCService {
   constructor(

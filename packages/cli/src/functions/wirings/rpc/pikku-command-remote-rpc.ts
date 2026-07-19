@@ -20,7 +20,9 @@ export const pikkuRemoteRPC = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         config.remoteRpcWorkersFile,
-        serializeRemoteRPC(pathToPikkuTypes)
+        serializeRemoteRPC(pathToPikkuTypes, {
+          noAuth: config.scaffold?.remoteRpc === 'no-auth',
+        })
       )
       return true
     }

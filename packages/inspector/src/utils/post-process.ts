@@ -10,6 +10,8 @@ import type {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '@pikku/core'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
@@ -417,6 +419,97 @@ export function validateVariableOverrides(
           `Variable override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a variable that does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
         )
       }
+    }
+  }
+}
+
+/**
+ * A `wireRemoteAddon` package ships types only — its handlers run on the host —
+ * so it MUST be a devDependency, not a production dependency (a prod dep would
+ * drag in the runtime deps remote consumption exists to avoid). This is the
+ * mirror image of `wireAddon`, which requires a production dependency.
+ */
+export function validateRemoteAddonDependencies(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const { wireAddonDeclarations } = state.rpc
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+
+  const hasRemote = Array.from(wireAddonDeclarations.values()).some(
+    (d) => d.remote
+  )
+  if (!hasRemote) return
+
+  const pkgJsonPath = join(state.rootDir, 'package.json')
+  if (!existsSync(pkgJsonPath)) return // no manifest to check (e.g. some tests)
+
+  let pkgJson: {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
+  try {
+    pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+  } catch (e: any) {
+    logger.warn(
+      `Could not read ${pkgJsonPath} to verify remote addon dependencies: ${e?.message ?? e}`
+    )
+    return
+  }
+
+  const prodDeps = pkgJson.dependencies ?? {}
+  const devDeps = pkgJson.devDependencies ?? {}
+
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    if (!decl.remote) continue
+    if (decl.package in devDeps) continue // correct
+
+    if (decl.package in prodDeps) {
+      logger.critical(
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
+        `Remote addon '${namespace}' ('${decl.package}') is a production dependency, but wireRemoteAddon consumes it for types only — its handlers run on the host. Move '${decl.package}' from "dependencies" to "devDependencies".`
+      )
+    } else {
+      logger.critical(
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
+        `Remote addon '${namespace}' ('${decl.package}') is wired with wireRemoteAddon but is not in "devDependencies". Add '${decl.package}' to "devDependencies" (types only).`
+      )
+    }
+  }
+}
+
+/**
+ * The auth a `wireRemoteAddon` consumer binds must reference a slot the consumer
+ * actually declares: a `credentialId` must be a wired credential, a `secretId`
+ * a wired secret. A custom `resolve()` and a public (omitted) surface are not
+ * statically checkable and are left to runtime.
+ */
+export function validateRemoteAddonAuth(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const { wireAddonDeclarations } = state.rpc
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+
+  const credentialNames = new Set(
+    state.credentials?.definitions.map((d) => d.name) ?? []
+  )
+  const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
+
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    if (!decl.remote) continue
+
+    if (decl.authCredentialId && !credentialNames.has(decl.authCredentialId)) {
+      logger.critical(
+        ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED,
+        `Remote addon '${namespace}' binds auth.credentialId '${decl.authCredentialId}', but no such credential is wired. Available credentials: ${Array.from(credentialNames).join(', ') || 'none'}`
+      )
+    }
+    if (decl.authSecretId && !secretNames.has(decl.authSecretId)) {
+      logger.critical(
+        ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED,
+        `Remote addon '${namespace}' binds auth.secretId '${decl.authSecretId}', but no such secret is wired. Available secrets: ${Array.from(secretNames).join(', ') || 'none'}`
+      )
     }
   }
 }

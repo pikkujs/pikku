@@ -18,6 +18,8 @@ import {
   validateSecretOverrides,
   validateVariableOverrides,
   validateCredentialOverrides,
+  validateRemoteAddonDependencies,
+  validateRemoteAddonAuth,
   validateScopeReferences,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
@@ -421,6 +423,8 @@ export const inspect = async (
     validateSecretOverrides(logger, state)
     validateVariableOverrides(logger, state)
     validateCredentialOverrides(logger, state)
+    validateRemoteAddonDependencies(logger, state)
+    validateRemoteAddonAuth(logger, state)
     validateScopeReferences(logger, state)
   }
 

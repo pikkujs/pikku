@@ -15,6 +15,11 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
 
     for (const [, decl] of stateBeforeBootstrap.rpc?.wireAddonDeclarations ??
       []) {
+      // Remote addons (wireRemoteAddon) run on the host — never import their
+      // runtime bootstrap here; that would register their functions locally
+      // and drag in the runtime deps remote consumption exists to avoid. The
+      // consumer's own wireRemoteAddon() call registers the remote binding.
+      if (decl.remote) continue
       addonBootstraps.push(`${decl.package}/.pikku/pikku-bootstrap.gen.js`)
       logger.debug(`• Addon bootstrap: ${decl.package}`)
     }
