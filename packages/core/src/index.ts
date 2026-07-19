@@ -184,6 +184,11 @@ export type { GraphNodeConfig } from './wirings/workflow/graph/workflow-graph.ty
 export { createGraph } from './wirings/workflow/graph/graph-node.js'
 export { wireAddon } from './wirings/rpc/wire-addon.js'
 export type { WireAddonConfig } from './wirings/rpc/wire-addon.js'
+export { wireRemoteAddon } from './wirings/rpc/wire-remote-addon.js'
+export type {
+  WireRemoteAddonConfig,
+  RemoteAddonAuth,
+} from './wirings/rpc/wire-remote-addon.js'
 export type { PikkuPackageState } from './types/state.types.js'
 export {
   runMiddleware,

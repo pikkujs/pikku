@@ -95,6 +95,17 @@ export interface PikkuPackageState {
         variableOverrides?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project credential name */
         credentialOverrides?: Record<string, string>
+        /** Set by `wireRemoteAddon`: this namespace is consumed remotely over HTTP, not bundled */
+        remote?: boolean
+        /** Remote host base URL (wireRemoteAddon) — string or resolver over singleton services */
+        serverUrl?: string | ((services: any) => string | Promise<string>)
+        /** Consumer-side auth binding for the hosted addon (wireRemoteAddon) */
+        remoteAuth?:
+          | { credentialId: string }
+          | { secretId: string }
+          | { resolve: (services: any, wire: any) => string | Promise<string> }
+        /** Map consumer-facing fn name → remote fn name (wireRemoteAddon) */
+        remoteName?: (fn: string) => string
       }
     >
   }

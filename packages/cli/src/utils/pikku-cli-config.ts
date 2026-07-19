@@ -296,6 +296,13 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    if (!result.rpcRemoteMapDeclarationFile) {
+      result.rpcRemoteMapDeclarationFile = join(
+        rpcDir,
+        'pikku-rpc-wirings-map.remote.gen.d.ts'
+      )
+    }
+
     // Scaffold directory for auto-generated wiring files. Default it beside the
     // first source directory (so a monorepo's scaffold lands in the functions
     // package where its deps — e.g. zod — resolve), not rootDir-relative

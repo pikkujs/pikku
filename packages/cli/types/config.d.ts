@@ -49,6 +49,9 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Exposed
   rpcMapDeclarationFile: string
 
+  // RPC Remote — the `remote: true` surface a wireRemoteAddon consumer imports
+  rpcRemoteMapDeclarationFile: string
+
   // Remote RPC workers (derived from scaffold.pikkuDir when scaffold.remoteRpc is enabled).
   // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
   remoteRpcWorkersFile?: string

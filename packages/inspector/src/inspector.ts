@@ -127,6 +127,8 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       internalFiles: new Map(),
       exposedMeta: {},
       exposedFiles: new Map(),
+      remoteMeta: {},
+      remoteFiles: new Map(),
       invokedFunctions: new Set(),
       invokedFunctionsByFile: new Map(),
       usedAddons: new Set(),

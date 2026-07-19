@@ -89,3 +89,50 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
     }),
   ],
 })
+
+/**
+ * The `remote: true` surface — what a `wireRemoteAddon` consumer imports.
+ * Mirrors the exposed map but is fed from `rpc.remoteMeta`.
+ */
+export const pikkuRPCRemoteMap = pikkuSessionlessFunc<void, void>({
+  func: async ({ logger, config, getInspectorState }) => {
+    const { functions, rpc, resolvedIOTypes } = await getInspectorState()
+    const {
+      rpcRemoteMapDeclarationFile,
+      packageMappings,
+      workflowMapDeclarationFile,
+      agentMapDeclarationFile,
+    } = config
+
+    const workflowMapPath = getFileImportRelativePath(
+      rpcRemoteMapDeclarationFile,
+      workflowMapDeclarationFile,
+      packageMappings
+    )
+
+    const agentMapPath = getFileImportRelativePath(
+      rpcRemoteMapDeclarationFile,
+      agentMapDeclarationFile,
+      packageMappings
+    )
+
+    const content = serializeTypedRPCMap(
+      logger,
+      rpcRemoteMapDeclarationFile,
+      packageMappings,
+      functions.typesMap,
+      rpc.remoteMeta,
+      resolvedIOTypes,
+      rpc.wireAddonDeclarations,
+      workflowMapPath,
+      agentMapPath
+    )
+    await writeFileInDir(logger, rpcRemoteMapDeclarationFile, content)
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating RPC remote map',
+      commandEnd: 'Created RPC remote map',
+    }),
+  ],
+})

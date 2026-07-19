@@ -55,5 +55,13 @@ export interface ResolvedFunction {
     secretOverrides?: Record<string, string>
     variableOverrides?: Record<string, string>
     credentialOverrides?: Record<string, string>
+    /** Set by `wireRemoteAddon`: dispatch this namespace's RPCs over HTTP */
+    remote?: boolean
+    serverUrl?: string | ((services: any) => string | Promise<string>)
+    remoteAuth?:
+      | { credentialId: string }
+      | { secretId: string }
+      | { resolve: (services: any, wire: any) => string | Promise<string> }
+    remoteName?: (fn: string) => string
   }
 }
