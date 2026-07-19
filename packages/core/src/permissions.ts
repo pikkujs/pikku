@@ -127,6 +127,24 @@ export const addGlobalPermission = (
 }
 
 /**
+ * @deprecated Tag-level permissions were removed in #972 — permissions are now
+ * function-scoped only (declare them on the function via `pikkuFunc({ permissions })`).
+ * This throwing stub exists solely so the pinned bootstrap CLI (which still
+ * generates an `addTagPermission` wrapper) can resolve the import at build time;
+ * it is never called. Delete once `PIKKU_CLI_VERSION` in the CLI build is bumped
+ * past the release that removes tag permissions.
+ */
+export const addTagPermission = (
+  _tag: string,
+  _permissions: CorePermissionGroup | CorePikkuPermission[],
+  _packageName: string | null = null
+): never => {
+  throw new Error(
+    'addTagPermission was removed in #972 — tag-level permissions no longer exist. Declare permissions on the function definition instead: pikkuFunc({ permissions }).'
+  )
+}
+
+/**
  * Resolves the registered global permission requirements for a package,
  * caching the resolved array per package. The cache is keyed by package name
  * (an empty string for the root package) so packages never collide, and it is

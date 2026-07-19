@@ -104,6 +104,25 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   return middleware
 }
 
+/**
+ * @deprecated HTTP-route-level permissions were removed in #972 — permissions
+ * are now function-scoped only (declare them on the function via
+ * `pikkuFunc({ permissions })`). This throwing stub exists solely so the pinned
+ * bootstrap CLI (which still generates an `addHTTPPermission` wrapper) can
+ * resolve the import at build time; it is never called. Delete once
+ * `PIKKU_CLI_VERSION` in the CLI build is bumped past the release that removes
+ * HTTP-route permissions.
+ */
+export const addHTTPPermission = (
+  _pattern: string,
+  _permissions:
+    | Record<string, CorePikkuPermission | CorePikkuPermission[]>
+    | CorePikkuPermission[]
+): never => {
+  throw new Error(
+    'addHTTPPermission was removed in #972 — HTTP-route-level permissions no longer exist. Declare permissions on the function definition instead: pikkuFunc({ permissions }).'
+  )
+}
 
 /**
  * Adds a new route to the global HTTP route registry.
