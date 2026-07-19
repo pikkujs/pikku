@@ -39,6 +39,7 @@ import {
   assertResourceOwner,
   ToolApprovalRequired,
   ToolCredentialRequired,
+  APPROVAL_REQUIRED,
   type RunAIAgentParams,
   type StreamAIAgentOptions,
   type StreamContext,
@@ -331,10 +332,12 @@ export function checkForApprovals(
       continue
     }
 
-    // The `__approvalRequired` marker is only trusted from a framework tool
-    // declared with `forwardsApproval` (the sub-agent delegating tools). A
-    // plain tool's output — which an attacker-influenced tool response may
-    // contain — can never forge an approval/suspension.
+    // The approval marker is only trusted from a framework tool declared with
+    // `forwardsApproval` (the sub-agent delegating tools) AND carrying the
+    // non-forgeable `APPROVAL_REQUIRED` Symbol brand. A plain tool's output — or
+    // a delegating tool's LLM-shaped `result.object`, which an attacker can
+    // influence — is plain JSON and can never carry the Symbol, so it can never
+    // forge an approval/suspension.
     if (!toolDef?.forwardsApproval) {
       continue
     }
@@ -345,7 +348,7 @@ export function checkForApprovals(
     if (
       tr?.result &&
       typeof tr.result === 'object' &&
-      '__approvalRequired' in (tr.result as object)
+      APPROVAL_REQUIRED in (tr.result as object)
     ) {
       const r = tr.result as {
         toolName: string
