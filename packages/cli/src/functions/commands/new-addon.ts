@@ -286,18 +286,28 @@ export const createWireServices = pikkuAddonWireServices(
 )
 `
   } else if (flags.oauth || flags.credential === 'oauth2') {
+    // The OAuth2 access token is owned and refreshed by the platform credential
+    // service (better-auth). Resolve a ready token per-request via the wire and
+    // hand it to the service — the addon does not do its own token exchange.
     files['src/services.ts'] =
-      `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonServices } from '#pikku'
+      `import { UnauthorizedError } from '@pikku/core/errors'
+import { ${pascalName}Service } from './${name}-api.service.js'
+import { pikkuAddonWireServices } from '#pikku'
 
-export const createSingletonServices = pikkuAddonServices(async (
-  config,
-  { secrets, variables }
-) => {
-  const ${camelName} = new ${pascalName}Service(secrets, variables)
+export const createWireServices = pikkuAddonWireServices(
+  async ({ variables }, wire) => {
+    if (!wire.getCredential) {
+      throw new Error('Credential resolution is not available in this runtime')
+    }
+    const cred = await wire.getCredential<{ accessToken: string }>('${camelName}')
+    if (!cred?.accessToken) {
+      throw new UnauthorizedError('No ${displayName} connection — connect ${displayName} first')
+    }
+    const ${camelName} = new ${pascalName}Service(cred, variables)
 
-  return { ${camelName} }
-})
+    return { ${camelName} }
+  }
+)
 `
   } else if (flags.secret) {
     files['src/services.ts'] =
@@ -388,10 +398,10 @@ export class ${pascalName}Service {
 }
 `
   } else if (flags.oauth) {
+    // The access token is resolved (and refreshed) by the platform credential
+    // service and injected via createWireServices — this service just uses it.
     files[`src/${name}-api.service.ts`] =
-      `import { OAuth2Client } from '@pikku/core/oauth2'
-import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'
-import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
+      `import type { TypedVariablesService } from '#pikku/variables/pikku-variables.gen.js'
 
 const BASE_URL = 'https://api.example.com/v1'
 
@@ -401,23 +411,17 @@ export interface RequestOptions {
 }
 
 export class ${pascalName}Service {
-  private oauth: OAuth2Client
-
-  constructor(secrets: TypedSecretService) {
-    const oauth2 = CREDENTIAL_OAUTH2_CONFIGS['${camelName}']
-    this.oauth = new OAuth2Client(
-      oauth2,
-      oauth2.appCredentialSecretId,
-      secrets
-    )
-  }
+  constructor(
+    private creds: { accessToken: string },
+    _variables?: TypedVariablesService
+  ) {}
 
   async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     endpoint: string,
     options?: RequestOptions
   ): Promise<T> {
-    const url = new URL(\`\${BASE_URL}\${endpoint}\`)
+    const url = new URL(endpoint, BASE_URL)
 
     if (options?.qs) {
       for (const [key, value] of Object.entries(options.qs)) {
@@ -427,10 +431,11 @@ export class ${pascalName}Service {
       }
     }
 
-    const response = await this.oauth.request(url.toString(), {
+    const response = await fetch(url.toString(), {
       method,
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${this.creds.accessToken}\`,
       },
       body: options?.body ? JSON.stringify(options.body) : undefined,
     })
@@ -440,11 +445,7 @@ export class ${pascalName}Service {
       throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
     }
 
-    const text = await response.text()
-    if (!text) {
-      return {} as T
-    }
-    return JSON.parse(text) as T
+    return response.json() as Promise<T>
   }
 }
 `
