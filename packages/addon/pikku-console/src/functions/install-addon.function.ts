@@ -90,11 +90,12 @@ export const installAddon = pikkuSessionlessFunc<
     const { execFileSync } = await import(cp)
     execFileSync(pm, installArgs[pm]!, { cwd: rootDir, stdio: 'pipe' })
 
-    const typesImport = config.scaffold?.pikkuDir
-      ? `../${config.scaffold.pikkuDir.split('/').pop()}/pikku-types.gen.js`
-      : '../../.pikku/pikku-types.gen.js'
-
-    const wiringContent = `import { wireAddon } from '${typesImport}'
+    // Import via the project's `#pikku` subpath alias, not a computed relative
+    // path: every pikku project defines `#pikku/*`, and it resolves to the
+    // generated types regardless of where the addon wiring physically sits (a
+    // relative guess breaks the moment scaffold.pikkuDir and the real .pikku
+    // location diverge).
+    const wiringContent = `import { wireAddon } from '#pikku/pikku-types.gen.js'
 
 wireAddon({ name: '${namespace}', package: '${packageName}' })
 `
