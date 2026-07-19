@@ -1,5 +1,4 @@
 import type {
-  CorePermissionGroup,
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
@@ -7,7 +6,6 @@ import type {
 import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
-  PermissionMetadata,
 } from '../../types/core.types.js'
 
 /**
@@ -49,12 +47,11 @@ export type PikkuMCP<Tools extends string = any> = {
  */
 export type MCPResourceMeta = Record<
   string,
-  Omit<CoreMCPResource, 'func' | 'middleware' | 'permissions'> & {
+  Omit<CoreMCPResource, 'func' | 'middleware'> & {
     pikkuFuncId: string
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
-    permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   }
 >
 
@@ -63,12 +60,11 @@ export type MCPResourceMeta = Record<
  */
 export type MCPToolMeta = Record<
   string,
-  Omit<CoreMCPTool, 'func' | 'middleware' | 'permissions'> & {
+  Omit<CoreMCPTool, 'func' | 'middleware'> & {
     pikkuFuncId: string
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
-    permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   }
 >
 
@@ -77,7 +73,7 @@ export type MCPToolMeta = Record<
  */
 export type MCPPromptMeta = Record<
   string,
-  Omit<CoreMCPPrompt, 'func' | 'middleware' | 'permissions'> & {
+  Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
     pikkuFuncId: string
     inputSchema: string | null
     outputSchema: string | null
@@ -87,7 +83,6 @@ export type MCPPromptMeta = Record<
       required: boolean
     }>
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
-    permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   }
 >
 
@@ -112,7 +107,6 @@ export type CoreMCPResource<
   func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]
-  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 /**
@@ -134,7 +128,6 @@ export type CoreMCPTool<
   tags?: string[]
   streaming?: boolean
   middleware?: PikkuMiddleware[]
-  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 /**
@@ -154,7 +147,6 @@ export type CoreMCPPrompt<
   func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]
-  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 export type JsonRpcRequest = {

@@ -8,7 +8,6 @@ import type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
-  CorePermissionGroup,
   CorePikkuFunctionConfig,
 } from '../../function/functions.types.js'
 
@@ -138,7 +137,6 @@ export type CoreHTTPFunctionWiring<
         PikkuPermission,
         PikkuMiddleware
       >
-      permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       middleware?: PikkuMiddleware[]
       sse?: undefined
@@ -151,7 +149,6 @@ export type CoreHTTPFunctionWiring<
         PikkuPermission,
         PikkuMiddleware
       >
-      permissions?: undefined
       auth?: false
       middleware?: PikkuMiddleware[]
       sse?: undefined
@@ -164,7 +161,6 @@ export type CoreHTTPFunctionWiring<
         PikkuPermission,
         PikkuMiddleware
       >
-      permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       middleware?: PikkuMiddleware[]
       sse?: boolean
@@ -177,7 +173,6 @@ export type CoreHTTPFunctionWiring<
         PikkuPermission,
         PikkuMiddleware
       >
-      permissions?: undefined
       auth?: false
       middleware?: PikkuMiddleware[]
       sse?: boolean
@@ -190,7 +185,6 @@ export type CoreHTTPFunctionWiring<
         PikkuPermission,
         PikkuMiddleware
       >
-      permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       middleware?: PikkuMiddleware[]
       query?: Array<keyof In>
@@ -204,7 +198,6 @@ export type CoreHTTPFunctionWiring<
         PikkuPermission,
         PikkuMiddleware
       >
-      permissions?: undefined
       auth?: false
       middleware?: PikkuMiddleware[]
       query?: Array<keyof In>
@@ -305,9 +298,8 @@ export type HTTPRouteConfig<
   route: string
   func: CorePikkuFunctionConfig<PikkuFunction, PikkuPermission, PikkuMiddleware>
 
-  // Auth & permissions
+  // Auth
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission>
 
   // Middleware
   middleware?: PikkuMiddleware[]
@@ -331,7 +323,6 @@ export type HTTPRoutesGroupConfig<
   tags?: string[]
   auth?: boolean
   middleware?: PikkuMiddleware[]
-  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 /**

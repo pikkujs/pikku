@@ -6,7 +6,6 @@ import type {
 import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
-  PermissionMetadata,
 } from '../../types/core.types.js'
 
 export type BinaryData = ArrayBuffer | Uint8Array
@@ -23,7 +22,6 @@ export type CorePikkuChannelMiddlewareFactory<
   Event = unknown,
 > = (input: In) => CorePikkuChannelMiddleware<Services, Event>
 import type {
-  CorePermissionGroup,
   CorePikkuFunction,
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
@@ -52,7 +50,6 @@ export interface ChannelMessageMeta {
   errors?: string[]
   tags?: string[]
   middleware?: MiddlewareMetadata[]
-  permissions?: PermissionMetadata[]
 }
 
 export interface ChannelMeta {
@@ -72,7 +69,6 @@ export interface ChannelMeta {
   errors?: string[]
   tags?: string[]
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
-  permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   channelMiddleware?: MiddlewareMetadata[]
 }
 
@@ -123,7 +119,6 @@ export type CoreChannel<
       | ChannelFunctionMessage
       | {
           func: ChannelFunctionMessage
-          permissions?: CorePermissionGroup<PikkuPermission>
           auth?: boolean
           middleware?: PikkuMiddleware[]
         }
@@ -133,7 +128,6 @@ export type CoreChannel<
   channelMiddleware?: Array<
     CorePikkuChannelMiddleware | CorePikkuChannelMiddlewareFactory
   >
-  permissions?: CorePermissionGroup<PikkuPermission>
   auth?: boolean
   binary?: boolean | null
   onBinaryMessage?: (

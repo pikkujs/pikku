@@ -7,7 +7,6 @@ export {
   fetchData,
   wireHTTP,
   addHTTPMiddleware,
-  addHTTPPermission,
 } from './http-runner.js'
 
 export { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
