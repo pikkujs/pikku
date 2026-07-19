@@ -1255,7 +1255,7 @@ function generateServiceFile(
   vars: AddonVars,
   flags: CodegenFlags
 ): string {
-  const { name, camelName, pascalName, screamingName } = vars
+  const { name, pascalName, screamingName } = vars
   const displayName = vars.displayName.replace(/'/g, '')
   const lines: string[] = []
 
@@ -1265,10 +1265,8 @@ function generateServiceFile(
   if (flags.credential && flags.credential !== 'oauth2') {
     // Per-user credential: no special imports needed, creds passed via constructor
   } else if (flags.oauth || flags.credential === 'oauth2') {
-    lines.push("import { OAuth2Client } from '@pikku/core/oauth2'")
-    lines.push(
-      "import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'"
-    )
+    // OAuth2: the access token is resolved via the credential service and passed
+    // via the constructor — no special imports needed.
   } else if (flags.secret) {
     lines.push(
       `import type { ${pascalName}Secrets } from './${name}.secret.js'`
@@ -1285,13 +1283,6 @@ function generateServiceFile(
     `import type { TypedVariablesService } from '#pikku/variables/pikku-variables.gen.js'`
   )
   lines.push('')
-
-  if (flags.oauth) {
-    lines.push(
-      `import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'`
-    )
-    lines.push('')
-  }
 
   // Generate route map from parsed operations
   const routes: Record<string, RouteInfo> = {}
@@ -1354,20 +1345,13 @@ function generateServiceFile(
     )
     lines.push('  }')
   } else if (flags.oauth || flags.credential === 'oauth2') {
-    lines.push('  private oauth: OAuth2Client')
     lines.push('')
     lines.push(
-      `  constructor(secrets: TypedSecretService, variables: TypedVariablesService) {`
+      `  constructor(private creds: { accessToken: string }, variables: TypedVariablesService) {`
     )
     lines.push(
       `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
     )
-    lines.push(`    const oauth2 = CREDENTIAL_OAUTH2_CONFIGS['${camelName}']`)
-    lines.push('    this.oauth = new OAuth2Client(')
-    lines.push('      oauth2,')
-    lines.push('      oauth2.appCredentialSecretId,')
-    lines.push('      secrets')
-    lines.push('    )')
     lines.push('  }')
   } else if (flags.secret) {
     lines.push('')
@@ -1494,9 +1478,9 @@ function generateServiceFile(
     lines.push('      body: body ? JSON.stringify(body) : undefined,')
     lines.push('    })')
   } else if (flags.oauth || flags.credential === 'oauth2') {
-    lines.push(
-      '    const response = await this.oauth.request(url.toString(), {'
-    )
+    lines.push('    headers.Authorization = `Bearer ${this.creds.accessToken}`')
+    lines.push('')
+    lines.push('    const response = await fetch(url.toString(), {')
     lines.push('      method,')
     lines.push('      headers,')
     lines.push('      body: body ? JSON.stringify(body) : undefined,')

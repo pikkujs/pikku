@@ -676,7 +676,7 @@ wireCLI({
             },
             oauth: {
               description:
-                'Include OAuth2 credential wiring and OAuth2Client-based API service',
+                'Include OAuth2 credential wiring; the API service reads its access token from the credential service',
               default: false,
             },
             credential: {
