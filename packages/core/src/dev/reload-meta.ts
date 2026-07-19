@@ -136,3 +136,29 @@ export async function reloadGeneratedMeta(
     )
   }
 }
+
+/**
+ * Prunes the live addon registry down to what the current source still declares.
+ *
+ * Dev hot-reload re-imports only changed/added files, so a deleted `*.addon.ts`
+ * leaves its `wireAddon` entry stranded in `pikkuState(null,'addons','packages')`
+ * until a full restart — the reason `getInstalledAddons` reports removed addons.
+ * The Map holds definitions (namespace → package config), not runtime state, so
+ * dropping any namespace the fresh inspection no longer declares is safe.
+ *
+ * `declaredNamespaces` is the set of `wireAddon` names from the just-regenerated
+ * inspection (`inspectorState.rpc.wireAddonDeclarations.keys()`).
+ */
+export function reconcileAddonRegistry(
+  declaredNamespaces: Iterable<string>,
+  logger?: Logger
+): void {
+  const declared = new Set(declaredNamespaces)
+  const addons = pikkuState(null, 'addons', 'packages')
+  for (const namespace of [...addons.keys()]) {
+    if (!declared.has(namespace)) {
+      addons.delete(namespace)
+      logger?.info(`• Removed unwired addon "${namespace}"`)
+    }
+  }
+}
