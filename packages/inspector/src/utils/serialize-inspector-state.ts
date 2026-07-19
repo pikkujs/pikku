@@ -112,14 +112,6 @@ export interface SerializableInspectorState {
           : never,
       ]
     >
-    routePermissions: Array<
-      [
-        string,
-        InspectorState['http']['routePermissions'] extends Map<string, infer V>
-          ? V
-          : never,
-      ]
-    >
   }
   channels: {
     files: string[]
@@ -248,17 +240,6 @@ export interface SerializableInspectorState {
   permissions: {
     definitions: InspectorState['permissions']['definitions']
     instances: InspectorState['permissions']['instances']
-    tagPermissions: Array<
-      [
-        string,
-        InspectorState['permissions']['tagPermissions'] extends Map<
-          string,
-          infer V
-        >
-          ? V
-          : never,
-      ]
-    >
   }
   serviceAggregation: {
     requiredServices: string[]
@@ -348,7 +329,6 @@ export function serializeInspectorState(
       meta: state.http.meta,
       files: Array.from(state.http.files),
       routeMiddleware: Array.from(state.http.routeMiddleware.entries()),
-      routePermissions: Array.from(state.http.routePermissions.entries()),
     },
     channels: {
       files: Array.from(state.channels.files),
@@ -454,7 +434,6 @@ export function serializeInspectorState(
     permissions: {
       definitions: state.permissions.definitions,
       instances: state.permissions.instances,
-      tagPermissions: Array.from(state.permissions.tagPermissions.entries()),
     },
     serviceAggregation: {
       requiredServices: Array.from(state.serviceAggregation.requiredServices),
@@ -544,7 +523,6 @@ export function deserializeInspectorState(
       meta: data.http.meta,
       files: new Set(data.http.files),
       routeMiddleware: new Map(data.http.routeMiddleware),
-      routePermissions: new Map(data.http.routePermissions),
     },
     channels: {
       files: new Set(data.channels.files),
@@ -646,7 +624,6 @@ export function deserializeInspectorState(
     permissions: {
       definitions: data.permissions.definitions,
       instances: data.permissions.instances || {},
-      tagPermissions: new Map(data.permissions.tagPermissions),
     },
     serviceAggregation: {
       requiredServices: new Set(data.serviceAggregation.requiredServices),
@@ -666,8 +643,6 @@ export function deserializeInspectorState(
     },
     permissionsGroupsMeta: data.permissionsGroupsMeta || {
       definitions: {},
-      httpGroups: {},
-      tagGroups: {},
     },
     requiredSchemas: new Set(data.requiredSchemas || []),
     openAPISpec: data.openAPISpec || null,

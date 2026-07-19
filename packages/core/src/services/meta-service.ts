@@ -107,8 +107,6 @@ export interface PermissionDefinitionMeta {
 
 export interface PermissionsGroupsMeta {
   definitions: Record<string, PermissionDefinitionMeta>
-  httpGroups: Record<string, GroupMeta>
-  tagGroups: Record<string, GroupMeta>
 }
 
 export interface EmailTemplateLocaleMeta {
@@ -489,7 +487,7 @@ export class LocalMetaService implements MetaService {
     )
     this.permissionsGroupsMetaCache = content
       ? JSON.parse(content)
-      : { definitions: {}, httpGroups: {}, tagGroups: {} }
+      : { definitions: {} }
     return this.permissionsGroupsMetaCache!
   }
 

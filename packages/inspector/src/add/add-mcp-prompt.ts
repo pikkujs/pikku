@@ -152,7 +152,6 @@ export const addMCPPrompt: AddWiring = (
       outputSchema,
       arguments: [], // Will be populated by CLI during serialization
       middleware,
-      permissions,
     }
   }
 }

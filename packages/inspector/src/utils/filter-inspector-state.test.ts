@@ -82,7 +82,6 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
       },
       files: new Set(['/test/project/src/api/users.ts']),
       routeMiddleware: new Map(),
-      routePermissions: new Map(),
     },
     functions: {
       typesMap: new Map(),
@@ -332,7 +331,6 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
     permissions: {
       definitions: {},
       instances: {},
-      tagPermissions: new Map(),
     },
     serviceAggregation: {
       requiredServices: new Set(),

@@ -70,7 +70,7 @@ function makeState(
     },
     functions: { meta: overrides.functionsMeta ?? {} },
     middleware: { definitions: {}, tagMiddleware: new Map() },
-    permissions: { definitions: {}, tagPermissions: new Map() },
+    permissions: { definitions: {} },
     http: {
       meta: {
         get: {},
@@ -82,7 +82,6 @@ function makeState(
         options: {},
       },
       routeMiddleware: new Map(),
-      routePermissions: new Map(),
     },
     channels: { meta: {} },
     queueWorkers: { meta: {} },

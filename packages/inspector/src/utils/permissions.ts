@@ -76,147 +76,34 @@ export function getPermissionsNode(
 }
 
 /**
- * Check if a route matches a pattern with wildcards
- * Pattern can be exact match or use * as wildcard
- * e.g., '/api/*' matches '/api/users', '/api/posts/123', etc.
+ * Resolve the explicit permission references declared on a function (or agent).
+ * Permissions are function-scoped only: a `permissions: { group: [fn] }` object
+ * is flattened to `{ type: 'wire', name }` references used at filter time.
+ * Returns undefined if none are declared, otherwise an array with ≥1 item.
  */
-export function routeMatchesPattern(route: string, pattern: string): boolean {
-  if (route === pattern) return true
-
-  // Convert pattern to regex: replace * with .*
-  const regexPattern = pattern
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape regex special chars except *
-    .replace(/\*/g, '.*') // Replace * with .*
-
-  const regex = new RegExp(`^${regexPattern}$`)
-  return regex.test(route)
-}
-
-/**
- * Resolve permissions for an HTTP wiring based on:
- * 1. Global HTTP permissions (addHTTPPermission('*', [...]))
- * 2. Route-specific HTTP permissions (addHTTPPermission('/pattern', [...]))
- * 3. Tag-based permissions (addPermission('tag', [...]))
- * 4. Explicit wiring permissions (wireHTTP({ permissions: [...] }))
- * Returns undefined if no permissions are found, otherwise returns array with at least one item
- */
-export function resolveHTTPPermissions(
+function resolveExplicitPermissions(
   state: InspectorState,
-  route: string,
-  tags: string[] | undefined,
   explicitPermissionsNode: ts.Expression | undefined,
   checker: ts.TypeChecker
 ): PermissionMetadata[] | undefined {
+  if (!explicitPermissionsNode) {
+    return undefined
+  }
+
   const resolved: PermissionMetadata[] = []
-
-  // 1. HTTP route permission groups (includes '*' for global)
-  for (const [pattern, _groupMeta] of state.http.routePermissions.entries()) {
-    if (routeMatchesPattern(route, pattern)) {
-      // Just reference the group by route pattern
-      resolved.push({
-        type: 'http',
-        route: pattern,
-      })
-    }
-  }
-
-  // 2. Tag-based permission groups
-  if (tags && tags.length > 0) {
-    for (const tag of tags) {
-      if (state.permissions.tagPermissions.has(tag)) {
-        // Just reference the group by tag
-        resolved.push({
-          type: 'tag',
-          tag,
-        })
-      }
-    }
-  }
-
-  // 3. Explicit wire permissions (inline is OK here)
-  if (explicitPermissionsNode) {
-    const permissionNames = extractPermissionPikkuNames(
-      explicitPermissionsNode,
-      checker,
-      state.rootDir
-    )
-    for (const name of permissionNames) {
-      const def = state.permissions.definitions[name]
-      resolved.push({
-        type: 'wire',
-        name,
-        inline: def?.exportedName === null,
-      })
-    }
-  }
-
-  return resolved.length > 0 ? resolved : undefined
-}
-
-/**
- * Resolve tag-based and explicit permissions (common logic for wires and functions)
- * 1. Tag-based permissions (addPermission('tag', [...]))
- * 2. Explicit permissions (wireHTTP/pikkuFunc({ permissions: [...] }))
- */
-function resolveTagAndExplicitPermissions(
-  state: InspectorState,
-  tags: string[] | undefined,
-  explicitPermissionsNode: ts.Expression | undefined,
-  checker: ts.TypeChecker
-): PermissionMetadata[] {
-  const resolved: PermissionMetadata[] = []
-
-  // 1. Tag-based permission groups
-  if (tags && tags.length > 0) {
-    for (const tag of tags) {
-      if (state.permissions.tagPermissions.has(tag)) {
-        // Just reference the group by tag
-        resolved.push({
-          type: 'tag',
-          tag,
-        })
-      }
-    }
-  }
-
-  // 2. Explicit permissions (inline is OK here - used directly in wire/function)
-  if (explicitPermissionsNode) {
-    const permissionNames = extractPermissionPikkuNames(
-      explicitPermissionsNode,
-      checker,
-      state.rootDir
-    )
-    for (const name of permissionNames) {
-      const def = state.permissions.definitions[name]
-      resolved.push({
-        type: 'wire',
-        name,
-        inline: def?.exportedName === null,
-      })
-    }
-  }
-
-  return resolved
-}
-
-/**
- * Resolve permissions for a function based on:
- * 1. Tag-based permissions (addPermission('tag', [...]))
- * 2. Explicit function permissions (pikkuFunc({ permissions: [...] }))
- * Returns undefined if no permissions are found, otherwise returns array with at least one item
- */
-function resolveFunctionPermissionsInternal(
-  state: InspectorState,
-  tags: string[] | undefined,
-  explicitPermissionsNode: ts.Expression | undefined,
-  checker: ts.TypeChecker
-): PermissionMetadata[] | undefined {
-  const resolved = resolveTagAndExplicitPermissions(
-    state,
-    tags,
+  const permissionNames = extractPermissionPikkuNames(
     explicitPermissionsNode,
-    checker
+    checker,
+    state.rootDir
   )
+  for (const name of permissionNames) {
+    const def = state.permissions.definitions[name]
+    resolved.push({
+      type: 'wire',
+      name,
+      inline: def?.exportedName === null,
+    })
+  }
 
   return resolved.length > 0 ? resolved : undefined
 }
@@ -228,35 +115,8 @@ function resolveFunctionPermissionsInternal(
 export function resolvePermissions(
   state: InspectorState,
   obj: ts.ObjectLiteralExpression,
-  tags: string[] | undefined,
+  _tags: string[] | undefined,
   checker: ts.TypeChecker
 ): PermissionMetadata[] | undefined {
-  const explicitPermissionsNode = getPermissionsNode(obj)
-  return resolveFunctionPermissionsInternal(
-    state,
-    tags,
-    explicitPermissionsNode,
-    checker
-  )
-}
-
-/**
- * Convenience wrapper for HTTP: Extract permissions and resolve with HTTP-specific logic
- * Use this in add-http-route.ts for cleaner code
- */
-export function resolveHTTPPermissionsFromObject(
-  state: InspectorState,
-  route: string,
-  obj: ts.ObjectLiteralExpression,
-  tags: string[] | undefined,
-  checker: ts.TypeChecker
-): PermissionMetadata[] | undefined {
-  const explicitPermissionsNode = getPermissionsNode(obj)
-  return resolveHTTPPermissions(
-    state,
-    route,
-    tags,
-    explicitPermissionsNode,
-    checker
-  )
+  return resolveExplicitPermissions(state, getPermissionsNode(obj), checker)
 }

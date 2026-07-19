@@ -19,7 +19,7 @@ import type {
   InspectorState,
 } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
-import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
+import { resolvePermissions } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
@@ -381,13 +381,7 @@ export function registerHTTPRoute({
   )
 
   // Resolve permissions
-  const permissions = resolveHTTPPermissionsFromObject(
-    state,
-    fullRoute,
-    obj,
-    tags,
-    checker
-  )
+  const permissions = resolvePermissions(state, obj, tags, checker)
 
   state.serviceAggregation.usedFunctions.add(funcName)
   if (refAddonTarget) {

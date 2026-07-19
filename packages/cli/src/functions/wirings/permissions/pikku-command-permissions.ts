@@ -12,12 +12,10 @@ export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
 
       let filesGenerated = false
 
-      const hasHTTPGroups = state.http.routePermissions.size > 0
-      const hasTagGroups = state.permissions.tagPermissions.size > 0
       const hasIndividual =
         Object.keys(state.permissions.definitions).length > 0
 
-      if (hasHTTPGroups || hasTagGroups || hasIndividual) {
+      if (hasIndividual) {
         const metaData = state.permissionsGroupsMeta
 
         await writeFileInDir(

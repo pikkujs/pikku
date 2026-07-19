@@ -47,7 +47,7 @@ export function stampAuthHandlerServices(
  * Skips type:'http' and type:'tag' (reference groups, not individuals).
  */
 export function extractWireNames(
-  list?: MiddlewareMetadata[] | PermissionMetadata[]
+  list?: Array<MiddlewareMetadata | PermissionMetadata>
 ): string[] {
   if (!list) return []
   return list
@@ -58,34 +58,25 @@ export function extractWireNames(
 }
 
 /**
- * Helper to expand middleware/permission groups into individual names
- * and add their services to the aggregation.
- * This handles tag-based and HTTP-pattern-based middleware/permission groups.
+ * Helper to expand middleware groups into individual names and add their
+ * services to the aggregation. Handles tag-based and HTTP-pattern-based
+ * middleware groups. Permissions are function-scoped only and carry no groups.
  */
 function expandAndAddGroupServices(
-  list: MiddlewareMetadata[] | PermissionMetadata[] | undefined,
+  list: MiddlewareMetadata[] | undefined,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  addServices: (services: FunctionServicesMeta | undefined) => void,
-  isMiddleware: boolean
+  addServices: (services: FunctionServicesMeta | undefined) => void
 ): void {
   if (!list) return
 
   for (const item of list) {
     if (item.type === 'tag') {
-      // Expand tag-based group
-      const groupMeta = isMiddleware
-        ? state.middleware.tagMiddleware.get(item.tag)
-        : state.permissions.tagPermissions.get(item.tag)
-
+      const groupMeta = state.middleware.tagMiddleware.get(item.tag)
       if (groupMeta?.services) {
         addServices(groupMeta.services)
       }
     } else if (item.type === 'http' && 'route' in item) {
-      // Expand HTTP-pattern-based group
-      const groupMeta = isMiddleware
-        ? state.http.routeMiddleware.get(item.route)
-        : state.http.routePermissions.get(item.route)
-
+      const groupMeta = state.http.routeMiddleware.get(item.route)
       if (groupMeta?.services) {
         addServices(groupMeta.services)
       }
@@ -189,55 +180,33 @@ export function aggregateRequiredServices(
     'options',
   ] as const) {
     for (const routeMeta of Object.values(state.http.meta[method])) {
-      expandAndAddGroupServices(routeMeta.middleware, state, addServices, true)
-      expandAndAddGroupServices(
-        routeMeta.permissions,
-        state,
-        addServices,
-        false
-      )
+      expandAndAddGroupServices(routeMeta.middleware, state, addServices)
     }
   }
 
   // Also check other wiring types (channels, queues, schedulers, MCP)
   for (const channelMeta of Object.values(state.channels.meta)) {
-    expandAndAddGroupServices(channelMeta.middleware, state, addServices, true)
-    expandAndAddGroupServices(
-      channelMeta.permissions,
-      state,
-      addServices,
-      false
-    )
+    expandAndAddGroupServices(channelMeta.middleware, state, addServices)
   }
 
   for (const queueMeta of Object.values(state.queueWorkers.meta)) {
-    expandAndAddGroupServices(queueMeta.middleware, state, addServices, true)
-    // expandAndAddGroupServices(queueMeta.permissions, state, addServices, false)
+    expandAndAddGroupServices(queueMeta.middleware, state, addServices)
   }
 
   for (const scheduleMeta of Object.values(state.scheduledTasks.meta)) {
-    expandAndAddGroupServices(scheduleMeta.middleware, state, addServices, true)
-    // expandAndAddGroupServices(scheduleMeta.permissions, state, addServices, false)
+    expandAndAddGroupServices(scheduleMeta.middleware, state, addServices)
   }
 
   for (const toolMeta of Object.values(state.mcpEndpoints.toolsMeta)) {
-    expandAndAddGroupServices(toolMeta.middleware, state, addServices, true)
-    expandAndAddGroupServices(toolMeta.permissions, state, addServices, false)
+    expandAndAddGroupServices(toolMeta.middleware, state, addServices)
   }
 
   for (const promptMeta of Object.values(state.mcpEndpoints.promptsMeta)) {
-    expandAndAddGroupServices(promptMeta.middleware, state, addServices, true)
-    expandAndAddGroupServices(promptMeta.permissions, state, addServices, false)
+    expandAndAddGroupServices(promptMeta.middleware, state, addServices)
   }
 
   for (const resourceMeta of Object.values(state.mcpEndpoints.resourcesMeta)) {
-    expandAndAddGroupServices(resourceMeta.middleware, state, addServices, true)
-    expandAndAddGroupServices(
-      resourceMeta.permissions,
-      state,
-      addServices,
-      false
-    )
+    expandAndAddGroupServices(resourceMeta.middleware, state, addServices)
   }
 
   // 5. Services from session service factories
@@ -538,36 +507,8 @@ export function computeMiddlewareGroupsMeta(state: InspectorState): void {
 }
 
 export function computePermissionsGroupsMeta(state: InspectorState): void {
-  const httpGroups: Record<string, any> = {}
-  for (const [pattern, meta] of state.http.routePermissions.entries()) {
-    httpGroups[pattern] = {
-      exportName: meta.exportName,
-      sourceFile: meta.sourceFile,
-      position: meta.position,
-      services: meta.services,
-      count: meta.count,
-      instanceIds: meta.instanceIds,
-      isFactory: meta.isFactory,
-    }
-  }
-
-  const tagGroups: Record<string, any> = {}
-  for (const [tag, meta] of state.permissions.tagPermissions.entries()) {
-    tagGroups[tag] = {
-      exportName: meta.exportName,
-      sourceFile: meta.sourceFile,
-      position: meta.position,
-      services: meta.services,
-      count: meta.count,
-      instanceIds: meta.instanceIds,
-      isFactory: meta.isFactory,
-    }
-  }
-
   state.permissionsGroupsMeta = {
     definitions: state.permissions.definitions,
-    httpGroups,
-    tagGroups,
   }
 }
 
@@ -701,14 +642,6 @@ export function validateSchemaWiringSeparation(
   // HTTP route wirings
   for (const file of state.http.files) {
     wiringFiles.add(file)
-  }
-
-  // Permission wirings (addPermission calls)
-  for (const meta of state.permissions.tagPermissions.values()) {
-    wiringFiles.add(meta.sourceFile)
-  }
-  for (const meta of state.http.routePermissions.values()) {
-    wiringFiles.add(meta.sourceFile)
   }
 
   // Middleware wirings (addHTTPMiddleware calls)

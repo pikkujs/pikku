@@ -170,7 +170,6 @@ export const addMCPResource: AddWiring = (
       inputSchema,
       outputSchema,
       middleware,
-      permissions,
     }
   }
 }

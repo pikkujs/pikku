@@ -6,7 +6,7 @@ export const serializeHTTPTypes = (functionTypesImportPath: string) => {
  * HTTP-specific type definitions for tree-shaking optimization
  */
 
-import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, addHTTPPermission as addHTTPPermissionCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
+import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
 import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { CoreHTTPFunctionWiring, HTTPMethod, HTTPRouteBaseConfig } from '@pikku/core/http'
 
@@ -61,32 +61,6 @@ export const addHTTPMiddleware = (
 }
 
 /**
- * Registers HTTP permissions either globally or for a specific route pattern.
- *
- * When a string route pattern is provided along with permissions, the permissions
- * are applied only to that route. Permissions can be passed as an array or as a
- * permission group object.
- *
- * @param pattern - Route pattern string (e.g., '*' for all routes, '/api/*' for specific routes)
- * @param permissions - The permissions to apply for the specified route pattern
- *
- * @example
- * \`\`\`typescript
- * // Add global HTTP permissions
- * addHTTPPermission('*', { global: globalPermission })
- *
- * // Add route-specific permissions
- * addHTTPPermission('/api/admin/*', { admin: adminPermission })
- * \`\`\`
- */
-export const addHTTPPermission = <In = unknown>(
-  pattern: string,
-  permissions: Record<string, PikkuPermission<In>> | PikkuPermission<In>[]
-) => {
-  addHTTPPermissionCore(pattern, permissions as any)
-}
-
-/**
  * Route configuration for wireHTTPRoutes with proper typing
  */
 type HTTPRouteConfig = HTTPRouteBaseConfig & {
@@ -94,7 +68,6 @@ type HTTPRouteConfig = HTTPRouteBaseConfig & {
   route: string
   func: PikkuFunctionConfig<any, any, any, any, any, any>
   auth?: boolean
-  permissions?: Record<string, PikkuPermission | PikkuPermission[]>
   middleware?: PikkuMiddleware[]
   sse?: boolean
 }
@@ -114,14 +87,13 @@ type TypedHTTPRouteContract<T extends TypedHTTPRouteMap = TypedHTTPRouteMap> = T
 }
 
 /**
- * Group config with typed middleware/permissions
+ * Group config with typed middleware
  */
 type TypedHTTPRoutesGroupConfig = {
   basePath?: string
   tags?: string[]
   auth?: boolean
   middleware?: PikkuMiddleware[]
-  permissions?: Record<string, PikkuPermission | PikkuPermission[]>
 }
 
 /**
