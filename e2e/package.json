@@ -38,8 +38,12 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
     "@pikku/addon-console": "workspace:*",
+    "@pikku/addon-email-send": "0.1.2",
+    "@pikku/addon-gmail": "0.1.2",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
+    "@pikku/addon-mailgun": "0.1.2",
+    "@pikku/addon-mandrill": "0.1.2",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
