@@ -1,3 +1,186 @@
+## 0.12.83
+
+### Patch Changes
+
+- c478794: Simplify authorization to be session + function based (#972). Permissions are now function-scoped only: global permissions AND together, a function's own permissions OR together, and the two are independent gates that both must pass — a broad global can no longer satisfy an admin-only function. Removed wire-, tag-, and HTTP-route-level permissions (`addTagPermission`, `addHTTPPermission`, wire-level `permissions` on HTTP/channel/MCP wirings). Tags are now organizational only. `auth` (session presence) and tag/HTTP middleware are unchanged.
+- 57d2b09: `pikku new addon <name>` now scaffolds into `addon-<name>/` to mirror the `@pikku/addon-<name>` package name.
+- cb079cc: A workflow-graph node's `func` can now reference a registered AI agent by name, dispatched as an agent run like sub-workflows, with `ref()` resolving the agent's output keys.
+- cb079cc: `pikkuAIAgent` gains a `workflows: []` capability: a referenced workflow is exposed to the LLM as a tool that runs inline and returns its output.
+- 13474a6: Generate a `ScopeId` union from `wireScope` declarations.
+
+  `pikku all` now emits `.pikku/scopes/pikku-scopes.gen.ts` with a `ScopeId` union
+  of every declared scope, plus a wildcard form for each node that has
+  descendants. A project's generated `pikkuFunc` narrows `scopes` to that union,
+  so an undeclared scope is a compile error with editor autocomplete:
+
+  ```ts
+  wireScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+
+  pikkuFunc({
+    scopes: ['admin:invoices:create'],  // ✓ autocompleted
+    func: ...,
+  })
+
+  pikkuFunc({
+    scopes: ['admin:invoice:create'],   // ✗ compile error (typo)
+    func: ...,
+  })
+  ```
+
+  The inspector independently rejects undeclared scopes, so a cast that defeats
+  the compiler is still caught at build time.
+
+  Also fixes `getArrayPropertyValue` dropping any array behind a cast — idiomatic
+  `tags: ['a'] as const` was previously invisible to the inspector and silently
+  omitted from meta.
+
+- a309848: Bundle two new `fabric`-group skills: `pikku-software-archaeology` (reverse-engineers a repo into a `.knowledge/` Product Blueprint) and `pikku-product-second-opinion` (turns that blueprint into a plain-language owner's report).
+- 739c9f8: Document how to gate the console addon's privileged surface.
+
+  The console addon (`@pikku/addon-console`) exposes privileged RPCs — credential
+  read/write, on-disk source editing, package install — with no authorization of
+  their own. Since tag-level permissions were removed in #972, a consuming app
+  gates the entire surface with a single package-scoped global permission:
+  `addGlobalPermission([checker], '@pikku/addon-console')`. Global permissions are
+  resolved in the callee's package namespace, so one registration covers every
+  console function at once. Apps that register none are unaffected (no globals =>
+  allow). The generated console `wireAddon` no longer emits a `console:admin` tag.
+
+- 5a2b0d5: Prune removed addons on `pikku dev` hot-reload. Deleting an addon wiring (`*.addon.ts`) regenerated `.pikku` on disk but left its `wireAddon` entry stranded in the live `pikkuState(null,'addons','packages')` map until a full restart (the reimport path is add-only), so `getInstalledAddons` kept reporting deleted addons. `reloadGeneratedMeta`'s sibling `reconcileAddonRegistry(declaredNamespaces)` now drops any addon namespace the fresh inspection no longer declares, and the dev watcher calls it with `inspectorState.rpc.wireAddonDeclarations`. Routes already reconcile (http meta is replaced wholesale + router reset); function-impl entries are intentionally left since the workflow service registers framework internals there that aren't in the generated set.
+- 0de10a5: Stop `pikku dev` re-inspecting the whole project a second time per hot-reload.
+  The addon-registry reconcile called `getInspectorState(true)` after codegen, but
+  `runAllWithCommandState()` had already produced a fresh post-change inspection —
+  the forced refresh only re-ran because codegen's file writes bumped the ts-write
+  generation, making the warm cache look stale. Reuse that inspection with a plain
+  `getInspectorState()`; the reconcile still sees the current declaration set and
+  addon add/delete pruning is unchanged. Cuts reload time ~35% on the e2e fixture.
+- 13474a6: feat: propagate an addon's declared scopes to the host
+
+  An addon can now declare scopes with `wireScope`, and a host that wires it picks
+  them up: they merge into the host's `ScopeId` union and its declared set, so a
+  host function can require an addon scope and the `pikku_scopes` foreign key
+  accepts granting one. This mirrors how addon secrets and variables are loaded.
+
+  The generated `pikku-scopes.gen.ts` now imports its metadata sidecar and derives
+  `SCOPES` from it, rather than inlining the list. TypeScript only emits a `.json`
+  into the build output when something imports it, and an addon publishes only
+  that output — without the import, an addon's scopes never reached a host.
+
+- f6b4113: Rewrite 46 bundled skills' frontmatter descriptions as `>-` folded block scalars so pi.dev's strict `yaml` parser stops silently dropping them (was 15/61 loading, now 61/61); the corpus lint now parses with the same parser.
+- cb079cc: `pikku import n8n` now batch-imports export arrays, `{ workflows: [...] }` wrappers, and directories of `.json` exports — one slug-named sub-directory per workflow, per-workflow failures skipped.
+- cb079cc: `parseN8n` takes an optional `nameHint` and the `pikku import n8n` CLI passes the source filename, so nameless n8n exports no longer all collapse onto the same `importedWorkflow` slug.
+- cb079cc: Add `@pikku/n8n-import` and the `pikku import n8n <file>` CLI command, converting an n8n workflow JSON export into a Pikku workflow graph plus a coverage harness.
+- 13474a6: fix: ship an addon's secrets and variables metadata
+
+  An addon's `pikku-secrets-meta.gen.json` and `pikku-variables-meta.gen.json`
+  never reached its published package, so a host installing the addon could not
+  discover its declared secrets or variables — the inspector's addon loaders
+  silently found nothing.
+
+  TypeScript only emits a `.json` into the build output when something imports it,
+  and an addon publishes only that output. The generated `pikku-secrets.gen.ts`
+  and `pikku-variables.gen.ts` now import their sidecars and re-export them as
+  `SECRETS_META` / `VARIABLES_META`, so the metadata ships.
+
+- 9f0d0eb: Migrate the `--oauth` addon scaffold off `OAuth2Client`. A scaffolded OAuth2
+  addon service used to construct `new OAuth2Client(config, appCredentialSecretId,
+secrets)` and do its own token exchange/refresh — the responsibility better-auth
+  now owns via the credential service. The `pikku new addon --oauth` scaffold (and
+  the OpenAPI `--openapi` generator) now emit a service that receives a ready
+  access token: `services.ts` uses `createWireServices` + `wire.getCredential<{
+accessToken: string }>(name)` and the service does a plain `fetch` with
+  `Authorization: Bearer ${accessToken}`, matching the existing per-user
+  bearer/apikey credential scaffold. With no remaining consumers, `OAuth2Client`
+  (`@pikku/core/oauth2`) and its test are removed; the `./oauth2` export keeps the
+  `OAuth2AppCredential` / `OAuth2Token` types.
+- 8601505: Make `wireCredential` the single source of truth for an addon's OAuth2 config: `pikku-credentials.gen.ts` exports `CREDENTIAL_OAUTH2_CONFIGS`, generated services import from it, the OpenAPI importer emits a `wireCredential`, and the inspector now extracts `oauth2.additionalParams`.
+- 70fa400: Add outgoing webhooks — `webhookService.send()` enqueues signed deliveries onto a retrying queue, `@pikku/kysely`'s `KyselyWebhookService` persists per-attempt delivery history, and `@pikku/console` gains a read-only `/webhooks` page; also caches resolved secrets in `TypedSecretService` and registers inline-`func` metadata for queue/scheduler/trigger/gateway wirings.
+- f5eb5ab: `pikku skills install --agent pi` installs bundled skills into `.pi/skills/` for pi.dev (composes with `--only`/`--core`/`--fabric`/`--update`); per-agent install paths now come from one map, and `--agent` help lists only the agents that work.
+- 3d284d2: Fix bundled skills that referenced nonexistent APIs/commands (`getSecretJSON`, `pikku tsc`/`prebuild`/`auth`/`create`, `pikku tests`), rewrite pikku-testing onto scenarios, and add a verifier that rejects references to commands/methods that don't exist.
+- 13474a6: feat: `pikku scopes audit` and `pikku scopes prune`
+
+  Scopes sync additively, so a scope removed from code leaves an inert row rather
+  than revoking a grant mid-deploy. These commands are the deliberate cleanup
+  path.
+
+  `pikku scopes audit` reports scopes in the database that are no longer declared
+  in code, along with the roles still holding them. `pikku scopes prune` removes
+  them, cascading them out of every role — but only with `--yes`; without it,
+  prune just shows the blast radius.
+
+- d2a6eea: Add `wireRemoteAddon` — consume a hosted addon's `remote: true` RPCs transparently over HTTP, with the addon installed as a devDependency (types only). `rpc('ns:fn', input)` dispatches to the host's `/remote/rpc/:rpcName`, authenticating as a client with a token bound from a local source (`{ credentialId }` per-user, `{ secretId }` platform, or a custom `resolve()`), or omitted for a public surface. This is any-machine → hosted-library client auth, distinct from the trusted mesh (`PIKKU_REMOTE_SECRET`). A new `.remote.gen.d.ts` RPC map exposes only the `remote: true` surface to consumers. `pikku` verify errors if a `wireRemoteAddon` package is a production dependency (or missing) instead of a devDependency, and if a bound `credentialId`/`secretId` isn't wired.
+- 30e62ee: Add `workflow.approval(reason, { schema, expiry })` — a return-valued, expiring human-in-the-loop gate that stays closed until a decision is recorded (via `workflowService.approveStep` or `POST /workflow/:workflowName/approve/:runId`), unlike the one-shot `workflow.suspend()`.
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [b714fd4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [416606c]
+- Updated dependencies [739c9f8]
+- Updated dependencies [13474a6]
+- Updated dependencies [c2a66dc]
+- Updated dependencies [ca0d14f]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [13474a6]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [8601505]
+- Updated dependencies [13474a6]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [3c75366]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [4b02d73]
+- Updated dependencies [13474a6]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+  - @pikku/inspector@0.12.43
+  - @pikku/better-auth@0.12.18
+  - @pikku/kysely@0.13.1
+  - @pikku/n8n-import@0.0.2
+  - @pikku/openapi-parser@0.12.16
+  - @pikku/fetch@0.12.8
+
 ## 0.12.82
 
 ### Patch Changes

@@ -1,3 +1,96 @@
+## 0.12.27
+
+### Patch Changes
+
+- 1dd7928: Route `getOpenapis`/`getOpenapiDetail` through `AddonService` and the fabric registry's `/registry/openapis` endpoints (unifying with the package funcs on `FABRIC_API_URL`), instead of the divergent `REGISTRY_URL`/`/api/openapis` path.
+- e3dc7d7: When installing a second-or-later instance of the same addon package, the console now writes namespace-scoped `secretOverrides`/`variableOverrides`/`credentialOverrides` into the generated `wireAddon` so the two instances don't silently share one credential. The first (sole) instance stays plain and keeps the package's documented logical names. Overrides are a sensible default only — the generated file is the user's to edit or drop (the runtime and inspector both fall back to the logical name when an override is absent).
+- 78f0b8c: The addon Setup tab is now instance-aware. A new `getAddonInstances` RPC returns every wired instance of a package with its per-instance overrides, and when a package is installed more than once the Setup tab shows an instance selector. The selected instance's `credentialOverrides`/`secretOverrides` are resolved so the OAuth connect and secret status/set actions target that instance's actual project names (and the resolved names are shown), instead of always acting on the package's shared logical names.
+- 13474a6: feat(scopes): grant scopes directly to a user, not only through roles
+
+  A scope can now be granted to a user directly, outside of any role.
+  `resolveScopes` returns the union of a user's role-derived scopes and their
+  direct grants, so a one-off capability no longer requires inventing a role.
+  - `@pikku/core`: `ScopeService` gains `addScopeToUser` / `removeScopeFromUser` /
+    `listUserScopes`.
+  - `@pikku/kysely`: a new `pikku_user_scope` table (FK into `pikku_scopes`, so the
+    database still refuses an undeclared grant; `ON DELETE CASCADE` from `user`,
+    so deleting a user takes their direct grants with it). `resolveScopes` unions
+    it with the role join.
+  - `@pikku/addon-console`: `scopeAddScopeToUser` / `scopeRemoveScopeFromUser`
+    (gated by `pikku:scopes:manage`), and `scopeListUserRoles` now also returns
+    `directScopes`.
+  - `@pikku/console`: a **Direct scopes** section in the user roles drawer to grant
+    and revoke scopes directly, showing them distinctly from the resolved union.
+
+  Also: the Scopes page now distinguishes a permission error (a console admin
+  without `pikku:scopes:read`) from an actual scope-service outage, instead of
+  showing "the scope service may be unavailable" for both.
+
+- 13474a6: feat: role and scope management functions
+
+  Adds functions over `ScopeService` for listing the declared scope vocabulary,
+  composing roles from it, and granting roles to users. Grants take effect on the
+  user's next request — no re-login.
+
+  These are self-hosting: the console declares its own `pikku:scopes:read` and
+  `pikku:scopes:manage` scopes and requires them, so being able to reach the
+  console is not the same as being able to grant yourself anything.
+
+  The addon's `createSingletonServices` now forwards the host's `scopeService`
+  through to these functions — without it the addon composed a services object
+  that dropped `scopeService`, so every scope RPC silently returned an empty
+  result behind a passing scope gate.
+
+- 4a624cc: Installing an addon now returns typed errors instead of a raw 500. Re-installing
+  under a name that's already wired raises a `ConflictError` (409) with a clean,
+  path-free message ("An addon is already installed under the name ..."), and
+  invalid package/namespace/version inputs raise `BadRequestError` (400) — so the
+  console surfaces them inline as user-facing errors rather than a server stack
+  trace.
+- 70fa400: Add outgoing webhooks — `webhookService.send()` enqueues signed deliveries onto a retrying queue, `@pikku/kysely`'s `KyselyWebhookService` persists per-attempt delivery history, and `@pikku/console` gains a read-only `/webhooks` page; also caches resolved secrets in `TypedSecretService` and registers inline-`func` metadata for queue/scheduler/trigger/gateway wirings.
+- 3c75366: Key `secretOverrides`/`variableOverrides` on the secretId/variableId (the string the addon actually reads by — its typed map is keyed by id, e.g. `getSecret('MAILGUN_CREDENTIALS')`), not the logical meta name. The runtime aliaser already keys on the id, but the inspector merge + validation keyed on the logical name, so a correctly-keyed override failed validation and never provisioned its target whenever an addon's logical name differed from its id (the common case — `mailgun`/`MAILGUN_CREDENTIALS`). The existing test masked it by using a secret whose name equalled its id. The merge now resolves and provisions by id (with a name-fallback for older meta), validation checks ids, and the console install codegen generates overrides keyed by id.
+- 1dc77d5: Remove the old, pre-better-auth OAuth2 credential runtime now that the
+  `credentialOAuth` plugin owns credential linking, storage and refresh.
+  - `@pikku/core`: drop the unused `createOAuth2Handler` HTTP-routes flow (and its
+    `CreateOAuth2HandlerOptions`) from the `./oauth2` entrypoint. The credential
+    schema types (`OAuth2AppCredential`, `OAuth2Token`) and the `OAuth2Client`
+    API helper remain exported.
+  - `@pikku/addon-console`: delete the six `oauth-*` console functions
+    (connect/disconnect/status/exchange-tokens/refresh-token/test-token) and the
+    `OAuthService` behind them — credential connections now flow through
+    better-auth's `/credential-oauth/link` + `/callback`.
+  - `@pikku/console`: the credential UI no longer calls the removed
+    `console:oauth*` RPCs. Per-user and singleton (platform) OAuth2 credentials
+    connect via the `/credential-oauth/link` full-page redirect and disconnect via
+    `console:credentialDelete`; the `/oauth/callback` popup page is removed.
+
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [13474a6]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+
 ## 0.12.26
 
 ### Patch Changes

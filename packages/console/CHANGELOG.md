@@ -1,3 +1,154 @@
+## 0.12.39
+
+### Patch Changes
+
+- 90d9f04: Scope `console:getAddonInstalledPackage` to the addon's own `.pikku` metadata.
+
+  Previously every addon returned the _app's_ secrets/wirings (read from the app's
+  `.pikku` root), so the installed-package view couldn't show what a given addon
+  actually requires. `MetaService` gains optional `readPackageFile`/`readPackageDir`
+  helpers (implemented by `LocalMetaService`, which resolves the addon package's
+  root from node_modules), and `getAddonInstalledPackage` now reads secrets,
+  variables, wirings, schemas, README and package.json from the addon package
+  itself. It also reads and returns the addon's `credentials` meta (OAuth2 + wire
+  credentials), which was never surfaced before — entries with an `oauth2` field
+  are the OAuth integrations to connect.
+
+- ea2ffe9: Add a "Setup" tab to the installed-addon detail that surfaces what the addon
+  needs before it runs: its OAuth integrations (connect / connected status) and
+  its secrets (set / not-set status), each with an inline connect or set action.
+  The tab is the default view for an addon that has requirements, so opening a
+  freshly added addon shows what still needs configuring. Status comes from
+  `console:credentialStatus` (OAuth) and `pikkuConsoleGetSecret` (secrets);
+  connecting reuses the admin-gated `/credential-oauth/link` redirect flow.
+- a08d05c: Installing an addon from the console now lets you name the instance and drops
+  you on its setup. The browse drawer gains an editable "Instance name" field
+  (defaulting to the derived slug) that becomes the `wireAddon` name, so the same
+  package can be wired under a distinct name. On a successful install the console
+  routes straight to the addon's detail page, whose Setup tab surfaces the OAuth
+  integrations and secrets the addon needs.
+- 78f0b8c: The addon Setup tab is now instance-aware. A new `getAddonInstances` RPC returns every wired instance of a package with its per-instance overrides, and when a package is installed more than once the Setup tab shows an instance selector. The selected instance's `credentialOverrides`/`secretOverrides` are resolved so the OAuth connect and secret status/set actions target that instance's actual project names (and the resolved names are shown), instead of always acting on the package's shared logical names.
+- c8ad159: `ShellHeader`'s offscreen width-measurement clone no longer duplicates the
+  search input's placeholder and value in the DOM.
+
+  The measurement layer re-renders each control to measure its natural width. For
+  the search `TextInput` it rendered a second element carrying the same
+  `placeholder`/`value`, so `getByPlaceholder(...)`-style lookups matched two
+  elements. The measurement clone now drops the placeholder/value (and is marked
+  read-only + `aria-hidden`), leaving a single interactive search field in the
+  accessibility tree.
+
+- b1a2be0: Render a suspended workflow run as its own yellow "waiting to be resumed" state instead of a red error, with distinct copy for `WORKFLOW_SUSPENDED` vs `RPC_NOT_FOUND` and a Suspended run-list filter.
+- e2baa24: Render the Credentials overview as rows (the shared EntityCardList used by
+  Workflows and Agents) instead of a card grid. Each row shows the credential's
+  type, the addon that declares it (when it comes from one), its connected status,
+  and inline connect/disconnect actions; clicking a row opens the owning addon's
+  setup. The owner mapping is built from the installed addons' declared
+  credentials so it stays accurate as addons are added or removed.
+- 13474a6: feat(scopes): grant scopes directly to a user, not only through roles
+
+  A scope can now be granted to a user directly, outside of any role.
+  `resolveScopes` returns the union of a user's role-derived scopes and their
+  direct grants, so a one-off capability no longer requires inventing a role.
+  - `@pikku/core`: `ScopeService` gains `addScopeToUser` / `removeScopeFromUser` /
+    `listUserScopes`.
+  - `@pikku/kysely`: a new `pikku_user_scope` table (FK into `pikku_scopes`, so the
+    database still refuses an undeclared grant; `ON DELETE CASCADE` from `user`,
+    so deleting a user takes their direct grants with it). `resolveScopes` unions
+    it with the role join.
+  - `@pikku/addon-console`: `scopeAddScopeToUser` / `scopeRemoveScopeFromUser`
+    (gated by `pikku:scopes:manage`), and `scopeListUserRoles` now also returns
+    `directScopes`.
+  - `@pikku/console`: a **Direct scopes** section in the user roles drawer to grant
+    and revoke scopes directly, showing them distinctly from the resolved union.
+
+  Also: the Scopes page now distinguishes a permission error (a console admin
+  without `pikku:scopes:read`) from an actual scope-service outage, instead of
+  showing "the scope service may be unavailable" for both.
+
+- ad75a76: Make the addons UI surface an installed addon's setup requirements:
+  - The "Installed" filter now lists every addon the project has actually wired,
+    not just catalogue entries that happen to be installed. It previously
+    intersected the remote gallery with the installed set, so a local, private,
+    or unpublished addon — returned by `console:getInstalledAddons` but absent
+    from the catalogue — never appeared. It is now a left-join on the installed
+    set: catalogue metadata is used when available, a minimal card otherwise.
+  - Opening an installed addon now routes to its full detail page (which carries
+    the Setup tab: OAuth integrations + secrets the addon needs, with connect/set
+    actions) instead of the lightweight browse drawer. Not-yet-installed addons
+    still open the drawer to preview before installing.
+
+- 70fa400: Add outgoing webhooks — `webhookService.send()` enqueues signed deliveries onto a retrying queue, `@pikku/kysely`'s `KyselyWebhookService` persists per-attempt delivery history, and `@pikku/console` gains a read-only `/webhooks` page; also caches resolved secrets in `TypedSecretService` and registers inline-`func` metadata for queue/scheduler/trigger/gateway wirings.
+- 83030f5: Hide the "Publish an integration" CTA on a read-only console (e.g. a deployed
+  stage). Publishing is an authoring action, so it now only shows when the console
+  is editable.
+- 1dc77d5: Remove the old, pre-better-auth OAuth2 credential runtime now that the
+  `credentialOAuth` plugin owns credential linking, storage and refresh.
+  - `@pikku/core`: drop the unused `createOAuth2Handler` HTTP-routes flow (and its
+    `CreateOAuth2HandlerOptions`) from the `./oauth2` entrypoint. The credential
+    schema types (`OAuth2AppCredential`, `OAuth2Token`) and the `OAuth2Client`
+    API helper remain exported.
+  - `@pikku/addon-console`: delete the six `oauth-*` console functions
+    (connect/disconnect/status/exchange-tokens/refresh-token/test-token) and the
+    `OAuthService` behind them — credential connections now flow through
+    better-auth's `/credential-oauth/link` + `/callback`.
+  - `@pikku/console`: the credential UI no longer calls the removed
+    `console:oauth*` RPCs. Per-user and singleton (platform) OAuth2 credentials
+    connect via the `/credential-oauth/link` full-page redirect and disconnect via
+    `console:credentialDelete`; the `/oauth/callback` popup page is removed.
+
+- 13474a6: Add a Scopes admin surface to the console.
+
+  A new **Scopes** page (beside Users) with two tabs:
+  - **Roles** — list the admin-composed roles and edit each one in a drawer that
+    composes it from the declared scope vocabulary. Create and delete roles.
+  - **Scopes** — a read-only view of the vocabulary declared in code via
+    `wireScope`, flagging any scope that is stored but no longer declared (inert,
+    and what `pikku scopes prune` removes).
+
+  The **Users** page gains a per-row **Roles** action opening a drawer to grant
+  and revoke a user's roles, with the resolved scope union shown read-only.
+
+  All backed by the console addon's scope RPCs (`scopeListRoles`,
+  `scopeListDeclared`, `scopeListUserRoles`, `scopeCreateRole`,
+  `scopeSetRoleScopes`, `scopeDeleteRole`, `scopeAddUserToRole`,
+  `scopeRemoveUserFromRole`).
+
+- 6c64ebc: Remove the per-row impersonate action from the admin Users page. Impersonation
+  is driven from the header (the impersonate control in the navbar), so the Users
+  table no longer renders its own impersonate/stop buttons.
+- 2112151: Workflow side panel now renders the flow vertically (top→down graph, or the scenario persona timeline) in place of the flat Nodes table; adds direction-aware ELK layout and exports WorkflowGraphView/PersonaTimeline for embedders.
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [416606c]
+- Updated dependencies [13474a6]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [4b02d73]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+  - @pikku/assistant-ui@0.12.8
+  - @pikku/fetch@0.12.8
+
 ## 0.12.38
 
 ### Patch Changes

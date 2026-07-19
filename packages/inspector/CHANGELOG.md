@@ -1,3 +1,101 @@
+## 0.12.43
+
+### Patch Changes
+
+- c478794: Simplify authorization to be session + function based (#972). Permissions are now function-scoped only: global permissions AND together, a function's own permissions OR together, and the two are independent gates that both must pass — a broad global can no longer satisfy an admin-only function. Removed wire-, tag-, and HTTP-route-level permissions (`addTagPermission`, `addHTTPPermission`, wire-level `permissions` on HTTP/channel/MCP wirings). Tags are now organizational only. `auth` (session presence) and tag/HTTP middleware are unchanged.
+- b714fd4: Merge an addon's credential meta into the consuming app during inspection, the
+  same way addon secrets and variables are already merged. Without this, a
+  credential declared by an addon (e.g. an OAuth2 integration) never reached the
+  app's `CREDENTIAL_OAUTH2_CONFIGS`, so the `credential-oauth` provider and the
+  credential service could not resolve it — the addon's Connect flow and status
+  silently no-op'd. Addon credentials are added as fallbacks: an app-declared
+  credential of the same name still wins.
+- cb079cc: `pikkuAIAgent` gains a `workflows: []` capability: a referenced workflow is exposed to the LLM as a tool that runs inline and returns its output.
+- 13474a6: Generate a `ScopeId` union from `wireScope` declarations.
+
+  `pikku all` now emits `.pikku/scopes/pikku-scopes.gen.ts` with a `ScopeId` union
+  of every declared scope, plus a wildcard form for each node that has
+  descendants. A project's generated `pikkuFunc` narrows `scopes` to that union,
+  so an undeclared scope is a compile error with editor autocomplete:
+
+  ```ts
+  wireScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+
+  pikkuFunc({
+    scopes: ['admin:invoices:create'],  // ✓ autocompleted
+    func: ...,
+  })
+
+  pikkuFunc({
+    scopes: ['admin:invoice:create'],   // ✗ compile error (typo)
+    func: ...,
+  })
+  ```
+
+  The inspector independently rejects undeclared scopes, so a cast that defeats
+  the compiler is still caught at build time.
+
+  Also fixes `getArrayPropertyValue` dropping any array behind a cast — idiomatic
+  `tags: ['a'] as const` was previously invisible to the inspector and silently
+  omitted from meta.
+
+- ca0d14f: Apply `credentialOverrides` when merging an addon's credentials into the consuming app, mirroring the existing `secretOverrides`/`variableOverrides` handling. Previously the credentials merge ignored overrides and always registered the addon's logical credential name, so a second instance of the same package (`wireAddon` with a `credentialOverrides` map) failed `validateCredentialOverrides` and both instances shared one OAuth provider. Now each override's resolved name is provisioned as its own credential — and since the credential name doubles as the better-auth providerId, two instances surface two distinct providers instead of a shared account pool.
+- 13474a6: feat: propagate an addon's declared scopes to the host
+
+  An addon can now declare scopes with `wireScope`, and a host that wires it picks
+  them up: they merge into the host's `ScopeId` union and its declared set, so a
+  host function can require an addon scope and the `pikku_scopes` foreign key
+  accepts granting one. This mirrors how addon secrets and variables are loaded.
+
+  The generated `pikku-scopes.gen.ts` now imports its metadata sidecar and derives
+  `SCOPES` from it, rather than inlining the list. TypeScript only emits a `.json`
+  into the build output when something imports it, and an addon publishes only
+  that output — without the import, an addon's scopes never reached a host.
+
+- cb079cc: `pikkuWorkflowGraph` nodes accept an optional `notes?: string` and the graph an optional `notes?: string[]`; notes are documentation only and excluded from `graphHash`.
+- cb079cc: Fix two corpus type-check failures: n8n `graph:sort`/`graph:summarize` enum rows now emit `as const`, and the inspector's `sanitizeTypeName` prefixes an underscore when a name starts with a digit.
+- 8601505: Make `wireCredential` the single source of truth for an addon's OAuth2 config: `pikku-credentials.gen.ts` exports `CREDENTIAL_OAUTH2_CONFIGS`, generated services import from it, the OpenAPI importer emits a `wireCredential`, and the inspector now extracts `oauth2.additionalParams`.
+- 70fa400: Add outgoing webhooks — `webhookService.send()` enqueues signed deliveries onto a retrying queue, `@pikku/kysely`'s `KyselyWebhookService` persists per-attempt delivery history, and `@pikku/console` gains a read-only `/webhooks` page; also caches resolved secrets in `TypedSecretService` and registers inline-`func` metadata for queue/scheduler/trigger/gateway wirings.
+- 3c75366: Key `secretOverrides`/`variableOverrides` on the secretId/variableId (the string the addon actually reads by — its typed map is keyed by id, e.g. `getSecret('MAILGUN_CREDENTIALS')`), not the logical meta name. The runtime aliaser already keys on the id, but the inspector merge + validation keyed on the logical name, so a correctly-keyed override failed validation and never provisioned its target whenever an addon's logical name differed from its id (the common case — `mailgun`/`MAILGUN_CREDENTIALS`). The existing test masked it by using a secret whose name equalled its id. The merge now resolves and provisions by id (with a name-fallback for older meta), validation checks ids, and the console install codegen generates overrides keyed by id.
+- 7b2ea23: `wireAddon` can install one addon package as multiple named instances, each with its own per-instance singleton services and `secretOverrides`/`variableOverrides`/`credentialOverrides` that alias logical names to real project secrets/variables/credentials.
+- 13474a6: Extract `wireScope` declarations and validate scope references.
+
+  Functions referencing a scope that no `wireScope` declares now fail the build
+  with an `INVALID_VALUE` critical listing the available scopes, so a typo like
+  `admin:invoice:create` is caught at codegen rather than at runtime.
+
+  `wireScope` declarations wrapped in a cast (`as const`, `as any`) are unwrapped
+  before extraction rather than being silently skipped.
+
+- d2a6eea: Add `wireRemoteAddon` — consume a hosted addon's `remote: true` RPCs transparently over HTTP, with the addon installed as a devDependency (types only). `rpc('ns:fn', input)` dispatches to the host's `/remote/rpc/:rpcName`, authenticating as a client with a token bound from a local source (`{ credentialId }` per-user, `{ secretId }` platform, or a custom `resolve()`), or omitted for a public surface. This is any-machine → hosted-library client auth, distinct from the trusted mesh (`PIKKU_REMOTE_SECRET`). A new `.remote.gen.d.ts` RPC map exposes only the `remote: true` surface to consumers. `pikku` verify errors if a `wireRemoteAddon` package is a production dependency (or missing) instead of a devDependency, and if a bound `credentialId`/`secretId` isn't wired.
+- 30e62ee: Add `workflow.approval(reason, { schema, expiry })` — a return-valued, expiring human-in-the-loop gate that stays closed until a decision is recorded (via `workflowService.approveStep` or `POST /workflow/:workflowName/approve/:runId`), unlike the one-shot `workflow.suspend()`.
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [13474a6]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+
 ## 0.12.42
 
 ### Patch Changes

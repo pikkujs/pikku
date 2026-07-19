@@ -1,5 +1,22 @@
 # @pikku/openapi-parser
 
+## 0.12.16
+
+### Patch Changes
+
+- 9f0d0eb: Migrate the `--oauth` addon scaffold off `OAuth2Client`. A scaffolded OAuth2
+  addon service used to construct `new OAuth2Client(config, appCredentialSecretId,
+secrets)` and do its own token exchange/refresh — the responsibility better-auth
+  now owns via the credential service. The `pikku new addon --oauth` scaffold (and
+  the OpenAPI `--openapi` generator) now emit a service that receives a ready
+  access token: `services.ts` uses `createWireServices` + `wire.getCredential<{
+accessToken: string }>(name)` and the service does a plain `fetch` with
+  `Authorization: Bearer ${accessToken}`, matching the existing per-user
+  bearer/apikey credential scaffold. With no remaining consumers, `OAuth2Client`
+  (`@pikku/core/oauth2`) and its test are removed; the `./oauth2` export keeps the
+  `OAuth2AppCredential` / `OAuth2Token` types.
+- 8601505: Make `wireCredential` the single source of truth for an addon's OAuth2 config: `pikku-credentials.gen.ts` exports `CREDENTIAL_OAUTH2_CONFIGS`, generated services import from it, the OpenAPI importer emits a `wireCredential`, and the inspector now extracts `oauth2.additionalParams`.
+
 ## 0.12.15
 
 ### Patch Changes

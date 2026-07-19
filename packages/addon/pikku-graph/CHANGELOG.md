@@ -1,5 +1,41 @@
 # @pikku/addon-graph
 
+## 0.12.6
+
+### Patch Changes
+
+- cb079cc: `graph:httpRequest` gains an optional `auth` descriptor (bearer/apiKeyHeader/apiKeyQuery/basic) resolved from the `SecretService` at request time; `oauth2` is a guarded not-yet-supported error.
+- cb079cc: Rename the `graph:map` addon function (and its `Map*` types) to `graph:fanout`, which better names invoking a child RPC once per element and collecting ordered results.
+- cb079cc: Map n8n's Aggregate `aggregateAllItemData` mode onto `graph:aggregate` (new additive `includeAllItems` flag), converting ~164 previously-stubbed Aggregate nodes into real graph functions.
+- cb079cc: Map n8n's Merge `append` mode (and mode-less Merge default) onto a new `graph:concat` addon function that flattens all input streams, converting ~103 previously-stubbed Merge nodes.
+- cb079cc: Import n8n RAG flows (v1) — retrieval-as-tool, chainRetrievalQa, and ingestion — as runnable vector-store addon calls driven by a new `rag-map`, plus a new `graph:splitText` builtin.
+- Updated dependencies [7ab5287]
+- Updated dependencies [e86bc17]
+- Updated dependencies [a9b96a0]
+- Updated dependencies [3f7fc54]
+- Updated dependencies [c478794]
+- Updated dependencies [3f04ae4]
+- Updated dependencies [90d9f04]
+- Updated dependencies [cb079cc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [0a7db82]
+- Updated dependencies [981c4db]
+- Updated dependencies [13474a6]
+- Updated dependencies [5a2b0d5]
+- Updated dependencies [13474a6]
+- Updated dependencies [ee040dc]
+- Updated dependencies [cb079cc]
+- Updated dependencies [13474a6]
+- Updated dependencies [9f0d0eb]
+- Updated dependencies [13474a6]
+- Updated dependencies [70fa400]
+- Updated dependencies [7b2ea23]
+- Updated dependencies [1dc77d5]
+- Updated dependencies [416606c]
+- Updated dependencies [d2a6eea]
+- Updated dependencies [30e62ee]
+  - @pikku/core@0.12.64
+
 ## 0.12.5
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/n8n-import",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "n8n workflow importer for Pikku — converts n8n exports into Pikku workflow graphs, agents and stub functions",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
