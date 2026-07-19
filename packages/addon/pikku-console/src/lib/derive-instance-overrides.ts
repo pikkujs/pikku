@@ -90,19 +90,27 @@ export async function readAddonDeclaredNames(
   packageName: string
 ): Promise<AddonDeclaredNames> {
   const pkgPikku = join(rootDir, 'node_modules', packageName, '.pikku')
-  const readKeys = async (rel: string): Promise<string[]> => {
+  // Read the id the addon actually reads by (secretId/variableId for secrets and
+  // variables — the string it passes to getSecret / variables.get; the meta's
+  // own name for credentials), falling back to the meta key for older meta. That
+  // id is what overrides key on, matching the runtime aliaser and the inspector
+  // merge.
+  const readIds = async (rel: string, idField?: string): Promise<string[]> => {
     try {
       const raw = await readFile(join(pkgPikku, rel), 'utf-8')
-      return Object.keys(JSON.parse(raw) as Record<string, unknown>)
+      const meta = JSON.parse(raw) as Record<string, Record<string, string>>
+      return Object.entries(meta).map(([key, def]) =>
+        idField ? (def[idField] ?? key) : key
+      )
     } catch {
       // No meta of this kind shipped — the addon declares none.
       return []
     }
   }
   const [secrets, variables, credentials] = await Promise.all([
-    readKeys('secrets/pikku-secrets-meta.gen.json'),
-    readKeys('variables/pikku-variables-meta.gen.json'),
-    readKeys('credentials/pikku-credentials-meta.gen.json'),
+    readIds('secrets/pikku-secrets-meta.gen.json', 'secretId'),
+    readIds('variables/pikku-variables-meta.gen.json', 'variableId'),
+    readIds('credentials/pikku-credentials-meta.gen.json'),
   ])
   return { secrets, variables, credentials }
 }

@@ -172,18 +172,23 @@ export async function loadAddonFunctionsMeta(
         const secretsRaw = await readFile(secretsMetaPath, 'utf-8')
         const secretsMeta = JSON.parse(secretsRaw)
         for (const [key, def] of Object.entries<any>(secretsMeta)) {
-          // Each instance's secretOverrides remap the addon's logical secret
-          // name to the real project secret; the logical name is the default
-          // only when no override is provided. Two instances with different
-          // overrides therefore surface two distinct project secrets.
-          const resolvedName = decl.secretOverrides?.[key] ?? key
+          // secretOverrides key on the SECRET ID (the string the addon passes to
+          // getSecret — its typed map is keyed by secretId, e.g.
+          // `getSecret('MAILGUN_CREDENTIALS')`), NOT the logical meta key, so the
+          // runtime aliaser (which also keys on secretId) and this merge agree.
+          // The resolved id is the real project secret; the addon's secretId is
+          // the default when no override is given. Two instances with different
+          // overrides therefore surface two distinct project secrets. `key` is
+          // the fallback for older meta that predates the secretId field.
+          const secretId = def.secretId ?? key
+          const resolvedSecretId = decl.secretOverrides?.[secretId] ?? secretId
           const existing = state.secrets.definitions.find(
-            (d: any) => d.name === resolvedName
+            (d: any) => (d.secretId ?? d.name) === resolvedSecretId
           )
           if (!existing) {
-            state.secrets.definitions.push({ ...def, name: resolvedName })
+            state.secrets.definitions.push({ ...def, secretId: resolvedSecretId })
             logger.debug(
-              `Loaded addon secret '${resolvedName}' from ${decl.package}`
+              `Loaded addon secret '${resolvedSecretId}' from ${decl.package}`
             )
           }
         }
@@ -221,14 +226,23 @@ export async function loadAddonFunctionsMeta(
         const variablesRaw = await readFile(variablesMetaPath, 'utf-8')
         const variablesMeta = JSON.parse(variablesRaw)
         for (const [key, def] of Object.entries<any>(variablesMeta)) {
-          const resolvedName = decl.variableOverrides?.[key] ?? key
+          // variableOverrides key on the VARIABLE ID (the string the addon reads
+          // via its typed map, keyed by variableId), same as secretOverrides key
+          // on secretId — so the runtime aliaser and this merge agree. `key` is
+          // the fallback for older meta without a variableId field.
+          const variableId = def.variableId ?? key
+          const resolvedVariableId =
+            decl.variableOverrides?.[variableId] ?? variableId
           const existing = state.variables.definitions.find(
-            (d: any) => d.name === resolvedName
+            (d: any) => (d.variableId ?? d.name) === resolvedVariableId
           )
           if (!existing) {
-            state.variables.definitions.push({ ...def, name: resolvedName })
+            state.variables.definitions.push({
+              ...def,
+              variableId: resolvedVariableId,
+            })
             logger.debug(
-              `Loaded addon variable '${resolvedName}' from ${decl.package}`
+              `Loaded addon variable '${resolvedVariableId}' from ${decl.package}`
             )
           }
         }
