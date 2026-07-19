@@ -30,6 +30,51 @@ export const isScopeRowDisabled = (
   treeDisabled: boolean
 ): boolean => treeDisabled || (!row.declared && !held)
 
+const isAncestorOf = (ancestor: string, id: string): boolean =>
+  id.startsWith(`${ancestor}:`)
+
+/**
+ * Whether a row is selected — either granted directly or covered by an ancestor
+ * that is granted. Holding a parent scope grants everything nested beneath it
+ * (see `verifyScopes`), so a child under a selected parent reads as selected.
+ */
+export const isScopeSelected = (selected: string[], id: string): boolean =>
+  selected.some((s) => s === id || isAncestorOf(s, id))
+
+/**
+ * Whether a row is covered by a *strict* ancestor grant, so its checkbox is
+ * locked — you manage it through the parent that grants it, not on its own.
+ */
+export const isScopeLockedByAncestor = (
+  selected: string[],
+  id: string
+): boolean => selected.some((s) => s !== id && isAncestorOf(s, id))
+
+/**
+ * Toggles a row, returning the next selection. Granting a scope drops any
+ * descendant it now subsumes (they become redundant); ungranting removes just
+ * it. A row covered by an ancestor is returned unchanged — it can only be
+ * toggled through that ancestor.
+ */
+export const toggleScope = (selected: string[], id: string): string[] => {
+  if (isScopeLockedByAncestor(selected, id)) return selected
+  if (selected.includes(id)) return selected.filter((s) => s !== id)
+  return [...selected.filter((s) => !isAncestorOf(id, s)), id]
+}
+
+/** The scopes to grant and revoke to move a selection from `prev` to `next`. */
+export const diffScopeSelection = (
+  prev: string[],
+  next: string[]
+): { added: string[]; removed: string[] } => {
+  const prevSet = new Set(prev)
+  const nextSet = new Set(next)
+  return {
+    added: next.filter((s) => !prevSet.has(s)),
+    removed: prev.filter((s) => !nextSet.has(s)),
+  }
+}
+
 export const toScopeTreeRows = (scopes: DeclaredScope[]): ScopeTreeRow[] =>
   scopes.map((scope) => {
     const segments = scope.id.split(':')

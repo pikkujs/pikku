@@ -22,6 +22,14 @@ Feature: Managing scopes and roles in the console
     And I create a role "billing-viewer" granting the "Read reports" scope
     Then I should see the role "billing-viewer"
 
+  # Granting a parent scope grants everything nested beneath it, so its children
+  # show as selected and lock — you manage them through the parent.
+  Scenario: Granting a parent scope auto-selects and locks its children
+    When I open the scopes page in the console
+    And I start creating a role
+    And I grant the "Reporting access" scope in the role editor
+    Then the "Read reports" scope should be selected and locked in the role editor
+
   Scenario: Saving a role with no name surfaces a validation error, not a dead button
     When I open the scopes page in the console
     And I try to save a new role without a name

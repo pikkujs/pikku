@@ -70,6 +70,27 @@ describe('verifyScopes', () => {
     })
   })
 
+  describe('a plain parent grant covers its descendants', () => {
+    test('holding a parent satisfies a deep descendant', () => {
+      verifyScopes(['admin:invoices:create'], session(['admin']))
+    })
+
+    test('holding a parent satisfies an intermediate descendant', () => {
+      verifyScopes(['admin:invoices'], session(['admin']))
+    })
+
+    test('holding an intermediate parent satisfies its child', () => {
+      verifyScopes(['admin:invoices:create'], session(['admin:invoices']))
+    })
+
+    test('a parent does not leak across siblings', () => {
+      assert.throws(
+        () => verifyScopes(['billing:read'], session(['admin'])),
+        MissingScopeError
+      )
+    })
+  })
+
   describe('AND semantics', () => {
     test('passes only when every required scope is held', () => {
       verifyScopes(

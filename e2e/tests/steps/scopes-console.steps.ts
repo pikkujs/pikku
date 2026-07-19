@@ -102,6 +102,32 @@ When(
   }
 )
 
+When('I start creating a role', async function (this: AgentWorld) {
+  await this.page.getByRole('button', { name: 'Create role' }).click()
+  await expect(this.page.getByRole('dialog')).toBeVisible()
+})
+
+When(
+  'I grant the {string} scope in the role editor',
+  async function (this: AgentWorld, scopeLabel: string) {
+    await this.page
+      .getByRole('dialog')
+      .getByRole('checkbox', { name: new RegExp(scopeLabel) })
+      .click()
+  }
+)
+
+Then(
+  'the {string} scope should be selected and locked in the role editor',
+  async function (this: AgentWorld, scopeLabel: string) {
+    const checkbox = this.page
+      .getByRole('dialog')
+      .getByRole('checkbox', { name: new RegExp(scopeLabel) })
+    await expect(checkbox).toBeChecked()
+    await expect(checkbox).toBeDisabled()
+  }
+)
+
 When(
   'I try to save a new role without a name',
   async function (this: AgentWorld) {

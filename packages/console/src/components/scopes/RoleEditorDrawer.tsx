@@ -67,11 +67,6 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
     }
   }, [opened, role])
 
-  const toggle = (id: string) =>
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    )
-
   const pending =
     createRole.isPending || setRoleScopes.isPending || deleteRole.isPending
 
@@ -149,7 +144,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
           <ScopeTreeSelector
             scopes={declaredScopes}
             selected={selected}
-            onToggle={toggle}
+            onChange={setSelected}
           />
         </Box>
         {error && (

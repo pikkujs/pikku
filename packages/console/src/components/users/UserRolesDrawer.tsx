@@ -25,6 +25,7 @@ import {
   useRemoveScopeFromUser,
 } from '../../hooks/useScopes'
 import { ScopeTreeSelector } from '../scopes/ScopeTreeSelector'
+import { diffScopeSelection } from '../scopes/scope-tree'
 import { m } from '@/i18n/messages'
 
 type UserRolesDrawerProps = {
@@ -66,13 +67,11 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
     addRole.error ||
     removeRole.error) as Error | null
 
-  const toggleDirectScope = (scope: string) => {
+  const applyDirectScopes = (next: string[]) => {
     if (!userId) return
-    if (directScopes.includes(scope)) {
-      removeScope.mutate({ userId, scope })
-    } else {
-      addScope.mutate({ userId, scope })
-    }
+    const { added, removed } = diffScopeSelection(directScopes, next)
+    added.forEach((scope) => addScope.mutate({ userId, scope }))
+    removed.forEach((scope) => removeScope.mutate({ userId, scope }))
   }
 
   return (
@@ -161,7 +160,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
             <ScopeTreeSelector
               scopes={declaredScopes}
               selected={directScopes}
-              onToggle={toggleDirectScope}
+              onChange={applyDirectScopes}
               disabled={!userId}
             />
           </Box>

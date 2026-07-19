@@ -1,6 +1,13 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isScopeRowDisabled, toScopeTreeRows } from './scope-tree.js'
+import {
+  isScopeRowDisabled,
+  isScopeSelected,
+  isScopeLockedByAncestor,
+  toggleScope,
+  diffScopeSelection,
+  toScopeTreeRows,
+} from './scope-tree.js'
 
 const SCOPES = [
   { id: 'admin', declared: true },
@@ -73,5 +80,74 @@ describe('isScopeRowDisabled', () => {
   test('a disabled tree locks every row regardless of state', () => {
     assert.equal(isScopeRowDisabled({ declared: true }, true, true), true)
     assert.equal(isScopeRowDisabled({ declared: false }, true, true), true)
+  })
+})
+
+describe('isScopeSelected', () => {
+  test('a directly-granted scope is selected', () => {
+    assert.equal(isScopeSelected(['admin'], 'admin'), true)
+  })
+
+  test('a child under a granted parent is selected', () => {
+    assert.equal(isScopeSelected(['admin'], 'admin:invoices:create'), true)
+  })
+
+  test('a parent is not selected by a granted child', () => {
+    assert.equal(isScopeSelected(['admin:invoices'], 'admin'), false)
+  })
+
+  test('a colon prefix that is not a path segment does not count', () => {
+    assert.equal(isScopeSelected(['admin'], 'administrator'), false)
+  })
+})
+
+describe('isScopeLockedByAncestor', () => {
+  test('a child under a granted parent is locked', () => {
+    assert.equal(isScopeLockedByAncestor(['admin'], 'admin:invoices'), true)
+  })
+
+  test('the granted scope itself is not locked', () => {
+    assert.equal(isScopeLockedByAncestor(['admin'], 'admin'), false)
+  })
+
+  test('an ungoverned scope is not locked', () => {
+    assert.equal(isScopeLockedByAncestor(['admin'], 'billing:read'), false)
+  })
+})
+
+describe('toggleScope', () => {
+  test('granting a scope adds it', () => {
+    assert.deepEqual(toggleScope([], 'admin'), ['admin'])
+  })
+
+  test('ungranting a directly-held scope removes it', () => {
+    assert.deepEqual(toggleScope(['admin'], 'admin'), [])
+  })
+
+  test('granting a parent drops descendants it now subsumes', () => {
+    assert.deepEqual(
+      toggleScope(['admin:invoices', 'admin:invoices:create'], 'admin'),
+      ['admin']
+    )
+  })
+
+  test('a scope locked by an ancestor cannot be toggled', () => {
+    assert.deepEqual(toggleScope(['admin'], 'admin:invoices'), ['admin'])
+  })
+})
+
+describe('diffScopeSelection', () => {
+  test('reports the added and removed scopes', () => {
+    assert.deepEqual(diffScopeSelection(['a', 'b'], ['b', 'c']), {
+      added: ['c'],
+      removed: ['a'],
+    })
+  })
+
+  test('granting a parent adds it and removes the subsumed child', () => {
+    assert.deepEqual(diffScopeSelection(['admin:invoices'], ['admin']), {
+      added: ['admin'],
+      removed: ['admin:invoices'],
+    })
   })
 })

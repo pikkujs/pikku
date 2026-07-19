@@ -6,10 +6,12 @@ const WILDCARD = '*'
 
 /**
  * Builds every grant that would satisfy `scope`: the scope itself, a wildcard
- * directly beneath it, and a wildcard at each ancestor level.
+ * directly beneath it, a wildcard at each ancestor level, and each plain
+ * ancestor id — holding a parent scope grants everything nested beneath it.
  *
  * For `admin:invoices:create` that is:
- *   admin:invoices:create, admin:invoices:create:*, *, admin:*, admin:invoices:*
+ *   admin:invoices:create, admin:invoices:create:*, *, admin:*, admin:invoices:*,
+ *   admin, admin:invoices
  */
 const satisfyingGrants = (scope: string): string[] => {
   const segments = scope.split(SEPARATOR)
@@ -17,16 +19,20 @@ const satisfyingGrants = (scope: string): string[] => {
   for (let i = 0; i < segments.length; i++) {
     grants.push([...segments.slice(0, i), WILDCARD].join(SEPARATOR))
   }
+  for (let i = 1; i < segments.length; i++) {
+    grants.push(segments.slice(0, i).join(SEPARATOR))
+  }
   return grants
 }
 
 /**
  * Checks whether `held` satisfies a single required scope.
  *
- * A grant satisfies a requirement when it is the scope itself, a wildcard at
- * or above it (`admin:*` covers `admin` and `admin:invoices:create`), or the
- * bare `*`. A narrower grant never satisfies a broader requirement —
- * `admin:invoices` does not grant `admin`.
+ * A grant satisfies a requirement when it is the scope itself, a plain ancestor
+ * (`admin` covers `admin:invoices:create`), a wildcard at or above it (`admin:*`
+ * covers `admin` and `admin:invoices:create`), or the bare `*`. A narrower grant
+ * never satisfies a broader requirement — `admin:invoices` does not grant
+ * `admin`.
  */
 const holds = (held: ReadonlySet<string>, scope: string): boolean =>
   satisfyingGrants(scope).some((grant) => held.has(grant))
