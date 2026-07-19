@@ -4,7 +4,6 @@ import type {
   CoreUserSession,
   CoreServices,
   MiddlewareMetadata,
-  PermissionMetadata,
 } from '../../types/core.types.js'
 import type {
   CorePikkuFunctionConfig,
@@ -80,7 +79,6 @@ export interface CLICommandMeta {
   tags?: string[]
   subcommands?: Record<string, CLICommandMeta>
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
-  permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   isDefault?: boolean
 }
 

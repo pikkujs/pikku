@@ -208,30 +208,12 @@ describe('ContextAwareRPCService.rpc', () => {
       { requiresAuth: true }
     )
 
-    const seenTags: string[][] = []
-    const addonTagGroup = pikkuState('@addon/stripe', 'permissions', 'tagGroup')
-    addonTagGroup['addon-tag'] = [
-      async (_services: any, _data: any, wire: any) => {
-        seenTags.push(['addon-tag', wire.wireType])
-        return true
-      },
-    ] as never
-    addonTagGroup['function-tag'] = [
-      async (_services: any, _data: any, wire: any) => {
-        seenTags.push(['function-tag', wire.wireType])
-        return true
-      },
-    ] as never
-
     const result = await service.rpc('stripe:createCharge', { amount: 10 })
 
     assert.deepEqual(result, {
       data: { amount: 10 },
       auth: 'http',
     })
-    // Tags are organizational only — they no longer register permissions, so the
-    // tag-group permission functions above are never invoked.
-    assert.deepEqual(seenTags, [])
   })
 
   test('falls back to deploymentService when rpc meta is missing', async () => {

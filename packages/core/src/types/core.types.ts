@@ -103,20 +103,17 @@ export type MiddlewareMetadata =
  * - type: 'tag' = Tag-based permission group (references tagGroup in pikkuState)
  * - type: 'wire' = Wire-level individual permission
  */
-export type PermissionMetadata =
-  | {
-      type: 'http'
-      route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
-    }
-  | {
-      type: 'tag'
-      tag: string // Tag name
-    }
-  | {
-      type: 'wire'
-      name: string
-      inline?: boolean // true if inline permission
-    }
+/**
+ * A reference to a permission function a function declares, resolved by name.
+ * Used at filter time (e.g. listing agent tools) to run the session-only
+ * (pikkuAuth) predicates without request data. Permissions are function-scoped
+ * only — there are no wire- or tag-level permission references.
+ */
+export type PermissionMetadata = {
+  type: 'wire'
+  name: string
+  inline?: boolean // true if inline permission
+}
 
 export type FunctionRuntimeMeta = {
   pikkuFuncId: string

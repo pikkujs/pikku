@@ -155,8 +155,6 @@ export interface PikkuPackageState {
     tagGroup: Record<string, CorePikkuChannelMiddleware[]>
   }
   permissions: {
-    tagGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
-    httpGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
     global: (CorePermissionGroup | CorePikkuPermission)[]
   }
   misc: {

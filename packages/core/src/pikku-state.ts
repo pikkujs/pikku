@@ -141,8 +141,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     tagGroup: {},
   },
   permissions: {
-    tagGroup: {},
-    httpGroup: {},
     global: [] as any,
   },
   misc: {

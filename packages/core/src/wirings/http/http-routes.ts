@@ -128,7 +128,6 @@ function processRouteMap(
  * - tags: Merges (parent + child)
  * - middleware: Merges (parent runs first)
  * - auth: Inner overrides outer
- * - permissions: Inner overrides outer
  */
 function mergeGroupConfig(
   parent: HTTPRoutesGroupConfig,
@@ -139,7 +138,6 @@ function mergeGroupConfig(
     tags: [...(parent.tags || []), ...(child.tags || [])],
     middleware: [...(parent.middleware || []), ...(child.middleware || [])],
     auth: child.auth ?? parent.auth,
-    permissions: child.permissions ?? parent.permissions,
   }
 }
 
@@ -162,7 +160,6 @@ function registerRoute(
       ...(groupConfig.middleware || []),
       ...(route.middleware || []),
     ],
-    permissions: route.permissions ?? groupConfig.permissions,
     contentType: route.contentType,
     timeout: route.timeout,
     headers: route.headers,

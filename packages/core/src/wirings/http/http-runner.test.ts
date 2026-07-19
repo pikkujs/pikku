@@ -4,7 +4,6 @@ import { NotFoundError } from '../../errors/errors.js'
 import type { JSONValue, CorePikkuMiddleware } from '../../types/core.types.js'
 import {
   addHTTPMiddleware,
-  addHTTPPermission,
   createHTTPWire,
   fetch,
   fetchData,
@@ -253,22 +252,13 @@ describe('http-runner helpers', () => {
     } as any)
   })
 
-  test('addHTTPMiddleware and addHTTPPermission register route groups', () => {
+  test('addHTTPMiddleware registers a route middleware group', () => {
     const middleware = [sessionMiddleware]
-    const permissions = [async () => true]
 
     assert.strictEqual(addHTTPMiddleware('/api/*', middleware), middleware)
     assert.strictEqual(
-      addHTTPPermission('/api/*', permissions as any),
-      permissions
-    )
-    assert.strictEqual(
       pikkuState(null, 'middleware', 'httpGroup')['/api/*'],
       middleware
-    )
-    assert.strictEqual(
-      pikkuState(null, 'permissions', 'httpGroup')['/api/*'],
-      permissions
     )
   })
 

@@ -11,7 +11,6 @@ import type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
-  CorePermissionGroup,
 } from '../../function/functions.types.js'
 import type {
   CoreUserSession,
@@ -105,44 +104,6 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   return middleware
 }
 
-/**
- * Registers HTTP permissions for a specific route pattern.
- *
- * This function registers permissions at runtime that will be applied to
- * HTTP routes matching the specified pattern.
- *
- * For tree-shaking benefits, wrap in a factory function:
- * `export const x = () => addHTTPPermission('pattern', [...])`
- *
- * @template PikkuPermission The permission type.
- * @param {string} pattern - Route pattern (e.g., '*' for all routes, '/api/*' for specific routes).
- * @param {CorePermissionGroup | CorePikkuPermission[]} permissions - Permissions for this route pattern.
- *
- * @returns {CorePermissionGroup | CorePikkuPermission[]} The permissions (for chaining/wrapping).
- *
- * @example
- * ```typescript
- * // Recommended: tree-shakeable
- * export const httpGlobalPermissions = () => addHTTPPermission('*', [
- *   authenticatedPermission,
- *   rateLimitPermission
- * ])
- *
- * // Also works: no tree-shaking
- * export const apiPermissions = addHTTPPermission('/api/*', [
- *   adminPermission
- * ])
- * ```
- */
-export const addHTTPPermission = <PikkuPermission extends CorePikkuPermission>(
-  pattern: string,
-  permissions: CorePermissionGroup | CorePikkuPermission[],
-  packageName: string | null = null
-): CorePermissionGroup | CorePikkuPermission[] => {
-  const httpGroups = pikkuState(packageName, 'permissions', 'httpGroup')
-  httpGroups[pattern] = permissions
-  return permissions
-}
 
 /**
  * Adds a new route to the global HTTP route registry.
@@ -233,7 +194,6 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
       matchedPath,
       params: matchedPath.params,
       route,
-      permissions: route.permissions,
       meta: meta!,
     }
   }
