@@ -24,13 +24,15 @@ const writeAddonFixture = (rootDir: string) => {
     join(pikku, 'function', 'pikku-functions-meta.gen.json'),
     JSON.stringify({})
   )
+  // Real addon secrets/variables have a logical name that DIFFERS from the id
+  // the addon reads by (secretId/variableId) — overrides key on the id.
   writeFileSync(
     join(pikku, 'secrets', 'pikku-secrets-meta.gen.json'),
-    JSON.stringify({ slack: { name: 'slack', type: 'string' } })
+    JSON.stringify({ slack: { name: 'slack', secretId: 'SLACK_TOKEN' } })
   )
   writeFileSync(
     join(pikku, 'variables', 'pikku-variables-meta.gen.json'),
-    JSON.stringify({ region: { name: 'region' } })
+    JSON.stringify({ region: { name: 'region', variableId: 'REGION' } })
   )
   writeFileSync(
     join(pikku, 'credentials', 'pikku-credentials-meta.gen.json'),
@@ -86,8 +88,9 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
           'slack-marketing',
           {
             package: ADDON,
-            secretOverrides: { slack: 'slack_marketing_secret' },
-            variableOverrides: { region: 'marketing_region' },
+            // Overrides key on the secretId/variableId, not the logical name.
+            secretOverrides: { SLACK_TOKEN: 'SLACK_MARKETING_TOKEN' },
+            variableOverrides: { REGION: 'MARKETING_REGION' },
             credentialOverrides: { slackOAuth: 'slack_marketing_oauth' },
           },
         ],
@@ -95,7 +98,7 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
           'slack-support',
           {
             package: ADDON,
-            secretOverrides: { slack: 'slack_support_secret' },
+            secretOverrides: { SLACK_TOKEN: 'SLACK_SUPPORT_TOKEN' },
             credentialOverrides: { slackOAuth: 'slack_support_oauth' },
           },
         ],
@@ -104,18 +107,17 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
 
     await loadAddonFunctionsMeta(logger, state)
 
-    const secretNames = state.secrets.definitions.map((d: any) => d.name).sort()
-    assert.deepEqual(secretNames, [
-      'slack_marketing_secret',
-      'slack_support_secret',
-    ])
+    const secretIds = state.secrets.definitions
+      .map((d: any) => d.secretId)
+      .sort()
+    assert.deepEqual(secretIds, ['SLACK_MARKETING_TOKEN', 'SLACK_SUPPORT_TOKEN'])
 
     // slack-marketing overrides region; slack-support has no override, so it
-    // falls back to the addon's default variable name.
-    const variableNames = state.variables.definitions
-      .map((d: any) => d.name)
+    // falls back to the addon's default variableId.
+    const variableIds = state.variables.definitions
+      .map((d: any) => d.variableId)
       .sort()
-    assert.deepEqual(variableNames, ['marketing_region', 'region'])
+    assert.deepEqual(variableIds, ['MARKETING_REGION', 'REGION'])
 
     // Each instance's credentialOverride surfaces a distinct credential name
     // (which doubles as the better-auth providerId) — no shared account pool.
@@ -137,12 +139,12 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
     await loadAddonFunctionsMeta(logger, state)
 
     assert.deepEqual(
-      state.secrets.definitions.map((d: any) => d.name),
-      ['slack']
+      state.secrets.definitions.map((d: any) => d.secretId),
+      ['SLACK_TOKEN']
     )
     assert.deepEqual(
-      state.variables.definitions.map((d: any) => d.name),
-      ['region']
+      state.variables.definitions.map((d: any) => d.variableId),
+      ['REGION']
     )
     assert.deepEqual(
       state.credentials.definitions.map((d: any) => d.name),

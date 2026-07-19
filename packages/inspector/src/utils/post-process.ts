@@ -350,7 +350,12 @@ export function validateSecretOverrides(
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
 
-  const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
+  // secretOverrides key on (and resolve to) SECRET IDs — the string the addon
+  // passes to getSecret — so validate against secretId, falling back to name for
+  // older meta without a secretId field.
+  const secretIds = new Set(
+    state.secrets.definitions.map((d: any) => d.secretId ?? d.name)
+  )
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.secretOverrides) continue
@@ -358,8 +363,8 @@ export function validateSecretOverrides(
     for (const [logicalName, resolvedName] of Object.entries(
       addonDecl.secretOverrides
     )) {
-      if (!secretNames.has(resolvedName)) {
-        const availableSecrets = Array.from(secretNames)
+      if (!secretIds.has(resolvedName)) {
+        const availableSecrets = Array.from(secretIds)
         logger.critical(
           ErrorCode.INVALID_VALUE,
           `Secret override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
@@ -404,7 +409,11 @@ export function validateVariableOverrides(
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
 
-  const variableNames = new Set(state.variables.definitions.map((d) => d.name))
+  // variableOverrides key on (and resolve to) VARIABLE IDs, so validate against
+  // variableId, falling back to name for older meta without a variableId field.
+  const variableIds = new Set(
+    state.variables.definitions.map((d: any) => d.variableId ?? d.name)
+  )
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.variableOverrides) continue
@@ -412,8 +421,8 @@ export function validateVariableOverrides(
     for (const [logicalName, resolvedName] of Object.entries(
       addonDecl.variableOverrides
     )) {
-      if (!variableNames.has(resolvedName)) {
-        const availableVariables = Array.from(variableNames)
+      if (!variableIds.has(resolvedName)) {
+        const availableVariables = Array.from(variableIds)
         logger.critical(
           ErrorCode.INVALID_VALUE,
           `Variable override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a variable that does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
