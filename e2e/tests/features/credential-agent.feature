@@ -9,6 +9,13 @@ Feature: AI Agent with OAuth Credential Gating
     Then I should see "Connect your accounts" on the page
     And I should see "User OAuth" on the page
 
+  # TODO(#980): better-auth now owns oauth2 tokens — `setCredential` for an
+  # oauth2 credential is rejected ("Cannot set OAuth2 credential directly"), so
+  # these two scenarios' direct-set connect no longer works. They must be
+  # rewritten to connect `user-oauth` via the better-auth link flow (the popup
+  # step) and, for the mid-chat one, redesigned off the now-void empty-token
+  # premise. Skipped until verifiable in a live-LLM e2e env.
+  @skip
   Scenario: Agent playground shows chat after credential is connected
     Given I connect credential "user-oauth" with value:
       """
@@ -17,6 +24,7 @@ Feature: AI Agent with OAuth Credential Gating
     And I open the "oauthApiAgent" playground
     Then I should not see "Connect your accounts" in the chat
 
+  @skip
   Scenario: Mid-chat credential request connects via OAuth popup and resumes
     Given I connect credential "user-oauth" with value:
       """
