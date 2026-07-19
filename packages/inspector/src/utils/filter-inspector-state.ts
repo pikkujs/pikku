@@ -425,6 +425,8 @@ export function filterInspectorState(
       internalFiles: new Map(state.rpc.internalFiles),
       exposedMeta: { ...state.rpc.exposedMeta },
       exposedFiles: new Map(state.rpc.exposedFiles),
+      remoteMeta: { ...state.rpc.remoteMeta },
+      remoteFiles: new Map(state.rpc.remoteFiles),
       invokedFunctions: new Set(state.rpc.invokedFunctions),
     },
     cli: {
@@ -1050,6 +1052,13 @@ export function filterInspectorState(
       if (!survivingFuncIds.has(targetFuncId) && !survivingFuncIds.has(key)) {
         delete filteredState.rpc.exposedMeta[key]
         filteredState.rpc.exposedFiles.delete(key)
+      }
+    }
+    for (const key of Object.keys(filteredState.rpc.remoteMeta)) {
+      const targetFuncId = filteredState.rpc.remoteMeta[key]
+      if (!survivingFuncIds.has(targetFuncId) && !survivingFuncIds.has(key)) {
+        delete filteredState.rpc.remoteMeta[key]
+        filteredState.rpc.remoteFiles.delete(key)
       }
     }
     // Prune invokedFunctions to match surviving functions

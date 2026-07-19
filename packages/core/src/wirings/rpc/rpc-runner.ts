@@ -12,6 +12,7 @@ import { pikkuState } from '../../pikku-state.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
+import { resolveRemoteAddonToken } from './remote-addon-auth.js'
 
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
@@ -24,6 +25,37 @@ addError(RPCNotFoundError, {
   status: 404,
   mcpCode: -32601,
   message: 'RPC function not found.',
+})
+
+/** A `wireRemoteAddon` namespace is missing a usable `serverUrl`. */
+export class RemoteAddonConfigError extends PikkuError {
+  constructor(namespace: string, detail: string) {
+    super(`Remote addon '${namespace}' is misconfigured: ${detail}`)
+  }
+}
+addError(RemoteAddonConfigError, {
+  status: 500,
+  message: 'Remote addon is misconfigured.',
+})
+
+/** The hosted addon returned a non-2xx response for a remote RPC. */
+export class RemoteAddonRequestError extends PikkuError {
+  public readonly httpStatus: number
+  constructor(
+    namespace: string,
+    fnName: string,
+    status: number,
+    detail: string
+  ) {
+    super(
+      `Remote addon '${namespace}:${fnName}' returned ${status}${detail ? `: ${detail}` : ''}`
+    )
+    this.httpStatus = status
+  }
+}
+addError(RemoteAddonRequestError, {
+  status: 502,
+  message: 'Remote addon request failed.',
 })
 import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
 import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
@@ -223,6 +255,21 @@ export class ContextAwareRPCService {
       throw new RPCNotFoundError(namespacedFunction)
     }
 
+    const namespace = namespacedFunction.slice(
+      0,
+      namespacedFunction.indexOf(':')
+    )
+
+    // wireRemoteAddon: the addon ships as a devDependency (types only) and its
+    // handlers run on the host — dispatch over HTTP, not through local meta.
+    if (resolved.addonConfig?.remote) {
+      return this.invokeRemoteAddonFunction<In, Out>(
+        namespace,
+        resolved.function,
+        data
+      )
+    }
+
     // Get the function meta from the addon package
     // Addon packages use function meta, not RPC meta
     const addonFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
@@ -240,10 +287,6 @@ export class ContextAwareRPCService {
 
     // The namespace is the consumer-facing wireAddon name; it selects the
     // per-instance singleton services and secret/variable/credential overrides.
-    const namespace = namespacedFunction.slice(
-      0,
-      namespacedFunction.indexOf(':')
-    )
     const addonInstance: AddonInstance = {
       namespace,
       secretOverrides: resolved.addonConfig?.secretOverrides,
@@ -263,6 +306,74 @@ export class ContextAwareRPCService {
       tags,
       addonInstance,
     })
+  }
+
+  /**
+   * Dispatch a `wireRemoteAddon` RPC over HTTP to the hosting service.
+   *
+   * The consumer sends the addon's own function name (not the namespaced form)
+   * to the host's `/remote/rpc/:rpcName` endpoint, authenticating as a client
+   * with the token bound in `wireRemoteAddon({ auth })`. The addon's handlers
+   * live on the host, so there is no local function meta to resolve.
+   */
+  private async invokeRemoteAddonFunction<In = any, Out = any>(
+    namespace: string,
+    fnName: string,
+    data: In
+  ): Promise<Out> {
+    const cfg = pikkuState(null, 'addons', 'packages').get(namespace)
+    if (!cfg?.remote) {
+      throw new RPCNotFoundError(`${namespace}:${fnName}`)
+    }
+
+    const serverUrl =
+      typeof cfg.serverUrl === 'function'
+        ? await cfg.serverUrl(this.services)
+        : cfg.serverUrl
+    if (!serverUrl) {
+      throw new RemoteAddonConfigError(namespace, 'serverUrl resolved empty')
+    }
+
+    const remoteFn = cfg.remoteName ? cfg.remoteName(fnName) : fnName
+    const token = await resolveRemoteAddonToken(
+      cfg.remoteAuth,
+      this.services,
+      this.wire,
+      namespace
+    )
+
+    const headers: Record<string, string> = {
+      'content-type': 'application/json',
+      accept: 'application/json',
+    }
+    if (token) {
+      headers.authorization = `Bearer ${token}`
+    }
+    if (this.wire.traceId) {
+      headers['x-trace-id'] = this.wire.traceId
+    }
+
+    const base = serverUrl.replace(/\/+$/, '')
+    const res = await fetch(
+      `${base}/remote/rpc/${encodeURIComponent(remoteFn)}`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ rpcName: remoteFn, data }),
+      }
+    )
+
+    if (!res.ok) {
+      // Best-effort body read to enrich the thrown error (mirrors postRpc).
+      const detail = (await res.text().catch(() => '')).slice(0, 300)
+      throw new RemoteAddonRequestError(namespace, remoteFn, res.status, detail)
+    }
+
+    if (res.status === 204) {
+      return undefined as Out
+    }
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as Out
   }
 
   public async rpcWithWire<In = any, Out = any>(

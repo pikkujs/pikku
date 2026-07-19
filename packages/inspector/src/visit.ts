@@ -20,6 +20,7 @@ import { addChannel } from './add/add-channel.js'
 import { addGateway } from './add/add-gateway.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addWireAddon } from './add/add-wire-addon.js'
+import { addWireRemoteAddon } from './add/add-wire-remote-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
@@ -97,6 +98,7 @@ export const visitSetup = (
 
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)
+  addWireRemoteAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
   addApprovalDescription(logger, node, checker, state, options)

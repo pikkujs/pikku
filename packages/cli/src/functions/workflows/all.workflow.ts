@@ -255,9 +255,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
-    const [, , workflows] = await Promise.all([
+    const [, , , workflows] = await Promise.all([
       workflow.do('RPC internal map', 'pikkuRPCInternalMap', null),
       workflow.do('RPC exposed map', 'pikkuRPCExposedMap', null),
+      workflow.do('RPC remote map', 'pikkuRPCRemoteMap', null),
       workflow.do('Workflow', 'pikkuWorkflow', null),
     ])
 

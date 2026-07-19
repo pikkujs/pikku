@@ -146,6 +146,8 @@ export interface SerializableInspectorState {
     internalFiles: Array<[string, { path: string; exportedName: string }]>
     exposedMeta: InspectorState['rpc']['exposedMeta']
     exposedFiles: Array<[string, { path: string; exportedName: string }]>
+    remoteMeta: InspectorState['rpc']['remoteMeta']
+    remoteFiles: Array<[string, { path: string; exportedName: string }]>
     invokedFunctions: string[]
     invokedFunctionsByFile?: Array<[string, string[]]>
     usedAddons: string[]
@@ -155,6 +157,7 @@ export interface SerializableInspectorState {
         {
           package: string
           rpcEndpoint?: string
+          remote?: boolean
           secretOverrides?: Record<string, string>
           variableOverrides?: Record<string, string>
           credentialOverrides?: Record<string, string>
@@ -363,6 +366,8 @@ export function serializeInspectorState(
       internalFiles: Array.from(state.rpc.internalFiles.entries()),
       exposedMeta: state.rpc.exposedMeta,
       exposedFiles: Array.from(state.rpc.exposedFiles.entries()),
+      remoteMeta: state.rpc.remoteMeta,
+      remoteFiles: Array.from(state.rpc.remoteFiles.entries()),
       invokedFunctions: Array.from(state.rpc.invokedFunctions),
       invokedFunctionsByFile: Array.from(
         (
@@ -557,6 +562,8 @@ export function deserializeInspectorState(
       internalFiles: new Map(data.rpc.internalFiles),
       exposedMeta: data.rpc.exposedMeta,
       exposedFiles: new Map(data.rpc.exposedFiles),
+      remoteMeta: data.rpc.remoteMeta ?? {},
+      remoteFiles: new Map(data.rpc.remoteFiles ?? []),
       invokedFunctions: new Set(data.rpc.invokedFunctions),
       invokedFunctionsByFile: new Map(
         (data.rpc.invokedFunctionsByFile || []).map(

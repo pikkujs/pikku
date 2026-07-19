@@ -5,7 +5,7 @@ import type { Logger } from '@pikku/core/services'
 
 type WireAddonDeclarations = Map<
   string,
-  { package: string; rpcEndpoint?: string }
+  { package: string; rpcEndpoint?: string; remote?: boolean }
 >
 
 export const serializeTypedRPCMap = (
@@ -145,9 +145,14 @@ function generateAddonImports(
 
   let imports = '\n// Addon package RPC maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    // Import the RPCMap from each addon package's internal RPC map
-    // Use .js extension - package.json exports will resolve to .d.ts for types
-    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${decl.package}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
+    // Import the RPCMap from each addon package's RPC map.
+    // A `wireRemoteAddon` namespace imports the addon's `.remote.gen` map (only
+    // its `remote: true` surface); a local `wireAddon` imports `.internal.gen`.
+    // Use .js extension — package.json exports resolve it to .d.ts for types.
+    const mapFile = decl.remote
+      ? 'pikku-rpc-wirings-map.remote.gen.js'
+      : 'pikku-rpc-wirings-map.internal.gen.js'
+    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${decl.package}/.pikku/rpc/${mapFile}'\n`
   }
   return imports
 }

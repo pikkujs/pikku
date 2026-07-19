@@ -718,7 +718,7 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
   addGlobalPermissionCore(permissions as any, ${packageNameValue})
 }
 
-export { wireAddon } from '@pikku/core/rpc'
-export type { WireAddonConfig } from '@pikku/core/rpc'
+export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
+export type { WireAddonConfig, WireRemoteAddonConfig, RemoteAddonAuth } from '@pikku/core/rpc'
 `
 }

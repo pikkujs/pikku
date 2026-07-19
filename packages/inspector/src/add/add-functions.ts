@@ -1184,6 +1184,12 @@ export const addFunctions: AddWiring = (
 
     if (remote) {
       state.rpc.invokedFunctions.add(pikkuFuncId)
+      // The consumer-facing surface a wireRemoteAddon imports (mirrors exposedMeta)
+      state.rpc.remoteMeta[name] = pikkuFuncId
+      state.rpc.remoteFiles.set(name, {
+        path: node.getSourceFile().fileName,
+        exportedName,
+      })
     }
 
     if (expose) {

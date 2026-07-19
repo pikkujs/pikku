@@ -9,6 +9,7 @@ import { ErrorCode } from '../error-codes.js'
  */
 const BANNED_WIRINGS = new Set([
   'wireAddon',
+  'wireRemoteAddon',
   'wireChannel',
   'wireCLI',
   'wireGateway',

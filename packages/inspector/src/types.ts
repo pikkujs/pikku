@@ -473,6 +473,9 @@ export interface InspectorState {
     internalFiles: Map<string, { path: string; exportedName: string }>
     exposedMeta: Record<string, string>
     exposedFiles: Map<string, { path: string; exportedName: string }>
+    /** Functions marked `remote: true` — the surface a wireRemoteAddon consumer imports */
+    remoteMeta: Record<string, string>
+    remoteFiles: Map<string, { path: string; exportedName: string }>
     invokedFunctions: Set<string>
     invokedFunctionsByFile: Map<string, Set<string>>
     usedAddons: Set<string>
@@ -482,6 +485,8 @@ export interface InspectorState {
         package: string
         rpcEndpoint?: string
         mcp?: boolean
+        /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
+        remote?: boolean
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
         credentialOverrides?: Record<string, string>
