@@ -1,9 +1,6 @@
 import { watch, type FSWatcher } from 'node:fs'
-import { stat, readFile, copyFile, rm } from 'node:fs/promises'
-import { basename, dirname, join, resolve, relative } from 'node:path'
-import { pathToFileURL } from 'node:url'
-
-import { register } from 'tsx/esm/api'
+import { stat } from 'node:fs/promises'
+import { basename, join, resolve, relative } from 'node:path'
 
 import { pikkuState } from '../pikku-state.js'
 import { clearMiddlewareCache } from '../middleware-runner.js'
@@ -12,6 +9,7 @@ import { clearChannelMiddlewareCache } from '../wirings/channel/channel-middlewa
 import { httpRouter } from '../wirings/http/routers/http-router.js'
 import type { Logger } from '../services/logger.js'
 import type { CorePikkuFunctionConfig } from '../function/functions.types.js'
+import { createModuleRunner } from './module-runner.js'
 
 export * from './reload-meta.js'
 
@@ -54,67 +52,19 @@ const findCompiledFile = async (
   return null
 }
 
-// Use data: URLs to import modules. This bypasses TypeScript loaders
-// (e.g. tsx) that intercept file:// imports and break dynamic ESM loading.
-// Each import gets unique content so there's no module cache to worry about.
-let tsxRegistered = false
-
-const ensureTsxRegistered = () => {
-  if (tsxRegistered) return
-  register()
-  tsxRegistered = true
-}
-
-let tempCounter = 0
-
-const reimportModule = async (
-  filePath: string,
-  useTsx = false
-): Promise<Record<string, unknown> | null> => {
-  try {
-    if (useTsx) {
-      // Import a uniquely-named sibling copy: a `?t=` query does NOT bust
-      // the cache on either runtime (Bun keys module identity on the bare
-      // path; tsx's transform cache keys on the file path too), so a fresh
-      // path is the only reliable re-import. Same directory → identical
-      // resolution for relative and package-`imports` (#…) specifiers. The
-      // dot-prefix keeps it out of the watcher.
-      if (!process.versions.bun) {
-        // Node needs tsx's loader to import raw .ts; Bun imports it natively.
-        ensureTsxRegistered()
-      }
-      const abs = resolve(filePath)
-      const tempPath = join(
-        dirname(abs),
-        `.pikku-hot-${++tempCounter}-${basename(abs)}`
-      )
-      await copyFile(abs, tempPath)
-      try {
-        return await import(pathToFileURL(tempPath).href)
-      } finally {
-        await rm(tempPath, { force: true }).catch(() => {
-          // Best-effort temp cleanup; a leftover dotfile is watcher-ignored.
-        })
-      }
-    }
-
-    const content = await readFile(resolve(filePath), 'utf-8')
-    const dataUrl =
-      'data:text/javascript;base64,' + Buffer.from(content).toString('base64')
-    return await import(dataUrl)
-  } catch {
-    return null
-  }
-}
-
+// Changed user files are re-run through an evictable module runner keyed by a
+// stable path (createModuleRunner), NOT re-imported under a fresh URL. A
+// fresh-URL import (a `data:` URL on Node, a uniquely-named temp sibling on
+// Bun) permanently leaks a record in the native ESM loader map on every
+// reload, OOMing long editing sessions; the runner overwrites a single slot so
+// the previous module is collected. See ./module-runner.ts.
 const isWatchedTsFile = (filename: string): boolean => {
   return (
     filename.endsWith('.ts') &&
     !filename.endsWith('.test.ts') &&
     !filename.endsWith('.d.ts') &&
     !filename.endsWith('.gen.ts') &&
-    // Hidden files: editor/sed atomic-write temps and our own hot-reload
-    // sibling copies must never trigger a reload of themselves.
+    // Hidden files: editor/sed atomic-write temps must never trigger a reload.
     !basename(filename).startsWith('.')
   )
 }
@@ -135,6 +85,7 @@ export async function pikkuDevReloader(
   const watchers: FSWatcher[] = []
 
   const functionsMap = pikkuState(null, 'function', 'functions')
+  const moduleRunner = createModuleRunner()
 
   const handleFileChange = async (changedTsFile: string) => {
     const start = Date.now()
@@ -150,15 +101,8 @@ export async function pikkuDevReloader(
       absPikkuDir
     )
     const importPath = compiledFile ?? changedTsFile
-    const usedTsxFallback = !compiledFile
 
-    if (usedTsxFallback) {
-      logger.debug(
-        `Hot-reload using tsx fallback for: ${relative(process.cwd(), changedTsFile)}`
-      )
-    }
-
-    const mod = await reimportModule(importPath, usedTsxFallback)
+    const mod = await moduleRunner.run(importPath)
     if (!mod) {
       logger.error(
         `Failed to import: ${relative(process.cwd(), importPath)} (keeping old code)`
@@ -260,6 +204,7 @@ export async function pikkuDevReloader(
       for (const watcher of watchers) {
         watcher.close()
       }
+      moduleRunner.clear()
     },
     // Drain the queue of recently re-imported files and import them again.
     // A dev-server watcher calls this AFTER its codegen pass has refreshed

@@ -71,6 +71,7 @@
   "devDependencies": {
     "@ag-ui/core": "0.0.57",
     "@types/node": "^24.11.0",
+    "esbuild": "~0.27.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   },
