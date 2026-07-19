@@ -6,11 +6,7 @@ import {
   getFunctionNames,
   runPikkuFunc,
 } from './function-runner.js'
-import {
-  addGlobalPermission,
-  addTagMiddleware,
-  addTagPermission,
-} from '../index.js'
+import { addGlobalPermission, addTagMiddleware } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
@@ -25,12 +21,9 @@ beforeEach(() => {
 // Helper function to add function with metadata for tests
 const addTestFunction = (funcName: string, funcConfig: any) => {
   addFunction(funcName, funcConfig)
-  // Convert tags to middleware metadata
+  // Convert tags to middleware metadata (tags are organizational only; they no
+  // longer carry permissions in the session+function authorization model).
   const middleware = funcConfig.tags
-    ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
-    : undefined
-  // Convert tags to permissions metadata
-  const permissions = funcConfig.tags
     ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
     : undefined
   pikkuState(null, 'function', 'meta')[funcName] = {
@@ -39,7 +32,6 @@ const addTestFunction = (funcName: string, funcConfig: any) => {
     outputSchemaName: null,
     sessionless: true,
     middleware,
-    permissions,
   }
 }
 
@@ -105,31 +97,16 @@ describe('runPikkuFunc - Integration Tests', () => {
     ])
   })
 
-  test('should execute permissions in correct order: wiringTags → wiringPermissions → funcTags → funcPermissions', async () => {
+  test('runs global (AND) then function (OR) permissions before the handler', async () => {
     const executionOrder: string[] = []
 
-    // Setup tagged permissions
-    const wiringTagPermission = async () => {
-      executionOrder.push('wiringTag')
-      return true
-    }
-    const funcTagPermission = async () => {
-      executionOrder.push('funcTag')
-      return true
-    }
+    addGlobalPermission([
+      async () => {
+        executionOrder.push('globalPermission')
+        return true
+      },
+    ])
 
-    addTagPermission('wiringTag', [wiringTagPermission])
-    addTagPermission('funcTag', [funcTagPermission])
-
-    // Setup direct permissions
-    const wiringPermissions: CorePermissionGroup = {
-      permissions: [
-        async () => {
-          executionOrder.push('wiringPermission')
-          return true
-        },
-      ],
-    }
     const funcPermissions: CorePermissionGroup = {
       permissions: [
         async () => {
@@ -139,14 +116,12 @@ describe('runPikkuFunc - Integration Tests', () => {
       ],
     }
 
-    // Register function with permissions and tags
     addTestFunction('testFunc', {
       func: async () => {
         executionOrder.push('main')
         return 'success'
       },
       permissions: funcPermissions,
-      tags: ['funcTag'],
     })
 
     const result = await runPikkuFunc(
@@ -157,25 +132,33 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
-        wirePermissions: wiringPermissions,
-        tags: ['wiringTag'],
         auth: false,
         wire: {},
       }
     )
 
     assert.equal(result, 'success')
-    // Order: wiringTags → main (short-circuit on first passing group)
-    assert.deepEqual(executionOrder, ['wiringTag', 'main'])
+    assert.deepEqual(executionOrder, [
+      'globalPermission',
+      'funcPermission',
+      'main',
+    ])
   })
 
-  test('should throw specific error for wiring tag permission failures', async () => {
-    const failingWiringTagPermission = async () => false
-
-    addTagPermission('wiringTag', [failingWiringTagPermission])
+  test('a failing global permission denies before the function permission runs', async () => {
+    let funcPermissionRan = false
+    addGlobalPermission([async () => false])
 
     addTestFunction('testFunc', {
       func: async () => 'success',
+      permissions: {
+        allow: [
+          async () => {
+            funcPermissionRan = true
+            return true
+          },
+        ],
+      },
     })
 
     await assert.rejects(
@@ -183,7 +166,6 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
-        tags: ['wiringTag'],
         auth: false,
         wire: {},
       }),
@@ -191,40 +173,15 @@ describe('runPikkuFunc - Integration Tests', () => {
         message: 'Permission denied',
       }
     )
+    assert.equal(funcPermissionRan, false)
   })
 
-  test('should throw specific error for wiring permission failures', async () => {
-    const wiringPermissions: CorePermissionGroup = {
-      permissions: [async () => false],
-    }
+  test('a passing global permission does not satisfy a failing function permission', async () => {
+    addGlobalPermission([async () => true])
 
     addTestFunction('testFunc', {
       func: async () => 'success',
-    })
-
-    await assert.rejects(
-      runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
-        singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
-        data: () => ({}),
-        wirePermissions: wiringPermissions,
-        auth: false,
-        wire: {},
-      }),
-      {
-        message: 'Permission denied',
-      }
-    )
-  })
-
-  test('should throw specific error for function tag permission failures', async () => {
-    const failingFuncTagPermission = async () => false
-
-    addTagPermission('funcTag', [failingFuncTagPermission])
-
-    addTestFunction('testFunc', {
-      func: async () => 'success',
-      tags: ['funcTag'],
+      permissions: { admin: [async () => false] },
     })
 
     await assert.rejects(
@@ -298,39 +255,31 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.equal(executionCount, 1)
   })
 
-  test('should handle mixed permission types correctly', async () => {
+  test('should OR function permission groups and short-circuit on the first pass', async () => {
     const executionOrder: string[] = []
 
-    // Mix of array and object permissions
-    const arrayPermission = [
-      async () => {
-        executionOrder.push('arrayPermission1')
-        return false
-      },
-      async () => {
-        executionOrder.push('arrayPermission2')
-        return true
-      },
-    ]
-
-    const objectPermission: CorePermissionGroup = {
-      permissions: [
+    // Two groups ORed together: the first (owner) fails, the second (admin) passes.
+    const permissions: CorePermissionGroup = {
+      owner: [
         async () => {
-          executionOrder.push('objectPermission')
+          executionOrder.push('owner')
+          return false
+        },
+      ],
+      admin: [
+        async () => {
+          executionOrder.push('admin')
           return true
         },
       ],
     }
-
-    addTagPermission('mixedTag', arrayPermission)
 
     addTestFunction('testFunc', {
       func: async () => {
         executionOrder.push('main')
         return 'success'
       },
-      permissions: objectPermission,
-      tags: ['mixedTag'],
+      permissions,
     })
 
     const result = await runPikkuFunc(
@@ -347,12 +296,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'success')
-    // Should execute tag permissions and short-circuit before function permissions
-    assert.deepEqual(executionOrder, [
-      'arrayPermission1',
-      'arrayPermission2',
-      'main',
-    ])
+    assert.deepEqual(executionOrder, ['owner', 'admin', 'main'])
   })
 
   test('should work without any middleware or permissions', async () => {
@@ -376,7 +320,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.equal(result, 'simple success')
   })
 
-  test('should work with only wiring-level middleware and permissions', async () => {
+  test('should work with only wiring-level middleware', async () => {
     const executionOrder: string[] = []
 
     const wiringMiddleware: CorePikkuMiddleware = async (
@@ -386,15 +330,6 @@ describe('runPikkuFunc - Integration Tests', () => {
     ) => {
       executionOrder.push('wiringMiddleware')
       await next()
-    }
-
-    const wiringPermissions: CorePermissionGroup = {
-      permissions: [
-        async () => {
-          executionOrder.push('wiringPermission')
-          return true
-        },
-      ],
     }
 
     addTestFunction('testFunc', {
@@ -413,19 +348,13 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         wireMiddleware: [wiringMiddleware],
-        wirePermissions: wiringPermissions,
         auth: false,
         wire: {},
       }
     )
 
     assert.equal(result, 'success')
-    // Permissions run after middleware (middleware can set/modify session)
-    assert.deepEqual(executionOrder, [
-      'wiringMiddleware',
-      'wiringPermission',
-      'main',
-    ])
+    assert.deepEqual(executionOrder, ['wiringMiddleware', 'main'])
   })
 
   test('should work with only function-level middleware and permissions', async () => {
@@ -1474,9 +1403,8 @@ describe('runPikkuFunc - scopes', () => {
     )
   })
 
-  // The load-bearing test. runPermissions ORs global/wire/tag/func permissions
-  // and returns on the first pass, so a scope check placed inside that pool
-  // would be satisfied by any passing permission anywhere in the app.
+  // The load-bearing test. Scopes are an AND gate separate from permissions, so
+  // a passing global (or function) permission must never satisfy a scope.
   test('a passing global permission does not satisfy a scope', async () => {
     addGlobalPermission([async () => true])
     addTestFunction('scoped', { func: async () => 'ok', scopes: ['admin'] })

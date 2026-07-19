@@ -10,8 +10,4 @@ export {
   addGlobalMiddleware,
   runMiddleware,
 } from '../middleware-runner.js'
-export {
-  addTagPermission,
-  addTagPermission as addPermission,
-  addGlobalPermission,
-} from '../permissions.js'
+export { addGlobalPermission } from '../permissions.js'

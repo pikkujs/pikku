@@ -102,11 +102,7 @@ export const processMessageHandlers = (
       routingProperty,
       routerValue
     )
-    const {
-      packageName,
-      middleware: routeInheritedMiddleware,
-      permissions: inheritedPermissions,
-    } = routeMeta
+    const { packageName, middleware: routeInheritedMiddleware } = routeMeta
 
     const pikkuFuncId = routeMeta.pikkuFuncId
 
@@ -132,8 +128,6 @@ export const processMessageHandlers = (
     // Inherited middleware comes from metadata (tag groups, non-inline wire)
     const inheritedMiddleware = routeInheritedMiddleware || []
 
-    const wirePermissions = isWrapper ? onMessage.permissions : undefined
-
     // Create unique cache key that includes routing info to avoid cache collisions
     // when multiple message handlers use the same function
     const cacheKey = routingProperty
@@ -150,8 +144,6 @@ export const processMessageHandlers = (
       wireMiddleware,
       inheritedChannelMiddleware: channelMeta?.channelMiddleware,
       wireChannelMiddleware: wireChannelMiddleware as any,
-      inheritedPermissions,
-      wirePermissions,
       coerceDataFromSchema: true,
       tags: channelConfig.tags,
       sessionService: userSession,

@@ -85,7 +85,6 @@ export const runChannelLifecycleWithMiddleware = async ({
       data: () => data as any,
       wire,
       tags: meta.tags ?? [],
-      inheritedPermissions: meta.permissions,
       packageName: meta.packageName ?? null,
     })
   }
