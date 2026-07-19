@@ -58,16 +58,6 @@ export interface MiddlewareGroupMeta {
   isFactory: boolean // true if wrapped in () => add...()
 }
 
-export interface PermissionGroupMeta {
-  exportName: string | null // null if not exported
-  sourceFile: string
-  position: number
-  services: FunctionServicesMeta
-  count: number
-  instanceIds: string[]
-  isFactory: boolean // true if wrapped in () => add...()
-}
-
 export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
   meta: HTTPWiringsMeta
@@ -76,10 +66,6 @@ export interface InspectorHTTPState {
   // Pattern '*' matches all routes (from addHTTPMiddleware('*', [...]))
   // Pattern '/api/*' matches specific routes (from addHTTPMiddleware('/api/*', [...]))
   routeMiddleware: Map<string, MiddlewareGroupMeta>
-  // HTTP permission calls tracking - route pattern -> group metadata
-  // Pattern '*' matches all routes (from addHTTPPermission('*', [...]))
-  // Pattern '/api/*' matches specific routes (from addHTTPPermission('/api/*', [...]))
-  routePermissions: Map<string, PermissionGroupMeta>
 }
 
 /**
@@ -242,7 +228,6 @@ export interface InspectorPermissionInstance {
 export interface InspectorPermissionState {
   definitions: Record<string, InspectorPermissionDefinition>
   instances: Record<string, InspectorPermissionInstance>
-  tagPermissions: Map<string, PermissionGroupMeta>
 }
 
 export type InspectorFilters = {
@@ -589,8 +574,6 @@ export interface InspectorState {
   }
   permissionsGroupsMeta: {
     definitions: Record<string, InspectorPermissionDefinition>
-    httpGroups: Record<string, PermissionGroupMeta>
-    tagGroups: Record<string, PermissionGroupMeta>
   }
   requiredSchemas: Set<string>
   openAPISpec: Record<string, any> | null

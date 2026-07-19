@@ -37,7 +37,6 @@ import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import {
   addTagMiddleware as addTagMiddlewareCore,
   addGlobalMiddleware as addGlobalMiddlewareCore,
-  addTagPermission as addTagPermissionCore,
   addGlobalPermission as addGlobalPermissionCore,
 } from '@pikku/core/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
@@ -704,16 +703,6 @@ export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => 
  */
 export const addGlobalMiddleware = (middleware: PikkuMiddleware[]) => {
   addGlobalMiddlewareCore(middleware as any, ${packageNameValue})
-}
-
-/**
- * Tag-scoped permissions. Applies to any wiring that carries the matching tag.
- *
- * @example
- * addTagPermission('admin', [adminPermission])
- */
-export const addTagPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
-  addTagPermissionCore(tag, permissions as any, ${packageNameValue})
 }
 
 /**

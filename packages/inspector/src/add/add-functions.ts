@@ -1032,17 +1032,6 @@ export const addFunctions: AddWiring = (
     if (newMiddleware.length > 0) {
       middleware = [...(middleware || []), ...newMiddleware]
     }
-    const existingPermissionTags = new Set(
-      (permissions || [])
-        .filter((p) => p.type === 'tag')
-        .map((p) => (p as any).tag)
-    )
-    const newPermissions = tagEntries.filter(
-      (e) => !existingPermissionTags.has(e.tag)
-    )
-    if (newPermissions.length > 0) {
-      permissions = [...(permissions || []), ...newPermissions]
-    }
   }
 
   const implementationHash = computeImplementationHash({
@@ -1151,7 +1140,6 @@ export const addFunctions: AddWiring = (
       inputSchema: inputNames[0] ?? null,
       outputSchema: outputNames[0] ?? null,
       middleware,
-      permissions,
     }
     state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     extractWireNames(middleware).forEach((n) =>

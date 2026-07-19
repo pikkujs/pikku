@@ -191,20 +191,6 @@ export const pikkuInfoTags = pikkuSessionlessFunc<InfoInput, void>({
       }
     }
 
-    const tagPermissions = state.permissions?.tagPermissions
-    if (tagPermissions) {
-      for (const [tag, group] of tagPermissions) {
-        if (!tagMap.has(tag)) {
-          tagMap.set(tag, {
-            funcIds: [],
-            middlewareNames: [],
-            permissionNames: [],
-          })
-        }
-        tagMap.get(tag)!.permissionNames.push(...(group.instanceIds ?? []))
-      }
-    }
-
     const tags = [...tagMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))
 
     if (tags.length === 0) {

@@ -1,43 +1,13 @@
 import * as ts from 'typescript'
 import type { FunctionWiresMeta } from '@pikku/core'
-import type { AddWiring, InspectorState } from '../types.js'
-import {
-  extractFunctionName,
-  isNamedExport,
-  makeContextBasedId,
-} from '../utils/extract-function-name.js'
+import type { AddWiring } from '../types.js'
+import { extractFunctionName } from '../utils/extract-function-name.js'
 import {
   extractServicesFromFunction,
   extractUsedWires,
 } from '../utils/extract-services.js'
-import { extractPermissionPikkuNames } from '../utils/permissions.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-
-function renameTempDefinitions(
-  state: InspectorState,
-  definitionIds: string[],
-  groupType: string,
-  groupKey: string
-): void {
-  const tempIndices = definitionIds
-    .map((name, i) => (name.startsWith('__temp_') ? i : -1))
-    .filter((i) => i >= 0)
-
-  for (const idx of tempIndices) {
-    const oldId = definitionIds[idx]
-    const newId =
-      tempIndices.length === 1
-        ? makeContextBasedId(groupType, groupKey)
-        : makeContextBasedId(groupType, groupKey, String(idx))
-    const existing = state.permissions.definitions[oldId]
-    if (existing) {
-      delete state.permissions.definitions[oldId]
-      state.permissions.definitions[newId] = existing
-    }
-    definitionIds[idx] = newId
-  }
-}
 
 function isInsidePermissionContainer(node: ts.Node): boolean {
   let current = node.parent
@@ -45,9 +15,7 @@ function isInsidePermissionContainer(node: ts.Node): boolean {
     if (
       ts.isCallExpression(current) &&
       ts.isIdentifier(current.expression) &&
-      (current.expression.text === 'pikkuPermissionFactory' ||
-        current.expression.text === 'addTagPermission' ||
-        current.expression.text === 'addHTTPPermission')
+      current.expression.text === 'pikkuPermissionFactory'
     ) {
       return true
     }
@@ -57,7 +25,7 @@ function isInsidePermissionContainer(node: ts.Node): boolean {
 }
 
 /**
- * Inspect pikkuPermission calls, addPermission calls, and addHTTPPermission calls
+ * Inspect pikkuPermission, pikkuAuth, and pikkuPermissionFactory definitions.
  */
 export const addPermission: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
@@ -337,212 +305,6 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
     logger.debug(
       `• Found permission factory with services: ${services.services.join(', ')}`
-    )
-    return
-  }
-
-  // Handle addPermission('tag', [permission1, permission2])
-  // Supports two patterns:
-  // 1. export const x = () => addTagPermission('tag', [...])  (factory - tree-shakeable)
-  // 2. export const x = addTagPermission('tag', [...])  (direct - no tree-shaking)
-  if (expression.text === 'addTagPermission') {
-    const tagArg = args[0]
-    const permissionsArrayArg = args[1]
-
-    if (!tagArg || !permissionsArrayArg) return
-
-    // Extract tag name
-    let tag: string | undefined
-    if (ts.isStringLiteral(tagArg)) {
-      tag = tagArg.text
-    }
-
-    if (!tag) {
-      logger.warn(`• addTagPermission call without valid tag string`)
-      return
-    }
-
-    // Check if permissions is a literal array or object
-    if (
-      !ts.isArrayLiteralExpression(permissionsArrayArg) &&
-      !ts.isObjectLiteralExpression(permissionsArrayArg)
-    ) {
-      logger.error(
-        `• addTagPermission('${tag}', ...) must have a literal array or object as second argument`
-      )
-      return
-    }
-
-    // Extract permission pikkuFuncIds from array
-    const permissionNames = extractPermissionPikkuNames(
-      permissionsArrayArg,
-      checker,
-      state.rootDir
-    )
-
-    if (permissionNames.length > 0) {
-      renameTempDefinitions(state, permissionNames, 'tag', tag)
-    }
-
-    const allServices = new Set<string>()
-    for (const permissionName of permissionNames) {
-      const permissionMeta = state.permissions.definitions[permissionName]
-      if (permissionMeta && permissionMeta.services) {
-        for (const service of permissionMeta.services.services) {
-          allServices.add(service)
-        }
-      }
-    }
-
-    let isFactory = false
-    let exportedName: string | null = null
-    let parent = node.parent
-
-    if (parent && ts.isArrowFunction(parent)) {
-      if (parent.parameters.length === 0) {
-        isFactory = true
-
-        const arrowParent = parent.parent
-        if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
-          if (ts.isIdentifier(arrowParent.name)) {
-            if (isNamedExport(arrowParent)) {
-              exportedName = arrowParent.name.text
-            }
-          }
-        }
-      }
-    }
-
-    if (!isFactory) {
-      const extracted = extractFunctionName(node, checker, state.rootDir)
-      exportedName = extracted.exportedName
-    }
-
-    if (!isFactory && exportedName) {
-      logger.warn(
-        `• Permission group '${exportedName}' for tag '${tag}' is not wrapped in a factory function. ` +
-          `For tree-shaking, use: export const ${exportedName} = () => addTagPermission('${tag}', [...])`
-      )
-    }
-
-    state.permissions.tagPermissions.set(tag, {
-      exportName: exportedName,
-      sourceFile: node.getSourceFile().fileName,
-      position: node.getStart(),
-      services: {
-        optimized: false,
-        services: Array.from(allServices),
-      },
-      count: permissionNames.length,
-      instanceIds: permissionNames,
-      isFactory,
-    })
-
-    logger.debug(
-      `• Found tag permission group: ${tag} -> [${permissionNames.join(', ')}] (${isFactory ? 'factory' : 'direct'})`
-    )
-    return
-  }
-
-  // Handle addHTTPPermission(pattern, [permission1, permission2])
-  // Supports two patterns:
-  // 1. export const x = () => addHTTPPermission('*', [...])  (factory - tree-shakeable)
-  // 2. export const x = addHTTPPermission('*', [...])  (direct - no tree-shaking)
-  if (expression.text === 'addHTTPPermission') {
-    const patternArg = args[0]
-    const permissionsArrayArg = args[1]
-
-    if (!patternArg || !permissionsArrayArg) return
-
-    // Extract route pattern
-    let pattern: string | undefined
-    if (ts.isStringLiteral(patternArg)) {
-      pattern = patternArg.text
-    }
-
-    if (!pattern) {
-      logger.warn(`• addHTTPPermission call without valid pattern string`)
-      return
-    }
-
-    // Check if permissions is a literal array or object
-    if (
-      !ts.isArrayLiteralExpression(permissionsArrayArg) &&
-      !ts.isObjectLiteralExpression(permissionsArrayArg)
-    ) {
-      logger.error(
-        `• addHTTPPermission('${pattern}', ...) must have a literal array or object as second argument`
-      )
-      return
-    }
-
-    // Extract permission pikkuFuncIds from array
-    const permissionNames = extractPermissionPikkuNames(
-      permissionsArrayArg,
-      checker,
-      state.rootDir
-    )
-
-    if (permissionNames.length > 0) {
-      renameTempDefinitions(state, permissionNames, 'http', pattern)
-    }
-
-    const allServices = new Set<string>()
-    for (const permissionName of permissionNames) {
-      const permissionMeta = state.permissions.definitions[permissionName]
-      if (permissionMeta && permissionMeta.services) {
-        for (const service of permissionMeta.services.services) {
-          allServices.add(service)
-        }
-      }
-    }
-
-    let isFactory = false
-    let exportedName: string | null = null
-    let parent = node.parent
-
-    if (parent && ts.isArrowFunction(parent)) {
-      if (parent.parameters.length === 0) {
-        isFactory = true
-
-        const arrowParent = parent.parent
-        if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
-          if (ts.isIdentifier(arrowParent.name)) {
-            if (isNamedExport(arrowParent)) {
-              exportedName = arrowParent.name.text
-            }
-          }
-        }
-      }
-    }
-
-    if (!isFactory) {
-      const extracted = extractFunctionName(node, checker, state.rootDir)
-      exportedName = extracted.exportedName
-    }
-
-    if (!isFactory && exportedName) {
-      logger.warn(
-        `• HTTP permission group '${exportedName}' for pattern '${pattern}' is not wrapped in a factory function. ` +
-          `For tree-shaking, use: export const ${exportedName} = () => addHTTPPermission('${pattern}', [...])`
-      )
-    }
-
-    state.http.routePermissions.set(pattern, {
-      exportName: exportedName,
-      sourceFile: node.getSourceFile().fileName,
-      position: node.getStart(),
-      services: {
-        optimized: false,
-        services: Array.from(allServices),
-      },
-      count: permissionNames.length,
-      instanceIds: permissionNames,
-      isFactory,
-    })
-
-    logger.debug(
-      `• Found HTTP route permission group: ${pattern} -> [${permissionNames.join(', ')}] (${isFactory ? 'factory' : 'direct'})`
     )
     return
   }

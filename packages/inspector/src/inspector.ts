@@ -92,7 +92,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       },
       files: new Set(),
       routeMiddleware: new Map(),
-      routePermissions: new Map(),
     },
     channels: {
       files: new Set(),
@@ -197,7 +196,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     permissions: {
       definitions: {},
       instances: {},
-      tagPermissions: new Map(),
     },
     serviceAggregation: {
       requiredServices: new Set(),
@@ -221,8 +219,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     },
     permissionsGroupsMeta: {
       definitions: {},
-      httpGroups: {},
-      tagGroups: {},
     },
     requiredSchemas: new Set(),
     openAPISpec: null,
