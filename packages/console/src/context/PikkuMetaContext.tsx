@@ -56,7 +56,7 @@ const EMPTY_META: PikkuMetaState = {
     httpGroups: {},
     tagGroups: {},
   },
-  permissionsGroupsMeta: { definitions: {}, httpGroups: {}, tagGroups: {} },
+  permissionsGroupsMeta: { definitions: {} },
   agentsMeta: {},
   emailsMeta: { src: '', themeHash: '', templates: {} },
   secretsMeta: {},

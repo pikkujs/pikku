@@ -1,12 +1,9 @@
 import React from 'react'
-import { Stack, Text, Box, Group, Divider, Table } from '@pikku/mantine/core'
+import { Stack, Text, Box, Group } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { Layers, Shield } from 'lucide-react'
-import { usePikkuMeta } from '../../../context/PikkuMetaContext'
-import { usePanelContext } from '../../../context/PanelContext'
+import { Shield } from 'lucide-react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { SectionLabel } from '../../ui/SectionLabel'
-import classes from '../../ui/console.module.css'
 
 interface PermissionPanelProps {
   permissionId: string
@@ -17,22 +14,6 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
   defId,
   def,
 }) => {
-  const { meta } = usePikkuMeta()
-  const httpGroups = meta.permissionsGroupsMeta?.httpGroups || {}
-  const tagGroups = meta.permissionsGroupsMeta?.tagGroups || {}
-
-  const usedByGroups: Array<{ type: string; key: string; group: any }> = []
-  for (const [pattern, group] of Object.entries(httpGroups) as any[]) {
-    if (group.instanceIds?.includes(defId)) {
-      usedByGroups.push({ type: 'http', key: pattern, group })
-    }
-  }
-  for (const [tag, group] of Object.entries(tagGroups) as any[]) {
-    if (group.instanceIds?.includes(defId)) {
-      usedByGroups.push({ type: 'tag', key: tag, group })
-    }
-  }
-
   return (
     <Stack gap="lg">
       <Box>
@@ -116,102 +97,6 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
           )}
         </Box>
       )}
-
-      {usedByGroups.length > 0 && (
-        <>
-          <Divider />
-          <Box>
-            <SectionLabel>{asI18n('Used in Groups')}</SectionLabel>
-            <Group gap={4}>
-              {usedByGroups.map((g) => (
-                <PikkuBadge
-                  key={`${g.type}::${g.key}`}
-                  type="label"
-                  color={g.type === 'http' ? 'blue' : 'green'}
-                  leftSection={<Layers size={10} />}
-                >
-                  {asI18n(g.type === 'http' ? `HTTP ${g.key}` : `Tag: ${g.key}`)}
-                </PikkuBadge>
-              ))}
-            </Group>
-          </Box>
-        </>
-      )}
-    </Stack>
-  )
-}
-
-const GroupPanel: React.FC<{
-  groupType: string
-  groupKey: string
-}> = ({ groupType, groupKey }) => {
-  const { meta } = usePikkuMeta()
-  const { openPermission } = usePanelContext()
-  const groups =
-    groupType === 'http'
-      ? meta.permissionsGroupsMeta?.httpGroups || {}
-      : meta.permissionsGroupsMeta?.tagGroups || {}
-  const group = groups[groupKey]
-  const definitions = meta.permissionsGroupsMeta?.definitions || {}
-
-  const resolvedDefs: Array<{ defId: string; def: any }> = []
-  const seen = new Set<string>()
-  for (const instanceId of group?.instanceIds || []) {
-    if (!seen.has(instanceId) && definitions[instanceId]) {
-      seen.add(instanceId)
-      resolvedDefs.push({ defId: instanceId, def: definitions[instanceId] })
-    }
-  }
-
-  return (
-    <Stack gap="lg">
-      <Box>
-        <PikkuBadge
-          type="label"
-          color={groupType === 'http' ? 'blue' : 'green'}
-        >
-          {asI18n(groupType === 'http' ? `HTTP ${groupKey}` : `Tag: ${groupKey}`)}
-        </PikkuBadge>
-      </Box>
-
-      {group?.exportName && (
-        <Box>
-          <SectionLabel>{asI18n('Export')}</SectionLabel>
-          <Text size="sm" ff="monospace">
-            {asI18n(group.exportName)}
-          </Text>
-        </Box>
-      )}
-
-      {resolvedDefs.length > 0 && (
-        <Box>
-          <SectionLabel>{asI18n(`Permissions (${resolvedDefs.length})`)}</SectionLabel>
-          <Table verticalSpacing={4} horizontalSpacing="xs">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Definition</Table.Th>
-                <Table.Th>Type</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {resolvedDefs.map(({ defId, def }) => (
-                <Table.Tr
-                  key={defId}
-                  className={classes.clickableText}
-                  onClick={() => openPermission(defId, { ...def, _id: defId })}
-                >
-                  <Table.Td ff="monospace" fz="sm">
-                    {def?.name || def?.exportedName || defId}
-                  </Table.Td>
-                  <Table.Td>
-                    {def?.factory && <PikkuBadge type="flag" flag="factory" />}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Box>
-      )}
     </Stack>
   )
 }
@@ -220,13 +105,5 @@ export const PermissionConfiguration: React.FC<PermissionPanelProps> = ({
   permissionId,
   metadata = {},
 }) => {
-  if (metadata._groupType) {
-    return (
-      <GroupPanel
-        groupType={metadata._groupType}
-        groupKey={metadata._groupKey}
-      />
-    )
-  }
   return <DefinitionPanel defId={metadata._id || permissionId} def={metadata} />
 }
