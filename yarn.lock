@@ -6024,6 +6024,7 @@ __metadata:
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
     cookie: "npm:^1.1.1"
+    esbuild: "npm:~0.27.0"
     json-schema: "npm:^0.4.0"
     path-to-regexp: "npm:^8.3.0"
     picoquery: "npm:^2.5.0"
