@@ -1,8 +1,8 @@
 ---
 name: pikku-permissions
 description: >-
-  Use when adding authorization checks to Pikku functions or routes — pikkuPermission, pikkuAuth,
-  per-function permissions, pattern-based permissions, or understanding OR/AND permission logic.
+  Use when adding authorization checks to Pikku functions — pikkuPermission, pikkuAuth,
+  per-function permissions, global permissions, or understanding OR/AND permission logic.
   TRIGGER when: user wants to restrict who can call a function, check resource ownership, add
   role-based access, or understand where permission checks belong. DO NOT TRIGGER when: user asks
   about middleware or request interception (use pikku-middleware), authentication strategies (use
@@ -42,7 +42,7 @@ export const deleteBook = pikkuFunc({
 
 1. Discover before editing. Run `pikku info permissions --verbose` and `pikku info functions --verbose` to understand what permissions are already defined and applied.
 2. Define permission checkers in a `src/permissions.ts` or domain-specific `src/lib/*-permissions.ts` file.
-3. Apply them via the `permissions` field on the function, or via `addHTTPPermission` / `addPermission` for pattern/tag-based application.
+3. Apply them via the `permissions` field on the function. For an app-wide baseline that every function must additionally satisfy, use `addGlobalPermission`.
 4. Validate: run `pikku all --tsc` to confirm permission checker signatures are correct.
 
 ## Permission Factories
@@ -113,21 +113,28 @@ export const deleteBook = pikkuFunc({
 })
 ```
 
-### Pattern-Based (`addHTTPPermission`)
+### Global (`addGlobalPermission`) — App-Wide AND Gate
+
+A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever *narrow* access — it never grants access a function's own `permissions` would deny.
 
 ```typescript
-import { addHTTPPermission } from '@pikku/core/http'
+import { addGlobalPermission } from '.pikku/pikku-types.gen.js'
 
-addHTTPPermission('/admin/*', { admin: isAdmin })
+addGlobalPermission([signedInUser]) // every function now also requires a session
 ```
 
-### Tag-Based (`addPermission`)
+Multiple `addGlobalPermission` calls accumulate and are AND'd together.
 
-```typescript
-import { addPermission } from '.pikku/pikku-types.gen.js'
+> Wire-, tag-, and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, and a `permissions` field on HTTP/channel/MCP wirings) were **removed in #972**. Permissions now live only on the function definition, plus the optional global gate. Tags are organizational only — use tag/HTTP *middleware* (`addTagMiddleware`, `addHTTPMiddleware`) for cross-cutting request handling, not authorization.
 
-addPermission('internal', { machine: isMachineAgent })
-```
+## The Two Gates
+
+Authorization is two independent gates, both of which must pass:
+
+1. **Global permissions** (`addGlobalPermission`) — AND'd together. A broad baseline that can only narrow access.
+2. **The function's own `permissions`** — OR'd groups (OR-of-ANDs), as above.
+
+The gates are independent: a broad global (e.g. `signedInUser`) can **never** satisfy an admin-only function's own requirement. Each function still enforces its own `permissions` in full.
 
 ## Complete Example
 

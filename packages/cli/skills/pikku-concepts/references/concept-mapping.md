@@ -197,19 +197,21 @@ const isAdmin = pikkuPermission(async (services, data, wire) => {
   return session?.role === 'admin'
 })
 
-// Apply to route pattern
-addHTTPPermission('/admin/*', { admin: [isAdmin] })
-
-// Or inline on specific wiring
-wireHTTP({
-  route: '/users/:id',
-  method: 'delete',
-  func: deleteUser,
+// Declare on the function definition (the only place permissions live)
+export const deleteUser = pikkuFunc({
+  func: async (services, data) => {
+    /* ... */
+  },
   permissions: { admin: [isAdmin] },
 })
+
+// App-wide baseline every function must also pass (AND gate, narrow-only)
+addGlobalPermission([signedInUser])
 ```
 
 **Permission groups:** `{ groupA: [perm1, perm2], groupB: [perm3] }` means `(perm1 AND perm2) OR perm3`.
+
+> Route-pattern (`addHTTPPermission`) and wire-level `permissions` were removed in #972 — permissions live on the function, plus the optional global gate.
 
 ---
 

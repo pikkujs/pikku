@@ -11,7 +11,6 @@ Wire a single function to an HTTP endpoint. Import from `@pikku/core/http`.
 | `func` | `PikkuFunc` | The function to call |
 | `auth?` | `boolean` | Override default auth (`true` = require session) |
 | `tags?` | `string[]` | For grouping, middleware targeting |
-| `permissions?` | `Record<string, PikkuPermission \| PikkuPermission[]>` | Permission checks |
 | `middleware?` | `PikkuMiddleware[]` | Per-route middleware |
 | `sse?` | `boolean` | Enable Server-Sent Events |
 | `contentType?` | `'xml' \| 'json'` | Response content type |
@@ -35,7 +34,6 @@ const routes = defineHTTPRoutes({
       route: string,
       func: PikkuFunc,
       auth?: boolean,      // Override group auth
-      permissions?: Record<string, PikkuPermission | PikkuPermission[]>,
       middleware?: PikkuMiddleware[],
     }
   }

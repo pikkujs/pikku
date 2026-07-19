@@ -2,7 +2,7 @@
 name: pikku-http
 description: >-
   Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers
-  wireHTTP, defineHTTPRoutes, route groups, auth, middleware, permissions, SSE, and generated
+  wireHTTP, defineHTTPRoutes, route groups, auth, middleware, SSE, and generated
   fetch client. TRIGGER when: code uses wireHTTP/defineHTTPRoutes/wireHTTPRoutes, user asks about
   REST endpoints, API routes, SSE, or the generated fetch client. DO NOT TRIGGER when: user asks
   about WebSocket (use pikku-websocket), queue workers (use pikku-queue), or deployment (use
@@ -22,7 +22,7 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-Wire Pikku functions to HTTP endpoints. Supports single routes, composable route groups, auth, middleware, permissions, SSE, and auto-generated type-safe clients.
+Wire Pikku functions to HTTP endpoints. Supports single routes, composable route groups, auth, middleware, SSE, and auto-generated type-safe clients. (Authorization lives on the function, not the wiring — see `pikku-permissions`.)
 
 ## Before You Start
 
@@ -54,11 +54,7 @@ addHTTPMiddleware('*', [authBearer()]) // All routes
 addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
 ```
 
-### `addHTTPPermission(pattern, permissions)`
-
-```typescript
-addHTTPPermission('/admin/*', { admin: [isAdmin] })
-```
+> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-permissions`), or app-wide via `addGlobalPermission`. Tags/patterns are for *middleware* only now.
 
 ## Data Flow
 
@@ -111,23 +107,17 @@ wireHTTPRoutes({
 // Results in: GET /api/v1/books, POST /api/v1/books, GET /api/v1/todos, etc.
 ```
 
-### Auth & Permissions
+### Auth
 
 ```typescript
 // Public route (no auth)
 wireHTTP({ method: 'get', route: '/books', func: listBooks, auth: false })
 
-// Route with permission check
-wireHTTP({
-  method: 'delete',
-  route: '/books/:bookId',
-  func: deleteBook,
-  permissions: { admin: isAdmin },
-})
-
-// Pattern-based permissions
-addHTTPPermission('/admin/*', { admin: isAdmin })
+// Authenticated route (default when a global auth middleware is set)
+wireHTTP({ method: 'delete', route: '/books/:bookId', func: deleteBook })
 ```
+
+Authorization is not a wiring concern — declare it on the function via `permissions` (see `pikku-permissions`), or app-wide via `addGlobalPermission`.
 
 ### Middleware
 
