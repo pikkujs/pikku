@@ -4,7 +4,6 @@ export {
   RPCNotFoundError,
   RemoteAddonConfigError,
   RemoteAddonRequestError,
-  assertRemoteInvocable,
 } from './rpc-runner.js'
 export {
   resolveRemoteAddonToken,

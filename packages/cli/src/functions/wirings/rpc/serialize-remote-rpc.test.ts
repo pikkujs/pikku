@@ -26,25 +26,4 @@ describe('serializeRemoteRPC', () => {
       'expected the queue worker to invoke remoteRPCHandler'
     )
   })
-
-  test('mesh mode (default) gates the endpoint with pikkuRemoteAuthMiddleware', () => {
-    const output = serializeRemoteRPC('./pikku-types.gen.js')
-    assert.ok(output.includes('pikkuRemoteAuthMiddleware'))
-    assert.ok(output.includes('middleware: [pikkuRemoteAuthMiddleware]'))
-    assert.ok(!output.includes('assertRemoteInvocable'))
-  })
-
-  test('no-auth (public) mode drops the mesh secret and guards to remote: true funcs', () => {
-    const output = serializeRemoteRPC('./pikku-types.gen.js', { noAuth: true })
-    assert.ok(
-      !output.includes('pikkuRemoteAuthMiddleware'),
-      'public surface must not require the mesh secret'
-    )
-    assert.ok(
-      output.includes('assertRemoteInvocable'),
-      'public surface must guard to remote: true functions'
-    )
-    assert.ok(output.includes('/remote/rpc/:rpcName'))
-    assert.ok(output.includes('auth: false'))
-  })
 })

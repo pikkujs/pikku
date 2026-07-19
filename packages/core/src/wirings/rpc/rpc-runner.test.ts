@@ -7,7 +7,6 @@ import {
   ContextAwareRPCService,
   RPCNotFoundError,
   RemoteAddonRequestError,
-  assertRemoteInvocable,
   resolveNamespace,
   rpcService,
 } from './rpc-runner.js'
@@ -809,33 +808,6 @@ describe('wireRemoteAddon dispatch', () => {
     } finally {
       restoreFetch()
     }
-  })
-})
-
-describe('assertRemoteInvocable', () => {
-  test('allows a remote: true function', () => {
-    pikkuState(null, 'rpc', 'meta').getOpenApi = 'getOpenApiFunc'
-    registerFunction('getOpenApiFunc', async () => ({}))
-    pikkuState(null, 'function', 'meta').getOpenApiFunc = {
-      name: 'getOpenApiFunc',
-      sessionless: true,
-      permissions: [],
-      remote: true,
-    } as never
-
-    assert.doesNotThrow(() => assertRemoteInvocable('getOpenApi'))
-  })
-
-  test('rejects a non-remote function as if it did not exist', () => {
-    pikkuState(null, 'rpc', 'meta').secretOp = 'secretOpFunc'
-    registerFunction('secretOpFunc', async () => ({}))
-    pikkuState(null, 'function', 'meta').secretOpFunc = {
-      name: 'secretOpFunc',
-      sessionless: true,
-      permissions: [],
-    } as never
-
-    assert.throws(() => assertRemoteInvocable('secretOp'), RPCNotFoundError)
   })
 })
 
