@@ -421,9 +421,12 @@ export const dev = pikkuSessionlessFunc<
               await devReloader?.reimportPending()
               // reimportPending only re-runs wire* for changed/added files, so a
               // DELETED *.addon.ts leaves its wireAddon entry stranded in the
-              // live registry. Prune it against the fresh inspection (refresh=true
-              // — the cache was just invalidated, a plain read returns stale data).
-              const { rpc } = await getInspectorState(true)
+              // live registry. Prune it against the inspection runAllWithCommandState
+              // already produced this pass — a plain read (no refresh) reuses that
+              // fresh post-change cache. Forcing refresh=true here re-inspected the
+              // whole project a SECOND time: the codegen writes after that inspection
+              // bump the ts-write generation, so refresh treats the cache as stale.
+              const { rpc } = await getInspectorState()
               reconcileAddonRegistry(rpc.wireAddonDeclarations.keys(), logger)
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
