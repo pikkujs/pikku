@@ -22,8 +22,35 @@ describe('isPrivateHost', () => {
     }
   })
 
+  test('flags alias and encoded forms of internal hosts', () => {
+    for (const host of [
+      'localhost.', // trailing-dot FQDN
+      'foo.localhost', // *.localhost resolves to loopback (RFC 6761)
+      '::', // unspecified address
+      '::ffff:127.0.0.1', // IPv4-mapped IPv6 (dotted)
+      '::ffff:7f00:1', // IPv4-mapped IPv6 (hex, as URL normalizes it)
+      '2130706433', // decimal-encoded 127.0.0.1
+      '0x7f000001', // hex-encoded 127.0.0.1
+      '0177.0.0.1', // octal first octet (127)
+      '0x7f.0.0.1', // hex first octet (127)
+      'fe80::1', // link-local
+      'fea9::1', // link-local within fe80::/10
+      'febf::1', // top of fe80::/10
+    ]) {
+      assert.equal(isPrivateHost(host), true, `${host} should be private`)
+    }
+  })
+
   test('allows public hosts', () => {
-    for (const host of ['example.com', '8.8.8.8', '172.32.0.1', '11.0.0.1']) {
+    for (const host of [
+      'example.com',
+      '8.8.8.8',
+      '172.32.0.1',
+      '11.0.0.1',
+      '134744072', // decimal-encoded 8.8.8.8 — public
+      '2001:db8::1', // documentation range — public
+      'fec0::1', // deprecated site-local, outside fe80::/10 — treated public
+    ]) {
       assert.equal(isPrivateHost(host), false, `${host} should be public`)
     }
   })
@@ -124,6 +151,73 @@ describe('safeFetch', () => {
         const res = await safeFetch('https://start.com')
         assert.equal(res.status, 200)
         assert.deepEqual(calls, ['https://start.com/', 'https://end.com/final'])
+      }
+    )
+  })
+
+  const withHeaderCapturingFetch = async (
+    handler: (url: string) => Response,
+    run: (
+      headersByUrl: Array<{ url: string; headers: Headers }>
+    ) => Promise<void>
+  ) => {
+    const original = globalThis.fetch
+    const seen: Array<{ url: string; headers: Headers }> = []
+    globalThis.fetch = (async (u: any, init: any) => {
+      seen.push({ url: String(u), headers: new Headers(init?.headers) })
+      return handler(String(u))
+    }) as typeof fetch
+    try {
+      await run(seen)
+    } finally {
+      globalThis.fetch = original
+    }
+  }
+
+  test('strips Authorization and Cookie when a redirect crosses origin', async () => {
+    await withHeaderCapturingFetch(
+      (url) =>
+        url.includes('start.com')
+          ? new Response(null, {
+              status: 302,
+              headers: { location: 'https://other.com/final' },
+            })
+          : new Response('ok', { status: 200 }),
+      async (seen) => {
+        await safeFetch('https://start.com', {
+          headers: {
+            authorization: 'Bearer secret',
+            cookie: 'session=abc',
+            'x-trace': 'keep-me',
+          },
+        })
+        assert.equal(seen.length, 2)
+        assert.equal(seen[0]!.headers.get('authorization'), 'Bearer secret')
+        assert.equal(seen[1]!.url, 'https://other.com/final')
+        assert.equal(seen[1]!.headers.get('authorization'), null)
+        assert.equal(seen[1]!.headers.get('cookie'), null)
+        assert.equal(seen[1]!.headers.get('x-trace'), 'keep-me')
+      }
+    )
+  })
+
+  test('preserves Authorization and Cookie on a same-origin redirect', async () => {
+    await withHeaderCapturingFetch(
+      (url) =>
+        url.endsWith('/a')
+          ? new Response(null, {
+              status: 302,
+              headers: { location: 'https://same.com/b' },
+            })
+          : new Response('ok', { status: 200 }),
+      async (seen) => {
+        await safeFetch('https://same.com/a', {
+          headers: { authorization: 'Bearer secret', cookie: 'session=abc' },
+        })
+        assert.equal(seen.length, 2)
+        assert.equal(seen[1]!.url, 'https://same.com/b')
+        assert.equal(seen[1]!.headers.get('authorization'), 'Bearer secret')
+        assert.equal(seen[1]!.headers.get('cookie'), 'session=abc')
       }
     )
   })

@@ -112,6 +112,17 @@ export type StreamAIAgentOptions = {
   onRunCreated?: (runId: string) => void
 }
 
+/**
+ * Non-forgeable brand for the sub-agent approval marker. Only framework code
+ * (the delegating sub-agent tools below) sets this Symbol on a tool result; a
+ * sub-agent's LLM-shaped `result.object` — plain JSON — cannot carry a Symbol,
+ * so `checkForApprovals` trusts the brand rather than the `__approvalRequired`
+ * string key to decide an approval must be surfaced.
+ */
+export const APPROVAL_REQUIRED: unique symbol = Symbol(
+  'pikku.ai.approvalRequired'
+)
+
 export class ToolApprovalRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string
@@ -577,6 +588,7 @@ export async function buildToolDefs(
             )
             if (subChannel.approvals.length > 0) {
               return {
+                [APPROVAL_REQUIRED]: true,
                 __approvalRequired: true,
                 toolName: subAgentName,
                 args: toolInput,
@@ -605,6 +617,7 @@ export async function buildToolDefs(
             result.pendingApprovals?.length
           ) {
             return {
+              [APPROVAL_REQUIRED]: true,
               __approvalRequired: true,
               toolName: subAgentName,
               args: toolInput,
