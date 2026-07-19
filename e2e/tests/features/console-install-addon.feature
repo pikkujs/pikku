@@ -6,9 +6,9 @@ Feature: Installing addons from the console
   choose. Re-using a name that is already wired must surface as a clean, inline
   error — never a raw 500 — and a fresh install lands you on the addon's setup.
 
-  The fixture project already wires "gmail" (@pikku/addon-gmail), so it is the
-  name to collide with. @pikku/addon-mandrill and @pikku/addon-email-send are in
-  the catalogue but NOT wired, so their cards open the install drawer.
+  The fixture project already wires "mailgun" (@pikku/addon-mailgun), so it is
+  the name to collide with. @pikku/addon-mandrill and @pikku/addon-email-send are
+  in the catalogue but NOT wired, so their cards open the install drawer.
 
   Background:
     Given the API is available
@@ -16,7 +16,7 @@ Feature: Installing addons from the console
 
   Scenario: Re-using an installed name shows a clean conflict, not a 500
     When I open the browse drawer for the "@pikku/addon-email-send" addon
-    And I set the install instance name to "gmail"
+    And I set the install instance name to "mailgun"
     And I click add to project
     Then the install error should contain "already installed under the name"
 
