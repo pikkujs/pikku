@@ -4,7 +4,6 @@ import { asI18n } from '@pikku/react'
 import {
   MousePointerClick,
   Hourglass,
-  Flag,
   GitFork,
   Network,
   Circle,
@@ -24,7 +23,6 @@ const KIND_STYLE: Record<
 > = {
   rpc: { Icon: MousePointerClick, color: 'green', badge: 'RPC' },
   eventual: { Icon: Hourglass, color: 'yellow', badge: 'EVENTUAL' },
-  return: { Icon: Flag, color: 'gray', badge: 'RETURN' },
   parallel: { Icon: GitFork, color: 'blue', badge: 'PARALLEL' },
   fanout: { Icon: Network, color: 'blue', badge: 'FANOUT' },
   other: { Icon: Circle, color: 'gray', badge: 'STEP' },
