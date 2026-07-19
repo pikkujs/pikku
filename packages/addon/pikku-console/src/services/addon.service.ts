@@ -43,6 +43,32 @@ export interface AddonPackageInfo {
 export type AddonMeta = AddonPackageInfo
 export type AddonDetail = AddonPackageInfo
 
+export interface OpenApiSummary {
+  name: string
+  version: string
+  provider: string
+  service: string | null
+  title: string
+  description: string
+  openapiVer: string
+  swaggerUrl: string
+  logo?: string
+}
+
+export interface OpenApiListResult {
+  apis: OpenApiSummary[]
+  total: number
+  nextCursor: number | null
+}
+
+export interface OpenApiDetail extends OpenApiSummary {
+  swaggerYamlUrl?: string
+  categories: string[]
+  tags: string[]
+  added?: string
+  updated?: string
+}
+
 export class AddonService {
   constructor(private fabricApiUrl: string) {}
 
@@ -60,6 +86,37 @@ export class AddonService {
   async readAddon(id: string): Promise<AddonDetail | null> {
     const response = await fetch(
       `${this.fabricApiUrl}/registry/packages/${encodeURIComponent(id)}`
+    )
+    if (!response.ok) return null
+    const text = await response.text()
+    if (!text) return null
+    return JSON.parse(text)
+  }
+
+  /** Browse the fabric registry's OpenAPI catalogue (apis.guru + published). */
+  async readOpenapis(opts: {
+    limit: number
+    offset: number
+    search?: string
+  }): Promise<OpenApiListResult> {
+    const params = new URLSearchParams({
+      limit: String(opts.limit),
+      offset: String(opts.offset),
+    })
+    if (opts.search) params.set('query', opts.search)
+    const response = await fetch(
+      `${this.fabricApiUrl}/registry/openapis?${params.toString()}`
+    )
+    if (!response.ok) {
+      throw new Error(`Registry returned ${response.status}`)
+    }
+    return response.json()
+  }
+
+  /** Fetch one OpenAPI catalogue entry by name (returns null when absent). */
+  async readOpenapiDetail(name: string): Promise<OpenApiDetail | null> {
+    const response = await fetch(
+      `${this.fabricApiUrl}/registry/openapis/${encodeURIComponent(name)}`
     )
     if (!response.ok) return null
     const text = await response.text()

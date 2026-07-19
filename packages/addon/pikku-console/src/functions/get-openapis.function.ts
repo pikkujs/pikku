@@ -15,23 +15,13 @@ export const getOpenapis = pikkuFunc<
       logo?: string
     }>
     total: number
-    nextCursor: number
+    nextCursor: number | null
   }
 >({
   title: 'Get OpenAPI Specs',
-  description: 'Fetches available OpenAPI specs from the registry.',
+  description: 'Fetches available OpenAPI specs from the fabric registry.',
   expose: true,
-  func: async ({ variables }, { limit, offset, search }) => {
-    const registryUrl =
-      (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
-    let url = `${registryUrl}/api/openapis?limit=${limit}&offset=${offset}`
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`
-    }
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`Registry returned ${response.status}`)
-    }
-    return response.json()
+  func: async ({ addonService }, { limit, offset, search }) => {
+    return addonService.readOpenapis({ limit, offset, search })
   },
 })
