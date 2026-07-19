@@ -47,7 +47,7 @@ yarn pikku info functions --verbose --silent
 
 ### Tags
 
-List all tags with counts of associated functions, middleware, and permissions:
+List all tags with counts of associated functions and middleware:
 
 ```bash
 yarn pikku info tags --silent
