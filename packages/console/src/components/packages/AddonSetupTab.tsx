@@ -47,19 +47,31 @@ const CRED_STATUS_KEY = 'addon-setup-cred-status'
 export const AddonSetupTab: React.FC<{
   credentials: Record<string, CredentialEntry>
   secrets: Record<string, SecretEntry>
-}> = ({ credentials, secrets }) => {
+  // The selected instance's overrides, if any: they remap the addon's logical
+  // credential name / secretId to the actual project name this instance reads.
+  // Absent (or no matching entry) → the addon's own name/id is used.
+  credentialOverrides?: Record<string, string>
+  secretOverrides?: Record<string, string>
+}> = ({ credentials, secrets, credentialOverrides, secretOverrides }) => {
   useLocale()
   const rpc = usePikkuRPC()
+
+  // Overrides key on the credential NAME / secretId the addon reads by.
+  const resolveCred = (name: string) => credentialOverrides?.[name] ?? name
+  const resolveSecret = (secretId: string) =>
+    secretOverrides?.[secretId] ?? secretId
 
   const oauthCreds = Object.values(credentials ?? {}).filter((c) => !!c.oauth2)
   const secretList = Object.values(secrets ?? {})
 
-  // One batched status call for every OAuth integration the addon declares.
+  // One batched status call for every OAuth integration the addon declares,
+  // against this instance's RESOLVED provider names.
+  const resolvedCredNames = oauthCreds.map((c) => resolveCred(c.name))
   const { data: credStatus } = useQuery({
-    queryKey: [CRED_STATUS_KEY, oauthCreds.map((c) => c.name).sort()],
+    queryKey: [CRED_STATUS_KEY, [...resolvedCredNames].sort()],
     queryFn: async () => {
       const result = await rpc.invoke('console:credentialStatus', {
-        names: oauthCreds.map((c) => c.name),
+        names: resolvedCredNames,
       })
       return (result.statuses ?? {}) as Record<string, boolean>
     },
@@ -89,13 +101,17 @@ export const AddonSetupTab: React.FC<{
               {m.addon_setup_oauth_heading()}
             </Text>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-              {oauthCreds.map((cred) => (
-                <OAuthRequirementCard
-                  key={cred.name}
-                  credential={cred}
-                  isConnected={credStatus?.[cred.name] === true}
-                />
-              ))}
+              {oauthCreds.map((cred) => {
+                const resolvedName = resolveCred(cred.name)
+                return (
+                  <OAuthRequirementCard
+                    key={cred.name}
+                    credential={cred}
+                    resolvedName={resolvedName}
+                    isConnected={credStatus?.[resolvedName] === true}
+                  />
+                )
+              })}
             </SimpleGrid>
           </Stack>
         )}
@@ -107,7 +123,11 @@ export const AddonSetupTab: React.FC<{
             </Text>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               {secretList.map((secret) => (
-                <SecretRequirementCard key={secret.name} secret={secret} />
+                <SecretRequirementCard
+                  key={secret.name}
+                  secret={secret}
+                  resolvedSecretId={resolveSecret(secret.secretId)}
+                />
               ))}
             </SimpleGrid>
           </Stack>
@@ -140,12 +160,16 @@ const StatusDot: React.FC<{
 
 const OAuthRequirementCard: React.FC<{
   credential: CredentialEntry
+  // The provider name this instance actually links/reads (== credential.name
+  // unless the instance overrides it).
+  resolvedName: string
   isConnected: boolean
-}> = ({ credential, isConnected }) => {
+}> = ({ credential, resolvedName, isConnected }) => {
   useLocale()
   const rpc = usePikkuRPC()
   const auth = useOptionalAuth()
   const queryClient = useQueryClient()
+  const showResolved = resolvedName !== credential.name
 
   // A singleton OAuth credential is platform-owned: linking it flows through the
   // admin-gated /credential-oauth/link endpoint then a full-page redirect back.
@@ -156,7 +180,7 @@ const OAuthRequirementCard: React.FC<{
         {
           method: 'POST',
           body: {
-            providerId: credential.name,
+            providerId: resolvedName,
             callbackURL: window.location.href,
           },
         }
@@ -173,7 +197,7 @@ const OAuthRequirementCard: React.FC<{
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await rpc.invoke('console:credentialDelete', { name: credential.name })
+      await rpc.invoke('console:credentialDelete', { name: resolvedName })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CRED_STATUS_KEY] })
@@ -193,6 +217,12 @@ const OAuthRequirementCard: React.FC<{
         {credential.description && (
           <Text size="sm" c="dimmed" lineClamp={2}>
             {asI18n(credential.description)}
+          </Text>
+        )}
+
+        {showResolved && (
+          <Text size="xs" c="dimmed" ff="monospace">
+            {asI18n(resolvedName)}
           </Text>
         )}
 
@@ -251,9 +281,11 @@ const OAuthRequirementCard: React.FC<{
   )
 }
 
-const SecretRequirementCard: React.FC<{ secret: SecretEntry }> = ({
-  secret,
-}) => {
+const SecretRequirementCard: React.FC<{
+  secret: SecretEntry
+  // The project secret this instance reads (== secret.secretId unless overridden).
+  resolvedSecretId: string
+}> = ({ secret, resolvedSecretId }) => {
   useLocale()
   const rpc = usePikkuRPC()
   const setSecret = useSetSecret()
@@ -261,10 +293,10 @@ const SecretRequirementCard: React.FC<{ secret: SecretEntry }> = ({
   const [value, setValue] = useState('')
 
   const { data: status } = useQuery({
-    queryKey: ['addon-setup-secret-status', secret.secretId],
+    queryKey: ['addon-setup-secret-status', resolvedSecretId],
     queryFn: async () => {
       const result = (await rpc.invoke('pikkuConsoleGetSecret', {
-        secretId: secret.secretId,
+        secretId: resolvedSecretId,
       })) as { exists: boolean }
       return { exists: result?.exists === true }
     },
@@ -274,7 +306,7 @@ const SecretRequirementCard: React.FC<{ secret: SecretEntry }> = ({
 
   const save = () => {
     setSecret.mutate(
-      { secretId: secret.secretId, value },
+      { secretId: resolvedSecretId, value },
       {
         onSuccess: () => {
           setEditing(false)
@@ -301,7 +333,7 @@ const SecretRequirementCard: React.FC<{ secret: SecretEntry }> = ({
         )}
 
         <Text size="xs" c="dimmed" ff="monospace">
-          {asI18n(secret.secretId)}
+          {asI18n(resolvedSecretId)}
         </Text>
 
         <StatusDot
