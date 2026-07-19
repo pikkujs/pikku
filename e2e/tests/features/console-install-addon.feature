@@ -25,13 +25,20 @@ Feature: Installing addons from the console
     And I set the install instance name to "Not A Namespace!"
     Then the add to project button should be disabled
 
-  # TODO: This mutates the fixture and triggers a `pikku dev` reinspection. The
-  # dev server keeps the freshly-installed addon loaded in-memory after the
-  # After hook deletes the wiring (reload lag on removal), so a re-run finds the
-  # package already "installed" and its card opens Setup instead of the drawer —
-  # non-deterministic against a persistent dev server. Runs green against a fresh
-  # server (CI). Un-skip once the harness gives each mutating scenario a clean
-  # server, or the console exposes multi-instance add from an installed card.
+  # TODO: This mutates the fixture and triggers a `pikku dev` reinspection.
+  # The REMOVAL side is now fixed: `pikku dev` reconciles the in-memory addon
+  # registry on delete (reconcileAddonRegistry prunes the unwired package —
+  # proven live: "• Removed unwired addon "<name>""), so the After hook's
+  # cleanup no longer leaves a stale in-memory addon that makes re-runs racy.
+  # But the FORWARD install->setup path still fails against a persistent dev
+  # server: after "Add to project" writes the wiring, PackageDetailPage polls
+  # console:getAddonInstalledPackage for only ~20s (pollExpired) before
+  # rendering "Package not found". Re-inspection + installed-package registry
+  # population takes longer than that window here (full regen observed 6-10s+),
+  # so the Setup tab never appears. Un-skip once (a) the console poll window
+  # covers the actual re-inspection time / getAddonInstalledPackage returns the
+  # freshly-wired addon promptly, or (b) the harness gives each mutating
+  # scenario a fast fresh server. Runs green against a fresh server (CI).
   @mutates-project @skip
   Scenario: Installing an addon under a fresh name lands on its setup
     When I open the browse drawer for the "@pikku/addon-mandrill" addon
