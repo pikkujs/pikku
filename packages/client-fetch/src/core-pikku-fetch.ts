@@ -1,5 +1,6 @@
 import { transformDates } from './transform-date.js'
 import { corePikkuFetch } from './pikku-fetch.js'
+import { PikkuFetchError } from './pikku-fetch-error.js'
 
 type AuthHeaders = {
   jwt?: string
@@ -168,7 +169,7 @@ export class CorePikkuFetch {
     })
 
     if (response.status >= 400) {
-      throw response
+      throw await PikkuFetchError.fromResponse(response)
     }
 
     return { assetKey: uploadInfo.assetKey, response }
@@ -182,7 +183,7 @@ export class CorePikkuFetch {
    * @param {any} data - The data to be sent with the request.
    * @param {RequestInit} [options] - Additional options for the request.
    * @returns {Promise<any>} - A promise that resolves to the response data.
-   * @throws {Response} - Throws the response if the status code is greater than 400.
+   * @throws {PikkuFetchError} - Throws a decoded error if the status code is >= 400.
    */
   public async api(
     uri: string,
@@ -192,7 +193,7 @@ export class CorePikkuFetch {
   ) {
     const response = await this.fetch(uri, method, data, options)
     if (response.status >= 400) {
-      throw response
+      throw await PikkuFetchError.fromResponse(response)
     }
     try {
       const result = await response.json()

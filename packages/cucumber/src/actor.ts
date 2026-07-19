@@ -118,18 +118,12 @@ export class Actor {
       )
       return { result, error: undefined }
     } catch (thrown: unknown) {
-      if (thrown instanceof Response) {
-        const body = (await thrown.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >
-        const err = new Error(
-          (body.message as string | undefined) ?? thrown.statusText
-        )
-        err.name = (body.name as string | undefined) ?? 'HttpError'
-        return { result: undefined, error: err }
+      // client.api throws a PikkuFetchError — an Error already carrying the
+      // server's decoded message and name — on any non-2xx.
+      if (thrown instanceof Error) {
+        return { result: undefined, error: thrown }
       }
-      return { result: undefined, error: thrown as Error }
+      return { result: undefined, error: new Error(String(thrown)) }
     }
   }
 

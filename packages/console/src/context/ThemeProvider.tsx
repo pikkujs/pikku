@@ -271,6 +271,21 @@ const theme = createTheme({
         },
       },
     },
+    // Mantine renders Drawer content/header through Paper, so the glass Paper
+    // styles above bleed into every drawer as a translucent blur. Reset them to
+    // a solid panel — drawers are the console's primary surface, not chrome.
+    Drawer: {
+      styles: {
+        content: {
+          background: 'var(--mantine-color-body)',
+          backdropFilter: 'none',
+        },
+        header: {
+          background: 'var(--mantine-color-body)',
+          backdropFilter: 'none',
+        },
+      },
+    },
     Button: Button.extend({
       styles: {
         root: {

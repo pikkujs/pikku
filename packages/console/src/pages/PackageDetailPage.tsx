@@ -306,6 +306,15 @@ export const PackageDetailPage: React.FC<{
   const queryClient = useQueryClient()
   useLocale()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
+  // Fixed at mount so the freshly-installed reload-poll window (below) is bounded.
+  const [mountedAt] = React.useState(() => Date.now())
+  // Flips true ~20s after mount, guaranteeing a re-render that ends the settling
+  // window even if the final poll tick wouldn't otherwise trigger one.
+  const [pollExpired, setPollExpired] = React.useState(false)
+  React.useEffect(() => {
+    const t = setTimeout(() => setPollExpired(true), 20_000)
+    return () => clearTimeout(t)
+  }, [])
 
   const { data: installedAddons } = useQuery<
     Array<{ packageName: string; namespace: string }>
@@ -418,7 +427,19 @@ export const PackageDetailPage: React.FC<{
       return result
     },
     enabled: source !== 'api',
+    // A freshly-installed addon isn't queryable until `pikku dev` re-inspects
+    // the newly-written wiring (a few seconds). Poll briefly so we don't flash
+    // "Package not found" during that reload window; give up after ~20s.
+    refetchInterval: (query) => {
+      if (source !== 'installed' || query.state.data || pollExpired) return false
+      return Date.now() - mountedAt < 20_000 ? 1500 : false
+    },
   })
+
+  // Still within the reload window with nothing found yet — the install just
+  // landed and the dev server hasn't re-inspected the wiring. Show a settling
+  // state rather than a premature "not found".
+  const settling = source === 'installed' && !pkg && !pollExpired
 
   if (source === 'api') {
     const api = apiDetail
@@ -639,7 +660,7 @@ export const PackageDetailPage: React.FC<{
     )
   }
 
-  if (isLoading) {
+  if (isLoading || settling) {
     return (
       <Center h="100vh">
         <Loader />

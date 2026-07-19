@@ -24,6 +24,8 @@ interface CommunityGalleryProps {
   addons: PackageMeta[]
   searchQuery: string
   installedNames: Set<string>
+  /** packageName → the wireAddon names it's installed under (for the drawer). */
+  installedNamespaces?: Record<string, string[]>
   editable: boolean
   installingName: string | null
   /** The most recent install/import failure, if any — shown inline in the drawer for that addon. */
@@ -50,6 +52,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   addons,
   searchQuery,
   installedNames,
+  installedNamespaces,
   editable,
   installingName,
   actionError,
@@ -198,6 +201,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         addon={selected}
         installed={selected ? installedNames.has(selected.name) : false}
         installing={!!selected && installingName === selected.name}
+        installedNamespaces={
+          selected ? (installedNamespaces?.[selected.name] ?? []) : []
+        }
         error={selected && actionError?.name === selected.name ? actionError.message : null}
         editable={editable}
         kind={kind}

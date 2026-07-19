@@ -129,6 +129,16 @@ const AddonsList: React.FC<{
     [installedAddons]
   )
 
+  // packageName → the wireAddon names it's installed under, so the drawer can
+  // show existing instances (the same package can be wired several times).
+  const installedNamespaces = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    for (const a of installedAddons ?? []) {
+      ;(map[a.packageName] ??= []).push(a.namespace)
+    }
+    return map
+  }, [installedAddons])
+
   // All | Official | Installed narrows the same catalogue in place: 'official' =
   // first-party Pikku packages, 'all' = the full gallery. 'installed' is a
   // left-join on what the project has actually wired, NOT an intersection with
@@ -173,6 +183,7 @@ const AddonsList: React.FC<{
       addons={visible}
       searchQuery={searchQuery}
       installedNames={installedNames}
+      installedNamespaces={installedNamespaces}
       editable={editable}
       installingName={
         installMutation.isPending

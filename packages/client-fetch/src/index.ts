@@ -10,3 +10,4 @@
 export { CorePikkuFetch } from './core-pikku-fetch.js'
 export type { CorePikkuFetchOptions, HTTPMethod } from './core-pikku-fetch.js'
 export { corePikkuFetch } from './pikku-fetch.js'
+export { PikkuFetchError } from './pikku-fetch-error.js'

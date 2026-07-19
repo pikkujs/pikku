@@ -77,6 +77,8 @@ interface AddonDetailDrawerProps {
   installed: boolean
   installing: boolean
   editable: boolean
+  /** wireAddon names this package is already installed under (may be several). */
+  installedNamespaces?: string[]
   /** Install/import failure message for this addon, shown inline above the CTA. */
   error?: string | null
   /** 'api' fetches OpenAPI detail instead of a community package and swaps the CTA to Import. */
@@ -97,6 +99,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
   installed,
   installing,
   editable,
+  installedNamespaces = [],
   error,
   kind = 'addon',
   onClose,
@@ -340,9 +343,30 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
               </Group>
             )}
 
+            {!isApi && installedNamespaces.length > 0 && (
+              <Group gap="xs" mt="lg" align="center">
+                <Text size="sm" c="dimmed">
+                  {m.packages_installed_as()}
+                </Text>
+                {installedNamespaces.map((ns) => (
+                  <Badge
+                    key={ns}
+                    size="sm"
+                    variant="light"
+                    color="green"
+                    tt="none"
+                    ff="monospace"
+                    fw={400}
+                  >
+                    {asI18n(ns)}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
             {!installed && !isApi && editable && (
               <TextInput
-                mt="lg"
+                mt={installedNamespaces.length > 0 ? 'sm' : 'lg'}
                 label={m.packages_install_name_label()}
                 description={m.packages_install_name_description()}
                 value={name}
