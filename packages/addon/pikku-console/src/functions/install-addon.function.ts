@@ -1,4 +1,8 @@
-import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
+import {
+  BadRequestError,
+  ConflictError,
+  LocalEnvironmentOnlyError,
+} from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 
@@ -21,13 +25,13 @@ export const installAddon = pikkuSessionlessFunc<
     const { existsSync } = await import('node:fs')
     const validPkg = /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/
     if (!validPkg.test(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`)
+      throw new BadRequestError(`Invalid package name: ${packageName}`)
     }
     if (!/^[a-z0-9-]+$/.test(namespace)) {
-      throw new Error(`Invalid namespace: ${namespace}`)
+      throw new BadRequestError(`Invalid namespace: ${namespace}`)
     }
     if (version && !/^[a-z0-9._^~><=|-]+$/i.test(version)) {
-      throw new Error(`Invalid version: ${version}`)
+      throw new BadRequestError(`Invalid version: ${version}`)
     }
 
     const metaBasePath = metaService?.basePath
@@ -54,7 +58,9 @@ export const installAddon = pikkuSessionlessFunc<
 
     const wiringFile = join(addonDir, `${namespace}.addon.ts`)
     if (existsSync(wiringFile)) {
-      throw new Error(`Addon wiring file already exists: ${wiringFile}`)
+      throw new ConflictError(
+        `An addon is already installed under the name "${namespace}". Pick a different instance name.`
+      )
     }
 
     const pkg = version ? `${packageName}@${version}` : packageName
