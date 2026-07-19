@@ -35,6 +35,7 @@ import {
   buildToolDefs,
   createScopedChannel,
   resolveOwnerResourceId,
+  agentSessionScope,
   assertResourceOwner,
   ToolApprovalRequired,
   ToolCredentialRequired,
@@ -595,7 +596,11 @@ export async function streamAIAgent(
 
   const normalizedInput = {
     ...input,
-    resourceId: resolveOwnerResourceId(params, input.resourceId),
+    resourceId: resolveOwnerResourceId(
+      params,
+      agentSessionScope(agentName),
+      input.resourceId
+    ),
   }
 
   const streamContext: StreamContext = { channel, options }
@@ -872,7 +877,11 @@ export async function resumeAIAgent(
     throw new Error(`No run found for runId ${input.runId}`)
   }
   assertResourceOwner(
-    resolveOwnerResourceId(params, run.resourceId),
+    resolveOwnerResourceId(
+      params,
+      agentSessionScope(run.agentName),
+      run.resourceId
+    ),
     run.resourceId,
     'run'
   )

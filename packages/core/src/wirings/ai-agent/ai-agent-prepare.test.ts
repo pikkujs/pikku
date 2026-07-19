@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import {
+  agentSessionScope,
   assertResourceOwner,
   buildInstructions,
   buildToolDefs,
@@ -427,34 +428,119 @@ describe('ai-agent-prepare', () => {
   })
 })
 
-describe('C2 thread/run ownership', () => {
-  const sessionParams = (userId?: string) => ({
-    sessionService: {
-      get: () => (userId ? { userId } : undefined),
-    } as never,
+describe('C2 thread/run ownership + sessionScope', () => {
+  const params = (session?: Record<string, unknown>) => ({
+    sessionService: { get: () => session } as never,
   })
 
-  test('resolveOwnerResourceId uses the session user id when authenticated', () => {
+  test('user scope composes the trusted userId with the requested resourceId', () => {
     assert.equal(
-      resolveOwnerResourceId(sessionParams('user-a'), 'client-supplied'),
-      'user-a'
+      resolveOwnerResourceId(params({ userId: 'user-a' }), 'user', 'default'),
+      'user-a:default'
     )
   })
 
-  test('resolveOwnerResourceId falls back to the requested resourceId when sessionless', () => {
-    assert.equal(resolveOwnerResourceId({}, 'resource-1'), 'resource-1')
+  test("user scope is the default when sessionScope is undefined", () => {
     assert.equal(
-      resolveOwnerResourceId(sessionParams(undefined), 'resource-1'),
+      resolveOwnerResourceId(params({ userId: 'user-a' }), undefined, 'p1'),
+      'user-a:p1'
+    )
+  })
+
+  test('user scope sub-partitions within the owner (client resourceId regains meaning)', () => {
+    assert.equal(
+      resolveOwnerResourceId(params({ userId: 'alice' }), 'user', 'project-1'),
+      'alice:project-1'
+    )
+    assert.equal(
+      resolveOwnerResourceId(params({ userId: 'alice' }), 'user', 'project-2'),
+      'alice:project-2'
+    )
+  })
+
+  test('is idempotent: re-normalizing an already-owned key does not double-compose', () => {
+    // sub-agent recursion and resume both pass an already-composite resourceId
+    assert.equal(
+      resolveOwnerResourceId(params({ userId: 'alice' }), 'user', 'alice:project-1'),
+      'alice:project-1'
+    )
+  })
+
+  test('a client cannot forge another owner: a foreign prefix is re-scoped, not trusted', () => {
+    // bob passes alice's composite → it is re-prefixed under bob, never accepted as alice's
+    assert.equal(
+      resolveOwnerResourceId(params({ userId: 'bob' }), 'user', 'alice:secret'),
+      'bob:alice:secret'
+    )
+  })
+
+  test('user scope falls back to the bare requested resourceId when sessionless', () => {
+    assert.equal(resolveOwnerResourceId({}, 'user', 'resource-1'), 'resource-1')
+    assert.equal(
+      resolveOwnerResourceId(params(undefined), 'user', 'resource-1'),
       'resource-1'
+    )
+  })
+
+  test('org scope composes the trusted orgId with the requested resourceId', () => {
+    assert.equal(
+      resolveOwnerResourceId(
+        params({ userId: 'user-a', orgId: 'org-x' }),
+        'org',
+        'default'
+      ),
+      'org-x:default'
+    )
+  })
+
+  test('org scope denies (ForbiddenError) when the session has no org', () => {
+    assert.throws(
+      () =>
+        resolveOwnerResourceId(params({ userId: 'user-a' }), 'org', 'default'),
+      (e: unknown) => e instanceof ForbiddenError
+    )
+    assert.throws(
+      () => resolveOwnerResourceId({}, 'org', 'default'),
+      (e: unknown) => e instanceof ForbiddenError
     )
   })
 
   test('assertResourceOwner throws ForbiddenError on an owner mismatch', () => {
     assert.throws(
-      () => assertResourceOwner('user-a', 'user-b', 'thread'),
+      () => assertResourceOwner('user-a:d', 'user-b:d', 'thread'),
       (e: unknown) =>
         e instanceof ForbiddenError && !/user-a|user-b/.test(e.message)
     )
-    assert.doesNotThrow(() => assertResourceOwner('user-a', 'user-a', 'run'))
+    assert.doesNotThrow(() =>
+      assertResourceOwner('user-a:d', 'user-a:d', 'run')
+    )
+  })
+
+  test('agentSessionScope reads the declared scope and defaults to user', () => {
+    addAgent('scoped-user')
+    addAgent('scoped-org', { sessionScope: 'org' })
+    assert.equal(agentSessionScope('scoped-user'), 'user')
+    assert.equal(agentSessionScope('scoped-org'), 'org')
+  })
+
+  test('resume ownership: owner passes, a different user is rejected (via idempotent recompose)', () => {
+    // resume recomputes owner from run.resourceId; idempotency keeps the owner stable
+    const stored = 'alice:default'
+    assert.doesNotThrow(() =>
+      assertResourceOwner(
+        resolveOwnerResourceId(params({ userId: 'alice' }), 'user', stored),
+        stored,
+        'run'
+      )
+    )
+    assert.throws(
+      () =>
+        assertResourceOwner(
+          resolveOwnerResourceId(params({ userId: 'bob' }), 'user', stored),
+          stored,
+          'run'
+        ),
+      (e: unknown) => e instanceof ForbiddenError
+    )
   })
 })

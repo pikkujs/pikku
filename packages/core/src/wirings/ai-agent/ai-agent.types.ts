@@ -104,6 +104,20 @@ export interface AIAgentOutput {
   }>
 }
 
+/**
+ * How an agent's threads/runs are owned and partitioned.
+ * - `'user'` (default): owner is the authenticated `session.userId`; the caller's
+ *   `resourceId` becomes a sub-partition within that user (`userId:resourceId`).
+ * - `'org'`: owner is the authenticated `session.orgId` (`orgId:resourceId`), so
+ *   threads are shared across everyone in the org. Requires a session with an org
+ *   (e.g. Better Auth's `organization` plugin) — otherwise access is denied.
+ *
+ * The trusted principal is always the prefix, so a client-supplied `resourceId`
+ * can sub-divide within the caller's own boundary but can never widen access to
+ * another user's or org's threads.
+ */
+export type SessionScope = 'user' | 'org'
+
 export interface AIAgentToolDef {
   name: string
   description: string
@@ -222,6 +236,8 @@ export type CoreAIAgent<
   goal: string
   model: string
   temperature?: number
+  /** Ownership/partitioning of this agent's threads and runs. Defaults to `'user'`. */
+  sessionScope?: SessionScope
   tools?: unknown[]
   agents?: unknown[]
   workflows?: unknown[]

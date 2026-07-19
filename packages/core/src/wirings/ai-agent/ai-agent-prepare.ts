@@ -8,6 +8,7 @@ import type {
   AIStreamChannel,
   AIStreamEvent,
   PikkuAIMiddlewareHooks,
+  SessionScope,
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
@@ -38,17 +39,53 @@ export type RunAIAgentParams = {
 }
 
 /**
- * The ownership key for a thread/run. When the caller is authenticated their own
- * user id is authoritative, so a client-supplied `resourceId` can never widen
- * access to another user's threads or runs. Sessionless wirings fall back to the
- * requested `resourceId` as a best-effort partition key.
+ * The ownership key for a thread/run: the trusted principal (the authenticated
+ * `session.userId` for `'user'` scope, or `session.orgId` for `'org'` scope)
+ * composed with the client-supplied `resourceId` as a sub-partition —
+ * `principal:resourceId`. Because the principal is always the prefix, a client
+ * `resourceId` can sub-divide within the caller's own boundary but can never
+ * widen access to another user's or org's threads.
+ *
+ * Idempotent: a value that is already within the caller's namespace (top-level
+ * re-entry, sub-agent recursion, or resume, which all pass an already-composite
+ * `resourceId`) is returned unchanged rather than double-composed.
+ *
+ * `'org'` scope with no session org throws {@link ForbiddenError} — falling back
+ * to a bare/shared key would leak across organizations. Sessionless `'user'`
+ * wirings have no trusted principal and fall back to the requested `resourceId`
+ * as a best-effort partition key.
  */
 export function resolveOwnerResourceId(
   params: RunAIAgentParams,
+  sessionScope: SessionScope | undefined,
   requestedResourceId: string
 ): string {
   const session = params.sessionService?.get()
-  return session?.userId ?? requestedResourceId
+  let principal: string | undefined
+  if ((sessionScope ?? 'user') === 'org') {
+    if (!session?.orgId) {
+      throw new ForbiddenError(
+        'This agent is org-scoped but the session has no organization'
+      )
+    }
+    principal = session.orgId
+  } else {
+    principal = session?.userId
+  }
+
+  if (!principal) return requestedResourceId
+  if (
+    requestedResourceId === principal ||
+    requestedResourceId.startsWith(`${principal}:`)
+  ) {
+    return requestedResourceId
+  }
+  return `${principal}:${requestedResourceId}`
+}
+
+/** The declared {@link SessionScope} for an agent, defaulting to `'user'`. */
+export function agentSessionScope(agentName: string): SessionScope {
+  return resolveAgent(agentName).agent.sessionScope ?? 'user'
 }
 
 /**

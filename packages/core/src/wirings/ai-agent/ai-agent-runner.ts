@@ -28,6 +28,7 @@ import {
   buildInstructions,
   buildToolDefs,
   resolveOwnerResourceId,
+  agentSessionScope,
   assertResourceOwner,
   type RunAIAgentParams,
 } from './ai-agent-prepare.js'
@@ -75,7 +76,11 @@ export async function runAIAgent(
 
   input = {
     ...input,
-    resourceId: resolveOwnerResourceId(params, input.resourceId),
+    resourceId: resolveOwnerResourceId(
+      params,
+      agentSessionScope(agentName),
+      input.resourceId
+    ),
   }
 
   const {
@@ -393,7 +398,11 @@ export async function resumeAIAgentSync(
   const run = await aiRunState.getRun(runId)
   if (!run) throw new Error(`No run found for runId ${runId}`)
   assertResourceOwner(
-    resolveOwnerResourceId(params, run.resourceId),
+    resolveOwnerResourceId(
+      params,
+      agentSessionScope(run.agentName),
+      run.resourceId
+    ),
     run.resourceId,
     'run'
   )
