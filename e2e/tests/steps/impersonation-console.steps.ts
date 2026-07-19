@@ -36,6 +36,7 @@ When(
   async function (this: AgentWorld, query: string) {
     await this.page
       .getByPlaceholder('Search users by email')
+      .first()
       .fill(query)
   }
 )

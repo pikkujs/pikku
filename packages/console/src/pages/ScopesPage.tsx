@@ -41,7 +41,7 @@ export const ScopesPage: React.FC = () => {
           lead={
             tab === 'roles' ? (
               <Button
-                size="sm"
+                size="xs"
                 leftSection={<Plus size={14} />}
                 onClick={() => openRole(null)}
               >
