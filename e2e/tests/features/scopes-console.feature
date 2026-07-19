@@ -52,6 +52,20 @@ Feature: Managing scopes and roles in the console
     And I open the role "console-admin" with the keyboard
     Then I should see the edit drawer for the role "console-admin"
 
+  # Search and the create action live in the page header, like every other list
+  # page. Filtering roles from the header narrows the list, and switching tabs
+  # resets the query so it never leaks across surfaces.
+  Scenario: Roles are filtered from the page-header search, which clears on tab switch
+    When I open the scopes page in the console
+    Then the create-role action and search live in the page header
+    When I search the roles for "report-viewer"
+    Then I should see the role "report-viewer"
+    And I should not see the role "console-admin"
+    When I view the scope vocabulary
+    And I return to the roles tab
+    Then I should see the role "console-admin"
+    And the roles search box should be empty
+
   # The read-only scope vocabulary must not advertise clickability it does not have.
   Scenario: Scope vocabulary rows are not interactive
     When I open the scopes page in the console

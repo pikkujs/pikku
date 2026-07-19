@@ -1,7 +1,6 @@
-import { useState } from 'react'
-import { Alert, Badge, Button, Text } from '@pikku/mantine/core'
+import { Alert, Badge, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { Plus, UsersRound } from 'lucide-react'
+import { UsersRound } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { RoleEditorDrawer, type EditableRole } from './RoleEditorDrawer'
 import { isForbiddenScopeError } from './scope-error'
@@ -10,23 +9,31 @@ import { m } from '@/i18n/messages'
 
 const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
 
+type RolesTabProps = {
+  search: string
+  editing: EditableRole | null
+  drawerOpen: boolean
+  onOpenRole: (role: EditableRole | null) => void
+  onCloseDrawer: () => void
+}
+
 /**
  * The Roles surface: a list of admin-composed roles, each editable in a drawer
- * that composes it from the declared scope vocabulary.
+ * that composes it from the declared scope vocabulary. Search and the create
+ * action live in the page header, so both are passed in from ScopesPage.
  */
-export const RolesTab: React.FC = () => {
+export const RolesTab: React.FC<RolesTabProps> = ({
+  search,
+  editing,
+  drawerOpen,
+  onOpenRole,
+  onCloseDrawer,
+}) => {
   const rolesQuery = useRoles()
   const declaredQuery = useDeclaredScopes()
-  const [editing, setEditing] = useState<EditableRole | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const roles = rolesQuery.data?.roles ?? []
   const declaredScopes = declaredQuery.data?.scopes ?? []
-
-  const open = (role: EditableRole | null) => {
-    setEditing(role)
-    setDrawerOpen(true)
-  }
 
   const loadError = rolesQuery.error || declaredQuery.error
   if (loadError) {
@@ -52,24 +59,15 @@ export const RolesTab: React.FC = () => {
         docsHref={DOCS_HREF}
         data={roles}
         getKey={(role) => role.name}
-        onRowClick={(role) => open(role)}
+        onRowClick={(role) => onOpenRole(role)}
         loading={rolesQuery.isLoading}
-        searchPlaceholder={m.scopes_search_roles()}
+        externalSearch={search}
         searchFilter={(role, q) =>
           role.name.toLowerCase().includes(q) ||
           (role.description ?? '').toLowerCase().includes(q)
         }
         emptyTitle={m.scopes_no_roles_title()}
         emptyDescription={m.scopes_no_roles_description()}
-        headerRight={
-          <Button
-            size="sm"
-            leftSection={<Plus size={14} />}
-            onClick={() => open(null)}
-          >
-            {m.scopes_create_role()}
-          </Button>
-        }
         columns={[
           {
             key: 'name',
@@ -104,7 +102,7 @@ export const RolesTab: React.FC = () => {
       />
       <RoleEditorDrawer
         opened={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={onCloseDrawer}
         role={editing}
         declaredScopes={declaredScopes}
       />

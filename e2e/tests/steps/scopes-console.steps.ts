@@ -32,6 +32,55 @@ When('I view the scope vocabulary', async function (this: AgentWorld) {
     .click()
 })
 
+When('I return to the roles tab', async function (this: AgentWorld) {
+  await this.page
+    .getByRole('radiogroup')
+    .locator('label')
+    .filter({ hasText: 'Roles' })
+    .click()
+})
+
+// The header bar is the Mantine Paper that also holds the Roles/Scopes tab
+// switch; scoping to it proves the controls moved out of the table card and up
+// into the shared page header, like every other list page.
+Then(
+  'the create-role action and search live in the page header',
+  async function (this: AgentWorld) {
+    const header = this.page
+      .getByRole('radiogroup')
+      .locator('xpath=ancestor::div[contains(@class,"mantine-Paper-root")][1]')
+    await expect(
+      header.getByRole('button', { name: 'Create role' })
+    ).toBeVisible()
+    await expect(header.getByPlaceholder(/search roles/i)).toBeVisible()
+  }
+)
+
+When(
+  'I search the roles for {string}',
+  async function (this: AgentWorld, query: string) {
+    await this.page
+      .getByPlaceholder(/search roles/i)
+      .first()
+      .fill(query)
+  }
+)
+
+Then(
+  'I should not see the role {string}',
+  async function (this: AgentWorld, role: string) {
+    await expect(
+      this.page.getByRole('cell', { name: role, exact: true })
+    ).toBeHidden()
+  }
+)
+
+Then('the roles search box should be empty', async function (this: AgentWorld) {
+  await expect(this.page.getByPlaceholder(/search roles/i).first()).toHaveValue(
+    ''
+  )
+})
+
 Then(
   'I should see the declared scope {string}',
   async function (this: AgentWorld, scope: string) {

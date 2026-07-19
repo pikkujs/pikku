@@ -14,7 +14,13 @@ const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
  * flagged stale is still stored but no longer declared — it grants nothing and
  * is what `pikku scopes prune` removes.
  */
-export const ScopesVocabularyTab: React.FC = () => {
+type ScopesVocabularyTabProps = {
+  search: string
+}
+
+export const ScopesVocabularyTab: React.FC<ScopesVocabularyTabProps> = ({
+  search,
+}) => {
   const declaredQuery = useDeclaredScopes()
   const rows = toScopeTreeRows(declaredQuery.data?.scopes ?? [])
 
@@ -42,7 +48,7 @@ export const ScopesVocabularyTab: React.FC = () => {
       data={rows}
       getKey={(row) => row.id}
       loading={declaredQuery.isLoading}
-      searchPlaceholder={m.scopes_search_scopes()}
+      externalSearch={search}
       searchFilter={(row, q) =>
         row.id.toLowerCase().includes(q) ||
         (row.description ?? '').toLowerCase().includes(q)
