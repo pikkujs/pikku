@@ -23,6 +23,15 @@ const getGc = (): (() => void) => {
 
 const heapUsedMb = () => process.memoryUsage().heapUsed / 1048576
 
+// V8's --experimental-test-coverage retains coverage data for every compiled
+// script for the life of the run, which pins the runner's per-reload compiled
+// functions (and would equally pin the old leaky mechanism), so a heap-growth
+// measurement can't discriminate a leak from a non-leak while it's on. run-tests.sh
+// exports this marker in --coverage mode (the flag itself is not visible to the
+// isolated test child). The single-slot registry guarantee below still runs
+// unconditionally.
+const UNDER_COVERAGE = process.env.PIKKU_TEST_COVERAGE === '1'
+
 describe('createModuleRunner', { concurrency: false }, () => {
   let tmpDir: string
 
@@ -151,6 +160,7 @@ describe('createModuleRunner', { concurrency: false }, () => {
     const growth = heapUsedMb() - baseline
 
     assert.equal(runner.size, 1)
+    if (UNDER_COVERAGE) return
     assert.ok(
       growth < 15,
       `heap grew ${growth.toFixed(1)} MB over 200 edits (expected < 15 MB)`

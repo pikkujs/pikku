@@ -53,6 +53,7 @@ fi
 
 if [ "$coverage_mode" = true ]; then
   node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info)
+  export PIKKU_TEST_COVERAGE=1
 fi
 
 # Execute the node command with the expanded list of files
