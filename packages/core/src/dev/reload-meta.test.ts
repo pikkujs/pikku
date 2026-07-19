@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os'
 
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import { getSchema } from '../schema.js'
-import { reloadGeneratedMeta } from './reload-meta.js'
+import { wireAddon } from '../wirings/rpc/wire-addon.js'
+import { reloadGeneratedMeta, reconcileAddonRegistry } from './reload-meta.js'
 
 const createMockLogger = () => {
   const logs: Array<{ level: string; message: string }> = []
@@ -150,5 +151,31 @@ describe('reloadGeneratedMeta', { concurrency: false }, () => {
     })
     const errors = mockLogger.getLogs().filter((l) => l.level === 'error')
     assert.deepEqual(errors, [])
+  })
+})
+
+describe('reconcileAddonRegistry', { concurrency: false }, () => {
+  beforeEach(() => resetPikkuState())
+
+  test('drops addons the fresh generation no longer declares', () => {
+    wireAddon({ name: 'gmail', package: '@pikku/addon-gmail' })
+    wireAddon({ name: 'mandrill-e2e', package: '@pikku/addon-mandrill' })
+
+    // gmail is still wired in source; mandrill-e2e's *.addon.ts was deleted.
+    reconcileAddonRegistry(['gmail'])
+
+    const addons = pikkuState(null, 'addons', 'packages')
+    assert.ok(addons.has('gmail'), 'still-declared addon is kept')
+    assert.ok(!addons.has('mandrill-e2e'), 'deleted addon is pruned')
+  })
+
+  test('keeps every addon when all are still declared', () => {
+    wireAddon({ name: 'gmail', package: '@pikku/addon-gmail' })
+    wireAddon({ name: 'mailgun', package: '@pikku/addon-mailgun' })
+
+    reconcileAddonRegistry(['gmail', 'mailgun'])
+
+    const addons = pikkuState(null, 'addons', 'packages')
+    assert.equal(addons.size, 2)
   })
 })

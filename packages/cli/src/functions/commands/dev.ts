@@ -2,7 +2,11 @@ import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
-import { pikkuDevReloader, reloadGeneratedMeta } from '@pikku/core/dev'
+import {
+  pikkuDevReloader,
+  reloadGeneratedMeta,
+  reconcileAddonRegistry,
+} from '@pikku/core/dev'
 import {
   ConsoleLogger,
   LocalEmailService,
@@ -415,6 +419,12 @@ export const dev = pikkuSessionlessFunc<
               // this post-codegen pass (the reloader's instant pass ran too
               // early to see it).
               await devReloader?.reimportPending()
+              // reimportPending only re-runs wire* for changed/added files, so a
+              // DELETED *.addon.ts leaves its wireAddon entry stranded in the
+              // live registry. Prune it against the fresh inspection (refresh=true
+              // — the cache was just invalidated, a plain read returns stale data).
+              const { rpc } = await getInspectorState(true)
+              reconcileAddonRegistry(rpc.wireAddonDeclarations.keys(), logger)
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
                 type: 'timing',
