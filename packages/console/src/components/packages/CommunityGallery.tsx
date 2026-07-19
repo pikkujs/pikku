@@ -193,7 +193,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             )}
           </Box>
 
-          {kind === 'addon' && <PublishCta />}
+          {/* Publishing is an authoring action — hide it on a read-only console
+              (e.g. a deployed stage) where you can't install or edit anyway. */}
+          {kind === 'addon' && editable && <PublishCta />}
         </Stack>
       </Box>
 
