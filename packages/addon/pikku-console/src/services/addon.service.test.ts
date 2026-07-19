@@ -52,4 +52,32 @@ describe('AddonService', () => {
     )
     assert.deepEqual(result, { id: 'pkg-1', name: '@x/y' })
   })
+
+  test('readOpenapis queries the fabric registry openapis endpoint', async () => {
+    mockFetch({ apis: [{ name: 'stripe' }], total: 1, nextCursor: null })
+    const service = new AddonService(FABRIC)
+    const result = await service.readOpenapis({ limit: 50, offset: 0, search: 'stripe' })
+    assert.equal(calls.length, 1)
+    assert.ok(
+      calls[0].startsWith(`${FABRIC}/registry/openapis`),
+      `expected fabric /registry/openapis, got ${calls[0]}`
+    )
+    assert.ok(
+      calls[0].includes('query=stripe'),
+      `expected query param, got ${calls[0]}`
+    )
+    assert.deepEqual(result, { apis: [{ name: 'stripe' }], total: 1, nextCursor: null })
+  })
+
+  test('readOpenapiDetail queries the fabric registry openapi-by-name endpoint', async () => {
+    mockFetch({ name: 'stripe', title: 'Stripe' })
+    const service = new AddonService(FABRIC)
+    const result = await service.readOpenapiDetail('stripe')
+    assert.equal(calls.length, 1)
+    assert.ok(
+      calls[0].startsWith(`${FABRIC}/registry/openapis/stripe`),
+      `expected fabric /registry/openapis/:name, got ${calls[0]}`
+    )
+    assert.deepEqual(result, { name: 'stripe', title: 'Stripe' })
+  })
 })

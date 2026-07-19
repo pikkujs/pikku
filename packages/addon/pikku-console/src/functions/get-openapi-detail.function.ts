@@ -21,17 +21,9 @@ export const getOpenapiDetail = pikkuFunc<
 >({
   title: 'Get OpenAPI Detail',
   description:
-    'Fetches a single OpenAPI spec detail from the registry by name.',
+    'Fetches a single OpenAPI spec detail from the fabric registry by name.',
   expose: true,
-  func: async ({ variables }, { name }) => {
-    const registryUrl =
-      (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
-    const response = await fetch(
-      `${registryUrl}/api/openapis?limit=1&offset=0&search=${encodeURIComponent(name)}`
-    )
-    if (!response.ok) return null
-    const data = await response.json()
-    const api = data.apis?.find((a: any) => a.name === name)
-    return api ?? null
+  func: async ({ addonService }, { name }) => {
+    return addonService.readOpenapiDetail(name)
   },
 })
