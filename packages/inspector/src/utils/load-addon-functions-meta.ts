@@ -133,6 +133,10 @@ export async function loadAddonFunctionsMeta(
   const require = createRequire(join(state.rootDir, 'package.json'))
 
   for (const [namespace, decl] of wireAddonDeclarations) {
+    // Remote addons (wireRemoteAddon) ship as a devDependency: types only.
+    // Their functions, secrets, variables, schemas and services live on the
+    // HOST that runs them — never load or require any of that here.
+    if (decl.remote) continue
     try {
       const metaPath = require.resolve(
         `${decl.package}/.pikku/function/pikku-functions-meta.gen.json`
@@ -355,6 +359,8 @@ export async function loadAddonSchemas(
   const require = createRequire(join(state.rootDir, 'package.json'))
 
   for (const [namespace, decl] of wireAddonDeclarations) {
+    // Remote addons carry no local schemas — their funcs run on the host.
+    if (decl.remote) continue
     try {
       const metaPath = require.resolve(
         `${decl.package}/.pikku/function/pikku-functions-meta.gen.json`

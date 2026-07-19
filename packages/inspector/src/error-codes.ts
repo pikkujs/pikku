@@ -26,6 +26,10 @@ export enum ErrorCode {
   INVALID_DSL_WORKFLOW = 'PKU641',
   WORKFLOW_GRAPH_ADDON_NOT_WIRED = 'PKU642',
 
+  // Remote addon (wireRemoteAddon) validation
+  REMOTE_ADDON_NOT_DEV_DEPENDENCY = 'PKU338',
+  REMOTE_ADDON_AUTH_UNRESOLVED = 'PKU339',
+
   // Database schema codegen warnings
   DB_COLUMN_NAME_TYPE_CONTRADICTION = 'PKU480',
   DB_JSON_COLUMN_UNTYPED = 'PKU481',

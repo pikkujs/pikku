@@ -166,6 +166,9 @@ export interface SerializableInspectorState {
           package: string
           rpcEndpoint?: string
           remote?: boolean
+          hasAuth?: boolean
+          authCredentialId?: string
+          authSecretId?: string
           secretOverrides?: Record<string, string>
           variableOverrides?: Record<string, string>
           credentialOverrides?: Record<string, string>

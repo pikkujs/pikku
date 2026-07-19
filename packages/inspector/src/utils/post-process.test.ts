@@ -1,11 +1,17 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   aggregateRequiredServices,
   validateSecretOverrides,
   validateCredentialOverrides,
   validateVariableOverrides,
+  validateRemoteAddonDependencies,
+  validateRemoteAddonAuth,
 } from './post-process.js'
+import { ErrorCode } from '../error-codes.js'
 import type { InspectorState, InspectorLogger } from '../types.js'
 
 const makeCriticalLogger = () => {
@@ -349,5 +355,166 @@ describe('override validation resolves the override target (value), not the logi
     )
     validateVariableOverrides(logger, state)
     assert.deepEqual(criticals, [])
+  })
+})
+
+const makeRemoteState = (
+  rootDir: string,
+  decl: {
+    package: string
+    remote?: boolean
+    authCredentialId?: string
+    authSecretId?: string
+  },
+  declared: { credentials?: string[]; secrets?: string[] } = {}
+): Omit<InspectorState, 'typesLookup'> =>
+  ({
+    rootDir,
+    rpc: {
+      wireAddonDeclarations: new Map([['registry', decl]]),
+    },
+    credentials: {
+      definitions: (declared.credentials ?? []).map((name) => ({ name })),
+    },
+    secrets: {
+      definitions: (declared.secrets ?? []).map((name) => ({ name })),
+    },
+  }) as unknown as Omit<InspectorState, 'typesLookup'>
+
+describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependency)', () => {
+  const writePkg = (
+    deps: Record<string, string>,
+    devDeps: Record<string, string>
+  ): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-remote-dep-'))
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ dependencies: deps, devDependencies: devDeps })
+    )
+    return dir
+  }
+
+  test('passes when the remote addon is in devDependencies', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const dir = writePkg({}, { '@pikkufabric/addon-registry': '1.0.0' })
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(dir, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+        })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('errors when the remote addon is a production dependency', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const dir = writePkg({ '@pikkufabric/addon-registry': '1.0.0' }, {})
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(dir, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+        })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY)
+      assert.match(criticals[0]!.message, /devDependencies/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('errors when the remote addon is missing from both', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const dir = writePkg({}, {})
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(dir, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+        })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('ignores a non-remote (wireAddon) declaration', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const dir = writePkg({ '@addon/local': '1.0.0' }, {})
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(dir, { package: '@addon/local' })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('validateRemoteAddonAuth (bound credential/secret must exist)', () => {
+  test('passes when the bound credential is wired', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateRemoteAddonAuth(
+      logger,
+      makeRemoteState(
+        '/tmp',
+        {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          authCredentialId: 'fabricRegistryToken',
+        },
+        { credentials: ['fabricRegistryToken'] }
+      )
+    )
+    assert.deepEqual(criticals, [])
+  })
+
+  test('errors when the bound credential is not wired', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateRemoteAddonAuth(
+      logger,
+      makeRemoteState(
+        '/tmp',
+        {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          authCredentialId: 'ghostToken',
+        },
+        { credentials: [] }
+      )
+    )
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED)
+    assert.match(criticals[0]!.message, /ghostToken/)
+  })
+
+  test('errors when the bound secret is not wired', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateRemoteAddonAuth(
+      logger,
+      makeRemoteState(
+        '/tmp',
+        {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          authSecretId: 'ghostSecret',
+        },
+        { secrets: [] }
+      )
+    )
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED)
   })
 })
