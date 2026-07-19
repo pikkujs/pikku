@@ -277,10 +277,9 @@ const revokeCredential = async (name: string, userId?: string) => {
     body: JSON.stringify({ data: { name, userId } }),
   })
   const body = await res.json()
-  expect(
-    res.status,
-    `revoke failed for ${name}: ${JSON.stringify(body)}`
-  ).toBe(200)
+  expect(res.status, `revoke failed for ${name}: ${JSON.stringify(body)}`).toBe(
+    200
+  )
   expect(body.success, `revoke did not report success for ${name}`).toBe(true)
 }
 

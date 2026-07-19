@@ -11,7 +11,9 @@ import { useLocale } from '@/i18n/config'
 
 type CredentialsTab = 'credentials' | 'connections' | 'users'
 
-export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
+  emptyHero,
+}) => {
   useLocale()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
@@ -51,7 +53,10 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
               onChange: handleTabChange,
               options: [
                 { value: 'credentials', label: m.credentials_tab_global() },
-                { value: 'connections', label: m.credentials_tab_connections() },
+                {
+                  value: 'connections',
+                  label: m.credentials_tab_connections(),
+                },
                 { value: 'users', label: m.credentials_tab_users() },
               ],
             }}
@@ -68,7 +73,10 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
             emptyHero={emptyHero}
           />
         ) : (
-          <CredentialsOverviewTab searchQuery={searchQuery} emptyHero={emptyHero} />
+          <CredentialsOverviewTab
+            searchQuery={searchQuery}
+            emptyHero={emptyHero}
+          />
         )}
       </ResizablePanelLayout>
     </PanelProvider>

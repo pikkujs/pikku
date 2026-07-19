@@ -110,7 +110,10 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
     const secretIds = state.secrets.definitions
       .map((d: any) => d.secretId)
       .sort()
-    assert.deepEqual(secretIds, ['SLACK_MARKETING_TOKEN', 'SLACK_SUPPORT_TOKEN'])
+    assert.deepEqual(secretIds, [
+      'SLACK_MARKETING_TOKEN',
+      'SLACK_SUPPORT_TOKEN',
+    ])
 
     // slack-marketing overrides region; slack-support has no override, so it
     // falls back to the addon's default variableId.

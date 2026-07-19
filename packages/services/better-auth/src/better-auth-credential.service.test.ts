@@ -225,7 +225,7 @@ describe('BetterAuthCredentialService', () => {
   // Server-side revoke is the admin's path (console:credentialDelete) and the
   // only possible path for a platform credential, whose owner never has a
   // session for better-auth's own unlink endpoint to act on.
-  test('deleting an oauth2 credential removes that user\'s account row', async () => {
+  test("deleting an oauth2 credential removes that user's account row", async () => {
     const deleted: string[] = []
     const service = build(
       makeAuth({
@@ -264,7 +264,10 @@ describe('BetterAuthCredentialService', () => {
   })
 
   test('has() reflects whether the account is linked', async () => {
-    const service = build(makeAuth({ tokens: { youtube: 'yt' } }), new FakeFallback())
+    const service = build(
+      makeAuth({ tokens: { youtube: 'yt' } }),
+      new FakeFallback()
+    )
     assert.strictEqual(await service.has('youtube', 'user-1'), true)
     assert.strictEqual(await service.has('google-docs', 'user-1'), false)
   })

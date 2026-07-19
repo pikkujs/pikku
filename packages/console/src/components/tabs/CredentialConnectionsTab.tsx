@@ -64,7 +64,9 @@ export const CredentialConnectionsTab: React.FC<{
   const { data: owners } = useQuery({
     queryKey: ['credential-owners'],
     queryFn: async () => {
-      const installed = (await rpc.invoke('console:getInstalledAddons')) as Array<{
+      const installed = (await rpc.invoke(
+        'console:getInstalledAddons'
+      )) as Array<{
         packageName: string
         namespace: string
       }>
@@ -240,7 +242,9 @@ const ConnectionRowActions: React.FC<{
           <Circle size={8} color="var(--mantine-color-gray-5)" />
         )}
         <Text size="sm" c={isConnected ? 'teal.6' : 'dimmed'}>
-          {isConnected ? m.credentials_connected() : m.credentials_not_connected()}
+          {isConnected
+            ? m.credentials_connected()
+            : m.credentials_not_connected()}
         </Text>
       </Group>
 

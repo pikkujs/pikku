@@ -204,7 +204,11 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         installedNamespaces={
           selected ? (installedNamespaces?.[selected.name] ?? []) : []
         }
-        error={selected && actionError?.name === selected.name ? actionError.message : null}
+        error={
+          selected && actionError?.name === selected.name
+            ? actionError.message
+            : null
+        }
         editable={editable}
         kind={kind}
         onClose={() => setSelected(null)}

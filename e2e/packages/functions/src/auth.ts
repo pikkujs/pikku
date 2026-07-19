@@ -28,52 +28,52 @@ let migrated: Promise<void> | undefined
 
 export const auth = pikkuBetterAuth(
   async ({ secrets, variables, kysely, logger }) => {
-  const baseURL = (await variables.get('API_URL')) ?? 'http://localhost:4077'
-  const consoleURL =
-    (await variables.get('CONSOLE_URL')) ?? 'http://localhost:7071'
-  const instance = betterAuth({
-    secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
-    baseURL,
-    // Console signs in cross-origin; without this better-auth rejects the POST.
-    trustedOrigins: [baseURL, consoleURL],
-    database: { db: kysely, type: 'sqlite' },
-    emailAndPassword: {
-      enabled: true,
-      // The e2e fixtures use short passwords (≥7 chars); keep the floor below
-      // them so valid signups are not rejected on length.
-      minPasswordLength: 6,
-    },
-    socialProviders: {
-      github: await secrets.getSecret('GITHUB_OAUTH'),
-    },
-    // admin: role/banned session fields + listUsers/impersonation endpoints.
-    plugins: [
-      bearer(),
-      admin(),
-      actor({
-        secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
-      }),
-      // Every wireCredential oauth2 declaration becomes a provider here, so
-      // linking an account is what makes getCredential(name) resolve.
-      credentialOAuth({
-        config: await credentialOAuthProviders(
-          CREDENTIAL_OAUTH2_CONFIGS,
-          secrets,
-          logger
-        ),
-        // Connecting a singleton rebinds it for everyone, so the app decides
-        // who may. The seeded console admin (role: 'admin') is the realistic
-        // gate; 'root' is kept for the link suite, which provisions a user by
-        // name rather than role.
-        canLinkSingleton: (session) =>
-          session.user.role === 'admin' || session.user.name === 'root',
-      }),
-    ],
-  })
+    const baseURL = (await variables.get('API_URL')) ?? 'http://localhost:4077'
+    const consoleURL =
+      (await variables.get('CONSOLE_URL')) ?? 'http://localhost:7071'
+    const instance = betterAuth({
+      secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
+      baseURL,
+      // Console signs in cross-origin; without this better-auth rejects the POST.
+      trustedOrigins: [baseURL, consoleURL],
+      database: { db: kysely, type: 'sqlite' },
+      emailAndPassword: {
+        enabled: true,
+        // The e2e fixtures use short passwords (≥7 chars); keep the floor below
+        // them so valid signups are not rejected on length.
+        minPasswordLength: 6,
+      },
+      socialProviders: {
+        github: await secrets.getSecret('GITHUB_OAUTH'),
+      },
+      // admin: role/banned session fields + listUsers/impersonation endpoints.
+      plugins: [
+        bearer(),
+        admin(),
+        actor({
+          secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
+        }),
+        // Every wireCredential oauth2 declaration becomes a provider here, so
+        // linking an account is what makes getCredential(name) resolve.
+        credentialOAuth({
+          config: await credentialOAuthProviders(
+            CREDENTIAL_OAUTH2_CONFIGS,
+            secrets,
+            logger
+          ),
+          // Connecting a singleton rebinds it for everyone, so the app decides
+          // who may. The seeded console admin (role: 'admin') is the realistic
+          // gate; 'root' is kept for the link suite, which provisions a user by
+          // name rather than role.
+          canLinkSingleton: (session) =>
+            session.user.role === 'admin' || session.user.name === 'root',
+        }),
+      ],
+    })
 
-  migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>
-    runMigrations()
-  )
+    migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>
+      runMigrations()
+    )
     await migrated
 
     return instance

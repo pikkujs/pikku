@@ -1,14 +1,21 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { deriveInstanceOverrides, packageBase } from './derive-instance-overrides.js'
+import {
+  deriveInstanceOverrides,
+  packageBase,
+} from './derive-instance-overrides.js'
 
 describe('deriveInstanceOverrides', () => {
   test('scopes an env secret by namespace, stripping a redundant package prefix', () => {
-    const o = deriveInstanceOverrides('mandrill-promo', '@pikku/addon-mandrill', {
-      secrets: ['MANDRILL_API_KEY'],
-      variables: [],
-      credentials: [],
-    })
+    const o = deriveInstanceOverrides(
+      'mandrill-promo',
+      '@pikku/addon-mandrill',
+      {
+        secrets: ['MANDRILL_API_KEY'],
+        variables: [],
+        credentials: [],
+      }
+    )
     assert.deepEqual(o.secretOverrides, {
       MANDRILL_API_KEY: 'MANDRILL_PROMO_API_KEY',
     })

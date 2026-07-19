@@ -25,9 +25,8 @@ export const installAddon = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }, { packageName, namespace, version }) => {
-    const { readFile, writeFile, mkdir, readdir } = await import(
-      'node:fs/promises'
-    )
+    const { readFile, writeFile, mkdir, readdir } =
+      await import('node:fs/promises')
     const { join, dirname } = await import('node:path')
     const { existsSync } = await import('node:fs')
     const validPkg = /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/
@@ -139,8 +138,8 @@ wireAddon(${serializeWireAddon(namespace, packageName, overrides)})
 async function packageIsAlreadyWired(
   addonDir: string,
   packageName: string,
-  readdir: (typeof import('node:fs/promises'))['readdir'],
-  readFile: (typeof import('node:fs/promises'))['readFile']
+  readdir: (path: string) => Promise<string[]>,
+  readFile: (path: string, encoding: 'utf-8') => Promise<string>
 ): Promise<boolean> {
   let entries: string[]
   try {

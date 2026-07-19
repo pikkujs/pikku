@@ -24,9 +24,9 @@ When(
       `${config.consoleUrl}/addons?id=${encodeURIComponent(packageName)}&source=installed`
     )
     // The Setup tab is the default for an addon with requirements.
-    await expect(
-      this.page.getByRole('tab', { name: 'Setup' })
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(this.page.getByRole('tab', { name: 'Setup' })).toBeVisible({
+      timeout: 15_000,
+    })
   }
 )
 

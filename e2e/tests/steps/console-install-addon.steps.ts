@@ -27,9 +27,9 @@ When(
     await expect(card).toBeVisible({ timeout: 15_000 })
     await card.click()
     // The drawer for a not-yet-installed addon carries the instance-name field.
-    await expect(
-      this.page.getByLabel('Instance name')
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(this.page.getByLabel('Instance name')).toBeVisible({
+      timeout: 15_000,
+    })
   }
 )
 
@@ -62,7 +62,9 @@ Then(
     // The drawer renders the server's typed-error message inline in an Alert
     // (never a 500 stack). A raw 500 would surface a different, generic message.
     await expect(
-      this.page.getByText(new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      this.page.getByText(
+        new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      )
     ).toBeVisible({ timeout: 15_000 })
   }
 )
@@ -73,12 +75,14 @@ Then(
     // On success the console routes to the installed addon's detail page
     // (?id=<pkg>&source=installed) whose Setup tab is the default.
     await expect(this.page).toHaveURL(
-      new RegExp(`id=${encodeURIComponent(packageName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+      new RegExp(
+        `id=${encodeURIComponent(packageName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`
+      ),
       { timeout: 30_000 }
     )
-    await expect(
-      this.page.getByRole('tab', { name: 'Setup' })
-    ).toBeVisible({ timeout: 30_000 })
+    await expect(this.page.getByRole('tab', { name: 'Setup' })).toBeVisible({
+      timeout: 30_000,
+    })
   }
 )
 

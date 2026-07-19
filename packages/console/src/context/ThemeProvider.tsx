@@ -63,7 +63,8 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-6': 'rgba(255,255,255,0.55)',
     '--mantine-color-blue-light': 'rgba(255,255,255,0.05)',
     '--mantine-color-blue-3': 'rgba(255,255,255,0.18)',
-    '--app-glass-bg': 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
+    '--app-glass-bg':
+      'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
     '--app-glass-border': 'rgba(255,255,255,0.10)',
     '--app-input-bg': 'rgba(255,255,255,0.04)',
     '--app-surface': dark[7],
@@ -113,7 +114,8 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-6': '#4b5563',
     '--mantine-color-blue-light': 'rgba(0,0,0,0.04)',
     '--mantine-color-blue-3': 'rgba(0,0,0,0.12)',
-    '--app-glass-bg': 'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.01) 100%)',
+    '--app-glass-bg':
+      'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.01) 100%)',
     '--app-glass-border': 'rgba(0,0,0,0.08)',
     '--app-input-bg': 'rgba(0,0,0,0.03)',
     '--app-surface': '#ffffff',
