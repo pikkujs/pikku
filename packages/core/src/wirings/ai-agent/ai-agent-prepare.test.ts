@@ -243,6 +243,64 @@ describe('ai-agent-prepare', () => {
     assert.equal(afterCalls.length, 1)
   })
 
+  test('buildToolDefs resolves addon-scoped services for approvalDescription on a cold services cache', async () => {
+    addAgent('todo-agent')
+    pikkuState(null, 'agent', 'agentsMeta')['todo-agent'] = {
+      ...pikkuState(null, 'agent', 'agentsMeta')['todo-agent'],
+      tools: ['todos:deleteTodo'],
+    } as any
+    pikkuState(null, 'addons', 'packages').set('todos', {
+      package: '@test/todos-addon',
+    })
+    pikkuState('@test/todos-addon', 'function', 'meta').deleteTodo = {
+      description: 'Deletes a todo by ID',
+      approvalRequired: true,
+      inputSchemaName: 'DeleteTodoInput',
+      sessionless: true,
+    } as any
+    pikkuState('@test/todos-addon', 'misc', 'schemas').set('DeleteTodoInput', {
+      type: 'object',
+    })
+    pikkuState('@test/todos-addon', 'function', 'functions').set('deleteTodo', {
+      func: async ({ todoStore }: any, { id }: any) => todoStore.delete(id),
+      approvalDescription: async ({ todoStore }: any, { id }: any) =>
+        `Delete the todo called "${todoStore.get(id)?.title ?? id}"`,
+    })
+
+    // The addon builds `todoStore` in its own singleton services, which are NOT
+    // in the root services and are only cached the first time the addon runs.
+    // The approval is raised before the tool executes, so the cache is cold.
+    pikkuState('@test/todos-addon', 'package', 'factories', {
+      createSingletonServices: async () => ({
+        todoStore: {
+          get: (id: string) =>
+            id === '1' ? { id: '1', title: 'Buy groceries' } : undefined,
+          delete: () => true,
+        },
+      }),
+    } as any)
+
+    const singletonServices = {
+      logger: { warn: () => {} },
+    } as any
+    pikkuState(null, 'package', 'singletonServices', singletonServices)
+
+    const { tools } = await buildToolDefs(
+      {},
+      new Map<string, string>(),
+      'resource-1',
+      'todo-agent',
+      null
+    )
+
+    assert.equal(tools.length, 1)
+    assert.equal(tools[0].needsApproval, true)
+    assert.equal(
+      await tools[0].approvalDescriptionFn?.({ id: '1' }),
+      'Delete the todo called "Buy groceries"'
+    )
+  })
+
   test('buildToolDefs logs a tool execute() failure even without aiMiddleware hooks, then rethrows', async () => {
     addAgent('ops-agent')
     pikkuState(null, 'agent', 'agentsMeta')['ops-agent'] = {

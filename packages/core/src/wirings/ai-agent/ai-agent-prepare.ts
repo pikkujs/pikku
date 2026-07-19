@@ -25,6 +25,7 @@ import {
   resolveNamespace,
   ContextAwareRPCService,
 } from '../../wirings/rpc/rpc-runner.js'
+import { getOrCreatePackageSingletonServices } from '../../wirings/rpc/addon-runner.js'
 import {
   resolveMemoryServices,
   loadContextMessages,
@@ -458,17 +459,27 @@ export async function buildToolDefs(
         if (funcConfig?.approvalDescription) {
           const descFn = funcConfig.approvalDescription
           const capturedPkg = resolvedPkg
+          const capturedAddonConfig = resolved?.addonConfig
+          const capturedNamespace = toolName.includes(':')
+            ? toolName.slice(0, toolName.indexOf(':'))
+            : null
           approvalDescriptionFn = async (input: unknown) => {
             let services = singletonServices
             if (capturedPkg) {
-              const pkgServices = pikkuState(
+              const addonInstance = capturedNamespace
+                ? {
+                    namespace: capturedNamespace,
+                    secretOverrides: capturedAddonConfig?.secretOverrides,
+                    variableOverrides: capturedAddonConfig?.variableOverrides,
+                    credentialOverrides:
+                      capturedAddonConfig?.credentialOverrides,
+                  }
+                : undefined
+              services = await getOrCreatePackageSingletonServices(
                 capturedPkg,
-                'package',
-                'singletonServices'
+                singletonServices,
+                addonInstance
               )
-              if (pkgServices) {
-                services = pkgServices
-              }
             }
             return descFn(services, input)
           }
