@@ -128,6 +128,13 @@ export function assertFetchableUrl(
 }
 
 /**
+ * The only 3xx statuses that request a redirect be followed. `300` (Multiple
+ * Choices), `304` (Not Modified), `305` (Use Proxy) and `306` are returned to
+ * the caller as-is rather than followed.
+ */
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
+/**
  * Drop credential-bearing headers (`Authorization`, `Cookie`) so they are not
  * replayed to a different origin across a redirect.
  */
@@ -140,10 +147,31 @@ function stripCredentialHeaders(init: RequestInit): RequestInit {
 }
 
 /**
+ * Apply the WHATWG-fetch method/body transform for a redirect: a `303` (and a
+ * `301`/`302` on a `POST`) becomes a bodyless `GET`; `307`/`308` preserve the
+ * original method and body. When the method changes to `GET` the request body
+ * and its `Content-*` headers are dropped.
+ */
+function redirectInit(status: number, init: RequestInit): RequestInit {
+  const method = (init.method ?? 'GET').toUpperCase()
+  const toGet =
+    (status === 303 && method !== 'GET' && method !== 'HEAD') ||
+    ((status === 301 || status === 302) && method === 'POST')
+  if (!toGet) return init
+  const headers = new Headers(init.headers)
+  headers.delete('content-length')
+  headers.delete('content-type')
+  return { ...init, method: 'GET', body: undefined, headers }
+}
+
+/**
  * `fetch` with SSRF protection. The initial URL and every redirect target are
  * validated with {@link assertFetchableUrl}. Redirects are followed manually
  * (`redirect: 'manual'`) so an unsafe `Location` can never be followed into the
- * internal network; when a redirect cannot or should not be followed (no
+ * internal network; only the redirect statuses in {@link REDIRECT_STATUSES} are
+ * followed, and the method/body are transformed per {@link redirectInit}. Each
+ * intermediate redirect response body is cancelled before the next hop so it is
+ * not left dangling. When a redirect cannot or should not be followed (no
  * `Location`, or the hop budget is exhausted) the raw redirect response is
  * returned for the caller to handle by status. Credential headers
  * (`Authorization`, `Cookie`) are stripped whenever a redirect crosses origin,
@@ -163,7 +191,7 @@ export async function safeFetch(
       ...currentInit,
       redirect: 'manual',
     })
-    if (response.status < 300 || response.status >= 400) {
+    if (!REDIRECT_STATUSES.has(response.status)) {
       return response
     }
     const location = response.headers.get('location')
@@ -174,9 +202,12 @@ export async function safeFetch(
       new URL(location, currentUrl).toString(),
       options
     ).toString()
+    await response.body?.cancel()
+    let nextInit = redirectInit(response.status, currentInit)
     if (new URL(nextUrl).origin !== new URL(currentUrl).origin) {
-      currentInit = stripCredentialHeaders(currentInit)
+      nextInit = stripCredentialHeaders(nextInit)
     }
+    currentInit = nextInit
     currentUrl = nextUrl
   }
 }

@@ -101,7 +101,6 @@ describe('combineChannelMiddleware', () => {
     const shared = async () => {}
     addChannelMiddleware('chat:outbound', [shared])
 
-    // Run A of an agent stream, with its own per-invocation middleware closure.
     const runA = async () => {}
     const first = combineChannelMiddleware('agent', 'stream:bot', {
       wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
@@ -109,7 +108,6 @@ describe('combineChannelMiddleware', () => {
     })
     assert.deepEqual(first, [shared, runA])
 
-    // Run B of the SAME agent must get ITS closure, never run A's.
     const runB = async () => {}
     const second = combineChannelMiddleware('agent', 'stream:bot', {
       wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
@@ -119,7 +117,6 @@ describe('combineChannelMiddleware', () => {
     assert.strictEqual(second[1], runB)
     assert.notStrictEqual(second[1], runA)
 
-    // A run with no per-run middleware still gets the cached inherited set.
     const third = combineChannelMiddleware('agent', 'stream:bot', {
       wireInheritedChannelMiddleware: [{ type: 'tag', tag: 'chat:outbound' }],
     })
