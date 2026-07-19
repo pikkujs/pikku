@@ -10,6 +10,7 @@ import {
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
+import { withResolvedScopes } from './auth-session-scopes.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -35,6 +36,11 @@ export type BetterAuthStatelessSessionOptions = {
  * REQUIRES `session.cookieCache` enabled in the better-auth config. Tradeoff:
  * server-side revocation isn't seen until the cookie cache expires; sign-out is
  * still immediate (it deletes the cookie).
+ *
+ * The one exception to "no DB": if a `ScopeService` is registered, scopes are
+ * resolved per request (see {@link withResolvedScopes}), which costs a query.
+ * That is the price of grants that take effect immediately; leave the service
+ * unregistered, or have `mapSession` set `scopes` itself, to stay query-free.
  */
 export const betterAuthStatelessSession = (
   options: BetterAuthStatelessSessionOptions = {}
@@ -101,14 +107,21 @@ export const betterAuthStatelessSession = (
             mapSession
           )
           if (impersonated) {
-            setSession(impersonated)
+            setSession(
+              await withResolvedScopes(impersonated, services as CoreServices)
+            )
             return next()
           }
         }
         const mapped = mapSession
           ? await mapSession(cached, services as CoreServices)
           : ({ userId: cached.user.id } as CoreUserSession)
-        setSession(stampActorFlag(mapped, cached.user))
+        setSession(
+          await withResolvedScopes(
+            stampActorFlag(mapped, cached.user),
+            services as CoreServices
+          )
+        )
       }
 
       return next()

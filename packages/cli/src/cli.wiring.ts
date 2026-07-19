@@ -21,6 +21,8 @@ import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
+import { scopesAudit } from './functions/commands/scopes-audit.js'
+import { scopesPrune } from './functions/commands/scopes-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
 import {
   workspaceValidate,
@@ -398,6 +400,29 @@ wireCLI({
           func: dbAudit,
           description:
             'Report column classifications from the manifest and flag columns with no anonymize strategy',
+        }),
+      },
+    },
+    scopes: {
+      description: 'Inspect and maintain declared authorization scopes',
+      subcommands: {
+        audit: pikkuCLICommand({
+          func: scopesAudit,
+          description:
+            'Report scopes in the database that are no longer declared in code, and the roles holding them',
+        }),
+        prune: pikkuCLICommand({
+          func: scopesPrune,
+          description:
+            'Remove scopes that are no longer declared in code, cascading them out of every role',
+          options: {
+            yes: {
+              description:
+                'Actually delete. Without it, prune only reports the blast radius',
+              short: 'y',
+              default: false,
+            },
+          },
         }),
       },
     },

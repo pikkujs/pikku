@@ -24,6 +24,9 @@ export class AgentWorld extends World {
   /** Requests seen since recordRequests() was called, with their impersonate header. */
   recorded: { url: string; impersonate: string | null }[] = []
 
+  /** The last raw RPC response captured by the scope-gate suite, per scenario. */
+  lastScopeResponse?: { status: number; body: any }
+
   async openBrowser() {
     const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
     this.browser = await chromium.launch({
@@ -73,24 +76,59 @@ export class AgentWorld extends World {
   private consoleActor?: Actor
   private consoleUserId?: string
 
+  // Sign in as an arbitrary seeded user and return an Actor owning that user's
+  // session cookie jar. Used by the scope-gate suite to exercise the same
+  // endpoint as two callers with different scopes.
+  async signInAs(user: SeedUser): Promise<Actor> {
+    const actor = new Actor('console', {}, config.apiUrl)
+    const authClient = createAuthClient({
+      baseURL: config.apiUrl,
+      fetchOptions: { customFetchImpl: actor.cookieFetch },
+    })
+    const { error } = await authClient.signIn.email({
+      email: user.email,
+      password: user.password,
+    })
+    if (error) {
+      throw new Error(
+        `sign-in failed for ${user.email}: ${JSON.stringify(error)}`
+      )
+    }
+    return actor
+  }
+
+  // POST an RPC carrying an actor's session cookie and return the raw status +
+  // parsed body WITHOUT throwing — the scope gate's whole point is the status
+  // code, so a 403 is an expected outcome to assert on, not an error.
+  async rpcResponse(
+    actor: Actor,
+    name: string,
+    data: unknown = null
+  ): Promise<{ status: number; body: any }> {
+    const res = await actor.cookieFetch(`${config.apiUrl}/rpc/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    })
+    const text = await res.text()
+    let body: any = text
+    try {
+      body = JSON.parse(text)
+    } catch {
+      // non-JSON body — leave as text
+    }
+    return { status: res.status, body }
+  }
+
   private async authenticatedActor(): Promise<Actor> {
     if (!this.consoleActor) {
-      const actor = new Actor('console', {}, config.apiUrl)
+      const actor = await this.signInAs(ADMIN_USER)
       const authClient = createAuthClient({
         baseURL: config.apiUrl,
         fetchOptions: { customFetchImpl: actor.cookieFetch },
       })
-      const { data, error } = await authClient.signIn.email({
-        email: ADMIN_USER.email,
-        password: ADMIN_USER.password,
-      })
-      if (error) {
-        throw new Error(`console auth sign-in failed: ${JSON.stringify(error)}`)
-      }
+      this.consoleUserId = (await authClient.getSession()).data?.user?.id
       this.consoleActor = actor
-      this.consoleUserId =
-        (data as any)?.user?.id ??
-        (await authClient.getSession()).data?.user?.id
     }
     return this.consoleActor
   }
@@ -121,6 +159,43 @@ export class AgentWorld extends World {
       throw new Error(`RPC ${name} failed (${res.status}): ${await res.text()}`)
     }
     return res.json()
+  }
+
+  // Resolve a seeded user's Better Auth id by email, via the admin list-users
+  // endpoint. Cached per scenario. Better Auth owns the user table, so ids are
+  // only knowable at runtime.
+  private userIds = new Map<string, string>()
+  async userIdByEmail(email: string): Promise<string> {
+    const cached = this.userIds.get(email)
+    if (cached) {
+      return cached
+    }
+    const actor = await this.authenticatedActor()
+    const res = await actor.cookieFetch(
+      `${config.apiUrl}/api/auth/admin/list-users?limit=100`,
+      { method: 'GET' }
+    )
+    const data = await res.json()
+    const users = Array.isArray(data) ? data : data.users
+    for (const user of users) {
+      this.userIds.set(user.email, user.id)
+    }
+    const id = this.userIds.get(email)
+    if (!id) {
+      throw new Error(`no seeded user with email ${email}`)
+    }
+    return id
+  }
+
+  // Grant / revoke a scope directly to a user (outside of any role), as the
+  // admin who holds pikku:scopes:manage.
+  async grantScopeDirectly(email: string, scope: string): Promise<void> {
+    const userId = await this.userIdByEmail(email)
+    await this.consoleRpc('console:scopeAddScopeToUser', { userId, scope })
+  }
+  async revokeScopeDirectly(email: string, scope: string): Promise<void> {
+    const userId = await this.userIdByEmail(email)
+    await this.consoleRpc('console:scopeRemoveScopeFromUser', { userId, scope })
   }
 
   // Sign in through the LoginScreen UI so the AuthGate lets the console render.

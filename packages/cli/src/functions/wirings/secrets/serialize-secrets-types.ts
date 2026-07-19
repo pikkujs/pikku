@@ -66,6 +66,12 @@ export const serializeSecretsTypes = ({
     `import { TypedSecretService as CoreTypedSecretService, type CredentialMeta } from '@pikku/core/services'`
   )
   imports.push(`import type { SecretService } from '@pikku/core/services'`)
+  imports.push(
+    `import type { SecretDefinitionsMeta } from '@pikku/core/secret'`
+  )
+  imports.push(
+    `import secretsMeta from './pikku-secrets-meta.gen.json' with { type: 'json' }`
+  )
 
   if (needsZod) {
     imports.push(`import type { z } from 'zod'`)
@@ -88,6 +94,17 @@ export const serializeSecretsTypes = ({
   }
 
   return `${imports.join('\n')}
+
+/**
+ * Every secret declared in this package.
+ *
+ * Read from the metadata sidecar rather than inlined, so that the import above
+ * forces tsc to emit the .json alongside this file. An addon publishes only its
+ * compiled output, and a host reads that .json to discover the addon's declared
+ * secrets — an uncopied sidecar leaves them invisible to the host.
+ */
+export const SECRETS_META: SecretDefinitionsMeta =
+  secretsMeta as SecretDefinitionsMeta
 
 export interface CredentialsMap {
 ${mapEntries.join('\n')}

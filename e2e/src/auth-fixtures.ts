@@ -16,3 +16,15 @@ export const GUEST_USER: SeedUser = {
   email: 'guest@e2e.test',
   password: 'guest-password',
 }
+
+/**
+ * A console admin (better-auth `role: 'admin'`, so the console AuthGate lets
+ * them in) who holds NO scope role — so the self-hosting scope RPCs refuse
+ * them with a 403. Exists to exercise the "you don't have permission" state,
+ * distinct from a real outage.
+ */
+export const STAFF_USER: SeedUser = {
+  name: 'E2E Staff',
+  email: 'staff@e2e.test',
+  password: 'staff-password',
+}

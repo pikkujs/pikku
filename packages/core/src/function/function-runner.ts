@@ -27,6 +27,7 @@ import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
 import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
+import { verifyScopes } from '../scopes.js'
 import {
   PikkuCredentialWireService,
   createWireServicesCredentialWireProps,
@@ -305,6 +306,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
     if ((session as any)?.readonly && !funcMeta.readonly) {
       throw new ReadonlySessionError()
     }
+
+    // Scopes gate before the data is evaluated: they depend only on the
+    // session, so a denied request never pays to parse or validate its body.
+    // Kept out of runPermissions deliberately — that ORs global/wire/tag/func
+    // permissions and returns on the first pass, so a scope checked in there
+    // would be satisfied by any passing permission anywhere in the app.
+    verifyScopes(funcConfig.scopes ?? funcMeta.scopes, session)
 
     // Evaluate the data from the lazy function
     const actualData = await data()

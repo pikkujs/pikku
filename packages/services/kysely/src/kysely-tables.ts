@@ -187,6 +187,51 @@ export interface UserSessionsTable {
   updatedAt: Generated<Date>
 }
 
+/**
+ * The declared scope set, synced from generated SCOPES.
+ *
+ * Additive: a scope removed from code leaves an inert row rather than
+ * cascading a grant away mid-deploy. `pikku scopes prune` removes them
+ * deliberately.
+ */
+export interface PikkuScopesTable {
+  name: string
+  description: string | null
+  /**
+   * False once a scope is no longer declared in code. Marking is
+   * non-destructive — grants survive until `pikku scopes prune` removes them
+   * deliberately.
+   */
+  declared: Generated<boolean>
+}
+
+/** A role: an admin-composed bag of scopes. */
+export interface PikkuRolesTable {
+  name: string
+  description: string | null
+  createdAt: Generated<Date>
+}
+
+export interface PikkuRoleScopesTable {
+  role: string
+  scope: string
+}
+
+export interface PikkuUserRoleTable {
+  userId: string
+  role: string
+  grantedBy: string | null
+  grantedAt: Generated<Date>
+}
+
+/** A scope granted directly to a user, outside of any role. */
+export interface PikkuUserScopeTable {
+  userId: string
+  scope: string
+  grantedBy: string | null
+  grantedAt: Generated<Date>
+}
+
 export interface WebhookDeliveryTable {
   deliveryId: string
   organizationId: string | null
@@ -210,6 +255,11 @@ export interface WebhookDeliveryAttemptTable {
 }
 
 export interface KyselyPikkuDB {
+  pikkuScopes: PikkuScopesTable
+  pikkuRoles: PikkuRolesTable
+  pikkuRoleScopes: PikkuRoleScopesTable
+  pikkuUserRole: PikkuUserRoleTable
+  pikkuUserScope: PikkuUserScopeTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable

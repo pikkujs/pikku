@@ -1,14 +1,23 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Text, Button, Center, Loader, Alert } from '@pikku/mantine/core'
+import {
+  Text,
+  Button,
+  Alert,
+  Group,
+  Avatar,
+  Badge,
+  Box,
+} from '@pikku/mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-import { AlertTriangle, UserCog } from 'lucide-react'
+import { AlertTriangle, UserCog, ShieldCheck } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
-import { UsersTable } from '../components/users/UsersTable'
+import { TableListPage } from '../components/layout/TableListPage'
+import { UserRolesDrawer } from '../components/users/UserRolesDrawer'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, type AuthUser } from '../context/AuthContext'
 import { useImpersonation } from '../context/ImpersonationContext'
 
 export const AdminUsersPage: React.FC = () => {
@@ -17,6 +26,9 @@ export const AdminUsersPage: React.FC = () => {
   const { setTarget, target } = useImpersonation()
   const [search, setSearch] = useState('')
   const [debounced] = useDebouncedValue(search, 250)
+  const [rolesFor, setRolesFor] = useState<{ id: string; label: string } | null>(
+    null
+  )
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', debounced],
@@ -40,55 +52,125 @@ export const AdminUsersPage: React.FC = () => {
         />
       }
     >
-      {usersQuery.isLoading ? (
-        <Center py="xl">
-          <Loader />
-        </Center>
-      ) : usersQuery.error ? (
+      {usersQuery.error ? (
         <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
           <Text size="sm">{asI18n((usersQuery.error as Error).message)}</Text>
         </Alert>
-      ) : users.length === 0 ? (
-        <Text c="dimmed" ta="center" py="xl">
-          {m.users_empty()}
-        </Text>
       ) : (
-        <UsersTable
-          users={users}
-          labels={{
-            columnUser: m.users_col_user(),
-            columnRole: m.users_col_role(),
-            columnCreated: m.users_col_created(),
-            roleAdmin: m.users_role_admin(),
-            roleUser: m.users_role_user(),
-            banned: m.users_banned(),
-          }}
-          renderActions={(u) => {
-            if (u.id === currentUser?.id) return null
-            const full = users.find((x) => x.id === u.id) ?? null
-            return target?.id === u.id ? (
-              <Button
-                size="compact-sm"
-                variant="light"
-                color="yellow"
-                leftSection={<UserCog size={14} />}
-                onClick={() => setTarget(null)}
-              >
-                {m.impersonate_stop()}
-              </Button>
-            ) : (
-              <Button
-                size="compact-sm"
-                variant="subtle"
-                leftSection={<UserCog size={14} />}
-                onClick={() => setTarget(full)}
-              >
-                {m.impersonate_button()}
-              </Button>
-            )
-          }}
+        <TableListPage<AuthUser>
+          icon={UserCog}
+          title={m.users_title()}
+          docsHref="https://www.better-auth.com/docs/plugins/admin"
+          data={users}
+          getKey={(u) => u.id}
+          loading={usersQuery.isLoading}
+          externalSearch={search}
+          emptyTitle={m.users_empty()}
+          columns={[
+            {
+              key: 'user',
+              header: m.users_col_user(),
+              render: (u) => (
+                <Group gap="sm" wrap="nowrap">
+                  <Avatar src={u.image ?? undefined} radius="xl" size="sm">
+                    {(u.name ?? u.email).slice(0, 1).toUpperCase()}
+                  </Avatar>
+                  <Box style={{ minWidth: 0 }}>
+                    {u.name && (
+                      <Text size="sm" fw={500} truncate>
+                        {asI18n(u.name)}
+                      </Text>
+                    )}
+                    <Text size="xs" c="dimmed" truncate>
+                      {asI18n(u.email)}
+                    </Text>
+                  </Box>
+                </Group>
+              ),
+            },
+            {
+              key: 'role',
+              header: m.users_col_role(),
+              render: (u) => (
+                <Group gap={6}>
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color={u.role === 'admin' ? 'blue' : 'gray'}
+                  >
+                    {u.role === 'admin' ? m.users_role_admin() : m.users_role_user()}
+                  </Badge>
+                  {u.banned && (
+                    <Badge size="sm" variant="light" color="red">
+                      {m.users_banned()}
+                    </Badge>
+                  )}
+                </Group>
+              ),
+            },
+            {
+              key: 'created',
+              header: m.users_col_created(),
+              render: (u) => (
+                <Text size="sm" c="dimmed">
+                  {u.createdAt
+                    ? asI18n(new Date(u.createdAt).toLocaleDateString())
+                    : asI18n('—')}
+                </Text>
+              ),
+            },
+            {
+              key: 'actions',
+              header: '',
+              align: 'right',
+              render: (u) => {
+                const isSelf = u.id === currentUser?.id
+                return (
+                  <Group gap={6} justify="flex-end" wrap="nowrap">
+                    <Button
+                      size="compact-sm"
+                      variant="subtle"
+                      leftSection={<ShieldCheck size={14} />}
+                      onClick={() =>
+                        setRolesFor({ id: u.id, label: u.email ?? u.id })
+                      }
+                    >
+                      {m.users_roles_action()}
+                    </Button>
+                    {!isSelf &&
+                      (target?.id === u.id ? (
+                        <Button
+                          size="compact-sm"
+                          variant="light"
+                          color="yellow"
+                          leftSection={<UserCog size={14} />}
+                          onClick={() => setTarget(null)}
+                        >
+                          {m.impersonate_stop()}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="compact-sm"
+                          variant="subtle"
+                          leftSection={<UserCog size={14} />}
+                          onClick={() => setTarget(u)}
+                        >
+                          {m.impersonate_button()}
+                        </Button>
+                      ))}
+                  </Group>
+                )
+              },
+            },
+          ]}
         />
       )}
+      <UserRolesDrawer
+        opened={rolesFor !== null}
+        onClose={() => setRolesFor(null)}
+        userId={rolesFor?.id}
+        userLabel={rolesFor?.label ?? ''}
+      />
     </PageContainer>
   )
 }

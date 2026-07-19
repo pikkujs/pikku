@@ -5,6 +5,8 @@ export const bootstrap = pikkuVoidFunc({
   func: async ({ logger, getInspectorState }, _data, { rpc }) => {
     await getInspectorState(false, true, true)
 
+    // Before function types: they import ScopeId from the scopes codegen.
+    await rpc.invoke('pikkuScopes', { bootstrap: true })
     await rpc.invoke('pikkuFunctionTypesSplit', { bootstrap: true })
     // Stub auth.types.ts (if better-auth is used) so the pikkuBetterAuth
     // re-export resolves before any user file is imported.
@@ -20,6 +22,7 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuAIAgentTypes')
     await rpc.invoke('pikkuNodeTypes')
     await rpc.invoke('pikkuSecretDefinitionTypes')
+    await rpc.invoke('pikkuScopeDefinitionTypes')
     await rpc.invoke('pikkuCLITypes', { bootstrap: true })
 
     if (logger.hasCriticalErrors()) {

@@ -13,6 +13,7 @@ import type {
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
 
 /**
  * Stamp the inspected authorize/callbacks service set onto the generated auth
@@ -812,4 +813,45 @@ export function computeDiagnostics(state: InspectorState): void {
   }
 
   state.diagnostics = diagnostics
+}
+
+/**
+ * Validates that every scope referenced by a function is declared via
+ * `wireScope`. Runs after all visitors, so declaration order does not matter.
+ *
+ * A `*` suffix is a wildcard requirement: `admin:*` requires the `admin` scope
+ * to be declared, and grants its whole subtree.
+ */
+export function validateScopeReferences(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const declared = new Set(
+    flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id)
+  )
+
+  for (const [funcName, meta] of Object.entries(state.functions.meta)) {
+    if (!meta.scopes?.length) continue
+
+    for (const scope of meta.scopes) {
+      // A trailing wildcard grants a subtree; the node it hangs off must exist.
+      const declaredForm = scope.endsWith(':*') ? scope.slice(0, -2) : scope
+
+      if (scope === '*') {
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Function '${funcName}' requires the bare wildcard scope '*'. A function must require a specific scope — '*' is only meaningful as a grant.`
+        )
+        continue
+      }
+
+      if (!declared.has(declaredForm)) {
+        const available = Array.from(declared)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Function '${funcName}' requires scope '${scope}' which is not declared. Declare it with wireScope. Available scopes: ${available.join(', ') || 'none'}`
+        )
+      }
+    }
+  }
 }

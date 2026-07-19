@@ -6,6 +6,7 @@ export {
 } from './dev-quick-login.js'
 export { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 export { betterAuthSession } from './auth-session.js'
+export { withResolvedScopes } from './auth-session-scopes.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export { fabric } from './fabric-plugin.js'

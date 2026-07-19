@@ -10,6 +10,7 @@ import {
   resolveImpersonatedSession,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
+import { withResolvedScopes } from './auth-session-scopes.js'
 
 type BetterAuthSessionResult = { user: any; session: any }
 
@@ -48,6 +49,11 @@ type BetterAuthSessionOptions = {
      * services so callers can resolve current scope (e.g. look up the owning
      * resource row) rather than trusting only what is baked into the key.
      * Return `null`/`undefined` to reject the caller.
+     *
+     * Set `scopes` here to mint a *restricted* key: an explicit set (including
+     * an empty one) is authoritative and is never widened back out to
+     * everything the owning user holds. Leave it unset for a key that acts with
+     * its owner's full rights.
      */
     mapKey: (
       key: any,
@@ -81,6 +87,11 @@ export const betterAuthSession = (
       if (apiKey) {
         const rawKey = request.header(apiKeyHeader)
         if (rawKey) {
+          // Only key verification is caught here: an unusable key is an
+          // ordinary "not authenticated", not an outage. Scope resolution sits
+          // outside so a scope-store failure surfaces as an error rather than
+          // silently serving the request anonymously.
+          let mapped: CoreUserSession | null | undefined
           try {
             const auth = (await (services as any).auth()) as BetterAuthInstance
             const verified = (await auth.api.verifyApiKey({
@@ -88,17 +99,19 @@ export const betterAuthSession = (
             })) as VerifiedApiKey | null
 
             if (verified?.valid && verified.key) {
-              const mapped = await apiKey.mapKey(
+              mapped = await apiKey.mapKey(
                 verified.key,
                 services as CoreServices
               )
-              if (mapped) {
-                setSession(mapped)
-              }
             }
           } catch (e: any) {
             services.logger?.warn(
               `better-auth api-key verify failed: ${e?.message}`
+            )
+          }
+          if (mapped) {
+            setSession(
+              await withResolvedScopes(mapped, services as CoreServices)
             )
           }
           // The api-key header is authoritative for this request — never fall
@@ -141,14 +154,23 @@ export const betterAuthSession = (
             mapSession
           )
           if (impersonated) {
-            setSession(impersonated)
+            // Scopes resolve for the impersonated userId, not the admin's — an
+            // impersonated session runs as the target, with the target's rights.
+            setSession(
+              await withResolvedScopes(impersonated, services as CoreServices)
+            )
             return next()
           }
         }
         const mapped = mapSession
           ? await mapSession(result, services as CoreServices)
           : ({ userId: result.user.id } as CoreUserSession)
-        setSession(stampActorFlag(mapped, result.user))
+        setSession(
+          await withResolvedScopes(
+            stampActorFlag(mapped, result.user),
+            services as CoreServices
+          )
+        )
       }
 
       return next()

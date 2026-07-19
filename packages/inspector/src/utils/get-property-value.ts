@@ -5,6 +5,17 @@ import { extractStringLiteral } from './extract-node-value.js'
 /**
  * Extracts an array of strings from an object property.
  */
+/**
+ * Unwraps `x as const` / `x as any` / `x satisfies T` down to the underlying
+ * expression. Without this a cast makes the value invisible to the inspector,
+ * so it is silently dropped from meta rather than validated — and `as const` on
+ * an array is idiomatic enough that this is easy to hit by accident.
+ */
+const unwrapAs = (node: ts.Expression): ts.Expression =>
+  ts.isAsExpression(node) || ts.isSatisfiesExpression(node)
+    ? unwrapAs(node.expression)
+    : node
+
 export const getArrayPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string
@@ -17,7 +28,7 @@ export const getArrayPropertyValue = (
   )
 
   if (property && ts.isPropertyAssignment(property)) {
-    const initializer = property.initializer
+    const initializer = unwrapAs(property.initializer)
     if (ts.isArrayLiteralExpression(initializer)) {
       return initializer.elements
         .filter(ts.isStringLiteral)

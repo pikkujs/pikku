@@ -14,6 +14,7 @@ import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
+import { KyselyScopeService } from '@pikku/kysely'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
 
@@ -131,13 +132,28 @@ export const createSingletonServices = pikkuServices(
     // AI/workflow db (which runs CamelCase/Serialize plugins). The auth factory
     // runs Better Auth's migrations against it on first request.
     const { default: AuthDatabase } = await import('better-sqlite3')
-    const { Kysely: AuthKysely, SqliteDialect: AuthSqliteDialect } =
-      await import('kysely')
+    const {
+      CamelCasePlugin: AuthCamelCase,
+      Kysely: AuthKysely,
+      SqliteDialect: AuthSqliteDialect,
+    } = await import('kysely')
+    const { SerializePlugin: AuthSerialize } = await import('@pikku/kysely')
+    const authDatabase = new AuthDatabase(':memory:')
     const kysely = new AuthKysely<KyselyPikkuDB>({
-      dialect: new AuthSqliteDialect({
-        database: new AuthDatabase(':memory:'),
-      }),
+      dialect: new AuthSqliteDialect({ database: authDatabase }),
     })
+
+    // Shares the Better Auth *database* — not the Kysely instance — so
+    // pikku_user_role can FK into better-auth's `user` table while the scope
+    // service still addresses its own tables in camelCase (Better Auth needs an
+    // unmangled, plugin-free instance; the scope service's query builders
+    // expect CamelCase/Serialize). init()/syncScopes()/seeding run in
+    // lifecycle.afterStart, once Better Auth has created the user table.
+    const scopeDb = new AuthKysely<KyselyPikkuDB>({
+      dialect: new AuthSqliteDialect({ database: authDatabase }),
+      plugins: [new AuthCamelCase(), new AuthSerialize()],
+    })
+    const scopeService = new KyselyScopeService(scopeDb)
 
     // Dedicated plugin-enabled Kysely for webhook delivery history. Reuses the
     // CamelCase/Serialize plugins the AI/workflow db uses (the auth db above is
@@ -208,6 +224,7 @@ export const createSingletonServices = pikkuServices(
       secrets,
       emailService: email,
       kysely,
+      scopeService,
       credentialService,
       jwt,
       schema,

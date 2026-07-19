@@ -33,7 +33,8 @@ interface TableListPageProps<T> {
   data: T[]
   columns: Column<T>[]
   getKey: (item: T, index: number) => string
-  onRowClick: (item: T) => void
+  /** When provided, rows become keyboard-operable buttons; omit for read-only tables. */
+  onRowClick?: (item: T) => void
   searchPlaceholder?: I18nString
   searchFilter?: (item: T, query: string) => boolean
   /** When provided, the internal search input is hidden and this value is used for filtering */
@@ -151,7 +152,7 @@ export const TableListPage = <T,>({
         </Box>
       ) : (
         <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          <Table highlightOnHover withRowBorders className={classes.tableLastRowBorder}>
+          <Table highlightOnHover={!!onRowClick} withRowBorders className={classes.tableLastRowBorder}>
             <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--mantine-color-body)' }}>
               <Table.Tr style={{ height: 42 }}>
                 {columns.map((col, i) => (
@@ -172,9 +173,20 @@ export const TableListPage = <T,>({
               {filtered.map((item, index) => (
                 <Table.Tr
                   key={getKey(item, index)}
-                  className={classes.clickableText}
+                  className={onRowClick ? classes.clickableText : undefined}
                   style={{ height: '3.75rem' }}
-                  onClick={() => onRowClick(item)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            onRowClick(item)
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   {columns.map((col, i) => (
                     <Table.Td

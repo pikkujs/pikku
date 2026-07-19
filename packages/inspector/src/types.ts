@@ -17,6 +17,7 @@ import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
 import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
+import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
 import type {
@@ -547,6 +548,10 @@ export interface InspectorState {
   }
   credentials: {
     definitions: CredentialDefinitions
+    files: Set<string>
+  }
+  scopes: {
+    definitions: ScopeDefinitions
     files: Set<string>
   }
   variables: {
