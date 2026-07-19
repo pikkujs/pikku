@@ -1,0 +1,5 @@
+{"name":"Pg","nodes":[
+{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"p"}},
+{"id":"q","name":"Query","type":"n8n-nodes-base.postgres","typeVersion":2.5,"position":[200,0],"parameters":{"operation":"executeQuery","query":"select 1"}},
+{"id":"i","name":"Insert","type":"n8n-nodes-base.postgres","typeVersion":2.5,"position":[400,0],"parameters":{"operation":"insert","table":{"__rl":true,"mode":"list","value":"users"}}}],
+"connections":{"Webhook":{"main":[[{"node":"Query","type":"main","index":0}]]},"Query":{"main":[[{"node":"Insert","type":"main","index":0}]]}}}

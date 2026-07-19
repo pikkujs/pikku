@@ -8,6 +8,7 @@ export {
   WorkflowDispatchException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
+  WorkflowApprovalResolvedError,
   DEFAULT_STEP_RETRIES,
 } from './pikku-workflow-service.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
@@ -88,6 +89,9 @@ export type {
   WorkflowWireDoInline,
   WorkflowWireSleep,
   WorkflowWireSuspend,
+  WorkflowWireApproval,
+  WorkflowApprovalOptions,
+  ApprovalOutcome,
   InputSource,
   OutputBinding,
   RpcStepMeta,
@@ -102,6 +106,7 @@ export type {
   SleepStepMeta,
   CancelStepMeta,
   SuspendStepMeta,
+  ApprovalStepMeta,
   SetStepMeta,
   SwitchCaseMeta,
   SwitchStepMeta,

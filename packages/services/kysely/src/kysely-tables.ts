@@ -232,6 +232,28 @@ export interface PikkuUserScopeTable {
   grantedAt: Generated<Date>
 }
 
+export interface WebhookDeliveryTable {
+  deliveryId: string
+  organizationId: string | null
+  url: string
+  event: string | null
+  status: Generated<'pending' | 'delivered' | 'failed'>
+  attempts: Generated<number>
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
+  deliveredAt: Date | null
+}
+
+export interface WebhookDeliveryAttemptTable {
+  attemptId: string
+  deliveryId: string
+  attemptNumber: number
+  statusCode: number | null
+  responseBody: string | null
+  error: string | null
+  createdAt: Generated<Date>
+}
+
 export interface KyselyPikkuDB {
   pikkuScopes: PikkuScopesTable
   pikkuRoles: PikkuRolesTable
@@ -256,4 +278,6 @@ export interface KyselyPikkuDB {
   credentials: CredentialsTable
   credentialsAudit: CredentialsAuditTable
   pikkuUserSessions: UserSessionsTable
+  webhookDelivery: WebhookDeliveryTable
+  webhookDeliveryAttempt: WebhookDeliveryAttemptTable
 }

@@ -1,8 +1,10 @@
 ---
 name: pikku-schema-ajv
-description: 'Use when setting up JSON schema validation with AJV in a Pikku app. Covers AjvSchemaService for request/response validation.
-TRIGGER when: code uses AjvSchemaService, user asks about AJV, JSON schema validation, or @pikku/schema-ajv.
-DO NOT TRIGGER when: user asks about Cloudflare Workers schema validation (use pikku-schema-cfworker).'
+description: >-
+  Use when setting up JSON schema validation with AJV in a Pikku app. Covers AjvSchemaService for
+  request/response validation. TRIGGER when: code uses AjvSchemaService, user asks about AJV, JSON
+  schema validation, or @pikku/schema-ajv. DO NOT TRIGGER when: user asks about Cloudflare Workers
+  schema validation (use pikku-schema-cfworker).
 installGroups: [core]
 ---
 

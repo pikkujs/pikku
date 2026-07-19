@@ -1,8 +1,12 @@
 ---
 name: pikku-permissions
-description: 'Use when adding authorization checks to Pikku functions or routes — pikkuPermission, pikkuAuth, per-function permissions, pattern-based permissions, or understanding OR/AND permission logic.
-TRIGGER when: user wants to restrict who can call a function, check resource ownership, add role-based access, or understand where permission checks belong.
-DO NOT TRIGGER when: user asks about middleware or request interception (use pikku-middleware), authentication strategies (use pikku-security), or session management.'
+description: >-
+  Use when adding authorization checks to Pikku functions or routes — pikkuPermission, pikkuAuth,
+  per-function permissions, pattern-based permissions, or understanding OR/AND permission logic.
+  TRIGGER when: user wants to restrict who can call a function, check resource ownership, add
+  role-based access, or understand where permission checks belong. DO NOT TRIGGER when: user asks
+  about middleware or request interception (use pikku-middleware), authentication strategies (use
+  pikku-security), or session management.
 installGroups: [core]
 ---
 
@@ -39,7 +43,7 @@ export const deleteBook = pikkuFunc({
 1. Discover before editing. Run `pikku info permissions --verbose` and `pikku info functions --verbose` to understand what permissions are already defined and applied.
 2. Define permission checkers in a `src/permissions.ts` or domain-specific `src/lib/*-permissions.ts` file.
 3. Apply them via the `permissions` field on the function, or via `addHTTPPermission` / `addPermission` for pattern/tag-based application.
-4. Validate: run `pikku tsc` to confirm permission checker signatures are correct.
+4. Validate: run `pikku all --tsc` to confirm permission checker signatures are correct.
 
 ## Permission Factories
 
@@ -160,6 +164,6 @@ export const deleteOrg = pikkuFunc({
 ## After Changes
 
 ```bash
-pikku tsc        # verify permission checker types are correct
-pikku all        # regenerate if wirings changed
+pikku all              # regenerate if wirings changed
+pikku all --tsc        # regenerate, then verify permission checker types (fails on type errors)
 ```

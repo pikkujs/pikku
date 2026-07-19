@@ -1,0 +1,1673 @@
+import type {
+  ParsedWorkflow,
+  ParsedNode,
+  ImportDiagnostic,
+  WorkflowRefResolver,
+} from './types.js'
+import { buildTopology, type NextValue } from './topology.js'
+import { planFanout, type FanoutMap } from './fanout.js'
+import {
+  classifyExpression,
+  type ExprContext,
+  type RefPart,
+} from './expressions.js'
+import { toPascalCase } from './naming.js'
+import {
+  translateCodeNode,
+  codeRefKey,
+  type CodeTranslation,
+} from './code-translate.js'
+import { setAssignments } from './set-translate.js'
+import { collectionName } from './rag-map.js'
+import { normalizeBranch } from './branch.js'
+import {
+  nativeSpecFor,
+  nativeOutputAliasFor,
+  type NativeFieldSpec,
+} from './native-map.js'
+import {
+  deriveCredentialInstances,
+  nodeInstanceBindings,
+  type CredentialInstance,
+} from './credentials.js'
+import { findAgentSubNode } from './ai-subnodes.js'
+import { httpToolSpec, type HttpToolSpec } from './http-tool.js'
+import { mapModel, mapOpenAiNodeModel } from './model-map.js'
+import { outputParserToZod } from './output-schema.js'
+import { planSubWorkflows, subWorkflowParsed } from './subworkflow.js'
+import {
+  decideShape,
+  isChainAgentType,
+  isOpenAiAgentNode,
+} from './parse-n8n.js'
+
+export interface ManifestEntry {
+  rpcName: string
+  n8nType: string
+  n8nName: string
+  parameters: Record<string, unknown>
+  credentials?: Record<string, unknown>
+  /** Addon instance name this node's credential binds to, when it has one. */
+  credentialInstance?: string
+  isAgentTool: boolean
+  agentName?: string
+}
+
+export interface GenerateResult {
+  /** path -> file content */
+  files: Record<string, string>
+  manifest: ManifestEntry[]
+  /** Encapsulated addon instances (one per distinct n8n credential). */
+  credentialInstances: CredentialInstance[]
+  /**
+   * Reasons the workflow could not be imported. When any has `type: 'error'`,
+   * the workflow is skipped — `files` is empty and nothing should be written.
+   */
+  diagnostics: ImportDiagnostic[]
+}
+
+export interface GenerateOptions {
+  /**
+   * Resolve a sub-workflow's n8n id → the registered Pikku workflow name, built
+   * from the whole import set. Absent (single-file import) ⇒ only self-recursion
+   * resolves; every cross-workflow reference is reported as missing.
+   */
+  resolveWorkflowRef?: WorkflowRefResolver
+  /**
+   * Prefix applied to every generated *stub* rpc name (integration / agent-tool /
+   * code / vector / unmapped-control). Stub functions are locally defined, so
+   * importing several workflows into one project would otherwise collide on a
+   * shared name (a `DUPLICATE_FUNCTION_NAME` critical). Addon rpcs (`graph:*`,
+   * `service:*`), sub-workflow names, and agent names are shared and never
+   * prefixed. No prefix ⇒ names are unchanged (single-file import).
+   */
+  rpcPrefix?: string
+}
+
+/** Roles whose rpc is a locally-generated stub function (not a shared addon/workflow rpc). */
+const STUB_ROLES = new Set<ParsedNode['role']>([
+  'integration',
+  'agentTool',
+  'code',
+  'vectorStore',
+  'control',
+])
+
+/**
+ * Resolve every executeWorkflow / toolWorkflow node to the Pikku workflow name
+ * it should call. Self-references resolve to the workflow's own name; static ids
+ * go through the import-set resolver; anything unresolved (dangling id or
+ * runtime-dynamic target) produces an error diagnostic that skips the workflow.
+ */
+function resolveSubworkflows(
+  parsed: ParsedWorkflow,
+  resolve?: WorkflowRefResolver
+): { targets: Map<string, string>; diagnostics: ImportDiagnostic[] } {
+  const targets = new Map<string, string>()
+  const diagnostics: ImportDiagnostic[] = []
+  for (const node of parsed.nodes) {
+    if (node.disabled || !node.workflowRef) continue
+    const refKind = node.workflowRef.kind
+    if (refKind === 'self') {
+      targets.set(node.nodeId, parsed.name)
+    } else if (refKind === 'static') {
+      const name = resolve?.(node.workflowRef.targetId!)
+      if (name) targets.set(node.nodeId, name)
+      else
+        diagnostics.push({
+          diagnostic: 'PIKKU_N8N_IMPORT_DIAGNOSTIC',
+          type: 'error',
+          reason: 'missing-subworkflow',
+          message: `Node "${node.name}" references a subflow that doesn't exist (n8n id "${node.workflowRef.targetId}") — not part of the import.`,
+          node: node.name,
+        })
+    } else {
+      diagnostics.push({
+        diagnostic: 'PIKKU_N8N_IMPORT_DIAGNOSTIC',
+        type: 'error',
+        reason: 'dynamic-subworkflow-target',
+        message: `Node "${node.name}" selects its sub-workflow at runtime — the target can't be identified statically.`,
+        node: node.name,
+      })
+    }
+  }
+  return { targets, diagnostics }
+}
+
+const q = (v: unknown) => JSON.stringify(v)
+
+function safeJson(value: unknown): string | null {
+  try {
+    const out = JSON.stringify(value)
+    return out === undefined ? null : out
+  } catch {
+    return null
+  }
+}
+
+function emitRef(ref: RefPart): string {
+  return ref.path
+    ? `ref(${q(ref.nodeId)}, ${q(ref.path)})`
+    : `ref(${q(ref.nodeId)})`
+}
+
+/** Render one classified parameter value as a graph-input expression. */
+function emitValue(value: unknown, ctx: ExprContext): string | null {
+  const classified = classifyExpression(value, ctx)
+  if (classified.kind === 'literal') {
+    return safeJson(classified.value)
+  }
+  if (classified.kind === 'ref') {
+    return emitRef(classified)
+  }
+  if (classified.kind === 'template') {
+    const tmpl = classified.parts
+      .map((p, i) => p + (i < classified.refs.length ? `$${i}` : ''))
+      .join('')
+    return `template(${q(tmpl)}, [${classified.refs
+      .map((r) => emitRef(r))
+      .join(', ')}])`
+  }
+  return null
+}
+
+/**
+ * Build the `input: (ref) => ({...})` body for an n8n Set / Edit Fields node,
+ * lowering each assignment to a `set` operation for `@pikku/addon-graph`'s
+ * `editFields` function.
+ */
+function emitSetInput(node: ParsedNode, ctx: ExprContext): string | null {
+  const ops: string[] = []
+  for (const { field, value } of setAssignments(node.parameters)) {
+    const classified = classifyExpression(value, ctx)
+    if (classified.kind === 'transform') {
+      // Both the field name and value may be multi-line n8n expressions (a Set
+      // assignment can compute its own key via an IIFE); flatten each to a single
+      // line so it stays inside the `//` comment instead of leaking live code.
+      const oneLine = (s: string) => s.replace(/\s*\n\s*/g, ' ').trim()
+      ops.push(
+        `        // TODO(n8n expr): ${oneLine(field)} = ${oneLine(classified.expression)}`
+      )
+      continue
+    }
+    const rendered = emitValue(value, ctx)
+    if (rendered === null) continue
+    ops.push(
+      `        { field: ${q(field)}, operation: "set" as const, value: ${rendered} },`
+    )
+  }
+  if (ops.length === 0) return null
+  return [
+    `(ref) => ({`,
+    `      item: {},`,
+    `      operations: [`,
+    ...ops,
+    `      ],`,
+    `    })`,
+  ].join('\n')
+}
+
+/**
+ * Render an n8n keypair collection (`[{ name, value }]`) as an object literal.
+ * n8n allows the same name more than once (e.g. a copy-pasted `Sec-Fetch-Dest`
+ * header); a JS object literal cannot. Collapse duplicates last-wins — the JS
+ * object-literal runtime rule — keeping each key at its first position.
+ */
+function emitParamObject(params: unknown, ctx: ExprContext): string | null {
+  if (!Array.isArray(params)) return null
+  const entries = new Map<string, string>()
+  for (const p of params) {
+    if (!p || typeof p !== 'object') continue
+    const name = String((p as Record<string, unknown>).name ?? '')
+    if (!name) continue
+    const rendered = emitValue((p as Record<string, unknown>).value, ctx)
+    if (rendered === null) continue
+    entries.set(name, rendered)
+  }
+  if (entries.size === 0) return null
+  const parts = [...entries].map(
+    ([name, rendered]) => `${q(name)}: ${rendered}`
+  )
+  return `{ ${parts.join(', ')} }`
+}
+
+/**
+ * Build the `input: (ref) => ({...})` body for an n8n HTTP Request node,
+ * mapping its parameters onto @pikku/addon-graph's `httpRequest` contract
+ * (`{ method, url, headers, query, body }`).
+ */
+function emitHttpInput(node: ParsedNode, ctx: ExprContext): string | null {
+  const p = node.parameters
+  const lines: string[] = []
+
+  const method = emitValue(p.method ?? 'GET', ctx)
+  // A literal method must keep its enum literal type, not widen to `string`.
+  if (method !== null) {
+    const rendered = /^".*"$/.test(method) ? `${method} as const` : method
+    lines.push(`      method: ${rendered},`)
+  }
+
+  const url = emitValue(p.url, ctx)
+  if (url !== null) lines.push(`      url: ${url},`)
+
+  const headers = emitParamObject(
+    (p.headerParameters as Record<string, unknown> | undefined)?.parameters,
+    ctx
+  )
+  if (headers) lines.push(`      headers: ${headers},`)
+
+  const query = emitParamObject(
+    (p.queryParameters as Record<string, unknown> | undefined)?.parameters,
+    ctx
+  )
+  if (query) lines.push(`      query: ${query},`)
+
+  const bodyParams = (p.bodyParameters as Record<string, unknown> | undefined)
+    ?.parameters
+  if (Array.isArray(bodyParams)) {
+    const body = emitParamObject(bodyParams, ctx)
+    if (body) lines.push(`      body: ${body},`)
+  } else if (p.jsonBody !== undefined) {
+    const body = emitValue(p.jsonBody, ctx)
+    if (body !== null) lines.push(`      body: ${body},`)
+  }
+
+  // An authenticated node carries a static auth descriptor (names + constants,
+  // no secret value) the runtime resolves from a secret. `todo` is a codegen
+  // hint only — rendered as a comment, never emitted into the auth object.
+  if (node.httpAuth) {
+    const a = node.httpAuth
+    if (a.todo) lines.push(`      // TODO(n8n-import): ${a.todo}`)
+    const authLines: string[] = [
+      `        mode: ${q(a.mode)},`,
+      `        credential: ${q(a.credential)},`,
+    ]
+    if (a.headerName) authLines.push(`        headerName: ${q(a.headerName)},`)
+    if (a.queryName) authLines.push(`        queryName: ${q(a.queryName)},`)
+    if (a.extraHeaders) {
+      const eh = Object.entries(a.extraHeaders)
+        .map(([k, v]) => `          ${q(k)}: ${q(v)},`)
+        .join('\n')
+      authLines.push(`        extraHeaders: {\n${eh}\n        },`)
+    }
+    if (a.source) authLines.push(`        source: ${q(a.source)},`)
+    lines.push(`      auth: {\n${authLines.join('\n')}\n      },`)
+  }
+
+  if (lines.length === 0) return null
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Build the `input: (ref) => ({...})` body for an n8n IF / Filter / Switch node,
+ * mapping its conditions onto @pikku/addon-graph's `branch` contract
+ * (`{ cases: [{ key, combinator, conditions }], fallback }`). Each operand is
+ * lowered like any other value — a ref, a template, or a literal.
+ */
+function emitBranchInput(node: ParsedNode, ctx: ExprContext): string | null {
+  const spec = normalizeBranch(node)
+  if (!spec) return null
+
+  const caseLines = spec.cases.map((c) => {
+    const conds = c.conditions.map((cond) => {
+      const left = emitValue(cond.left, ctx) ?? 'undefined'
+      const parts = [`left: ${left}`]
+      if (cond.right !== undefined) {
+        const right = emitValue(cond.right, ctx)
+        if (right !== null) parts.push(`right: ${right}`)
+      }
+      parts.push(
+        `type: ${q(cond.type)} as const`,
+        `operation: ${q(cond.operation)}`
+      )
+      return `{ ${parts.join(', ')} }`
+    })
+    return `        { key: ${q(c.key)}, combinator: ${q(c.combinator)} as const, conditions: [${conds.join(', ')}] },`
+  })
+
+  const lines = [`(ref) => ({`, `      cases: [`, ...caseLines, `      ],`]
+  if (spec.fallback) lines.push(`      fallback: ${q(spec.fallback)},`)
+  lines.push(`    })`)
+  return lines.join('\n')
+}
+
+/**
+ * Build the `input: (ref) => ({...})` body for a native addon node, sourcing
+ * each addon input field from an n8n parameter per its `native-map` spec.
+ */
+/** Read a dot-path (`a.b.c`) out of a nested n8n parameter object. */
+function readPath(obj: Record<string, unknown>, path: string): unknown {
+  let current: unknown = obj
+  for (const key of path.split('.')) {
+    if (current == null || typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current
+}
+
+type CollectionSpec = NonNullable<NativeFieldSpec['fromCollection']>
+
+/**
+ * Render an n8n `fixedCollection` row array as a graph-input value: an array of
+ * projected objects (`map`), or an array / single scalar (`pick` / `pick+first`).
+ * Each source value is lowered like any other expression (ref / template /
+ * literal), with optional per-key enum remapping. Returns null when empty.
+ */
+function emitCollection(
+  spec: CollectionSpec,
+  parameters: Record<string, unknown>,
+  ctx: ExprContext
+): string | null {
+  const rows = readPath(parameters, spec.path)
+  if (!Array.isArray(rows) || rows.length === 0) return null
+
+  if (spec.pick) {
+    const picked = rows
+      .map((r) => (r as Record<string, unknown>)?.[spec.pick!])
+      .filter((v) => v !== undefined && v !== '')
+    if (spec.first) {
+      if (picked.length === 0) return null
+      return emitValue(picked[0], ctx)
+    }
+    const vals = picked.map((v) => emitValue(v, ctx)).filter((v) => v !== null)
+    return vals.length ? `[${vals.join(', ')}]` : null
+  }
+
+  if (spec.map) {
+    const objs: string[] = []
+    for (const row of rows) {
+      const r = row as Record<string, unknown>
+      const parts: string[] = []
+      for (const [outKey, src] of Object.entries(spec.map)) {
+        const fromKey = typeof src === 'string' ? src : src.from
+        let raw = r?.[fromKey]
+        if (raw === undefined) continue
+        if (typeof src !== 'string' && src.values && typeof raw === 'string') {
+          raw = src.values[raw] ?? raw
+        }
+        let rendered = emitValue(raw, ctx)
+        if (rendered === null) continue
+        if (typeof src !== 'string' && src.asConst && /^".*"$/.test(rendered))
+          rendered = `${rendered} as const`
+        parts.push(`${outKey}: ${rendered}`)
+      }
+      if (parts.length) objs.push(`{ ${parts.join(', ')} }`)
+    }
+    return objs.length ? `[${objs.join(', ')}]` : null
+  }
+
+  return null
+}
+
+/**
+ * Resolve an n8n node name to the graph ref target the way expression lowering
+ * does: unknown names and triggers collapse to `trigger`, dropped No Op
+ * passthroughs follow their rewrite.
+ */
+function codeRefTarget(name: string, ctx: ExprContext): string {
+  const nodeId = ctx.nameToNodeId[name] ?? 'trigger'
+  if (ctx.triggerNodeIds?.has(nodeId)) return 'trigger'
+  return ctx.refRewrite?.[nodeId] ?? nodeId
+}
+
+/**
+ * Wire a translated Code node's graph input: its incoming item stream as
+ * `items: ref(predecessor)`, plus one ref per `$("X")` / `$node["X"]` it reads.
+ * Returns null when the node needs no input (no implicit stream, no refs).
+ */
+function emitCodeInput(
+  translation: Extract<CodeTranslation, { translatable: true }>,
+  ctx: ExprContext
+): string | null {
+  const entries: string[] = []
+  if (translation.usesInput) {
+    entries.push(`items: ref(${q(ctx.predecessorNodeId ?? 'trigger')})`)
+  }
+  for (const name of translation.refs) {
+    entries.push(`${codeRefKey(name)}: ref(${q(codeRefTarget(name, ctx))})`)
+  }
+  return entries.length ? `(ref) => ({ ${entries.join(', ')} })` : null
+}
+
+function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
+  const spec = nativeSpecFor(node.typeShort, node.parameters)
+  if (!spec) return null
+  const lines: string[] = []
+  for (const [field, fspec] of Object.entries(spec.fields)) {
+    if (fspec.fromPredecessor) {
+      // n8n's implicit incoming item stream → the data predecessor's whole
+      // output (a pathless ref). No predecessor ⇒ nothing to feed.
+      if (!ctx.predecessorNodeId) continue
+      lines.push(`      ${field}: ref(${q(ctx.predecessorNodeId)}),`)
+      continue
+    }
+    if (fspec.fromAllPredecessors) {
+      const preds = ctx.predecessorNodeIds ?? []
+      if (preds.length === 0) continue
+      const refs = preds.map((p) => `ref(${q(p)})`).join(', ')
+      lines.push(`      ${field}: [${refs}],`)
+      continue
+    }
+    if (fspec.fromPredecessorPath) {
+      // n8n's `dataPropertyName` reads a field off the incoming item; when the
+      // data predecessor is the trigger it's excluded from the graph, so fall
+      // back to the implicit 'trigger' input (same id expression lowering uses).
+      const predId = ctx.predecessorNodeId ?? 'trigger'
+      const rawName = node.parameters[fspec.fromPredecessorPath.param]
+      const path =
+        typeof rawName === 'string' && /^[A-Za-z0-9_.]+$/.test(rawName)
+          ? rawName
+          : fspec.fromPredecessorPath.default
+      lines.push(`      ${field}: ref(${q(predId)}, ${q(path)}),`)
+      continue
+    }
+    if (fspec.fromNodeId) {
+      lines.push(`      ${field}: ${q(node.nodeId)},`)
+      continue
+    }
+    if (fspec.fromCollection) {
+      const rendered = emitCollection(
+        fspec.fromCollection,
+        node.parameters,
+        ctx
+      )
+      if (rendered === null) continue
+      lines.push(`      ${field}: ${rendered},`)
+      continue
+    }
+    if (fspec.fromRL) {
+      const rlKeys = Array.isArray(fspec.fromRL) ? fspec.fromRL : [fspec.fromRL]
+      let rlValue: unknown
+      for (const key of rlKeys) {
+        const loc = node.parameters[key]
+        if (loc && typeof loc === 'object' && '__rl' in (loc as object)) {
+          rlValue = (loc as { value?: unknown }).value
+          break
+        }
+        if (loc !== undefined) {
+          rlValue = loc
+          break
+        }
+      }
+      if (rlValue === undefined) rlValue = fspec.default
+      if (rlValue === undefined) continue
+      if (fspec.values && typeof rlValue === 'string')
+        rlValue = fspec.values[rlValue] ?? rlValue
+      let rendered = emitValue(rlValue, ctx)
+      if (rendered === null) continue
+      if (fspec.asConst && /^".*"$/.test(rendered))
+        rendered = `${rendered} as const`
+      lines.push(`      ${field}: ${rendered},`)
+      continue
+    }
+    const froms = fspec.from
+      ? Array.isArray(fspec.from)
+        ? fspec.from
+        : [fspec.from]
+      : []
+    let raw: unknown
+    for (const key of froms) {
+      if (node.parameters[key] !== undefined) {
+        raw = node.parameters[key]
+        break
+      }
+    }
+    if (raw === undefined) raw = fspec.default
+    if (raw === undefined) continue
+    if (fspec.values && typeof raw === 'string') raw = fspec.values[raw] ?? raw
+    let rendered = emitValue(raw, ctx)
+    if (rendered === null) continue
+    if (fspec.asConst && /^".*"$/.test(rendered))
+      rendered = `${rendered} as const`
+    lines.push(`      ${field}: ${rendered},`)
+  }
+  if (lines.length === 0) return null
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/** Build the `input: (ref) => ({...})` body for a node from its parameters. */
+function emitInput(node: ParsedNode, ctx: ExprContext): string | null {
+  if (node.role === 'set') return emitSetInput(node, ctx)
+  if (node.role === 'http') return emitHttpInput(node, ctx)
+  if (node.role === 'branch') return emitBranchInput(node, ctx)
+  if (node.role === 'native') return emitNativeInput(node, ctx)
+  if (node.role === 'retrieval') return emitRetrievalInput(node, ctx)
+  if (node.role === 'splitText') return emitSplitTextInput(node, ctx)
+  if (node.role === 'ingestion') return emitIngestInput(node, ctx)
+  const lines: string[] = []
+  for (const [key, value] of Object.entries(node.parameters)) {
+    const classified = classifyExpression(value, ctx)
+    const rendered = emitValue(value, ctx)
+    if (rendered !== null) {
+      lines.push(`      ${q(key)}: ${rendered},`)
+    } else if (classified.kind === 'transform') {
+      // Tier 3 — not declaratively expressible; preserve verbatim as a TODO.
+      lines.push(
+        `      // TODO(n8n expr): ${key} = ${classified.expression.replace(/\n/g, ' ')}`
+      )
+    }
+  }
+  if (lines.length === 0) return null
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Emit the input for a `retrieval` node — the vector store's `<ns>:query`, which
+ * embeds the question and searches in one call. `collection` is static (from the
+ * store's own params); `query` is the chain's question expression lowered against
+ * this node's main predecessor (the same data source the chain saw), falling back
+ * to the whole predecessor payload when the chain used the auto prompt.
+ */
+function emitRetrievalInput(node: ParsedNode, ctx: ExprContext): string {
+  const lines = [`      collection: ${q(collectionName(node.parameters))},`]
+  const query = node.ragQuery ? emitValue(node.ragQuery, ctx) : null
+  if (query) {
+    lines.push(`      query: ${query},`)
+  } else if (ctx.predecessorNodeId) {
+    lines.push(`      query: ref(${q(ctx.predecessorNodeId)}),`)
+  }
+  lines.push(`      topK: 4,`)
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Emit the input for a synthesized `graph:splitText` node (the head of a vector
+ * ingestion pipeline). It splits the main predecessor's payload into chunks;
+ * `strategy` and chunk sizes come from the absorbed n8n text-splitter sub-node.
+ */
+function emitSplitTextInput(node: ParsedNode, ctx: ExprContext): string {
+  const lines = [`      text: ref(${q(ctx.predecessorNodeId ?? 'trigger')}),`]
+  const { strategy, chunkSize, chunkOverlap } = node.parameters
+  if (typeof strategy === 'string')
+    lines.push(`      strategy: ${q(strategy)},`)
+  if (typeof chunkSize === 'number')
+    lines.push(`      chunkSize: ${chunkSize},`)
+  if (typeof chunkOverlap === 'number')
+    lines.push(`      chunkOverlap: ${chunkOverlap},`)
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+/**
+ * Emit the input for an `ingestion` node — the vector store's fat `<ns>:ingest`,
+ * which embeds each chunk (via the aiEmbedding service) and upserts in one call.
+ * `collection` is static (from the store's own params); `texts` is the `chunks`
+ * output of the synthesized `graph:splitText` node feeding it.
+ */
+function emitIngestInput(node: ParsedNode, _ctx: ExprContext): string {
+  const lines = [`      collection: ${q(collectionName(node.parameters))},`]
+  if (node.ingestChunksFrom)
+    lines.push(`      texts: ref(${q(node.ingestChunksFrom)}, "chunks"),`)
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
+function emitNext(next: NextValue): string {
+  if (typeof next === 'string') return q(next)
+  if (Array.isArray(next)) return `[${next.map(q).join(', ')}]`
+  // Key-based branch next (`graph.branch(key)` routing). The graph's `NextConfig`
+  // can't narrow the record's string-array targets to node-id literals, so — as
+  // the hand-authored graphs do — cast it. See e2e graph-branching.workflow.ts.
+  const entries = Object.entries(next)
+    .map(([k, v]) => `${q(k)}: [${v.map(q).join(', ')}]`)
+    .join(', ')
+  return `{ ${entries} } as any`
+}
+
+/**
+ * Strip the `(ref) => (...)` wrapper off an emitted input so its object literal
+ * can be embedded as a `graph:fanout` childInput value.
+ */
+function inputObjectBody(input: string): string {
+  return input.replace(/^\(ref\) => \(/, '').replace(/\)$/, '')
+}
+
+function emitMapConfig(
+  fan: FanoutMap,
+  child: ParsedNode,
+  baseCtx: ExprContext
+): string {
+  // The consumer is invoked once per item, so its `$json` (predecessor) and any
+  // explicit reference to the source rebind to the per-item `$item`.
+  const childCtx: ExprContext = {
+    ...baseCtx,
+    predecessorNodeId: '$item',
+    predecessorNodeIds: ['$item'],
+    refRewrite: { ...baseCtx.refRewrite, [fan.sourceNodeId]: '$item' },
+  }
+  const childInput = emitInput(child, childCtx)
+  const lines = [
+    `      items: ref(${q(fan.sourceNodeId)}),`,
+    `      child: ${q(fan.childRpc)},`,
+    `      stepPrefix: ${q(fan.mapNodeId)},`,
+  ]
+  if (childInput)
+    lines.push(`      childInput: ${inputObjectBody(childInput)},`)
+  const parts = [`      input: (ref) => ({\n${lines.join('\n')}\n    }),`]
+  if (fan.next !== undefined) parts.push(`      next: ${emitNext(fan.next)},`)
+  return `    ${fan.mapNodeId}: {\n${parts.join('\n')}\n    },`
+}
+
+function emitGraphFile(
+  parsed: ParsedWorkflow,
+  targets: Map<string, string>,
+  agentNames?: Map<string, AgentNaming>
+): string {
+  const topo = buildTopology(parsed)
+  const fanout = planFanout(topo)
+  const constName = `${parsed.slug}Workflow`
+
+  const nodesLines = topo.graphNodes
+    .filter((n) => !fanout.absorbed.has(n.nodeId))
+    .map((n) => {
+      // An embedded agent is a native graph node (#910), referenced by its
+      // exported const (the AgentMap key) — not a stub rpc. A sub-workflow
+      // (executeWorkflow) node references the target workflow by its registered
+      // name (self-recursion → this workflow's own name).
+      const value =
+        n.role === 'agent'
+          ? (agentNames?.get(n.nodeId)?.constName ?? `${parsed.slug}Agent`)
+          : n.role === 'subworkflow'
+            ? targets.get(n.nodeId)!
+            : n.rpcName
+      return `    ${n.nodeId}: ${q(value)},`
+    })
+  for (const fan of fanout.maps) {
+    nodesLines.push(`    ${fan.mapNodeId}: "graph:fanout",`)
+  }
+
+  const triggerNodeIds = new Set(
+    parsed.nodes.filter((n) => n.role === 'trigger').map((n) => n.nodeId)
+  )
+
+  // native nodes whose result is written under a named output field → a
+  // per-node map from that n8n field name to the addon output key.
+  const outputAliasByNodeId: Record<string, Record<string, string>> = {}
+  for (const node of topo.graphNodes) {
+    if (node.role !== 'native') continue
+    const alias = nativeOutputAliasFor(node.typeShort, node.parameters)
+    if (alias) outputAliasByNodeId[node.nodeId] = { [alias.field]: alias.to }
+  }
+
+  const childById = new Map(topo.graphNodes.map((n) => [n.nodeId, n]))
+
+  let anyTemplate = false
+  const configBlocks: string[] = []
+  for (const node of topo.graphNodes) {
+    if (fanout.absorbed.has(node.nodeId)) continue
+    const t = topo.byNodeId[node.nodeId]!
+    const ctx: ExprContext = {
+      predecessorNodeId: t.predecessorNodeId,
+      predecessorNodeIds: t.predecessorNodeIds,
+      nameToNodeId: topo.nameToNodeId,
+      triggerNodeIds,
+      refRewrite: topo.refRewrite,
+      outputAliasByNodeId,
+    }
+    const wantsInput =
+      node.role === 'integration' ||
+      node.role === 'set' ||
+      node.role === 'http' ||
+      node.role === 'branch' ||
+      node.role === 'native' ||
+      node.role === 'retrieval' ||
+      node.role === 'splitText' ||
+      node.role === 'ingestion'
+
+    const parts: string[] = []
+    const input = wantsInput ? emitInput(node, ctx) : null
+    if (input) {
+      parts.push(`      input: ${input},`)
+      if (input.includes('template(')) anyTemplate = true
+    }
+    if (node.role === 'code') {
+      const tr = translateCodeNode(node)
+      const codeInput = tr.translatable ? emitCodeInput(tr, ctx) : null
+      if (codeInput) parts.push(`      input: ${codeInput},`)
+    }
+    // A collection source's edge into its per-item consumer is redirected
+    // through the synthetic map node.
+    const overriddenNext = fanout.sourceNext.get(node.nodeId)
+    if (overriddenNext !== undefined) {
+      parts.push(`      next: ${q(overriddenNext)},`)
+    } else if (t.next !== undefined) {
+      parts.push(`      next: ${emitNext(t.next)},`)
+    }
+    if (t.onError !== undefined)
+      parts.push(`      onError: ${emitNext(t.onError as NextValue)},`)
+    if (node.notes) parts.push(`      notes: ${q(node.notes)},`)
+    if (parts.length > 0) {
+      configBlocks.push(`    ${node.nodeId}: {\n${parts.join('\n')}\n    },`)
+    }
+  }
+
+  for (const fan of fanout.maps) {
+    const child = childById.get(fan.childNodeId)
+    if (!child) continue
+    const tChild = topo.byNodeId[fan.childNodeId]!
+    const baseCtx: ExprContext = {
+      predecessorNodeId: tChild.predecessorNodeId,
+      predecessorNodeIds: tChild.predecessorNodeIds,
+      nameToNodeId: topo.nameToNodeId,
+      triggerNodeIds,
+      refRewrite: topo.refRewrite,
+      outputAliasByNodeId,
+    }
+    const block = emitMapConfig(fan, child, baseCtx)
+    if (block.includes('template(')) anyTemplate = true
+    configBlocks.push(block)
+  }
+
+  const imports = [
+    `import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'`,
+  ]
+  if (anyTemplate)
+    imports.push(`import { template } from '@pikku/core/workflow'`)
+
+  const notesLine =
+    parsed.stickyNotes.length > 0
+      ? `  notes: [${parsed.stickyNotes.map(q).join(', ')}],\n`
+      : ''
+
+  return [
+    imports.join('\n'),
+    ``,
+    `export const ${constName} = pikkuWorkflowGraph({`,
+    `  name: ${q(parsed.name)},`,
+    notesLine + `  nodes: {\n${nodesLines.join('\n')}\n  },`,
+    configBlocks.length > 0
+      ? `  config: {\n${configBlocks.join('\n')}\n  },`
+      : `  config: {},`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+function envelopeSchemas(inputName: string, outputName: string): string {
+  // Stub bodies are unimplemented, so their I/O shapes are unknown. Keep the
+  // schemas fully permissive: the workflow graph type-checks every node's
+  // `input` mapping against the target's input schema and every `ref(...)` path
+  // against a node's output schema — an opaque stub must accept any mapping and
+  // expose any ref path, or a valid import won't type-check.
+  return [
+    `export const ${inputName} = z.any()`,
+    `export const ${outputName} = z.any()`,
+  ].join('\n')
+}
+
+function emitIntegrationStub(node: ParsedNode): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+  return [
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    envelopeSchemas(inputName, outputName),
+    ``,
+    `/** STUB — generated from n8n node ${q(node.name)} (type ${q(node.type)}). */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async () => {`,
+    `    throw new Error(${q(`${node.rpcName} — implement me`)})`,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+/**
+ * Emit a real Pikku function for a static `toolHttpRequest` agent tool — the
+ * agent-tool sibling of the main-flow `graph:httpRequest` mapping. The URL,
+ * method, headers and query are baked in as literals; auth is resolved from a
+ * secret at call time (mirroring `graph:httpRequest`'s injection), so no
+ * credential value is ever emitted. The agent references it unchanged via
+ * `tools: [ref(<rpcName>)]`.
+ */
+function emitHttpToolFunction(node: ParsedNode, spec: HttpToolSpec): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+  const svc = spec.auth ? '{ secrets }' : ''
+
+  const body: string[] = [`    const url = new URL(${q(spec.url)})`]
+  for (const [key, value] of Object.entries(spec.query))
+    body.push(`    url.searchParams.set(${q(key)}, ${q(value)})`)
+  body.push(`    const headers: Record<string, string> = ${q(spec.headers)}`)
+
+  if (spec.auth) {
+    const auth = spec.auth
+    body.push(
+      `    const secret = await secrets.getSecret(${q(auth.credential)})`
+    )
+    for (const [key, value] of Object.entries(auth.extraHeaders ?? {}))
+      body.push(
+        `    if (!(${q(key)} in headers)) headers[${q(key)}] = ${q(value)}`
+      )
+    switch (auth.mode) {
+      case 'bearer':
+        body.push(`    headers['Authorization'] = \`Bearer \${secret}\``)
+        break
+      case 'apiKeyHeader':
+        body.push(
+          `    headers[${q(auth.headerName ?? 'Authorization')}] = secret`
+        )
+        break
+      case 'apiKeyQuery':
+        body.push(
+          `    url.searchParams.set(${q(auth.queryName ?? 'api_key')}, secret)`
+        )
+        break
+      case 'basic':
+        body.push(
+          `    headers['Authorization'] = \`Basic \${Buffer.from(secret).toString('base64')}\``
+        )
+        break
+    }
+  }
+
+  body.push(
+    `    const response = await fetch(url, { method: ${q(spec.method)}, headers })`,
+    `    const text = await response.text()`,
+    `    try {`,
+    `      const parsed = JSON.parse(text)`,
+    `      return parsed !== null && typeof parsed === 'object' ? parsed : { data: parsed }`,
+    `    } catch {`,
+    `      return { data: text }`,
+    `    }`
+  )
+
+  return [
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    envelopeSchemas(inputName, outputName),
+    ``,
+    `/** Ported from n8n HTTP Request tool ${q(node.name)}. */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  description: ${q(spec.description)},`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async (${svc}) => {`,
+    ...body,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+function emitCodeStub(node: ParsedNode): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+  const code =
+    (node.parameters.jsCode as string | undefined) ??
+    (node.parameters.functionCode as string | undefined) ??
+    ''
+  const preserved = code
+    .replace(/\*\//g, '*\\/')
+    .split('\n')
+    .map((l) => ` *   ${l}`)
+    .join('\n')
+  return [
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    envelopeSchemas(inputName, outputName),
+    ``,
+    `/**`,
+    ` * STUB — generated from n8n Code node ${q(node.name)}.`,
+    ` *`,
+    ` * Original n8n JavaScript (preserved verbatim; rewrite for Pikku semantics):`,
+    ` *`,
+    preserved || ` *   (empty)`,
+    ` */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  description: ${q(`Stub: ported from n8n Code node "${node.name}"`)},`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async () => {`,
+    `    throw new Error(${q(`Stub: ported from n8n Code node "${node.name}" — implement me`)})`,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+function indentBody(source: string, pad: string): string {
+  return source
+    .split('\n')
+    .map((line) => (line.trim() === '' ? '' : pad + line))
+    .join('\n')
+}
+
+function emitCodeFunction(
+  node: ParsedNode,
+  translation: Extract<CodeTranslation, { translatable: true }>
+): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+  // A computed Set node reaches this path with a synthesized body; label it as
+  // the Set node it came from rather than a Code node.
+  const origin = node.computedSetSource !== undefined ? 'Set' : 'Code'
+
+  // n8n's `$env` is the process environment; Pikku reads it through the
+  // variables service. Resolve it once up front (getAll is sync-or-async, so
+  // `await` covers both) into a plain object the original `$env.X` reads hit.
+  const usesEnv = /\$env\b/.test(translation.source)
+  const servicesParam = usesEnv ? '{ variables }' : '_services'
+  const envPreamble = usesEnv
+    ? [
+        `    const $env: Record<string, string | undefined> = await variables.getAll()`,
+        `    void $env`,
+      ]
+    : []
+
+  // n8n exposes upstream data as an item list (`[{ json }]`). Pikku's graph
+  // hands a node whatever its refs resolve to, so normalise any wired input
+  // (array, object, or nothing) back into that item shape.
+  const itemModel = [
+    `    const toItems = (v: any): any[] =>`,
+    `      Array.isArray(v)`,
+    `        ? v.map((x: any) => (x && typeof x === 'object' && 'json' in x ? x : { json: x }))`,
+    `        : v == null`,
+    `          ? []`,
+    `          : [{ json: v }]`,
+    `    const $items: any[] = toItems(data?.items)`,
+  ]
+
+  // Each `$("X")` / `$node["X"]` reference is wired in as its own ref key; the
+  // shim rebuilds n8n's node-accessor over that input so the body runs verbatim.
+  const refShim =
+    translation.refs.length > 0
+      ? [
+          `    const wrapRef = (items: any[]): any => ({`,
+          `      all: () => items,`,
+          `      first: () => items[0],`,
+          `      last: () => items[items.length - 1],`,
+          `      item: items[0],`,
+          `      json: items[0]?.json,`,
+          `    })`,
+          `    const $node: Record<string, any> = {`,
+          ...translation.refs.map(
+            (name) =>
+              `      ${q(name)}: wrapRef(toItems(data?.${codeRefKey(name)})),`
+          ),
+          `    }`,
+          `    const $ = (name: string): any => $node[name]`,
+          `    void $node`,
+          `    void $`,
+        ]
+      : []
+
+  const modeBody =
+    translation.mode === 'each'
+      ? [
+          `    return $items.map((item: any) => {`,
+          `      const $json = item?.json`,
+          `      const $input = {`,
+          `        item,`,
+          `        all: () => $items,`,
+          `        first: () => $items[0],`,
+          `        last: () => $items[$items.length - 1],`,
+          `      }`,
+          `      void $json`,
+          `      void $input`,
+          indentBody(translation.source, '      '),
+          `    })`,
+        ]
+      : [
+          `    const items = $items`,
+          `    const $input = {`,
+          `      all: () => $items,`,
+          `      first: () => $items[0],`,
+          `      last: () => $items[$items.length - 1],`,
+          `      item: $items[0],`,
+          `    }`,
+          `    const $json = ($input.first() as any)?.json`,
+          `    void items`,
+          `    void $input`,
+          `    void $json`,
+          indentBody(translation.source, '    '),
+        ]
+
+  const body = [...envPreamble, ...itemModel, ...refShim, ...modeBody].join(
+    '\n'
+  )
+
+  return [
+    // The body is the node's original JavaScript lowered verbatim; arbitrary
+    // user JS can't be soundly strict-typed (locals built as `{}`, unannotated
+    // callbacks), so the runtime shim keeps it `any` and type-checking is off
+    // for this generated file only. The typed contract is the input/output.
+    `// @ts-nocheck`,
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    `export const ${inputName} = z.any()`,
+    `export const ${outputName} = z.any()`,
+    ``,
+    `/** Ported from n8n ${origin} node ${q(node.name)}. */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  description: ${q(`Ported from n8n ${origin} node "${node.name}"`)},`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async (${servicesParam}, data) => {`,
+    body,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+function emitVectorStub(node: ParsedNode): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+  const index = (node.parameters.indexName ??
+    node.parameters.pineconeIndex ??
+    node.parameters.tableName ??
+    'my-collection') as string
+  return [
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    `export const ${inputName} = z.object({`,
+    `  query: z.string(),`,
+    `  topK: z.number().optional(),`,
+    `})`,
+    `export const ${outputName} = z.object({`,
+    `  matches: z.array(z.object({ id: z.string(), score: z.number() })),`,
+    `})`,
+    ``,
+    `/**`,
+    ` * STUB — generated from n8n vector-store node ${q(node.name)} (type ${q(node.type)}).`,
+    ` *`,
+    ` * RAG has no core Pikku primitive yet — tracked in pikkujs/pikku#902. Once`,
+    ` * @pikku VectorStore lands, replace this body with:`,
+    ` *   const matches = await services.vectorStore.query(${q(index)}, data.query, { topK: data.topK ?? 5 })`,
+    ` *   return { matches }`,
+    ` */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async () => {`,
+    `    throw new Error(${q(`${node.rpcName} — RAG not yet supported (pikkujs/pikku#902); implement me`)})`,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+/**
+ * n8n memory sub-node → Pikku agent `memory` config. `memoryBufferWindow` maps
+ * cleanly to `lastMessages` (n8n's default window is 5); other backends
+ * (postgres/redis chat) need a service and are left as a TODO for the operator.
+ */
+function emitMemory(node: ParsedNode): string {
+  if (node.typeShort === 'memoryBufferWindow') {
+    const raw = node.parameters.contextWindowLength
+    const n = typeof raw === 'number' ? raw : 5
+    return `  memory: { lastMessages: ${n} },`
+  }
+  return `  // TODO(n8n): map memory node ${q(node.name)} (${q(node.type)}) to a Pikku memory backend`
+}
+
+/**
+ * Resolve the structured-output parser feeding an agent. n8n may wrap it in an
+ * `outputParserAutofixing` node (the structured parser hangs off *that* node's
+ * `ai_outputParser` port), so unwrap one level when the direct parser carries no
+ * schema of its own.
+ */
+function resolveOutputSchema(
+  parsed: ParsedWorkflow,
+  agentName: string
+): string | undefined {
+  const parser = findAgentSubNode(parsed, agentName, 'ai_outputParser')
+  if (!parser) return undefined
+  const direct = outputParserToZod(parser)
+  if (direct) return direct
+  const inner = findAgentSubNode(parsed, parser.name, 'ai_outputParser')
+  return inner ? outputParserToZod(inner) : undefined
+}
+
+/** Strip n8n's leading `=` expression marker from a prompt string. */
+function stripExprMarker(v: unknown): string | undefined {
+  return typeof v === 'string' && v.trim()
+    ? v.replace(/^=/, '').trim()
+    : undefined
+}
+
+/**
+ * Derive an agent `goal` + `output` Zod for a LangChain *chain* node promoted to
+ * a tools-less agent. Each chain type carries its instruction and (for the
+ * structured ones) its schema in different parameters:
+ *  - chainLlm / chainSummarization: `text` is the prompt; output is free text.
+ *  - informationExtractor: `options.systemPromptTemplate` instructs; the schema
+ *    lives in `inputSchema` / `jsonSchemaExample` (same shape a structured parser
+ *    uses, so `outputParserToZod` reads it directly).
+ *  - textClassifier: `categories` defines the output — one category name.
+ *  - sentimentAnalysis: a fixed positive/neutral/negative classification.
+ */
+function chainAgentSpec(node: ParsedNode): {
+  goal?: string
+  outputZod?: string
+} {
+  const p = node.parameters
+  const options = (p.options as Record<string, unknown> | undefined) ?? {}
+  switch (node.typeShort.toLowerCase()) {
+    case 'chainllm':
+      return { goal: stripExprMarker(p.text) }
+    case 'chainsummarization':
+      return {
+        goal:
+          stripExprMarker(p.text) ??
+          'Summarize the input text concisely, preserving the key points.',
+      }
+    case 'informationextractor':
+      return {
+        goal:
+          stripExprMarker(options.systemPromptTemplate) ??
+          'Extract the requested structured information from the input.',
+        outputZod: outputParserToZod(node),
+      }
+    case 'textclassifier': {
+      const cats = (
+        (p.categories as Record<string, unknown> | undefined)?.categories as
+          | { category?: unknown }[]
+          | undefined
+      )
+        ?.map((c) => (typeof c.category === 'string' ? c.category : undefined))
+        .filter((c): c is string => !!c)
+      const outputZod =
+        cats && cats.length > 0
+          ? `z.object({ category: z.enum([${cats
+              .map((c) => q(c))
+              .join(', ')}]) })`
+          : undefined
+      return {
+        goal:
+          stripExprMarker(options.systemPromptTemplate) ??
+          'Classify the input into exactly one of the configured categories.',
+        outputZod,
+      }
+    }
+    case 'sentimentanalysis':
+      return {
+        goal: 'Analyze the sentiment of the input.',
+        outputZod: `z.object({ sentiment: z.enum(["positive", "neutral", "negative"]) })`,
+      }
+    default:
+      return {}
+  }
+}
+
+/**
+ * Derive an agent `goal` from a base n8n `openAi` node promoted to a tools-less
+ * agent. The prompt lives in different parameters per resource/operation:
+ *  - chat: `prompt.messages[]` — each message's `content` is joined in order.
+ *  - text edit: `instruction` describes the transformation.
+ *  - text completion: `prompt` is the raw prompt string.
+ */
+function openAiAgentSpec(node: ParsedNode): {
+  goal?: string
+  outputZod?: string
+} {
+  const p = node.parameters
+  const prompt = p.prompt
+
+  if (prompt && typeof prompt === 'object' && 'messages' in prompt) {
+    const messages = (prompt as { messages?: unknown }).messages
+    if (Array.isArray(messages)) {
+      const parts = messages
+        .map((m) =>
+          stripExprMarker(
+            (m as { content?: unknown } | null | undefined)?.content
+          )
+        )
+        .filter((c): c is string => !!c)
+      if (parts.length > 0) return { goal: parts.join('\n\n') }
+    }
+  }
+
+  const instruction = stripExprMarker(p.instruction)
+  if (instruction) return { goal: instruction }
+
+  const promptText = stripExprMarker(prompt)
+  if (promptText) return { goal: promptText }
+
+  return {}
+}
+
+interface AgentNaming {
+  /** Exported const + AgentMap key — the value a graph node references. */
+  constName: string
+  /** The agent's `name:` field. */
+  registeredName: string
+}
+
+/**
+ * Assign each agent node a unique exported const + registered name. A single
+ * agent keeps the workflow slug (`<slug>Agent` / `<slug>`); with several agents
+ * (a multi-chain pipeline) each is namespaced by its node id so the consts,
+ * AgentMap keys, and graph-node references stay distinct.
+ */
+function agentNaming(parsed: ParsedWorkflow): Map<string, AgentNaming> {
+  const agents = parsed.nodes.filter((n) => n.role === 'agent')
+  const multi = agents.length > 1
+  const map = new Map<string, AgentNaming>()
+  for (const a of agents) {
+    const registeredName = multi ? `${parsed.slug}_${a.nodeId}` : parsed.slug
+    map.set(a.nodeId, { registeredName, constName: `${registeredName}Agent` })
+  }
+  return map
+}
+
+/** Agent-tool nodes attached to a specific agent via an `ai_tool` connection. */
+function agentToolsFor(
+  parsed: ParsedWorkflow,
+  agentName: string
+): ParsedNode[] {
+  const sources = new Set<string>()
+  for (const [source, ports] of Object.entries(parsed.connections)) {
+    const targetsAgent = ports.ai_tool?.some(
+      (slot) => Array.isArray(slot) && slot.some((t) => t?.node === agentName)
+    )
+    if (targetsAgent) sources.add(source)
+  }
+  return parsed.nodes.filter(
+    (n) => n.role === 'agentTool' && sources.has(n.name)
+  )
+}
+
+function emitAgentFile(
+  parsed: ParsedWorkflow,
+  agent: ParsedNode,
+  names: AgentNaming,
+  targets: Map<string, string>
+): string {
+  const multiAgent = parsed.nodes.filter((n) => n.role === 'agent').length > 1
+  // With one agent, every agent-tool belongs to it; with several, attribute each
+  // tool to the agent its `ai_tool` connection targets.
+  const agentTools = multiAgent
+    ? agentToolsFor(parsed, agent.name)
+    : parsed.nodes.filter((n) => n.role === 'agentTool')
+  // A tool backed by a sub-workflow (self `toolWorkflow` lifted into its own
+  // graph, or an executeWorkflow target) is an agent *workflow* capability, not
+  // an rpc tool — workflow graphs are not rpc-registered.
+  const tools = agentTools.filter((n) => !n.workflowRef)
+  const workflowTools = agentTools.filter((n) => n.workflowRef)
+  // A chain node promoted to a tools-less agent carries its instruction and
+  // schema in type-specific parameters; an openAi text/chat node carries its
+  // prompt inline; a real Agent node uses text/systemMessage.
+  const chainSpec = isChainAgentType(agent.typeShort)
+    ? chainAgentSpec(agent)
+    : isOpenAiAgentNode(agent.typeShort, agent.parameters)
+      ? openAiAgentSpec(agent)
+      : {}
+  // A promoted chainRetrievalQa agent receives the retrieved context (and the
+  // question) as its input; its `text` param is the question expression, not a
+  // system prompt, so give it a fixed retrieval-QA instruction instead.
+  const retrievalQaGoal =
+    agent.typeShort.toLowerCase() === 'chainretrievalqa'
+      ? 'Answer the user question using only the retrieved context provided in the input. If the answer is not in the context, say you do not know.'
+      : undefined
+  const systemPrompt =
+    retrievalQaGoal ??
+    chainSpec.goal ??
+    stripExprMarker(agent.parameters.text) ??
+    stripExprMarker(agent.parameters.systemMessage) ??
+    stripExprMarker(
+      (agent.parameters.options as Record<string, unknown> | undefined)
+        ?.systemMessage
+    ) ??
+    `You are ${parsed.name}.`
+
+  const modelNode = findAgentSubNode(parsed, agent.name, 'ai_languageModel')
+  const model = modelNode
+    ? mapModel(modelNode)
+    : isOpenAiAgentNode(agent.typeShort, agent.parameters)
+      ? mapOpenAiNodeModel(agent)
+      : undefined
+  const memoryNode = findAgentSubNode(parsed, agent.name, 'ai_memory')
+  const outputZod =
+    chainSpec.outputZod ?? resolveOutputSchema(parsed, agent.name)
+
+  // rpc-backed tools ref their stub rpc; sub-workflow-backed tools become
+  // `workflows: [ref(<registered graph name>)]` (deduped — several tools may
+  // share one lifted sub-workflow).
+  const toolLines = tools.map((t) => `    ref(${q(t.rpcName)}),`)
+  const workflowNames = [
+    ...new Set(
+      workflowTools
+        .map((t) => targets.get(t.nodeId))
+        .filter((n): n is string => !!n)
+    ),
+  ]
+  const workflowLines = workflowNames.map((n) => `    ref(${q(n)}),`)
+
+  const imports = [
+    `import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
+    `import { ref } from '#pikku/pikku-types.gen.js'`,
+  ]
+  if (outputZod) imports.push(`import { z } from 'zod'`)
+
+  const modelLines = model
+    ? [`  model: ${q(model.model)},`]
+    : [
+        `  // TODO(n8n): map the connected chat-model node to a Pikku model id`,
+        `  model: 'openai/gpt-4o',`,
+      ]
+  if (model?.temperature !== undefined)
+    modelLines.push(`  temperature: ${model.temperature},`)
+
+  // An agent `output` must reference an exported schema variable — inline
+  // schemas are rejected (PKU489). Emit the Zod as a top-level const.
+  const outputConst = outputZod
+    ? `${toPascalCase(names.registeredName)}Output`
+    : undefined
+
+  return [
+    imports.join('\n'),
+    ``,
+    ...(outputZod ? [`export const ${outputConst} = ${outputZod}`, ``] : []),
+    `export const ${names.constName} = pikkuAIAgent({`,
+    `  name: ${q(names.registeredName)},`,
+    `  description: ${q(multiAgent ? agent.name : parsed.name)},`,
+    `  goal: ${q(systemPrompt)},`,
+    ...modelLines,
+    ...(memoryNode ? [emitMemory(memoryNode)] : []),
+    tools.length > 0
+      ? `  tools: [\n${toolLines.join('\n')}\n  ],`
+      : `  tools: [],`,
+    ...(workflowNames.length > 0
+      ? [`  workflows: [\n${workflowLines.join('\n')}\n  ],`]
+      : []),
+    ...(outputConst ? [`  output: ${outputConst},`] : []),
+    `})`,
+    ``,
+  ].join('\n')
+}
+
+/**
+ * Emit `wireAddon(...)` declarations — one encapsulated addon instance per
+ * distinct n8n credential, each bound to its own credential via
+ * `credentialOverrides`. Packages are inferred from the n8n credential type and
+ * refined downstream by the addon-map step.
+ */
+/** `google-drive:filesGet` → { namespace: 'google-drive', fn: 'filesGet' }. */
+function splitAddonRpc(
+  rpc: string
+): { namespace: string; fn: string } | undefined {
+  const i = rpc.indexOf(':')
+  if (i < 0) return undefined
+  const namespace = rpc.slice(0, i)
+  if (namespace === 'graph') return undefined
+  return { namespace, fn: rpc.slice(i + 1) }
+}
+
+/**
+ * Distinct per-service addon namespaces referenced by mapped native nodes
+ * (`google-drive:filesGet` → `google-drive` / `@pikku/addon-google-drive`).
+ * These must be `wireAddon`'d so the graph's function-map union includes their
+ * rpcs — otherwise the addon-ref graph nodes don't type-check.
+ */
+function mappedAddonPackages(
+  parsed: ParsedWorkflow
+): { namespace: string; package: string }[] {
+  const byNs = new Map<string, { namespace: string; package: string }>()
+  for (const node of parsed.nodes) {
+    if (node.disabled) continue
+    // native nodes and addon-backed agent tools both ref a per-service addon rpc.
+    const isAddonBackedTool =
+      node.role === 'agentTool' && node.rpcName.includes(':')
+    if (
+      node.role !== 'native' &&
+      node.role !== 'retrieval' &&
+      node.role !== 'ingestion' &&
+      !isAddonBackedTool
+    )
+      continue
+    const split = splitAddonRpc(node.rpcName)
+    if (!split || byNs.has(split.namespace)) continue
+    byNs.set(split.namespace, {
+      namespace: split.namespace,
+      package: `@pikku/addon-${split.namespace}`,
+    })
+  }
+  // A vector-store `<ns>:query` embeds its text via `openai:textEmbedding` at
+  // runtime (the fat retrieval call), so the openai addon must be wired too.
+  const usesRetrievalQuery = parsed.nodes.some(
+    (n) =>
+      !n.disabled &&
+      (n.role === 'retrieval' || n.role === 'agentTool') &&
+      /:query$/.test(n.rpcName)
+  )
+  if (usesRetrievalQuery && !byNs.has('openai')) {
+    byNs.set('openai', { namespace: 'openai', package: '@pikku/addon-openai' })
+  }
+  return [...byNs.values()]
+}
+
+function emitAddonsFile(
+  instances: CredentialInstance[],
+  mappedAddons: { namespace: string; package: string }[]
+): string {
+  // A mapped service is wired plainly by its `mappedBlocks` entry and the graph
+  // references its single namespace (`slack:chatPostMessage`). The forward-looking
+  // per-credential override blocks for that same package are then orphaned — no
+  // graph node calls them and they target credentials that don't exist yet, which
+  // fails inspection (PKU124). Multi-account per-credential namespacing isn't built
+  // yet, so drop them for mapped packages (the manifest still records each node's
+  // credential for the addon-map step).
+  const mappedPackages = new Set(mappedAddons.map((a) => a.package))
+  const keptInstances = instances.filter(
+    (inst) => !mappedPackages.has(inst.package)
+  )
+  const credBlocks = keptInstances.map((inst) =>
+    [
+      `wireAddon({`,
+      `  name: ${q(inst.instanceName)},`,
+      `  package: ${q(inst.package)},`,
+      `  credentialOverrides: { ${q(inst.addonCredKey)}: ${q(inst.credentialName)} },`,
+      `})`,
+    ].join('\n')
+  )
+  // Addon instances for mapped nodes whose namespace isn't already provisioned
+  // by a credential instance. Credential binding is filled in by the addon-map
+  // step; here we just register the package so its rpcs resolve.
+  const provisioned = new Set(keptInstances.map((i) => i.instanceName))
+  const mappedBlocks = mappedAddons
+    .filter((a) => !provisioned.has(a.namespace))
+    .map((a) =>
+      [
+        `wireAddon({`,
+        `  name: ${q(a.namespace)},`,
+        `  package: ${q(a.package)},`,
+        `})`,
+      ].join('\n')
+    )
+  return [
+    `import { wireAddon } from '@pikku/core/rpc'`,
+    ``,
+    `// TODO(n8n): verify each addon package + credential key — packages are`,
+    `// inferred from the n8n credential type and refined by the addon-map step.`,
+    ...[...credBlocks, ...mappedBlocks].flatMap((b) => [``, b]),
+    ``,
+  ].join('\n')
+}
+
+/**
+ * Generate Pikku source from a parsed n8n workflow. Pure — returns a path→content
+ * map plus the integration manifest. No filesystem access.
+ */
+export function generateWorkflowFromN8n(
+  parsed: ParsedWorkflow,
+  opts: GenerateOptions = {}
+): GenerateResult {
+  // Resolve sub-workflow references first: an unresolved one (dangling id or
+  // runtime-dynamic target) makes the whole workflow un-importable — emit the
+  // diagnostic and skip rather than write a graph that can never run.
+  const { targets, diagnostics } = resolveSubworkflows(
+    parsed,
+    opts.resolveWorkflowRef
+  )
+  if (diagnostics.some((d) => d.type === 'error')) {
+    return { files: {}, manifest: [], credentialInstances: [], diagnostics }
+  }
+
+  // Namespace locally-generated stub rpcs so several workflows can share one
+  // project without colliding. A stub whose target is a sub-workflow keeps the
+  // resolved workflow name (no stub is emitted for it).
+  if (opts.rpcPrefix) {
+    for (const node of parsed.nodes) {
+      if (!node.workflowRef && STUB_ROLES.has(node.role)) {
+        node.rpcName = `${opts.rpcPrefix}${node.rpcName}`
+      }
+    }
+  }
+
+  const files: Record<string, string> = {}
+  const dir = parsed.slug
+  const credentialInstances = deriveCredentialInstances(parsed)
+  const bindings = nodeInstanceBindings(credentialInstances)
+
+  // Lift self-referencing `toolWorkflow` bodies into their own sub-graphs and
+  // point the agent at them via `workflows: [ref(...)]`. The self tool's target
+  // is remapped from the whole workflow (the old, unrunnable `ref(graph)`) to
+  // its lifted sub-graph.
+  const subPlan = planSubWorkflows(parsed)
+  for (const [toolNodeId, subName] of subPlan.toolToWorkflow) {
+    targets.set(toolNodeId, subName)
+  }
+  for (const sub of subPlan.subWorkflows) {
+    files[`${dir}/${sub.slug}.graph.ts`] = emitGraphFile(
+      subWorkflowParsed(parsed, sub),
+      targets
+    )
+  }
+
+  // The main graph excludes the lifted body nodes and their trigger; recompute
+  // the shape (often collapsing to agent-only once the tool body is gone).
+  const excluded = new Set([
+    ...subPlan.extractedNodeIds,
+    ...subPlan.triggerNodeIds,
+  ])
+  const mainParsed: ParsedWorkflow =
+    excluded.size > 0
+      ? (() => {
+          const mainNodes = parsed.nodes.filter((n) => !excluded.has(n.nodeId))
+          return { ...parsed, nodes: mainNodes, shape: decideShape(mainNodes) }
+        })()
+      : parsed
+
+  const agentNames = agentNaming(mainParsed)
+  const agentNodes = mainParsed.nodes.filter((n) => n.role === 'agent')
+
+  const emitGraph = mainParsed.shape !== 'agent-only'
+  if (emitGraph) {
+    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(
+      mainParsed,
+      targets,
+      agentNames
+    )
+  }
+  for (const agent of agentNodes) {
+    const names = agentNames.get(agent.nodeId)!
+    // Single agent keeps `<slug>.agent.ts`; several share the dir, one file each.
+    const fileBase = agentNodes.length > 1 ? names.registeredName : parsed.slug
+    files[`${dir}/${fileBase}.agent.ts`] = emitAgentFile(
+      mainParsed,
+      agent,
+      names,
+      targets
+    )
+  }
+
+  const emittedStubRpc = new Set<string>()
+  for (const node of parsed.nodes) {
+    if (node.disabled) continue
+    // Sub-workflow references (executeWorkflow / toolWorkflow) resolve to a
+    // workflow name — no stub function.
+    if (node.workflowRef) continue
+    // Set / Edit Fields, no-auth HTTP, IF/Filter/Switch, and other native nodes
+    // map to @pikku/addon-graph functions (`editFields` / `httpRequest` /
+    // `branch` / …) — no stub.
+    if (
+      node.role === 'set' ||
+      node.role === 'http' ||
+      node.role === 'branch' ||
+      node.role === 'native' ||
+      node.role === 'retrieval' ||
+      node.role === 'splitText' ||
+      node.role === 'ingestion'
+    )
+      continue
+    // An agent tool backed by a per-service addon refs the addon rpc directly
+    // (`ref('gmail:messageSend')`) — a shared addon function, no stub.
+    if (node.role === 'agentTool' && node.rpcName.includes(':')) continue
+    if (emittedStubRpc.has(node.rpcName)) continue
+    const toolSpec = node.role === 'agentTool' ? httpToolSpec(node) : undefined
+    if (toolSpec) {
+      // A static HTTP Request tool becomes a real function performing the call,
+      // not a throwing stub — the agent still references it as a tool.
+      files[`${dir}/functions/${node.rpcName}.function.ts`] =
+        emitHttpToolFunction(node, toolSpec)
+      emittedStubRpc.add(node.rpcName)
+    } else if (
+      node.role === 'integration' ||
+      node.role === 'agentTool' ||
+      node.role === 'control'
+    ) {
+      files[`${dir}/functions/${node.rpcName}.function.ts`] =
+        emitIntegrationStub(node)
+      emittedStubRpc.add(node.rpcName)
+    } else if (node.role === 'code') {
+      const translation = translateCodeNode(node)
+      files[`${dir}/functions/${node.rpcName}.function.ts`] =
+        translation.translatable
+          ? emitCodeFunction(node, translation)
+          : emitCodeStub(node)
+      emittedStubRpc.add(node.rpcName)
+    } else if (node.role === 'vectorStore') {
+      files[`${dir}/functions/${node.rpcName}.function.ts`] =
+        emitVectorStub(node)
+      emittedStubRpc.add(node.rpcName)
+    }
+  }
+  const mappedAddons = mappedAddonPackages(parsed)
+  if (credentialInstances.length > 0 || mappedAddons.length > 0) {
+    files[`${dir}/${parsed.slug}.addons.gen.ts`] = emitAddonsFile(
+      credentialInstances,
+      mappedAddons
+    )
+  }
+
+  // Manifest: one entry per integration / agent-tool node.
+  const agentName = parsed.slug
+  const manifest: ManifestEntry[] = parsed.nodes
+    .filter(
+      (n) =>
+        !n.workflowRef && (n.role === 'integration' || n.role === 'agentTool')
+    )
+    .map((n) => ({
+      rpcName: n.rpcName,
+      n8nType: n.type,
+      n8nName: n.name,
+      parameters: n.parameters,
+      credentials: n.credentials,
+      credentialInstance: bindings[n.rpcName],
+      isAgentTool: n.role === 'agentTool',
+      agentName: n.role === 'agentTool' ? agentName : undefined,
+    }))
+
+  if (manifest.length > 0) {
+    files[`${dir}/${parsed.slug}.integrations.json`] = JSON.stringify(
+      manifest,
+      null,
+      2
+    )
+  }
+
+  return { files, manifest, credentialInstances, diagnostics }
+}

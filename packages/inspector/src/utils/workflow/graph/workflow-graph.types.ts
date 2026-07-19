@@ -76,6 +76,9 @@ export type SerializedNext =
       /** Default target if no conditions match */
       default?: string | string[]
     }
+  // Key-based branching: the running node picks a key via `graph.branch(key)`,
+  // routing to `next[key]`. Keys are branch/output identifiers, not predicates.
+  | Record<string, string | string[]>
 
 /**
  * Node execution options
@@ -94,6 +97,7 @@ export interface NodeOptions {
  */
 export type FlowType =
   | 'sleep'
+  | 'approval'
   | 'branch'
   | 'parallel'
   | 'fanout'
@@ -128,6 +132,8 @@ interface BaseNode {
   onError?: string | string[]
   /** Execution options */
   options?: NodeOptions
+  /** Free-text node documentation. Non-semantic — excluded from graphHash. */
+  notes?: string
 }
 
 /**
@@ -209,6 +215,8 @@ export interface SerializedWorkflowGraph {
   context?: WorkflowContext
   /** Serialized nodes */
   nodes: Record<string, SerializedGraphNode>
+  /** Graph-level free-text notes (e.g. imported sticky notes). Non-semantic — excluded from graphHash. */
+  notes?: string[]
   /** Entry node(s) - first nodes to execute */
   entryNodeIds: string[]
   /** Hash of graph topology (nodes, edges, input mappings) */

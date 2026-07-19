@@ -1,0 +1,1 @@
+{"name":"Cp","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"cp"}},{"id":"c","name":"Zip","type":"n8n-nodes-base.compression","typeVersion":1,"position":[200,0],"parameters":{"operation":"compress"}}],"connections":{"Webhook":{"main":[[{"node":"Zip","type":"main","index":0}]]}}}

@@ -255,6 +255,30 @@ export const graphStarter = pikkuSessionlessFunc<
   },
 })
 
+/**
+ * Record a human decision against a workflow.approval() gate and wake the run.
+ *
+ * The decision is validated on replay inside the workflow body — the only place
+ * the approval's schema value is in scope — so this route deliberately accepts
+ * an unknown payload. An invalid one re-closes the gate rather than failing the
+ * run. Gate this route with your own auth/permissions to control WHO may
+ * approve: the framework does not model approver identity.
+ */
+export const workflowApprover = pikkuSessionlessFunc<
+  { workflowName: string; runId: string; reason: string; decision: unknown },
+  { ok: true }
+>({
+  tags: ['pikku'],
+  auth: ${authFlag},
+  // See workflowStarter — destructure workflowService so the analyzer
+  // assigns workflow-state capability to this unit.
+  func: async ({ workflowService }, { runId, reason, decision }) => {
+    assertWorkflowService(workflowService)
+    await workflowService.approveStep(runId, reason, decision)
+    return { ok: true }
+  },
+})
+
 wireHTTPRoutes({
   tags: ['pikku'],
   auth: ${authFlag},
@@ -263,6 +287,11 @@ wireHTTPRoutes({
       route: '/workflow/:workflowName/start',
       method: 'post',
       func: workflowStarter,
+    },
+    workflowApprove: {
+      route: '/workflow/:workflowName/approve/:runId',
+      method: 'post',
+      func: workflowApprover,
     },
     workflowRun: {
       route: '/workflow/:workflowName/run',

@@ -11,6 +11,7 @@ import { ApisPage } from './pages/ApisPage'
 import { JobsPage } from './pages/JobsPage'
 import { RuntimePage } from './pages/RuntimePage'
 import { EmailsPage } from './pages/EmailsPage'
+import { WebhooksPage } from './pages/WebhooksPage'
 import { SecretsPage } from './pages/SecretsPage'
 import { VariablesPage } from './pages/VariablesPage'
 import { AgentsPage } from './pages/AgentsPage'
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/runtime" element={<RuntimePage />} />
         <Route path="/emails" element={<EmailsPage />} />
+        <Route path="/webhooks" element={<WebhooksPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/variables" element={<VariablesPage />} />
         <Route path="/security" element={<SecurityPage />} />

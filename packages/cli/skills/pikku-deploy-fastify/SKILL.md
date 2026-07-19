@@ -1,8 +1,11 @@
 ---
 name: pikku-deploy-fastify
-description: 'Use when deploying a Pikku app with Fastify. Covers PikkuFastifyServer standalone and pikkuFastifyPlugin for existing Fastify apps.
-TRIGGER when: code imports @pikku/fastify or @pikku/fastify-plugin, user mentions Fastify deployment, or start.ts creates a PikkuFastifyServer.
-DO NOT TRIGGER when: just defining functions/wirings without Fastify-specific code.'
+description: >-
+  Use when deploying a Pikku app with Fastify. Covers PikkuFastifyServer standalone and
+  pikkuFastifyPlugin for existing Fastify apps. TRIGGER when: code imports @pikku/fastify or
+  @pikku/fastify-plugin, user mentions Fastify deployment, or start.ts creates a
+  PikkuFastifyServer. DO NOT TRIGGER when: just defining functions/wirings without
+  Fastify-specific code.
 ---
 
 # Pikku Fastify Deployment

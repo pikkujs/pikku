@@ -1,8 +1,10 @@
 ---
 name: pikku-ws
-description: 'Use when setting up a WebSocket server with the ws library in a Pikku app. Covers the ws runtime adapter for Pikku channels.
-TRIGGER when: code uses @pikku/ws, user asks about ws library WebSocket server, or Node.js WebSocket runtime.
-DO NOT TRIGGER when: user asks about WebSocket wiring/channels (use pikku-websocket) or uWebSockets (use pikku-deploy-uws).'
+description: >-
+  Use when setting up a WebSocket server with the ws library in a Pikku app. Covers the ws runtime
+  adapter for Pikku channels. TRIGGER when: code uses @pikku/ws, user asks about ws library
+  WebSocket server, or Node.js WebSocket runtime. DO NOT TRIGGER when: user asks about WebSocket
+  wiring/channels (use pikku-websocket) or uWebSockets (use pikku-deploy-uws).
 ---
 
 # Pikku WS (WebSocket Server Runtime)

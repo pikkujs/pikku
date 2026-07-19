@@ -1,0 +1,84 @@
+{
+  "name": "Page Fetcher Assistant",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "ag",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "text": "You fetch web pages using the fetch_page tool." }
+    },
+    {
+      "id": "m1",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o", "options": { "temperature": 0.2 } }
+    },
+    {
+      "id": "tw",
+      "name": "Fetch Page Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1,
+      "position": [400, 200],
+      "parameters": {
+        "name": "fetch_page",
+        "description": "Fetch the markdown content of a web page. Pass the url.",
+        "workflowId": { "__rl": true, "mode": "id", "value": "={{ $workflow.id }}" },
+        "workflowInputs": {
+          "value": { "url": "={{ $fromAI('url', '', 'string') }}" },
+          "schema": [
+            { "id": "url", "type": "string", "displayName": "url", "required": true }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sub",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 400],
+      "parameters": {}
+    },
+    {
+      "id": "cfg",
+      "name": "Build Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 400],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "name": "endpoint", "type": "string", "value": "={{ $json.url }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 400],
+      "parameters": { "url": "={{ $json.endpoint }}", "method": "GET" }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Fetch Page Tool": { "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]] },
+    "When Executed by Another Workflow": { "main": [[{ "node": "Build Config", "type": "main", "index": 0 }]] },
+    "Build Config": { "main": [[{ "node": "Fetch", "type": "main", "index": 0 }]] }
+  }
+}

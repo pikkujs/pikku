@@ -8,7 +8,7 @@
   "node": {
     "displayName": "Pikku Utils",
     "description": "Data transformation and utility functions",
-    "categories": ["Transform", "Array", "Data"],
+    "categories": ["Transform", "Array", "Data", "Logic"],
     "icon": "pikku.svg"
   }
 }

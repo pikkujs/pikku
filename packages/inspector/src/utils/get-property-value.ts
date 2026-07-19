@@ -40,6 +40,56 @@ export const getArrayPropertyValue = (
 }
 
 /**
+ * Extracts a string->string record from an object property.
+ *
+ * `getPropertyValue` falls through to `getText()` for an object literal, which
+ * returns the raw source text rather than the record — so callers that need the
+ * entries (e.g. oauth2 `additionalParams`) must use this instead.
+ */
+export const getRecordPropertyValue = (
+  obj: ts.ObjectLiteralExpression,
+  propertyName: string
+): Record<string, string> | null => {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === propertyName
+  )
+
+  if (!property || !ts.isPropertyAssignment(property)) {
+    return null
+  }
+  const initializer = property.initializer
+  if (!ts.isObjectLiteralExpression(initializer)) {
+    return null
+  }
+
+  const record: Record<string, string> = {}
+  for (const prop of initializer.properties) {
+    if (!ts.isPropertyAssignment(prop)) {
+      continue
+    }
+    const key = ts.isIdentifier(prop.name)
+      ? prop.name.text
+      : ts.isStringLiteral(prop.name)
+        ? prop.name.text
+        : null
+    if (key === null) {
+      continue
+    }
+    if (
+      ts.isStringLiteral(prop.initializer) ||
+      ts.isNoSubstitutionTemplateLiteral(prop.initializer)
+    ) {
+      record[key] = prop.initializer.text
+    }
+  }
+
+  return Object.keys(record).length > 0 ? record : null
+}
+
+/**
  * Wiring identity fields (`name`, `secretId`, `variableId`, …) are read
  * STATICALLY from source — a const or variable reference is keyed by its
  * identifier text, not its runtime value, so the wiring is silently skipped at

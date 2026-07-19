@@ -31,7 +31,8 @@
     "console": "auth",
     "scenarios": "auth",
     "agent": "no-auth",
-    "workflow": "no-auth"
+    "workflow": "no-auth",
+    "webhook": true
   },
   "emailTemplatesDir": "emails",
   "scenarios": {

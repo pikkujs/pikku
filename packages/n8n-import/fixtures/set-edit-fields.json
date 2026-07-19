@@ -1,0 +1,46 @@
+{
+  "name": "Edit Fields Demo",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "demo" }
+    },
+    {
+      "id": "s",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 0],
+      "parameters": {
+        "mode": "manual",
+        "options": {},
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "product", "type": "string", "value": "widget" },
+            {
+              "id": "a2",
+              "name": "email",
+              "type": "string",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "id": "a3",
+              "name": "greeting",
+              "type": "string",
+              "value": "=Hi {{ $json.body.name }}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Edit Fields", "type": "main", "index": 0 }]]
+    }
+  }
+}

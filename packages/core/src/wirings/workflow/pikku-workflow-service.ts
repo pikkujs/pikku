@@ -48,9 +48,11 @@ import type { PikkuWire, SerializedError } from '../../types/core.types.js'
 import type { QueueService } from '../queue/queue.types.js'
 import { runScheduledTask } from '../scheduler/scheduler-runner.js'
 import type {
+  ApprovalOutcome,
   PikkuScenarioWire,
   StepState,
   StepStatus,
+  WorkflowApprovalOptions,
   WorkflowPlannedStep,
   WorkflowRun,
   WorkflowRunMirror,
@@ -201,6 +203,27 @@ export class WorkflowRunCancelledError extends PikkuError {
 addError(WorkflowRunCancelledError, {
   status: 409,
   message: 'Workflow was cancelled.',
+})
+
+/**
+ * A decision arrived for an approval gate that has already resolved. The gate
+ * caches its outcome as the step result and never re-reads run state, so the
+ * decision could not take effect — it is rejected rather than accepted and
+ * dropped.
+ */
+export class WorkflowApprovalResolvedError extends PikkuError {
+  public payload: {
+    reason: string
+    outcome: ApprovalOutcome<unknown>['status']
+  }
+  constructor(reason: string, outcome: ApprovalOutcome<unknown>['status']) {
+    super(`Approval already ${outcome}: ${reason}`)
+    this.payload = { reason, outcome }
+  }
+}
+addError(WorkflowApprovalResolvedError, {
+  status: 409,
+  message: 'Approval has already been resolved.',
 })
 
 export class WorkflowServiceNotInitialized extends Error {}
@@ -2148,6 +2171,214 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     })
   }
 
+  /**
+   * Wake a run later by enqueuing a delayed orchestrator pass. Deliberately NOT
+   * {@link scheduleSleep}: that resolves the step it is given, which for an
+   * approval would resolve the gate itself. This only nudges the run to replay
+   * and re-evaluate — the gate stays the sole judge of its own outcome.
+   *
+   * Best-effort by design. Expiry is decided from the recorded deadline on
+   * replay, so losing this wake costs liveness (the run sits until something
+   * else resumes it), never correctness.
+   */
+  private async scheduleRunWake(runId: string, delay: number): Promise<void> {
+    try {
+      const queueService = this.verifyQueueService()
+      const run = await this.getRun(runId)
+      if (!run?.workflow) return
+      await queueService.add(
+        this.getOrchestratorQueueName(run.workflow),
+        { runId },
+        { ...this.resolveStepJobOptions(), delay }
+      )
+    } catch (error) {
+      this.logger?.warn(
+        `Failed to schedule approval expiry wake for run ${runId}; expiry will still resolve on the next replay`,
+        error
+      )
+    }
+  }
+
+  /**
+   * Durable step name for an approval gate. Namespaced separately from suspend
+   * so the two can't collide, and derived from `reason` for the same reason
+   * {@link getSuspendStepName} is: it must be stable across replays.
+   */
+  private getApprovalStepName(reason: string): string {
+    return `__workflow_approval:${reason}`
+  }
+
+  /**
+   * Run-state key holding an approval gate's record. Hex-encoded because the
+   * Mongo backend restricts state keys to `/^[a-zA-Z0-9_]+$/` and a `reason` is
+   * arbitrary human text. One key per gate, so two gates resolving concurrently
+   * can't clobber each other through a read-modify-write.
+   */
+  private approvalStateKey(stepName: string): string {
+    let hex = ''
+    for (const byte of new TextEncoder().encode(stepName)) {
+      hex += byte.toString(16).padStart(2, '0')
+    }
+    return `__approval_${hex}`
+  }
+
+  /**
+   * Record a decision against an approval gate and wake the run. Called from
+   * outside the workflow (an HTTP route, an RPC), so the schema value is NOT in
+   * scope here — the payload is stored raw and validated on replay inside the
+   * workflow body, which is the only place the schema exists. An invalid payload
+   * therefore leaves the gate closed rather than failing the run.
+   *
+   * `reason` addresses the first reach of that gate. An approval reached more
+   * than once under the same reason (e.g. in a loop) gets `#N`-suffixed step
+   * rows that this cannot currently target.
+   */
+  public async approveStep(
+    runId: string,
+    reason: string,
+    decision: unknown
+  ): Promise<void> {
+    const stepName = this.getApprovalStepName(reason)
+    const stateKey = this.approvalStateKey(stepName)
+
+    // A resolved gate returns its cached step result and never re-reads state,
+    // so a decision recorded now would be silently discarded — most obviously
+    // when it loses the race with expiry. Reject instead, so the approver
+    // learns their decision did not land.
+    let resolved: StepState | undefined
+    try {
+      resolved = await this.getStepState(runId, stepName)
+    } catch {
+      // No step row yet: the run has not reached the gate. Recording a decision
+      // ahead of it is legitimate — the gate picks it up on arrival.
+    }
+    if (resolved?.stepId && resolved.status === 'succeeded') {
+      const outcome = resolved.result as ApprovalOutcome<unknown> | undefined
+      throw new WorkflowApprovalResolvedError(
+        reason,
+        outcome?.status ?? 'decided'
+      )
+    }
+
+    const state = await this.getRunState(runId)
+    const record = (state[stateKey] ?? {}) as Record<string, unknown>
+    await this.updateRunState(runId, stateKey, {
+      ...record,
+      decision,
+      decidedAt: new Date().toISOString(),
+      error: undefined,
+    })
+    await this.resumeWorkflow(runId)
+  }
+
+  private async approvalStep(
+    runId: string,
+    reason: string,
+    options: WorkflowApprovalOptions
+  ): Promise<ApprovalOutcome<unknown>> {
+    const fromStepName = this.lastStepName(runId)
+    const approvalStepName = this.nextStepKey(
+      runId,
+      this.getApprovalStepName(reason)
+    )
+    return await this.withStepLock(runId, approvalStepName, async () => {
+      let stepState: StepState
+      try {
+        stepState = await this.getStepState(runId, approvalStepName)
+      } catch {
+        stepState = await this.insertStepState(
+          runId,
+          approvalStepName,
+          'pikkuWorkflowApproval',
+          { reason, expiry: options.expiry },
+          undefined,
+          fromStepName
+        )
+      }
+      if (!stepState.stepId) {
+        stepState = await this.insertStepState(
+          runId,
+          approvalStepName,
+          'pikkuWorkflowApproval',
+          { reason, expiry: options.expiry },
+          undefined,
+          fromStepName
+        )
+      }
+
+      // Unlike suspend, `succeeded` here means a decision (or expiry) was
+      // actually resolved, and the step result IS the return channel.
+      if (stepState.status === 'succeeded') {
+        return stepState.result as ApprovalOutcome<unknown>
+      }
+
+      const stateKey = this.approvalStateKey(approvalStepName)
+      let record = ((await this.getRunState(runId))[stateKey] ?? {}) as {
+        decision?: unknown
+        decidedAt?: string
+        expiresAt?: string
+        error?: unknown
+      }
+
+      if (stepState.status === 'pending') {
+        await this.setStepRunning(stepState.stepId)
+        // First reach: stamp the deadline and nudge the run awake when it
+        // passes. The deadline is what's authoritative — see below.
+        if (options.expiry !== undefined && !record.expiresAt) {
+          const expiresAt = new Date(
+            Date.now() + getDurationInMilliseconds(options.expiry)
+          ).toISOString()
+          record = { ...record, expiresAt }
+          await this.updateRunState(runId, stateKey, record)
+          await this.scheduleRunWake(
+            runId,
+            getDurationInMilliseconds(options.expiry)
+          )
+        }
+      }
+
+      if (record.decision !== undefined) {
+        const validation = await options.schema['~standard'].validate(
+          record.decision
+        )
+        if (validation.issues) {
+          // Drop the bad decision and re-close the gate, leaving the failure
+          // legible to whoever tries next. Failing the run instead would let any
+          // caller kill a workflow with a malformed payload.
+          await this.updateRunState(runId, stateKey, {
+            ...record,
+            decision: undefined,
+            decidedAt: undefined,
+            error: validation.issues.map((issue) => ({
+              message: issue.message,
+              path: issue.path?.map((segment) =>
+                typeof segment === 'object' ? segment.key : segment
+              ),
+            })),
+          })
+          throw new WorkflowSuspendedException(runId, reason)
+        }
+        const outcome: ApprovalOutcome<unknown> = {
+          status: 'decided',
+          data: validation.value,
+        }
+        await this.setStepResult(stepState.stepId, outcome)
+        return outcome
+      }
+
+      // Expiry is decided by comparing against the recorded deadline rather than
+      // by the timer having fired, so a duplicate, late, or dropped timer all
+      // produce the same answer.
+      if (record.expiresAt && Date.now() >= Date.parse(record.expiresAt)) {
+        const outcome: ApprovalOutcome<unknown> = { status: 'expired' }
+        await this.setStepResult(stepState.stepId, outcome)
+        return outcome
+      }
+
+      throw new WorkflowSuspendedException(runId, reason)
+    })
+  }
+
   public createWorkflowWire(
     name: string,
     runId: string,
@@ -2344,6 +2575,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         this.verifyStepName(reason)
         await this.suspendStep(runId, reason)
       },
+
+      approval: (async (reason: string, options: WorkflowApprovalOptions) => {
+        this.verifyStepName(reason)
+        return await this.approvalStep(runId, reason, options)
+      }) as PikkuScenarioWire['approval'],
 
       runScheduledTask: async (taskName: string) => {
         await runScheduledTask({ name: taskName })

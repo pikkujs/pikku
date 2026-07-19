@@ -14,11 +14,17 @@ type ScaffoldGenerator =
   | 'pikkuScenarioFunctions'
   | 'pikkuPublicAgent'
   | 'pikkuEventsScaffold'
+  | 'pikkuGraphWirings'
 
 const scaffoldFiles = (
   config: any
 ): { file: string; generator: ScaffoldGenerator }[] => {
   const files: { file: string; generator: ScaffoldGenerator }[] = []
+  if (config.scaffold?.graph && config.graphWiringsFile)
+    files.push({
+      file: config.graphWiringsFile,
+      generator: 'pikkuGraphWirings',
+    })
   if (config.scaffold?.rpc && config.publicRpcFile)
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.console && config.consoleFunctionsFile)
@@ -196,6 +202,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     // Scaffold and definition generators are all independent
     await Promise.all([
+      workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Scenario functions', 'pikkuScenarioFunctions', null),
@@ -255,9 +262,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     ])
 
     let remoteRPC = false
+    let webhook = false
     let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
+      webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
       if (workflows) {
         workflowRoutes = await workflow.do(
           'Workflow routes',
@@ -267,11 +276,18 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
-    if (workflows || remoteRPC || workflowRoutes) {
+    if (workflows || remoteRPC || webhook || workflowRoutes) {
       await workflow.do('Re-inspect after workflows', async () =>
         getInspectorState(true)
       )
-      await workflow.do('Re-generate schemas', 'pikkuSchemas', null)
+      const regeneratedSchemas = await workflow.do(
+        'Re-generate schemas',
+        'pikkuSchemas',
+        null
+      )
+      if (regeneratedSchemas && !schemas) {
+        allImports.push(`${config.schemaDirectory}/register.gen.ts`)
+      }
     }
 
     if (!config.addon) {

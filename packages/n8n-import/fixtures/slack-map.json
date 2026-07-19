@@ -1,0 +1,29 @@
+{
+  "name": "Slack Notify",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "notify" }
+    },
+    {
+      "id": "m",
+      "name": "Post Message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channelId": { "__rl": true, "mode": "id", "value": "C0123ABCD" },
+        "text": "Deployment finished"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Post Message", "type": "main", "index": 0 }]] }
+  }
+}

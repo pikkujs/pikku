@@ -1,0 +1,1 @@
+{"name":"Mailjet","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"mailjet"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.mailjet","typeVersion":1,"position":[200,0],"parameters":{"resource":"email","operation":"send"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

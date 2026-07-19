@@ -102,12 +102,23 @@ function computeStepHashes(
   }
 }
 
-function computeGraphHash(graph: SerializedWorkflowGraph): string {
+/**
+ * Hash of graph topology only. `notes` (node- and graph-level) is deliberately
+ * excluded so editing documentation never changes the hash / marks the workflow
+ * as a new version.
+ */
+export function computeGraphHash(graph: SerializedWorkflowGraph): string {
+  const nodesForHash = Object.fromEntries(
+    Object.entries(graph.nodes).map(([nodeId, node]) => {
+      const { notes: _notes, ...rest } = node as { notes?: string }
+      return [nodeId, rest]
+    })
+  )
   return hashString(
     canonicalJSON({
       source: graph.source,
       context: graph.context,
-      nodes: graph.nodes,
+      nodes: nodesForHash,
       entryNodeIds: graph.entryNodeIds,
     }),
     12

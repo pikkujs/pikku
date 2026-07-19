@@ -22,6 +22,10 @@ export { LocalCredentialService } from './local-credential-service.js'
 export { LocalVariablesService } from './local-variables.js'
 export { ConsoleLogger, JsonConsoleLogger } from './logger-console.js'
 export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
+export {
+  QueueWebhookService,
+  pikkuWebhookWorkerFunc,
+} from './queue-webhook-service.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
@@ -56,6 +60,20 @@ export type {
   SendTemplateEmailInput,
   SendTextEmailInput,
 } from './email-service.js'
+export {
+  DEFAULT_WEBHOOK_RETRIES,
+  DEFAULT_WEBHOOK_SIGNATURE_HEADER,
+  PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
+  WebhookService,
+  type SendWebhookInput,
+  type SendWebhookResult,
+  type WebhookAttemptRecord,
+  type WebhookAttemptResult,
+  type WebhookDeliveryRecord,
+  type WebhookDeliveryWithAttempts,
+  type WebhookJobData,
+  type WebhookServiceConfig,
+} from './webhook-service.js'
 export type { Logger } from './logger.js'
 export type { SecretService } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'
@@ -95,6 +113,7 @@ export type {
   AITranscriptionResult,
   AIAgentRunnerService,
 } from './ai-agent-runner-service.js'
+export type { AIEmbeddingService } from './ai-embedding-service.js'
 export type {
   CreateRunInput,
   AIRunStateService,

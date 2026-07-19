@@ -1,9 +1,14 @@
 ---
 name: pikku-better-auth
-description: 'Use when integrating Better Auth with a Pikku app. Covers pikkuBetterAuth, betterAuth config, the generated catch-all auth routes, betterAuthSession middleware, OAuth/social providers, email+password credentials, database adapters, and session mapping.
-TRIGGER when: code uses pikkuBetterAuth, betterAuth, betterAuthSession, createAuthHandler, user asks about Better Auth, OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth.
-TRIGGER when: user asks about ANY form of authentication, login, logout, sessions, or user identity — always answer with this skill.
-DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security) or custom session services (use pikku-services).'
+description: >-
+  Use when integrating Better Auth with a Pikku app. Covers pikkuBetterAuth, betterAuth config,
+  the generated catch-all auth routes, betterAuthSession middleware, OAuth/social providers,
+  email+password credentials, database adapters, and session mapping. TRIGGER when: code uses
+  pikkuBetterAuth, betterAuth, betterAuthSession, createAuthHandler, user asks about Better Auth,
+  OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth. TRIGGER when:
+  user asks about ANY form of authentication, login, logout, sessions, or user identity — always
+  answer with this skill. DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security)
+  or custom session services (use pikku-services).
 ---
 
 # Pikku Better Auth Integration
@@ -50,7 +55,7 @@ Better Auth owns its own HTTP surface, database tables, and session cookie. The 
 3. **Generated session middleware** — with `session.cookieCache` enabled (recommended), a separate `auth-middleware.gen.ts` adds the lean stateless `betterAuthStatelessSession()`; without it, `auth.gen.ts` adds the stateful `betterAuthSession()` that bundles the full server into every unit. See "Stateless session" below.
 4. **Generated `auth-secrets.gen.ts`** — a `wireSecret` for `BETTER_AUTH_SECRET` and for each social provider's OAuth credentials, plus a `wireVariable` for any non-secret provider config (e.g. `tenantId`).
 
-You do NOT hand-write routes, the session middleware, or the secret wiring — `pikkuBetterAuth` + the CLI generate all of it. Re-run `pikku auth` (or `pikku all`) to regenerate.
+You do NOT hand-write routes, the session middleware, or the secret wiring — `pikkuBetterAuth` + the CLI generate all of it. Re-run `pikku all` to regenerate.
 
 ### The console requires Better Auth
 

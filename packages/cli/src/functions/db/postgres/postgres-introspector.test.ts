@@ -46,7 +46,9 @@ test('getColumns captures the element type of a text[] array column', async () =
   const client = fakeClient([
     row({ column_name: 'tags', data_type: 'ARRAY', udt_name: '_text' }),
   ])
-  const cols = await new PostgresIntrospector(client).getColumns('public.widget')
+  const cols = await new PostgresIntrospector(client).getColumns(
+    'public.widget'
+  )
   assert.equal(cols[0]!.type, 'text[]')
 })
 

@@ -1,0 +1,65 @@
+{
+  "name": "Age Gate",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "age-gate" }
+    },
+    {
+      "id": "if1",
+      "name": "Check Age",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.age }}",
+              "rightValue": 18,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "g1",
+      "name": "Notify Adult",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [440, -80],
+      "parameters": {
+        "sendTo": "={{ $json.body.email }}",
+        "subject": "Welcome aboard"
+      }
+    },
+    {
+      "id": "g2",
+      "name": "Notify Minor",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [440, 80],
+      "parameters": {
+        "sendTo": "={{ $json.body.email }}",
+        "subject": "Access denied"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Check Age", "type": "main", "index": 0 }]]
+    },
+    "Check Age": {
+      "main": [
+        [{ "node": "Notify Adult", "type": "main", "index": 0 }],
+        [{ "node": "Notify Minor", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

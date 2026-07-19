@@ -1,0 +1,51 @@
+{
+  "name": "itemLists modes",
+  "nodes": [
+    { "name": "Trigger", "type": "n8n-nodes-base.manualTrigger", "parameters": {}, "position": [0, 0] },
+    {
+      "name": "SplitOut",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "parameters": { "operation": "splitOutItems", "fieldToSplitOut": "tags" },
+      "position": [200, 0]
+    },
+    {
+      "name": "Dedupe",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "parameters": { "operation": "removeDuplicates" },
+      "position": [400, 0]
+    },
+    {
+      "name": "Sort",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "parameters": {
+        "operation": "sort",
+        "sortFieldsUi": { "sortField": [{ "fieldName": "name", "order": "descending" }] }
+      },
+      "position": [600, 0]
+    },
+    {
+      "name": "Limit",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "parameters": { "operation": "limit", "maxItems": 5 },
+      "position": [800, 0]
+    },
+    {
+      "name": "Concat",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "parameters": { "operation": "concatenateItems", "destinationFieldName": "all" },
+      "position": [1000, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "SplitOut", "type": "main", "index": 0 }]] },
+    "SplitOut": { "main": [[{ "node": "Dedupe", "type": "main", "index": 0 }]] },
+    "Dedupe": { "main": [[{ "node": "Sort", "type": "main", "index": 0 }]] },
+    "Sort": { "main": [[{ "node": "Limit", "type": "main", "index": 0 }]] },
+    "Limit": { "main": [[{ "node": "Concat", "type": "main", "index": 0 }]] }
+  }
+}

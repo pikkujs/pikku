@@ -90,19 +90,24 @@ export class BrowserWorld<Clients = unknown> {
         '[e2e] "the app data is reset" needs E2E_RESET_URL, or override resetAppData() on your world to call the app\'s reset RPC via its typed client'
       )
     }
-    const body = resetRpcName ? JSON.stringify({ rpcName: resetRpcName, data: {} }) : undefined
+    const body = resetRpcName
+      ? JSON.stringify({ rpcName: resetRpcName, data: {} })
+      : undefined
     const res = await fetch(resetUrl, {
       method: 'POST',
       headers: body ? { 'content-type': 'application/json' } : undefined,
       body,
     })
-    if (!res.ok) throw new Error(`[e2e] reset hook ${resetUrl} returned ${res.status}`)
+    if (!res.ok)
+      throw new Error(`[e2e] reset hook ${resetUrl} returned ${res.status}`)
   }
 
   /** The current actor's page — for project-specific steps. */
   get page() {
     if (!this.last) {
-      throw new Error('[e2e] no actor yet — start the scenario with a visit/sign-in step')
+      throw new Error(
+        '[e2e] no actor yet — start the scenario with a visit/sign-in step'
+      )
     }
     return this.last.page
   }
@@ -126,7 +131,10 @@ export class BrowserWorld<Clients = unknown> {
 
   private personaFor(name: string): PersonaCredentials {
     if (name === 'the user') return this.config.defaultPersona
-    return this.config.personas[name] ?? derivePersona(name, this.config.defaultPersona)
+    return (
+      this.config.personas[name] ??
+      derivePersona(name, this.config.defaultPersona)
+    )
   }
 
   private async launchBrowser(): Promise<Browser> {
@@ -185,10 +193,15 @@ export class BrowserWorld<Clients = unknown> {
  */
 async function resolveCdpWsUrl(cdpBaseUrl: string): Promise<string> {
   const res = await fetch(new URL('/json/version', cdpBaseUrl))
-  if (!res.ok) throw new Error(`[e2e] remote CDP /json/version returned ${res.status}`)
-  const { webSocketDebuggerUrl } = (await res.json()) as { webSocketDebuggerUrl?: string }
+  if (!res.ok)
+    throw new Error(`[e2e] remote CDP /json/version returned ${res.status}`)
+  const { webSocketDebuggerUrl } = (await res.json()) as {
+    webSocketDebuggerUrl?: string
+  }
   if (!webSocketDebuggerUrl) {
-    throw new Error('[e2e] remote CDP /json/version had no webSocketDebuggerUrl')
+    throw new Error(
+      '[e2e] remote CDP /json/version had no webSocketDebuggerUrl'
+    )
   }
   const base = new URL(cdpBaseUrl)
   const ws = new URL(webSocketDebuggerUrl)

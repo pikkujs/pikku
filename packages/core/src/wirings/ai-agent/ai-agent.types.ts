@@ -216,6 +216,7 @@ export type CoreAIAgent<
   temperature?: number
   tools?: unknown[]
   agents?: unknown[]
+  workflows?: unknown[]
   agentMode?: 'delegate' | 'supervise'
   memory?: AIAgentMemoryConfig
   maxSteps?: number
@@ -275,6 +276,7 @@ export type AIStreamEvent =
       toolName: string
       args: unknown
       reason?: string
+      runId?: string
       agent?: string
       session?: string
     }
@@ -413,6 +415,7 @@ export type AIAgentMeta = Record<
     | 'output'
     | 'tools'
     | 'agents'
+    | 'workflows'
     | 'middleware'
     | 'channelMiddleware'
     | 'aiMiddleware'
@@ -420,6 +423,7 @@ export type AIAgentMeta = Record<
   > & {
     tools?: string[]
     agents?: string[]
+    workflows?: string[]
     inputSchema: string | null
     outputSchema: string | null
     workingMemorySchema: string | null

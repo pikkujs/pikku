@@ -1,16 +1,38 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku'
 
+export const AggregateFieldInput = z.object({
+  field: z.string().describe('The field path to collect values from'),
+  outputField: z
+    .string()
+    .optional()
+    .describe('The output field name (defaults to the source field path)'),
+  unique: z.boolean().optional().describe('Only include unique values'),
+})
+
 export const AggregateInput = z.object({
   items: z
     .array(z.record(z.string(), z.unknown()))
     .describe('The array of items to aggregate'),
-  field: z.string().describe('The field path to collect values from'),
+  field: z
+    .string()
+    .optional()
+    .describe('The field path to collect values from (single-field mode)'),
   outputField: z
     .string()
     .optional()
     .describe('The name of the output field containing the list'),
   unique: z.boolean().optional().describe('Only include unique values'),
+  fields: z
+    .array(AggregateFieldInput)
+    .optional()
+    .describe('Collect several fields at once into one output item'),
+  includeAllItems: z
+    .boolean()
+    .optional()
+    .describe(
+      'Collect the entire items into a single list field (n8n aggregateAllItemData)'
+    ),
 })
 
 export const AggregateOutput = z.object({
@@ -40,20 +62,35 @@ export const aggregate = pikkuSessionlessFunc({
   input: AggregateInput,
   output: AggregateOutput,
   func: async (_services, data) => {
-    const outputField = data.outputField ?? 'aggregated'
-    const unique = data.unique ?? false
-    let values = data.items.map((item) => getNestedValue(item, data.field))
-
-    if (unique) {
-      const seen = new Set<string>()
-      values = values.filter((v) => {
-        const key = JSON.stringify(v)
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
+    const collect = (field: string, unique: boolean): unknown[] => {
+      let values = data.items.map((item) => getNestedValue(item, field))
+      if (unique) {
+        const seen = new Set<string>()
+        values = values.filter((v) => {
+          const key = JSON.stringify(v)
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+      }
+      return values
     }
 
-    return { item: { [outputField]: values } }
+    if (data.includeAllItems) {
+      return { item: { [data.outputField ?? 'data']: data.items } }
+    }
+
+    if (data.fields && data.fields.length > 0) {
+      const item: Record<string, unknown> = {}
+      for (const f of data.fields) {
+        item[f.outputField ?? f.field] = collect(f.field, f.unique ?? false)
+      }
+      return { item }
+    }
+
+    const outputField = data.outputField ?? 'aggregated'
+    return {
+      item: { [outputField]: collect(data.field ?? '', data.unique ?? false) },
+    }
   },
 })

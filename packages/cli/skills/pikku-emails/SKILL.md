@@ -1,10 +1,15 @@
 ---
 name: pikku-emails
-description: "Use when working with Pikku's file-based email templates: authoring HTML/subject/text templates, locales, partials and theme, running `pikku emails generate`, and rendering/sending them through an EmailService.
-TRIGGER when: code uses renderEmailTemplate, EmailTemplateName, EmailService, SendTemplateEmailInput, LocalEmailService, or imports from .pikku/email/pikku-emails.gen.
-TRIGGER when: the project has an emails/ directory (templates/, locales/, partials/, theme.json) or emailTemplatesDir in pikku.config.json.
-TRIGGER when: user asks to add/edit a transactional email (verification, password reset, invitation, receipt), wire email sending, or translate an email.
-DO NOT TRIGGER when: user asks about i18n for the app UI (use pikku-i18n) or auth flows in general (use pikku-better-auth)."
+description: >-
+  Use when working with Pikku's file-based email templates: authoring HTML/subject/text templates,
+  locales, partials and theme, running `pikku emails generate`, and rendering/sending them through
+  an EmailService. TRIGGER when: code uses renderEmailTemplate, EmailTemplateName, EmailService,
+  SendTemplateEmailInput, LocalEmailService, or imports from .pikku/email/pikku-emails.gen.
+  TRIGGER when: the project has an emails/ directory (templates/, locales/, partials/, theme.json)
+  or emailTemplatesDir in pikku.config.json. TRIGGER when: user asks to add/edit a transactional
+  email (verification, password reset, invitation, receipt), wire email sending, or translate an
+  email. DO NOT TRIGGER when: user asks about i18n for the app UI (use pikku-i18n) or auth flows
+  in general (use pikku-better-auth).
 ---
 
 # Pikku Emails

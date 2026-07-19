@@ -1,0 +1,1 @@
+{"name":"Zulip","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"zulip"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.zulip","typeVersion":1,"position":[200,0],"parameters":{"resource":"message","operation":"delete"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

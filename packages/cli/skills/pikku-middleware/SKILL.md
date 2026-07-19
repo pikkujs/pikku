@@ -1,8 +1,13 @@
 ---
 name: pikku-middleware
-description: 'Use when adding any middleware to a Pikku app — global HTTP middleware, tag-scoped middleware (including service-to-service bearer auth), per-route middleware, session-setting middleware, or understanding middleware execution order and priority.
-TRIGGER when: user wants middleware on some or all routes, machine-to-machine auth, tag-scoped cross-cutting concerns, global interceptors, or middleware priority/order questions.
-DO NOT TRIGGER when: user asks about permissions/authorization checks (use pikku-permissions), auth strategies like authBearer/authCookie (use pikku-security), or deployment.'
+description: >-
+  Use when adding any middleware to a Pikku app — global HTTP middleware, tag-scoped middleware
+  (including service-to-service bearer auth), per-route middleware, session-setting middleware, or
+  understanding middleware execution order and priority. TRIGGER when: user wants middleware on
+  some or all routes, machine-to-machine auth, tag-scoped cross-cutting concerns, global
+  interceptors, or middleware priority/order questions. DO NOT TRIGGER when: user asks about
+  permissions/authorization checks (use pikku-permissions), auth strategies like
+  authBearer/authCookie (use pikku-security), or deployment.
 installGroups: [core]
 ---
 
@@ -13,7 +18,7 @@ installGroups: [core]
 1. Discover before editing. Run `pikku info middleware --verbose` and `pikku info tags --json` to understand the existing middleware and tag landscape.
 2. Identify the source files that own the behavior — wirings files, not generated output.
 3. Register middleware at module load time — in a `wirings/*.ts` file, never inside a function body.
-4. Validate: run `pikku all` after adding or changing middleware; run `pikku tsc` to confirm type safety.
+4. Validate: run `pikku all --tsc` after adding or changing middleware — it regenerates and then confirms type safety in one pass.
 
 ## The `pikkuMiddleware` Factory
 
@@ -221,6 +226,6 @@ export const myFunc = pikkuSessionlessFunc({
 ## After Changes
 
 ```bash
-pikku all        # regenerate metadata so new tags are picked up
-pikku tsc        # type-check
+pikku all              # regenerate metadata so new tags are picked up
+pikku all --tsc        # regenerate, then type-check (fails on type errors)
 ```

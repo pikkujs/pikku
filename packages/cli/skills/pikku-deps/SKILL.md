@@ -1,8 +1,14 @@
 ---
 name: pikku-deps
-description: 'Use for the Pikku dependency security audit: the `pikku audit` CLI command, the `.pikku/audit.json` artifact, the `SecurityAuditReport` type in @pikku/core, and the console Security screen (getSecurityAudit / runSecurityAudit / updateDependency + SecurityAuditView).
-TRIGGER when: user asks about `pikku audit`, dependency vulnerabilities/advisories, outdated dependencies, the Security screen/page in the console, updating a vulnerable dependency, or reading/rendering audit.json.
-DO NOT TRIGGER when: user asks about authentication/sessions/JWT (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use pikku-config).'
+description: >-
+  Use for the Pikku dependency security audit: the `pikku audit` CLI command, the
+  `.pikku/audit.json` artifact, the `SecurityAuditReport` type in @pikku/core, and the console
+  Security screen (getSecurityAudit / runSecurityAudit / updateDependency + SecurityAuditView).
+  TRIGGER when: user asks about `pikku audit`, dependency vulnerabilities/advisories, outdated
+  dependencies, the Security screen/page in the console, updating a vulnerable dependency, or
+  reading/rendering audit.json. DO NOT TRIGGER when: user asks about authentication/sessions/JWT
+  (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use
+  pikku-config).
 installGroups: [core]
 ---
 
@@ -21,9 +27,10 @@ installGroups: [core]
    `SecuritySeverity` / `SecurityUpdateLevel`) are exported from **@pikku/core**.
    The CLI writes it, the addon reads it, the UI renders it — never redeclare
    the type at a call site.
-3. Validate with `pikku tsc` after changes; the command never fails a build
-   (advisories are informational; a missing/failed audit yields an
-   empty-but-valid report).
+3. Validate with `pikku all --tsc` after changes — it type-checks and **fails on
+   type errors**, like any real build gate. Separately, `pikku audit` never fails
+   a build: advisories are informational, and a missing/failed audit yields an
+   empty-but-valid report.
 
 ## The `pikku audit` command
 

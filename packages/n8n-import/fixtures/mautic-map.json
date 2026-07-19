@@ -1,0 +1,1 @@
+{"name":"Mautic","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"mautic"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.mautic","typeVersion":1,"position":[200,0],"parameters":{"resource":"contact","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

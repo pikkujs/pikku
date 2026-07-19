@@ -1,8 +1,11 @@
 ---
 name: pikku-aws
-description: 'Use when setting up AWS services (S3, SQS, Secrets Manager) in a Pikku app. Covers S3Content for file storage, SQSQueueService for queues, and AWSSecrets for secret management.
-TRIGGER when: code uses S3Content, SQSQueueService, AWSSecrets, or user asks about AWS integration, S3 uploads, SQS queues, or AWS Secrets Manager with Pikku.
-DO NOT TRIGGER when: user asks about AWS Lambda runtime (use pikku-deploy-lambda).'
+description: >-
+  Use when setting up AWS services (S3, SQS, Secrets Manager) in a Pikku app. Covers S3Content for
+  file storage, SQSQueueService for queues, and AWSSecrets for secret management. TRIGGER when:
+  code uses S3Content, SQSQueueService, AWSSecrets, or user asks about AWS integration, S3
+  uploads, SQS queues, or AWS Secrets Manager with Pikku. DO NOT TRIGGER when: user asks about AWS
+  Lambda runtime (use pikku-deploy-lambda).
 ---
 
 # Pikku AWS Services
@@ -74,9 +77,10 @@ const secrets = new AWSSecrets(config: AWSConfig)
 
 **Methods:**
 
-- `getSecret<R>(SecretId: string): Promise<R>` — Get a secret value
-- `getSecretJSON<R>(SecretId: string): Promise<R>` — Get and parse a JSON secret
+- `getSecret<T = string>(SecretId: string): Promise<T>` — Get a secret value; a JSON secret is parsed automatically, so pass a shape as `T` (a non-JSON value comes back as the raw string)
+- `getSecrets<T>(SecretIds: (keyof T & string)[]): Promise<Partial<T>>` — Batch fetch; missing keys are omitted rather than thrown
 - `hasSecret(SecretId: string): Promise<boolean>` — Check if secret exists
+- `setSecret` / `deleteSecret` — **not implemented** for `AWSSecrets`; it throws. Manage AWS secrets out of band.
 
 ## Usage Patterns
 

@@ -6,6 +6,7 @@ import type {
   PikkuWire,
   PickRequired,
 } from '../types/core.types.js'
+import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
@@ -29,12 +30,8 @@ export type CorePikkuFunction<
   Out,
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
-  Wire extends PikkuWire<In, Out, true, Session> = PikkuWire<
-    In,
-    Out,
-    true,
-    Session
-  >,
+  Wire extends PikkuWire<In, Out, true, Session, PikkuRPC, null, string> =
+    PikkuWire<In, Out, true, Session>,
 > = (
   services: Services,
   data: In,
@@ -54,15 +51,8 @@ export type CorePikkuFunctionSessionless<
   Out,
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
-  Wire extends PikkuWire<In, Out, false, Session, any, any, any> = PikkuWire<
-    In,
-    Out,
-    false,
-    Session,
-    any,
-    any,
-    any
-  >,
+  Wire extends PikkuWire<In, Out, false, Session, PikkuRPC, null, string> =
+    PikkuWire<In, Out, false, Session>,
 > = (
   services: Services,
   data: In,
@@ -79,15 +69,8 @@ export type CorePikkuFunctionSessionless<
 export type CorePikkuPermission<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, false, any, any, never, never> = PikkuWire<
-    In,
-    never,
-    false,
-    any,
-    never,
-    never,
-    never
-  >,
+  Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
 
 /**
@@ -100,12 +83,8 @@ export type CorePikkuPermission<
 export type CorePikkuPermissionConfig<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, false, any> = PikkuWire<
-    In,
-    never,
-    false,
-    any
-  >,
+  Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = {
   /** The permission function */
   func: CorePikkuPermission<In, Services, Wire>
@@ -143,8 +122,13 @@ export type CorePikkuPermissionConfig<
 export const pikkuPermission = <
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PickRequired<PikkuWire<In, never, false, any>, 'session'> =
-    PickRequired<PikkuWire<In, never, false, any>, 'session'>,
+  Wire extends PickRequired<
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
+    'session'
+  > = PickRequired<
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
+    'session'
+  >,
 >(
   permission:
     | CorePikkuPermission<In, Services, Wire>
@@ -164,12 +148,8 @@ export const pikkuPermission = <
 export type CorePikkuPermissionFactory<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, false, any> = PikkuWire<
-    In,
-    never,
-    false,
-    any
-  >,
+  Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (input: In) => CorePikkuPermission<any, Services, Wire>
 
 /**

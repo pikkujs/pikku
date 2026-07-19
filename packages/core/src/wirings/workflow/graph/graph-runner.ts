@@ -308,6 +308,9 @@ function resolveTemplate(
 
 function resolveValue(value: unknown, nodeResults: Record<string, any>): any {
   if (isDataRef(value)) {
+    if (value.$ref === '$item') {
+      return value
+    }
     const source = nodeResults[value.$ref]
     return value.path ? getValueAtPath(source, value.path) : source
   }

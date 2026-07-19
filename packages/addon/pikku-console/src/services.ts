@@ -24,6 +24,7 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
       coverageService,
       scopeService,
+      webhookService,
     }
   ) => {
     if (!existingMetaService) {
@@ -78,6 +79,7 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
       coverageService,
       scopeService,
+      webhookService,
       codeEditService,
       stateDiffService,
       dbSchemaService,

@@ -1,0 +1,4 @@
+{"name":"Oa","nodes":[
+{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"o"}},
+{"id":"m","name":"Msg","type":"n8n-nodes-base.openAi","typeVersion":1.4,"position":[200,0],"parameters":{"resource":"text","operation":"message","model":"gpt-4o"}}],
+"connections":{"Webhook":{"main":[[{"node":"Msg","type":"main","index":0}]]}}}

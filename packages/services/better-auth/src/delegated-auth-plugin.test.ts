@@ -12,7 +12,9 @@ import {
   type UpstreamIdentity,
 } from './delegated-auth-plugin.js'
 
-const identityFor = (over: Partial<UpstreamIdentity> = {}): UpstreamIdentity => ({
+const identityFor = (
+  over: Partial<UpstreamIdentity> = {}
+): UpstreamIdentity => ({
   externalId: 'bb2-1',
   email: 'Jane@Corp.com',
   name: 'Jane Doe',
@@ -116,8 +118,12 @@ describe('better-auth delegatedAuth plugin', () => {
     })
 
     assert.equal(
-      (await signInDelegated(auth, { email: 'jane@corp.com', password: 'hunter2' }))
-        .status,
+      (
+        await signInDelegated(auth, {
+          email: 'jane@corp.com',
+          password: 'hunter2',
+        })
+      ).status,
       200
     )
     const res2 = await signInDelegated(auth, {

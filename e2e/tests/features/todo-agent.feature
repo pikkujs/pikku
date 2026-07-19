@@ -39,8 +39,8 @@ Feature: Todo Agent via Console
     When I send "Create these 3 todos: 'Learn to juggle', 'Eat a cloud', 'Befriend a squirrel'"
     Then I should see 3 approval requests
     When I deny the 2nd approval and approve the rest
-    Then I should see 2 "done" badges in the chat
-    And I should see 1 "denied" badges in the chat
+    Then I should see 2 "Done" badges in the chat
+    And I should see 1 "Denied" badges in the chat
     And I should see "Learn to juggle" in the chat
     And I should see "Befriend a squirrel" in the chat
 

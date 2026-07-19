@@ -1,0 +1,88 @@
+{
+  "name": "text file addons",
+  "nodes": [
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Extract",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "page",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "titles",
+              "cssSelector": "h2 a",
+              "returnValue": "text",
+              "returnArray": true
+            },
+            {
+              "key": "link",
+              "cssSelector": "a.more",
+              "returnValue": "attribute",
+              "attribute": "href"
+            }
+          ]
+        }
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "ToTable",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "parameters": { "operation": "convertToHtmlTable" },
+      "position": [400, 0]
+    },
+    {
+      "name": "Template",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "parameters": { "html": "<h1>{{ $json.title }}</h1>" },
+      "position": [600, 0]
+    },
+    {
+      "name": "XmlToJson",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "parameters": { "dataPropertyName": "body" },
+      "position": [800, 0]
+    },
+    {
+      "name": "JsonToXml",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "parameters": { "mode": "jsonToxml" },
+      "position": [1000, 0]
+    },
+    {
+      "name": "HtmlToMd",
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "parameters": { "html": "={{ $json.content }}" },
+      "position": [1200, 0]
+    },
+    {
+      "name": "MdToHtml",
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "parameters": { "mode": "markdownToHtml", "markdown": "={{ $json.md }}" },
+      "position": [1400, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Extract", "type": "main", "index": 0 }]] },
+    "Extract": { "main": [[{ "node": "ToTable", "type": "main", "index": 0 }]] },
+    "ToTable": { "main": [[{ "node": "Template", "type": "main", "index": 0 }]] },
+    "Template": { "main": [[{ "node": "XmlToJson", "type": "main", "index": 0 }]] },
+    "XmlToJson": { "main": [[{ "node": "JsonToXml", "type": "main", "index": 0 }]] },
+    "JsonToXml": { "main": [[{ "node": "HtmlToMd", "type": "main", "index": 0 }]] },
+    "HtmlToMd": { "main": [[{ "node": "MdToHtml", "type": "main", "index": 0 }]] }
+  }
+}

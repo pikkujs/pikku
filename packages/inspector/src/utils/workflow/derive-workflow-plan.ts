@@ -63,9 +63,7 @@ function containsConditional(steps: WorkflowStepMeta[]): boolean {
  * e.g. "awaiting_approval" → "Awaiting approval", "building-image" → "Building image"
  */
 function reasonToLabel(reason: string): string {
-  return reason
-    .replace(/[-_]/g, ' ')
-    .replace(/^(.)/, (c) => c.toUpperCase())
+  return reason.replace(/[-_]/g, ' ').replace(/^(.)/, (c) => c.toUpperCase())
 }
 
 /** Flatten named steps (rpc/inline/sleep/parallel children) in source order. */
@@ -88,13 +86,22 @@ function collectNamedSteps(steps: WorkflowStepMeta[]): WorkflowPlannedStep[] {
           displayName: reasonToLabel(step.reason),
         })
         break
+      case 'approval':
+        // Same as suspend, but namespaced `__workflow_approval:` to match the
+        // runtime's separate step key.
+        planned.push({
+          stepName: `__workflow_approval:${step.reason}`,
+          displayName: reasonToLabel(step.reason),
+        })
+        break
       case 'parallel':
         for (const child of step.children) {
           planned.push({ stepName: child.stepName })
         }
         break
       case 'branch':
-        for (const b of step.branches) planned.push(...collectNamedSteps(b.steps))
+        for (const b of step.branches)
+          planned.push(...collectNamedSteps(b.steps))
         if (step.elseSteps) planned.push(...collectNamedSteps(step.elseSteps))
         break
       case 'switch':

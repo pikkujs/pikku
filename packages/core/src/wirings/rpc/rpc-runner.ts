@@ -6,6 +6,8 @@ import type {
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
+import type { AddonInstance } from './addon-runner.js'
+import { addonInstanceForNamespace } from './addon-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
@@ -28,6 +30,7 @@ import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
 import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
 import { runAIAgent, resumeAIAgentSync } from '../ai-agent/ai-agent-runner.js'
 import { streamAIAgent, resumeAIAgent } from '../ai-agent/ai-agent-stream.js'
+import { wrapChannelWithAGUI } from '../ai-agent/ai-agent-agui.js'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -164,6 +167,12 @@ export class ContextAwareRPCService {
     // 'namespace:func' boundary via invokeAddonFunction.
     try {
       const resolved = resolvePikkuFunction(funcName, this.packageName)
+      const addonInstance = resolved.packageName
+        ? addonInstanceForNamespace(
+            this.wire.addonNamespace,
+            resolved.packageName
+          )
+        : undefined
       return await runPikkuFunc<In, Out>(
         'rpc',
         funcName,
@@ -174,6 +183,7 @@ export class ContextAwareRPCService {
           data: () => data,
           wire: updatedWire,
           packageName: resolved.packageName,
+          addonInstance,
         }
       )
     } catch (e) {
@@ -228,6 +238,19 @@ export class ContextAwareRPCService {
       ...(funcMeta.tags ?? []),
     ]
 
+    // The namespace is the consumer-facing wireAddon name; it selects the
+    // per-instance singleton services and secret/variable/credential overrides.
+    const namespace = namespacedFunction.slice(
+      0,
+      namespacedFunction.indexOf(':')
+    )
+    const addonInstance: AddonInstance = {
+      namespace,
+      secretOverrides: resolved.addonConfig?.secretOverrides,
+      variableOverrides: resolved.addonConfig?.variableOverrides,
+      credentialOverrides: resolved.addonConfig?.credentialOverrides,
+    }
+
     // Execute the function using runPikkuFunc with the addon package's state
     // We use the parent services (this.services) since addon packages share services
     // Pass the function's tags so tag-based middleware/permissions are applied
@@ -238,6 +261,7 @@ export class ContextAwareRPCService {
       wire,
       packageName: resolved.package,
       tags,
+      addonInstance,
     })
   }
 
@@ -257,12 +281,19 @@ export class ContextAwareRPCService {
 
     try {
       const resolved = resolvePikkuFunction(rpcName, this.packageName)
+      const addonInstance = resolved.packageName
+        ? addonInstanceForNamespace(
+            this.wire.addonNamespace,
+            resolved.packageName
+          )
+        : undefined
       return await runPikkuFunc<In, Out>('rpc', rpcName, resolved.pikkuFuncId, {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
         data: () => data,
         wire: mergedWire,
         packageName: resolved.packageName,
+        addonInstance,
       })
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {
@@ -338,16 +369,26 @@ export class ContextAwareRPCService {
       ) => {
         const channel = this.wire.channel as unknown as AIStreamChannel
         if (!channel) throw new Error('No channel available for streaming')
+        let currentRunId: string | undefined
         await streamAIAgent(
           agentName,
           input,
-          channel,
+          wrapChannelWithAGUI(channel, {
+            threadId: input.threadId,
+            getRunId: () => currentRunId,
+          }),
           {
             sessionService: this.options.sessionService,
             getCredential: this.wire.getCredential?.bind(this.wire),
           },
           undefined,
-          options
+          {
+            ...options,
+            onRunCreated: (runId) => {
+              currentRunId = runId
+              options?.onRunCreated?.(runId)
+            },
+          }
         )
       },
       resume: async (
@@ -359,7 +400,7 @@ export class ContextAwareRPCService {
         if (!channel) throw new Error('No channel available for streaming')
         await resumeAIAgent(
           { runId, ...input },
-          channel,
+          wrapChannelWithAGUI(channel, { runId }),
           {
             sessionService: this.options.sessionService,
             getCredential: this.wire.getCredential?.bind(this.wire),

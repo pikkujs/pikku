@@ -1,0 +1,40 @@
+{
+  "name": "Cross Node Ref",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "cnr" }
+    },
+    {
+      "id": "c",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [200, 0],
+      "parameters": { "apiBase": "https://api.example.com" }
+    },
+    {
+      "id": "b",
+      "name": "Build",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [400, 0],
+      "parameters": {
+        "endpoint": "={{ $('Config').first().json.apiBase }}",
+        "greeting": "=at {{ $('Config').first().json.apiBase }}!"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Config", "type": "main", "index": 0 }]]
+    },
+    "Config": {
+      "main": [[{ "node": "Build", "type": "main", "index": 0 }]]
+    }
+  }
+}

@@ -155,6 +155,27 @@ export const createSingletonServices = pikkuServices(
     })
     const scopeService = new KyselyScopeService(scopeDb)
 
+    // Dedicated plugin-enabled Kysely for webhook delivery history. Reuses the
+    // CamelCase/Serialize plugins the AI/workflow db uses (the auth db above is
+    // deliberately plugin-free), kept separate so it works across DB_BACKEND.
+    const { KyselyWebhookService, SerializePlugin: WebhookSerializePlugin } =
+      await import('@pikku/kysely')
+    const { default: WebhookDatabase } = await import('better-sqlite3')
+    const {
+      Kysely: WebhookKysely,
+      SqliteDialect: WebhookSqliteDialect,
+      CamelCasePlugin: WebhookCamelCasePlugin,
+    } = await import('kysely')
+    const webhookDb = new WebhookKysely<KyselyPikkuDB>({
+      dialect: new WebhookSqliteDialect({
+        database: new WebhookDatabase(':memory:'),
+      }),
+      plugins: [new WebhookCamelCasePlugin(), new WebhookSerializePlugin()],
+    })
+    const queueService = new InMemoryQueueService()
+    const webhookService = new KyselyWebhookService(queueService, webhookDb)
+    await webhookService.init()
+
     const credentialService = new LocalCredentialService()
 
     const jwt = new JoseJWTService(async () => [
@@ -215,7 +236,8 @@ export const createSingletonServices = pikkuServices(
       aiAgentRunner,
       workflowService,
       workflowRunService,
-      queueService: new InMemoryQueueService(),
+      queueService,
+      webhookService,
     }
   }
 )

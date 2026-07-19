@@ -38,6 +38,7 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import {
   pikkuInfoFunctions,
   pikkuInfoTags,
@@ -52,6 +53,7 @@ import {
   enableWorkflow,
   enableEvents,
   enableRemoteRpc,
+  enableWebhook,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
 import { binary } from './functions/commands/binary.js'
@@ -582,6 +584,11 @@ wireCLI({
             },
           },
         }),
+        webhook: pikkuCLICommand({
+          func: enableWebhook,
+          description:
+            'Enable the outgoing webhook delivery queue worker (scaffolds webhook.gen.ts)',
+        }),
       },
     },
     new: {
@@ -702,6 +709,24 @@ wireCLI({
         }),
       },
     },
+    import: {
+      description: 'Import workflows from other systems',
+      subcommands: {
+        n8n: pikkuCLICommand({
+          func: pikkuImportN8n,
+          description:
+            'Import an n8n workflow JSON export (a single workflow, an export array, or a directory of exports) into Pikku workflow graphs + stub functions',
+          parameters: '<file>',
+          options: {
+            out: {
+              description:
+                'Output directory (defaults to scaffold.functionDir or cwd)',
+              short: 'o',
+            },
+          },
+        }),
+      },
+    },
     versions: {
       description: 'Manage function contract versions',
       subcommands: {
@@ -802,7 +827,7 @@ wireCLI({
     },
     skills: {
       description:
-        'Install bundled agent skills (Claude Code today; Codex/Gemini coming soon)',
+        'Install bundled agent skills (Claude Code, opencode, pi; Codex/Gemini coming soon)',
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuSkillsList,
@@ -815,7 +840,7 @@ wireCLI({
           options: {
             agent: {
               description:
-                'Target agent (claude | opencode | codex | gemini). Default: claude',
+                'Target agent (claude | opencode | pi). Default: claude',
               default: 'claude',
             },
             only: {

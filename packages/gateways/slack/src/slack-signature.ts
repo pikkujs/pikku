@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { hmacSha256Hex, timingSafeStringEqual } from '@pikku/core/hmac'
 
 /**
  * Verify a Slack request signature.
@@ -27,15 +27,7 @@ export function verifySlackSignature(
   // Construct the signature base string: v0:{timestamp}:{body}
   const sigBaseString = `v0:${timestamp}:${body}`
 
-  // Compute HMAC-SHA256
-  const computed =
-    'v0=' +
-    createHmac('sha256', signingSecret).update(sigBaseString).digest('hex')
+  const computed = 'v0=' + hmacSha256Hex(signingSecret, sigBaseString)
 
-  // Timing-safe comparison to prevent timing attacks
-  try {
-    return timingSafeEqual(Buffer.from(computed), Buffer.from(signature))
-  } catch {
-    return false
-  }
+  return timingSafeStringEqual(computed, signature)
 }

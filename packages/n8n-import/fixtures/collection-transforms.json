@@ -1,0 +1,68 @@
+{
+  "name": "collection transforms",
+  "nodes": [
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {},
+      "position": [200, 0]
+    },
+    {
+      "name": "SortIt",
+      "type": "n8n-nodes-base.sort",
+      "parameters": {
+        "type": "simple",
+        "sortFieldsUi": {
+          "sortField": [
+            { "fieldName": "created", "order": "descending" },
+            { "fieldName": "name", "order": "ascending" }
+          ]
+        }
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "Rename",
+      "type": "n8n-nodes-base.renameKeys",
+      "parameters": {
+        "keys": { "key": [{ "currentKey": "old", "newKey": "new" }] }
+      },
+      "position": [600, 0]
+    },
+    {
+      "name": "Roll",
+      "type": "n8n-nodes-base.aggregate",
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            { "fieldToAggregate": "id", "outputFieldName": "ids" }
+          ]
+        }
+      },
+      "position": [800, 0]
+    },
+    {
+      "name": "Stats",
+      "type": "n8n-nodes-base.summarize",
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [{ "aggregation": "average", "field": "amount" }]
+        }
+      },
+      "position": [1000, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Fetch", "type": "main", "index": 0 }]] },
+    "Fetch": { "main": [[{ "node": "SortIt", "type": "main", "index": 0 }]] },
+    "SortIt": { "main": [[{ "node": "Rename", "type": "main", "index": 0 }]] },
+    "Rename": { "main": [[{ "node": "Roll", "type": "main", "index": 0 }]] },
+    "Roll": { "main": [[{ "node": "Stats", "type": "main", "index": 0 }]] }
+  }
+}

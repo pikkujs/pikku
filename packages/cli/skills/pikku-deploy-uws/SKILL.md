@@ -1,8 +1,11 @@
 ---
 name: pikku-deploy-uws
-description: 'Use when deploying a Pikku app with uWebSockets.js. Covers PikkuUWSServer with built-in HTTP and WebSocket support, and pikkuWebsocketHandler for standalone ws library.
-TRIGGER when: code imports @pikku/uws or @pikku/ws, user mentions uWebSockets or high-performance server, or start.ts creates a PikkuUWSServer.
-DO NOT TRIGGER when: just defining functions/wirings without uWS-specific code.'
+description: >-
+  Use when deploying a Pikku app with uWebSockets.js. Covers PikkuUWSServer with built-in HTTP and
+  WebSocket support, and pikkuWebsocketHandler for standalone ws library. TRIGGER when: code
+  imports @pikku/uws or @pikku/ws, user mentions uWebSockets or high-performance server, or
+  start.ts creates a PikkuUWSServer. DO NOT TRIGGER when: just defining functions/wirings without
+  uWS-specific code.
 ---
 
 # Pikku uWebSockets.js Deployment
@@ -17,7 +20,7 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-Highest performance option. Handles both HTTP and WebSocket automatically.
+Highest-throughput option among Pikku's runtimes. Handles both HTTP and WebSocket automatically.
 
 ```bash
 yarn add @pikku/uws

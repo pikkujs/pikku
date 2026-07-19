@@ -1,8 +1,12 @@
 ---
 name: pikku-websocket
-description: 'Use when adding real-time features, WebSocket channels, live updates, chat, or pub/sub to a Pikku app. Covers wireChannel, action routing, auth, EventHub pub/sub, channel middleware, and generated WebSocket client.
-TRIGGER when: code uses wireChannel, user asks about WebSocket, real-time, live updates, chat, pub/sub, or the generated WebSocket client.
-DO NOT TRIGGER when: user asks about HTTP/REST (use pikku-http), SSE (use pikku-http with sse: true), or WebSocket deployment specifics (use pikku-deploy-uws).'
+description: >-
+  Use when adding real-time features, WebSocket channels, live updates, chat, or pub/sub to a
+  Pikku app. Covers wireChannel, action routing, auth, EventHub pub/sub, channel middleware, and
+  generated WebSocket client. TRIGGER when: code uses wireChannel, user asks about WebSocket,
+  real-time, live updates, chat, pub/sub, or the generated WebSocket client. DO NOT TRIGGER when:
+  user asks about HTTP/REST (use pikku-http), SSE (use pikku-http with sse: true), or WebSocket
+  deployment specifics (use pikku-deploy-uws).
 ---
 
 # Pikku WebSocket Wiring
@@ -172,7 +176,7 @@ wireChannel({
 
 ### Generated WebSocket Client
 
-After `npx pikku prebuild`:
+After `npx pikku all`:
 
 ```typescript
 import { PikkuWebSocket } from '.pikku/pikku-websocket.gen.js'

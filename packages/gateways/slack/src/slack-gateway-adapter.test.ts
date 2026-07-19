@@ -10,8 +10,7 @@ const signedRequest = (
   body: string,
   overrides: { signature?: string; timestamp?: string } = {}
 ): PikkuHTTPRequest => {
-  const timestamp =
-    overrides.timestamp ?? String(Math.floor(Date.now() / 1000))
+  const timestamp = overrides.timestamp ?? String(Math.floor(Date.now() / 1000))
   const signature =
     overrides.signature ??
     'v0=' +

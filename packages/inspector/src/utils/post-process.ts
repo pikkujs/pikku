@@ -384,12 +384,14 @@ export function validateSecretOverrides(
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.secretOverrides) continue
 
-    for (const secretKey of Object.keys(addonDecl.secretOverrides)) {
-      if (!secretNames.has(secretKey)) {
+    for (const [logicalName, resolvedName] of Object.entries(
+      addonDecl.secretOverrides
+    )) {
+      if (!secretNames.has(resolvedName)) {
         const availableSecrets = Array.from(secretNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Secret override '${secretKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
+          `Secret override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
         )
       }
     }
@@ -410,12 +412,14 @@ export function validateCredentialOverrides(
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.credentialOverrides) continue
 
-    for (const credentialKey of Object.keys(addonDecl.credentialOverrides)) {
-      if (!credentialNames.has(credentialKey)) {
+    for (const [logicalName, resolvedName] of Object.entries(
+      addonDecl.credentialOverrides
+    )) {
+      if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${credentialKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Credential override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
         )
       }
     }
@@ -434,12 +438,14 @@ export function validateVariableOverrides(
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.variableOverrides) continue
 
-    for (const variableKey of Object.keys(addonDecl.variableOverrides)) {
-      if (!variableNames.has(variableKey)) {
+    for (const [logicalName, resolvedName] of Object.entries(
+      addonDecl.variableOverrides
+    )) {
+      if (!variableNames.has(resolvedName)) {
         const availableVariables = Array.from(variableNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Variable override '${variableKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
+          `Variable override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a variable that does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
         )
       }
     }
@@ -628,6 +634,44 @@ export function validateAgentModels(
       logger.critical(
         ErrorCode.INVALID_MODEL,
         `AI agent '${meta.name}' uses model '${model}', which must be provider-qualified as '<provider>/<model>' (e.g. 'openai/gpt-4').`
+      )
+    }
+  }
+}
+
+/**
+ * A `pikkuWorkflowGraph` node that references the `graph:` namespace (e.g.
+ * `graph:editFields`) needs @pikku/addon-graph wired — otherwise the RPC never
+ * registers and codegen fails deep in type-checking with an opaque error. Fail
+ * early with an actionable message pointing at `scaffold: { graph: true }`.
+ */
+export function validateWorkflowGraphAddons(
+  logger: InspectorLogger,
+  state: InspectorState
+): void {
+  const addonGraphWired = Array.from(
+    state.rpc.wireAddonDeclarations.values()
+  ).some((decl) => decl.package === '@pikku/addon-graph')
+  if (addonGraphWired) {
+    return
+  }
+
+  for (const [name, graph] of Object.entries(state.workflows.graphMeta)) {
+    for (const node of Object.values(graph.nodes)) {
+      if (!('rpcName' in node) || typeof node.rpcName !== 'string') {
+        continue
+      }
+      if (!node.rpcName.startsWith('graph:')) {
+        continue
+      }
+      if (state.functions.meta[node.rpcName]) {
+        continue
+      }
+      logger.critical(
+        ErrorCode.WORKFLOW_GRAPH_ADDON_NOT_WIRED,
+        `Workflow graph '${name}' references '${node.rpcName}' but @pikku/addon-graph is not wired. ` +
+          `Enable "scaffold": { "graph": true } in pikku.config.json (and install @pikku/addon-graph), ` +
+          `or wire it manually with wireAddon({ name: 'graph', package: '@pikku/addon-graph' }).`
       )
     }
   }

@@ -38,6 +38,11 @@ export type RunAIAgentParams = {
 
 export type StreamAIAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
+  /**
+   * Invoked as soon as the run's AIRunStateService id exists, so transport
+   * wrappers (e.g. the AG-UI bridge) can stamp the real runId on RUN_STARTED.
+   */
+  onRunCreated?: (runId: string) => void
 }
 
 export class ToolApprovalRequired extends PikkuError {
@@ -193,7 +198,7 @@ export async function buildInstructions(
   if (meta?.goal) parts.push(meta.goal)
   let instructions = parts.join('\n\n')
 
-  if (meta?.tools?.length) {
+  if (meta?.tools?.length || meta?.workflows?.length) {
     instructions +=
       '\n\nTool usage rules:\n' +
       '- Act immediately with the information given. Do NOT ask clarifying questions unless a required field is truly missing.\n' +
@@ -219,6 +224,7 @@ export type ScopedChannel = AIStreamChannel & {
     toolCallId: string
     toolName: string
     args: unknown
+    reason?: string
     runId: string
   }>
 }
@@ -248,6 +254,7 @@ export function createScopedChannel(
           toolCallId: event.toolCallId,
           toolName: event.toolName,
           args: event.args,
+          ...(event.reason !== undefined ? { reason: event.reason } : {}),
           runId: (event as any).runId,
         })
         return
@@ -538,6 +545,7 @@ export async function buildToolDefs(
                 toolCallId: a.toolCallId,
                 toolName: a.toolName,
                 args: a.args,
+                reason: a.reason,
                 runId: a.runId,
               })),
             }
@@ -545,6 +553,84 @@ export async function buildToolDefs(
           return result.object ?? result.text
         },
       })
+    }
+  }
+
+  const metaWorkflows = meta.workflows
+  if (metaWorkflows?.length) {
+    const workflowMetaMap = pikkuState(null, 'workflows', 'meta')
+    const functionMeta = pikkuState(null, 'function', 'meta')
+    const schemas = pikkuState(null, 'misc', 'schemas')
+
+    for (const workflowName of metaWorkflows) {
+      const wfMeta = workflowMetaMap[workflowName]
+      if (!wfMeta) {
+        missingRpcs.push(workflowName)
+        continue
+      }
+
+      const inputSchemaName = wfMeta.pikkuFuncId
+        ? functionMeta[wfMeta.pikkuFuncId]?.inputSchemaName
+        : undefined
+      let inputSchema = inputSchemaName
+        ? schemas.get(inputSchemaName)
+        : undefined
+      if (
+        !inputSchema ||
+        (typeof inputSchema === 'object' &&
+          inputSchema.type === 'object' &&
+          !inputSchema.properties)
+      ) {
+        inputSchema = { type: 'object', properties: {} }
+      }
+
+      tools.push({
+        name: workflowName,
+        description: wfMeta.description || workflowName,
+        inputSchema,
+        execute: async (toolInput: unknown) => {
+          const workflowService = singletonServices.workflowService
+          if (!workflowService) {
+            throw new Error(
+              `workflowService is not configured — cannot run workflow tool '${workflowName}'`
+            )
+          }
+          const wire: PikkuRawWire = params.sessionService
+            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
+            : {}
+          const rpcService = new ContextAwareRPCService(
+            singletonServices,
+            wire,
+            { sessionService: params.sessionService }
+          )
+          return workflowService.runToCompletion(
+            workflowName,
+            toolInput,
+            rpcService,
+            { wire: { type: 'internal' } }
+          )
+        },
+      })
+    }
+  }
+
+  // A tool's execute() can throw (bad input, RPC failure, DB error, ...). The AI
+  // SDK catches that at the tool-call boundary and turns it into a conversational
+  // "tool error" reply — without this, the exception never reaches pikku's own
+  // logger, so a failing tool is undiagnosable server-side. Log unconditionally,
+  // even when no aiMiddleware afterToolCall hook is registered to see it.
+  for (const tool of tools) {
+    const originalExecute = tool.execute
+    tool.execute = async (toolInput: unknown) => {
+      try {
+        return await originalExecute(toolInput)
+      } catch (err) {
+        singletonServices.logger.error(
+          `AI agent tool '${tool.name}' threw during execute()`,
+          err
+        )
+        throw err
+      }
     }
   }
 

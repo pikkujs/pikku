@@ -1,0 +1,40 @@
+{
+  "name": "Drive Ops",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "drive" }
+    },
+    {
+      "id": "d",
+      "name": "Download File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": { "__rl": true, "mode": "id", "value": "1AbCfileId" }
+      }
+    },
+    {
+      "id": "s",
+      "name": "Search Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [400, 0],
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "name contains 'report'"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Download File", "type": "main", "index": 0 }]] },
+    "Download File": { "main": [[{ "node": "Search Folder", "type": "main", "index": 0 }]] }
+  }
+}

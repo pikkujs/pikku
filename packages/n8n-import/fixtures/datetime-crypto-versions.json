@@ -1,0 +1,72 @@
+{
+  "name": "datetime crypto versions",
+  "nodes": [
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "AddDays",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "parameters": {
+        "operation": "addToDate",
+        "magnitude": "={{$json.ts}}",
+        "duration": 365,
+        "timeUnit": "days",
+        "outputFieldName": "future"
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "FormatV1",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 1,
+      "parameters": {
+        "action": "format",
+        "value": "={{$json.date}}",
+        "toFormat": "YYYY-MM-DD"
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "ExtractYear",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "parameters": {
+        "operation": "extractDate",
+        "date": "={{$json.ts}}",
+        "part": "year"
+      },
+      "position": [500, 0]
+    },
+    {
+      "name": "Hash",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "parameters": {
+        "action": "hash",
+        "type": "SHA256",
+        "value": "={{$json.pw}}",
+        "encoding": "hex"
+      },
+      "position": [600, 0]
+    },
+    {
+      "name": "SignIt",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "parameters": { "action": "sign", "value": "x" },
+      "position": [800, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "AddDays", "type": "main", "index": 0 }]] },
+    "AddDays": { "main": [[{ "node": "FormatV1", "type": "main", "index": 0 }]] },
+    "FormatV1": { "main": [[{ "node": "ExtractYear", "type": "main", "index": 0 }]] },
+    "ExtractYear": { "main": [[{ "node": "Hash", "type": "main", "index": 0 }]] },
+    "Hash": { "main": [[{ "node": "SignIt", "type": "main", "index": 0 }]] }
+  }
+}

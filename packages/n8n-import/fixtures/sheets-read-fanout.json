@@ -1,0 +1,48 @@
+{
+  "name": "Sheet Read Fanout",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "r",
+      "name": "Read",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [200, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "list", "value": "1abcSHEET" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Sheet1" }
+      }
+    },
+    {
+      "id": "p",
+      "name": "Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.com/publish",
+        "sendBody": true,
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "video", "value": "={{ $json.url }}" },
+            { "name": "caption", "value": "={{ $json.title }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] },
+    "Read": { "main": [[{ "node": "Post", "type": "main", "index": 0 }]] }
+  }
+}

@@ -1,0 +1,5 @@
+{"name":"At","nodes":[
+{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"a"}},
+{"id":"c","name":"Create","type":"n8n-nodes-base.airtable","typeVersion":2,"position":[200,0],"parameters":{"operation":"create","base":{"__rl":true,"mode":"list","value":"appXXX"},"table":{"__rl":true,"mode":"list","value":"tblYYY"}}},
+{"id":"g","name":"Get","type":"n8n-nodes-base.airtable","typeVersion":2,"position":[400,0],"parameters":{"operation":"get","base":{"__rl":true,"mode":"list","value":"appXXX"},"table":{"__rl":true,"mode":"list","value":"tblYYY"},"id":"rec123"}}],
+"connections":{"Webhook":{"main":[[{"node":"Create","type":"main","index":0}]]},"Create":{"main":[[{"node":"Get","type":"main","index":0}]]}}}

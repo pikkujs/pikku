@@ -1,8 +1,12 @@
 ---
 name: pikku-services
-description: 'Use when setting up dependency injection, creating custom services, or configuring the service layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service typing, built-in services, and tree-shaking.
-TRIGGER when: code uses pikkuServices/pikkuWireServices, user asks about services.ts, dependency injection, service factories, or built-in services (ConsoleLogger, JoseJWTService).
-DO NOT TRIGGER when: user asks about auth middleware (use pikku-security) or secrets/variables (use pikku-config).'
+description: >-
+  Use when setting up dependency injection, creating custom services, or configuring the service
+  layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service
+  typing, built-in services, and tree-shaking. TRIGGER when: code uses
+  pikkuServices/pikkuWireServices, user asks about services.ts, dependency injection, service
+  factories, or built-in services (ConsoleLogger, JoseJWTService). DO NOT TRIGGER when: user asks
+  about auth middleware (use pikku-security) or secrets/variables (use pikku-config).
 installGroups: [core]
 ---
 
@@ -72,7 +76,7 @@ export const createWireServices = pikkuWireServices(
 
 ### Auto-Generated Service Manifest
 
-After `npx pikku prebuild`, Pikku generates `.pikku/pikku-services.gen.ts`, a manifest of which services are actually used by wired functions:
+After `npx pikku all`, Pikku generates `.pikku/pikku-services.gen.ts`, a manifest of which services are actually used by wired functions:
 
 ```typescript
 export const requiredSingletonServices = {

@@ -18,5 +18,14 @@ export const wireAddon = (config: WireAddonConfig): void => {
     rpcEndpoint: config.rpcEndpoint,
     auth: config.auth,
     tags: config.tags,
+    ...(config.secretOverrides
+      ? { secretOverrides: config.secretOverrides }
+      : {}),
+    ...(config.variableOverrides
+      ? { variableOverrides: config.variableOverrides }
+      : {}),
+    ...(config.credentialOverrides
+      ? { credentialOverrides: config.credentialOverrides }
+      : {}),
   })
 }

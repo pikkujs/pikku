@@ -168,12 +168,19 @@ export async function loadAddonFunctionsMeta(
         const secretsRaw = await readFile(secretsMetaPath, 'utf-8')
         const secretsMeta = JSON.parse(secretsRaw)
         for (const [key, def] of Object.entries<any>(secretsMeta)) {
+          // Each instance's secretOverrides remap the addon's logical secret
+          // name to the real project secret; the logical name is the default
+          // only when no override is provided. Two instances with different
+          // overrides therefore surface two distinct project secrets.
+          const resolvedName = decl.secretOverrides?.[key] ?? key
           const existing = state.secrets.definitions.find(
-            (d: any) => d.name === key
+            (d: any) => d.name === resolvedName
           )
           if (!existing) {
-            state.secrets.definitions.push(def)
-            logger.debug(`Loaded addon secret '${key}' from ${decl.package}`)
+            state.secrets.definitions.push({ ...def, name: resolvedName })
+            logger.debug(
+              `Loaded addon secret '${resolvedName}' from ${decl.package}`
+            )
           }
         }
       } catch {
@@ -210,12 +217,15 @@ export async function loadAddonFunctionsMeta(
         const variablesRaw = await readFile(variablesMetaPath, 'utf-8')
         const variablesMeta = JSON.parse(variablesRaw)
         for (const [key, def] of Object.entries<any>(variablesMeta)) {
+          const resolvedName = decl.variableOverrides?.[key] ?? key
           const existing = state.variables.definitions.find(
-            (d: any) => d.name === key
+            (d: any) => d.name === resolvedName
           )
           if (!existing) {
-            state.variables.definitions.push(def)
-            logger.debug(`Loaded addon variable '${key}' from ${decl.package}`)
+            state.variables.definitions.push({ ...def, name: resolvedName })
+            logger.debug(
+              `Loaded addon variable '${resolvedName}' from ${decl.package}`
+            )
           }
         }
       } catch {

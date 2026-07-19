@@ -25,6 +25,7 @@ import {
   computeRequiredSchemas,
   computeDiagnostics,
   validateSchemaWiringSeparation,
+  validateWorkflowGraphAddons,
 } from './utils/post-process.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core/internal'
@@ -405,6 +406,7 @@ export const inspect = async (
     computePermissionsGroupsMeta(state)
     computeDiagnostics(state)
     validateSchemaWiringSeparation(logger, state)
+    validateWorkflowGraphAddons(logger, state)
 
     if (options.openAPI) {
       state.openAPISpec = await generateOpenAPISpec(

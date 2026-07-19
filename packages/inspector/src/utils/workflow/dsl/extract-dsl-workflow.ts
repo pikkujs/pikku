@@ -8,6 +8,7 @@ import type {
   FanoutStepMeta,
   CancelStepMeta,
   SuspendStepMeta,
+  ApprovalStepMeta,
   SetStepMeta,
   SwitchStepMeta,
   SwitchCaseMeta,
@@ -25,6 +26,7 @@ import {
   extractActorFromOptions,
   isWorkflowSleepCall,
   isWorkflowSuspendCall,
+  isWorkflowApprovalCall,
   isThrowCancelException,
   extractCancelReason,
   isParallelFanout,
@@ -520,6 +522,22 @@ function extractExpressionStatement(
       return extractSuspendStep(call, context)
     }
 
+    if (isWorkflowApprovalCall(call, context.checker)) {
+      const step = extractApprovalStep(call, context, outputVar)
+
+      // Unlike suspend, an approval yields a value, so a downstream step can
+      // reference it — track the binding the same way workflow.do() does.
+      if (outputVar && step) {
+        const type = context.checker.getTypeAtLocation(expr)
+        context.outputVars.set(outputVar, { type, node: expr })
+        if (isArrayType(type, context.checker)) {
+          context.arrayVars.add(outputVar)
+        }
+      }
+
+      return step
+    }
+
     // Check for parallel group or fanout
     if (isParallelFanout(call)) {
       return extractParallelFanout(call, context)
@@ -732,6 +750,54 @@ function extractSuspendStep(
   } catch (error) {
     context.errors.push({
       message: `Failed to extract suspend step: ${error instanceof Error ? error.message : String(error)}`,
+      node: call,
+    })
+    return null
+  }
+}
+
+/**
+ * Extract approval step from workflow.approval() call
+ */
+function extractApprovalStep(
+  call: ts.CallExpression,
+  context: ExtractionContext,
+  outputVar?: string
+): ApprovalStepMeta | null {
+  const args = call.arguments
+  if (args.length < 1) return null
+
+  try {
+    const reason = extractStringLiteral(args[0], context.checker)
+    const step: ApprovalStepMeta = {
+      type: 'approval',
+      reason,
+    }
+    if (outputVar) {
+      step.outputVar = outputVar
+    }
+    // The `schema` option is a runtime value validated inside the workflow body,
+    // so it is deliberately not serialized here — only `expiry`, which the graph
+    // and planned-step ladder need in order to describe the gate.
+    const options = args[1]
+    if (options && ts.isObjectLiteralExpression(options)) {
+      for (const prop of options.properties) {
+        if (
+          ts.isPropertyAssignment(prop) &&
+          prop.name.getText() === 'expiry' &&
+          (ts.isStringLiteral(prop.initializer) ||
+            ts.isNumericLiteral(prop.initializer))
+        ) {
+          step.expiry = ts.isNumericLiteral(prop.initializer)
+            ? Number(prop.initializer.text)
+            : prop.initializer.text
+        }
+      }
+    }
+    return step
+  } catch (error) {
+    context.errors.push({
+      message: `Failed to extract approval step: ${error instanceof Error ? error.message : String(error)}`,
       node: call,
     })
     return null

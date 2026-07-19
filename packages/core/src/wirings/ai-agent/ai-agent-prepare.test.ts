@@ -150,6 +150,7 @@ describe('ai-agent-prepare', () => {
       toolCallId: 'tc-1',
       toolName: 'tool-a',
       args: { x: 1 },
+      reason: 'Delete todo "x"',
       runId: 'run-1',
     } as AIStreamEvent)
     channel.send({ type: 'done' } as AIStreamEvent)
@@ -161,6 +162,7 @@ describe('ai-agent-prepare', () => {
         toolCallId: 'tc-1',
         toolName: 'tool-a',
         args: { x: 1 },
+        reason: 'Delete todo "x"',
         runId: 'run-1',
       },
     ])
@@ -237,6 +239,51 @@ describe('ai-agent-prepare', () => {
     assert.equal(afterCalls.length, 1)
   })
 
+  test('buildToolDefs logs a tool execute() failure even without aiMiddleware hooks, then rethrows', async () => {
+    addAgent('ops-agent')
+    pikkuState(null, 'agent', 'agentsMeta')['ops-agent'] = {
+      ...pikkuState(null, 'agent', 'agentsMeta')['ops-agent'],
+      tools: ['searchInventory'],
+    } as any
+    pikkuState(null, 'rpc', 'meta').searchInventory = 'searchInventory'
+    pikkuState(null, 'function', 'meta').searchInventory = {
+      description: 'Search inventory',
+      inputSchemaName: 'SearchInput',
+      sessionless: true,
+    }
+    pikkuState(null, 'misc', 'schemas').set('SearchInput', { type: 'object' })
+    pikkuState(null, 'function', 'functions').set('searchInventory', {
+      func: async () => {
+        throw new Error('db unreachable')
+      },
+    })
+
+    const errorCalls: unknown[][] = []
+    const singletonServices = {
+      logger: {
+        warn: () => {},
+        error: (...args: unknown[]) => errorCalls.push(args),
+      },
+    } as any
+    pikkuState(null, 'package', 'singletonServices', singletonServices)
+
+    const { tools } = await buildToolDefs(
+      {},
+      new Map<string, string>(),
+      'resource-1',
+      'ops-agent',
+      null
+    )
+
+    assert.equal(tools.length, 1)
+    await assert.rejects(
+      () => tools[0].execute({}),
+      /db unreachable/
+    )
+    assert.equal(errorCalls.length, 1)
+    assert.match(String(errorCalls[0][0]), /searchInventory.*execute/)
+  })
+
   test('buildToolDefs skips permissioned tools without a session and adds sub-agent tools', async () => {
     addAgent('manager', {
       agents: ['assistant'],
@@ -290,5 +337,89 @@ describe('ai-agent-prepare', () => {
       },
       required: ['message', 'session'],
     })
+  })
+
+  test('buildToolDefs adds a workflow tool that runs the workflow and returns its output', async () => {
+    addAgent('planner', { workflows: ['buildReport'] } as any)
+    pikkuState(null, 'agent', 'agentsMeta').planner = {
+      ...pikkuState(null, 'agent', 'agentsMeta').planner,
+      workflows: ['buildReport'],
+    } as any
+
+    pikkuState(null, 'workflows', 'meta').buildReport = {
+      name: 'buildReport',
+      pikkuFuncId: 'buildReport',
+      source: 'graph',
+      description: 'Build a report for a country',
+    } as any
+    pikkuState(null, 'function', 'meta').buildReport = {
+      inputSchemaName: 'BuildReportInput',
+      sessionless: true,
+    } as any
+    pikkuState(null, 'misc', 'schemas').set('BuildReportInput', {
+      type: 'object',
+      properties: { country: { type: 'string' } },
+      required: ['country'],
+    })
+
+    const runCalls: Array<{ name: string; input: unknown }> = []
+    const workflowService = {
+      runToCompletion: async (name: string, input: unknown) => {
+        runCalls.push({ name, input })
+        return { capital: 'Paris' }
+      },
+    }
+    const singletonServices = {
+      logger: { warn: () => {} },
+      workflowService,
+    } as any
+    pikkuState(null, 'package', 'singletonServices', singletonServices)
+
+    const { tools, missingRpcs } = await buildToolDefs(
+      {},
+      new Map<string, string>(),
+      'resource-1',
+      'planner',
+      null
+    )
+
+    assert.deepEqual(missingRpcs, [])
+    assert.equal(tools.length, 1)
+    assert.equal(tools[0].name, 'buildReport')
+    assert.equal(tools[0].description, 'Build a report for a country')
+    assert.deepEqual(tools[0].inputSchema, {
+      type: 'object',
+      properties: { country: { type: 'string' } },
+      required: ['country'],
+    })
+
+    const result = await tools[0].execute({ country: 'France' })
+    assert.deepEqual(result, { capital: 'Paris' })
+    assert.deepEqual(runCalls, [
+      { name: 'buildReport', input: { country: 'France' } },
+    ])
+  })
+
+  test('buildToolDefs reports an unknown workflow tool as missing', async () => {
+    addAgent('planner2', { workflows: ['ghost'] } as any)
+    pikkuState(null, 'agent', 'agentsMeta').planner2 = {
+      ...pikkuState(null, 'agent', 'agentsMeta').planner2,
+      workflows: ['ghost'],
+    } as any
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { warn: () => {} },
+      workflowService: { runToCompletion: async () => ({}) },
+    } as any)
+
+    const { tools, missingRpcs } = await buildToolDefs(
+      {},
+      new Map<string, string>(),
+      'resource-1',
+      'planner2',
+      null
+    )
+
+    assert.equal(tools.length, 0)
+    assert.deepEqual(missingRpcs, ['ghost'])
   })
 })

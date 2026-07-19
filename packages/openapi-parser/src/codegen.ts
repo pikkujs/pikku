@@ -105,7 +105,10 @@ function humanDescription(parsed: ParsedOperation): string {
   if (summary && !GENERIC_SUMMARIES.has(summary.toLowerCase())) {
     return capitalize(summary)
   }
-  return humanizeOperationId(parsed.operationId) ?? `${parsed.method.toUpperCase()} ${parsed.path}`
+  return (
+    humanizeOperationId(parsed.operationId) ??
+    `${parsed.method.toUpperCase()} ${parsed.path}`
+  )
 }
 
 function getErrorClassesForResponses(
@@ -433,7 +436,9 @@ export function generateAddonFromOpenAPI(
 
   // Generate index.ts with all exports
   files['src/index.ts'] = generateIndexFile(functionExports, {
-    upstreamAuth: upstreamAuthExport ? { name, export: upstreamAuthExport } : undefined,
+    upstreamAuth: upstreamAuthExport
+      ? { name, export: upstreamAuthExport }
+      : undefined,
   })
 
   // Generate typed API service class with route map
@@ -443,6 +448,10 @@ export function generateAddonFromOpenAPI(
     vars,
     flags
   )
+
+  if (flags.oauth || flags.credential === 'oauth2') {
+    files[`src/${name}.credential.ts`] = generateCredentialFile(spec, vars)
+  }
 
   // Generate variable file for BASE_URL
   files[`src/${name}.variable.ts`] = generateVariableFile(spec, vars)
@@ -1075,9 +1084,7 @@ function generateUpstreamAuthFile(
   )
   lines.push('}')
   lines.push('')
-  lines.push(
-    `export interface ${pascalName}UpstreamCredentials {`
-  )
+  lines.push(`export interface ${pascalName}UpstreamCredentials {`)
   lines.push('  email?: string')
   lines.push('  password?: string')
   lines.push('  apiKey?: string')
@@ -1098,18 +1105,16 @@ function generateUpstreamAuthFile(
     "  typeof value === 'string' && value ? value : typeof value === 'number' ? String(value) : undefined"
   )
   lines.push('')
-  lines.push('/** Decode a JWT payload without verifying — see file docblock. */')
+  lines.push(
+    '/** Decode a JWT payload without verifying — see file docblock. */'
+  )
   lines.push('const decodeJwtPayload = (token: string): unknown => {')
   lines.push("  const part = token.split('.')[1]")
   lines.push('  if (!part) return undefined')
   lines.push('  try {')
   lines.push("    const pad = part + '==='.slice((part.length + 3) % 4)")
-  lines.push(
-    "    const bin = atob(pad.replace(/-/g, '+').replace(/_/g, '/'))"
-  )
-  lines.push(
-    '    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))'
-  )
+  lines.push("    const bin = atob(pad.replace(/-/g, '+').replace(/_/g, '/'))")
+  lines.push('    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))')
   lines.push('    return JSON.parse(new TextDecoder().decode(bytes))')
   lines.push('  } catch {')
   lines.push('    // Not a decodable JWT — caller treats it as missing claims.')
@@ -1156,7 +1161,9 @@ function generateUpstreamAuthFile(
   lines.push(
     `  const response = await fetch(\`\${baseUrl.replace(/\\/+$/, '')}${delegated.loginPath}\`, {`
   )
-  lines.push(`    method: ${JSON.stringify(delegated.loginMethod.toUpperCase())},`)
+  lines.push(
+    `    method: ${JSON.stringify(delegated.loginMethod.toUpperCase())},`
+  )
   lines.push('    headers,')
   lines.push(
     '    body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,'
@@ -1165,7 +1172,9 @@ function generateUpstreamAuthFile(
   lines.push('  if (!response.ok) return null')
   lines.push('')
   lines.push('  const data: unknown = await response.json()')
-  lines.push(`  const token = str(pick(data, ${JSON.stringify(delegated.tokenPath)}))`)
+  lines.push(
+    `  const token = str(pick(data, ${JSON.stringify(delegated.tokenPath)}))`
+  )
   lines.push('  if (!token) return null')
   lines.push('')
   if (claims.source === 'jwt') {
@@ -1178,7 +1187,9 @@ function generateUpstreamAuthFile(
   lines.push(
     `  const externalId = str(pick(claims, ${JSON.stringify(claims.externalId)}))`
   )
-  lines.push(`  const email = str(pick(claims, ${JSON.stringify(claims.email)}))`)
+  lines.push(
+    `  const email = str(pick(claims, ${JSON.stringify(claims.email)}))`
+  )
   lines.push('  if (!externalId || !email) return null')
   lines.push('')
   if (namePaths.length > 0) {
@@ -1244,7 +1255,7 @@ function generateServiceFile(
   vars: AddonVars,
   flags: CodegenFlags
 ): string {
-  const { name, pascalName, screamingName } = vars
+  const { name, camelName, pascalName, screamingName } = vars
   const displayName = vars.displayName.replace(/'/g, '')
   const lines: string[] = []
 
@@ -1276,25 +1287,9 @@ function generateServiceFile(
   lines.push('')
 
   if (flags.oauth) {
-    // Use OAuth2 details from spec if available
-    const oauthScheme = Object.values(spec.securitySchemes).find(
-      (s) => s.type === 'oauth2'
+    lines.push(
+      `import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'`
     )
-    const authUrl =
-      oauthScheme?.flows?.authorizationUrl ??
-      'https://example.com/oauth2/authorize'
-    const tokenUrl =
-      oauthScheme?.flows?.tokenUrl ?? 'https://example.com/oauth2/token'
-    const scopes = oauthScheme?.flows?.scopes
-      ? Object.keys(oauthScheme.flows.scopes)
-      : ['read', 'write']
-
-    lines.push(`export const ${screamingName}_OAUTH2_CONFIG = {`)
-    lines.push(`  tokenSecretId: '${screamingName}_TOKENS',`)
-    lines.push(`  authorizationUrl: ${JSON.stringify(authUrl)},`)
-    lines.push(`  tokenUrl: ${JSON.stringify(tokenUrl)},`)
-    lines.push(`  scopes: ${JSON.stringify(scopes)},`)
-    lines.push('}')
     lines.push('')
   }
 
@@ -1367,9 +1362,10 @@ function generateServiceFile(
     lines.push(
       `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
     )
+    lines.push(`    const oauth2 = CREDENTIAL_OAUTH2_CONFIGS['${camelName}']`)
     lines.push('    this.oauth = new OAuth2Client(')
-    lines.push(`      ${screamingName}_OAUTH2_CONFIG,`)
-    lines.push(`      '${screamingName}_APP_CREDENTIALS',`)
+    lines.push('      oauth2,')
+    lines.push('      oauth2.appCredentialSecretId,')
     lines.push('      secrets')
     lines.push('    )')
     lines.push('  }')
@@ -1399,9 +1395,7 @@ function generateServiceFile(
   lines.push('    path: string,')
   lines.push('    data?: unknown')
   lines.push('  ): Promise<T> {')
-  lines.push(
-    '    const input = data as Record<string, unknown> | undefined'
-  )
+  lines.push('    const input = data as Record<string, unknown> | undefined')
   if (flags.camelCase) {
     lines.push('    const rawData = input ? _toSnakeCase(input) : input')
   }
@@ -1576,6 +1570,79 @@ function generateServiceFile(
   lines.push('  }')
 
   lines.push('}')
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
+  const { camelName, screamingName } = vars
+  const displayName = vars.displayName.replace(/'/g, '')
+  const description = vars.description.replace(/'/g, '')
+
+  const oauthScheme = Object.values(spec.securitySchemes).find(
+    (s) => s.type === 'oauth2'
+  )
+  const authorizationUrl = oauthScheme?.flows?.authorizationUrl
+  const tokenUrl = oauthScheme?.flows?.tokenUrl
+  const scopes = oauthScheme?.flows?.scopes
+    ? Object.keys(oauthScheme.flows.scopes)
+    : ['read', 'write']
+
+  const lines: string[] = []
+  lines.push("import { z } from 'zod'")
+  lines.push("import { wireCredential } from '@pikku/core/credential'")
+  lines.push("import { wireSecret } from '@pikku/core/secret'")
+  lines.push('')
+  lines.push(`export const ${camelName}TokenSchema = z.object({`)
+  lines.push('  accessToken: z.string(),')
+  lines.push('  refreshToken: z.string().optional(),')
+  lines.push('})')
+  lines.push('')
+  lines.push(`export const ${camelName}OAuthAppSchema = z.object({`)
+  lines.push("  clientId: z.string().describe('OAuth2 app client ID'),")
+  lines.push("  clientSecret: z.string().describe('OAuth2 app client secret'),")
+  lines.push('})')
+  lines.push('')
+
+  if (!authorizationUrl || !tokenUrl) {
+    lines.push(
+      '// TODO: this spec declares no oauth2 flow URLs, so the placeholder(s)'
+    )
+    lines.push(
+      `// below are not real. Replace them with ${displayName}'s endpoints —`
+    )
+    lines.push('// OAuth will fail against example.com.')
+  }
+
+  // oauth2 must stay an inline object literal: the inspector reads it via AST
+  // (add-credential.ts) and silently drops a config behind an identifier.
+  lines.push('wireCredential({')
+  lines.push(`  name: '${camelName}',`)
+  lines.push(`  displayName: '${displayName}',`)
+  lines.push(`  description: '${description}',`)
+  lines.push(`  type: 'wire',`)
+  lines.push(`  schema: ${camelName}TokenSchema,`)
+  lines.push('  oauth2: {')
+  lines.push(`    appCredentialSecretId: '${screamingName}_OAUTH_APP',`)
+  lines.push(`    tokenSecretId: '${screamingName}_OAUTH_TOKENS',`)
+  lines.push(
+    `    authorizationUrl: ${JSON.stringify(authorizationUrl ?? 'https://example.com/oauth2/authorize')},`
+  )
+  lines.push(
+    `    tokenUrl: ${JSON.stringify(tokenUrl ?? 'https://example.com/oauth2/token')},`
+  )
+  lines.push(`    scopes: ${JSON.stringify(scopes)},`)
+  lines.push('  },')
+  lines.push('})')
+  lines.push('')
+  lines.push('wireSecret({')
+  lines.push(`  name: '${camelName}OAuthApp',`)
+  lines.push(`  displayName: '${displayName} OAuth App',`)
+  lines.push(`  description: 'OAuth2 app credentials for ${displayName}',`)
+  lines.push(`  secretId: '${screamingName}_OAUTH_APP',`)
+  lines.push(`  schema: ${camelName}OAuthAppSchema,`)
+  lines.push('})')
   lines.push('')
 
   return lines.join('\n')

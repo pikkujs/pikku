@@ -12,6 +12,11 @@ function extractAstValue(
   refParamName: string,
   templateParamName: string | undefined
 ): unknown {
+  // `'GET' as const` / parenthesised values wrap the real initializer — see
+  // through them or the whole property is silently dropped from the meta.
+  while (ts.isAsExpression(expr) || ts.isParenthesizedExpression(expr)) {
+    expr = expr.expression
+  }
   if (ts.isStringLiteral(expr)) {
     return expr.text
   }
@@ -146,10 +151,14 @@ function extractInputMapping(
       ? node.parameters[0].name.text
       : 'ref'
 
+  // The canonical form imports `template` from '@pikku/core/workflow' and calls
+  // it inside a single-param `(ref) => (...)` arrow; the older form passes it as
+  // a second arrow parameter. Support both — default to the imported name so a
+  // `template(...)` value is never dropped just because it isn't a 2nd param.
   const templateParamName =
     node.parameters.length > 1 && ts.isIdentifier(node.parameters[1].name)
       ? node.parameters[1].name.text
-      : undefined
+      : 'template'
 
   const input: Record<string, unknown | DataRef> = {}
 
@@ -184,6 +193,13 @@ function extractNextConfig(
   node: ts.Node,
   _checker: ts.TypeChecker
 ): string | string[] | Record<string, string | string[]> | undefined {
+  // Key-based branch `next` (`{ key: [targets] }`) is authored with an `as any`
+  // cast because the graph's NextConfig can't narrow record targets to node-id
+  // literals; see through that (and parens) so the routing survives into the meta.
+  while (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) {
+    node = node.expression
+  }
+
   if (ts.isStringLiteral(node)) {
     return node.text
   }
@@ -254,6 +270,7 @@ interface PikkuWorkflowGraphExtract {
   name?: string
   description?: string
   tags?: string[]
+  notes?: string[]
   disabled?: true
   nodesNode?: ts.ObjectLiteralExpression
   configNode?: ts.ObjectLiteralExpression
@@ -270,6 +287,7 @@ function extractWorkflowGraphConfig(
   let name: string | undefined
   let description: string | undefined
   let tags: string[] | undefined
+  let notes: string[] | undefined
   let disabled: true | undefined
   let nodesNode: ts.ObjectLiteralExpression | undefined
   let configNode: ts.ObjectLiteralExpression | undefined
@@ -294,6 +312,13 @@ function extractWorkflowGraphConfig(
         .filter(ts.isStringLiteral)
         .map((el) => (el as ts.StringLiteral).text)
     } else if (
+      propName === 'notes' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      notes = prop.initializer.elements
+        .filter(ts.isStringLiteral)
+        .map((el) => (el as ts.StringLiteral).text)
+    } else if (
       propName === 'nodes' &&
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
@@ -306,7 +331,7 @@ function extractWorkflowGraphConfig(
     }
   }
 
-  return { name, description, tags, disabled, nodesNode, configNode }
+  return { name, description, tags, notes, disabled, nodesNode, configNode }
 }
 
 /**
@@ -359,6 +384,7 @@ function extractGraphFromNewFormat(
       onError: undefined,
       retries: undefined,
       retryDelay: undefined,
+      notes: undefined,
     }
   }
 
@@ -386,6 +412,7 @@ function extractGraphFromNewFormat(
           nodes[nodeId].input = nodeConfig.input
           nodes[nodeId].retries = nodeConfig.retries
           nodes[nodeId].retryDelay = nodeConfig.retryDelay
+          nodes[nodeId].notes = nodeConfig.notes
         }
       }
     }
@@ -406,12 +433,14 @@ function extractNodeConfigFromObject(
   input: Record<string, any>
   retries: number | undefined
   retryDelay: string | number | undefined
+  notes: string | undefined
 } {
   let next: any = undefined
   let onError: any = undefined
   let input: Record<string, any> = {}
   let retries: number | undefined = undefined
   let retryDelay: string | number | undefined = undefined
+  let notes: string | undefined = undefined
 
   for (const prop of obj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -434,10 +463,12 @@ function extractNodeConfigFromObject(
       } else if (ts.isStringLiteral(prop.initializer)) {
         retryDelay = prop.initializer.text
       }
+    } else if (propName === 'notes') {
+      notes = extractStringLiteral(prop.initializer, checker)
     }
   }
 
-  return { next, onError, input, retries, retryDelay }
+  return { next, onError, input, retries, retryDelay, notes }
 }
 
 /**
@@ -526,6 +557,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     source: 'graph',
     description: graphConfig.description,
     tags: graphConfig.tags,
+    notes: graphConfig.notes,
     nodes: graphNodes,
     entryNodeIds,
   }

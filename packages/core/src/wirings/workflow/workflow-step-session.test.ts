@@ -31,7 +31,9 @@ function capturingRpcService(): {
 
 describe('queued workflow steps carry the run wire pikkuUserId', () => {
   test('invokeStepRpc merges run.wire.pikkuUserId into the step wire override', async () => {
-    pikkuState(null, 'package', 'singletonServices', { logger: silentLogger } as any)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: silentLogger,
+    } as any)
 
     const ws = new InMemoryWorkflowService()
     const runId = await ws.createRun('flow', {}, false, 'hash', {
@@ -56,19 +58,33 @@ describe('queued workflow steps carry the run wire pikkuUserId', () => {
       'user-abc',
       'the step wire override carries the run wire pikkuUserId so authed steps rehydrate'
     )
-    assert.ok(rpc.wire().workflowStep, 'workflowStep provenance is still present')
+    assert.ok(
+      rpc.wire().workflowStep,
+      'workflowStep provenance is still present'
+    )
   })
 
   test('no pikkuUserId key is injected when the run wire has none', async () => {
-    pikkuState(null, 'package', 'singletonServices', { logger: silentLogger } as any)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: silentLogger,
+    } as any)
 
     const ws = new InMemoryWorkflowService()
-    const runId = await ws.createRun('flow', {}, false, 'hash', { type: 'test' })
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
     await ws.insertStepState(runId, 'noauth', 'someFn', {})
     const stepState = await ws.getStepState(runId, 'noauth')
 
     const rpc = capturingRpcService()
-    await (ws as any).invokeStepRpc(runId, 'noauth', stepState, 'someFn', {}, rpc.service)
+    await (ws as any).invokeStepRpc(
+      runId,
+      'noauth',
+      stepState,
+      'someFn',
+      {},
+      rpc.service
+    )
 
     assert.ok(
       !('pikkuUserId' in rpc.wire()),

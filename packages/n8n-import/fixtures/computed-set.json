@@ -1,0 +1,46 @@
+{
+  "name": "Computed Set",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "cs" }
+    },
+    {
+      "id": "b",
+      "name": "Build",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [200, 0],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "endpoint", "value": "https://api.example.com" },
+            { "name": "total", "value": "={{ $json.a * 1.2 }}" }
+          ]
+        },
+        "keepOnlySet": true
+      }
+    },
+    {
+      "id": "u",
+      "name": "Use",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [400, 0],
+      "parameters": {
+        "values": {
+          "string": [{ "name": "url", "value": "={{ $('Build').json.total }}" }]
+        },
+        "keepOnlySet": true
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build", "type": "main", "index": 0 }]] },
+    "Build": { "main": [[{ "node": "Use", "type": "main", "index": 0 }]] }
+  }
+}

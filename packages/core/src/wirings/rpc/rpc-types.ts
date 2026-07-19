@@ -1,9 +1,9 @@
 export type PikkuRPC<
-  Invoke extends Function = any,
-  Remote extends Function = any,
-  startWorkflow extends Function = any,
-  AgentRun extends Function = any,
-  AgentStream extends Function = any,
+  Invoke extends (...args: any[]) => any = (...args: any[]) => any,
+  Remote extends (...args: any[]) => any = (...args: any[]) => any,
+  startWorkflow extends (...args: any[]) => any = (...args: any[]) => any,
+  AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
+  AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
 > = {
   depth: number
   global: boolean
@@ -52,5 +52,8 @@ export interface ResolvedFunction {
     auth?: boolean
     tags?: string[]
     rpcEndpoint?: string
+    secretOverrides?: Record<string, string>
+    variableOverrides?: Record<string, string>
+    credentialOverrides?: Record<string, string>
   }
 }

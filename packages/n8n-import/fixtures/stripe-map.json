@@ -1,0 +1,1 @@
+{"name":"St","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"st"}},{"id":"c","name":"Cust","type":"n8n-nodes-base.stripe","typeVersion":1,"position":[200,0],"parameters":{"resource":"customer","operation":"getAll"}}],"connections":{"Webhook":{"main":[[{"node":"Cust","type":"main","index":0}]]}}}

@@ -1,8 +1,14 @@
 ---
 name: pikku-machine-auth
-description: 'Use when authenticating a CLI/agent/service against a Pikku server, adding machine-to-machine (M2M) auth, issuing scoped API keys for sandboxes/agents/workers, or wiring better-auth sessions into Pikku middleware. Covers `pikku login` (device-authorization), the better-auth API Key plugin, machine identities, and `betterAuthSession` with the api-key branch.
-TRIGGER when: user asks about CLI login, `pikku login`, machine agents, service-to-service auth, API keys, client credentials, sandbox/worker tokens, or resolving a better-auth session in a Pikku function.
-DO NOT TRIGGER when: user asks about end-user HTTP session/cookie auth only (use pikku-http + the app betterAuth config) or about WebSocket channel mechanics (use pikku-websocket).'
+description: >-
+  Use when authenticating a CLI/agent/service against a Pikku server, adding machine-to-machine
+  (M2M) auth, issuing scoped API keys for sandboxes/agents/workers, or wiring better-auth sessions
+  into Pikku middleware. Covers `pikku login` (device-authorization), the better-auth API Key
+  plugin, machine identities, and `betterAuthSession` with the api-key branch. TRIGGER when: user
+  asks about CLI login, `pikku login`, machine agents, service-to-service auth, API keys, client
+  credentials, sandbox/worker tokens, or resolving a better-auth session in a Pikku function. DO
+  NOT TRIGGER when: user asks about end-user HTTP session/cookie auth only (use pikku-http + the
+  app betterAuth config) or about WebSocket channel mechanics (use pikku-websocket).
 ---
 
 # Pikku Machine Auth

@@ -1,6 +1,6 @@
 import { readdir, readFile, mkdir, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
-import { join, dirname } from 'path'
+import { join, dirname, sep } from 'path'
 import { fileURLToPath } from 'url'
 import { pikkuSessionlessFunc } from '#pikku'
 
@@ -47,6 +47,18 @@ async function copyDir(src: string, dest: string): Promise<void> {
       await writeFile(d, content)
     }
   }
+}
+
+/**
+ * Where each supported agent reads project-local skills from, relative to the
+ * project root. `pi` mirrors pi.dev's own resolution: it scans
+ * `<cwd>/<CONFIG_DIR_NAME>/skills` for project skills, where CONFIG_DIR_NAME
+ * defaults to `.pi`.
+ */
+const AGENT_SKILL_DIRS: Record<string, string> = {
+  claude: join('.claude', 'skills'),
+  opencode: join('.opencode', 'skills'),
+  pi: join('.pi', 'skills'),
 }
 
 function parseInstallGroups(frontmatter: string): string[] {
@@ -140,10 +152,8 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
       .sort()
 
     const installed = new Set<string>()
-    for (const dir of [
-      join(process.cwd(), '.claude', 'skills'),
-      join(process.cwd(), '.opencode', 'skills'),
-    ]) {
+    for (const relative of Object.values(AGENT_SKILL_DIRS)) {
+      const dir = join(process.cwd(), relative)
       if (existsSync(dir)) {
         for (const e of await readdir(dir, { withFileTypes: true })) {
           if (e.isDirectory() || e.isSymbolicLink()) installed.add(e.name)
@@ -164,6 +174,9 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
     console.log(
       'Run `pikku skills install --agent opencode` to copy them into .opencode/skills/'
     )
+    console.log(
+      'Run `pikku skills install --agent pi` to copy them into .pi/skills/'
+    )
   },
 })
 
@@ -181,7 +194,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     { logger },
     { agent = 'claude', only, core = false, fabric = false, update = false }
   ) => {
-    const supportedAgents = ['claude', 'opencode']
+    const supportedAgents = Object.keys(AGENT_SKILL_DIRS)
     if (!supportedAgents.includes(agent)) {
       logger.error(
         `Agent "${agent}" is not yet supported. Supported: ${supportedAgents.join(', ')}. ` +
@@ -209,10 +222,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       return
     }
 
-    const installRoot =
-      agent === 'opencode'
-        ? join(process.cwd(), '.opencode', 'skills')
-        : join(process.cwd(), '.claude', 'skills')
+    const installRoot = join(process.cwd(), AGENT_SKILL_DIRS[agent]!)
     await mkdir(installRoot, { recursive: true })
 
     let installed = 0
@@ -228,8 +238,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       installed++
     }
 
-    const destLabel =
-      agent === 'opencode' ? '.opencode/skills/' : '.claude/skills/'
+    const destLabel = `${AGENT_SKILL_DIRS[agent]!.split(sep).join('/')}/`
     logger.info(
       `Installed ${installed} skill(s) into ${destLabel}${
         skipped > 0

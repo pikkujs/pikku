@@ -3,9 +3,11 @@ import { pikkuSessionlessFunc } from '#pikku'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
 import timezone from 'dayjs/plugin/timezone.js'
+import weekOfYear from 'dayjs/plugin/weekOfYear.js'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
+dayjs.extend(weekOfYear)
 
 type DayjsUnit =
   | 'year'
@@ -44,9 +46,23 @@ export const DateTimeInput = z.object({
       'startOf',
       'endOf',
       'diff',
+      'extract',
       'now',
     ])
     .describe('The operation to perform'),
+  part: z
+    .enum([
+      'year',
+      'month',
+      'week',
+      'day',
+      'dayOfWeek',
+      'hour',
+      'minute',
+      'second',
+    ])
+    .optional()
+    .describe('The date/time component to extract for the extract operation'),
   format: z
     .string()
     .optional()
@@ -130,6 +146,36 @@ export const dateTime = pikkuSessionlessFunc({
           unitMap[data.unit ?? 'milliseconds'],
           true
         )
+        break
+      case 'extract':
+        switch (data.part) {
+          case 'year':
+            result = date.year()
+            break
+          case 'month':
+            result = date.month() + 1
+            break
+          case 'week':
+            result = date.week()
+            break
+          case 'day':
+            result = date.date()
+            break
+          case 'dayOfWeek':
+            result = date.day()
+            break
+          case 'hour':
+            result = date.hour()
+            break
+          case 'minute':
+            result = date.minute()
+            break
+          case 'second':
+            result = date.second()
+            break
+          default:
+            result = date.toISOString()
+        }
         break
       case 'now':
       default:

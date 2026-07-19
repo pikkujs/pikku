@@ -1,0 +1,4 @@
+{"name":"Tg","nodes":[
+{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"t"}},
+{"id":"s","name":"Send","type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[200,0],"parameters":{"operation":"sendMessage","chatId":"12345","text":"hi"}}],
+"connections":{"Webhook":{"main":[[{"node":"Send","type":"main","index":0}]]}}}

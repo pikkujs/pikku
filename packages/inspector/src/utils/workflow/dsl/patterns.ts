@@ -116,6 +116,24 @@ export function isWorkflowSuspendCall(
 }
 
 /**
+ * Check if a call expression is workflow.approval()
+ */
+export function isWorkflowApprovalCall(
+  node: ts.CallExpression,
+  _checker: ts.TypeChecker
+): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  const propAccess = node.expression
+  return (
+    propAccess.name.text === 'approval' &&
+    isWorkflowWireIdentifier(propAccess.expression)
+  )
+}
+
+/**
  * Check if a throw statement throws WorkflowCancelledException
  * Matches: throw new WorkflowCancelledException(...) or throw WorkflowCancelledException(...)
  */

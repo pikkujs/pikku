@@ -1,8 +1,13 @@
 ---
 name: pikku-concepts
-description: 'Foundational guide to Pikku framework concepts. Use this skill when working with any Pikku codebase, starting a new Pikku project, or migrating a backend to Pikku. Covers the core mental model, function types, project structure, code generation, testing, and how Pikku maps to traditional backend patterns.
-TRIGGER when: user asks "what is Pikku?", starts a new Pikku project, migrates from Express/NestJS/Hono, or needs to understand how Pikku works.
-DO NOT TRIGGER when: user is doing a specific wiring task (use the specific skill instead, e.g. pikku-http, pikku-websocket).'
+description: >-
+  Foundational guide to Pikku framework concepts. Use this skill when working with any Pikku
+  codebase, starting a new Pikku project, or migrating a backend to Pikku. Covers the core mental
+  model, function types, project structure, code generation, testing, and how Pikku maps to
+  traditional backend patterns. TRIGGER when: user asks "what is Pikku?", starts a new Pikku
+  project, migrates from Express/NestJS/Hono, or needs to understand how Pikku works. DO NOT
+  TRIGGER when: user is doing a specific wiring task (use the specific skill instead, e.g.
+  pikku-http, pikku-websocket).
 installGroups: [core]
 ---
 
@@ -149,7 +154,7 @@ await server.start()
 
 ## Code Generation
 
-Run `npx pikku prebuild` to generate:
+Run `npx pikku all` to generate:
 
 - `pikku-types.gen.ts` — Typed function factories and wiring functions
 - `pikku-fetch.gen.ts` — Type-safe HTTP client

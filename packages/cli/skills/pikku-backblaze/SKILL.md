@@ -1,8 +1,9 @@
 ---
 name: pikku-backblaze
-description: 'Use when setting up Backblaze B2 file storage in a Pikku app. Covers B2Content for file uploads, downloads, and signed URLs.
-TRIGGER when: code uses B2Content, user asks about Backblaze B2, or @pikku/backblaze.
-DO NOT TRIGGER when: user asks about S3 storage (use pikku-aws).'
+description: >-
+  Use when setting up Backblaze B2 file storage in a Pikku app. Covers B2Content for file uploads,
+  downloads, and signed URLs. TRIGGER when: code uses B2Content, user asks about Backblaze B2, or
+  @pikku/backblaze. DO NOT TRIGGER when: user asks about S3 storage (use pikku-aws).
 ---
 
 # Pikku Backblaze (B2 Content Storage)

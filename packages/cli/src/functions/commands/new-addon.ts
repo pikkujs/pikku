@@ -391,15 +391,9 @@ export class ${pascalName}Service {
     files[`src/${name}-api.service.ts`] =
       `import { OAuth2Client } from '@pikku/core/oauth2'
 import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'
+import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 
 const BASE_URL = 'https://api.example.com/v1'
-
-export const ${screamingName}_OAUTH2_CONFIG = {
-  tokenSecretId: '${screamingName}_TOKENS',
-  authorizationUrl: 'https://example.com/oauth2/authorize',
-  tokenUrl: 'https://example.com/oauth2/token',
-  scopes: ['read', 'write'],
-}
 
 export interface RequestOptions {
   body?: unknown
@@ -410,9 +404,10 @@ export class ${pascalName}Service {
   private oauth: OAuth2Client
 
   constructor(secrets: TypedSecretService) {
+    const oauth2 = CREDENTIAL_OAUTH2_CONFIGS['${camelName}']
     this.oauth = new OAuth2Client(
-      ${screamingName}_OAUTH2_CONFIG,
-      '${screamingName}_APP_CREDENTIALS',
+      oauth2,
+      oauth2.appCredentialSecretId,
       secrets
     )
   }
@@ -940,7 +935,9 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
 
     // Resolve target directory
     const baseDir = dir || config.scaffold?.addonDir || process.cwd()
-    const addonDir = join(baseDir, name)
+    // Folder mirrors the package name (@pikku/addon-<name>) so a packages/
+    // listing reads as packages/addon-<name>, distinct from app workspaces.
+    const addonDir = join(baseDir, `addon-${name}`)
 
     if (existsSync(addonDir)) {
       logger.error(`Directory already exists: ${addonDir}`)

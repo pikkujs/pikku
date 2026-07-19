@@ -1,0 +1,1 @@
+{"name":"Gotify","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"gotify"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.gotify","typeVersion":1,"position":[200,0],"parameters":{"resource":"message","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

@@ -1,0 +1,28 @@
+{
+  "name": "@pikku/n8n-import",
+  "version": "0.0.1",
+  "description": "n8n workflow importer for Pikku — converts n8n exports into Pikku workflow graphs, agents and stub functions",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc -b",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "harness": "node --import tsx harness/run.ts",
+    "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "@pikku/openapi-to-zod-schema": "^0.12.5",
+    "to-json-schema": "^0.2.5",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/to-json-schema": "^0.2.4"
+  }
+}

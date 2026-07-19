@@ -169,6 +169,7 @@ export type {
   AITranscriptionParams,
   AITranscriptionResult,
 } from './services/ai-agent-runner-service.js'
+export type { AIEmbeddingService } from './services/ai-embedding-service.js'
 export type { AIRunStateService } from './services/ai-run-state-service.js'
 export type { AIStorageService } from './services/ai-storage-service.js'
 export type {
