@@ -116,7 +116,9 @@ export const streamAgent = async (
  */
 export type Identity = { userId?: string; orgId?: string }
 
-export const identityHeaders = (identity: Identity): Record<string, string> => ({
+export const identityHeaders = (
+  identity: Identity
+): Record<string, string> => ({
   ...(identity.userId ? { 'x-user-id': identity.userId } : {}),
   ...(identity.orgId ? { 'x-org-id': identity.orgId } : {}),
 })
@@ -155,7 +157,7 @@ export const callRpcAs = async (
       'Content-Type': 'application/json',
       ...identityHeaders(identity),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ rpcName, data: body }),
   })
   const text = await res.text()
   try {
