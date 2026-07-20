@@ -56,6 +56,8 @@ export function validateAndBuildCredentialDefinitionsMeta(
       type: def.type,
       schema: def.schema,
       oauth2: def.oauth2,
+      docsUrl: def.docsUrl,
+      optional: def.optional,
       sourceFile: def.sourceFile,
     }
   }
