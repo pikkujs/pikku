@@ -1,5 +1,9 @@
 import { randomUUID } from 'crypto'
-import { MockLanguageModelV3 } from 'ai/test'
+import {
+  MockLanguageModelV3,
+  MockTranscriptionModelV3,
+  MockSpeechModelV3,
+} from 'ai/test'
 import type {
   LanguageModelV3,
   LanguageModelV3CallOptions,
@@ -182,13 +186,54 @@ const buildLanguageModel = (modelName: string): LanguageModelV3 =>
   })
 
 /**
+ * The transcript a scripted transcription model returns for any audio it is
+ * handed. It is deliberately distinctive so a scenario can assert that voice
+ * input was transcribed and the text reached the model, without controlling the
+ * audio bytes themselves.
+ */
+export const MOCK_TRANSCRIPT = 'the transcribed spoken words'
+
+const buildTranscriptionModel = (modelName: string) =>
+  new MockTranscriptionModelV3({
+    provider: 'mock',
+    modelId: modelName,
+    doGenerate: async () => ({
+      text: MOCK_TRANSCRIPT,
+      segments: [],
+      language: 'en',
+      durationInSeconds: 1,
+      warnings: [],
+      response: { timestamp: new Date(0), modelId: modelName, headers: {} },
+    }),
+  })
+
+const buildSpeechModel = (modelName: string) =>
+  new MockSpeechModelV3({
+    provider: 'mock',
+    modelId: modelName,
+    doGenerate: async () => ({
+      audio: new Uint8Array([0, 1, 2, 3]),
+      warnings: [],
+      request: { body: '' },
+      response: { timestamp: new Date(0), modelId: modelName, headers: {} },
+    }),
+  })
+
+/**
  * A callable provider, which is what `VercelAIAgentRunner.getModel` prefers for
  * language models (`isCallable(provider) -> provider(modelName)`). Being a
  * function rather than a `MockProviderV3` lets the script be selected by model
  * name at call time — `model: 'mock/tool-then-text'` — instead of being frozen
  * into a static record at construction.
+ *
+ * `getModel` looks up non-language kinds as methods on the provider
+ * (`provider.transcription(modelName)` / `provider.speech(modelName)`), so those
+ * are attached alongside the callable to support voice in/out.
  */
 export const createMockLlmProvider = () => {
   const provider = (modelName: string) => buildLanguageModel(modelName)
-  return provider
+  return Object.assign(provider, {
+    transcription: (modelName: string) => buildTranscriptionModel(modelName),
+    speech: (modelName: string) => buildSpeechModel(modelName),
+  })
 }
