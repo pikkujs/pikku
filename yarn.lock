@@ -150,6 +150,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ai-sdk/provider@npm:^3.0.0":
+  version: 3.0.14
+  resolution: "@ai-sdk/provider@npm:3.0.14"
+  dependencies:
+    json-schema: "npm:^0.4.0"
+  checksum: 10/f5992c94e10b8ee412657a62746cc485679fe6172cdfa7c26443203dfc79f41e1ec023dc72ffcdc0b182401087fc22fd35ff2df51343bd58cf5c338ba542af87
+  languageName: node
+  linkType: hard
+
 "@apidevtools/json-schema-ref-parser@npm:^15.0.0, @apidevtools/json-schema-ref-parser@npm:^15.2.1":
   version: 15.2.2
   resolution: "@apidevtools/json-schema-ref-parser@npm:15.2.2"
@@ -6143,9 +6152,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/e2e-functions@workspace:e2e/packages/functions"
   dependencies:
+    "@ai-sdk/provider": "npm:^3.0.0"
     "@pikku/better-auth": "workspace:*"
     "@pikku/core": "npm:*"
     "@types/node": "npm:^22"
+    ai: "npm:^6.0.105"
     better-auth: "npm:^1.6.19"
     typescript: "npm:^6.0.3"
     zod: "npm:*"
