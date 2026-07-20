@@ -27,6 +27,10 @@ BeforeAll(async function () {
 
   process.env.SCENARIO_ACTOR_SECRET ??= 'e2e-actor-secret'
 
+  // The deterministic agent suite scripts the model instead of calling OpenAI.
+  // Opt out with PIKKU_MOCK_LLM=0 to run the @ai-live tier against a real key.
+  process.env.PIKKU_MOCK_LLM ??= '1'
+
   backendProcess = spawn(
     'npx',
     ['pikku', 'dev', '--port', backendPort, '--coverage', '--test'],
@@ -134,6 +138,15 @@ After(
     await this.closeBrowser()
   }
 )
+
+Before('@agent-protocol', async function (this: AgentWorld) {
+  this.threadId = randomUUID()
+  await fetch(`${config.apiUrl}/rpc/resetLlmLog`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+})
 
 Before('@console-staff', async function (this: AgentWorld) {
   await this.openBrowser()

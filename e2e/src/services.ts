@@ -43,9 +43,20 @@ export const createSingletonServices = pikkuServices(
 
     const schema = new CFWorkerSchemaService(logger)
 
-    const aiAgentRunner = new VercelAIAgentRunner({
-      openai: createOpenAI(),
-    })
+    // The deterministic agent suite replaces the provider rather than the
+    // runner, so every code path under test — tool loop, streaming, memory,
+    // approvals — is the real one; only the model's replies are scripted.
+    const mockLlm = process.env.PIKKU_MOCK_LLM === '1'
+    const aiAgentRunner = new VercelAIAgentRunner(
+      mockLlm
+        ? await (async () => {
+            const { createMockLlmProvider } =
+              await import('../packages/functions/src/mock-llm/provider.js')
+            const provider = createMockLlmProvider()
+            return { mock: provider, openai: provider }
+          })()
+        : { openai: createOpenAI() }
+    )
 
     const backend = process.env.DB_BACKEND ?? 'sqlite'
     let aiStorage: any

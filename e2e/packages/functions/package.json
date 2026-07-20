@@ -11,7 +11,9 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/provider": "^3.0.0",
     "@pikku/better-auth": "workspace:*",
+    "ai": "^6.0.105",
     "better-auth": "^1.6.19",
     "zod": "*"
   },
