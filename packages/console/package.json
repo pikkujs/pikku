@@ -27,6 +27,9 @@
     "preview": "vite preview",
     "generate": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide && cd backend && pikku all",
     "lint": "tsc --noEmit",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage",
     "prepublishOnly": "echo 'Source-only package — no build needed'"
   },
   "dependencies": {
