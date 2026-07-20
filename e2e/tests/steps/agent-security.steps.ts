@@ -220,6 +220,29 @@ Then(
 )
 
 Then(
+  'user {string} claiming resource {string} on thread {string} is refused',
+  async function (
+    this: AgentWorld,
+    userId: string,
+    resourceId: string,
+    threadKey: string
+  ) {
+    const { threadId } = this.threadOwners![threadKey]!
+    const { status, body } = await callRpcAs(
+      { userId },
+      'getAgentThreadMessages',
+      { threadId, resourceId }
+    )
+    const refused = status >= 400 || Boolean(body?.message ?? body?.errorId)
+    expect(
+      refused,
+      `expected the forged-resource read to be refused, got ${status} ${JSON.stringify(body)}`
+    ).toBe(true)
+    expect(JSON.stringify(body)).not.toContain(threadId)
+  }
+)
+
+Then(
   'user {string} calling {string} on thread {string} succeeds',
   async function (
     this: AgentWorld,
@@ -241,7 +264,7 @@ Then(
   async function (this: AgentWorld, userId: string, threadKey: string) {
     const { threadId } = this.threadOwners![threadKey]!
     const { body } = await callRpcAs({ userId }, 'getAgentThreads', {})
-    const ids = (Array.isArray(body) ? body : []).map((t: any) => t.threadId)
+    const ids = (Array.isArray(body) ? body : []).map((t: any) => t.id)
     expect(ids).not.toContain(threadId)
   }
 )
@@ -251,7 +274,7 @@ Then(
   async function (this: AgentWorld, userId: string, threadKey: string) {
     const { threadId } = this.threadOwners![threadKey]!
     const { body } = await callRpcAs({ userId }, 'getAgentThreads', {})
-    const ids = (Array.isArray(body) ? body : []).map((t: any) => t.threadId)
+    const ids = (Array.isArray(body) ? body : []).map((t: any) => t.id)
     expect(ids).toContain(threadId)
   }
 )
