@@ -13,6 +13,12 @@ shipped HTTP contract. No deployed app could send an attachment or a per-request
 model override. Both callers now share an `AgentCallerInput` type covering every
 optional field and forward each one to the RPC.
 
+Both callers declare that shape **inline** in the generic position rather than
+behind a shared named alias: the schema extractor only reads type literals there
+and synthesises the schema name from the function name. Behind an alias it
+records an `inputSchemaName` with no schema generated for it, and every agent
+HTTP call then fails at runtime with `MissingSchemaError`.
+
 Widening that surface makes caller-supplied attachment URLs reachable, which is
 an SSRF vector: the AI SDK downloads attachment URLs **server-side** whenever the
 model cannot consume them natively, using an unguarded `fetch`. A caller could

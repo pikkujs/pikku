@@ -19,28 +19,29 @@ describe('serializePublicAgent — agent HTTP surface', () => {
     return output.slice(start, end === -1 ? undefined : end)
   }
 
-  test('the caller input type accepts every optional AIAgentInput field', () => {
-    const output = generate()
-    const start = output.indexOf('type AgentCallerInput = {')
-    assert.notEqual(start, -1, 'expected a shared caller input type')
-    const inputType = output.slice(
-      start,
-      output.indexOf('export const ', start)
-    )
-    for (const field of optionalInputs) {
-      assert.ok(
-        inputType.includes(`${field}?:`),
-        `expected the caller input to declare an optional \`${field}\``
-      )
-    }
-  })
-
   for (const caller of ['agentCaller', 'agentStreamCaller']) {
-    test(`${caller} is typed with the shared caller input`, () => {
+    test(`${caller} declares every optional AIAgentInput field`, () => {
       const body = callerBody(generate(), caller)
+      for (const field of optionalInputs) {
+        assert.ok(
+          body.includes(`${field}?:`),
+          `expected ${caller} to declare an optional \`${field}\``
+        )
+      }
+    })
+
+    /**
+     * The schema extractor only reads type literals in the generic position and
+     * synthesises the schema name from the function name. Behind a named alias
+     * it records an `inputSchemaName` with no schema behind it, and the runtime
+     * then rejects every agent call with MissingSchemaError.
+     */
+    test(`${caller} declares its input inline so a schema is generated`, () => {
+      const body = callerBody(generate(), caller)
+      const generic = body.slice(body.indexOf('pikkuSessionlessFunc<'))
       assert.ok(
-        body.includes('AgentCallerInput'),
-        `expected ${caller} to use AgentCallerInput`
+        generic.startsWith('pikkuSessionlessFunc<{'),
+        `expected ${caller} to open its generic with an inline type literal`
       )
     })
 

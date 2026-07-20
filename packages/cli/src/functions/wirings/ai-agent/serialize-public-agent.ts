@@ -4,6 +4,29 @@ export const serializePublicAgent = (
   globalHTTPPrefix: string = ''
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
+
+  // Emitted inline at each call site rather than as a shared named alias: the
+  // schema extractor only reads type literals in the generic position, and
+  // synthesises the schema name from the function name. Behind a named alias it
+  // records an `inputSchemaName` with no schema behind it, and every agent call
+  // then fails at runtime with MissingSchemaError.
+  const callerInput = `{
+    agentName: string
+    message: string
+    threadId: string
+    resourceId: string
+    attachments?: {
+      type: 'image' | 'file'
+      data?: string
+      url?: string
+      mediaType?: string
+      filename?: string
+    }[]
+    model?: string
+    temperature?: number
+    context?: string
+  }`
+
   return `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/ai-agent'
 import { pikkuSessionlessFunc, pikkuPermission, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
 
@@ -22,24 +45,7 @@ export const isThreadOwner = pikkuPermission<{ threadId: string }>(
   }
 )
 
-type AgentCallerInput = {
-  agentName: string
-  message: string
-  threadId: string
-  resourceId: string
-  attachments?: {
-    type: 'image' | 'file'
-    data?: string
-    url?: string
-    mediaType?: string
-    filename?: string
-  }[]
-  model?: string
-  temperature?: number
-  context?: string
-}
-
-export const agentCaller = pikkuSessionlessFunc<AgentCallerInput, unknown>({
+export const agentCaller = pikkuSessionlessFunc<${callerInput}, unknown>({
   tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
@@ -55,7 +61,7 @@ export const agentCaller = pikkuSessionlessFunc<AgentCallerInput, unknown>({
   },
 })
 
-export const agentStreamCaller = pikkuSessionlessFunc<AgentCallerInput, void>({
+export const agentStreamCaller = pikkuSessionlessFunc<${callerInput}, void>({
   tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
