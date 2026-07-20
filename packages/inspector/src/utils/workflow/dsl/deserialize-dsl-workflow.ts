@@ -6,6 +6,7 @@
 import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,
+  SerializedNext,
   DataRef,
   ContextVariable,
 } from '../graph/workflow-graph.types.js'
@@ -181,15 +182,184 @@ function inputToCode(
 }
 
 /**
+ * Convert a fanout's per-iteration body into code by walking the `next` chain
+ * from the body's entry node. Steps whose result is referenced later in the
+ * same iteration are re-emitted as `const` bindings.
+ */
+function fanoutBodyToCode(
+  entryNodeId: string | undefined,
+  nodes: Record<string, any>,
+  indent: string,
+  itemVar: string
+): string[] {
+  const lines: string[] = []
+  const seen = new Set<string>()
+  let currentId = entryNodeId
+
+  while (currentId && nodes[currentId] && !seen.has(currentId)) {
+    seen.add(currentId)
+    const node = nodes[currentId]
+
+    if ('rpcName' in node && node.rpcName) {
+      const stepName = node.stepName || `Call ${node.rpcName}`
+      const input = (node.input || {}) as Record<string, unknown>
+      const inputCode = inputToCode(input, indent, itemVar)
+      const options = node.options ? optionsToCode(node.options) : ''
+      const doCall = `await workflow.do('${escapeSingleQuotes(stepName)}', '${node.rpcName}', ${inputCode}${options ? `, ${options}` : ''})`
+      lines.push(
+        node.outputVar
+          ? `${indent}const ${node.outputVar} = ${doCall}`
+          : `${indent}${doCall}`
+      )
+    } else if ('flow' in node) {
+      // A body is not RPC-only — a sleep or suspend between calls is part of
+      // the iteration and would otherwise be dropped from the regenerated code.
+      lines.push(
+        ...nodeToCode(node, nodes, indent).filter((line) => line !== '')
+      )
+    }
+
+    currentId = node.next
+  }
+
+  return lines
+}
+
+/**
+ * Collect every node id that belongs to a parent construct's body, following
+ * each body's `next` chain to the parent's exit.
+ */
+function collectChildNodeIds(
+  nodes: Record<string, SerializedGraphNode>
+): Set<string> {
+  const owned = new Set<string>()
+
+  // An error handler belongs to the step that routes to it, not to the main
+  // flow — emitting it top-level would turn compensation into a step that
+  // always runs.
+  for (const node of Object.values(nodes)) {
+    const onError = (node as any).onError
+    if (typeof onError === 'string') {
+      owned.add(onError)
+    } else if (Array.isArray(onError)) {
+      for (const handlerId of onError) owned.add(handlerId)
+    }
+  }
+
+  const walk = (entry: string | undefined, exit: string | undefined) => {
+    const seen = new Set<string>()
+    let currentId = entry
+    while (
+      currentId &&
+      nodes[currentId] &&
+      isWithinBody(currentId, exit, seen)
+    ) {
+      seen.add(currentId)
+      owned.add(currentId)
+      const next = (nodes[currentId] as any).next
+      currentId = typeof next === 'string' ? next : undefined
+    }
+  }
+
+  for (const node of Object.values(nodes)) {
+    if (!('flow' in node)) continue
+    const flowNode = node as any
+    const exit = flowNode.next as string | undefined
+
+    switch (flowNode.flow) {
+      case 'branch':
+        for (const branch of flowNode.branches || []) walk(branch.entry, exit)
+        walk(flowNode.elseEntry, exit)
+        break
+      case 'switch':
+        for (const caseItem of flowNode.cases || []) walk(caseItem.entry, exit)
+        walk(flowNode.defaultEntry, exit)
+        break
+      case 'fanout':
+        walk(flowNode.childEntry, undefined)
+        break
+      case 'parallel':
+        for (const childId of flowNode.children || []) walk(childId, exit)
+        break
+    }
+  }
+
+  return owned
+}
+
+/**
+ * Escape a value for embedding inside a single-quoted string literal.
+ */
+function escapeSingleQuotes(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+/**
+ * `outputVar` is optional — a graph-authored node may have no binding. Emitting
+ * `const undefined = ...` for those would not parse, so the expression is kept
+ * as a bare statement instead.
+ */
+function bindingPrefix(outputVar: unknown): string {
+  return typeof outputVar === 'string' && outputVar
+    ? `const ${outputVar} = `
+    : ''
+}
+
+/**
+ * Resolve a node's `onError` node id back to the rpc name the DSL author wrote.
+ */
+function onErrorRpcNameOf(
+  node: SerializedGraphNode,
+  nodes: Record<string, SerializedGraphNode>
+): string | undefined {
+  const onError = (node as any).onError
+  const handlerId = Array.isArray(onError) ? onError[0] : onError
+  if (typeof handlerId !== 'string') {
+    return undefined
+  }
+  const handler = nodes[handlerId]
+  return handler && 'rpcName' in handler
+    ? (handler.rpcName as string)
+    : undefined
+}
+
+/**
+ * A duration is `string | number` ('5s' or 5000). Quoting a number would change
+ * the value the runtime parses, so only strings get quotes.
+ */
+function durationToCode(duration: unknown): string {
+  return typeof duration === 'number'
+    ? String(duration)
+    : `'${escapeSingleQuotes(String(duration))}'`
+}
+
+/**
+ * Render a switch case value. `switch` compares with ===, so quoting a number
+ * or boolean would stop the case ever matching.
+ */
+function caseValueToCode(value: unknown): string {
+  if (typeof value === 'string') {
+    return `'${escapeSingleQuotes(value)}'`
+  }
+  return String(value)
+}
+
+/**
  * Convert options to code
  */
-function optionsToCode(options: Record<string, unknown>): string {
+function optionsToCode(
+  options: Record<string, unknown>,
+  onErrorRpcName?: string
+): string {
   const parts: string[] = []
+  if (onErrorRpcName) {
+    parts.push(`onError: '${escapeSingleQuotes(onErrorRpcName)}'`)
+  }
   if (options.retries !== undefined) {
     parts.push(`retries: ${options.retries}`)
   }
   if (options.retryDelay !== undefined) {
-    parts.push(`retryDelay: '${options.retryDelay}'`)
+    parts.push(`retryDelay: ${durationToCode(options.retryDelay)}`)
   }
   return parts.length > 0 ? `{ ${parts.join(', ')} }` : ''
 }
@@ -265,14 +435,26 @@ function collectBranchConditionalVars(
   if (branchNode.branches) {
     for (const branch of branchNode.branches) {
       if (branch.entry) {
-        collectVarsFromBranch(branch.entry, nodes, conditionalVars, vars)
+        collectVarsFromBranch(
+          branch.entry,
+          nodes,
+          conditionalVars,
+          vars,
+          branchNode.next as string | undefined
+        )
       }
     }
   }
 
   // Check else branch
   if (branchNode.elseEntry) {
-    collectVarsFromBranch(branchNode.elseEntry, nodes, conditionalVars, vars)
+    collectVarsFromBranch(
+      branchNode.elseEntry,
+      nodes,
+      conditionalVars,
+      vars,
+      branchNode.next as string | undefined
+    )
   }
 
   return vars
@@ -285,8 +467,12 @@ function collectVarsFromBranch(
   nodeId: string,
   nodes: Record<string, SerializedGraphNode>,
   conditionalVars: Set<string>,
-  result: string[]
+  result: string[],
+  exitNodeId?: string,
+  seen: Set<string> = new Set()
 ): void {
+  if (seen.has(nodeId)) return
+  seen.add(nodeId)
   const node = nodes[nodeId]
   if (!node) return
 
@@ -301,22 +487,32 @@ function collectVarsFromBranch(
   // Follow the chain of nodes within the branch
   if ('next' in node && node.next) {
     const nextId = node.next as string
-    // Only follow if it's still within the branch
-    if (isWithinBranch(nextId)) {
-      collectVarsFromBranch(nextId, nodes, conditionalVars, result)
+    // Only follow if it's still within the branch body
+    if (isWithinBody(nextId, exitNodeId, seen)) {
+      collectVarsFromBranch(
+        nextId,
+        nodes,
+        conditionalVars,
+        result,
+        exitNodeId,
+        seen
+      )
     }
   }
 }
 
 /**
- * Check if a node ID is still within a branch (not the main flow)
+ * A nested body (branch arm, switch case) ends where it rejoins the main flow.
+ * That rejoin point is the enclosing flow node's own `next`, so it is passed in
+ * explicitly rather than guessed from the node id — ids are step names, which
+ * carry no structural marker.
  */
-function isWithinBranch(nodeId: string): boolean {
-  return (
-    nodeId.includes('_then_') ||
-    nodeId.includes('_else_') ||
-    nodeId.includes('_branch')
-  )
+function isWithinBody(
+  nodeId: string,
+  exitNodeId: string | undefined,
+  seen: Set<string>
+): boolean {
+  return nodeId !== exitNodeId && !seen.has(nodeId)
 }
 
 /**
@@ -326,23 +522,25 @@ function generateBranchContent(
   entryNodeId: string,
   nodes: Record<string, SerializedGraphNode>,
   indent: string,
-  conditionalVars: Set<string>
+  conditionalVars: Set<string>,
+  exitNodeId?: string
 ): string[] {
   const lines: string[] = []
+  const seen = new Set<string>()
   let currentId: string | undefined = entryNodeId
 
   while (currentId) {
     const node = nodes[currentId]
     if (!node) break
+    seen.add(currentId)
 
     const nodeLines = nodeToCode(node, nodes, indent, conditionalVars, true)
     lines.push(...nodeLines)
 
-    // Follow to next node within the branch
-    if ('next' in node && node.next) {
-      const nextId = node.next as string
-      // Only continue if it's still within the branch
-      if (isWithinBranch(nextId)) {
+    // Follow to next node within the body
+    if ('next' in node && node.next && typeof node.next === 'string') {
+      const nextId = node.next
+      if (isWithinBody(nextId, exitNodeId, seen)) {
         currentId = nextId
       } else {
         break
@@ -377,8 +575,9 @@ function nodeToCode(
     let doCall = `await workflow.do('${stepName}', '${node.rpcName}', ${inputCode}`
 
     // Add options if present
-    if ((node as any).options) {
-      const optCode = optionsToCode((node as any).options)
+    const onErrorRpc = onErrorRpcNameOf(node, nodes)
+    if ((node as any).options || onErrorRpc) {
+      const optCode = optionsToCode((node as any).options ?? {}, onErrorRpc)
       if (optCode) {
         doCall += `, ${optCode}`
       }
@@ -406,10 +605,32 @@ function nodeToCode(
     switch (flowNode.flow) {
       case 'sleep':
         lines.push(
-          `${indent}await workflow.sleep('${flowNode.stepName || 'Sleep'}', '${flowNode.duration}')`
+          `${indent}await workflow.sleep('${escapeSingleQuotes(flowNode.stepName || 'Sleep')}', ${
+            typeof flowNode.expression === 'string'
+              ? flowNode.expression
+              : durationToCode(flowNode.duration)
+          })`
         )
         lines.push('')
         break
+
+      case 'suspend':
+        lines.push(
+          `${indent}await workflow.suspend('${escapeSingleQuotes(String(flowNode.reason ?? ''))}')`
+        )
+        lines.push('')
+        break
+
+      case 'approval': {
+        const approvalCall = `await workflow.approval('${escapeSingleQuotes(String(flowNode.reason ?? ''))}')`
+        lines.push(
+          flowNode.outputVar
+            ? `${indent}const ${flowNode.outputVar} = ${approvalCall}`
+            : `${indent}${approvalCall}`
+        )
+        lines.push('')
+        break
+      }
 
       case 'cancel':
         const cancelReason =
@@ -444,7 +665,8 @@ function nodeToCode(
               branch.entry,
               nodes,
               indent + '  ',
-              conditionalVars
+              conditionalVars,
+              flowNode.next as string | undefined
             )
             lines.push(...branchLines)
           }
@@ -458,7 +680,8 @@ function nodeToCode(
             flowNode.elseEntry,
             nodes,
             indent + '  ',
-            conditionalVars
+            conditionalVars,
+            flowNode.next as string | undefined
           )
           lines.push(...elseLines)
           lines.push(`${indent}}`)
@@ -466,96 +689,101 @@ function nodeToCode(
         lines.push('')
         break
 
-      case 'switch':
+      case 'switch': {
+        const caseExit = flowNode.next as string | undefined
         lines.push(`${indent}switch (${flowNode.expression}) {`)
         for (const caseItem of flowNode.cases || []) {
-          lines.push(`${indent}  case '${caseItem.value}':`)
+          lines.push(`${indent}  case ${caseValueToCode(caseItem.value)}:`)
           if (caseItem.entry && nodes[caseItem.entry]) {
-            const caseLines = nodeToCode(
-              nodes[caseItem.entry],
-              nodes,
-              indent + '    '
+            lines.push(
+              ...generateBranchContent(
+                caseItem.entry,
+                nodes,
+                indent + '    ',
+                conditionalVars,
+                caseExit
+              )
             )
-            lines.push(...caseLines)
           }
           lines.push(`${indent}    break`)
         }
         if (flowNode.defaultEntry && nodes[flowNode.defaultEntry]) {
           lines.push(`${indent}  default:`)
-          const defaultLines = nodeToCode(
-            nodes[flowNode.defaultEntry],
-            nodes,
-            indent + '    '
+          lines.push(
+            ...generateBranchContent(
+              flowNode.defaultEntry,
+              nodes,
+              indent + '    ',
+              conditionalVars,
+              caseExit
+            )
           )
-          lines.push(...defaultLines)
           lines.push(`${indent}    break`)
         }
         lines.push(`${indent}}`)
         lines.push('')
         break
+      }
 
-      case 'parallel':
-        lines.push(`${indent}await Promise.all([`)
-        for (const childId of flowNode.children || []) {
-          if (nodes[childId]) {
-            const childNode = nodes[childId]
-            if ('rpcName' in childNode && childNode.rpcName) {
-              const stepName = childNode.stepName || `Call ${childNode.rpcName}`
-              const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(input, indent + '  ')
-              lines.push(
-                `${indent}  workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode}),`
-              )
+      case 'parallel': {
+        const childNodes = (flowNode.children || [])
+          .map((childId: string) => nodes[childId])
+          .filter(
+            (child: SerializedGraphNode | undefined) =>
+              !!child && 'rpcName' in child && !!child.rpcName
+          ) as any[]
+
+        // Results the caller bound (const [a, b] = await Promise.all([...]))
+        // must be re-declared, or every later reference to them is unbound.
+        const bindings = childNodes.map((child) => child.outputVar)
+        const prefix = bindings.some(Boolean)
+          ? `const [${bindings
+              .map((name: string | undefined, i: number) => name ?? `_${i}`)
+              .join(', ')}] = `
+          : ''
+
+        lines.push(`${indent}${prefix}await Promise.all([`)
+        for (const childNode of childNodes) {
+          const stepName = childNode.stepName || `Call ${childNode.rpcName}`
+          const input = (childNode.input || {}) as Record<string, unknown>
+          const inputCode = inputToCode(input, indent + '  ')
+          let call = `workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode}`
+          if (childNode.options) {
+            const optCode = optionsToCode(childNode.options)
+            if (optCode) {
+              call += `, ${optCode}`
             }
           }
+          call += ')'
+          lines.push(`${indent}  ${call},`)
         }
         lines.push(`${indent}])`)
         lines.push('')
         break
+      }
 
-      case 'fanout':
+      case 'fanout': {
+        const bodyLines = fanoutBodyToCode(
+          flowNode.childEntry,
+          nodes,
+          flowNode.mode === 'parallel' ? indent + '    ' : indent + '  ',
+          flowNode.itemVar
+        )
+
         if (flowNode.mode === 'parallel') {
           lines.push(`${indent}await Promise.all(`)
           lines.push(
-            `${indent}  ${flowNode.sourceVar}.map(async (${flowNode.itemVar}) =>`
+            `${indent}  ${flowNode.sourceVar}.map(async (${flowNode.itemVar}) => {`
           )
-          if (flowNode.childEntry && nodes[flowNode.childEntry]) {
-            const childNode = nodes[flowNode.childEntry]
-            if ('rpcName' in childNode && childNode.rpcName) {
-              const stepName = childNode.stepName || `Call ${childNode.rpcName}`
-              const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(
-                input,
-                indent + '    ',
-                flowNode.itemVar
-              )
-              lines.push(
-                `${indent}    await workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode})`
-              )
-            }
-          }
-          lines.push(`${indent}  )`)
+          lines.push(...bodyLines)
+          lines.push(`${indent}  })`)
           lines.push(`${indent})`)
         } else {
           // Sequential fanout
           lines.push(
             `${indent}for (const ${flowNode.itemVar} of ${flowNode.sourceVar}) {`
           )
-          if (flowNode.childEntry && nodes[flowNode.childEntry]) {
-            const childNode = nodes[flowNode.childEntry]
-            if ('rpcName' in childNode && childNode.rpcName) {
-              const stepName = childNode.stepName || `Call ${childNode.rpcName}`
-              const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(
-                input,
-                indent + '  ',
-                flowNode.itemVar
-              )
-              lines.push(
-                `${indent}  await workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode})`
-              )
-            }
-          }
+          lines.push(...bodyLines)
           if (flowNode.timeBetween) {
             lines.push(
               `${indent}  await workflow.sleep('Wait between iterations', '${flowNode.timeBetween}')`
@@ -565,10 +793,11 @@ function nodeToCode(
         }
         lines.push('')
         break
+      }
 
       case 'filter':
         lines.push(
-          `${indent}const ${flowNode.outputVar} = ${flowNode.sourceVar}.filter((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
+          `${indent}${bindingPrefix(flowNode.outputVar)}${flowNode.sourceVar}.filter((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
         )
         lines.push('')
         break
@@ -576,16 +805,19 @@ function nodeToCode(
       case 'arrayPredicate':
         const method = flowNode.mode === 'some' ? 'some' : 'every'
         lines.push(
-          `${indent}const ${flowNode.outputVar} = ${flowNode.sourceVar}.${method}((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
+          `${indent}${bindingPrefix(flowNode.outputVar)}${flowNode.sourceVar}.${method}((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
         )
         lines.push('')
         break
 
       case 'return':
-        if (flowNode.outputs) {
+        if (flowNode.outputs || flowNode.spread) {
           const returnObj: string[] = []
+          for (const spreadVar of (flowNode.spread as string[]) ?? []) {
+            returnObj.push(`${indent}  ...${spreadVar},`)
+          }
           for (const [key, output] of Object.entries(
-            flowNode.outputs as Record<string, any>
+            (flowNode.outputs ?? {}) as Record<string, any>
           )) {
             let value: string
             if (output.from === 'outputVar') {
@@ -627,9 +859,11 @@ function nodeToCode(
         // Generate variable assignment: varName = value
         const setVar = flowNode.variable
         const setValue =
-          typeof flowNode.value === 'string'
-            ? `'${flowNode.value}'`
-            : JSON.stringify(flowNode.value)
+          typeof flowNode.expression === 'string'
+            ? flowNode.expression
+            : typeof flowNode.value === 'string'
+              ? `'${escapeSingleQuotes(flowNode.value)}'`
+              : JSON.stringify(flowNode.value)
         lines.push(`${indent}${setVar} = ${setValue}`)
         lines.push('')
         break
@@ -650,16 +884,42 @@ function findConditionalVars(
   const varsInBranches = new Set<string>()
   const varsUsedInReturn = new Set<string>()
 
-  // Collect variables defined in branches (then/else/case/default nodes)
-  for (const [nodeId, node] of Object.entries(nodes)) {
-    if (
-      nodeId.includes('_then_') ||
-      nodeId.includes('_else_') ||
-      nodeId.includes('_case') ||
-      nodeId.includes('_default_')
-    ) {
-      if ('outputVar' in node && node.outputVar) {
-        varsInBranches.add(node.outputVar as string)
+  // Collect variables defined inside a branch arm or switch case. Found by
+  // walking each body from its entry to the enclosing node's exit — node ids
+  // are step names and carry no structural marker to match on.
+  for (const node of Object.values(nodes)) {
+    if (!('flow' in node)) continue
+    const flowNode = node as any
+    const exit = flowNode.next as string | undefined
+
+    const entries: string[] = []
+    if (flowNode.flow === 'branch') {
+      for (const branch of flowNode.branches || []) {
+        if (branch.entry) entries.push(branch.entry)
+      }
+      if (flowNode.elseEntry) entries.push(flowNode.elseEntry)
+    } else if (flowNode.flow === 'switch') {
+      for (const caseItem of flowNode.cases || []) {
+        if (caseItem.entry) entries.push(caseItem.entry)
+      }
+      if (flowNode.defaultEntry) entries.push(flowNode.defaultEntry)
+    }
+
+    for (const entry of entries) {
+      const seen = new Set<string>()
+      let currentId: string | undefined = entry
+      while (
+        currentId &&
+        nodes[currentId] &&
+        isWithinBody(currentId, exit, seen)
+      ) {
+        seen.add(currentId)
+        const bodyNode = nodes[currentId] as any
+        if (bodyNode.outputVar) {
+          varsInBranches.add(bodyNode.outputVar as string)
+        }
+        currentId =
+          typeof bodyNode.next === 'string' ? bodyNode.next : undefined
       }
     }
   }
@@ -773,16 +1033,14 @@ export function deserializeDslWorkflow(
   // Process nodes in order
   const orderedNodes = traverseNodes(workflow.nodes, workflow.entryNodeIds)
 
+  // Nodes emitted as part of a parent (branch arm, switch case, parallel group,
+  // fanout body) must not also be emitted at the top level. Ownership is read
+  // from the parents themselves — node ids are step names and a legitimate step
+  // may be called anything.
+  const ownedByParent = collectChildNodeIds(workflow.nodes)
+
   for (const node of orderedNodes) {
-    // Skip child nodes that are processed as part of their parent
-    if (
-      node.nodeId.includes('_then_') ||
-      node.nodeId.includes('_else_') ||
-      node.nodeId.includes('_case') ||
-      node.nodeId.includes('_default_') ||
-      node.nodeId.includes('_child_') ||
-      node.nodeId.includes('_item_')
-    ) {
+    if (ownedByParent.has(node.nodeId)) {
       continue
     }
 
@@ -943,8 +1201,91 @@ function findNextRpcNode(
 
   // It's a flow node - follow its 'next' if it has one
   const flowNode = nodes[startNextId]
-  if (flowNode && 'next' in flowNode && flowNode.next) {
-    return findNextRpcNode(flowNode.next as string, nodes, flowNodeIds, visited)
+  if (flowNode && 'next' in flowNode && typeof flowNode.next === 'string') {
+    return findNextRpcNode(flowNode.next, nodes, flowNodeIds, visited)
+  }
+
+  return null
+}
+
+/**
+ * Resolve a single next target through any intervening flow nodes.
+ */
+function resolveNextTarget(
+  target: string,
+  nodes: Record<string, SerializedGraphNode>,
+  flowNodeIds: Set<string>
+): string | null {
+  const resolved = flowNodeIds.has(target)
+    ? findNextRpcNode(target, nodes, flowNodeIds)
+    : target
+  return resolved && !flowNodeIds.has(resolved) ? resolved : null
+}
+
+/**
+ * Render a `next` in any of its shapes. A `next` is not always a single node
+ * id — it can fan out to an array, route by branch key, or carry conditions.
+ * Coercing those to a string produces node ids that match nothing ('a,b',
+ * '[object Object]'), silently severing the rest of the graph.
+ */
+function nextToCode(
+  next: SerializedNext,
+  nodes: Record<string, SerializedGraphNode>,
+  flowNodeIds: Set<string>
+): string | null {
+  const renderTargets = (targets: string | string[]): string | null => {
+    if (typeof targets === 'string') {
+      const resolved = resolveNextTarget(targets, nodes, flowNodeIds)
+      return resolved ? `'${resolved}'` : null
+    }
+    const resolved = targets
+      .map((t) => resolveNextTarget(t, nodes, flowNodeIds))
+      .filter((t): t is string => t !== null)
+    return resolved.length > 0
+      ? `[${resolved.map((t) => `'${t}'`).join(', ')}]`
+      : null
+  }
+
+  if (typeof next === 'string' || Array.isArray(next)) {
+    return renderTargets(next)
+  }
+
+  if (typeof next === 'object' && next !== null) {
+    if ('conditions' in next && Array.isArray(next.conditions)) {
+      const conditions = next.conditions
+        .map((condition) => {
+          const target = renderTargets(condition.target)
+          return target
+            ? `{ expression: '${escapeSingleQuotes(condition.expression)}', target: ${target} }`
+            : null
+        })
+        .filter((c): c is string => c !== null)
+      if (conditions.length === 0) {
+        return null
+      }
+      const parts = [`conditions: [${conditions.join(', ')}]`]
+      if (next.default !== undefined) {
+        const defaultTarget = renderTargets(next.default)
+        if (defaultTarget) {
+          parts.push(`default: ${defaultTarget}`)
+        }
+      }
+      return `{ ${parts.join(', ')} }`
+    }
+
+    const entries = Object.entries(next)
+      .map(([key, target]) => {
+        const isTarget =
+          typeof target === 'string' ||
+          (Array.isArray(target) && target.every((t) => typeof t === 'string'))
+        const rendered = isTarget ? renderTargets(target) : null
+        const safeKey = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
+          ? key
+          : JSON.stringify(key)
+        return rendered ? `${safeKey}: ${rendered}` : null
+      })
+      .filter((e): e is string => e !== null)
+    return entries.length > 0 ? `{ ${entries.join(', ')} }` : null
   }
 
   return null
@@ -1014,14 +1355,28 @@ export function deserializeGraphWorkflow(
 
     // Add next if present - follow through flow nodes to find the actual next RPC node
     if ('next' in node && node.next) {
-      const nextId = node.next as string
-      // If next points to a flow node, follow through to find the next RPC node
-      const actualNextId = flowNodeIds.has(nextId)
-        ? findNextRpcNode(nextId, workflow.nodes, flowNodeIds)
-        : nextId
-      // Only add if we found a valid next RPC node
-      if (actualNextId && !flowNodeIds.has(actualNextId)) {
-        configParts.push(`next: '${actualNextId}'`)
+      const nextCode = nextToCode(node.next, workflow.nodes, flowNodeIds)
+      if (nextCode) {
+        configParts.push(`next: ${nextCode}`)
+      }
+    }
+
+    // onError, retries and retryDelay are all honoured by the graph runner,
+    // so dropping them here silently changes how the workflow behaves.
+    if ('onError' in node && node.onError) {
+      const onErrorCode = nextToCode(node.onError, workflow.nodes, flowNodeIds)
+      if (onErrorCode) {
+        configParts.push(`onError: ${onErrorCode}`)
+      }
+    }
+
+    if ('options' in node && node.options) {
+      const { retries, retryDelay } = node.options
+      if (retries !== undefined) {
+        configParts.push(`retries: ${retries}`)
+      }
+      if (retryDelay !== undefined) {
+        configParts.push(`retryDelay: ${durationToCode(retryDelay)}`)
       }
     }
 
@@ -1056,6 +1411,12 @@ export function deserializeGraphWorkflow(
   }
   if (workflow.tags && workflow.tags.length > 0) {
     lines.push(`  tags: [${workflow.tags.map((t) => `'${t}'`).join(', ')}],`)
+  }
+  if (workflow.notes && workflow.notes.length > 0) {
+    const notes = workflow.notes
+      .map((n) => `'${escapeSingleQuotes(n)}'`)
+      .join(', ')
+    lines.push(`  notes: [${notes}],`)
   }
 
   // Generate nodes (RPC mapping)

@@ -25,7 +25,7 @@ import {
 } from '../components/project/nodes/WiringNode'
 import { getChannelWiringNodeConfig } from '../components/project/nodes/ChannelWiringNode'
 
-interface WiringFlowResult {
+interface WorkflowFlowResult {
   nodes: Node[]
   edges: Edge[]
 }
@@ -54,6 +54,22 @@ function createEdge(
     edge.labelBgStyle = { fill: 'rgba(255,255,255,0.05)', fillOpacity: 1 }
   }
 
+  return edge
+}
+
+/**
+ * Compensation edge: a failure route, not part of the happy path, so it reads
+ * as an aside rather than another sequential step.
+ */
+function createErrorEdge(id: string, source: string, target: string): Edge {
+  const edge = createEdge(id, source, target, 'on error')
+  edge.animated = false
+  edge.style = { stroke: 'var(--mantine-color-red-6)', strokeDasharray: '4 4' }
+  edge.labelStyle = {
+    fontSize: 10,
+    fill: 'var(--mantine-color-red-4)',
+    fontFamily: 'monospace',
+  }
   return edge
 }
 
@@ -207,7 +223,9 @@ function getSourceHandle(
   return undefined
 }
 
-export function createFlow(workflow: WorkflowsMeta[0]): WiringFlowResult {
+export function createWorkflowFlow(
+  workflow: WorkflowsMeta[0]
+): WorkflowFlowResult {
   const nodes: Node[] = []
   const edges: Edge[] = []
   const workflowNodes = (workflow as any).nodes
@@ -332,6 +350,19 @@ export function createFlow(workflow: WorkflowsMeta[0]): WiringFlowResult {
         )
         processNode(step.defaultEntry, depth + 1)
       }
+    }
+
+    if (step.onError) {
+      const errorTargets = Array.isArray(step.onError)
+        ? step.onError
+        : [step.onError]
+
+      errorTargets.forEach((target: string) => {
+        edges.push(
+          createErrorEdge(`${nodeId}-onerror-${target}`, nodeId, target)
+        )
+        processNode(target, depth + 1)
+      })
     }
 
     if (stepType === 'fanout' && step.childEntry) {

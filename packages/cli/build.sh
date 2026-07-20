@@ -8,36 +8,51 @@ test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
 rm -rf -- .pikku dist
 
 # Bootstrap using the published CLI - generates all .pikku files.
-# Pinned to 0.12.35 (not `latest`): 0.12.36 shipped a `@pikku/better-auth:
-# workspace:*` dependency that leaked verbatim to npm and is uninstallable, so
-# bootstrapping off `latest` self-deadlocks the build. 0.12.35 is the last clean
-# release and still uses @pikku/auth-js (matching the install below).
+#
+# Pin the CLI *and* the inspector together. They share the inspector state
+# shape, and only the CLI was pinned before: when 0.12.43 dropped
+# `state.http.routePermissions` (the authz simplification), the floating
+# inspector paired with the pinned 0.12.35 CLI, which still read
+# `routePermissions.size`, and every bootstrap build broke at once — including
+# on main, which had been green minutes earlier.
+#
+# 0.12.83 is the CLI from that same release wave, so it matches 0.12.43. It
+# imports @pikku/better-auth rather than @pikku/auth-js, which is why the
+# bootstrap installs better-auth directly instead of overriding it.
+#
+# Historical note, still relevant when choosing a version: 0.12.36 shipped a
+# `@pikku/better-auth: workspace:*` dependency that leaked verbatim to npm and
+# is uninstallable, so bootstrapping off `latest` can self-deadlock.
 echo "Bootstrapping with published @pikku/cli..."
-: "${PIKKU_CLI_VERSION:=0.12.35}"
-: "${PIKKU_AUTH_JS_VERSION:=0.12.5}"
+: "${PIKKU_CLI_VERSION:=0.12.83}"
+: "${PIKKU_INSPECTOR_VERSION:=0.12.43}"
 : "${PIKKU_BETTER_AUTH_VERSION:=0.12.12}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
-# module load, so it must be installed alongside it. This stays @pikku/auth-js
-# until a CLI release that imports @pikku/better-auth is published, after which
-# this should flip to "@pikku/better-auth".
+# module load, so it must be installed alongside it. 0.12.83 imports
+# @pikku/better-auth, so that is what goes in.
 #
-# The `overrides` neutralises an unconverted `workspace:*` specifier that can
-# leak into a published @pikku/cli manifest (e.g. @pikku/cli@0.12.36 shipped
-# `@pikku/better-auth: workspace:*`, which npm cannot resolve). Declaring the
-# bootstrap deps in a package.json is what lets the override apply during
-# resolution — npm ignores `overrides` for packages passed as install args.
+# The inspector is listed explicitly, not left to float: it and the CLI share
+# the inspector state shape, so resolving it by range lets a later release pair
+# a new state with an older reader. Both move together or neither does.
+#
+# Declaring the bootstrap deps in a package.json is what lets `overrides` apply
+# during resolution — npm ignores `overrides` for packages passed as install
+# args. It is kept as a guard against an unconverted `workspace:*` specifier
+# leaking into a published manifest, as @pikku/cli@0.12.36 did.
 cat > "$_bootstrap_dir/package.json" <<JSON
 {
   "name": "pikku-bootstrap",
   "private": true,
   "dependencies": {
     "@pikku/cli": "${PIKKU_CLI_VERSION}",
-    "@pikku/auth-js": "${PIKKU_AUTH_JS_VERSION}"
+    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
+    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}"
   },
   "overrides": {
-    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}"
+    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
+    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}"
   }
 }
 JSON

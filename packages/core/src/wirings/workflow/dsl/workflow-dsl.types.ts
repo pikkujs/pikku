@@ -19,6 +19,13 @@ export interface WorkflowStepOptions {
   /** Delay between retry attempts (e.g., '1s', '2s', '2min') */
   retryDelay?: string | number
   /**
+   * RPC to invoke for compensation when this step fails after exhausting its
+   * retries. Mirrors a graph node's `onError`: the handler receives
+   * `{ error: { message } }` and the original error is still thrown, so the
+   * workflow fails — this is compensation, not recovery.
+   */
+  onError?: string
+  /**
    * Run this step as an actor (scenarios). The RPC is sent through the
    * actor's authenticated client over the REAL transport — never dispatched
    * internally — so auth middleware and permissions are exercised end-to-end.
@@ -224,16 +231,20 @@ export interface ParallelGroupStepMeta {
  */
 export interface FanoutStepMeta {
   type: 'fanout'
-  /** Step name for this fanout */
-  stepName: string
+  /**
+   * Step name for this fanout. Optional: a fanout is not itself a cached step,
+   * and node ids are step names — borrowing a body step's name would give the
+   * loop and that step the same id, collapsing one onto the other.
+   */
+  stepName?: string
   /** Source array variable name */
   sourceVar: string
   /** Iterator variable name */
   itemVar: string
   /** Execution mode */
   mode: 'parallel' | 'sequential'
-  /** Child step to execute per iteration */
-  child: RpcStepMeta
+  /** Steps to execute inline per iteration, in order */
+  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta>
   /** Time between iterations (sequential mode only) */
   timeBetween?: string
 }
@@ -245,6 +256,12 @@ export interface ReturnStepMeta {
   type: 'return'
   /** Output bindings */
   outputs: Record<string, OutputBinding>
+  /**
+   * Variables spread into the returned object (`return { ...r }`), or the sole
+   * returned variable (`return r`). Their fields are not enumerable statically,
+   * so they are recorded by name rather than expanded into `outputs`.
+   */
+  spread?: string[]
 }
 
 /**
@@ -271,6 +288,13 @@ export interface SleepStepMeta {
   stepName: string
   /** Sleep duration */
   duration: string | number
+  /**
+   * Source text of a duration only known at runtime (e.g. a loop variable).
+   * The closure evaluates it, so it is legal DSL; it is kept separate from
+   * `duration` so regenerated code emits it raw rather than as a string
+   * literal, exactly as `expression` does on a set step.
+   */
+  expression?: string
 }
 
 /**
@@ -291,8 +315,14 @@ export interface SetStepMeta {
   type: 'set'
   /** Variable name to set (must be in context) */
   variable: string
-  /** Value to assign (literal or expression) */
-  value: unknown
+  /** Literal value to assign. Mutually exclusive with `expression`. */
+  value?: unknown
+  /**
+   * Source text of a non-literal assignment (e.g. `count + 1`). Kept separate
+   * from `value` so regenerated code can emit it raw — a string `value` is a
+   * string literal, an `expression` is code.
+   */
+  expression?: string
 }
 
 /**

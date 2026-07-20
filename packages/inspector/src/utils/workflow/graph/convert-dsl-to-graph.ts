@@ -91,6 +91,7 @@ function convertStepToNode(
       const node: FunctionNode = {
         nodeId,
         rpcName: step.rpcName,
+        stepName: step.stepName,
         next: nextNodeId,
       }
       if (step.actor) {
@@ -116,8 +117,23 @@ function convertStepToNode(
       if (step.options) {
         node.options = {
           retries: step.options.retries,
-          retryDelay: step.options.retryDelay?.toString(),
+          retryDelay: step.options.retryDelay,
         }
+      }
+      // An onError handler is written as an rpc name, but the graph routes to
+      // node ids — materialise a node for it so the console has something to
+      // draw the error edge to, exactly as in a hand-authored graph.
+      if (step.options?.onError) {
+        const handlerId = `${nodeId}_onError`
+        node.onError = handlerId
+        return [
+          node,
+          {
+            nodeId: handlerId,
+            rpcName: step.options.onError,
+            stepName: `${step.stepName} (on error)`,
+          } satisfies FunctionNode,
+        ]
       }
       return [node]
     }
@@ -126,7 +142,22 @@ function convertStepToNode(
       const node: FlowNode = {
         nodeId,
         flow: 'sleep',
+        stepName: step.stepName,
         duration: step.duration,
+        expression: step.expression,
+        next: nextNodeId,
+      }
+      return [node]
+    }
+
+    case 'suspend': {
+      // A suspend yields no value, but it must still be a node: the previous
+      // step's `next` points at it, so omitting it dead-ends traversal and
+      // silently deletes every step that follows.
+      const node: FlowNode = {
+        nodeId,
+        flow: 'suspend',
+        reason: step.reason,
         next: nextNodeId,
       }
       return [node]
@@ -214,16 +245,32 @@ function convertStepToNode(
         entry: string
       }> = []
 
+      // A case with no statements falls through to the next one. Dropping it
+      // would lose the value entirely, so it is held until an entry exists.
+      let fallingThrough: Array<{ value?: unknown; expression?: string }> = []
+
       for (let i = 0; i < step.cases.length; i++) {
         const caseSteps = convertStepsToNodes(
           step.cases[i].steps,
           `${nodeId}_case${i}`
         )
-        if (caseSteps.length > 0) {
+        if (caseSteps.length === 0) {
+          fallingThrough.push({
+            value: step.cases[i].value,
+            expression: step.cases[i].expression,
+          })
+          continue
+        }
+        {
+          const entry = caseSteps[0].nodeId
+          for (const pending of fallingThrough) {
+            cases.push({ ...pending, entry })
+          }
+          fallingThrough = []
           cases.push({
             value: step.cases[i].value,
             expression: step.cases[i].expression,
-            entry: caseSteps[0].nodeId,
+            entry,
           })
           // Link last case node to next (unless terminal flow)
           if (nextNodeId) {
@@ -250,6 +297,14 @@ function convertStepToNode(
               lastDefault.next = nextNodeId
           }
           caseNodes.push(...defaultNodes)
+        }
+      }
+
+      // Cases falling through past the last one land in default, or exit.
+      const trailingEntry = defaultEntry ?? nextNodeId
+      if (trailingEntry) {
+        for (const pending of fallingThrough) {
+          cases.push({ ...pending, entry: trailingEntry })
         }
       }
 
@@ -294,13 +349,13 @@ function convertStepToNode(
     }
 
     case 'fanout': {
-      // Convert child step
-      const childNodes = convertStepToNode(
-        step.child,
-        0,
-        [step.child],
-        `${nodeId}_item`
-      )
+      // Convert the per-iteration body into a `next`-chained sequence
+      const childNodes: SerializedGraphNode[] = []
+      for (let i = 0; i < step.body.length; i++) {
+        childNodes.push(
+          ...convertStepToNode(step.body[i], i, step.body, `${nodeId}_item`)
+        )
+      }
 
       const node: FlowNode = {
         nodeId,
@@ -348,6 +403,7 @@ function convertStepToNode(
         nodeId,
         flow: 'return',
         outputs: step.outputs,
+        spread: step.spread,
       }
       return [node]
     }
@@ -367,6 +423,7 @@ function convertStepToNode(
         flow: 'set',
         variable: step.variable,
         value: step.value,
+        expression: step.expression,
         next: nextNodeId,
       }
       return [node]
