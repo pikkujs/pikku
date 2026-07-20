@@ -322,12 +322,16 @@ function extractVariableDeclaration(
 ): WorkflowStepMeta | null {
   const declList = statement.declarationList
   if (declList.declarations.length !== 1) {
+    context.errors.push({
+      message: `A single declaration statement may only declare one variable in DSL workflows. Split '${statement.getText().slice(0, 60)}' into separate statements.`,
+      node: statement,
+    })
     return null
   }
 
   const decl = declList.declarations[0]
   if (!ts.isIdentifier(decl.name)) {
-    return null
+    return extractDestructuredDeclaration(statement, decl, context)
   }
 
   const varName = decl.name.text
@@ -434,6 +438,70 @@ function extractVariableDeclaration(
     }
   }
 
+  return null
+}
+
+/**
+ * Extract a declaration whose binding is a destructuring pattern.
+ *
+ * `const [a, b] = await Promise.all([...])` is the idiomatic way to run steps
+ * in parallel and keep both results, so each element of the pattern is bound to
+ * the matching child step's output. Every other destructuring shape reports a
+ * diagnostic rather than silently dropping the step.
+ */
+function extractDestructuredDeclaration(
+  statement: ts.VariableStatement,
+  decl: ts.VariableDeclaration,
+  context: ExtractionContext
+): WorkflowStepMeta | null {
+  const init = decl.initializer
+
+  if (
+    init &&
+    ts.isAwaitExpression(init) &&
+    ts.isCallExpression(init.expression) &&
+    isParallelGroup(init.expression) &&
+    ts.isArrayBindingPattern(decl.name)
+  ) {
+    const elements = decl.name.elements
+    const allSimple = elements.every(
+      (el) =>
+        ts.isBindingElement(el) &&
+        ts.isIdentifier(el.name) &&
+        !el.dotDotDotToken
+    )
+
+    if (allSimple) {
+      const step = extractParallelGroup(init.expression, context)
+      if (step) {
+        if (elements.length !== step.children.length) {
+          context.errors.push({
+            message: `Destructuring binds ${elements.length} name(s) but Promise.all has ${step.children.length} step(s). They must match so each result can be bound to its step.`,
+            node: statement,
+          })
+          return null
+        }
+
+        elements.forEach((el, i) => {
+          const name = (el as ts.BindingElement).name as ts.Identifier
+          const varName = name.text
+          step.children[i].outputVar = varName
+          const type = context.checker.getTypeAtLocation(name)
+          context.outputVars.set(varName, { type, node: name })
+          if (isArrayType(type, context.checker)) {
+            context.arrayVars.add(varName)
+          }
+        })
+
+        return step
+      }
+    }
+  }
+
+  context.errors.push({
+    message: `Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. \`const result = await workflow.do(...)\`) and read its properties.`,
+    node: statement,
+  })
   return null
 }
 
@@ -1308,10 +1376,12 @@ function extractSequentialFanout(
 
   const { itemVar, sourceVar } = vars
 
-  // Extract child step and optional sleep from loop body
-  if (!ts.isBlock(statement.statement)) {
-    return null
-  }
+  // Extract child steps and optional sleep from the loop body. A brace-less
+  // body (`for (const x of xs) await workflow.do(...)`) is a single statement
+  // rather than a block, and must still be extracted.
+  const bodyStatements = ts.isBlock(statement.statement)
+    ? statement.statement.statements
+    : [statement.statement]
 
   const body: RpcStepMeta[] = []
   let timeBetween: string | undefined = undefined
@@ -1324,7 +1394,7 @@ function extractSequentialFanout(
     loopVars: new Set([...context.loopVars, itemVar]),
   }
 
-  for (const stmt of statement.statement.statements) {
+  for (const stmt of bodyStatements) {
     extractFanoutBodyStep(stmt, childContext, body)
 
     // Look for workflow.sleep in ExpressionStatement
@@ -1661,6 +1731,11 @@ function extractInputSource(
 
       if (objName === context.inputParamName) {
         return { from: 'input', path: propName }
+      }
+
+      // A field of the fanout item: users.map((u) => do(..., { id: u.id }))
+      if (context.loopVars.has(objName)) {
+        return { from: 'item', path: propName }
       }
 
       if (context.outputVars.has(objName)) {
