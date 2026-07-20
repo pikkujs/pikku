@@ -12,6 +12,7 @@ import {
   streamText,
   tool as aiTool,
 } from 'ai'
+import { safeDownload } from './safe-download.js'
 import type {
   AIAgentRunnerParams,
   AIAgentRunnerService,
@@ -134,17 +135,16 @@ type AIEmbedManyResult = {
   providerMetadata?: Record<string, unknown>
   responses?: unknown[]
 }
-type AIRerankParams<VALUE extends string | Record<string, unknown>> =
-  {
-    model: string
-    query: string
-    documents: VALUE[]
-    topK?: number
-    providerOptions?: Record<string, Record<string, unknown>>
-    maxRetries?: number
-    abortSignal?: AbortSignal
-    headers?: Record<string, string>
-  }
+type AIRerankParams<VALUE extends string | Record<string, unknown>> = {
+  model: string
+  query: string
+  documents: VALUE[]
+  topK?: number
+  providerOptions?: Record<string, Record<string, unknown>>
+  maxRetries?: number
+  abortSignal?: AbortSignal
+  headers?: Record<string, string>
+}
 type AIRerankResult<VALUE extends string | Record<string, unknown>> = {
   ranking: Array<{
     index: number
@@ -257,12 +257,18 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
   private readonly providerFactory?: (apiKey: string) => Record<string, any>
 
+  /** Host allowlist for downloading attachment URLs. When omitted, any
+   *  non-private host is permitted; private/internal hosts are always refused. */
+  private readonly allowedAttachmentHosts?: string[]
+
   constructor(
     providers: Record<string, any>,
-    providerFactory?: (apiKey: string) => Record<string, any>
+    providerFactory?: (apiKey: string) => Record<string, any>,
+    allowedAttachmentHosts?: string[]
   ) {
     this.providers = providers
     this.providerFactory = providerFactory
+    this.allowedAttachmentHosts = allowedAttachmentHosts
   }
 
   withApiKey(apiKey: string): VercelAIAgentRunner {
@@ -270,7 +276,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     if (!apiKey?.trim()) return this
     return new VercelAIAgentRunner(
       this.providerFactory(apiKey),
-      this.providerFactory
+      this.providerFactory,
+      this.allowedAttachmentHosts
     )
   }
 
@@ -397,6 +404,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       messages,
       tools: aiTools,
       stopWhen: stepCountIs(1),
+      experimental_download: safeDownload(this.allowedAttachmentHosts),
       toolChoice: params.toolChoice,
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
@@ -553,6 +561,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       messages,
       tools: aiTools,
       stopWhen: stepCountIs(1),
+      experimental_download: safeDownload(this.allowedAttachmentHosts),
       toolChoice: params.toolChoice,
       ...(params.temperature !== undefined && {
         temperature: params.temperature,

@@ -22,10 +22,24 @@ export const isThreadOwner = pikkuPermission<{ threadId: string }>(
   }
 )
 
-export const agentCaller = pikkuSessionlessFunc<
-  { agentName: string; message: string; threadId: string; resourceId: string },
-  unknown
->({
+type AgentCallerInput = {
+  agentName: string
+  message: string
+  threadId: string
+  resourceId: string
+  attachments?: {
+    type: 'image' | 'file'
+    data?: string
+    url?: string
+    mediaType?: string
+    filename?: string
+  }[]
+  model?: string
+  temperature?: number
+  context?: string
+}
+
+export const agentCaller = pikkuSessionlessFunc<AgentCallerInput, unknown>({
   tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
@@ -33,14 +47,15 @@ export const agentCaller = pikkuSessionlessFunc<
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
+      ...(data.attachments ? { attachments: data.attachments } : {}),
+      ...(data.model ? { model: data.model } : {}),
+      ...(data.temperature !== undefined ? { temperature: data.temperature } : {}),
+      ...(data.context ? { context: data.context } : {}),
     })
   },
 })
 
-export const agentStreamCaller = pikkuSessionlessFunc<
-  { agentName: string; message: string; threadId: string; resourceId: string; context?: string },
-  void
->({
+export const agentStreamCaller = pikkuSessionlessFunc<AgentCallerInput, void>({
   tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
@@ -48,6 +63,9 @@ export const agentStreamCaller = pikkuSessionlessFunc<
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
+      ...(data.attachments ? { attachments: data.attachments } : {}),
+      ...(data.model ? { model: data.model } : {}),
+      ...(data.temperature !== undefined ? { temperature: data.temperature } : {}),
       ...(data.context ? { context: data.context } : {}),
     })
   },
