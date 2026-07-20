@@ -4,6 +4,7 @@ import type {
   AgentRunRow,
   AgentRunService,
 } from '@pikku/core/ai-agent'
+import { isOwnedByPrincipal } from '@pikku/core/ai-agent'
 import type { Redis } from 'ioredis'
 
 export class RedisAgentRunService implements AgentRunService {
@@ -39,10 +40,21 @@ export class RedisAgentRunService implements AgentRunService {
   async listThreads(options?: {
     agentName?: string
     resourceId?: string
+    owners?: string[]
     limit?: number
     offset?: number
   }): Promise<AIThread[]> {
-    const { agentName, resourceId, limit = 50, offset = 0 } = options ?? {}
+    const {
+      agentName,
+      resourceId,
+      owners,
+      limit = 50,
+      offset = 0,
+    } = options ?? {}
+
+    // An owners constraint is an authorization boundary, so an empty list must
+    // match nothing rather than degrade to "no filter".
+    if (owners && owners.length === 0) return []
 
     let threadIds: string[]
 
@@ -61,17 +73,24 @@ export class RedisAgentRunService implements AgentRunService {
       threadIds = await this.redis.zrevrange(this.threadsIndexKey(), 0, -1)
     }
 
-    const paged = threadIds.slice(offset, offset + limit)
-
-    const threads: AIThread[] = []
-    for (const id of paged) {
+    // Filter before paging: slicing first would let a page of another owner's
+    // threads collapse to fewer results than requested (and, for `owners`, makes
+    // the page size leak how many foreign threads exist).
+    const matched: AIThread[] = []
+    for (const id of threadIds) {
       const thread = await this.getThread(id)
       if (!thread) continue
       if (resourceId && thread.resourceId !== resourceId) continue
-      threads.push(thread)
+      if (
+        owners &&
+        !owners.some((owner) => isOwnedByPrincipal(thread.resourceId, owner))
+      ) {
+        continue
+      }
+      matched.push(thread)
     }
 
-    return threads
+    return matched.slice(offset, offset + limit)
   }
 
   async getThread(threadId: string): Promise<AIThread | null> {

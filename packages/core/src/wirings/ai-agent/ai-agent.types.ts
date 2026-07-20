@@ -439,6 +439,17 @@ export interface AgentRunService {
   listThreads(options?: {
     agentName?: string
     resourceId?: string
+    /**
+     * Restrict results to threads owned by one of these session principals. A
+     * thread matches when its `resourceId` is the principal itself or one of its
+     * `principal:` sub-partitions, mirroring the composition
+     * `resolveOwnerResourceId` writes.
+     *
+     * Unlike `resourceId`, which is an optional exact-match filter, this is an
+     * authorization constraint: an empty array matches nothing. Callers exposing
+     * threads over the wire must derive it from the session, never from input.
+     */
+    owners?: string[]
     limit?: number
     offset?: number
   }): Promise<AIThread[]>

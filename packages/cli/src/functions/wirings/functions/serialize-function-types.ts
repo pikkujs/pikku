@@ -59,6 +59,17 @@ ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeNa
 ${configTypeImport.includes('Config type not found') ? 'export type Config = any' : ''}
 
 /**
+ * The services a wired function actually receives. The inspector records which
+ * services each wired \`func\`, \`permissions\` and \`middleware\` destructures and
+ * emits them as \`RequiredSingletonServices\`; intersecting that here makes those
+ * services **non-optional** at every call site. A service is optional only when
+ * nothing destructures it — in which case it is never created either. This is
+ * why an \`if (!service)\` guard inside a function body is always dead code.
+ */
+export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
+export type WiredServices = RequiredSingletonServices & Services
+
+/**
  * Inline node configuration for function definitions.
  */
 export type NodeConfig = {
@@ -75,7 +86,7 @@ export type NodeConfig = {
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
+export type PikkuPermission<In = unknown, RequiredServices extends Services = WiredServices> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
@@ -83,12 +94,12 @@ export type PikkuPermission<In = unknown, RequiredServices extends Services = Se
  *
  * @template RequiredServices - The services required for this middleware
  */
-export type PikkuMiddleware<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuMiddleware<RequiredServices>
+export type PikkuMiddleware<RequiredServices extends SingletonServices = WiredSingletonServices> = CorePikkuMiddleware<RequiredServices>
 
 /**
  * Configuration object for creating a permission with metadata
  */
-export type PikkuPermissionConfig<In = unknown, RequiredServices extends Services = Services> = {
+export type PikkuPermissionConfig<In = unknown, RequiredServices extends Services = WiredServices> = {
   /** The permission function */
   func: PikkuPermission<In, RequiredServices>
   /** Optional human-readable name for the permission */
@@ -133,12 +144,12 @@ export const pikkuPermission = <In>(
  *
  * @template RequiredServices - The services required for this auth check
  */
-export type PikkuAuth<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuAuth<RequiredServices, Session>
+export type PikkuAuth<RequiredServices extends SingletonServices = WiredSingletonServices> = CorePikkuAuth<RequiredServices, Session>
 
 /**
  * Configuration object for creating an auth permission with metadata
  */
-export type PikkuAuthConfig<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuAuthConfig<RequiredServices, Session>
+export type PikkuAuthConfig<RequiredServices extends SingletonServices = WiredSingletonServices> = CorePikkuAuthConfig<RequiredServices, Session>
 
 /**
  * Factory function for creating auth-only permissions with tree-shaking support.
@@ -160,7 +171,7 @@ export type PikkuAuthConfig<RequiredServices extends SingletonServices = Singlet
  * })
  * \\\`\\\`\\\`
  */
-export const pikkuAuth = <RequiredServices extends SingletonServices = SingletonServices>(
+export const pikkuAuth = <RequiredServices extends SingletonServices = WiredSingletonServices>(
   auth: PikkuAuth<RequiredServices> | PikkuAuthConfig<RequiredServices>
 ): PikkuPermission<any, any> => {
   return pikkuAuthCore(auth as any) as any
@@ -169,7 +180,7 @@ export const pikkuAuth = <RequiredServices extends SingletonServices = Singleton
 /**
  * Configuration object for creating middleware with metadata
  */
-export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = SingletonServices> = {
+export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSingletonServices> = {
   /** The middleware function */
   func: PikkuMiddleware<RequiredServices>
   /** Optional human-readable name for the middleware */
@@ -201,7 +212,7 @@ export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = S
  * })
  * \`\`\`
  */
-export const pikkuMiddleware = <RequiredServices extends SingletonServices = SingletonServices>(
+export const pikkuMiddleware = <RequiredServices extends SingletonServices = WiredSingletonServices>(
   middleware: PikkuMiddleware<RequiredServices> | PikkuMiddlewareConfig<RequiredServices>
 ): PikkuMiddleware<RequiredServices> => {
   return typeof middleware === 'function' ? middleware : middleware.func
@@ -262,7 +273,7 @@ export const pikkuPermissionFactory = <In = any>(
  * @template In - The input type (same as the function it describes)
  * @template RequiredServices - The services required for this description function
  */
-export type PikkuApprovalDescription<In = unknown, RequiredServices extends Services = Services> = (
+export type PikkuApprovalDescription<In = unknown, RequiredServices extends Services = WiredServices> = (
   services: RequiredServices,
   data: In
 ) => Promise<string>
@@ -280,7 +291,7 @@ export type PikkuApprovalDescription<In = unknown, RequiredServices extends Serv
  * )
  * \`\`\`
  */
-export const pikkuApprovalDescription = <In = unknown, RequiredServices extends Services = Services>(
+export const pikkuApprovalDescription = <In = unknown, RequiredServices extends Services = WiredServices>(
   fn: PikkuApprovalDescription<In, RequiredServices>
 ): PikkuApprovalDescription<In, RequiredServices> => {
   return fn
@@ -298,7 +309,7 @@ export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
   RequiredWires extends keyof PikkuWire = never,
-  RequiredServices extends Services = Services
+  RequiredServices extends Services = WiredServices
 > = CorePikkuFunctionSessionless<
     In,
     Out,
@@ -319,7 +330,7 @@ export type PikkuFunction<
   In = unknown,
   Out = never,
   RequiredWires extends keyof PikkuWire = 'session',
-  RequiredServices extends Services = Services
+  RequiredServices extends Services = WiredServices
 > = CorePikkuFunction<
     In,
     Out,

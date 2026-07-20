@@ -4,8 +4,23 @@ export const serializePublicAgent = (
   globalHTTPPrefix: string = ''
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
-  return `import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+  return `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/ai-agent'
+import { pikkuSessionlessFunc, pikkuPermission, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+
+/**
+ * Thread reads are keyed by a caller-supplied \`threadId\`, so ownership cannot
+ * come from the request — it is derived from the session and checked against
+ * the stored thread's resourceId.
+ */
+export const isThreadOwner = pikkuPermission<{ threadId: string }>(
+  async ({ agentRunService }, { threadId }, { session }) => {
+    const thread = await agentRunService.getThread(threadId)
+    // A missing thread is denied rather than 404'd so it is indistinguishable
+    // from one owned by someone else — no existence oracle.
+    if (!thread) return false
+    return canAccessThread(thread.resourceId, session)
+  }
+)
 
 export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
@@ -70,14 +85,16 @@ export const getAgentThreads = pikkuSessionlessFunc<
   tags: ['pikku', 'pikku:agent'],
   title: 'Get Agent Threads',
   description:
-    'Returns a list of AI agent threads from storage. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
+    'Returns the caller\\'s AI agent threads from storage. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
   expose: true,
   auth: ${authFlag},
-  func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
+  func: async ({ agentRunService }, input, { session }) => {
+    // \`owners\` is an authorization constraint derived from the session, never
+    // from input — \`resourceId\` remains a caller-supplied filter within it.
     return await agentRunService.listThreads({
       agentName: input?.agentName,
       resourceId: input?.resourceId,
+      owners: threadOwnerConstraint(session),
       limit: input?.limit,
       offset: input?.offset,
     })
@@ -94,8 +111,8 @@ export const getAgentThreadMessages = pikkuSessionlessFunc<
     'Returns all messages for a given AI agent thread, ordered by creation time.',
   expose: true,
   auth: ${authFlag},
+  permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
     return await agentRunService.getThreadMessages(input.threadId)
   },
 })
@@ -110,8 +127,8 @@ export const getAgentThreadRuns = pikkuSessionlessFunc<
     'Returns the run history for a given AI agent thread, ordered by creation time.',
   expose: true,
   auth: ${authFlag},
+  permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
     return await agentRunService.getThreadRuns(input.threadId)
   },
 })
@@ -126,8 +143,8 @@ export const deleteAgentThread = pikkuSessionlessFunc<
     'Deletes an AI agent thread and all of its persisted state.',
   expose: true,
   auth: ${authFlag},
+  permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
     const deleted = await agentRunService.deleteThread(input.threadId)
     return { deleted }
   },
