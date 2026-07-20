@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 
 export const credentialDelete = pikkuFunc<
@@ -9,9 +8,6 @@ export const credentialDelete = pikkuFunc<
   description: 'Deletes a credential, optionally scoped to a user.',
   expose: true,
   func: async ({ credentialService }, { name, userId }) => {
-    if (!credentialService) {
-      throw new MissingServiceError('CredentialService is not configured')
-    }
     await credentialService.delete(name, userId)
     return { success: true }
   },

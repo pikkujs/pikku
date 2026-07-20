@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
@@ -7,8 +6,6 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
   expose: false,
   auth: false,
   func: async ({ workflowRunService }, { runId }, { channel }) => {
-    if (!workflowRunService)
-      throw new MissingServiceError('workflowRunService is not available')
     if (!channel) return
 
     let lastHash = ''

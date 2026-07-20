@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 
 export const credentialGet = pikkuFunc<
@@ -9,9 +8,6 @@ export const credentialGet = pikkuFunc<
   description: 'Retrieves a credential value, optionally scoped to a user.',
   expose: true,
   func: async ({ credentialService }, { name, userId }) => {
-    if (!credentialService) {
-      throw new MissingServiceError('CredentialService is not configured')
-    }
     const value = await credentialService.get(name, userId)
     return { value }
   },

@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 
 export const deleteAgentThread = pikkuFunc<
@@ -10,8 +9,6 @@ export const deleteAgentThread = pikkuFunc<
     'Deletes an AI agent thread and all its associated messages and runs via cascade.',
   expose: true,
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService)
-      throw new MissingServiceError('agentRunService is not available')
     const deleted = await agentRunService.deleteThread(input.threadId)
     return { deleted }
   },
