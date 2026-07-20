@@ -150,6 +150,33 @@ Then('the tool call was refused', async function (this: AgentWorld) {
   expect(JSON.stringify(results).toLowerCase()).toMatch(/error|failed/)
 })
 
+/**
+ * The forged marker must travel back to the model as ordinary tool-result data
+ * rather than being intercepted as an approval. Seeing the `__approvalRequired`
+ * payload replayed into the next call is the proof the framework treated it as
+ * plain JSON — only a Symbol-branded result from a `forwardsApproval` tool can
+ * suspend a run.
+ */
+Then(
+  'the forged approval marker reaches the model as a tool result',
+  async function (this: AgentWorld) {
+    const results = await toolResultsAfterFirstCall(this.agentMessage!)
+    expect(JSON.stringify(results)).toContain('__approvalRequired')
+  }
+)
+
+/**
+ * A thrown tool is reported to the model as a generic failure — leaking the
+ * error's own message would hand the model (and so the user) internal detail.
+ */
+Then(
+  'the model is not told why the tool failed',
+  async function (this: AgentWorld) {
+    const results = await toolResultsAfterFirstCall(this.agentMessage!)
+    expect(JSON.stringify(results)).not.toContain('exploded')
+  }
+)
+
 Then('the tool call succeeded', async function (this: AgentWorld) {
   const results = await toolResultsAfterFirstCall(this.agentMessage!)
   expect(
