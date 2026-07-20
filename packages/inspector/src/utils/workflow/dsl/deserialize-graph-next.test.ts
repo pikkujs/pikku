@@ -104,3 +104,58 @@ describe('DSL round-trip — an unbound array step must not emit a broken bindin
     )
   })
 })
+
+describe('graph round-trip — runtime-honoured node config must survive', () => {
+  test('onError routing is preserved', () => {
+    const code = deserializeGraphWorkflow(
+      graph({
+        start: {
+          nodeId: 'start',
+          rpcName: 'charge',
+          next: 'ship',
+          onError: 'refund',
+        },
+        ship: { nodeId: 'ship', rpcName: 'ship' },
+        refund: { nodeId: 'refund', rpcName: 'refund' },
+      })
+    )
+
+    assert.ok(
+      code.includes("onError: 'refund'"),
+      `error routing is honoured at runtime and must not be dropped, got:\n${code}`
+    )
+  })
+
+  test('retries and retryDelay are preserved', () => {
+    const code = deserializeGraphWorkflow(
+      graph({
+        start: {
+          nodeId: 'start',
+          rpcName: 'charge',
+          options: { retries: 3, retryDelay: '5s' },
+        },
+      })
+    )
+
+    assert.ok(
+      code.includes('retries: 3'),
+      `retries must not be dropped, got:\n${code}`
+    )
+    assert.ok(
+      code.includes("retryDelay: '5s'"),
+      `retryDelay must not be dropped, got:\n${code}`
+    )
+  })
+
+  test('graph-level notes are preserved', () => {
+    const code = deserializeGraphWorkflow({
+      ...graph({ start: { nodeId: 'start', rpcName: 'charge' } }),
+      notes: ['imported from n8n'],
+    })
+
+    assert.ok(
+      code.includes('imported from n8n'),
+      `graph notes must not be dropped, got:\n${code}`
+    )
+  })
+})

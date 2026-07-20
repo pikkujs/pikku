@@ -204,11 +204,18 @@ function fanoutBodyToCode(
       const stepName = node.stepName || `Call ${node.rpcName}`
       const input = (node.input || {}) as Record<string, unknown>
       const inputCode = inputToCode(input, indent, itemVar)
-      const doCall = `await workflow.do('${stepName}', '${node.rpcName}', ${inputCode})`
+      const options = node.options ? optionsToCode(node.options) : ''
+      const doCall = `await workflow.do('${escapeSingleQuotes(stepName)}', '${node.rpcName}', ${inputCode}${options ? `, ${options}` : ''})`
       lines.push(
         node.outputVar
           ? `${indent}const ${node.outputVar} = ${doCall}`
           : `${indent}${doCall}`
+      )
+    } else if ('flow' in node) {
+      // A body is not RPC-only — a sleep or suspend between calls is part of
+      // the iteration and would otherwise be dropped from the regenerated code.
+      lines.push(
+        ...nodeToCode(node, nodes, indent).filter((line) => line !== '')
       )
     }
 
@@ -1313,6 +1320,25 @@ export function deserializeGraphWorkflow(
       }
     }
 
+    // onError, retries and retryDelay are all honoured by the graph runner,
+    // so dropping them here silently changes how the workflow behaves.
+    if ('onError' in node && node.onError) {
+      const onErrorCode = nextToCode(node.onError, workflow.nodes, flowNodeIds)
+      if (onErrorCode) {
+        configParts.push(`onError: ${onErrorCode}`)
+      }
+    }
+
+    if ('options' in node && node.options) {
+      const { retries, retryDelay } = node.options
+      if (retries !== undefined) {
+        configParts.push(`retries: ${retries}`)
+      }
+      if (retryDelay !== undefined) {
+        configParts.push(`retryDelay: ${durationToCode(retryDelay)}`)
+      }
+    }
+
     // Add input if present
     // Always use callback form to avoid excess property checking in TypeScript
     if ('input' in node && node.input) {
@@ -1344,6 +1370,12 @@ export function deserializeGraphWorkflow(
   }
   if (workflow.tags && workflow.tags.length > 0) {
     lines.push(`  tags: [${workflow.tags.map((t) => `'${t}'`).join(', ')}],`)
+  }
+  if (workflow.notes && workflow.notes.length > 0) {
+    const notes = workflow.notes
+      .map((n) => `'${escapeSingleQuotes(n)}'`)
+      .join(', ')
+    lines.push(`  notes: [${notes}],`)
   }
 
   // Generate nodes (RPC mapping)

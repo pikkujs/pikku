@@ -8,6 +8,7 @@ import type {
   FanoutStepMeta,
   CancelStepMeta,
   SuspendStepMeta,
+  SleepStepMeta,
   ApprovalStepMeta,
   SetStepMeta,
   SwitchStepMeta,
@@ -1182,7 +1183,7 @@ function extractArrayPredicate(
 function extractFanoutBodyStep(
   stmt: ts.Statement,
   childContext: ExtractionContext,
-  body: RpcStepMeta[]
+  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta>
 ): void {
   if (ts.isVariableStatement(stmt)) {
     const declList = stmt.declarationList
@@ -1230,7 +1231,24 @@ function extractFanoutBodyStep(
       : ts.isCallExpression(expr)
         ? expr
         : null
-    if (!call || !isWorkflowDoCall(call, childContext.checker)) {
+    if (!call) {
+      return
+    }
+    if (isWorkflowSleepCall(call, childContext.checker)) {
+      const sleepStep = extractSleepStep(call, childContext)
+      if (sleepStep && sleepStep.type === 'sleep') {
+        body.push(sleepStep)
+      }
+      return
+    }
+    if (isWorkflowSuspendCall(call, childContext.checker)) {
+      const suspendStep = extractSuspendStep(call, childContext)
+      if (suspendStep && suspendStep.type === 'suspend') {
+        body.push(suspendStep)
+      }
+      return
+    }
+    if (!isWorkflowDoCall(call, childContext.checker)) {
       return
     }
     const step = extractRpcStep(call, childContext)
@@ -1286,7 +1304,7 @@ function extractParallelFanout(
     loopVars: new Set([...context.loopVars, itemVar]),
   }
 
-  const body: RpcStepMeta[] = []
+  const body: FanoutStepMeta['body'] = []
 
   if (ts.isBlock(mapFn.body)) {
     for (const stmt of mapFn.body.statements) {
@@ -1317,7 +1335,6 @@ function extractParallelFanout(
 
   return {
     type: 'fanout',
-    stepName: body[0].stepName,
     sourceVar,
     itemVar,
     mode: 'parallel',
@@ -1383,7 +1400,7 @@ function extractSequentialFanout(
     ? statement.statement.statements
     : [statement.statement]
 
-  const body: RpcStepMeta[] = []
+  const body: FanoutStepMeta['body'] = []
   let timeBetween: string | undefined = undefined
 
   // Create a child context with the loop variable added
@@ -1467,7 +1484,6 @@ function extractSequentialFanout(
 
   return {
     type: 'fanout',
-    stepName: body[0].stepName,
     sourceVar,
     itemVar,
     mode: 'sequential',

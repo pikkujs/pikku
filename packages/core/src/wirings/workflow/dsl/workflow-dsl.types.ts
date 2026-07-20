@@ -224,8 +224,12 @@ export interface ParallelGroupStepMeta {
  */
 export interface FanoutStepMeta {
   type: 'fanout'
-  /** Step name for this fanout */
-  stepName: string
+  /**
+   * Step name for this fanout. Optional: a fanout is not itself a cached step,
+   * and node ids are step names — borrowing a body step's name would give the
+   * loop and that step the same id, collapsing one onto the other.
+   */
+  stepName?: string
   /** Source array variable name */
   sourceVar: string
   /** Iterator variable name */
@@ -233,7 +237,7 @@ export interface FanoutStepMeta {
   /** Execution mode */
   mode: 'parallel' | 'sequential'
   /** Steps to execute inline per iteration, in order */
-  body: RpcStepMeta[]
+  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta>
   /** Time between iterations (sequential mode only) */
   timeBetween?: string
 }
