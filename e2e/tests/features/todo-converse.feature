@@ -1,4 +1,4 @@
-@ai @converse
+@ai-live @converse
 Feature: Actor converses with the todo agent
   An actor agent (the "shopper" persona) holds a real, LLM-driven conversation
   with the todo-agent over HTTP — approving its tool requests in-persona. We
