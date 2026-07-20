@@ -546,11 +546,11 @@ function extractExpressionStatement(
               value: literalValue,
             } as SetStepMeta
           }
-          // Non-literal assignment to context var - use expression as string
+          // Non-literal assignment to context var - keep the source expression
           return {
             type: 'set',
             variable: outputVar,
-            value: getSourceText(expr.right),
+            expression: getSourceText(expr.right),
           } as SetStepMeta
         }
       }

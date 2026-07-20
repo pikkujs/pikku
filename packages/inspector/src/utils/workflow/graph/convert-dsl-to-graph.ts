@@ -382,6 +382,7 @@ function convertStepToNode(
         flow: 'set',
         variable: step.variable,
         value: step.value,
+        expression: step.expression,
         next: nextNodeId,
       }
       return [node]

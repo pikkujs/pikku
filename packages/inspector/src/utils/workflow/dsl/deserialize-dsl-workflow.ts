@@ -6,6 +6,7 @@
 import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,
+  SerializedNext,
   DataRef,
   ContextVariable,
 } from '../graph/workflow-graph.types.js'
@@ -275,6 +276,27 @@ function escapeSingleQuotes(value: string): string {
 }
 
 /**
+ * `outputVar` is optional — a graph-authored node may have no binding. Emitting
+ * `const undefined = ...` for those would not parse, so the expression is kept
+ * as a bare statement instead.
+ */
+function bindingPrefix(outputVar: unknown): string {
+  return typeof outputVar === 'string' && outputVar
+    ? `const ${outputVar} = `
+    : ''
+}
+
+/**
+ * A duration is `string | number` ('5s' or 5000). Quoting a number would change
+ * the value the runtime parses, so only strings get quotes.
+ */
+function durationToCode(duration: unknown): string {
+  return typeof duration === 'number'
+    ? String(duration)
+    : `'${escapeSingleQuotes(String(duration))}'`
+}
+
+/**
  * Render a switch case value. `switch` compares with ===, so quoting a number
  * or boolean would stop the case ever matching.
  */
@@ -294,7 +316,7 @@ function optionsToCode(options: Record<string, unknown>): string {
     parts.push(`retries: ${options.retries}`)
   }
   if (options.retryDelay !== undefined) {
-    parts.push(`retryDelay: '${options.retryDelay}'`)
+    parts.push(`retryDelay: ${durationToCode(options.retryDelay)}`)
   }
   return parts.length > 0 ? `{ ${parts.join(', ')} }` : ''
 }
@@ -539,7 +561,7 @@ function nodeToCode(
     switch (flowNode.flow) {
       case 'sleep':
         lines.push(
-          `${indent}await workflow.sleep('${flowNode.stepName || 'Sleep'}', '${flowNode.duration}')`
+          `${indent}await workflow.sleep('${escapeSingleQuotes(flowNode.stepName || 'Sleep')}', ${durationToCode(flowNode.duration)})`
         )
         lines.push('')
         break
@@ -727,7 +749,7 @@ function nodeToCode(
 
       case 'filter':
         lines.push(
-          `${indent}const ${flowNode.outputVar} = ${flowNode.sourceVar}.filter((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
+          `${indent}${bindingPrefix(flowNode.outputVar)}${flowNode.sourceVar}.filter((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
         )
         lines.push('')
         break
@@ -735,7 +757,7 @@ function nodeToCode(
       case 'arrayPredicate':
         const method = flowNode.mode === 'some' ? 'some' : 'every'
         lines.push(
-          `${indent}const ${flowNode.outputVar} = ${flowNode.sourceVar}.${method}((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
+          `${indent}${bindingPrefix(flowNode.outputVar)}${flowNode.sourceVar}.${method}((${flowNode.itemVar}) => ${conditionToCode(flowNode.condition)})`
         )
         lines.push('')
         break
@@ -786,9 +808,11 @@ function nodeToCode(
         // Generate variable assignment: varName = value
         const setVar = flowNode.variable
         const setValue =
-          typeof flowNode.value === 'string'
-            ? `'${flowNode.value}'`
-            : JSON.stringify(flowNode.value)
+          typeof flowNode.expression === 'string'
+            ? flowNode.expression
+            : typeof flowNode.value === 'string'
+              ? `'${escapeSingleQuotes(flowNode.value)}'`
+              : JSON.stringify(flowNode.value)
         lines.push(`${indent}${setVar} = ${setValue}`)
         lines.push('')
         break
@@ -1126,8 +1150,91 @@ function findNextRpcNode(
 
   // It's a flow node - follow its 'next' if it has one
   const flowNode = nodes[startNextId]
-  if (flowNode && 'next' in flowNode && flowNode.next) {
-    return findNextRpcNode(flowNode.next as string, nodes, flowNodeIds, visited)
+  if (flowNode && 'next' in flowNode && typeof flowNode.next === 'string') {
+    return findNextRpcNode(flowNode.next, nodes, flowNodeIds, visited)
+  }
+
+  return null
+}
+
+/**
+ * Resolve a single next target through any intervening flow nodes.
+ */
+function resolveNextTarget(
+  target: string,
+  nodes: Record<string, SerializedGraphNode>,
+  flowNodeIds: Set<string>
+): string | null {
+  const resolved = flowNodeIds.has(target)
+    ? findNextRpcNode(target, nodes, flowNodeIds)
+    : target
+  return resolved && !flowNodeIds.has(resolved) ? resolved : null
+}
+
+/**
+ * Render a `next` in any of its shapes. A `next` is not always a single node
+ * id — it can fan out to an array, route by branch key, or carry conditions.
+ * Coercing those to a string produces node ids that match nothing ('a,b',
+ * '[object Object]'), silently severing the rest of the graph.
+ */
+function nextToCode(
+  next: SerializedNext,
+  nodes: Record<string, SerializedGraphNode>,
+  flowNodeIds: Set<string>
+): string | null {
+  const renderTargets = (targets: string | string[]): string | null => {
+    if (typeof targets === 'string') {
+      const resolved = resolveNextTarget(targets, nodes, flowNodeIds)
+      return resolved ? `'${resolved}'` : null
+    }
+    const resolved = targets
+      .map((t) => resolveNextTarget(t, nodes, flowNodeIds))
+      .filter((t): t is string => t !== null)
+    return resolved.length > 0
+      ? `[${resolved.map((t) => `'${t}'`).join(', ')}]`
+      : null
+  }
+
+  if (typeof next === 'string' || Array.isArray(next)) {
+    return renderTargets(next)
+  }
+
+  if (typeof next === 'object' && next !== null) {
+    if ('conditions' in next && Array.isArray(next.conditions)) {
+      const conditions = next.conditions
+        .map((condition) => {
+          const target = renderTargets(condition.target)
+          return target
+            ? `{ expression: '${escapeSingleQuotes(condition.expression)}', target: ${target} }`
+            : null
+        })
+        .filter((c): c is string => c !== null)
+      if (conditions.length === 0) {
+        return null
+      }
+      const parts = [`conditions: [${conditions.join(', ')}]`]
+      if (next.default !== undefined) {
+        const defaultTarget = renderTargets(next.default)
+        if (defaultTarget) {
+          parts.push(`default: ${defaultTarget}`)
+        }
+      }
+      return `{ ${parts.join(', ')} }`
+    }
+
+    const entries = Object.entries(next)
+      .map(([key, target]) => {
+        const isTarget =
+          typeof target === 'string' ||
+          (Array.isArray(target) && target.every((t) => typeof t === 'string'))
+        const rendered = isTarget ? renderTargets(target) : null
+        const safeKey = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
+          ? key
+          : JSON.stringify(key)
+        return rendered ? `${safeKey}: ${rendered}` : null
+      })
+      .filter((e): e is string => e !== null)
+    return entries.length > 0 ? `{ ${entries.join(', ')} }` : null
   }
 
   return null
@@ -1197,14 +1304,9 @@ export function deserializeGraphWorkflow(
 
     // Add next if present - follow through flow nodes to find the actual next RPC node
     if ('next' in node && node.next) {
-      const nextId = node.next as string
-      // If next points to a flow node, follow through to find the next RPC node
-      const actualNextId = flowNodeIds.has(nextId)
-        ? findNextRpcNode(nextId, workflow.nodes, flowNodeIds)
-        : nextId
-      // Only add if we found a valid next RPC node
-      if (actualNextId && !flowNodeIds.has(actualNextId)) {
-        configParts.push(`next: '${actualNextId}'`)
+      const nextCode = nextToCode(node.next, workflow.nodes, flowNodeIds)
+      if (nextCode) {
+        configParts.push(`next: ${nextCode}`)
       }
     }
 

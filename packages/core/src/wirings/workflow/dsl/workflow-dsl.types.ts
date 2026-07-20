@@ -291,8 +291,14 @@ export interface SetStepMeta {
   type: 'set'
   /** Variable name to set (must be in context) */
   variable: string
-  /** Value to assign (literal or expression) */
-  value: unknown
+  /** Literal value to assign. Mutually exclusive with `expression`. */
+  value?: unknown
+  /**
+   * Source text of a non-literal assignment (e.g. `count + 1`). Kept separate
+   * from `value` so regenerated code can emit it raw — a string `value` is a
+   * string literal, an `expression` is code.
+   */
+  expression?: string
 }
 
 /**
