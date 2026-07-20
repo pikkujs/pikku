@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 
 export const scopeCreateRole = pikkuFunc<
@@ -10,9 +9,6 @@ export const scopeCreateRole = pikkuFunc<
   expose: true,
   scopes: ['pikku:scopes:manage'],
   func: async ({ scopeService }, { name, description, scopes }) => {
-    if (!scopeService) {
-      throw new MissingServiceError('ScopeService is not configured')
-    }
     // An undeclared scope is rejected by the pikku_scopes foreign key, so the
     // database is the one enforcing the vocabulary — not this function.
     await scopeService.createRole({ name, description, scopes })

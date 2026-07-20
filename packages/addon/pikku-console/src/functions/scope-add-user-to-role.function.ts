@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 
 export const scopeAddUserToRole = pikkuFunc<
@@ -11,9 +10,6 @@ export const scopeAddUserToRole = pikkuFunc<
   expose: true,
   scopes: ['pikku:scopes:manage'],
   func: async ({ scopeService }, { userId, role }, { session }) => {
-    if (!scopeService) {
-      throw new MissingServiceError('ScopeService is not configured')
-    }
     await scopeService.addUserToRole(userId, role, session?.userId)
     return { success: true }
   },

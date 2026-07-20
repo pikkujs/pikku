@@ -1,4 +1,3 @@
-import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 
 export const scopeRemoveUserFromRole = pikkuFunc<
@@ -11,9 +10,6 @@ export const scopeRemoveUserFromRole = pikkuFunc<
   expose: true,
   scopes: ['pikku:scopes:manage'],
   func: async ({ scopeService }, { userId, role }) => {
-    if (!scopeService) {
-      throw new MissingServiceError('ScopeService is not configured')
-    }
     await scopeService.removeUserFromRole(userId, role)
     return { success: true }
   },
