@@ -14,6 +14,7 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { config } from './types.js'
 import { GUEST_USER } from '../../src/auth-fixtures.js'
+import { assertPortFree } from './backend-port.js'
 
 // LLM calls can be slow
 setDefaultTimeout(config.responseTimeout)
@@ -24,6 +25,8 @@ BeforeAll(async function () {
   const __dirname = dirname(fileURLToPath(import.meta.url))
   const projectDir = resolve(__dirname, '../..')
   const backendPort = new URL(config.apiUrl).port
+
+  await assertPortFree(Number(backendPort), new URL(config.apiUrl).hostname)
 
   process.env.SCENARIO_ACTOR_SECRET ??= 'e2e-actor-secret'
 
@@ -56,8 +59,20 @@ BeforeAll(async function () {
   // instead (guest is created last of the seed users, so a 2xx proves the
   // server is up and seeding has finished; the admin role update runs
   // immediately after guest creation).
+  // A backend that dies on startup would otherwise burn the whole 120s window
+  // before reporting, and the reason would already have scrolled past.
+  let exitCode: number | null | undefined
+  backendProcess.on('exit', (code) => {
+    exitCode = code
+  })
+
   const deadline = Date.now() + 120_000
   while (Date.now() < deadline) {
+    if (exitCode !== undefined) {
+      throw new Error(
+        `Backend exited with code ${exitCode} before it was ready`
+      )
+    }
     try {
       const res = await fetch(`${config.apiUrl}/api/auth/sign-in/email`, {
         method: 'POST',
