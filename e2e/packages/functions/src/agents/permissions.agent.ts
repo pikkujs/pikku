@@ -1,5 +1,22 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
+import { isPermittedUser } from '../functions/adversarial.functions.js'
+
+/**
+ * Gated at the agent level rather than the tool level. The agent's own gate
+ * resolves its permissions by reference, so unlike the tool-list filter it does
+ * not depend on a name lookup.
+ */
+export const restrictedAgent = pikkuAIAgent({
+  name: 'restricted-agent',
+  description: 'Refuses to run at all for a caller who fails its permission',
+  goal: 'You only answer permitted callers.',
+  model: 'openai/o4-mini',
+  permissions: { permitted: isPermittedUser },
+  tools: [ref('openTool')],
+  maxSteps: 5,
+  toolChoice: 'auto',
+})
 
 export const permissionsAgent = pikkuAIAgent({
   name: 'permissions-agent',

@@ -51,3 +51,13 @@ Feature: Permission filtering of an agent's tools
   Scenario: The same tool succeeds on a record the caller does own
     When I run agent "permissionsAgent" as user "permitted-user" with script "data-gated-own-record" and message "reach for my own record"
     Then the tool call succeeded
+
+  Scenario: An agent's own permission refuses an unpermitted caller before it runs
+    When I run agent "restrictedAgent" as user "outsider" with script "text-only" and message "let me in"
+    Then the agent run is refused
+    And no model call is made
+
+  Scenario: The same agent runs for a permitted caller
+    When I run agent "restrictedAgent" as user "permitted-user" with script "text-only" and message "i belong here"
+    Then the agent run succeeds
+    And the run result is "The mock model replied with plain text."
