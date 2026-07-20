@@ -46,7 +46,6 @@ export function validateAndBuildVariableDefinitionsMeta(
           variableId: def.variableId,
           schema: def.schema,
           docsUrl: def.docsUrl,
-          optional: def.optional,
           sourceFile: def.sourceFile,
         }
       }
@@ -63,7 +62,6 @@ export function validateAndBuildVariableDefinitionsMeta(
         variableId: def.variableId,
         schema: def.schema,
         docsUrl: def.docsUrl,
-        optional: def.optional,
         sourceFile: def.sourceFile,
       }
     }

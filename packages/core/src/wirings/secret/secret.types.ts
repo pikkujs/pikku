@@ -12,13 +12,6 @@ export type CoreSecret<T = unknown> = {
    */
   docsUrl?: string
   /**
-   * Mark a value the app can start without. Deploy gates and config checks
-   * should report it as informational rather than blocking, matching code that
-   * treats a missing value as an optional feature being switched off. Defaults
-   * to false — absent means required.
-   */
-  optional?: boolean
-  /**
    * Optional rotation cadence for this secret, e.g. '1d', '30day', '1w'.
    * Stored in the generated secrets metadata so consumers can tell when a
    * secret was last updated and whether it is due for rotation.
@@ -48,13 +41,6 @@ export type SecretDefinitionMeta = {
    * an opaque identifier.
    */
   docsUrl?: string
-  /**
-   * Mark a value the app can start without. Deploy gates and config checks
-   * should report it as informational rather than blocking, matching code that
-   * treats a missing value as an optional feature being switched off. Defaults
-   * to false — absent means required.
-   */
-  optional?: boolean
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string
   sourceFile?: string

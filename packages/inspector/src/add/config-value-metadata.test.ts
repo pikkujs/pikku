@@ -10,7 +10,10 @@ import type { InspectorLogger } from '../types.js'
 // Fixtures must sit inside the package so `zod` resolves — the schema-vendor
 // check rejects a schema it cannot trace to a supported library, and the
 // definition is then never recorded at all.
-const fixtureRoot = join(fileURLToPath(new URL('.', import.meta.url)), '__fixtures')
+const fixtureRoot = join(
+  fileURLToPath(new URL('.', import.meta.url)),
+  '__fixtures'
+)
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
   ({
@@ -28,12 +31,12 @@ const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
   }) satisfies InspectorLogger
 
 /**
- * `docsUrl` and `optional` are only useful if they survive inspection — a field
- * declared on the wiring but dropped by the inspector is invisible to every
- * consumer downstream, which is exactly how `displayName` went unused.
+ * `docsUrl` is only useful if it survives inspection — a field declared on the
+ * wiring but dropped by the inspector is invisible to every consumer
+ * downstream, which is exactly how `displayName` went unused.
  */
-describe('config value metadata (docsUrl / optional)', () => {
-  test('carries docsUrl and optional from wireSecret into the definition', async () => {
+describe('config value metadata (docsUrl)', () => {
+  test('carries docsUrl from wireSecret into the definition', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-secret-`)
     const file = join(rootDir, 'secret.ts')
 
@@ -48,7 +51,6 @@ describe('config value metadata (docsUrl / optional)', () => {
         "  displayName: 'Stripe Secret Key',",
         "  secretId: 'STRIPE_SECRET_KEY',",
         "  docsUrl: 'https://dashboard.stripe.com/apikeys',",
-        '  optional: true,',
         '  schema: StripeKeySchema,',
         '})',
       ].join('\n')
@@ -62,13 +64,12 @@ describe('config value metadata (docsUrl / optional)', () => {
       )
       assert.ok(def, 'expected the secret definition to be inspected')
       assert.equal(def!.docsUrl, 'https://dashboard.stripe.com/apikeys')
-      assert.equal(def!.optional, true)
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
 
-  test('leaves docsUrl and optional undefined when not declared', async () => {
+  test('leaves docsUrl undefined when not declared', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-bare-`)
     const file = join(rootDir, 'secret.ts')
 
@@ -90,16 +91,17 @@ describe('config value metadata (docsUrl / optional)', () => {
     const criticals: Array<{ code: ErrorCode; message: string }> = []
     try {
       const state = await inspect(makeLogger(criticals), [file], { rootDir })
-      const def = state.secrets.definitions.find((d) => d.secretId === 'API_KEY')
+      const def = state.secrets.definitions.find(
+        (d) => d.secretId === 'API_KEY'
+      )
       assert.ok(def, 'expected the secret definition to be inspected')
       assert.equal(def!.docsUrl, undefined)
-      assert.equal(def!.optional, undefined)
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
 
-  test('carries docsUrl and optional from wireVariable into the definition', async () => {
+  test('carries docsUrl from wireVariable into the definition', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-variable-`)
     const file = join(rootDir, 'variable.ts')
 
@@ -114,7 +116,6 @@ describe('config value metadata (docsUrl / optional)', () => {
         "  displayName: 'Console URL',",
         "  variableId: 'CONSOLE_URL',",
         "  docsUrl: 'https://example.com/docs/console-url',",
-        '  optional: true,',
         '  schema: ConsoleUrlSchema,',
         '})',
       ].join('\n')
@@ -128,13 +129,12 @@ describe('config value metadata (docsUrl / optional)', () => {
       )
       assert.ok(def, 'expected the variable definition to be inspected')
       assert.equal(def!.docsUrl, 'https://example.com/docs/console-url')
-      assert.equal(def!.optional, true)
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
 
-  test('carries docsUrl and optional from wireCredential into the definition', async () => {
+  test('carries docsUrl from wireCredential into the definition', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-credential-`)
     const file = join(rootDir, 'credential.ts')
 
@@ -149,7 +149,6 @@ describe('config value metadata (docsUrl / optional)', () => {
         "  displayName: 'GitHub Token',",
         "  type: 'wire',",
         "  docsUrl: 'https://github.com/settings/tokens',",
-        '  optional: true,',
         '  schema: TokenSchema,',
         '})',
       ].join('\n')
@@ -163,7 +162,6 @@ describe('config value metadata (docsUrl / optional)', () => {
       )
       assert.ok(def, 'expected the credential definition to be inspected')
       assert.equal(def!.docsUrl, 'https://github.com/settings/tokens')
-      assert.equal(def!.optional, true)
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
