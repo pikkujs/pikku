@@ -91,6 +91,7 @@ function convertStepToNode(
       const node: FunctionNode = {
         nodeId,
         rpcName: step.rpcName,
+        stepName: step.stepName,
         next: nextNodeId,
       }
       if (step.actor) {
@@ -126,7 +127,21 @@ function convertStepToNode(
       const node: FlowNode = {
         nodeId,
         flow: 'sleep',
+        stepName: step.stepName,
         duration: step.duration,
+        next: nextNodeId,
+      }
+      return [node]
+    }
+
+    case 'suspend': {
+      // A suspend yields no value, but it must still be a node: the previous
+      // step's `next` points at it, so omitting it dead-ends traversal and
+      // silently deletes every step that follows.
+      const node: FlowNode = {
+        nodeId,
+        flow: 'suspend',
+        reason: step.reason,
         next: nextNodeId,
       }
       return [node]

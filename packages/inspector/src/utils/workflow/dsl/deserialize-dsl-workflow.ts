@@ -218,6 +218,24 @@ function fanoutBodyToCode(
 }
 
 /**
+ * Escape a value for embedding inside a single-quoted string literal.
+ */
+function escapeSingleQuotes(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+/**
+ * Render a switch case value. `switch` compares with ===, so quoting a number
+ * or boolean would stop the case ever matching.
+ */
+function caseValueToCode(value: unknown): string {
+  if (typeof value === 'string') {
+    return `'${escapeSingleQuotes(value)}'`
+  }
+  return String(value)
+}
+
+/**
  * Convert options to code
  */
 function optionsToCode(options: Record<string, unknown>): string {
@@ -302,14 +320,26 @@ function collectBranchConditionalVars(
   if (branchNode.branches) {
     for (const branch of branchNode.branches) {
       if (branch.entry) {
-        collectVarsFromBranch(branch.entry, nodes, conditionalVars, vars)
+        collectVarsFromBranch(
+          branch.entry,
+          nodes,
+          conditionalVars,
+          vars,
+          branchNode.next as string | undefined
+        )
       }
     }
   }
 
   // Check else branch
   if (branchNode.elseEntry) {
-    collectVarsFromBranch(branchNode.elseEntry, nodes, conditionalVars, vars)
+    collectVarsFromBranch(
+      branchNode.elseEntry,
+      nodes,
+      conditionalVars,
+      vars,
+      branchNode.next as string | undefined
+    )
   }
 
   return vars
@@ -322,8 +352,12 @@ function collectVarsFromBranch(
   nodeId: string,
   nodes: Record<string, SerializedGraphNode>,
   conditionalVars: Set<string>,
-  result: string[]
+  result: string[],
+  exitNodeId?: string,
+  seen: Set<string> = new Set()
 ): void {
+  if (seen.has(nodeId)) return
+  seen.add(nodeId)
   const node = nodes[nodeId]
   if (!node) return
 
@@ -338,22 +372,32 @@ function collectVarsFromBranch(
   // Follow the chain of nodes within the branch
   if ('next' in node && node.next) {
     const nextId = node.next as string
-    // Only follow if it's still within the branch
-    if (isWithinBranch(nextId)) {
-      collectVarsFromBranch(nextId, nodes, conditionalVars, result)
+    // Only follow if it's still within the branch body
+    if (isWithinBody(nextId, exitNodeId, seen)) {
+      collectVarsFromBranch(
+        nextId,
+        nodes,
+        conditionalVars,
+        result,
+        exitNodeId,
+        seen
+      )
     }
   }
 }
 
 /**
- * Check if a node ID is still within a branch (not the main flow)
+ * A nested body (branch arm, switch case) ends where it rejoins the main flow.
+ * That rejoin point is the enclosing flow node's own `next`, so it is passed in
+ * explicitly rather than guessed from the node id — ids are step names, which
+ * carry no structural marker.
  */
-function isWithinBranch(nodeId: string): boolean {
-  return (
-    nodeId.includes('_then_') ||
-    nodeId.includes('_else_') ||
-    nodeId.includes('_branch')
-  )
+function isWithinBody(
+  nodeId: string,
+  exitNodeId: string | undefined,
+  seen: Set<string>
+): boolean {
+  return nodeId !== exitNodeId && !seen.has(nodeId)
 }
 
 /**
@@ -363,23 +407,25 @@ function generateBranchContent(
   entryNodeId: string,
   nodes: Record<string, SerializedGraphNode>,
   indent: string,
-  conditionalVars: Set<string>
+  conditionalVars: Set<string>,
+  exitNodeId?: string
 ): string[] {
   const lines: string[] = []
+  const seen = new Set<string>()
   let currentId: string | undefined = entryNodeId
 
   while (currentId) {
     const node = nodes[currentId]
     if (!node) break
+    seen.add(currentId)
 
     const nodeLines = nodeToCode(node, nodes, indent, conditionalVars, true)
     lines.push(...nodeLines)
 
-    // Follow to next node within the branch
-    if ('next' in node && node.next) {
-      const nextId = node.next as string
-      // Only continue if it's still within the branch
-      if (isWithinBranch(nextId)) {
+    // Follow to next node within the body
+    if ('next' in node && node.next && typeof node.next === 'string') {
+      const nextId = node.next
+      if (isWithinBody(nextId, exitNodeId, seen)) {
         currentId = nextId
       } else {
         break
@@ -448,6 +494,24 @@ function nodeToCode(
         lines.push('')
         break
 
+      case 'suspend':
+        lines.push(
+          `${indent}await workflow.suspend('${escapeSingleQuotes(String(flowNode.reason ?? ''))}')`
+        )
+        lines.push('')
+        break
+
+      case 'approval': {
+        const approvalCall = `await workflow.approval('${escapeSingleQuotes(String(flowNode.reason ?? ''))}')`
+        lines.push(
+          flowNode.outputVar
+            ? `${indent}const ${flowNode.outputVar} = ${approvalCall}`
+            : `${indent}${approvalCall}`
+        )
+        lines.push('')
+        break
+      }
+
       case 'cancel':
         const cancelReason =
           flowNode.reason || flowNode.stepName || 'Workflow cancelled'
@@ -481,7 +545,8 @@ function nodeToCode(
               branch.entry,
               nodes,
               indent + '  ',
-              conditionalVars
+              conditionalVars,
+              flowNode.next as string | undefined
             )
             lines.push(...branchLines)
           }
@@ -495,7 +560,8 @@ function nodeToCode(
             flowNode.elseEntry,
             nodes,
             indent + '  ',
-            conditionalVars
+            conditionalVars,
+            flowNode.next as string | undefined
           )
           lines.push(...elseLines)
           lines.push(`${indent}}`)
@@ -503,33 +569,41 @@ function nodeToCode(
         lines.push('')
         break
 
-      case 'switch':
+      case 'switch': {
+        const caseExit = flowNode.next as string | undefined
         lines.push(`${indent}switch (${flowNode.expression}) {`)
         for (const caseItem of flowNode.cases || []) {
-          lines.push(`${indent}  case '${caseItem.value}':`)
+          lines.push(`${indent}  case ${caseValueToCode(caseItem.value)}:`)
           if (caseItem.entry && nodes[caseItem.entry]) {
-            const caseLines = nodeToCode(
-              nodes[caseItem.entry],
-              nodes,
-              indent + '    '
+            lines.push(
+              ...generateBranchContent(
+                caseItem.entry,
+                nodes,
+                indent + '    ',
+                conditionalVars,
+                caseExit
+              )
             )
-            lines.push(...caseLines)
           }
           lines.push(`${indent}    break`)
         }
         if (flowNode.defaultEntry && nodes[flowNode.defaultEntry]) {
           lines.push(`${indent}  default:`)
-          const defaultLines = nodeToCode(
-            nodes[flowNode.defaultEntry],
-            nodes,
-            indent + '    '
+          lines.push(
+            ...generateBranchContent(
+              flowNode.defaultEntry,
+              nodes,
+              indent + '    ',
+              conditionalVars,
+              caseExit
+            )
           )
-          lines.push(...defaultLines)
           lines.push(`${indent}    break`)
         }
         lines.push(`${indent}}`)
         lines.push('')
         break
+      }
 
       case 'parallel':
         lines.push(`${indent}await Promise.all([`)
