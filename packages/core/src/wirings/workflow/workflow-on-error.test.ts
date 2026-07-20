@@ -10,6 +10,20 @@ import { InMemoryWorkflowService } from '../../services/in-memory-workflow-servi
  */
 class TestWorkflowService extends InMemoryWorkflowService {
   public compensations: Array<{ rpcName: string; data: any }> = []
+  public dispatches = 0
+  private pretendDispatchSucceeds = false
+
+  public alwaysDispatch() {
+    this.pretendDispatchSucceeds = true
+  }
+
+  protected override async dispatchStep(...args: any[]): Promise<boolean> {
+    this.dispatches++
+    if (this.pretendDispatchSucceeds) {
+      return true
+    }
+    return (super.dispatchStep as any)(...args)
+  }
 
   public async callFailedStep(
     runId: string,
@@ -28,6 +42,18 @@ class TestWorkflowService extends InMemoryWorkflowService {
     }
     return self.rpcStep(runId, stepName, 'chargeCard', {}, {}, { onError })
   }
+}
+
+/**
+ * Seed a step in a non-terminal state, as a replay would find one that is
+ * waiting on the queue rather than one that has failed.
+ */
+async function seedPendingStep(ws: TestWorkflowService, stepName: string) {
+  const runId = await ws.createRun('wf', {}, true, 'hash', {
+    type: 'inline',
+  } as any)
+  const step = await ws.insertStepState(runId, stepName, 'chargeCard', {})
+  return { runId, step }
 }
 
 async function seedFailedStep(ws: TestWorkflowService, stepName: string) {
@@ -74,6 +100,43 @@ describe('workflow onError — compensation on terminal step failure', () => {
       ws.compensations[0].data,
       { error: { message: 'card declined' } },
       'the handler receives the failure reason, as a graph onError node does'
+    )
+  })
+
+  test('a step still sitting on the queue pauses without compensating', async () => {
+    const ws = new TestWorkflowService()
+    const { runId, step } = await seedPendingStep(ws, 'Charge')
+    await ws.setStepScheduled(step.stepId)
+
+    await assert.rejects(
+      () => ws.callFailedStep(runId, 'Charge', 'refundOrder'),
+      (error: Error) => error.name === 'WorkflowAsyncException',
+      'a scheduled step must pause the workflow, not fail it'
+    )
+
+    assert.equal(
+      ws.compensations.length,
+      0,
+      'compensating a step that has not run yet would refund a charge that was never made'
+    )
+  })
+
+  test('the pause thrown right after dispatch does not compensate', async () => {
+    const ws = new TestWorkflowService()
+    ws.alwaysDispatch()
+    const { runId } = await seedPendingStep(ws, 'Charge')
+
+    await assert.rejects(
+      () => ws.callFailedStep(runId, 'Charge', 'refundOrder'),
+      (error: Error) => error.name === 'WorkflowAsyncException',
+      'a freshly dispatched step pauses the workflow'
+    )
+
+    assert.equal(ws.dispatches, 1, 'the step should have been dispatched once')
+    assert.equal(
+      ws.compensations.length,
+      0,
+      'queued is not failed — the handler must not run'
     )
   })
 
