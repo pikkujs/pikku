@@ -23,3 +23,15 @@ steps:
 - Numeric and boolean `switch` case values were emitted quoted (`case '1':`),
   so the case could never match. Step names and reasons containing a quote are
   now escaped.
+
+Also fixed in the same pass:
+
+- `const [org, user] = await Promise.all([...])` regenerated as a bare
+  `await Promise.all([...])`, leaving both names unbound.
+- A step result assigned inside a branch was re-declared with `const` inside
+  that branch, so any later reference was out of scope. Hoisting analysis was
+  keyed off the same dead node-id heuristic and never fired.
+- A top-level step whose *name* contained `_case`, `_item_`, `_then_`,
+  `_else_`, `_child_` or `_default_` was silently deleted, because node ids are
+  step names and were matched against those structural substrings. Ownership is
+  now read from the parent constructs themselves.

@@ -218,6 +218,56 @@ function fanoutBodyToCode(
 }
 
 /**
+ * Collect every node id that belongs to a parent construct's body, following
+ * each body's `next` chain to the parent's exit.
+ */
+function collectChildNodeIds(
+  nodes: Record<string, SerializedGraphNode>
+): Set<string> {
+  const owned = new Set<string>()
+
+  const walk = (entry: string | undefined, exit: string | undefined) => {
+    const seen = new Set<string>()
+    let currentId = entry
+    while (
+      currentId &&
+      nodes[currentId] &&
+      isWithinBody(currentId, exit, seen)
+    ) {
+      seen.add(currentId)
+      owned.add(currentId)
+      const next = (nodes[currentId] as any).next
+      currentId = typeof next === 'string' ? next : undefined
+    }
+  }
+
+  for (const node of Object.values(nodes)) {
+    if (!('flow' in node)) continue
+    const flowNode = node as any
+    const exit = flowNode.next as string | undefined
+
+    switch (flowNode.flow) {
+      case 'branch':
+        for (const branch of flowNode.branches || []) walk(branch.entry, exit)
+        walk(flowNode.elseEntry, exit)
+        break
+      case 'switch':
+        for (const caseItem of flowNode.cases || []) walk(caseItem.entry, exit)
+        walk(flowNode.defaultEntry, exit)
+        break
+      case 'fanout':
+        walk(flowNode.childEntry, undefined)
+        break
+      case 'parallel':
+        for (const childId of flowNode.children || []) walk(childId, exit)
+        break
+    }
+  }
+
+  return owned
+}
+
+/**
  * Escape a value for embedding inside a single-quoted string literal.
  */
 function escapeSingleQuotes(value: string): string {
@@ -605,24 +655,42 @@ function nodeToCode(
         break
       }
 
-      case 'parallel':
-        lines.push(`${indent}await Promise.all([`)
-        for (const childId of flowNode.children || []) {
-          if (nodes[childId]) {
-            const childNode = nodes[childId]
-            if ('rpcName' in childNode && childNode.rpcName) {
-              const stepName = childNode.stepName || `Call ${childNode.rpcName}`
-              const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(input, indent + '  ')
-              lines.push(
-                `${indent}  workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode}),`
-              )
+      case 'parallel': {
+        const childNodes = (flowNode.children || [])
+          .map((childId: string) => nodes[childId])
+          .filter(
+            (child: SerializedGraphNode | undefined) =>
+              !!child && 'rpcName' in child && !!child.rpcName
+          ) as any[]
+
+        // Results the caller bound (const [a, b] = await Promise.all([...]))
+        // must be re-declared, or every later reference to them is unbound.
+        const bindings = childNodes.map((child) => child.outputVar)
+        const prefix = bindings.some(Boolean)
+          ? `const [${bindings
+              .map((name: string | undefined, i: number) => name ?? `_${i}`)
+              .join(', ')}] = `
+          : ''
+
+        lines.push(`${indent}${prefix}await Promise.all([`)
+        for (const childNode of childNodes) {
+          const stepName = childNode.stepName || `Call ${childNode.rpcName}`
+          const input = (childNode.input || {}) as Record<string, unknown>
+          const inputCode = inputToCode(input, indent + '  ')
+          let call = `workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode}`
+          if (childNode.options) {
+            const optCode = optionsToCode(childNode.options)
+            if (optCode) {
+              call += `, ${optCode}`
             }
           }
+          call += ')'
+          lines.push(`${indent}  ${call},`)
         }
         lines.push(`${indent}])`)
         lines.push('')
         break
+      }
 
       case 'fanout': {
         const bodyLines = fanoutBodyToCode(
@@ -741,16 +809,42 @@ function findConditionalVars(
   const varsInBranches = new Set<string>()
   const varsUsedInReturn = new Set<string>()
 
-  // Collect variables defined in branches (then/else/case/default nodes)
-  for (const [nodeId, node] of Object.entries(nodes)) {
-    if (
-      nodeId.includes('_then_') ||
-      nodeId.includes('_else_') ||
-      nodeId.includes('_case') ||
-      nodeId.includes('_default_')
-    ) {
-      if ('outputVar' in node && node.outputVar) {
-        varsInBranches.add(node.outputVar as string)
+  // Collect variables defined inside a branch arm or switch case. Found by
+  // walking each body from its entry to the enclosing node's exit — node ids
+  // are step names and carry no structural marker to match on.
+  for (const node of Object.values(nodes)) {
+    if (!('flow' in node)) continue
+    const flowNode = node as any
+    const exit = flowNode.next as string | undefined
+
+    const entries: string[] = []
+    if (flowNode.flow === 'branch') {
+      for (const branch of flowNode.branches || []) {
+        if (branch.entry) entries.push(branch.entry)
+      }
+      if (flowNode.elseEntry) entries.push(flowNode.elseEntry)
+    } else if (flowNode.flow === 'switch') {
+      for (const caseItem of flowNode.cases || []) {
+        if (caseItem.entry) entries.push(caseItem.entry)
+      }
+      if (flowNode.defaultEntry) entries.push(flowNode.defaultEntry)
+    }
+
+    for (const entry of entries) {
+      const seen = new Set<string>()
+      let currentId: string | undefined = entry
+      while (
+        currentId &&
+        nodes[currentId] &&
+        isWithinBody(currentId, exit, seen)
+      ) {
+        seen.add(currentId)
+        const bodyNode = nodes[currentId] as any
+        if (bodyNode.outputVar) {
+          varsInBranches.add(bodyNode.outputVar as string)
+        }
+        currentId =
+          typeof bodyNode.next === 'string' ? bodyNode.next : undefined
       }
     }
   }
@@ -864,16 +958,14 @@ export function deserializeDslWorkflow(
   // Process nodes in order
   const orderedNodes = traverseNodes(workflow.nodes, workflow.entryNodeIds)
 
+  // Nodes emitted as part of a parent (branch arm, switch case, parallel group,
+  // fanout body) must not also be emitted at the top level. Ownership is read
+  // from the parents themselves — node ids are step names and a legitimate step
+  // may be called anything.
+  const ownedByParent = collectChildNodeIds(workflow.nodes)
+
   for (const node of orderedNodes) {
-    // Skip child nodes that are processed as part of their parent
-    if (
-      node.nodeId.includes('_then_') ||
-      node.nodeId.includes('_else_') ||
-      node.nodeId.includes('_case') ||
-      node.nodeId.includes('_default_') ||
-      node.nodeId.includes('_child_') ||
-      node.nodeId.includes('_item_')
-    ) {
+    if (ownedByParent.has(node.nodeId)) {
       continue
     }
 
