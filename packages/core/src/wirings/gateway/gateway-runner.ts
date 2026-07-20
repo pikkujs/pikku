@@ -1,6 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
 import { NotFoundError, UnauthorizedError } from '../../errors/errors.js'
-import { addFunction } from '../../function/function-runner.js'
+import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { httpRouter } from '../http/routers/http-router.js'
 import type {
@@ -16,6 +16,54 @@ import type {
  * requests share one construction).
  */
 const resolvedAdapters = new WeakMap<CoreGateway, Promise<GatewayAdapter>>()
+
+/**
+ * The generated function id a gateway's handler is registered under.
+ */
+const gatewayHandlerFuncId = (name: string) => `gateway__${name}__handler`
+
+/**
+ * Bridges a session established by gateway middleware onto the wire so the
+ * handler's gate can see it.
+ *
+ * Gateway middleware is the only place a webhook can acquire a session (e.g.
+ * mapping a verified platform sender to a user). Middleware that assigns
+ * `wire.session` needs nothing, but middleware using the idiomatic
+ * `wire.setSession()` writes to the enclosing wiring's session service, which
+ * the handler's own invocation does not read — without this the session would
+ * be silently invisible to `auth` and `scopes`.
+ */
+const bridgeMiddlewareSession = async (wire: PikkuRawWire): Promise<void> => {
+  if (wire.session || !wire.getSession) return
+  const session = await wire.getSession()
+  if (session) {
+    wire.session = session
+  }
+}
+
+/**
+ * Registers a gateway's handler as a real pikku function so that invoking it
+ * goes through the function runner's gate. Without this the handler is called
+ * directly and its own `auth`, `scopes` and `permissions` are never evaluated.
+ *
+ * The handler is registered as sessionless: a gateway's inbound traffic is
+ * platform-authenticated (adapter signature verification), not session-bearing,
+ * so requiring a session by default would break every webhook. A handler that
+ * does need one declares `auth: true`, exactly like `pikkuSessionlessFunc`.
+ * `scopes` and `permissions` are always enforced when declared.
+ */
+const registerGatewayHandler = (config: CoreGateway): string => {
+  const funcId = gatewayHandlerFuncId(config.name)
+  const funcMeta = pikkuState(null, 'function', 'meta')
+  funcMeta[funcId] = {
+    pikkuFuncId: funcId,
+    inputSchemaName: null,
+    outputSchemaName: null,
+    sessionless: true,
+  }
+  addFunction(funcId, config.func as any)
+  return funcId
+}
 
 export const resolveGatewayAdapter = (
   config: CoreGateway,
@@ -142,15 +190,13 @@ const wireWebhookGateway = (config: CoreGateway): void => {
  *  2. Parse body via adapter → GatewayInboundMessage (or null to ignore)
  *  3. Populate `wire.gateway`
  *  4. Run user middleware (which can read `wire.gateway` for auth)
- *  5. Call user func with parsed message
+ *  5. Invoke the handler through the function runner, which enforces its
+ *     `auth`/`scopes`/`permissions` before running it
  *  6. Auto-send response via adapter if func returns outbound content
  */
 const createWebhookPostHandler = (config: CoreGateway) => {
-  const { name, func: userFunc, middleware: userMiddleware } = config
-  const userFuncConfig = userFunc as {
-    func: Function
-    middleware?: CorePikkuMiddleware[]
-  }
+  const { name, middleware: userMiddleware } = config
+  const handlerFuncId = registerGatewayHandler(config)
 
   return async (
     services: CoreSingletonServices,
@@ -183,26 +229,32 @@ const createWebhookPostHandler = (config: CoreGateway) => {
     }
     ;(wire as any).gateway = gateway
 
-    // Build combined middleware chain: gateway-level + func-level
-    const allMiddleware: CorePikkuMiddleware[] = [
-      ...((userMiddleware as CorePikkuMiddleware[] | undefined) || []),
-      ...(userFuncConfig.middleware || []),
-    ]
-
-    const exec = async () => {
-      const result = await userFuncConfig.func(services, parsed, wire)
-      // Auto-send response if the func returns outbound content
-      if (result && (result.text || result.richContent || result.attachments)) {
-        await adapter.send(parsed.senderId, result as GatewayOutboundMessage)
-      }
-      return { ok: true }
+    // Gateway middleware runs first and outside the gate, so it can establish
+    // the session the gate then checks. The handler is invoked through the
+    // function runner, which enforces its auth, scopes and permissions and
+    // applies the handler's own middleware.
+    const invoke = async () => {
+      await bridgeMiddlewareSession(wire as any)
+      return await runPikkuFunc('gateway', name, handlerFuncId, {
+        singletonServices: services,
+        data: () => parsed,
+        auth: config.auth,
+        wire: wire as any,
+      })
     }
 
-    if (allMiddleware.length > 0) {
-      return await runMiddleware(services, wire, allMiddleware, exec)
-    }
+    const gatewayMiddleware = userMiddleware as
+      | CorePikkuMiddleware[]
+      | undefined
+    const result: any = gatewayMiddleware?.length
+      ? await runMiddleware(services, wire, gatewayMiddleware, invoke)
+      : await invoke()
 
-    return await exec()
+    // Auto-send response if the func returns outbound content
+    if (result && (result.text || result.richContent || result.attachments)) {
+      await adapter.send(parsed.senderId, result as GatewayOutboundMessage)
+    }
+    return { ok: true }
   }
 }
 
@@ -281,11 +333,8 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
     message: { pikkuFuncId: messageFuncId },
   } as any
 
-  const userFuncConfig = config.func as {
-    func: Function
-    middleware?: CorePikkuMiddleware[]
-  }
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
+  const handlerFuncId = registerGatewayHandler(config)
 
   // Register onConnect
   addFunction(connectFuncId, {
@@ -321,25 +370,25 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
       }
       ;(wire as any).gateway = gateway
 
-      const allMiddleware: CorePikkuMiddleware[] = [
-        ...(userMiddleware || []),
-        ...(userFuncConfig.middleware || []),
-      ]
-
-      const exec = async () => {
-        const result = await userFuncConfig.func(services, parsed, wire)
-        if (
-          result &&
-          (result.text || result.richContent || result.attachments)
-        ) {
-          wire.channel?.send(result)
-        }
+      const invoke = async () => {
+        await bridgeMiddlewareSession(wire as any)
+        return await runPikkuFunc('gateway', name, handlerFuncId, {
+          singletonServices: services,
+          data: () => parsed,
+          auth: config.auth,
+          wire: wire as any,
+        })
       }
 
-      if (allMiddleware.length > 0) {
-        await runMiddleware(services, wire, allMiddleware, exec)
-      } else {
-        await exec()
+      const gatewayMiddleware = userMiddleware as
+        | CorePikkuMiddleware[]
+        | undefined
+      const result: any = gatewayMiddleware?.length
+        ? await runMiddleware(services, wire, gatewayMiddleware, invoke)
+        : await invoke()
+
+      if (result && (result.text || result.richContent || result.attachments)) {
+        wire.channel?.send(result)
       }
     },
   } as any)
@@ -384,11 +433,8 @@ export const createListenerMessageHandler = (
   config: CoreGateway,
   singletonServices: CoreSingletonServices
 ): ((rawData: unknown) => Promise<void>) => {
-  const userFuncConfig = config.func as {
-    func: Function
-    middleware?: CorePikkuMiddleware[]
-  }
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
+  const handlerFuncId = registerGatewayHandler(config)
 
   return async (rawData: unknown): Promise<void> => {
     const adapter = await resolveGatewayAdapter(config, singletonServices)
@@ -404,27 +450,27 @@ export const createListenerMessageHandler = (
     }
     ;(wire as any).gateway = gateway
 
-    const allMiddleware: CorePikkuMiddleware[] = [
-      ...(userMiddleware || []),
-      ...(userFuncConfig.middleware || []),
-    ]
-
-    const exec = async () => {
-      const result = await userFuncConfig.func(singletonServices, parsed, wire)
-      if (result && (result.text || result.richContent || result.attachments)) {
-        await adapter.send(parsed.senderId, result as GatewayOutboundMessage)
-      }
+    const invoke = async () => {
+      await bridgeMiddlewareSession(wire)
+      return await runPikkuFunc('gateway', name, handlerFuncId, {
+        singletonServices,
+        data: () => parsed,
+        auth: config.auth,
+        wire,
+      })
     }
 
-    if (allMiddleware.length > 0) {
-      await runMiddleware(
-        singletonServices,
-        wire as unknown as PikkuWire,
-        allMiddleware,
-        exec
-      )
-    } else {
-      await exec()
+    const result: any = userMiddleware?.length
+      ? await runMiddleware(
+          singletonServices,
+          wire as any,
+          userMiddleware,
+          invoke
+        )
+      : await invoke()
+
+    if (result && (result.text || result.richContent || result.attachments)) {
+      await adapter.send(parsed.senderId, result as GatewayOutboundMessage)
     }
   }
 }

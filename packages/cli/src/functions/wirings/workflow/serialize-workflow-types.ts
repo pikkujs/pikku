@@ -2,7 +2,8 @@ export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
   rpcMapImportPath: string,
   workflowMapImportPath: string,
-  agentMapImportPath: string
+  agentMapImportPath: string,
+  scopesImportPath: string
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
@@ -47,6 +48,7 @@ export type TypedScenario = TypedWorkflow & Omit<PikkuScenarioWire, keyof PikkuW
 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { InferSchemaOutput, PikkuPermission, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
+import type { ScopeId } from '${scopesImportPath}'
 import { PikkuError } from '@pikku/core/errors'
 import type { CorePermissionGroup } from '@pikku/core'
 
@@ -81,6 +83,11 @@ export type PikkuWorkflowConfigWithSchema<
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
   >
   auth?: boolean
+  /**
+   * Scopes the session must hold to run this workflow. All of them are required
+   * (AND), and they are checked before \`permissions\`.
+   */
+  scopes?: ScopeId[]
   permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
   middleware?: PikkuMiddleware[]
   input?: InputSchema
@@ -123,7 +130,7 @@ export function pikkuWorkflowComplexFunc(func: any) {
 export type PikkuScenarioConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>, 'func'> & {
+> = Omit<PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>, 'func' | 'auth' | 'scopes' | 'permissions'> & {
   func: PikkuFunctionScenario<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown

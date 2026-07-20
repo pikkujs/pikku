@@ -190,12 +190,15 @@ export const runPermissions = async ({
   wire,
   data,
   packageName = null,
+  label = 'function',
 }: {
   funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
   services: CoreServices
   wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
   data: any
   packageName?: string | null
+  /** What the non-global gate is called in debug logs, e.g. 'function', 'agent'. */
+  label?: string
 }) => {
   const globals = resolveGlobalPermissions(packageName)
   for (const entry of globals) {
@@ -211,7 +214,7 @@ export const runPermissions = async ({
       : funcPermissions
     if (group && Object.keys(group).length > 0) {
       if (!(await verifyPermissions(group, services, data, wire))) {
-        services.logger.debug('Permission denied - function permission')
+        services.logger.debug(`Permission denied - ${label} permission`)
         throw new ForbiddenError('Permission denied')
       }
     }

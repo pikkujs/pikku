@@ -286,8 +286,6 @@ export type CoreWorkflow<
   func: PikkuFunctionConfig
   /** Middleware chain for this workflow */
   middleware?: PikkuFunctionConfig['middleware']
-  /** Permission requirements */
-  permissions?: PikkuFunctionConfig['permissions']
   /** Tags for organization and filtering */
   tags?: string[]
 }

@@ -37,6 +37,7 @@ import {
   resolveOwnerResourceId,
   agentSessionScope,
   assertResourceOwner,
+  assertAgentAuthorized,
   ToolApprovalRequired,
   ToolCredentialRequired,
   APPROVAL_REQUIRED,
@@ -898,12 +899,19 @@ export async function resumeAIAgent(
     )
   }
 
+  const { agent, packageName, resolvedName } = resolveAgent(run.agentName)
+
+  // Gate before resolving the approval: recording it is a persisted side
+  // effect, so an unauthorized caller must not reach it. Run ownership alone is
+  // not enough — a grant revoked while the run was suspended must stop the
+  // caller from approving its pending tool calls.
+  await assertAgentAuthorized(agent, params, packageName)
+
   await aiRunState.resolveApproval(
     input.toolCallId,
     input.approved ? 'approved' : 'denied'
   )
 
-  const { agent, packageName, resolvedName } = resolveAgent(run.agentName)
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
   const agentRunner = singletonServices.aiAgentRunner
