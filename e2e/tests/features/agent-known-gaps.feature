@@ -14,6 +14,15 @@ Feature: Current agent behaviour that is a known gap
     And the run result is ""
     And the run reports 1 model call
 
+  Scenario: prepareStep stop() ends the run with no signal
+    # prepareStopAgent calls stop() before the first step. The loop breaks before
+    # any model call, and the run still reports success with an empty result —
+    # nothing distinguishes it from an agent that genuinely had nothing to say.
+    When I run agent "prepareStopAgent" as user "alice" with script "text-only" and message "stop me"
+    Then the agent run succeeds
+    And the run result is ""
+    And the run reports 0 model calls
+
   Scenario: An unresolvable tool is dropped silently rather than suspending
     # missingRpcAgent lists a tool whose RPC does not exist. Rather than suspending
     # the run with the missing name before any model call, the tool is simply
