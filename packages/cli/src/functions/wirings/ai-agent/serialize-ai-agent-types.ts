@@ -1,6 +1,7 @@
 export const serializeAIAgentTypes = (
   functionTypesImportPath: string,
-  agentMapImportPath: string
+  agentMapImportPath: string,
+  scopesImportPath: string
 ) => {
   return `import {
   CoreAIAgent,
@@ -16,11 +17,12 @@ import type { PikkuPermission, PikkuMiddleware, Services, PikkuFunctionConfig } 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { AIAgentMemoryConfig, AIAgentInput } from '@pikku/core/ai-agent'
 import type { AgentMap } from '${agentMapImportPath}'
+import type { ScopeId } from '${scopesImportPath}'
 
 type AIAgentConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware>, 'tools' | 'agents' | 'workflows' | 'memory' | 'input' | 'output'> & {
+> = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware, ScopeId>, 'tools' | 'agents' | 'workflows' | 'memory' | 'input' | 'output'> & {
   input?: InputSchema
   output?: OutputSchema
   memory?: Omit<AIAgentMemoryConfig, 'workingMemory'> & { workingMemory?: StandardSchemaV1 }

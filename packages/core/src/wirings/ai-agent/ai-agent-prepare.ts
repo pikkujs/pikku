@@ -12,9 +12,10 @@ import type {
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
-import { checkAuthPermissions } from '../../permissions.js'
+import { checkAuthPermissions, runPermissions } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { ForbiddenError } from '../../errors/errors.js'
+import { verifyScopes } from '../../scopes.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
@@ -264,6 +265,56 @@ export const resolveAgent = (
   }
 
   throw new Error(`AI agent not found: ${agentName}`)
+}
+
+/**
+ * Enforces an agent's own authorization before it runs: session presence
+ * (`auth`), then `scopes`, then `permissions`.
+ *
+ * The ordering mirrors the function runner — scopes are an AND gate checked
+ * first, so they can only ever narrow access, and a missing scope short-circuits
+ * before any permission function does I/O.
+ *
+ * `auth` follows `pikkuSessionlessFunc` rather than `pikkuFunc`: a session is
+ * required only when `auth: true` is set explicitly. An agent is normally
+ * reached from a function that has already enforced its own auth, and agents are
+ * also run from genuinely sessionless contexts (crons, queue workers), so
+ * requiring a session by default would reject those without adding a meaningful
+ * gate. `scopes` and `permissions` are always enforced when declared.
+ *
+ * Globals are evaluated here too (via {@link runPermissions}) rather than being
+ * assumed to have already run: an agent is reachable from entry points that do
+ * not go through the function runner, and re-evaluating an AND gate of
+ * side-effect-free predicates is idempotent.
+ */
+export async function assertAgentAuthorized(
+  agent: CoreAIAgent,
+  params: RunAIAgentParams,
+  packageName: string | null
+): Promise<void> {
+  const session = params.sessionService
+    ? await params.sessionService.get()
+    : undefined
+
+  if (agent.auth === true && !session) {
+    throw new ForbiddenError('Authentication required')
+  }
+
+  verifyScopes(agent.scopes, session)
+
+  const singletonServices = getSingletonServices()
+  const wire = params.sessionService
+    ? createMiddlewareSessionWireProps(params.sessionService)
+    : { session: undefined }
+
+  await runPermissions({
+    funcPermissions: agent.permissions,
+    services: singletonServices as any,
+    wire: wire as any,
+    data: {},
+    packageName,
+    label: 'agent',
+  })
 }
 
 export async function buildInstructions(
@@ -795,6 +846,8 @@ export async function prepareAgentRun(
 ) {
   const singletonServices = getSingletonServices()
   const { agent, packageName, resolvedName } = resolveAgent(agentName)
+
+  await assertAgentAuthorized(agent, params, packageName)
 
   let agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {

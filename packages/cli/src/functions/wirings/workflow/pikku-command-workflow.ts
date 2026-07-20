@@ -150,6 +150,11 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       config.agentMapDeclarationFile,
       packageMappings
     )
+    const scopesImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      config.scopesFile,
+      packageMappings
+    )
 
     await writeFileInDir(
       logger,
@@ -158,7 +163,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         functionTypesImportPath,
         rpcMapImportPath,
         workflowMapImportPath,
-        agentMapImportPath
+        agentMapImportPath,
+        scopesImportPath
       )
     )
 

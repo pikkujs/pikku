@@ -4,11 +4,7 @@ import type {
   CorePikkuMiddlewareGroup,
   CoreSingletonServices,
 } from '../../types/core.types.js'
-import type {
-  CorePikkuFunctionConfig,
-  CorePermissionGroup,
-  CorePikkuPermission,
-} from '../../function/functions.types.js'
+import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { PikkuHTTPRequest } from '../http/http.types.js'
 
 /**
@@ -124,7 +120,6 @@ export type GatewayTransportType = 'webhook' | 'websocket' | 'listener'
  */
 export type CoreGateway<
   PikkuFunctionConfig = CorePikkuFunctionConfig<any, any>,
-  PikkuPermission extends CorePikkuPermission = CorePikkuPermission,
   PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
 > = Partial<
   Pick<CommonWireMeta, 'title' | 'summary' | 'description' | 'errors'>
@@ -143,11 +138,14 @@ export type CoreGateway<
   func: PikkuFunctionConfig
   /** Optional middleware chain (e.g., auth) */
   middleware?: CorePikkuMiddlewareGroup<any, any>
-  /** Optional permissions */
-  permissions?: CorePermissionGroup | PikkuPermission[]
   /** Optional tags for categorization */
   tags?: string[]
-  /** Whether authentication is required (default: true) */
+  /**
+   * Whether the handler requires a session. Left unset, the handler's own
+   * `auth` governs, and a gateway handler is sessionless by default — inbound
+   * gateway traffic is platform-authenticated by the adapter, not
+   * session-bearing. Set `true` to require a session for every message.
+   */
   auth?: boolean
 }
 

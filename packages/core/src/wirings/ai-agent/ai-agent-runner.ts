@@ -30,6 +30,7 @@ import {
   resolveOwnerResourceId,
   agentSessionScope,
   assertResourceOwner,
+  assertAgentAuthorized,
   type RunAIAgentParams,
 } from './ai-agent-prepare.js'
 import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
@@ -416,6 +417,12 @@ export async function resumeAIAgentSync(
   }
 
   const { agent, packageName, resolvedName } = resolveAgent(run.agentName)
+
+  // Resuming re-runs the agent, so it re-runs the agent's gate. Run ownership
+  // alone is not enough: a grant revoked while the run was suspended must stop
+  // the caller from approving its pending tool calls.
+  await assertAgentAuthorized(agent, params, packageName)
+
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
   const agentRunner = singletonServices.aiAgentRunner

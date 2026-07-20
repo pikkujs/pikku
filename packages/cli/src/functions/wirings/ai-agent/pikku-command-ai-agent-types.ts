@@ -10,6 +10,7 @@ export const pikkuAIAgentTypes = pikkuSessionlessFunc<void, void>({
       agentTypesFile,
       functionTypesFile,
       agentMapDeclarationFile,
+      scopesFile,
       packageMappings,
     } = config
 
@@ -23,9 +24,15 @@ export const pikkuAIAgentTypes = pikkuSessionlessFunc<void, void>({
       agentMapDeclarationFile,
       packageMappings
     )
+    const scopesImportPath = getFileImportRelativePath(
+      agentTypesFile,
+      scopesFile,
+      packageMappings
+    )
     const content = serializeAIAgentTypes(
       functionTypesImportPath,
-      agentMapImportPath
+      agentMapImportPath,
+      scopesImportPath
     )
     await writeFileInDir(logger, agentTypesFile, content)
   },

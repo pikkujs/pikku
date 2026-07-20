@@ -226,6 +226,7 @@ export type AIAgentMemoryConfig = {
 export type CoreAIAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
+  Scope extends string = string,
 > = {
   name: string
   description: string
@@ -259,6 +260,23 @@ export type CoreAIAgent<
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
   aiMiddleware?: PikkuAIMiddlewareHooks<any, any>[]
+  /**
+   * Whether a session is required to run this agent. Defaults to `false`, since
+   * agents are commonly invoked from an already-authenticated `pikkuFunc` or
+   * from genuinely sessionless contexts (crons, queue workers). Set `true` to
+   * require a session at the agent itself. `scopes` and `permissions` are
+   * enforced either way.
+   */
+  auth?: boolean
+  /**
+   * Scopes the session must hold to run this agent. All of them are required
+   * (AND), and they are checked before `permissions` — unlike permissions,
+   * which OR together, a scope can only narrow access.
+   *
+   * Narrowed to the generated `ScopeId` union in a project's own
+   * `pikku-types.gen.ts`, so an undeclared scope is a compile error.
+   */
+  scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 
