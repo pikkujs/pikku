@@ -3,10 +3,12 @@ Feature: Todo Agent via Console
   The todo-agent manages a todo list. Tests interact with it through
   the Pikku Console agent playground UI.
 
-  Scenario: List all todos — response is uppercased by AI middleware
-    Given I open the "todoAgent" playground
-    When I send "What todos do I have?"
-    Then I should see exactly "REVIEW PULL REQUESTS" in the chat
+  # The list / deny / batch-approve-all / delete-reason scenarios were retired
+  # once the deterministic @agent-approval protocol suite covered the same
+  # suspend/approve/deny/reason behaviour without a browser or a live model.
+  # What remains here is assistant-ui interaction a protocol test cannot see:
+  # the approval card render, mixed approve/deny across cards, and a full
+  # multi-turn conversation in the composer.
 
   Scenario: Add a todo (approved) — shows approval description and uppercase response
     Given I open the "todoAgent" playground
@@ -16,23 +18,6 @@ Feature: Todo Agent via Console
     And the approval reason should contain "Write e2e tests"
     When I click "Approve"
     Then I should see exactly "WRITE E2E TESTS" in the chat
-
-  Scenario: Add a todo (denied)
-    Given I open the "todoAgent" playground
-    When I send "Add a todo called 'Should not exist'"
-    Then I should see an approval request
-    And the approval reason should contain "Add a todo called"
-    When I click "Deny"
-    Then I should see "Denied" on the approval badge
-
-  Scenario: Add three todos in one prompt (batch approve all)
-    Given I open the "todoAgent" playground
-    When I send "Create these 3 todos: 'Teach a penguin to dance', 'Build a rocket from socks', 'Paint the moon purple'"
-    Then I should see 3 approval requests
-    When I approve all pending requests
-    Then I should see "Teach a penguin to dance" in the chat
-    And I should see "Build a rocket from socks" in the chat
-    And I should see "Paint the moon purple" in the chat
 
   Scenario: Add three todos in one prompt (approve 2, deny 1)
     Given I open the "todoAgent" playground
