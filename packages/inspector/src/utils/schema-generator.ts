@@ -87,7 +87,9 @@ const inspectorVersion: string = (() => {
   try {
     const pkgUrl = new URL('../../package.json', import.meta.url)
     const pkg = JSON.parse(readFileSync(pkgUrl, 'utf-8'))
-    return typeof pkg.version === 'string' ? pkg.version : `v${SCHEMA_CACHE_VERSION}`
+    return typeof pkg.version === 'string'
+      ? pkg.version
+      : `v${SCHEMA_CACHE_VERSION}`
   } catch {
     return `v${SCHEMA_CACHE_VERSION}`
   }
@@ -98,7 +100,10 @@ const inspectorVersion: string = (() => {
 // inspector version (schema-format changes ship with a version bump).
 function tsSchemaCacheKey(
   customTypesContent: string,
-  config: { schemasFromTypes?: string[]; schema?: { additionalProperties?: boolean } }
+  config: {
+    schemasFromTypes?: string[]
+    schema?: { additionalProperties?: boolean }
+  }
 ): string {
   return createHash('sha1')
     .update(`v${SCHEMA_CACHE_VERSION}\0`)
@@ -145,6 +150,7 @@ function writeDiskTSSchemas(
 }
 
 function createProgramWithVirtualFile(
+  logger: InspectorLogger,
   tsconfig: string,
   virtualFilePath: string,
   virtualFileContent: string
@@ -165,7 +171,11 @@ function createProgramWithVirtualFile(
   }
 
   const resolvedVirtualPath = resolve(virtualFilePath)
-  const fileNames = [...cachedParsedConfig.fileNames, resolvedVirtualPath]
+  // The virtual file imports every type it references, so it is a complete root
+  // on its own and TypeScript pulls in exactly the transitive closure it needs.
+  // Rooting at cachedParsedConfig.fileNames instead loaded the whole project
+  // (2572 files vs 870 on a real tree) without widening what could be resolved.
+  const fileNames = [resolvedVirtualPath]
 
   const defaultHost = ts.createCompilerHost(cachedParsedConfig.options)
   const customHost: ts.CompilerHost = {
@@ -200,6 +210,7 @@ function createProgramWithVirtualFile(
     },
   }
 
+  const startProgram = performance.now()
   const program = ts.createProgram(
     fileNames,
     cachedParsedConfig.options,
@@ -207,6 +218,9 @@ function createProgramWithVirtualFile(
     cachedSchemaProgram // reuse previous program for incremental compilation
   )
   cachedSchemaProgram = program
+  logger.debug(
+    `Created schema program in ${(performance.now() - startProgram).toFixed(0)}ms (${program.getSourceFiles().length} files)`
+  )
   return program
 }
 
@@ -274,6 +288,7 @@ function generateTSSchemas(
     '__pikku_virtual_types__.ts'
   )
   const program = createProgramWithVirtualFile(
+    logger,
     tsconfig,
     virtualFilePath,
     customTypesContent
@@ -613,6 +628,14 @@ export async function generateAllSchemas(
     config.schema?.additionalProperties,
     zodSchemas
   )
+
+  // Release the program once the schemas are out of it. It spans the whole
+  // tsconfig (~2.5k files, ~600MB on a large tree) and was previously pinned at
+  // module scope for the life of the process, so it stacked on top of the main
+  // inspector program and pushed `pikku all` past a 2GB heap (#982). The result
+  // cache below is what the same-process fast path actually needs; the program
+  // only bought incremental reuse on a rebuild, at a cost that dwarfs it.
+  cachedSchemaProgram = undefined
 
   cachedCustomTypesContent = customTypesContent
   cachedTSSchemas = tsSchemas

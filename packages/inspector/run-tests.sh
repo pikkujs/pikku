@@ -38,7 +38,7 @@ if [ ${#files[@]} -eq 0 ]; then
 fi
 
 # Construct the node command
-node_cmd=(node --import tsx --test)
+node_cmd=(node --import tsx --expose-gc --test)
 
 # Append options based on flags
 if [ "$watch_mode" = true ]; then
