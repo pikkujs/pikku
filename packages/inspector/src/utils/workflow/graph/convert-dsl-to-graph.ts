@@ -229,16 +229,32 @@ function convertStepToNode(
         entry: string
       }> = []
 
+      // A case with no statements falls through to the next one. Dropping it
+      // would lose the value entirely, so it is held until an entry exists.
+      let fallingThrough: Array<{ value?: unknown; expression?: string }> = []
+
       for (let i = 0; i < step.cases.length; i++) {
         const caseSteps = convertStepsToNodes(
           step.cases[i].steps,
           `${nodeId}_case${i}`
         )
-        if (caseSteps.length > 0) {
+        if (caseSteps.length === 0) {
+          fallingThrough.push({
+            value: step.cases[i].value,
+            expression: step.cases[i].expression,
+          })
+          continue
+        }
+        {
+          const entry = caseSteps[0].nodeId
+          for (const pending of fallingThrough) {
+            cases.push({ ...pending, entry })
+          }
+          fallingThrough = []
           cases.push({
             value: step.cases[i].value,
             expression: step.cases[i].expression,
-            entry: caseSteps[0].nodeId,
+            entry,
           })
           // Link last case node to next (unless terminal flow)
           if (nextNodeId) {
@@ -265,6 +281,14 @@ function convertStepToNode(
               lastDefault.next = nextNodeId
           }
           caseNodes.push(...defaultNodes)
+        }
+      }
+
+      // Cases falling through past the last one land in default, or exit.
+      const trailingEntry = defaultEntry ?? nextNodeId
+      if (trailingEntry) {
+        for (const pending of fallingThrough) {
+          cases.push({ ...pending, entry: trailingEntry })
         }
       }
 
@@ -363,6 +387,7 @@ function convertStepToNode(
         nodeId,
         flow: 'return',
         outputs: step.outputs,
+        spread: step.spread,
       }
       return [node]
     }

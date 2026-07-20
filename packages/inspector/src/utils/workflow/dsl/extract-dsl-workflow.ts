@@ -1574,11 +1574,21 @@ function extractReturn(
     }
   }
 
+  // `return r` returns every field of r — record it as a spread of one.
+  if (ts.isIdentifier(statement.expression)) {
+    const varName = statement.expression.text
+    if (context.outputVars.has(varName) || context.contextVars.has(varName)) {
+      return { type: 'return', outputs: {}, spread: [varName] }
+    }
+    return null
+  }
+
   if (!ts.isObjectLiteralExpression(statement.expression)) {
     return null
   }
 
   const outputs: Record<string, OutputBinding> = {}
+  const spread: string[] = []
 
   for (const prop of statement.expression.properties) {
     if (
@@ -1609,16 +1619,22 @@ function extractReturn(
       if (binding) {
         outputs[propName] = binding
       }
+    } else if (
+      ts.isSpreadAssignment(prop) &&
+      ts.isIdentifier(prop.expression)
+    ) {
+      spread.push(prop.expression.text)
     }
   }
 
-  if (Object.keys(outputs).length === 0) {
+  if (Object.keys(outputs).length === 0 && spread.length === 0) {
     return null
   }
 
   return {
     type: 'return',
     outputs,
+    ...(spread.length > 0 ? { spread } : {}),
   }
 }
 

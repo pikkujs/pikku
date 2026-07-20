@@ -245,6 +245,12 @@ export interface ReturnStepMeta {
   type: 'return'
   /** Output bindings */
   outputs: Record<string, OutputBinding>
+  /**
+   * Variables spread into the returned object (`return { ...r }`), or the sole
+   * returned variable (`return r`). Their fields are not enumerable statically,
+   * so they are recorded by name rather than expanded into `outputs`.
+   */
+  spread?: string[]
 }
 
 /**

@@ -763,10 +763,13 @@ function nodeToCode(
         break
 
       case 'return':
-        if (flowNode.outputs) {
+        if (flowNode.outputs || flowNode.spread) {
           const returnObj: string[] = []
+          for (const spreadVar of (flowNode.spread as string[]) ?? []) {
+            returnObj.push(`${indent}  ...${spreadVar},`)
+          }
           for (const [key, output] of Object.entries(
-            flowNode.outputs as Record<string, any>
+            (flowNode.outputs ?? {}) as Record<string, any>
           )) {
             let value: string
             if (output.from === 'outputVar') {
