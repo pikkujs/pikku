@@ -1,3 +1,24 @@
+## 0.12.84
+
+### Patch Changes
+
+- 1a86d3f: Pin the bootstrap `@pikku/inspector` alongside `@pikku/cli`. Only the CLI was
+  pinned, so when the inspector dropped `state.http.routePermissions` the pinned
+  older CLI still read `routePermissions.size` and every bootstrap build failed.
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [314ace3]
+- Updated dependencies [3d76f51]
+  - @pikku/inspector@0.12.44
+  - @pikku/core@0.12.65
+
 ## 0.12.83
 
 ### Patch Changes
