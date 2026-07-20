@@ -110,6 +110,16 @@ const contentForStep = (
         ],
         finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
       }
+    case 'tools':
+      return {
+        content: step.calls.map((call) => ({
+          type: 'tool-call',
+          toolCallId: call.toolCallId ?? `mock-${randomUUID()}`,
+          toolName: call.toolName,
+          input: JSON.stringify(call.input ?? {}),
+        })),
+        finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
+      }
     case 'error':
       throw new Error(step.message)
   }

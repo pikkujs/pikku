@@ -7,9 +7,16 @@
  * already accumulated *since the last user message*, which keeps the mock
  * stateless and therefore safe to run scenarios in parallel.
  */
+export type MockLlmToolCall = {
+  toolName: string
+  input?: unknown
+  toolCallId?: string
+}
+
 export type MockLlmStep =
   | { kind: 'text'; text: string }
   | { kind: 'tool'; toolName: string; input?: unknown; toolCallId?: string }
+  | { kind: 'tools'; calls: MockLlmToolCall[] }
   | { kind: 'object'; object: unknown }
   | { kind: 'error'; message: string }
 
@@ -61,6 +68,56 @@ export const MOCK_LLM_SCRIPTS: Record<string, MockLlmScript> = {
     steps: [
       { kind: 'tool', toolName: 'gatedTool', input: {} },
       { kind: 'text', text: 'I called the gated tool.' },
+    ],
+  },
+
+  /**
+   * Calls the approval-gated addTodo tool, then acknowledges. The run suspends
+   * on the tool call until an approve/deny decision resumes it; the second step
+   * replays after resumption.
+   */
+  'add-todo-then-text': {
+    steps: [
+      {
+        kind: 'tool',
+        toolName: 'todos__addTodo',
+        input: { title: 'Write e2e tests' },
+      },
+      { kind: 'text', text: 'Done adding your todo.' },
+    ],
+  },
+
+  /**
+   * Calls the approval-gated deleteTodo tool for a known seeded id, then
+   * acknowledges. Used to assert the approval reason names the target record.
+   */
+  'delete-todo-then-text': {
+    steps: [
+      {
+        kind: 'tool',
+        toolName: 'todos__deleteTodo',
+        input: { id: '1' },
+      },
+      { kind: 'text', text: 'Done deleting your todo.' },
+    ],
+  },
+
+  /**
+   * Emits three approval-gated addTodo calls in a single model turn, then
+   * acknowledges. The run suspends with three pending approvals at once, which
+   * is what the console's batch-approve flow drives through the UI.
+   */
+  'three-todos-then-text': {
+    steps: [
+      {
+        kind: 'tools',
+        calls: [
+          { toolName: 'todos__addTodo', input: { title: 'First batch todo' } },
+          { toolName: 'todos__addTodo', input: { title: 'Second batch todo' } },
+          { toolName: 'todos__addTodo', input: { title: 'Third batch todo' } },
+        ],
+      },
+      { kind: 'text', text: 'Done adding your todos.' },
     ],
   },
 
