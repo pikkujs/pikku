@@ -28,7 +28,7 @@ import { ChannelWiringNode } from './nodes/ChannelWiringNode'
 import { SetNode } from './nodes/SetNode'
 import { GenericNode } from './nodes/GenericNode'
 import { ElkEdge } from './edges/ElkEdge'
-import { createFlow } from '../../hooks/useWiringFlow'
+import { createWorkflowFlow } from '../../hooks/create-workflow-flow'
 import { useElkLayout } from '../../hooks/useElkLayout'
 import 'reactflow/dist/style.css'
 
@@ -56,7 +56,7 @@ const edgeTypes: EdgeTypes = {
   elk: ElkEdge,
 }
 
-/** Inner flow of WorkflowGraphView: createFlow → ELK layout → reactflow.
+/** Inner flow of WorkflowGraphView: createWorkflowFlow → ELK layout → reactflow.
  *  Must render inside a ReactFlowProvider (WorkflowGraphView supplies it). */
 export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
   workflow,
@@ -66,7 +66,7 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
   const { fitView } = useReactFlow()
 
   const { nodes: flowNodes, edges: initialEdges } = useMemo(() => {
-    return createFlow(workflow)
+    return createWorkflowFlow(workflow)
   }, [workflow])
 
   const layoutResult = useElkLayout(flowNodes, initialEdges, direction)

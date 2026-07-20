@@ -25,7 +25,7 @@ import {
 } from '../components/project/nodes/WiringNode'
 import { getChannelWiringNodeConfig } from '../components/project/nodes/ChannelWiringNode'
 
-interface WiringFlowResult {
+interface WorkflowFlowResult {
   nodes: Node[]
   edges: Edge[]
 }
@@ -223,7 +223,9 @@ function getSourceHandle(
   return undefined
 }
 
-export function createFlow(workflow: WorkflowsMeta[0]): WiringFlowResult {
+export function createWorkflowFlow(
+  workflow: WorkflowsMeta[0]
+): WorkflowFlowResult {
   const nodes: Node[] = []
   const edges: Edge[] = []
   const workflowNodes = (workflow as any).nodes

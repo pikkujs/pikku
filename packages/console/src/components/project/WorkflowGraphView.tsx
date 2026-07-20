@@ -14,7 +14,7 @@ export interface WorkflowGraphViewProps {
   onPaneClick?: () => void
 }
 
-/** Standalone workflow graph renderer: createFlow → ELK layout → reactflow,
+/** Standalone workflow graph renderer: createWorkflowFlow → ELK layout → reactflow,
  *  with its own ReactFlowProvider so it can be embedded anywhere (full canvas
  *  page, side panel, …). Interactivity (node click → panels) comes from the
  *  surrounding Panel/Workflow contexts, which the host must provide. */

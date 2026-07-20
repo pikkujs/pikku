@@ -10,7 +10,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow'
 import { MantineProvider, Box } from '@pikku/mantine/core'
-import { createFlow } from '../hooks/useWiringFlow'
+import { createWorkflowFlow } from '../hooks/create-workflow-flow'
 import { useElkLayout } from '../hooks/useElkLayout'
 import { WiringNode } from '../components/project/nodes/WiringNode'
 import { FunctionNode } from '../components/project/nodes/FunctionNode'
@@ -68,7 +68,7 @@ const RenderFlow: React.FC<{ workflow: any }> = ({ workflow }) => {
   const { fitView } = useReactFlow()
 
   const { nodes: flowNodes, edges: initialEdges } = useMemo(() => {
-    return createFlow(workflow)
+    return createWorkflowFlow(workflow)
   }, [workflow])
 
   const layoutResult = useElkLayout(flowNodes, initialEdges)
