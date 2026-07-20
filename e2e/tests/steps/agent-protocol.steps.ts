@@ -126,6 +126,28 @@ Then(
   }
 )
 
+Then('the run result is a structured object', function (this: AgentWorld) {
+  const result = this.agentResponse?.body?.result
+  expect(
+    result !== null && typeof result === 'object',
+    `expected a structured object, got ${JSON.stringify(result)}`
+  ).toBe(true)
+})
+
+Then(
+  'the run result field {string} is the text {string}',
+  function (this: AgentWorld, field: string, value: string) {
+    expect(this.agentResponse?.body?.result?.[field]).toBe(value)
+  }
+)
+
+Then(
+  'the run result field {string} is the number {float}',
+  function (this: AgentWorld, field: string, value: number) {
+    expect(this.agentResponse?.body?.result?.[field]).toBe(value)
+  }
+)
+
 Then(
   'the run reports {int} model call(s)',
   async function (this: AgentWorld, count: number) {
