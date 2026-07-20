@@ -27,9 +27,6 @@
     "preview": "vite preview",
     "generate": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide && cd backend && pikku all",
     "lint": "tsc --noEmit",
-    "test": "bash run-tests.sh",
-    "test:watch": "bash run-tests.sh --watch",
-    "test:coverage": "bash run-tests.sh --coverage",
     "prepublishOnly": "echo 'Source-only package — no build needed'"
   },
   "dependencies": {
@@ -85,7 +82,6 @@
     "@pikku/addon-console": "^0.12.27",
     "@pikku/cli": "^0.12.83",
     "@pikku/core": "^0.12.64",
-    "@pikku/inspector": "^0.12.43",
     "@pikku/websocket": "^0.12.2",
     "@types/chroma-js": "^3",
     "@types/lodash": "^4",
