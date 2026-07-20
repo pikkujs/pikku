@@ -746,6 +746,16 @@ function extractStepOptions(
         } catch {
           // Ignore extraction errors for retryDelay
         }
+      } else if (propName === 'onError') {
+        if (ts.isStringLiteral(prop.initializer)) {
+          options.onError = prop.initializer.text
+        } else {
+          context.errors.push({
+            message:
+              'onError must be a literal RPC name so it can be wired and drawn in the graph.',
+            node: prop.initializer,
+          })
+        }
       } else if (propName === 'description') {
         try {
           options.description = extractStringLiteral(

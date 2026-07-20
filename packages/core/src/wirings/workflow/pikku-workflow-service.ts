@@ -1825,6 +1825,30 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  /**
+   * Run a failed step's compensation handler as a durable step of its own.
+   *
+   * Durable rather than a bare invoke so a replay does not compensate twice —
+   * a handler is typically a refund or a rollback. `onError` is deliberately
+   * not forwarded: a compensation handler cannot itself compensate.
+   */
+  private async runStepCompensation(
+    runId: string,
+    stepName: string,
+    onErrorRpcName: string,
+    rpcService: any,
+    error: Error
+  ): Promise<void> {
+    await this.rpcStep(
+      runId,
+      `${stepName}:onError`,
+      onErrorRpcName,
+      { error: { message: error.message } },
+      rpcService,
+      { retries: 0 }
+    )
+  }
+
   private async rpcStep(
     runId: string,
     logicalStepName: string,
@@ -1844,6 +1868,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       retries: stepOptions?.retries ?? DEFAULT_STEP_RETRIES,
       retryDelay: stepOptions?.retryDelay,
       actor: stepOptions?.actor,
+      onError: stepOptions?.onError,
     }
     // Check if step already exists
     let stepState: StepState
@@ -1872,6 +1897,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepState.error?.message ||
           `Step '${stepName}' failed after exhausting all retries`
       )
+      // Compensation, mirroring a graph node's onError: run the handler, then
+      // still throw — the workflow fails either way.
+      if (resolvedStepOptions.onError) {
+        await this.runStepCompensation(
+          runId,
+          stepName,
+          resolvedStepOptions.onError,
+          rpcService,
+          error
+        )
+      }
       // Preserve original error properties if available
       if (stepState.error) {
         Object.assign(error, stepState.error)

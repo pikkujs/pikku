@@ -19,6 +19,13 @@ export interface WorkflowStepOptions {
   /** Delay between retry attempts (e.g., '1s', '2s', '2min') */
   retryDelay?: string | number
   /**
+   * RPC to invoke for compensation when this step fails after exhausting its
+   * retries. Mirrors a graph node's `onError`: the handler receives
+   * `{ error: { message } }` and the original error is still thrown, so the
+   * workflow fails — this is compensation, not recovery.
+   */
+  onError?: string
+  /**
    * Run this step as an actor (scenarios). The RPC is sent through the
    * actor's authenticated client over the REAL transport — never dispatched
    * internally — so auth middleware and permissions are exercised end-to-end.

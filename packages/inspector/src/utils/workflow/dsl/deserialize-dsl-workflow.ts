@@ -234,6 +234,18 @@ function collectChildNodeIds(
 ): Set<string> {
   const owned = new Set<string>()
 
+  // An error handler belongs to the step that routes to it, not to the main
+  // flow — emitting it top-level would turn compensation into a step that
+  // always runs.
+  for (const node of Object.values(nodes)) {
+    const onError = (node as any).onError
+    if (typeof onError === 'string') {
+      owned.add(onError)
+    } else if (Array.isArray(onError)) {
+      for (const handlerId of onError) owned.add(handlerId)
+    }
+  }
+
   const walk = (entry: string | undefined, exit: string | undefined) => {
     const seen = new Set<string>()
     let currentId = entry
@@ -294,6 +306,24 @@ function bindingPrefix(outputVar: unknown): string {
 }
 
 /**
+ * Resolve a node's `onError` node id back to the rpc name the DSL author wrote.
+ */
+function onErrorRpcNameOf(
+  node: SerializedGraphNode,
+  nodes: Record<string, SerializedGraphNode>
+): string | undefined {
+  const onError = (node as any).onError
+  const handlerId = Array.isArray(onError) ? onError[0] : onError
+  if (typeof handlerId !== 'string') {
+    return undefined
+  }
+  const handler = nodes[handlerId]
+  return handler && 'rpcName' in handler
+    ? (handler.rpcName as string)
+    : undefined
+}
+
+/**
  * A duration is `string | number` ('5s' or 5000). Quoting a number would change
  * the value the runtime parses, so only strings get quotes.
  */
@@ -317,8 +347,14 @@ function caseValueToCode(value: unknown): string {
 /**
  * Convert options to code
  */
-function optionsToCode(options: Record<string, unknown>): string {
+function optionsToCode(
+  options: Record<string, unknown>,
+  onErrorRpcName?: string
+): string {
   const parts: string[] = []
+  if (onErrorRpcName) {
+    parts.push(`onError: '${escapeSingleQuotes(onErrorRpcName)}'`)
+  }
   if (options.retries !== undefined) {
     parts.push(`retries: ${options.retries}`)
   }
@@ -539,8 +575,9 @@ function nodeToCode(
     let doCall = `await workflow.do('${stepName}', '${node.rpcName}', ${inputCode}`
 
     // Add options if present
-    if ((node as any).options) {
-      const optCode = optionsToCode((node as any).options)
+    const onErrorRpc = onErrorRpcNameOf(node, nodes)
+    if ((node as any).options || onErrorRpc) {
+      const optCode = optionsToCode((node as any).options ?? {}, onErrorRpc)
       if (optCode) {
         doCall += `, ${optCode}`
       }
