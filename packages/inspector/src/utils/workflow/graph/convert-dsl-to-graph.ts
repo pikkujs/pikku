@@ -117,7 +117,7 @@ function convertStepToNode(
       if (step.options) {
         node.options = {
           retries: step.options.retries,
-          retryDelay: step.options.retryDelay?.toString(),
+          retryDelay: step.options.retryDelay,
         }
       }
       // An onError handler is written as an rpc name, but the graph routes to

@@ -86,8 +86,8 @@ export type SerializedNext =
 export interface NodeOptions {
   /** Number of retry attempts on failure */
   retries?: number
-  /** Delay between retries (e.g., '1s', '5s') */
-  retryDelay?: string
+  /** Delay between retries (e.g., '1s', '5s', or a number of milliseconds) */
+  retryDelay?: string | number
   /** Timeout for node execution (e.g., '30s', '5m') */
   timeout?: string
 }
