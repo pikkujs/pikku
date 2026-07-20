@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inspect } from '../inspector.js'
-import { ErrorCode } from '../error-codes.js'
+import type { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
 // Fixtures must sit inside the package so `zod` resolves — the schema-vendor
