@@ -184,7 +184,7 @@ const ChannelTree: React.FC<{
                     tt="none"
                     style={{
                       background: 'rgba(124,58,237,0.08)',
-                      border: '0.5px solid rgba(124,58,237,0.18)',
+                      border: '0.5px solid transparent',
                       color: '#7c3aed',
                     }}
                   >

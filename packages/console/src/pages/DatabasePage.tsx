@@ -89,11 +89,11 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
   const { openDbColumn } = usePanelContext()
   const isDark = colorScheme === 'dark'
 
-  const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
+  const border = 'transparent'
   const headerBg = isDark ? 'var(--mantine-color-dark-5)' : 'var(--mantine-color-blue-0, #e7f5ff)'
   const badgeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f0f0f0'
   const badgeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
-  const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
+  const rowBorder = 'transparent'
   const typeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f5f5f5'
   const typeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
   const nullableColor = isDark ? 'var(--mantine-color-dark-2)' : '#aaa'
@@ -240,9 +240,9 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
 
-  const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
+  const border = 'transparent'
   const headerBg = isDark ? 'var(--mantine-color-violet-9)' : 'var(--mantine-color-violet-1)'
-  const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
+  const rowBorder = 'transparent'
   const valueColor = isDark ? 'var(--mantine-color-dark-1)' : '#555'
 
   return (

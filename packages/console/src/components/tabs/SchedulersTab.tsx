@@ -33,7 +33,7 @@ const CronBadges: React.FC<{ schedule: string }> = ({ schedule }) => {
           tt="none"
           style={{
             background: 'rgba(245,158,11,0.08)',
-            border: '0.5px solid rgba(245,158,11,0.18)',
+            border: '0.5px solid transparent',
             color: '#fbbf24',
             padding: '1px 5px',
           }}

@@ -34,7 +34,7 @@ const columns = [
         tt="none"
         style={{
           background: 'rgba(124,58,237,0.08)',
-          border: '0.5px solid rgba(124,58,237,0.18)',
+          border: '0.5px solid transparent',
           color: '#a78bfa',
           maxWidth: 200,
           overflow: 'hidden',
@@ -55,7 +55,7 @@ const columns = [
         tt="none"
         style={{
           background: 'rgba(6,182,212,0.07)',
-          border: '0.5px solid rgba(6,182,212,0.15)',
+          border: '0.5px solid transparent',
           color: '#06b6d4',
           maxWidth: 200,
           overflow: 'hidden',

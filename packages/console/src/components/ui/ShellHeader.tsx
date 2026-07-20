@@ -253,11 +253,10 @@ export const ShellHeader = <T extends string = string>({
         radius={0}
         py={0}
         px="xl"
-        h={45}
+        h={50}
         style={{
           display: 'flex',
           alignItems: 'center',
-          borderBottom: '1px solid var(--mantine-color-default-border)',
         }}
       >
         <Group
