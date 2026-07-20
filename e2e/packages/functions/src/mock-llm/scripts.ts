@@ -121,6 +121,31 @@ export const MOCK_LLM_SCRIPTS: Record<string, MockLlmScript> = {
     ],
   },
 
+  /**
+   * The sub-agent's own model program. A sub-agent runs under its configured
+   * model (`mock/sub-agent-text`), not the caller's per-request override, so its
+   * output is controlled from here and stays distinctive enough to assert on.
+   */
+  'sub-agent-text': {
+    steps: [{ kind: 'text', text: 'SUBAGENT-REPLY: task handled.' }],
+  },
+
+  /**
+   * A parent turn that delegates to the sub-agent tool, then replies. The tool
+   * name is the sub-agent's export identifier. The second step's text is what a
+   * supervise-mode parent surfaces while the sub-agent's own text is suppressed.
+   */
+  'delegate-then-text': {
+    steps: [
+      {
+        kind: 'tool',
+        toolName: 'deterministicSubAgent',
+        input: { message: 'handle the task', session: 'default' },
+      },
+      { kind: 'text', text: 'SUPERVISOR: the sub-agent finished.' },
+    ],
+  },
+
   'forge-approval-then-text': {
     steps: [
       { kind: 'tool', toolName: 'forgeApproval', input: {} },
