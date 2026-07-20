@@ -18,11 +18,7 @@ async function fetchAsUint8Array(
   url: string,
   allowedAudioHosts?: string[]
 ): Promise<Uint8Array> {
-  const response = await safeFetch(
-    url,
-    {},
-    { allowedHosts: allowedAudioHosts }
-  )
+  const response = await safeFetch(url, {}, { allowedHosts: allowedAudioHosts })
   const contentLength = response.headers.get('content-length')
   if (contentLength && parseInt(contentLength, 10) > MAX_AUDIO_SIZE) {
     throw new Error('Audio file exceeds maximum size')
@@ -41,10 +37,12 @@ export const voiceInput = (config?: {
 }) =>
   pikkuAIMiddleware({
     modifyInput: async (services, { messages, instructions }) => {
-      const transcribeAudio = (services as {
-        aiAgentRunner?: AIAgentRunnerService
-      }).aiAgentRunner?.transcribe
-      if (!transcribeAudio) return { messages, instructions }
+      const aiAgentRunner = (
+        services as {
+          aiAgentRunner?: AIAgentRunnerService
+        }
+      ).aiAgentRunner
+      if (!aiAgentRunner?.transcribe) return { messages, instructions }
 
       const last = messages[messages.length - 1]
       if (!last || last.role !== 'user' || typeof last.content === 'string') {
@@ -76,7 +74,7 @@ export const voiceInput = (config?: {
         const audioData = p.data
           ? base64ToUint8Array(p.data)
           : await fetchAsUint8Array(p.url!, config.allowedAudioHosts)
-        const result = await transcribeAudio({
+        const result = await aiAgentRunner.transcribe({
           model: config.model,
           audio: audioData,
           ...(config.language
