@@ -28,6 +28,8 @@ jobs:
         run: node scripts/check-no-workspace-protocol.mjs
       - name: Check no publish-time CLI rebuild
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
+      - name: Check CLI bootstrap deps are pinned
+        run: node scripts/check-bootstrap-deps-pinned.mjs
 
   lint:
     name: Lint & Format

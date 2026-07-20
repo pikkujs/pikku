@@ -16,6 +16,14 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=0.12.35}"
 : "${PIKKU_AUTH_JS_VERSION:=0.12.5}"
 : "${PIKKU_BETTER_AUTH_VERSION:=0.12.12}"
+# Pinning the CLI alone is not enough: it declares its own @pikku/* deps with
+# carets (e.g. "@pikku/inspector": "^0.12.19"), so a later breaking release of a
+# dependency retroactively breaks an already-pinned bootstrap. #972 did exactly
+# that — @pikku/inspector@0.12.43 dropped http.routePermissions, and CLI 0.12.35
+# then died on `state.http.routePermissions.size`. Resolving the whole tree as of
+# the CLI pin's publish date keeps the bootstrap internally consistent.
+# Bump this alongside PIKKU_CLI_VERSION.
+: "${PIKKU_BOOTSTRAP_BEFORE:=2026-06-15T00:00:00Z}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
@@ -41,7 +49,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
   }
 }
 JSON
-(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock)
+(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock --before="${PIKKU_BOOTSTRAP_BEFORE}")
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
