@@ -16,6 +16,14 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=0.12.35}"
 : "${PIKKU_AUTH_JS_VERSION:=0.12.5}"
 : "${PIKKU_BETTER_AUTH_VERSION:=0.12.12}"
+# Pinning the CLI alone is not enough: it declares caret ranges on its own
+# @pikku/* deps, so npm pairs a months-old CLI with today's core/inspector. The
+# moment the inspector-state shape moves, bootstrap dies on every branch at once
+# (`Cannot read properties of undefined (reading 'size')`) with no commit to
+# blame. These are the versions that shipped alongside @pikku/cli 0.12.35 — bump
+# them together with PIKKU_CLI_VERSION, never independently.
+: "${PIKKU_CORE_VERSION:=0.12.31}"
+: "${PIKKU_INSPECTOR_VERSION:=0.12.19}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
@@ -37,7 +45,9 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/auth-js": "${PIKKU_AUTH_JS_VERSION}"
   },
   "overrides": {
-    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}"
+    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
+    "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}"
   }
 }
 JSON
