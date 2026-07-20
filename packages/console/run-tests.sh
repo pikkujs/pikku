@@ -46,7 +46,9 @@ if [ "$watch_mode" = true ]; then
 fi
 
 if [ "$coverage_mode" = true ]; then
-  node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info)
+  # The lcov reporter writes to a file, so without a second reporter aimed at
+  # stdout a failing run in CI produces no readable output at all.
+  node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test-reporter=spec --test-reporter-destination=stdout)
 fi
 
 # Execute the node command with the expanded list of files
