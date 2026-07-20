@@ -1,5 +1,5 @@
-import { existsSync } from 'fs'
-import { join } from 'path'
+import { existsSync, readFileSync } from 'fs'
+import { dirname, join } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import {
   createEmptyManifest,
@@ -13,6 +13,39 @@ import {
   loadAuthConfig,
   type AuthConfig,
 } from '@pikku/openapi-parser'
+
+/**
+ * Pick the protocol the generated test app uses to depend on its parent addon.
+ *
+ * Inside a workspace this must be `workspace:*`. The `file:` protocol copies
+ * the whole parent directory rather than honouring its `files` field, so the
+ * copy includes the parent's own test/node_modules — which already holds a
+ * copy. Every install then adds another layer until the path exceeds the OS
+ * limit. Outside a workspace `workspace:*` cannot resolve, so `file:` remains
+ * the only option there.
+ */
+export function resolveAddonDepProtocol(baseDir: string): string {
+  let dir = baseDir
+  while (true) {
+    const manifest = join(dir, 'package.json')
+    if (existsSync(manifest)) {
+      try {
+        const { workspaces } = JSON.parse(readFileSync(manifest, 'utf8'))
+        if (Array.isArray(workspaces) || Array.isArray(workspaces?.packages)) {
+          return 'workspace:*'
+        }
+      } catch {
+        // A malformed manifest tells us nothing about the workspace layout;
+        // keep walking up rather than failing the scaffold.
+      }
+    }
+    const parent = dirname(dir)
+    if (parent === dir) {
+      return 'file:..'
+    }
+    dir = parent
+  }
+}
 
 function toCamelCase(str: string): string {
   return str.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase())
@@ -98,6 +131,7 @@ interface AddonVars {
   displayName: string
   description: string
   category: string
+  addonDepProtocol: string
 }
 
 function getAddonFiles(
@@ -686,7 +720,7 @@ wireVariable({
 }
 
 function getTestFiles(vars: AddonVars): Record<string, string> {
-  const { name, camelName, pascalName, screamingName } = vars
+  const { name, camelName, pascalName, screamingName, addonDepProtocol } = vars
   const files: Record<string, string> = {}
 
   // test/package.json
@@ -705,7 +739,7 @@ function getTestFiles(vars: AddonVars): Record<string, string> {
       },
       dependencies: {
         '@pikku/core': '*',
-        [`@pikku/addon-${name}`]: 'file:..',
+        [`@pikku/addon-${name}`]: addonDepProtocol,
       },
       devDependencies: {
         '@pikku/cli': '*',
@@ -953,6 +987,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       displayName: resolvedDisplayName,
       description: resolvedDescription,
       category,
+      addonDepProtocol: resolveAddonDepProtocol(baseDir),
     }
 
     // Load the auth config (custom auth header / delegated login overrides)
