@@ -1,3 +1,104 @@
+## 0.12.65
+
+### Patch Changes
+
+- 1a86d3f: Fix a fanout collapsing into a single step, and preserve graph node config.
+  - A fanout took its `stepName` from the first step of its body. Node ids _are_
+    step names, so the loop and that step got the same id and the step overwrote
+    the loop: `await Promise.all(users.map(...))` rendered as one plain call, and
+    everything after the loop became unreachable. A fanout is not itself a cached
+    step, so it no longer borrows a name.
+  - A `workflow.sleep` or `workflow.suspend` inside a fanout body was dropped at
+    extraction — `FanoutStepMeta.body` was typed RPC-only. It now admits sleep and
+    suspend, and the regenerated body emits them.
+  - Regenerating a `pikkuWorkflowGraph` dropped `onError`, `retries` and
+    `retryDelay` from every node, and graph-level `notes`. All four are honoured
+    at runtime, so the round trip silently changed behaviour.
+
+- 1a86d3f: Support multi-step fanout bodies in DSL workflows.
+
+  A `Promise.all(array.map(...))` (or `for...of`) body containing more than one
+  `workflow.do` call previously extracted only a single step: `const`-captured
+  steps were skipped entirely by the parallel extractor, so a body like
+
+  ```ts
+  await Promise.all(
+    users.map(async (u) => {
+      const digestData = await workflow.do('Get pipeline', 'getDigestData', {
+        userId: u.id,
+      })
+      await workflow.do('Send digest', 'sendDigestEmail', { ...digestData })
+    })
+  )
+  ```
+
+  produced a graph with `getDigestData` missing and `sendDigestEmail` referencing
+  an unregistered variable. `FanoutStepMeta.child` is replaced by
+  `FanoutStepMeta.body: RpcStepMeta[]`, holding the per-iteration steps inline in
+  the same workflow — no sub-workflow boundary. Per-iteration `const` bindings are
+  now registered so later steps in the same iteration can reference them, and the
+  sequential path no longer hard-errors on bodies with more than one step.
+
+- 1a86d3f: Add `onError` compensation to DSL workflows.
+
+  A DSL workflow had no way to express error handling at all — `try/catch` is not
+  an allowed statement, and step options carried only `retries`/`retryDelay`. A
+  step can now name a compensation RPC:
+
+  ```ts
+  await workflow.do(
+    'Charge',
+    'chargeCard',
+    { id },
+    {
+      retries: 3,
+      onError: 'refundOrder',
+    }
+  )
+  ```
+
+  Semantics mirror a graph node's `onError` exactly: once the step's retries are
+  exhausted the handler is invoked with `{ error: { message } }` and the original
+  error is still thrown. This is compensation, not recovery — the workflow fails
+  either way. The handler runs as its own durable step, so a replay cannot
+  compensate twice, and it does not inherit `onError` itself.
+
+  The handler is materialised as a real graph node, so it is wired like any other
+  RPC and the console draws a dashed red "on error" edge to it rather than the
+  route being invisible.
+
+- 1a86d3f: Stop silently dropping switch cases and spread returns from workflow graphs.
+  - A fall-through case (`case 'a': case 'b': ...`) recorded only the last value.
+    A run entering on `'a'` therefore appeared to match no case at all. Empty
+    clauses now carry through to the entry they fall into — the next non-empty
+    case, otherwise `default`, otherwise the switch exit.
+  - `return { ...r, extra: 1 }` produced a return node listing only `extra`, so
+    the graph claimed an output shape the workflow does not have, with no
+    diagnostic. `return r` produced no return node at all. `ReturnStepMeta` now
+    records a `spread` list, and the regenerated code emits it.
+
+- 1a86d3f: Stop corrupting values when regenerating a workflow from its graph.
+  - A numeric `workflow.sleep('Wait', 5000)` came back as `'5000'`, and a numeric
+    `retryDelay` likewise. Durations are `string | number`; only strings are
+    quoted now.
+  - An assignment to a context variable was stored as an opaque `value`, so
+    `count = count + 1` regenerated as `count = 'count + 1'` — an expression
+    turned into a string literal. `SetStepMeta` now carries a separate
+    `expression` field (mirroring `SwitchCaseMeta`), so a string literal and a
+    code expression are no longer indistinguishable in the meta.
+  - A `next` that was not a single node id was coerced with a string cast: an
+    array became the bogus id `'a,b'` and a branch-key record became
+    `'[object Object]'`, severing every downstream node. Arrays, key-based
+    routing tables and condition lists now each render in their own shape.
+  - A `filter`/`some`/`every` node with no `outputVar` emitted
+    `const undefined = ...`, which does not parse.
+
+- 1a86d3f: Keep a `workflow.sleep` whose duration is only known at runtime (a loop
+  variable, a field off the input). The closure evaluates it, so it is legal DSL;
+  its source text is recorded as an `expression` and emitted raw when regenerating
+  code, as a set step already does.
+- 3d76f51: Add an optional `docsUrl` to `wireSecret`, `wireVariable`, and `wireCredential`, so a console or deploy UI reporting a missing value can link the user to where they obtain it instead of showing a bare identifier.
+
 ## 0.12.64
 
 ### Patch Changes
