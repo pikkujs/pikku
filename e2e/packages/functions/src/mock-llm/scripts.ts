@@ -108,6 +108,20 @@ export const MOCK_LLM_SCRIPTS: Record<string, MockLlmScript> = {
   'tool-forever': {
     steps: [{ kind: 'tool', toolName: 'openTool', input: {} }],
   },
+
+  /**
+   * Emits an object rather than text. With an agent that declares an `output`
+   * schema and has no tools, the runner parses this against the schema and
+   * surfaces it as the run's structured result.
+   */
+  'structured-object': {
+    steps: [
+      {
+        kind: 'object',
+        object: { sentiment: 'positive', score: 0.9, summary: 'all good' },
+      },
+    ],
+  },
 }
 
 export const resolveScript = (modelName: string): MockLlmScript =>
