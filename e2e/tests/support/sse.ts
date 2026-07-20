@@ -105,6 +105,66 @@ export const streamAgent = async (
   return new StreamRecording(events, res.status)
 }
 
+/**
+ * Identity headers for the security scenarios.
+ *
+ * `x-user-id` / `x-org-id` are read by `setSessionFromHeader`, which runs after
+ * the better-auth middleware and overwrites the session, so these win over any
+ * cookie. That makes an arbitrary principal reachable without seeding a real
+ * user per scenario — and the composed owner key derives from the session, so
+ * it is the session that has to vary, not the request body.
+ */
+export type Identity = { userId?: string; orgId?: string }
+
+export const identityHeaders = (identity: Identity): Record<string, string> => ({
+  ...(identity.userId ? { 'x-user-id': identity.userId } : {}),
+  ...(identity.orgId ? { 'x-org-id': identity.orgId } : {}),
+})
+
+/** Calls an agent as a given principal, bypassing the cookie actor entirely. */
+export const callAgentAs = async (
+  identity: Identity,
+  agentName: string,
+  body: Record<string, unknown>
+): Promise<{ status: number; body: any }> => {
+  const res = await fetch(`${config.apiUrl}/rpc/agent/${agentName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...identityHeaders(identity),
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  try {
+    return { status: res.status, body: JSON.parse(text) }
+  } catch {
+    return { status: res.status, body: text }
+  }
+}
+
+/** Calls an exposed RPC as a given principal. */
+export const callRpcAs = async (
+  identity: Identity,
+  rpcName: string,
+  body: Record<string, unknown>
+): Promise<{ status: number; body: any }> => {
+  const res = await fetch(`${config.apiUrl}/rpc/${rpcName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...identityHeaders(identity),
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  try {
+    return { status: res.status, body: JSON.parse(text) }
+  } catch {
+    return { status: res.status, body: text }
+  }
+}
+
 export const callAgent = async (
   actor: Actor,
   agentName: string,

@@ -13,8 +13,15 @@ const setSessionFromHeader: CorePikkuMiddleware = async (
   next
 ) => {
   const userId = wire.http?.request?.header('x-user-id')
-  if (userId) {
-    wire.setSession?.({ userId })
+  // `x-org-id` makes org-scoped agents reachable: nothing else in this harness
+  // populates `session.orgId`, and an agent declaring `sessionScope: 'org'`
+  // fails closed without one, so its success path would be untestable.
+  const orgId = wire.http?.request?.header('x-org-id')
+  if (userId || orgId) {
+    wire.setSession?.({
+      ...(userId ? { userId } : {}),
+      ...(orgId ? { orgId } : {}),
+    })
   }
   await next()
 }
