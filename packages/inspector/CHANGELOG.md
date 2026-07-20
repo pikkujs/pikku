@@ -1,3 +1,172 @@
+## 0.12.44
+
+### Patch Changes
+
+- 1a86d3f: Stop silently dropping DSL workflow constructs during extraction.
+
+  Four constructs produced a wrong workflow graph with no diagnostic:
+  - A property access on the fanout item (`users.map((u) => workflow.do(..., { userId: u.id }))`)
+    was dropped from the step's inputs — `extractInputSource` resolved property
+    access against the input param and output variables but not loop variables.
+  - `const [org, user] = await Promise.all([...])` dropped **both** steps, because
+    extraction bailed on any non-identifier binding name before reaching the
+    `Promise.all` branch. Array destructuring now binds each name to its matching
+    child step's output.
+  - A brace-less `for (const x of xs) await workflow.do(...)` dropped the entire
+    loop, since only block bodies were walked.
+  - Object destructuring of a step result and multi-declarator statements now
+    report a diagnostic instead of vanishing.
+
+- 1a86d3f: Fix a fanout collapsing into a single step, and preserve graph node config.
+  - A fanout took its `stepName` from the first step of its body. Node ids _are_
+    step names, so the loop and that step got the same id and the step overwrote
+    the loop: `await Promise.all(users.map(...))` rendered as one plain call, and
+    everything after the loop became unreachable. A fanout is not itself a cached
+    step, so it no longer borrows a name.
+  - A `workflow.sleep` or `workflow.suspend` inside a fanout body was dropped at
+    extraction — `FanoutStepMeta.body` was typed RPC-only. It now admits sleep and
+    suspend, and the regenerated body emits them.
+  - Regenerating a `pikkuWorkflowGraph` dropped `onError`, `retries` and
+    `retryDelay` from every node, and graph-level `notes`. All four are honoured
+    at runtime, so the round trip silently changed behaviour.
+
+- 1a86d3f: Support multi-step fanout bodies in DSL workflows.
+
+  A `Promise.all(array.map(...))` (or `for...of`) body containing more than one
+  `workflow.do` call previously extracted only a single step: `const`-captured
+  steps were skipped entirely by the parallel extractor, so a body like
+
+  ```ts
+  await Promise.all(
+    users.map(async (u) => {
+      const digestData = await workflow.do('Get pipeline', 'getDigestData', {
+        userId: u.id,
+      })
+      await workflow.do('Send digest', 'sendDigestEmail', { ...digestData })
+    })
+  )
+  ```
+
+  produced a graph with `getDigestData` missing and `sendDigestEmail` referencing
+  an unregistered variable. `FanoutStepMeta.child` is replaced by
+  `FanoutStepMeta.body: RpcStepMeta[]`, holding the per-iteration steps inline in
+  the same workflow — no sub-workflow boundary. Per-iteration `const` bindings are
+  now registered so later steps in the same iteration can reference them, and the
+  sequential path no longer hard-errors on bodies with more than one step.
+
+- 1a86d3f: Add `onError` compensation to DSL workflows.
+
+  A DSL workflow had no way to express error handling at all — `try/catch` is not
+  an allowed statement, and step options carried only `retries`/`retryDelay`. A
+  step can now name a compensation RPC:
+
+  ```ts
+  await workflow.do(
+    'Charge',
+    'chargeCard',
+    { id },
+    {
+      retries: 3,
+      onError: 'refundOrder',
+    }
+  )
+  ```
+
+  Semantics mirror a graph node's `onError` exactly: once the step's retries are
+  exhausted the handler is invoked with `{ error: { message } }` and the original
+  error is still thrown. This is compensation, not recovery — the workflow fails
+  either way. The handler runs as its own durable step, so a replay cannot
+  compensate twice, and it does not inherit `onError` itself.
+
+  The handler is materialised as a real graph node, so it is wired like any other
+  RPC and the console draws a dashed red "on error" edge to it rather than the
+  route being invisible.
+
+- 1a86d3f: Keep a numeric `retryDelay` numeric through the graph round-trip. The serialized
+  graph typed it as `string` and the DSL→graph conversion called `.toString()`, so
+  `retryDelay: 500` regenerated as `retryDelay: '500'` — a different value to the
+  runtime, which parses strings as durations.
+- 1a86d3f: Stop silently dropping switch cases and spread returns from workflow graphs.
+  - A fall-through case (`case 'a': case 'b': ...`) recorded only the last value.
+    A run entering on `'a'` therefore appeared to match no case at all. Empty
+    clauses now carry through to the entry they fall into — the next non-empty
+    case, otherwise `default`, otherwise the switch exit.
+  - `return { ...r, extra: 1 }` produced a return node listing only `extra`, so
+    the graph claimed an output shape the workflow does not have, with no
+    diagnostic. `return r` produced no return node at all. `ReturnStepMeta` now
+    records a `spread` list, and the regenerated code emits it.
+
+- 1a86d3f: Stop deleting code when regenerating a DSL workflow from its graph.
+
+  Regenerating a workflow (as the console's graph editor does) silently dropped
+  steps:
+  - Only the **first** step of an `if` arm survived. The walk stopped via a
+    heuristic that tested whether the next node id contained `_then_`/`_else_`,
+    but node ids are step names, so it never matched. Branch and switch bodies now
+    walk the `next` chain up to an explicit exit boundary — the enclosing flow
+    node's own `next`.
+  - Switch cases emitted only their entry node, never walking `next` at all.
+  - Every step was renamed to `Call <rpcName>`, because the graph conversion never
+    wrote `stepName` onto the node. Step names are the durable replay cache key,
+    so a round-trip silently invalidated in-flight runs.
+  - `workflow.suspend()` had no graph node, yet the preceding step's `next` still
+    pointed at its id — traversal dead-ended there and every following step was
+    deleted. `suspend` is now a real flow node, and both `suspend` and `approval`
+    have deserializer cases.
+  - Numeric and boolean `switch` case values were emitted quoted (`case '1':`),
+    so the case could never match. Step names and reasons containing a quote are
+    now escaped.
+
+  Also fixed in the same pass:
+  - `const [org, user] = await Promise.all([...])` regenerated as a bare
+    `await Promise.all([...])`, leaving both names unbound.
+  - A step result assigned inside a branch was re-declared with `const` inside
+    that branch, so any later reference was out of scope. Hoisting analysis was
+    keyed off the same dead node-id heuristic and never fired.
+  - A top-level step whose _name_ contained `_case`, `_item_`, `_then_`,
+    `_else_`, `_child_` or `_default_` was silently deleted, because node ids are
+    step names and were matched against those structural substrings. Ownership is
+    now read from the parent constructs themselves.
+
+- 1a86d3f: Stop corrupting values when regenerating a workflow from its graph.
+  - A numeric `workflow.sleep('Wait', 5000)` came back as `'5000'`, and a numeric
+    `retryDelay` likewise. Durations are `string | number`; only strings are
+    quoted now.
+  - An assignment to a context variable was stored as an opaque `value`, so
+    `count = count + 1` regenerated as `count = 'count + 1'` — an expression
+    turned into a string literal. `SetStepMeta` now carries a separate
+    `expression` field (mirroring `SwitchCaseMeta`), so a string literal and a
+    code expression are no longer indistinguishable in the meta.
+  - A `next` that was not a single node id was coerced with a string cast: an
+    array became the bogus id `'a,b'` and a branch-key record became
+    `'[object Object]'`, severing every downstream node. Arrays, key-based
+    routing tables and condition lists now each render in their own shape.
+  - A `filter`/`some`/`every` node with no `outputVar` emitted
+    `const undefined = ...`, which does not parse.
+
+- 1a86d3f: Keep a `workflow.sleep` whose duration is only known at runtime (a loop
+  variable, a field off the input). The closure evaluates it, so it is legal DSL;
+  its source text is recorded as an `expression` and emitted raw when regenerating
+  code, as a set step already does.
+- 314ace3: Cut the schema generator's ts.Program cost — the dominant contributor to `pikku all` memory and time.
+
+  Two independent fixes: the program is now scoped to the virtual file's import
+  closure (870 source files instead of the whole tsconfig's 2572), and it is
+  released once schemas are generated instead of being pinned at module scope for
+  the life of the process. On a 279-function tree this cuts cold codegen ~20% and
+  in-pass live heap ~21%, with byte-identical schema output.
+
+- 3d76f51: Add an optional `docsUrl` to `wireSecret`, `wireVariable`, and `wireCredential`, so a console or deploy UI reporting a missing value can link the user to where they obtain it instead of showing a bare identifier.
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [1a86d3f]
+- Updated dependencies [b501612]
+- Updated dependencies [3d76f51]
+  - @pikku/core@0.12.65
+
 ## 0.12.43
 
 ### Patch Changes

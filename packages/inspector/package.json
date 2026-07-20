@@ -1,6 +1,6 @@
 {
   "name": "@pikku/inspector",
-  "version": "0.12.43",
+  "version": "0.12.44",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "type": "module",
@@ -44,10 +44,10 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.64"
+    "@pikku/core": "^0.12.65"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.64",
+    "@pikku/core": "^0.12.65",
     "@types/node": "^24.11.0"
   },
   "engines": {
