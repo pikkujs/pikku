@@ -105,6 +105,72 @@ export function assertResourceOwner(
   }
 }
 
+/** A session's trusted principals, in the order they may be read as. */
+export function sessionPrincipals(
+  session: { userId?: string; orgId?: string } | undefined
+): string[] {
+  return [session?.userId, session?.orgId].filter(
+    (principal): principal is string => Boolean(principal)
+  )
+}
+
+/**
+ * Whether `storedResourceId` belongs to `principal` under the composition
+ * {@link resolveOwnerResourceId} performs — either the bare principal or one of
+ * its `principal:` sub-partitions. The `:` is required so that `alice` does not
+ * match a `alice-evil:…` lookalike.
+ */
+export function isOwnedByPrincipal(
+  storedResourceId: string,
+  principal: string
+): boolean {
+  return (
+    storedResourceId === principal ||
+    storedResourceId.startsWith(`${principal}:`)
+  )
+}
+
+/**
+ * The `owners` constraint to pass to `AgentRunService.listThreads` for a caller.
+ *
+ * Returns `undefined` — not `[]` — for a session with no principal, because an
+ * empty list means "match nothing" whereas a sessionless deployment (agent
+ * `no-auth`) has no ownership model to constrain by. Keeping that carve-out here
+ * rather than at each call site stops it from being re-derived inconsistently.
+ */
+export function threadOwnerConstraint(
+  session: { userId?: string; orgId?: string } | undefined
+): string[] | undefined {
+  const principals = sessionPrincipals(session)
+  return principals.length > 0 ? principals : undefined
+}
+
+/**
+ * Whether a stored thread/run may be read by the caller. Shaped as a predicate
+ * so it can back a `pikkuPermission` — authorization belongs in a function's
+ * `permissions` field, never in its body.
+ *
+ * Unlike {@link assertResourceOwner}, which compares against a single composed
+ * owner key on the run path, this guards the thread-management reads where the
+ * caller supplies only a `threadId` — so ownership has to be derived from the
+ * session rather than from the request.
+ *
+ * A session with no principal means the deployment opted out of authorization
+ * (agent `no-auth`), so there is no ownership model to enforce and access is not
+ * gated — mirroring {@link resolveOwnerResourceId}'s sessionless fallback to a
+ * bare resourceId.
+ */
+export function canAccessThread(
+  storedResourceId: string,
+  session: { userId?: string; orgId?: string } | undefined
+): boolean {
+  const principals = sessionPrincipals(session)
+  if (principals.length === 0) return true
+  return principals.some((principal) =>
+    isOwnedByPrincipal(storedResourceId, principal)
+  )
+}
+
 export type StreamAIAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
   /**

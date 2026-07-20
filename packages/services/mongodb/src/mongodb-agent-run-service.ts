@@ -6,6 +6,11 @@ import type {
 } from '@pikku/core/ai-agent'
 import type { Db, Collection } from 'mongodb'
 
+// Owner ids are untrusted input to the regex, so metacharacters must not be
+// able to widen the prefix match.
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 interface AIThreadDoc {
   _id: string
   resourceId: string
@@ -71,15 +76,33 @@ export class MongoDBAgentRunService implements AgentRunService {
   async listThreads(options?: {
     agentName?: string
     resourceId?: string
+    owners?: string[]
     limit?: number
     offset?: number
   }): Promise<AIThread[]> {
-    const { agentName, resourceId, limit = 50, offset = 0 } = options ?? {}
+    const {
+      agentName,
+      resourceId,
+      owners,
+      limit = 50,
+      offset = 0,
+    } = options ?? {}
+
+    // An owners constraint is an authorization boundary, so an empty list must
+    // match nothing rather than degrade to "no filter".
+    if (owners && owners.length === 0) return []
 
     let filter: Record<string, any> = {}
 
     if (resourceId) {
       filter.resourceId = resourceId
+    }
+
+    if (owners) {
+      filter.$or = owners.flatMap((owner) => [
+        { resourceId: owner },
+        { resourceId: { $regex: `^${escapeRegExp(owner)}:` } },
+      ])
     }
 
     if (agentName) {

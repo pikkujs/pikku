@@ -5,12 +5,16 @@ import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import {
   agentSessionScope,
   assertResourceOwner,
+  canAccessThread,
   buildInstructions,
   buildToolDefs,
   createScopedChannel,
   getAddonCredentialRequirements,
+  isOwnedByPrincipal,
   resolveAgent,
   resolveOwnerResourceId,
+  sessionPrincipals,
+  threadOwnerConstraint,
 } from './ai-agent-prepare.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import type {
@@ -571,6 +575,84 @@ describe('C2 thread/run ownership + sessionScope', () => {
     assert.doesNotThrow(() =>
       assertResourceOwner('user-a:d', 'user-a:d', 'run')
     )
+  })
+})
+
+describe('thread-read ownership (session principals)', () => {
+  test('a principal owns its own bare key and any sub-partition of it', () => {
+    assert.equal(isOwnedByPrincipal('alice', 'alice'), true)
+    assert.equal(isOwnedByPrincipal('alice:project-1', 'alice'), true)
+  })
+
+  test('a principal does not own a lookalike prefix', () => {
+    assert.equal(isOwnedByPrincipal('alice-evil:p', 'alice'), false)
+    assert.equal(isOwnedByPrincipal('bob:alice:secret', 'alice'), false)
+  })
+
+  test('the caller may read a thread owned by their userId', () => {
+    assert.equal(canAccessThread('alice:default', { userId: 'alice' }), true)
+  })
+
+  test('the caller may read a thread owned by their orgId', () => {
+    assert.equal(
+      canAccessThread('org-x:default', { userId: 'alice', orgId: 'org-x' }),
+      true
+    )
+  })
+
+  test('cross-user thread reads are refused', () => {
+    assert.equal(canAccessThread('bob:secret', { userId: 'alice' }), false)
+  })
+
+  test('cross-org thread reads are refused', () => {
+    assert.equal(
+      canAccessThread('org-y:d', { userId: 'alice', orgId: 'org-x' }),
+      false
+    )
+  })
+
+  test('a forged owner prefix in the stored id cannot grant access', () => {
+    assert.equal(
+      canAccessThread('bob:alice:secret', { userId: 'alice' }),
+      false
+    )
+  })
+
+  // A deployment with no session has explicitly opted out of authorization
+  // (agent `no-auth`), so there is no ownership model to enforce — matching
+  // resolveOwnerResourceId's own sessionless fallback to a bare resourceId.
+  test('a sessionless deployment has no ownership model and is not gated', () => {
+    assert.equal(canAccessThread('anything', undefined), true)
+    assert.equal(canAccessThread('anything', {}), true)
+  })
+
+  test('sessionPrincipals lists the userId and orgId a caller can read as', () => {
+    assert.deepEqual(sessionPrincipals({ userId: 'alice', orgId: 'org-x' }), [
+      'alice',
+      'org-x',
+    ])
+    assert.deepEqual(sessionPrincipals({ userId: 'alice' }), ['alice'])
+    assert.deepEqual(sessionPrincipals(undefined), [])
+  })
+
+  test('threadOwnerConstraint scopes a session to its principals', () => {
+    assert.deepEqual(
+      threadOwnerConstraint({ userId: 'alice', orgId: 'org-x' }),
+      ['alice', 'org-x']
+    )
+  })
+
+  // undefined, not [] — [] means "match nothing", which would hide every thread
+  // from a no-auth deployment that never had an ownership model to begin with.
+  test('threadOwnerConstraint is undefined for a sessionless caller', () => {
+    assert.equal(threadOwnerConstraint(undefined), undefined)
+    assert.equal(threadOwnerConstraint({}), undefined)
+  })
+})
+
+describe('C2 sessionScope + resume ownership', () => {
+  const params = (session?: Record<string, unknown>) => ({
+    sessionService: { get: () => session } as never,
   })
 
   test('agentSessionScope reads the declared scope and defaults to user', () => {

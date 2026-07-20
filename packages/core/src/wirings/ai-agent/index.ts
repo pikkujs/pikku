@@ -14,6 +14,10 @@ export {
   type StreamAIAgentOptions,
   ToolApprovalRequired,
   ToolCredentialRequired,
+  canAccessThread,
+  isOwnedByPrincipal,
+  sessionPrincipals,
+  threadOwnerConstraint,
 } from './ai-agent-prepare.js'
 export {
   addAIAgent,

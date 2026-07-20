@@ -5,8 +5,14 @@ import type {
   AgentRunService,
 } from '@pikku/core/ai-agent'
 import type { Kysely } from 'kysely'
+import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
+
+// Owner ids routinely contain `_` (e.g. `user_123`), which LIKE treats as a
+// single-character wildcard — so a raw prefix would match a foreign owner.
+const escapeLikePattern = (value: string) =>
+  value.replace(/[\\%_]/g, (char) => `\\${char}`)
 
 export class KyselyAgentRunService implements AgentRunService {
   constructor(private db: Kysely<KyselyPikkuDB>) {}
@@ -14,10 +20,21 @@ export class KyselyAgentRunService implements AgentRunService {
   async listThreads(options?: {
     agentName?: string
     resourceId?: string
+    owners?: string[]
     limit?: number
     offset?: number
   }): Promise<AIThread[]> {
-    const { agentName, resourceId, limit = 50, offset = 0 } = options ?? {}
+    const {
+      agentName,
+      resourceId,
+      owners,
+      limit = 50,
+      offset = 0,
+    } = options ?? {}
+
+    // An owners constraint is an authorization boundary, so an empty list must
+    // match nothing rather than degrade to "no filter".
+    if (owners && owners.length === 0) return []
 
     let query = this.db
       .selectFrom('aiThreads as t')
@@ -44,6 +61,21 @@ export class KyselyAgentRunService implements AgentRunService {
 
     if (resourceId) {
       query = query.where('t.resourceId', '=', resourceId)
+    }
+
+    if (owners) {
+      query = query.where((eb) =>
+        eb.or(
+          owners.flatMap((owner) => [
+            eb('t.resourceId', '=', owner),
+            eb(
+              't.resourceId',
+              'like',
+              sql<string>`${`${escapeLikePattern(owner)}:%`} escape '\\'`
+            ),
+          ])
+        )
+      )
     }
 
     const result = await query

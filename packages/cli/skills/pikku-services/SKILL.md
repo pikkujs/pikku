@@ -118,6 +118,40 @@ const getUser = pikkuFunc({
 })
 ```
 
+### Services Are Never Optional Inside a Function
+
+**Never write a `if (!service) throw ...` existence guard in a function body.** It is dead code, and it defeats the platform.
+
+Optionality lives in exactly one place — `services.ts` / the `SingletonServices` declaration — and it means *"this may not be created"*, not *"this may be missing at call time"*. A service is optional precisely because **nothing destructures it**, and `requireSingletonServices` therefore never creates it. The moment any wired function destructures it, Pikku creates it and guarantees it is there.
+
+The types enforce this rather than merely documenting it. The inspector records the services destructured by every wired `func`, `permissions` **and** `middleware`, and emits them as `RequiredSingletonServices`. The generated function types then default their service parameter to:
+
+```typescript
+export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
+export type WiredServices = RequiredSingletonServices & Services
+```
+
+so a service that is `foo?: Foo` in `SingletonServices` arrives as a non-optional `Foo` in every function, permission and middleware that uses it. There is nothing to guard against.
+
+```typescript
+// ✅ Correct — destructure and use; creation is guaranteed by the manifest
+const listThreads = pikkuFunc({
+  func: async ({ agentRunService }, { threadId }) => {
+    return await agentRunService.getThreadMessages(threadId)
+  },
+})
+
+// ❌ Wrong — unreachable guard; signals a misunderstanding of service wiring
+const listThreads = pikkuFunc({
+  func: async ({ agentRunService }, { threadId }) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService')
+    return await agentRunService.getThreadMessages(threadId)
+  },
+})
+```
+
+If a service really is conditional at runtime (e.g. an optional integration a deployment may not configure), that is a **configuration** concern: branch on config, or fail fast at startup in `services.ts` — not per-request in every function.
+
 ### Dynamic Import Optimization
 
 Use the generated manifest to conditionally import heavy dependencies — only the services actually wired get instantiated:
