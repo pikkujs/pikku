@@ -45,6 +45,7 @@ export const addCredential: AddWiring = (
       | string
       | null
     const typeValue = getPropertyValue(obj, 'type') as string | null
+    const docsUrlValue = getPropertyValue(obj, 'docsUrl') as string | null
 
     if (!nameValue) {
       logger.critical(
@@ -179,6 +180,7 @@ export const addCredential: AddWiring = (
       displayName: displayNameValue,
       description: descriptionValue || undefined,
       type: typeValue as 'singleton' | 'wire',
+      docsUrl: docsUrlValue || undefined,
       schema: schemaLookupName,
       oauth2,
       sourceFile,

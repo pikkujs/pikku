@@ -56,6 +56,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
       const rotationPeriodValue = getPropertyValue(obj, 'rotationPeriod') as
         | string
         | null
+      const docsUrlValue = getPropertyValue(obj, 'docsUrl') as string | null
       const idValue = getPropertyValue(obj, config.idField) as string | null
 
       let schemaVariableName: string | null = null
@@ -165,6 +166,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         displayName: displayNameValue,
         description: descriptionValue || undefined,
         rotationPeriod: rotationPeriodValue || undefined,
+        docsUrl: docsUrlValue || undefined,
         [config.idField]: idValue,
         schema: schemaLookupName,
         sourceFile,

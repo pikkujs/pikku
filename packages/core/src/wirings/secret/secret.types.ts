@@ -5,6 +5,13 @@ export type CoreSecret<T = unknown> = {
   secretId: string
   schema: T
   /**
+   * Link to documentation explaining how to obtain this value — a provider's
+   * API-key page, a setup guide, an internal runbook. Surfaced by consoles and
+   * deploy UIs so a user facing a missing value has somewhere to go instead of
+   * an opaque identifier.
+   */
+  docsUrl?: string
+  /**
    * Optional rotation cadence for this secret, e.g. '1d', '30day', '1w'.
    * Stored in the generated secrets metadata so consumers can tell when a
    * secret was last updated and whether it is due for rotation.
@@ -27,6 +34,13 @@ export type SecretDefinitionMeta = {
   description?: string
   secretId: string
   schema?: Record<string, unknown> | string
+  /**
+   * Link to documentation explaining how to obtain this value — a provider's
+   * API-key page, a setup guide, an internal runbook. Surfaced by consoles and
+   * deploy UIs so a user facing a missing value has somewhere to go instead of
+   * an opaque identifier.
+   */
+  docsUrl?: string
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string
   sourceFile?: string
