@@ -1105,6 +1105,109 @@ describe('streamAIAgent', () => {
       },
     ])
   })
+  /**
+   * `send` is synchronous, so the persisting channel cannot await its flush and
+   * calls it fire-and-forget. Any rejection from storage — a dropped connection,
+   * or a model reusing a toolCallId, which is a primary key in AI storage — then
+   * surfaces as an unhandled rejection and takes the whole server process down
+   * with it. A failed persist must fail (or degrade) the run, not the process.
+   */
+  test('a storage failure while streaming does not become an unhandled rejection', async () => {
+    addTestAgent('storage-failure-agent')
+
+    const events: AIStreamEvent[] = []
+    const loggedErrors: unknown[] = []
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: (...args: unknown[]) => {
+          loggedErrors.push(args)
+        },
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        // Emits through the channel the way the real runner does: the persisting
+        // channel flushes fire-and-forget on `usage`, which is the path that
+        // cannot await and so cannot catch.
+        stream: async (
+          _params: unknown,
+          channel: AIStreamChannel
+        ): Promise<AIAgentStepResult> => {
+          channel.send({
+            type: 'text-delta',
+            text: 'persisted text',
+          } as AIStreamEvent)
+          channel.send({
+            type: 'usage',
+            tokens: { input: 1, output: 1 },
+            model: 'test/test-model',
+          } as AIStreamEvent)
+          return makeStepResult({ text: 'persisted text' })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-storage-failure',
+        updateRun: async () => {},
+      },
+      aiStorage: {
+        getThread: async () => undefined,
+        createThread: async () => {},
+        getMessages: async () => [],
+        // Fails only on the assistant/tool write the persisting channel makes,
+        // the way a repeated toolCallId collides on its primary key — the
+        // initial user-message save is awaited and must still succeed.
+        saveMessages: async (_threadId: string, messages: AIMessage[]) => {
+          if (messages.some((m) => m.role !== 'user')) {
+            throw new Error('UNIQUE constraint failed: ai_tool_call.id')
+          }
+        },
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown) => unhandled.push(reason)
+    process.on('unhandledRejection', onUnhandled)
+
+    try {
+      await streamAIAgent(
+        'storage-failure-agent',
+        {
+          message: 'hello',
+          threadId: 'thread-storage-failure',
+          resourceId: 'resource-storage-failure',
+        },
+        {
+          channelId: 'channel-storage-failure',
+          openingData: undefined,
+          state: 'open',
+          send: (event: AIStreamEvent) => {
+            events.push(event)
+          },
+          close: () => {},
+        },
+        {}
+      )
+      // unhandledRejection is emitted on a later macrotask, so the floating
+      // flush promise needs a real timer to settle before asserting.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+    }
+
+    assert.deepEqual(
+      unhandled,
+      [],
+      'a storage failure must not escape as an unhandled rejection'
+    )
+    assert.ok(
+      loggedErrors.length > 0,
+      'the storage failure should be reported rather than swallowed'
+    )
+  })
 })
 
 describe('ai-agent-stream helpers', () => {

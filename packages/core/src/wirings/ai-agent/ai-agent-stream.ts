@@ -58,7 +58,8 @@ type PersistingChannel = AIStreamChannel & {
 function createPersistingChannel(
   parent: AIStreamChannel,
   storage: AIStorageService | undefined,
-  threadId: string
+  threadId: string,
+  logger?: { error: (...args: any[]) => void }
 ): PersistingChannel {
   let fullText = ''
   let stepText = ''
@@ -111,6 +112,23 @@ function createPersistingChannel(
     }
   }
 
+  /**
+   * `send` is synchronous and so cannot await the flush. A rejection would have
+   * nothing to propagate to and would take the process down as an unhandled
+   * rejection — a model reusing a toolCallId, which is a primary key in AI
+   * storage, is enough to trigger it. Persistence from inside `send` is
+   * therefore best-effort: the run carries on, and the awaited `flush()` on the
+   * suspend paths still surfaces failures to its caller.
+   */
+  const flushDetached = () => {
+    void flushStep().catch((error) => {
+      logger?.error('Failed to persist agent messages', {
+        threadId,
+        error,
+      })
+    })
+  }
+
   const channel: PersistingChannel = {
     channelId: parent.channelId,
     openingData: parent.openingData,
@@ -157,10 +175,10 @@ function createPersistingChannel(
             totalUsage.inputTokens += event.tokens.input
             totalUsage.outputTokens += event.tokens.output
             if (event.model) totalUsage.model = event.model
-            flushStep()
+            flushDetached()
             break
           case 'done':
-            flushStep()
+            flushDetached()
             break
         }
       }
@@ -731,7 +749,12 @@ export async function streamAIAgent(
     }
   )
 
-  const persistingChannel = createPersistingChannel(channel, storage, threadId)
+  const persistingChannel = createPersistingChannel(
+    channel,
+    storage,
+    threadId,
+    singletonServices.logger
+  )
 
   const wrappedChannel =
     allChannelMiddleware.length > 0
@@ -1237,7 +1260,8 @@ async function continueAfterToolResult(
   const persistingChannel = createPersistingChannel(
     channel,
     storage,
-    run.threadId
+    run.threadId,
+    singletonServices.logger
   )
 
   const wrappedChannel =
