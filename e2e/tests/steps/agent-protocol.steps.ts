@@ -84,6 +84,24 @@ When(
 )
 
 When(
+  'I run agent {string} with script {string} and message {string} and context {string}',
+  async function (
+    this: AgentWorld,
+    agent: string,
+    script: string,
+    message: string,
+    context: string
+  ) {
+    this.agentMessage = message
+    const actor = await this.signInAs(GUEST_USER)
+    this.agentResponse = await callAgent(actor, agent, {
+      ...body(this, script, message),
+      context,
+    })
+  }
+)
+
+When(
   'I stream agent {string} with script {string} and message {string}',
   async function (
     this: AgentWorld,
@@ -169,6 +187,22 @@ Then(
   async function (this: AgentWorld, index: number, temperature: number) {
     const calls = await callsFor(this.agentMessage!)
     expect(calls[index - 1]?.temperature).toBe(temperature)
+  }
+)
+
+Then(
+  'model call {int} used model {string}',
+  async function (this: AgentWorld, index: number, model: string) {
+    const calls = await callsFor(this.agentMessage!)
+    expect(calls[index - 1]?.modelId).toBe(model)
+  }
+)
+
+Then(
+  'model call {int} instructions include {string}',
+  async function (this: AgentWorld, index: number, fragment: string) {
+    const calls = await callsFor(this.agentMessage!)
+    expect(calls[index - 1]?.instructions ?? '').toContain(fragment)
   }
 )
 
