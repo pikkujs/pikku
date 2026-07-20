@@ -17,6 +17,7 @@ import {
   threadOwnerConstraint,
 } from './ai-agent-prepare.js'
 import { ForbiddenError } from '../../errors/errors.js'
+import { pikkuAuth } from '../../function/functions.types.js'
 import type {
   AIStreamChannel,
   AIStreamEvent,
@@ -400,6 +401,71 @@ describe('ai-agent-prepare', () => {
       },
       required: ['message', 'session'],
     })
+  })
+
+  /**
+   * The permission's `pikkuAuth` brand survives only on the live objects in the
+   * function config, not on the metadata. Reading the metadata's by-name
+   * reference resolves against a registry nothing populates, so it collects no
+   * predicate and lets every gated tool through — this pins that the live config
+   * is what gets evaluated.
+   */
+  const addFilterAgent = (allow: boolean) => {
+    addAgent('gatekeeper', { tools: ['gated'] })
+    pikkuState(null, 'agent', 'agentsMeta').gatekeeper = {
+      ...pikkuState(null, 'agent', 'agentsMeta').gatekeeper,
+      tools: ['gated'],
+    } as any
+    pikkuState(null, 'rpc', 'meta').gated = 'gated'
+    pikkuState(null, 'function', 'meta').gated = {
+      description: 'Gated tool',
+      permissions: [{ type: 'wire', name: 'mayUse' }],
+      inputSchemaName: 'GatedInput',
+      sessionless: true,
+    } as any
+    pikkuState(null, 'misc', 'schemas').set('GatedInput', {
+      type: 'object',
+      properties: {},
+    })
+    pikkuState(null, 'function', 'functions').set('gated', {
+      func: async () => ({ ok: true }),
+      permissions: { mayUse: pikkuAuth(async () => allow) },
+    } as any)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { warn: () => {}, debug: () => {} },
+    } as any)
+  }
+
+  const sessionParams = () =>
+    ({
+      sessionService: { get: async () => ({ userId: 'u1' }) },
+    }) as any
+
+  test('buildToolDefs offers a tool whose live auth predicate passes', async () => {
+    addFilterAgent(true)
+    const { tools } = await buildToolDefs(
+      sessionParams(),
+      new Map<string, string>(),
+      'resource-1',
+      'gatekeeper',
+      null
+    )
+    assert.deepEqual(
+      tools.map((t) => t.name),
+      ['gated']
+    )
+  })
+
+  test('buildToolDefs filters out a tool whose live auth predicate fails', async () => {
+    addFilterAgent(false)
+    const { tools } = await buildToolDefs(
+      sessionParams(),
+      new Map<string, string>(),
+      'resource-1',
+      'gatekeeper',
+      null
+    )
+    assert.deepEqual(tools, [])
   })
 
   test('buildToolDefs adds a workflow tool that runs the workflow and returns its output', async () => {

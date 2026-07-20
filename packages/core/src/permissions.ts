@@ -1,7 +1,6 @@
 import type {
   CoreServices,
   CoreUserSession,
-  PermissionMetadata,
   PikkuWire,
 } from './types/core.types.js'
 import type {
@@ -60,29 +59,6 @@ const verifyPermissions = async (
   return false
 }
 
-/**
- * Retrieves a registered permission function by its name.
- *
- * This function looks up permissions that was registered with registerPermission.
- * It's used internally by the framework to resolve permission references in metadata.
- *
- * @param {string} name - The unique name (pikkuFuncId) of the permission function.
- * @param {string | null} packageName - Optional package namespace.
- * @returns {CorePikkuPermission | undefined} The permission function, or undefined if not found.
- *
- * @internal
- */
-const getPermissionByName = (
-  name: string,
-  packageName: string | null = null
-): CorePikkuPermission | undefined => {
-  const permissionStore = pikkuState(packageName, 'misc', 'permissions')
-  const permission = permissionStore[name]
-  if (Array.isArray(permission) && permission.length === 1) {
-    return permission[0]
-  }
-  return undefined
-}
 
 const globalPermissionsCache: Record<
   string,
@@ -227,14 +203,20 @@ export const runPermissions = async ({
  * request data which isn't available at filter time. Global auth requirements
  * are included so a filtered list honours app-wide auth.
  *
- * @param funcPermissions - The PermissionMetadata[] from function or agent metadata
+ * `funcPermissions` is the live {@link CorePermissionGroup} from the function or
+ * agent config, not the metadata form: the `pikkuAuth` brand only survives on
+ * the actual predicate objects, and the by-name registry those metadata entries
+ * would resolve against is never populated. Passing metadata here would silently
+ * collect nothing and let every gated tool through.
+ *
+ * @param funcPermissions - The live permission group from the func/agent config
  * @param session - The user's session
  * @param services - Singleton services
  * @param packageName - Optional package namespace
  * @returns true if the session passes the auth checks (or no auth checks exist)
  */
 export const checkAuthPermissions = async (
-  funcPermissions: PermissionMetadata[] | undefined,
+  funcPermissions: CorePermissionGroup | undefined,
   session: CoreUserSession,
   services: CoreServices,
   packageName: string | null = null
@@ -274,15 +256,8 @@ export const checkAuthPermissions = async (
     collect(entry)
   }
 
-  if (funcPermissions?.length) {
-    for (const meta of funcPermissions) {
-      if (meta.type === 'wire') {
-        const permission = getPermissionByName(meta.name, packageName)
-        if (permission) {
-          collect(permission)
-        }
-      }
-    }
+  if (funcPermissions) {
+    collect(funcPermissions)
   }
 
   // No auth permissions = allowed (only data-dependent permissions exist)

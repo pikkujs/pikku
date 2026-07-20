@@ -6,7 +6,7 @@ import {
   clearPermissionsCache,
   checkAuthPermissions,
 } from './permissions.js'
-import { pikkuState, resetPikkuState } from './pikku-state.js'
+import { resetPikkuState } from './pikku-state.js'
 import { pikkuAuth } from './function/functions.types.js'
 import type { CoreServices, CoreUserSession } from './types/core.types.js'
 import type { CorePermissionGroup } from './function/functions.types.js'
@@ -190,25 +190,31 @@ describe('checkAuthPermissions', () => {
     )
   })
 
-  test('resolves a function-referenced (wire) auth predicate by name', async () => {
-    const store = pikkuState(null, 'misc', 'permissions')
-    store['isAdmin'] = [pikkuAuth(async () => false)] as any
+  test('evaluates a live pikkuAuth predicate from the config group', async () => {
     assert.equal(
       await checkAuthPermissions(
-        [{ type: 'wire', name: 'isAdmin' }],
+        { admin: pikkuAuth(async () => false) as any },
         mockSession,
         mockServices
       ),
       false
     )
+    assert.equal(
+      await checkAuthPermissions(
+        { admin: pikkuAuth(async () => true) as any },
+        mockSession,
+        mockServices
+      ),
+      true
+    )
   })
 
   test('ignores data-dependent permissions (no auth marker)', async () => {
-    const store = pikkuState(null, 'misc', 'permissions')
-    store['ownsRow'] = [async () => false] as any
+    // A bare pikkuPermission carries no __pikkuAuth brand, so it cannot be
+    // evaluated at filter time and must not gate the tool list.
     assert.equal(
       await checkAuthPermissions(
-        [{ type: 'wire', name: 'ownsRow' }],
+        { ownsRow: (async () => false) as any },
         mockSession,
         mockServices
       ),

@@ -536,11 +536,17 @@ export async function buildToolDefs(
         continue
       }
 
-      // Filter out tools the user doesn't have auth for
+      // Filter out tools the user doesn't have auth for. The `pikkuAuth` brand
+      // only survives on the live permission objects in the function config, so
+      // the check reads those rather than the metadata (whose by-name registry
+      // is never populated, which would let every gated tool through).
       if (fnMeta.permissions?.length) {
         if (!session) continue
+        const funcConfig = pikkuFuncId
+          ? pikkuState(resolvedPkg, 'function', 'functions').get(pikkuFuncId)
+          : undefined
         const allowed = await checkAuthPermissions(
-          fnMeta.permissions,
+          funcConfig?.permissions,
           session,
           singletonServices,
           resolvedPkg
@@ -636,11 +642,13 @@ export async function buildToolDefs(
         continue
       }
 
-      // Filter out sub-agents the user doesn't have auth for
+      // Filter out sub-agents the user doesn't have auth for, reading the live
+      // agent config for the same reason the tool path does.
       if (subMeta.permissions?.length) {
         if (!session) continue
+        const subAgent = pikkuState(null, 'agent', 'agents').get(subAgentName)
         const allowed = await checkAuthPermissions(
-          subMeta.permissions,
+          subAgent?.permissions,
           session,
           singletonServices
         )
