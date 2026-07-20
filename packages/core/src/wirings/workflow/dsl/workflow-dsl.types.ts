@@ -288,6 +288,13 @@ export interface SleepStepMeta {
   stepName: string
   /** Sleep duration */
   duration: string | number
+  /**
+   * Source text of a duration only known at runtime (e.g. a loop variable).
+   * The closure evaluates it, so it is legal DSL; it is kept separate from
+   * `duration` so regenerated code emits it raw rather than as a string
+   * literal, exactly as `expression` does on a set step.
+   */
+  expression?: string
 }
 
 /**

@@ -605,7 +605,11 @@ function nodeToCode(
     switch (flowNode.flow) {
       case 'sleep':
         lines.push(
-          `${indent}await workflow.sleep('${escapeSingleQuotes(flowNode.stepName || 'Sleep')}', ${durationToCode(flowNode.duration)})`
+          `${indent}await workflow.sleep('${escapeSingleQuotes(flowNode.stepName || 'Sleep')}', ${
+            typeof flowNode.expression === 'string'
+              ? flowNode.expression
+              : durationToCode(flowNode.duration)
+          })`
         )
         lines.push('')
         break

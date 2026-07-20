@@ -793,7 +793,19 @@ function extractSleepStep(
     if (numValue !== null) {
       duration = numValue
     } else {
-      duration = extractStringLiteral(args[1], context.checker)
+      try {
+        duration = extractStringLiteral(args[1], context.checker)
+      } catch {
+        // A duration computed at runtime (a loop variable, a field off the
+        // input) is legal: the closure evaluates it. Record the source text so
+        // the graph can show what it waits on, rather than failing the workflow.
+        return {
+          type: 'sleep',
+          stepName,
+          duration: '',
+          expression: args[1].getText(),
+        }
+      }
     }
 
     return {

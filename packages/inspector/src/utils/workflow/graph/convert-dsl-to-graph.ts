@@ -144,6 +144,7 @@ function convertStepToNode(
         flow: 'sleep',
         stepName: step.stepName,
         duration: step.duration,
+        expression: step.expression,
         next: nextNodeId,
       }
       return [node]
