@@ -1,14 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Text,
-  Button,
-  Alert,
-  Group,
-  Avatar,
-  Badge,
-  Box,
-} from '@pikku/mantine/core'
+import { Text, Button, Alert, Group, Avatar, Box } from '@pikku/mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { AlertTriangle, UserCog, ShieldCheck } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
@@ -41,7 +33,7 @@ export const AdminUsersPage: React.FC = () => {
       header={
         <ListPageHeader
           title={m.users_title()}
-          docsHref="https://www.better-auth.com/docs/plugins/admin"
+          docsHref="https://pikku.dev/docs/authentication/scopes"
           search={{
             placeholder: m.users_search_placeholder(),
             value: search,
@@ -59,7 +51,7 @@ export const AdminUsersPage: React.FC = () => {
         <TableListPage<AuthUser>
           icon={UserCog}
           title={m.users_title()}
-          docsHref="https://www.better-auth.com/docs/plugins/admin"
+          docsHref="https://pikku.dev/docs/authentication/scopes"
           data={users}
           getKey={(u) => u.id}
           loading={usersQuery.isLoading}
@@ -84,28 +76,6 @@ export const AdminUsersPage: React.FC = () => {
                       {asI18n(u.email)}
                     </Text>
                   </Box>
-                </Group>
-              ),
-            },
-            {
-              key: 'role',
-              header: m.users_col_role(),
-              render: (u) => (
-                <Group gap={6}>
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    color={u.role === 'admin' ? 'blue' : 'gray'}
-                  >
-                    {u.role === 'admin'
-                      ? m.users_role_admin()
-                      : m.users_role_user()}
-                  </Badge>
-                  {u.banned && (
-                    <Badge size="sm" variant="light" color="red">
-                      {m.users_banned()}
-                    </Badge>
-                  )}
                 </Group>
               ),
             },

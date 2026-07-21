@@ -5,8 +5,10 @@ import { NotAuthorized } from './NotAuthorized'
 
 /**
  * Admin-only gate for the console. Blocks all app UI until there is a Better
- * Auth session whose user has `role: 'admin'`. No session → login; signed in
- * but not an admin → not-authorized. Wrap the authenticated route group with it.
+ * Auth session whose user holds the `admin` scope — pikku's parent-grant rule
+ * makes that the umbrella over every `admin:*` capability the console exposes.
+ * No session → login; signed in but without the scope → not-authorized. Wrap
+ * the authenticated route group with it.
  */
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
   children,
