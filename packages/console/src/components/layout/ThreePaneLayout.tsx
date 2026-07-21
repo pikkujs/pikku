@@ -1,5 +1,11 @@
 import React from 'react'
-import { ActionIcon, Box, Tooltip, UnstyledButton } from '@pikku/mantine/core'
+import {
+  ActionIcon,
+  Box,
+  Text,
+  Tooltip,
+  UnstyledButton,
+} from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { useLocalStorage } from '@mantine/hooks'
 import {
@@ -73,7 +79,9 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   const showLeft = hasLeft && !leftCollapsed
   const showRight = hasRight && !rightCollapsed
 
-  const showPaneHeader = hasLeft || hasRight || !!lead || !!filters
+  // The middle pane's header carries only its own content (selector/badges) —
+  // each side pane owns the control that collapses it.
+  const showPaneHeader = !!lead || !!filters
 
   return (
     <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
@@ -102,7 +110,45 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 className={classes.listSurfaceCard}
                 style={{ height: '100%' }}
               >
-                {runsPanel}
+                <Box
+                  px={8}
+                  style={{
+                    height: 42,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    borderBottom: '1px solid var(--app-row-border)',
+                  }}
+                >
+                  <Text
+                    size="sm"
+                    fw={600}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {listLabel ?? m.pane_list()}
+                  </Text>
+                  <Tooltip label={m.pane_hide_list()}>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      aria-label={m.pane_hide_list()}
+                      onClick={() => setLeftCollapsed(true)}
+                    >
+                      <PanelLeftClose size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Box>
+                <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                  {runsPanel}
+                </Box>
               </Box>
             ) : (
               <Tooltip label={m.pane_show_list()} position="right">
@@ -137,27 +183,6 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 borderBottom: '1px solid var(--app-row-border)',
               }}
             >
-              {hasLeft && (
-                <Tooltip
-                  label={leftCollapsed ? m.pane_show_list() : m.pane_hide_list()}
-                >
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label={
-                      leftCollapsed ? m.pane_show_list() : m.pane_hide_list()
-                    }
-                    onClick={() => setLeftCollapsed((v) => !v)}
-                  >
-                    {leftCollapsed ? (
-                      <PanelLeftOpen size={16} />
-                    ) : (
-                      <PanelLeftClose size={16} />
-                    )}
-                  </ActionIcon>
-                </Tooltip>
-              )}
               <Box
                 style={{
                   flex: 1,
@@ -170,31 +195,6 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 {lead}
                 {filters}
               </Box>
-              {hasRight && (
-                <Tooltip
-                  label={
-                    rightCollapsed ? m.pane_show_details() : m.pane_hide_details()
-                  }
-                >
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label={
-                      rightCollapsed
-                        ? m.pane_show_details()
-                        : m.pane_hide_details()
-                    }
-                    onClick={() => setRightCollapsed((v) => !v)}
-                  >
-                    {rightCollapsed ? (
-                      <PanelRightOpen size={16} />
-                    ) : (
-                      <PanelRightClose size={16} />
-                    )}
-                  </ActionIcon>
-                </Tooltip>
-              )}
             </Box>
           )}
           <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -222,6 +222,19 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                   workflowGraph={false}
                   hideClose
                   hideRootTitle={!!lead}
+                  collapseAction={
+                    <Tooltip label={m.pane_hide_details()}>
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        aria-label={m.pane_hide_details()}
+                        onClick={() => setRightCollapsed(true)}
+                      >
+                        <PanelRightClose size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  }
                 />
               </Box>
             ) : (

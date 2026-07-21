@@ -22,6 +22,10 @@ interface PanelContainerProps {
    *  it here is redundant. Drilled-in panels (steps, sub-items) keep their
    *  header + back button. */
   hideRootTitle?: boolean
+  /** The pane's own collapse control, rendered at the right edge of the panel
+   *  header. Lives here (not in the middle pane) so the control sits in the
+   *  panel it actually collapses. */
+  collapseAction?: React.ReactNode
 }
 
 export const PanelContainer: React.FC<PanelContainerProps> = ({
@@ -29,6 +33,7 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
   workflowGraph = true,
   hideClose = false,
   hideRootTitle = false,
+  collapseAction,
 }) => {
   const { panels, activePanel, closePanel, goBack } = usePanelContext()
   useLocale()
@@ -43,11 +48,16 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
 
   if (!activePanelData || children.length === 0) {
     return (
-      <Center h="100%" p="xl">
-        <Text c="dimmed" ta="center">
-          {emptyMessage ?? m.panel_select_item()}
-        </Text>
-      </Center>
+      <Box
+        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      >
+        {collapseAction && <SidePanelHeader>{collapseAction}</SidePanelHeader>}
+        <Center style={{ flex: 1, minHeight: 0 }} p="xl">
+          <Text c="dimmed" ta="center">
+            {emptyMessage ?? m.panel_select_item()}
+          </Text>
+        </Center>
+      </Box>
     )
   }
 
@@ -55,17 +65,30 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
     <Box style={{ height: '100%' }}>
       {children.map((child) =>
         child.selfContained ? (
-          <Box key={child.id} style={{ height: '100%' }}>
-            {child.content}
+          <Box
+            key={child.id}
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          >
+            {collapseAction && (
+              <SidePanelHeader>{collapseAction}</SidePanelHeader>
+            )}
+            <Box style={{ flex: 1, minHeight: 0 }}>{child.content}</Box>
           </Box>
         ) : (
           <SidePanel key={child.id}>
-            {!(hideRootTitle && activePanelData.history.length === 0) && (
+            {(!(hideRootTitle && activePanelData.history.length === 0) ||
+              collapseAction) && (
               <SidePanelHeader
-                title={asI18n(activePanelData.title)}
+                title={
+                  hideRootTitle && activePanelData.history.length === 0
+                    ? undefined
+                    : asI18n(activePanelData.title)
+                }
                 onBack={activePanelData.history.length > 0 ? goBack : undefined}
                 onClose={hideClose ? undefined : () => closePanel(activePanel!)}
-              />
+              >
+                {collapseAction}
+              </SidePanelHeader>
             )}
             <SidePanelContent>
               <Stack gap="xl" px="md">
