@@ -1,3 +1,123 @@
+## 0.12.66
+
+### Patch Changes
+
+- 5f19016: Widen the generated agent HTTP surface, and guard attachment downloads against SSRF.
+
+  `agentCaller` and `agentStreamCaller` declared only `message`, `threadId` and
+  `resourceId` (plus `context` on the stream route), so `attachments`, `model`,
+  `temperature` — all accepted by `AIAgentInput` — were unreachable over the
+  shipped HTTP contract. No deployed app could send an attachment or a per-request
+  model override. Both callers now share an `AgentCallerInput` type covering every
+  optional field and forward each one to the RPC.
+
+  Both callers declare that shape **inline** in the generic position rather than
+  behind a shared named alias: the schema extractor only reads type literals there
+  and synthesises the schema name from the function name. Behind an alias it
+  records an `inputSchemaName` with no schema generated for it, and every agent
+  HTTP call then fails at runtime with `MissingSchemaError`.
+
+  Widening that surface makes caller-supplied attachment URLs reachable, which is
+  an SSRF vector: the AI SDK downloads attachment URLs **server-side** whenever the
+  model cannot consume them natively, using an unguarded `fetch`. A caller could
+  point an attachment at the cloud metadata endpoint or another internal host and
+  have the response relayed into the model's context. `VercelAIAgentRunner` now
+  passes an `experimental_download` implementation backed by `safeFetch` (which
+  refuses private/internal hosts and non-HTTP schemes, and re-validates every
+  redirect hop) to both `streamText` and `generateText`. URLs the model supports
+  natively are passed through untouched, so the provider still fetches those
+  itself.
+
+  The runner takes an optional `allowedAttachmentHosts` allowlist, carried across
+  `withApiKey`. `safeFetch` is now exported from `@pikku/core/safe-fetch`.
+
+- 78e4778: Stop a failed message persist during an agent stream from killing the process.
+
+  The persisting channel flushes from inside `send`, which is synchronous and so cannot await the flush. Any rejection — a dropped storage connection, or a model reusing a `toolCallId`, which is a primary key in AI storage — escaped as an unhandled rejection and took the whole server down. Persistence from `send` is now best-effort and logged; the awaited `flush()` on the suspend paths still surfaces failures to its caller.
+
+- 4324652: Scope AI agent thread reads to the calling session.
+
+  The generated thread-management functions (`getAgentThreads`,
+  `getAgentThreadMessages`, `getAgentThreadRuns`, `deleteAgentThread`) keyed purely
+  off a caller-supplied `threadId` and treated `resourceId` as an optional filter,
+  so omitting it enumerated every tenant's threads.
+  - `listThreads` gains an `owners` **authorization constraint** (distinct from the
+    `resourceId` filter): an empty array matches nothing, and it is always derived
+    from the session, never from input. Implemented across the Kysely, Redis and
+    MongoDB agent run services, with LIKE/regex metacharacter escaping so an owner
+    id containing `_` or `%` cannot match a foreign owner.
+  - The three `threadId`-keyed functions are now guarded by an `isThreadOwner`
+    `pikkuPermission` rather than an in-body check. A thread that does not exist is
+    denied rather than 404'd, so it is indistinguishable from one owned by someone
+    else.
+  - New `@pikku/core/ai-agent` helpers: `canAccessThread`, `threadOwnerConstraint`,
+    `sessionPrincipals`, `isOwnedByPrincipal`.
+
+  Services destructured by a wired function are now non-optional inside it.
+
+  The inspector already aggregated the services used by every wired `func`,
+  `permissions` and `middleware` into `RequiredSingletonServices`, but the
+  generated function types defaulted their service parameter to the raw `Services`
+  — so a service declared `foo?: Foo` still arrived as possibly-undefined, forcing
+  `if (!foo) throw new MissingServiceError(...)` guards that could never fire.
+  Generated types now expose `WiredSingletonServices` / `WiredServices`
+  (`RequiredSingletonServices & Services`) and default the `RequiredServices`
+  generic of functions, permissions, middleware, auth and approval-description
+  helpers to them. Optionality now means only what it should: "this service may
+  not be created, because nothing uses it".
+
+- de044f8: Fix the agent tool-list permission filter failing open.
+
+  `buildToolDefs` filtered permission-gated tools by resolving `checkAuthPermissions` from a function's _metadata_ — a by-name lookup into the `misc/permissions` state that nothing ever populates. It therefore collected no predicate and returned `true`, so every auth-gated tool was offered to the model regardless of session (its input schema and description leaked, and the model could attempt calls that then failed at invocation).
+
+  `checkAuthPermissions` now takes the live `CorePermissionGroup` from the function/agent config, where the `pikkuAuth` brand actually survives — matching how the agent's own gate and the function runner already resolve permissions by reference. The dead by-name lookup (`getPermissionByName`) is removed. Enforcement on invocation was never affected; this closes the exposure gap in the offered tool list.
+
+- cd1a811: warn instead of silently ignoring unknown long CLI options
+
+  An unknown long option (`--sektion functions` or `--sektion=functions`) was parsed
+  into the options object and then silently dropped by the command's input schema —
+  the command ran with the real option at its default and produced plausible-but-wrong
+  output. Unknown long options are still accepted (forward compatibility is preserved),
+  but the parser now records a warning that the runner prints to stderr, e.g.
+  `Warning: Unknown option: --sektion (ignored) Did you mean --section?`.
+
+- 19fa6f0: Fix `HTTPRouteConfig` and `HTTPRoutesGroupConfig`'s default `PikkuPermission`/`PikkuMiddleware` type parameters under-specifying their own generic arguments (e.g. `CorePikkuPermission<any>` instead of `CorePikkuPermission<any, any, any>`). The missing arguments silently fell back to `CorePikkuPermission`'s own defaults (`CoreServices`, with `schema` optional) instead of `any`, so a project whose generated services type guarantees `schema` is always present (any project using `WiredServices`-style non-optional services) failed to type-check against `defineHTTPRoutes`/`wireHTTPRoutes` with a misleading `index signature` error.
+- b501612: Enforce authorization consistently across `pikku*` primitives.
+  - `pikkuAIAgent` now enforces `permissions` (previously accepted but never
+    checked) and gains `auth` and `scopes`. Scopes are checked before permissions.
+    `auth` defaults to `false`, matching `pikkuSessionlessFunc`, since agents are
+    typically invoked from an already-authenticated function or from sessionless
+    contexts such as crons and queue workers.
+  - `pikkuWorkflowFunc` / `pikkuWorkflowComplexFunc` schema config gains `auth`
+    and `scopes` alongside `permissions`.
+  - `pikkuScenario` no longer accepts `auth`, `scopes`, or `permissions` —
+    scenarios drive the app as actors and authorize per step.
+  - `wireGateway` no longer accepts `permissions`. A gateway proxies to an agent,
+    so access is governed by normal auth plus the target agent's own rules.
+  - Removed the dead `permissions` field from `CoreWorkflow`, which was never read.
+
+  Closed two paths that reached user code without authorization:
+  - Gateway handlers were invoked directly, so a handler's own `auth`, `scopes`
+    and `permissions` were never evaluated. Webhook, websocket and listener
+    gateways now invoke the handler through the function runner. Handlers are
+    sessionless by default (inbound gateway traffic is platform-authenticated by
+    the adapter, not session-bearing); declare `auth: true` to require a session.
+    A gateway's own `auth` field is now honoured too — it was previously ignored.
+    Gateway middleware runs before the gate, so `wire.setSession()` in gateway
+    middleware — the idiomatic way to map a verified platform sender to a user —
+    is visible to the handler's `auth` and `scopes`.
+  - Resuming a suspended agent run (`resumeAIAgentSync`, `resumeAIAgent`) checked
+    run ownership but never re-ran the agent's own gate, so a scope or permission
+    revoked while a run was suspended did not prevent the caller from resuming it
+    and approving its pending tool calls. Both now re-run `assertAgentAuthorized`
+    before any state is mutated.
+
+- eb37b1e: Fix `voiceInput` middleware losing the runner receiver: it grabbed
+  `aiAgentRunner.transcribe` as a bare method reference, so calling it left `this`
+  undefined and threw `Cannot read properties of undefined (reading 'getModel')`
+  on the first audio attachment. It now calls `aiAgentRunner.transcribe(...)`
+  directly, preserving the receiver.
+
 ## 0.12.65
 
 ### Patch Changes

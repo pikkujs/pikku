@@ -1,3 +1,28 @@
+## 0.12.28
+
+### Patch Changes
+
+- df54b6f: Drop dead service-existence guards from the console addon functions.
+
+  All 27 `if (!service) throw new MissingServiceError(...)` guards are removed.
+  A service is optional only when nothing destructures it — in which case it is
+  never created — so a guard inside a function that _does_ destructure it can
+  never fire. Now that wired functions receive `WiredServices`, these are dead
+  code and the compiler agrees: the addon typechecks with the guards gone.
+
+  Two function descriptions that documented the unreachable `MissingServiceError`
+  are corrected.
+
+- Updated dependencies [5f19016]
+- Updated dependencies [78e4778]
+- Updated dependencies [4324652]
+- Updated dependencies [de044f8]
+- Updated dependencies [cd1a811]
+- Updated dependencies [19fa6f0]
+- Updated dependencies [b501612]
+- Updated dependencies [eb37b1e]
+  - @pikku/core@0.12.66
+
 ## 0.12.27
 
 ### Patch Changes

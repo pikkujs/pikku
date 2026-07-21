@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@pikku/bun-server": "^0.12.4",
-    "@pikku/core": "^0.12.65",
+    "@pikku/core": "^0.12.66",
     "@pikku/schedule": "^0.12.4",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3"
