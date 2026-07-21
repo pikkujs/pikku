@@ -9,7 +9,8 @@ import { ADMIN_USER, GUEST_USER } from '../../src/auth-fixtures.js'
 // session cookie, the same way the console does — the point is to prove the
 // addon's privileged surface is gated by the global admin permission, not to
 // mock the check. The seeded admin/guest users are provisioned at server boot
-// (src/lifecycle.ts → seedAuthUsers), the admin carrying role='admin'.
+// (src/lifecycle.ts → seedAuthUsers), the admin then granted the umbrella
+// `admin` scope by seedScopes.
 
 const accounts = { admin: ADMIN_USER, guest: GUEST_USER }
 

@@ -11,7 +11,7 @@ import { createAuthClient } from 'better-auth/client'
 import { config } from './types.js'
 import { ADMIN_USER, type SeedUser } from '../../src/auth-fixtures.js'
 
-const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
+export const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
 
 export class AgentWorld extends World {
   browser!: Browser
@@ -108,11 +108,12 @@ export class AgentWorld extends World {
   async rpcResponse(
     actor: Actor,
     name: string,
-    data: unknown = null
+    data: unknown = null,
+    headers: Record<string, string> = {}
   ): Promise<{ status: number; body: any }> {
     const res = await actor.cookieFetch(`${config.apiUrl}/rpc/${name}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ data }),
     })
     const text = await res.text()
@@ -166,22 +167,17 @@ export class AgentWorld extends World {
     return res.json()
   }
 
-  // Resolve a seeded user's Better Auth id by email, via the admin list-users
-  // endpoint. Cached per scenario. Better Auth owns the user table, so ids are
-  // only knowable at runtime.
+  // Resolve a seeded user's Better Auth id by email, via the console addon's
+  // user directory RPC (gated on `admin:users:list`). Cached per scenario.
+  // Better Auth owns the user table, so ids are only knowable at runtime.
   private userIds = new Map<string, string>()
   async userIdByEmail(email: string): Promise<string> {
     const cached = this.userIds.get(email)
     if (cached) {
       return cached
     }
-    const actor = await this.authenticatedActor()
-    const res = await actor.cookieFetch(
-      `${config.apiUrl}/api/auth/admin/list-users?limit=100`,
-      { method: 'GET' }
-    )
-    const data = await res.json()
-    const users = Array.isArray(data) ? data : data.users
+    const data = await this.consoleRpc('console:listUsers', { limit: 100 })
+    const users = data.users ?? []
     for (const user of users) {
       this.userIds.set(user.email, user.id)
     }

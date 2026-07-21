@@ -6,8 +6,6 @@ import {
   type SeedUser,
 } from './auth-fixtures.js'
 
-type SeedServices = CoreSingletonServices & { kysely?: any }
-
 const signUp = async (baseUrl: string, user: SeedUser) => {
   const res = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
     method: 'POST',
@@ -20,18 +18,13 @@ const signUp = async (baseUrl: string, user: SeedUser) => {
 }
 
 export const seedAuthUsers = async (
-  services: SeedServices,
+  services: CoreSingletonServices,
   baseUrl: string
 ) => {
   await signUp(baseUrl, ADMIN_USER)
   await signUp(baseUrl, GUEST_USER)
   await signUp(baseUrl, STAFF_USER)
-  await (services.kysely as any)
-    .updateTable('user')
-    .set({ role: 'admin' })
-    .where('email', 'in', [ADMIN_USER.email, STAFF_USER.email])
-    .execute()
   services.logger.info(
-    `seeded console users: ${ADMIN_USER.email} (admin), ${STAFF_USER.email} (admin, no scopes), ${GUEST_USER.email}`
+    `seeded console users: ${ADMIN_USER.email}, ${STAFF_USER.email}, ${GUEST_USER.email} (admin grants follow in seedScopes)`
   )
 }

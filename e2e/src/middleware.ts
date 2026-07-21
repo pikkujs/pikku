@@ -2,7 +2,6 @@ import { cors } from '@pikku/core/middleware'
 import { addHTTPMiddleware } from '@pikku/core/http'
 import type { CoreSingletonServices, CorePikkuMiddleware } from '@pikku/core'
 import { betterAuthSession } from '@pikku/better-auth'
-import type { UserSession } from './application-types.js'
 // Registers the console addon's admin gate (a global permission). Imported here
 // so it runs at bootstrap alongside the global middleware registrations.
 import './console-authz.js'
@@ -50,12 +49,6 @@ const loadCredentials: CorePikkuMiddleware = async (services, wire, next) => {
 // Registered before the generated betterAuthSession (import order) so the
 // impersonation overlay wins; the generated one then skips (session already set).
 const impersonationSession = betterAuthSession({
-  // Carry the better-auth role into the pikku session so the console admin gate
-  // can read it — the default map returns only userId.
-  mapSession: (result): UserSession => ({
-    userId: result.user.id,
-    role: result.user.role,
-  }),
   impersonation: {
     loadUser: (userId, services) =>
       (services as CoreSingletonServices & { kysely: any }).kysely

@@ -1,5 +1,6 @@
+import { ADMIN_SCOPE_ROOT } from '@pikku/better-auth'
 import type { SingletonServices } from './application-types.js'
-import { ADMIN_USER, GUEST_USER } from './auth-fixtures.js'
+import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
 
 /** Role granting the console's own scope-admin capabilities. */
@@ -30,6 +31,14 @@ const userIdByEmail = async (
  *   RPCs return 200. It deliberately does NOT get `reports:read`.
  * - `guest@e2e.test` gets `reports:read` so the scope-gate suite can show a 200
  *   for a scoped caller against the admin's 403.
+ * - `admin@e2e.test` and `staff@e2e.test` are granted the umbrella `admin`
+ *   scope directly, outside any role. That is what passes the console's global
+ *   admin gate, what lets them impersonate (`admin:impersonate`) and what lets
+ *   them read the user directory (`admin:users:list`) — one parent grant covers
+ *   all three. It is a direct grant rather than a role so that staff stays what
+ *   the scopes-console-permissions suite needs it to be: an admin holding no
+ *   scope role, and therefore refused by the self-hosting scope RPCs.
+ *   `guest@e2e.test` deliberately gets none of it.
  *
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
@@ -51,10 +60,13 @@ export const seedScopes = async (services: SingletonServices) => {
 
   const adminId = await userIdByEmail(services, ADMIN_USER.email)
   const guestId = await userIdByEmail(services, GUEST_USER.email)
+  const staffId = await userIdByEmail(services, STAFF_USER.email)
   await scopeService.addUserToRole(adminId, CONSOLE_ADMIN_ROLE)
   await scopeService.addUserToRole(guestId, REPORT_VIEWER_ROLE)
+  await scopeService.addScopeToUser(adminId, ADMIN_SCOPE_ROOT)
+  await scopeService.addScopeToUser(staffId, ADMIN_SCOPE_ROOT)
 
   services.logger.info(
-    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}`
+    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${ADMIN_SCOPE_ROOT}, ${STAFF_USER.email} -> ${ADMIN_SCOPE_ROOT}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}`
   )
 }

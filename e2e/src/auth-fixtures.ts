@@ -1,4 +1,5 @@
-// Seeded console users, shared by src/seed-auth.ts and the @console tests.
+// Seeded console users, shared by src/seed-auth.ts, src/seed-scopes.ts (which
+// grants the admin scopes) and the @console tests.
 export interface SeedUser {
   name: string
   email: string
@@ -18,10 +19,11 @@ export const GUEST_USER: SeedUser = {
 }
 
 /**
- * A console admin (better-auth `role: 'admin'`, so the console AuthGate lets
- * them in) who holds NO scope role — so the self-hosting scope RPCs refuse
- * them with a 403. Exists to exercise the "you don't have permission" state,
- * distinct from a real outage.
+ * A console admin (granted the umbrella `admin` scope directly, so the console
+ * AuthGate lets them in) who holds NO scope role — so the self-hosting scope
+ * RPCs, which additionally require `pikku:scopes:read`, refuse them with a 403.
+ * Exists to exercise the "you don't have permission" state, distinct from a
+ * real outage.
  */
 export const STAFF_USER: SeedUser = {
   name: 'E2E Staff',

@@ -39,3 +39,16 @@ Feature: The console addon's privileged RPCs require an admin session
     Given a signed-in console user with the seeded "admin" account
     When they call the console RPC "console:getFunctionsMeta"
     Then the console RPC is allowed
+
+  # The user directory replaces better-auth's admin() list-users endpoint. It
+  # additionally declares `admin:users:list`, which the umbrella `admin` grant
+  # covers — a caller holding neither gets nothing back.
+  Scenario: A non-admin is refused the user directory
+    Given a signed-in console user with the seeded "guest" account
+    When they call the console RPC "console:listUsers"
+    Then the console RPC is forbidden
+
+  Scenario: An admin may read the user directory
+    Given a signed-in console user with the seeded "admin" account
+    When they call the console RPC "console:listUsers"
+    Then the console RPC is allowed

@@ -1,4 +1,5 @@
-import { pikkuAuth, addGlobalPermission } from '@pikku/core'
+import { pikkuAuth, addGlobalPermission, hasScopes } from '@pikku/core'
+import { ADMIN_SCOPE_ROOT } from '@pikku/better-auth'
 import type { UserSession } from './application-types.js'
 
 /**
@@ -10,13 +11,14 @@ import type { UserSession } from './application-types.js'
  * admin session passes. (Tag-level permissions were removed in #972; a
  * package-scoped `addGlobalPermission` is the replacement.)
  *
- * The consuming app decides who is an admin by how it maps the session — see
- * `src/middleware.ts`, whose `betterAuthSession` carries Better Auth's `role`
- * into the pikku session. The addon itself is never touched.
+ * The consuming app decides who is an admin by who it grants the `admin` scope
+ * to — see `src/seed-scopes.ts`. Scopes are resolved onto the session at the
+ * auth boundary (`withResolvedScopes` inside `betterAuthSession`), and the
+ * umbrella `admin` grant covers every capability nested beneath it. The addon
+ * itself is never touched.
  */
-const isConsoleAdmin = pikkuAuth(
-  async (_services, session) =>
-    (session as UserSession | undefined)?.role === 'admin'
+const isConsoleAdmin = pikkuAuth(async (_services, session) =>
+  hasScopes([ADMIN_SCOPE_ROOT], (session as UserSession | undefined)?.scopes)
 )
 
 addGlobalPermission([isConsoleAdmin], '@pikku/addon-console')
