@@ -195,7 +195,8 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 />
                 {/* Overlaid rather than given a header row of its own — with the
                     root title suppressed that row would be empty but for this
-                    icon, pushing the panel down a line. */}
+                    icon, pushing the panel down a line. The offset lines it up
+                    with the panel's own title row and its actions. */}
                 <Tooltip label={m.pane_hide_details()}>
                   <ActionIcon
                     variant="subtle"
@@ -203,7 +204,12 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                     size="sm"
                     aria-label={m.pane_hide_details()}
                     onClick={() => setRightCollapsed(true)}
-                    style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
+                    style={{
+                      position: 'absolute',
+                      top: 20,
+                      right: 10,
+                      zIndex: 2,
+                    }}
                   >
                     <PanelRightClose size={16} />
                   </ActionIcon>
