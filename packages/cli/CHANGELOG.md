@@ -1,3 +1,127 @@
+## 0.12.85
+
+### Patch Changes
+
+- 2dad759: Scaffold addon test apps with the workspace protocol when inside a workspace.
+
+  `new-addon` generated a test app depending on its parent via `file:..`. Yarn's
+  `file:` protocol copies the entire parent directory rather than honouring its
+  `files` field, so the copy includes the parent's own `test/node_modules` —
+  which already holds a copy. Every install adds another layer. In the pikku
+  addons repo this reached 20 levels and ~1.4 GiB before `yarn install` failed
+  outright with `ENAMETOOLONG`, and it made `yarn.lock` nondeterministic because
+  the `file:` locator checksums changed as the packed contents grew.
+
+  The generated dependency is now `workspace:*`, which symlinks the parent
+  instead of copying it, so the recursion cannot occur.
+
+  `workspace:*` only resolves inside a workspace, and `new-addon` can scaffold
+  anywhere (`dir || config.scaffold?.addonDir || process.cwd()`). The protocol is
+  therefore chosen by walking up from the target directory for a `package.json`
+  declaring `workspaces`, falling back to `file:..` when there is none.
+
+- 5f19016: Widen the generated agent HTTP surface, and guard attachment downloads against SSRF.
+
+  `agentCaller` and `agentStreamCaller` declared only `message`, `threadId` and
+  `resourceId` (plus `context` on the stream route), so `attachments`, `model`,
+  `temperature` — all accepted by `AIAgentInput` — were unreachable over the
+  shipped HTTP contract. No deployed app could send an attachment or a per-request
+  model override. Both callers now share an `AgentCallerInput` type covering every
+  optional field and forward each one to the RPC.
+
+  Both callers declare that shape **inline** in the generic position rather than
+  behind a shared named alias: the schema extractor only reads type literals there
+  and synthesises the schema name from the function name. Behind an alias it
+  records an `inputSchemaName` with no schema generated for it, and every agent
+  HTTP call then fails at runtime with `MissingSchemaError`.
+
+  Widening that surface makes caller-supplied attachment URLs reachable, which is
+  an SSRF vector: the AI SDK downloads attachment URLs **server-side** whenever the
+  model cannot consume them natively, using an unguarded `fetch`. A caller could
+  point an attachment at the cloud metadata endpoint or another internal host and
+  have the response relayed into the model's context. `VercelAIAgentRunner` now
+  passes an `experimental_download` implementation backed by `safeFetch` (which
+  refuses private/internal hosts and non-HTTP schemes, and re-validates every
+  redirect hop) to both `streamText` and `generateText`. URLs the model supports
+  natively are passed through untouched, so the provider still fetches those
+  itself.
+
+  The runner takes an optional `allowedAttachmentHosts` allowlist, carried across
+  `withApiKey`. `safeFetch` is now exported from `@pikku/core/safe-fetch`.
+
+- de9ae9b: Force `agentRunService` as a required singleton service whenever the AI agent scaffold (`config.scaffold.agent`) is enabled. The generated public-agent permission (`isThreadOwner` in `agent.gen.ts`) always destructures `agentRunService`, but that file is written to disk after `requiredServices` is computed from inspecting hand-written sources, so the inspector never saw that usage. `agentRunService` stayed in `RequiredSingletonServices` as optional, and since `CoreServices.agentRunService` is itself optional, any project generating the agent scaffold failed to type-check with `'agentRunService' is possibly 'undefined'.` in `agent.gen.ts`.
+- 4324652: Scope AI agent thread reads to the calling session.
+
+  The generated thread-management functions (`getAgentThreads`,
+  `getAgentThreadMessages`, `getAgentThreadRuns`, `deleteAgentThread`) keyed purely
+  off a caller-supplied `threadId` and treated `resourceId` as an optional filter,
+  so omitting it enumerated every tenant's threads.
+  - `listThreads` gains an `owners` **authorization constraint** (distinct from the
+    `resourceId` filter): an empty array matches nothing, and it is always derived
+    from the session, never from input. Implemented across the Kysely, Redis and
+    MongoDB agent run services, with LIKE/regex metacharacter escaping so an owner
+    id containing `_` or `%` cannot match a foreign owner.
+  - The three `threadId`-keyed functions are now guarded by an `isThreadOwner`
+    `pikkuPermission` rather than an in-body check. A thread that does not exist is
+    denied rather than 404'd, so it is indistinguishable from one owned by someone
+    else.
+  - New `@pikku/core/ai-agent` helpers: `canAccessThread`, `threadOwnerConstraint`,
+    `sessionPrincipals`, `isOwnedByPrincipal`.
+
+  Services destructured by a wired function are now non-optional inside it.
+
+  The inspector already aggregated the services used by every wired `func`,
+  `permissions` and `middleware` into `RequiredSingletonServices`, but the
+  generated function types defaulted their service parameter to the raw `Services`
+  — so a service declared `foo?: Foo` still arrived as possibly-undefined, forcing
+  `if (!foo) throw new MissingServiceError(...)` guards that could never fire.
+  Generated types now expose `WiredSingletonServices` / `WiredServices`
+  (`RequiredSingletonServices & Services`) and default the `RequiredServices`
+  generic of functions, permissions, middleware, auth and approval-description
+  helpers to them. Optionality now means only what it should: "this service may
+  not be created, because nothing uses it".
+
+- b501612: Enforce authorization consistently across `pikku*` primitives.
+  - `pikkuAIAgent` now enforces `permissions` (previously accepted but never
+    checked) and gains `auth` and `scopes`. Scopes are checked before permissions.
+    `auth` defaults to `false`, matching `pikkuSessionlessFunc`, since agents are
+    typically invoked from an already-authenticated function or from sessionless
+    contexts such as crons and queue workers.
+  - `pikkuWorkflowFunc` / `pikkuWorkflowComplexFunc` schema config gains `auth`
+    and `scopes` alongside `permissions`.
+  - `pikkuScenario` no longer accepts `auth`, `scopes`, or `permissions` —
+    scenarios drive the app as actors and authorize per step.
+  - `wireGateway` no longer accepts `permissions`. A gateway proxies to an agent,
+    so access is governed by normal auth plus the target agent's own rules.
+  - Removed the dead `permissions` field from `CoreWorkflow`, which was never read.
+
+  Closed two paths that reached user code without authorization:
+  - Gateway handlers were invoked directly, so a handler's own `auth`, `scopes`
+    and `permissions` were never evaluated. Webhook, websocket and listener
+    gateways now invoke the handler through the function runner. Handlers are
+    sessionless by default (inbound gateway traffic is platform-authenticated by
+    the adapter, not session-bearing); declare `auth: true` to require a session.
+    A gateway's own `auth` field is now honoured too — it was previously ignored.
+    Gateway middleware runs before the gate, so `wire.setSession()` in gateway
+    middleware — the idiomatic way to map a verified platform sender to a user —
+    is visible to the handler's `auth` and `scopes`.
+  - Resuming a suspended agent run (`resumeAIAgentSync`, `resumeAIAgent`) checked
+    run ownership but never re-ran the agent's own gate, so a scope or permission
+    revoked while a run was suspended did not prevent the caller from resuming it
+    and approving its pending tool calls. Both now re-run `assertAgentAuthorized`
+    before any state is mutated.
+
+- Updated dependencies [5f19016]
+- Updated dependencies [78e4778]
+- Updated dependencies [4324652]
+- Updated dependencies [de044f8]
+- Updated dependencies [cd1a811]
+- Updated dependencies [19fa6f0]
+- Updated dependencies [b501612]
+- Updated dependencies [eb37b1e]
+  - @pikku/core@0.12.66
+  - @pikku/kysely@0.13.2
+
 ## 0.12.84
 
 ### Patch Changes

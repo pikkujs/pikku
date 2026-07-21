@@ -1,3 +1,62 @@
+## 0.12.41
+
+### Patch Changes
+
+- 16db9cc: Soften and tighten the dev console chrome.
+  - Borders give way to flat fills: every `*-border` theme token (dark + light) and
+    the Badge border go transparent, so the pervasive hairline rules disappear
+    without restructuring any layout. The hardcoded borders the token sweep
+    couldn't reach are neutralised too — the coloured tag borders in
+    Schedulers/Triggers/Channel tabs, the run-selector outline, and the database
+    result-table rules. Functional/diagram borders stay (flow-node rings, the
+    active tab underline, the overlapping-avatar separators).
+  - `ShellHeader` grows from 45px to 50px and loses its bottom rule.
+  - The agents and workflow playgrounds can collapse their list and detail panes.
+    Each pane's collapse control lives on the pane's own outer edge, inside a row
+    it already has, so nothing gains a header row just to hold an icon; a collapsed
+    pane leaves a labelled rail rather than an unexplained void.
+  - The sidebar shows one section at a time, anchored to the current route: the
+    section owning the page is the expanded one and carries the accent, so the rail
+    answers "where am I" without the user keeping it tidy.
+  - 80+ `en.json` entries shipped with their key path as the value ("Empty title",
+    "State how it works", "Header separator" between breadcrumbs). They now have
+    real copy.
+
+- 0273e51: Require Mantine 9; drop the Mantine 8 peer range.
+
+  `@pikku/mantine` re-exports `@mantine/core` wholesale (`export * from
+'@mantine/core'`), so its `^8 || ^9` peer range was never really satisfiable in
+  both directions: the set of exported names differs between the majors, and any
+  consumer symbol that exists in only one of them resolves for one peer and fails
+  for the other. `@pikku/console` sat on the v8 side of that split — it imported
+  `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
+  alongside Mantine 9 failed at bundle time with two missing exports:
+
+      "TypographyStylesProvider" is not exported by @pikku/mantine/core
+      "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+
+  The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
+  to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
+  helper that v9 removed. Pinning every `@mantine/*` dependency to the same major
+  is what makes that class of error impossible, so all eight move together.
+
+  Consumers on Mantine 8 must upgrade to 9 alongside this release. The migration
+  in this repo was small: `TypographyStylesProvider` → `Typography` (2 files) and
+  `<Collapse in>` → `<Collapse expanded>` (3 files). No other v9 breaking change
+  was reachable — no `createPolymorphicComponent`, `positionDependencies`, `Grid
+gutter`, `Text`/`Anchor` `color`, or affected hooks (`useFullscreen`,
+  `useResizeObserver`, `useMouse`, `useMutationObserver`, `useTree`).
+
+- Updated dependencies [5f19016]
+- Updated dependencies [78e4778]
+- Updated dependencies [4324652]
+- Updated dependencies [de044f8]
+- Updated dependencies [cd1a811]
+- Updated dependencies [19fa6f0]
+- Updated dependencies [b501612]
+- Updated dependencies [eb37b1e]
+  - @pikku/core@0.12.66
+
 ## 0.12.40
 
 ### Patch Changes
