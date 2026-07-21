@@ -13,7 +13,7 @@ import {
   Code,
   Container,
   Button,
-  TypographyStylesProvider,
+  Typography,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -326,7 +326,7 @@ const ToolCallDisplay: React.FC<{
           )}
         </Group>
       </UnstyledButton>
-      <Collapse in={opened}>
+      <Collapse expanded={opened}>
         <Stack gap={4} mt="xs">
           <Text size="xs" c="dimmed">
             {m.agent_toolcall_arguments()}
@@ -398,11 +398,11 @@ const AssistantMessage: React.FC = () => {
           <MessagePrimitive.Content
             components={{
               Text: ({ text }) => (
-                <TypographyStylesProvider p={0} m={0} fz="sm">
+                <Typography p={0} m={0} fz="sm">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {text}
                   </ReactMarkdown>
-                </TypographyStylesProvider>
+                </Typography>
               ),
               tools: {
                 Fallback: (props) => (
