@@ -2,7 +2,6 @@ import React from 'react'
 import {
   ActionIcon,
   Box,
-  Text,
   Tooltip,
   UnstyledButton,
 } from '@pikku/mantine/core'
@@ -108,47 +107,24 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
             {showLeft ? (
               <Box
                 className={classes.listSurfaceCard}
-                style={{ height: '100%' }}
+                style={{ height: '100%', position: 'relative' }}
               >
-                <Box
-                  px={8}
-                  style={{
-                    height: 42,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderBottom: '1px solid var(--app-row-border)',
-                  }}
-                >
-                  <Text
+                {runsPanel}
+                {/* Sits on top of the panel's own first row rather than in a
+                    header of its own, so owning the control costs the list no
+                    vertical space. */}
+                <Tooltip label={m.pane_hide_list()}>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
                     size="sm"
-                    fw={600}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                    aria-label={m.pane_hide_list()}
+                    onClick={() => setLeftCollapsed(true)}
+                    style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
                   >
-                    {listLabel ?? m.pane_list()}
-                  </Text>
-                  <Tooltip label={m.pane_hide_list()}>
-                    <ActionIcon
-                      variant="subtle"
-                      color="gray"
-                      size="sm"
-                      aria-label={m.pane_hide_list()}
-                      onClick={() => setLeftCollapsed(true)}
-                    >
-                      <PanelLeftClose size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Box>
-                <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                  {runsPanel}
-                </Box>
+                    <PanelLeftClose size={16} />
+                  </ActionIcon>
+                </Tooltip>
               </Box>
             ) : (
               <Tooltip label={m.pane_show_list()} position="right">
