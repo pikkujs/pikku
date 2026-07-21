@@ -126,8 +126,10 @@ export type CoreHTTPFunctionWiring<
   > = CorePikkuFunctionSessionless<In, Out>,
   PikkuPermission extends CorePikkuPermission<In, any, any> =
     CorePikkuPermission<In, any, any>,
-  PikkuMiddleware extends CorePikkuMiddleware<any, any> =
-    CorePikkuMiddleware<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
 > =
   | (CoreHTTPFunction & {
       route: R
@@ -287,7 +289,7 @@ export type HTTPRouteConfig<
     | CorePikkuFunction<any, any, any, any, any>
     | CorePikkuFunctionSessionless<any, any, any, any, any>,
   PikkuPermission extends CorePikkuPermission<any, any, any> =
-    CorePikkuPermission<any>,
+    CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
     any,
     any
@@ -313,7 +315,7 @@ export type HTTPRouteConfig<
  */
 export type HTTPRoutesGroupConfig<
   PikkuPermission extends CorePikkuPermission<any, any, any> =
-    CorePikkuPermission<any>,
+    CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
     any,
     any
