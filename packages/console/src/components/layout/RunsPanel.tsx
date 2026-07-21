@@ -225,11 +225,25 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
           <Group
             gap="xs"
             wrap="nowrap"
-            pr={6}
+            pl={6}
             style={{
               borderBottom: '1px solid var(--mantine-color-default-border)',
             }}
           >
+            {/* Sits beside the new-run button rather than in a header row of
+                its own, so the pane owns its collapse control for free — and on
+                this pane's outer edge, mirroring the detail pane's. */}
+            {collapsePane && (
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label={m.pane_hide_list()}
+                onClick={collapsePane}
+              >
+                <PanelLeftClose size={16} />
+              </ActionIcon>
+            )}
             {onNewClick && (
               <UnstyledButton
                 py="sm"
@@ -244,20 +258,6 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
                   </Text>
                 </Group>
               </UnstyledButton>
-            )}
-            {/* Sits beside the new-run button rather than in a header row of
-                its own, so the pane owns its collapse control for free. */}
-            {collapsePane && (
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="sm"
-                ml="auto"
-                aria-label={m.pane_hide_list()}
-                onClick={collapsePane}
-              >
-                <PanelLeftClose size={16} />
-              </ActionIcon>
             )}
           </Group>
         )}
