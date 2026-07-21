@@ -144,6 +144,25 @@
   padding: 12px 0 6px;
 }
 
+/* Sidebar accordion section header — a full-width row (like the Fabric rail's
+   group headers) so the whole strip is the hit target, with a subtle hover. */
+.navSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 10px;
+  margin: 2px 6px;
+  width: calc(100% - 12px);
+  border-radius: 6px;
+  color: var(--app-section-label, var(--mantine-color-dimmed));
+  transition: background 120ms ease;
+}
+
+.navSectionHeader:hover {
+  background: var(--app-hover, rgba(128, 128, 128, 0.1));
+}
+
 /* ── Empty state (centered placeholder) ── */
 
 .emptyState {

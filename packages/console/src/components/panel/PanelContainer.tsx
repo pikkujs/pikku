@@ -14,11 +14,15 @@ interface PanelContainerProps {
    *  scenario timeline). Default true; layouts that already show a full
    *  workflow canvas next to the panel pass false. */
   workflowGraph?: boolean
+  /** Hide the per-panel close (X). Used when the surrounding layout owns the
+   *  collapse control for the whole pane. */
+  hideClose?: boolean
 }
 
 export const PanelContainer: React.FC<PanelContainerProps> = ({
   emptyMessage,
   workflowGraph = true,
+  hideClose = false,
 }) => {
   const { panels, activePanel, closePanel, goBack } = usePanelContext()
   useLocale()
@@ -53,7 +57,7 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
             <SidePanelHeader
               title={asI18n(activePanelData.title)}
               onBack={activePanelData.history.length > 0 ? goBack : undefined}
-              onClose={() => closePanel(activePanel!)}
+              onClose={hideClose ? undefined : () => closePanel(activePanel!)}
             />
             <SidePanelContent>
               <Stack gap="xl" px="md">

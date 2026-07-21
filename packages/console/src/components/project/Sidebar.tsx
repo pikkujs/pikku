@@ -52,7 +52,7 @@ import css from '../ui/console.module.css'
 export interface NavItem {
   label: I18nNode
   href: string
-  icon: React.ComponentType<{ size?: number }>
+  icon: React.ComponentType<{ size?: number; color?: string }>
   matchPrefix: string
 }
 
@@ -176,11 +176,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     key: 'sidebar-collapsed-sections',
     defaultValue: [],
   })
-  const isSectionOpen = (title: string) => !collapsedSections.includes(title)
-  const toggleSection = (title: string) =>
-    setCollapsedSections((prev) =>
-      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
-    )
+  // Section titles are branded I18n strings; key the collapse set off their
+  // string value.
+  const isSectionOpen = (title: I18nNode) =>
+    !collapsedSections.includes(String(title))
+  const toggleSection = (title: I18nNode) =>
+    setCollapsedSections((prev) => {
+      const key = String(title)
+      return prev.includes(key)
+        ? prev.filter((t) => t !== key)
+        : [...prev, key]
+    })
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
   const canImpersonate = !!auth?.isAdmin
@@ -267,21 +273,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {section.title && !collapsed && (
               <UnstyledButton
                 onClick={() => toggleSection(section.title!)}
-                px="sm"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  paddingTop: 8,
-                  paddingBottom: 2,
-                }}
+                className={css.navSectionHeader}
               >
                 <Text
                   size="xs"
                   fw={600}
                   style={{
-                    color: 'var(--mantine-color-dimmed)',
+                    color: 'inherit',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
                     fontSize: 11,
@@ -292,7 +290,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <ChevronRight
                   size={12}
                   style={{
-                    color: 'var(--mantine-color-dimmed)',
                     transform: sectionOpen ? 'rotate(90deg)' : 'none',
                     transition: 'transform 150ms ease',
                   }}

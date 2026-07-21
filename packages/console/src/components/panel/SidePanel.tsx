@@ -25,7 +25,9 @@ export const SidePanel: React.FC<{ children: React.ReactNode }> = ({ children })
 
 interface SidePanelHeaderProps {
   title: I18nNode
-  onClose: () => void
+  /** Omit to hide the close (X) button — e.g. when a parent layout owns the
+   *  collapse control for this pane. */
+  onClose?: () => void
   onBack?: () => void
   children?: React.ReactNode
 }
@@ -52,7 +54,7 @@ export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose
         {title}
       </Text>
       {children}
-      <CloseButton size="sm" onClick={onClose} />
+      {onClose && <CloseButton size="sm" onClick={onClose} />}
     </Group>
   </Box>
 )
