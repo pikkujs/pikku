@@ -42,7 +42,7 @@ pikkuAIAgent({
   name: string,                  // Unique agent identifier
   description: string,           // What the agent does
   instructions: string | string[],  // System prompt / behavior instructions
-  model: string,                 // LLM model (e.g. 'openai/gpt-4o-mini')
+  model: string,                 // LLM model (e.g. 'openai/gpt-5-mini')
   tools?: PikkuFunc[],           // Pikku functions the agent can call
   agents?: AIAgentConfig[],      // Sub-agents this agent can delegate to
   memory?: {
@@ -120,7 +120,7 @@ const todoAssistant = pikkuAIAgent({
   description: 'A helpful assistant that manages todos',
   instructions:
     'You help users manage their todo lists. Be concise and helpful.',
-  model: 'openai/gpt-4o-mini',
+  model: 'openai/gpt-5-mini',
   tools: [listTodos, createTodo, completeTodo],
   memory: {
     storage: 'aiStorage',
@@ -197,7 +197,7 @@ const todoAssistant = pikkuAIAgent({
     - Be concise and helpful
     - When creating todos, infer priority if not specified
     - When listing todos, summarize the results`,
-  model: 'openai/gpt-4o-mini',
+  model: 'openai/gpt-5-mini',
   tools: [listTodos, createTodo, completeTodo],
   memory: {
     storage: 'aiStorage',

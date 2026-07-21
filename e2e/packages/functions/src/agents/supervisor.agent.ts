@@ -6,7 +6,7 @@ export const supervisorAgent = pikkuAIAgent({
   description:
     'Supervises todo operations — sub-agent results are returned to this agent, not streamed to the user',
   goal: 'You supervise todo operations. Delegate todo requests to the todo-agent. When you get the result back, summarize it for the user. Always prefix your response with "SUPERVISOR:".',
-  model: 'openai/o4-mini',
+  model: 'openai/gpt-5-mini',
   agents: [todoAgent],
   agentMode: 'supervise',
   maxSteps: 10,

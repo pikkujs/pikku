@@ -7,7 +7,7 @@ export const routerAgent = pikkuAIAgent({
   description:
     'Main entry point — routes requests to the appropriate domain agent',
   goal: 'You are the Pikku assistant. Route user requests to the appropriate domain agent. Use the todo-agent for anything related to managing todos. Use the email-agent for anything related to sending or viewing emails.',
-  model: 'openai/o4-mini',
+  model: 'openai/gpt-5-mini',
   agents: [todoAgent, emailAgent],
   maxSteps: 10,
 })

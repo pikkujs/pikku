@@ -21,7 +21,7 @@ export const delegateParentAgent = pikkuAIAgent({
   name: 'delegate-parent-agent',
   description: 'Delegates to a sub-agent and lets its output reach the client',
   goal: 'You route the request to your sub-agent.',
-  model: 'openai/gpt-4o-mini',
+  model: 'openai/gpt-5-mini',
   agents: [deterministicSubAgent],
   maxSteps: 5,
 })
@@ -34,7 +34,7 @@ export const superviseParentAgent = pikkuAIAgent({
   name: 'supervise-parent-agent',
   description: 'Supervises a sub-agent and summarises its result',
   goal: 'You supervise the sub-agent and prefix your reply with "SUPERVISOR:".',
-  model: 'openai/gpt-4o-mini',
+  model: 'openai/gpt-5-mini',
   agents: [deterministicSubAgent],
   agentMode: 'supervise',
   maxSteps: 5,

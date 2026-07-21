@@ -16,7 +16,7 @@ export const structuredAgent = pikkuAIAgent({
   name: 'structured-agent',
   description: 'Classifies a message and returns a structured verdict',
   goal: 'You classify the sentiment of the user message and return a structured result.',
-  model: 'openai/o4-mini',
+  model: 'openai/gpt-5-mini',
   output: StructuredAgentOutput,
   maxSteps: 3,
   toolChoice: 'auto',
