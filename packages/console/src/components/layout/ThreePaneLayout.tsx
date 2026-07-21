@@ -1,5 +1,5 @@
 import React from 'react'
-import { ActionIcon, Box, Tooltip } from '@pikku/mantine/core'
+import { ActionIcon, Box, Tooltip, UnstyledButton } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { useLocalStorage } from '@mantine/hooks'
 import {
@@ -31,6 +31,10 @@ interface ThreePaneLayoutProps {
   /** Namespaces the persisted left/right collapse state so different playgrounds
    *  (agents, workflow) remember their panes independently. */
   storageKey?: string
+  /** Noun shown on the collapsed left/right rail (e.g. "Conversations", "Runs").
+   *  Falls back to generic "List" / "Details". */
+  listLabel?: I18nNode
+  detailLabel?: I18nNode
 }
 
 export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
@@ -45,6 +49,8 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   hidePanel = false,
   collapseWhenEmpty = false,
   storageKey = 'three-pane',
+  listLabel,
+  detailLabel,
 }) => {
   useLocale()
   const { panels } = usePanelContext()
@@ -81,21 +87,39 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           padding: 'var(--mantine-spacing-md)',
         }}
       >
-        <Box
-          style={{
-            width: showLeft ? 240 : 0,
-            minWidth: showLeft ? 240 : 0,
-            flexShrink: 0,
-            overflow: 'hidden',
-            opacity: showLeft ? 1 : 0,
-            transition:
-              'width 180ms ease, min-width 180ms ease, opacity 180ms ease',
-          }}
-        >
-          <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
-            {runsPanel}
+        {hasLeft && (
+          <Box
+            className={classes.paneCollapseTransition}
+            style={{
+              width: showLeft ? 240 : 40,
+              minWidth: showLeft ? 240 : 40,
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}
+          >
+            {showLeft ? (
+              <Box
+                className={classes.listSurfaceCard}
+                style={{ height: '100%' }}
+              >
+                {runsPanel}
+              </Box>
+            ) : (
+              <Tooltip label={m.pane_show_list()} position="right">
+                <UnstyledButton
+                  className={classes.paneStub}
+                  aria-label={m.pane_show_list()}
+                  onClick={() => setLeftCollapsed(false)}
+                >
+                  <PanelLeftOpen size={16} />
+                  <span className={classes.paneStubLabel}>
+                    {listLabel ?? m.pane_list()}
+                  </span>
+                </UnstyledButton>
+              </Tooltip>
+            )}
           </Box>
-        </Box>
+        )}
 
         <Box
           className={classes.listSurfaceCard}
@@ -178,26 +202,44 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           </Box>
         </Box>
 
-        <Box
-          style={{
-            width: showRight ? 'min(520px, 42vw)' : 0,
-            flexShrink: 0,
-            overflow: 'hidden',
-            opacity: showRight ? 1 : 0,
-            transition: 'width 180ms ease, opacity 180ms ease',
-          }}
-        >
+        {hasRight && (
           <Box
-            className={classes.listSurfaceCard}
-            style={{ height: '100%', width: 'min(520px, 42vw)' }}
+            className={classes.paneCollapseTransition}
+            style={{
+              width: showRight ? 'min(520px, 42vw)' : 40,
+              minWidth: showRight ? undefined : 40,
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}
           >
-            <PanelContainer
-              emptyMessage={emptyPanelMessage}
-              workflowGraph={false}
-              hideClose
-            />
+            {showRight ? (
+              <Box
+                className={classes.listSurfaceCard}
+                style={{ height: '100%', width: 'min(520px, 42vw)' }}
+              >
+                <PanelContainer
+                  emptyMessage={emptyPanelMessage}
+                  workflowGraph={false}
+                  hideClose
+                  hideRootTitle={!!lead}
+                />
+              </Box>
+            ) : (
+              <Tooltip label={m.pane_show_details()} position="left">
+                <UnstyledButton
+                  className={classes.paneStub}
+                  aria-label={m.pane_show_details()}
+                  onClick={() => setRightCollapsed(false)}
+                >
+                  <PanelRightOpen size={16} />
+                  <span className={classes.paneStubLabel}>
+                    {detailLabel ?? m.pane_details()}
+                  </span>
+                </UnstyledButton>
+              </Tooltip>
+            )}
           </Box>
-        </Box>
+        )}
       </Box>
     </Box>
   )

@@ -17,12 +17,18 @@ interface PanelContainerProps {
   /** Hide the per-panel close (X). Used when the surrounding layout owns the
    *  collapse control for the whole pane. */
   hideClose?: boolean
+  /** Drop the header on the top-level panel — the entity it names is already
+   *  shown by the layout's own header (the middle-pane selector), so repeating
+   *  it here is redundant. Drilled-in panels (steps, sub-items) keep their
+   *  header + back button. */
+  hideRootTitle?: boolean
 }
 
 export const PanelContainer: React.FC<PanelContainerProps> = ({
   emptyMessage,
   workflowGraph = true,
   hideClose = false,
+  hideRootTitle = false,
 }) => {
   const { panels, activePanel, closePanel, goBack } = usePanelContext()
   useLocale()
@@ -54,11 +60,13 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
           </Box>
         ) : (
           <SidePanel key={child.id}>
-            <SidePanelHeader
-              title={asI18n(activePanelData.title)}
-              onBack={activePanelData.history.length > 0 ? goBack : undefined}
-              onClose={hideClose ? undefined : () => closePanel(activePanel!)}
-            />
+            {!(hideRootTitle && activePanelData.history.length === 0) && (
+              <SidePanelHeader
+                title={asI18n(activePanelData.title)}
+                onBack={activePanelData.history.length > 0 ? goBack : undefined}
+                onClose={hideClose ? undefined : () => closePanel(activePanel!)}
+              />
+            )}
             <SidePanelContent>
               <Stack gap="xl" px="md">
                 {child.content}

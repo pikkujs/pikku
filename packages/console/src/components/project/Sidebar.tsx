@@ -203,12 +203,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       top={0}
       w={sidebarWidth}
       h="100vh"
+      className={css.railCollapseTransition}
       style={{
         borderRight: `1px solid var(--app-rail-border)`,
         backgroundColor: `var(--app-rail-bg)`,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 200ms ease',
         overflow: 'hidden',
         zIndex: 100,
       }}
@@ -274,6 +274,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <UnstyledButton
                 onClick={() => toggleSection(section.title!)}
                 className={css.navSectionHeader}
+                aria-expanded={sectionOpen}
               >
                 <Text
                   size="xs"

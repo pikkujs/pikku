@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { AlertTriangle, History } from 'lucide-react'
 import { WorkflowSelector } from './WorkflowSelector'
 import {
@@ -232,6 +233,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
         lead={lead}
         filters={immersiveDetail ? undefined : complexNote}
         storageKey="workflow"
+        listLabel={m.pane_runs()}
         showTabs={immersiveDetail}
         collapseWhenEmpty
         emptyPanelMessage={asI18n('Select a node to view its details')}

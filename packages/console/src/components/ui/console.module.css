@@ -163,6 +163,76 @@
   background: var(--app-hover, rgba(128, 128, 128, 0.1));
 }
 
+.navSectionHeader:focus-visible {
+  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
+  outline-offset: -2px;
+}
+
+/* ── Collapsible pane rail ── */
+
+/* Width/opacity transition for the collapsing side panes. Kept in a class (not
+   inline) so the reduced-motion guard below can switch it off. */
+.paneCollapseTransition {
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    opacity 180ms ease;
+}
+
+/* Sidebar rail width animation — in a class so reduced-motion can disable it. */
+.railCollapseTransition {
+  transition: width 200ms ease;
+}
+
+/* Slim rail shown in place of a collapsed pane: an always-visible affordance
+   (icon + vertical label) so the panes never collapse to an unexplained void. */
+.paneStub {
+  background: var(--app-surface, var(--mantine-color-body));
+  border: 1px solid var(--app-row-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  width: 100%;
+  padding: 10px 0;
+  cursor: pointer;
+  color: var(--app-section-label, var(--mantine-color-dimmed));
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.paneStub:hover {
+  background: var(--app-hover, rgba(128, 128, 128, 0.08));
+  color: var(--mantine-color-bright);
+}
+
+.paneStub:focus-visible {
+  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
+  outline-offset: -2px;
+}
+
+.paneStubLabel {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paneCollapseTransition,
+  .railCollapseTransition,
+  .paneStub,
+  .navSectionHeader,
+  .detailDrawerPane,
+  .listItem {
+    transition: none;
+  }
+}
+
 /* ── Empty state (centered placeholder) ── */
 
 .emptyState {

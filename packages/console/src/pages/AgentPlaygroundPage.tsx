@@ -268,6 +268,7 @@ const AgentPlaygroundInner: React.FC<{
     <ThreePaneLayout
       lead={selector}
       storageKey="agent"
+      listLabel={m.pane_conversations()}
       runsPanel={runsPanel}
       runsPanelVisible
       emptyPanelMessage={m.agent_playground_panel_message()}
