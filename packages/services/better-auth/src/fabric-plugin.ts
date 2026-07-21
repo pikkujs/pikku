@@ -2,6 +2,8 @@ import * as z from 'zod'
 import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
+import type { Logger, ScopeService } from '@pikku/core/services'
+import { ADMIN_SCOPE_ROOT } from './auth-scopes.js'
 
 export interface FabricPluginOptions {
   /**
@@ -17,6 +19,14 @@ export interface FabricPluginOptions {
     | (() => string | undefined | Promise<string | undefined>)
   /** Reject tokens whose `purpose` claim isn't this. Defaults to `fabric-admin`. */
   purpose?: string
+  /**
+   * Grants the operator's synthetic row the `admin` scope on creation, which is
+   * what authorizes it against the framework's `admin:*` gates. Without one the
+   * operator signs in but holds nothing.
+   */
+  scopeService?: ScopeService
+  /** Logger for the grant's configuration warnings. */
+  logger?: Logger
 }
 
 /** Synthetic, guaranteed-non-colliding email for a Fabric operator's app row. */
@@ -110,6 +120,30 @@ const verifyFabricToken = async (
  * Use ALONGSIDE better-auth's `admin()` plugin (which declares the `role`
  * column). Filter `fabric: true` rows out of any end-user listing.
  */
+/**
+ * Grants the operator's row the umbrella `admin` scope. A failure here is
+ * logged, not thrown: the operator gets an authenticated but unprivileged
+ * session, which is a far clearer symptom than a 500 on sign-in.
+ */
+const grantOperatorAdmin = async (
+  options: FabricPluginOptions,
+  userId: string
+): Promise<void> => {
+  if (!options.scopeService) {
+    options.logger?.warn?.(
+      `fabric: no ScopeService registered, so operator ${userId} holds no admin scope`
+    )
+    return
+  }
+  try {
+    await options.scopeService.addScopeToUser(userId, ADMIN_SCOPE_ROOT)
+  } catch (error) {
+    options.logger?.warn?.(
+      `fabric: could not grant '${ADMIN_SCOPE_ROOT}' to operator ${userId}: ${error}`
+    )
+  }
+}
+
 export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
   const requiredPurpose = options.purpose ?? 'fabric-admin'
   return {
@@ -163,8 +197,7 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
               message: 'Fabric token has the wrong purpose',
             })
           }
-          const fabricUserId =
-            typeof claims.sub === 'string' ? claims.sub : ''
+          const fabricUserId = typeof claims.sub === 'string' ? claims.sub : ''
           if (!fabricUserId) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Fabric token is missing sub',
@@ -195,8 +228,6 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
               emailVerified: true,
               name: name ?? 'Fabric',
               fabric: true,
-              // Grants app-admin so admin() and impersonation authorize it.
-              role: 'admin',
               createdAt: new Date(),
               updatedAt: new Date(),
             })) as unknown as FabricUser | undefined
@@ -205,6 +236,7 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
                 message: 'Failed to create fabric user',
               })
             }
+            await grantOperatorAdmin(options, user.id)
           }
 
           const session = await ctx.context.internalAdapter.createSession(

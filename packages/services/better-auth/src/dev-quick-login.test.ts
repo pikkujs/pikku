@@ -9,18 +9,16 @@ interface FakeAuthCalls {
   handler: Request[]
   signUp: any[]
   signIn: any[]
-  roleUpdates: Array<{ userId: string; update: any }>
 }
 
 function createFakeAuth(opts: {
-  existingUser?: { id: string; email: string; role?: string }
+  existingUser?: { id: string; email: string }
   signUpError?: Error
 }) {
   const calls: FakeAuthCalls = {
     handler: [],
     signUp: [],
     signIn: [],
-    roleUpdates: [],
   }
   let user = opts.existingUser ? { ...opts.existingUser } : undefined
   const auth = {
@@ -35,7 +33,7 @@ function createFakeAuth(opts: {
         if (opts.signUpError) {
           throw opts.signUpError
         }
-        user = { id: 'u_dev', email: input.body.email, role: 'user' }
+        user = { id: 'u_dev', email: input.body.email }
         return { user }
       },
       signInEmail: async (input: any) => {
@@ -50,11 +48,6 @@ function createFakeAuth(opts: {
       internalAdapter: {
         findUserByEmail: async (email: string) =>
           user && user.email === email ? { user } : null,
-        updateUser: async (userId: string, update: any) => {
-          calls.roleUpdates.push({ userId, update })
-          user = { ...user!, ...update }
-          return user
-        },
       },
     }),
   }
@@ -80,16 +73,39 @@ function fakeHttpRequest(opts: {
   }
 }
 
+/** Records the scope grants quick login makes, standing in for a ScopeService. */
+function createFakeScopeService(held: string[] = []) {
+  const granted: Array<{ userId: string; scope: string }> = []
+  return {
+    granted,
+    scopeService: {
+      listUserScopes: async () => held,
+      addScopeToUser: async (userId: string, scope: string) => {
+        granted.push({ userId, scope })
+      },
+    },
+  }
+}
+
 async function run(opts: {
   method: string
   path?: string
   host?: string
   auth: any
+  scopeService?: any
+  warnings?: string[]
 }) {
   const { func } = createAuthHandler()
   const services: any = {
-    logger: { info() {}, warn() {}, error() {} },
+    logger: {
+      info() {},
+      warn(message: string) {
+        opts.warnings?.push(message)
+      },
+      error() {},
+    },
     auth: async () => opts.auth,
+    scopeService: opts.scopeService,
   }
   const request = fakeHttpRequest({
     method: opts.method,
@@ -149,16 +165,15 @@ describe('dev quick login', () => {
     assert.equal(calls.handler.length, 0)
   })
 
-  test('POST creates the dev admin, promotes the role and signs in', async () => {
+  test('POST creates the dev admin, grants the admin scope and signs in', async () => {
     process.env[FLAG] = 'true'
     const { auth, calls } = createFakeAuth({})
-    const response = await run({ method: 'POST', auth })
+    const { granted, scopeService } = createFakeScopeService()
+    const response = await run({ method: 'POST', auth, scopeService })
     assert.equal(response.status, 200)
     assert.equal(calls.signUp.length, 1)
     assert.equal(calls.signUp[0].body.email, DEV_QUICK_LOGIN_USER.email)
-    assert.deepEqual(calls.roleUpdates, [
-      { userId: 'u_dev', update: { role: 'admin' } },
-    ])
+    assert.deepEqual(granted, [{ userId: 'u_dev', scope: 'admin' }])
     assert.equal(calls.signIn.length, 1)
     assert.equal(calls.signIn[0].body.email, DEV_QUICK_LOGIN_USER.email)
     assert.equal(calls.signIn[0].asResponse, true)
@@ -174,14 +189,25 @@ describe('dev quick login', () => {
       existingUser: {
         id: 'u_existing',
         email: DEV_QUICK_LOGIN_USER.email,
-        role: 'admin',
       },
       signUpError: new Error('user already exists'),
     })
-    const response = await run({ method: 'POST', auth })
+    const { granted, scopeService } = createFakeScopeService(['admin'])
+    const response = await run({ method: 'POST', auth, scopeService })
     assert.equal(response.status, 200)
     assert.equal(calls.signIn.length, 1)
-    assert.equal(calls.roleUpdates.length, 0)
+    assert.equal(granted.length, 0)
+  })
+
+  test('POST still signs in, with a warning, when no ScopeService is registered', async () => {
+    process.env[FLAG] = 'true'
+    const { auth, calls } = createFakeAuth({})
+    const warnings: string[] = []
+    const response = await run({ method: 'POST', auth, warnings })
+    assert.equal(response.status, 200)
+    assert.equal(calls.signIn.length, 1)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /no ScopeService/)
   })
 
   test('127.0.0.1 counts as local', async () => {

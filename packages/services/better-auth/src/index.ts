@@ -7,6 +7,13 @@ export {
 export { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 export { betterAuthSession } from './auth-session.js'
 export { withResolvedScopes } from './auth-session-scopes.js'
+export {
+  ADMIN_SCOPES,
+  ADMIN_SCOPE_ROOT,
+  ADMIN_SCOPE_TREE,
+  resolvedUserHoldsScopes,
+  userHoldsScopes,
+} from './auth-scopes.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export { fabric } from './fabric-plugin.js'

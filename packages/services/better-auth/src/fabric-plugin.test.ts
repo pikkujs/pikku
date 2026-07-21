@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { createSign, generateKeyPairSync } from 'node:crypto'
 import { betterAuth } from 'better-auth'
-import { admin } from 'better-auth/plugins'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { fabric } from './fabric-plugin.js'
@@ -37,14 +36,30 @@ const signToken = (
   return `${input}.${sig}`
 }
 
-const makeAuth = (db: Record<string, any[]>, key?: string) =>
+/** Records what the plugin grants the synthetic operator row. */
+const makeScopeService = () => {
+  const granted: Array<{ userId: string; scope: string }> = []
+  return {
+    granted,
+    scopeService: {
+      addScopeToUser: async (userId: string, scope: string) => {
+        granted.push({ userId, scope })
+      },
+    } as any,
+  }
+}
+
+const makeAuth = (
+  db: Record<string, any[]>,
+  key?: string,
+  scopeService?: any
+) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    // admin() declares the `role` column the fabric row is created with.
-    plugins: [fabric({ publicKey: key }), admin()],
+    plugins: [fabric({ publicKey: key, scopeService })],
   })
 
 const signInFabric = (auth: ReturnType<typeof makeAuth>, token: string) =>
@@ -59,7 +74,8 @@ const signInFabric = (auth: ReturnType<typeof makeAuth>, token: string) =>
 describe('better-auth fabric plugin', () => {
   test('mints an admin session for a synthetic fabric operator row', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const auth = makeAuth(db, publicKey)
+    const { granted, scopeService } = makeScopeService()
+    const auth = makeAuth(db, publicKey, scopeService)
 
     const res = await signInFabric(auth, signToken(privateKey, { sub: 'op-123', name: 'Yasser' }))
 
@@ -71,13 +87,18 @@ describe('better-auth fabric plugin', () => {
 
     const row = db.user!.find((u) => u.id === body.user.id)
     assert.equal(row?.fabric, true, 'user row is flagged fabric')
-    assert.equal(row?.role, 'admin', 'fabric row is app-admin')
+    assert.deepEqual(
+      granted,
+      [{ userId: body.user.id, scope: 'admin' }],
+      'fabric row is granted the admin scope'
+    )
     assert.equal(db.user!.length, 1)
 
     // Second sign-in reuses the row — no duplicate operators.
     const res2 = await signInFabric(auth, signToken(privateKey, { sub: 'op-123' }))
     assert.equal(res2.status, 200)
     assert.equal(db.user!.length, 1, 'no duplicate fabric rows')
+    assert.equal(granted.length, 1, 'the grant is not repeated for a known row')
   })
 
   test('never signs in a real user sitting at the namespaced email', async () => {

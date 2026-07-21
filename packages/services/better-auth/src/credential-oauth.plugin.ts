@@ -4,17 +4,19 @@ import { generateState, parseState, setTokenUtil } from 'better-auth/oauth2'
 import { createAuthorizationURL } from '@better-auth/core/oauth2'
 import { APIError } from '@better-auth/core/error'
 import * as z from 'zod'
+import type { Logger, ScopeService } from '@pikku/core/services'
 import type { CredentialOAuthProvider } from './credential-oauth-providers.js'
+import { ADMIN_SCOPES, resolvedUserHoldsScopes } from './auth-scopes.js'
 
 const CALLBACK_PATH = '/credential-oauth/callback'
 
 /**
  * Owner of every `type: 'singleton'` credential. A platform credential belongs
  * to the app, not to whoever happened to click Connect — but better-auth keys
- * accounts by user, so the platform needs a user to be. Reserved, never
- * sign-in-able (no password account, and `banned` blocks session creation);
- * account rows hang off it exactly like a real user's, so storage, refresh and
- * unlink are the same code path.
+ * accounts by user, so the platform needs a user to be. Reserved and never
+ * sign-in-able: it is created with no credential account of any kind, so no
+ * sign-in method can resolve it. Account rows hang off it exactly like a real
+ * user's, so storage, refresh and unlink are the same code path.
  */
 export const PLATFORM_USER_ID = 'pikku-platform'
 const PLATFORM_USER_EMAIL = 'platform@pikku.internal'
@@ -23,9 +25,17 @@ export interface CredentialOAuthOptions {
   /** Built by `credentialOAuthProviders(CREDENTIAL_OAUTH2_CONFIGS, secrets)`. */
   config: CredentialOAuthProvider[]
   /**
+   * Resolves the caller's scopes for the default {@link canLinkSingleton}
+   * gate. Pass the app's registered `ScopeService`; without it the default
+   * gate denies every singleton link.
+   */
+  scopeService?: ScopeService
+  /** Logger for the default gate's configuration warnings. */
+  logger?: Logger
+  /**
    * Decides who may connect a `type: 'singleton'` credential — it rebinds the
    * token for EVERY user, so this cannot be left to any signed-in caller.
-   * Defaults to better-auth's admin role.
+   * Defaults to requiring the `admin:credentials:link` scope.
    */
   canLinkSingleton?: (
     session: CredentialOAuthSession
@@ -37,12 +47,8 @@ export interface CredentialOAuthSession {
     id: string
     name?: string | null
     email?: string | null
-    role?: string | null
   }
 }
-
-const isAdmin = (session: CredentialOAuthSession) =>
-  session.user.role === 'admin'
 
 /**
  * Links OAuth2 *credentials* — API access tokens — to a user, storing them in
@@ -73,7 +79,15 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
   const base = genericOAuth({ config: options.config })
   const findConfig = (providerId: string) =>
     options.config.find((provider) => provider.providerId === providerId)
-  const canLinkSingleton = options.canLinkSingleton ?? isAdmin
+  const canLinkSingleton =
+    options.canLinkSingleton ??
+    ((session: CredentialOAuthSession) =>
+      resolvedUserHoldsScopes(
+        session.user.id,
+        [ADMIN_SCOPES.credentialsLink],
+        options.scopeService,
+        options.logger
+      ))
 
   /**
    * Created on demand rather than at startup: an app with no singleton
@@ -90,8 +104,6 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
       email: PLATFORM_USER_EMAIL,
       name: 'Platform',
       emailVerified: false,
-      // Nothing may sign in as the platform: it owns tokens, not sessions.
-      banned: true,
     })
     return PLATFORM_USER_ID
   }
