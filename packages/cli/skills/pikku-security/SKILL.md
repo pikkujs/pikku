@@ -80,7 +80,7 @@ addHTTPMiddleware('*', [authAPIKey({ source: 'all' })])
 import { pikkuAuth, pikkuPermission } from '#pikku'
 
 export const isAuthenticated = pikkuAuth(async (_services, session) => !!session)
-export const isAdmin = pikkuAuth(async (_services, session) => session?.role === 'admin')
+export const isVerified = pikkuAuth(async (_services, session) => !!session?.emailVerified)
 
 // wirings/auth.wiring.ts
 import { authCookie } from '@pikku/core/middleware'

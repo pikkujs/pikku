@@ -5,8 +5,8 @@ import { betterAuthSession } from './auth-session.js'
 const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
 
 const USERS: Record<string, any> = {
-  u_admin: { id: 'u_admin', role: 'admin' },
-  u_guest: { id: 'u_guest', role: 'user' },
+  u_admin: { id: 'u_admin' },
+  u_guest: { id: 'u_guest' },
 }
 
 const GRANTS: Record<string, string[]> = {

@@ -119,6 +119,62 @@ Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a
 
 In both cases a **route-scoped** registration (`addHTTPMiddleware('/some/path', [...])`) does NOT count — only a global one suppresses the generated default. The generated middleware in a `.gen.ts` file is also ignored by the detector, so regeneration never self-suppresses.
 
+### Admin capabilities are scopes, not a role
+
+Pikku does **not** use better-auth's `admin()` plugin, and nothing in this
+package reads a `role` column. A role is not a permission: "who may impersonate"
+and "who may rebind a shared credential" are different capabilities one user can
+hold independently, which a single `role` string cannot express. Every gate the
+package owns therefore resolves the caller's scopes through the registered
+`ScopeService` and checks the `admin:*` tree:
+
+| Gate | Scope required |
+| --- | --- |
+| `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate` |
+| `credentialOAuth`'s `canLinkSingleton` | `admin:credentials:link` |
+| the console's user directory | `admin:users:list` |
+
+Holding the bare `admin` scope satisfies all of them — a parent grant covers
+everything nested beneath it — so `admin` is the direct replacement for the old
+`role === 'admin'`.
+
+Declare the tree in your own `wireScope` (the CLI extracts it by AST, so it must
+be an inline literal; `ADMIN_SCOPE_TREE` is exported from `@pikku/better-auth`
+as the reference shape). Apps wiring `@pikku/addon-console` inherit it already.
+
+```typescript
+wireScope({
+  admin: {
+    displayName: 'Administration',
+    description: 'Capabilities that act on the application as a whole',
+    scopes: {
+      impersonate: { description: 'Act as another user' },
+      credentials: {
+        description: 'Application-wide credentials',
+        scopes: {
+          link: { description: 'Bind a shared credential for every user' },
+        },
+      },
+      users: {
+        description: 'The user directory',
+        scopes: { list: { description: 'List and search users' } },
+      },
+    },
+  },
+})
+```
+
+Then grant it — via a role (`scopeService.createRole({ name: 'admin', scopes: ['admin'] })` plus `addUserToRole`) or directly with `addScopeToUser`.
+
+Every gate **fails closed**: with no `ScopeService` registered nothing can hold
+a scope, so nothing is authorized, and the denial is logged at `warn` because
+that is a configuration bug rather than a permissions decision. Pass your own
+`canImpersonate` / `canLinkSingleton` to override the default entirely.
+
+Sibling concerns — banning a user, listing users from your own screens — are
+actions your app *invokes*, not things pikku gates. Put them on your own
+functions with `scopes: ['admin:users:ban']` and friends.
+
 ### 2. Production database adapter
 
 For real deployments swap `memoryAdapter` for the Kysely adapter backed by an injected DB. Better Auth owns its own tables (`user`, `session`, `account`, `verification`, plus plugin tables) — generate its schema with `npx @better-auth/cli generate` and apply it as a migration.

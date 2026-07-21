@@ -190,11 +190,11 @@ describe('addAuth inspector', () => {
       [
         "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        "import { bearer, admin, twoFactor } from 'better-auth/plugins'",
+        "import { bearer, apiKey, twoFactor } from 'better-auth/plugins'",
         'export const auth = pikkuBetterAuth(() =>',
         '  betterAuth({',
         "    socialProviders: { github: { clientId: 'x', clientSecret: 'y' } },",
-        '    plugins: [bearer(), admin(), twoFactor({ issuer: "pikku" })],',
+        '    plugins: [bearer(), apiKey(), twoFactor({ issuer: "pikku" })],',
         '  })',
         ')',
       ].join('\n')
@@ -204,10 +204,10 @@ describe('addAuth inspector', () => {
     try {
       const state = await inspect(makeLogger(criticals), [file], { rootDir })
       assert.equal(criticals.length, 0)
-      assert.deepEqual(state.auth.plugins, ['bearer', 'admin', 'twoFactor'])
+      assert.deepEqual(state.auth.plugins, ['bearer', 'apiKey', 'twoFactor'])
       assert.deepEqual(state.auth.definition?.plugins, [
         'bearer',
-        'admin',
+        'apiKey',
         'twoFactor',
       ])
     } finally {

@@ -58,8 +58,8 @@ export const isAuthenticated = pikkuAuth(
   async (_services, session) => !!session
 )
 
-export const isAdmin = pikkuAuth(
-  async (_services, session) => session?.role === 'admin'
+export const isVerified = pikkuAuth(
+  async (_services, session) => !!session?.emailVerified
 )
 ```
 
@@ -88,11 +88,11 @@ export const hasBookAccess = pikkuPermission(
 
 ```typescript
 permissions: {
-  admin: isAdmin,                              // OR: admins can access
+  verified: isVerified,                        // OR: verified users can access
   owner: isBookOwner,                          // OR: owners can access
   reviewer: [isAuthenticated, hasBookAccess],  // AND: both must pass
 }
-// Logic: admin OR owner OR (isAuthenticated AND hasBookAccess)
+// Logic: verified OR owner OR (isAuthenticated AND hasBookAccess)
 ```
 
 Groups are OR'd. Entries within a group array are AND'd.
@@ -107,7 +107,7 @@ export const deleteBook = pikkuFunc({
     await db.deleteBook(bookId)
   },
   permissions: {
-    admin: isAdmin,
+    verified: isVerified,
     owner: isBookOwner,
   },
 })
@@ -146,8 +146,8 @@ export const isAuthenticated = pikkuAuth(
   async (_services, session) => !!session
 )
 
-export const isAdmin = pikkuAuth(
-  async (_services, session) => session?.role === 'admin'
+export const isVerified = pikkuAuth(
+  async (_services, session) => !!session?.emailVerified
 )
 
 export const isOrgMember = pikkuPermission(
@@ -162,7 +162,7 @@ export const deleteOrg = pikkuFunc({
     await db.deleteOrg(orgId)
   },
   permissions: {
-    admin: isAdmin,
+    verified: isVerified,
     owner: [isAuthenticated, isOrgMember],
   },
 })
