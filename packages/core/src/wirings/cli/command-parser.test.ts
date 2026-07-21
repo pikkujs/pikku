@@ -270,6 +270,7 @@ describe('Command Parser', () => {
       // Unknown options are allowed (for forward compatibility)
       // They just won't have defaults or validation
       assert.strictEqual(result.options.unknown, true)
+      assert.strictEqual(result.errors.length, 0)
     })
 
     test('should report error for unknown short flag', () => {
@@ -523,6 +524,135 @@ describe('Command Parser', () => {
         result.errors.some((e) => e.includes('--token')),
         'expected a missing --token error'
       )
+    })
+  })
+
+  describe('unknown long options', () => {
+    const listMeta: CLIMeta = {
+      programs: {
+        'test-cli': {
+          program: 'test-cli',
+          options: {},
+          commands: {
+            list: {
+              pikkuFuncId: 'listFunc',
+              positionals: [],
+              options: {
+                section: { description: 'Section to list', default: 'all' },
+                autoApply: {
+                  description: 'Apply automatically',
+                  default: false,
+                },
+              },
+            },
+          },
+        },
+      },
+      renderers: {},
+    }
+
+    test('warns (but does not error) on an unknown --opt value option', () => {
+      const result = parseCLIArguments(
+        ['list', '--sektion', 'functions'],
+        'test-cli',
+        listMeta
+      )
+
+      assert.strictEqual(result.errors.length, 0, 'should stay non-fatal')
+      assert.strictEqual(result.warnings.length, 1)
+      assert.ok(
+        result.warnings[0].startsWith('Unknown option: --sektion (ignored)'),
+        `unexpected warning: ${result.warnings[0]}`
+      )
+      // Forward compatibility: the value is still parsed through
+      assert.strictEqual(result.options.sektion, 'functions')
+      // ...and the real option keeps its default
+      assert.strictEqual(result.options.section, 'all')
+    })
+
+    test('warns on an unknown --opt=value option', () => {
+      const result = parseCLIArguments(
+        ['list', '--sektion=functions'],
+        'test-cli',
+        listMeta
+      )
+
+      assert.strictEqual(result.errors.length, 0)
+      assert.strictEqual(result.warnings.length, 1)
+      assert.ok(
+        result.warnings[0].startsWith('Unknown option: --sektion (ignored)'),
+        `unexpected warning: ${result.warnings[0]}`
+      )
+      assert.strictEqual(result.options.sektion, 'functions')
+    })
+
+    test('suggests a near-miss option name', () => {
+      const result = parseCLIArguments(
+        ['list', '--sektion'],
+        'test-cli',
+        listMeta
+      )
+
+      assert.ok(
+        result.warnings[0].includes('Did you mean --section?'),
+        `expected a suggestion, got: ${result.warnings[0]}`
+      )
+    })
+
+    test('suggests the kebab-case rendering of a camelCase option', () => {
+      const result = parseCLIArguments(
+        ['list', '--auto-aply'],
+        'test-cli',
+        listMeta
+      )
+
+      assert.ok(
+        result.warnings[0].includes('Did you mean --auto-apply?'),
+        `expected a suggestion, got: ${result.warnings[0]}`
+      )
+    })
+
+    test('omits the suggestion when nothing is close', () => {
+      const result = parseCLIArguments(
+        ['list', '--completely-different'],
+        'test-cli',
+        listMeta
+      )
+
+      assert.strictEqual(
+        result.warnings[0],
+        'Unknown option: --completely-different (ignored)'
+      )
+    })
+
+    test('does not warn for a known option (either casing)', () => {
+      const kebab = parseCLIArguments(
+        ['list', '--section', 'functions', '--auto-apply'],
+        'test-cli',
+        listMeta
+      )
+      assert.deepStrictEqual(kebab.warnings, [])
+      assert.strictEqual(kebab.options.section, 'functions')
+
+      const camel = parseCLIArguments(
+        ['list', '--autoApply'],
+        'test-cli',
+        listMeta
+      )
+      assert.deepStrictEqual(camel.warnings, [])
+    })
+
+    test('does not warn for --help', () => {
+      const result = parseCLIArguments(['list', '--help'], 'test-cli', listMeta)
+
+      assert.deepStrictEqual(result.warnings, [])
+    })
+
+    test('unknown short flags still error, not warn', () => {
+      const result = parseCLIArguments(['list', '-x'], 'test-cli', listMeta)
+
+      assert.ok(result.errors.some((e) => e.includes('Unknown option: -x')))
+      assert.deepStrictEqual(result.warnings, [])
     })
   })
 })
