@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
-import { verifyScopes } from './scopes.js'
+import { hasScopes, verifyScopes } from './scopes.js'
 import { MissingScopeError } from './errors/errors.js'
 import type { CoreUserSession } from './types/core.types.js'
 
@@ -163,5 +163,41 @@ describe('verifyScopes', () => {
         return true
       }
     )
+  })
+})
+
+describe('hasScopes', () => {
+  test('true on an exact match', () => {
+    assert.equal(hasScopes(['invoices:create'], ['invoices:create']), true)
+  })
+
+  test('false when the grant is unrelated', () => {
+    assert.equal(hasScopes(['invoices:create'], ['billing:read']), false)
+  })
+
+  test('shares the hierarchy rules with verifyScopes', () => {
+    assert.equal(hasScopes(['admin:impersonate'], ['admin']), true)
+    assert.equal(hasScopes(['admin:impersonate'], ['admin:*']), true)
+    assert.equal(hasScopes(['admin:impersonate'], ['*']), true)
+    assert.equal(hasScopes(['admin'], ['admin:impersonate']), false)
+  })
+
+  test('AND semantics: every required scope must be satisfied', () => {
+    assert.equal(hasScopes(['a:read', 'a:write'], ['a:read']), false)
+    assert.equal(hasScopes(['a:read', 'a:write'], ['a']), true)
+  })
+
+  test('fails closed on absent or empty grants', () => {
+    assert.equal(hasScopes(['invoices:create'], undefined), false)
+    assert.equal(hasScopes(['invoices:create'], []), false)
+  })
+
+  test('an empty requirement is satisfied by anything', () => {
+    assert.equal(hasScopes([], undefined), true)
+    assert.equal(hasScopes(undefined, undefined), true)
+  })
+
+  test('accepts a Set of held grants', () => {
+    assert.equal(hasScopes(['admin:impersonate'], new Set(['admin'])), true)
   })
 })

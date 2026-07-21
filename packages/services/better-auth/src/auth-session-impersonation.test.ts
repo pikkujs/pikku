@@ -6,8 +6,14 @@ import {
 } from './auth-session-impersonation.js'
 
 const USERS: Record<string, any> = {
-  u_admin: { id: 'u_admin', role: 'admin' },
-  u_guest: { id: 'u_guest', role: 'user' },
+  u_admin: { id: 'u_admin' },
+  u_guest: { id: 'u_guest' },
+}
+
+/** Grants each user holds, as a ScopeService would resolve them. */
+const GRANTS: Record<string, string[]> = {
+  u_admin: ['admin'],
+  u_guest: ['reports:read'],
 }
 
 const caller = (id: string): SessionLike => ({
@@ -15,13 +21,18 @@ const caller = (id: string): SessionLike => ({
   session: { id: `sess_${id}` },
 })
 
-function svc() {
+function svc(grants: Record<string, string[]> | null = GRANTS) {
   const logs: { info: string[]; warn: string[] } = { info: [], warn: [] }
   const services: any = {
     logger: {
       info: (m: string) => logs.info.push(m),
       warn: (m: string) => logs.warn.push(m),
     },
+  }
+  if (grants) {
+    services.scopeService = {
+      resolveScopes: async (userId: string) => grants[userId] ?? [],
+    }
   }
   return { services, logs }
 }
@@ -51,7 +62,7 @@ describe('resolveImpersonatedSession', () => {
     assert.equal(out, null)
   })
 
-  test('default gate: an admin resolves the target session', async () => {
+  test('default gate: admin:impersonate resolves the target session', async () => {
     const { services, logs } = svc()
     const out = await resolveImpersonatedSession(
       caller('u_admin'),
@@ -63,7 +74,7 @@ describe('resolveImpersonatedSession', () => {
     assert.equal(logs.info.length, 1)
   })
 
-  test('default gate: a non-admin is denied (returns null)', async () => {
+  test('default gate: a caller without the scope is denied (returns null)', async () => {
     const { services } = svc()
     const out = await resolveImpersonatedSession(
       caller('u_guest'),
@@ -72,6 +83,41 @@ describe('resolveImpersonatedSession', () => {
       () => 'u_admin'
     )
     assert.equal(out, null)
+  })
+
+  test('default gate: a narrower grant does not satisfy admin:impersonate', async () => {
+    const { services } = svc({ u_admin: ['admin:users:list'] })
+    const out = await resolveImpersonatedSession(
+      caller('u_admin'),
+      { loadUser },
+      services,
+      () => 'u_guest'
+    )
+    assert.equal(out, null)
+  })
+
+  test('default gate: an exact admin:impersonate grant is enough', async () => {
+    const { services } = svc({ u_guest: ['admin:impersonate'] })
+    const out = await resolveImpersonatedSession(
+      caller('u_guest'),
+      { loadUser },
+      services,
+      () => 'u_admin'
+    )
+    assert.deepEqual(out, { userId: 'u_admin' })
+  })
+
+  test('default gate: fails closed and warns with no ScopeService', async () => {
+    const { services, logs } = svc(null)
+    const out = await resolveImpersonatedSession(
+      caller('u_admin'),
+      { loadUser },
+      services,
+      () => 'u_guest'
+    )
+    assert.equal(out, null)
+    assert.equal(logs.warn.length, 1)
+    assert.match(logs.warn[0]!, /admin:impersonate/)
   })
 
   test('an unknown target returns null and warns (not an error)', async () => {
@@ -120,9 +166,9 @@ describe('resolveImpersonatedSession', () => {
       { loadUser },
       services,
       () => 'u_guest',
-      (result) => ({ userId: result.user.id, role: result.user.role })
+      (result) => ({ userId: result.user.id, name: result.user.id })
     )
-    assert.deepEqual(out, { userId: 'u_guest', role: 'user' })
+    assert.deepEqual(out, { userId: 'u_guest', name: 'u_guest' })
   })
 
   test('loadUser errors propagate (not swallowed)', async () => {

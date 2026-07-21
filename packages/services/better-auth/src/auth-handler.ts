@@ -68,7 +68,12 @@ export const createAuthHandler = (): {
     const webRequest = toWebRequest(request)
     const basePath = (auth as any).options?.basePath ?? '/api/auth'
     const response = isDevQuickLoginRequest(webRequest, basePath)
-      ? await handleDevQuickLogin(auth, webRequest, (services as any).logger)
+      ? await handleDevQuickLogin(
+          auth,
+          webRequest,
+          (services as any).logger,
+          (services as any).scopeService
+        )
       : await auth.handler(webRequest)
     return crossSiteCookies() ? rewriteSetCookies(response) : response
   },

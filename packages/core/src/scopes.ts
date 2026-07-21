@@ -38,6 +38,51 @@ const holds = (held: ReadonlySet<string>, scope: string): boolean =>
   satisfyingGrants(scope).some((grant) => held.has(grant))
 
 /**
+ * The first required scope a set of held grants does not satisfy, or `null`
+ * when every one is satisfied.
+ *
+ * Scopes are an AND gate: every entry in `required` must be satisfied. This is
+ * deliberately distinct from `permissions`, which OR together — a scope can
+ * only ever narrow access, so adding one to a function can never widen it.
+ *
+ * Fails closed: an absent `held` satisfies nothing.
+ */
+const firstUnsatisfied = (
+  required: readonly string[] | undefined,
+  held: Iterable<string> | undefined
+): string | null => {
+  if (!required || required.length === 0) {
+    return null
+  }
+
+  const grants = new Set(held ?? [])
+  for (const scope of required) {
+    if (!holds(grants, scope)) {
+      return scope
+    }
+  }
+  return null
+}
+
+/**
+ * Whether a set of held grants satisfies every required scope.
+ *
+ * The non-throwing counterpart to {@link verifyScopes}, for deciding rather
+ * than enforcing — an authorization gate that falls back to another check when
+ * it is not satisfied, rather than rejecting the request outright.
+ *
+ * Fails closed: an absent or empty `held` satisfies nothing. An empty
+ * `required` is satisfied by anything.
+ *
+ * @param required - Scopes to check for. Empty means no gate.
+ * @param held - The grants held, e.g. `session.scopes`. May be undefined.
+ */
+export const hasScopes = (
+  required: readonly string[] | undefined,
+  held: Iterable<string> | undefined
+): boolean => firstUnsatisfied(required, held) === null
+
+/**
  * Verifies that a session holds every required scope, throwing on the first
  * one it does not.
  *
@@ -56,14 +101,8 @@ export const verifyScopes = (
   required: readonly string[] | undefined,
   session: CoreUserSession | undefined
 ): void => {
-  if (!required || required.length === 0) {
-    return
-  }
-
-  const held = new Set(session?.scopes ?? [])
-  for (const scope of required) {
-    if (!holds(held, scope)) {
-      throw new MissingScopeError(scope)
-    }
+  const missing = firstUnsatisfied(required, session?.scopes)
+  if (missing !== null) {
+    throw new MissingScopeError(missing)
   }
 }

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
-import { admin } from 'better-auth/plugins'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { fabric } from './fabric-plugin.js'
@@ -28,16 +27,25 @@ const makeAuth = (
   opts: Partial<DelegatedAuthOptions> = {}
 ) => {
   const stored: Array<{ userId: string; identity: UpstreamIdentity }> = []
+  // Stands in for the app's ScopeService: roles are pikku grants, not a column.
+  const roles: Array<{ userId: string; role: string }> = []
+  const scopeService = {
+    listUserRoles: async (userId: string) =>
+      roles.filter((r) => r.userId === userId).map((r) => r.role),
+    addUserToRole: async (userId: string, role: string) => {
+      roles.push({ userId, role })
+    },
+  } as any
   const auth = betterAuth({
     baseURL: 'http://localhost:3000',
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
-      // admin() declares the `role` column; fabric() declares the `fabric` flag.
-      admin(),
+      // fabric() declares the `fabric` flag the plugin refuses to sign in.
       fabric({ publicKey: undefined }),
       delegatedAuth({
+        scopeService,
         authenticate: async ({ email, password, apiKey }) => {
           if (apiKey === 'good-key') return identityFor()
           if (email === 'jane@corp.com' && password === 'hunter2') {
@@ -52,7 +60,7 @@ const makeAuth = (
       }),
     ],
   })
-  return { auth, stored }
+  return { auth, stored, roles }
 }
 
 const signInDelegated = (
@@ -70,7 +78,7 @@ const signInDelegated = (
 describe('better-auth delegatedAuth plugin', () => {
   test('JIT-provisions the user, links the delegated account, stores the credential, mints a session', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const { auth, stored } = makeAuth(db)
+    const { auth, stored, roles } = makeAuth(db)
 
     const res = await signInDelegated(auth, {
       email: 'jane@corp.com',
@@ -89,7 +97,7 @@ describe('better-auth delegatedAuth plugin', () => {
     assert.ok(row, 'user row created')
     assert.equal(row.emailVerified, true)
     assert.equal(row.name, 'Jane Doe')
-    assert.equal(row.role, 'Manager')
+    assert.deepEqual(roles, [{ userId: row.id, role: 'Manager' }])
 
     const account = db.account!.find(
       (a) => a.providerId === DELEGATED_PROVIDER_ID
@@ -108,7 +116,7 @@ describe('better-auth delegatedAuth plugin', () => {
 
   test('second sign-in resolves via the account row and refreshes name/role', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const { auth } = makeAuth(db, {
+    const { auth, roles } = makeAuth(db, {
       authenticate: async ({ password }) =>
         password === 'hunter2'
           ? identityFor()
@@ -135,7 +143,10 @@ describe('better-auth delegatedAuth plugin', () => {
     assert.equal(db.user!.length, 1, 'no duplicate rows')
     assert.equal(db.account!.length, 1, 'no duplicate account rows')
     assert.equal(db.user![0]!.name, 'Jane Married')
-    assert.equal(db.user![0]!.role, 'Admin')
+    assert.deepEqual(roles, [
+      { userId: db.user![0]!.id, role: 'Manager' },
+      { userId: db.user![0]!.id, role: 'Admin' },
+    ])
   })
 
   test('links a delegated account to an existing email row without one', async () => {
@@ -285,20 +296,36 @@ describe('better-auth delegatedAuth plugin', () => {
     assert.equal(missing.status, 400)
   })
 
-  test('mapRole and defaultRole shape the stored role', async () => {
+  test('mapRole and defaultRole shape the granted role', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const { auth } = makeAuth(db, {
+    const { auth, roles } = makeAuth(db, {
       mapRole: (r) => (r === 'Manager' ? 'admin' : 'user'),
     })
     await signInDelegated(auth, { email: 'jane@corp.com', password: 'hunter2' })
-    assert.equal(db.user![0]!.role, 'admin')
+    assert.deepEqual(roles, [{ userId: db.user![0]!.id, role: 'admin' }])
 
     const db2: Record<string, any[]> = { user: [], session: [], account: [] }
-    const { auth: auth2 } = makeAuth(db2, {
+    const { auth: auth2, roles: roles2 } = makeAuth(db2, {
       authenticate: async () => identityFor({ role: undefined }),
       defaultRole: 'user',
     })
     await signInDelegated(auth2, { email: 'x@y.z', password: 'p' })
-    assert.equal(db2.user![0]!.role, 'user')
+    assert.deepEqual(roles2, [{ userId: db2.user![0]!.id, role: 'user' }])
+  })
+
+  test('a sign-in with no ScopeService still succeeds, dropping the role', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const warnings: string[] = []
+    const { auth } = makeAuth(db, {
+      scopeService: undefined,
+      logger: { warn: (m: string) => warnings.push(m) } as any,
+    })
+    const res = await signInDelegated(auth, {
+      email: 'jane@corp.com',
+      password: 'hunter2',
+    })
+    assert.equal(res.status, 200)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /no ScopeService/)
   })
 })

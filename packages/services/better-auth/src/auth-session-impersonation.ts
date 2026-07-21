@@ -1,4 +1,5 @@
 import type { CoreServices, CoreUserSession } from '@pikku/core'
+import { ADMIN_SCOPES, userHoldsScopes } from './auth-scopes.js'
 
 /** The `{ user, session }` shape both session paths resolve before mapping. */
 export type SessionLike = { user: any; session: any }
@@ -6,7 +7,10 @@ export type SessionLike = { user: any; session: any }
 export type ImpersonationOptions = {
   /** Header carrying the target user id. Defaults to `x-pikku-impersonate-user-id`. */
   header?: string
-  /** Gate the real caller against impersonating. Defaults to `user.role === 'admin'`. */
+  /**
+   * Gate the real caller against impersonating. Defaults to requiring the
+   * `admin:impersonate` scope, resolved through the registered `ScopeService`.
+   */
   canImpersonate?: (
     result: SessionLike,
     services: CoreServices
@@ -30,6 +34,10 @@ export type MapSession = (
  * self-target, the gate denies, or an unknown target) so the caller falls back
  * to the real session. An unknown target is logged at `warn` — it is NOT an
  * error. Hook errors (`canImpersonate`/`loadUser`) propagate by design.
+ *
+ * The default gate is the `admin:impersonate` scope, resolved for the *caller*
+ * through the registered `ScopeService`. It fails closed: with no ScopeService
+ * there is nothing to hold the scope, so impersonation is denied.
  */
 export const resolveImpersonatedSession = async (
   caller: SessionLike,
@@ -47,7 +55,12 @@ export const resolveImpersonatedSession = async (
 
   const canImpersonate =
     impersonation.canImpersonate ??
-    ((result: SessionLike) => result.user?.role === 'admin')
+    ((result: SessionLike, coreServices: CoreServices) =>
+      userHoldsScopes(
+        result.user?.id,
+        [ADMIN_SCOPES.impersonate],
+        coreServices
+      ))
   if (!(await canImpersonate(caller, services))) {
     return null
   }

@@ -2,6 +2,7 @@ import * as z from 'zod'
 import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
+import type { Logger, ScopeService } from '@pikku/core/services'
 
 /** providerId of the account row that keys a delegated identity to its upstream. */
 export const DELEGATED_PROVIDER_ID = 'delegated'
@@ -51,10 +52,51 @@ export interface DelegatedAuthOptions {
    * persist fails outright, since every proxied call would be dead anyway.
    */
   storeCredential: (userId: string, identity: UpstreamIdentity) => Promise<void>
-  /** Role when the identity carries none. Requires the admin() plugin's role column. */
+  /** Role when the identity carries none. Must exist in the ScopeService. */
   defaultRole?: string
   /** Map an upstream role onto an app role; default: pass-through. */
   mapRole?: (upstreamRole: string) => string | undefined
+  /**
+   * Where a resolved role is granted. Roles are pikku's — a named bag of
+   * scopes — so the grant lands in `pikku_user_role`, not on a `role` column.
+   * Without one, a resolved role is dropped with a warning.
+   */
+  scopeService?: ScopeService
+  /** Logger for role-grant warnings. */
+  logger?: Logger
+}
+
+/**
+ * Grants `role` to `userId` unless already held.
+ *
+ * Never throws: an upstream role the app has not defined is a provisioning gap,
+ * and failing the whole sign-in over it would lock the user out of an app they
+ * just proved they can access. The user simply signs in without that role.
+ */
+const grantRole = async (
+  options: DelegatedAuthOptions,
+  userId: string,
+  role: string | undefined
+): Promise<void> => {
+  if (!role) {
+    return
+  }
+  if (!options.scopeService) {
+    options.logger?.warn?.(
+      `delegated sign-in: no ScopeService registered, so role '${role}' was not granted to ${userId}`
+    )
+    return
+  }
+  try {
+    const held = await options.scopeService.listUserRoles(userId)
+    if (!held.includes(role)) {
+      await options.scopeService.addUserToRole(userId, role)
+    }
+  } catch (error) {
+    options.logger?.warn?.(
+      `delegated sign-in: could not grant role '${role}' to ${userId}: ${error}`
+    )
+  }
 }
 
 /**
@@ -65,7 +107,8 @@ export interface DelegatedAuthOptions {
  * the upstream just verified those credentials) linked to the upstream via an
  * `account` row (`providerId: 'delegated'`, `accountId: externalId`), persists
  * the upstream token per-user, and mints a normal session. Passwords are never
- * stored; name/role are refreshed on every sign-in.
+ * stored; the name is refreshed on every sign-in, and the resolved role is
+ * re-granted through the {@link DelegatedAuthOptions.scopeService}.
  */
 export const delegatedAuth = (
   options: DelegatedAuthOptions
@@ -132,7 +175,6 @@ export const delegatedAuth = (
           // upstream email change must not collide with another local row.
           user = (await adapter.updateUser(found.id, {
             ...(identity.name ? { name: identity.name } : {}),
-            ...(role ? { role } : {}),
           })) as AppUser
         } else {
           const existing = await adapter.findUserByEmail(identityEmail, {
@@ -158,14 +200,12 @@ export const delegatedAuth = (
             }
             user = (await adapter.updateUser(existingUser.id, {
               ...(identity.name ? { name: identity.name } : {}),
-              ...(role ? { role } : {}),
             })) as AppUser
           } else {
             user = (await adapter.createUser({
               email: identityEmail,
               emailVerified: true,
               name: identity.name ?? identityEmail.split('@')[0]!,
-              ...(role ? { role } : {}),
               createdAt: new Date(),
               updatedAt: new Date(),
             })) as unknown as AppUser
@@ -181,6 +221,8 @@ export const delegatedAuth = (
             userId: user.id,
           })
         }
+
+        await grantRole(options, user.id, role)
 
         // Persist the upstream token BEFORE minting the session — without it
         // every proxied call would fail, so the sign-in must fail instead.
