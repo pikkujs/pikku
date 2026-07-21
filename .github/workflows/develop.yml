@@ -83,12 +83,12 @@ jobs:
       - name: Run e2e tests
         run: yarn test:e2e --force-exit
 
-  e2e-ai:
-    name: E2E AI
+  e2e-agent:
+    name: E2E Agent (deterministic)
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-noble
-    timeout-minutes: 30
+    timeout-minutes: 15
     needs: build
     steps:
       - uses: actions/checkout@v7
@@ -96,10 +96,8 @@ jobs:
         run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
-      - name: Run AI e2e tests
-        run: yarn test:e2e:ai
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Run deterministic agent e2e tests
+        run: yarn test:e2e:agent
 
   verifiers:
     name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
