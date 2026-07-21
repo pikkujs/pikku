@@ -125,7 +125,7 @@ export const WorkflowTimelineDrawer: React.FC = () => {
         </Group>
       </Group>
 
-      <Collapse in={open}>
+      <Collapse expanded={open}>
         <Stack gap="xs" px="md" pb="sm">
           <ScrollArea type="hover" scrollbarSize={6}>
             <Group gap={6} wrap="nowrap" py={2}>

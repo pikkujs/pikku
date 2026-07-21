@@ -357,7 +357,7 @@ export const ShellHeader = <T extends string = string>({
 
       {/* Overflow row — the funnel slides the collapsed controls down as a
           second toolbar row, pushing the page content below it. */}
-      <Collapse in={panelOpen && showFunnel}>
+      <Collapse expanded={panelOpen && showFunnel}>
         <Box
           px="xl"
           py="xs"

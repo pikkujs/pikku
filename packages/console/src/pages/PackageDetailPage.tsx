@@ -15,7 +15,7 @@ import {
   Tabs,
   Text,
   ThemeIcon,
-  TypographyStylesProvider,
+  Typography,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -1017,7 +1017,7 @@ export const PackageDetailPage: React.FC<{
 
             {pkg.readme && (
               <Tabs.Panel value="readme">
-                <TypographyStylesProvider
+                <Typography
                   px="xl"
                   py="md"
                   style={{
@@ -1028,7 +1028,7 @@ export const PackageDetailPage: React.FC<{
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {pkg.readme}
                   </ReactMarkdown>
-                </TypographyStylesProvider>
+                </Typography>
               </Tabs.Panel>
             )}
 
