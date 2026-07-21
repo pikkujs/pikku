@@ -32,3 +32,8 @@ Every gate fails closed and warns when no `ScopeService` is registered.
 `delegatedAuth`'s `defaultRole`/`mapRole` now grant a pikku role through the
 `ScopeService` instead of writing better-auth's `role` column, and the
 `credentialOAuth` platform user no longer sets `banned`.
+
+BREAKING: the console reads its user directory over the new `console:listUsers`
+RPC (gated on `admin:users:list`, backed by better-auth's `$context.adapter`)
+instead of `client.admin.listUsers`, and `UsersTableUser`/`UsersTableLabels` no
+longer carry `role` or `banned` — there is no role column to render.
