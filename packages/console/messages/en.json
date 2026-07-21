@@ -327,7 +327,7 @@
   "cli_search_no_match": "No commands match “{query}”",
   "common_no_schema": "No schema",
   "common_details_wired_to": "Wired to {count}",
-  "common_details_description": "Details description",
+  "common_details_description": "Description",
   "common_details_function": "Details function",
   "common_details_services": "Details services",
   "common_details_wires": "Details wires",

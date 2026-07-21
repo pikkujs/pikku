@@ -17,6 +17,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
+import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
 import classes from '../ui/console.module.css'
 
 interface ThreePaneLayoutProps {
@@ -107,24 +108,13 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
             {showLeft ? (
               <Box
                 className={classes.listSurfaceCard}
-                style={{ height: '100%', position: 'relative' }}
+                style={{ height: '100%' }}
               >
-                {runsPanel}
-                {/* Sits on top of the panel's own first row rather than in a
-                    header of its own, so owning the control costs the list no
-                    vertical space. */}
-                <Tooltip label={m.pane_hide_list()}>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label={m.pane_hide_list()}
-                    onClick={() => setLeftCollapsed(true)}
-                    style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
-                  >
-                    <PanelLeftClose size={16} />
-                  </ActionIcon>
-                </Tooltip>
+                {/* The panel renders the collapse control itself, in a row it
+                    already has — see PaneCollapseContext. */}
+                <PaneCollapseProvider collapse={() => setLeftCollapsed(true)}>
+                  {runsPanel}
+                </PaneCollapseProvider>
               </Box>
             ) : (
               <Tooltip label={m.pane_show_list()} position="right">
@@ -191,27 +181,33 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
             {showRight ? (
               <Box
                 className={classes.listSurfaceCard}
-                style={{ height: '100%', width: 'min(520px, 42vw)' }}
+                style={{
+                  height: '100%',
+                  width: 'min(520px, 42vw)',
+                  position: 'relative',
+                }}
               >
                 <PanelContainer
                   emptyMessage={emptyPanelMessage}
                   workflowGraph={false}
                   hideClose
                   hideRootTitle={!!lead}
-                  collapseAction={
-                    <Tooltip label={m.pane_hide_details()}>
-                      <ActionIcon
-                        variant="subtle"
-                        color="gray"
-                        size="sm"
-                        aria-label={m.pane_hide_details()}
-                        onClick={() => setRightCollapsed(true)}
-                      >
-                        <PanelRightClose size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  }
                 />
+                {/* Overlaid rather than given a header row of its own — with the
+                    root title suppressed that row would be empty but for this
+                    icon, pushing the panel down a line. */}
+                <Tooltip label={m.pane_hide_details()}>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    aria-label={m.pane_hide_details()}
+                    onClick={() => setRightCollapsed(true)}
+                    style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
+                  >
+                    <PanelRightClose size={16} />
+                  </ActionIcon>
+                </Tooltip>
               </Box>
             ) : (
               <Tooltip label={m.pane_show_details()} position="left">

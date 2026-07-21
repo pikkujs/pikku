@@ -24,11 +24,9 @@ export const SidePanel: React.FC<{ children: React.ReactNode }> = ({ children })
 }
 
 interface SidePanelHeaderProps {
-  /** Omit when the title would duplicate what an outer header already shows —
-   *  the bar still renders so it can host the pane's own controls. */
-  title?: I18nNode
-  /** Omit to hide the close (X) button — e.g. when the pane owns a collapse
-   *  control instead. */
+  title: I18nNode
+  /** Omit to hide the close (X) button — e.g. when a parent layout owns the
+   *  collapse control for this pane. */
   onClose?: () => void
   onBack?: () => void
   children?: React.ReactNode
@@ -52,13 +50,9 @@ export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose
           <ChevronLeft size={16} color="var(--mantine-color-dimmed)" />
         </UnstyledButton>
       )}
-      {title ? (
-        <Text size="sm" fw={600} style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {title}
-        </Text>
-      ) : (
-        <Box style={{ flex: 1 }} />
-      )}
+      <Text size="sm" fw={600} style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {title}
+      </Text>
       {children}
       {onClose && <CloseButton size="sm" onClick={onClose} />}
     </Group>

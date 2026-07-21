@@ -158,11 +158,12 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
   return (
     <>
       {description != null && description !== '' && (
-        <MetaRow label={m.common_details_description()} labelWidth={90}>
-          <Text size="sm" c="var(--app-meta-value)">
+        <Box>
+          <SectionLabel>{m.common_details_description()}</SectionLabel>
+          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
             {asI18n(description)}
           </Text>
-        </MetaRow>
+        </Box>
       )}
 
       {pikkuFuncId && (

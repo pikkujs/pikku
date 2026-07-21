@@ -10,12 +10,14 @@ import {
   Group,
   ActionIcon,
   Button,
+  UnstyledButton,
 } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Check, Plus, X } from 'lucide-react'
+import { Check, PanelLeftClose, Plus, X } from 'lucide-react'
+import { usePaneCollapse } from '../../context/PaneCollapseContext'
 import classes from '../ui/console.module.css'
 
 const statusColors: Record<string, string> = {
@@ -176,6 +178,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   header,
 }) => {
   const [statusFilter, setStatusFilter] = useState('all')
+  const collapsePane = usePaneCollapse()
   useLocale()
 
   const filteredRuns = useMemo(() => {
@@ -218,23 +221,45 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
       )}
 
       <ScrollArea className={classes.flexGrow}>
-        {onNewClick && (
-          <Box
-            py="sm"
-            px="sm"
+        {(onNewClick || collapsePane) && (
+          <Group
+            gap="xs"
+            wrap="nowrap"
+            pr={6}
             style={{
               borderBottom: '1px solid var(--mantine-color-default-border)',
-              cursor: 'pointer',
             }}
-            onClick={onNewClick}
           >
-            <Group gap="xs">
-              <Plus size={16} color="var(--mantine-color-primary-6)" />
-              <Text size="sm" fw={500} c="primary">
-                {newButtonLabel ?? m.runs_panel_new()}
-              </Text>
-            </Group>
-          </Box>
+            {onNewClick && (
+              <UnstyledButton
+                py="sm"
+                px="sm"
+                style={{ flex: 1, minWidth: 0 }}
+                onClick={onNewClick}
+              >
+                <Group gap="xs">
+                  <Plus size={16} color="var(--mantine-color-primary-6)" />
+                  <Text size="sm" fw={500} c="primary">
+                    {newButtonLabel ?? m.runs_panel_new()}
+                  </Text>
+                </Group>
+              </UnstyledButton>
+            )}
+            {/* Sits beside the new-run button rather than in a header row of
+                its own, so the pane owns its collapse control for free. */}
+            {collapsePane && (
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                ml="auto"
+                aria-label={m.pane_hide_list()}
+                onClick={collapsePane}
+              >
+                <PanelLeftClose size={16} />
+              </ActionIcon>
+            )}
+          </Group>
         )}
         {loading ? (
           <Box p="md" ta="center">
