@@ -42,7 +42,7 @@ import {
   Shield,
   Webhook,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
@@ -170,23 +170,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     key: 'sidebar-collapsed',
     defaultValue: false,
   })
-  // Collapsible nav sections (like the Fabric rail's accordion groups). We store
-  // the *collapsed* titles so a newly-added section defaults to open.
-  const [collapsedSections, setCollapsedSections] = useLocalStorage<string[]>({
-    key: 'sidebar-collapsed-sections',
-    defaultValue: [],
-  })
-  // Section titles are branded I18n strings; key the collapse set off their
-  // string value.
-  const isSectionOpen = (title: I18nNode) =>
-    !collapsedSections.includes(String(title))
-  const toggleSection = (title: I18nNode) =>
-    setCollapsedSections((prev) => {
-      const key = String(title)
-      return prev.includes(key)
-        ? prev.filter((t) => t !== key)
-        : [...prev, key]
-    })
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
   const canImpersonate = !!auth?.isAdmin
@@ -195,6 +178,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
   const isActive = (item: NavItem) => pathname.includes(item.matchPrefix)
+
+  // One section is open at a time, and it follows the route: the section owning
+  // the current page is the one expanded, so the rail always shows where you
+  // are. Opening another section is a browsing move that the next navigation
+  // resolves — hence no persistence.
+  const routeSection =
+    sections.find((s) => s.title && s.items.some(isActive))?.title ?? null
+  const [openedSection, setOpenedSection] = useState<I18nNode | null>(
+    routeSection
+  )
+  const routeSectionKey = routeSection ? String(routeSection) : null
+  useEffect(() => {
+    if (routeSection) setOpenedSection(routeSection)
+  }, [routeSectionKey])
 
   return (
     <Box
@@ -265,15 +262,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {sections.map((section, sectionIndex) => {
           // Untitled sections and the collapsed (icon-only) rail are never
           // accordion-gated; only titled sections collapse in the expanded rail.
+          const isRouteSection =
+            !!section.title && String(section.title) === routeSectionKey
           const sectionOpen =
-            collapsed || !section.title || isSectionOpen(section.title)
+            collapsed ||
+            !section.title ||
+            String(section.title) === String(openedSection ?? '')
           return (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
             {section.title && !collapsed && (
               <UnstyledButton
-                onClick={() => toggleSection(section.title!)}
+                onClick={() =>
+                  setOpenedSection(sectionOpen ? null : section.title!)
+                }
                 className={css.navSectionHeader}
+                data-active={isRouteSection || undefined}
                 aria-expanded={sectionOpen}
               >
                 <Text

@@ -163,6 +163,12 @@
   background: var(--app-hover, rgba(128, 128, 128, 0.1));
 }
 
+/* The section holding the current page — carries the "you are here" signal at
+   parent level, so it reads even while another section is expanded. */
+.navSectionHeader[data-active] {
+  color: var(--app-accent, var(--mantine-primary-color-filled));
+}
+
 .navSectionHeader:focus-visible {
   outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
   outline-offset: -2px;
