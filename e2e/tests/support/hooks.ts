@@ -145,12 +145,34 @@ After(
         // Ignore screenshot failures
       }
     }
+    // A rendered assistant bubble must never be empty. Only assert on
+    // scenarios that otherwise passed so this never masks an unrelated
+    // failure, and close the browser before throwing so it never leaks.
+    let emptyAssistantError: string | undefined
+    if (result?.status === 'PASSED') {
+      try {
+        const blocks = this.page.locator('[data-testid="assistant-block"]')
+        const count = await blocks.count()
+        for (let i = 0; i < count; i++) {
+          const text = (await blocks.nth(i).innerText()).trim()
+          if (text === '') {
+            emptyAssistantError = `Assistant message #${i + 1} of ${count} rendered empty — assistant replies must never be blank`
+            break
+          }
+        }
+      } catch {
+        // Page may already be gone; skip the check rather than fail teardown
+      }
+    }
     const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
     if (headed) {
       console.log('[headed] Pausing for 10 seconds before closing browser...')
       await new Promise((r) => setTimeout(r, 10_000))
     }
     await this.closeBrowser()
+    if (emptyAssistantError) {
+      throw new Error(emptyAssistantError)
+    }
   }
 )
 
