@@ -87,7 +87,7 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              border: '1px solid var(--mantine-color-gray-4)',
+              border: '1px solid transparent',
               borderRadius: 'var(--mantine-radius-sm)',
             }}
           >

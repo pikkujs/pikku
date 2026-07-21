@@ -26,6 +26,12 @@ export const CopyableCode: React.FC<CopyableCodeProps> = ({
         language={language}
         copyLabel="Copy"
         copiedLabel="Copied"
+        // Wrap long lines (e.g. WS URLs) so the snippet never clips off the
+        // right edge of a narrow panel instead of relying on a hidden scrollbar.
+        styles={{
+          pre: { whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
+          code: { whiteSpace: 'pre-wrap' },
+        }}
       />
     </Box>
   )

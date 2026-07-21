@@ -175,6 +175,10 @@ export const SpotlightSearch: React.FC = () => {
         placeholder: 'Search functions, routes, workflows...',
       }}
       shortcut={['mod + K']}
+      // Cap the results list so a long action list scrolls within the dialog
+      // instead of running off the bottom of the screen.
+      scrollable
+      maxHeight={420}
       highlightQuery
     />
   )

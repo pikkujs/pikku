@@ -8,8 +8,8 @@ import {
   Tooltip,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { AlertTriangle, History } from 'lucide-react'
-import { ListPageHeader } from '../layout/PageLayout'
 import { WorkflowSelector } from './WorkflowSelector'
 import {
   CanvasDrawerProvider,
@@ -219,24 +219,21 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
     </Tooltip>
   ) : undefined
 
-  const header = immersiveDetail ? undefined : (
-    <ListPageHeader
-      title={asI18n('Workflow')}
-      filters={complexNote}
-      lead={
-        <WorkflowSelector
-          workflowName={workflowName}
-          items={items}
-          onItemSelect={onItemSelect}
-        />
-      }
+  const lead = immersiveDetail ? undefined : (
+    <WorkflowSelector
+      workflowName={workflowName}
+      items={items}
+      onItemSelect={onItemSelect}
     />
   )
 
   return (
     <>
       <ThreePaneLayout
-        header={header}
+        lead={lead}
+        filters={immersiveDetail ? undefined : complexNote}
+        storageKey="workflow"
+        listLabel={m.pane_runs()}
         showTabs={immersiveDetail}
         collapseWhenEmpty
         emptyPanelMessage={asI18n('Select a node to view its details')}

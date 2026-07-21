@@ -172,14 +172,14 @@ const AgentPlaygroundInner: React.FC<{
     >
       <Popover.Target>
         <UnstyledButton
-          px="sm"
-          py="xs"
+          px="xs"
+          py={4}
           style={{
-            width: '100%',
+            maxWidth: 260,
             display: 'flex',
             alignItems: 'center',
             gap: 4,
-            borderBottom: '1px solid var(--mantine-color-default-border)',
+            borderRadius: 6,
           }}
           onClick={() => setSelectorOpen((o) => !o)}
         >
@@ -260,13 +260,15 @@ const AgentPlaygroundInner: React.FC<{
       newButtonLabel={m.agent_playground_new_conversation()}
       emptyMessage={m.agent_playground_no_conversations()}
       statusFilters={[]}
-      header={selector}
       onDelete={handleDelete}
     />
   )
 
   return (
     <ThreePaneLayout
+      lead={selector}
+      storageKey="agent"
+      listLabel={m.pane_conversations()}
       runsPanel={runsPanel}
       runsPanelVisible
       emptyPanelMessage={m.agent_playground_panel_message()}

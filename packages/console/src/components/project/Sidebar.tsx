@@ -25,8 +25,8 @@ import {
   Server,
   KeyRound,
   Variable,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   Search,
   Package,
   RefreshCw,
@@ -42,7 +42,7 @@ import {
   Shield,
   Webhook,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
@@ -52,7 +52,7 @@ import css from '../ui/console.module.css'
 export interface NavItem {
   label: I18nNode
   href: string
-  icon: React.ComponentType<{ size?: number }>
+  icon: React.ComponentType<{ size?: number; color?: string }>
   matchPrefix: string
 }
 
@@ -148,7 +148,8 @@ export interface SidebarProps {
 }
 
 const COLLAPSED_WIDTH = 60
-const EXPANDED_WIDTH = 210
+// Match the Fabric console rail (60 collapsed / 260 expanded).
+const EXPANDED_WIDTH = 260
 
 export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
@@ -178,6 +179,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isActive = (item: NavItem) => pathname.includes(item.matchPrefix)
 
+  // One section is open at a time, and it follows the route: the section owning
+  // the current page is the one expanded, so the rail always shows where you
+  // are. Opening another section is a browsing move that the next navigation
+  // resolves — hence no persistence.
+  const routeSection =
+    sections.find((s) => s.title && s.items.some(isActive))?.title ?? null
+  const [openedSection, setOpenedSection] = useState<I18nNode | null>(
+    routeSection
+  )
+  const routeSectionKey = routeSection ? String(routeSection) : null
+  useEffect(() => {
+    if (routeSection) setOpenedSection(routeSection)
+  }, [routeSectionKey])
+
   return (
     <Box
       pos="fixed"
@@ -185,12 +200,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       top={0}
       w={sidebarWidth}
       h="100vh"
+      className={css.railCollapseTransition}
       style={{
-        borderRight: `1px solid var(--app-glass-border)`,
-        backgroundColor: `var(--mantine-color-body)`,
+        borderRight: `1px solid var(--app-rail-border)`,
+        backgroundColor: `var(--app-rail-bg)`,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 200ms ease',
         overflow: 'hidden',
         zIndex: 100,
       }}
@@ -244,29 +259,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </Box>
 
       <Box style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} py={4}>
-        {sections.map((section, sectionIndex) => (
+        {sections.map((section, sectionIndex) => {
+          // Untitled sections and the collapsed (icon-only) rail are never
+          // accordion-gated; only titled sections collapse in the expanded rail.
+          const isRouteSection =
+            !!section.title && String(section.title) === routeSectionKey
+          const sectionOpen =
+            collapsed ||
+            !section.title ||
+            String(section.title) === String(openedSection ?? '')
+          return (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
-            {section.title && (
-              collapsed ? null : (
+            {section.title && !collapsed && (
+              <UnstyledButton
+                onClick={() =>
+                  setOpenedSection(sectionOpen ? null : section.title!)
+                }
+                className={css.navSectionHeader}
+                data-active={isRouteSection || undefined}
+                aria-expanded={sectionOpen}
+              >
                 <Text
                   size="xs"
                   fw={600}
-                  px="sm"
                   style={{
-                    color: 'var(--mantine-color-dimmed)',
+                    color: 'inherit',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
-                    fontSize: 10,
-                    paddingTop: 8,
-                    paddingBottom: 2,
+                    fontSize: 11,
                   }}
                 >
                   {section.title}
                 </Text>
-              )
+                <ChevronRight
+                  size={12}
+                  style={{
+                    transform: sectionOpen ? 'rotate(90deg)' : 'none',
+                    transition: 'transform 150ms ease',
+                  }}
+                />
+              </UnstyledButton>
             )}
-            {section.items.map((item) => {
+            {sectionOpen && section.items.map((item) => {
               const active = isActive(item)
 
               if (collapsed) {
@@ -277,12 +312,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         component={Link}
                         to={item.href}
                         active={active}
-                        leftSection={<item.icon size={18} />}
+                        leftSection={
+                          <item.icon
+                            size={18}
+                            color={active ? 'var(--app-accent)' : undefined}
+                          />
+                        }
                         variant="light"
                         style={{
                           borderRadius: theme.radius.sm,
                           justifyContent: 'center',
                           padding: '8px 0',
+                          background: active ? 'var(--app-accent-soft)' : undefined,
                         }}
                         styles={{
                           section: { marginRight: 0 },
@@ -300,19 +341,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     component={Link}
                     to={item.href}
                     label={item.label}
-                    leftSection={<item.icon size={16} />}
+                    leftSection={
+                      <item.icon
+                        size={16}
+                        color={active ? 'var(--app-accent)' : undefined}
+                      />
+                    }
                     active={active}
                     variant="light"
                     style={{
                       borderRadius: theme.radius.sm,
                       fontSize: 13,
+                      // 2px accent bar is the primary "you are here" cue; the
+                      // soft tint + accent label reinforce it.
+                      borderLeft: `2px solid ${active ? 'var(--app-accent-bar)' : 'transparent'}`,
+                      background: active ? 'var(--app-accent-soft)' : undefined,
+                    }}
+                    styles={{
+                      label: {
+                        fontWeight: active ? 600 : 400,
+                        color: active ? 'var(--app-accent)' : undefined,
+                      },
                     }}
                   />
                 </Box>
               )
             })}
           </Box>
-        ))}
+          )
+        })}
       </Box>
 
       {footer && (
@@ -383,6 +440,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Tooltip
             label={colorScheme === 'dark' ? m.sidebar_switch_to_light() : m.sidebar_switch_to_dark()}
             position="right"
+            disabled={!collapsed}
           >
             <UnstyledButton
               onClick={() => toggleColorScheme()}
@@ -401,6 +459,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!collapsed && <Text size="sm">{colorScheme === 'dark' ? m.sidebar_light_mode() : m.sidebar_dark_mode()}</Text>}
             </UnstyledButton>
           </Tooltip>
+        </Stack>
+      </Box>
+
+      {/* Collapse control — mirrors the Fabric rail: a subtle rotating chevron
+          pinned as the very last element, on its own footer below a divider,
+          distinct from the utility actions above. */}
+      <Box className={css.noShrink}>
+        <Divider mx="sm" />
+        <Box px={6} py={4}>
           <Tooltip
             label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
             position="right"
@@ -409,25 +476,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <UnstyledButton
               onClick={() => setCollapsed(!collapsed)}
               px={collapsed ? 0 : 10}
-              py={8}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-start',
                 gap: 10,
+                width: '100%',
+                height: 32,
                 borderRadius: 6,
                 color: 'var(--mantine-color-dimmed)',
               }}
             >
-              {collapsed ? (
-                <PanelLeftOpen size={18} />
-              ) : (
-                <PanelLeftClose size={18} />
+              <ChevronLeft
+                size={16}
+                style={{
+                  transform: collapsed ? 'rotate(180deg)' : undefined,
+                  flexShrink: 0,
+                }}
+              />
+              {!collapsed && (
+                <Text size="sm" fw={500} style={{ fontSize: 12.5 }}>
+                  {m.sidebar_collapse()}
+                </Text>
               )}
-              {!collapsed && <Text size="sm">{m.sidebar_collapse()}</Text>}
             </UnstyledButton>
           </Tooltip>
-        </Stack>
+        </Box>
       </Box>
 
       {canImpersonate && (
