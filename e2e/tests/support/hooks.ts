@@ -13,7 +13,7 @@ import { spawn, type ChildProcess } from 'child_process'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { config } from './types.js'
-import { GUEST_USER } from '../../src/auth-fixtures.js'
+import { ADMIN_USER } from '../../src/auth-fixtures.js'
 import { assertPortFree } from './backend-port.js'
 
 // LLM calls can be slow
@@ -53,12 +53,12 @@ BeforeAll(async function () {
   )
 
   // Wait for the backend to be ready AND for seeding to have finished. Seeding
-  // (seedAuthUsers) runs in afterStart — async, AFTER the server starts
-  // accepting requests — so a bare connectivity check races ahead of it and UI
-  // sign-ins fail against not-yet-seeded users. Poll the seeded guest sign-in
-  // instead (guest is created last of the seed users, so a 2xx proves the
-  // server is up and seeding has finished; the admin role update runs
-  // immediately after guest creation).
+  // (seedAuthUsers, then seedScopes) runs in afterStart — async, AFTER the
+  // server starts accepting requests — so a bare connectivity check races ahead
+  // of it and UI sign-ins fail against not-yet-seeded users. Poll the seeded
+  // admin all the way through a console RPC instead: a non-403 proves both that
+  // the user rows exist and that seedScopes has granted the `admin` scope the
+  // console's global gate checks, which is the very last thing seeding does.
   // A backend that dies on startup would otherwise burn the whole 120s window
   // before reporting, and the reason would already have scrolled past.
   let exitCode: number | null | undefined
@@ -81,11 +81,19 @@ BeforeAll(async function () {
           origin: config.apiUrl,
         },
         body: JSON.stringify({
-          email: GUEST_USER.email,
-          password: GUEST_USER.password,
+          email: ADMIN_USER.email,
+          password: ADMIN_USER.password,
         }),
       })
-      if (res.ok) return // server up and seed users present
+      const cookie = res.headers.get('set-cookie')
+      if (res.ok && cookie) {
+        const ping = await fetch(`${config.apiUrl}/rpc/console:ping`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({ data: {} }),
+        })
+        if (ping.status !== 403) return // server up, users seeded, scopes granted
+      }
     } catch {
       // server not accepting connections yet — keep polling
     }

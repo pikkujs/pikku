@@ -69,7 +69,8 @@ Feature: Per-user OAuth2 credentials via Better Auth account linking
     Then the credential "user-oauth" should not resolve for "grace"
     And the "user-oauth" account should not be linked
 
-  # The platform user is banned and never holds a session, so a server-side
+  # The platform user has no sign-in method and never holds a session, so a
+  # server-side
   # revoke is the ONLY way a singleton can ever be disconnected.
   Scenario: A platform-wide credential can be disconnected
     Given a signed-in admin "root"

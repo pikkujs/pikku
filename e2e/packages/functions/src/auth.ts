@@ -1,10 +1,12 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
-import { admin, bearer } from 'better-auth/plugins'
+import { bearer } from 'better-auth/plugins'
 import {
   actor,
   credentialOAuth,
   credentialOAuthProviders,
+  resolvedUserHoldsScopes,
+  ADMIN_SCOPES,
 } from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
@@ -27,7 +29,7 @@ import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
 let migrated: Promise<void> | undefined
 
 export const auth = pikkuBetterAuth(
-  async ({ secrets, variables, kysely, logger }) => {
+  async ({ secrets, variables, kysely, logger, scopeService }) => {
     const baseURL = (await variables.get('API_URL')) ?? 'http://localhost:4077'
     const consoleURL =
       (await variables.get('CONSOLE_URL')) ?? 'http://localhost:7071'
@@ -46,10 +48,12 @@ export const auth = pikkuBetterAuth(
       socialProviders: {
         github: await secrets.getSecret('GITHUB_OAUTH'),
       },
-      // admin: role/banned session fields + listUsers/impersonation endpoints.
+      // Admin capabilities (impersonation, the user directory, singleton
+      // credential links) are gated on the `admin` scope tree, not on
+      // better-auth's admin() plugin. The tree itself is declared by
+      // @pikku/addon-console's wireScope, which this app inherits.
       plugins: [
         bearer(),
-        admin(),
         actor({
           secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
         }),
@@ -61,12 +65,21 @@ export const auth = pikkuBetterAuth(
             secrets,
             logger
           ),
+          scopeService,
+          logger,
           // Connecting a singleton rebinds it for everyone, so the app decides
-          // who may. The seeded console admin (role: 'admin') is the realistic
-          // gate; 'root' is kept for the link suite, which provisions a user by
-          // name rather than role.
-          canLinkSingleton: (session) =>
-            session.user.role === 'admin' || session.user.name === 'root',
+          // who may. The realistic gate is the `admin:credentials:link` scope,
+          // which the seeded console admin holds. The 'root' escape is kept for
+          // the link suite: it signs a user up mid-scenario under a throwaway
+          // email, so there is no seeding pass in which a scope could have been
+          // granted to it.
+          canLinkSingleton: async (session) =>
+            (await resolvedUserHoldsScopes(
+              session.user.id,
+              [ADMIN_SCOPES.credentialsLink],
+              scopeService,
+              logger
+            )) || session.user.name === 'root',
         }),
       ],
     })
