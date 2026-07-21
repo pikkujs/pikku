@@ -29,9 +29,14 @@ export class AgentWorld extends World {
 
   async openBrowser() {
     const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
+    const slowMo = process.env.PIKKU_WATCH_SLOWMO
+      ? Number(process.env.PIKKU_WATCH_SLOWMO)
+      : headed
+        ? 200
+        : 0
     this.browser = await chromium.launch({
       headless: !headed,
-      slowMo: headed ? 200 : 0,
+      slowMo,
       ...(process.env.PIKKU_E2E_BROWSER_LOG === '1' ? { dumpio: true } : {}),
     })
     this.context = await this.browser.newContext()
@@ -351,6 +356,10 @@ export class AgentWorld extends World {
       },
       { timeout: config.responseTimeout }
     )
+    const watchDelay = Number(process.env.PIKKU_WATCH_DELAY ?? 0)
+    if (watchDelay > 0) {
+      await this.page.waitForTimeout(watchDelay)
+    }
   }
 
   /**
