@@ -18,6 +18,71 @@ function toKebabCase(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 }
 
+/** Options the runner handles itself — never reported as unknown. */
+const RESERVED_OPTIONS = new Set(['help'])
+
+/** Levenshtein distance, capped-free and dependency-free. Used only to suggest
+ *  a near-miss option name, so the naive O(n*m) implementation is fine. */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  if (a.length === 0) return b.length
+  if (b.length === 0) return a.length
+
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i]
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      row[j] = Math.min(row[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+    }
+    prev = row
+  }
+  return prev[b.length]
+}
+
+/** Finds the closest declared option (distance <= 2) to what the user typed.
+ *  Compares against the kebab-case rendering, since that is what is typed. */
+function suggestOption(
+  typed: string,
+  availableOptions: Record<string, CLIOption>
+): string | null {
+  let best: string | null = null
+  let bestDistance = 3
+
+  for (const name of Object.keys(availableOptions)) {
+    const kebab = toKebabCase(name)
+    const distance = Math.min(
+      levenshtein(typed, kebab),
+      levenshtein(typed, name)
+    )
+    if (distance < bestDistance) {
+      bestDistance = distance
+      best = kebab
+    }
+  }
+
+  return best
+}
+
+/** Records a warning that an unknown long option was accepted but ignored.
+ *  Unknown options stay non-fatal for forward compatibility (a newer command
+ *  version may understand them) — they are just no longer silent. */
+function warnUnknownOption(
+  typed: string,
+  availableOptions: Record<string, CLIOption>,
+  result: ParsedCommand
+) {
+  if (RESERVED_OPTIONS.has(toCamelCase(typed))) {
+    return
+  }
+
+  const suggestion = suggestOption(typed, availableOptions)
+  result.warnings.push(
+    `Unknown option: --${typed} (ignored)` +
+      (suggestion ? ` Did you mean --${suggestion}?` : '')
+  )
+}
+
 /**
  * Result of parsing CLI arguments
  */
@@ -27,6 +92,8 @@ export interface ParsedCommand {
   positionals: Record<string, any>
   options: Record<string, any>
   errors: string[]
+  /** Non-fatal diagnostics (e.g. unknown options that were accepted+ignored) */
+  warnings: string[]
 }
 
 /**
@@ -43,6 +110,7 @@ export function parseCLIArguments(
     positionals: {},
     options: {},
     errors: [],
+    warnings: [],
   }
 
   const meta = allMeta.programs[programName]
@@ -148,7 +216,12 @@ export function parseCLIArguments(
         const key = toCamelCase(arg.slice(2, equalIndex))
         const optionDef = availableOptions[key]
 
-        // Unknown options are allowed for forward compatibility
+        // Unknown options are allowed for forward compatibility, but warned
+        // about so they are not silently dropped by the input schema.
+        if (!optionDef) {
+          warnUnknownOption(arg.slice(2, equalIndex), availableOptions, result)
+        }
+
         const value = arg.slice(equalIndex + 1)
         optionArgs[key] = parseOptionValue(value, optionDef)
       } else {
@@ -156,7 +229,12 @@ export function parseCLIArguments(
         const key = toCamelCase(arg.slice(2))
         const optionDef = availableOptions[key]
 
-        // Unknown options are allowed for forward compatibility
+        // Unknown options are allowed for forward compatibility, but warned
+        // about so they are not silently dropped by the input schema.
+        if (!optionDef) {
+          warnUnknownOption(arg.slice(2), availableOptions, result)
+        }
+
         if (optionDef && optionDef.array) {
           // Array option - collect all following non-flag values
           currentIndex++

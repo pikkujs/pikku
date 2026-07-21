@@ -490,6 +490,10 @@ export async function executeCLI({
       return
     }
 
+    // Non-fatal diagnostics (unknown options are still accepted) go to stderr
+    // so they never pollute a command's machine-readable stdout.
+    parsed.warnings.forEach((warning) => console.error(`Warning: ${warning}`))
+
     if (parsed.errors.length > 0) {
       // Check if any error is about an unknown command
       const hasUnknownCommand = parsed.errors.some(
