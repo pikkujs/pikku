@@ -47,7 +47,7 @@ const buildActors = (): ScenarioActors => {
     apiUrl: config.apiUrl,
     // todo-agent is no-auth, so converse never signs in — the secret is unused.
     secret: process.env.SCENARIO_ACTOR_SECRET ?? 'e2e-unused',
-    model: 'openai/gpt-4o-mini',
+    model: 'openai/gpt-5-mini',
     actors: ACTORS,
   })
 }
