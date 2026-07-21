@@ -25,8 +25,8 @@ import {
   Server,
   KeyRound,
   Variable,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   Search,
   Package,
   RefreshCw,
@@ -148,7 +148,8 @@ export interface SidebarProps {
 }
 
 const COLLAPSED_WIDTH = 60
-const EXPANDED_WIDTH = 210
+// Match the Fabric console rail (60 collapsed / 260 expanded).
+const EXPANDED_WIDTH = 260
 
 export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
@@ -169,6 +170,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     key: 'sidebar-collapsed',
     defaultValue: false,
   })
+  // Collapsible nav sections (like the Fabric rail's accordion groups). We store
+  // the *collapsed* titles so a newly-added section defaults to open.
+  const [collapsedSections, setCollapsedSections] = useLocalStorage<string[]>({
+    key: 'sidebar-collapsed-sections',
+    defaultValue: [],
+  })
+  const isSectionOpen = (title: string) => !collapsedSections.includes(title)
+  const toggleSection = (title: string) =>
+    setCollapsedSections((prev) =>
+      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    )
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
   const canImpersonate = !!auth?.isAdmin
@@ -186,8 +198,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       w={sidebarWidth}
       h="100vh"
       style={{
-        borderRight: `1px solid var(--app-glass-border)`,
-        backgroundColor: `var(--mantine-color-body)`,
+        borderRight: `1px solid var(--app-rail-border)`,
+        backgroundColor: `var(--app-rail-bg)`,
         display: 'flex',
         flexDirection: 'column',
         transition: 'width 200ms ease',
@@ -244,29 +256,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </Box>
 
       <Box style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} py={4}>
-        {sections.map((section, sectionIndex) => (
+        {sections.map((section, sectionIndex) => {
+          // Untitled sections and the collapsed (icon-only) rail are never
+          // accordion-gated; only titled sections collapse in the expanded rail.
+          const sectionOpen =
+            collapsed || !section.title || isSectionOpen(section.title)
+          return (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
-            {section.title && (
-              collapsed ? null : (
+            {section.title && !collapsed && (
+              <UnstyledButton
+                onClick={() => toggleSection(section.title!)}
+                px="sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  paddingTop: 8,
+                  paddingBottom: 2,
+                }}
+              >
                 <Text
                   size="xs"
                   fw={600}
-                  px="sm"
                   style={{
                     color: 'var(--mantine-color-dimmed)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
-                    fontSize: 10,
-                    paddingTop: 8,
-                    paddingBottom: 2,
+                    fontSize: 11,
                   }}
                 >
                   {section.title}
                 </Text>
-              )
+                <ChevronRight
+                  size={12}
+                  style={{
+                    color: 'var(--mantine-color-dimmed)',
+                    transform: sectionOpen ? 'rotate(90deg)' : 'none',
+                    transition: 'transform 150ms ease',
+                  }}
+                />
+              </UnstyledButton>
             )}
-            {section.items.map((item) => {
+            {sectionOpen && section.items.map((item) => {
               const active = isActive(item)
 
               if (collapsed) {
@@ -277,12 +310,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         component={Link}
                         to={item.href}
                         active={active}
-                        leftSection={<item.icon size={18} />}
+                        leftSection={
+                          <item.icon
+                            size={18}
+                            color={active ? 'var(--app-accent)' : undefined}
+                          />
+                        }
                         variant="light"
                         style={{
                           borderRadius: theme.radius.sm,
                           justifyContent: 'center',
                           padding: '8px 0',
+                          background: active ? 'var(--app-accent-soft)' : undefined,
                         }}
                         styles={{
                           section: { marginRight: 0 },
@@ -300,19 +339,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     component={Link}
                     to={item.href}
                     label={item.label}
-                    leftSection={<item.icon size={16} />}
+                    leftSection={
+                      <item.icon
+                        size={16}
+                        color={active ? 'var(--app-accent)' : undefined}
+                      />
+                    }
                     active={active}
                     variant="light"
                     style={{
                       borderRadius: theme.radius.sm,
                       fontSize: 13,
+                      // 2px accent bar is the primary "you are here" cue; the
+                      // soft tint + accent label reinforce it.
+                      borderLeft: `2px solid ${active ? 'var(--app-accent-bar)' : 'transparent'}`,
+                      background: active ? 'var(--app-accent-soft)' : undefined,
+                    }}
+                    styles={{
+                      label: {
+                        fontWeight: active ? 600 : 400,
+                        color: active ? 'var(--app-accent)' : undefined,
+                      },
                     }}
                   />
                 </Box>
               )
             })}
           </Box>
-        ))}
+          )
+        })}
       </Box>
 
       {footer && (
@@ -383,6 +438,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Tooltip
             label={colorScheme === 'dark' ? m.sidebar_switch_to_light() : m.sidebar_switch_to_dark()}
             position="right"
+            disabled={!collapsed}
           >
             <UnstyledButton
               onClick={() => toggleColorScheme()}
@@ -401,6 +457,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!collapsed && <Text size="sm">{colorScheme === 'dark' ? m.sidebar_light_mode() : m.sidebar_dark_mode()}</Text>}
             </UnstyledButton>
           </Tooltip>
+        </Stack>
+      </Box>
+
+      {/* Collapse control — mirrors the Fabric rail: a subtle rotating chevron
+          pinned as the very last element, on its own footer below a divider,
+          distinct from the utility actions above. */}
+      <Box className={css.noShrink}>
+        <Divider mx="sm" />
+        <Box px={6} py={4}>
           <Tooltip
             label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
             position="right"
@@ -409,25 +474,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <UnstyledButton
               onClick={() => setCollapsed(!collapsed)}
               px={collapsed ? 0 : 10}
-              py={8}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-start',
                 gap: 10,
+                width: '100%',
+                height: 32,
                 borderRadius: 6,
                 color: 'var(--mantine-color-dimmed)',
               }}
             >
-              {collapsed ? (
-                <PanelLeftOpen size={18} />
-              ) : (
-                <PanelLeftClose size={18} />
+              <ChevronLeft
+                size={16}
+                style={{
+                  transform: collapsed ? 'rotate(180deg)' : undefined,
+                  flexShrink: 0,
+                }}
+              />
+              {!collapsed && (
+                <Text size="sm" fw={500} style={{ fontSize: 12.5 }}>
+                  {m.sidebar_collapse()}
+                </Text>
               )}
-              {!collapsed && <Text size="sm">{m.sidebar_collapse()}</Text>}
             </UnstyledButton>
           </Tooltip>
-        </Stack>
+        </Box>
       </Box>
 
       {canImpersonate && (

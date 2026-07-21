@@ -83,7 +83,7 @@ const ChannelTree: React.FC<{
           fontSize: 11,
           color: isActive ? 'var(--app-meta-value)' : 'var(--app-text)',
           borderLeft: isActive
-            ? '2px solid rgba(6,182,212,0.4)'
+            ? '2px solid var(--app-accent-bar)'
             : '2px solid transparent',
           width: '100%',
           opacity: isActive ? 1 : 0.6,
@@ -119,16 +119,16 @@ const ChannelTree: React.FC<{
                   alignItems: 'center',
                   gap: 8,
                   padding: '5px 12px 5px 22px',
-                  fontSize: 10,
+                  fontSize: 11,
                   color: active
                     ? 'var(--app-meta-value)'
                     : exists
                       ? 'var(--app-text)'
                       : 'var(--app-text-muted)',
                   borderLeft: active
-                    ? '2px solid #7c3aed'
+                    ? '2px solid var(--app-accent-bar)'
                     : '2px solid transparent',
-                  background: active ? 'rgba(124,58,237,0.06)' : undefined,
+                  background: active ? 'var(--app-accent-soft)' : undefined,
                   width: '100%',
                   cursor: exists ? 'pointer' : 'default',
                   transition: 'all 0.15s',
@@ -163,7 +163,7 @@ const ChannelTree: React.FC<{
                     alignItems: 'center',
                     gap: 6,
                     padding: '6px 12px 4px 22px',
-                    fontSize: 10,
+                    fontSize: 11,
                     color: 'var(--app-text)',
                     width: '100%',
                     cursor: 'pointer',
@@ -183,9 +183,9 @@ const ChannelTree: React.FC<{
                     ff="monospace"
                     tt="none"
                     style={{
-                      background: 'rgba(124,58,237,0.08)',
+                      background: 'var(--mantine-color-default)',
                       border: '0.5px solid transparent',
-                      color: '#7c3aed',
+                      color: 'var(--app-text-muted)',
                     }}
                   >
                     {asI18n('routing')}
@@ -209,10 +209,10 @@ const ChannelTree: React.FC<{
                           gap: 7,
                           padding: '5px 12px 5px 32px',
                           borderLeft: active
-                            ? '2px solid #7c3aed'
+                            ? '2px solid var(--app-accent-bar)'
                             : '2px solid transparent',
                           background: active
-                            ? 'rgba(124,58,237,0.06)'
+                            ? 'var(--app-accent-soft)'
                             : undefined,
                           width: '100%',
                           cursor: 'pointer',
@@ -242,7 +242,7 @@ const ChannelTree: React.FC<{
                                 : 'var(--app-text-muted)'
                             }
                             truncate
-                            style={{ fontSize: 9 }}
+                            style={{ fontSize: 11 }}
                           >
                             {asI18n(`${funcName}()`)}
                           </Text>

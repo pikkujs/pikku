@@ -99,10 +99,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
   return (
     <Box className={classes.flexColumn}>
       {/* Header */}
-      <Box
-        className={classes.detailHeader}
-        style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}
-      >
+      <Box className={classes.detailHeader} style={{ padding: '10px 16px' }}>
         <Box className={classes.flexGrow}>
           <Text size="sm" ff="monospace" c="var(--app-section-label)">
             {asI18n(breadcrumb)}
@@ -123,7 +120,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
             {m.channel_badge_channel()}
           </Badge>
           {selected?.type === 'action' && (
-            <Badge size="sm" variant="light" color="violet">
+            <Badge size="sm" variant="light" color="gray">
               {asI18n(selected.category)}
             </Badge>
           )}
@@ -187,10 +184,10 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                   border: '1px solid var(--app-row-border)',
                   borderRadius: 5,
                   padding: '5px 8px',
-                  fontSize: 10,
+                  fontSize: 11,
                 }}
               >
-                <Text component="span" c="violet" size="sm" ff="monospace">
+                <Text component="span" c="var(--app-accent)" size="sm" ff="monospace">
                   {asI18n(selected.category)}
                 </Text>
                 <Text component="span" c="dimmed" size="sm" ff="monospace">
@@ -323,7 +320,7 @@ function generateRawWsSnippet(
 ): string {
   const route = channel.route || '/'
   const lines: string[] = [
-    `const ws = new WebSocket('ws://localhost:4002${route}')`,
+    `const ws = new WebSocket('ws://localhost:3000${route}')`,
     ``,
     `ws.onopen = () => {`,
   ]

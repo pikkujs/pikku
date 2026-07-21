@@ -50,10 +50,21 @@ const dark: MantineColorsTuple = [
 
 const cssVariablesResolver: CSSVariablesResolver = () => ({
   variables: {
-    '--app-glass-backdrop': 'blur(8px)',
+    // No glass in the console: surfaces are solid, no backdrop blur. (Kept as a
+    // var so every Paper/Accordion/Spotlight consumer stays a single source.)
+    '--app-glass-backdrop': 'none',
   },
   dark: {
     '--mantine-color-body': dark[9],
+    // Shell surfaces: the rail sits half a step above the content canvas so it
+    // reads as its own plane (not a border-only separation).
+    '--app-rail-bg': dark[7],
+    '--app-rail-border': 'rgba(255,255,255,0.06)',
+    // One selection accent for the whole console (cyan). Bar = the 2px active
+    // marker, soft = the active row tint, accent = active icon/label color.
+    '--app-accent': '#22d3ee',
+    '--app-accent-bar': '#06b6d4',
+    '--app-accent-soft': 'rgba(6,182,212,0.13)',
     '--mantine-color-default-border': 'transparent',
     '--mantine-color-default-hover': 'rgba(255,255,255,0.05)',
     '--mantine-color-gray-light': 'rgba(255,255,255,0.08)',
@@ -63,8 +74,8 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-6': 'rgba(255,255,255,0.55)',
     '--mantine-color-blue-light': 'rgba(255,255,255,0.05)',
     '--mantine-color-blue-3': 'rgba(255,255,255,0.18)',
-    '--app-glass-bg':
-      'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
+    // Solid raised surface — no translucent glass gradient.
+    '--app-glass-bg': dark[7],
     '--app-glass-border': 'transparent',
     '--app-input-bg': 'rgba(255,255,255,0.04)',
     '--app-surface': dark[7],
@@ -79,10 +90,10 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-meta-label': '#748398',
     '--app-meta-value': '#e2e8f0',
     '--app-text': '#a8b8cc',
-    '--app-text-muted': '#748398',
-    '--app-text-dim': '#64748b',
-    '--app-text-faint': '#4a5568',
-    '--app-section-label': '#5a6880',
+    '--app-text-muted': '#8496ad',
+    '--app-text-dim': '#7a8ba3',
+    '--app-text-faint': '#6b7a90',
+    '--app-section-label': '#8496ad',
     '--app-tag-bg': 'rgba(6,182,212,0.12)',
     '--app-tag-border': 'transparent',
     '--app-tag-color': '#22d3ee',
@@ -104,7 +115,13 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-surface-danger-soft': 'rgba(248,113,113,0.08)',
   },
   light: {
-    '--mantine-color-body': '#f8f9fa',
+    '--mantine-color-body': '#f4f5f7',
+    // Rail sits above the (slightly greyer) content canvas as a white plane.
+    '--app-rail-bg': '#ffffff',
+    '--app-rail-border': 'rgba(0,0,0,0.07)',
+    '--app-accent': '#0891b2',
+    '--app-accent-bar': '#0891b2',
+    '--app-accent-soft': 'rgba(6,182,212,0.10)',
     '--mantine-color-default-border': 'transparent',
     '--mantine-color-default-hover': 'rgba(0,0,0,0.04)',
     '--mantine-color-gray-light': 'rgba(0,0,0,0.06)',
@@ -114,8 +131,8 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-6': '#4b5563',
     '--mantine-color-blue-light': 'rgba(0,0,0,0.04)',
     '--mantine-color-blue-3': 'rgba(0,0,0,0.12)',
-    '--app-glass-bg':
-      'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.01) 100%)',
+    // Solid raised surface — no translucent glass gradient.
+    '--app-glass-bg': '#ffffff',
     '--app-glass-border': 'transparent',
     '--app-input-bg': 'rgba(0,0,0,0.03)',
     '--app-surface': '#ffffff',
@@ -130,10 +147,10 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-meta-label': '#64748b',
     '--app-meta-value': '#1e293b',
     '--app-text': '#374151',
-    '--app-text-muted': '#64748b',
-    '--app-text-dim': '#94a3b8',
-    '--app-text-faint': '#9ca3af',
-    '--app-section-label': '#6b7280',
+    '--app-text-muted': '#5b6472',
+    '--app-text-dim': '#64748b',
+    '--app-text-faint': '#6b7280',
+    '--app-section-label': '#5b6472',
     '--app-tag-bg': 'rgba(6,182,212,0.08)',
     '--app-tag-border': 'transparent',
     '--app-tag-color': '#0891b2',
@@ -390,7 +407,9 @@ const theme = createTheme({
     },
     Tabs: Tabs.extend({
       defaultProps: {
-        color: 'violet',
+        // One selection accent across the console (cyan), matching the nav +
+        // channel-tree active markers.
+        color: 'cyan',
       },
       classNames: (_theme, props) => ({
         tab: 'pikku-tab',
