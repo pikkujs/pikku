@@ -12,7 +12,8 @@ export const serializeServicesMap = (
   servicesImport: string,
   wireServicesImport: string,
   addonRequiredParentServices: string[] = [],
-  authInjected: boolean = false
+  authInjected: boolean = false,
+  agentScaffoldEnabled: boolean = false
 ): string => {
   // Use pre-aggregated services from inspector state
   // This includes services from:
@@ -53,6 +54,14 @@ export const serializeServicesMap = (
   // factory's return.
   if (authInjected) {
     usedServices.add('auth')
+  }
+
+  // The generated public-agent permission (isThreadOwner) always destructures
+  // agentRunService, but agent.gen.ts is written after requiredServices is
+  // computed from inspecting hand-written sources, so the inspector never
+  // sees that usage — force it required whenever the agent scaffold runs.
+  if (agentScaffoldEnabled) {
+    usedServices.add('agentRunService')
   }
 
   // Create singleton services map: all singleton services with true/false based on usage
@@ -147,7 +156,8 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       servicesImport,
       wireServicesImport,
       config.addonName ? visitState.addonRequiredParentServices : [],
-      Boolean(visitState.auth?.definition)
+      Boolean(visitState.auth?.definition),
+      Boolean(config.scaffold?.agent)
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
   },

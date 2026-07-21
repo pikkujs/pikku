@@ -60,6 +60,49 @@ describe('serializeServicesMap', () => {
     assert.match(content, /Required<Pick<SingletonServices,[^>]*'kysely'/)
     assert.match(content, /Required<Pick<Services,[^>]*'customWire'/)
   })
+
+  test('leaves agentRunService optional when no agent scaffold is configured', () => {
+    const content = serializeServicesMap(
+      ['agentRunService', 'todoStore'],
+      [],
+      new Set(['todoStore']),
+      [],
+      SERVICES_IMPORT,
+      WIRE_IMPORT,
+      [],
+      false,
+      false
+    )
+
+    assert.match(content, /'agentRunService': false,/)
+    assert.doesNotMatch(
+      content,
+      /Pick<SingletonServices,[^>]*'agentRunService'/
+    )
+  })
+
+  test('marks agentRunService required when the agent scaffold is configured', () => {
+    // The generated public-agent permission (isThreadOwner) always destructures
+    // agentRunService, but it is written to disk after requiredServices is
+    // computed, so the inspector never sees it — this has to be force-required.
+    const content = serializeServicesMap(
+      ['agentRunService', 'todoStore'],
+      [],
+      new Set(['todoStore']),
+      [],
+      SERVICES_IMPORT,
+      WIRE_IMPORT,
+      [],
+      false,
+      true
+    )
+
+    assert.match(content, /'agentRunService': true,/)
+    assert.match(
+      content,
+      /Required<Pick<SingletonServices,[^>]*'agentRunService'/
+    )
+  })
 })
 
 describe('pikkuServices', () => {
