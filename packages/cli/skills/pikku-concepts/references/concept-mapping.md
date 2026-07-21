@@ -192,17 +192,19 @@ router.delete('/users/:id', requireRole('admin'), deleteUser)
 **Pikku:**
 
 ```typescript
-const isAdmin = pikkuPermission(async (services, data, wire) => {
+const isOwner = pikkuPermission(async ({ db }, { userId }, wire) => {
   const session = await wire.session.get()
-  return session?.role === 'admin'
+  return session?.userId === userId
 })
 
-// Declare on the function definition (the only place permissions live)
+// Declare on the function definition (the only place permissions live).
+// A capability like "may delete users" is a scope, not a permission.
 export const deleteUser = pikkuFunc({
   func: async (services, data) => {
     /* ... */
   },
-  permissions: { admin: [isAdmin] },
+  scopes: ['admin:users:delete'],
+  permissions: { owner: [isOwner] },
 })
 
 // App-wide baseline every function must also pass (AND gate, narrow-only)

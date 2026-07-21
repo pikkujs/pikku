@@ -106,21 +106,6 @@ const verifyFabricToken = async (
 }
 
 /**
- * Better Auth plugin that lets an authorized Fabric operator act as an admin of
- * a client app WITHOUT being one of its real users. Mirrors {@link actor}:
- * `POST /sign-in/fabric` with `{ token }` verifies a short-lived RS256 JWT the
- * Fabric control plane signed (checked against {@link FabricPluginOptions.publicKey}
- * — the existing `FABRIC_AUTH_PUBLIC_KEY`, not a shared secret) and mints a
- * session for a synthetic, `fabric: true` row created with `role: 'admin'` — so
- * it satisfies both the admin() plugin's permission checks (listUsers, …) and
- * pikku's `resolveImpersonatedSession` default `canImpersonate` (role === 'admin').
- * The token's `sub` is the operator id; the synthetic email is namespaced so it
- * can never collide with a real user, and sign-in against a real row is refused.
- *
- * Use ALONGSIDE better-auth's `admin()` plugin (which declares the `role`
- * column). Filter `fabric: true` rows out of any end-user listing.
- */
-/**
  * Grants the operator's row the umbrella `admin` scope. A failure here is
  * logged, not thrown: the operator gets an authenticated but unprivileged
  * session, which is a far clearer symptom than a 500 on sign-in.
@@ -144,6 +129,21 @@ const grantOperatorAdmin = async (
   }
 }
 
+/**
+ * Better Auth plugin that lets an authorized Fabric operator act as an admin of
+ * a client app WITHOUT being one of its real users. Mirrors {@link actor}:
+ * `POST /sign-in/fabric` with `{ token }` verifies a short-lived RS256 JWT the
+ * Fabric control plane signed (checked against {@link FabricPluginOptions.publicKey}
+ * — the existing `FABRIC_AUTH_PUBLIC_KEY`, not a shared secret) and mints a
+ * session for a synthetic, `fabric: true` row that is granted the umbrella
+ * `admin` scope — which is what satisfies pikku's `admin:*` gates, including
+ * `resolveImpersonatedSession`'s default `canImpersonate`.
+ * The token's `sub` is the operator id; the synthetic email is namespaced so it
+ * can never collide with a real user, and sign-in against a real row is refused.
+ *
+ * Requires a {@link FabricPluginOptions.scopeService} for the grant to land.
+ * Filter `fabric: true` rows out of any end-user listing.
+ */
 export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
   const requiredPurpose = options.purpose ?? 'fabric-admin'
   return {
