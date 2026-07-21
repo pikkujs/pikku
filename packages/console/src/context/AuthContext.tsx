@@ -1,9 +1,11 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { hasScopes } from '@pikku/core'
 import {
   createConsoleAuthClient,
   type ConsoleAuthClient,
 } from '../lib/auth-client'
+import { usePikkuRPC } from './PikkuRpcProvider'
 import { getServerUrl, setServerUrl as persistServerUrl } from './serverUrl'
 
 export interface AuthUser {
@@ -11,17 +13,24 @@ export interface AuthUser {
   email: string
   name?: string | null
   image?: string | null
-  role?: string | null
-  banned?: boolean | null
   createdAt?: string | Date | null
 }
 
 export interface AuthContextValue {
   client: ConsoleAuthClient
   user: AuthUser | null
-  /** True while the initial session fetch is in flight. */
+  /** True while the initial session or scope fetch is in flight. */
   loading: boolean
-  /** True once a session has been resolved (success or not). */
+  /** The scopes the caller's session carries, from `console:getMyAccess`. */
+  scopes: string[]
+  /**
+   * Whether the caller holds `scope`, honouring pikku's parent-grant rule — a
+   * user holding `admin` satisfies `admin:impersonate`. Prefer this over
+   * {@link AuthContextValue.isAdmin} wherever a specific capability is what
+   * actually matters.
+   */
+  can: (scope: string) => boolean
+  /** Whether the caller holds the umbrella `admin` scope. */
   isAdmin: boolean
   /** The pikku instance URL auth + RPC/meta point at (persisted in localStorage). */
   serverUrl: string
@@ -29,7 +38,11 @@ export interface AuthContextValue {
   setServerUrl: (url: string) => void
   refetchSession: () => Promise<unknown>
   /** Sign in. Pass `nextServerUrl` to switch instance and authenticate against it in one step. */
-  signIn: (email: string, password: string, nextServerUrl?: string) => Promise<void>
+  signIn: (
+    email: string,
+    password: string,
+    nextServerUrl?: string
+  ) => Promise<void>
   signOut: () => Promise<void>
   listUsers: (search?: string) => Promise<AuthUser[]>
 }
@@ -37,6 +50,7 @@ export interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 const SESSION_QUERY_KEY = ['console-auth-session']
+const ACCESS_QUERY_KEY = ['console-auth-access']
 
 export const AuthProvider: React.FC<{
   children: React.ReactNode
@@ -44,10 +58,8 @@ export const AuthProvider: React.FC<{
 }> = ({ children, serverUrl }) => {
   const [activeUrl, setActiveUrl] = useState(serverUrl ?? getServerUrl())
   const queryClient = useQueryClient()
-  const client = useMemo(
-    () => createConsoleAuthClient(activeUrl),
-    [activeUrl]
-  )
+  const rpc = usePikkuRPC()
+  const client = useMemo(() => createConsoleAuthClient(activeUrl), [activeUrl])
 
   const sessionQuery = useQuery({
     queryKey: [...SESSION_QUERY_KEY, activeUrl],
@@ -61,12 +73,30 @@ export const AuthProvider: React.FC<{
     retry: false,
   })
 
+  const userId = (sessionQuery.data?.user as AuthUser | undefined)?.id ?? null
+
+  const accessQuery = useQuery({
+    queryKey: [...ACCESS_QUERY_KEY, activeUrl, userId],
+    queryFn: async () =>
+      (await rpc.invoke('console:getMyAccess')) as {
+        userId: string
+        scopes: string[]
+      },
+    enabled: !!userId,
+    retry: false,
+  })
+
   const value = useMemo<AuthContextValue>(() => {
     const session = sessionQuery.data ?? null
     const user = (session?.user as AuthUser | undefined) ?? null
+    const scopes = accessQuery.data?.scopes ?? []
+    const can = (scope: string) => hasScopes([scope], scopes)
 
     const refetchSession = () =>
-      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ACCESS_QUERY_KEY }),
+      ])
 
     const setServerUrl = (url: string) => {
       persistServerUrl(url)
@@ -76,8 +106,13 @@ export const AuthProvider: React.FC<{
     return {
       client,
       user,
-      loading: sessionQuery.isLoading,
-      isAdmin: user?.role === 'admin',
+      // Scopes arrive a round-trip after the session, so a gate that reads
+      // `isAdmin` must keep waiting or it flashes not-authorized at every
+      // admin who is in fact authorized.
+      loading: sessionQuery.isLoading || (!!userId && accessQuery.isLoading),
+      scopes,
+      can,
+      isAdmin: hasScopes(['admin'], scopes),
       serverUrl: activeUrl,
       setServerUrl,
       refetchSession,
@@ -104,25 +139,22 @@ export const AuthProvider: React.FC<{
         await refetchSession()
       },
       listUsers: async (search) => {
-        const { data, error } = await client.admin.listUsers({
-          query: {
-            limit: 200,
-            ...(search
-              ? {
-                  searchField: 'email',
-                  searchOperator: 'contains',
-                  searchValue: search,
-                }
-              : {}),
-          },
-        })
-        if (error) {
-          throw new Error(error.message ?? 'Failed to list users')
-        }
-        return (data?.users ?? []) as AuthUser[]
+        const { users } = (await rpc.invoke('console:listUsers', {
+          ...(search ? { search } : {}),
+        })) as { users: AuthUser[] }
+        return users
       },
     }
-  }, [client, sessionQuery.data, sessionQuery.isLoading, queryClient])
+  }, [
+    client,
+    rpc,
+    userId,
+    sessionQuery.data,
+    sessionQuery.isLoading,
+    accessQuery.data,
+    accessQuery.isLoading,
+    queryClient,
+  ])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

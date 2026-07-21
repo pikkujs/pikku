@@ -1,14 +1,38 @@
 import { wireScope } from '#pikku'
 
 /**
- * Scopes the console's own authorization management requires.
+ * Scopes the console's own authorization management requires, plus the `admin`
+ * tree the framework's own gates check.
  *
  * Self-hosting: the functions that grant scopes are themselves scoped, so
  * handing someone the console does not hand them the ability to grant
  * themselves anything. These flow into the host's ScopeId union and declared
  * set when the addon is wired, so a host role can grant them.
+ *
+ * The `admin` tree mirrors `ADMIN_SCOPE_TREE` in `@pikku/better-auth` — it is
+ * spelled out inline because `wireScope` is extracted by AST, so an imported
+ * constant cannot be spread here. Keep the two in sync.
  */
 wireScope({
+  admin: {
+    displayName: 'Administration',
+    description: 'Capabilities that act on the application as a whole',
+    scopes: {
+      impersonate: { description: 'Act as another user' },
+      credentials: {
+        description: 'Application-wide credentials',
+        scopes: {
+          link: { description: 'Bind a shared credential for every user' },
+        },
+      },
+      users: {
+        description: 'The user directory',
+        scopes: {
+          list: { description: 'List and search users' },
+        },
+      },
+    },
+  },
   pikku: {
     displayName: 'Pikku Console',
     description: "The console's own administrative capabilities",

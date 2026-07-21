@@ -69,44 +69,141 @@ export function useDefaultNavSections(): NavSection[] {
     {
       title: m.nav_run(),
       items: [
-        { label: m.nav_functions(), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
-        { label: m.nav_workflows(), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
-        { label: m.nav_agents(), href: '/agents', icon: Bot, matchPrefix: '/agents' },
-        { label: asI18n('Scenarios'), href: '/scenarios', icon: Route, matchPrefix: '/scenarios' },
+        {
+          label: m.nav_functions(),
+          href: '/functions',
+          icon: FunctionSquare,
+          matchPrefix: '/functions',
+        },
+        {
+          label: m.nav_workflows(),
+          href: '/workflow',
+          icon: GitBranch,
+          matchPrefix: '/workflow',
+        },
+        {
+          label: m.nav_agents(),
+          href: '/agents',
+          icon: Bot,
+          matchPrefix: '/agents',
+        },
+        {
+          label: asI18n('Scenarios'),
+          href: '/scenarios',
+          icon: Route,
+          matchPrefix: '/scenarios',
+        },
       ],
     },
     {
       title: m.nav_data(),
       items: [
-        { label: m.nav_database(), href: '/database', icon: Database, matchPrefix: '/database' },
-        { label: m.nav_apis(), href: '/apis', icon: Globe, matchPrefix: '/apis' },
-        { label: m.nav_jobs(), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
-        { label: m.nav_runtime(), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
-        { label: m.nav_emails(), href: '/emails', icon: Mail, matchPrefix: '/emails' },
-        { label: asI18n('Webhooks'), href: '/webhooks', icon: Webhook, matchPrefix: '/webhooks' },
+        {
+          label: m.nav_database(),
+          href: '/database',
+          icon: Database,
+          matchPrefix: '/database',
+        },
+        {
+          label: m.nav_apis(),
+          href: '/apis',
+          icon: Globe,
+          matchPrefix: '/apis',
+        },
+        {
+          label: m.nav_jobs(),
+          href: '/jobs',
+          icon: Clock,
+          matchPrefix: '/jobs',
+        },
+        {
+          label: m.nav_runtime(),
+          href: '/runtime',
+          icon: Server,
+          matchPrefix: '/runtime',
+        },
+        {
+          label: m.nav_emails(),
+          href: '/emails',
+          icon: Mail,
+          matchPrefix: '/emails',
+        },
+        {
+          label: asI18n('Webhooks'),
+          href: '/webhooks',
+          icon: Webhook,
+          matchPrefix: '/webhooks',
+        },
       ],
     },
     {
       title: m.nav_config(),
       items: [
-        { label: m.nav_secrets(), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
-        { label: m.nav_env_vars(), href: '/variables', icon: Variable, matchPrefix: '/variables' },
-        { label: m.nav_security(), href: '/security', icon: ShieldCheck, matchPrefix: '/security' },
-        { label: m.nav_addons(), href: '/addons', icon: Package, matchPrefix: '/addons' },
+        {
+          label: m.nav_secrets(),
+          href: '/secrets',
+          icon: KeyRound,
+          matchPrefix: '/secrets',
+        },
+        {
+          label: m.nav_env_vars(),
+          href: '/variables',
+          icon: Variable,
+          matchPrefix: '/variables',
+        },
+        {
+          label: m.nav_security(),
+          href: '/security',
+          icon: ShieldCheck,
+          matchPrefix: '/security',
+        },
+        {
+          label: m.nav_addons(),
+          href: '/addons',
+          icon: Package,
+          matchPrefix: '/addons',
+        },
       ],
     },
     {
       title: m.nav_auth(),
       items: [
-        { label: m.nav_users(), href: '/users', icon: Users, matchPrefix: '/users' },
-        { label: asI18n('Scopes'), href: '/scopes', icon: Shield, matchPrefix: '/scopes' },
-        { label: m.nav_oauth(), href: '/auth-providers', icon: KeyRound, matchPrefix: '/auth-providers' },
-        { label: m.nav_credentials(), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
+        {
+          label: m.nav_users(),
+          href: '/users',
+          icon: Users,
+          matchPrefix: '/users',
+        },
+        {
+          label: asI18n('Scopes'),
+          href: '/scopes',
+          icon: Shield,
+          matchPrefix: '/scopes',
+        },
+        {
+          label: m.nav_oauth(),
+          href: '/auth-providers',
+          icon: KeyRound,
+          matchPrefix: '/auth-providers',
+        },
+        {
+          label: m.nav_credentials(),
+          href: '/credentials',
+          icon: KeyRound,
+          matchPrefix: '/credentials',
+        },
       ],
     },
     {
       title: asI18n(''),
-      items: [{ label: m.nav_changes(), href: '/changes', icon: GitCompare, matchPrefix: '/changes' }],
+      items: [
+        {
+          label: m.nav_changes(),
+          href: '/changes',
+          icon: GitCompare,
+          matchPrefix: '/changes',
+        },
+      ],
     },
   ]
 }
@@ -137,7 +234,9 @@ const DEFAULT_BRANDING: SidebarBranding = {
     />
   ),
   title: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'),
-  tooltipLabel: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'),
+  tooltipLabel: asI18n(
+    import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'
+  ),
   homeHref: '/',
 }
 
@@ -172,7 +271,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   })
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
-  const canImpersonate = !!auth?.isAdmin
+  const canImpersonate = auth?.can('admin:impersonate') ?? false
   const [impersonateOpen, setImpersonateOpen] = useState(false)
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
@@ -269,105 +368,114 @@ export const Sidebar: React.FC<SidebarProps> = ({
             !section.title ||
             String(section.title) === String(openedSection ?? '')
           return (
-          <Box key={sectionIndex}>
-            {sectionIndex > 0 && <Divider my={4} mx="sm" />}
-            {section.title && !collapsed && (
-              <UnstyledButton
-                onClick={() =>
-                  setOpenedSection(sectionOpen ? null : section.title!)
-                }
-                className={css.navSectionHeader}
-                data-active={isRouteSection || undefined}
-                aria-expanded={sectionOpen}
-              >
-                <Text
-                  size="xs"
-                  fw={600}
-                  style={{
-                    color: 'inherit',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontSize: 11,
-                  }}
+            <Box key={sectionIndex}>
+              {sectionIndex > 0 && <Divider my={4} mx="sm" />}
+              {section.title && !collapsed && (
+                <UnstyledButton
+                  onClick={() =>
+                    setOpenedSection(sectionOpen ? null : section.title!)
+                  }
+                  className={css.navSectionHeader}
+                  data-active={isRouteSection || undefined}
+                  aria-expanded={sectionOpen}
                 >
-                  {section.title}
-                </Text>
-                <ChevronRight
-                  size={12}
-                  style={{
-                    transform: sectionOpen ? 'rotate(90deg)' : 'none',
-                    transition: 'transform 150ms ease',
-                  }}
-                />
-              </UnstyledButton>
-            )}
-            {sectionOpen && section.items.map((item) => {
-              const active = isActive(item)
+                  <Text
+                    size="xs"
+                    fw={600}
+                    style={{
+                      color: 'inherit',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      fontSize: 11,
+                    }}
+                  >
+                    {section.title}
+                  </Text>
+                  <ChevronRight
+                    size={12}
+                    style={{
+                      transform: sectionOpen ? 'rotate(90deg)' : 'none',
+                      transition: 'transform 150ms ease',
+                    }}
+                  />
+                </UnstyledButton>
+              )}
+              {sectionOpen &&
+                section.items.map((item) => {
+                  const active = isActive(item)
 
-              if (collapsed) {
-                return (
-                  <Tooltip key={item.href} label={item.label} position="right">
-                    <Box px={6} py={2}>
+                  if (collapsed) {
+                    return (
+                      <Tooltip
+                        key={item.href}
+                        label={item.label}
+                        position="right"
+                      >
+                        <Box px={6} py={2}>
+                          <NavLink
+                            component={Link}
+                            to={item.href}
+                            active={active}
+                            leftSection={
+                              <item.icon
+                                size={18}
+                                color={active ? 'var(--app-accent)' : undefined}
+                              />
+                            }
+                            variant="light"
+                            style={{
+                              borderRadius: theme.radius.sm,
+                              justifyContent: 'center',
+                              padding: '8px 0',
+                              background: active
+                                ? 'var(--app-accent-soft)'
+                                : undefined,
+                            }}
+                            styles={{
+                              section: { marginRight: 0 },
+                              body: { display: 'none' },
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
+                    )
+                  }
+
+                  return (
+                    <Box key={item.href} px={6} py={1}>
                       <NavLink
                         component={Link}
                         to={item.href}
-                        active={active}
+                        label={item.label}
                         leftSection={
                           <item.icon
-                            size={18}
+                            size={16}
                             color={active ? 'var(--app-accent)' : undefined}
                           />
                         }
+                        active={active}
                         variant="light"
                         style={{
                           borderRadius: theme.radius.sm,
-                          justifyContent: 'center',
-                          padding: '8px 0',
-                          background: active ? 'var(--app-accent-soft)' : undefined,
+                          fontSize: 13,
+                          // 2px accent bar is the primary "you are here" cue; the
+                          // soft tint + accent label reinforce it.
+                          borderLeft: `2px solid ${active ? 'var(--app-accent-bar)' : 'transparent'}`,
+                          background: active
+                            ? 'var(--app-accent-soft)'
+                            : undefined,
                         }}
                         styles={{
-                          section: { marginRight: 0 },
-                          body: { display: 'none' },
+                          label: {
+                            fontWeight: active ? 600 : 400,
+                            color: active ? 'var(--app-accent)' : undefined,
+                          },
                         }}
                       />
                     </Box>
-                  </Tooltip>
-                )
-              }
-
-              return (
-                <Box key={item.href} px={6} py={1}>
-                  <NavLink
-                    component={Link}
-                    to={item.href}
-                    label={item.label}
-                    leftSection={
-                      <item.icon
-                        size={16}
-                        color={active ? 'var(--app-accent)' : undefined}
-                      />
-                    }
-                    active={active}
-                    variant="light"
-                    style={{
-                      borderRadius: theme.radius.sm,
-                      fontSize: 13,
-                      // 2px accent bar is the primary "you are here" cue; the
-                      // soft tint + accent label reinforce it.
-                      borderLeft: `2px solid ${active ? 'var(--app-accent-bar)' : 'transparent'}`,
-                      background: active ? 'var(--app-accent-soft)' : undefined,
-                    }}
-                    styles={{
-                      label: {
-                        fontWeight: active ? 600 : 400,
-                        color: active ? 'var(--app-accent)' : undefined,
-                      },
-                    }}
-                  />
-                </Box>
-              )
-            })}
-          </Box>
+                  )
+                })}
+            </Box>
           )
         })}
       </Box>
@@ -438,7 +546,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={colorScheme === 'dark' ? m.sidebar_switch_to_light() : m.sidebar_switch_to_dark()}
+            label={
+              colorScheme === 'dark'
+                ? m.sidebar_switch_to_light()
+                : m.sidebar_switch_to_dark()
+            }
             position="right"
             disabled={!collapsed}
           >
@@ -456,7 +568,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             >
               {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? m.sidebar_light_mode() : m.sidebar_dark_mode()}</Text>}
+              {!collapsed && (
+                <Text size="sm">
+                  {colorScheme === 'dark'
+                    ? m.sidebar_light_mode()
+                    : m.sidebar_dark_mode()}
+                </Text>
+              )}
             </UnstyledButton>
           </Tooltip>
         </Stack>
