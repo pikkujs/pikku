@@ -49,19 +49,35 @@ export const deleteBook = pikkuFunc({
 
 ### `pikkuAuth(fn)` — Session-Only Checks
 
-Use for checks that only need the session — no request data required.
+Use for checks that read the session but need no request data — and that assert
+something **beyond** merely having a session (a flag, a tier, a claim).
 
 ```typescript
 import { pikkuAuth } from '#pikku'
 
-export const isAuthenticated = pikkuAuth(
-  async (_services, session) => !!session
-)
-
+// Good: a real gate on the session's contents, not just its existence.
 export const isVerified = pikkuAuth(
   async (_services, session) => !!session?.emailVerified
 )
 ```
+
+**Do NOT write an "is signed in" permission.** A checker that just returns
+`!!session` is not authorization — it re-checks authentication, which the
+function already enforces. A function that needs a signed-in user sets
+`auth: true` (the default for `pikkuFunc`); it does not also carry a
+`permissions: { signedIn }`.
+
+```typescript
+// WRONG — redundant with auth: true; adds a permission that gates nothing.
+export const isSignedIn = pikkuAuth(async (_s, session) => !!session)
+pikkuFunc({ auth: true, permissions: { signedIn: isSignedIn }, /* ... */ })
+
+// RIGHT — auth: true already requires the session; permissions are for capability.
+pikkuFunc({ auth: true, /* ... */ })
+```
+
+A permission answers "*may this user do this?*" (role, ownership, tier) — never
+"*is there a session?*".
 
 ### `pikkuPermission(fn)` — Data-Aware Checks
 
