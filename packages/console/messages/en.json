@@ -575,6 +575,7 @@
   "users_search_placeholder": "Search users by email",
   "users_col_user": "User",
   "users_col_created": "Created",
+  "users_empty_created": "—",
   "users_col_actions": "Actions",
   "users_empty": "No users found",
   "users_roles_action": "Roles",

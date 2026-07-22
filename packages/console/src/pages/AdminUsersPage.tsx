@@ -110,7 +110,7 @@ export const AdminUsersPage: React.FC = () => {
                 <Text size="sm" c="dimmed">
                   {u.createdAt
                     ? asI18n(new Date(u.createdAt).toLocaleDateString())
-                    : asI18n('—')}
+                    : m.users_empty_created()}
                 </Text>
               ),
             },
