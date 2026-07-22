@@ -151,8 +151,53 @@ function emitRef(ref: RefPart): string {
     : `ref(${q(ref.nodeId)})`
 }
 
+/**
+ * Does this value carry an expression anywhere inside a container?
+ *
+ * n8n almost always holds expressions as scalar parameter values, so classifying
+ * per-value is sufficient for it. Other engines don't: a Make `mapper` routinely
+ * nests refs inside arrays/objects (`to: ["{{1.\`0\`}}"]`). Without this, such a
+ * value classifies as a plain literal and the raw expression string is emitted
+ * verbatim into generated code.
+ *
+ * Deliberately guarded: a container with no expression inside keeps the original
+ * `safeJson` path, so existing n8n emissions stay byte-identical.
+ */
+function containsExpression(value: unknown): boolean {
+  if (typeof value === 'string') return value.startsWith('=')
+  if (Array.isArray(value)) return value.some(containsExpression)
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some(
+      containsExpression
+    )
+  }
+  return false
+}
+
 /** Render one classified parameter value as a graph-input expression. */
 function emitValue(value: unknown, ctx: ExprContext): string | null {
+  // Lower expressions nested inside a container element-wise.
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    containsExpression(value)
+  ) {
+    if (Array.isArray(value)) {
+      const items = value.map((v) => emitValue(v, ctx))
+      // A transform anywhere inside isn't declaratively expressible — bail the
+      // whole value, exactly as a scalar transform does.
+      if (items.some((i) => i === null)) return null
+      return `[${items.join(', ')}]`
+    }
+    const entries: string[] = []
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      const rendered = emitValue(v, ctx)
+      if (rendered === null) return null
+      entries.push(`${q(k)}: ${rendered}`)
+    }
+    return `{ ${entries.join(', ')} }`
+  }
+
   const classified = classifyExpression(value, ctx)
   if (classified.kind === 'literal') {
     return safeJson(classified.value)
