@@ -160,7 +160,7 @@ const pikku = createPikku(
   PikkuFetch,
   PikkuRPC,
   PikkuRealtime, // pass the realtime class as the third arg
-  { serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000' }
+  { serverUrl: apiUrl() } // shared env helper — see pikku-react
 )
 // pikku.fetch / pikku.rpc / pikku.realtime — all share the same fetch.
 

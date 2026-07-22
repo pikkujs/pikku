@@ -7,6 +7,7 @@ description: >-
   addons, reusable function packages, cross-project sharing, or addon package structure. DO NOT
   TRIGGER when: user asks about internal function composition (use pikku-rpc) or general function
   definitions (use pikku-concepts).
+installGroups: [core]
 ---
 
 # Pikku Addons

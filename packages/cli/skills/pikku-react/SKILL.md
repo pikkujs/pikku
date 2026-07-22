@@ -36,15 +36,44 @@ import {
 Five exports. `usePikkuRealtime` is only valid when you wired a
 `PikkuRealtime` class via `createPikku` — see step 3 below.
 
+## Resolving the server URL
+
+Every client (`createPikku`, realtime, the auth client) resolves its base
+through one shared helper in `src/lib/env.ts`. Write this once:
+
+```ts
+// Endpoints come from env, never hardcoded.
+export function apiUrl(): string {
+  // SSR: the client hooks only run in the browser, so a placeholder is fine.
+  if (import.meta.env.SSR) {
+    return import.meta.env.VITE_API_URL ?? '/__api'
+  }
+  return import.meta.env.VITE_API_URL ?? `${window.location.origin}/api`
+}
+```
+
+**Never fall back to `http://localhost:3000`.** `import.meta.env.VITE_API_URL`
+is substituted by Vite at *build* time, so any deploy that supplies the URL as
+a *runtime* env var or platform binding leaves it `undefined` in the shipped
+bundle — the fallback is then the only branch that ever runs in the browser. A
+localhost fallback means every request from a deployed app goes to the user's
+own machine. `origin + '/api'` is same-origin, needs no build-time knowledge of
+the domain, and is correct wherever the app is served from.
+
+For local dev, set `VITE_API_URL`, or proxy `/api` → your backend in
+`vite.config.ts` under `server.proxy`. One `/api` entry also covers
+`/api/auth/*`; only add more entries for root-level routes outside `/api`.
+
 ## Setup at the app root
 
 ```tsx
 import { createPikku, PikkuProvider } from '@pikku/react'
 import { PikkuFetch } from './pikku/pikku-fetch.gen'
 import { PikkuRPC } from './pikku/pikku-rpc.gen'
+import { apiUrl } from './lib/env'
 
 const pikku = createPikku(PikkuFetch, PikkuRPC, {
-  serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+  serverUrl: apiUrl(),
 })
 
 createRoot(document.getElementById('root')!).render(
@@ -62,7 +91,7 @@ the `PikkuRealtime` class as the third argument and the instance gets a
 import { PikkuRealtime } from './pikku/realtime.gen'
 
 const pikku = createPikku(PikkuFetch, PikkuRPC, PikkuRealtime, {
-  serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+  serverUrl: apiUrl(),
 })
 // pikku.fetch / pikku.rpc / pikku.realtime — all share the same fetch
 // (server URL + auth configured once).
@@ -159,7 +188,7 @@ or set headers on the fetch instance after creation. Common pattern:
 
 ```tsx
 const pikku = createPikku(PikkuFetch, PikkuRPC, {
-  serverUrl: '...',
+  serverUrl: apiUrl(),
   fetchOptions: {
     onRequest: (req) => {
       const token = localStorage.getItem('token')
