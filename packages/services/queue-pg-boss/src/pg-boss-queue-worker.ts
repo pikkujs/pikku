@@ -18,12 +18,17 @@ import { mapPgBossJobToQueueJob } from './utils.js'
 export const mapPikkuWorkerToPgBoss = (
   workerConfig?: PikkuWorkerConfig
 ): WorkOptions => {
+  // Map the requested parallelism to pg-boss `localConcurrency` (independent
+  // per-job workers), NOT `batchSize`. A batch worker hands the whole fetched
+  // batch to one handler and only fetches again once that handler resolves — so
+  // a single slow job blocks every sibling in its batch AND stalls the next
+  // fetch. On a shared queue that is head-of-line blocking: one long job can
+  // freeze the entire worker and starve everything queued behind it.
+  // `localConcurrency` spawns N pollers that each fetch+process a single job and
+  // refill the instant they finish, so a slow job never holds up the others.
   const workerOptions: WorkOptions = {
-    batchSize: 10,
-  }
-
-  if (workerConfig?.batchSize !== undefined) {
-    workerOptions.batchSize = workerConfig.batchSize
+    localConcurrency: workerConfig?.batchSize ?? 10,
+    batchSize: 1,
   }
 
   if (workerConfig?.pollInterval !== undefined) {
@@ -51,9 +56,9 @@ export class PgBossQueueWorkers implements QueueWorkers {
     // Configurations that are directly supported
     supported: {
       batchSize: {
-        queueProperty: 'batchSize',
+        queueProperty: 'localConcurrency',
         description:
-          'Number of jobs to fetch and process concurrently in parallel',
+          'Number of independent workers processing jobs concurrently (maps to pg-boss localConcurrency, not batch fetching, to avoid head-of-line blocking)',
       },
       pollInterval: {
         queueProperty: 'pollingIntervalSeconds',
