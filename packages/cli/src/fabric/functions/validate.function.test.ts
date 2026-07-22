@@ -677,7 +677,7 @@ describe('pikku fabric validate', () => {
   })
 
   describe('services.ts', () => {
-    test('uses Kysely without LibsqlWebDialect → error', async () => {
+    test('constructs Kysely without LibsqlWebDialect → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -693,6 +693,27 @@ describe('pikku fabric validate', () => {
         assert.strictEqual(result.ok, false)
         assert.ok(
           result.findings.some((f) => f.id === 'services-wrong-db-adapter')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('imports Kysely but constructs nothing → no adapter error', async () => {
+      const tmp = await makeTmp()
+      try {
+        // The starter template takes kysely from injection and never builds a
+        // client, so importing the type must not be flagged as the wrong dialect.
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import type { Kysely } from 'kysely'\n" +
+            'export type Services = { db: Kysely<unknown> }\n',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'services-wrong-db-adapter')
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })
