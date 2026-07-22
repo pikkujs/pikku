@@ -915,8 +915,12 @@ export async function runValidate(
         const pikkuGenDir = join(fnDir, '.pikku')
         const typesGenTs = join(pikkuGenDir, 'pikku-types.gen.ts')
         const typesGenJs = join(pikkuGenDir, 'pikku-types.gen.js')
+        // A warning, not an error: the wrapper is gitignored and recreated by
+        // the sandbox entrypoint and `fabric smoke`, so a freshly cloned or
+        // freshly scaffolded project never has it. As an error, "validate must
+        // pass clean" was unachievable from a clean checkout.
         if (existsSync(typesGenTs) && !existsSync(typesGenJs)) {
-          e(
+          w(
             'pikku-types-js-wrapper-missing',
             'packages/functions/.pikku/pikku-types.gen.js is missing — the sandbox runs pikku dev via bare Node.js, which cannot load .ts files; without the .js wrapper it crashes with "Cannot find module \'#pikku/pikku-types.gen.js\'" on every restart',
             typesGenTs,
@@ -1019,7 +1023,14 @@ export async function runValidate(
         servicesText.includes('LibsqlWebDialect')
       const usesProcessEnv = /\bprocess\.env\.[A-Z_]/.test(servicesText)
 
-      if (dbEngine !== 'postgres' && usesKysely && !usesLibsql) {
+      // Only a services.ts that BUILDS its own client can pick the wrong
+      // dialect. The starter template takes kysely from injection (pikku dev
+      // supplies node:sqlite, the Worker supplies libsql) and constructs
+      // nothing — flagging it told every fresh scaffold to import a dialect it
+      // must not use.
+      const constructsKysely = /new\s+Kysely\s*[<(]/.test(servicesText)
+
+      if (dbEngine !== 'postgres' && usesKysely && constructsKysely && !usesLibsql) {
         e(
           'services-wrong-db-adapter',
           'services.ts uses Kysely but not LibsqlWebDialect — Fabric injects a Turso/libSQL DATABASE_URL at runtime, not a PostgreSQL URL',
