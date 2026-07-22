@@ -5703,6 +5703,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
+    "@pikku/better-auth": "npm:^0.12.18"
     "@pikku/cli": "npm:^0.12.85"
     "@pikku/core": "npm:^0.12.66"
     json-schema: "npm:^0.4.0"
@@ -5710,7 +5711,11 @@ __metadata:
     open: "npm:^10.0.0"
     typescript: "npm:^6.0.3"
   peerDependencies:
+    "@pikku/better-auth": ^0.12.18
     "@pikku/core": ^0.12.66
+  peerDependenciesMeta:
+    "@pikku/better-auth":
+      optional: true
   languageName: unknown
   linkType: soft
 
