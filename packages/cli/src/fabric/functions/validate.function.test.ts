@@ -683,7 +683,10 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeFile(
           join(tmp, 'packages', 'functions', 'src', 'services.ts'),
-          "import { Kysely } from 'kysely'\nimport { PostgresDialect } from 'kysely'\n",
+          // Must CONSTRUCT the client, not merely import it — the rule only
+          // flags a services.ts that builds its own Kysely with the wrong
+          // dialect (import-only scaffolds take kysely from injection).
+          "import { Kysely, PostgresDialect } from 'kysely'\nexport const db = new Kysely({ dialect: new PostgresDialect({}) })\n",
           'utf8'
         )
         const result = await runValidate(tmp)
