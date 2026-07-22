@@ -111,6 +111,22 @@ pikkuFunc({
 })
 ```
 
+**Generics XOR `input`/`output` — never both.** A function's data and return
+types come from *one* source: either the `input`/`output` schemas (preferred —
+they double as runtime validation and OpenAPI) or type generics
+(`pikkuFunc<In, Out>({ ... })`). Passing both makes the two disagree and forces
+`as any` casts. Do not annotate the `func` return type inline either — let the
+`output` schema (or the generic) be the single source of truth for the type.
+
+```typescript
+// Correct — schema-based (no generics, no inline return type)
+pikkuFunc({ input: MyInput, output: MyOutput, func: async (s, d) => { ... } })
+// Correct — generic-based (no input/output)
+pikkuFunc<MyIn, MyOut>({ func: async (s, d) => { ... } })
+// WRONG — mixing the two
+pikkuFunc<MyIn, MyOut>({ input: MyInput as any, func: async (s, d) => { ... } })
+```
+
 ## Schemas (Validation)
 
 Pikku uses Standard Schema — works with Zod, Valibot, ArkType:
