@@ -1,6 +1,6 @@
 ---
-'@pikku/addon-console': minor
-'@pikku/console': minor
+'@pikku/addon-console': patch
+'@pikku/console': patch
 ---
 
 Page the addon and API catalogues instead of loading them whole.
