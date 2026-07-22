@@ -6,6 +6,7 @@ description: >-
   uses pikkuAIAgent/runAIAgent/streamAIAgent, user asks about AI agents, chatbots, LLM assistants,
   tool-calling agents, or agent memory/streaming. DO NOT TRIGGER when: user asks about MCP tool
   exposure (use pikku-mcp) or general function definitions (use pikku-concepts).
+installGroups: [core]
 ---
 
 # Pikku AI Agent Wiring

@@ -59,9 +59,11 @@ import { PikkuProvider, createPikku } from '@pikku/react'
 import { PikkuFetch } from './pikku/pikku-fetch.gen'
 import { PikkuRPC } from './pikku/pikku-rpc.gen'
 
+import { apiUrl } from './lib/env'
+
 const queryClient = new QueryClient()
 const pikku = createPikku(PikkuFetch, PikkuRPC, {
-  serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+  serverUrl: apiUrl(),
 })
 
 <QueryClientProvider client={queryClient}>
@@ -74,6 +76,41 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, {
 The two generated files come from `pikku.config.json`'s
 `clientFiles.fetchFile` and `clientFiles.rpcWiringsFile`. Hooks live in
 the file at `clientFiles.reactQueryFile` (typically `api.gen.ts`).
+
+`apiUrl()` is the shared server-URL helper — see **pikku-react**. Never
+inline `?? 'http://localhost:3000'`: a deploy that supplies the URL as a
+runtime binding leaves `import.meta.env.VITE_API_URL` undefined in the
+bundle, so the fallback is the branch that actually runs.
+
+## TanStack Start (SSR)
+
+Under Start the provider mounts in `routes/__root.tsx` rather than
+`main.tsx`, and the same module is evaluated on the server. Three things
+differ:
+
+1. **`apiUrl()` must have an SSR branch.** `window` is undefined during
+   render; return the build-time var or a placeholder (the client hooks
+   only fire in the browser).
+2. **Build auth clients lazily.** Better Auth validates its baseURL with
+   `new URL(...)` at construction, so a module-scope `createAuthClient`
+   crashes SSR on the placeholder. Memoize it behind a getter:
+
+   ```ts
+   let _authClient: ReturnType<typeof createAuthClient> | undefined
+   export const authClient = () =>
+     (_authClient ??= createAuthClient({ baseURL: `${apiUrl()}/auth` }))
+   ```
+
+3. **The auth baseURL needs the `/auth` suffix.** Better Auth only
+   appends its default `/api/auth` when the baseURL carries no path.
+   `apiUrl()` already ends in `/api`, so a bare `apiUrl()` leaves the
+   client calling `/api/get-session` and 404ing.
+
+Server functions that need typed RPC access use the generated shim:
+
+```bash
+pikku tanstack-start   # emits the makeApi server-function shim
+```
 
 ## The hooks
 

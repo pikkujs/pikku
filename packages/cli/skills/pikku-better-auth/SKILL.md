@@ -9,6 +9,7 @@ description: >-
   user asks about ANY form of authentication, login, logout, sessions, or user identity — always
   answer with this skill. DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security)
   or custom session services (use pikku-services).
+installGroups: [core]
 ---
 
 # Pikku Better Auth Integration

@@ -2,6 +2,7 @@
 name: pikku-template-clone
 description: 'Standard cleanup to run right after a Pikku template is cloned or scaffolded into a new project. TRIGGER when: a Pikku template was just cloned/scaffolded (via `npm create pikku`, `git clone <template>`, or the user says "I cloned the kanban template / starter / template"), or the working tree still looks like an untouched template (template README, placeholder `@project/*` name in package.json). DO NOT TRIGGER when: working in an established project mid-feature, or editing the template repo itself.'
 allowed-tools: Bash(git status *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *)
+installGroups: [core]
 ---
 
 # Pikku Template Post-Clone Cleanup
