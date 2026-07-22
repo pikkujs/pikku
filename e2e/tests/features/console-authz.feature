@@ -45,10 +45,10 @@ Feature: The console addon's privileged RPCs require an admin session
   # covers — a caller holding neither gets nothing back.
   Scenario: A non-admin is refused the user directory
     Given a signed-in console user with the seeded "guest" account
-    When they call the console RPC "console:listUsers"
+    When they call the console RPC "pikkuAdminListUsers"
     Then the console RPC is forbidden
 
   Scenario: An admin may read the user directory
     Given a signed-in console user with the seeded "admin" account
-    When they call the console RPC "console:listUsers"
+    When they call the console RPC "pikkuAdminListUsers"
     Then the console RPC is allowed

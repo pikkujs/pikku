@@ -6,7 +6,11 @@ import { serializeUserAdminFunctions } from './serialize-user-admin-functions.js
 
 export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
-    if (!config.scaffold?.userAdmin || !config.userAdminFunctionsFile) {
+    if (
+      !config.scaffold?.userAdmin ||
+      !config.userAdminFunctionsFile ||
+      !config.userAdminSchemasFile
+    ) {
       logger.debug({
         message:
           'Skipping user admin scaffold (set scaffold.userAdmin in pikku.config.json to enable).',
@@ -46,14 +50,12 @@ export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
       config.typesDeclarationFile,
       config.packageMappings
     )
-    await writeFileInDir(
-      logger,
-      config.userAdminFunctionsFile,
-      serializeUserAdminFunctions(
-        pathToPikkuTypes,
-        config.scaffold.userAdmin === 'auth'
-      )
+    const { schemas, functions } = serializeUserAdminFunctions(
+      pathToPikkuTypes,
+      config.scaffold.userAdmin === 'auth'
     )
+    await writeFileInDir(logger, config.userAdminSchemasFile, schemas)
+    await writeFileInDir(logger, config.userAdminFunctionsFile, functions)
     return true
   },
   middleware: [

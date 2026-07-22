@@ -32,6 +32,7 @@ wireScope({
         description: 'The user directory',
         scopes: {
           list: { description: 'List and search users' },
+          create: { description: 'Create users out of band' },
           ban: { description: 'Ban and unban users' },
           remove: { description: 'Delete users and all their data' },
           sessions: { description: "Revoke a user's sessions" },

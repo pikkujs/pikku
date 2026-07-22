@@ -3,7 +3,7 @@ import {
   Alert,
   Button,
   Group,
-  Modal,
+  Drawer,
   PasswordInput,
   Stack,
   Text,
@@ -14,7 +14,7 @@ import { m } from '@/i18n/messages'
 import { useAuth, type AuthUser } from '../../context/AuthContext'
 import type { UserAction } from './user-actions'
 
-type UserActionModalProps = {
+type UserActionDrawerProps = {
   action: UserAction | null
   user: AuthUser | null
   onClose: () => void
@@ -26,7 +26,7 @@ type UserActionModalProps = {
  * the extra field vary by action; the shape — confirm, run, report — does not,
  * which is why these are one component rather than four near-identical ones.
  */
-export const UserActionModal: React.FC<UserActionModalProps> = ({
+export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
   action,
   user,
   onClose,
@@ -104,11 +104,12 @@ export const UserActionModal: React.FC<UserActionModalProps> = ({
           : m.users_set_password_action()
 
   return (
-    <Modal
+    <Drawer
       opened={action !== null && user !== null}
       onClose={onClose}
+      position="right"
+      size={420}
       title={title}
-      centered
     >
       <Stack gap="md">
         <Text size="sm">{body}</Text>
@@ -147,6 +148,6 @@ export const UserActionModal: React.FC<UserActionModalProps> = ({
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </Drawer>
   )
 }

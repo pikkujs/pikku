@@ -81,6 +81,11 @@ export class AgentWorld extends World {
   private consoleActor?: Actor
   private consoleUserId?: string
 
+  // Credentials for users a scenario created or re-passworded as it ran. The
+  // seeded fixtures are known up front; a user the console just provisioned is
+  // not, and a later step still has to be able to sign in as them.
+  createdUsers = new Map<string, string>()
+
   // Sign in as an arbitrary seeded user and return an Actor owning that user's
   // session cookie jar. Used by the scope-gate suite to exercise the same
   // endpoint as two callers with different scopes.
@@ -167,8 +172,8 @@ export class AgentWorld extends World {
     return res.json()
   }
 
-  // Resolve a seeded user's Better Auth id by email, via the console addon's
-  // user directory RPC (gated on `admin:users:list`). Cached per scenario.
+  // Resolve a seeded user's Better Auth id by email, via the scaffolded user
+  // directory RPC (gated on `admin:users:list`). Cached per scenario.
   // Better Auth owns the user table, so ids are only knowable at runtime.
   private userIds = new Map<string, string>()
   async userIdByEmail(email: string): Promise<string> {
@@ -176,7 +181,7 @@ export class AgentWorld extends World {
     if (cached) {
       return cached
     }
-    const data = await this.consoleRpc('console:listUsers', { limit: 100 })
+    const data = await this.consoleRpc('pikkuAdminListUsers', { limit: 100 })
     const users = data.users ?? []
     for (const user of users) {
       this.userIds.set(user.email, user.id)
