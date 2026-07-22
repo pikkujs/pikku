@@ -867,7 +867,7 @@ export type PollCliAuthInput = {
   code: string
 }
 export type PollCliAuthOutput = {
-  status: 'pending' | 'confirmed' | 'expired'
+  status: 'pending' | 'confirmed' | 'expired' | 'rejected'
   token?: string | undefined
 }
 export type PublishCloudflareDeploymentInput = {

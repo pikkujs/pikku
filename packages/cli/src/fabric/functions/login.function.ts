@@ -97,16 +97,17 @@ export const FabricLogin = pikkuSessionlessFunc({
 
     const { code, expiresAt } = await rpc.invoke('requestCliAuth')
 
-    // The code rides in the URL — /cli-auth prefills the field from ?code=, so
-    // following the link is the whole flow. The code is printed too, for a
-    // hand-typed fallback and so it survives a copied terminal line.
-    const authUrl = `${consoleUrl}/cli-auth?code=${encodeURIComponent(code)}`
+    // Deliberately no ?code= — the browser opens the page, but the code is
+    // typed. That hand-off is what proves the person authorizing the token is
+    // the person who ran this command; a link carrying its own code is a
+    // one-click grant for anyone who can put it in front of a signed-in user.
+    const authUrl = `${consoleUrl}/cli-auth`
 
     console.log('')
-    console.log('  Open this link to finish signing in:')
-    console.log(`    ${authUrl}`)
+    console.log('  Enter this code to finish signing in:')
+    console.log(`    ${code}`)
     console.log('')
-    console.log(`  Code: ${code}`)
+    console.log(`  at ${authUrl}`)
     console.log(`  (expires ${new Date(expiresAt).toLocaleTimeString()})`)
     console.log('')
     console.log('  Waiting for confirmation…')
@@ -120,6 +121,13 @@ export const FabricLogin = pikkuSessionlessFunc({
       if (result.status === 'expired') {
         throw new Error(
           'Code expired before confirmation. Run `pikku fabric login` again.'
+        )
+      }
+      // Distinct from expired: the user pressed Cancel, so stop immediately
+      // rather than sitting here until the TTL runs out.
+      if (result.status === 'rejected') {
+        throw new Error(
+          'Sign-in was cancelled in the browser. Run `pikku fabric login` again to retry.'
         )
       }
       if (result.status === 'confirmed' && result.token) {
