@@ -1459,3 +1459,36 @@ test('vectorStore insert becomes a split → ingest pipeline', () => {
   const addons = files['ingestHandbook/ingestHandbook.addons.gen.ts']
   assert.match(addons, /@pikku\/addon-qdrant/)
 })
+
+test('expressions nested inside array/object params are lowered element-wise, not emitted raw', () => {
+  const parsed = parseN8n(loadFixture('nested-expression-containers.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['nestedExpr/nestedExpr.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // an expression inside an array element is lowered to a ref, and its
+  // literal siblings survive untouched
+  assert.match(
+    graph,
+    /"recipients": \[ref\("trigger", "body\.email"\), "ops@example\.com"\]/
+  )
+
+  // ...and inside an object value
+  assert.match(
+    graph,
+    /"payload": \{ "dealId": ref\("trigger", "body\.id"\), "source": "webhook" \}/
+  )
+
+  // templates lower inside containers too
+  assert.match(
+    graph,
+    /"greetings": \[template\("Hello \$0", \[ref\("trigger", "body\.name"\)\]\)\]/
+  )
+
+  // an expression-free container keeps the original safeJson path
+  assert.match(graph, /"tags": \["blue","green"\]/)
+
+  // the raw n8n expression must never reach generated code
+  assert.doesNotMatch(graph, /\{\{/)
+})
