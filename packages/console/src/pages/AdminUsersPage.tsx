@@ -33,7 +33,7 @@ export const AdminUsersPage: React.FC = () => {
       header={
         <ListPageHeader
           title={m.users_title()}
-          docsHref="https://pikku.dev/docs/authentication/scopes"
+          docsHref="https://pikku.dev/docs/core-features/permission-guards"
           search={{
             placeholder: m.users_search_placeholder(),
             value: search,
@@ -51,7 +51,7 @@ export const AdminUsersPage: React.FC = () => {
         <TableListPage<AuthUser>
           icon={UserCog}
           title={m.users_title()}
-          docsHref="https://pikku.dev/docs/authentication/scopes"
+          docsHref="https://pikku.dev/docs/core-features/permission-guards"
           data={users}
           getKey={(u) => u.id}
           loading={usersQuery.isLoading}

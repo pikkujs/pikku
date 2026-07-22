@@ -214,7 +214,7 @@ wireHTTP({
   func: pikkuFunc({
     title: 'Chat',
     func: async (services, { message, threadId }, wire) => {
-      const session = await wire.session.get()
+      const { session } = wire
       return await runAIAgent(
         'todo-assistant',
         {

@@ -71,7 +71,7 @@ const updateTodo = pikkuFunc({
   input: UpdateTodoInput,
   output: TodoOutput,
   func: async (services, data, wire) => {
-    const session = await wire.session.get()
+    const { session } = wire
     return services.todoStore.update(data.id, data)
   },
 })

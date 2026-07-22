@@ -10,7 +10,6 @@ const USERS: Record<string, any> = {
   u_guest: { id: 'u_guest' },
 }
 
-/** Grants each user holds, as a ScopeService would resolve them. */
 const GRANTS: Record<string, string[]> = {
   u_admin: ['admin'],
   u_guest: ['reports:read'],
