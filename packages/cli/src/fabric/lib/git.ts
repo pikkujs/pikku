@@ -184,9 +184,9 @@ export async function assertNamedBranchDeploySafety(
   let head: string
   try {
     head = await localBranchHeadSha(branch, cwd)
-  } catch {
+  } catch (error: any) {
     throw new Error(
-      `Deployment blocked: local branch ${branch} does not exist.\nFetch or create it before deploying.`
+      `Deployment blocked: local branch ${branch} does not exist (${error.message}).\nFetch or create it before deploying.`
     )
   }
 

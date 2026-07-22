@@ -64,6 +64,18 @@ export async function findProjectConfig(
   }
 }
 
+/**
+ * Templates ship `pikkufabric.config.json` with a `__PROJECT_ID__` placeholder
+ * so the file's shape is visible before the repo is linked. A placeholder is
+ * not a link: without this, `fabric init` on a fresh scaffold reports
+ * "Already linked: __PROJECT_ID__" and every other command sends the
+ * placeholder to the API as if it were a real id.
+ */
+export function isLinkedProjectId(projectId?: string | null): boolean {
+  if (!projectId) return false
+  return !/^__.*__$/.test(projectId)
+}
+
 export async function writeProjectConfig(
   cwd: string,
   config: ProjectConfig
@@ -116,6 +128,8 @@ export async function resolveApiContext(
   return {
     apiUrl,
     token: auth.tokens[apiUrl] ?? null,
-    projectId: projectFile?.config.projectId ?? null,
+    projectId: isLinkedProjectId(projectFile?.config.projectId)
+      ? projectFile!.config.projectId
+      : null,
   }
 }

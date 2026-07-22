@@ -61,6 +61,12 @@ async function prepDeploy({ branch, production, ref }: DeployInput) {
     throw new Error('No fabric project linked. Run `pikku fabric link` first.')
   }
 
+  // Guarded rather than asserted: the schema-level refine is bypassed whenever
+  // the function is called outside CLI arg parsing, and `branch!` turned that
+  // into "local branch undefined does not exist" — an error that names nothing.
+  if (!production && !branch) {
+    throw new Error('Pass exactly one of --branch or --production.')
+  }
   const targetBranch = production ? 'main' : branch!
   const safety = await assertNamedBranchDeploySafety(targetBranch)
   const resolved = ref ? ((await resolveRef(ref)) ?? ref) : safety.headSha
