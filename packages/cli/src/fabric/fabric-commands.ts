@@ -105,6 +105,11 @@ export const fabricCommands = defineCLICommands({
       },
       apiUrl: { description: 'Override the fabric-api URL for this login' },
       consoleUrl: { description: 'Override the console URL the browser opens' },
+      browser: {
+        description:
+          'Open the sign-in link automatically (--no-browser to just print it)',
+        default: true,
+      },
     },
   }),
   init: pikkuCLICommand({

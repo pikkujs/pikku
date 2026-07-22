@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { spawn } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import {
   readAuthFile,
@@ -13,6 +14,7 @@ export const FabricLoginInput = z.object({
   token: z.string().optional(),
   apiUrl: z.string().optional(),
   consoleUrl: z.string().optional(),
+  browser: z.boolean().optional(),
 })
 
 export const FabricLoginOutput = z.object({
@@ -22,6 +24,37 @@ export const FabricLoginOutput = z.object({
 
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 5 * 60 * 1000
+
+/**
+ * Best-effort browser launch. The URL is always printed first, so a failure
+ * here costs the user a click, not the login — hence a warning rather than a
+ * throw. Skipped over SSH and in CI, where opening a browser on the wrong
+ * machine is worse than not opening one.
+ */
+function openBrowser(url: string): void {
+  if (process.env.SSH_TTY || process.env.CI) return
+  const cmd =
+    process.platform === 'darwin'
+      ? 'open'
+      : process.platform === 'win32'
+        ? 'start'
+        : 'xdg-open'
+  try {
+    const child = spawn(cmd, [url], {
+      stdio: 'ignore',
+      detached: true,
+      shell: process.platform === 'win32',
+    })
+    child.on('error', (err) =>
+      console.warn(`[fabric] could not open a browser (${err.message}) — open the URL above.`)
+    )
+    child.unref()
+  } catch (err) {
+    console.warn(
+      `[fabric] could not open a browser (${(err as Error).message}) — open the URL above.`
+    )
+  }
+}
 
 /**
  * Device-authorization-style CLI login. Server mints a short code, user types
@@ -35,7 +68,13 @@ export const FabricLogin = pikkuSessionlessFunc({
   output: FabricLoginOutput,
   func: async (
     _services,
-    { apiKey, token, apiUrl: apiUrlOverride, consoleUrl: consoleUrlOverride }
+    {
+      apiKey,
+      token,
+      apiUrl: apiUrlOverride,
+      consoleUrl: consoleUrlOverride,
+      browser,
+    }
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     const apiUrl = ctx.apiUrl
@@ -58,14 +97,21 @@ export const FabricLogin = pikkuSessionlessFunc({
 
     const { code, expiresAt } = await rpc.invoke('requestCliAuth')
 
+    // The code rides in the URL — /cli-auth prefills the field from ?code=, so
+    // following the link is the whole flow. The code is printed too, for a
+    // hand-typed fallback and so it survives a copied terminal line.
+    const authUrl = `${consoleUrl}/cli-auth?code=${encodeURIComponent(code)}`
+
     console.log('')
-    console.log('  Enter this code at:')
-    console.log(`    ${consoleUrl}/cli-auth`)
+    console.log('  Open this link to finish signing in:')
+    console.log(`    ${authUrl}`)
     console.log('')
     console.log(`  Code: ${code}`)
     console.log(`  (expires ${new Date(expiresAt).toLocaleTimeString()})`)
     console.log('')
     console.log('  Waiting for confirmation…')
+
+    if (browser !== false) openBrowser(authUrl)
 
     const deadline = Date.now() + POLL_TIMEOUT_MS
     while (Date.now() < deadline) {
