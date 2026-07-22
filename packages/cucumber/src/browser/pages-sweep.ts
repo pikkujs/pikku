@@ -34,15 +34,29 @@ export function staticRoutes(repoRoot: string): string[] {
 }
 
 /**
- * A failed request that is just Vite's dev dep-optimizer aborting in-flight
- * pre-bundle module loads (it re-optimizes on first hit of a new route, bumps
- * the `?v=` hash, and full-reloads) — a transient, NOT an app bug.
+ * A CANCELLED request — never on its own evidence of an app bug.
+ *
+ * An abort means nobody ever answered: the browser tore the request down while
+ * it was in flight. A genuinely broken endpoint does the opposite — it answers,
+ * with a status, and that is caught by `apiErrors`/`HTTP <status>`; a broken
+ * page throws, and that is caught by `pageErrors`/`consoleErrors`. So an abort
+ * adds no information those checks don't already carry, and reporting it as a
+ * "runtime error" is the sweep asserting a conclusion it has no evidence for.
+ *
+ * This used to match only aborted requests under `node_modules`, on the theory
+ * that Vite's dep-optimizer was the sole source. It isn't: a dep re-optimize
+ * (or any HMR full-reload) tears down EVERYTHING in flight at that instant —
+ * app source (`/src/Foo.tsx?t=<ts>`), workspace files served via `/@fs/`, and
+ * the page's own `/api/...` calls — and only the `node_modules` subset was
+ * exempt. One sandbox build spent 27 of its 43 `build-complete` refusals on
+ * this: every single failure it was ever shown was an abort, and it kept
+ * "fixing" pages that were fine.
+ *
+ * Aborts still count as transient, so the retry below re-reads the page — if a
+ * real error is hiding behind the reload, the next attempt reports it.
  */
-function isViteDepOptimizerAbort(failedRequest: string): boolean {
-  return (
-    /(?:ERR_ABORTED|net::ERR_FAILED|aborted)/i.test(failedRequest) &&
-    /(?:\/@fs\/[^ ]*node_modules|\/node_modules\/\.vite\/|\/\.vite\/deps\/)/.test(failedRequest)
-  )
+function isAbortedRequest(failedRequest: string): boolean {
+  return /(?:ERR_ABORTED|net::ERR_FAILED|aborted)/i.test(failedRequest)
 }
 
 export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
@@ -82,8 +96,8 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
       }
 
       const issues = actor.takeIssues()
-      const failedRequests = issues.failedRequests.filter((r) => !isViteDepOptimizerAbort(r))
-      const viteAborts = issues.failedRequests.length - failedRequests.length
+      const failedRequests = issues.failedRequests.filter((r) => !isAbortedRequest(r))
+      const aborts = issues.failedRequests.length - failedRequests.length
       // A GATEWAY error (502/503/504) on an app /api call means the edge
       // couldn't reach the upstream — the dev server is (re)starting. A plain
       // 500 is the server UP but a handler THREW — a real code bug — so it must
@@ -94,11 +108,12 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
       if (issues.consoleErrors.length) problems.push(`console errors: ${issues.consoleErrors.join(' | ')}`)
       if (failedRequests.length) problems.push(`failed requests: ${failedRequests.join(' | ')}`)
 
-      // Clean read → trust it. If the only disruption was transient (Vite
-      // optimizer, a gateway 502/503/504, or a session-loss /login redirect),
-      // wait for the server to settle and retry; otherwise stop — the problems
-      // are real (a 500, a console/page error, a persistent /login guard).
-      const transient = viteAborts > 0 || gatewayErrors.length > 0 || redirectedToLogin
+      // Clean read → trust it. If the only disruption was transient (a
+      // cancelled request, a gateway 502/503/504, or a session-loss /login
+      // redirect), wait for the server to settle and retry; otherwise stop —
+      // the problems are real (a 500, a console/page error, a persistent
+      // /login guard).
+      const transient = aborts > 0 || gatewayErrors.length > 0 || redirectedToLogin
       if (!transient || attempt === 2) break
       await actor.waitForServerReady()
     }
