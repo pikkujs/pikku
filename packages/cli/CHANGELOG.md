@@ -1,3 +1,172 @@
+## 0.12.86
+
+### Patch Changes
+
+- ae4f59a: Gate admin capabilities on scopes, and scaffold user management
+
+  Admin capabilities were gated on `user.role === 'admin'` — a single text column
+  meaning "can do everything". Impersonating a user, rebinding a shared
+  credential and reading the user directory are distinct capabilities that one
+  user can hold independently, so they are now scopes on an `admin` tree:
+
+  | Gate                                   | Scope                    |
+  | -------------------------------------- | ------------------------ |
+  | impersonation                          | `admin:impersonate`      |
+  | `credentialOAuth`'s `canLinkSingleton` | `admin:credentials:link` |
+  | reading the user directory             | `admin:users:list`       |
+  | creating a user out of band            | `admin:users:create`     |
+  | ban / unban                            | `admin:users:ban`        |
+  | delete a user                          | `admin:users:remove`     |
+  | revoke a user's sessions               | `admin:users:sessions`   |
+  | set a user's password                  | `admin:users:password`   |
+
+  Holding the bare `admin` scope satisfies all of them via pikku's existing
+  parent-grant rule, so it is a one-for-one replacement for the old role.
+
+  better-auth's `admin()` plugin is still what implements ban, delete,
+  session-revocation and set-password, so it stays. Its `user.role` column is no
+  longer something pikku grants: it is _projected_ from the scope store when a
+  session is built, and only from the scopes whose capability better-auth's own
+  endpoints gate on the caller's role. Someone granted `admin:users:list` can read
+  the directory — which goes straight to the auth adapter — without gaining the
+  power to ban, and revoking a scope demotes the role on the next sign-in. Scopes
+  remain the single source of truth.
+
+  New `scaffold.userAdmin` in `pikku.config.json` generates the whole set —
+  `pikkuAdminListUsers`, `pikkuAdminCreateUser`, `pikkuAdminSetUserBanned`,
+  `pikkuAdminRemoveUser`, `pikkuAdminRevokeUserSessions` and
+  `pikkuAdminSetUserPassword` — into your project. Listing or banning a user is
+  ordinary application behaviour and must not require installing the console.
+  Codegen fails with an actionable error if better-auth is wired without
+  `admin()`. The console's Users page calls these same functions, showing each
+  action only where the caller holds its scope.
+
+  Every scaffold now emits a directory named for its domain — `scaffold/admin/`,
+  `scaffold/rpc/`, `scaffold/agent/`, `scaffold/auth/`, `scaffold/console/`,
+  `scaffold/graph/`, `scaffold/realtime/`, `scaffold/scenarios/`,
+  `scaffold/webhook/`, `scaffold/workflow/` — holding its wiring file beside a
+  `*.schemas.gen.ts` sibling, and every generated payload is a zod schema instead
+  of a TypeScript generic. The schemas have to stand alone: the inspector reads a
+  zod schema by importing the module that declares it, which it cannot do for a
+  wiring file whose relative pikku-types import per-unit deploy codegen rewrites.
+
+  Resolving a schema by reference rather than by name also fixes the agent HTTP
+  surface. `agentCaller` and `agentStreamCaller` take the same payload but had to
+  repeat the type literal verbatim in each generic position, because the extractor
+  synthesised the schema name from the _function_ name and so recorded an
+  `inputSchemaName` with no schema behind it whenever the two shared a named
+  alias — every agent call through that alias failed with `MissingSchemaError`.
+  One `AgentCall` schema now backs both.
+
+  Where a payload's shape belongs to `@pikku/core` (`WorkflowRunStatus`,
+  `FunctionCoverageReport`, `StubCall[]`) the generated function carries no
+  `output` schema and the inspector infers it from the handler's return type;
+  re-declaring a core type in zod would be a second definition free to drift.
+
+  Upgrading rewrites the layout in place: codegen prunes the pre-directory copy of
+  each scaffold file before it inspects the source tree, since the old flat file
+  still wires the same routes and leaving it behind would wire everything twice.
+
+  `@pikku/core` gains `hasScopes(required, held)`, the non-throwing counterpart to
+  `verifyScopes`, and declares `auth` on `CoreSingletonServices` — the auth
+  instance the generated `pikkuServices` wrapper already injected but never typed.
+  A scope root declared twice (an addon and its host both contributing the same
+  `admin` tree) now flattens to one entry per id instead of emitting it twice.
+
+  BREAKING: there is no role fallback for the scope-gated capabilities. An app
+  that relied on the old default must register a `ScopeService` and grant `admin`
+  (or a narrower `admin:*` scope). Every gate fails closed and warns when no
+  `ScopeService` is registered. `delegatedAuth`'s `defaultRole`/`mapRole` now
+  grant a pikku role through the `ScopeService` instead of writing better-auth's
+  `role` column, and the `credentialOAuth` platform user no longer sets `banned`.
+
+  BREAKING: the console reads its user directory over the scaffolded
+  `pikkuAdminListUsers` RPC (gated on `admin:users:list`, backed by better-auth's
+  `$context.adapter`) instead of `client.admin.listUsers`, and
+  `UsersTableUser`/`UsersTableLabels` no longer carry `role` — there is no role
+  column to render. `@pikku/addon-console` no longer ships a `console:listUsers`
+  function: user management is not the console's job, so a host that wants the
+  Users page must enable `scaffold.userAdmin`.
+
+- 004f076: Remove generated schema files that are no longer required
+
+  `saveSchemas` rewrites `register.gen.ts` from scratch on every run, so a schema that
+  is no longer required stops being registered — but its `<Name>.schema.json` stayed on
+  disk indefinitely. That orphan is not inert: it is the artifact tooling reads to answer
+  "what does the server validate against?", and it answers with the shape the function had
+  at some earlier point. Anything trusting it concludes the schema is correct while the
+  running server disagrees, which presents as an unfixable "stale server" that no
+  regeneration or restart resolves.
+
+  The schemas directory is now kept in step with `register.gen.ts`: if a schema is not
+  imported there, its file is deleted.
+
+- da99ab6: Stop the frontend skills teaching a localhost server URL, and cover TanStack Start
+
+  `pikku-react`, `pikku-react-query` and `pikku-realtime` all showed
+  `serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000'`.
+  `import.meta.env` is a _build-time_ substitution, so any deploy that supplies the
+  API URL as a runtime env var or platform binding leaves it `undefined` in the
+  shipped bundle — the fallback is then the only branch that ever runs in the
+  browser, and every request from the deployed app goes to the developer's own
+  machine. It works locally and fails the moment it is deployed.
+
+  The three skills now resolve through one shared `apiUrl()` helper that falls back
+  to same-origin `${window.location.origin}/api`, which needs no build-time
+  knowledge of the domain and is correct wherever the app is served from.
+  `pikku-react` documents the helper and why the localhost fallback is banned.
+
+  `pikku-react-query` also gains a TanStack Start section: the `import.meta.env.SSR`
+  branch, building auth clients lazily (Better Auth validates its baseURL with
+  `new URL()` at construction, so a module-scope client crashes SSR), the `/auth`
+  suffix that Better Auth needs when the base already carries a path, and the
+  `pikku tanstack-start` shim.
+
+  Finally, `pikku-better-auth`, `pikku-emails`, `pikku-addon`, `pikku-ai-vercel`,
+  `pikku-ai-agent` and `pikku-template-clone` are tagged `installGroups: [core]`.
+  They were in no group at all, so `pikku skills install --core` left an agent with
+  no guidance on auth, email, addons or the post-clone cleanup — all of which the
+  starter template ships with.
+
+- 4bcf8d5: Add the pikku-fabric-debug skill
+
+  `pikku-fabric` covers project layout, database, deploy provider and config, and
+  stops at deploy. Nothing covered debugging a stage that is already live, so an
+  agent facing a broken deployment had no supported path and would reach for
+  whatever it could improvise.
+
+  The new skill documents the actual loop over the existing commands —
+  `errors` (filtered, carries the traceId) → `trace <traceId>` (the whole request
+  across the stage, in order, with per-event durations) → `metrics` (is this one
+  request or the whole stage) → `logs` → `status` (is the running gitSha the one
+  you think it is).
+
+  It also records two behaviours that read as app bugs but are not:
+  `pikku fabric logs` accepts `--since` and `--deployment` and ignores both, and
+  `--follow` is a 2-second client-side poll rather than a server stream.
+
+- 4443361: Open the sign-in page automatically, and stop on a cancelled login
+
+  `pikku fabric login` printed a `/cli-auth` URL and left the user to find it. The
+  link now opens in the default browser automatically. It is skipped when
+  `SSH_TTY` or `CI` is set, where opening a browser on the wrong machine is worse
+  than not opening one, and `--no-browser` disables it. A launch failure warns and
+  leaves the printed URL as the fallback rather than failing the login.
+
+  The code is not carried in the link. Typing it is what proves the person
+  authorizing the token is the person who ran the command — a URL that carries its
+  own code is a one-click grant for anyone who can put it in front of a signed-in
+  user. The output leads with the code and treats the URL as the destination.
+
+  `pollCliAuth` can now return `rejected`, which the CLI reports as a cancelled
+  sign-in and exits on, instead of polling until the code expires and then
+  blaming the timeout.
+
+- Updated dependencies [ae4f59a]
+  - @pikku/better-auth@0.12.19
+  - @pikku/inspector@0.12.45
+  - @pikku/core@0.12.67
+
 ## 0.12.85
 
 ### Patch Changes
