@@ -27,6 +27,7 @@ const KNOWN_INSTALL_GROUPS = new Set(['core', 'fabric'])
 const FABRIC_SKILLS = [
   'pikku-deploy-cloudflare',
   'pikku-fabric',
+  'pikku-fabric-debug',
   'pikku-schema-cfworker',
   'pikku-product-second-opinion',
   'pikku-software-archaeology',
