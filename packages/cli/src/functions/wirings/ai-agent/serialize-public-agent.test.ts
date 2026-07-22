@@ -19,34 +19,41 @@ describe('serializePublicAgent — agent HTTP surface', () => {
     return output.slice(start, end === -1 ? undefined : end)
   }
 
-  for (const caller of ['agentCaller', 'agentStreamCaller']) {
-    test(`${caller} declares every optional AIAgentInput field`, () => {
-      const body = callerBody(generate(), caller)
-      for (const field of optionalInputs) {
-        assert.ok(
-          body.includes(`${field}?:`),
-          `expected ${caller} to declare an optional \`${field}\``
-        )
-      }
-    })
-
-    /**
-     * The schema extractor only reads type literals in the generic position and
-     * synthesises the schema name from the function name. Behind a named alias
-     * it records an `inputSchemaName` with no schema behind it, and the runtime
-     * then rejects every agent call with MissingSchemaError.
-     */
-    test(`${caller} declares its input inline so a schema is generated`, () => {
-      const body = callerBody(generate(), caller)
-      const generic = body.slice(body.indexOf('pikkuSessionlessFunc<'))
+  test('AgentCall declares every optional AIAgentInput field', () => {
+    const { schemas } = generate()
+    for (const field of optionalInputs) {
       assert.ok(
-        generic.startsWith('pikkuSessionlessFunc<{'),
-        `expected ${caller} to open its generic with an inline type literal`
+        new RegExp(`${field}: [^\\n]*\\.optional\\(\\)`).test(schemas),
+        `expected AgentCall to declare an optional \`${field}\``
+      )
+    }
+  })
+
+  for (const caller of ['agentCaller', 'agentStreamCaller']) {
+    /**
+     * Both callers take the same payload. Before zod they each had to repeat the
+     * type literal verbatim in the generic position: the extractor synthesised
+     * the schema name from the function name, so behind a shared named alias it
+     * recorded an `inputSchemaName` with no schema behind it and the runtime
+     * rejected every agent call with MissingSchemaError. A zod `input` is
+     * resolved by reference, so one schema now backs both.
+     */
+    test(`${caller} takes its input from the shared AgentCall schema`, () => {
+      const { functions } = generate()
+      const body = callerBody(functions, caller)
+      assert.ok(
+        body.includes('input: AgentCall'),
+        `expected ${caller} to reference the shared schema`
+      )
+      assert.ok(
+        !body.includes('pikkuSessionlessFunc<'),
+        'schemas and generics are mutually exclusive'
       )
     })
 
     test(`${caller} forwards every optional AIAgentInput field to the rpc call`, () => {
-      const body = callerBody(generate(), caller)
+      const { functions } = generate()
+      const body = callerBody(functions, caller)
       for (const field of optionalInputs) {
         assert.ok(
           new RegExp(`\\.\\.\\.\\(data\\.${field}[^)]*\\)`).test(body),
@@ -57,16 +64,27 @@ describe('serializePublicAgent — agent HTTP surface', () => {
   }
 
   test('attachments are typed rather than accepted as opaque data', () => {
-    const output = generate()
+    const { schemas } = generate()
     assert.ok(
-      output.includes("type: 'image' | 'file'"),
+      schemas.includes("z.enum(['image', 'file'])"),
       'expected the attachment kind to be a literal union'
     )
     for (const field of ['data', 'url', 'mediaType', 'filename']) {
       assert.ok(
-        output.includes(`${field}?:`),
+        new RegExp(`${field}: z\\.string\\(\\)\\.optional\\(\\)`).test(schemas),
         `expected attachments to declare an optional \`${field}\``
       )
     }
+  })
+
+  test('the schemas module imports nothing but zod', () => {
+    const { schemas, functions } = generate()
+    assert.ok(schemas.includes("import { z } from 'zod'"))
+    assert.ok(
+      !schemas.includes('pikku-types.gen.js'),
+      'the inspector imports this module directly, so it must not reach for a path deploy codegen rewrites'
+    )
+    assert.ok(!schemas.includes('@pikku/core'))
+    assert.ok(functions.includes("from './agent.schemas.gen.js'"))
   })
 })

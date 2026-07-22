@@ -46,11 +46,31 @@ Codegen fails with an actionable error if better-auth is wired without
 `admin()`. The console's Users page calls these same functions, showing each
 action only where the caller holds its scope.
 
-The scaffold emits a directory, `scaffold/admin/`, holding `user-admin.gen.ts`
-beside `user-admin.schemas.gen.ts`. The schemas are zod and have to stand alone:
-the inspector reads a zod schema by importing the module that declares it, which
-it cannot do for a file whose relative pikku-types import per-unit deploy codegen
-rewrites.
+Every scaffold now emits a directory named for its domain — `scaffold/admin/`,
+`scaffold/rpc/`, `scaffold/agent/`, `scaffold/auth/`, `scaffold/console/`,
+`scaffold/graph/`, `scaffold/realtime/`, `scaffold/scenarios/`,
+`scaffold/webhook/`, `scaffold/workflow/` — holding its wiring file beside a
+`*.schemas.gen.ts` sibling, and every generated payload is a zod schema instead
+of a TypeScript generic. The schemas have to stand alone: the inspector reads a
+zod schema by importing the module that declares it, which it cannot do for a
+wiring file whose relative pikku-types import per-unit deploy codegen rewrites.
+
+Resolving a schema by reference rather than by name also fixes the agent HTTP
+surface. `agentCaller` and `agentStreamCaller` take the same payload but had to
+repeat the type literal verbatim in each generic position, because the extractor
+synthesised the schema name from the *function* name and so recorded an
+`inputSchemaName` with no schema behind it whenever the two shared a named
+alias — every agent call through that alias failed with `MissingSchemaError`.
+One `AgentCall` schema now backs both.
+
+Where a payload's shape belongs to `@pikku/core` (`WorkflowRunStatus`,
+`FunctionCoverageReport`, `StubCall[]`) the generated function carries no
+`output` schema and the inspector infers it from the handler's return type;
+re-declaring a core type in zod would be a second definition free to drift.
+
+Upgrading rewrites the layout in place: codegen prunes the pre-directory copy of
+each scaffold file before it inspects the source tree, since the old flat file
+still wires the same routes and leaving it behind would wire everything twice.
 
 `@pikku/core` gains `hasScopes(required, held)`, the non-throwing counterpart to
 `verifyScopes`, and declares `auth` on `CoreSingletonServices` — the auth

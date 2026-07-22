@@ -52,9 +52,17 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Remote — the `remote: true` surface a wireRemoteAddon consumer imports
   rpcRemoteMapDeclarationFile: string
 
+  // Every scaffold is a directory under scaffold.pikkuDir named for its domain,
+  // holding its wiring file beside a `*.schemas.gen.ts` sibling. The schemas are
+  // zod and have to stand alone: the inspector reads a zod schema by importing
+  // the module that declares it, which it cannot do for a wiring file whose
+  // relative pikku-types import per-unit deploy codegen rewrites. A scaffold
+  // with no payload of its own (graph, auth) has no schemas file.
+
   // Remote RPC workers (derived from scaffold.pikkuDir when scaffold.remoteRpc is enabled).
   // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
   remoteRpcWorkersFile?: string
+  remoteRpcSchemasFile?: string
 
   // wireAddon for @pikku/addon-graph (derived from scaffold.pikkuDir when scaffold.graph is enabled).
   // Optional: left undefined when scaffold.graph is not enabled, so consumers must guard.
@@ -63,22 +71,26 @@ export interface PikkuCLICoreOutputFiles {
   // Outgoing webhook delivery worker (derived from scaffold.pikkuDir when scaffold.webhook is enabled).
   // Optional: left undefined when scaffold.webhook is not enabled, so consumers must guard.
   webhookWorkersFile?: string
+  webhookSchemasFile?: string
 
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
+  publicRpcSchemasFile?: string
   publicAgentFile: string
+  publicAgentSchemasFile?: string
   consoleFunctionsFile: string
+  consoleSchemasFile?: string
   scenariosFunctionsFile: string
+  scenariosSchemasFile?: string
 
   // better-auth admin() wrappers (derived from scaffold.pikkuDir when scaffold.userAdmin is enabled).
   // Optional: left undefined when scaffold.userAdmin is not enabled, so consumers must guard.
-  // The schemas live in their own module: the inspector reads a zod schema by
-  // importing the file that declares it, and the functions file imports
-  // pikku-types over a relative path that per-unit deploy codegen rewrites.
   userAdminFunctionsFile?: string
   userAdminSchemasFile?: string
   workflowRoutesFile: string
+  workflowRoutesSchemasFile?: string
   eventsChannelFile: string
+  eventsSchemasFile?: string
 
   // Triggers
   triggersTypesFile: string

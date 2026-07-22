@@ -4,6 +4,7 @@ import { rm } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeAuthGen } from './serialize-auth-gen.js'
 import {
   serializeAuthTypes,
@@ -80,6 +81,14 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       await writeFileInDir(logger, middlewareFile, middleware)
     } else if (existsSync(middlewareFile)) {
       await rm(middlewareFile, { force: true })
+    }
+
+    // Auth used to be emitted flat into the scaffold dir and now lives in an
+    // `auth/` directory alongside every other scaffold. All three files still
+    // wire what they always did, so a leftover copy one level up would register
+    // the catch-all routes and session middleware a second time.
+    for (const file of [authFile, secretsFile, middlewareFile]) {
+      await removeLegacyScaffoldFile(file)
     }
 
     // Static metadata of the enabled providers/plugins for the console SSO page,

@@ -3,6 +3,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { projectDeclaresBetterAuth } from '../../../utils/detect-better-auth.js'
+import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeConsoleFunctions } from './serialize-console-functions.js'
 
 export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
@@ -12,7 +13,7 @@ export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
       return false
     }
 
-    if (config.scaffold?.console) {
+    if (config.scaffold?.console && config.consoleSchemasFile) {
       // Every console RPC now requires an authenticated session (the console is
       // an admin surface), so scaffolding it without an auth strategy produces a
       // console that 403s on every call. Better Auth is the supported strategy —
@@ -42,15 +43,14 @@ export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
         config.agentTypesFile,
         config.packageMappings
       )
-      await writeFileInDir(
-        logger,
-        config.consoleFunctionsFile,
-        serializeConsoleFunctions(
-          pathToPikkuTypes,
-          pathToAgentTypes,
-          config.globalHTTPPrefix || ''
-        )
+      const { schemas, functions } = serializeConsoleFunctions(
+        pathToPikkuTypes,
+        pathToAgentTypes,
+        config.globalHTTPPrefix || ''
       )
+      await writeFileInDir(logger, config.consoleSchemasFile, schemas)
+      await writeFileInDir(logger, config.consoleFunctionsFile, functions)
+      await removeLegacyScaffoldFile(config.consoleFunctionsFile)
       return true
     }
     return false

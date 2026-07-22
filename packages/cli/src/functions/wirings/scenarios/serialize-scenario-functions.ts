@@ -1,14 +1,48 @@
+export interface ScenarioGenOutput {
+  schemas: string
+  functions: string
+}
+
 /**
  * Generate the scenario instrumentation functions (`pikku scenario` coverage
  * snapshots and stub-call inspection) into the project scaffold, so scenario
  * runs work against any server without requiring the console addon.
+ *
+ * Emitted as two files. The schemas are zod, and the inspector reads a zod
+ * schema by importing the module that declares it — which it cannot do for the
+ * functions file, whose relative pikku-types import per-unit deploy codegen
+ * rewrites. Keeping the schemas in a sibling module that imports nothing but
+ * zod sidesteps that entirely.
+ *
+ * The coverage and stub-call results are `@pikku/core` types, so they get no
+ * zod `output`: re-declaring a core type here would be a second definition free
+ * to drift from the one the runtime actually returns. Without `output` the
+ * inspector takes the shape from the handler's own return type, which is that
+ * core type by construction. The three functions that take no arguments get no
+ * `input` for the same reason — there is nothing to validate.
  */
 export const serializeScenarioFunctions = (
   pathToPikkuTypes: string,
   requireAuth: boolean = true
-) => {
+): ScenarioGenOutput => {
   const authFlag = requireAuth ? 'true' : 'false'
-  return `/**
+
+  const schemas = `/**
+ * Auto-generated scenario instrumentation schemas
+ * Do not edit manually - regenerate with 'npx pikku'
+ */
+import { z } from 'zod'
+
+/** Narrows recorded stub calls to one service; every service when omitted. */
+export const StubCallsQuery = z.object({
+  service: z.string().optional(),
+})
+
+/** Whether the server was started with the instrumentation this call needs. */
+export const Enabled = z.object({ enabled: z.boolean() })
+`
+
+  const functions = `/**
  * Auto-generated scenario instrumentation functions
  * Do not edit manually - regenerate with 'npx pikku'
  */
@@ -19,14 +53,10 @@ import {
   getStubTracker,
   isTestRun,
   type CoverageFunctionMeta,
-  type FunctionCoverageReport,
-  type StubCall,
 } from '@pikku/core/services'
+import { StubCallsQuery, Enabled } from './scenarios.schemas.gen.js'
 
-export const pikkuScenarioTakeLiveCoverage = pikkuFunc<
-  null,
-  FunctionCoverageReport | null
->({
+export const pikkuScenarioTakeLiveCoverage = pikkuFunc({
   tags: ['pikku'],
   title: 'Take Live Coverage',
   description:
@@ -53,16 +83,14 @@ export const pikkuScenarioTakeLiveCoverage = pikkuFunc<
   },
 })
 
-export const pikkuScenarioResetLiveCoverage = pikkuFunc<
-  null,
-  { enabled: boolean }
->({
+export const pikkuScenarioResetLiveCoverage = pikkuFunc({
   tags: ['pikku'],
   title: 'Reset Live Coverage',
   description:
     'Clears V8 precise-coverage call counts so the next takeLiveCoverage snapshot is attributable to a single scenario run. Reports enabled: false when the server was not started with coverage enabled.',
   expose: true,
   auth: ${authFlag},
+  output: Enabled,
   func: async ({ coverageService }) => {
     if (!coverageService) return { enabled: false }
     await coverageService.reset()
@@ -70,32 +98,33 @@ export const pikkuScenarioResetLiveCoverage = pikkuFunc<
   },
 })
 
-export const pikkuScenarioResetStubs = pikkuFunc<null, { enabled: boolean }>({
+export const pikkuScenarioResetStubs = pikkuFunc({
   tags: ['pikku'],
   title: 'Reset Stubs',
   description:
     'Clears recorded stub calls so the next getStubCalls result is attributable to a single scenario run. Reports enabled: false when the server was not started in test mode.',
   expose: true,
   auth: ${authFlag},
+  output: Enabled,
   func: async () => {
     getStubTracker().reset()
     return { enabled: isTestRun() }
   },
 })
 
-export const pikkuScenarioGetStubCalls = pikkuFunc<
-  { service?: string },
-  StubCall[]
->({
+export const pikkuScenarioGetStubCalls = pikkuFunc({
   tags: ['pikku'],
   title: 'Get Stub Calls',
   description:
     'Returns calls recorded against stubbed/spied services (via the stub()/spy() core utils). Empty unless the server records service calls (pikku dev --test).',
   expose: true,
   auth: ${authFlag},
+  input: StubCallsQuery,
   func: async (_services, data) => {
     return getStubTracker().getCalls(data?.service ?? undefined)
   },
 })
 `
+
+  return { schemas, functions }
 }
