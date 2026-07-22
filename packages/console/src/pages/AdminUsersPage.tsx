@@ -6,6 +6,10 @@ import { AlertTriangle, UserCog, ShieldCheck } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { UserRolesDrawer } from '../components/users/UserRolesDrawer'
+import { UserStatusBadge } from '../components/users/UserStatusBadge'
+import { UserActionsMenu } from '../components/users/UserActionsMenu'
+import { UserActionModal } from '../components/users/UserActionModal'
+import type { UserAction } from '../components/users/user-actions'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
@@ -20,6 +24,10 @@ export const AdminUsersPage: React.FC = () => {
     id: string
     label: string
   } | null>(null)
+  const [actionFor, setActionFor] = useState<{
+    action: UserAction
+    user: AuthUser
+  } | null>(null)
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', debounced],
@@ -27,6 +35,11 @@ export const AdminUsersPage: React.FC = () => {
   })
 
   const users = usersQuery.data ?? []
+  // Ban state and session count both live on the row, so any action that
+  // changes them has to bring the list back rather than patch it locally.
+  const refetchUsers = () => {
+    void usersQuery.refetch()
+  }
 
   return (
     <PageContainer
@@ -79,6 +92,17 @@ export const AdminUsersPage: React.FC = () => {
                 </Group>
               ),
             },
+            // Only shown where the host wires `admin()`; without it the server
+            // reports no ban state and an always-empty column is just noise.
+            ...(users.some((u) => u.banned !== undefined)
+              ? [
+                  {
+                    key: 'status',
+                    header: m.users_col_status(),
+                    render: (u: AuthUser) => <UserStatusBadge user={u} />,
+                  },
+                ]
+              : []),
             {
               key: 'created',
               header: m.users_col_created(),
@@ -106,6 +130,11 @@ export const AdminUsersPage: React.FC = () => {
                   >
                     {m.users_roles_action()}
                   </Button>
+                  <UserActionsMenu
+                    user={u}
+                    onAction={(action) => setActionFor({ action, user: u })}
+                    onUnbanned={refetchUsers}
+                  />
                 </Group>
               ),
             },
@@ -117,6 +146,12 @@ export const AdminUsersPage: React.FC = () => {
         onClose={() => setRolesFor(null)}
         userId={rolesFor?.id}
         userLabel={rolesFor?.label ?? ''}
+      />
+      <UserActionModal
+        action={actionFor?.action ?? null}
+        user={actionFor?.user ?? null}
+        onClose={() => setActionFor(null)}
+        onDone={refetchUsers}
       />
     </PageContainer>
   )

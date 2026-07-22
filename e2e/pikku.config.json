@@ -32,7 +32,8 @@
     "scenarios": "auth",
     "agent": "no-auth",
     "workflow": "no-auth",
-    "webhook": true
+    "webhook": true,
+    "userAdmin": "auth"
   },
   "emailTemplatesDir": "emails",
   "scenarios": {

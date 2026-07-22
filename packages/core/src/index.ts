@@ -2,6 +2,7 @@
  * @module @pikku/core
  */
 export type {
+  AuthInstance,
   CommonWireMeta,
   CoreConfig,
   CorePikkuMiddleware,

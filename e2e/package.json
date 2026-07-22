@@ -34,6 +34,7 @@
     "test:security-console": "cucumber-js --config tests/cucumber.mjs --tags @security-console",
     "test:impersonation": "cucumber-js --config tests/cucumber.mjs --tags @impersonation",
     "test:scopes": "cucumber-js --config tests/cucumber.mjs --tags @scopes",
+    "test:user-admin": "cucumber-js --config tests/cucumber.mjs --tags @user-admin",
     "test:scopes-console": "cucumber-js --config tests/cucumber.mjs --tags @scopes-console",
     "tsc": "tsc --noEmit"
   },

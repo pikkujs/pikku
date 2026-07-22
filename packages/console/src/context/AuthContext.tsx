@@ -14,6 +14,14 @@ export interface AuthUser {
   name?: string | null
   image?: string | null
   createdAt?: string | Date | null
+  /**
+   * Ban state, owned by better-auth's `admin()` plugin. Undefined when the host
+   * does not wire it — distinct from `false`, so the UI can leave the column out
+   * entirely rather than claiming everyone is in good standing.
+   */
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: string | null
 }
 
 export interface AuthContextValue {
@@ -45,9 +53,40 @@ export interface AuthContextValue {
   ) => Promise<void>
   signOut: () => Promise<void>
   listUsers: (search?: string) => Promise<AuthUser[]>
+  /**
+   * User-management actions, each gated on its own `admin:users:*` scope.
+   *
+   * These live in the *host app's* scaffold (`scaffold.userAdmin`), not in the
+   * console addon — banning a user is ordinary application behaviour and must
+   * not require running a console. A host that has not scaffolded them has no
+   * such RPC and no such scopes, so `can(...)` returns false and the UI leaves
+   * the actions out entirely.
+   */
+  setUserBanned: (input: {
+    userId: string
+    banned: boolean
+    reason?: string
+    expiresInSeconds?: number
+  }) => Promise<void>
+  removeUser: (userId: string) => Promise<void>
+  revokeUserSessions: (userId: string) => Promise<void>
+  setUserPassword: (userId: string, newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+/**
+ * The user-management RPCs the host app scaffolds. They cannot appear in the
+ * console's `RPCMap`, which only knows the console addon's own functions, so
+ * the name is passed untyped — the payloads are pinned by
+ * {@link AuthContextValue} instead.
+ */
+const USER_ADMIN_RPC = {
+  setBanned: 'pikkuAdminSetUserBanned',
+  remove: 'pikkuAdminRemoveUser',
+  revokeSessions: 'pikkuAdminRevokeUserSessions',
+  setPassword: 'pikkuAdminSetUserPassword',
+} as const
 
 const SESSION_QUERY_KEY = ['console-auth-session']
 const ACCESS_QUERY_KEY = ['console-auth-access']
@@ -87,6 +126,12 @@ export const AuthProvider: React.FC<{
   })
 
   const value = useMemo<AuthContextValue>(() => {
+    const invokeUserAdmin = (name: string, data: unknown) =>
+      (rpc.invoke as (name: string, data: unknown) => Promise<unknown>)(
+        name,
+        data
+      )
+
     const session = sessionQuery.data ?? null
     const user = (session?.user as AuthUser | undefined) ?? null
     const scopes = accessQuery.data?.scopes ?? []
@@ -143,6 +188,21 @@ export const AuthProvider: React.FC<{
           ...(search ? { search } : {}),
         })) as { users: AuthUser[] }
         return users
+      },
+      setUserBanned: async (input) => {
+        await invokeUserAdmin(USER_ADMIN_RPC.setBanned, input)
+      },
+      removeUser: async (userId) => {
+        await invokeUserAdmin(USER_ADMIN_RPC.remove, { userId })
+      },
+      revokeUserSessions: async (userId) => {
+        await invokeUserAdmin(USER_ADMIN_RPC.revokeSessions, { userId })
+      },
+      setUserPassword: async (userId, newPassword) => {
+        await invokeUserAdmin(USER_ADMIN_RPC.setPassword, {
+          userId,
+          newPassword,
+        })
       },
     }
   }, [

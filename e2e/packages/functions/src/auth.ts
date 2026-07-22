@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
-import { bearer } from 'better-auth/plugins'
+import { admin, bearer } from 'better-auth/plugins'
 import {
   actor,
   credentialOAuth,
@@ -52,7 +52,14 @@ export const auth = pikkuBetterAuth(
       // credential links) are gated on the `admin` scope tree, not on
       // better-auth's admin() plugin. The tree itself is declared by
       // @pikku/addon-console's wireScope, which this app inherits.
+      //
+      // admin() is wired only for what pikku does NOT implement itself: ban,
+      // delete, session revocation and set-password. Its `role` column is never
+      // read as an authorization signal — `syncProjectedAdminRole` maintains it
+      // as a projection of the caller's `admin:users:*` scopes so those
+      // endpoints unlock for exactly the people the scope store says they should.
       plugins: [
+        admin(),
         bearer(),
         actor({
           secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',

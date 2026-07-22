@@ -16,6 +16,7 @@ export interface AuthPluginDef {
  */
 export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   actor: { displayName: 'Actor' },
+  admin: { displayName: 'Admin' },
   anonymous: { displayName: 'Anonymous' },
   apiKey: { displayName: 'API Key' },
   bearer: { displayName: 'Bearer' },
