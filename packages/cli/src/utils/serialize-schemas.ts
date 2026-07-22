@@ -37,9 +37,15 @@ async function pruneOrphanedSchemaFiles(
   let entries: string[]
   try {
     entries = await readdir(dir)
-  } catch {
+  } catch (e) {
     // No schemas dir yet (first run, or none were ever generated) — nothing to prune.
-    return
+    // Anything else (permissions, IO) means we do NOT know what is on disk, and
+    // reporting a clean generation over an unread directory is the exact false
+    // "everything is registered" claim this prune exists to stop.
+    if ((e as NodeJS.ErrnoException)?.code === 'ENOENT') {
+      return
+    }
+    throw e
   }
 
   const orphans = entries.filter(
@@ -102,7 +108,9 @@ export async function saveSchemas(
   // Sort so register.gen.ts is byte-identical across runs — requiredSchemas is
   // a Set in (nondeterministic) traversal-insertion order.
   const availableSchemas = Array.from(requiredSchemas)
-    .filter((schema) => schemas[schema])
+    // Presence, not truthiness: `false` is a legal JSON Schema (it rejects everything),
+    // and dropping it here would unregister the schema AND prune its file.
+    .filter((schema) => schemas[schema] !== undefined)
     .sort()
 
   // Keep exactly what register.gen.ts is about to import — the two must not disagree.

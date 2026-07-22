@@ -21,7 +21,6 @@ async function makeDir(): Promise<string> {
   return dir
 }
 
-/** Drop a schema file that a previous codegen run would have left behind. */
 async function seedExistingSchema(parent: string, name: string) {
   await mkdir(join(parent, 'schemas'), { recursive: true })
   await writeFile(
@@ -41,7 +40,6 @@ afterEach(async () => {
 describe('saveSchemas', () => {
   test('removes schema files that are no longer required', async () => {
     const parent = await makeDir()
-    // Two schemas from an earlier run; this run only still needs one of them.
     await seedExistingSchema(parent, 'CreateClassInput')
     await seedExistingSchema(parent, 'DeletedFunctionInput')
 
@@ -106,6 +104,38 @@ describe('saveSchemas', () => {
     await saveSchemas(noopLogger, parent, {}, new Set(), true)
 
     assert.deepEqual(await listSchemaFiles(parent), [])
+  })
+
+  test('reports a schema it could not delete instead of failing the build', async () => {
+    const parent = await makeDir()
+    // A directory cannot be unlink()ed, so this stands in for any undeletable entry.
+    await mkdir(join(parent, 'schemas', 'Undeletable.schema.json'), { recursive: true })
+
+    const errors: string[] = []
+    const logger = { ...noopLogger, error: (m: string) => errors.push(m) } as CLILogger
+
+    await saveSchemas(
+      logger,
+      parent,
+      { KeptInput: { type: 'object', properties: {} } },
+      new Set(['KeptInput']),
+      true
+    )
+
+    assert.ok(
+      errors.some((m) => m.includes('Undeletable.schema.json')),
+      `stale schema left on disk without a word about it: ${JSON.stringify(errors)}`
+    )
+  })
+
+  test('keeps a `false` schema, which is valid and rejects everything', async () => {
+    const parent = await makeDir()
+
+    await saveSchemas(noopLogger, parent, { DenyAll: false }, new Set(['DenyAll']), true)
+
+    assert.deepEqual(await listSchemaFiles(parent), ['DenyAll.schema.json'])
+    const register = await readFile(join(parent, 'register.gen.ts'), 'utf-8')
+    assert.ok(register.includes(`addSchema('DenyAll'`))
   })
 
   test('leaves an unrelated file in the schemas dir alone', async () => {
