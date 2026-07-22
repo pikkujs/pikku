@@ -21,6 +21,8 @@ export interface UsersTableUser {
 export interface UsersTableLabels {
   columnUser: I18nString
   columnCreated: I18nString
+  /** Shown in the joined column when a user row carries no creation date. */
+  emptyCreated: I18nString
 }
 
 export interface UsersTableProps {
@@ -76,7 +78,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
             <Text size="sm" c="dimmed">
               {u.createdAt
                 ? asI18n(new Date(u.createdAt).toLocaleDateString())
-                : asI18n('—')}
+                : labels.emptyCreated}
             </Text>
           </Table.Td>
           {renderActions && <Table.Td>{renderActions(u)}</Table.Td>}

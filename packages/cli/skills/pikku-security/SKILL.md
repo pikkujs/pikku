@@ -36,7 +36,7 @@ const login = pikkuFunc({
   auth: false,
   func: async ({ jwt, db }, { email, password }, { setSession }) => {
     const user = await db.verifyCredentials(email, password)
-    setSession({ userId: user.id, role: user.role })
+    setSession({ userId: user.id })
     return { token: jwt.sign({ userId: user.id }) }
   },
 })
@@ -95,7 +95,7 @@ export const login = pikkuFunc({
   auth: false,
   func: async ({ jwt, db }, { email, password }, { setSession }) => {
     const user = await db.verifyCredentials(email, password)
-    setSession({ userId: user.id, role: user.role })
+    setSession({ userId: user.id })
     return { token: jwt.sign({ userId: user.id }) }
   },
 })

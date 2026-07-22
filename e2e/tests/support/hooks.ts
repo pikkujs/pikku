@@ -92,7 +92,7 @@ BeforeAll(async function () {
           headers: { 'content-type': 'application/json', cookie },
           body: JSON.stringify({ data: {} }),
         })
-        if (ping.status !== 403) return // server up, users seeded, scopes granted
+        if (ping.ok) return // server up, users seeded, scopes granted
       }
     } catch {
       // server not accepting connections yet — keep polling

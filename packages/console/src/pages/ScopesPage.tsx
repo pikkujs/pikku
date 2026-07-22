@@ -37,7 +37,7 @@ export const ScopesPage: React.FC = () => {
               ? m.scopes_page_desc_roles()
               : m.scopes_page_desc_vocab()
           }
-          docsHref="https://pikku.dev/docs/authentication/scopes"
+          docsHref="https://pikku.dev/docs/core-features/permission-guards"
           lead={
             tab === 'roles' ? (
               <Button

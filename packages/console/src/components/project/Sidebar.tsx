@@ -88,7 +88,7 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/agents',
         },
         {
-          label: asI18n('Scenarios'),
+          label: m.nav_scenarios(),
           href: '/scenarios',
           icon: Route,
           matchPrefix: '/scenarios',
@@ -129,7 +129,7 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/emails',
         },
         {
-          label: asI18n('Webhooks'),
+          label: m.nav_webhooks(),
           href: '/webhooks',
           icon: Webhook,
           matchPrefix: '/webhooks',
@@ -175,7 +175,7 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/users',
         },
         {
-          label: asI18n('Scopes'),
+          label: m.nav_scopes(),
           href: '/scopes',
           icon: Shield,
           matchPrefix: '/scopes',

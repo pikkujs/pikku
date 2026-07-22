@@ -193,7 +193,7 @@ router.delete('/users/:id', requireRole('admin'), deleteUser)
 
 ```typescript
 const isOwner = pikkuPermission(async ({ db }, { userId }, wire) => {
-  const session = await wire.session.get()
+  const { session } = wire
   return session?.userId === userId
 })
 
@@ -478,7 +478,7 @@ const updateTodo = pikkuFunc(async (services, { id, title }, wire) => {
   const todo = services.todoStore.getTodo(id)
   if (!todo) throw new NotFoundError('Todo not found')
 
-  const session = await wire.session.get()
+  const { session } = wire
   if (todo.userId !== session.userId) throw new ForbiddenError()
 
   return { todo: services.todoStore.update(id, { title }) }
@@ -511,18 +511,18 @@ const login = pikkuSessionlessFunc(
   async ({ jwt }, { username, password }, wire) => {
     const user = authenticate(username, password)
     const token = await jwt.sign({ userId: user.id })
-    await wire.session.set({ userId: user.id, user }) // Set
+    await wire.setSession({ userId: user.id, user }) // Set
     return { token, user }
   }
 )
 
 const getMe = pikkuFunc(async (services, data, wire) => {
-  const session = await wire.session.get() // Get
+  const { session } = wire // Get
   return { user: session.user }
 })
 
 const logout = pikkuFunc(async (services, data, wire) => {
-  await wire.session.clear() // Clear
+  await wire.clearSession() // Clear
   return { success: true }
 })
 ```
