@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { spawn } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import {
   readAuthFile,
@@ -13,6 +14,7 @@ export const FabricLoginInput = z.object({
   token: z.string().optional(),
   apiUrl: z.string().optional(),
   consoleUrl: z.string().optional(),
+  browser: z.boolean().optional(),
 })
 
 export const FabricLoginOutput = z.object({
@@ -22,6 +24,37 @@ export const FabricLoginOutput = z.object({
 
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 5 * 60 * 1000
+
+/**
+ * Best-effort browser launch. The URL is always printed first, so a failure
+ * here costs the user a click, not the login — hence a warning rather than a
+ * throw. Skipped over SSH and in CI, where opening a browser on the wrong
+ * machine is worse than not opening one.
+ */
+function openBrowser(url: string): void {
+  if (process.env.SSH_TTY || process.env.CI) return
+  const cmd =
+    process.platform === 'darwin'
+      ? 'open'
+      : process.platform === 'win32'
+        ? 'start'
+        : 'xdg-open'
+  try {
+    const child = spawn(cmd, [url], {
+      stdio: 'ignore',
+      detached: true,
+      shell: process.platform === 'win32',
+    })
+    child.on('error', (err) =>
+      console.warn(`[fabric] could not open a browser (${err.message}) — open the URL above.`)
+    )
+    child.unref()
+  } catch (err) {
+    console.warn(
+      `[fabric] could not open a browser (${(err as Error).message}) — open the URL above.`
+    )
+  }
+}
 
 /**
  * Device-authorization-style CLI login. Server mints a short code, user types
@@ -35,7 +68,13 @@ export const FabricLogin = pikkuSessionlessFunc({
   output: FabricLoginOutput,
   func: async (
     _services,
-    { apiKey, token, apiUrl: apiUrlOverride, consoleUrl: consoleUrlOverride }
+    {
+      apiKey,
+      token,
+      apiUrl: apiUrlOverride,
+      consoleUrl: consoleUrlOverride,
+      browser,
+    }
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     const apiUrl = ctx.apiUrl
@@ -58,14 +97,22 @@ export const FabricLogin = pikkuSessionlessFunc({
 
     const { code, expiresAt } = await rpc.invoke('requestCliAuth')
 
+    // Deliberately no ?code= — the browser opens the page, but the code is
+    // typed. That hand-off is what proves the person authorizing the token is
+    // the person who ran this command; a link carrying its own code is a
+    // one-click grant for anyone who can put it in front of a signed-in user.
+    const authUrl = `${consoleUrl}/cli-auth`
+
     console.log('')
-    console.log('  Enter this code at:')
-    console.log(`    ${consoleUrl}/cli-auth`)
+    console.log('  Enter this code to finish signing in:')
+    console.log(`    ${code}`)
     console.log('')
-    console.log(`  Code: ${code}`)
+    console.log(`  at ${authUrl}`)
     console.log(`  (expires ${new Date(expiresAt).toLocaleTimeString()})`)
     console.log('')
     console.log('  Waiting for confirmation…')
+
+    if (browser !== false) openBrowser(authUrl)
 
     const deadline = Date.now() + POLL_TIMEOUT_MS
     while (Date.now() < deadline) {
@@ -74,6 +121,13 @@ export const FabricLogin = pikkuSessionlessFunc({
       if (result.status === 'expired') {
         throw new Error(
           'Code expired before confirmation. Run `pikku fabric login` again.'
+        )
+      }
+      // Distinct from expired: the user pressed Cancel, so stop immediately
+      // rather than sitting here until the TTL runs out.
+      if (result.status === 'rejected') {
+        throw new Error(
+          'Sign-in was cancelled in the browser. Run `pikku fabric login` again to retry.'
         )
       }
       if (result.status === 'confirmed' && result.token) {
