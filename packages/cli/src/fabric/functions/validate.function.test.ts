@@ -683,7 +683,8 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeFile(
           join(tmp, 'packages', 'functions', 'src', 'services.ts'),
-          "import { Kysely } from 'kysely'\nimport { PostgresDialect } from 'kysely'\n",
+          "import { Kysely, PostgresDialect } from 'kysely'\n" +
+            'export const db = new Kysely({ dialect: new PostgresDialect({}) })\n',
           'utf8'
         )
         const result = await runValidate(tmp)
@@ -710,7 +711,9 @@ describe('pikku fabric validate', () => {
         })
         await writeFile(
           join(tmp, 'packages', 'functions', 'src', 'services.ts'),
-          "import { Kysely } from 'kysely'\nimport { LibsqlWebDialect } from '@pikku/kysely-sqlite'\n",
+          "import { Kysely } from 'kysely'\n" +
+            "import { LibsqlWebDialect } from '@pikku/kysely-sqlite'\n" +
+            'export const db = new Kysely({ dialect: new LibsqlWebDialect({}) })\n',
           'utf8'
         )
         const result = await runValidate(tmp)
