@@ -4,16 +4,7 @@ export interface PublicRPCGenOutput {
 }
 
 /**
- * Generate public RPC HTTP endpoint.
- *
- * Emitted as two files. The schema is zod, and the inspector reads a zod schema
- * by importing the module that declares it — which it cannot do for the wiring
- * file, whose relative pikku-types import per-unit deploy codegen rewrites.
- *
- * The result is deliberately unschema'd: the caller names the RPC at runtime, so
- * the response is whatever that RPC returns and nothing can describe it up
- * front. Leaving `output` off lets the inspector take it from the handler's own
- * return type instead of pinning it to a lie.
+ * Generate public RPC HTTP endpoint
  */
 export const serializePublicRPC = (
   pathToPikkuTypes: string,
@@ -28,7 +19,6 @@ export const serializePublicRPC = (
  */
 import { z } from 'zod'
 
-/** A call to one named RPC. \`data\` is that RPC's own input, validated by it. */
 export const RPCCall = z.object({
   rpcName: z.string(),
   data: z.unknown().optional(),

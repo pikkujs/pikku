@@ -49,12 +49,6 @@ describe('removeLegacyScaffoldFile', () => {
 })
 
 describe('pruneLegacyScaffoldFiles', () => {
-  /**
-   * The upgrade path: a project generated before the move has both copies on
-   * disk. Inspection reads the tree before any scaffold is rewritten, so unless
-   * the prune happens up front the run dies on PKU851 and only the *second*
-   * codegen succeeds.
-   */
   test('clears every scaffold domain in one pass', async () => {
     const scaffold = await scaffoldDir()
     const config = {

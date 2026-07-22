@@ -52,13 +52,6 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Remote — the `remote: true` surface a wireRemoteAddon consumer imports
   rpcRemoteMapDeclarationFile: string
 
-  // Every scaffold is a directory under scaffold.pikkuDir named for its domain,
-  // holding its wiring file beside a `*.schemas.gen.ts` sibling. The schemas are
-  // zod and have to stand alone: the inspector reads a zod schema by importing
-  // the module that declares it, which it cannot do for a wiring file whose
-  // relative pikku-types import per-unit deploy codegen rewrites. A scaffold
-  // with no payload of its own (graph, auth) has no schemas file.
-
   // Remote RPC workers (derived from scaffold.pikkuDir when scaffold.remoteRpc is enabled).
   // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
   remoteRpcWorkersFile?: string

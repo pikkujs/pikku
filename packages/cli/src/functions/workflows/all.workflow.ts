@@ -64,9 +64,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // (workflows/RPCs "disappear"), so refuse to codegen against it.
     await assertSingleCoreVersion(config.rootDir, logger)
 
-    // Preflight: scaffolds moved from flat files into a directory per domain,
-    // and a leftover flat copy wires everything twice. This has to happen
-    // before the first inspection or the upgrade run fails on its own leftovers.
     await pruneLegacyScaffoldFiles(config)
 
     const allImports: string[] = []

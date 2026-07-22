@@ -30,14 +30,6 @@ describe('serializePublicAgent — agent HTTP surface', () => {
   })
 
   for (const caller of ['agentCaller', 'agentStreamCaller']) {
-    /**
-     * Both callers take the same payload. Before zod they each had to repeat the
-     * type literal verbatim in the generic position: the extractor synthesised
-     * the schema name from the function name, so behind a shared named alias it
-     * recorded an `inputSchemaName` with no schema behind it and the runtime
-     * rejected every agent call with MissingSchemaError. A zod `input` is
-     * resolved by reference, so one schema now backs both.
-     */
     test(`${caller} takes its input from the shared AgentCall schema`, () => {
       const { functions } = generate()
       const body = callerBody(functions, caller)

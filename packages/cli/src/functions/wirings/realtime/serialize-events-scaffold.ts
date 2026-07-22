@@ -21,12 +21,6 @@ export interface EventsGenOutput {
  * Both routes call `eventHub.subscribe`/`unsubscribe` with the channel id;
  * publish-side ergonomics (envelope shape) are documented in the
  * pikku-realtime skill.
- *
- * Emitted as two files. The topic schema is zod, and the inspector reads a zod
- * schema by importing the module that declares it — which it cannot do for the
- * wiring file, whose relative pikku-types import per-unit deploy codegen
- * rewrites. Keeping the schema in a sibling module that imports nothing but zod
- * sidesteps that entirely.
  */
 export const serializeEventsScaffold = (
   authRequired: boolean,
@@ -40,7 +34,6 @@ export const serializeEventsScaffold = (
  */
 import { z } from 'zod'
 
-/** The topic a subscribe, unsubscribe or SSE stream call is aimed at. */
 export const TopicRef = z.object({ topic: z.string() })
 `
 
