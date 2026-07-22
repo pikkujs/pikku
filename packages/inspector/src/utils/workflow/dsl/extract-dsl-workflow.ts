@@ -447,8 +447,15 @@ function extractVariableDeclaration(
  *
  * `const [a, b] = await Promise.all([...])` is the idiomatic way to run steps
  * in parallel and keep both results, so each element of the pattern is bound to
- * the matching child step's output. Every other destructuring shape reports a
+ * the matching child step's output. Every other destructuring OF A STEP reports a
  * diagnostic rather than silently dropping the step.
+ *
+ * A destructure whose initializer is NOT a step is just an ordinary local binding
+ * — `const { runId } = input`, `const { a } = someObject` — and has nothing to do
+ * with step results. Those pass through as non-steps, exactly as the identifier
+ * path already does for `const x = someLocal`. Reporting them was rejecting the
+ * single most idiomatic line in a DSL workflow (destructuring the workflow's own
+ * input), under a message about step results that named nothing the author wrote.
  */
 function extractDestructuredDeclaration(
   statement: ts.VariableStatement,
@@ -498,6 +505,19 @@ function extractDestructuredDeclaration(
       }
     }
   }
+
+  // Only a destructure OF A STEP is an error. Anything else is a plain local
+  // binding the DSL simply doesn't model as a step.
+  const stepCall =
+    init && ts.isAwaitExpression(init) && ts.isCallExpression(init.expression)
+      ? init.expression
+      : null
+  const destructuresAStep =
+    stepCall !== null &&
+    (isWorkflowDoCall(stepCall, context.checker) ||
+      isParallelGroup(stepCall) ||
+      isParallelFanout(stepCall))
+  if (!destructuresAStep) return null
 
   context.errors.push({
     message: `Destructuring a step result is not supported in DSL workflows. Assign it to a variable first (e.g. \`const result = await workflow.do(...)\`) and read its properties.`,
