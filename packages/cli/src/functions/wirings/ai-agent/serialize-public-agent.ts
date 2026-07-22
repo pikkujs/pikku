@@ -1,34 +1,106 @@
+export interface PublicAgentGenOutput {
+  schemas: string
+  functions: string
+}
+
+/**
+ * Generate the public HTTP surface for AI agents.
+ *
+ * Emitted as two files. The schemas are zod, and the inspector reads a zod
+ * schema by importing the module that declares it — which it cannot do for the
+ * wiring file, whose relative pikku-types import per-unit deploy codegen
+ * rewrites. Keeping the schemas in a sibling module that imports nothing but
+ * zod sidesteps that entirely.
+ *
+ * The run and stream calls share one `AgentCall` schema. That used to be
+ * impossible: a TS type literal had to be repeated verbatim in each generic
+ * position, because behind a named alias the extractor recorded an
+ * `inputSchemaName` with no schema behind it and every agent call failed at
+ * runtime with MissingSchemaError. A zod `input` is resolved by reference and
+ * named after the function, so one schema can back several functions.
+ *
+ * Thread reads return rows straight from `agentRunService`, so they carry no
+ * zod `output` — the handler's own return type already says what they are.
+ */
 export const serializePublicAgent = (
   pathToPikkuTypes: string,
   requireAuth: boolean = true,
   globalHTTPPrefix: string = ''
-) => {
+): PublicAgentGenOutput => {
   const authFlag = requireAuth ? 'true' : 'false'
 
-  // Emitted inline at each call site rather than as a shared named alias: the
-  // schema extractor only reads type literals in the generic position, and
-  // synthesises the schema name from the function name. Behind a named alias it
-  // records an `inputSchemaName` with no schema behind it, and every agent call
-  // then fails at runtime with MissingSchemaError.
-  const callerInput = `{
-    agentName: string
-    message: string
-    threadId: string
-    resourceId: string
-    attachments?: {
-      type: 'image' | 'file'
-      data?: string
-      url?: string
-      mediaType?: string
-      filename?: string
-    }[]
-    model?: string
-    temperature?: number
-    context?: string
-  }`
+  const schemas = `/**
+ * Auto-generated public agent schemas
+ * Do not edit manually - regenerate with 'npx pikku'
+ */
+import { z } from 'zod'
 
-  return `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/ai-agent'
+export const Attachment = z.object({
+  type: z.enum(['image', 'file']),
+  data: z.string().optional(),
+  url: z.string().optional(),
+  mediaType: z.string().optional(),
+  filename: z.string().optional(),
+})
+
+/** One turn against a named agent, run or streamed. */
+export const AgentCall = z.object({
+  agentName: z.string(),
+  message: z.string(),
+  threadId: z.string(),
+  resourceId: z.string(),
+  attachments: z.array(Attachment).optional(),
+  model: z.string().optional(),
+  temperature: z.number().optional(),
+  context: z.string().optional(),
+})
+
+/** A batch of decisions on the tool calls a run is waiting on. */
+export const AgentApproval = z.object({
+  agentName: z.string(),
+  runId: z.string(),
+  approvals: z.array(
+    z.object({ toolCallId: z.string(), approved: z.boolean() })
+  ),
+})
+
+/** A single decision, resuming a run that paused on one tool call. */
+export const AgentResume = z.object({
+  agentName: z.string(),
+  runId: z.string(),
+  toolCallId: z.string(),
+  approved: z.boolean(),
+})
+
+export const ThreadsQuery = z.object({
+  agentName: z.string().optional(),
+  resourceId: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+})
+
+/**
+ * \`resourceId\` is carried for the caller's convenience only — ownership is
+ * checked against the stored thread, never against this field.
+ */
+export const ThreadRef = z.object({
+  threadId: z.string(),
+  resourceId: z.string().optional(),
+})
+
+export const ThreadDeleted = z.object({ deleted: z.boolean() })
+`
+
+  const functions = `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/ai-agent'
 import { pikkuSessionlessFunc, pikkuPermission, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+import {
+  AgentCall,
+  AgentApproval,
+  AgentResume,
+  ThreadsQuery,
+  ThreadRef,
+  ThreadDeleted,
+} from './agent.schemas.gen.js'
 
 /**
  * Thread reads are keyed by a caller-supplied \`threadId\`, so ownership cannot
@@ -45,9 +117,10 @@ export const isThreadOwner = pikkuPermission<{ threadId: string }>(
   }
 )
 
-export const agentCaller = pikkuSessionlessFunc<${callerInput}, unknown>({
+export const agentCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: AgentCall,
   func: async (_services, data, { rpc }) => {
     return await rpc.agent.run(data.agentName as any, {
       message: data.message,
@@ -61,9 +134,10 @@ export const agentCaller = pikkuSessionlessFunc<${callerInput}, unknown>({
   },
 })
 
-export const agentStreamCaller = pikkuSessionlessFunc<${callerInput}, void>({
+export const agentStreamCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: AgentCall,
   func: async (_services, data, { rpc }) => {
     await rpc.agent.stream(data.agentName as any, {
       message: data.message,
@@ -77,23 +151,19 @@ export const agentStreamCaller = pikkuSessionlessFunc<${callerInput}, void>({
   },
 })
 
-export const agentApproveCaller = pikkuSessionlessFunc<
-  { agentName: string; runId: string; approvals: { toolCallId: string; approved: boolean }[] },
-  unknown
->({
+export const agentApproveCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: AgentApproval,
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
     return await rpc.agent.approve(runId, approvals, agentName)
   },
 })
 
-export const agentResumeCaller = pikkuSessionlessFunc<
-  { agentName: string; runId: string; toolCallId: string; approved: boolean },
-  void
->({
+export const agentResumeCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: AgentResume,
   func: async (_services, data, { rpc }) => {
     await rpc.agent.resume(data.runId, {
       toolCallId: data.toolCallId,
@@ -102,11 +172,9 @@ export const agentResumeCaller = pikkuSessionlessFunc<
   },
 })
 
-export const getAgentThreads = pikkuSessionlessFunc<
-  { agentName?: string; resourceId?: string; limit?: number; offset?: number },
-  any[]
->({
+export const getAgentThreads = pikkuSessionlessFunc({
   tags: ['pikku', 'pikku:agent'],
+  input: ThreadsQuery,
   title: 'Get Agent Threads',
   description:
     'Returns the caller\\'s AI agent threads from storage. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
@@ -125,11 +193,9 @@ export const getAgentThreads = pikkuSessionlessFunc<
   },
 })
 
-export const getAgentThreadMessages = pikkuSessionlessFunc<
-  { threadId: string; resourceId?: string },
-  any[]
->({
+export const getAgentThreadMessages = pikkuSessionlessFunc({
   tags: ['pikku', 'pikku:agent'],
+  input: ThreadRef,
   title: 'Get Agent Thread Messages',
   description:
     'Returns all messages for a given AI agent thread, ordered by creation time.',
@@ -141,11 +207,9 @@ export const getAgentThreadMessages = pikkuSessionlessFunc<
   },
 })
 
-export const getAgentThreadRuns = pikkuSessionlessFunc<
-  { threadId: string; resourceId?: string },
-  any[]
->({
+export const getAgentThreadRuns = pikkuSessionlessFunc({
   tags: ['pikku', 'pikku:agent'],
+  input: ThreadRef,
   title: 'Get Agent Thread Runs',
   description:
     'Returns the run history for a given AI agent thread, ordered by creation time.',
@@ -157,11 +221,10 @@ export const getAgentThreadRuns = pikkuSessionlessFunc<
   },
 })
 
-export const deleteAgentThread = pikkuSessionlessFunc<
-  { threadId: string; resourceId?: string },
-  { deleted: boolean }
->({
+export const deleteAgentThread = pikkuSessionlessFunc({
   tags: ['pikku', 'pikku:agent'],
+  input: ThreadRef,
+  output: ThreadDeleted,
   title: 'Delete Agent Thread',
   description:
     'Deletes an AI agent thread and all of its persisted state.',
@@ -205,4 +268,6 @@ export const agentRoutes = defineHTTPRoutes({
 
 wireHTTPRoutes({ routes: { agent: agentRoutes } })
 `
+
+  return { schemas, functions }
 }

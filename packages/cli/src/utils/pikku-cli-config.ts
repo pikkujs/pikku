@@ -318,32 +318,93 @@ const _getPikkuCLIConfig = async (
     if (result.scaffold?.remoteRpc && !result.remoteRpcWorkersFile) {
       result.remoteRpcWorkersFile = join(
         resolvedScaffoldDir,
+        'rpc',
         'rpc-remote.gen.ts'
+      )
+    }
+    if (result.scaffold?.remoteRpc && !result.remoteRpcSchemasFile) {
+      result.remoteRpcSchemasFile = join(
+        resolvedScaffoldDir,
+        'rpc',
+        'rpc-remote.schemas.gen.ts'
       )
     }
     if (result.scaffold?.graph && !result.graphWiringsFile) {
       result.graphWiringsFile = join(
         resolvedScaffoldDir,
+        'graph',
         'graph.wirings.gen.ts'
       )
     }
     if (result.scaffold?.webhook && !result.webhookWorkersFile) {
-      result.webhookWorkersFile = join(resolvedScaffoldDir, 'webhook.gen.ts')
+      result.webhookWorkersFile = join(
+        resolvedScaffoldDir,
+        'webhook',
+        'webhook.gen.ts'
+      )
+    }
+    if (result.scaffold?.webhook && !result.webhookSchemasFile) {
+      result.webhookSchemasFile = join(
+        resolvedScaffoldDir,
+        'webhook',
+        'webhook.schemas.gen.ts'
+      )
     }
     if (result.scaffold?.workflow && !result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,
+        'workflow',
         'workflow-routes.gen.ts'
       )
     }
+    if (result.scaffold?.workflow && !result.workflowRoutesSchemasFile) {
+      result.workflowRoutesSchemasFile = join(
+        resolvedScaffoldDir,
+        'workflow',
+        'workflow-routes.schemas.gen.ts'
+      )
+    }
     if (result.scaffold?.rpc && !result.publicRpcFile) {
-      result.publicRpcFile = join(resolvedScaffoldDir, 'rpc-public.gen.ts')
+      result.publicRpcFile = join(
+        resolvedScaffoldDir,
+        'rpc',
+        'rpc-public.gen.ts'
+      )
+    }
+    if (result.scaffold?.rpc && !result.publicRpcSchemasFile) {
+      result.publicRpcSchemasFile = join(
+        resolvedScaffoldDir,
+        'rpc',
+        'rpc-public.schemas.gen.ts'
+      )
     }
     if (result.scaffold?.agent && !result.publicAgentFile) {
-      result.publicAgentFile = join(resolvedScaffoldDir, 'agent.gen.ts')
+      result.publicAgentFile = join(
+        resolvedScaffoldDir,
+        'agent',
+        'agent.gen.ts'
+      )
+    }
+    if (result.scaffold?.agent && !result.publicAgentSchemasFile) {
+      result.publicAgentSchemasFile = join(
+        resolvedScaffoldDir,
+        'agent',
+        'agent.schemas.gen.ts'
+      )
     }
     if (result.scaffold?.console && !result.consoleFunctionsFile) {
-      result.consoleFunctionsFile = join(resolvedScaffoldDir, 'console.gen.ts')
+      result.consoleFunctionsFile = join(
+        resolvedScaffoldDir,
+        'console',
+        'console.gen.ts'
+      )
+    }
+    if (result.scaffold?.console && !result.consoleSchemasFile) {
+      result.consoleSchemasFile = join(
+        resolvedScaffoldDir,
+        'console',
+        'console.schemas.gen.ts'
+      )
     }
     if (result.scaffold?.userAdmin && !result.userAdminFunctionsFile) {
       result.userAdminFunctionsFile = join(
@@ -362,11 +423,19 @@ const _getPikkuCLIConfig = async (
     if (result.scaffold?.scenarios && !result.scenariosFunctionsFile) {
       result.scenariosFunctionsFile = join(
         resolvedScaffoldDir,
+        'scenarios',
         'scenarios.gen.ts'
       )
     }
+    if (result.scaffold?.scenarios && !result.scenariosSchemasFile) {
+      result.scenariosSchemasFile = join(
+        resolvedScaffoldDir,
+        'scenarios',
+        'scenarios.schemas.gen.ts'
+      )
+    }
     if (!result.authFile) {
-      result.authFile = join(resolvedScaffoldDir, 'auth.gen.ts')
+      result.authFile = join(resolvedScaffoldDir, 'auth', 'auth.gen.ts')
     }
     if (!result.authTypesFile) {
       result.authTypesFile = join(result.outDir, 'auth', 'auth.types.ts')
@@ -379,7 +448,18 @@ const _getPikkuCLIConfig = async (
       )
     }
     if (result.scaffold?.events && !result.eventsChannelFile) {
-      result.eventsChannelFile = join(resolvedScaffoldDir, 'events.gen.ts')
+      result.eventsChannelFile = join(
+        resolvedScaffoldDir,
+        'realtime',
+        'events.gen.ts'
+      )
+    }
+    if (result.scaffold?.events && !result.eventsSchemasFile) {
+      result.eventsSchemasFile = join(
+        resolvedScaffoldDir,
+        'realtime',
+        'events.schemas.gen.ts'
+      )
     }
     if (
       result.scaffold?.events &&

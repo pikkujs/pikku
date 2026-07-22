@@ -1,18 +1,83 @@
+export interface WorkflowRoutesGenOutput {
+  schemas: string
+  functions: string
+}
+
 /**
- * Generate catch-all HTTP routes for workflow operations
+ * Generate catch-all HTTP routes for workflow operations.
+ *
+ * Emitted as two files. The schemas are zod, and the inspector reads a zod
+ * schema by importing the module that declares it — which it cannot do for the
+ * wiring file, whose relative pikku-types import per-unit deploy codegen
+ * rewrites. Keeping the schemas in a sibling module that imports nothing but
+ * zod sidesteps that entirely.
+ *
+ * The status and stream results get no zod `output`: a run's status is a
+ * `@pikku/core` type and the streams push over the channel rather than
+ * returning, so in both cases the handler's own return type already says it and
+ * a second declaration here would only be free to drift.
  */
 export const serializeWorkflowRoutes = (
   pathToPikkuTypes: string,
   requireAuth: boolean = true
-) => {
+): WorkflowRoutesGenOutput => {
   const authFlag = requireAuth ? 'true' : 'false'
-  return `/**
+
+  const schemas = `/**
+ * Auto-generated workflow route schemas
+ * Do not edit manually - regenerate with 'npx pikku'
+ */
+import { z } from 'zod'
+
+/** Starting a run: \`data\` is the workflow's own input, validated by it. */
+export const WorkflowStart = z.object({
+  workflowName: z.string(),
+  data: z.unknown().optional(),
+})
+
+/** Starting a graph run from one node rather than the graph's entry point. */
+export const GraphStart = z.object({
+  workflowName: z.string(),
+  nodeId: z.string(),
+  data: z.unknown().optional(),
+})
+
+/** One run of one workflow. */
+export const WorkflowRunRef = z.object({
+  workflowName: z.string(),
+  runId: z.string(),
+})
+
+export const WorkflowRunId = z.object({ runId: z.string() })
+
+/**
+ * A human decision against a workflow.approval() gate. \`decision\` is
+ * deliberately unconstrained — see workflowApprover.
+ */
+export const WorkflowApproval = z.object({
+  workflowName: z.string(),
+  runId: z.string(),
+  reason: z.string(),
+  decision: z.unknown(),
+})
+
+export const Acknowledged = z.object({ ok: z.literal(true) })
+`
+
+  const functions = `/**
  * Workflow HTTP catch-all routes
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuSessionlessFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
 import { MissingServiceError } from '@pikku/core/errors'
-import type { WorkflowRunStatus } from '@pikku/core/workflow'
+import {
+  WorkflowStart,
+  GraphStart,
+  WorkflowRunRef,
+  WorkflowRunId,
+  WorkflowApproval,
+  Acknowledged,
+} from './workflow-routes.schemas.gen.js'
 
 function assertWorkflowService(workflowService: unknown): asserts workflowService {
   if (!workflowService) throw new MissingServiceError('workflowService is required')
@@ -22,12 +87,11 @@ function assertWorkflowRunService(workflowRunService: unknown): asserts workflow
   if (!workflowRunService) throw new MissingServiceError('workflowRunService is required')
 }
 
-export const workflowStarter = pikkuSessionlessFunc<
-  { workflowName: string; data?: unknown },
-  { runId: string }
->({
+export const workflowStarter = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: WorkflowStart,
+  output: WorkflowRunId,
   // workflowService is destructured (even though we delegate via rpc) so the
   // analyzer assigns workflow-state capability to this unit — without it,
   // rpc.startWorkflow() runs against a container missing workflowService.
@@ -37,24 +101,20 @@ export const workflowStarter = pikkuSessionlessFunc<
   },
 })
 
-export const workflowRunner = pikkuSessionlessFunc<
-  { workflowName: string; data?: unknown },
-  unknown
->({
+export const workflowRunner = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: WorkflowStart,
   func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
     assertWorkflowService(workflowService)
     return await workflowService.runToCompletion(workflowName, data ?? {}, rpc)
   },
 })
 
-export const workflowStatusChecker = pikkuSessionlessFunc<
-  { workflowName: string; runId: string },
-  WorkflowRunStatus
->({
+export const workflowStatusChecker = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: WorkflowRunRef,
   func: async ({ workflowService }, { runId }) => {
     assertWorkflowService(workflowService)
     const status = await workflowService.getRunStatus(runId)
@@ -67,12 +127,10 @@ export const workflowStatusChecker = pikkuSessionlessFunc<
  * Minimal workflow status stream — sends step names and statuses only.
  * Use this for user-facing frontends where internal details should not be exposed.
  */
-export const workflowStatusStream = pikkuSessionlessFunc<
-  { workflowName: string; runId: string },
-  unknown
->({
+export const workflowStatusStream = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: WorkflowRunRef,
   func: async ({ workflowRunService }, { runId }, { channel }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
@@ -154,12 +212,10 @@ export const workflowStatusStream = pikkuSessionlessFunc<
  * Full workflow status stream — includes output, error, and child run IDs.
  * Use this for admin consoles and internal tooling.
  */
-export const workflowStatusStreamFull = pikkuSessionlessFunc<
-  { workflowName: string; runId: string },
-  unknown
->({
+export const workflowStatusStreamFull = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: WorkflowRunRef,
   func: async ({ workflowRunService }, { runId }, { channel }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
@@ -241,12 +297,11 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc<
   },
 })
 
-export const graphStarter = pikkuSessionlessFunc<
-  { workflowName: string; nodeId: string; data?: unknown },
-  { runId: string }
->({
+export const graphStarter = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: GraphStart,
+  output: WorkflowRunId,
   // See workflowStarter — destructure workflowService so the analyzer
   // assigns workflow-state capability to this unit.
   func: async ({ workflowService }, { workflowName, nodeId, data }, { rpc }) => {
@@ -264,18 +319,17 @@ export const graphStarter = pikkuSessionlessFunc<
  * run. Gate this route with your own auth/permissions to control WHO may
  * approve: the framework does not model approver identity.
  */
-export const workflowApprover = pikkuSessionlessFunc<
-  { workflowName: string; runId: string; reason: string; decision: unknown },
-  { ok: true }
->({
+export const workflowApprover = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
+  input: WorkflowApproval,
+  output: Acknowledged,
   // See workflowStarter — destructure workflowService so the analyzer
   // assigns workflow-state capability to this unit.
   func: async ({ workflowService }, { runId, reason, decision }) => {
     assertWorkflowService(workflowService)
     await workflowService.approveStep(runId, reason, decision)
-    return { ok: true }
+    return { ok: true as const }
   },
 })
 
@@ -323,4 +377,6 @@ wireHTTPRoutes({
   },
 })
 `
+
+  return { schemas, functions }
 }

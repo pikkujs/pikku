@@ -2,11 +2,16 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeEventsScaffold } from './serialize-events-scaffold.js'
 
 export const pikkuEventsScaffold = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
-    if (!config.scaffold?.events || !config.eventsChannelFile) {
+    if (
+      !config.scaffold?.events ||
+      !config.eventsChannelFile ||
+      !config.eventsSchemasFile
+    ) {
       logger.debug({
         message:
           'Skipping events scaffold (set scaffold.events in pikku.config.json to enable).',
@@ -20,11 +25,13 @@ export const pikkuEventsScaffold = pikkuSessionlessFunc<void, boolean>({
       config.typesDeclarationFile,
       config.packageMappings
     )
-    await writeFileInDir(
-      logger,
-      config.eventsChannelFile,
-      serializeEventsScaffold(authRequired, pikkuTypesImportPath)
+    const { schemas, functions } = serializeEventsScaffold(
+      authRequired,
+      pikkuTypesImportPath
     )
+    await writeFileInDir(logger, config.eventsSchemasFile, schemas)
+    await writeFileInDir(logger, config.eventsChannelFile, functions)
+    await removeLegacyScaffoldFile(config.eventsChannelFile)
     return true
   },
   middleware: [
