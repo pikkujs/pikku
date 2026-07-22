@@ -249,8 +249,12 @@ pikku fabric login              # opens a browser; needs a human, wait for it
 pikku fabric init https://github.com/<owner>/<repo>
 pikku fabric validate           # must pass clean
 pikku fabric deploy plan --production
-pikku fabric deploy apply --production
+pikku fabric deploy apply --production --auto-apply
 ```
+
+`apply` confirms before deploying, and with no TTY to ask — CI, an agent shell —
+it refuses rather than hangs. `--auto-apply` supplies that confirmation; drop it
+only when a human is at a real terminal.
 
 `init` adopts a **GitHub** repo, and adoption goes through the Pikku Fabric
 GitHub App — the app has to be installed on the account or org that owns the
