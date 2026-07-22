@@ -19,7 +19,12 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
   const keyword = GHERKIN_KEYWORDS.find((kw) => step.startsWith(kw + ' '))
   if (!keyword) {
     return (
-      <Text component="span" ff="monospace" fz={12} c="var(--app-text, var(--mantine-color-text))">
+      <Text
+        component="span"
+        ff="monospace"
+        fz={12}
+        c="var(--app-text, var(--mantine-color-text))"
+      >
         {asI18n(step)}
       </Text>
     )
@@ -27,10 +32,21 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
   const rest = step.slice(keyword.length)
   return (
     <Text component="span" ff="monospace" fz={12}>
-      <Text component="span" ff="monospace" fz={12} fw={600} c="var(--mantine-color-blue-5)">
+      <Text
+        component="span"
+        ff="monospace"
+        fz={12}
+        fw={600}
+        c="var(--mantine-color-blue-5)"
+      >
         {asI18n(keyword)}
       </Text>
-      <Text component="span" ff="monospace" fz={12} c="var(--app-text, var(--mantine-color-text))">
+      <Text
+        component="span"
+        ff="monospace"
+        fz={12}
+        c="var(--app-text, var(--mantine-color-text))"
+      >
         {asI18n(rest)}
       </Text>
     </Text>
@@ -44,7 +60,13 @@ const SCENARIO_STATUS_BORDER: Record<string, string> = {
   running: 'var(--mantine-color-blue-6)',
 }
 
-export type CucumberStatus = 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING' | 'UNDEFINED' | 'AMBIGUOUS'
+export type CucumberStatus =
+  | 'PASSED'
+  | 'FAILED'
+  | 'SKIPPED'
+  | 'PENDING'
+  | 'UNDEFINED'
+  | 'AMBIGUOUS'
 
 export type LiveStep = {
   step: string
@@ -71,7 +93,9 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
       <Center h="100%">
         <Stack align="center" gap="xs">
           <Loader size="sm" />
-          <Text size="sm" c="dimmed">{m.live_run_running()}</Text>
+          <Text size="sm" c="dimmed">
+            {m.live_run_running()}
+          </Text>
         </Stack>
       </Center>
     )
@@ -85,7 +109,13 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
           const isPending = scenario.status === 'pending'
           const isRunning = scenario.status === 'running'
           const passed = scenario.status === 'PASSED'
-          const statusColor = isPending ? 'gray' : isRunning ? 'blue' : passed ? 'green' : 'red'
+          const statusColor = isPending
+            ? 'gray'
+            : isRunning
+              ? 'blue'
+              : passed
+                ? 'green'
+                : 'red'
           const borderLeft = isPending
             ? SCENARIO_STATUS_BORDER.pending
             : isRunning
@@ -112,19 +142,33 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
                     scenario.steps.length > 0
                       ? `1px solid var(--app-border, var(--mantine-color-default-border))`
                       : undefined,
-                  background: 'var(--app-surface, var(--mantine-color-default-hover))',
+                  background:
+                    'var(--app-surface, var(--mantine-color-default-hover))',
                 }}
               >
                 <Group justify="space-between" wrap="nowrap">
-                  <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                  <Group
+                    gap="xs"
+                    wrap="nowrap"
+                    style={{ flex: 1, minWidth: 0 }}
+                  >
                     {isPending ? (
-                      <Text fz={12} c="dimmed" style={{ lineHeight: 1, flexShrink: 0 }}>
+                      <Text
+                        fz={12}
+                        c="dimmed"
+                        style={{ lineHeight: 1, flexShrink: 0 }}
+                      >
                         {asI18n('○')}
                       </Text>
                     ) : isRunning ? (
                       <Loader size={12} style={{ flexShrink: 0 }} />
                     ) : (
-                      <Text fz={12} fw={700} c={statusColor} style={{ lineHeight: 1, flexShrink: 0 }}>
+                      <Text
+                        fz={12}
+                        fw={700}
+                        c={statusColor}
+                        style={{ lineHeight: 1, flexShrink: 0 }}
+                      >
                         {asI18n(passed ? '✓' : '✗')}
                       </Text>
                     )}
@@ -139,7 +183,15 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
                       </Text>
                     )}
                     <Badge color={statusColor} variant="light" size="sm">
-                      {asI18n(isPending ? 'Pending' : isRunning ? 'Running' : passed ? 'Pass' : 'Fail')}
+                      {asI18n(
+                        isPending
+                          ? 'Pending'
+                          : isRunning
+                            ? 'Running'
+                            : passed
+                              ? 'Pass'
+                              : 'Fail'
+                      )}
                     </Badge>
                   </Group>
                 </Group>
@@ -147,7 +199,11 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
 
               {scenario.steps.length > 0 && (
                 <Box p="md">
-                  <Stack gap={2} pl="sm" style={{ borderLeft: `3px solid ${borderLeft}` }}>
+                  <Stack
+                    gap={2}
+                    pl="sm"
+                    style={{ borderLeft: `3px solid ${borderLeft}` }}
+                  >
                     {scenario.steps.map((s, si) => (
                       <HighlightedStep key={si} step={s.step} />
                     ))}

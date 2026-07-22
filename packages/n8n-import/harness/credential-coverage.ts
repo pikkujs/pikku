@@ -27,8 +27,7 @@ const corpusDir = process.env.N8N_CORPUS_DIR
   ? resolve(process.env.N8N_CORPUS_DIR)
   : join(packageDir, '.corpus')
 const addonsRoot =
-  process.env.PIKKU_ADDONS_ROOT ||
-  resolve(packageDir, '../../..', 'addons')
+  process.env.PIKKU_ADDONS_ROOT || resolve(packageDir, '../../..', 'addons')
 
 function walk(dir: string): string[] {
   let out: string[] = []
@@ -122,7 +121,8 @@ for (const f of files) {
     else if (r === 'code') blocker = blocker || 'code-node'
     else if (r === 'agent' || r === 'agentTool') blocker = blocker || 'ai-agent'
   }
-  for (const s of services) svcTotalCount.set(s, (svcTotalCount.get(s) || 0) + 1)
+  for (const s of services)
+    svcTotalCount.set(s, (svcTotalCount.get(s) || 0) + 1)
   if (blocker) {
     blocked++
     blockerReason.set(blocker, (blockerReason.get(blocker) || 0) + 1)
@@ -147,7 +147,8 @@ while (true) {
   for (const need of remaining) {
     if ([...need].every((s) => owned.has(s))) continue
     const missing = [...need].filter((s) => !owned.has(s))
-    if (missing.length === 1) gain.set(missing[0]!, (gain.get(missing[0]!) || 0) + 1)
+    if (missing.length === 1)
+      gain.set(missing[0]!, (gain.get(missing[0]!) || 0) + 1)
   }
   if (gain.size === 0) break
   const [best, marginal] = [...gain.entries()].sort((a, b) => b[1] - a[1])[0]!
@@ -169,9 +170,7 @@ const rows = [...allSvcs]
     greedy_priority: greedyRank.get(svc) ?? '',
     greedy_cumulative_unlocked: greedyCum.get(svc) ?? '',
   }))
-  .sort(
-    (a, b) => b.workflows_runnable_using - a.workflows_runnable_using
-  )
+  .sort((a, b) => b.workflows_runnable_using - a.workflows_runnable_using)
 
 const header =
   'service,auth_type,workflows_runnable_using,workflows_total_using,greedy_priority,greedy_cumulative_unlocked'

@@ -12,10 +12,7 @@ export type FunctionMetaWithVersions = FunctionMeta & {
   versions?: FunctionVersionEntry[]
 }
 
-export const getFunctionsMeta = pikkuFunc<
-  null,
-  FunctionMetaWithVersions[]
->({
+export const getFunctionsMeta = pikkuFunc<null, FunctionMetaWithVersions[]>({
   title: 'Get Functions Metadata',
   description:
     'Reads function metadata from metaService and returns it as a flat array of FunctionMeta objects, enriched with version history from the versions manifest if available.',

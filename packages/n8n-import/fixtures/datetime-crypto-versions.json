@@ -63,10 +63,18 @@
     }
   ],
   "connections": {
-    "Trigger": { "main": [[{ "node": "AddDays", "type": "main", "index": 0 }]] },
-    "AddDays": { "main": [[{ "node": "FormatV1", "type": "main", "index": 0 }]] },
-    "FormatV1": { "main": [[{ "node": "ExtractYear", "type": "main", "index": 0 }]] },
-    "ExtractYear": { "main": [[{ "node": "Hash", "type": "main", "index": 0 }]] },
+    "Trigger": {
+      "main": [[{ "node": "AddDays", "type": "main", "index": 0 }]]
+    },
+    "AddDays": {
+      "main": [[{ "node": "FormatV1", "type": "main", "index": 0 }]]
+    },
+    "FormatV1": {
+      "main": [[{ "node": "ExtractYear", "type": "main", "index": 0 }]]
+    },
+    "ExtractYear": {
+      "main": [[{ "node": "Hash", "type": "main", "index": 0 }]]
+    },
     "Hash": { "main": [[{ "node": "SignIt", "type": "main", "index": 0 }]] }
   }
 }

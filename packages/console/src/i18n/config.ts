@@ -7,7 +7,11 @@
 // `project.inlang/settings.json` `locales`, and recompile. Content is reachable
 // via the `/<lang>` URL prefix (e.g. `/fr`); the base locale (`en`) needs none.
 import { useSyncExternalStore } from 'react'
-import { locales, baseLocale, overwriteGetLocale } from '../paraglide/runtime.js'
+import {
+  locales,
+  baseLocale,
+  overwriteGetLocale,
+} from '../paraglide/runtime.js'
 
 export const supportedLocales = locales
 export const defaultLocale = baseLocale
@@ -25,7 +29,8 @@ export function detectLocale(pathname: string): Locale {
   if (supportedLocales.includes(segment as Locale)) return segment as Locale
   if (typeof navigator !== 'undefined') {
     const browserLang = navigator.language?.split('-')[0]
-    if (supportedLocales.includes(browserLang as Locale)) return browserLang as Locale
+    if (supportedLocales.includes(browserLang as Locale))
+      return browserLang as Locale
   }
   return defaultLocale
 }
@@ -55,8 +60,16 @@ function subscribe(fn: () => void): () => void {
 // codemod injects a bare `useLocale()` wherever `const { t } = useTranslation()`
 // used to live; it also returns the active locale + direction for components
 // that need them (e.g. the language switcher).
-export function useLocale(): { locale: Locale; dir: 'ltr' | 'rtl'; setLocale: (l: Locale) => void } {
-  const locale = useSyncExternalStore<Locale>(subscribe, () => activeLocale, () => activeLocale)
+export function useLocale(): {
+  locale: Locale
+  dir: 'ltr' | 'rtl'
+  setLocale: (l: Locale) => void
+} {
+  const locale = useSyncExternalStore<Locale>(
+    subscribe,
+    () => activeLocale,
+    () => activeLocale
+  )
   return { locale, dir: localeDir(locale), setLocale: setActiveLocale }
 }
 
@@ -66,7 +79,8 @@ export function useLocale(): { locale: Locale; dir: 'ltr' | 'rtl'; setLocale: (l
 // hardcoded/inlined string) — missing i18n at a glance. Toggle with `?i18n-debug`
 // in the URL or `localStorage['i18n-debug'] = '1'` (`I18N_DEBUG=1` for SSR).
 export function isI18nDebug(): boolean {
-  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1') return true
+  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1')
+    return true
   if (typeof window === 'undefined') return false
   const params = new URLSearchParams(window.location.search)
   if (params.has('i18n-debug')) return params.get('i18n-debug') !== '0'

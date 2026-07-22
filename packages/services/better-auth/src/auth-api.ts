@@ -91,6 +91,7 @@ export async function getAuthSession<
     createSingletonServices
   )()
 
-  const headers = request instanceof Headers ? request : new Headers(request.headers)
+  const headers =
+    request instanceof Headers ? request : new Headers(request.headers)
   return await instance.api.getSession({ headers })
 }

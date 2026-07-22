@@ -147,8 +147,16 @@ const ToolCallDisplay: React.FC<{
             {asI18n(approvalReason)}
           </Text>
         )}
-        <Box component="p" style={{ fontSize: 'var(--mantine-font-size-xs)', color: 'var(--mantine-color-dimmed)', margin: '0 0 4px' }}>
-          {m.agent_approval_agent_wants_to_call()} <Code>{asI18n(toolName)}</Code>
+        <Box
+          component="p"
+          style={{
+            fontSize: 'var(--mantine-font-size-xs)',
+            color: 'var(--mantine-color-dimmed)',
+            margin: '0 0 4px',
+          }}
+        >
+          {m.agent_approval_agent_wants_to_call()}{' '}
+          <Code>{asI18n(toolName)}</Code>
         </Box>
         <Code block style={{ fontSize: 11, marginBottom: 8 }}>
           {asI18n(JSON.stringify(displayArgs, null, 2))}
@@ -182,7 +190,9 @@ const ToolCallDisplay: React.FC<{
             type="label"
             color={responded === 'approved' ? 'green' : 'red'}
           >
-            {responded === 'approved' ? m.agent_status_approved() : m.agent_status_denied()}
+            {responded === 'approved'
+              ? m.agent_status_approved()
+              : m.agent_status_denied()}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -253,7 +263,13 @@ const ToolCallDisplay: React.FC<{
             {m.agent_credential_required()}
           </PikkuBadge>
         </Group>
-        <Box component="p" style={{ fontSize: 'var(--mantine-font-size-sm)', margin: '0 0 var(--mantine-spacing-xs)' }}>
+        <Box
+          component="p"
+          style={{
+            fontSize: 'var(--mantine-font-size-sm)',
+            margin: '0 0 var(--mantine-spacing-xs)',
+          }}
+        >
           {m.agent_credential_action_requires()}{' '}
           <strong>{asI18n(cred?.credentialName ?? 'OAuth')}</strong>{' '}
           {m.agent_credential_to_be_connected()}
@@ -289,7 +305,9 @@ const ToolCallDisplay: React.FC<{
             type="label"
             color={responded === 'approved' ? 'green' : 'gray'}
           >
-            {responded === 'approved' ? m.agent_credential_connected() : m.agent_credential_ignored()}
+            {responded === 'approved'
+              ? m.agent_credential_connected()
+              : m.agent_credential_ignored()}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -340,9 +358,11 @@ const ToolCallDisplay: React.FC<{
                 {m.agent_toolcall_result()}
               </Text>
               <Code block style={{ fontSize: 11 }}>
-                {asI18n(typeof result === 'string'
-                  ? result
-                  : JSON.stringify(result, null, 2))}
+                {asI18n(
+                  typeof result === 'string'
+                    ? result
+                    : JSON.stringify(result, null, 2)
+                )}
               </Code>
             </>
           )}
@@ -446,7 +466,9 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
             <ComposerPrimitive.Input
               className={composerStyles.composerInput}
               placeholder={
-                disabled ? m.agent_composer_approval_placeholder() : m.agent_composer_message_placeholder()
+                disabled
+                  ? m.agent_composer_approval_placeholder()
+                  : m.agent_composer_message_placeholder()
               }
               rows={1}
               disabled={disabled ?? false}

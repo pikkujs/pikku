@@ -31,8 +31,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
 
   const showLeft = !!runsPanel && runsPanelVisible
   const showRight =
-    !hidePanel &&
-    (panels.size !== 0 || (alwaysVisible && !collapseWhenEmpty))
+    !hidePanel && (panels.size !== 0 || (alwaysVisible && !collapseWhenEmpty))
 
   return (
     <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
@@ -53,7 +52,8 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
             flexShrink: 0,
             overflow: 'hidden',
             opacity: showLeft ? 1 : 0,
-            transition: 'width 180ms ease, min-width 180ms ease, opacity 180ms ease',
+            transition:
+              'width 180ms ease, min-width 180ms ease, opacity 180ms ease',
           }}
         >
           <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
@@ -77,8 +77,14 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
             transition: 'width 180ms ease, opacity 180ms ease',
           }}
         >
-          <Box className={classes.listSurfaceCard} style={{ height: '100%', width: 'min(520px, 42vw)' }}>
-            <PanelContainer emptyMessage={emptyPanelMessage} workflowGraph={false} />
+          <Box
+            className={classes.listSurfaceCard}
+            style={{ height: '100%', width: 'min(520px, 42vw)' }}
+          >
+            <PanelContainer
+              emptyMessage={emptyPanelMessage}
+              workflowGraph={false}
+            />
           </Box>
         </Box>
       </Box>

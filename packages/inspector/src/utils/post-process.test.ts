@@ -422,7 +422,10 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
         })
       )
       assert.equal(criticals.length, 1)
-      assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY)
+      assert.equal(
+        criticals[0]!.code,
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
+      )
       assert.match(criticals[0]!.message, /devDependencies/)
     } finally {
       rmSync(dir, { recursive: true, force: true })
@@ -441,7 +444,10 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
         })
       )
       assert.equal(criticals.length, 1)
-      assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY)
+      assert.equal(
+        criticals[0]!.code,
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
+      )
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

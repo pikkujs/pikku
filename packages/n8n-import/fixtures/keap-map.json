@@ -1,1 +1,24 @@
-{"name":"Keap","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"keap"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.keap","typeVersion":1,"position":[200,0],"parameters":{"resource":"company","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Keap",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "keap" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.keap",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "company", "operation": "create" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

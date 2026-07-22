@@ -49,9 +49,7 @@ export const login = pikkuSessionlessFunc<LoginOptions, void>({
         logger.info(`    ${target}`)
         logger.info('')
         logger.info(`  And confirm this code:  ${userCode}`)
-        logger.info(
-          `  (expires ${new Date(expiresAtMs).toLocaleTimeString()})`
-        )
+        logger.info(`  (expires ${new Date(expiresAtMs).toLocaleTimeString()})`)
         logger.info('')
         logger.info('  Waiting for approval…')
         // Default to opening the browser unless explicitly disabled.
@@ -69,7 +67,9 @@ export const login = pikkuSessionlessFunc<LoginOptions, void>({
     const who = session.user?.email ?? session.user?.id ?? 'authenticated'
     logger.info(`✓ Logged in as ${who} on ${session.baseURL}`)
     if (session.expiresAt) {
-      logger.info(`  Session expires ${new Date(session.expiresAt).toLocaleString()}`)
+      logger.info(
+        `  Session expires ${new Date(session.expiresAt).toLocaleString()}`
+      )
     }
     logger.info(`  Saved to ${path}`)
   },

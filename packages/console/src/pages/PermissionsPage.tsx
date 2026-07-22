@@ -116,7 +116,12 @@ export const PermissionsPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.permissions_title()} description={m.permissions_description()} />}
+        header={
+          <ListPageHeader
+            title={m.permissions_title()}
+            description={m.permissions_description()}
+          />
+        }
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.permissions_select_item()}
       >

@@ -16,10 +16,10 @@ description: >-
 Unified authentication for humans **and** machines against a Pikku + better-auth
 server. Two paths, two headers, one resolver:
 
-| Caller | Credential | Header | Obtained by |
-|---|---|---|---|
-| **Human** (CLI, dev) | better-auth session token | `Authorization: Bearer <token>` | `pikku login` (device flow) → `~/.pikku/session.json` |
-| **Machine** (agent, sandbox, worker) | scoped API key | `x-api-key: <key>` | `createApiKey` (server-side, at provision/spawn) |
+| Caller                               | Credential                | Header                          | Obtained by                                           |
+| ------------------------------------ | ------------------------- | ------------------------------- | ----------------------------------------------------- |
+| **Human** (CLI, dev)                 | better-auth session token | `Authorization: Bearer <token>` | `pikku login` (device flow) → `~/.pikku/session.json` |
+| **Machine** (agent, sandbox, worker) | scoped API key            | `x-api-key: <key>`              | `createApiKey` (server-side, at provision/spawn)      |
 
 Both resolve to a Pikku `UserSession` through one middleware:
 `betterAuthSession({ mapSession, apiKey: { mapKey } })`.
@@ -83,7 +83,7 @@ import { apiKey } from '@better-auth/api-key'
 betterAuth({
   plugins: [
     apiKey({
-      enableMetadata: true,          // REQUIRED to store scope on the key
+      enableMetadata: true, // REQUIRED to store scope on the key
       enableSessionForAPIKeys: true, // lets a key resolve via getSession too
     }),
   ],
@@ -104,10 +104,10 @@ one for a non-existent `userId` is created but will not resolve.
 // `auth` is the better-auth instance (injected service)
 const { key } = await auth.api.createApiKey({
   body: {
-    userId: sandboxRuntimeUserId,        // a stable service user
+    userId: sandboxRuntimeUserId, // a stable service user
     name: `sandbox:${sandboxId}`,
-    expiresIn: 60 * 60,                   // seconds
-    metadata: { sandboxId },             // keep only STABLE ids here
+    expiresIn: 60 * 60, // seconds
+    metadata: { sandboxId }, // keep only STABLE ids here
     permissions: { sandbox: ['read', 'write'] },
   },
 })

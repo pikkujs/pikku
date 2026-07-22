@@ -1,1 +1,24 @@
-{"name":"Twist","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"twist"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.twist","typeVersion":1,"position":[200,0],"parameters":{"resource":"channel","operation":"archive"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Twist",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "twist" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.twist",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "channel", "operation": "archive" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

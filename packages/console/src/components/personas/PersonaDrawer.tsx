@@ -69,7 +69,9 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
             value={persona.email}
             readOnly
             variant="filled"
-            styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+            styles={{
+              input: { fontFamily: 'var(--mantine-font-family-monospace)' },
+            }}
           />
           <TextInput
             label={asI18n('Role label')}
@@ -108,7 +110,12 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
                   }}
                 >
                   <Group gap={10} wrap="nowrap">
-                    <ThemeIcon variant="light" color="cyan" size="sm" radius="sm">
+                    <ThemeIcon
+                      variant="light"
+                      color="cyan"
+                      size="sm"
+                      radius="sm"
+                    >
                       <Route size={13} />
                     </ThemeIcon>
                     <Text size="sm" style={{ flex: 1, minWidth: 0 }}>

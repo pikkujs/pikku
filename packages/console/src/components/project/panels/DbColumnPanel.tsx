@@ -34,7 +34,9 @@ type DbColumnPanelProps = {
   }
 }
 
-export const DbColumnPanel: React.FC<DbColumnPanelProps> = ({ metadata = {} }) => {
+export const DbColumnPanel: React.FC<DbColumnPanelProps> = ({
+  metadata = {},
+}) => {
   const {
     tableName,
     columnName,
@@ -102,9 +104,7 @@ export const DbColumnPanel: React.FC<DbColumnPanelProps> = ({ metadata = {} }) =
           <SectionLabel>{asI18n('Foreign Key')}</SectionLabel>
           <Group gap={4}>
             <Link size={12} />
-            <Code>
-              {asI18n(`${foreignKey.table}.${foreignKey.column}`)}
-            </Code>
+            <Code>{asI18n(`${foreignKey.table}.${foreignKey.column}`)}</Code>
           </Group>
         </Box>
       )}

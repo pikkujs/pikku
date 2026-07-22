@@ -65,7 +65,10 @@ class RuntimeSqliteDatabase implements SqliteDatabase {
 
   prepare(sql: string): SqliteStatement {
     const stmt = this.db.prepare(sql)
-    return new RuntimeSqliteStatement(stmt, Boolean(stmt.reader) || isReaderSql(sql))
+    return new RuntimeSqliteStatement(
+      stmt,
+      Boolean(stmt.reader) || isReaderSql(sql)
+    )
   }
 
   close(): void {

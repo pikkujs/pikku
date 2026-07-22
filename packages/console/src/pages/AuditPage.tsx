@@ -6,7 +6,9 @@ import { Stack } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-export const AuditPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+export const AuditPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
+  emptyHero,
+}) => {
   useLocale()
   return (
     <Stack gap={0} style={{ height: '100%' }}>

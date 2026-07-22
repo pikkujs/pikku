@@ -44,7 +44,11 @@ export interface UsersTableProps {
  * AdminUsersPage (fed by the Better Auth admin client) and Fabric's stage Users
  * tab (fed by a server-brokered RPC).
  */
-export const UsersTable: React.FC<UsersTableProps> = ({ users, labels, renderActions }) => (
+export const UsersTable: React.FC<UsersTableProps> = ({
+  users,
+  labels,
+  renderActions,
+}) => (
   <Table verticalSpacing="sm" highlightOnHover>
     <Table.Thead>
       <Table.Tr>
@@ -76,7 +80,11 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, labels, renderAct
           </Table.Td>
           <Table.Td>
             <Group gap={6}>
-              <Badge size="sm" variant="light" color={u.role === 'admin' ? 'blue' : 'gray'}>
+              <Badge
+                size="sm"
+                variant="light"
+                color={u.role === 'admin' ? 'blue' : 'gray'}
+              >
                 {u.role === 'admin' ? labels.roleAdmin : labels.roleUser}
               </Badge>
               {u.banned && (
@@ -88,7 +96,9 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, labels, renderAct
           </Table.Td>
           <Table.Td>
             <Text size="sm" c="dimmed">
-              {u.createdAt ? asI18n(new Date(u.createdAt).toLocaleDateString()) : asI18n('—')}
+              {u.createdAt
+                ? asI18n(new Date(u.createdAt).toLocaleDateString())
+                : asI18n('—')}
             </Text>
           </Table.Td>
           {renderActions && <Table.Td>{renderActions(u)}</Table.Td>}

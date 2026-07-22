@@ -1,16 +1,6 @@
 import { useState } from 'react'
-import {
-  Center,
-  Stack,
-  Paper,
-  Box,
-} from '@pikku/mantine/core'
-import {
-  TextInput,
-  Button,
-  Text,
-  Alert,
-} from '@pikku/mantine/core'
+import { Center, Stack, Paper, Box } from '@pikku/mantine/core'
+import { TextInput, Button, Text, Alert } from '@pikku/mantine/core'
 import { AlertTriangle } from 'lucide-react'
 import { getServerUrl, setServerUrl } from '../../context/serverUrl'
 import { m, mKey } from '@/i18n/messages'

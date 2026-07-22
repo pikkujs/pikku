@@ -90,7 +90,9 @@ export async function createDevAIAgentRunner({
       baseURL,
       apiKey: key,
     })
-    return Object.fromEntries(PROXY_PROVIDER_NAMES.map((name) => [name, provider]))
+    return Object.fromEntries(
+      PROXY_PROVIDER_NAMES.map((name) => [name, provider])
+    )
   }
 
   logger.info(`pikku dev: AI agent runner wired to ${baseURL}`)

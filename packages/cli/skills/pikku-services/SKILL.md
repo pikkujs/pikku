@@ -122,12 +122,13 @@ const getUser = pikkuFunc({
 
 **Never write a `if (!service) throw ...` existence guard in a function body.** It is dead code, and it defeats the platform.
 
-Optionality lives in exactly one place — `services.ts` / the `SingletonServices` declaration — and it means *"this may not be created"*, not *"this may be missing at call time"*. A service is optional precisely because **nothing destructures it**, and `requireSingletonServices` therefore never creates it. The moment any wired function destructures it, Pikku creates it and guarantees it is there.
+Optionality lives in exactly one place — `services.ts` / the `SingletonServices` declaration — and it means _"this may not be created"_, not _"this may be missing at call time"_. A service is optional precisely because **nothing destructures it**, and `requireSingletonServices` therefore never creates it. The moment any wired function destructures it, Pikku creates it and guarantees it is there.
 
 The types enforce this rather than merely documenting it. The inspector records the services destructured by every wired `func`, `permissions` **and** `middleware`, and emits them as `RequiredSingletonServices`. The generated function types then default their service parameter to:
 
 ```typescript
-export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
+export type WiredSingletonServices = RequiredSingletonServices &
+  SingletonServices
 export type WiredServices = RequiredSingletonServices & Services
 ```
 
@@ -183,15 +184,15 @@ const createSingletonServices = pikkuServices(async (config) => {
 
 ### Built-in Services
 
-| Service                    | Package                | Purpose                          |
-| -------------------------- | ---------------------- | -------------------------------- |
-| `ConsoleLogger`            | `@pikku/core/services` | Console-based logging            |
-| `JoseJWTService`           | `@pikku/jose`          | JWT sign/verify via jose         |
-| `LocalSecretService`       | `@pikku/core/services` | Local development secrets        |
-| `LocalVariablesService`    | `@pikku/core/services` | Local environment variables      |
-| `PinoLogger`               | `@pikku/pino`          | Structured logging via Pino      |
-| `createInvocationAudit`    | `@pikku/core/services` | Per-request audit buffer         |
-| `createAuditedKysely`      | `@pikku/kysely`        | Auto-capture DB queries as audit events |
+| Service                 | Package                | Purpose                                 |
+| ----------------------- | ---------------------- | --------------------------------------- |
+| `ConsoleLogger`         | `@pikku/core/services` | Console-based logging                   |
+| `JoseJWTService`        | `@pikku/jose`          | JWT sign/verify via jose                |
+| `LocalSecretService`    | `@pikku/core/services` | Local development secrets               |
+| `LocalVariablesService` | `@pikku/core/services` | Local environment variables             |
+| `PinoLogger`            | `@pikku/pino`          | Structured logging via Pino             |
+| `createInvocationAudit` | `@pikku/core/services` | Per-request audit buffer                |
+| `createAuditedKysely`   | `@pikku/kysely`        | Auto-capture DB queries as audit events |
 
 ## Complete Example
 
@@ -209,9 +210,15 @@ class TodoStore {
     this.todos.set(todo.id, todo)
     return todo
   }
-  async get(id: string) { return this.todos.get(id) }
-  async list() { return [...this.todos.values()] }
-  async delete(id: string) { this.todos.delete(id) }
+  async get(id: string) {
+    return this.todos.get(id)
+  }
+  async list() {
+    return [...this.todos.values()]
+  }
+  async delete(id: string) {
+    this.todos.delete(id)
+  }
 }
 
 export const createSingletonServices = pikkuServices(async (config) => {

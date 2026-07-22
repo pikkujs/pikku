@@ -1,1 +1,29 @@
-{"name":"Wa","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"w"}},{"id":"s","name":"Send","type":"n8n-nodes-base.whatsApp","typeVersion":1,"position":[200,0],"parameters":{"resource":"message","operation":"send","recipientPhoneNumber":"+123","textBody":"hi"}}],"connections":{"Webhook":{"main":[[{"node":"Send","type":"main","index":0}]]}}}
+{
+  "name": "Wa",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "w" }
+    },
+    {
+      "id": "s",
+      "name": "Send",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "recipientPhoneNumber": "+123",
+        "textBody": "hi"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send", "type": "main", "index": 0 }]] }
+  }
+}

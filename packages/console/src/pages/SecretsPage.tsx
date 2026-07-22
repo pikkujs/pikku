@@ -9,7 +9,9 @@ import { ProjectSecrets } from '../components/project/ProjectSecrets'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({
+  emptyHero,
+}) => {
   useLocale()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
@@ -63,12 +65,18 @@ const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHe
       }
       emptyPanelMessage={m.secrets_select_item()}
     >
-      <ProjectSecrets secrets={secrets} loading={loading} emptyHero={emptyHero} />
+      <ProjectSecrets
+        secrets={secrets}
+        loading={loading}
+        emptyHero={emptyHero}
+      />
     </ResizablePanelLayout>
   )
 }
 
-export const SecretsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+export const SecretsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
+  emptyHero,
+}) => {
   return (
     <PanelProvider>
       <SecretsPageContent emptyHero={emptyHero} />

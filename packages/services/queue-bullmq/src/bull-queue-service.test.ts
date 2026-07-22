@@ -13,9 +13,12 @@ describe('mapPikkuJobToBull — retry mapping', () => {
   })
 
   test("string backoff 'exponential' → { type: 'exponential' }", () => {
-    assert.deepEqual(mapPikkuJobToBull({ attempts: 6, backoff: 'exponential' }).backoff, {
-      type: 'exponential',
-    })
+    assert.deepEqual(
+      mapPikkuJobToBull({ attempts: 6, backoff: 'exponential' }).backoff,
+      {
+        type: 'exponential',
+      }
+    )
   })
 
   test('object backoff → { type, delay } (delay stays in ms)', () => {

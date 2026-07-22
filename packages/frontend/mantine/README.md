@@ -34,8 +34,8 @@ yarn add @pikku/mantine @pikku/react
 
 ## How it works
 
-The package re-exports the real Mantine component *values* and only re-casts their
-*types*. Polymorphism (`component="a"`), compound statics (`Menu.Item`,
+The package re-exports the real Mantine component _values_ and only re-casts their
+_types_. Polymorphism (`component="a"`), compound statics (`Menu.Item`,
 `Tabs.List`, `Menu.Divider`, …) and every other Mantine feature are preserved —
 see `src/core/helpers.ts` for the type machinery and `src/core/i18n.test-d.tsx`
 for the enforced positive/negative contract (`yarn test`).

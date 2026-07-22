@@ -1,1 +1,24 @@
-{"name":"Lemlist","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"lemlist"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.lemlist","typeVersion":2,"position":[200,0],"parameters":{"resource":"activity","operation":"getAll"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Lemlist",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "lemlist" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.lemlist",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "resource": "activity", "operation": "getAll" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

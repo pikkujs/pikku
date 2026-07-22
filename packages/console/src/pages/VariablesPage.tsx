@@ -9,7 +9,9 @@ import { ProjectVariables } from '../components/project/ProjectVariables'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({
+  emptyHero,
+}) => {
   useLocale()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
@@ -62,12 +64,18 @@ const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ empty
       }
       emptyPanelMessage={m.variables_select_item()}
     >
-      <ProjectVariables variables={variables} loading={loading} emptyHero={emptyHero} />
+      <ProjectVariables
+        variables={variables}
+        loading={loading}
+        emptyHero={emptyHero}
+      />
     </ResizablePanelLayout>
   )
 }
 
-export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
+  emptyHero,
+}) => {
   return (
     <PanelProvider>
       <VariablesPageContent emptyHero={emptyHero} />

@@ -151,7 +151,9 @@ const AgentPlaygroundInner: React.FC<{
     if (!search) return agentItems
     const q = search.toLowerCase()
     return agentItems.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        i.description?.toLowerCase().includes(q)
     )
   }, [agentItems, search])
 
@@ -183,7 +185,16 @@ const AgentPlaygroundInner: React.FC<{
           }}
           onClick={() => setSelectorOpen((o) => !o)}
         >
-          <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Text
+            size="sm"
+            fw={600}
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {asI18n(agentId)}
           </Text>
           <ChevronDown size={14} style={{ flexShrink: 0 }} />
@@ -326,8 +337,16 @@ export const AgentPlaygroundPage: React.FC = () => {
     return (
       <EmptyStatePlaceholder
         icon={Bot}
-        title={agentId ? asI18n(`Agent "${agentId}" not found`) : m.agent_playground_no_agent_selected()}
-        description={agentId ? m.agent_playground_agent_not_found_description() : m.agent_playground_select_agent_description()}
+        title={
+          agentId
+            ? asI18n(`Agent "${agentId}" not found`)
+            : m.agent_playground_no_agent_selected()
+        }
+        description={
+          agentId
+            ? m.agent_playground_agent_not_found_description()
+            : m.agent_playground_select_agent_description()
+        }
         docsHref="https://pikku.dev/docs/core-features/agents"
       />
     )

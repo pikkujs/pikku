@@ -1,1 +1,24 @@
-{"name":"Wp","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"wordpress"}},{"id":"p","name":"Node","type":"n8n-nodes-base.wordpress","typeVersion":1,"position":[200,0],"parameters":{"resource":"post","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Node","type":"main","index":0}]]}}}
+{
+  "name": "Wp",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "wordpress" }
+    },
+    {
+      "id": "p",
+      "name": "Node",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "post", "operation": "create" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Node", "type": "main", "index": 0 }]] }
+  }
+}

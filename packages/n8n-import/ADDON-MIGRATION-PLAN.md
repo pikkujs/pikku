@@ -1,29 +1,31 @@
 # Plan: make imported n8n workflows run — reuse first, build the thin tail
 
 ## Why this exists
+
 The n8n importer (`@pikku/n8n-import`) turns a workflow into a compiling Pikku
 project, but every integration node currently lands as a **throwing stub**. This
 plan replaces stubs with real wiring. The headline finding: **we already have
-coverage for ~93% of node instances** — the job is mostly *wiring the importer
-to existing capability*, not building new addons.
+coverage for ~93% of node instances** — the job is mostly _wiring the importer
+to existing capability_, not building new addons.
 
 ## Coverage reality (2,380-workflow corpus, 24,491 classified node instances)
 
 Classified against all three existing coverage sources at once:
 
-| Bucket | distinct | instances | share | how it becomes real |
-| --- | ---: | ---: | ---: | --- |
-| **NATIVE** | 36 | 18,366 | **75.0%** | `@pikku/addon-graph` data-transforms + importer-emitted natives |
-| **HAND-ADDON** | 31 | 2,226 | 9.1% | reuse existing hand-crafted `@pikku/*` addons |
-| **OPENAPI/registry** | 55 | 2,099 | 8.6% | reuse existing registry (OpenAPI-generated) addons |
-| **MISSING (build)** | 199 | 1,800 | **7.3%** | genuinely uncovered — the thin tail |
+| Bucket               | distinct | instances |     share | how it becomes real                                             |
+| -------------------- | -------: | --------: | --------: | --------------------------------------------------------------- |
+| **NATIVE**           |       36 |    18,366 | **75.0%** | `@pikku/addon-graph` data-transforms + importer-emitted natives |
+| **HAND-ADDON**       |       31 |     2,226 |      9.1% | reuse existing hand-crafted `@pikku/*` addons                   |
+| **OPENAPI/registry** |       55 |     2,099 |      8.6% | reuse existing registry (OpenAPI-generated) addons              |
+| **MISSING (build)**  |      199 |     1,800 |  **7.3%** | genuinely uncovered — the thin tail                             |
 
 The prior draft of this plan put MISSING at 30%. That number assumed we'd
-*re-port* services that already have addons. The user decision — **"if the addon
+_re-port_ services that already have addons. The user decision — **"if the addon
 exists we should just use the addon, why would we redo it?"** — collapses MISSING
 to **7.3%**, and even that overcounts (see below).
 
 ### The MISSING 7.3% is still overcounted
+
 Three groups sit in the MISSING list but need **no new addon**:
 
 1. **AI / LangChain sub-nodes** — `chainLlm` (79), `documentDefaultDataLoader`
@@ -103,6 +105,7 @@ tail. Each: port the declarative `routing` or the programmatic
 (`pikku-n8n-code-translate` skill), `pikku all --tsc` + test, publish.
 
 ## Wire it back into the importer (what turns coverage into "runs")
+
 1. **Native map** — importer emits real bodies / `graph:*` refs for the NATIVE
    set (transforms, httpRequest, control-flow predicates, file ops).
 2. **Addon-map step** — for each `integrations.json` entry, resolve to an
@@ -112,6 +115,7 @@ tail. Each: port the declarative `routing` or the programmatic
    stub vs real.
 
 ## Verification / acceptance
+
 - **End-to-end**: re-run the boot harness over the AI subset + a graph sample. A
   workflow whose nodes are all NATIVE + HAVE-addon boots with **zero throwing
   stubs**. Headline metric: "% of corpus node instances now real vs stub" — from
@@ -120,6 +124,7 @@ tail. Each: port the declarative `routing` or the programmatic
 - **Per-addon** (tail only): generated addon compiles + its test harness passes.
 
 ## Phasing (re-ordered — wiring before building)
+
 - **Phase A — native codegen** (biggest win): importer emits real bodies for the
   NATIVE 75% — httpRequest, control-flow branch predicates, `graph:*` transform
   refs, file/wait/respond. No addons touched.
@@ -132,7 +137,8 @@ tail. Each: port the declarative `routing` or the programmatic
   MISSING services, by frequency, on demand — not a bulk migration.
 
 ## Open questions for you
-1. **Credentials at runtime** — reused addons need real auth to *execute* (vs
+
+1. **Credentials at runtime** — reused addons need real auth to _execute_ (vs
    register). Wire per-user credentials via the credential-linking design, or is
    "boots + returns real shape against a test credential" the bar?
 2. **Phase A scope** — is httpRequest + control-flow the right first cut of

@@ -66,7 +66,7 @@ describe('toTanStackStartAuthHandler', () => {
               handler: async () => new Response('ok'),
               api: {},
             }) as any,
-          async () => ({} as any)
+          async () => ({}) as any
         ),
       /createSingletonServices is required/
     )

@@ -395,7 +395,13 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     if (latestHistory.length > 0) {
       await this.stepHistory.updateOne(
         { _id: latestHistory[0]!._id },
-        { $set: { status: 'failed', error: serializedError, failedAt: new Date() } }
+        {
+          $set: {
+            status: 'failed',
+            error: serializedError,
+            failedAt: new Date(),
+          },
+        }
       )
     }
   }
@@ -507,7 +513,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return nodeIds.filter((id) => !existingStepNames.has(id))
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const rows = await this.steps

@@ -24,7 +24,9 @@ export function useSecurityAudit(): {
   const { data, isLoading } = useQuery({
     queryKey: ['security-audit'],
     queryFn: async () =>
-      (await rpc.invoke('console:getSecurityAudit')) as SecurityAuditReport | null,
+      (await rpc.invoke(
+        'console:getSecurityAudit'
+      )) as SecurityAuditReport | null,
   })
 
   return { report: data ?? null, isLoading }
@@ -38,7 +40,9 @@ export function useRunSecurityAudit() {
 
   return useMutation({
     mutationFn: async () =>
-      (await rpc.invoke('console:runSecurityAudit')) as SecurityAuditReport | null,
+      (await rpc.invoke(
+        'console:runSecurityAudit'
+      )) as SecurityAuditReport | null,
     onSuccess: (report) => {
       // A transient null (read/parse race after regenerating audit.json) must
       // not wipe a previously-good report and flip the page to its empty state.

@@ -1,5 +1,13 @@
 import React from 'react'
-import { Stack, Text, Group, Card, Table, Timeline, Box } from '@pikku/mantine/core'
+import {
+  Stack,
+  Text,
+  Group,
+  Card,
+  Table,
+  Timeline,
+  Box,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
@@ -218,9 +226,11 @@ export const WorkflowStepError: React.FC<StepRunPanelProps> = ({ stepId }) => {
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             <Text size="sm" ff="monospace" c="red">
-              {asI18n(typeof step.error.message === 'string'
-                ? step.error.message
-                : JSON.stringify(step.error.message, null, 2))}
+              {asI18n(
+                typeof step.error.message === 'string'
+                  ? step.error.message
+                  : JSON.stringify(step.error.message, null, 2)
+              )}
             </Text>
           </Card.Section>
         </Card>
@@ -284,7 +294,9 @@ export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
     <Stack gap="md">
       <Group gap="xs">
         <SectionLabel>{asI18n('Retry History')}</SectionLabel>
-        <PikkuBadge type="label">{asI18n(`${stepHistory.length} attempts`)}</PikkuBadge>
+        <PikkuBadge type="label">
+          {asI18n(`${stepHistory.length} attempts`)}
+        </PikkuBadge>
       </Group>
 
       <Timeline active={stepHistory.length - 1} bulletSize={24} lineWidth={2}>
@@ -315,9 +327,11 @@ export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
               </Group>
               {attempt.error && (
                 <Text size="sm" c="red" mt={4}>
-                  {asI18n(typeof attempt.error.message === 'string'
-                    ? attempt.error.message
-                    : JSON.stringify(attempt.error.message, null, 2))}
+                  {asI18n(
+                    typeof attempt.error.message === 'string'
+                      ? attempt.error.message
+                      : JSON.stringify(attempt.error.message, null, 2)
+                  )}
                 </Text>
               )}
             </Timeline.Item>

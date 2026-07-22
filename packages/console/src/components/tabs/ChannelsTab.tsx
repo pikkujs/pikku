@@ -4,7 +4,10 @@ import { ChannelTabContent } from './ChannelTabContent'
 
 type ChannelsTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
-export const ChannelsTab: React.FC<ChannelsTabProps> = ({ searchQuery, emptyHero }) => {
+export const ChannelsTab: React.FC<ChannelsTabProps> = ({
+  searchQuery,
+  emptyHero,
+}) => {
   return (
     <Suspense
       fallback={

@@ -32,14 +32,19 @@ const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '')
 
 // Walk up from startDir to the nearest workspace root — the dir whose lockfile
 // the package manager audits. Falls back to startDir.
-function findProjectRoot(startDir: string): { root: string; pm: PackageManager } {
+function findProjectRoot(startDir: string): {
+  root: string
+  pm: PackageManager
+} {
   let dir = startDir
   for (let i = 0; i < 12; i++) {
     if (existsSync(join(dir, 'bun.lock')) || existsSync(join(dir, 'bun.lockb')))
       return { root: dir, pm: 'bun' }
-    if (existsSync(join(dir, 'pnpm-lock.yaml'))) return { root: dir, pm: 'pnpm' }
+    if (existsSync(join(dir, 'pnpm-lock.yaml')))
+      return { root: dir, pm: 'pnpm' }
     if (existsSync(join(dir, 'yarn.lock'))) return { root: dir, pm: 'yarn' }
-    if (existsSync(join(dir, 'package-lock.json'))) return { root: dir, pm: 'npm' }
+    if (existsSync(join(dir, 'package-lock.json')))
+      return { root: dir, pm: 'npm' }
     const parent = dirname(dir)
     if (parent === dir) break
     dir = parent
@@ -70,7 +75,9 @@ function runBun(args: string[], cwd: string): string {
 
 function normaliseSeverity(sev: unknown): Severity {
   const s = String(sev ?? '').toLowerCase()
-  return (SEVERITY_ORDER as readonly string[]).includes(s) ? (s as Severity) : 'info'
+  return (SEVERITY_ORDER as readonly string[]).includes(s)
+    ? (s as Severity)
+    : 'info'
 }
 
 // bun audit --json → { "<pkg>": [ { id, url, title, severity, vulnerable_versions, cwe[], cvss:{score} } ] }
@@ -83,7 +90,10 @@ function parseBunAudit(raw: string): SecurityAuditIssue[] {
   } catch {
     return issues
   }
-  const map = obj && typeof obj.advisories === 'object' && obj.advisories ? obj.advisories : obj
+  const map =
+    obj && typeof obj.advisories === 'object' && obj.advisories
+      ? obj.advisories
+      : obj
   if (!map || typeof map !== 'object') return issues
   for (const [pkg, list] of Object.entries(map)) {
     const advisories = Array.isArray(list) ? list : [list]
@@ -97,7 +107,10 @@ function parseBunAudit(raw: string): SecurityAuditIssue[] {
         url: a.url || a.advisory || '',
         vulnerableVersions: a.vulnerable_versions || a.vulnerableVersions || '',
         cwe: Array.isArray(a.cwe) ? a.cwe : a.cwe ? [String(a.cwe)] : [],
-        cvssScore: a.cvss && typeof a.cvss.score === 'number' && a.cvss.score > 0 ? a.cvss.score : null,
+        cvssScore:
+          a.cvss && typeof a.cvss.score === 'number' && a.cvss.score > 0
+            ? a.cvss.score
+            : null,
         recommendedVersion: null,
       })
     }
@@ -105,9 +118,18 @@ function parseBunAudit(raw: string): SecurityAuditIssue[] {
   return issues
 }
 
-function semverLevel(current: string, latest: string): SecurityAuditUpdate['level'] {
-  const c = String(current).replace(/^[^\d]*/, '').split('.').map((n) => parseInt(n, 10))
-  const l = String(latest).replace(/^[^\d]*/, '').split('.').map((n) => parseInt(n, 10))
+function semverLevel(
+  current: string,
+  latest: string
+): SecurityAuditUpdate['level'] {
+  const c = String(current)
+    .replace(/^[^\d]*/, '')
+    .split('.')
+    .map((n) => parseInt(n, 10))
+  const l = String(latest)
+    .replace(/^[^\d]*/, '')
+    .split('.')
+    .map((n) => parseInt(n, 10))
   if (Number.isNaN(c[0]) || Number.isNaN(l[0])) return 'unknown'
   if (l[0] > c[0]) return 'major'
   if ((l[1] || 0) > (c[1] || 0)) return 'minor'
@@ -121,14 +143,22 @@ function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
   const seen = new Set<string>()
   for (const line of stripAnsi(raw).split('\n')) {
     if (!line.includes('|')) continue
-    const cells = line.split('|').map((c) => c.trim()).filter((c) => c.length > 0)
+    const cells = line
+      .split('|')
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0)
     if (cells.length !== 4) continue
     const [pkg, current, , latest] = cells
     if (pkg === 'Package' || /^-+$/.test(pkg)) continue
     if (!/^\d/.test(current) || !/^\d/.test(latest)) continue
     if (seen.has(pkg)) continue
     seen.add(pkg)
-    updates.push({ package: pkg, current, latest, level: semverLevel(current, latest) })
+    updates.push({
+      package: pkg,
+      current,
+      latest,
+      level: semverLevel(current, latest),
+    })
   }
   return updates
 }
@@ -137,9 +167,12 @@ function summarise(
   tool: PackageManager,
   issues: SecurityAuditIssue[],
   updates: SecurityAuditUpdate[],
-  note?: string,
+  note?: string
 ): SecurityAuditReport {
-  issues.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity))
+  issues.sort(
+    (a, b) =>
+      SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity)
+  )
   const count = <T>(arr: T[], key: keyof T, val: unknown) =>
     arr.filter((x) => x[key] === val).length
   return {
@@ -172,9 +205,12 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
     if (pm === 'bun') {
       try {
         const issues = parseBunAudit(runBun(['audit', '--json'], root))
-        const updates = includeOutdated ? parseBunOutdated(runBun(['outdated'], root)) : []
+        const updates = includeOutdated
+          ? parseBunOutdated(runBun(['outdated'], root))
+          : []
         const latestByPkg = new Map(updates.map((u) => [u.package, u.latest]))
-        for (const i of issues) i.recommendedVersion = latestByPkg.get(i.package) ?? null
+        for (const i of issues)
+          i.recommendedVersion = latestByPkg.get(i.package) ?? null
         report = summarise('bun', issues, updates)
       } catch (e) {
         // A failed run must NOT read as clean — emit a note so the UI shows
@@ -183,7 +219,7 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
           'bun',
           [],
           [],
-          `Security audit could not run: ${e instanceof Error ? e.message : String(e)}`,
+          `Security audit could not run: ${e instanceof Error ? e.message : String(e)}`
         )
       }
     } else {
@@ -191,7 +227,7 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
         pm,
         [],
         [],
-        `Security audit is not yet supported for the '${pm}' package manager — only bun is implemented.`,
+        `Security audit is not yet supported for the '${pm}' package manager — only bun is implemented.`
       )
     }
 
@@ -206,7 +242,9 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
       logger.info(
         `pikku audit — ${summary.totalIssues} advisory(ies)` +
           ` (${summary.critical} critical, ${summary.high} high, ${summary.moderate} moderate, ${summary.low} low)` +
-          (includeOutdated ? `, ${summary.totalUpdates} available update(s)` : ''),
+          (includeOutdated
+            ? `, ${summary.totalUpdates} available update(s)`
+            : '')
       )
     }
     logger.info(`  → ${outFile}`)

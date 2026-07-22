@@ -34,11 +34,20 @@
       "parameters": {
         "name": "fetch_page",
         "description": "Fetch the markdown content of a web page. Pass the url.",
-        "workflowId": { "__rl": true, "mode": "id", "value": "={{ $workflow.id }}" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
         "workflowInputs": {
           "value": { "url": "={{ $fromAI('url', '', 'string') }}" },
           "schema": [
-            { "id": "url", "type": "string", "displayName": "url", "required": true }
+            {
+              "id": "url",
+              "type": "string",
+              "displayName": "url",
+              "required": true
+            }
           ]
         }
       }
@@ -60,7 +69,11 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            { "name": "endpoint", "type": "string", "value": "={{ $json.url }}" }
+            {
+              "name": "endpoint",
+              "type": "string",
+              "value": "={{ $json.url }}"
+            }
           ]
         }
       }
@@ -75,10 +88,22 @@
     }
   ],
   "connections": {
-    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
-    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
-    "Fetch Page Tool": { "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]] },
-    "When Executed by Another Workflow": { "main": [[{ "node": "Build Config", "type": "main", "index": 0 }]] },
-    "Build Config": { "main": [[{ "node": "Fetch", "type": "main", "index": 0 }]] }
+    "Chat Trigger": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Fetch Page Tool": {
+      "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "When Executed by Another Workflow": {
+      "main": [[{ "node": "Build Config", "type": "main", "index": 0 }]]
+    },
+    "Build Config": {
+      "main": [[{ "node": "Fetch", "type": "main", "index": 0 }]]
+    }
   }
 }

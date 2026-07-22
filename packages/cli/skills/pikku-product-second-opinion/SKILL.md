@@ -16,56 +16,60 @@ The reader is a founder/PM/operator, not an engineer. If they finish a section a
 
 ## The cardinal rule: translate, don't dump
 
-Every technical concept becomes a business outcome or a plain-language description. Never make the reader learn your vocabulary. If a term is unavoidable, define it in one clause the first time — but prefer describing the *effect* and skipping the term entirely.
+Every technical concept becomes a business outcome or a plain-language description. Never make the reader learn your vocabulary. If a term is unavoidable, define it in one clause the first time — but prefer describing the _effect_ and skipping the term entirely.
 
-| Don't write | Write instead (describe the effect) |
-|---|---|
-| queue / worker / job | "a background task that runs on its own" |
-| workflow | "a multi-step task that resumes where it left off if interrupted" |
-| API / endpoint / route | "something the app (or another tool) can ask it to do" |
-| webhook | "an automatic message the app sends to another tool when something happens" |
-| event | "a signal that something happened, that other parts can react to" |
-| cron / scheduler | "a timer that runs something on a schedule" |
-| schema / migration | "the shape of your stored data" / "a change to how data is stored" |
-| auth / session / token | "how the app knows who you are and what you're allowed to do" |
-| refactor / rewire | "reorganizing the inside without changing what it does" |
-| cache | "a saved copy kept around for speed" |
-| race condition | "two things happening at once and stepping on each other" |
-| component | "a reusable piece of the screen (a button, a chart, a table)" |
-| route / page | "a screen in the app" |
-| design system / component library | "the shared kit of screen pieces that keeps everything looking consistent" |
-| SSR / SPA / rendering | "how pages get built and shown" (only mention if it affects speed or SEO) |
-| MCP server | "a way for AI assistants to use your app's data and actions directly" |
-| SDK | "a ready-made toolkit so other developers can build on your app" |
-| CLI | "a way to drive the app by typing commands (for power users / automation)" |
-| theme token / design variable | "a single setting (like your brand color) reused everywhere, so you change it once" |
-| modal / drawer | "a pop-up box" / "a slide-out panel" |
+| Don't write                       | Write instead (describe the effect)                                                 |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| queue / worker / job              | "a background task that runs on its own"                                            |
+| workflow                          | "a multi-step task that resumes where it left off if interrupted"                   |
+| API / endpoint / route            | "something the app (or another tool) can ask it to do"                              |
+| webhook                           | "an automatic message the app sends to another tool when something happens"         |
+| event                             | "a signal that something happened, that other parts can react to"                   |
+| cron / scheduler                  | "a timer that runs something on a schedule"                                         |
+| schema / migration                | "the shape of your stored data" / "a change to how data is stored"                  |
+| auth / session / token            | "how the app knows who you are and what you're allowed to do"                       |
+| refactor / rewire                 | "reorganizing the inside without changing what it does"                             |
+| cache                             | "a saved copy kept around for speed"                                                |
+| race condition                    | "two things happening at once and stepping on each other"                           |
+| component                         | "a reusable piece of the screen (a button, a chart, a table)"                       |
+| route / page                      | "a screen in the app"                                                               |
+| design system / component library | "the shared kit of screen pieces that keeps everything looking consistent"          |
+| SSR / SPA / rendering             | "how pages get built and shown" (only mention if it affects speed or SEO)           |
+| MCP server                        | "a way for AI assistants to use your app's data and actions directly"               |
+| SDK                               | "a ready-made toolkit so other developers can build on your app"                    |
+| CLI                               | "a way to drive the app by typing commands (for power users / automation)"          |
+| theme token / design variable     | "a single setting (like your brand color) reused everywhere, so you change it once" |
+| modal / drawer                    | "a pop-up box" / "a slide-out panel"                                                |
 
-When in doubt, say what the *user or the business* experiences, not what the machine does.
+When in doubt, say what the _user or the business_ experiences, not what the machine does.
 
 ## Report structure (layered — skim or dive)
 
 Write these three parts in order. A reader can stop after Part 1.
 
 **Part 1 — Executive summary (one page).**
-- *What you have*: 2–3 sentences — what the product does and who uses it.
-- *The headline*: the 3–5 biggest risks/opportunities, one plain line each.
-- *Recommended order*: a table (Fix | Why it matters | Effort | Payoff). This is the part they act on.
+
+- _What you have_: 2–3 sentences — what the product does and who uses it.
+- _The headline_: the 3–5 biggest risks/opportunities, one plain line each.
+- _Recommended order_: a table (Fix | Why it matters | Effort | Payoff). This is the part they act on.
 
 **Part 2 — One section per major area** (drive the areas from `domains.json`; skip domains with nothing worth saying). Each section follows this shape (see `example/sample-report.md`):
-- *What this does* — the capability in business terms.
-- *How it works today* — a plain walkthrough, ideally as a small story ("on a timer, the app re-reads each site, compares…").
-- *What's working* — genuine credit. Never skip this; a report that's all criticism gets dismissed.
-- *What's holding you back* — each problem MUST carry: **what it means for you** (business impact), **severity** (Minor / Worth fixing / Serious / Urgent), and **effort** (Small / Medium / Large).
-- *How I'd do it differently — and why it's worth it* — the opinionated part. Argue the improvement in one of these business outcomes: **more reliable / fewer surprises**, **faster to add features**, **cheaper to run**, **safer / less risk**, **easier to maintain or hand off**. Be explicit whether it's a cheap rewire or an expensive rebuild.
+
+- _What this does_ — the capability in business terms.
+- _How it works today_ — a plain walkthrough, ideally as a small story ("on a timer, the app re-reads each site, compares…").
+- _What's working_ — genuine credit. Never skip this; a report that's all criticism gets dismissed.
+- _What's holding you back_ — each problem MUST carry: **what it means for you** (business impact), **severity** (Minor / Worth fixing / Serious / Urgent), and **effort** (Small / Medium / Large).
+- _How I'd do it differently — and why it's worth it_ — the opinionated part. Argue the improvement in one of these business outcomes: **more reliable / fewer surprises**, **faster to add features**, **cheaper to run**, **safer / less risk**, **easier to maintain or hand off**. Be explicit whether it's a cheap rewire or an expensive rebuild.
 
 **Part 3 — Appendix.**
-- *How confident am I* — REQUIRED. Where you're certain vs guessing; what you'd verify against real data first. The blueprint carries confidence tiers — anything you're relaying from a `low`/`medium` entry, or from a reconstructed (`explicit: false`) event, says so here.
-- *Glossary* (optional) — only for any term that slipped through.
+
+- _How confident am I_ — REQUIRED. Where you're certain vs guessing; what you'd verify against real data first. The blueprint carries confidence tiers — anything you're relaying from a `low`/`medium` entry, or from a reconstructed (`explicit: false`) event, says so here.
+- _Glossary_ (optional) — only for any term that slipped through.
 
 ## Rewire vs rebuild (say which)
 
 The blueprint's `migration.json` tells you which is which — `mappings[]` is what survives (each with its `recommendation`), `dropped[]` is what goes. The reader needs to know because the cost is 10× different.
+
 - **Rewire** — the valuable machinery exists; you're connecting pieces or turning something on. Cheap, low-risk. (Most "it should be automatic but isn't" findings are this.)
 - **Rebuild** — the capability doesn't exist or is fundamentally wrong. Expensive, risky. Reserve the word for when it's true; founders hear "rewrite" and panic or overspend.
 
@@ -76,33 +80,35 @@ Never recommend a full rewrite because the code is messy. Messy-but-working is a
 When the blueprint has the consumer-surface files, add these to the report — they're often where a founder's questions actually live ("why does the app feel inconsistent?", "can partners build on this?").
 
 **The screens (`frontend-*.json`) — one area section, founder-framed.**
-- *What a user can do* — walk the main screens as a journey, not a component list.
-- *Consistency* — is it built from one shared kit of screen pieces, or a patchwork? A consistent kit means changes are cheap and the app feels coherent; a patchwork means every change is bespoke and the look drifts. Say which, plainly.
-- *The expensive pieces* — this is the key frontend insight. Most of the screen is standard pieces that are cheap to rebuild or restyle. A **small number carry real custom logic** — a bespoke chart, a complicated data table, a drawing/drag interaction, a rich editor. Those are the parts that take real effort to move or change, and the ones most likely to break. Name them, say what they do, and flag them as the real work — so nobody assumes "it's just screens, it'll be quick."
-- *Design consistency (the "it looks a bit off" problems)* — from the blueprint's design findings, call out broken patterns in plain terms and, crucially, why each matters and roughly what it costs to fix. Common ones and how to frame them:
-  - **The same action behaves differently in different places** (a slide-out panel here, a pop-up box there for the same task). *Why it matters:* the app feels inconsistent and users have to re-learn each screen. *Fix:* pick one pattern and apply it everywhere — cheap.
-  - **Colors/spacing are hardcoded instead of set in one place.** *Why it matters:* changing your brand color, or fixing contrast, means hunting through every screen instead of editing one setting — slow and error-prone. *Fix:* move them to shared "design tokens" — a small, high-leverage cleanup.
-  - **The same element looks different from page to page** (buttons, headings, cards). *Why it matters:* reads as unpolished and erodes trust, especially in a paid product. *Fix:* one shared version of each, reused — cheap and makes every future change faster.
-  These are almost always **cheap rewires with an outsized polish/trust payoff**, not rebuilds. Give each an effort (usually Small–Medium) and say the payoff is perceived quality + faster future changes. Do NOT design-nitpick without a reason — every design point needs a "why it matters to you." And credit consistency where the app already has it.
+
+- _What a user can do_ — walk the main screens as a journey, not a component list.
+- _Consistency_ — is it built from one shared kit of screen pieces, or a patchwork? A consistent kit means changes are cheap and the app feels coherent; a patchwork means every change is bespoke and the look drifts. Say which, plainly.
+- _The expensive pieces_ — this is the key frontend insight. Most of the screen is standard pieces that are cheap to rebuild or restyle. A **small number carry real custom logic** — a bespoke chart, a complicated data table, a drawing/drag interaction, a rich editor. Those are the parts that take real effort to move or change, and the ones most likely to break. Name them, say what they do, and flag them as the real work — so nobody assumes "it's just screens, it'll be quick."
+- _Design consistency (the "it looks a bit off" problems)_ — from the blueprint's design findings, call out broken patterns in plain terms and, crucially, why each matters and roughly what it costs to fix. Common ones and how to frame them:
+  - **The same action behaves differently in different places** (a slide-out panel here, a pop-up box there for the same task). _Why it matters:_ the app feels inconsistent and users have to re-learn each screen. _Fix:_ pick one pattern and apply it everywhere — cheap.
+  - **Colors/spacing are hardcoded instead of set in one place.** _Why it matters:_ changing your brand color, or fixing contrast, means hunting through every screen instead of editing one setting — slow and error-prone. _Fix:_ move them to shared "design tokens" — a small, high-leverage cleanup.
+  - **The same element looks different from page to page** (buttons, headings, cards). _Why it matters:_ reads as unpolished and erodes trust, especially in a paid product. _Fix:_ one shared version of each, reused — cheap and makes every future change faster.
+    These are almost always **cheap rewires with an outsized polish/trust payoff**, not rebuilds. Give each an effort (usually Small–Medium) and say the payoff is perceived quality + faster future changes. Do NOT design-nitpick without a reason — every design point needs a "why it matters to you." And credit consistency where the app already has it.
 - Frame rebuild/restyle work as **rewire vs rebuild**: restyling standard pieces to a consistent kit is cheap; re-creating a custom-logic piece is real engineering.
 
 **How your app can be driven (`interfaces.json`) — usually a short, positive section.**
-Explain, in one line each, the ways the product can be used: people through the web, developers through an API or toolkit, AI assistants through a direct connection (MCP), power users through the command line. This is often a genuine strength worth naming — an app that agents and partners can build on is more valuable than one only humans can click. But be honest about `status`: a connection that exists but only does two things is a *start*, not a feature — say so.
+Explain, in one line each, the ways the product can be used: people through the web, developers through an API or toolkit, AI assistants through a direct connection (MCP), power users through the command line. This is often a genuine strength worth naming — an app that agents and partners can build on is more valuable than one only humans can click. But be honest about `status`: a connection that exists but only does two things is a _start_, not a feature — say so.
 
 ## Technology choices — the honest tradeoffs (don't be cheap on the cons)
 
-The app made specific technology bets. The founder deserves to know what each bet *bought* and what it *costs* — in business terms, tied to their situation (early vs scaling, chasing enterprise deals or not, big team or two people). Present every significant choice as a genuine tradeoff with **both sides**. Never cheerlead a technology, and never trash one — but do not soften the disadvantages to sound positive. A report that only lists upsides is not honest and is not useful.
+The app made specific technology bets. The founder deserves to know what each bet _bought_ and what it _costs_ — in business terms, tied to their situation (early vs scaling, chasing enterprise deals or not, big team or two people). Present every significant choice as a genuine tradeoff with **both sides**. Never cheerlead a technology, and never trash one — but do not soften the disadvantages to sound positive. A report that only lists upsides is not honest and is not useful.
 
 Rules:
-- For each notable choice (framework, auth, hosting, database, key libraries): **what it buys** and **what it costs**, both in plain business terms, then a recommendation tied to *their* stage and goals — usually "keep it, here's what to watch" rather than "switch."
+
+- For each notable choice (framework, auth, hosting, database, key libraries): **what it buys** and **what it costs**, both in plain business terms, then a recommendation tied to _their_ stage and goals — usually "keep it, here's what to watch" rather than "switch."
 - Tie cons to consequences the founder feels: vendor bills, security/breach liability, hiring difficulty, how fast they can ship, enterprise-sales blockers, the risk of betting on something young.
 - Distinguish "younger / smaller community" (a real, manageable risk) from "wrong choice" (rare). Most stack choices are defensible; the job is informed eyes-open, not alarm.
 - **Verify before you disparage.** "Don't be cheap on the cons" means ACCURATE cons, not invented ones. Do NOT label a technology immature, niche, or feature-poor from vibes, its name, or its age — check its actual adoption, maturity, and feature set first. And separate an **inherent tradeoff of an approach** (e.g. self-hosting anything means you run and secure it) from a **deficiency of a specific tool** (often false — the tool may be mature and full-featured). Overstating cons is as dishonest as hiding them.
 - **Hold your own recommendation to the same bar.** If "how I'd do it differently" lands on a specific stack — Pikku included — it gets the same both-sides treatment as everything else, cons first-class. Pinning someone's dependency for being pre-1.0 while not mentioning that the replacement is pre-1.0 too isn't a second opinion, it's a pitch.
 
-- **Derive the app's choices from the blueprint, never from a list in this file.** Read the stack off `architecture.json`, `integrations.json`, `frontend.json`, and the manifest the repo actually has (`package.json`, `Gemfile`, `go.mod`, …). Cover the bets that are *load-bearing for this product*: typically the framework, the auth/identity approach, the datastore, the hosting/deploy model, the payment and other critical vendor integrations, and anything the blueprint marks `replacementDifficulty: hard`. A choice earns a paragraph if switching it would be expensive, or if living with it constrains the business — not because it appears in some canonical list. If you could write the verdict before reading the blueprint, you are not giving a second opinion.
+- **Derive the app's choices from the blueprint, never from a list in this file.** Read the stack off `architecture.json`, `integrations.json`, `frontend.json`, and the manifest the repo actually has (`package.json`, `Gemfile`, `go.mod`, …). Cover the bets that are _load-bearing for this product_: typically the framework, the auth/identity approach, the datastore, the hosting/deploy model, the payment and other critical vendor integrations, and anything the blueprint marks `replacementDifficulty: hard`. A choice earns a paragraph if switching it would be expensive, or if living with it constrains the business — not because it appears in some canonical list. If you could write the verdict before reading the blueprint, you are not giving a second opinion.
 
-### The choices *this* app made
+### The choices _this_ app made
 
 Whatever the blueprint shows. A Rails app's bets are Rails, Devise, Pundit, MySQL, Sidekiq, its ERP and payment vendors; a Go app's are different again. Fill in buys/costs/usually for each, from evidence. If a legacy choice is working fine, credit it and move on — "boring and working" is a feature, and the pressure to find something to say about a stack is exactly what produces dishonest reports.
 
@@ -113,45 +119,49 @@ Worth naming when it applies: adopting one coherent system in place of hand-roll
 Include this section **only if you are actually recommending a rebuild** onto it — and then give every part of it the same both-sides treatment you gave the app's own bets, per the "hold your own recommendation to the same bar" rule above. These are not choices the app made; they are choices you are proposing, which is exactly why their costs are the reader's to weigh. The Pikku target stack is Pikku + Better Auth + TanStack Start + Mantine; the framings below are reference material for the parts you actually recommend, not a script to recite.
 
 **Better Auth (self-hosted sign-in) — instead of a paid service like Auth0/Clerk.**
-- *Buys you:* a mature, battle-tested, **framework-agnostic** library with a deep first-class plugin catalog — two-factor auth, multi-tenancy/organizations, multi-session, rate limiting, Stripe subscription billing, an admin panel, API keys for partners/automation, single-sign-on — plus a plugin system to add more without forking. You keep your users in your own database (single source of truth, no per-user bill that grows with success), with full control of the auth flows, and you can run it embedded in the app or as a standalone self-hosted auth server. So self-hosting here means neither giving up features nor rolling your own security.
-- *Cleans up messy auth (often the biggest win):* adopting it consolidates the kind of hand-rolled, drifted auth that accumulates in an older codebase — several different ways of deciding who's an admin, a bespoke token table, a back-door test login, home-grown encryption — into **one coherent system**. If the blueprint shows a before (legacy, bespoke) and after (on Better Auth), point at it directly: the sprawl collapses into a single well-structured setup. A concrete reliability-and-security upgrade, not just a swap.
-- *Costs you (the honest tradeoff — operational, not security-implementation):* the auth flows and security practices are handled by the library, so this is NOT "build secure auth from scratch." What self-hosting means is you **operate** it — hosting, upgrades, uptime, and incident response sit with your team, where a paid SaaS runs that for you and bundles hosted extras (bot/anomaly detection, leaked-password monitoring, vendor compliance certifications) you'd otherwise operate and document yourself. You trade a per-user bill and vendor ops for control, data ownership, and predictable cost.
-- *Usually:* a strong default for an independent product — mature, full-featured, framework-agnostic, and frequently a genuine cleanup of inherited auth. The real question is who owns operating it, not whether the tool is good enough.
+
+- _Buys you:_ a mature, battle-tested, **framework-agnostic** library with a deep first-class plugin catalog — two-factor auth, multi-tenancy/organizations, multi-session, rate limiting, Stripe subscription billing, an admin panel, API keys for partners/automation, single-sign-on — plus a plugin system to add more without forking. You keep your users in your own database (single source of truth, no per-user bill that grows with success), with full control of the auth flows, and you can run it embedded in the app or as a standalone self-hosted auth server. So self-hosting here means neither giving up features nor rolling your own security.
+- _Cleans up messy auth (often the biggest win):_ adopting it consolidates the kind of hand-rolled, drifted auth that accumulates in an older codebase — several different ways of deciding who's an admin, a bespoke token table, a back-door test login, home-grown encryption — into **one coherent system**. If the blueprint shows a before (legacy, bespoke) and after (on Better Auth), point at it directly: the sprawl collapses into a single well-structured setup. A concrete reliability-and-security upgrade, not just a swap.
+- _Costs you (the honest tradeoff — operational, not security-implementation):_ the auth flows and security practices are handled by the library, so this is NOT "build secure auth from scratch." What self-hosting means is you **operate** it — hosting, upgrades, uptime, and incident response sit with your team, where a paid SaaS runs that for you and bundles hosted extras (bot/anomaly detection, leaked-password monitoring, vendor compliance certifications) you'd otherwise operate and document yourself. You trade a per-user bill and vendor ops for control, data ownership, and predictable cost.
+- _Usually:_ a strong default for an independent product — mature, full-featured, framework-agnostic, and frequently a genuine cleanup of inherited auth. The real question is who owns operating it, not whether the tool is good enough.
 
 **TanStack Start (the web framework) — instead of the incumbent (Next.js).**
-- *Buys you:* modern, tidy developer experience; strong type-safety that catches whole classes of bugs before users see them; fast iteration; fine-grained control; deploys well to modern/edge hosting. The libraries underneath it — the TanStack ecosystem (Query, Router, Table) — are mature, battle-tested and everywhere in React.
-- *Costs you (the honest tradeoff — maturity of the framework itself):* separate the ecosystem from the framework. Query/Router/Table are mature; **TanStack Start, the framework that wraps them, has not shipped a stable 1.0** — its own maintainers describe it as a release candidate that is feature-complete with a stable API, and tell production users to lock to an exact version and follow the last-mile changes into 1.0. In practice that means pinning your version and budgeting for occasional upgrade work as it settles, rather than upgrading casually. On top of that it's newer than the incumbent (Next.js), which has the largest ecosystem — fewer ready-made templates and third-party examples, and a smaller (though growing) pool of developers who've used *this specific* framework, which can make hiring slightly slower.
-- *Usually:* a credible, modern choice on a mature foundation, but a **pre-1.0 one** — so it carries pinning and upgrade risk that the incumbent does not. Reasonable if the team wants the type-safety and is willing to track the framework to 1.0; harder to justify if nobody has capacity to own upgrades.
+
+- _Buys you:_ modern, tidy developer experience; strong type-safety that catches whole classes of bugs before users see them; fast iteration; fine-grained control; deploys well to modern/edge hosting. The libraries underneath it — the TanStack ecosystem (Query, Router, Table) — are mature, battle-tested and everywhere in React.
+- _Costs you (the honest tradeoff — maturity of the framework itself):_ separate the ecosystem from the framework. Query/Router/Table are mature; **TanStack Start, the framework that wraps them, has not shipped a stable 1.0** — its own maintainers describe it as a release candidate that is feature-complete with a stable API, and tell production users to lock to an exact version and follow the last-mile changes into 1.0. In practice that means pinning your version and budgeting for occasional upgrade work as it settles, rather than upgrading casually. On top of that it's newer than the incumbent (Next.js), which has the largest ecosystem — fewer ready-made templates and third-party examples, and a smaller (though growing) pool of developers who've used _this specific_ framework, which can make hiring slightly slower.
+- _Usually:_ a credible, modern choice on a mature foundation, but a **pre-1.0 one** — so it carries pinning and upgrade risk that the incumbent does not. Reasonable if the team wants the type-safety and is willing to track the framework to 1.0; harder to justify if nobody has capacity to own upgrades.
 
 **Pikku (the framework a rebuild would land on) — instead of staying where you are.**
-- *Buys you:* one way to write a capability and drive it from anywhere — web, background jobs, timers, realtime, AI assistants, the command line — so a feature is written once instead of five times. Type-safe clients and the API spec fall out of the code rather than being hand-maintained until they drift. The sprawl an organically-grown app accumulates collapses into one shape a small team can hold in its head.
-- *Costs you (the honest tradeoff — it is younger than anything it would replace):* Pikku has **not shipped a stable 1.0** — it's 0.12.x, and 0.13 is the first release that will promise backwards compatibility. Until then upgrades can break you. In practice: pin your version, budget for upgrade work, and know that the community, the ready-made examples, and the pool of developers who have used it are all far smaller than the incumbent's — smaller than TanStack Start's, let alone Next.js's. Being pre-1.0 is normal for a young framework, and survivable, but it is a real cost and it is the reader's to weigh, not yours to skip.
-- *Usually:* worth it when the real problem is sprawl — many surfaces, hand-maintained glue, the same rule implemented three slightly different ways — and the team wants one shape instead of five. Harder to justify for an app that works and needs a few rewires: those are usually cheaper in place. If nobody has capacity to own upgrades, that's a real reason to wait.
+
+- _Buys you:_ one way to write a capability and drive it from anywhere — web, background jobs, timers, realtime, AI assistants, the command line — so a feature is written once instead of five times. Type-safe clients and the API spec fall out of the code rather than being hand-maintained until they drift. The sprawl an organically-grown app accumulates collapses into one shape a small team can hold in its head.
+- _Costs you (the honest tradeoff — it is younger than anything it would replace):_ Pikku has **not shipped a stable 1.0** — it's 0.12.x, and 0.13 is the first release that will promise backwards compatibility. Until then upgrades can break you. In practice: pin your version, budget for upgrade work, and know that the community, the ready-made examples, and the pool of developers who have used it are all far smaller than the incumbent's — smaller than TanStack Start's, let alone Next.js's. Being pre-1.0 is normal for a young framework, and survivable, but it is a real cost and it is the reader's to weigh, not yours to skip.
+- _Usually:_ worth it when the real problem is sprawl — many surfaces, hand-maintained glue, the same rule implemented three slightly different ways — and the team wants one shape instead of five. Harder to justify for an app that works and needs a few rewires: those are usually cheaper in place. If nobody has capacity to own upgrades, that's a real reason to wait.
 
 Check these statuses before you write them up rather than repeating them from here — a framework's release stage moves, and the point is the current fact, not this example.
 
 ## Delivery
 
 Produce **both**:
+
 1. A **markdown** report in the repo (e.g. `docs/reports/<app>-second-opinion.md`) — versioned, diffable.
 2. A **shareable web page**: load the **artifact-design** skill, then render the same report as one clean, print-friendly, theme-aware page they can send to a cofounder or the agency. Same content, nicer to read.
 
 ## Red flags — you're writing the wrong report
 
-| Symptom | Fix |
-|---|---|
-| A technical term with no translation | Rephrase as the effect on the user/business, or cut the term. |
-| A problem with no "what it means for you" | Incomplete — add the business impact or delete it. |
-| All problems, no credit | You'll lose the reader's trust. Name what's genuinely good. |
-| A recommendation with no effort + payoff | Not decision-useful. Add both. |
-| "Rewrite the app" | Almost always wrong. Separate rewire (cheap) from rebuild (dear); lean on what `migration.json.mappings` says survives. |
-| A guess stated as fact | Mark confidence. "I'm certain" and "I'd need to check" are different sentences. |
-| Only listed the upsides of a technology choice | Not honest. Every bet has a cost — name it in business terms, don't soften it to sound positive. |
-| Recommended a stack (including ours) without its cons | You applied a maturity bar to their technology and exempted your own. Both sides, or cut the recommendation. |
-| Trashed a technology as "the wrong choice" | Equally lazy. Most choices are defensible; frame as tradeoff + "what to watch," not a verdict. |
-| "The frontend is just screens, it'll be quick" | Wrong. The custom-logic pieces (charts, complex tables, editors) are real work — flag them separately from the cheap standard pieces. |
-| A design point with no "why it matters" | Taste, not advice. Tie every design finding to user perception (polish/trust) or maintenance cost (change-once vs hunt-everywhere), plus effort. |
-| Reads like a code review | Wrong audience. Would a founder know what to *do* after this paragraph? |
+| Symptom                                               | Fix                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A technical term with no translation                  | Rephrase as the effect on the user/business, or cut the term.                                                                                    |
+| A problem with no "what it means for you"             | Incomplete — add the business impact or delete it.                                                                                               |
+| All problems, no credit                               | You'll lose the reader's trust. Name what's genuinely good.                                                                                      |
+| A recommendation with no effort + payoff              | Not decision-useful. Add both.                                                                                                                   |
+| "Rewrite the app"                                     | Almost always wrong. Separate rewire (cheap) from rebuild (dear); lean on what `migration.json.mappings` says survives.                          |
+| A guess stated as fact                                | Mark confidence. "I'm certain" and "I'd need to check" are different sentences.                                                                  |
+| Only listed the upsides of a technology choice        | Not honest. Every bet has a cost — name it in business terms, don't soften it to sound positive.                                                 |
+| Recommended a stack (including ours) without its cons | You applied a maturity bar to their technology and exempted your own. Both sides, or cut the recommendation.                                     |
+| Trashed a technology as "the wrong choice"            | Equally lazy. Most choices are defensible; frame as tradeoff + "what to watch," not a verdict.                                                   |
+| "The frontend is just screens, it'll be quick"        | Wrong. The custom-logic pieces (charts, complex tables, editors) are real work — flag them separately from the cheap standard pieces.            |
+| A design point with no "why it matters"               | Taste, not advice. Tie every design finding to user perception (polish/trust) or maintenance cost (change-once vs hunt-everywhere), plus effort. |
+| Reads like a code review                              | Wrong audience. Would a founder know what to _do_ after this paragraph?                                                                          |
 
 ## Relationship to pikku-software-archaeology
 

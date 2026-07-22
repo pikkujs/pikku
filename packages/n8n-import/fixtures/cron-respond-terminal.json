@@ -13,9 +13,7 @@
       "typeVersion": 3.4,
       "parameters": {
         "assignments": {
-          "assignments": [
-            { "name": "ok", "type": "boolean", "value": true }
-          ]
+          "assignments": [{ "name": "ok", "type": "boolean", "value": true }]
         }
       },
       "position": [200, 0]

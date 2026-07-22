@@ -20,7 +20,8 @@ const clientSecret = 'z.string().describe("OAuth client secret")'
 const standardFields = { clientId, clientSecret }
 
 /** PROVIDER_KEY → KEY_OAUTH (e.g. `github` → `GITHUB_OAUTH`). */
-const secretIdFor = (key: string) => `${key.replace(/-/g, '_').toUpperCase()}_OAUTH`
+const secretIdFor = (key: string) =>
+  `${key.replace(/-/g, '_').toUpperCase()}_OAUTH`
 
 const oauth = (key: string, displayName: string): AuthProviderDef => ({
   secretId: secretIdFor(key),
@@ -55,7 +56,8 @@ export const PROVIDER_REGISTRY = {
       },
       region: {
         variableId: 'COGNITO_REGION',
-        description: 'AWS region the Cognito user pool is hosted in (e.g. us-east-1)',
+        description:
+          'AWS region the Cognito user pool is hosted in (e.g. us-east-1)',
       },
       userPoolId: {
         variableId: 'COGNITO_USER_POOL_ID',
@@ -99,7 +101,10 @@ export const PROVIDER_REGISTRY = {
     secretId: secretIdFor('tiktok'),
     displayName: 'TikTok OAuth',
     // TikTok uses `clientKey` rather than `clientId`.
-    fields: { clientKey: 'z.string().describe("OAuth client key")', clientSecret },
+    fields: {
+      clientKey: 'z.string().describe("OAuth client key")',
+      clientSecret,
+    },
   },
   twitch: oauth('twitch', 'Twitch OAuth'),
   twitter: oauth('twitter', 'Twitter / X OAuth'),

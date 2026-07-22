@@ -18,10 +18,7 @@ afterEach(() => {
 
 function writeSidecar(value: unknown): void {
   mkdirSync(join(root, 'db'), { recursive: true })
-  writeFileSync(
-    join(root, 'db', 'annotations.gen.json'),
-    JSON.stringify(value)
-  )
+  writeFileSync(join(root, 'db', 'annotations.gen.json'), JSON.stringify(value))
 }
 
 // ── loadAnnotations: db/annotations.gen.json sidecar ─────────────────────────

@@ -16,9 +16,10 @@ type WithProps<F, O> = {
 }
 
 /** Narrow a polymorphic Mantine component's props while keeping `component=`. */
-export type OverridePoly<F extends PolyPayload, O> = MantinePolymorphicComponent<
-  WithProps<F, O>
->
+export type OverridePoly<
+  F extends PolyPayload,
+  O,
+> = MantinePolymorphicComponent<WithProps<F, O>>
 
 /** Narrow a plain (non-polymorphic) Mantine component's props. */
 export type OverrideFactory<F extends FactoryPayload, O> = MantineComponent<
@@ -30,6 +31,8 @@ export type OverrideFactory<F extends FactoryPayload, O> = MantineComponent<
 // (Menu.Divider, Menu.Sub, Tabs.List…), and preserve the parent's own call
 // signature. `CallSig` keeps callability (mapped types strip it); the mapped
 // type keeps all static keys.
-type CallSig<T> = T extends (...a: infer A) => infer R ? (...a: A) => R : unknown
+type CallSig<T> = T extends (...a: infer A) => infer R
+  ? (...a: A) => R
+  : unknown
 type OverrideStatics<T, O> = { [K in keyof T]: K extends keyof O ? O[K] : T[K] }
 export type WithStatics<T, O> = CallSig<T> & OverrideStatics<T, O>

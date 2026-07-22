@@ -219,7 +219,9 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                 <Group gap={4}>
                   {selectedData.meta.middleware.map((mw: any, i: number) => (
                     <Badge key={i} size="sm" variant="light" color="gray">
-                      {asI18n(typeof mw === 'string' ? mw : mw.type || 'middleware')}
+                      {asI18n(
+                        typeof mw === 'string' ? mw : mw.type || 'middleware'
+                      )}
                     </Badge>
                   ))}
                 </Group>

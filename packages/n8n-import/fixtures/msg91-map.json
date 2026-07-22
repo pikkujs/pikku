@@ -1,1 +1,24 @@
-{"name":"msg91","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"msg91"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.msg91","typeVersion":1,"position":[200,0],"parameters":{"resource":"sms","operation":"send"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "msg91",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "msg91" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.msg91",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "sms", "operation": "send" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

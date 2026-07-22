@@ -51,7 +51,9 @@
       "main": [[{ "node": "Notify Support", "type": "main", "index": 0 }]]
     },
     "Notify Support": {
-      "main": [[{ "node": "Notify Marketing Again", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Notify Marketing Again", "type": "main", "index": 0 }]
+      ]
     }
   }
 }

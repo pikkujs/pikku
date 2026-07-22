@@ -1,7 +1,14 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { CanvasDrawerData } from '../../context/DrawerContext'
-import { Box, Text, Stack, Group, UnstyledButton, Loader } from '@pikku/mantine/core'
+import {
+  Box,
+  Text,
+  Stack,
+  Group,
+  UnstyledButton,
+  Loader,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { PikkuBadge } from '../ui/PikkuBadge'

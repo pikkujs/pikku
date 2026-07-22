@@ -1,5 +1,9 @@
 import { runPikkuFunc } from '@pikku/core'
-import { createConfig, createSingletonServices, createWireServices } from './services.js'
+import {
+  createConfig,
+  createSingletonServices,
+  createWireServices,
+} from './services.js'
 
 interface LogEntry {
   level: string

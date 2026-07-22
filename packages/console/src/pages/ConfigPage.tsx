@@ -28,8 +28,16 @@ export const ConfigPage: React.FC = () => {
       <ResizablePanelLayout
         header={
           <Stack gap="md">
-            <ListPageHeader title={m.config_title()} description={m.config_description()} />
-            <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
+            <ListPageHeader
+              title={m.config_title()}
+              description={m.config_description()}
+            />
+            <SegmentedControl
+              size="xs"
+              value={tab}
+              onChange={handleTabChange}
+              data={TABS}
+            />
           </Stack>
         }
         emptyPanelMessage={m.common_select_item()}

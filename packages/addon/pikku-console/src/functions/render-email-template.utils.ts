@@ -1,4 +1,7 @@
-export function getNestedValue(source: Record<string, unknown>, path: string): string {
+export function getNestedValue(
+  source: Record<string, unknown>,
+  path: string
+): string {
   const segments = path.split('.')
   let current: unknown = source
   for (const segment of segments) {

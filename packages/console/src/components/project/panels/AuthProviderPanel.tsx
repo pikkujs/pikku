@@ -16,7 +16,10 @@ import { KeyRound, ExternalLink, Copy, Check, Trash2 } from 'lucide-react'
 import { useClipboard } from '@mantine/hooks'
 import { useSetSecret, useSecretValue } from '../../../hooks/useSecrets'
 import { SectionLabel } from './shared/SectionLabel'
-import type { AuthProviderDef, AuthProviderField } from '../../../pages/AuthProvidersPage'
+import type {
+  AuthProviderDef,
+  AuthProviderField,
+} from '../../../pages/AuthProvidersPage'
 
 // ─── Single field row ─────────────────────────────────────────────────────────
 
@@ -41,7 +44,9 @@ const FieldRow: React.FC<{
         )}
       </Group>
       <PasswordInput
-        placeholder={asI18n(isSet ? 'Leave blank to keep existing' : `Enter ${field.label}`)}
+        placeholder={asI18n(
+          isSet ? 'Leave blank to keep existing' : `Enter ${field.label}`
+        )}
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
         ff="monospace"
@@ -56,13 +61,15 @@ const FieldRow: React.FC<{
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
-export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ metadata }) => {
+export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({
+  metadata,
+}) => {
   const provider = metadata
   const callbackPath = `/api/auth/callback/${provider.callbackId}`
   const clipboard = useClipboard({ timeout: 1500 })
 
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(provider.fields.map((f) => [f.key, ''])),
+    Object.fromEntries(provider.fields.map((f) => [f.key, '']))
   )
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -76,8 +83,11 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
     try {
       await Promise.all(
         toSave.map((f) =>
-          setSecretMutation.mutateAsync({ secretId: f.key, value: (values[f.key] ?? '').trim() }),
-        ),
+          setSecretMutation.mutateAsync({
+            secretId: f.key,
+            value: (values[f.key] ?? '').trim(),
+          })
+        )
       )
       setValues(Object.fromEntries(provider.fields.map((f) => [f.key, ''])))
     } finally {
@@ -90,8 +100,8 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
     try {
       await Promise.all(
         provider.fields.map((f) =>
-          setSecretMutation.mutateAsync({ secretId: f.key, value: null }),
-        ),
+          setSecretMutation.mutateAsync({ secretId: f.key, value: null })
+        )
       )
     } finally {
       setRemoving(false)
@@ -117,7 +127,11 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
       <Box>
         <SectionLabel>{asI18n('Callback URL')}</SectionLabel>
         <Group gap="xs" wrap="nowrap">
-          <Text fz={13} ff="monospace" style={{ flex: 1, wordBreak: 'break-all' }}>
+          <Text
+            fz={13}
+            ff="monospace"
+            style={{ flex: 1, wordBreak: 'break-all' }}
+          >
             {asI18n(callbackPath)}
           </Text>
           <Tooltip label={asI18n(clipboard.copied ? 'Copied!' : 'Copy')}>
@@ -132,7 +146,9 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
           </Tooltip>
         </Group>
         <Text fz={12} c="dimmed" mt={4}>
-          {asI18n('Register this as the authorized redirect URI in your OAuth app.')}
+          {asI18n(
+            'Register this as the authorized redirect URI in your OAuth app.'
+          )}
         </Text>
       </Box>
 
@@ -154,7 +170,9 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
               key={field.key}
               field={field}
               value={values[field.key] ?? ''}
-              onChange={(v) => setValues((prev) => ({ ...prev, [field.key]: v }))}
+              onChange={(v) =>
+                setValues((prev) => ({ ...prev, [field.key]: v }))
+              }
             />
           ))}
         </Stack>
@@ -177,7 +195,12 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
         >
           {asI18n('Remove')}
         </Button>
-        <Button size="sm" disabled={!hasAnyValue} loading={saving} onClick={handleSave}>
+        <Button
+          size="sm"
+          disabled={!hasAnyValue}
+          loading={saving}
+          onClick={handleSave}
+        >
           {asI18n('Save secrets')}
         </Button>
       </Group>

@@ -95,6 +95,7 @@ yarn release
 > **When creating a changeset, every package name listed MUST exist as a workspace package.** Run `yarn workspaces list --json` to get the exact names before writing the `.changeset/*.md` file. A wrong name (e.g. `@pikku/services-redis` instead of `@pikku/redis`) causes `changeset status` to throw and blocks CI.
 
 ```bash
+
 ```
 
 ### Individual Package Testing
@@ -320,7 +321,7 @@ Props with more than one or two fields get a named `Props` type rather than an i
 
 ### Internationalization (console / any `@pikku/react` UI)
 
-**GOLDEN RULE — `asI18n` wraps VARIABLES, NEVER string literals.** `asI18n` exists to pass a *dynamic runtime value* — a role name, an error message, a scope id — through the i18n gate: `asI18n(role.name)`, `asI18n(error.message)`, `asI18n(scope)`. It must **never** wrap a hardcoded English string. `asI18n('Create role')` injects untranslatable English straight into the UI and is **always wrong**, no exceptions.
+**GOLDEN RULE — `asI18n` wraps VARIABLES, NEVER string literals.** `asI18n` exists to pass a _dynamic runtime value_ — a role name, an error message, a scope id — through the i18n gate: `asI18n(role.name)`, `asI18n(error.message)`, `asI18n(scope)`. It must **never** wrap a hardcoded English string. `asI18n('Create role')` injects untranslatable English straight into the UI and is **always wrong**, no exceptions.
 
 - Every fixed piece of UI copy lives in `messages/en.json` and is referenced through the typed `m` namespace: `m.scopes_create_role()`. Add the key to `en.json`, then call `m.<key>()`.
 - A fixed label that contains a variable is a **parameterized message** — `m.scopes_delete_confirm({ name })` with `"scopes_delete_confirm": "Delete {name} for everyone — confirm"` — never English concatenated around an `asI18n(...)`.

@@ -21,6 +21,8 @@
     }
   ],
   "connections": {
-    "Schedule": { "main": [[{ "node": "Transform", "type": "main", "index": 0 }]] }
+    "Schedule": {
+      "main": [[{ "node": "Transform", "type": "main", "index": 0 }]]
+    }
   }
 }

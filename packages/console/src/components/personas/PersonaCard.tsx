@@ -11,7 +11,10 @@ type PersonaCardProps = {
   onOpen?: (key: string) => void
 }
 
-export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onOpen }) => {
+export const PersonaCard: React.FC<PersonaCardProps> = ({
+  persona,
+  onOpen,
+}) => {
   const [hovered, setHovered] = useState(false)
   const { color } = personaVisual(persona.key, persona.jobTitle, persona.name)
   return (
@@ -59,7 +62,11 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onOpen }) => 
             </Text>
           )}
         </Stack>
-        <Stack gap={8} align="flex-end" style={{ flexShrink: 0, maxWidth: 260 }}>
+        <Stack
+          gap={8}
+          align="flex-end"
+          style={{ flexShrink: 0, maxWidth: 260 }}
+        >
           {persona.jobTitle && (
             <Badge variant="light" color={color} radius="sm" tt="none" fw={500}>
               {asI18n(persona.jobTitle)}

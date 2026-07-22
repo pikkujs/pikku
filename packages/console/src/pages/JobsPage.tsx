@@ -49,9 +49,13 @@ export const JobsPage: React.FC<JobsPageProps> = ({
       case 'queues':
         return <QueuesTab searchQuery={searchQuery} emptyHero={queuesHero} />
       case 'triggers':
-        return <TriggersTab searchQuery={searchQuery} emptyHero={triggersHero} />
+        return (
+          <TriggersTab searchQuery={searchQuery} emptyHero={triggersHero} />
+        )
       default:
-        return <SchedulersTab searchQuery={searchQuery} emptyHero={schedulersHero} />
+        return (
+          <SchedulersTab searchQuery={searchQuery} emptyHero={schedulersHero} />
+        )
     }
   }
 

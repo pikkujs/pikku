@@ -2,6 +2,11 @@
   "name": "n8n-boot-probe",
   "private": true,
   "type": "module",
-  "imports": { "#pikku/*": "./.pikku/*" },
-  "dependencies": { "@pikku/core": "*", "@pikku/addon-graph": "*" }
+  "imports": {
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/core": "*",
+    "@pikku/addon-graph": "*"
+  }
 }

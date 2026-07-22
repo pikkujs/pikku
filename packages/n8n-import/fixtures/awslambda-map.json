@@ -1,1 +1,24 @@
-{"name":"awslambda","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"awslambda"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.awsLambda","typeVersion":1,"position":[200,0],"parameters":{"resource":"default","operation":"invoke"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "awslambda",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "awslambda" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.awsLambda",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "default", "operation": "invoke" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

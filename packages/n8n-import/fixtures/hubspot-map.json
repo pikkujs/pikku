@@ -1,1 +1,24 @@
-{"name":"Hs","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"h"}},{"id":"c","name":"Create","type":"n8n-nodes-base.hubspot","typeVersion":2,"position":[200,0],"parameters":{"resource":"contact","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Create","type":"main","index":0}]]}}}
+{
+  "name": "Hs",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "h" }
+    },
+    {
+      "id": "c",
+      "name": "Create",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "resource": "contact", "operation": "create" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Create", "type": "main", "index": 0 }]] }
+  }
+}

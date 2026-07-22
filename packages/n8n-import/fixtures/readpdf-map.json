@@ -1,1 +1,24 @@
-{"name":"Rp","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"rp"}},{"id":"r","name":"Read","type":"n8n-nodes-base.readPDF","typeVersion":1,"position":[200,0],"parameters":{}}],"connections":{"Webhook":{"main":[[{"node":"Read","type":"main","index":0}]]}}}
+{
+  "name": "Rp",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "rp" }
+    },
+    {
+      "id": "r",
+      "name": "Read",
+      "type": "n8n-nodes-base.readPDF",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] }
+  }
+}

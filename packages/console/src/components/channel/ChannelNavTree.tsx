@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { Box, Text, ScrollArea, Badge, UnstyledButton } from '@pikku/mantine/core'
+import {
+  Box,
+  Text,
+  ScrollArea,
+  Badge,
+  UnstyledButton,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ChannelMeta } from '@pikku/core/channel'
@@ -291,23 +297,23 @@ export const ChannelNavTree: React.FC<ChannelNavTreeProps> = ({
   return (
     <ScrollArea className={styles.flexGrow}>
       {channelEntries.map(([name, chMeta]) => (
-          <ChannelTree
-            key={name}
-            name={name}
-            channel={chMeta as ChannelMeta}
-            isActive={name === channelName}
-            isExpanded={expandedChannels.has(name)}
-            onToggle={() => toggleChannel(name)}
-            selected={selected}
-            onSelect={(sel) => {
-              if (name !== channelName) {
-                onChannelSwitch(name)
-              }
-              onSelect(sel)
-            }}
-            onChannelSwitch={onChannelSwitch}
-          />
-        ))}
+        <ChannelTree
+          key={name}
+          name={name}
+          channel={chMeta as ChannelMeta}
+          isActive={name === channelName}
+          isExpanded={expandedChannels.has(name)}
+          onToggle={() => toggleChannel(name)}
+          selected={selected}
+          onSelect={(sel) => {
+            if (name !== channelName) {
+              onChannelSwitch(name)
+            }
+            onSelect(sel)
+          }}
+          onChannelSwitch={onChannelSwitch}
+        />
+      ))}
     </ScrollArea>
   )
 }

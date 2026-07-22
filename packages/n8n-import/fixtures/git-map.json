@@ -1,1 +1,24 @@
-{"name":"Gt","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"gt"}},{"id":"l","name":"Log","type":"n8n-nodes-base.git","typeVersion":1,"position":[200,0],"parameters":{"operation":"log","repositoryPath":"/repo"}}],"connections":{"Webhook":{"main":[[{"node":"Log","type":"main","index":0}]]}}}
+{
+  "name": "Gt",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "gt" }
+    },
+    {
+      "id": "l",
+      "name": "Log",
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "operation": "log", "repositoryPath": "/repo" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Log", "type": "main", "index": 0 }]] }
+  }
+}

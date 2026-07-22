@@ -8,7 +8,13 @@
     "declaration": true,
     "resolveJsonModule": true
   },
-  "include": ["bin/**/*.ts", "src/**/*.ts", ".pikku/**/*.ts", "types/*.ts", "types/*.d.ts"],
+  "include": [
+    "bin/**/*.ts",
+    "src/**/*.ts",
+    ".pikku/**/*.ts",
+    "types/*.ts",
+    "types/*.d.ts"
+  ],
   "exclude": ["**/*.test.ts", "node_modules"],
   "references": [
     {

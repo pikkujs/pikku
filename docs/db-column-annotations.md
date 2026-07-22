@@ -24,16 +24,16 @@ AnnotationMap  ── generateSchemaTypes() (db-codegen.ts) ──► .pikku/db/
 
 Key files (all under `packages/cli/src/functions/db/`):
 
-| File | Responsibility |
-|---|---|
-| `annotation-parser.ts` | `ColAnnotation` shape; `loadAnnotations()` reads + validates the sidecar |
-| `db-introspector.ts` | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces |
-| `postgres/postgres-introspector.ts`, `sqlite/…` | per-dialect introspection |
-| `db-codegen.ts` | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping** |
-| `zod-codegen.ts` | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
-| `coercion-plugin.ts` | runtime Kysely plugin; `ColumnKind` + `fromDb()` coercion |
+| File                                            | Responsibility                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `annotation-parser.ts`                          | `ColAnnotation` shape; `loadAnnotations()` reads + validates the sidecar                    |
+| `db-introspector.ts`                            | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces                                       |
+| `postgres/postgres-introspector.ts`, `sqlite/…` | per-dialect introspection                                                                   |
+| `db-codegen.ts`                                 | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping**  |
+| `zod-codegen.ts`                                | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
+| `coercion-plugin.ts`                            | runtime Kysely plugin; `ColumnKind` + `fromDb()` coercion                                   |
 
-## Two axes: what changes the *type* vs only the *validator*
+## Two axes: what changes the _type_ vs only the _validator_
 
 This distinction drives every extension decision.
 
@@ -99,7 +99,7 @@ Example: `kind: 'bigint'` typing a column as `bigint` + `z.bigint()`.
    - `emitClassificationMap()`: add `'bigint'` to the `kind?` union comment line.
    - If a real Postgres type should auto-derive it, add it to `realKind()`.
 4. **`zod-codegen.ts` — `scalarSchema()`**: add a `case 'bigint': schema =
-   'z.bigint()'`. If the type is a **named alias** (the `Uuid` pattern), also
+'z.bigint()'`. If the type is a **named alias** (the `Uuid` pattern), also
    emit `export type Bigint = …` in `db-codegen`'s schema header so the textual
    parser can see it.
 5. **Tests**: `zod-codegen.test.ts` + both verifier harnesses.
@@ -134,13 +134,13 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
 
 ### High-value candidates not yet implemented
 
-| Source | Maps to | Notes |
-|---|---|---|
-| `int2`/`int4` SQL type | `z.int()` | stricter than `z.number()`; type stays `number` |
-| `int8`/`bigint` | `bigint` + `z.bigint()` | real type change — Recipe 2 + auto-detect |
-| `varchar(n)` | `z.string().max(n)` | needs `character_maximum_length` from the introspector |
-| `inet`/`cidr` | `z.ipv4()`/`z.ipv6()`/`z.cidrv4()` | PG-native; or expose as a `format` |
-| `numeric(p,s)` | branded decimal or `z.string()` | exactness — decide JS representation first |
+| Source                 | Maps to                            | Notes                                                  |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------ |
+| `int2`/`int4` SQL type | `z.int()`                          | stricter than `z.number()`; type stays `number`        |
+| `int8`/`bigint`        | `bigint` + `z.bigint()`            | real type change — Recipe 2 + auto-detect              |
+| `varchar(n)`           | `z.string().max(n)`                | needs `character_maximum_length` from the introspector |
+| `inet`/`cidr`          | `z.ipv4()`/`z.ipv6()`/`z.cidrv4()` | PG-native; or expose as a `format`                     |
+| `numeric(p,s)`         | branded decimal or `z.string()`    | exactness — decide JS representation first             |
 
 ## Gotchas / invariants
 
@@ -148,7 +148,7 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   Anything it must recognize has to be a literal alias name or a parseable
   shape. Keep `INTERFACE_RE`/`FIELD_RE` and the splitters in mind.
 - **`db-codegen` owns name mapping** (snake → Pascal interface, snake → camel
-  field). `zod-codegen` keys hints by the *already-mapped* names. Never
+  field). `zod-codegen` keys hints by the _already-mapped_ names. Never
   re-derive names in `zod-codegen`.
 - **Non-`public` Postgres schemas** (`schema.table`) are not fully supported by
   `zod-codegen` (`INTERFACE_RE`'s `\w+` won't match a dotted name). Enum
@@ -156,7 +156,7 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   is a separate, worthwhile task.
 - **`ColumnKind` is shared** between typing and runtime coercion. A kind that
   needs no coercion (like `uuid`) must be excluded from the coercion map in
-  `db-codegen` *and* handled defensively in `fromDb()`.
+  `db-codegen` _and_ handled defensively in `fromDb()`.
 - **Keep `@pikku/core`'s `data-classification.ts` in lockstep** with the brand
   aliases emitted in the `schema.gen.d.ts` header (`Private`/`Pii`/`Secret` use an
   optional `__classification__?` marker so plain values stay assignable).

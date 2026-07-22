@@ -112,7 +112,24 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
     } catch {
       // error is in mutation state
     }
-  }, [source, title, description, summary, tags, expose, remote, mcp, readonly_, approvalRequired, body, sourceFile, exportedName, updateConfig, updateBody, onClose])
+  }, [
+    source,
+    title,
+    description,
+    summary,
+    tags,
+    expose,
+    remote,
+    mcp,
+    readonly_,
+    approvalRequired,
+    body,
+    sourceFile,
+    exportedName,
+    updateConfig,
+    updateBody,
+    onClose,
+  ])
 
   const isPending = updateConfig.isPending || updateBody.isPending
   const error = updateConfig.error || updateBody.error
@@ -123,140 +140,139 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
 
   return (
     <>
-    {isPending && (
-      <Box
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'var(--mantine-color-body)',
-          opacity: 0.6,
-          zIndex: 10,
-          pointerEvents: 'all',
-        }}
-      />
-    )}
-    <Stack gap="md">
-      {error && (
-        <Alert color="red" icon={<AlertTriangle size={16} />}>
-          {asI18n((error as Error).message)}
-        </Alert>
+      {isPending && (
+        <Box
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'var(--mantine-color-body)',
+            opacity: 0.6,
+            zIndex: 10,
+            pointerEvents: 'all',
+          }}
+        />
       )}
+      <Stack gap="md">
+        {error && (
+          <Alert color="red" icon={<AlertTriangle size={16} />}>
+            {asI18n((error as Error).message)}
+          </Alert>
+        )}
 
-      <SectionLabel>{asI18n('Metadata')}</SectionLabel>
-      <TextInput
-        label={asI18n('Title')}
-        value={title}
-        onChange={(e) => setTitle(e.currentTarget.value)}
-        size="sm"
-      />
-      <Textarea
-        label={asI18n('Description')}
-        value={description}
-        onChange={(e) => setDescription(e.currentTarget.value)}
-        autosize
-        minRows={2}
-        maxRows={6}
-        size="sm"
-      />
-      <TextInput
-        label={asI18n('Summary')}
-        value={summary}
-        onChange={(e) => setSummary(e.currentTarget.value)}
-        size="sm"
-      />
-      <MultiSelect
-        label={asI18n('Tags')}
-        data={tagOptions}
-        value={tags}
-        onChange={setTags}
-        searchable
-        clearable
-        size="sm"
-        placeholder={asI18n('Search tags...')}
-      />
+        <SectionLabel>{asI18n('Metadata')}</SectionLabel>
+        <TextInput
+          label={asI18n('Title')}
+          value={title}
+          onChange={(e) => setTitle(e.currentTarget.value)}
+          size="sm"
+        />
+        <Textarea
+          label={asI18n('Description')}
+          value={description}
+          onChange={(e) => setDescription(e.currentTarget.value)}
+          autosize
+          minRows={2}
+          maxRows={6}
+          size="sm"
+        />
+        <TextInput
+          label={asI18n('Summary')}
+          value={summary}
+          onChange={(e) => setSummary(e.currentTarget.value)}
+          size="sm"
+        />
+        <MultiSelect
+          label={asI18n('Tags')}
+          data={tagOptions}
+          value={tags}
+          onChange={setTags}
+          searchable
+          clearable
+          size="sm"
+          placeholder={asI18n('Search tags...')}
+        />
 
-      <SectionLabel>{asI18n('Flags')}</SectionLabel>
-      <Group gap="lg">
-        <Switch
-          label={asI18n('expose')}
-          checked={expose}
-          onChange={(e) => setExpose(e.currentTarget.checked)}
-          size="sm"
-        />
-        <Switch
-          label={asI18n('remote')}
-          checked={remote}
-          onChange={(e) => setRemote(e.currentTarget.checked)}
-          size="sm"
-        />
-        <Switch
-          label={asI18n('mcp')}
-          checked={mcp}
-          onChange={(e) => setMcp(e.currentTarget.checked)}
-          size="sm"
-        />
-        <Switch
-          label={asI18n('readonly')}
-          checked={readonly_}
-          onChange={(e) => setReadonly(e.currentTarget.checked)}
-          size="sm"
-        />
-        <Switch
-          label={asI18n('approvalRequired')}
-          checked={approvalRequired}
-          onChange={(e) => setApprovalRequired(e.currentTarget.checked)}
-          size="sm"
-        />
-      </Group>
-
-      {source?.body != null && (
-        <>
-          <SectionLabel>{asI18n('Function Body')}</SectionLabel>
-          <CodeMirror
-            value={body}
-            onChange={setBody}
-            extensions={[javascript({ typescript: true })]}
-            theme="dark"
-            basicSetup={{
-              lineNumbers: true,
-              foldGutter: false,
-              highlightActiveLine: true,
-            }}
-            style={{
-              fontSize: '13px',
-              border: '1px solid var(--app-border)',
-              borderRadius: '4px',
-              overflow: 'hidden',
-            }}
+        <SectionLabel>{asI18n('Flags')}</SectionLabel>
+        <Group gap="lg">
+          <Switch
+            label={asI18n('expose')}
+            checked={expose}
+            onChange={(e) => setExpose(e.currentTarget.checked)}
+            size="sm"
           />
-        </>
-      )}
+          <Switch
+            label={asI18n('remote')}
+            checked={remote}
+            onChange={(e) => setRemote(e.currentTarget.checked)}
+            size="sm"
+          />
+          <Switch
+            label={asI18n('mcp')}
+            checked={mcp}
+            onChange={(e) => setMcp(e.currentTarget.checked)}
+            size="sm"
+          />
+          <Switch
+            label={asI18n('readonly')}
+            checked={readonly_}
+            onChange={(e) => setReadonly(e.currentTarget.checked)}
+            size="sm"
+          />
+          <Switch
+            label={asI18n('approvalRequired')}
+            checked={approvalRequired}
+            onChange={(e) => setApprovalRequired(e.currentTarget.checked)}
+            size="sm"
+          />
+        </Group>
 
-    </Stack>
+        {source?.body != null && (
+          <>
+            <SectionLabel>{asI18n('Function Body')}</SectionLabel>
+            <CodeMirror
+              value={body}
+              onChange={setBody}
+              extensions={[javascript({ typescript: true })]}
+              theme="dark"
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: false,
+                highlightActiveLine: true,
+              }}
+              style={{
+                fontSize: '13px',
+                border: '1px solid var(--app-border)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}
+            />
+          </>
+        )}
+      </Stack>
 
-    <SidePanelFooter>
-      <Group gap="xs" justify="flex-end">
-        <Button
-          variant="subtle"
-          onClick={onClose}
-          disabled={isPending}
-          leftSection={<X size={14} />}
-          size="sm"
-        >
-          {asI18n('Cancel')}
-        </Button>
-        <Button
-          onClick={handleSaveConfig}
-          loading={isPending}
-          disabled={saved}
-          color={saved ? 'green' : undefined}
-          leftSection={saved ? <CheckCircle size={14} /> : <Save size={14} />}
-          size="sm"
-        >
-          {asI18n(saved ? 'Saved' : isPending ? 'Saving…' : 'Save & Rebuild')}
-        </Button>
-      </Group>
-    </SidePanelFooter>
+      <SidePanelFooter>
+        <Group gap="xs" justify="flex-end">
+          <Button
+            variant="subtle"
+            onClick={onClose}
+            disabled={isPending}
+            leftSection={<X size={14} />}
+            size="sm"
+          >
+            {asI18n('Cancel')}
+          </Button>
+          <Button
+            onClick={handleSaveConfig}
+            loading={isPending}
+            disabled={saved}
+            color={saved ? 'green' : undefined}
+            leftSection={saved ? <CheckCircle size={14} /> : <Save size={14} />}
+            size="sm"
+          >
+            {asI18n(saved ? 'Saved' : isPending ? 'Saving…' : 'Save & Rebuild')}
+          </Button>
+        </Group>
+      </SidePanelFooter>
     </>
   )
 }

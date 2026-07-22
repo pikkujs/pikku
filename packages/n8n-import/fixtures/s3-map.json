@@ -1,1 +1,29 @@
-{"name":"S3","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"s3"}},{"id":"u","name":"Up","type":"n8n-nodes-base.s3","typeVersion":1,"position":[200,0],"parameters":{"resource":"file","operation":"upload","bucketName":"my-bucket","fileKey":"a.txt"}}],"connections":{"Webhook":{"main":[[{"node":"Up","type":"main","index":0}]]}}}
+{
+  "name": "S3",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "s3" }
+    },
+    {
+      "id": "u",
+      "name": "Up",
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "bucketName": "my-bucket",
+        "fileKey": "a.txt"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Up", "type": "main", "index": 0 }]] }
+  }
+}

@@ -11,14 +11,23 @@ import type { I18nString } from '@pikku/react'
 import { identOf } from './ident.js'
 import { maskI18n } from './config.js'
 
-type BrandReturn<T> = T extends (...args: infer A) => unknown ? (...args: A) => I18nString : T
+type BrandReturn<T> = T extends (...args: infer A) => unknown
+  ? (...args: A) => I18nString
+  : T
 type Branded<T> = { [K in keyof T]: BrandReturn<T[K]> }
 
-const _raw = _m as unknown as Record<string, (args?: Record<string, unknown>) => string>
+const _raw = _m as unknown as Record<
+  string,
+  (args?: Record<string, unknown>) => string
+>
 const _wrapped: Record<string, unknown> = {}
 for (const key of Object.keys(_raw)) {
   const fn = _raw[key]
-  _wrapped[key] = typeof fn === 'function' ? (...args: unknown[]) => maskI18n((fn as (...a: unknown[]) => string)(...args)) : fn
+  _wrapped[key] =
+    typeof fn === 'function'
+      ? (...args: unknown[]) =>
+          maskI18n((fn as (...a: unknown[]) => string)(...args))
+      : fn
 }
 
 /** Branded, debug-maskable message namespace. Drop-in for `t('...')`. */
@@ -30,10 +39,14 @@ export const m = _wrapped as unknown as Branded<typeof _m>
  * message. Returns the raw key (and warns) on a miss, mirroring i18next's
  * graceful degradation. Prefer static `m.token(...)` wherever the key is known.
  */
-export const mKey = (key: string, args?: Record<string, unknown>): I18nString => {
+export const mKey = (
+  key: string,
+  args?: Record<string, unknown>
+): I18nString => {
   const fn = _raw[identOf(key)]
   if (!fn) {
-    if (typeof console !== 'undefined') console.warn(`[i18n] missing message for key "${key}"`)
+    if (typeof console !== 'undefined')
+      console.warn(`[i18n] missing message for key "${key}"`)
     return maskI18n(key) as unknown as I18nString
   }
   return maskI18n(fn(args)) as unknown as I18nString
@@ -43,7 +56,10 @@ export const mKey = (key: string, args?: Record<string, unknown>): I18nString =>
  * Resolves an i18next `returnObjects` array (stored as indexed keys `prefix.0`,
  * `prefix.1`, …) back into a list. Returns messages until the first gap.
  */
-export const mList = (keyPrefix: string, args?: Record<string, unknown>): I18nString[] => {
+export const mList = (
+  keyPrefix: string,
+  args?: Record<string, unknown>
+): I18nString[] => {
   const out: I18nString[] = []
   for (let i = 0; ; i++) {
     const fn = _raw[identOf(`${keyPrefix}.${i}`)]

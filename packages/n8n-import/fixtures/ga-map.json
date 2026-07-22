@@ -1,1 +1,24 @@
-{"name":"Ga","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"ga"}},{"id":"r","name":"Report","type":"n8n-nodes-base.googleAnalytics","typeVersion":2,"position":[200,0],"parameters":{"resource":"report","operation":"get"}}],"connections":{"Webhook":{"main":[[{"node":"Report","type":"main","index":0}]]}}}
+{
+  "name": "Ga",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "ga" }
+    },
+    {
+      "id": "r",
+      "name": "Report",
+      "type": "n8n-nodes-base.googleAnalytics",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "resource": "report", "operation": "get" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Report", "type": "main", "index": 0 }]] }
+  }
+}

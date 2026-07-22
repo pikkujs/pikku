@@ -48,6 +48,7 @@ const telemetryMiddleware = pikkuMiddleware({
 ```
 
 The `wire` object gives you:
+
 - `wire.http` — inbound HTTP context (headers, URL, cookies)
 - `wire.setSession(session)` — set the session for this request
 - `wire.getSession()` — read the current session
@@ -70,7 +71,7 @@ addHTTPMiddleware('*', [cors(), authBearer()])
 addHTTPMiddleware('/admin/*', [auditLog])
 
 // 4. Tag-based: any wiring with matching tag
-addTagMiddleware('machine-agent', [bearerAuth])  // tag on function or wire
+addTagMiddleware('machine-agent', [bearerAuth]) // tag on function or wire
 
 // 5. Inline: per-wiring
 wireHTTP({
@@ -88,8 +89,8 @@ Runs before everything else, across every wire type: HTTP, Queue, Channel, Trigg
 import { addGlobalMiddleware } from '@pikku/core'
 import { telemetryOuter, telemetryInner } from '@pikku/core/middleware'
 
-addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })])  // wraps the full call
-addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })])  // closest to the function body
+addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })]) // wraps the full call
+addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })]) // closest to the function body
 ```
 
 `telemetryOuter` ships with `priority: 'highest'`, `telemetryInner` with `priority: 'lowest'` — so priority sorting places outer first regardless of array/call order.
@@ -101,7 +102,9 @@ import { addHTTPMiddleware } from '@pikku/core/http'
 import { cors, authBearer } from '@pikku/core/middleware'
 
 // All routes
-addHTTPMiddleware('*', [cors({ origin: 'https://app.example.com', credentials: true })])
+addHTTPMiddleware('*', [
+  cors({ origin: 'https://app.example.com', credentials: true }),
+])
 
 // Scoped to /api/* prefix
 addHTTPMiddleware('/api/*', [rateLimit({ maxRequests: 100, windowMs: 60_000 })])
@@ -178,19 +181,26 @@ A server that exposes RPCs only to a trusted caller (e.g. an API calling a machi
 ```typescript
 // lib/host-token.ts
 let _token: string | null = null
-export const setToken = (t: string) => { _token = t }
+export const setToken = (t: string) => {
+  _token = t
+}
 export const getToken = () => _token
 ```
 
 ```typescript
 // wirings/http.wiring.ts
 import { timingSafeEqual } from 'node:crypto'
-import { addTagMiddleware, pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
+import {
+  addTagMiddleware,
+  pikkuMiddleware,
+} from '../../.pikku/pikku-types.gen.js'
 import { UnauthorizedError } from '@pikku/core/errors'
 import { getToken } from '../lib/host-token.js'
 
 const bearerAuth = pikkuMiddleware(async (_services, { http }, next) => {
-  const authHeader = http?.request?.header?.('authorization') || http?.request?.header?.('Authorization')
+  const authHeader =
+    http?.request?.header?.('authorization') ||
+    http?.request?.header?.('Authorization')
   const token = getToken()
   const expected = token ? `Bearer ${token}` : null
   if (

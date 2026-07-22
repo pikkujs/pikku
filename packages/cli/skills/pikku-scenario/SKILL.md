@@ -84,12 +84,12 @@ A scenario takes the same config fields as a workflow (`title`, `description`, `
 
 ### The scenario API
 
-| Call | Purpose |
-| --- | --- |
-| `scenario.do(step, rpc, data, { actor })` | Run an RPC as that actor. The step name is what appears in the run output. |
+| Call                                                                                 | Purpose                                                                                                              |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `scenario.do(step, rpc, data, { actor })`                                            | Run an RPC as that actor. The step name is what appears in the run output.                                           |
 | `scenario.expectEventually(step, rpc, data, predicate, { actor, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state. |
-| `scenario.expectError(step, rpc, data, { actor, matches })` | Assert the call **fails**. For fault injection and negative paths. |
-| `scenario.expectService(step, 'service.method', { actor, calledWith })` | Assert a stubbed service was called. Requires the server to run with `--test`. |
+| `scenario.expectError(step, rpc, data, { actor, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                   |
+| `scenario.expectService(step, 'service.method', { actor, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                       |
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
@@ -137,7 +137,7 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local --tags smoke,scenario
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`.
 
-**Exit code is 1** if any scenario fails *or* if no scenario matched the filter — a typo'd `--flows` is a hard error, not a silent zero-run pass. It throws outright on an unknown environment, an unknown flow name, or a missing `SCENARIO_ACTOR_SECRET`.
+**Exit code is 1** if any scenario fails _or_ if no scenario matched the filter — a typo'd `--flows` is a hard error, not a silent zero-run pass. It throws outright on an unknown environment, an unknown flow name, or a missing `SCENARIO_ACTOR_SECRET`.
 
 ## Coverage
 
@@ -160,7 +160,15 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local --coverage
 The run resets coverage before each scenario and snapshots after, writing **`<outDir>/coverage/scenario-coverage.json`**:
 
 ```jsonc
-{ "generatedAt": "…", "environment": "local", "scenarios": { "<name>": { /* FunctionCoverageReport */ } } }
+{
+  "generatedAt": "…",
+  "environment": "local",
+  "scenarios": {
+    "<name>": {
+      /* FunctionCoverageReport */
+    },
+  },
+}
 ```
 
 Coverage is best-effort: it disables itself with a warning if the server is not collecting or the first actor cannot invoke, and it needs at least one configured actor. If you get no coverage, check those first.
@@ -184,7 +192,9 @@ import assert from 'node:assert'
 
 describe('createTodo', () => {
   test('creates a todo', async () => {
-    const services = { todoStore: { add: async (title: string) => ({ id: '1', title }) } }
+    const services = {
+      todoStore: { add: async (title: string) => ({ id: '1', title }) },
+    }
     const result = await createTodo.func(services as any, { title: 'Buy milk' })
     assert.equal(result.title, 'Buy milk')
   })
@@ -199,16 +209,16 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 
 ## Red flags
 
-| Smell | Why it's wrong |
-| --- | --- |
-| `pikku tests …` | Removed in #865. Use `pikku scenario`. |
-| `.feature` files / Gherkin for function tests | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted. |
-| `scenario.do(...)` with no `{ actor }` | Throws. Every step runs as somebody. |
-| A scenario per function | Scenarios are user flows. One flow covers many functions; that is the point. |
-| Assuming a clean database | There is no state reset — it may be a staging server. Scope what you create. |
-| `sleep()` before asserting | Use `expectEventually`. |
-| `expectEventually` in a `pikkuWorkflowFunc` | `PKU675` — scenario-only. |
-| Coverage silently 0 | Server not run with `--coverage`, `verboseMeta` off, `scaffold.scenarios` unset, or no actors configured. |
+| Smell                                         | Why it's wrong                                                                                            |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `pikku tests …`                               | Removed in #865. Use `pikku scenario`.                                                                    |
+| `.feature` files / Gherkin for function tests | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                |
+| `scenario.do(...)` with no `{ actor }`        | Throws. Every step runs as somebody.                                                                      |
+| A scenario per function                       | Scenarios are user flows. One flow covers many functions; that is the point.                              |
+| Assuming a clean database                     | There is no state reset — it may be a staging server. Scope what you create.                              |
+| `sleep()` before asserting                    | Use `expectEventually`.                                                                                   |
+| `expectEventually` in a `pikkuWorkflowFunc`   | `PKU675` — scenario-only.                                                                                 |
+| Coverage silently 0                           | Server not run with `--coverage`, `verboseMeta` off, `scaffold.scenarios` unset, or no actors configured. |
 
 `@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `PersonaData`, `DbUtils`) — out of scope here.
 

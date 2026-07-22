@@ -368,7 +368,9 @@ export class PikkuWorkflowDoService<
     return result
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     this.assertOwn(runId)

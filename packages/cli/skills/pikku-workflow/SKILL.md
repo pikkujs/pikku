@@ -29,11 +29,11 @@ Build durable, multi-step workflows with automatic retry, sleep, suspend/resume,
 
 ## Choosing the right factory
 
-| Factory | When to use | Step-graph view? |
-|---|---|---|
-| `pikkuWorkflowFunc` | **Default for all new workflows.** Sequential + conditional logic; DSL mode (serialisable, replay-safe). ALL `const`/`let` declarations must be at the top level of the function body (not inside blocks). | ✅ Yes |
-| `pikkuWorkflowGraph` | DAG / fan-out with nodes and typed refs between them. | ✅ Yes |
-| `pikkuWorkflowComplexFunc` | Escape hatch only — arbitrary TypeScript, no top-level restriction (e.g. dynamic inline functions the DSL extractor cannot handle). | ❌ No (loses step-graph view) |
+| Factory                    | When to use                                                                                                                                                                                                | Step-graph view?              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `pikkuWorkflowFunc`        | **Default for all new workflows.** Sequential + conditional logic; DSL mode (serialisable, replay-safe). ALL `const`/`let` declarations must be at the top level of the function body (not inside blocks). | ✅ Yes                        |
+| `pikkuWorkflowGraph`       | DAG / fan-out with nodes and typed refs between them.                                                                                                                                                      | ✅ Yes                        |
+| `pikkuWorkflowComplexFunc` | Escape hatch only — arbitrary TypeScript, no top-level restriction (e.g. dynamic inline functions the DSL extractor cannot handle).                                                                        | ❌ No (loses step-graph view) |
 
 **Default to `pikkuWorkflowFunc`.** Use `pikkuWorkflowGraph` ONLY with explicit user approval AND only for a genuine cyclic dependency or Node.js-only import DSL cannot express. Use `pikkuWorkflowComplexFunc` ONLY with explicit user approval — a last-resort escape hatch. Never switch to either just to dodge a PKU641 error; restructure the code instead.
 
@@ -58,7 +58,11 @@ if (priority === 'high') {
 
 ```typescript
 // CORRECT — workflow factories come from the generated types file
-import { pikkuWorkflowFunc, pikkuWorkflowGraph, pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  pikkuWorkflowGraph,
+  pikkuWorkflowComplexFunc,
+} from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 // WRONG — '#pikku' does not re-export them (TS2305)
 import { pikkuWorkflowFunc } from '#pikku'
@@ -73,7 +77,10 @@ import { z } from 'zod'
 import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const ProcessOrderInput = z.object({ orderId: z.string(), amount: z.number() })
-const ProcessOrderOutput = z.object({ status: z.string(), discount: z.number().optional() })
+const ProcessOrderOutput = z.object({
+  status: z.string(),
+  discount: z.number().optional(),
+})
 
 export const processOrder = pikkuWorkflowFunc({
   description: 'Process an order through payment and fulfillment',
@@ -86,7 +93,9 @@ export const processOrder = pikkuWorkflowFunc({
     let status: string
 
     if (data.amount > 1000) {
-      const d = await workflow.do('Apply bulk discount', 'calcDiscount', { amount: data.amount })
+      const d = await workflow.do('Apply bulk discount', 'calcDiscount', {
+        amount: data.amount,
+      })
       discount = d.discountPercent
     }
 
@@ -111,7 +120,12 @@ export const processOrder = pikkuWorkflowFunc({
 
 ```typescript
 // RPC step — run a registered Pikku function as a step (opts: retries, retryDelay, description)
-const result = await workflow.do('Step name', 'rpcFunctionName', { ...data }, { retries: 3, retryDelay: '1s' })
+const result = await workflow.do(
+  'Step name',
+  'rpcFunctionName',
+  { ...data },
+  { retries: 3, retryDelay: '1s' }
+)
 
 // Inline closure step — immediate execution, cached for replay
 const msg = await workflow.do('Generate', async () => `Welcome, ${data.email}!`)
@@ -127,7 +141,9 @@ await workflow.suspend('Awaiting approval')
 
 ```typescript
 const users = await Promise.all(
-  data.userIds.map((userId) => workflow.do(`Fetch user ${userId}`, 'getUser', { userId }))
+  data.userIds.map((userId) =>
+    workflow.do(`Fetch user ${userId}`, 'getUser', { userId })
+  )
 )
 ```
 
@@ -148,7 +164,10 @@ export const userOnboarding = pikkuWorkflowGraph({
   config: {
     createProfile: { next: ['sendWelcome', 'setupDefaults'] }, // run in parallel
     sendWelcome: {
-      input: (ref) => ({ to: ref('createProfile', 'email'), subject: 'Welcome!' }),
+      input: (ref) => ({
+        to: ref('createProfile', 'email'),
+        subject: 'Welcome!',
+      }),
     },
   },
 })

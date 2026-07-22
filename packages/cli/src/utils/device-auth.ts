@@ -20,7 +20,11 @@ interface DeviceTokenSuccess {
 }
 
 interface DeviceTokenPending {
-  error: 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token'
+  error:
+    | 'authorization_pending'
+    | 'slow_down'
+    | 'access_denied'
+    | 'expired_token'
   error_description?: string
 }
 

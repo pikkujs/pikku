@@ -5,7 +5,7 @@
 
 Fix a fanout collapsing into a single step, and preserve graph node config.
 
-- A fanout took its `stepName` from the first step of its body. Node ids *are*
+- A fanout took its `stepName` from the first step of its body. Node ids _are_
   step names, so the loop and that step got the same id and the step overwrote
   the loop: `await Promise.all(users.map(...))` rendered as one plain call, and
   everything after the loop became unreachable. A fanout is not itself a cached

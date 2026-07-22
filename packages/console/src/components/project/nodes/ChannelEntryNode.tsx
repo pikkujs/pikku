@@ -108,7 +108,11 @@ export const ChannelEntryNode: React.FC<NodeProps<ChannelEntryNodeData>> = ({
           <HandlerRow label={asI18n('onMessage')} handleId="message" />
         )}
         {data.categories.map((cat) => (
-          <HandlerRow key={cat} label={asI18n(cat)} handleId={`category-${cat}`} />
+          <HandlerRow
+            key={cat}
+            label={asI18n(cat)}
+            handleId={`category-${cat}`}
+          />
         ))}
       </Stack>
     </Paper>

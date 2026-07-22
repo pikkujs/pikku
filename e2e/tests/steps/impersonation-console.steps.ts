@@ -25,9 +25,7 @@ When(
 Then(
   'the impersonation banner should show {string}',
   async function (this: AgentWorld, email: string) {
-    await expect(
-      this.page.getByText(`Impersonating ${email}`)
-    ).toBeVisible()
+    await expect(this.page.getByText(`Impersonating ${email}`)).toBeVisible()
   }
 )
 
@@ -60,13 +58,13 @@ When(
     // Pick the workflow from the selector popover.
     const search = this.page.getByPlaceholder('Search workflows...')
     if (!(await search.isVisible().catch(() => false))) {
-      await this.page.locator('button:has(svg.lucide-chevron-down)').first().click()
+      await this.page
+        .locator('button:has(svg.lucide-chevron-down)')
+        .first()
+        .click()
     }
     await search.fill(workflowName)
-    await this.page
-      .getByText(workflowName, { exact: true })
-      .last()
-      .click()
+    await this.page.getByText(workflowName, { exact: true }).last().click()
     // Open the new-run form and submit it. The outgoing startWorkflow request
     // carries the impersonation header regardless of the server's response.
     await this.page.getByRole('button', { name: 'New workflow run' }).click()

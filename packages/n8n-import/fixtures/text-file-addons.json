@@ -77,12 +77,26 @@
     }
   ],
   "connections": {
-    "Trigger": { "main": [[{ "node": "Extract", "type": "main", "index": 0 }]] },
-    "Extract": { "main": [[{ "node": "ToTable", "type": "main", "index": 0 }]] },
-    "ToTable": { "main": [[{ "node": "Template", "type": "main", "index": 0 }]] },
-    "Template": { "main": [[{ "node": "XmlToJson", "type": "main", "index": 0 }]] },
-    "XmlToJson": { "main": [[{ "node": "JsonToXml", "type": "main", "index": 0 }]] },
-    "JsonToXml": { "main": [[{ "node": "HtmlToMd", "type": "main", "index": 0 }]] },
-    "HtmlToMd": { "main": [[{ "node": "MdToHtml", "type": "main", "index": 0 }]] }
+    "Trigger": {
+      "main": [[{ "node": "Extract", "type": "main", "index": 0 }]]
+    },
+    "Extract": {
+      "main": [[{ "node": "ToTable", "type": "main", "index": 0 }]]
+    },
+    "ToTable": {
+      "main": [[{ "node": "Template", "type": "main", "index": 0 }]]
+    },
+    "Template": {
+      "main": [[{ "node": "XmlToJson", "type": "main", "index": 0 }]]
+    },
+    "XmlToJson": {
+      "main": [[{ "node": "JsonToXml", "type": "main", "index": 0 }]]
+    },
+    "JsonToXml": {
+      "main": [[{ "node": "HtmlToMd", "type": "main", "index": 0 }]]
+    },
+    "HtmlToMd": {
+      "main": [[{ "node": "MdToHtml", "type": "main", "index": 0 }]]
+    }
   }
 }

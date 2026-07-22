@@ -1,1 +1,24 @@
-{"name":"Snowflake","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"snowflake"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.snowflake","typeVersion":1,"position":[200,0],"parameters":{"operation":"insert","table":"users"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Snowflake",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "snowflake" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.snowflake",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "operation": "insert", "table": "users" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

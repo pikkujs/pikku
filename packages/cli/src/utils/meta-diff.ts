@@ -67,31 +67,43 @@ export interface MetaDiff {
 }
 
 // Snapshot = category → { id → normalized entry } captured at one instant.
-export type MetaSnapshot = Partial<Record<MetaDiffCategoryName, Record<string, unknown>>>
+export type MetaSnapshot = Partial<
+  Record<MetaDiffCategoryName, Record<string, unknown>>
+>
 
 function readJson(path: string): Record<string, unknown> {
   if (!existsSync(path)) return {}
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf-8')) as unknown
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      return {}
     return parsed as Record<string, unknown>
   } catch {
     return {}
   }
 }
 
-function readSingle(outDir: string, category: MetaDiffCategoryName, relPath: string): Record<string, unknown> {
+function readSingle(
+  outDir: string,
+  category: MetaDiffCategoryName,
+  relPath: string
+): Record<string, unknown> {
   let raw = readJson(join(outDir, relPath))
   const unwrapKey = UNWRAP[category]
   if (unwrapKey) {
     const inner = raw[unwrapKey]
-    raw = inner && typeof inner === 'object' && !Array.isArray(inner) ? (inner as Record<string, unknown>) : {}
+    raw =
+      inner && typeof inner === 'object' && !Array.isArray(inner)
+        ? (inner as Record<string, unknown>)
+        : {}
   }
   if (category !== 'http') return raw
   const flat: Record<string, unknown> = {}
   for (const [method, routes] of Object.entries(raw)) {
     if (routes && typeof routes === 'object' && !Array.isArray(routes)) {
-      for (const [route, meta] of Object.entries(routes as Record<string, unknown>)) {
+      for (const [route, meta] of Object.entries(
+        routes as Record<string, unknown>
+      )) {
         flat[`${method.toUpperCase()} ${route}`] = meta
       }
     }
@@ -104,7 +116,8 @@ function readWorkflows(outDir: string): Record<string, unknown> {
   if (!existsSync(dir)) return {}
   const out: Record<string, unknown> = {}
   for (const file of readdirSync(dir)) {
-    if (!file.endsWith('.gen.json') || file.endsWith('-verbose.gen.json')) continue
+    if (!file.endsWith('.gen.json') || file.endsWith('-verbose.gen.json'))
+      continue
     out[file.slice(0, -'.gen.json'.length)] = readJson(join(dir, file))
   }
   return out
@@ -145,7 +158,10 @@ function equal(a: unknown, b: unknown): boolean {
 }
 
 /** Diff two snapshots; only changed ids and non-empty categories are returned. */
-export function computeMetaDiff(before: MetaSnapshot, after: MetaSnapshot): MetaDiff {
+export function computeMetaDiff(
+  before: MetaSnapshot,
+  after: MetaSnapshot
+): MetaDiff {
   const categories: MetaDiff['categories'] = {}
   const totals = { added: 0, removed: 0, modified: 0 }
 

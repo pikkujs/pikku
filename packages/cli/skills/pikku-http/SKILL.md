@@ -54,7 +54,7 @@ addHTTPMiddleware('*', [authBearer()]) // All routes
 addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
 ```
 
-> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-permissions`), or app-wide via `addGlobalPermission`. Tags/patterns are for *middleware* only now.
+> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-permissions`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
 
 ## Data Flow
 

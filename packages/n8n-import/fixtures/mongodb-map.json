@@ -1,4 +1,24 @@
-{"name":"Mg","nodes":[
-{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"mg"}},
-{"id":"f","name":"Find","type":"n8n-nodes-base.mongoDb","typeVersion":1.1,"position":[200,0],"parameters":{"operation":"find","collection":"users"}}],
-"connections":{"Webhook":{"main":[[{"node":"Find","type":"main","index":0}]]}}}
+{
+  "name": "Mg",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "mg" }
+    },
+    {
+      "id": "f",
+      "name": "Find",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.1,
+      "position": [200, 0],
+      "parameters": { "operation": "find", "collection": "users" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Find", "type": "main", "index": 0 }]] }
+  }
+}

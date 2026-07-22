@@ -3,10 +3,7 @@ import { pikkuFunc } from '#pikku'
 import type { SecurityAuditReport } from '@pikku/core'
 import { readAuditReport, runPikkuAudit } from '../lib/audit-exec.js'
 
-export const runSecurityAudit = pikkuFunc<
-  null,
-  SecurityAuditReport | null
->({
+export const runSecurityAudit = pikkuFunc<null, SecurityAuditReport | null>({
   title: 'Run Security Audit',
   description:
     'Runs `pikku audit --outdated`, regenerating .pikku/audit.json, and returns the fresh report. Mirrors the Run Tests action.',

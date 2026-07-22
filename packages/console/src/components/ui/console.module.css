@@ -61,7 +61,10 @@
   flex-shrink: 0;
   min-height: 0;
   overflow: hidden;
-  transition: width 180ms ease, min-width 180ms ease, opacity 180ms ease;
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    opacity 180ms ease;
 }
 
 /* ── Grid header (column headings row) ── */

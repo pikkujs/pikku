@@ -111,7 +111,7 @@ describe('addAuth inspector', () => {
         'export const auth = pikkuBetterAuth(() =>',
         '  betterAuth({',
         '    session: { cookieCache: { enabled: true } },',
-        "    emailAndPassword: { enabled: true },",
+        '    emailAndPassword: { enabled: true },',
         '  })',
         ')',
       ].join('\n')

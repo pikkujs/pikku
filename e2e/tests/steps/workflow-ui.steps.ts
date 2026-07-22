@@ -135,9 +135,9 @@ Then(
 Then(
   'the timeline drawer should be visible',
   async function (this: AgentWorld) {
-    await expect(
-      this.page.getByTestId('workflow-timeline')
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(this.page.getByTestId('workflow-timeline')).toBeVisible({
+      timeout: 10_000,
+    })
   }
 )
 

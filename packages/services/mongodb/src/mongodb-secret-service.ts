@@ -131,9 +131,9 @@ export class MongoDBSecretService implements SecretService {
     await this.logAudit(key, 'delete')
   }
 
-  async getSecrets<
-    T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<T> {
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<T> {
     const rows = await this.secrets
       .find({ _id: { $in: keys } } as any)
       .toArray()

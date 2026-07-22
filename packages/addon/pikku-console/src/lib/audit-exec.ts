@@ -60,9 +60,7 @@ export function spawnProcess(
     const timer = setTimeout(() => {
       proc.kill('SIGKILL')
       reject(
-        new Error(
-          `${command} ${args.join(' ')} timed out after ${timeoutMs}ms`
-        )
+        new Error(`${command} ${args.join(' ')} timed out after ${timeoutMs}ms`)
       )
     }, timeoutMs)
     proc.on('close', (code) => {
@@ -88,5 +86,9 @@ export function spawnProcess(
 // Re-run `pikku audit --outdated` in the project, regenerating audit.json.
 export async function runPikkuAudit(projectDir: string): Promise<void> {
   const pikku = findBin('pikku', projectDir)
-  await spawnProcess(process.execPath, [pikku, 'audit', '--outdated'], projectDir)
+  await spawnProcess(
+    process.execPath,
+    [pikku, 'audit', '--outdated'],
+    projectDir
+  )
 }

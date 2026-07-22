@@ -34,8 +34,8 @@ generated output is never edited by hand.
 ```jsonc
 // pikku.config.json
 {
-  "emailTemplatesDir": "emails",   // relative to rootDir; omit to disable emails
-  "outDir": ".pikku"               // gen lands in <outDir>/email/
+  "emailTemplatesDir": "emails", // relative to rootDir; omit to disable emails
+  "outDir": ".pikku", // gen lands in <outDir>/email/
 }
 ```
 
@@ -103,9 +103,9 @@ only in a locale string), so it shows up as that template's variable.
 
 ```ts
 const rendered = renderEmailTemplate({
-  name: 'verify-email',        // EmailTemplateName (autocompleted)
-  locale: 'en',                // optional, defaults to 'en'
-  data: { verifyUrl: url },    // EmailTemplateVariables<'verify-email'>
+  name: 'verify-email', // EmailTemplateName (autocompleted)
+  locale: 'en', // optional, defaults to 'en'
+  data: { verifyUrl: url }, // EmailTemplateVariables<'verify-email'>
 })
 // rendered: { name, locale, subject, html, text?, variables, hash }
 ```

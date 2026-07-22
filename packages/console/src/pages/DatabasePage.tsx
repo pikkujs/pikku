@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef, memo } from 'react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Box, Center, ActionIcon, Loader, Text, Group, Tooltip, SegmentedControl, TextInput, useMantineColorScheme } from '@pikku/mantine/core'
+import {
+  Box,
+  Center,
+  ActionIcon,
+  Loader,
+  Text,
+  Group,
+  Tooltip,
+  SegmentedControl,
+  TextInput,
+  useMantineColorScheme,
+} from '@pikku/mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import ReactFlow, {
@@ -19,7 +30,18 @@ import ReactFlow, {
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole, UserCheck, Table2, Search } from 'lucide-react'
+import {
+  Database as DatabaseIcon,
+  Key,
+  Link,
+  RefreshCw,
+  Globe,
+  Shield,
+  LockKeyhole,
+  UserCheck,
+  Table2,
+  Search,
+} from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { usePanelContext } from '../context/PanelContext'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -89,8 +111,12 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
   const { openDbColumn } = usePanelContext()
   const isDark = colorScheme === 'dark'
 
-  const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
-  const headerBg = isDark ? 'var(--mantine-color-dark-5)' : 'var(--mantine-color-blue-0, #e7f5ff)'
+  const border = isDark
+    ? 'var(--mantine-color-dark-4)'
+    : 'var(--app-glass-border, #e0e0e0)'
+  const headerBg = isDark
+    ? 'var(--mantine-color-dark-5)'
+    : 'var(--mantine-color-blue-0, #e7f5ff)'
   const badgeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f0f0f0'
   const badgeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
   const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
@@ -114,7 +140,9 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
         border: `1px solid ${border}`,
         borderRadius: 8,
         backgroundColor: 'var(--mantine-color-body)',
-        boxShadow: isDark ? '0 1px 4px rgba(0,0,0,.4)' : '0 1px 4px rgba(0,0,0,.08)',
+        boxShadow: isDark
+          ? '0 1px 4px rgba(0,0,0,.4)'
+          : '0 1px 4px rgba(0,0,0,.08)',
       }}
     >
       <div
@@ -214,13 +242,18 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
             </span>
 
             {col.nullable && (
-              <span style={{ fontSize: 11, color: nullableColor, flexShrink: 0 }}>?</span>
+              <span
+                style={{ fontSize: 11, color: nullableColor, flexShrink: 0 }}
+              >
+                ?
+              </span>
             )}
 
-            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+            <span
+              style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}
+            >
               {CLASSIFICATION_ICON[col.classification]}
             </span>
-
           </div>
         ))}
       </div>
@@ -240,8 +273,12 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
 
-  const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
-  const headerBg = isDark ? 'var(--mantine-color-violet-9)' : 'var(--mantine-color-violet-1)'
+  const border = isDark
+    ? 'var(--mantine-color-dark-4)'
+    : 'var(--app-glass-border, #e0e0e0)'
+  const headerBg = isDark
+    ? 'var(--mantine-color-violet-9)'
+    : 'var(--mantine-color-violet-1)'
   const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
   const valueColor = isDark ? 'var(--mantine-color-dark-1)' : '#555'
 
@@ -252,7 +289,9 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
         border: `1px solid ${border}`,
         borderRadius: 8,
         backgroundColor: 'var(--mantine-color-body)',
-        boxShadow: isDark ? '0 1px 4px rgba(0,0,0,.4)' : '0 1px 4px rgba(0,0,0,.08)',
+        boxShadow: isDark
+          ? '0 1px 4px rgba(0,0,0,.4)'
+          : '0 1px 4px rgba(0,0,0,.08)',
       }}
     >
       <div
@@ -265,7 +304,14 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
           gap: 8,
         }}
       >
-        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mantine-color-violet-5)', letterSpacing: 1 }}>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: 'var(--mantine-color-violet-5)',
+            letterSpacing: 1,
+          }}
+        >
           ENUM
         </span>
         <span
@@ -302,7 +348,14 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
       <Handle
         type="target"
         position={Position.Left}
-        style={{ opacity: 0, pointerEvents: 'none', width: 8, height: 8, minWidth: 0, minHeight: 0 }}
+        style={{
+          opacity: 0,
+          pointerEvents: 'none',
+          width: 8,
+          height: 8,
+          minWidth: 0,
+          minHeight: 0,
+        }}
       />
     </div>
   )
@@ -357,7 +410,8 @@ async function schemaToFlow(schema: DbSchema): Promise<{
 }> {
   const edges: Edge[] = []
   const edgeIds = new Set<string>()
-  const elkEdges: Array<{ id: string; sources: string[]; targets: string[] }> = []
+  const elkEdges: Array<{ id: string; sources: string[]; targets: string[] }> =
+    []
 
   const tableNodeIds = new Set(schema.tables.map((t) => t.name))
 
@@ -418,7 +472,8 @@ async function schemaToFlow(schema: DbSchema): Promise<{
     const nodes: Node[] = schema.tables.map((table, i) => ({
       id: table.name,
       type: 'databaseSchema',
-      position: posById.get(table.name) ?? tableNodes[i]?.position ?? { x: 0, y: 0 },
+      position: posById.get(table.name) ??
+        tableNodes[i]?.position ?? { x: 0, y: 0 },
       data: { label: table.name, columns: sortedColumns(table.columns) },
     }))
 
@@ -435,11 +490,7 @@ const nodeTypes = { databaseSchema: DatabaseSchemaNode }
 
 // ── Filter helpers ────────────────────────────────────────────────────────────
 
-const INTERNAL_TABLE_PREFIXES = [
-  'workflow_',
-  'ai_',
-  'pikku_',
-]
+const INTERNAL_TABLE_PREFIXES = ['workflow_', 'ai_', 'pikku_']
 
 const ALWAYS_SKIP = new Set(['migrations', 'sql_migrations', 'pgmigrations'])
 
@@ -491,13 +542,32 @@ function DatabaseCanvas({
       const filtered = schema.tables
         .filter((t) => {
           if (!shouldShowTable(t.name, hideInternal)) return false
-          if (classificationFilter !== 'all' && !t.columns.some((col) => col.classification === classificationFilter)) return false
-          if (q && !t.name.toLowerCase().includes(q) && !t.columns.some((col) => col.name.toLowerCase().includes(q))) return false
+          if (
+            classificationFilter !== 'all' &&
+            !t.columns.some(
+              (col) => col.classification === classificationFilter
+            )
+          )
+            return false
+          if (
+            q &&
+            !t.name.toLowerCase().includes(q) &&
+            !t.columns.some((col) => col.name.toLowerCase().includes(q))
+          )
+            return false
           return true
         })
         .map((t) => {
-          const byClass = classificationFilter === 'all' ? t.columns : t.columns.filter((col) => col.classification === classificationFilter)
-          const cols = q && !t.name.toLowerCase().includes(q) ? byClass.filter((col) => col.name.toLowerCase().includes(q)) : byClass
+          const byClass =
+            classificationFilter === 'all'
+              ? t.columns
+              : t.columns.filter(
+                  (col) => col.classification === classificationFilter
+                )
+          const cols =
+            q && !t.name.toLowerCase().includes(q)
+              ? byClass.filter((col) => col.name.toLowerCase().includes(q))
+              : byClass
           return { ...t, columns: cols }
         })
       if (!filtered.length) {
@@ -508,12 +578,20 @@ function DatabaseCanvas({
 
       setLayouting(true)
       try {
-        const flow = await schemaToFlow({ tables: filtered, enums: schema.enums ?? [] })
+        const flow = await schemaToFlow({
+          tables: filtered,
+          enums: schema.enums ?? [],
+        })
         if (cancelled) return
         setNodes(flow.nodes)
         setEdges(flow.edges)
         setTimeout(() => {
-          if (!cancelled) flowRef.current?.fitView({ padding: 0.15, duration: 300, minZoom: 0.4 })
+          if (!cancelled)
+            flowRef.current?.fitView({
+              padding: 0.15,
+              duration: 300,
+              minZoom: 0.4,
+            })
         }, 50)
       } catch {
         if (!cancelled) {
@@ -554,8 +632,14 @@ function DatabaseCanvas({
     return (
       <EmptyStatePlaceholder
         icon={DatabaseIcon}
-        title={hideInternal ? m.database_no_visible_tables() : m.database_no_tables_found()}
-        description={hideInternal ? m.database_no_visible_tables_description() : undefined}
+        title={
+          hideInternal
+            ? m.database_no_visible_tables()
+            : m.database_no_tables_found()
+        }
+        description={
+          hideInternal ? m.database_no_visible_tables_description() : undefined
+        }
         docsHref="https://pikku.dev/docs/core-features/database"
       />
     )
@@ -584,15 +668,29 @@ function DatabaseCanvas({
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color={isDark ? 'var(--mantine-color-dark-4)' : 'var(--mantine-color-gray-4)'}
+          color={
+            isDark
+              ? 'var(--mantine-color-dark-4)'
+              : 'var(--mantine-color-gray-4)'
+          }
         />
         <Controls
-          style={{
-            '--xy-controls-button-background-color': isDark ? 'var(--mantine-color-dark-6)' : '#fff',
-            '--xy-controls-button-background-color-hover': isDark ? 'var(--mantine-color-dark-5)' : '#f4f4f5',
-            '--xy-controls-button-color': isDark ? 'var(--mantine-color-dark-0)' : '#333',
-            '--xy-controls-button-border-color': isDark ? 'var(--mantine-color-dark-4)' : '#d1d5db',
-          } as React.CSSProperties}
+          style={
+            {
+              '--xy-controls-button-background-color': isDark
+                ? 'var(--mantine-color-dark-6)'
+                : '#fff',
+              '--xy-controls-button-background-color-hover': isDark
+                ? 'var(--mantine-color-dark-5)'
+                : '#f4f4f5',
+              '--xy-controls-button-color': isDark
+                ? 'var(--mantine-color-dark-0)'
+                : '#333',
+              '--xy-controls-button-border-color': isDark
+                ? 'var(--mantine-color-dark-4)'
+                : '#d1d5db',
+            } as React.CSSProperties
+          }
         />
         <MiniMap
           nodeColor={isDark ? 'var(--mantine-color-dark-3)' : '#ccc'}
@@ -609,10 +707,12 @@ function DatabaseCanvas({
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const DatabasePageLayout: React.FC<{ header: React.ReactNode; children: React.ReactNode }> = ({ header, children }) => {
+const DatabasePageLayout: React.FC<{
+  header: React.ReactNode
+  children: React.ReactNode
+}> = ({ header, children }) => {
   const { activePanel } = usePanelContext()
   return (
     <ResizablePanelLayout hidePanel={!activePanel} header={header}>
@@ -625,14 +725,20 @@ function DatabasePageInner() {
   useLocale()
   const rpc = usePikkuRPC()
   const [hideInternal, setHideInternal] = useState(true)
-  const [classificationFilter, setClassificationFilter] = useState<ClassificationFilter>('all')
+  const [classificationFilter, setClassificationFilter] =
+    useState<ClassificationFilter>('all')
   const [search, setSearch] = useState('')
 
-  const { data: schema, isLoading, isFetching, error, refetch } = useQuery<
-    DbSchema | null
-  >({
+  const {
+    data: schema,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery<DbSchema | null>({
     queryKey: ['console:getDbSchema'],
-    queryFn: () => rpc.invoke('console:getDbSchema') as Promise<DbSchema | null>,
+    queryFn: () =>
+      rpc.invoke('console:getDbSchema') as Promise<DbSchema | null>,
   })
 
   const header = (
@@ -655,10 +761,45 @@ function DatabasePageInner() {
             onChange={(v) => setClassificationFilter(v as ClassificationFilter)}
             data={[
               { label: 'All', value: 'all' },
-              { label: <Group gap={4} wrap="nowrap"><Globe size={14} color="var(--mantine-color-teal-5)" />Public</Group>, value: 'public' },
-              { label: <Group gap={4} wrap="nowrap"><Shield size={14} color="var(--mantine-color-orange-5)" />Private</Group>, value: 'private' },
-              { label: <Group gap={4} wrap="nowrap"><UserCheck size={14} color="var(--mantine-color-violet-5)" />PII</Group>, value: 'pii' },
-              { label: <Group gap={4} wrap="nowrap"><LockKeyhole size={14} color="var(--mantine-color-red-5)" />Secret</Group>, value: 'secret' },
+              {
+                label: (
+                  <Group gap={4} wrap="nowrap">
+                    <Globe size={14} color="var(--mantine-color-teal-5)" />
+                    Public
+                  </Group>
+                ),
+                value: 'public',
+              },
+              {
+                label: (
+                  <Group gap={4} wrap="nowrap">
+                    <Shield size={14} color="var(--mantine-color-orange-5)" />
+                    Private
+                  </Group>
+                ),
+                value: 'private',
+              },
+              {
+                label: (
+                  <Group gap={4} wrap="nowrap">
+                    <UserCheck
+                      size={14}
+                      color="var(--mantine-color-violet-5)"
+                    />
+                    PII
+                  </Group>
+                ),
+                value: 'pii',
+              },
+              {
+                label: (
+                  <Group gap={4} wrap="nowrap">
+                    <LockKeyhole size={14} color="var(--mantine-color-red-5)" />
+                    Secret
+                  </Group>
+                ),
+                value: 'secret',
+              },
             ]}
           />
           <PikkuToggle
@@ -685,7 +826,14 @@ function DatabasePageInner() {
   return (
     <PanelProvider>
       <DatabasePageLayout header={header}>
-        <Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <Box
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           {error ? (
             <EmptyStatePlaceholder
               icon={DatabaseIcon}

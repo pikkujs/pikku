@@ -18,7 +18,8 @@ function resolveLocaleString(
 ): string | undefined {
   let current: unknown = strings
   for (const segment of dottedPath.split('.')) {
-    if (!current || typeof current !== 'object' || !(segment in current)) return undefined
+    if (!current || typeof current !== 'object' || !(segment in current))
+      return undefined
     current = (current as Record<string, unknown>)[segment]
   }
   return typeof current === 'string' ? current : undefined
@@ -78,11 +79,13 @@ function stableStringify(value: unknown): string {
     return `[${value.map((item) => stableStringify(item)).join(',')}]`
   }
   if (value && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-      a.localeCompare(b)
+    const entries = Object.entries(value as Record<string, unknown>).sort(
+      ([a], [b]) => a.localeCompare(b)
     )
     return `{${entries
-      .map(([key, nested]) => `${JSON.stringify(key)}:${stableStringify(nested)}`)
+      .map(
+        ([key, nested]) => `${JSON.stringify(key)}:${stableStringify(nested)}`
+      )
       .join(',')}}`
   }
   return JSON.stringify(value)
@@ -117,12 +120,13 @@ export async function generateEmailsArtifacts(
   const typedOut = join(config.outDir, 'email', 'pikku-emails.gen.ts')
   const metaOut = join(config.outDir, 'email', 'pikku-emails-meta.gen.json')
 
-  const [themeRaw, localeFiles, templateFiles, partialFiles] = await Promise.all([
-    readFile(join(emailDir, 'theme.json'), 'utf8').catch(() => '{}'),
-    readdir(join(emailDir, 'locales')).catch(() => []),
-    readdir(join(emailDir, 'templates')).catch(() => []),
-    readdir(join(emailDir, 'partials')).catch(() => []),
-  ])
+  const [themeRaw, localeFiles, templateFiles, partialFiles] =
+    await Promise.all([
+      readFile(join(emailDir, 'theme.json'), 'utf8').catch(() => '{}'),
+      readdir(join(emailDir, 'locales')).catch(() => []),
+      readdir(join(emailDir, 'templates')).catch(() => []),
+      readdir(join(emailDir, 'partials')).catch(() => []),
+    ])
 
   const theme = JSON.parse(themeRaw) as Record<string, unknown>
   const locales = Object.fromEntries(
@@ -164,7 +168,7 @@ export async function generateEmailsArtifacts(
             : file.endsWith('.text.txt')
               ? file.slice(0, -'.text.txt'.length)
               : file.slice(0, -'.html'.length)
-        ),
+        )
     ),
   ].sort()
 
@@ -181,10 +185,14 @@ export async function generateEmailsArtifacts(
       templateNames.map(async (templateName) => {
         const [html, subject, text] = await Promise.all([
           readFile(join(emailDir, 'templates', `${templateName}.html`), 'utf8'),
-          readFile(join(emailDir, 'templates', `${templateName}.subject.txt`), 'utf8'),
-          readFile(join(emailDir, 'templates', `${templateName}.text.txt`), 'utf8').catch(
-            () => ''
+          readFile(
+            join(emailDir, 'templates', `${templateName}.subject.txt`),
+            'utf8'
           ),
+          readFile(
+            join(emailDir, 'templates', `${templateName}.text.txt`),
+            'utf8'
+          ).catch(() => ''),
         ])
         // layout.html wraps every template at render time (see serialize-emails),
         // so include it as a discovery root or layout-only variables get dropped.
@@ -210,7 +218,9 @@ export async function generateEmailsArtifacts(
               locale,
               {
                 contentHash: sha256(localePayload),
-                htmlHash: sha256(stableStringify({ html, partials, theme, strings })),
+                htmlHash: sha256(
+                  stableStringify({ html, partials, theme, strings })
+                ),
                 subjectHash: sha256(stableStringify({ subject, strings })),
                 textHash: sha256(stableStringify({ text, strings })),
               },

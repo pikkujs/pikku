@@ -64,7 +64,12 @@ async function poll(
   throw new Error(message())
 }
 
-export function registerBrowserSteps({ Given, When, Then, defineParameterType }: BrowserStepApi) {
+export function registerBrowserSteps({
+  Given,
+  When,
+  Then,
+  defineParameterType,
+}: BrowserStepApi) {
   // `"name"` creates/reuses that actor; they/They → the last-referenced one.
   // Resolves to the ActorSession itself — steps receive the actor, not a name.
   defineParameterType({
@@ -120,18 +125,24 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
     await actor.ensureAccount()
   })
 
-  When('{actor} sign(s) in through the login form', async function (actor: ActorSession) {
-    await actor.loginViaForm()
-  })
+  When(
+    '{actor} sign(s) in through the login form',
+    async function (actor: ActorSession) {
+      await actor.loginViaForm()
+    }
+  )
 
   Then('{actor} land(s) on the app', async function (actor: ActorSession) {
     await actor.page.waitForURL((u) => !u.pathname.startsWith('/login'))
   })
 
   // ── Navigation ───────────────────────────────────────────────────────────
-  When('{actor} visit(s) {string}', async function (actor: ActorSession, path: string) {
-    await actor.gotoApp(path)
-  })
+  When(
+    '{actor} visit(s) {string}',
+    async function (actor: ActorSession, path: string) {
+      await actor.gotoApp(path)
+    }
+  )
 
   Then('the URL contains {string}', async function (fragment: string) {
     const actor = await this.actor(undefined)
@@ -153,21 +164,34 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
     }
   )
 
-  When('{actor} fill(s) in:', async function (actor: ActorSession, table: TableLike) {
-    for (const [fieldName, value] of Object.entries(table.rowsHash())) {
-      const target = await ui.field(actor.page, fieldName, this.config.elements)
-      await target.fill('')
-      await target.fill(value)
+  When(
+    '{actor} fill(s) in:',
+    async function (actor: ActorSession, table: TableLike) {
+      for (const [fieldName, value] of Object.entries(table.rowsHash())) {
+        const target = await ui.field(
+          actor.page,
+          fieldName,
+          this.config.elements
+        )
+        await target.fill('')
+        await target.fill(value)
+      }
     }
-  })
+  )
 
-  When('{actor} turn(s) on {string}', async function (actor: ActorSession, fieldName: string) {
-    await ui.setChecked(actor.page, fieldName, true, this.config.elements)
-  })
+  When(
+    '{actor} turn(s) on {string}',
+    async function (actor: ActorSession, fieldName: string) {
+      await ui.setChecked(actor.page, fieldName, true, this.config.elements)
+    }
+  )
 
-  When('{actor} turn(s) off {string}', async function (actor: ActorSession, fieldName: string) {
-    await ui.setChecked(actor.page, fieldName, false, this.config.elements)
-  })
+  When(
+    '{actor} turn(s) off {string}',
+    async function (actor: ActorSession, fieldName: string) {
+      await ui.setChecked(actor.page, fieldName, false, this.config.elements)
+    }
+  )
 
   When(
     '{actor} select(s) {string} from {string}',
@@ -202,9 +226,12 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
     }
   )
 
-  When('{actor} press(es) {string}', async function (actor: ActorSession, key: string) {
-    await actor.page.keyboard.press(key)
-  })
+  When(
+    '{actor} press(es) {string}',
+    async function (actor: ActorSession, key: string) {
+      await actor.page.keyboard.press(key)
+    }
+  )
 
   Then(
     'the field {string} has value {string}',
@@ -220,9 +247,12 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
   )
 
   // ── Actions ──────────────────────────────────────────────────────────────
-  When('{actor} click(s) {string}', async function (actor: ActorSession, label: string) {
-    await ui.click(actor.page, label, this.config.elements)
-  })
+  When(
+    '{actor} click(s) {string}',
+    async function (actor: ActorSession, label: string) {
+      await ui.click(actor.page, label, this.config.elements)
+    }
+  )
 
   When(
     '{actor} switch(es) to the {string} tab',
@@ -254,9 +284,12 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
   })
 
   // Native-dialog helpers (window.confirm / window.prompt widgets).
-  When('{actor} accept(s) the next confirmation', async function (actor: ActorSession) {
-    actor.page.once('dialog', (d) => void d.accept())
-  })
+  When(
+    '{actor} accept(s) the next confirmation',
+    async function (actor: ActorSession) {
+      actor.page.once('dialog', (d) => void d.accept())
+    }
+  )
 
   When(
     '{actor} answer(s) the next prompt with {string}',
@@ -269,19 +302,28 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
   )
 
   // ── Assertions ───────────────────────────────────────────────────────────
-  Then('{actor} see(s) {string}', async function (actor: ActorSession, text: string) {
-    await actor.expectText(text)
-  })
-
-  Then('{actor} do/does not see {string}', async function (actor: ActorSession, text: string) {
-    await expectHidden(actor, text, this.config.timeout)
-  })
-
-  Then('{actor} see(s) all of:', async function (actor: ActorSession, table: ListTableLike) {
-    for (const [text] of table.raw()) {
-      if (text) await actor.expectText(text)
+  Then(
+    '{actor} see(s) {string}',
+    async function (actor: ActorSession, text: string) {
+      await actor.expectText(text)
     }
-  })
+  )
+
+  Then(
+    '{actor} do/does not see {string}',
+    async function (actor: ActorSession, text: string) {
+      await expectHidden(actor, text, this.config.timeout)
+    }
+  )
+
+  Then(
+    '{actor} see(s) all of:',
+    async function (actor: ActorSession, table: ListTableLike) {
+      for (const [text] of table.raw()) {
+        if (text) await actor.expectText(text)
+      }
+    }
+  )
 
   Then(
     '{actor} wait(s) until they see {string}',
@@ -300,7 +342,10 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
   Then(
     'in row {string} {actor} see(s) {string}',
     async function (rowText: string, actor: ActorSession, text: string) {
-      const target = ui.row(actor.page, rowText).getByText(text, { exact: false }).first()
+      const target = ui
+        .row(actor.page, rowText)
+        .getByText(text, { exact: false })
+        .first()
       await poll(
         this.config.timeout,
         () => target.isVisible().catch(() => false),
@@ -312,7 +357,10 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
   Then(
     'in row {string} {actor} do/does not see {string}',
     async function (rowText: string, actor: ActorSession, text: string) {
-      const target = ui.row(actor.page, rowText).getByText(text, { exact: false }).first()
+      const target = ui
+        .row(actor.page, rowText)
+        .getByText(text, { exact: false })
+        .first()
       await poll(
         5_000,
         async () => !(await target.isVisible().catch(() => false)),
@@ -321,21 +369,25 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
     }
   )
 
-  Then('the {string} table has {int} row(s)', async function (tableName: string, want: number) {
-    const actor = await this.actor(undefined)
-    const table = await ui.field(actor.page, tableName, this.config.elements)
-    let got = -1
-    await poll(
-      this.config.timeout,
-      async () => {
-        // Header row excluded via tbody when present.
-        const body = table.locator('tbody tr')
-        got = (await body.count()) || (await table.getByRole('row').count()) - 1
-        return got === want
-      },
-      () => `The "${tableName}" table has ${got} row(s), expected ${want}`
-    )
-  })
+  Then(
+    'the {string} table has {int} row(s)',
+    async function (tableName: string, want: number) {
+      const actor = await this.actor(undefined)
+      const table = await ui.field(actor.page, tableName, this.config.elements)
+      let got = -1
+      await poll(
+        this.config.timeout,
+        async () => {
+          // Header row excluded via tbody when present.
+          const body = table.locator('tbody tr')
+          got =
+            (await body.count()) || (await table.getByRole('row').count()) - 1
+          return got === want
+        },
+        () => `The "${tableName}" table has ${got} row(s), expected ${want}`
+      )
+    }
+  )
 
   // ── Backend bridge ───────────────────────────────────────────────────────
   When('the app data is reset', async function () {
@@ -349,7 +401,11 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
   })
 }
 
-async function expectHidden(actor: ActorSession, text: string, graceMs: number) {
+async function expectHidden(
+  actor: ActorSession,
+  text: string,
+  graceMs: number
+) {
   // Give a just-clicked action a beat to render, then require hidden.
   await actor.page.waitForTimeout(Math.min(500, graceMs))
   const visible = await actor.page
@@ -357,5 +413,6 @@ async function expectHidden(actor: ActorSession, text: string, graceMs: number) 
     .first()
     .isVisible()
     .catch(() => false)
-  if (visible) throw new Error(`Expected "${text}" to be hidden (${actor.name})`)
+  if (visible)
+    throw new Error(`Expected "${text}" to be hidden (${actor.name})`)
 }

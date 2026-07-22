@@ -1,5 +1,13 @@
 import React, { useState } from 'react'
-import { Box, Button, Center, Loader, ScrollArea, Stack, Text } from '@pikku/mantine/core'
+import {
+  Box,
+  Button,
+  Center,
+  Loader,
+  ScrollArea,
+  Stack,
+  Text,
+} from '@pikku/mantine/core'
 import { Play, ShieldCheck } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -9,7 +17,10 @@ import {
   SecurityAuditView,
   type SecurityLens,
 } from '../components/security/SecurityAuditView'
-import { useSecurityAudit, useRunSecurityAudit } from '../hooks/useSecurityAudit'
+import {
+  useSecurityAudit,
+  useRunSecurityAudit,
+} from '../hooks/useSecurityAudit'
 
 export const SecurityPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
   emptyHero,

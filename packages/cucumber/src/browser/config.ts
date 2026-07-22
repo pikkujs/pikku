@@ -72,26 +72,32 @@ export function browserConfigFromEnv(
   }
   return {
     appUrl,
-    apiUrl: overrides.apiUrl ?? env.E2E_API_URL ?? env.API_URL ?? `${appUrl}/api`,
+    apiUrl:
+      overrides.apiUrl ?? env.E2E_API_URL ?? env.API_URL ?? `${appUrl}/api`,
     timeout: overrides.timeout ?? Number(env.E2E_TIMEOUT ?? 30_000),
     headed: overrides.headed ?? (env.HEADED === '1' || env.HEADED === 'true'),
     slowMo: overrides.slowMo ?? (env.HEADED ? 120 : 0),
     locale: overrides.locale ?? env.E2E_LOCALE,
-    chromiumPath: overrides.chromiumPath ?? (env.PLAYWRIGHT_CHROMIUM_PATH || undefined),
+    chromiumPath:
+      overrides.chromiumPath ?? (env.PLAYWRIGHT_CHROMIUM_PATH || undefined),
     cdpUrl: overrides.cdpUrl ?? (env.XBROWSER_CDP_URL || undefined),
-    hostnameOnly: overrides.hostnameOnly ?? (host ? host.split(':')[0] : undefined),
+    hostnameOnly:
+      overrides.hostnameOnly ?? (host ? host.split(':')[0] : undefined),
     ignoreHTTPSErrors: overrides.ignoreHTTPSErrors ?? true,
     defaultPersona: overrides.defaultPersona ?? defaultPersona,
     personas: overrides.personas ?? parsePersonas(env.E2E_PERSONAS),
     elements: overrides.elements ?? loadElementMap(env.E2E_ELEMENTS),
     resetUrl: overrides.resetUrl ?? env.E2E_RESET_URL,
     resetRpcName: overrides.resetRpcName ?? env.E2E_RESET_RPC_NAME,
-    fixturesDir: overrides.fixturesDir ?? env.E2E_FIXTURES_DIR ?? 'tests/fixtures',
+    fixturesDir:
+      overrides.fixturesDir ?? env.E2E_FIXTURES_DIR ?? 'tests/fixtures',
     repoRoot: overrides.repoRoot ?? env.E2E_REPO_ROOT ?? '..',
   }
 }
 
-function parsePersonas(raw: string | undefined): Record<string, PersonaCredentials> {
+function parsePersonas(
+  raw: string | undefined
+): Record<string, PersonaCredentials> {
   if (!raw) return {}
   try {
     return JSON.parse(raw) as Record<string, PersonaCredentials>
@@ -119,6 +125,8 @@ export function derivePersona(
   return {
     email: `e2e-${slug}@${domain}`,
     password: base.password,
-    name: name.replace(/^(the|a|an)\s+/i, '').replace(/^./, (c) => c.toUpperCase()),
+    name: name
+      .replace(/^(the|a|an)\s+/i, '')
+      .replace(/^./, (c) => c.toUpperCase()),
   }
 }

@@ -669,7 +669,9 @@ describe('wireRemoteAddon dispatch', () => {
         {}
       )
 
-      const result = await service.rpc('registry:getOpenApi', { name: 'stripe' })
+      const result = await service.rpc('registry:getOpenApi', {
+        name: 'stripe',
+      })
 
       assert.deepEqual(result, { echoed: 42 })
       assert.equal(calls.length, 1)
@@ -713,10 +715,7 @@ describe('wireRemoteAddon dispatch', () => {
       )
 
       await service.rpc('registry:getOpenApi', {})
-      assert.equal(
-        calls[0]!.init.headers.authorization,
-        'Bearer user-token-9'
-      )
+      assert.equal(calls[0]!.init.headers.authorization, 'Bearer user-token-9')
     } finally {
       restoreFetch()
     }

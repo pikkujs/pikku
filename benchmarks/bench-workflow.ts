@@ -25,7 +25,10 @@
 
 import { addFunction } from '@pikku/core'
 import { pikkuState, resetPikkuState } from '@pikku/core/internal'
-import { InMemoryWorkflowService, InMemoryQueueService } from '@pikku/core/services'
+import {
+  InMemoryWorkflowService,
+  InMemoryQueueService,
+} from '@pikku/core/services'
 import { addWorkflow } from '@pikku/core/workflow'
 import { rpcService } from '@pikku/core/rpc'
 
@@ -140,7 +143,8 @@ function registerEngine(mode: Mode) {
     source: 'dsl',
     graphHash: 'bench-workflow-hash',
   } as any
-  pikkuState(null, 'function', 'meta')[WORKFLOW_NAME] = mkStepMeta(WORKFLOW_NAME)
+  pikkuState(null, 'function', 'meta')[WORKFLOW_NAME] =
+    mkStepMeta(WORKFLOW_NAME)
   addWorkflow(WORKFLOW_NAME, {
     func: async (
       _services: any,
@@ -197,7 +201,8 @@ async function main() {
   const ws = new InMemoryWorkflowService()
   // The queue workers (orchestrator/step-worker) resolve the workflow service
   // off the singleton services, so it must be present for queued dispatch.
-  ;(pikkuState(null, 'package', 'singletonServices') as any).workflowService = ws
+  ;(pikkuState(null, 'package', 'singletonServices') as any).workflowService =
+    ws
   const rpc = rpcService.getContextRPCService(
     pikkuState(null, 'package', 'singletonServices') as any,
     {} as any,

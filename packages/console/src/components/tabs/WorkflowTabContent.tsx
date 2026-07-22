@@ -55,8 +55,16 @@ export const WorkflowTabContent: React.FC<{
     return (
       <EmptyStatePlaceholder
         icon={GitBranch}
-        title={resolvedId ? asI18n(`Workflow "${resolvedId}" not found`) : m.workflows_empty_title()}
-        description={resolvedId ? m.workflows_not_found_description() : m.workflows_empty_description()}
+        title={
+          resolvedId
+            ? asI18n(`Workflow "${resolvedId}" not found`)
+            : m.workflows_empty_title()
+        }
+        description={
+          resolvedId
+            ? m.workflows_not_found_description()
+            : m.workflows_empty_description()
+        }
         docsHref="https://pikku.dev/docs/core-features/workflows"
       />
     )

@@ -27,10 +27,9 @@ describe('createCoercionPlugin', () => {
   })
 
   test('coerces date columns from ISO strings to Date', async () => {
-    const [row] = await runTransform(
-      { users: { created_at: 'date' } },
-      [{ created_at: '2026-06-26T00:00:00.000Z' }]
-    )
+    const [row] = await runTransform({ users: { created_at: 'date' } }, [
+      { created_at: '2026-06-26T00:00:00.000Z' },
+    ])
     assert.ok(row.created_at instanceof Date)
     assert.equal(
       (row.created_at as Date).toISOString(),
@@ -39,10 +38,9 @@ describe('createCoercionPlugin', () => {
   })
 
   test('leaves unparseable date strings untouched', async () => {
-    const [row] = await runTransform(
-      { users: { created_at: 'date' } },
-      [{ created_at: 'not-a-date' }]
-    )
+    const [row] = await runTransform({ users: { created_at: 'date' } }, [
+      { created_at: 'not-a-date' },
+    ])
     assert.equal(row.created_at, 'not-a-date')
   })
 
@@ -65,19 +63,17 @@ describe('createCoercionPlugin', () => {
   })
 
   test('passes through null values and unmapped columns', async () => {
-    const rows = await runTransform(
-      { users: { created_at: 'date' } },
-      [{ created_at: null, name: 'leave me' }]
-    )
+    const rows = await runTransform({ users: { created_at: 'date' } }, [
+      { created_at: null, name: 'leave me' },
+    ])
     assert.equal(rows[0].created_at, null)
     assert.equal(rows[0].name, 'leave me')
   })
 
   test('matches both snake_case and camelCase column names', async () => {
-    const rows = await runTransform(
-      { users: { created_at: 'date' } },
-      [{ createdAt: '2026-06-26T00:00:00.000Z' }]
-    )
+    const rows = await runTransform({ users: { created_at: 'date' } }, [
+      { createdAt: '2026-06-26T00:00:00.000Z' },
+    ])
     assert.ok(rows[0].createdAt instanceof Date)
   })
 

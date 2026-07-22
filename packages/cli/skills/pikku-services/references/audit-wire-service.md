@@ -9,13 +9,15 @@ Pair with `createAuditedKysely` to auto-capture every Kysely query as an audit e
 import { createInvocationAudit } from '@pikku/core/services'
 import { createAuditedKysely } from '@pikku/kysely'
 
-export const createWireServices = pikkuWireServices(async (singletonServices, wire) => {
-  const audit = createInvocationAudit(singletonServices.audit, wire)
-  const kysely = singletonServices.kysely
-    ? createAuditedKysely(singletonServices.kysely, { audit })
-    : undefined
-  return { audit, ...(kysely ? { kysely } : {}) }
-})
+export const createWireServices = pikkuWireServices(
+  async (singletonServices, wire) => {
+    const audit = createInvocationAudit(singletonServices.audit, wire)
+    const kysely = singletonServices.kysely
+      ? createAuditedKysely(singletonServices.kysely, { audit })
+      : undefined
+    return { audit, ...(kysely ? { kysely } : {}) }
+  }
+)
 ```
 
 The `audit` wire service is typed as `AuditLog` (from `@pikku/core`). Functions that emit custom events use it directly:

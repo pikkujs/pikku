@@ -119,7 +119,9 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
           <Stack gap="xs">
             <TextInput
               size="xs"
-              label={asI18n(`Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`)}
+              label={asI18n(
+                `Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`
+              )}
               placeholder={asI18n(metadata?.model ?? 'provider/model')}
               value={playgroundCtx.model ?? ''}
               onChange={(e) =>
@@ -128,12 +130,14 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
             />
             <NumberInput
               size="xs"
-              label={asI18n(`Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`)}
-              placeholder={
-                asI18n(metadata?.temperature != null
+              label={asI18n(
+                `Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`
+              )}
+              placeholder={asI18n(
+                metadata?.temperature != null
                   ? String(metadata.temperature)
-                  : 'default')
-              }
+                  : 'default'
+              )}
               value={playgroundCtx.temperature ?? ''}
               onChange={(v) =>
                 playgroundCtx.setTemperature(
@@ -202,7 +206,9 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 
         {subAgents.length > 0 && (
           <Box>
-            <SectionLabel>{asI18n(`Sub-Agents (${subAgents.length})`)}</SectionLabel>
+            <SectionLabel>
+              {asI18n(`Sub-Agents (${subAgents.length})`)}
+            </SectionLabel>
             <Group gap={6}>
               {subAgents.map((agent: string) => (
                 <PikkuBadge

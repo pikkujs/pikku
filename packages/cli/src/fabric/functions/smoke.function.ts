@@ -1,6 +1,13 @@
 import { spawn } from 'node:child_process'
 import { existsSync, createWriteStream } from 'node:fs'
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, relative, resolve } from 'node:path'
@@ -91,7 +98,9 @@ function truncateTail(text: string, maxBytes = DEV_LOG_TAIL_BYTES): string {
     return trimmed
   }
 
-  const slice = Buffer.from(trimmed, 'utf8').subarray(-maxBytes).toString('utf8')
+  const slice = Buffer.from(trimmed, 'utf8')
+    .subarray(-maxBytes)
+    .toString('utf8')
   const newlineIndex = slice.indexOf('\n')
   return newlineIndex === -1 ? slice : slice.slice(newlineIndex + 1)
 }
@@ -208,9 +217,10 @@ async function waitForHealth(args: {
   }
 }
 
-function rewriteFrontendCommand(
-  command: string[]
-): { command: string; args: string[] } {
+function rewriteFrontendCommand(command: string[]): {
+  command: string
+  args: string[]
+} {
   if (command.length === 0) {
     throw new Error('frontend dev.command must not be empty')
   }
@@ -280,7 +290,9 @@ async function runFrontendChecks(args: {
   timeoutMs: number
   steps: SmokeStep[]
 }): Promise<{ ok: boolean; failure?: string; logTail?: string }> {
-  const fabricConfigPath = existsSync(join(args.root, 'pikkufabric.config.json'))
+  const fabricConfigPath = existsSync(
+    join(args.root, 'pikkufabric.config.json')
+  )
     ? join(args.root, 'pikkufabric.config.json')
     : join(args.root, 'fabric.config.json')
 
@@ -302,9 +314,10 @@ async function runFrontendChecks(args: {
   }
 
   for (const [slug, config] of entries) {
-    const cwd = typeof config.cwd === 'string' && config.cwd.length > 0
-      ? resolve(args.root, config.cwd)
-      : null
+    const cwd =
+      typeof config.cwd === 'string' && config.cwd.length > 0
+        ? resolve(args.root, config.cwd)
+        : null
 
     if (!cwd || !existsSync(cwd) || !existsSync(join(cwd, 'package.json'))) {
       args.steps.push({
@@ -372,7 +385,9 @@ async function startFrontends(args: {
   timeoutMs: number
   steps: SmokeStep[]
 }) {
-  const fabricConfigPath = existsSync(join(args.root, 'pikkufabric.config.json'))
+  const fabricConfigPath = existsSync(
+    join(args.root, 'pikkufabric.config.json')
+  )
     ? join(args.root, 'pikkufabric.config.json')
     : join(args.root, 'fabric.config.json')
 
@@ -443,7 +458,8 @@ async function startFrontends(args: {
 
     const rewritten = rewriteFrontendCommand(devConfig.command)
     const healthPath =
-      typeof devConfig.healthPath === 'string' && devConfig.healthPath.length > 0
+      typeof devConfig.healthPath === 'string' &&
+      devConfig.healthPath.length > 0
         ? devConfig.healthPath
         : '/'
     const normalizedHealthPath = healthPath.startsWith('/')
@@ -1073,7 +1089,9 @@ export const renderSmoke = (
           ? removed('✗')
           : changed('•')
     const detail = step.detail ? ` ${dim(step.detail)}` : ''
-    console.log(`${icon} ${step.name} ${dim(`(${formatDuration(step.durationMs)})`)}${detail}`)
+    console.log(
+      `${icon} ${step.name} ${dim(`(${formatDuration(step.durationMs)})`)}${detail}`
+    )
     if (step.command) {
       console.log(`   ${dim(step.command)}`)
     }

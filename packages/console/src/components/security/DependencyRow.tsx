@@ -27,7 +27,9 @@ export const DependencyRow: React.FC<DependencyRowProps> = ({ dep, first }) => {
       wrap="nowrap"
       p="sm"
       style={{
-        borderTop: first ? undefined : '1px solid var(--mantine-color-default-border)',
+        borderTop: first
+          ? undefined
+          : '1px solid var(--mantine-color-default-border)',
       }}
     >
       <Box
@@ -71,7 +73,13 @@ export const DependencyRow: React.FC<DependencyRowProps> = ({ dep, first }) => {
           </Group>
         ) : (
           SEV_ORDER.filter((s) => dep.counts[s] > 0).map((s) => (
-            <Badge key={s} size="xs" variant="light" color={SEV_COLOR[s]} ff="monospace">
+            <Badge
+              key={s}
+              size="xs"
+              variant="light"
+              color={SEV_COLOR[s]}
+              ff="monospace"
+            >
               {asI18n(`${dep.counts[s]} ${SEV_LABEL[s]()}`)}
             </Badge>
           ))
@@ -80,7 +88,12 @@ export const DependencyRow: React.FC<DependencyRowProps> = ({ dep, first }) => {
       {dep.total > 0 && dep.latest && (
         <Group gap="xs" wrap="nowrap" align="center">
           {update.isError && (
-            <Text span size="xs" c="red" data-testid="security-dep-update-error">
+            <Text
+              span
+              size="xs"
+              c="red"
+              data-testid="security-dep-update-error"
+            >
               {m.security_update_dep_error()}
             </Text>
           )}

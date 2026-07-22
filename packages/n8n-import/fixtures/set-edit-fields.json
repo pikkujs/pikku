@@ -20,7 +20,12 @@
         "options": {},
         "assignments": {
           "assignments": [
-            { "id": "a1", "name": "product", "type": "string", "value": "widget" },
+            {
+              "id": "a1",
+              "name": "product",
+              "type": "string",
+              "value": "widget"
+            },
             {
               "id": "a2",
               "name": "email",

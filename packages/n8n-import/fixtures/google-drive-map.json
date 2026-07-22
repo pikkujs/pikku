@@ -34,7 +34,11 @@
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Download File", "type": "main", "index": 0 }]] },
-    "Download File": { "main": [[{ "node": "Search Folder", "type": "main", "index": 0 }]] }
+    "Webhook": {
+      "main": [[{ "node": "Download File", "type": "main", "index": 0 }]]
+    },
+    "Download File": {
+      "main": [[{ "node": "Search Folder", "type": "main", "index": 0 }]]
+    }
   }
 }

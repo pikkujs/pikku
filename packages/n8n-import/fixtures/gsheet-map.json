@@ -1,5 +1,41 @@
-{"name":"GSheet","nodes":[
-{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"g"}},
-{"id":"a","name":"Append","type":"n8n-nodes-base.googleSheets","typeVersion":4,"position":[200,0],"parameters":{"operation":"append","documentId":{"__rl":true,"mode":"list","value":"1abcSHEET"},"sheetName":{"__rl":true,"mode":"list","value":"Sheet1"}}},
-{"id":"r","name":"Read","type":"n8n-nodes-base.googleSheets","typeVersion":4,"position":[400,0],"parameters":{"operation":"read","documentId":{"__rl":true,"mode":"list","value":"1abcSHEET"},"sheetName":{"__rl":true,"mode":"list","value":"Sheet1"}}}],
-"connections":{"Webhook":{"main":[[{"node":"Append","type":"main","index":0}]]},"Append":{"main":[[{"node":"Read","type":"main","index":0}]]}}}
+{
+  "name": "GSheet",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "g" }
+    },
+    {
+      "id": "a",
+      "name": "Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [200, 0],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "list", "value": "1abcSHEET" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Sheet1" }
+      }
+    },
+    {
+      "id": "r",
+      "name": "Read",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [400, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "list", "value": "1abcSHEET" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Sheet1" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Append", "type": "main", "index": 0 }]] },
+    "Append": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] }
+  }
+}

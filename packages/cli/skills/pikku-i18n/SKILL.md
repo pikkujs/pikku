@@ -25,7 +25,7 @@ Use this skill as an execution checklist, not reference material.
     "auth__login__description": "Welcome back to {name}."
   }
   ```
-  Key convention: lower snake_case, `__` (double underscore) between namespace segments, `_` within a segment — `auth__login__title`, `common__email_placeholder`.
+  Key convention: lower snake*case, `__` (double underscore) between namespace segments, `*`within a segment —`auth**login**title`, `common\_\_email_placeholder`.
 - `project.inlang/settings.json` — `baseLocale`, `locales`, the `@inlang/plugin-message-format` module, `pathPattern: "./messages/{locale}.json"`.
 - `vite.config.ts` — `paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' })` from `@inlang/paraglide-js` (devDependency), FIRST in the plugins array.
 - `src/paraglide/` — compiled output (`messages.js`, `runtime.js`, per-locale `messages/*.js`). Generated; it writes its own `.gitignore`.

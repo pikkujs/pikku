@@ -1,1 +1,24 @@
-{"name":"Wise","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"wise"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.wise","typeVersion":1,"position":[200,0],"parameters":{"resource":"account","operation":"getBalances"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Wise",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "wise" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.wise",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "account", "operation": "getBalances" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

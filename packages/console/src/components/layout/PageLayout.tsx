@@ -1,11 +1,24 @@
 import type { ComponentProps, ReactNode } from 'react'
-import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@pikku/mantine/core'
+import {
+  ActionIcon,
+  Box,
+  Container,
+  Group,
+  Stack,
+  Text,
+  Title,
+  Tooltip,
+} from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { ExternalLink } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import DocLink from '../ui/DocLink'
-import { ShellHeader, type ShellHeaderSearch, type ShellHeaderSelection } from '../ui/ShellHeader'
+import {
+  ShellHeader,
+  type ShellHeaderSearch,
+  type ShellHeaderSelection,
+} from '../ui/ShellHeader'
 import { usePageGate } from '../../context/PageGateContext'
 
 interface ListPageHeaderProps<T extends string = string> {
@@ -47,7 +60,13 @@ export function ListPageHeader<T extends string = string>({
       </>
     ) : undefined
   return (
-    <ShellHeader title={title} count={description} search={search} selection={selection} actionsNode={right} />
+    <ShellHeader
+      title={title}
+      count={description}
+      search={search}
+      selection={selection}
+      actionsNode={right}
+    />
   )
 }
 
@@ -101,7 +120,15 @@ export function PageContainer({
   if (!hasHeader) return bodyContainer
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+      }}
+    >
       {header}
       {bodyContainer}
     </div>
@@ -115,7 +142,12 @@ interface PageHeaderProps {
   docsHref?: string
 }
 
-export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  docsHref,
+}: PageHeaderProps) {
   useLocale()
   return (
     <Stack gap={4} style={{ marginBottom: 'var(--mantine-spacing-xl)' }}>
@@ -160,7 +192,12 @@ interface PageHeaderControlsProps {
 
 export function PageHeaderControls({ children }: PageHeaderControlsProps) {
   return (
-    <Group gap="xs" wrap="nowrap" align="center" style={{ flexShrink: 0, minWidth: 0 }}>
+    <Group
+      gap="xs"
+      wrap="nowrap"
+      align="center"
+      style={{ flexShrink: 0, minWidth: 0 }}
+    >
       {children}
     </Group>
   )
@@ -187,14 +224,24 @@ interface PageActionBarProps {
 export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
   if (!lead && !view && !filters) return null
   return (
-    <Group gap="sm" wrap="nowrap" align="center" style={{ width: '100%', minWidth: 0 }}>
+    <Group
+      gap="sm"
+      wrap="nowrap"
+      align="center"
+      style={{ width: '100%', minWidth: 0 }}
+    >
       {lead && (
         <Group gap="xs" wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
           {lead}
         </Group>
       )}
       {lead ? (
-        <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+        <Group
+          gap="sm"
+          wrap="nowrap"
+          align="center"
+          style={{ marginLeft: 'auto', flexShrink: 0 }}
+        >
           {filters}
           {view}
         </Group>
@@ -202,7 +249,12 @@ export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
         <>
           {filters}
           {view && (
-            <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto' }}>
+            <Group
+              gap="sm"
+              wrap="nowrap"
+              align="center"
+              style={{ marginLeft: 'auto' }}
+            >
               {view}
             </Group>
           )}

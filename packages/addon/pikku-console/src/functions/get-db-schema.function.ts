@@ -9,7 +9,9 @@ export const getDbSchema = pikkuFunc<null, DbSchema | null>({
   expose: true,
   func: async ({ dbSchemaService }) => {
     if (!dbSchemaService) {
-      throw new LocalEnvironmentOnlyError('Only available in local development mode')
+      throw new LocalEnvironmentOnlyError(
+        'Only available in local development mode'
+      )
     }
     return dbSchemaService.getSchema()
   },

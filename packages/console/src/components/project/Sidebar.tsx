@@ -69,44 +69,141 @@ export function useDefaultNavSections(): NavSection[] {
     {
       title: m.nav_run(),
       items: [
-        { label: m.nav_functions(), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
-        { label: m.nav_workflows(), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
-        { label: m.nav_agents(), href: '/agents', icon: Bot, matchPrefix: '/agents' },
-        { label: asI18n('Scenarios'), href: '/scenarios', icon: Route, matchPrefix: '/scenarios' },
+        {
+          label: m.nav_functions(),
+          href: '/functions',
+          icon: FunctionSquare,
+          matchPrefix: '/functions',
+        },
+        {
+          label: m.nav_workflows(),
+          href: '/workflow',
+          icon: GitBranch,
+          matchPrefix: '/workflow',
+        },
+        {
+          label: m.nav_agents(),
+          href: '/agents',
+          icon: Bot,
+          matchPrefix: '/agents',
+        },
+        {
+          label: asI18n('Scenarios'),
+          href: '/scenarios',
+          icon: Route,
+          matchPrefix: '/scenarios',
+        },
       ],
     },
     {
       title: m.nav_data(),
       items: [
-        { label: m.nav_database(), href: '/database', icon: Database, matchPrefix: '/database' },
-        { label: m.nav_apis(), href: '/apis', icon: Globe, matchPrefix: '/apis' },
-        { label: m.nav_jobs(), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
-        { label: m.nav_runtime(), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
-        { label: m.nav_emails(), href: '/emails', icon: Mail, matchPrefix: '/emails' },
-        { label: asI18n('Webhooks'), href: '/webhooks', icon: Webhook, matchPrefix: '/webhooks' },
+        {
+          label: m.nav_database(),
+          href: '/database',
+          icon: Database,
+          matchPrefix: '/database',
+        },
+        {
+          label: m.nav_apis(),
+          href: '/apis',
+          icon: Globe,
+          matchPrefix: '/apis',
+        },
+        {
+          label: m.nav_jobs(),
+          href: '/jobs',
+          icon: Clock,
+          matchPrefix: '/jobs',
+        },
+        {
+          label: m.nav_runtime(),
+          href: '/runtime',
+          icon: Server,
+          matchPrefix: '/runtime',
+        },
+        {
+          label: m.nav_emails(),
+          href: '/emails',
+          icon: Mail,
+          matchPrefix: '/emails',
+        },
+        {
+          label: asI18n('Webhooks'),
+          href: '/webhooks',
+          icon: Webhook,
+          matchPrefix: '/webhooks',
+        },
       ],
     },
     {
       title: m.nav_config(),
       items: [
-        { label: m.nav_secrets(), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
-        { label: m.nav_env_vars(), href: '/variables', icon: Variable, matchPrefix: '/variables' },
-        { label: m.nav_security(), href: '/security', icon: ShieldCheck, matchPrefix: '/security' },
-        { label: m.nav_addons(), href: '/addons', icon: Package, matchPrefix: '/addons' },
+        {
+          label: m.nav_secrets(),
+          href: '/secrets',
+          icon: KeyRound,
+          matchPrefix: '/secrets',
+        },
+        {
+          label: m.nav_env_vars(),
+          href: '/variables',
+          icon: Variable,
+          matchPrefix: '/variables',
+        },
+        {
+          label: m.nav_security(),
+          href: '/security',
+          icon: ShieldCheck,
+          matchPrefix: '/security',
+        },
+        {
+          label: m.nav_addons(),
+          href: '/addons',
+          icon: Package,
+          matchPrefix: '/addons',
+        },
       ],
     },
     {
       title: m.nav_auth(),
       items: [
-        { label: m.nav_users(), href: '/users', icon: Users, matchPrefix: '/users' },
-        { label: asI18n('Scopes'), href: '/scopes', icon: Shield, matchPrefix: '/scopes' },
-        { label: m.nav_oauth(), href: '/auth-providers', icon: KeyRound, matchPrefix: '/auth-providers' },
-        { label: m.nav_credentials(), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
+        {
+          label: m.nav_users(),
+          href: '/users',
+          icon: Users,
+          matchPrefix: '/users',
+        },
+        {
+          label: asI18n('Scopes'),
+          href: '/scopes',
+          icon: Shield,
+          matchPrefix: '/scopes',
+        },
+        {
+          label: m.nav_oauth(),
+          href: '/auth-providers',
+          icon: KeyRound,
+          matchPrefix: '/auth-providers',
+        },
+        {
+          label: m.nav_credentials(),
+          href: '/credentials',
+          icon: KeyRound,
+          matchPrefix: '/credentials',
+        },
       ],
     },
     {
       title: asI18n(''),
-      items: [{ label: m.nav_changes(), href: '/changes', icon: GitCompare, matchPrefix: '/changes' }],
+      items: [
+        {
+          label: m.nav_changes(),
+          href: '/changes',
+          icon: GitCompare,
+          matchPrefix: '/changes',
+        },
+      ],
     },
   ]
 }
@@ -137,7 +234,9 @@ const DEFAULT_BRANDING: SidebarBranding = {
     />
   ),
   title: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'),
-  tooltipLabel: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'),
+  tooltipLabel: asI18n(
+    import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'
+  ),
   homeHref: '/',
 }
 
@@ -247,8 +346,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {sections.map((section, sectionIndex) => (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
-            {section.title && (
-              collapsed ? null : (
+            {section.title &&
+              (collapsed ? null : (
                 <Text
                   size="xs"
                   fw={600}
@@ -264,8 +363,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   {section.title}
                 </Text>
-              )
-            )}
+              ))}
             {section.items.map((item) => {
               const active = isActive(item)
 
@@ -381,7 +479,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={colorScheme === 'dark' ? m.sidebar_switch_to_light() : m.sidebar_switch_to_dark()}
+            label={
+              colorScheme === 'dark'
+                ? m.sidebar_switch_to_light()
+                : m.sidebar_switch_to_dark()
+            }
             position="right"
           >
             <UnstyledButton
@@ -398,7 +500,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             >
               {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? m.sidebar_light_mode() : m.sidebar_dark_mode()}</Text>}
+              {!collapsed && (
+                <Text size="sm">
+                  {colorScheme === 'dark'
+                    ? m.sidebar_light_mode()
+                    : m.sidebar_dark_mode()}
+                </Text>
+              )}
             </UnstyledButton>
           </Tooltip>
           <Tooltip

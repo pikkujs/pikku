@@ -171,9 +171,7 @@ export const WebhooksPage: React.FC = () => {
             {detail.attempts.map((attempt) => (
               <Stack key={attempt.attemptId} gap={4}>
                 <Group gap="xs">
-                  <Text fw={500}>
-                    {asI18n(`#${attempt.attemptNumber}`)}
-                  </Text>
+                  <Text fw={500}>{asI18n(`#${attempt.attemptNumber}`)}</Text>
                   {attempt.statusCode != null && (
                     <Badge
                       color={

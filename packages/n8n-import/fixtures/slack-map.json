@@ -24,6 +24,8 @@
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Post Message", "type": "main", "index": 0 }]] }
+    "Webhook": {
+      "main": [[{ "node": "Post Message", "type": "main", "index": 0 }]]
+    }
   }
 }

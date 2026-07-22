@@ -163,8 +163,7 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
               message: 'Fabric token has the wrong purpose',
             })
           }
-          const fabricUserId =
-            typeof claims.sub === 'string' ? claims.sub : ''
+          const fabricUserId = typeof claims.sub === 'string' ? claims.sub : ''
           if (!fabricUserId) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Fabric token is missing sub',

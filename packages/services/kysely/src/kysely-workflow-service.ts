@@ -417,7 +417,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (latestHistory) {
       await this.db
         .updateTable('workflowStepHistory')
-        .set({ status: 'succeeded', result: resultJson, succeededAt: new Date() })
+        .set({
+          status: 'succeeded',
+          result: resultJson,
+          succeededAt: new Date(),
+        })
         .where('historyId', '=', latestHistory.historyId)
         .execute()
     }
@@ -586,7 +590,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return nodeIds.filter((id) => !existingStepNames.has(id))
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const rows = await this.db

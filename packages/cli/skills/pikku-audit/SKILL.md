@@ -36,11 +36,13 @@ An event only persists when the function opts in with **`audit: true`** — othe
 ```typescript
 import { NoopAuditService, createInvocationAudit } from '@pikku/core/services'
 
-export const createSingletonServices = pikkuServices(async (config, existing) => {
-  // Prod platforms may inject a queue-backed sink as existing.audit.
-  const audit = existing?.audit ?? new NoopAuditService()
-  return { ...existing, config, /* ... */ audit }
-})
+export const createSingletonServices = pikkuServices(
+  async (config, existing) => {
+    // Prod platforms may inject a queue-backed sink as existing.audit.
+    const audit = existing?.audit ?? new NoopAuditService()
+    return { ...existing, config, /* ... */ audit }
+  }
+)
 
 // auditLog is created per invocation from the sink. Returned unconditionally so
 // a write from a function that forgot `audit: true` warns instead of vanishing.
@@ -58,12 +60,17 @@ Mark the function `audit: true` and call `auditLog?.write(...)`. Domain history 
 
 ```typescript
 export const cancelInvoice = pikkuFunc({
-  audit: true,                       // REQUIRED — else write() is a no-op
+  audit: true, // REQUIRED — else write() is a no-op
   input: CancelInvoiceInput,
   output: CancelInvoiceOutput,
   func: async ({ kysely, auditLog }, { invoiceId }, { session }) => {
-    const inv = await kysely.selectFrom('invoice')/* ... */.executeTakeFirstOrThrow()
-    await kysely.updateTable('invoice').set({ status: 'cancelled' })/* ... */.execute()
+    const inv = await kysely
+      .selectFrom('invoice') /* ... */
+      .executeTakeFirstOrThrow()
+    await kysely
+      .updateTable('invoice')
+      .set({ status: 'cancelled' }) /* ... */
+      .execute()
 
     await auditLog?.write({
       type: 'invoice.update',
@@ -97,7 +104,10 @@ import { createAuditedKysely } from '@pikku/kysely'
 export const createWireServices = pikkuWireServices(async (services, wire) => {
   if (!services.audit) return {}
   const auditLog = createInvocationAudit(services.audit, wire)
-  return { auditLog, kysely: createAuditedKysely(services.kysely, { audit: auditLog }) }
+  return {
+    auditLog,
+    kysely: createAuditedKysely(services.kysely, { audit: auditLog }),
+  }
 })
 ```
 
@@ -153,14 +163,19 @@ const rows = await kysely
 
 ```typescript
 type AuditEvent = {
-  type: string                          // e.g. 'invoice.update'
+  type: string // e.g. 'invoice.update'
   source: 'auto' | 'explicit'
-  occurredAt: string                    // auto-filled by auditLog
+  occurredAt: string // auto-filled by auditLog
   outcome?: string
-  functionId?; wireType?; wireId?; traceId?; transactionId?; queryId?  // auto
-  actor?: { userId?; orgId? }           // auto from wire session
+  functionId?
+  wireType?
+  wireId?
+  traceId?
+  transactionId?
+  queryId? // auto
+  actor?: { userId?; orgId? } // auto from wire session
   input?: unknown
-  metadata?: Record<string, unknown>    // your domain payload
+  metadata?: Record<string, unknown> // your domain payload
 }
 ```
 

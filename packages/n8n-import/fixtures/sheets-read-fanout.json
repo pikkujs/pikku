@@ -42,7 +42,9 @@
     }
   ],
   "connections": {
-    "Manual Trigger": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] },
+    "Manual Trigger": {
+      "main": [[{ "node": "Read", "type": "main", "index": 0 }]]
+    },
     "Read": { "main": [[{ "node": "Post", "type": "main", "index": 0 }]] }
   }
 }

@@ -36,15 +36,30 @@ export const CommandChip: React.FC<CommandChipProps> = ({ cmd }) => {
         borderRadius: 8,
         border: `0.5px solid ${hovered ? 'var(--app-border-hover, var(--app-border))' : 'var(--app-border)'}`,
         background: 'var(--app-panel-bg, var(--mantine-color-body))',
-        fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontFamily:
+          "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
         fontSize: 12.5,
         cursor: 'pointer',
         transition: 'border-color 130ms',
         lineHeight: 1,
       }}
     >
-      <Text span c="var(--app-text-faint, var(--mantine-color-dimmed))" ff="inherit" fz="inherit">{asI18n('$')}</Text>
-      <Text span c="var(--app-text, var(--mantine-color-text))" ff="inherit" fz="inherit">{asI18n(cmd)}</Text>
+      <Text
+        span
+        c="var(--app-text-faint, var(--mantine-color-dimmed))"
+        ff="inherit"
+        fz="inherit"
+      >
+        {asI18n('$')}
+      </Text>
+      <Text
+        span
+        c="var(--app-text, var(--mantine-color-text))"
+        ff="inherit"
+        fz="inherit"
+      >
+        {asI18n(cmd)}
+      </Text>
       <Box
         display="flex"
         style={{

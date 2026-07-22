@@ -29,7 +29,9 @@ const TriggersTable: React.FC<{
       {
         key: 'name',
         header: 'NAME',
-        render: (pair: TriggerPair) => <Text fw={500}>{asI18n(pair.name)}</Text>,
+        render: (pair: TriggerPair) => (
+          <Text fw={500}>{asI18n(pair.name)}</Text>
+        ),
       },
       {
         key: 'source',
@@ -48,7 +50,9 @@ const TriggersTable: React.FC<{
               }
             }}
           >
-            {asI18n(pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing')}
+            {asI18n(
+              pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing'
+            )}
           </PikkuBadge>
         ),
       },
@@ -70,7 +74,9 @@ const TriggersTable: React.FC<{
               }
             }}
           >
-            {asI18n(pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing')}
+            {asI18n(
+              pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing'
+            )}
           </PikkuBadge>
         ),
       },
@@ -124,7 +130,12 @@ export const TriggersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.triggers_title()} description={m.triggers_description()} />}
+        header={
+          <ListPageHeader
+            title={m.triggers_title()}
+            description={m.triggers_description()}
+          />
+        }
         hidePanel={!loading && pairs.length === 0}
         emptyPanelMessage={m.triggers_select_item()}
       >

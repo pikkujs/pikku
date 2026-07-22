@@ -62,7 +62,8 @@ function collectQueryTables(node: unknown, out: Set<string>): void {
   }
   if (op.kind === 'TableNode') {
     const tableName = op.table?.identifier?.name
-    if (typeof tableName === 'string' && tableName.length > 0) out.add(tableName)
+    if (typeof tableName === 'string' && tableName.length > 0)
+      out.add(tableName)
   }
 
   for (const value of Object.values(node)) {

@@ -35,11 +35,17 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
       },
-      "credentials": { "httpHeaderAuth": { "id": "c2", "name": "Other Header" } }
+      "credentials": {
+        "httpHeaderAuth": { "id": "c2", "name": "Other Header" }
+      }
     }
   ],
   "connections": {
-    "Manual": { "main": [[{ "node": "Call OpenAI", "type": "main", "index": 0 }]] },
-    "Call OpenAI": { "main": [[{ "node": "Call Custom", "type": "main", "index": 0 }]] }
+    "Manual": {
+      "main": [[{ "node": "Call OpenAI", "type": "main", "index": 0 }]]
+    },
+    "Call OpenAI": {
+      "main": [[{ "node": "Call Custom", "type": "main", "index": 0 }]]
+    }
   }
 }

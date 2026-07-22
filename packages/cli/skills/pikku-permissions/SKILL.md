@@ -25,14 +25,14 @@ export const deleteBook = pikkuFunc({
     await db.deleteBook(bookId)
   },
   permissions: {
-    owner: isBookOwner,   // ← authorization here
+    owner: isBookOwner, // ← authorization here
   },
 })
 
 // WRONG — permission check inside func body
 export const deleteBook = pikkuFunc({
   func: async ({ db }, { bookId }, { session }) => {
-    if (!session) throw new UnauthorizedError()  // ← never do this
+    if (!session) throw new UnauthorizedError() // ← never do this
     await db.deleteBook(bookId)
   },
 })
@@ -115,7 +115,7 @@ export const deleteBook = pikkuFunc({
 
 ### Global (`addGlobalPermission`) — App-Wide AND Gate
 
-A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever *narrow* access — it never grants access a function's own `permissions` would deny.
+A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever _narrow_ access — it never grants access a function's own `permissions` would deny.
 
 ```typescript
 import { addGlobalPermission } from '.pikku/pikku-types.gen.js'
@@ -125,7 +125,7 @@ addGlobalPermission([signedInUser]) // every function now also requires a sessio
 
 Multiple `addGlobalPermission` calls accumulate and are AND'd together.
 
-> Wire-, tag-, and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, and a `permissions` field on HTTP/channel/MCP wirings) were **removed in #972**. Permissions now live only on the function definition, plus the optional global gate. Tags are organizational only — use tag/HTTP *middleware* (`addTagMiddleware`, `addHTTPMiddleware`) for cross-cutting request handling, not authorization.
+> Wire-, tag-, and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, and a `permissions` field on HTTP/channel/MCP wirings) were **removed in #972**. Permissions now live only on the function definition, plus the optional global gate. Tags are organizational only — use tag/HTTP _middleware_ (`addTagMiddleware`, `addHTTPMiddleware`) for cross-cutting request handling, not authorization.
 
 ## The Two Gates
 

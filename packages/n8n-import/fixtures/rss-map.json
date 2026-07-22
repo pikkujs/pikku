@@ -1,1 +1,24 @@
-{"name":"Rs","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"rs"}},{"id":"r","name":"Read","type":"n8n-nodes-base.rssFeedRead","typeVersion":1,"position":[200,0],"parameters":{"url":"https://ex.com/feed"}}],"connections":{"Webhook":{"main":[[{"node":"Read","type":"main","index":0}]]}}}
+{
+  "name": "Rs",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "rs" }
+    },
+    {
+      "id": "r",
+      "name": "Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "url": "https://ex.com/feed" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] }
+  }
+}

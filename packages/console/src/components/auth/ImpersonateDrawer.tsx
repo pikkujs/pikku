@@ -99,9 +99,7 @@ const UserRow: React.FC<{
     p="xs"
     style={{
       borderRadius: 6,
-      backgroundColor: active
-        ? 'var(--mantine-color-yellow-light)'
-        : undefined,
+      backgroundColor: active ? 'var(--mantine-color-yellow-light)' : undefined,
     }}
   >
     <Group gap="sm" wrap="nowrap">

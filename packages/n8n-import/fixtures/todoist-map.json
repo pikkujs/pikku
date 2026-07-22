@@ -1,1 +1,24 @@
-{"name":"Td","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"td"}},{"id":"p","name":"Tasks","type":"n8n-nodes-base.todoist","typeVersion":2,"position":[200,0],"parameters":{"resource":"task","operation":"getAll"}}],"connections":{"Webhook":{"main":[[{"node":"Tasks","type":"main","index":0}]]}}}
+{
+  "name": "Td",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "td" }
+    },
+    {
+      "id": "p",
+      "name": "Tasks",
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "resource": "task", "operation": "getAll" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Tasks", "type": "main", "index": 0 }]] }
+  }
+}

@@ -1,5 +1,12 @@
 import React from 'react'
-import { Box, Group, Paper, Stack, Text, useMantineTheme } from '@pikku/mantine/core'
+import {
+  Box,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  useMantineTheme,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Handle, Position } from 'reactflow'
 import { Lock, LockOpen, Shield, Layers } from 'lucide-react'

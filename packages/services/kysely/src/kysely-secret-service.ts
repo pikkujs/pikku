@@ -149,9 +149,9 @@ export class KyselySecretService implements SecretService {
     await this.logAudit(key, 'delete')
   }
 
-  async getSecrets<
-    T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<T> {
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<T> {
     const rows = await this.db
       .selectFrom('secrets')
       .select(['key', 'ciphertext', 'wrappedDek', 'keyVersion'])

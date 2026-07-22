@@ -26,7 +26,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [200, 200],
-      "parameters": { "model": "gpt-4o-mini", "options": { "temperature": 0.2 } }
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": { "temperature": 0.2 }
+      }
     }
   ],
   "connections": {

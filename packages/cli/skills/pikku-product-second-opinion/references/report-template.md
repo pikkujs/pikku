@@ -6,7 +6,8 @@ reader. Delete any section that would be empty rather than padding it.
 ---
 
 # {App name}, in plain English — and where it could get better
-*A second opinion on {scope: the whole app / the competitor-tracking system / …}*
+
+_A second opinion on {scope: the whole app / the competitor-tracking system / …}_
 
 **How to read this:** no technical background needed. Part 1 is the summary — if
 you read nothing else, read that. Parts 2–3 go area by area for anyone who wants
@@ -21,9 +22,9 @@ opportunities. No jargon.}
 
 **If it were me, this is the order I'd tackle things:**
 
-| Fix | Why it matters to you | Effort | Payoff |
-|---|---|---|---|
-| {…} | {business impact} | Small/Medium/Large | High/Medium/Low |
+| Fix | Why it matters to you | Effort             | Payoff          |
+| --- | --------------------- | ------------------ | --------------- |
+| {…} | {business impact}     | Small/Medium/Large | High/Medium/Low |
 
 ---
 
@@ -38,6 +39,7 @@ opportunities. No jargon.}
 **What's working.** {genuine credit — the parts that are solid and worth keeping}
 
 **What's holding you back.**
+
 - **{Problem in plain terms}.** What it means for you: {business impact}.
   Severity: {Minor / Worth fixing / Serious / Urgent}. Effort to fix: {Small /
   Medium / Large}.
@@ -54,11 +56,12 @@ off. Say whether it's a cheap rewire or an expensive rebuild.}
 libraries — AND anything a rebuild would move them ONTO. Each gets both sides.}
 
 **{Technology}.**
-- *Buys you:* {in business terms}
-- *Costs you:* {in business terms — bills, hiring, shipping speed, upgrade work,
+
+- _Buys you:_ {in business terms}
+- _Costs you:_ {in business terms — bills, hiring, shipping speed, upgrade work,
   the risk of betting on something young. Don't soften it. If it hasn't shipped a
   stable 1.0, say so and say what that means: pin the version, budget upgrades.}
-- *Usually:* {recommendation tied to their stage — normally "keep it, watch this"}
+- _Usually:_ {recommendation tied to their stage — normally "keep it, watch this"}
 
 {The same bar applies to anything you're recommending they move to. A stack you
 propose with no cons listed is a pitch, not a second opinion.}

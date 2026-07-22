@@ -123,8 +123,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        verifier:
-          [
+        verifier: [
             addon,
             addon-treeshake,
             # binary,

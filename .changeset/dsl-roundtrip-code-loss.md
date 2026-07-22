@@ -31,7 +31,7 @@ Also fixed in the same pass:
 - A step result assigned inside a branch was re-declared with `const` inside
   that branch, so any later reference was out of scope. Hoisting analysis was
   keyed off the same dead node-id heuristic and never fired.
-- A top-level step whose *name* contained `_case`, `_item_`, `_then_`,
+- A top-level step whose _name_ contained `_case`, `_item_`, `_then_`,
   `_else_`, `_child_` or `_default_` was silently deleted, because node ids are
   step names and were matched against those structural substrings. Ownership is
   now read from the parent constructs themselves.

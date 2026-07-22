@@ -16,7 +16,8 @@ export interface PikkuSwitchOption<T extends string> {
 const TONE_VARS: Record<SwitchTone, CSSProperties> = {
   default: {
     ['--switch-active-bg' as string]: 'var(--mantine-color-primary-light)',
-    ['--switch-active-fg' as string]: 'var(--mantine-color-primary-light-color)',
+    ['--switch-active-fg' as string]:
+      'var(--mantine-color-primary-light-color)',
     ['--switch-active-border' as string]: 'transparent',
   },
   green: {

@@ -16,7 +16,13 @@ import { existsSync, readFileSync } from 'node:fs'
  * not in the registry fall back to the Mantine-aware heuristics in
  * locators.ts, so adoption is incremental.
  */
-export type ElementKind = 'buttons' | 'fields' | 'links' | 'tabs' | 'tables' | 'menus'
+export type ElementKind =
+  | 'buttons'
+  | 'fields'
+  | 'links'
+  | 'tabs'
+  | 'tables'
+  | 'menus'
 
 export type ElementMap = Partial<Record<ElementKind, Record<string, string>>>
 
@@ -27,7 +33,9 @@ export function loadElementMap(file?: string): ElementMap {
   try {
     return JSON.parse(readFileSync(path, 'utf8')) as ElementMap
   } catch (err) {
-    throw new Error(`[e2e] element map ${path} is not valid JSON: ${(err as Error).message}`)
+    throw new Error(
+      `[e2e] element map ${path} is not valid JSON: ${(err as Error).message}`
+    )
   }
 }
 

@@ -1,16 +1,65 @@
 {
   "name": "Two Step Chain",
   "nodes": [
-    { "id": "t", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 1, "position": [0,0], "parameters": { "path": "x" } },
-    { "id": "c1", "name": "Draft", "type": "@n8n/n8n-nodes-langchain.chainLlm", "typeVersion": 1.4, "position": [200,0], "parameters": { "text": "=Draft a reply to: {{ $json.msg }}", "promptType": "define" } },
-    { "id": "c2", "name": "Polish", "type": "@n8n/n8n-nodes-langchain.chainLlm", "typeVersion": 1.4, "position": [400,0], "parameters": { "text": "=Polish this draft to be concise.", "promptType": "define" } },
-    { "id": "m1", "name": "Model A", "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi", "typeVersion": 1, "position": [200,200], "parameters": { "model": "gpt-4o-mini" } },
-    { "id": "m2", "name": "Model B", "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic", "typeVersion": 1, "position": [400,200], "parameters": { "model": "claude-3-5-sonnet" } }
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "x" }
+    },
+    {
+      "id": "c1",
+      "name": "Draft",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [200, 0],
+      "parameters": {
+        "text": "=Draft a reply to: {{ $json.msg }}",
+        "promptType": "define"
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Polish",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [400, 0],
+      "parameters": {
+        "text": "=Polish this draft to be concise.",
+        "promptType": "define"
+      }
+    },
+    {
+      "id": "m1",
+      "name": "Model A",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o-mini" }
+    },
+    {
+      "id": "m2",
+      "name": "Model B",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [400, 200],
+      "parameters": { "model": "claude-3-5-sonnet" }
+    }
   ],
   "connections": {
     "Webhook": { "main": [[{ "node": "Draft", "type": "main", "index": 0 }]] },
     "Draft": { "main": [[{ "node": "Polish", "type": "main", "index": 0 }]] },
-    "Model A": { "ai_languageModel": [[{ "node": "Draft", "type": "ai_languageModel", "index": 0 }]] },
-    "Model B": { "ai_languageModel": [[{ "node": "Polish", "type": "ai_languageModel", "index": 0 }]] }
+    "Model A": {
+      "ai_languageModel": [
+        [{ "node": "Draft", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Model B": {
+      "ai_languageModel": [
+        [{ "node": "Polish", "type": "ai_languageModel", "index": 0 }]
+      ]
+    }
   }
 }

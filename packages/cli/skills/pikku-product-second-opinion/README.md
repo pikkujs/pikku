@@ -11,8 +11,8 @@ Existing repo → pikku-software-archaeology → .knowledge/ blueprint → pikku
 
 ## The split from pikku-software-archaeology
 
-- **pikku-software-archaeology** extracts *facts* into `.knowledge/` for a machine (Pikku) to rebuild from. Engineer/generator audience.
-- **pikku-product-second-opinion** reads that blueprint and writes an *opinionated report* for a human to decide from. Non-technical audience.
+- **pikku-software-archaeology** extracts _facts_ into `.knowledge/` for a machine (Pikku) to rebuild from. Engineer/generator audience.
+- **pikku-product-second-opinion** reads that blueprint and writes an _opinionated report_ for a human to decide from. Non-technical audience.
 
 One extracts; one advises. This skill consumes the other's output — it doesn't re-read the code.
 
@@ -30,7 +30,7 @@ One extracts; one advises. This skill consumes the other's output — it doesn't
 4. **Argue improvements in business outcomes** (more reliable / faster / cheaper / safer / easier to hand off), and say whether each is a cheap **rewire** or an expensive **rebuild** — never recommend a rewrite just because the code is messy.
 5. **Mark confidence.** Certain and "I'd need to check" are different sentences.
 6. **Cover the frontend and the other ways the app is used** when the blueprint has them — walk the screens as a journey, call out consistency, and flag the custom-logic pieces (charts/tables/editors) as the real work vs the cheap standard pieces. Name the ways the product can be driven (people/web, developers/API+SDK, AI agents/MCP, power users/CLI) — often a genuine strength.
-7. **Give honest technology tradeoffs — both sides.** Every stack bet (framework, auth, hosting, key libraries) gets what-it-buys AND what-it-costs in business terms, tied to the founder's stage/goals. Don't cheerlead, don't trash, and **don't soften the disadvantages**. The app's own bets are derived from the blueprint (`architecture.json`/`integrations.json`/`frontend.json` + the repo's manifest) — never from a list in the skill, because a verdict you could write before reading the blueprint isn't a second opinion. Separately, and only when a rebuild is actually being recommended, the target stack (Pikku, Better Auth, TanStack Start) gets the *same* both-sides treatment with cons first-class — pinning someone's dependency for being pre-1.0 while staying quiet about the replacement being pre-1.0 too is a pitch, not an opinion.
+7. **Give honest technology tradeoffs — both sides.** Every stack bet (framework, auth, hosting, key libraries) gets what-it-buys AND what-it-costs in business terms, tied to the founder's stage/goals. Don't cheerlead, don't trash, and **don't soften the disadvantages**. The app's own bets are derived from the blueprint (`architecture.json`/`integrations.json`/`frontend.json` + the repo's manifest) — never from a list in the skill, because a verdict you could write before reading the blueprint isn't a second opinion. Separately, and only when a rebuild is actually being recommended, the target stack (Pikku, Better Auth, TanStack Start) gets the _same_ both-sides treatment with cons first-class — pinning someone's dependency for being pre-1.0 while staying quiet about the replacement being pre-1.0 too is a pitch, not an opinion.
 
 ## Files
 

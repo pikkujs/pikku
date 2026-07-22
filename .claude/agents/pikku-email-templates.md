@@ -58,14 +58,14 @@ A flat or nested JSON object of design tokens. Any key path is reachable in temp
     "body": "Inter, Arial, sans-serif"
   },
   "colors": {
-    "canvas":      "#0b1020",
-    "surface":     "#11182d",
-    "border":      "#263252",
-    "text":        "#f7f8fb",
-    "muted":       "#a8b0c5",
-    "accent":      "#7dd3fc",
-    "button":      "#f59e0b",
-    "buttonText":  "#111827"
+    "canvas": "#0b1020",
+    "surface": "#11182d",
+    "border": "#263252",
+    "text": "#f7f8fb",
+    "muted": "#a8b0c5",
+    "accent": "#7dd3fc",
+    "button": "#f59e0b",
+    "buttonText": "#111827"
   }
 }
 ```
@@ -83,10 +83,10 @@ Group strings by template name. Each leaf string can itself contain `{{appName}}
   "confirmEmail": {
     "subject": "Confirm your email for {{appName}}",
     "heading": "Confirm your email",
-    "intro":   "Thanks for signing up for {{appName}}! Click below to confirm {{email}}.",
-    "cta":     "Confirm email",
-    "fallback":"If the button doesn't work, copy this URL into your browser:",
-    "expiry":  "This link expires in 24 hours."
+    "intro": "Thanks for signing up for {{appName}}! Click below to confirm {{email}}.",
+    "cta": "Confirm email",
+    "fallback": "If the button doesn't work, copy this URL into your browser:",
+    "expiry": "This link expires in 24 hours."
   },
   "common": {
     "footer": "If you did not create this account, you can safely ignore this email."
@@ -114,9 +114,13 @@ The outer HTML shell. Must include `{{content}}` where the template body is inje
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{subject}}</title>
   </head>
-  <body style="margin:0;padding:0;background:{{theme.colors.canvas}};font-family:{{theme.fonts.body}};">
+  <body
+    style="margin:0;padding:0;background:{{theme.colors.canvas}};font-family:{{theme.fonts.body}};"
+  >
     <div style="padding:32px 16px;">
-      <div style="max-width:560px;margin:0 auto;background:{{theme.colors.surface}};border:1px solid {{theme.colors.border}};border-radius:24px;padding:32px;">
+      <div
+        style="max-width:560px;margin:0 auto;background:{{theme.colors.surface}};border:1px solid {{theme.colors.border}};border-radius:24px;padding:32px;"
+      >
         {{content}}
       </div>
     </div>
@@ -129,7 +133,9 @@ The outer HTML shell. Must include `{{content}}` where the template body is inje
 A reusable snippet included in templates with `{{> footer}}`.
 
 ```html
-<p style="margin:32px 0 0;color:{{theme.colors.muted}};font-size:13px;line-height:1.6;">
+<p
+  style="margin:32px 0 0;color:{{theme.colors.muted}};font-size:13px;line-height:1.6;"
+>
   {{t.common.footer}}
 </p>
 ```
@@ -151,13 +157,19 @@ Use `{{> partialName}}` (matches the filename without `.html`):
 The body fragment — no `<html>`, `<head>`, or `<body>` tags. The layout partial wraps it automatically via `{{content}}`. Use inline styles; email clients don't support stylesheets.
 
 ```html
-<p style="margin:0 0 12px;color:{{theme.colors.accent}};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">
+<p
+  style="margin:0 0 12px;color:{{theme.colors.accent}};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;"
+>
   {{appName}}
 </p>
-<h1 style="margin:0 0 16px;color:{{theme.colors.text}};font-size:28px;line-height:1.1;">
+<h1
+  style="margin:0 0 16px;color:{{theme.colors.text}};font-size:28px;line-height:1.1;"
+>
   {{t.confirmEmail.heading}}
 </h1>
-<p style="margin:0 0 24px;color:{{theme.colors.muted}};font-size:16px;line-height:1.6;">
+<p
+  style="margin:0 0 24px;color:{{theme.colors.muted}};font-size:16px;line-height:1.6;"
+>
   {{t.confirmEmail.intro}}
 </p>
 <p style="margin:0 0 24px;">
@@ -168,13 +180,19 @@ The body fragment — no `<html>`, `<head>`, or `<body>` tags. The layout partia
     {{t.confirmEmail.cta}}
   </a>
 </p>
-<p style="margin:0 0 8px;color:{{theme.colors.text}};font-size:14px;line-height:1.6;">
+<p
+  style="margin:0 0 8px;color:{{theme.colors.text}};font-size:14px;line-height:1.6;"
+>
   {{t.confirmEmail.fallback}}
 </p>
-<p style="margin:0;color:{{theme.colors.muted}};font-size:14px;line-height:1.6;word-break:break-all;">
+<p
+  style="margin:0;color:{{theme.colors.muted}};font-size:14px;line-height:1.6;word-break:break-all;"
+>
   {{confirmUrl}}
 </p>
-<p style="margin:24px 0 0;color:{{theme.colors.muted}};font-size:13px;line-height:1.6;">
+<p
+  style="margin:24px 0 0;color:{{theme.colors.muted}};font-size:13px;line-height:1.6;"
+>
   {{t.confirmEmail.expiry}}
 </p>
 {{> footer}}
@@ -221,8 +239,16 @@ After scaffolding, wire `GeneratedTemplateEmailService` into `services.ts`. This
 Create this file (it is **not** generated — it's your wiring code):
 
 ```typescript
-import { LocalEmailService, type EmailService, type SendEmailInput, type SendEmailResult } from '@pikku/core/services'
-import { renderEmailTemplate, type EmailTemplateName } from '../../.pikku/email/pikku-emails.gen.js'
+import {
+  LocalEmailService,
+  type EmailService,
+  type SendEmailInput,
+  type SendEmailResult,
+} from '@pikku/core/services'
+import {
+  renderEmailTemplate,
+  type EmailTemplateName,
+} from '../../.pikku/email/pikku-emails.gen.js'
 
 type GeneratedTemplateEmailServiceOptions = {
   delegate?: EmailService
@@ -245,7 +271,9 @@ export class GeneratedTemplateEmailService implements EmailService {
 
     const rendered = renderEmailTemplate({
       name: input.template.name as EmailTemplateName,
-      locale: (input.template.locale ?? this.defaultLocale) as Parameters<typeof renderEmailTemplate>[0]['locale'],
+      locale: (input.template.locale ?? this.defaultLocale) as Parameters<
+        typeof renderEmailTemplate
+      >[0]['locale'],
       data: input.template.data ?? {},
     })
 
@@ -279,7 +307,9 @@ import { GeneratedTemplateEmailService } from './lib/email-service.js'
 
 // inside createSingletonServices:
 const email = new GeneratedTemplateEmailService({
-  delegate: new ResendEmailService({ apiKey: await secrets.getSecret('RESEND_API_KEY') }),
+  delegate: new ResendEmailService({
+    apiKey: await secrets.getSecret('RESEND_API_KEY'),
+  }),
   defaultLocale: 'en',
 })
 ```
@@ -298,8 +328,8 @@ export const registerUser = pikkuFunc({
     await email.send({
       to: userEmail,
       template: {
-        name: 'confirm-email',       // typed — must match a template file name
-        locale,                      // optional; falls back to defaultLocale
+        name: 'confirm-email', // typed — must match a template file name
+        locale, // optional; falls back to defaultLocale
         data: {
           confirmUrl: `https://example.com/verify?token=${token}`,
           email: userEmail,

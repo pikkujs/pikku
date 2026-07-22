@@ -1,1 +1,24 @@
-{"name":"Sg","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"sg"}},{"id":"s","name":"Send","type":"n8n-nodes-base.sendGrid","typeVersion":1,"position":[200,0],"parameters":{"resource":"mail","operation":"send"}}],"connections":{"Webhook":{"main":[[{"node":"Send","type":"main","index":0}]]}}}
+{
+  "name": "Sg",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "sg" }
+    },
+    {
+      "id": "s",
+      "name": "Send",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "mail", "operation": "send" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send", "type": "main", "index": 0 }]] }
+  }
+}

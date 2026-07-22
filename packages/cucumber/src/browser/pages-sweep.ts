@@ -21,10 +21,14 @@ export function staticRoutes(repoRoot: string): string[] {
     const tree = join(appsDir, app, 'src', 'routeTree.gen.ts')
     if (!existsSync(tree)) continue
     const source = readFileSync(tree, 'utf8')
-    const body = source.match(/export interface FileRoutesByFullPath \{([\s\S]*?)\n\}/)?.[1] ?? ''
+    const body =
+      source.match(
+        /export interface FileRoutesByFullPath \{([\s\S]*?)\n\}/
+      )?.[1] ?? ''
     for (const match of body.matchAll(/'([^']+)'\s*:/g)) {
       const path = match[1]!
-      if (path.includes('$') || path.includes('*') || path.includes('{')) continue
+      if (path.includes('$') || path.includes('*') || path.includes('{'))
+        continue
       paths.add(path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path)
     }
   }
@@ -41,7 +45,9 @@ export function staticRoutes(repoRoot: string): string[] {
 function isViteDepOptimizerAbort(failedRequest: string): boolean {
   return (
     /(?:ERR_ABORTED|net::ERR_FAILED|aborted)/i.test(failedRequest) &&
-    /(?:\/@fs\/[^ ]*node_modules|\/node_modules\/\.vite\/|\/\.vite\/deps\/)/.test(failedRequest)
+    /(?:\/@fs\/[^ ]*node_modules|\/node_modules\/\.vite\/|\/\.vite\/deps\/)/.test(
+      failedRequest
+    )
   )
 }
 
@@ -63,7 +69,9 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
       try {
         status = await actor.gotoApp(path)
       } catch (err) {
-        problems = [`navigation threw: ${err instanceof Error ? err.message : String(err)}`]
+        problems = [
+          `navigation threw: ${err instanceof Error ? err.message : String(err)}`,
+        ]
         break
       }
 
@@ -78,32 +86,44 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
       }
       const redirectedToLogin = pathname.startsWith('/login')
       if (redirectedToLogin) {
-        problems.push('redirected to /login (session did not carry or a route guard rejected access)')
+        problems.push(
+          'redirected to /login (session did not carry or a route guard rejected access)'
+        )
       }
 
       const issues = actor.takeIssues()
-      const failedRequests = issues.failedRequests.filter((r) => !isViteDepOptimizerAbort(r))
+      const failedRequests = issues.failedRequests.filter(
+        (r) => !isViteDepOptimizerAbort(r)
+      )
       const viteAborts = issues.failedRequests.length - failedRequests.length
       // A GATEWAY error (502/503/504) on an app /api call means the edge
       // couldn't reach the upstream — the dev server is (re)starting. A plain
       // 500 is the server UP but a handler THREW — a real code bug — so it must
       // NOT be retried away; it stays in `problems` and fails like any error.
-      const gatewayErrors = issues.apiErrors.filter((e) => /^(502|503|504)\b/.test(e))
-      if (issues.apiErrors.length) problems.push(`API errors: ${issues.apiErrors.join(', ')}`)
-      if (issues.pageErrors.length) problems.push(`uncaught exception: ${issues.pageErrors.join(' | ')}`)
-      if (issues.consoleErrors.length) problems.push(`console errors: ${issues.consoleErrors.join(' | ')}`)
-      if (failedRequests.length) problems.push(`failed requests: ${failedRequests.join(' | ')}`)
+      const gatewayErrors = issues.apiErrors.filter((e) =>
+        /^(502|503|504)\b/.test(e)
+      )
+      if (issues.apiErrors.length)
+        problems.push(`API errors: ${issues.apiErrors.join(', ')}`)
+      if (issues.pageErrors.length)
+        problems.push(`uncaught exception: ${issues.pageErrors.join(' | ')}`)
+      if (issues.consoleErrors.length)
+        problems.push(`console errors: ${issues.consoleErrors.join(' | ')}`)
+      if (failedRequests.length)
+        problems.push(`failed requests: ${failedRequests.join(' | ')}`)
 
       // Clean read → trust it. If the only disruption was transient (Vite
       // optimizer, a gateway 502/503/504, or a session-loss /login redirect),
       // wait for the server to settle and retry; otherwise stop — the problems
       // are real (a 500, a console/page error, a persistent /login guard).
-      const transient = viteAborts > 0 || gatewayErrors.length > 0 || redirectedToLogin
+      const transient =
+        viteAborts > 0 || gatewayErrors.length > 0 || redirectedToLogin
       if (!transient || attempt === 2) break
       await actor.waitForServerReady()
     }
 
-    if (problems.length) failures.push(`  ✗ ${path}\n      ${problems.join('\n      ')}`)
+    if (problems.length)
+      failures.push(`  ✗ ${path}\n      ${problems.join('\n      ')}`)
   }
 
   if (failures.length) {

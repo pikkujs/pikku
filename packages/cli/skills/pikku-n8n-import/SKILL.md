@@ -51,13 +51,13 @@ For a directory of exports, run it per file.
 Every unmapped node is a stub that throws `… — implement me`. Classify each by its
 JSDoc marker and route to the matching reference:
 
-| Stub marker / signal | Handle via |
-|---|---|
-| `STUB — generated from n8n node "…" (type "n8n-nodes-base.<svc>…")` | `references/addon-mapping.md` |
-| `STUB — generated from n8n Code node "…"` | `references/code-translation.md` |
-| A `control` stub — Loop Over Items / **splitInBatches**, Switch expr-mode | `references/loops-and-control.md` |
-| `STUB — … vector-store … #902` | rare now (RAG ships as `<store>:query`/`:ingest`); a residual one = an unmapped store → report it, don't guess |
-| Importer `diagnostics` (already exited 1) | explain the reason; the workflow is un-importable as-is |
+| Stub marker / signal                                                      | Handle via                                                                                                     |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `STUB — generated from n8n node "…" (type "n8n-nodes-base.<svc>…")`       | `references/addon-mapping.md`                                                                                  |
+| `STUB — generated from n8n Code node "…"`                                 | `references/code-translation.md`                                                                               |
+| A `control` stub — Loop Over Items / **splitInBatches**, Switch expr-mode | `references/loops-and-control.md`                                                                              |
+| `STUB — … vector-store … #902`                                            | rare now (RAG ships as `<store>:query`/`:ingest`); a residual one = an unmapped store → report it, don't guess |
+| Importer `diagnostics` (already exited 1)                                 | explain the reason; the workflow is un-importable as-is                                                        |
 
 Read a reference file only when you actually hit that stub class.
 
@@ -91,11 +91,11 @@ Missing integrations — install these or the nodes stay stubs:
 
 ## References
 
-| Open when you need to… | Read |
-|---|---|
-| map an integration stub (gmailTool, slackTool, googleSheets, plain action nodes) to an installed addon `ref(...)` | `references/addon-mapping.md` |
-| translate an n8n Code node body into a Pikku function body | `references/code-translation.md` |
-| lower a Loop Over Items / splitInBatches loop, or a Switch that stayed a stub | `references/loops-and-control.md` |
+| Open when you need to…                                                                                            | Read                              |
+| ----------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| map an integration stub (gmailTool, slackTool, googleSheets, plain action nodes) to an installed addon `ref(...)` | `references/addon-mapping.md`     |
+| translate an n8n Code node body into a Pikku function body                                                        | `references/code-translation.md`  |
+| lower a Loop Over Items / splitInBatches loop, or a Switch that stayed a stub                                     | `references/loops-and-control.md` |
 
 ## Final summary
 

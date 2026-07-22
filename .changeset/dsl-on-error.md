@@ -11,10 +11,15 @@ an allowed statement, and step options carried only `retries`/`retryDelay`. A
 step can now name a compensation RPC:
 
 ```ts
-await workflow.do('Charge', 'chargeCard', { id }, {
-  retries: 3,
-  onError: 'refundOrder',
-})
+await workflow.do(
+  'Charge',
+  'chargeCard',
+  { id },
+  {
+    retries: 3,
+    onError: 'refundOrder',
+  }
+)
 ```
 
 Semantics mirror a graph node's `onError` exactly: once the step's retries are

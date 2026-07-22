@@ -47,8 +47,14 @@
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Query Database", "type": "main", "index": 0 }]] },
-    "Query Database": { "main": [[{ "node": "Update Page", "type": "main", "index": 0 }]] },
-    "Update Page": { "main": [[{ "node": "Get Blocks", "type": "main", "index": 0 }]] }
+    "Webhook": {
+      "main": [[{ "node": "Query Database", "type": "main", "index": 0 }]]
+    },
+    "Query Database": {
+      "main": [[{ "node": "Update Page", "type": "main", "index": 0 }]]
+    },
+    "Update Page": {
+      "main": [[{ "node": "Get Blocks", "type": "main", "index": 0 }]]
+    }
   }
 }

@@ -110,7 +110,11 @@ describe('buildRunTimeline', () => {
       ['pending', 'succeeded']
     )
     const succeeded = tl.find((e) => e.type === 'succeeded')!
-    assert.equal(succeeded.at.getTime(), T(5).getTime(), 'falls back to updatedAt')
+    assert.equal(
+      succeeded.at.getTime(),
+      T(5).getTime(),
+      'falls back to updatedAt'
+    )
     assert.deepEqual(succeeded.result, { ok: 1 })
     assert.deepEqual(reconstructFinalState(tl).results, { begin: { ok: 1 } })
   })

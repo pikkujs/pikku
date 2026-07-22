@@ -46,7 +46,13 @@
     },
     "Recursive Character Text Splitter": {
       "ai_textSplitter": [
-        [{ "node": "Default Data Loader", "type": "ai_textSplitter", "index": 0 }]
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
       ]
     },
     "Embeddings OpenAI": {

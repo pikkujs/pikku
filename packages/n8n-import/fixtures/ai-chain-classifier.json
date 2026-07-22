@@ -1,16 +1,50 @@
 {
   "name": "Email Classifier",
   "nodes": [
-    { "id": "t", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 1, "position": [0,0], "parameters": { "path": "x" } },
-    { "id": "c", "name": "Classify", "type": "@n8n/n8n-nodes-langchain.textClassifier", "typeVersion": 1, "position": [200,0],
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "x" }
+    },
+    {
+      "id": "c",
+      "name": "Classify",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [200, 0],
       "parameters": {
         "inputText": "={{ $json.snippet }}",
-        "categories": { "categories": [ { "category": "is_appointment", "description": "requests an appointment" }, { "category": "is_spam", "description": "junk" } ] }
-      } },
-    { "id": "m", "name": "OpenAI Chat Model", "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi", "typeVersion": 1, "position": [200,200], "parameters": { "model": "gpt-4o-mini" } }
+        "categories": {
+          "categories": [
+            {
+              "category": "is_appointment",
+              "description": "requests an appointment"
+            },
+            { "category": "is_spam", "description": "junk" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "m",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o-mini" }
+    }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Classify", "type": "main", "index": 0 }]] },
-    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "Classify", "type": "ai_languageModel", "index": 0 }]] }
+    "Webhook": {
+      "main": [[{ "node": "Classify", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "Classify", "type": "ai_languageModel", "index": 0 }]
+      ]
+    }
   }
 }

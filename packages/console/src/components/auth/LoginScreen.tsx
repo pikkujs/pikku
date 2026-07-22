@@ -63,7 +63,9 @@ export const LoginScreen: React.FC = () => {
                 color="red"
                 variant="light"
               >
-                <Text size="sm">{asI18n((mutation.error as Error).message)}</Text>
+                <Text size="sm">
+                  {asI18n((mutation.error as Error).message)}
+                </Text>
               </Alert>
             )}
 

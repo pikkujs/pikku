@@ -28,6 +28,8 @@
   ],
   "connections": {
     "Hook": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
-    "Respond": { "main": [[{ "node": "AfterResponse", "type": "main", "index": 0 }]] }
+    "Respond": {
+      "main": [[{ "node": "AfterResponse", "type": "main", "index": 0 }]]
+    }
   }
 }

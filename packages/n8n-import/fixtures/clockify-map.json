@@ -1,1 +1,24 @@
-{"name":"Clockify","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"clockify"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.clockify","typeVersion":1,"position":[200,0],"parameters":{"resource":"project","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Clockify",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "clockify" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.clockify",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "project", "operation": "create" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

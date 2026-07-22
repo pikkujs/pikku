@@ -142,9 +142,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
               {available.map((role) => (
                 <Menu.Item
                   key={role}
-                  onClick={() =>
-                    userId && addRole.mutate({ userId, role })
-                  }
+                  onClick={() => userId && addRole.mutate({ userId, role })}
                 >
                   {asI18n(role)}
                 </Menu.Item>

@@ -59,7 +59,6 @@ const verifyPermissions = async (
   return false
 }
 
-
 const globalPermissionsCache: Record<
   string,
   readonly (CorePermissionGroup | CorePikkuPermission)[]

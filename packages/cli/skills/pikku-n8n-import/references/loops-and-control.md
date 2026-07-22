@@ -32,11 +32,11 @@ predecessor and any `$('<loop node>')` become `$item`.
 
 ### Decide the shape first
 
-| Loop body does… | Emit |
-|---|---|
-| transform each item independently (enrich, format, call one thing) | `graph:map` — child = the body |
-| accumulate across items (running total, build one object/array) | a **reduce**: a single generated function over the whole array, not a map — `graph:map` collects per-item results and *loses* the accumulator |
-| pure side-effect per item, nothing downstream consumes results | `graph:map` with **no `next`** (done branch empty) — the safest, unambiguous case |
+| Loop body does…                                                    | Emit                                                                                                                                          |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| transform each item independently (enrich, format, call one thing) | `graph:map` — child = the body                                                                                                                |
+| accumulate across items (running total, build one object/array)    | a **reduce**: a single generated function over the whole array, not a map — `graph:map` collects per-item results and _loses_ the accumulator |
+| pure side-effect per item, nothing downstream consumes results     | `graph:map` with **no `next`** (done branch empty) — the safest, unambiguous case                                                             |
 
 ### Child arity
 
@@ -49,8 +49,8 @@ predecessor and any `$('<loop node>')` become `$item`.
 
 ### Done-branch semantics (ask if it matters)
 
-n8n's done output is version-dependent: it may carry the *original* items or the
-*accumulated* results. `graph:map`'s `next` receives the array of child results.
+n8n's done output is version-dependent: it may carry the _original_ items or the
+_accumulated_ results. `graph:map`'s `next` receives the array of child results.
 If a downstream node reads that array's shape and the distinction matters, add:
 
 ```ts

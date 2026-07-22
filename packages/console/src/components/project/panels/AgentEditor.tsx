@@ -241,7 +241,9 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
       <Textarea
         value={role}
         onChange={(e) => setRole(e.currentTarget.value)}
-        placeholder={asI18n('Who the agent is -- role, expertise, domain context')}
+        placeholder={asI18n(
+          'Who the agent is -- role, expertise, domain context'
+        )}
         autosize
         minRows={2}
         maxRows={6}
@@ -254,7 +256,9 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
       <Textarea
         value={personality}
         onChange={(e) => setPersonality(e.currentTarget.value)}
-        placeholder={asI18n('Defines how the agent behaves -- tone, style, constraints')}
+        placeholder={asI18n(
+          'Defines how the agent behaves -- tone, style, constraints'
+        )}
         autosize
         minRows={3}
         maxRows={10}

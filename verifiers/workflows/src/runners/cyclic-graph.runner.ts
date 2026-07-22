@@ -181,7 +181,9 @@ function assertAllNodesCorrect(steps: HistoryStep[]): void {
   }
 
   // The provenance chain reconstructs the exact walked path, cycle included.
-  const from = new Map(steps.map((s) => [s.stepName, s.fromStepName ?? undefined]))
+  const from = new Map(
+    steps.map((s) => [s.stepName, s.fromStepName ?? undefined])
+  )
   const path: string[] = []
   let cursor: string | undefined = 'finish'
   while (cursor) {
@@ -271,107 +273,102 @@ async function main(): Promise<void> {
 
   let queuedNodes: ReturnType<typeof normalizeNodes> | null = null
 
-  await test(
-    'QUEUED cyclic graph: every node is correct (status, result, provenance)',
-    async () => {
-      const { status, runId } = await runQueued('graphCyclicRetry', {
-        attempts: 3,
-      })
-      assert(status === 'completed', `expected completed, got ${status}`)
-      const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
-      assertAllNodesCorrect(steps)
-      queuedNodes = normalizeNodes(steps)
-    }
-  )
+  await test('QUEUED cyclic graph: every node is correct (status, result, provenance)', async () => {
+    const { status, runId } = await runQueued('graphCyclicRetry', {
+      attempts: 3,
+    })
+    assert(status === 'completed', `expected completed, got ${status}`)
+    const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
+    assertAllNodesCorrect(steps)
+    queuedNodes = normalizeNodes(steps)
+  })
 
-  await test(
-    'INLINE cyclic graph: every node is correct (proves inline supports cycles)',
-    async () => {
-      const { status, runId } = await runInline('graphCyclicRetry', {
-        attempts: 3,
-      })
-      assert(status === 'completed', `expected completed, got ${status}`)
-      const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
-      assertAllNodesCorrect(steps)
-    }
-  )
+  await test('INLINE cyclic graph: every node is correct (proves inline supports cycles)', async () => {
+    const { status, runId } = await runInline('graphCyclicRetry', {
+      attempts: 3,
+    })
+    assert(status === 'completed', `expected completed, got ${status}`)
+    const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
+    assertAllNodesCorrect(steps)
+  })
 
-  await test(
-    'INLINE and QUEUED produce byte-identical node state (transport independence)',
-    async () => {
-      assert(queuedNodes !== null, 'queued run did not record node state')
-      const { status, runId } = await runInline('graphCyclicRetry', {
-        attempts: 3,
-      })
-      assert(status === 'completed', `expected completed, got ${status}`)
-      const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
-      const inlineNodes = normalizeNodes(steps)
-      assert(
-        JSON.stringify(inlineNodes) === JSON.stringify(queuedNodes),
-        `inline vs queued node state diverged\n  inline: ${JSON.stringify(inlineNodes)}\n  queued: ${JSON.stringify(queuedNodes)}`
-      )
-    }
-  )
+  await test('INLINE and QUEUED produce byte-identical node state (transport independence)', async () => {
+    assert(queuedNodes !== null, 'queued run did not record node state')
+    const { status, runId } = await runInline('graphCyclicRetry', {
+      attempts: 3,
+    })
+    assert(status === 'completed', `expected completed, got ${status}`)
+    const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
+    const inlineNodes = normalizeNodes(steps)
+    assert(
+      JSON.stringify(inlineNodes) === JSON.stringify(queuedNodes),
+      `inline vs queued node state diverged\n  inline: ${JSON.stringify(inlineNodes)}\n  queued: ${JSON.stringify(queuedNodes)}`
+    )
+  })
 
-  await test(
-    'TIMELINE time-travel reconstructs run state at any point (cycle included)',
-    async () => {
-      const { status, runId } = await runInline('graphCyclicRetry', {
-        attempts: 3,
-      })
-      assert(status === 'completed', `expected completed, got ${status}`)
+  await test('TIMELINE time-travel reconstructs run state at any point (cycle included)', async () => {
+    const { status, runId } = await runInline('graphCyclicRetry', {
+      attempts: 3,
+    })
+    assert(status === 'completed', `expected completed, got ${status}`)
 
-      // Final state: the reconstructed path + results must match EXPECTED_NODES
-      // exactly — same durable history the provenance test reads, now folded.
-      const final = await workflowService.reconstructRunStateAt(runId)
-      assert(final !== null, 'reconstructRunStateAt returned null for a real run')
+    // Final state: the reconstructed path + results must match EXPECTED_NODES
+    // exactly — same durable history the provenance test reads, now folded.
+    const final = await workflowService.reconstructRunStateAt(runId)
+    assert(final !== null, 'reconstructRunStateAt returned null for a real run')
+    assert(
+      JSON.stringify(final!.path) ===
+        JSON.stringify([
+          'begin',
+          'attempt',
+          'attempt#1',
+          'attempt#2',
+          'finish',
+        ]),
+      `final path mismatch, got ${JSON.stringify(final!.path)}`
+    )
+    for (const [name, expected] of Object.entries(EXPECTED_NODES)) {
       assert(
-        JSON.stringify(final!.path) ===
-          JSON.stringify(['begin', 'attempt', 'attempt#1', 'attempt#2', 'finish']),
-        `final path mismatch, got ${JSON.stringify(final!.path)}`
-      )
-      for (const [name, expected] of Object.entries(EXPECTED_NODES)) {
-        assert(
-          JSON.stringify(final!.results[name]) === JSON.stringify(expected.result),
-          `final result for '${name}' mismatch — expected ${JSON.stringify(expected.result)}, got ${JSON.stringify(final!.results[name])}`
-        )
-      }
-
-      // Time-travel: rewind to the instant the 2nd cycle pass (attempt#1) is
-      // created. begin + attempt have succeeded; attempt#1 is freshly pending;
-      // attempt#2 and finish do not exist yet.
-      const timeline = await workflowService.getRunTimeline(runId)
-      assert(timeline !== null, 'getRunTimeline returned null for a real run')
-      const created = timeline!.find(
-        (e) => e.type === 'pending' && e.stepName === 'attempt#1'
-      )
-      assert(created !== undefined, 'no created event for attempt#1')
-      const mid = await workflowService.reconstructRunStateAt(runId, created!.seq)
-      assert(
-        JSON.stringify(mid!.path) ===
-          JSON.stringify(['begin', 'attempt', 'attempt#1']),
-        `mid-run path mismatch, got ${JSON.stringify(mid!.path)}`
-      )
-      const attempt1 = mid!.steps.find((s) => s.stepName === 'attempt#1')!
-      assert(
-        attempt1.status === 'pending',
-        `attempt#1 should be pending mid-run, got ${attempt1.status}`
-      )
-      assert(
-        mid!.phase === 'running',
-        `mid-run phase should be running, got ${mid!.phase}`
-      )
-      assert(
-        mid!.results.begin !== undefined && mid!.results.attempt !== undefined,
-        'begin + attempt results must be in the replay cache mid-run'
-      )
-      assert(
-        mid!.results['attempt#1'] === undefined &&
-          mid!.results.finish === undefined,
-        'future steps must NOT be in the replay cache mid-run'
+        JSON.stringify(final!.results[name]) ===
+          JSON.stringify(expected.result),
+        `final result for '${name}' mismatch — expected ${JSON.stringify(expected.result)}, got ${JSON.stringify(final!.results[name])}`
       )
     }
-  )
+
+    // Time-travel: rewind to the instant the 2nd cycle pass (attempt#1) is
+    // created. begin + attempt have succeeded; attempt#1 is freshly pending;
+    // attempt#2 and finish do not exist yet.
+    const timeline = await workflowService.getRunTimeline(runId)
+    assert(timeline !== null, 'getRunTimeline returned null for a real run')
+    const created = timeline!.find(
+      (e) => e.type === 'pending' && e.stepName === 'attempt#1'
+    )
+    assert(created !== undefined, 'no created event for attempt#1')
+    const mid = await workflowService.reconstructRunStateAt(runId, created!.seq)
+    assert(
+      JSON.stringify(mid!.path) ===
+        JSON.stringify(['begin', 'attempt', 'attempt#1']),
+      `mid-run path mismatch, got ${JSON.stringify(mid!.path)}`
+    )
+    const attempt1 = mid!.steps.find((s) => s.stepName === 'attempt#1')!
+    assert(
+      attempt1.status === 'pending',
+      `attempt#1 should be pending mid-run, got ${attempt1.status}`
+    )
+    assert(
+      mid!.phase === 'running',
+      `mid-run phase should be running, got ${mid!.phase}`
+    )
+    assert(
+      mid!.results.begin !== undefined && mid!.results.attempt !== undefined,
+      'begin + attempt results must be in the replay cache mid-run'
+    )
+    assert(
+      mid!.results['attempt#1'] === undefined &&
+        mid!.results.finish === undefined,
+      'future steps must NOT be in the replay cache mid-run'
+    )
+  })
 
   console.log('\n=== Summary ===')
   const passed = results.filter((r) => r.ok).length

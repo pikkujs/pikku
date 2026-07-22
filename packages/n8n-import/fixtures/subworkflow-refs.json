@@ -1,7 +1,12 @@
 {
   "name": "Recursive Importer",
   "nodes": [
-    { "name": "Trigger", "type": "n8n-nodes-base.manualTrigger", "parameters": {}, "position": [0, 0] },
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
     {
       "name": "CallSelf",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -13,12 +18,23 @@
       "name": "CallOther",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "parameters": { "workflowId": { "__rl": true, "mode": "list", "value": "TARGET123", "cachedResultName": "enrich" } },
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "TARGET123",
+          "cachedResultName": "enrich"
+        }
+      },
       "position": [400, 0]
     }
   ],
   "connections": {
-    "Trigger": { "main": [[{ "node": "CallSelf", "type": "main", "index": 0 }]] },
-    "CallSelf": { "main": [[{ "node": "CallOther", "type": "main", "index": 0 }]] }
+    "Trigger": {
+      "main": [[{ "node": "CallSelf", "type": "main", "index": 0 }]]
+    },
+    "CallSelf": {
+      "main": [[{ "node": "CallOther", "type": "main", "index": 0 }]]
+    }
   }
 }

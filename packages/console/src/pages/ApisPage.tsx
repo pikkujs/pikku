@@ -56,13 +56,17 @@ const ApisPageInner: React.FC<ApisPageProps> = ({
   const renderTab = () => {
     switch (tab) {
       case 'channels':
-        return <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
+        return (
+          <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
+        )
       case 'mcp':
         return <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
       case 'cli':
         return <CliTab searchQuery={searchQuery} />
       case 'gateways':
-        return <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
+        return (
+          <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
+        )
       default:
         return <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
     }

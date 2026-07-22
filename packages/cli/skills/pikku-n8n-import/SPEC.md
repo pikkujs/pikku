@@ -11,6 +11,7 @@ remainder with judgment, report gaps that need a human decision, and verify.
 ## Scope
 
 In scope:
+
 - Running `pikku import n8n` and triaging its output.
 - Filling integration stubs (→ addon refs), Code stubs (→ function bodies), and
   loop/control stubs (→ `graph:map`/reduce/branch).
@@ -18,6 +19,7 @@ In scope:
 - Verifying via `pikku all` + `tsc` + a zero-surviving-stub check.
 
 Out of scope:
+
 - Extending `@pikku/n8n-import` itself (it is frozen; do not add per-service tables
   or new compiler rules to it).
 - Authoring workflows from scratch (`pikku-workflow`) or hand-written addon wiring
@@ -47,6 +49,7 @@ Out of scope:
 ## Source And Evidence Model
 
 Authoritative sources:
+
 - `@pikku/n8n-import` codegen (stub markers, manifest shape, `import-n8n` command).
 - `@pikku/addon-graph` function contracts (`graph:map`/`fanout`, `branch`).
 - Installed `@pikku/addon-*` source (function names verified by grep, never guessed).

@@ -504,8 +504,12 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                     </Group>
                     {branch.entry && (
                       <Group gap={4}>
-                        <Text size="sm" c="dimmed">{asI18n('Entry:')}</Text>
-                        <Text size="sm" ff="monospace">{asI18n(branch.entry)}</Text>
+                        <Text size="sm" c="dimmed">
+                          {asI18n('Entry:')}
+                        </Text>
+                        <Text size="sm" ff="monospace">
+                          {asI18n(branch.entry)}
+                        </Text>
                       </Group>
                     )}
                   </Box>
@@ -530,8 +534,12 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                     </Group>
                     {caseItem.entry && (
                       <Group gap={4}>
-                        <Text size="sm" c="dimmed">{asI18n('Entry:')}</Text>
-                        <Text size="sm" ff="monospace">{asI18n(caseItem.entry)}</Text>
+                        <Text size="sm" c="dimmed">
+                          {asI18n('Entry:')}
+                        </Text>
+                        <Text size="sm" ff="monospace">
+                          {asI18n(caseItem.entry)}
+                        </Text>
                       </Group>
                     )}
                   </Box>
@@ -550,8 +558,12 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                       </PikkuBadge>
                     </Group>
                     <Group gap={4}>
-                      <Text size="sm" c="dimmed">{asI18n('Entry:')}</Text>
-                      <Text size="sm" ff="monospace">{asI18n(node.defaultEntry)}</Text>
+                      <Text size="sm" c="dimmed">
+                        {asI18n('Entry:')}
+                      </Text>
+                      <Text size="sm" ff="monospace">
+                        {asI18n(node.defaultEntry)}
+                      </Text>
                     </Group>
                   </Box>
                 )}

@@ -45,33 +45,33 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
         const checked = isScopeSelected(selected, row.id)
         const locked = isScopeLockedByAncestor(selected, row.id)
         return (
-        <Box key={row.id} pl={row.depth * 20}>
-          <Checkbox
-            checked={checked}
-            onChange={() => onChange(toggleScope(selected, row.id))}
-            disabled={isScopeRowDisabled(row, checked, disabled) || locked}
-            aria-label={
-              row.description ? `${row.id} — ${row.description}` : row.id
-            }
-            label={
-              <Group gap={8} wrap="nowrap">
-                <Text size="sm" fw={row.hasChildren ? 600 : 400}>
-                  {asI18n(row.segment)}
-                </Text>
-                {row.description && (
-                  <Text size="xs" c="dimmed">
-                    {asI18n(row.description)}
+          <Box key={row.id} pl={row.depth * 20}>
+            <Checkbox
+              checked={checked}
+              onChange={() => onChange(toggleScope(selected, row.id))}
+              disabled={isScopeRowDisabled(row, checked, disabled) || locked}
+              aria-label={
+                row.description ? `${row.id} — ${row.description}` : row.id
+              }
+              label={
+                <Group gap={8} wrap="nowrap">
+                  <Text size="sm" fw={row.hasChildren ? 600 : 400}>
+                    {asI18n(row.segment)}
                   </Text>
-                )}
-                {!row.declared && (
-                  <Text size="xs" c="orange">
-                    {m.scopes_state_stale()}
-                  </Text>
-                )}
-              </Group>
-            }
-          />
-        </Box>
+                  {row.description && (
+                    <Text size="xs" c="dimmed">
+                      {asI18n(row.description)}
+                    </Text>
+                  )}
+                  {!row.declared && (
+                    <Text size="xs" c="orange">
+                      {m.scopes_state_stale()}
+                    </Text>
+                  )}
+                </Group>
+              }
+            />
+          </Box>
         )
       })}
     </Stack>

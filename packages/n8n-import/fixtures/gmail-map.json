@@ -43,8 +43,14 @@
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]] },
-    "Send Email": { "main": [[{ "node": "List Messages", "type": "main", "index": 0 }]] },
-    "List Messages": { "main": [[{ "node": "Mark Read", "type": "main", "index": 0 }]] }
+    "Webhook": {
+      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
+    },
+    "Send Email": {
+      "main": [[{ "node": "List Messages", "type": "main", "index": 0 }]]
+    },
+    "List Messages": {
+      "main": [[{ "node": "Mark Read", "type": "main", "index": 0 }]]
+    }
   }
 }

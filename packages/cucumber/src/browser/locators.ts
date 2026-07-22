@@ -12,8 +12,10 @@ import { registered, type ElementMap } from './elements.js'
  * exact, and unregistered UI still resolves heuristically.
  */
 
-const looksLikeCss = (s: string) => /[\[#.>:\s]/.test(s) || s.startsWith('input')
-export const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const looksLikeCss = (s: string) =>
+  /[\[#.>:\s]/.test(s) || s.startsWith('input')
+export const escapeRegex = (s: string) =>
+  s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
  * Resolve a form field (TextInput/Textarea/NumberInput/Select input/…).
@@ -49,7 +51,10 @@ export async function field(
   return page.getByPlaceholder(name, { exact: false }).first()
 }
 
-export async function isVisibleWithin(target: Locator, timeout = 5000): Promise<boolean> {
+export async function isVisibleWithin(
+  target: Locator,
+  timeout = 5000
+): Promise<boolean> {
   try {
     await target.waitFor({ state: 'visible', timeout })
     return true
@@ -91,7 +96,11 @@ export async function clickable(
   label: string,
   elements?: ElementMap
 ): Promise<Locator | null> {
-  const explicit = registered(elements, ['buttons', 'links', 'tabs', 'menus'], label)
+  const explicit = registered(
+    elements,
+    ['buttons', 'links', 'tabs', 'menus'],
+    label
+  )
   if (explicit) {
     const target = page.locator(explicit).first()
     if (await isVisibleWithin(target, 3000)) return target
@@ -118,12 +127,19 @@ export async function click(page: Page, label: string, elements?: ElementMap) {
 }
 
 /** Tabs.Tab — registered selector, else role=tab by visible label. */
-export async function switchTab(page: Page, label: string, elements?: ElementMap) {
+export async function switchTab(
+  page: Page,
+  label: string,
+  elements?: ElementMap
+) {
   const explicit = registered(elements, ['tabs'], label)
   const tab = explicit
     ? page.locator(explicit).first()
-    : page.getByRole('tab', { name: new RegExp(escapeRegex(label), 'i') }).first()
-  if (!(await isVisibleWithin(tab))) throw new Error(`Could not find tab "${label}"`)
+    : page
+        .getByRole('tab', { name: new RegExp(escapeRegex(label), 'i') })
+        .first()
+  if (!(await isVisibleWithin(tab)))
+    throw new Error(`Could not find tab "${label}"`)
   await activate(tab)
   await page.waitForTimeout(250)
 }
@@ -162,7 +178,9 @@ export async function choose(
   elements?: ElementMap
 ) {
   const group = await field(page, groupName, elements)
-  const radio = group.getByRole('radio', { name: new RegExp(escapeRegex(value), 'i') }).first()
+  const radio = group
+    .getByRole('radio', { name: new RegExp(escapeRegex(value), 'i') })
+    .first()
   if (await radio.count()) {
     await radio.check({ force: true })
     return
@@ -195,7 +213,9 @@ export async function setChecked(
   } catch {
     // Input fully hidden — click the closest Mantine wrapper/label instead.
     await target.evaluate((el) => {
-      const wrapper = (el as HTMLElement).closest('label, [class*="Switch"], [class*="Checkbox"], [class*="Chip"]')
+      const wrapper = (el as HTMLElement).closest(
+        'label, [class*="Switch"], [class*="Checkbox"], [class*="Chip"]'
+      )
       ;((wrapper ?? el) as HTMLElement).click()
     })
   }
@@ -224,7 +244,9 @@ export async function pickDate(
   // Button-style picker: open the popover and click the day (aria-label is the
   // full date on Mantine day cells).
   await target.click()
-  const day = page.locator(`[aria-label*="${value}"], [data-date="${value}"]`).first()
+  const day = page
+    .locator(`[aria-label*="${value}"], [data-date="${value}"]`)
+    .first()
   if (!(await isVisibleWithin(day, 3000))) {
     throw new Error(
       `Could not pick date "${value}" in "${name}" — not typeable and no matching day cell`
@@ -265,7 +287,9 @@ export async function clickInRow(page: Page, rowText: string, label: string) {
   const scope = row(page, rowText)
   const previousUrl = page.url()
   for (const role of ['button', 'link', 'menuitem'] as const) {
-    const candidate = scope.getByRole(role, { name: new RegExp(label, 'i') }).first()
+    const candidate = scope
+      .getByRole(role, { name: new RegExp(label, 'i') })
+      .first()
     if (await isVisibleWithin(candidate)) {
       await activate(candidate)
       await settleAfterClick(page, previousUrl)
@@ -282,7 +306,11 @@ export async function clickInRow(page: Page, rowText: string, label: string) {
 }
 
 /** Kebab/Menu pattern: open the row's menu trigger, then click the item. */
-export async function chooseFromRowMenu(page: Page, rowText: string, item: string) {
+export async function chooseFromRowMenu(
+  page: Page,
+  rowText: string,
+  item: string
+) {
   const scope = row(page, rowText)
   const trigger = scope
     .locator('[aria-haspopup="menu"], [data-testid*="menu"], button:has(svg)')
@@ -322,14 +350,20 @@ export async function resolveDialog(page: Page, accept: boolean) {
       await page.keyboard.press('Escape')
       return
     }
-    throw new Error('A dialog is open but no confirm-style button was found in it')
+    throw new Error(
+      'A dialog is open but no confirm-style button was found in it'
+    )
   }
   // No Mantine dialog — assume the click that follows triggers window.confirm,
   // which the one-shot handler above resolves.
 }
 
 /** @mantine/notifications toast (falls back to role=alert). */
-export async function expectNotification(page: Page, text: string, timeout = 10_000) {
+export async function expectNotification(
+  page: Page,
+  text: string,
+  timeout = 10_000
+) {
   const toast = page
     .locator('[class*="Notification"], [role="alert"], [role="status"]')
     .filter({ hasText: text })

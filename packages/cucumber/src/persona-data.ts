@@ -30,9 +30,7 @@ export class PersonaData<T> {
   get(name: string): T {
     if (!(name in this.map)) {
       const known = Object.keys(this.map).join(', ')
-      throw new Error(
-        `No data for persona "${name}". Known personas: ${known}`
-      )
+      throw new Error(`No data for persona "${name}". Known personas: ${known}`)
     }
     return this.map[name]!
   }

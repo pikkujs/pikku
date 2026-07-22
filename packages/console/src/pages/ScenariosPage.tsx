@@ -42,19 +42,21 @@ const ScenariosPageInner: React.FC = () => {
     return (Object.values(meta.workflows ?? {}) as any[])
       .filter((w) => w.source === 'scenario' || w.scenario === true)
       .filter((w) => !(w.tags ?? []).includes('test-fixture'))
-      .map((w): FlowEntry => ({
-        name: w.name,
-        displayName: toEnglishName(w.name),
-        description: w.description ?? w.summary,
-        stepCount: w.nodes
-          ? Object.keys(w.nodes).length
-          : (w.steps?.length ?? 0),
-        cast: (w.actors ?? []).map((key: string) => ({
-          key,
-          name: (actors as any)[key]?.name,
-          jobTitle: (actors as any)[key]?.jobTitle,
-        })),
-      }))
+      .map(
+        (w): FlowEntry => ({
+          name: w.name,
+          displayName: toEnglishName(w.name),
+          description: w.description ?? w.summary,
+          stepCount: w.nodes
+            ? Object.keys(w.nodes).length
+            : (w.steps?.length ?? 0),
+          cast: (w.actors ?? []).map((key: string) => ({
+            key,
+            name: (actors as any)[key]?.name,
+            jobTitle: (actors as any)[key]?.jobTitle,
+          })),
+        })
+      )
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [meta.workflows, meta.scenarioActors])
 
@@ -71,14 +73,16 @@ const ScenariosPageInner: React.FC = () => {
       }
     }
     return Object.entries(actors)
-      .map(([key, cfg]: [string, any]): PersonaEntry => ({
-        key,
-        name: cfg.name ?? key,
-        email: cfg.email,
-        jobTitle: cfg.jobTitle,
-        personality: cfg.personality,
-        flows: flowsByActor.get(key) ?? [],
-      }))
+      .map(
+        ([key, cfg]: [string, any]): PersonaEntry => ({
+          key,
+          name: cfg.name ?? key,
+          email: cfg.email,
+          jobTitle: cfg.jobTitle,
+          personality: cfg.personality,
+          flows: flowsByActor.get(key) ?? [],
+        })
+      )
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [meta.scenarioActors, meta.workflows])
 

@@ -15,7 +15,9 @@ interface PermissionItem {
   data: any
 }
 
-export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+export const PermissionsTab: React.FC<{ searchQuery: string }> = ({
+  searchQuery,
+}) => {
   const { meta, loading } = usePikkuMeta()
   useLocale()
   const { openPermission } = usePanelContext()

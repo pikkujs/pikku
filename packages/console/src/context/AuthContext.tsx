@@ -29,7 +29,11 @@ export interface AuthContextValue {
   setServerUrl: (url: string) => void
   refetchSession: () => Promise<unknown>
   /** Sign in. Pass `nextServerUrl` to switch instance and authenticate against it in one step. */
-  signIn: (email: string, password: string, nextServerUrl?: string) => Promise<void>
+  signIn: (
+    email: string,
+    password: string,
+    nextServerUrl?: string
+  ) => Promise<void>
   signOut: () => Promise<void>
   listUsers: (search?: string) => Promise<AuthUser[]>
 }
@@ -44,10 +48,7 @@ export const AuthProvider: React.FC<{
 }> = ({ children, serverUrl }) => {
   const [activeUrl, setActiveUrl] = useState(serverUrl ?? getServerUrl())
   const queryClient = useQueryClient()
-  const client = useMemo(
-    () => createConsoleAuthClient(activeUrl),
-    [activeUrl]
-  )
+  const client = useMemo(() => createConsoleAuthClient(activeUrl), [activeUrl])
 
   const sessionQuery = useQuery({
     queryKey: [...SESSION_QUERY_KEY, activeUrl],

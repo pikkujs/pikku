@@ -52,24 +52,26 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         padding: compact ? '24px 16px' : '44px 16px',
       }}
     >
-      {hero ?? (Icon && (
-        <Box
-          style={{
-            width: tokenSize,
-            height: tokenSize,
-            borderRadius: tokenSize * 0.28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--app-panel-bg, var(--mantine-color-body))',
-            border: '0.5px solid var(--app-border, var(--mantine-color-default-border))',
-            boxShadow: 'var(--app-shadow-sm, 0 1px 3px rgba(0,0,0,.06))',
-            flexShrink: 0,
-          }}
-        >
-          <Icon size={tokenSize * 0.46} strokeWidth={1.5} />
-        </Box>
-      ))}
+      {hero ??
+        (Icon && (
+          <Box
+            style={{
+              width: tokenSize,
+              height: tokenSize,
+              borderRadius: tokenSize * 0.28,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--app-panel-bg, var(--mantine-color-body))',
+              border:
+                '0.5px solid var(--app-border, var(--mantine-color-default-border))',
+              boxShadow: 'var(--app-shadow-sm, 0 1px 3px rgba(0,0,0,.06))',
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={tokenSize * 0.46} strokeWidth={1.5} />
+          </Box>
+        ))}
 
       <Text
         mt={hasTop ? (compact ? 14 : 24) : 0}

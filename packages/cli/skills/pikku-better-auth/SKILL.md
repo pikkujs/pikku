@@ -85,7 +85,12 @@ export const auth = pikkuBetterAuth(async ({ secrets }) => {
     secret: BETTER_AUTH_SECRET,
     // memoryAdapter needs an array per model — `{}` throws "Model user not found"
     // at runtime. Swap for the Kysely adapter in production (see below).
-    database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
+    database: memoryAdapter({
+      user: [],
+      session: [],
+      account: [],
+      verification: [],
+    }),
     emailAndPassword: { enabled: true },
     // ALWAYS enable for deployed apps — see "Stateless session" below.
     session: { cookieCache: { enabled: true } },
@@ -97,6 +102,7 @@ export const auth = pikkuBetterAuth(async ({ secrets }) => {
 ```
 
 **Key points:**
+
 - `socialProviders` keys must be string literals — the CLI reads them statically to emit a `wireSecret` per provider. Provider keys mirror better-auth's built-in ids exactly (e.g. `microsoft`, NOT `microsoft-entra-id`; `cognito`; `github`).
 - The factory runs lazily on the first auth request, so it pulls secrets/DB off the injected `services`.
 - The default `basePath` is `/api/auth`. Override it by passing `basePath` to `betterAuth`.
@@ -114,7 +120,7 @@ Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a
 
 **Customizing the session bridge (`mapSession`, `impersonation`, `apiKey`, …):** you do NOT chain a second middleware on top of the generated one — register your OWN global session middleware and the CLI steps aside (it stops generating its default). This works on both paths and is detected the same way:
 
-- **Stateless (cookieCache on):** register `betterAuthStatelessSession({ mapSession })` **globally** — `addHTTPMiddleware('*', [...])` or `addGlobalMiddleware([...])`. The CLI sees the global registration and skips emitting `auth-middleware.gen.ts` (pikkujs/pikku#754), so you keep cookieCache's lean bundles *and* your custom fields.
+- **Stateless (cookieCache on):** register `betterAuthStatelessSession({ mapSession })` **globally** — `addHTTPMiddleware('*', [...])` or `addGlobalMiddleware([...])`. The CLI sees the global registration and skips emitting `auth-middleware.gen.ts` (pikkujs/pikku#754), so you keep cookieCache's lean bundles _and_ your custom fields.
 - **Stateful (cookieCache off):** register `betterAuthSession({ mapSession, impersonation })` **globally**. The CLI detects it (`hasUserSessionMiddleware`) and omits its own `addHTTPMiddleware('*', [betterAuthSession()])` from `auth.gen.ts` — so there's exactly one session bridge in the chain, yours.
 
 In both cases a **route-scoped** registration (`addHTTPMiddleware('/some/path', [...])`) does NOT count — only a global one suppresses the generated default. The generated middleware in a `.gen.ts` file is also ignored by the detector, so regeneration never self-suppresses.
@@ -127,9 +133,9 @@ For real deployments swap `memoryAdapter` for the Kysely adapter backed by an in
 import { kyselyAdapter } from 'better-auth/adapters/kysely'
 
 export const auth = pikkuBetterAuth(async ({ secrets, kysely }) => {
-  const { BETTER_AUTH_SECRET } = await secrets.getSecrets<{ BETTER_AUTH_SECRET: string }>([
-    'BETTER_AUTH_SECRET',
-  ])
+  const { BETTER_AUTH_SECRET } = await secrets.getSecrets<{
+    BETTER_AUTH_SECRET: string
+  }>(['BETTER_AUTH_SECRET'])
   return betterAuth({
     secret: BETTER_AUTH_SECRET,
     database: kyselyAdapter(kysely, { type: 'postgres' }),
@@ -164,7 +170,12 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables }) => {
 
   return betterAuth({
     secret: BETTER_AUTH_SECRET,
-    database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
+    database: memoryAdapter({
+      user: [],
+      session: [],
+      account: [],
+      verification: [],
+    }),
     socialProviders: {
       microsoft: { ...MICROSOFT_OAUTH, tenantId: MICROSOFT_TENANT_ID },
     },
@@ -201,13 +212,13 @@ For public endpoints that optionally vary by viewer, use `pikkuSessionlessFunc` 
 
 Better Auth serves everything under `basePath` (default `/api/auth`). Call these directly — the Pikku SDK does not wrap them.
 
-| Action | Request | Result |
-|---|---|---|
-| Sign up | `POST /api/auth/sign-up/email` `{ name, email, password }` | 200 + `better-auth.session_token` cookie |
-| Log in | `POST /api/auth/sign-in/email` `{ email, password }` | 200 + cookie; wrong creds → 401 `{ code: "INVALID_EMAIL_OR_PASSWORD" }` |
-| Session | `GET /api/auth/get-session` | `{ session, user }` or `null` |
-| Social sign-in | `POST /api/auth/sign-in/social` `{ provider, callbackURL }` | 200 `{ url, redirect }` (authorize URL) |
-| Sign out | `POST /api/auth/sign-out` | 200, clears cookie |
+| Action         | Request                                                     | Result                                                                  |
+| -------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Sign up        | `POST /api/auth/sign-up/email` `{ name, email, password }`  | 200 + `better-auth.session_token` cookie                                |
+| Log in         | `POST /api/auth/sign-in/email` `{ email, password }`        | 200 + cookie; wrong creds → 401 `{ code: "INVALID_EMAIL_OR_PASSWORD" }` |
+| Session        | `GET /api/auth/get-session`                                 | `{ session, user }` or `null`                                           |
+| Social sign-in | `POST /api/auth/sign-in/social` `{ provider, callbackURL }` | 200 `{ url, redirect }` (authorize URL)                                 |
+| Sign out       | `POST /api/auth/sign-out`                                   | 200, clears cookie                                                      |
 
 **`Origin` header on state-changing POSTs:** better-auth enforces an `Origin` header matching `baseURL` on POSTs such as sign-out — omit it and you get `403`. Browsers send it automatically; server-to-server callers must set it.
 

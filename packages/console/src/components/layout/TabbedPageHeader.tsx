@@ -37,7 +37,12 @@ export const TabbedPageHeader: React.FC<TabbedPageHeaderProps> = ({
       docsHref={docsHref}
       actions={
         <PageHeaderControls>
-          <SegmentedControl size="xs" value={activeTab} onChange={onTabChange} data={tabs} />
+          <SegmentedControl
+            size="xs"
+            value={activeTab}
+            onChange={onTabChange}
+            data={tabs}
+          />
           {rightSection}
         </PageHeaderControls>
       }

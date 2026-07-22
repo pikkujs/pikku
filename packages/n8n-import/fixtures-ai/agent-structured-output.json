@@ -23,7 +23,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [200, 200],
-      "parameters": { "modelName": "models/gemini-1.5-flash", "options": { "temperature": 0.2 } }
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": { "temperature": 0.2 }
+      }
     },
     {
       "id": "op",
@@ -38,8 +41,18 @@
     }
   ],
   "connections": {
-    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
-    "Gemini Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
-    "Structured Output Parser": { "ai_outputParser": [[{ "node": "AI Agent", "type": "ai_outputParser", "index": 0 }]] }
+    "Chat Trigger": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [{ "node": "AI Agent", "type": "ai_outputParser", "index": 0 }]
+      ]
+    }
   }
 }

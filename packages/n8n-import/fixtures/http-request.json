@@ -21,7 +21,9 @@
         "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{ "name": "X-Token", "value": "={{ $json.body.token }}" }]
+          "parameters": [
+            { "name": "X-Token", "value": "={{ $json.body.token }}" }
+          ]
         },
         "sendQuery": true,
         "queryParameters": {

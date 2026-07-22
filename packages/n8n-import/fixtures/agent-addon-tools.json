@@ -61,7 +61,11 @@
       "name": "Baserow",
       "type": "n8n-nodes-base.baserowTool",
       "typeVersion": 1,
-      "parameters": { "tableId": 372174, "databaseId": 146496, "additionalOptions": {} },
+      "parameters": {
+        "tableId": 372174,
+        "databaseId": 146496,
+        "additionalOptions": {}
+      },
       "position": [440, 720]
     },
     {
@@ -73,14 +77,34 @@
     }
   ],
   "connections": {
-    "Chat Trigger": { "main": [[{ "node": "Agent", "type": "main", "index": 0 }]] },
-    "Model": { "ai_languageModel": [[{ "node": "Agent", "type": "ai_languageModel", "index": 0 }]] },
-    "Send Email": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "Add Event": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "MCP": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "Wikipedia": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "Calculator": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "Baserow": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] },
-    "Weather": { "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]] }
+    "Chat Trigger": {
+      "main": [[{ "node": "Agent", "type": "main", "index": 0 }]]
+    },
+    "Model": {
+      "ai_languageModel": [
+        [{ "node": "Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Send Email": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Add Event": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "MCP": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Wikipedia": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Calculator": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Baserow": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Weather": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    }
   }
 }

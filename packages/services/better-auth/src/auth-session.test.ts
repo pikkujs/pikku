@@ -23,7 +23,12 @@ async function run(opts: {
   const captured: any[] = []
   let warned = false
   const services: any = {
-    logger: { info() {}, warn() { warned = true } },
+    logger: {
+      info() {},
+      warn() {
+        warned = true
+      },
+    },
     auth: async () => ({
       api: {
         getSession: async () =>
@@ -51,7 +56,9 @@ async function run(opts: {
       : {
           impersonation: {
             ...(opts.canImpersonate
-              ? { canImpersonate: (result: any) => opts.canImpersonate!(result) }
+              ? {
+                  canImpersonate: (result: any) => opts.canImpersonate!(result),
+                }
               : {}),
             loadUser: async (userId: string) => USERS[userId] ?? null,
           },

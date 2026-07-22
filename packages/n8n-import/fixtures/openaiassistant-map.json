@@ -1,1 +1,24 @@
-{"name":"Openaiassistant","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"openaiassistant"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.openAiAssistant","typeVersion":1,"position":[200,0],"parameters":{"resource":"default","operation":"chatComplete"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Openaiassistant",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "openaiassistant" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.openAiAssistant",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resource": "default", "operation": "chatComplete" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

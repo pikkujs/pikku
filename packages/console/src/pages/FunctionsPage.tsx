@@ -1,5 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { Text, Badge, Group, UnstyledButton, TextInput } from '@pikku/mantine/core'
+import {
+  Text,
+  Badge,
+  Group,
+  UnstyledButton,
+  TextInput,
+} from '@pikku/mantine/core'
 import { FunctionSquare, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { asI18n } from '@pikku/react'
@@ -310,7 +316,11 @@ export const FunctionsPage: React.FC<{
           />
         }
         emptyPanelMessage={m.functions_select_function()}
-        hidePanel={isLoading || !rawFunctions || (rawFunctions as unknown as any[]).length === 0}
+        hidePanel={
+          isLoading ||
+          !rawFunctions ||
+          (rawFunctions as unknown as any[]).length === 0
+        }
       >
         <FunctionsList
           functions={functions}

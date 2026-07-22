@@ -26,7 +26,9 @@ export const mapPikkuJobToPgBoss = (
 
   if (options?.backoff !== undefined) {
     const type =
-      typeof options.backoff === 'string' ? options.backoff : options.backoff.type
+      typeof options.backoff === 'string'
+        ? options.backoff
+        : options.backoff.type
     const delay =
       typeof options.backoff === 'object' ? options.backoff.delay : undefined
     pgBossOptions.retryBackoff = type === 'exponential'

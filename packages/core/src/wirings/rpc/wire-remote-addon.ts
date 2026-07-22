@@ -18,7 +18,12 @@ import type { CoreServices, PikkuWire } from '../../types/core.types.js'
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
-  | { resolve: (services: CoreServices, wire: PikkuWire) => string | Promise<string> }
+  | {
+      resolve: (
+        services: CoreServices,
+        wire: PikkuWire
+      ) => string | Promise<string>
+    }
 
 export type WireRemoteAddonConfig = {
   /** Consumer-facing namespace, e.g. `registry` → `rpc('registry:getOpenApi')` */

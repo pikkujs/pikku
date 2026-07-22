@@ -838,7 +838,9 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return result
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const instances: Array<{

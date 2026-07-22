@@ -1,5 +1,13 @@
 import React from 'react'
-import { Text, Box, Group, Divider, Table, Anchor, Badge } from '@pikku/mantine/core'
+import {
+  Text,
+  Box,
+  Group,
+  Divider,
+  Table,
+  Anchor,
+  Badge,
+} from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -88,7 +96,9 @@ const WiredToSection: React.FC<{ functionName: string }> = ({
 
   return (
     <Box>
-      <SectionLabel>{m.common_details_wired_to({ count: allWirings.length })}</SectionLabel>
+      <SectionLabel>
+        {m.common_details_wired_to({ count: allWirings.length })}
+      </SectionLabel>
       <Table verticalSpacing={4} horizontalSpacing="xs">
         <Table.Thead>
           <Table.Tr>
@@ -166,7 +176,10 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {pikkuFuncId && (
-        <MetaRow label={functionLinkLabel ?? m.common_details_function()} labelWidth={90}>
+        <MetaRow
+          label={functionLinkLabel ?? m.common_details_function()}
+          labelWidth={90}
+        >
           <FunctionValue pikkuFuncId={pikkuFuncId} />
         </MetaRow>
       )}
@@ -239,8 +252,14 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       {hasSchemas && (
         <>
           <Divider mt="sm" />
-          <SchemaSection label={m.common_details_input()} schemaName={inputSchemaName} />
-          <SchemaSection label={m.common_details_output()} schemaName={outputSchemaName} />
+          <SchemaSection
+            label={m.common_details_input()}
+            schemaName={inputSchemaName}
+          />
+          <SchemaSection
+            label={m.common_details_output()}
+            schemaName={outputSchemaName}
+          />
         </>
       )}
 

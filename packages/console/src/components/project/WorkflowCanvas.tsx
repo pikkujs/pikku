@@ -1,12 +1,5 @@
 import React, { useMemo, useEffect, useCallback } from 'react'
-import {
-  Box,
-  Drawer,
-  Text,
-  Alert,
-  Badge,
-  Tooltip,
-} from '@pikku/mantine/core'
+import { Box, Drawer, Text, Alert, Badge, Tooltip } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { AlertTriangle, History } from 'lucide-react'
 import { ListPageHeader } from '../layout/PageLayout'

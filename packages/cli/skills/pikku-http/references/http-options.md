@@ -4,19 +4,19 @@
 
 Wire a single function to an HTTP endpoint. Import from `@pikku/core/http`.
 
-| Option | Type | Notes |
-| --- | --- | --- |
-| `method` | `'get' \| 'post' \| 'put' \| 'patch' \| 'delete' \| 'head'` | HTTP verb |
-| `route` | `string` | e.g. `/books/:bookId` — `:params` become `data` fields |
-| `func` | `PikkuFunc` | The function to call |
-| `auth?` | `boolean` | Override default auth (`true` = require session) |
-| `tags?` | `string[]` | For grouping, middleware targeting |
-| `middleware?` | `PikkuMiddleware[]` | Per-route middleware |
-| `sse?` | `boolean` | Enable Server-Sent Events |
-| `contentType?` | `'xml' \| 'json'` | Response content type |
-| `timeout?` | `number` | Request timeout in ms |
-| `headers?` | `HTTPHeadersSchema` | Expected headers schema |
-| `docs?` | `HTTPRouteDocsConfig` | OpenAPI docs config |
+| Option         | Type                                                        | Notes                                                  |
+| -------------- | ----------------------------------------------------------- | ------------------------------------------------------ |
+| `method`       | `'get' \| 'post' \| 'put' \| 'patch' \| 'delete' \| 'head'` | HTTP verb                                              |
+| `route`        | `string`                                                    | e.g. `/books/:bookId` — `:params` become `data` fields |
+| `func`         | `PikkuFunc`                                                 | The function to call                                   |
+| `auth?`        | `boolean`                                                   | Override default auth (`true` = require session)       |
+| `tags?`        | `string[]`                                                  | For grouping, middleware targeting                     |
+| `middleware?`  | `PikkuMiddleware[]`                                         | Per-route middleware                                   |
+| `sse?`         | `boolean`                                                   | Enable Server-Sent Events                              |
+| `contentType?` | `'xml' \| 'json'`                                           | Response content type                                  |
+| `timeout?`     | `number`                                                    | Request timeout in ms                                  |
+| `headers?`     | `HTTPHeadersSchema`                                         | Expected headers schema                                |
+| `docs?`        | `HTTPRouteDocsConfig`                                       | OpenAPI docs config                                    |
 
 ## `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)`
 

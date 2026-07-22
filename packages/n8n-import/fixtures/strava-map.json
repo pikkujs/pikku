@@ -1,1 +1,24 @@
-{"name":"Strava","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"strava"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.strava","typeVersion":1.1,"position":[200,0],"parameters":{"resource":"activity","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Strava",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "strava" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.strava",
+      "typeVersion": 1.1,
+      "position": [200, 0],
+      "parameters": { "resource": "activity", "operation": "create" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

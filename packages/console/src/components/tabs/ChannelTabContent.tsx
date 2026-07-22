@@ -57,9 +57,15 @@ const ChannelTabInner: React.FC<{
   )
 }
 
-type ChannelTabContentProps = { searchQuery: string; emptyHero?: React.ReactNode }
+type ChannelTabContentProps = {
+  searchQuery: string
+  emptyHero?: React.ReactNode
+}
 
-export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuery, emptyHero }) => {
+export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({
+  searchQuery,
+  emptyHero,
+}) => {
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()

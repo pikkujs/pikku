@@ -57,7 +57,10 @@ export class KyselyWebhookService extends QueueWebhookService {
       .ifNotExists()
       .addColumn('attempt_id', 'text', (col) => col.primaryKey())
       .addColumn('delivery_id', 'text', (col) =>
-        col.notNull().references('webhook_delivery.delivery_id').onDelete('cascade')
+        col
+          .notNull()
+          .references('webhook_delivery.delivery_id')
+          .onDelete('cascade')
       )
       .addColumn('attempt_number', 'integer', (col) => col.notNull())
       .addColumn('status_code', 'integer')

@@ -26,16 +26,23 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
   useLocale()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const allItems = useMemo((): EntityCardItem[] =>
-    templateNames.map((name): EntityCardItem => {
-      const t = templates[name]
-      const varCount = (t.variables ?? []).length
-      const localeCount = Object.keys(t.locales ?? {}).length
-      const metaTags: string[] = []
-      if (varCount > 0) metaTags.push(`${varCount} ${varCount === 1 ? 'variable' : 'variables'}`)
-      if (localeCount > 0) metaTags.push(`${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`)
-      return { name, meta: metaTags }
-    }),
+  const allItems = useMemo(
+    (): EntityCardItem[] =>
+      templateNames.map((name): EntityCardItem => {
+        const t = templates[name]
+        const varCount = (t.variables ?? []).length
+        const localeCount = Object.keys(t.locales ?? {}).length
+        const metaTags: string[] = []
+        if (varCount > 0)
+          metaTags.push(
+            `${varCount} ${varCount === 1 ? 'variable' : 'variables'}`
+          )
+        if (localeCount > 0)
+          metaTags.push(
+            `${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`
+          )
+        return { name, meta: metaTags }
+      }),
     [templateNames, templates]
   )
 

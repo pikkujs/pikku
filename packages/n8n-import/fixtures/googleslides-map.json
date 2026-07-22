@@ -1,1 +1,24 @@
-{"name":"Googleslides","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"googleslides"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.googleSlides","typeVersion":2,"position":[200,0],"parameters":{"resource":"presentation","operation":"create"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Googleslides",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "googleslides" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.googleSlides",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "resource": "presentation", "operation": "create" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

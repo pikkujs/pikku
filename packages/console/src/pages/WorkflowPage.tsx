@@ -68,13 +68,19 @@ const WorkflowPageInner: React.FC<{
     }
     return all
       .map((w: any): EntityCardItem => {
-        const stepCount = w.nodes ? Object.keys(w.nodes).length : (w.steps?.length ?? 0)
+        const stepCount = w.nodes
+          ? Object.keys(w.nodes).length
+          : (w.steps?.length ?? 0)
         const badges = []
-        if (w.source === 'dynamic-workflow') badges.push({ label: 'Dynamic', tone: 'accent' as const })
-        else if (w.source === 'scenario') badges.push({ label: 'Scenario', tone: 'accent' as const })
-        else if (w.dsl === true) badges.push({ label: 'DSL', tone: 'neutral' as const })
+        if (w.source === 'dynamic-workflow')
+          badges.push({ label: 'Dynamic', tone: 'accent' as const })
+        else if (w.source === 'scenario')
+          badges.push({ label: 'Scenario', tone: 'accent' as const })
+        else if (w.dsl === true)
+          badges.push({ label: 'DSL', tone: 'neutral' as const })
         const metaTags: string[] = []
-        if (stepCount > 0) metaTags.push(`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`)
+        if (stepCount > 0)
+          metaTags.push(`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`)
         if (w.actors?.length) metaTags.push(w.actors.join(', '))
         return {
           name: w.name,

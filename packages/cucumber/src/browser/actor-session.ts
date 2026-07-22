@@ -66,13 +66,15 @@ export class ActorSession<Clients = unknown> {
       locale: this.config.locale,
     })
     await this.context.addInitScript((apiUrl) => {
-      ;(window as typeof window & { __E2E_API_URL?: string }).__E2E_API_URL = apiUrl
+      ;(window as typeof window & { __E2E_API_URL?: string }).__E2E_API_URL =
+        apiUrl
     }, this.config.apiUrl)
     this.page = await this.context.newPage()
     this.page.setDefaultTimeout(this.config.timeout)
 
     this.page.on('console', (msg) => {
-      if (msg.type() === 'error') this.issues.consoleErrors.push(msg.text().slice(0, 500))
+      if (msg.type() === 'error')
+        this.issues.consoleErrors.push(msg.text().slice(0, 500))
     })
     this.page.on('pageerror', (err) => {
       this.issues.pageErrors.push(String(err?.message ?? err).slice(0, 500))
@@ -80,13 +82,20 @@ export class ActorSession<Clients = unknown> {
     this.page.on('requestfailed', (req) => {
       const failure = req.failure()
       this.issues.failedRequests.push(
-        `${req.method()} ${req.url()} — ${failure?.errorText ?? 'failed'}`.slice(0, 300)
+        `${req.method()} ${req.url()} — ${failure?.errorText ?? 'failed'}`.slice(
+          0,
+          300
+        )
       )
     })
     this.page.on('response', (res) => {
       try {
         const path = new URL(res.url()).pathname
-        if (path.startsWith('/api/') && !path.startsWith('/api/auth/') && res.status() >= 400) {
+        if (
+          path.startsWith('/api/') &&
+          !path.startsWith('/api/auth/') &&
+          res.status() >= 400
+        ) {
           this.issues.apiErrors.push(`${res.status()} ${path}`)
         }
       } catch {
@@ -100,7 +109,8 @@ export class ActorSession<Clients = unknown> {
       if (isApiPath(req.url())) this.inflightApi += 1
     })
     const settleReq = (req: { url(): string }) => {
-      if (isApiPath(req.url())) this.inflightApi = Math.max(0, this.inflightApi - 1)
+      if (isApiPath(req.url()))
+        this.inflightApi = Math.max(0, this.inflightApi - 1)
     }
     this.page.on('requestfinished', settleReq)
     this.page.on('requestfailed', settleReq)
@@ -131,7 +141,9 @@ export class ActorSession<Clients = unknown> {
   /** Navigate within the app; returns the main document HTTP status. */
   async gotoApp(path: string): Promise<number | null> {
     this.inflightApi = 0
-    const res = await this.page.goto(this.url(path), { waitUntil: 'domcontentloaded' })
+    const res = await this.page.goto(this.url(path), {
+      waitUntil: 'domcontentloaded',
+    })
     // App shell mounted (or the app's own hydration marker set) — instant on a
     // prerendered/SSR page. No blanket networkidle: a bare page (no shell)
     // still has its errors collected below.
@@ -210,16 +222,15 @@ export class ActorSession<Clients = unknown> {
       for (const attr of attrs) {
         const [k = '', v = ''] = attr.split('=').map((s) => s.trim())
         const key = k.toLowerCase()
-        if (key === 'max-age') cookie.expires = Math.floor(Date.now() / 1000) + Number(v)
+        if (key === 'max-age')
+          cookie.expires = Math.floor(Date.now() / 1000) + Number(v)
         else if (key === 'expires' && cookie.expires === undefined)
           cookie.expires = Math.floor(new Date(v).getTime() / 1000)
         else if (key === 'httponly') cookie.httpOnly = true
         else if (key === 'secure') cookie.secure = true
         else if (key === 'samesite')
-          cookie.sameSite = (v.charAt(0).toUpperCase() + v.slice(1).toLowerCase()) as
-            | 'Strict'
-            | 'Lax'
-            | 'None'
+          cookie.sameSite = (v.charAt(0).toUpperCase() +
+            v.slice(1).toLowerCase()) as 'Strict' | 'Lax' | 'None'
       }
       return cookie
     })
@@ -260,7 +271,10 @@ export class ActorSession<Clients = unknown> {
     if (!res.ok) {
       res = await this.authFetch('/api/auth/sign-in/email', {
         method: 'POST',
-        body: JSON.stringify({ email: credentials.email, password: credentials.password }),
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
       })
     }
     if (!res.ok) {
@@ -302,7 +316,9 @@ export class ActorSession<Clients = unknown> {
     await this.page.locator('input[type="email"]').fill(credentials.email)
     await this.page.locator('input[type="password"]').fill(credentials.password)
     await this.page
-      .locator('button[type="submit"], button:has-text("sign in"), button:has-text("login"), button:has-text("anmelden")')
+      .locator(
+        'button[type="submit"], button:has-text("sign in"), button:has-text("login"), button:has-text("anmelden")'
+      )
       .first()
       .click()
     await this.page.waitForURL((u) => !u.pathname.startsWith('/login'), {
@@ -335,7 +351,9 @@ export class ActorSession<Clients = unknown> {
       }
       await this.page.waitForTimeout(100)
     }
-    throw new Error(`Timed out waiting for visible text (${this.name}): ${text}`)
+    throw new Error(
+      `Timed out waiting for visible text (${this.name}): ${text}`
+    )
   }
 
   async getPageText(): Promise<string> {
@@ -344,7 +362,12 @@ export class ActorSession<Clients = unknown> {
 }
 
 function blankIssues(): PageIssues {
-  return { consoleErrors: [], pageErrors: [], failedRequests: [], apiErrors: [] }
+  return {
+    consoleErrors: [],
+    pageErrors: [],
+    failedRequests: [],
+    apiErrors: [],
+  }
 }
 
 function isApiPath(url: string): boolean {

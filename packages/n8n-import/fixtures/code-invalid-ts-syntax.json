@@ -31,7 +31,11 @@
     }
   ],
   "connections": {
-    "Schedule": { "main": [[{ "node": "Octal Chat Id", "type": "main", "index": 0 }]] },
-    "Octal Chat Id": { "main": [[{ "node": "Html Comment", "type": "main", "index": 0 }]] }
+    "Schedule": {
+      "main": [[{ "node": "Octal Chat Id", "type": "main", "index": 0 }]]
+    },
+    "Octal Chat Id": {
+      "main": [[{ "node": "Html Comment", "type": "main", "index": 0 }]]
+    }
   }
 }

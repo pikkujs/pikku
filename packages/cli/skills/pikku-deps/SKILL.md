@@ -41,7 +41,7 @@ installGroups: [core]
   `bun outdated`, normalised into one `SecurityAuditReport` with per-severity /
   per-update-level counts). Other PMs are detected but **stubbed** with a `note`
   field until their shapes are normalised — issues/updates come back empty.
-- `bun audit` exits non-zero when it *finds* advisories but still writes a valid
+- `bun audit` exits non-zero when it _finds_ advisories but still writes a valid
   report — treat any non-zero exit as data, not failure.
 
 ## Console integration (@pikku/addon-console)

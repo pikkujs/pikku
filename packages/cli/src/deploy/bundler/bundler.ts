@@ -243,7 +243,11 @@ export abstract class BaseBundler implements Bundler {
       exactDependencies,
       exactOptionalDependencies
     )
-    await writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf-8')
+    await writeFile(
+      packageJsonPath,
+      JSON.stringify(packageJson, null, 2),
+      'utf-8'
+    )
     await writeFile(
       exactDependenciesPath,
       JSON.stringify(

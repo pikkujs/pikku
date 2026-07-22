@@ -182,7 +182,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
 
   const openGateway = useCallback(
     (gatewayId: string, metadata?: any) => {
-      openPanelGeneric('gateway', gatewayId, metadata?.name || gatewayId, metadata)
+      openPanelGeneric(
+        'gateway',
+        gatewayId,
+        metadata?.name || gatewayId,
+        metadata
+      )
     },
     [openPanelGeneric]
   )
@@ -274,7 +279,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
 
   const openDbColumn = useCallback(
     (tableName: string, columnName: string, metadata?: any) => {
-      openPanelGeneric('dbColumn', `${tableName}.${columnName}`, columnName, { ...metadata, tableName, columnName })
+      openPanelGeneric('dbColumn', `${tableName}.${columnName}`, columnName, {
+        ...metadata,
+        tableName,
+        columnName,
+      })
     },
     [openPanelGeneric]
   )

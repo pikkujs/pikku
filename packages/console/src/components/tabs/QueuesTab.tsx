@@ -79,7 +79,11 @@ export const QueuesTab: React.FC<{
             <Text
               size="sm"
               ff="monospace"
-              c={depth?.queued ? 'var(--app-meta-value)' : 'var(--app-meta-label)'}
+              c={
+                depth?.queued
+                  ? 'var(--app-meta-value)'
+                  : 'var(--app-meta-label)'
+              }
             >
               {depth?.queued ?? asI18n('—')}
             </Text>
@@ -96,7 +100,11 @@ export const QueuesTab: React.FC<{
             <Text
               size="sm"
               ff="monospace"
-              c={depth?.active ? 'var(--mantine-color-green-5)' : 'var(--app-meta-label)'}
+              c={
+                depth?.active
+                  ? 'var(--mantine-color-green-5)'
+                  : 'var(--app-meta-label)'
+              }
             >
               {depth?.active ?? asI18n('—')}
             </Text>
@@ -113,7 +121,11 @@ export const QueuesTab: React.FC<{
             <Text
               size="sm"
               ff="monospace"
-              c={depth?.failed ? 'var(--mantine-color-red-5)' : 'var(--app-meta-label)'}
+              c={
+                depth?.failed
+                  ? 'var(--mantine-color-red-5)'
+                  : 'var(--app-meta-label)'
+              }
             >
               {depth?.failed ?? asI18n('—')}
             </Text>

@@ -30,7 +30,9 @@ const COLUMNS = [
   },
 ]
 
-export const ServicesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+export const ServicesTab: React.FC<{ searchQuery: string }> = ({
+  searchQuery,
+}) => {
   const { meta, loading } = usePikkuMeta()
   useLocale()
 

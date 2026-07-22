@@ -169,7 +169,10 @@ export const ChannelConfiguration: React.FC<WiringPanelProps> = ({
         errors={metadata?.errors || []}
       >
         {metadata?.input && (
-          <SchemaSection label={asI18n('Input Schema')} schemaName={metadata.input} />
+          <SchemaSection
+            label={asI18n('Input Schema')}
+            schemaName={metadata.input}
+          />
         )}
 
         <FunctionLink
@@ -499,7 +502,9 @@ const CliCommandTree: React.FC<{
                   variant="outline"
                   color={pos.required ? 'red' : 'gray'}
                 >
-                  {asI18n(`${pos.variadic ? `...${pos.name}` : pos.name}${pos.required ? '*' : ''}`)}
+                  {asI18n(
+                    `${pos.variadic ? `...${pos.name}` : pos.name}${pos.required ? '*' : ''}`
+                  )}
                 </PikkuBadge>
               ))}
             </Group>

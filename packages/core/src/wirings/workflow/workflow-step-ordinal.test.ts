@@ -22,11 +22,23 @@ describe('same step name invoked multiple times in one run', () => {
     ;(ws as any).inlineRuns.add(runId)
 
     // Two `do('process', fn)` reaches in the SAME replay (no reset between).
-    const r1 = await (ws as any).inlineStep(runId, 'process', async () => 'first')
-    const r2 = await (ws as any).inlineStep(runId, 'process', async () => 'second')
+    const r1 = await (ws as any).inlineStep(
+      runId,
+      'process',
+      async () => 'first'
+    )
+    const r2 = await (ws as any).inlineStep(
+      runId,
+      'process',
+      async () => 'second'
+    )
 
     assert.equal(r1, 'first')
-    assert.equal(r2, 'second', 'second call must NOT return the first cached result')
+    assert.equal(
+      r2,
+      'second',
+      'second call must NOT return the first cached result'
+    )
 
     // Distinct rows: 'process' (ordinal 0) and 'process#1'.
     const s0 = await ws.getStepState(runId, 'process')
@@ -51,7 +63,10 @@ describe('same step name invoked multiple times in one run', () => {
     // Stored under the bare name, and the dedupe key matches the pre-ordinal hash.
     const s = await ws.getStepState(runId, 'solo')
     assert.equal(s.result, 'x')
-    await assert.rejects(ws.getStepState(runId, 'solo#1'), 'no synthetic row for a single call')
+    await assert.rejects(
+      ws.getStepState(runId, 'solo#1'),
+      'no synthetic row for a single call'
+    )
   })
 
   test('a fresh replay resets ordinals so the same call resolves to the same row', async () => {

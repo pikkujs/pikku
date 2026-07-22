@@ -36,11 +36,16 @@ export const AgentsPage: React.FC<{
       .map(([name, data]: [string, any]): EntityCardItem => {
         const toolCount = (data.tools ?? []).length
         const agentCount = (data.agents ?? []).length
-        const badges = data.model ? [{ label: data.model, tone: 'neutral' as const }] : []
+        const badges = data.model
+          ? [{ label: data.model, tone: 'neutral' as const }]
+          : []
         const metaTags: string[] = []
-        if (toolCount > 0) metaTags.push(`${toolCount} ${toolCount === 1 ? 'tool' : 'tools'}`)
+        if (toolCount > 0)
+          metaTags.push(`${toolCount} ${toolCount === 1 ? 'tool' : 'tools'}`)
         if (agentCount > 0)
-          metaTags.push(`${agentCount} ${agentCount === 1 ? 'sub-agent' : 'sub-agents'}`)
+          metaTags.push(
+            `${agentCount} ${agentCount === 1 ? 'sub-agent' : 'sub-agents'}`
+          )
         return {
           name,
           badges,

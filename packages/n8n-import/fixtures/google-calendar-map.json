@@ -48,8 +48,14 @@
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Create Event", "type": "main", "index": 0 }]] },
-    "Create Event": { "main": [[{ "node": "List Events", "type": "main", "index": 0 }]] },
-    "List Events": { "main": [[{ "node": "Get Event", "type": "main", "index": 0 }]] }
+    "Webhook": {
+      "main": [[{ "node": "Create Event", "type": "main", "index": 0 }]]
+    },
+    "Create Event": {
+      "main": [[{ "node": "List Events", "type": "main", "index": 0 }]]
+    },
+    "List Events": {
+      "main": [[{ "node": "Get Event", "type": "main", "index": 0 }]]
+    }
   }
 }

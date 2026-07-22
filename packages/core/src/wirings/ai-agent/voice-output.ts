@@ -63,9 +63,11 @@ export const voiceOutput = (config?: {
 }) =>
   pikkuAIMiddleware<VoiceOutputState>({
     modifyOutputStream: async (services, { event, state }) => {
-      const aiAgentRunner = (services as {
-        aiAgentRunner?: AIAgentRunnerService
-      }).aiAgentRunner
+      const aiAgentRunner = (
+        services as {
+          aiAgentRunner?: AIAgentRunnerService
+        }
+      ).aiAgentRunner
       if (!aiAgentRunner?.generateSpeech) return event
 
       if (event.type === 'done') {

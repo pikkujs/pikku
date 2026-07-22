@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Box, CloseButton, Group, Text, UnstyledButton } from '@pikku/mantine/core'
+import {
+  Box,
+  CloseButton,
+  Group,
+  Text,
+  UnstyledButton,
+} from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { ChevronLeft } from 'lucide-react'
 import classes from '../ui/console.module.css'
@@ -9,7 +15,9 @@ const SidePanelCtx = createContext<{
   setHasFooter: (v: boolean) => void
 }>({ hasFooter: false, setHasFooter: () => {} })
 
-export const SidePanel: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SidePanel: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [hasFooter, setHasFooter] = useState(false)
   return (
     <SidePanelCtx.Provider value={{ hasFooter, setHasFooter }}>
@@ -30,7 +38,12 @@ interface SidePanelHeaderProps {
   children?: React.ReactNode
 }
 
-export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose, onBack, children }) => (
+export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({
+  title,
+  onClose,
+  onBack,
+  children,
+}) => (
   <Box
     px="md"
     style={{
@@ -44,11 +57,23 @@ export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose
   >
     <Group gap="xs" wrap="nowrap" align="center" style={{ width: '100%' }}>
       {onBack && (
-        <UnstyledButton onClick={onBack} style={{ display: 'flex', alignItems: 'center' }}>
+        <UnstyledButton
+          onClick={onBack}
+          style={{ display: 'flex', alignItems: 'center' }}
+        >
           <ChevronLeft size={16} color="var(--mantine-color-dimmed)" />
         </UnstyledButton>
       )}
-      <Text size="sm" fw={600} style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <Text
+        size="sm"
+        fw={600}
+        style={{
+          flex: 1,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
         {title}
       </Text>
       {children}
@@ -57,7 +82,9 @@ export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose
   </Box>
 )
 
-export const SidePanelContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SidePanelContent: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { hasFooter } = useContext(SidePanelCtx)
   return (
     <Box
@@ -70,7 +97,9 @@ export const SidePanelContent: React.FC<{ children: React.ReactNode }> = ({ chil
   )
 }
 
-export const SidePanelFooter: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SidePanelFooter: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { setHasFooter } = useContext(SidePanelCtx)
   useEffect(() => {
     setHasFooter(true)

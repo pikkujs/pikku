@@ -97,11 +97,9 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
     onClose()
   }
 
-  const error = (
-    createRole.error ||
+  const error = (createRole.error ||
     setRoleScopes.error ||
-    deleteRole.error
-  ) as Error | null
+    deleteRole.error) as Error | null
 
   return (
     <Drawer

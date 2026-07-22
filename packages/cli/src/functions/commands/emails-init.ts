@@ -35,8 +35,7 @@ const DEFAULT_EN_LOCALE = {
     title: 'Your first Pikku email is ready',
     intro:
       'This starter template proves the pipeline works and gives you a place to shape your own visual language.',
-    body:
-      'Chat to your AI to create new emails, refine the theme, or localize every message for your product.',
+    body: 'Chat to your AI to create new emails, refine the theme, or localize every message for your product.',
     cta: 'Open the email console',
     footer: 'Built with Pikku email templates.',
   },
@@ -49,8 +48,7 @@ const DEFAULT_DE_LOCALE = {
     title: 'Deine erste Pikku-E-Mail ist bereit',
     intro:
       'Diese Startvorlage zeigt, dass die Pipeline funktioniert, und gibt dir einen Ausgangspunkt fuer dein eigenes Design.',
-    body:
-      'Sprich mit deiner KI, um neue E-Mails zu erstellen, das Theme zu verfeinern oder jede Nachricht zu lokalisieren.',
+    body: 'Sprich mit deiner KI, um neue E-Mails zu erstellen, das Theme zu verfeinern oder jede Nachricht zu lokalisieren.',
     cta: 'E-Mail-Konsole oeffnen',
     footer: 'Erstellt mit Pikku-E-Mail-Vorlagen.',
   },
@@ -136,7 +134,10 @@ async function updateJsonConfig(configDir: string, emailDir: string) {
 
   const raw = await readFile(configPath, 'utf8')
   const parsed = JSON.parse(raw) as Record<string, unknown>
-  if (typeof parsed.emailTemplatesDir === 'string' && parsed.emailTemplatesDir) {
+  if (
+    typeof parsed.emailTemplatesDir === 'string' &&
+    parsed.emailTemplatesDir
+  ) {
     return false
   }
 
@@ -148,20 +149,33 @@ async function updateJsonConfig(configDir: string, emailDir: string) {
 export const pikkuEmailsInit = pikkuSessionlessFunc<EmailsInitInput, void>({
   func: async ({ logger, config }, input) => {
     const force = input?.force
-    const configuredEmailDir = config.emailTemplatesDir ?? join(config.rootDir, DEFAULT_EMAIL_DIR)
+    const configuredEmailDir =
+      config.emailTemplatesDir ?? join(config.rootDir, DEFAULT_EMAIL_DIR)
     const emailDir =
       config.emailTemplatesDir && config.emailTemplatesDir.length > 0
         ? config.emailTemplatesDir
         : join(config.rootDir, DEFAULT_EMAIL_DIR)
 
     const files: Array<[string, string]> = [
-      [join(emailDir, 'theme.json'), `${JSON.stringify(DEFAULT_THEME, null, 2)}\n`],
-      [join(emailDir, 'locales', 'en.json'), `${JSON.stringify(DEFAULT_EN_LOCALE, null, 2)}\n`],
-      [join(emailDir, 'locales', 'de.json'), `${JSON.stringify(DEFAULT_DE_LOCALE, null, 2)}\n`],
+      [
+        join(emailDir, 'theme.json'),
+        `${JSON.stringify(DEFAULT_THEME, null, 2)}\n`,
+      ],
+      [
+        join(emailDir, 'locales', 'en.json'),
+        `${JSON.stringify(DEFAULT_EN_LOCALE, null, 2)}\n`,
+      ],
+      [
+        join(emailDir, 'locales', 'de.json'),
+        `${JSON.stringify(DEFAULT_DE_LOCALE, null, 2)}\n`,
+      ],
       [join(emailDir, 'partials', 'layout.html'), layoutTemplate()],
       [join(emailDir, 'partials', 'footer.html'), footerPartial()],
       [join(emailDir, 'templates', 'hello-world.html'), helloWorldHtml()],
-      [join(emailDir, 'templates', 'hello-world.subject.txt'), helloWorldSubject()],
+      [
+        join(emailDir, 'templates', 'hello-world.subject.txt'),
+        helloWorldSubject(),
+      ],
       [join(emailDir, 'templates', 'hello-world.text.txt'), helloWorldText()],
     ]
 

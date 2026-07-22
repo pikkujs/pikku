@@ -22,8 +22,17 @@ export const FilterChip: React.FC<FilterChipProps> = ({
       size="sm"
       leftSection={filter.icon}
       rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
-      onClick={filter.options ? undefined : filter.onChange ? () => filter.onChange?.(filter.value) : undefined}
-      styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H }, label: { gap: 5 } }}
+      onClick={
+        filter.options
+          ? undefined
+          : filter.onChange
+            ? () => filter.onChange?.(filter.value)
+            : undefined
+      }
+      styles={{
+        root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H },
+        label: { gap: 5 },
+      }}
     >
       <Text span fz={11.5} c="dimmed">
         {filter.label}

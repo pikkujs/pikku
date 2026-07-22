@@ -12,7 +12,9 @@ steps were skipped entirely by the parallel extractor, so a body like
 ```ts
 await Promise.all(
   users.map(async (u) => {
-    const digestData = await workflow.do('Get pipeline', 'getDigestData', { userId: u.id })
+    const digestData = await workflow.do('Get pipeline', 'getDigestData', {
+      userId: u.id,
+    })
     await workflow.do('Send digest', 'sendDigestEmail', { ...digestData })
   })
 )

@@ -100,7 +100,12 @@ export const McpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.mcp_title()} description={m.mcp_description()} />}
+        header={
+          <ListPageHeader
+            title={m.mcp_title()}
+            description={m.mcp_description()}
+          />
+        }
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.mcp_select_entry()}
       >

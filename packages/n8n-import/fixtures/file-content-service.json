@@ -49,6 +49,8 @@
     "Trigger": { "main": [[{ "node": "Read", "type": "main", "index": 0 }]] },
     "Read": { "main": [[{ "node": "Write", "type": "main", "index": 0 }]] },
     "Write": { "main": [[{ "node": "ReadBin", "type": "main", "index": 0 }]] },
-    "ReadBin": { "main": [[{ "node": "WriteBin", "type": "main", "index": 0 }]] }
+    "ReadBin": {
+      "main": [[{ "node": "WriteBin", "type": "main", "index": 0 }]]
+    }
   }
 }

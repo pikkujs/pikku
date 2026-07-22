@@ -1,4 +1,24 @@
-{"name":"My","nodes":[
-{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"m"}},
-{"id":"q","name":"Query","type":"n8n-nodes-base.mySql","typeVersion":2.4,"position":[200,0],"parameters":{"operation":"executeQuery","query":"select 1"}}],
-"connections":{"Webhook":{"main":[[{"node":"Query","type":"main","index":0}]]}}}
+{
+  "name": "My",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "m" }
+    },
+    {
+      "id": "q",
+      "name": "Query",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [200, 0],
+      "parameters": { "operation": "executeQuery", "query": "select 1" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Query", "type": "main", "index": 0 }]] }
+  }
+}

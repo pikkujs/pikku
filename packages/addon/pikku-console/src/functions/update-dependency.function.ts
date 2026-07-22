@@ -2,7 +2,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { pikkuFunc } from '#pikku'
 import type { SecurityAuditReport } from '@pikku/core'
-import { readAuditReport, runPikkuAudit, spawnProcess } from '../lib/audit-exec.js'
+import {
+  readAuditReport,
+  runPikkuAudit,
+  spawnProcess,
+} from '../lib/audit-exec.js'
 
 const DEP_SECTIONS = [
   'dependencies',
@@ -25,7 +29,9 @@ function bumpPackageJson(
       // Only plain semver ranges (^, ~, or exact) can be safely rewritten to a
       // bare version. workspace:/file:/link:/git/url specifiers carry semantics
       // a version string would silently destroy — refuse rather than clobber.
-      if (/^(workspace:|file:|link:|git\+|github:|https?:|npm:)/.test(current)) {
+      if (
+        /^(workspace:|file:|link:|git\+|github:|https?:|npm:)/.test(current)
+      ) {
         throw new Error(
           `${pkg} uses a non-semver specifier (${current}) — cannot bump it here.`
         )

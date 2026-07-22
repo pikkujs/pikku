@@ -237,7 +237,8 @@ const CliPageInner: React.FC<{
           >
             <Text component="span" c="violet" ff="monospace">
               {asI18n('$')}
-            </Text>{asI18n(' ')}
+            </Text>
+            {asI18n(' ')}
             <Text component="span" c="var(--app-text)" ff="monospace">
               {asI18n(promptText.slice(2))}
             </Text>
@@ -294,7 +295,9 @@ const CliPageInner: React.FC<{
 
 type CliTabContentProps = { searchQuery: string }
 
-export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => {
+export const CliTabContent: React.FC<CliTabContentProps> = ({
+  searchQuery,
+}) => {
   const { meta } = usePikkuMeta()
   useLocale()
   const programs = meta.cliMeta || []

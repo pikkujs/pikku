@@ -1,1 +1,28 @@
-{"name":"Hn","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"hn"}},{"id":"g","name":"Get","type":"n8n-nodes-base.hackerNews","typeVersion":1,"position":[200,0],"parameters":{"resource":"article","operation":"get","articleId":"1234"}}],"connections":{"Webhook":{"main":[[{"node":"Get","type":"main","index":0}]]}}}
+{
+  "name": "Hn",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "hn" }
+    },
+    {
+      "id": "g",
+      "name": "Get",
+      "type": "n8n-nodes-base.hackerNews",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "article",
+        "operation": "get",
+        "articleId": "1234"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get", "type": "main", "index": 0 }]] }
+  }
+}

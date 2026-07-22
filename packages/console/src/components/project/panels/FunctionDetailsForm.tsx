@@ -19,12 +19,15 @@ import { FunctionSquare, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { PikkuBadge } from '../../ui/PikkuBadge'
-import { SidePanel, SidePanelContent, SidePanelHeader } from '../../panel/SidePanel'
+import {
+  SidePanel,
+  SidePanelContent,
+  SidePanelHeader,
+} from '../../panel/SidePanel'
 import { usePanelContext } from '../../../context/PanelContext'
 import { funcWrapperDefs } from '../../ui/badge-defs'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionEditor } from './FunctionEditor'
-
 
 interface FunctionDetailsFormProps {
   functionName: string
@@ -146,7 +149,10 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
               onClose={() => setEditing(false)}
             />
           ) : (
-            <FunctionConfiguration functionName={functionName} metadata={passedMetadata} />
+            <FunctionConfiguration
+              functionName={functionName}
+              metadata={passedMetadata}
+            />
           )}
         </Box>
       </SidePanelContent>
@@ -190,11 +196,19 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">{m.functions_schema_load_error({ message: error.message })}</Text>
+    return (
+      <Text c="red">
+        {m.functions_schema_load_error({ message: error.message })}
+      </Text>
+    )
   }
 
   if (!schema) {
-    return <Text c="dimmed">{m.functions_schema_not_found({ name: inputSchemaName })}</Text>
+    return (
+      <Text c="dimmed">
+        {m.functions_schema_not_found({ name: inputSchemaName })}
+      </Text>
+    )
   }
 
   return <SchemaViewer schema={schema} />
@@ -223,11 +237,19 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">{m.functions_schema_load_error({ message: error.message })}</Text>
+    return (
+      <Text c="red">
+        {m.functions_schema_load_error({ message: error.message })}
+      </Text>
+    )
   }
 
   if (!schema) {
-    return <Text c="dimmed">{m.functions_schema_not_found({ name: outputSchemaName })}</Text>
+    return (
+      <Text c="dimmed">
+        {m.functions_schema_not_found({ name: outputSchemaName })}
+      </Text>
+    )
   }
 
   return <SchemaViewer schema={schema} />

@@ -168,7 +168,13 @@ describe('runConversation', () => {
     const { target, approveCalls } = alwaysSuspendingTarget()
 
     await assert.rejects(
-      runConversation({ ...base, approvals: 'always', maxApprovalRounds: 3, llm, target }),
+      runConversation({
+        ...base,
+        approvals: 'always',
+        maxApprovalRounds: 3,
+        llm,
+        target,
+      }),
       /approval rounds/
     )
     assert.equal(approveCalls(), 3)

@@ -1,1 +1,24 @@
-{"name":"Googlefirebasecloudfirestore","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"googlefirebasecloudfirestore"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.googleFirebaseCloudFirestore","typeVersion":1.1,"position":[200,0],"parameters":{"resource":"document","operation":"get"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Googlefirebasecloudfirestore",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "googlefirebasecloudfirestore" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [200, 0],
+      "parameters": { "resource": "document", "operation": "get" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

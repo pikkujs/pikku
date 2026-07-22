@@ -176,7 +176,10 @@ export const OverviewPage: React.FC = () => {
 
   return (
     <PageContainer>
-      <ListPageHeader title={m.overview_title()} description={m.overview_description()} />
+      <ListPageHeader
+        title={m.overview_title()}
+        description={m.overview_description()}
+      />
       <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4 }} spacing="md">
         {stats.map((stat) => (
           <StatCard key={String(stat.label)} {...stat} />

@@ -70,7 +70,8 @@ export const TableListPage = <T,>({
   const gate = usePageGate()
   useLocale()
   const [internalSearch, setInternalSearch] = useState('')
-  const searchQuery = externalSearch !== undefined ? externalSearch : internalSearch
+  const searchQuery =
+    externalSearch !== undefined ? externalSearch : internalSearch
 
   const filtered = useMemo(() => {
     if (!searchQuery || !searchFilter) return data
@@ -98,7 +99,9 @@ export const TableListPage = <T,>({
         icon={icon}
         hero={emptyHero}
         title={emptyTitle ?? asI18n(`No ${title} found`)}
-        description={emptyDescription ?? asI18n(`No ${title.toLowerCase()} exist yet.`)}
+        description={
+          emptyDescription ?? asI18n(`No ${title.toLowerCase()} exist yet.`)
+        }
         docsHref={docsHref}
       />
     )
@@ -106,105 +109,122 @@ export const TableListPage = <T,>({
 
   return (
     <Box className={classes.listSurfaceCard}>
-    <Stack gap={0} className={classes.flexColumn}>
-      {description && (
-        <Box
-          px="md"
-          py="xs"
-          style={{
-            borderBottom: '1px solid var(--mantine-color-default-border)',
-          }}
-        >
-          {description}
-        </Box>
-      )}
-      {(searchFilter && externalSearch === undefined || headerRight) && (
-        <Box
-          px="md"
-          style={{
-            height: 42,
-            borderBottom: '1px solid var(--mantine-color-default-border)',
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
-          {searchFilter && externalSearch === undefined && (
-            <TextInput
-              placeholder={searchPlaceholder ?? m.common_search()}
-              leftSection={<Search size={14} />}
-              value={internalSearch}
-              onChange={(e) => setInternalSearch(e.target.value)}
-              className={classes.flexGrow}
-              size="sm"
-            />
-          )}
-          {headerRight}
-        </Box>
-      )}
-      {filtered.length === 0 ? (
-        <Box p="xl">
-          <Text c="dimmed" ta="center">
-            {searchQuery
-              ? asI18n(`No results found for "${searchQuery}"`)
-              : (emptyMessage ?? m.common_no_items())}
-          </Text>
-        </Box>
-      ) : (
-        <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          <Table highlightOnHover={!!onRowClick} withRowBorders className={classes.tableLastRowBorder}>
-            <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--mantine-color-body)' }}>
-              <Table.Tr style={{ height: 42 }}>
-                {columns.map((col, i) => (
-                  <Table.Th
-                    key={col.key}
-                    pl={i === 0 ? 'md' : undefined}
-                    pr={i === columns.length - 1 ? 'md' : undefined}
-                    fw={600}
-                    fz="sm"
-                    style={{ ...(col.width ? { width: col.width } : {}), ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}) }}
-                  >
-                    {col.header}
-                  </Table.Th>
-                ))}
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filtered.map((item, index) => (
-                <Table.Tr
-                  key={getKey(item, index)}
-                  className={onRowClick ? classes.clickableText : undefined}
-                  style={{ height: '3.75rem' }}
-                  tabIndex={onRowClick ? 0 : undefined}
-                  onClick={onRowClick ? () => onRowClick(item) : undefined}
-                  onKeyDown={
-                    onRowClick
-                      ? (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            onRowClick(item)
-                          }
-                        }
-                      : undefined
-                  }
-                >
+      <Stack gap={0} className={classes.flexColumn}>
+        {description && (
+          <Box
+            px="md"
+            py="xs"
+            style={{
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+            }}
+          >
+            {description}
+          </Box>
+        )}
+        {((searchFilter && externalSearch === undefined) || headerRight) && (
+          <Box
+            px="md"
+            style={{
+              height: 42,
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+            }}
+          >
+            {searchFilter && externalSearch === undefined && (
+              <TextInput
+                placeholder={searchPlaceholder ?? m.common_search()}
+                leftSection={<Search size={14} />}
+                value={internalSearch}
+                onChange={(e) => setInternalSearch(e.target.value)}
+                className={classes.flexGrow}
+                size="sm"
+              />
+            )}
+            {headerRight}
+          </Box>
+        )}
+        {filtered.length === 0 ? (
+          <Box p="xl">
+            <Text c="dimmed" ta="center">
+              {searchQuery
+                ? asI18n(`No results found for "${searchQuery}"`)
+                : (emptyMessage ?? m.common_no_items())}
+            </Text>
+          </Box>
+        ) : (
+          <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <Table
+              highlightOnHover={!!onRowClick}
+              withRowBorders
+              className={classes.tableLastRowBorder}
+            >
+              <Table.Thead
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  background: 'var(--mantine-color-body)',
+                }}
+              >
+                <Table.Tr style={{ height: 42 }}>
                   {columns.map((col, i) => (
-                    <Table.Td
+                    <Table.Th
                       key={col.key}
                       pl={i === 0 ? 'md' : undefined}
                       pr={i === columns.length - 1 ? 'md' : undefined}
-                      style={{ ...(col.width ? { width: col.width } : {}), ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}) }}
+                      fw={600}
+                      fz="sm"
+                      style={{
+                        ...(col.width ? { width: col.width } : {}),
+                        ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}),
+                      }}
                     >
-                      {col.render(item, index)}
-                    </Table.Td>
+                      {col.header}
+                    </Table.Th>
                   ))}
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Box>
-      )}
-    </Stack>
+              </Table.Thead>
+              <Table.Tbody>
+                {filtered.map((item, index) => (
+                  <Table.Tr
+                    key={getKey(item, index)}
+                    className={onRowClick ? classes.clickableText : undefined}
+                    style={{ height: '3.75rem' }}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onClick={onRowClick ? () => onRowClick(item) : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              onRowClick(item)
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    {columns.map((col, i) => (
+                      <Table.Td
+                        key={col.key}
+                        pl={i === 0 ? 'md' : undefined}
+                        pr={i === columns.length - 1 ? 'md' : undefined}
+                        style={{
+                          ...(col.width ? { width: col.width } : {}),
+                          ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}),
+                        }}
+                      >
+                        {col.render(item, index)}
+                      </Table.Td>
+                    ))}
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Box>
+        )}
+      </Stack>
     </Box>
   )
 }

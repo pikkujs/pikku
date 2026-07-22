@@ -18,7 +18,7 @@ Use this as an execution checklist, not reference material.
 ## The rules that don't change
 
 - **Never resolve an enum key dynamically.** No `mKey('status.' + value)`, no `m['enum__status__' + value]()`, no `mExists`/`mList` helpers. Dynamic keys can't be type-checked or tree-shaken. Everything is a static `m.<literal>()` reference, generated into the map.
-- **The `enum__<group>__<member>` namespace.** `__` separates the prefix / group / member segments; a single `_` joins words *within* a segment (`enum__booking_status__form_received`). The prefix (`enum`) and separator (`__`) are configurable but leave them at the defaults.
+- **The `enum__<group>__<member>` namespace.** `__` separates the prefix / group / member segments; a single `_` joins words _within_ a segment (`enum__booking_status__form_received`). The prefix (`enum`) and separator (`__`) are configurable but leave them at the defaults.
 - **Members must be valid JS identifiers.** Spell out leading digits — `two_guests`, not `2_guests`. The generator quotes an invalid member as a fallback but warns you to rename it.
 - **`asI18n(...)` is only for opaque server data** (names, slugs, ids returned from the API). Never `asI18n()` a hardcoded English string or an enum value — an enum value goes through its label map.
 
@@ -35,8 +35,8 @@ export type I18nMessage = () => I18nString
 export type EnumLabel<E extends string> = Record<E, I18nMessage>
 
 export const bookingStatus = {
-  enquiry:   m.enum__booking_status__enquiry,
-  reserved:  m.enum__booking_status__reserved,
+  enquiry: m.enum__booking_status__enquiry,
+  reserved: m.enum__booking_status__reserved,
   confirmed: m.enum__booking_status__confirmed,
 } satisfies EnumLabel<BookingStatus>
 export type BookingStatusKey = keyof typeof bookingStatus
@@ -61,18 +61,24 @@ const items = [{ label: m.common__nav__items__dashboard /* ← reference */ }]
 The DB column is the real source of truth for what an enum can be. The pikku CLI's db codegen emits a bare unions module — `.pikku/db/enums.gen.ts` — covering **both** Postgres native enums and SQLite `CHECK (col IN ('a','b',…))` constraints:
 
 ```ts
-export type BookingStatus = 'enquiry' | 'reserved' | 'confirmed' | 'ended' | 'cancelled'
+export type BookingStatus =
+  | 'enquiry'
+  | 'reserved'
+  | 'confirmed'
+  | 'ended'
+  | 'cancelled'
 ```
 
 Point `@pikku/paraglide` at that file (`enumsFile`) and each catalog group whose member set **exactly matches** a DB enum is typed `satisfies EnumLabel<DbEnum>`. The label map then **is** the reconciliation — no separate assertion:
 
 - catalog drops a DB member, or `en.json` is missing the key → `m.enum__…` doesn't exist / `Record<DbEnum,…>` isn't exhaustive → **`tsc` error naming the gap**.
 - a DB enum with **no** catalog group → `unmatchedDbEnums: 'emit'` (default) generates a label map referencing `enum__<table>_<column>__<member>` keys, so `tsc` tells you exactly which keys to add; `'warn'` only reports it.
-- a group with a member the DB lacks (a *derived* UI state, e.g. a `waitlisted` view of a `pending` row) → a drift warning. Make that a **standalone `m.<key>()` message**, not an enum member — the enum group must mirror the DB column exactly.
+- a group with a member the DB lacks (a _derived_ UI state, e.g. a `waitlisted` view of a `pending` row) → a drift warning. Make that a **standalone `m.<key>()` message**, not an enum member — the enum group must mirror the DB column exactly.
 
 Labelling an enum that's never rendered costs nothing: Paraglide compiles only the messages actually referenced, so unused labels are tree-shaken away. So label every DB enum; don't add an opt-out.
 
 **To make a column an enum**, give it a closed domain in the migration so codegen can see it:
+
 - SQLite: `status TEXT NOT NULL CHECK (status IN ('enquiry','reserved','confirmed'))`
 - Postgres: a native `CREATE TYPE … AS ENUM (…)` column.
 
@@ -88,7 +94,10 @@ import { paraglideEnums } from '@pikku/paraglide/vite'
 
 export default defineConfig({
   plugins: [
-    paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+    }),
     paraglideEnums({
       catalog: './messages/en.json',
       outFile: './src/i18n/i18n-enum.gen.ts',

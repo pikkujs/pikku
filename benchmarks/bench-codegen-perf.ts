@@ -362,16 +362,28 @@ async function main() {
       ? reinspects.reduce((a, b) => (b[1] > a[1] ? b : a))
       : null
     return { initial, reinspects, worst }
-  }).filter((s): s is { initial: number; reinspects: [string, number][]; worst: [string, number] } => s.worst !== null)
+  }).filter(
+    (
+      s
+    ): s is {
+      initial: number
+      reinspects: [string, number][]
+      worst: [string, number]
+    } => s.worst !== null
+  )
 
   if (samples.length > 0) {
     // Best (lowest worst-reinspect) sample — a transient stall can only push a
     // sample up, never down, so the minimum reflects the true incremental cost.
     const best = samples.reduce((a, b) => (b.worst[1] < a.worst[1] ? b : a))
     const [worstName, worstMs] = best.worst
-    const ratioPct = best.initial ? ((worstMs / best.initial) * 100).toFixed(0) : '?'
+    const ratioPct = best.initial
+      ? ((worstMs / best.initial) * 100).toFixed(0)
+      : '?'
     console.log(`\nInspector pass timings (best of ${samples.length}):`)
-    console.log(`  ${String(best.initial).padStart(6)}ms  Generate function types (initial)`)
+    console.log(
+      `  ${String(best.initial).padStart(6)}ms  Generate function types (initial)`
+    )
     for (const [name, dur] of best.reinspects) {
       console.log(`  ${String(dur).padStart(6)}ms  ${name}`)
     }

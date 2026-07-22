@@ -1,4 +1,27 @@
-{"name":"Sb","nodes":[
-{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"s"}},
-{"id":"c","name":"Create","type":"n8n-nodes-base.supabase","typeVersion":1,"position":[200,0],"parameters":{"operation":"create","tableId":{"__rl":true,"mode":"list","value":"leads"}}}],
-"connections":{"Webhook":{"main":[[{"node":"Create","type":"main","index":0}]]}}}
+{
+  "name": "Sb",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "s" }
+    },
+    {
+      "id": "c",
+      "name": "Create",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "operation": "create",
+        "tableId": { "__rl": true, "mode": "list", "value": "leads" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Create", "type": "main", "index": 0 }]] }
+  }
+}

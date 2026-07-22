@@ -55,7 +55,11 @@ describe('BunEventHubService', () => {
     const bin = new Uint8Array([1, 2, 3])
     await hub.publish('bin', null, bin as any, true)
 
-    assert.deepEqual(calls[0], ['news', JSON.stringify({ hello: 'world' }), false])
+    assert.deepEqual(calls[0], [
+      'news',
+      JSON.stringify({ hello: 'world' }),
+      false,
+    ])
     assert.equal(calls[1][0], 'bin')
     assert.equal(calls[1][1], bin)
     assert.equal(calls[1][2], true)

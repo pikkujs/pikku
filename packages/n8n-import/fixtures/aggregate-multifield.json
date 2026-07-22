@@ -1,7 +1,12 @@
 {
   "name": "aggregate multi field",
   "nodes": [
-    { "name": "Trigger", "type": "n8n-nodes-base.manualTrigger", "parameters": {}, "position": [0, 0] },
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
     {
       "name": "Roll",
       "type": "n8n-nodes-base.aggregate",
@@ -10,7 +15,11 @@
         "fieldsToAggregate": {
           "fieldToAggregate": [
             { "fieldToAggregate": "text" },
-            { "fieldToAggregate": "repost.text", "renameField": true, "outputFieldName": "repost" }
+            {
+              "fieldToAggregate": "repost.text",
+              "renameField": true,
+              "outputFieldName": "repost"
+            }
           ]
         }
       },

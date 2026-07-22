@@ -1,5 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
-import { Center, Stack, Paper, Box, Button, Text, Alert } from '@pikku/mantine/core'
+import {
+  Center,
+  Stack,
+  Paper,
+  Box,
+  Button,
+  Text,
+  Alert,
+} from '@pikku/mantine/core'
 import { ShieldX } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'

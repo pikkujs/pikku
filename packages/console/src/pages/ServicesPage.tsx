@@ -26,7 +26,9 @@ export const ServicesPage: React.FC = () => {
       {
         key: 'name',
         header: 'NAME',
-        render: (item: ServiceItem) => <Text fw={500}>{asI18n(item.name)}</Text>,
+        render: (item: ServiceItem) => (
+          <Text fw={500}>{asI18n(item.name)}</Text>
+        ),
       },
       {
         key: 'functions',
@@ -66,7 +68,12 @@ export const ServicesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.services_title()} description={m.services_description()} />}
+        header={
+          <ListPageHeader
+            title={m.services_title()}
+            description={m.services_description()}
+          />
+        }
         hidePanel
       >
         <TableListPage

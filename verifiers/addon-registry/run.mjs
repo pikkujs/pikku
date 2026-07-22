@@ -42,7 +42,9 @@ const ADDON_FOLDER = ADDON_PKG.split('/').pop()
 
 function run(label, file, args, cwd) {
   console.log(`\n▶ ${label}`)
-  console.log(`  ${file} ${args.join(' ')}  (cwd: ${cwd.replace(repoRoot, '.')})`)
+  console.log(
+    `  ${file} ${args.join(' ')}  (cwd: ${cwd.replace(repoRoot, '.')})`
+  )
   execFileSync(file, args, { cwd, stdio: 'inherit' })
 }
 
@@ -97,7 +99,12 @@ console.log(`  recorded pikku-addons.json (${ADDON_PKG}@${version})`)
 // 4. Build + type-check the consumer against the linked addon
 rmSync(join(consumerDir, '.pikku'), { recursive: true, force: true })
 run('consumer: pikku all', 'node', [PIKKU, 'all'], consumerDir)
-run('consumer: tsc --noEmit', TSC, ['--noEmit', '-p', 'tsconfig.json'], consumerDir)
+run(
+  'consumer: tsc --noEmit',
+  TSC,
+  ['--noEmit', '-p', 'tsconfig.json'],
+  consumerDir
+)
 
 // 5. Runtime invoke — prove the installed addon actually runs over RPC
 run('consumer: runtime invoke', TSX, ['src/start.ts'], consumerDir)
@@ -105,4 +112,6 @@ run('consumer: runtime invoke', TSX, ['src/start.ts'], consumerDir)
 // Cleanup the artifact (keep addons/ install + symlink for debugging)
 rmSync(tgzPath, { force: true })
 
-console.log('\n✓ registry pack/install round-trip passed (shadcn/workspace model)')
+console.log(
+  '\n✓ registry pack/install round-trip passed (shadcn/workspace model)'
+)

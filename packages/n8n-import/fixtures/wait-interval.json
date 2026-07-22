@@ -15,7 +15,11 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [200, 0],
-      "parameters": { "resume": "timeInterval", "amount": 30, "unit": "seconds" }
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 30,
+        "unit": "seconds"
+      }
     },
     {
       "id": "h",

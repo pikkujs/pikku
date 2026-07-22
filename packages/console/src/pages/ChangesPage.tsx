@@ -292,7 +292,9 @@ const FieldDiff: React.FC<{
             wrap="nowrap"
             style={{
               borderBottom: '1px solid var(--app-row-border)',
-              background: equal ? 'transparent' : 'var(--mantine-color-default-hover)',
+              background: equal
+                ? 'transparent'
+                : 'var(--mantine-color-default-hover)',
             }}
           >
             <Text
@@ -318,7 +320,8 @@ const FieldDiff: React.FC<{
                 style={{
                   background: 'transparent',
                   fontSize: 11,
-                  color: b === undefined ? 'var(--mantine-color-dimmed)' : undefined,
+                  color:
+                    b === undefined ? 'var(--mantine-color-dimmed)' : undefined,
                 }}
               >
                 {b === undefined ? '—' : JSON.stringify(b)}
@@ -339,7 +342,8 @@ const FieldDiff: React.FC<{
                 style={{
                   background: 'transparent',
                   fontSize: 11,
-                  color: o === undefined ? 'var(--mantine-color-dimmed)' : undefined,
+                  color:
+                    o === undefined ? 'var(--mantine-color-dimmed)' : undefined,
                 }}
               >
                 {o === undefined ? '—' : JSON.stringify(o)}
@@ -630,7 +634,11 @@ export const ChangesPage: React.FC = () => {
                   onChange={(e) => setDraftPath(e.currentTarget.value)}
                   onKeyDown={(e) => e.key === 'Enter' && apply()}
                   rightSection={
-                    <ActionIcon variant="subtle" size="sm" onClick={() => fileInputRef.current?.click()}>
+                    <ActionIcon
+                      variant="subtle"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
                       <FolderOpen size={14} />
                     </ActionIcon>
                   }
@@ -658,7 +666,12 @@ export const ChangesPage: React.FC = () => {
       >
         <Box
           className={classes.listSurfaceCard}
-          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
         >
           {!activePath && (
             <EmptyStatePlaceholder
@@ -683,7 +696,8 @@ export const ChangesPage: React.FC = () => {
           {activePath && diff && !diff.baseExists && (
             <Center p="xl">
               <Text size="sm" c="red">
-                {asI18n('Base path does not exist: ')}<Code>{diff.basePath}</Code>
+                {asI18n('Base path does not exist: ')}
+                <Code>{diff.basePath}</Code>
               </Text>
             </Center>
           )}

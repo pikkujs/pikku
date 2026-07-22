@@ -67,11 +67,23 @@
   "connections": {
     "Trigger": { "main": [[{ "node": "Load", "type": "main", "index": 0 }]] },
     "Load": { "main": [[{ "node": "ParsePdf", "type": "main", "index": 0 }]] },
-    "ParsePdf": { "main": [[{ "node": "ParseSheet", "type": "main", "index": 0 }]] },
-    "ParseSheet": { "main": [[{ "node": "ParseText", "type": "main", "index": 0 }]] },
-    "ParseText": { "main": [[{ "node": "MakeSheet", "type": "main", "index": 0 }]] },
-    "MakeSheet": { "main": [[{ "node": "MakeText", "type": "main", "index": 0 }]] },
-    "MakeText": { "main": [[{ "node": "MoveData", "type": "main", "index": 0 }]] },
-    "MoveData": { "main": [[{ "node": "MakeBinary", "type": "main", "index": 0 }]] }
+    "ParsePdf": {
+      "main": [[{ "node": "ParseSheet", "type": "main", "index": 0 }]]
+    },
+    "ParseSheet": {
+      "main": [[{ "node": "ParseText", "type": "main", "index": 0 }]]
+    },
+    "ParseText": {
+      "main": [[{ "node": "MakeSheet", "type": "main", "index": 0 }]]
+    },
+    "MakeSheet": {
+      "main": [[{ "node": "MakeText", "type": "main", "index": 0 }]]
+    },
+    "MakeText": {
+      "main": [[{ "node": "MoveData", "type": "main", "index": 0 }]]
+    },
+    "MoveData": {
+      "main": [[{ "node": "MakeBinary", "type": "main", "index": 0 }]]
+    }
   }
 }

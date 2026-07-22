@@ -195,8 +195,7 @@ const WorkflowTabbedPanel: React.FC<{
   const { workflow } = useWorkflowContext()
   const hasRun = !!runContext?.selectedRunId
   const isCreating = !!runContext?.isCreatingRun
-  const hasNodes =
-    !!workflow?.nodes && Object.keys(workflow.nodes).length > 0
+  const hasNodes = !!workflow?.nodes && Object.keys(workflow.nodes).length > 0
   const showGraph = renderGraph && hasNodes
 
   return (

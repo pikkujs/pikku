@@ -17,7 +17,7 @@ Set `dir` **once at the document root** from the active locale, then let the
 browser and Mantine mirror everything — _provided_ every custom style is written
 **flow-relative** (start/end), never **physical** (left/right). Get those two
 things right and Arabic, Hebrew, Farsi and Urdu all work with zero per-component
-*layout* code — directional icons still need one manual step, covered below.
+_layout_ code — directional icons still need one manual step, covered below.
 
 ## Agent Operating Procedure
 

@@ -130,7 +130,9 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       .select((eb) =>
         eb
           .selectFrom('workflowStepHistory')
-          .select((eb2) => eb2.fn.max('workflowStepHistory.succeededAt').as('m'))
+          .select((eb2) =>
+            eb2.fn.max('workflowStepHistory.succeededAt').as('m')
+          )
           .whereRef(
             'workflowStepHistory.workflowStepId',
             '=',

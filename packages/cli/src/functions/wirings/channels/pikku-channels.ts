@@ -16,7 +16,8 @@ export const pikkuChannels = pikkuVoidFunc({
       schema,
     } = config
     const { channels, exportedContracts } = visitState
-    const hasChannelContracts = Object.keys(exportedContracts.channel).length > 0
+    const hasChannelContracts =
+      Object.keys(exportedContracts.channel).length > 0
 
     if (
       (channels.files.size === 0 || Object.keys(channels.meta).length === 0) &&
@@ -59,8 +60,7 @@ export const pikkuChannels = pikkuVoidFunc({
         packageMappings
       )
 
-      const supportsImportAttributes =
-        schema?.supportsImportAttributes ?? false
+      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
       const importStatement = supportsImportAttributes
         ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
         : `import metaData from '${jsonImportPath}'`

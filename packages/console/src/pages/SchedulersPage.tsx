@@ -97,7 +97,12 @@ export const SchedulersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.schedulers_title()} description={m.schedulers_description()} />}
+        header={
+          <ListPageHeader
+            title={m.schedulers_title()}
+            description={m.schedulers_description()}
+          />
+        }
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.schedulers_select_item()}
       >

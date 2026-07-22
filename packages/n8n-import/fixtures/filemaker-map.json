@@ -1,1 +1,24 @@
-{"name":"Filemaker","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"filemaker"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.filemaker","typeVersion":1,"position":[200,0],"parameters":{"action":"record"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}
+{
+  "name": "Filemaker",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "filemaker" }
+    },
+    {
+      "id": "p",
+      "name": "Svc",
+      "type": "n8n-nodes-base.filemaker",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "action": "record" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Svc", "type": "main", "index": 0 }]] }
+  }
+}

@@ -31,7 +31,13 @@ const signToken = (
   claims: Record<string, unknown>
 ): string => {
   const now = Math.floor(Date.now() / 1000)
-  const payload = { iss: 'test', iat: now, exp: now + 120, purpose: 'fabric-admin', ...claims }
+  const payload = {
+    iss: 'test',
+    iat: now,
+    exp: now + 120,
+    purpose: 'fabric-admin',
+    ...claims,
+  }
   const input = `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64url(JSON.stringify(payload))}`
   const sig = b64url(createSign('RSA-SHA256').update(input).sign(signingKey))
   return `${input}.${sig}`
@@ -61,10 +67,16 @@ describe('better-auth fabric plugin', () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const auth = makeAuth(db, publicKey)
 
-    const res = await signInFabric(auth, signToken(privateKey, { sub: 'op-123', name: 'Yasser' }))
+    const res = await signInFabric(
+      auth,
+      signToken(privateKey, { sub: 'op-123', name: 'Yasser' })
+    )
 
     assert.equal(res.status, 200)
-    assert.match(res.headers.getSetCookie().join('; '), /better-auth\.session_token=/)
+    assert.match(
+      res.headers.getSetCookie().join('; '),
+      /better-auth\.session_token=/
+    )
 
     const body = await res.json()
     assert.equal(body.user.fabric, true)
@@ -75,7 +87,10 @@ describe('better-auth fabric plugin', () => {
     assert.equal(db.user!.length, 1)
 
     // Second sign-in reuses the row — no duplicate operators.
-    const res2 = await signInFabric(auth, signToken(privateKey, { sub: 'op-123' }))
+    const res2 = await signInFabric(
+      auth,
+      signToken(privateKey, { sub: 'op-123' })
+    )
     assert.equal(res2.status, 200)
     assert.equal(db.user!.length, 1, 'no duplicate fabric rows')
   })
@@ -96,7 +111,10 @@ describe('better-auth fabric plugin', () => {
       session: [],
       account: [],
     }
-    const res = await signInFabric(makeAuth(db, publicKey), signToken(privateKey, { sub: 'op-1' }))
+    const res = await signInFabric(
+      makeAuth(db, publicKey),
+      signToken(privateKey, { sub: 'op-1' })
+    )
     assert.equal(res.status, 401)
     assert.match((await res.json()).message ?? '', /not a fabric operator/)
   })
@@ -105,7 +123,10 @@ describe('better-auth fabric plugin', () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
 
     // Signed by an unrelated key → signature verification fails.
-    const forged = await signInFabric(makeAuth(db, publicKey), signToken(other.privateKey, { sub: 'op-9' }))
+    const forged = await signInFabric(
+      makeAuth(db, publicKey),
+      signToken(other.privateKey, { sub: 'op-9' })
+    )
     assert.equal(forged.status, 401)
     assert.equal(db.user!.length, 0, 'no user created on bad signature')
 
@@ -123,7 +144,10 @@ describe('better-auth fabric plugin', () => {
     assert.equal(wrongPurpose.status, 401)
 
     // No public key configured → endpoint disabled.
-    const unconfigured = await signInFabric(makeAuth(db, undefined), signToken(privateKey, { sub: 'op-9' }))
+    const unconfigured = await signInFabric(
+      makeAuth(db, undefined),
+      signToken(privateKey, { sub: 'op-9' })
+    )
     assert.equal(unconfigured.status, 401)
     assert.equal(db.user!.length, 0)
   })

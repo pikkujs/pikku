@@ -41,7 +41,10 @@ export class InMemoryQueueService implements QueueService {
       } catch (e: any) {
         if (attemptsMade < maxAttempts) {
           // Transient failure — redeliver with backoff, mirroring a real queue.
-          setTimeout(runAttempt, this.backoffDelay(options?.backoff, attemptsMade))
+          setTimeout(
+            runAttempt,
+            this.backoffDelay(options?.backoff, attemptsMade)
+          )
         } else {
           console.error(
             `[InMemoryQueue] Job ${jobId} on ${queueName} failed after ${attemptsMade} attempt(s):`,

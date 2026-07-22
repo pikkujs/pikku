@@ -25,12 +25,12 @@ needs to read intent.
 
 ## Coverage (2,053 real workflows)
 
-| Outcome | Count | % | Meaning |
-| --- | ---: | ---: | --- |
-| clean | 1,119 | 54.5% | compiles with zero stubs — runnable as-is |
-| partial | 832 | 40.5% | compiles, but ≥1 stub needs the skill to fill |
-| failed | 10 | 0.5% | all malformed JSON (missing `nodes` array) — not our bug |
-| skipped | 92 | 4.5% | external cross-workflow sub-flow ref (un-importable single-file) |
+| Outcome | Count |     % | Meaning                                                          |
+| ------- | ----: | ----: | ---------------------------------------------------------------- |
+| clean   | 1,119 | 54.5% | compiles with zero stubs — runnable as-is                        |
+| partial |   832 | 40.5% | compiles, but ≥1 stub needs the skill to fill                    |
+| failed  |    10 |  0.5% | all malformed JSON (missing `nodes` array) — not our bug         |
+| skipped |    92 |  4.5% | external cross-workflow sub-flow ref (un-importable single-file) |
 
 Every one of the 10 failures is a corrupt corpus file; the compiler itself produces
 no crash-emitting output. Separately, **208** n8n expressions across **117**
@@ -41,30 +41,30 @@ workflows were too dynamic to lower and were preserved verbatim as `// TODO` mar
 `parse-n8n.ts` classifies each node into a role, then `codegen.ts` emits it. Status
 below is the compiler's own label per node type (`yarn harness`).
 
-| Class | Mechanism | Example types (corpus count) | Status |
-| --- | --- | --- | --- |
-| Data / transform | native `@pikku/addon-graph` fns | set 2,448 · aggregate 240 · splitOut 402 · limit 67 | supported |
-| HTTP | `graph:httpRequest` (+ static auth recipes) | httpRequest 2,093 | supported |
-| Control flow | `graph:branch` (normalizable IF/Filter/Switch) | if 1,058 · switch 277 · filter 267 | supported |
-| Integrations w/ an addon | `ref('<ns>:<fn>')` to installed addon | googleSheets 589 · telegram 389 · gmail 257 · slack 175 | supported |
-| Agents / chains | `pikkuAIAgent` (+ tools/memory absorbed) | agent 457 · chainLlm 256 · informationExtractor 91 | supported |
-| RAG retrieval | tool + chain → `<store>:query` | vectorStoreQdrant 82 | supported |
-| RAG ingestion | synthesized `graph:splitText → <store>:ingest` | graphSplitText 85 (synthesized) | supported |
-| Triggers / AI sub-nodes | absorbed (become the workflow trigger, or folded into an agent/RAG) | manualTrigger 769 · lmChatOpenAi 630 · embeddingsOpenAi 130 | skipped¹ |
+| Class                    | Mechanism                                                           | Example types (corpus count)                                | Status    |
+| ------------------------ | ------------------------------------------------------------------- | ----------------------------------------------------------- | --------- |
+| Data / transform         | native `@pikku/addon-graph` fns                                     | set 2,448 · aggregate 240 · splitOut 402 · limit 67         | supported |
+| HTTP                     | `graph:httpRequest` (+ static auth recipes)                         | httpRequest 2,093                                           | supported |
+| Control flow             | `graph:branch` (normalizable IF/Filter/Switch)                      | if 1,058 · switch 277 · filter 267                          | supported |
+| Integrations w/ an addon | `ref('<ns>:<fn>')` to installed addon                               | googleSheets 589 · telegram 389 · gmail 257 · slack 175     | supported |
+| Agents / chains          | `pikkuAIAgent` (+ tools/memory absorbed)                            | agent 457 · chainLlm 256 · informationExtractor 91          | supported |
+| RAG retrieval            | tool + chain → `<store>:query`                                      | vectorStoreQdrant 82                                        | supported |
+| RAG ingestion            | synthesized `graph:splitText → <store>:ingest`                      | graphSplitText 85 (synthesized)                             | supported |
+| Triggers / AI sub-nodes  | absorbed (become the workflow trigger, or folded into an agent/RAG) | manualTrigger 769 · lmChatOpenAi 630 · embeddingsOpenAi 130 | skipped¹  |
 
 ¹ "skipped" ≠ dropped — triggers and model/memory/embedding sub-nodes are
 intentionally not standalone graph nodes.
 
 ## What it can't automate (and who does)
 
-| Stubbed class | Count | Why a rule can't | Handled by |
-| --- | ---: | --- | --- |
-| Code node | 988 | arbitrary JS — no static equivalent | skill → `references/code-translation.md` |
-| Integration w/o installed addon | e.g. gmailTool 57, toolHttpRequest 142 | mapping needs the real addon surface | skill → `references/addon-mapping.md` |
-| **splitInBatches** (Loop Over Items) | 279 | loop semantics need intent (see below) | skill → `references/loops-and-control.md` |
-| Sub-workflow tool (`toolWorkflow`) | 178 | target/shape is judgment | skill / manual |
-| `function` (legacy code) | 188 | same as Code node | skill → code-translation |
-| HTML / form / misc | html 149 · form 86 | niche, low ROI to compile | skill / manual |
+| Stubbed class                        |                                  Count | Why a rule can't                       | Handled by                                |
+| ------------------------------------ | -------------------------------------: | -------------------------------------- | ----------------------------------------- |
+| Code node                            |                                    988 | arbitrary JS — no static equivalent    | skill → `references/code-translation.md`  |
+| Integration w/o installed addon      | e.g. gmailTool 57, toolHttpRequest 142 | mapping needs the real addon surface   | skill → `references/addon-mapping.md`     |
+| **splitInBatches** (Loop Over Items) |                                    279 | loop semantics need intent (see below) | skill → `references/loops-and-control.md` |
+| Sub-workflow tool (`toolWorkflow`)   |                                    178 | target/shape is judgment               | skill / manual                            |
+| `function` (legacy code)             |                                    188 | same as Code node                      | skill → code-translation                  |
+| HTML / form / misc                   |                     html 149 · form 86 | niche, low ROI to compile              | skill / manual                            |
 
 The compiler deliberately does **not** carry per-service tables — those live in the
 skill. Adding a new addon needs **zero** compiler changes.
@@ -86,15 +86,15 @@ Three references carry the depth: `addon-mapping.md`, `code-translation.md`,
 
 Measured scoping (why this is a skill job, not a compiler epic):
 
-| Cut | Count | Note |
-| --- | ---: | --- |
-| Total splitInBatches nodes | 282 | across 223 workflows |
-| `batchSize = 1` | 249 (88%) | = per-item `graph:map`, not real batching |
-| Loop body ≤1 node | 40 | trivially a single-node map child |
-| Loop body 2–3 nodes | 79 | needs a per-item sub-graph child |
-| Loop body 4+ nodes | 135 | needs a per-item sub-graph child |
-| Provably-safe subset (clean 1-node body, **empty** done branch) | 10 | unambiguous `graph:map`, no `next` |
-| Clean 1-node body, **passthrough** done branch | 26 | done-branch data semantics are version-dependent → guess |
+| Cut                                                             |     Count | Note                                                     |
+| --------------------------------------------------------------- | --------: | -------------------------------------------------------- |
+| Total splitInBatches nodes                                      |       282 | across 223 workflows                                     |
+| `batchSize = 1`                                                 | 249 (88%) | = per-item `graph:map`, not real batching                |
+| Loop body ≤1 node                                               |        40 | trivially a single-node map child                        |
+| Loop body 2–3 nodes                                             |        79 | needs a per-item sub-graph child                         |
+| Loop body 4+ nodes                                              |       135 | needs a per-item sub-graph child                         |
+| Provably-safe subset (clean 1-node body, **empty** done branch) |        10 | unambiguous `graph:map`, no `next`                       |
+| Clean 1-node body, **passthrough** done branch                  |        26 | done-branch data semantics are version-dependent → guess |
 
 The only guess-free deterministic subset is ~10 workflows — too little to justify
 the sub-graph-child + rebind-boundary compiler work. **Recommendation: the skill
@@ -109,6 +109,7 @@ the mechanical majority, the skill for the rest. This section is just the map fo
 picking the work back up when someone chooses to.
 
 **Frozen / done:**
+
 - Core roles, native-map, integration-map, branch, fanout, agents, sub-workflow lift.
 - RAG retrieval (tool + chain) **and** ingestion (`graph:splitText` + `<store>:ingest`)
   shipped this session. 153 unit tests green; `yarn tsc` clean.
@@ -123,6 +124,7 @@ picking the work back up when someone chooses to.
 `/Users/yasser/git/pikku/addons`, blocked on the `@pikku/core` #948/#949 release.
 
 **Next levers, in ROI order:**
+
 1. splitInBatches via the **skill** (unlocks ~150–200 nodes without compiler work).
 2. Publish the vector-store addons once `@pikku/core` ships `AIEmbeddingService`.
 3. Grow the addon catalogue (demand-driven; each new addon = 0 compiler changes).

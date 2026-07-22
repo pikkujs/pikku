@@ -117,9 +117,7 @@ export class PikkuNextJS<
 
     if (!this.singletonServicesPromise) {
       this.singletonServicesPromise = (async () => {
-        const config = this.createConfig
-          ? await this.createConfig()
-          : ({} as C)
+        const config = this.createConfig ? await this.createConfig() : ({} as C)
         const singletonServices = await this.createSingletonServices(config)
         this.singletonServices = singletonServices
         return singletonServices

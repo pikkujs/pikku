@@ -1,19 +1,32 @@
 {
   "name": "merge modes",
   "nodes": [
-    { "name": "Trigger", "type": "n8n-nodes-base.manualTrigger", "parameters": {}, "position": [0, 0] },
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
     {
       "name": "A",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "parameters": { "assignments": { "assignments": [{ "name": "a", "type": "number", "value": 1 }] } },
+      "parameters": {
+        "assignments": {
+          "assignments": [{ "name": "a", "type": "number", "value": 1 }]
+        }
+      },
       "position": [200, -100]
     },
     {
       "name": "B",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "parameters": { "assignments": { "assignments": [{ "name": "b", "type": "number", "value": 2 }] } },
+      "parameters": {
+        "assignments": {
+          "assignments": [{ "name": "b", "type": "number", "value": 2 }]
+        }
+      },
       "position": [200, 100]
     },
     {
@@ -32,9 +45,18 @@
     }
   ],
   "connections": {
-    "Trigger": { "main": [[{ "node": "A", "type": "main", "index": 0 }, { "node": "B", "type": "main", "index": 0 }]] },
+    "Trigger": {
+      "main": [
+        [
+          { "node": "A", "type": "main", "index": 0 },
+          { "node": "B", "type": "main", "index": 0 }
+        ]
+      ]
+    },
     "A": { "main": [[{ "node": "Combine", "type": "main", "index": 0 }]] },
     "B": { "main": [[{ "node": "Combine", "type": "main", "index": 1 }]] },
-    "Combine": { "main": [[{ "node": "Appended", "type": "main", "index": 0 }]] }
+    "Combine": {
+      "main": [[{ "node": "Appended", "type": "main", "index": 0 }]]
+    }
   }
 }

@@ -114,7 +114,12 @@ export const MiddlewarePage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.middleware_title()} description={m.middleware_description()} />}
+        header={
+          <ListPageHeader
+            title={m.middleware_title()}
+            description={m.middleware_description()}
+          />
+        }
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.middleware_select_item()}
       >
