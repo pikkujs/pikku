@@ -3,6 +3,7 @@ import {
   ADMIN_USER,
   GUEST_USER,
   STAFF_USER,
+  TARGET_USER,
   type SeedUser,
 } from './auth-fixtures.js'
 
@@ -24,7 +25,8 @@ export const seedAuthUsers = async (
   await signUp(baseUrl, ADMIN_USER)
   await signUp(baseUrl, GUEST_USER)
   await signUp(baseUrl, STAFF_USER)
+  await signUp(baseUrl, TARGET_USER)
   services.logger.info(
-    `seeded console users: ${ADMIN_USER.email}, ${STAFF_USER.email}, ${GUEST_USER.email} (admin grants follow in seedScopes)`
+    `seeded console users: ${ADMIN_USER.email}, ${STAFF_USER.email}, ${GUEST_USER.email}, ${TARGET_USER.email} (admin grants follow in seedScopes)`
   )
 }

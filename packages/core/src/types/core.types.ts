@@ -270,6 +270,22 @@ export interface CoreUserSession {
 }
 
 /**
+ * The shape pikku needs from whatever auth library a project wires: something
+ * that can answer an HTTP request and expose its own endpoints as callable
+ * methods. Kept structural so core stays independent of any one auth package —
+ * `@pikku/better-auth`'s `BetterAuthInstance` is this type.
+ */
+export interface AuthInstance {
+  handler: (request: Request) => Promise<Response>
+  api: Record<string, any>
+  /**
+   * The auth library's resolved context. Optional because a hand-built instance
+   * may omit it.
+   */
+  $context?: Promise<any>
+}
+
+/**
  * Interface for core singleton services provided by Pikku.
  */
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
@@ -341,6 +357,13 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    * better-auth's `mapSession`), never by the function runner.
    */
   scopeService?: ScopeService
+  /**
+   * The project's resolved auth instance, built once by the factory an auth
+   * package registers (e.g. `pikkuBetterAuth`) and injected by the generated
+   * `pikkuServices` wrapper — which is why service factories are forbidden from
+   * returning it themselves. Absent when the project wires no auth.
+   */
+  auth?: () => Promise<AuthInstance>
 }
 
 /**

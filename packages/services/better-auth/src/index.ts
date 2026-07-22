@@ -8,12 +8,17 @@ export { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 export { betterAuthSession } from './auth-session.js'
 export { withResolvedScopes } from './auth-session-scopes.js'
 export {
+  ADMIN_ROLE_SCOPES,
   ADMIN_SCOPES,
   ADMIN_SCOPE_ROOT,
   ADMIN_SCOPE_TREE,
+  projectedAdminRole,
   resolvedUserHoldsScopes,
   userHoldsScopes,
 } from './auth-scopes.js'
+export { syncProjectedAdminRole } from './admin-role-sync.js'
+export { callAdminApi } from './admin-api.js'
+export type { AdminApiHttpWire } from './admin-api.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export { fabric } from './fabric-plugin.js'

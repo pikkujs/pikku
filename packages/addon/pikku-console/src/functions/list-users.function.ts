@@ -14,6 +14,14 @@ export type ListedUser = {
   name?: string
   image?: string
   createdAt?: string
+  /**
+   * Ban state, present only when better-auth's `admin()` plugin is wired — it
+   * owns these columns. Absent everywhere else, so a host without the plugin
+   * simply renders no ban column rather than a misleading "not banned".
+   */
+  banned?: boolean
+  banReason?: string
+  banExpires?: string
 }
 
 const DEFAULT_LIMIT = 200
@@ -59,6 +67,11 @@ export const listUsers = pikkuFunc<
         image: row.image ?? undefined,
         createdAt: row.createdAt
           ? new Date(row.createdAt).toISOString()
+          : undefined,
+        banned: typeof row.banned === 'boolean' ? row.banned : undefined,
+        banReason: row.banReason ?? undefined,
+        banExpires: row.banExpires
+          ? new Date(row.banExpires).toISOString()
           : undefined,
       })
     }

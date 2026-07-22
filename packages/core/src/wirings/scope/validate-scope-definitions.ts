@@ -52,6 +52,14 @@ const flattenNodes = (
  * Flattens declared scope trees into the full list of grantable scope ids,
  * depth-first. Every node is emitted, including intermediate ones.
  *
+ * Ids are unique. A root may legitimately be declared more than once — an addon
+ * and its host app both contributing the same `admin` tree, say — and
+ * {@link validateAndBuildScopeDefinitionsMeta} already guarantees those
+ * declarations are identical, so the second one is redundant rather than
+ * conflicting. Collapsing it here keeps every consumer honest: codegen emits an
+ * object literal keyed by id (duplicates are a TypeScript error), and a
+ * ScopeService syncs one row per scope instead of re-writing the same one.
+ *
  * Used by codegen to build the `ScopeId` union, and by a ScopeService to sync
  * the declared set into its store.
  */
@@ -63,7 +71,14 @@ export const flattenScopeDefinitions = (
     out.push({ id: def.name, description: def.description })
     flattenNodes(def.scopes, def.name, out)
   }
-  return out
+  const seen = new Set<string>()
+  return out.filter((scope) => {
+    if (seen.has(scope.id)) {
+      return false
+    }
+    seen.add(scope.id)
+    return true
+  })
 }
 
 /**

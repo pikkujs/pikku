@@ -62,6 +62,31 @@ describe('flattenScopeDefinitions', () => {
       ['admin', 'admin:users', 'billing']
     )
   })
+
+  // An addon and its host app may both contribute the same root. Codegen writes
+  // these ids into an object literal, where a repeat is a TypeScript error.
+  test('a root declared twice is flattened once', () => {
+    const tree = { users: { scopes: { ban: {} } } }
+    const definitions: ScopeDefinitions = [
+      { name: 'admin', description: 'Administration', scopes: tree },
+      { name: 'admin', description: 'Administration', scopes: tree },
+    ]
+
+    assert.deepEqual(
+      flattenScopeDefinitions(definitions).map((s) => s.id),
+      ['admin', 'admin:users', 'admin:users:ban']
+    )
+  })
+
+  test('the first description of a repeated scope wins', () => {
+    assert.deepEqual(
+      flattenScopeDefinitions([
+        { name: 'admin', description: 'Administration' },
+        { name: 'admin', description: 'Something else' },
+      ]),
+      [{ id: 'admin', description: 'Administration' }]
+    )
+  })
 })
 
 describe('validateAndBuildScopeDefinitionsMeta', () => {

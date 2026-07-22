@@ -11,7 +11,10 @@ import { wireScope } from '#pikku'
  *
  * The `admin` tree mirrors `ADMIN_SCOPE_TREE` in `@pikku/better-auth` — it is
  * spelled out inline because `wireScope` is extracted by AST, so an imported
- * constant cannot be spread here. Keep the two in sync.
+ * constant cannot be spread here. Keep the two in sync: pikku requires every
+ * declaration of a shared scope root to be byte-identical, so this must match
+ * the `scaffold.userAdmin` output too, including the leaves whose capabilities
+ * only exist once better-auth's admin() plugin is wired.
  */
 wireScope({
   admin: {
@@ -29,6 +32,10 @@ wireScope({
         description: 'The user directory',
         scopes: {
           list: { description: 'List and search users' },
+          ban: { description: 'Ban and unban users' },
+          remove: { description: 'Delete users and all their data' },
+          sessions: { description: "Revoke a user's sessions" },
+          password: { description: "Set a user's password" },
         },
       },
     },

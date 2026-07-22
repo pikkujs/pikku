@@ -30,3 +30,14 @@ export const STAFF_USER: SeedUser = {
   email: 'staff@e2e.test',
   password: 'staff-password',
 }
+
+/**
+ * The target of the user-management suite: banned, signed out and given a new
+ * password by other tests. It holds no scope and nothing else asserts on it, so
+ * those tests cannot disturb another suite's fixtures.
+ */
+export const TARGET_USER: SeedUser = {
+  name: 'E2E Target',
+  email: 'target@e2e.test',
+  password: 'target-password',
+}

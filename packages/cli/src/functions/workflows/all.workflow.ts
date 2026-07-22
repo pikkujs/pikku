@@ -12,6 +12,7 @@ type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuConsoleFunctions'
   | 'pikkuScenarioFunctions'
+  | 'pikkuUserAdminFunctions'
   | 'pikkuPublicAgent'
   | 'pikkuEventsScaffold'
   | 'pikkuGraphWirings'
@@ -36,6 +37,11 @@ const scaffoldFiles = (
     files.push({
       file: config.scenariosFunctionsFile,
       generator: 'pikkuScenarioFunctions',
+    })
+  if (config.scaffold?.userAdmin && config.userAdminFunctionsFile)
+    files.push({
+      file: config.userAdminFunctionsFile,
+      generator: 'pikkuUserAdminFunctions',
     })
   if (config.scaffold?.agent && config.publicAgentFile)
     files.push({
@@ -206,6 +212,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Scenario functions', 'pikkuScenarioFunctions', null),
+      workflow.do('User admin functions', 'pikkuUserAdminFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),
       workflow.do(

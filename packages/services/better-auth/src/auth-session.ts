@@ -11,6 +11,7 @@ import {
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
+import { syncProjectedAdminRole } from './admin-role-sync.js'
 
 type BetterAuthSessionResult = { user: any; session: any }
 
@@ -167,12 +168,20 @@ export const betterAuthSession = (
       const mapped = mapSession
         ? await mapSession(result, services as CoreServices)
         : ({ userId: result.user.id } as CoreUserSession)
-      setSession(
-        await withResolvedScopes(
-          stampActorFlag(mapped, result.user),
-          services as CoreServices
-        )
+      const resolved = await withResolvedScopes(
+        stampActorFlag(mapped, result.user),
+        services as CoreServices
       )
+      // Only the human path projects the role: an API key may carry a
+      // deliberately narrowed scope set, and an impersonated session acts as
+      // the target rather than on their behalf — neither should rewrite what a
+      // user is allowed to do when signed in themselves.
+      await syncProjectedAdminRole(
+        services as CoreServices,
+        result.user,
+        resolved.scopes
+      )
+      setSession(resolved)
     }
 
     return next()
