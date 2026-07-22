@@ -476,6 +476,26 @@ export function createScopedChannel(
   }
 }
 
+/**
+ * Build the run input for a delegated sub-agent.
+ *
+ * `context` is the PARENT run's identifier block (the "Current context" text
+ * with organizationId, project/stage ids). A sub-agent's tool-call schema only
+ * carries { message, session }, so unless the sub-agent inherits the parent's
+ * context it never sees the authoritative ids — it depends on the model
+ * re-typing them into `message`, which weak models botch, causing
+ * schema/permission rejections and retry loops. Forwarding it here is the
+ * regression this seam guards.
+ */
+export function buildSubAgentRunInput(
+  message: string,
+  threadId: string,
+  resourceId: string,
+  parentContext?: string
+): { message: string; threadId: string; resourceId: string; context?: string } {
+  return { message, threadId, resourceId, context: parentContext }
+}
+
 export async function buildToolDefs(
   params: RunAIAgentParams,
   agentSessionMap: Map<string, string>,
@@ -484,7 +504,15 @@ export async function buildToolDefs(
   packageName: string | null,
   streamContext?: StreamContext,
   aiMiddlewares?: PikkuAIMiddlewareHooks[],
-  agentMode?: 'delegate' | 'supervise'
+  agentMode?: 'delegate' | 'supervise',
+  // The parent run's `context` (the "Current context" identifier block). A
+  // delegated sub-agent's tool-call input schema only carries { message,
+  // session }, so without inheriting this the sub-agent never sees the
+  // authoritative ids (organizationId, project/stage ids) — it depends on the
+  // model re-typing them into `message`, which weak models botch, causing
+  // schema/permission rejections and retry loops. Forward it so the sub-agent
+  // gets the same context block in its instructions.
+  parentContext?: string
 ): Promise<{ tools: AIAgentToolDef[]; missingRpcs: string[] }> {
   const singletonServices = getSingletonServices()
   const tools: AIAgentToolDef[] = []
@@ -716,7 +744,12 @@ export async function buildToolDefs(
                 }
             const resultText = await streamAIAgent(
               subAgentName,
-              { message, threadId, resourceId },
+              buildSubAgentRunInput(
+                message,
+                threadId,
+                resourceId,
+                parentContext
+              ),
               effectiveChannel,
               params,
               agentSessionMap,
@@ -744,7 +777,7 @@ export async function buildToolDefs(
           // No stream context: sub-agent runs non-streaming
           const result = await runAIAgent(
             subAgentName,
-            { message, threadId, resourceId },
+            buildSubAgentRunInput(message, threadId, resourceId, parentContext),
             params,
             agentSessionMap
           )
@@ -1017,7 +1050,8 @@ export async function prepareAgentRun(
     packageName,
     streamContext,
     aiMiddlewares,
-    agent.agentMode
+    agent.agentMode,
+    input.context
   )
 
   let instructions = await buildInstructions(resolvedName, packageName)

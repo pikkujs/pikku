@@ -7,6 +7,7 @@ import {
   assertResourceOwner,
   canAccessThread,
   buildInstructions,
+  buildSubAgentRunInput,
   buildToolDefs,
   createScopedChannel,
   getAddonCredentialRequirements,
@@ -773,5 +774,33 @@ describe('C2 sessionScope + resume ownership', () => {
         ),
       (e: unknown) => e instanceof ForbiddenError
     )
+  })
+})
+
+describe('buildSubAgentRunInput (parent context forwarding)', () => {
+  // A delegated sub-agent's tool-call schema only carries { message, session }.
+  // If its run input does not inherit the parent's `context` (the identifier
+  // block with organizationId / project ids), the sub-agent never sees the
+  // authoritative ids and depends on the model re-typing them into `message` —
+  // which weak models botch, causing schema/permission rejections and retry
+  // loops. These pin that the parent context is always forwarded.
+  test('forwards the parent context onto the sub-agent run input', () => {
+    const input = buildSubAgentRunInput(
+      'find failing functions',
+      'thread-1',
+      'org-uuid',
+      'organizationId: 11111111-1111-1111-1111-111111111111'
+    )
+    assert.deepEqual(input, {
+      message: 'find failing functions',
+      threadId: 'thread-1',
+      resourceId: 'org-uuid',
+      context: 'organizationId: 11111111-1111-1111-1111-111111111111',
+    })
+  })
+
+  test('context is undefined when the parent run had none (root agent)', () => {
+    const input = buildSubAgentRunInput('hi', 'thread-1', 'res-1')
+    assert.equal(input.context, undefined)
   })
 })
