@@ -1,7 +1,14 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { CanvasDrawerData } from '../../context/DrawerContext'
-import { Box, Text, Stack, Group, UnstyledButton, Loader } from '@pikku/mantine/core'
+import {
+  Box,
+  Text,
+  Stack,
+  Group,
+  UnstyledButton,
+  Loader,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -434,14 +441,14 @@ const FunctionsView: React.FC<{
   onBack: () => void
 }> = ({ onBack }) => {
   const { data: functions, isLoading, isError } = useFunctionsMeta()
-  const { data: addonMeta } = useAddonMeta()
+  const { data: addonMeta } = useAddonMeta<AddonMeta>()
 
   const internalFunctions = React.useMemo(() => {
     if (!functions) return []
 
     const addonFuncNames = new Set<string>()
     if (addonMeta) {
-      for (const pkg of addonMeta as AddonMeta[]) {
+      for (const pkg of addonMeta) {
         for (const name of Object.keys(pkg.functions ?? {})) {
           addonFuncNames.add(name)
         }
@@ -537,7 +544,7 @@ const AddonsView: React.FC<{
   onBack: () => void
   onSelectAddon: (addon: AddonMeta) => void
 }> = ({ onBack, onSelectAddon }) => {
-  const { data: addons, isLoading, isError } = useAddonMeta()
+  const { data: addons, isLoading, isError } = useAddonMeta<AddonMeta>()
 
   const filteredAddons = React.useMemo(() => {
     if (!addons) return []

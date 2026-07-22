@@ -1,7 +1,7 @@
 import { pikkuFunc } from '#pikku'
 
 export const getOpenapis = pikkuFunc<
-  { limit: number; offset: number; search?: string },
+  { limit: number; offset: number; search?: string; category?: string },
   {
     apis: Array<{
       name: string
@@ -15,13 +15,15 @@ export const getOpenapis = pikkuFunc<
       logo?: string
     }>
     total: number
+    // null once the last page has been handed out.
     nextCursor: number | null
   }
 >({
   title: 'Get OpenAPI Specs',
-  description: 'Fetches available OpenAPI specs from the fabric registry.',
+  description:
+    'Fetches one page of the OpenAPI catalogue from the fabric registry. Search and category are applied by the registry so they cover every entry, not just the loaded pages.',
   expose: true,
-  func: async ({ addonService }, { limit, offset, search }) => {
-    return addonService.readOpenapis({ limit, offset, search })
+  func: async ({ addonService }, { limit, offset, search, category }) => {
+    return addonService.readOpenapis({ limit, offset, search, category })
   },
 })

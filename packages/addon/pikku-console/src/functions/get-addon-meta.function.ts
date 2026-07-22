@@ -1,12 +1,15 @@
 import { pikkuFunc } from '#pikku'
-import type { AddonMeta } from '../services/addon.service.js'
+import type {
+  AddonMetaPage,
+  AddonMetaQuery,
+} from '../services/addon.service.js'
 
-export const getAddonMeta = pikkuFunc<null, AddonMeta[]>({
+export const getAddonMeta = pikkuFunc<AddonMetaQuery | null, AddonMetaPage>({
   title: 'Get Addon Metadata',
   description:
-    'Returns an array of AddonMeta objects for all installed addons by reading from addonService.readAddonsMeta()',
+    'Returns one page of the addon catalogue. Search, category and sort are applied by the registry rather than the caller, so they cover every package and not just the pages already loaded.',
   expose: true,
-  func: async ({ addonService }) => {
-    return await addonService.readAddonsMeta()
+  func: async ({ addonService }, input) => {
+    return await addonService.readAddonsMeta(input ?? {})
   },
 })

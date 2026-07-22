@@ -35,7 +35,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
-import type { PackageMeta } from '../../pages/PackagesPage'
+import type { PackageMeta } from './packageMeta'
 import { SurfaceTile } from './SurfaceTile'
 import {
   getCategoryMeta,
