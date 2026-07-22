@@ -441,7 +441,7 @@ const FunctionsView: React.FC<{
   onBack: () => void
 }> = ({ onBack }) => {
   const { data: functions, isLoading, isError } = useFunctionsMeta()
-  const { data: addonMeta } = useAddonMeta<AddonMeta>()
+  const { data: addonMeta } = useAddonMeta()
 
   const internalFunctions = React.useMemo(() => {
     if (!functions) return []
@@ -544,7 +544,7 @@ const AddonsView: React.FC<{
   onBack: () => void
   onSelectAddon: (addon: AddonMeta) => void
 }> = ({ onBack, onSelectAddon }) => {
-  const { data: addons, isLoading, isError } = useAddonMeta<AddonMeta>()
+  const { data: addons, isLoading, isError } = useAddonMeta()
 
   const filteredAddons = React.useMemo(() => {
     if (!addons) return []

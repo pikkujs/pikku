@@ -55,20 +55,20 @@ export function useFunctionMeta(pikkuFuncId: string) {
  *
  * The gallery must NOT use this: it wants one page at a time.
  */
-export function useAddonMeta<T = unknown>() {
+export function useAddonMeta() {
   const rpc = usePikkuRPC()
 
-  return useQuery<T[]>({
+  return useQuery({
     queryKey: ['addon', 'meta'],
     queryFn: async () => {
-      const addons: T[] = []
+      const addons = []
       let cursor: number | undefined
       // Bounded so a backend that always echoes a cursor can't spin forever.
       for (let page = 0; page < 100; page++) {
-        const result = (await rpc.invoke('console:getAddonMeta', {
+        const result = await rpc.invoke('console:getAddonMeta', {
           limit: 250,
           ...(cursor != null ? { cursor } : {}),
-        })) as { packages?: T[]; nextCursor?: number | null }
+        })
         addons.push(...(result?.packages ?? []))
         if (result?.nextCursor == null) break
         cursor = result.nextCursor
