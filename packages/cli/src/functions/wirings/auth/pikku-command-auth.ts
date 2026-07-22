@@ -83,10 +83,6 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       await rm(middlewareFile, { force: true })
     }
 
-    // Auth used to be emitted flat into the scaffold dir and now lives in an
-    // `auth/` directory alongside every other scaffold. All three files still
-    // wire what they always did, so a leftover copy one level up would register
-    // the catch-all routes and session middleware a second time.
     for (const file of [authFile, secretsFile, middlewareFile]) {
       await removeLegacyScaffoldFile(file)
     }

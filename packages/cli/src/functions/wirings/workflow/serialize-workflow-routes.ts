@@ -4,18 +4,7 @@ export interface WorkflowRoutesGenOutput {
 }
 
 /**
- * Generate catch-all HTTP routes for workflow operations.
- *
- * Emitted as two files. The schemas are zod, and the inspector reads a zod
- * schema by importing the module that declares it — which it cannot do for the
- * wiring file, whose relative pikku-types import per-unit deploy codegen
- * rewrites. Keeping the schemas in a sibling module that imports nothing but
- * zod sidesteps that entirely.
- *
- * The status and stream results get no zod `output`: a run's status is a
- * `@pikku/core` type and the streams push over the channel rather than
- * returning, so in both cases the handler's own return type already says it and
- * a second declaration here would only be free to drift.
+ * Generate catch-all HTTP routes for workflow operations
  */
 export const serializeWorkflowRoutes = (
   pathToPikkuTypes: string,
@@ -29,20 +18,17 @@ export const serializeWorkflowRoutes = (
  */
 import { z } from 'zod'
 
-/** Starting a run: \`data\` is the workflow's own input, validated by it. */
 export const WorkflowStart = z.object({
   workflowName: z.string(),
   data: z.unknown().optional(),
 })
 
-/** Starting a graph run from one node rather than the graph's entry point. */
 export const GraphStart = z.object({
   workflowName: z.string(),
   nodeId: z.string(),
   data: z.unknown().optional(),
 })
 
-/** One run of one workflow. */
 export const WorkflowRunRef = z.object({
   workflowName: z.string(),
   runId: z.string(),
@@ -50,10 +36,6 @@ export const WorkflowRunRef = z.object({
 
 export const WorkflowRunId = z.object({ runId: z.string() })
 
-/**
- * A human decision against a workflow.approval() gate. \`decision\` is
- * deliberately unconstrained — see workflowApprover.
- */
 export const WorkflowApproval = z.object({
   workflowName: z.string(),
   runId: z.string(),

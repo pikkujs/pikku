@@ -7,19 +7,6 @@ export interface ScenarioGenOutput {
  * Generate the scenario instrumentation functions (`pikku scenario` coverage
  * snapshots and stub-call inspection) into the project scaffold, so scenario
  * runs work against any server without requiring the console addon.
- *
- * Emitted as two files. The schemas are zod, and the inspector reads a zod
- * schema by importing the module that declares it — which it cannot do for the
- * functions file, whose relative pikku-types import per-unit deploy codegen
- * rewrites. Keeping the schemas in a sibling module that imports nothing but
- * zod sidesteps that entirely.
- *
- * The coverage and stub-call results are `@pikku/core` types, so they get no
- * zod `output`: re-declaring a core type here would be a second definition free
- * to drift from the one the runtime actually returns. Without `output` the
- * inspector takes the shape from the handler's own return type, which is that
- * core type by construction. The three functions that take no arguments get no
- * `input` for the same reason — there is nothing to validate.
  */
 export const serializeScenarioFunctions = (
   pathToPikkuTypes: string,
@@ -33,12 +20,10 @@ export const serializeScenarioFunctions = (
  */
 import { z } from 'zod'
 
-/** Narrows recorded stub calls to one service; every service when omitted. */
 export const StubCallsQuery = z.object({
   service: z.string().optional(),
 })
 
-/** Whether the server was started with the instrumentation this call needs. */
 export const Enabled = z.object({ enabled: z.boolean() })
 `
 

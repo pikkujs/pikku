@@ -3,16 +3,6 @@ export interface ConsoleGenOutput {
   functions: string
 }
 
-/**
- * Generate the console's secret and variable functions into the project
- * scaffold.
- *
- * Emitted as two files. The schemas are zod, and the inspector reads a zod
- * schema by importing the module that declares it — which it cannot do for the
- * functions file, whose relative pikku-types import per-unit deploy codegen
- * rewrites. Keeping the schemas in a sibling module that imports nothing but
- * zod sidesteps that entirely.
- */
 export const serializeConsoleFunctions = (
   pathToPikkuTypes: string,
   _pathToAgentTypes: string,
@@ -38,10 +28,6 @@ export const SetVariable = z.object({
   value: z.unknown(),
 })
 
-/**
- * A read that does not conflate "unset" with "set to null" — \`exists\` carries
- * that distinction, so the value alone never has to.
- */
 export const ValueResult = z.object({
   exists: z.boolean(),
   value: z.unknown().nullable(),

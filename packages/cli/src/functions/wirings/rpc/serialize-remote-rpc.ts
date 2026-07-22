@@ -4,11 +4,7 @@ export interface RemoteRPCGenOutput {
 }
 
 /**
- * Generate remote internal RPC queue worker and HTTP endpoint.
- *
- * Emitted as two files. The schema is zod, and the inspector reads a zod schema
- * by importing the module that declares it — which it cannot do for the wiring
- * file, whose relative pikku-types import per-unit deploy codegen rewrites.
+ * Generate remote internal RPC queue worker and HTTP endpoint
  */
 export const serializeRemoteRPC = (
   pathToPikkuTypes: string
@@ -19,7 +15,6 @@ export const serializeRemoteRPC = (
  */
 import { z } from 'zod'
 
-/** A call to one named internal RPC on another unit. */
 export const RemoteRPCCall = z.object({
   rpcName: z.string(),
   data: z.unknown().optional(),

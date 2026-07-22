@@ -3,25 +3,6 @@ export interface PublicAgentGenOutput {
   functions: string
 }
 
-/**
- * Generate the public HTTP surface for AI agents.
- *
- * Emitted as two files. The schemas are zod, and the inspector reads a zod
- * schema by importing the module that declares it — which it cannot do for the
- * wiring file, whose relative pikku-types import per-unit deploy codegen
- * rewrites. Keeping the schemas in a sibling module that imports nothing but
- * zod sidesteps that entirely.
- *
- * The run and stream calls share one `AgentCall` schema. That used to be
- * impossible: a TS type literal had to be repeated verbatim in each generic
- * position, because behind a named alias the extractor recorded an
- * `inputSchemaName` with no schema behind it and every agent call failed at
- * runtime with MissingSchemaError. A zod `input` is resolved by reference and
- * named after the function, so one schema can back several functions.
- *
- * Thread reads return rows straight from `agentRunService`, so they carry no
- * zod `output` — the handler's own return type already says what they are.
- */
 export const serializePublicAgent = (
   pathToPikkuTypes: string,
   requireAuth: boolean = true,
@@ -43,7 +24,6 @@ export const Attachment = z.object({
   filename: z.string().optional(),
 })
 
-/** One turn against a named agent, run or streamed. */
 export const AgentCall = z.object({
   agentName: z.string(),
   message: z.string(),
@@ -55,7 +35,6 @@ export const AgentCall = z.object({
   context: z.string().optional(),
 })
 
-/** A batch of decisions on the tool calls a run is waiting on. */
 export const AgentApproval = z.object({
   agentName: z.string(),
   runId: z.string(),
@@ -64,7 +43,6 @@ export const AgentApproval = z.object({
   ),
 })
 
-/** A single decision, resuming a run that paused on one tool call. */
 export const AgentResume = z.object({
   agentName: z.string(),
   runId: z.string(),
@@ -79,10 +57,6 @@ export const ThreadsQuery = z.object({
   offset: z.number().optional(),
 })
 
-/**
- * \`resourceId\` is carried for the caller's convenience only — ownership is
- * checked against the stored thread, never against this field.
- */
 export const ThreadRef = z.object({
   threadId: z.string(),
   resourceId: z.string().optional(),
