@@ -77,6 +77,23 @@ describe('syncProjectedAdminRole', () => {
     assert.deepEqual(updates, [])
   })
 
+  // Creating a user runs through better-auth's own createUser endpoint, which
+  // checks the *caller's* role — unlike the directory read, which goes straight
+  // to the adapter. Without the projection the endpoint refuses the very caller
+  // pikku just authorized.
+  test('creating a user promotes, because better-auth gates that endpoint', async () => {
+    const updates: Updated[] = []
+    await syncProjectedAdminRole(
+      withAdminPlugin(updates),
+      { id: 'u1', role: 'user' },
+      [ADMIN_SCOPES.usersCreate]
+    )
+
+    assert.deepEqual(updates, [
+      { userId: 'u1', data: { role: ADMIN_SCOPE_ROOT } },
+    ])
+  })
+
   test('demotes a user whose grant was revoked', async () => {
     const updates: Updated[] = []
     await syncProjectedAdminRole(withAdminPlugin(updates), {

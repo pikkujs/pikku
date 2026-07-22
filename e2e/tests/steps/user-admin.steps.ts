@@ -16,12 +16,20 @@ const usersByEmail: Record<string, SeedUser> = {
   [TARGET_USER.email]: TARGET_USER,
 }
 
-const seedUser = (email: string): SeedUser => {
-  const user = usersByEmail[email]
-  if (!user) {
-    throw new Error(`no seeded user for ${email}`)
+/**
+ * Resolve the credentials to sign in with for `email` — a seeded fixture, or a
+ * user an earlier step in this scenario created or re-passworded.
+ */
+const credentialsFor = (world: AgentWorld, email: string): SeedUser => {
+  const seeded = usersByEmail[email]
+  if (seeded) {
+    return seeded
   }
-  return user
+  const password = world.createdUsers.get(email)
+  if (!password) {
+    throw new Error(`no seeded or created user for ${email}`)
+  }
+  return { name: email, email, password }
 }
 
 /**
@@ -37,7 +45,7 @@ const callAs = async (
   targetEmail: string,
   extra: Record<string, unknown> = {}
 ) => {
-  const actor = await world.signInAs(seedUser(callerEmail))
+  const actor = await world.signInAs(credentialsFor(world, callerEmail))
   const userId = await world.userIdByEmail(targetEmail)
   world.lastScopeResponse = await world.rpcResponse(actor, rpcName, {
     userId,
@@ -95,7 +103,7 @@ When(
 Then(
   '{string} should not be able to sign in',
   async function (this: AgentWorld, email: string) {
-    await expect(this.signInAs(seedUser(email))).rejects.toThrow(
+    await expect(this.signInAs(credentialsFor(this, email))).rejects.toThrow(
       /sign-in failed/
     )
   }
@@ -104,6 +112,6 @@ Then(
 Then(
   '{string} should be able to sign in',
   async function (this: AgentWorld, email: string) {
-    await this.signInAs(seedUser(email))
+    await this.signInAs(credentialsFor(this, email))
   }
 )

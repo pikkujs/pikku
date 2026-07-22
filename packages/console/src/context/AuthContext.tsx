@@ -52,16 +52,22 @@ export interface AuthContextValue {
     nextServerUrl?: string
   ) => Promise<void>
   signOut: () => Promise<void>
-  listUsers: (search?: string) => Promise<AuthUser[]>
   /**
-   * User-management actions, each gated on its own `admin:users:*` scope.
+   * The user directory and the actions on it, each gated on its own
+   * `admin:users:*` scope.
    *
    * These live in the *host app's* scaffold (`scaffold.userAdmin`), not in the
-   * console addon — banning a user is ordinary application behaviour and must
-   * not require running a console. A host that has not scaffolded them has no
-   * such RPC and no such scopes, so `can(...)` returns false and the UI leaves
-   * the actions out entirely.
+   * console addon — listing or banning a user is ordinary application behaviour
+   * and must not require running a console. A host that has not scaffolded them
+   * has no such RPC and no such scopes, so `can(...)` returns false and the UI
+   * leaves the actions out entirely.
    */
+  listUsers: (search?: string) => Promise<AuthUser[]>
+  createUser: (input: {
+    email: string
+    password: string
+    name?: string
+  }) => Promise<void>
   setUserBanned: (input: {
     userId: string
     banned: boolean
@@ -82,6 +88,8 @@ const AuthContext = createContext<AuthContextValue | null>(null)
  * {@link AuthContextValue} instead.
  */
 const USER_ADMIN_RPC = {
+  list: 'pikkuAdminListUsers',
+  create: 'pikkuAdminCreateUser',
   setBanned: 'pikkuAdminSetUserBanned',
   remove: 'pikkuAdminRemoveUser',
   revokeSessions: 'pikkuAdminRevokeUserSessions',
@@ -184,10 +192,13 @@ export const AuthProvider: React.FC<{
         await refetchSession()
       },
       listUsers: async (search) => {
-        const { users } = (await rpc.invoke('console:listUsers', {
+        const { users } = (await invokeUserAdmin(USER_ADMIN_RPC.list, {
           ...(search ? { search } : {}),
         })) as { users: AuthUser[] }
         return users
+      },
+      createUser: async (input) => {
+        await invokeUserAdmin(USER_ADMIN_RPC.create, input)
       },
       setUserBanned: async (input) => {
         await invokeUserAdmin(USER_ADMIN_RPC.setBanned, input)

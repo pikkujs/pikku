@@ -72,7 +72,11 @@ export interface PikkuCLICoreOutputFiles {
 
   // better-auth admin() wrappers (derived from scaffold.pikkuDir when scaffold.userAdmin is enabled).
   // Optional: left undefined when scaffold.userAdmin is not enabled, so consumers must guard.
+  // The schemas live in their own module: the inspector reads a zod schema by
+  // importing the file that declares it, and the functions file imports
+  // pikku-types over a relative path that per-unit deploy codegen rewrites.
   userAdminFunctionsFile?: string
+  userAdminSchemasFile?: string
   workflowRoutesFile: string
   eventsChannelFile: string
 

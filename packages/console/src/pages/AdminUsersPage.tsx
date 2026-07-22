@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Text, Button, Alert, Group, Avatar, Box } from '@pikku/mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-import { AlertTriangle, UserCog, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, UserCog, ShieldCheck, UserPlus } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { UserRolesDrawer } from '../components/users/UserRolesDrawer'
 import { UserStatusBadge } from '../components/users/UserStatusBadge'
 import { UserActionsMenu } from '../components/users/UserActionsMenu'
-import { UserActionModal } from '../components/users/UserActionModal'
+import { UserActionDrawer } from '../components/users/UserActionDrawer'
+import { CreateUserDrawer } from '../components/users/CreateUserDrawer'
 import type { UserAction } from '../components/users/user-actions'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -17,8 +18,9 @@ import { useAuth, type AuthUser } from '../context/AuthContext'
 
 export const AdminUsersPage: React.FC = () => {
   useLocale()
-  const { listUsers } = useAuth()
+  const { listUsers, can } = useAuth()
   const [search, setSearch] = useState('')
+  const [creating, setCreating] = useState(false)
   const [debounced] = useDebouncedValue(search, 250)
   const [rolesFor, setRolesFor] = useState<{
     id: string
@@ -53,6 +55,18 @@ export const AdminUsersPage: React.FC = () => {
             onChange: setSearch,
             width: 240,
           }}
+          lead={
+            can('admin:users:create') ? (
+              <Button
+                size="compact-sm"
+                leftSection={<UserPlus size={14} />}
+                onClick={() => setCreating(true)}
+                data-testid="create-user"
+              >
+                {m.users_create_action()}
+              </Button>
+            ) : undefined
+          }
         />
       }
     >
@@ -147,7 +161,12 @@ export const AdminUsersPage: React.FC = () => {
         userId={rolesFor?.id}
         userLabel={rolesFor?.label ?? ''}
       />
-      <UserActionModal
+      <CreateUserDrawer
+        opened={creating}
+        onClose={() => setCreating(false)}
+        onDone={refetchUsers}
+      />
+      <UserActionDrawer
         action={actionFor?.action ?? null}
         user={actionFor?.user ?? null}
         onClose={() => setActionFor(null)}

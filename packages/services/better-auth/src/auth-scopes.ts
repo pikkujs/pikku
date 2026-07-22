@@ -21,6 +21,8 @@ export const ADMIN_SCOPES = {
   credentialsLink: 'admin:credentials:link',
   /** Read the user directory. */
   usersList: 'admin:users:list',
+  /** Create a user out of band, bypassing the sign-up flow. */
+  usersCreate: 'admin:users:create',
   /** Ban and unban users. */
   usersBan: 'admin:users:ban',
   /** Delete a user along with their sessions and accounts. */
@@ -42,6 +44,7 @@ export const ADMIN_SCOPES = {
  * to someone granted only the ability to look. See {@link projectedAdminRole}.
  */
 export const ADMIN_ROLE_SCOPES = [
+  ADMIN_SCOPES.usersCreate,
   ADMIN_SCOPES.usersBan,
   ADMIN_SCOPES.usersRemove,
   ADMIN_SCOPES.usersSessions,
@@ -73,6 +76,7 @@ export const ADMIN_SCOPE_TREE = {
         description: 'The user directory',
         scopes: {
           list: { description: 'List and search users' },
+          create: { description: 'Create users out of band' },
           ban: { description: 'Ban and unban users' },
           remove: { description: 'Delete users and all their data' },
           sessions: { description: "Revoke a user's sessions" },

@@ -18,7 +18,8 @@ user can hold independently, so they are now scopes on an `admin` tree:
 | --- | --- |
 | impersonation | `admin:impersonate` |
 | `credentialOAuth`'s `canLinkSingleton` | `admin:credentials:link` |
-| the console's user directory | `admin:users:list` |
+| reading the user directory | `admin:users:list` |
+| creating a user out of band | `admin:users:create` |
 | ban / unban | `admin:users:ban` |
 | delete a user | `admin:users:remove` |
 | revoke a user's sessions | `admin:users:sessions` |
@@ -30,18 +31,26 @@ parent-grant rule, so it is a one-for-one replacement for the old role.
 better-auth's `admin()` plugin is still what implements ban, delete,
 session-revocation and set-password, so it stays. Its `user.role` column is no
 longer something pikku grants: it is *projected* from the scope store when a
-session is built, and only from the user-management subtree. Someone granted
-`admin:users:list` can read the directory without gaining the power to ban, and
-revoking the scope demotes the role on the next sign-in. Scopes remain the
-single source of truth.
+session is built, and only from the scopes whose capability better-auth's own
+endpoints gate on the caller's role. Someone granted `admin:users:list` can read
+the directory — which goes straight to the auth adapter — without gaining the
+power to ban, and revoking a scope demotes the role on the next sign-in. Scopes
+remain the single source of truth.
 
-New `scaffold.userAdmin` in `pikku.config.json` generates
-`pikkuAdminSetUserBanned`, `pikkuAdminRemoveUser`,
-`pikkuAdminRevokeUserSessions` and `pikkuAdminSetUserPassword` into your
-project — banning a user is ordinary application behaviour and must not require
-installing the console. Codegen fails with an actionable error if better-auth is
-wired without `admin()`. The console's Users page calls these same functions,
-showing each action only where the caller holds its scope.
+New `scaffold.userAdmin` in `pikku.config.json` generates the whole set —
+`pikkuAdminListUsers`, `pikkuAdminCreateUser`, `pikkuAdminSetUserBanned`,
+`pikkuAdminRemoveUser`, `pikkuAdminRevokeUserSessions` and
+`pikkuAdminSetUserPassword` — into your project. Listing or banning a user is
+ordinary application behaviour and must not require installing the console.
+Codegen fails with an actionable error if better-auth is wired without
+`admin()`. The console's Users page calls these same functions, showing each
+action only where the caller holds its scope.
+
+The scaffold emits a directory, `scaffold/admin/`, holding `user-admin.gen.ts`
+beside `user-admin.schemas.gen.ts`. The schemas are zod and have to stand alone:
+the inspector reads a zod schema by importing the module that declares it, which
+it cannot do for a file whose relative pikku-types import per-unit deploy codegen
+rewrites.
 
 `@pikku/core` gains `hasScopes(required, held)`, the non-throwing counterpart to
 `verifyScopes`, and declares `auth` on `CoreSingletonServices` — the auth
@@ -56,7 +65,10 @@ that relied on the old default must register a `ScopeService` and grant `admin`
 grant a pikku role through the `ScopeService` instead of writing better-auth's
 `role` column, and the `credentialOAuth` platform user no longer sets `banned`.
 
-BREAKING: the console reads its user directory over the new `console:listUsers`
-RPC (gated on `admin:users:list`, backed by better-auth's `$context.adapter`)
-instead of `client.admin.listUsers`, and `UsersTableUser`/`UsersTableLabels` no
-longer carry `role` — there is no role column to render.
+BREAKING: the console reads its user directory over the scaffolded
+`pikkuAdminListUsers` RPC (gated on `admin:users:list`, backed by better-auth's
+`$context.adapter`) instead of `client.admin.listUsers`, and
+`UsersTableUser`/`UsersTableLabels` no longer carry `role` — there is no role
+column to render. `@pikku/addon-console` no longer ships a `console:listUsers`
+function: user management is not the console's job, so a host that wants the
+Users page must enable `scaffold.userAdmin`.

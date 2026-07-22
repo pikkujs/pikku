@@ -348,7 +348,15 @@ const _getPikkuCLIConfig = async (
     if (result.scaffold?.userAdmin && !result.userAdminFunctionsFile) {
       result.userAdminFunctionsFile = join(
         resolvedScaffoldDir,
+        'admin',
         'user-admin.gen.ts'
+      )
+    }
+    if (result.scaffold?.userAdmin && !result.userAdminSchemasFile) {
+      result.userAdminSchemasFile = join(
+        resolvedScaffoldDir,
+        'admin',
+        'user-admin.schemas.gen.ts'
       )
     }
     if (result.scaffold?.scenarios && !result.scenariosFunctionsFile) {
