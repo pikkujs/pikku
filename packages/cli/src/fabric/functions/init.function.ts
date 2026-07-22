@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import {
   findProjectConfig,
+  isLinkedProjectId,
   resolveApiContext,
   writeProjectConfig,
 } from '../lib/config.js'
@@ -42,7 +43,7 @@ export const FabricInit = pikkuSessionlessFunc({
       throw new Error('Not logged in. Run `pikku fabric login` first.')
 
     const existing = await findProjectConfig()
-    if (existing && !force) {
+    if (existing && isLinkedProjectId(existing.config.projectId) && !force) {
       throw new Error(
         `Already linked: ${existing.config.projectId} at ${existing.path}. Pass --force to replace.`
       )
