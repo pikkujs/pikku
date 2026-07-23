@@ -1,3 +1,26 @@
+## 0.12.87
+
+### Patch Changes
+
+- 6f3cdae: Treat a `__PROJECT_ID__` placeholder as unlinked, so `fabric init` works on a fresh scaffold; report a missing `--branch` instead of "local branch undefined does not exist"; keep the git error when a deploy branch cannot be resolved.
+- c1a4ed3: Load `.env` from the working directory before running any command.
+
+  `LocalSecretService` reads `process.env` and nothing else, so a project keeping
+  `BETTER_AUTH_SECRET` in `.env` got `Requested secret not found` on its first
+  sign-up — an error that names no key and points at no file. This could not be
+  left to the package manager: the CLI has a node shebang, so `bunx pikku dev`
+  execs node and bun's own `.env` injection never reaches the process.
+
+  Real environment variables still win over the file.
+
+- Updated dependencies [f11675f]
+- Updated dependencies [2a7d9b0]
+- Updated dependencies [a8f9a7d]
+- Updated dependencies [eaabcbf]
+  - @pikku/core@0.12.68
+  - @pikku/n8n-import@0.0.3
+  - @pikku/inspector@0.12.46
+
 ## 0.12.86
 
 ### Patch Changes
