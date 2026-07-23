@@ -29,6 +29,77 @@ describe('pikku-workflow-service worker registration', () => {
   })
 })
 
+describe('pikku-workflow-service per-workflow queue warning', () => {
+  // Losing the per-workflow orchestrator queues is silent — dispatch just falls
+  // back to the single shared queue and one slow step starves every workflow
+  // behind it. These assert the misconfiguration is announced at wiring time.
+  const setup = (workflowNames: string[], perWorkflowQueues: string[] = []) => {
+    resetPikkuState()
+    const warnings: string[] = []
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        error: () => {},
+        info: () => {},
+        debug: () => {},
+        warn: (message: string) => warnings.push(message),
+      },
+    } as any)
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    for (const name of workflowNames) {
+      metaState[name] = {
+        name,
+        pikkuFuncId: name,
+        source: 'dsl',
+        graphHash: `${name}-hash`,
+      } as any
+    }
+
+    const queueMeta = pikkuState(null, 'queue', 'meta')
+    for (const queueName of perWorkflowQueues) {
+      queueMeta[queueName] = {
+        pikkuFuncId: queueName,
+        name: queueName,
+      } as any
+    }
+
+    return warnings
+  }
+
+  test('warns when workflows exist but no per-workflow orchestrator queue is registered', () => {
+    const warnings = setup(['someWorkflow'])
+
+    new InMemoryWorkflowService().wireQueueWorkers()
+
+    assert.ok(
+      warnings.some((w) => /no per-workflow orchestrator queues/.test(w)),
+      `expected a per-workflow queue warning, got: ${JSON.stringify(warnings)}`
+    )
+  })
+
+  test('does not warn when per-workflow orchestrator queues are present', () => {
+    const warnings = setup(['someWorkflow'], ['wf-orchestrator-some-workflow'])
+
+    new InMemoryWorkflowService().wireQueueWorkers()
+
+    assert.ok(
+      !warnings.some((w) => /no per-workflow orchestrator queues/.test(w)),
+      `expected no warning, got: ${JSON.stringify(warnings)}`
+    )
+  })
+
+  test('does not warn when the app registers no workflows at all', () => {
+    const warnings = setup([])
+
+    new InMemoryWorkflowService().wireQueueWorkers()
+
+    assert.ok(
+      !warnings.some((w) => /no per-workflow orchestrator queues/.test(w)),
+      `expected no warning, got: ${JSON.stringify(warnings)}`
+    )
+  })
+})
+
 describe('pikku-workflow-service run-level inline', () => {
   test('workflow runs inline (and queues nothing) when no queue service is configured', async () => {
     const ws = new InMemoryWorkflowService()
