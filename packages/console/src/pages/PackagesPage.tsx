@@ -5,7 +5,6 @@ import { Group, TextInput, SegmentedControl } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Search } from 'lucide-react'
-import { useConsoleEditable } from '../context/ConsoleEditableContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { AddonsList } from '../components/packages/AddonsList'
@@ -21,12 +20,7 @@ const PackagesList: React.FC<{
   const [tab, setTab] = useState<MainTab>('addons')
   const [filter, setFilter] = useState<AddonFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const editable = useConsoleEditable()
   useLocale()
-
-  // A deployed stage is read-only: you can't install into it. Lock the addons
-  // view to what's already wired and point people at a sandbox to add more.
-  const effectiveFilter: AddonFilter = editable ? filter : 'installed'
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
@@ -65,7 +59,7 @@ const PackagesList: React.FC<{
                 size="xs"
                 style={{ width: 240 }}
               />
-              {tab === 'addons' && editable && (
+              {tab === 'addons' && (
                 <SegmentedControl
                   size="xs"
                   value={filter}
@@ -89,7 +83,7 @@ const PackagesList: React.FC<{
       ) : (
         <AddonsList
           searchQuery={searchQuery}
-          filter={effectiveFilter}
+          filter={filter}
           onSelect={onSelect}
         />
       )}
