@@ -4,6 +4,7 @@ import { isExpectedError } from '../errors/error-handler.js'
 import type { SerializedError } from '../types/core.types.js'
 import type {
   WorkflowPlannedStep,
+  WorkflowQueueOptions,
   WorkflowRun,
   WorkflowRunService,
   WorkflowRunWire,
@@ -39,8 +40,8 @@ export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
 {
-  constructor() {
-    super({ wireQueues: false })
+  constructor(options: WorkflowQueueOptions = {}) {
+    super({ ...options, wireQueues: false })
   }
 
   private sleepTimers = new Set<ReturnType<typeof setTimeout>>()

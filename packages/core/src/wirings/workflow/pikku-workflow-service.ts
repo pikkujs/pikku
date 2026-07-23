@@ -60,6 +60,7 @@ import type {
   WorkflowRunWire,
   WorkflowStatus,
   WorkflowVersionStatus,
+  WorkflowQueueOptions,
   WorkflowServiceConfig,
   WorkflowStepOptions,
   WorkflowExpectEventuallyOptions,
@@ -88,7 +89,12 @@ import {
   type RunTimeline,
   type ReconstructedRunState,
 } from './run-timeline.js'
-import type { JobOptions } from '../queue/queue.types.js'
+import type {
+  GroupConcurrencyConfig,
+  JobGroup,
+  JobOptions,
+  PikkuWorkerConfig,
+} from '../queue/queue.types.js'
 
 /**
  * Default number of retries for a workflow step when none is specified. The
@@ -257,11 +263,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   protected mirror?: WorkflowRunMirror
 
+  protected readonly queueStrategy: 'per-workflow' | 'shared-groups'
+  protected readonly queueConcurrency: number
+  protected readonly queueGroupConcurrency: number | GroupConcurrencyConfig
+
   constructor(
-    options: { wireQueues?: boolean; mirror?: WorkflowRunMirror } = {}
+    options: {
+      wireQueues?: boolean
+      mirror?: WorkflowRunMirror
+    } & WorkflowQueueOptions = {}
   ) {
     const wireQueues = options.wireQueues ?? true
     this.mirror = options.mirror
+    this.queueStrategy = options.queueStrategy ?? 'per-workflow'
+    this.queueConcurrency = options.queueConcurrency ?? 20
+    this.queueGroupConcurrency = options.queueGroupConcurrency ?? 2
     if (wireQueues) {
       this.wireQueueWorkers()
     }
@@ -306,29 +322,44 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const registerWorkflowFunc = (
       funcId: string,
       func: { func: unknown },
-      queueName: string
+      queueName: string,
+      config?: PikkuWorkerConfig
     ) => {
       if (functions.has(funcId)) return
       addFunction(funcId, func as never)
       if (!queueMeta[queueName]) {
         queueMeta[queueName] = { pikkuFuncId: funcId, name: queueName }
       }
-      wireQueueWorker({ name: queueName, func } as never)
+      wireQueueWorker({ name: queueName, func, config } as never)
       if (!functionsMeta[funcId]) {
         functionsMeta[funcId] = mkMeta(funcId)
       }
     }
 
+    // Under 'shared-groups' every workflow runs through these two queues and is
+    // kept from hogging them by the per-group cap, so the per-workflow queues
+    // below are left unconsumed — one set of pollers for the whole system
+    // instead of one per workflow.
+    const sharedGroups = this.queueStrategy === 'shared-groups'
+    const sharedQueueConfig: PikkuWorkerConfig | undefined = sharedGroups
+      ? {
+          batchSize: this.queueConcurrency,
+          groupConcurrency: this.queueGroupConcurrency,
+        }
+      : undefined
+
     // Register shared queue workers for monolith deployments
     registerWorkflowFunc(
       'pikkuWorkflowOrchestrator',
       { func: pikkuWorkflowOrchestratorFunc },
-      'pikku-workflow-orchestrator'
+      'pikku-workflow-orchestrator',
+      sharedQueueConfig
     )
     registerWorkflowFunc(
       'pikkuWorkflowStepWorker',
       { func: pikkuWorkflowWorkerFunc },
-      'pikku-workflow-step-worker'
+      'pikku-workflow-step-worker',
+      sharedQueueConfig
     )
 
     // Register per-workflow queue workers (root + addon packages)
@@ -351,14 +382,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     }
 
-    registerQueueWorkers(pikkuState(null, 'queue', 'meta'))
+    if (!sharedGroups) {
+      registerQueueWorkers(pikkuState(null, 'queue', 'meta'))
 
-    const addons = pikkuState(null, 'addons', 'packages')
-    if (addons) {
-      for (const [, addon] of addons) {
-        const addonQueueMeta = pikkuState(addon.package, 'queue', 'meta')
-        if (addonQueueMeta) {
-          registerQueueWorkers(addonQueueMeta)
+      const addons = pikkuState(null, 'addons', 'packages')
+      if (addons) {
+        for (const [, addon] of addons) {
+          const addonQueueMeta = pikkuState(addon.package, 'queue', 'meta')
+          if (addonQueueMeta) {
+            registerQueueWorkers(addonQueueMeta)
+          }
         }
       }
     }
@@ -927,7 +960,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await queueService.add(
       this.getOrchestratorQueueName(workflowName),
       { runId },
-      this.resolveStepJobOptions()
+      {
+        ...this.resolveStepJobOptions(),
+        group: this.getJobGroup(workflowName),
+      }
     )
   }
 
@@ -970,7 +1006,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       JSON.parse(
         JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
       ),
-      this.resolveStepJobOptions(stepOptions)
+      {
+        ...this.resolveStepJobOptions(stepOptions),
+        // Group by step function, mirroring how per-step queues split them —
+        // one slow step function can't monopolise the shared step worker.
+        group: this.getJobGroup(rpcName),
+      }
     )
   }
 
@@ -1005,7 +1046,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await queueService.add(
       this.getOrchestratorQueueName(workflowName),
       { runId },
-      retryDelay ? { delay: getDurationInMilliseconds(retryDelay) } : undefined
+      {
+        ...(retryDelay
+          ? { delay: getDurationInMilliseconds(retryDelay) }
+          : undefined),
+        group: this.getJobGroup(workflowName),
+      }
     )
   }
 
@@ -1054,7 +1100,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         JSON.parse(
           JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
         ),
-        this.resolveStepJobOptions(stepOptions)
+        {
+          ...this.resolveStepJobOptions(stepOptions),
+          group: this.getJobGroup(rpcName),
+        }
       )
     } catch (cause) {
       // The queue is down/unreachable — NOT a step failure. Surface it as a
@@ -2225,7 +2274,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       await queueService.add(
         this.getOrchestratorQueueName(run.workflow),
         { runId },
-        { ...this.resolveStepJobOptions(), delay }
+        {
+          ...this.resolveStepJobOptions(),
+          delay,
+          group: this.getJobGroup(run.workflow),
+        }
       )
     } catch (error) {
       this.logger?.warn(
@@ -2655,7 +2708,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * queues — but it produces to them — so registrations would miss them.
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
-    if (workflowName) {
+    if (workflowName && this.queueStrategy !== 'shared-groups') {
       const perWorkflow = `wf-orchestrator-${toKebab(workflowName)}`
       const meta = pikkuState(null, 'queue', 'meta')
       if (meta[perWorkflow]) {
@@ -2666,7 +2719,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   protected getStepWorkerQueueName(rpcName?: string): string {
-    if (rpcName) {
+    if (rpcName && this.queueStrategy !== 'shared-groups') {
       const perStep = `wf-step-${toKebab(rpcName)}`
       const meta = pikkuState(null, 'queue', 'meta')
       if (meta[perStep]) {
@@ -2674,5 +2727,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     }
     return this.getConfig().stepWorkerQueueName
+  }
+
+  /**
+   * Fairness key for a job on a shared queue. Under `'per-workflow'` the queue
+   * name already isolates workflows, so no group is needed — returning one
+   * anyway would cap a workflow inside its own dedicated queue.
+   *
+   * The tier repeats the id so a workflow can be given its own limit purely
+   * from config, with no per-workflow wiring; an unmatched tier falls back to
+   * the default limit.
+   */
+  protected getJobGroup(id?: string): JobGroup | undefined {
+    if (!id || this.queueStrategy !== 'shared-groups') {
+      return undefined
+    }
+    return { id, tier: id }
   }
 }

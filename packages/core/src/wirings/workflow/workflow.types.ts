@@ -1,5 +1,6 @@
 import type { SerializedError, CommonWireMeta } from '../../types/core.types.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
 
 // Re-export WorkflowService from services module
 export type { WorkflowService } from '../../services/workflow-service.js'
@@ -60,6 +61,44 @@ export interface WorkflowServiceConfig {
   orchestratorQueueName: string
   stepWorkerQueueName: string
   sleeperRPCName: string
+}
+
+/**
+ * How a workflow service spreads its jobs across queues.
+ *
+ * Passed to the service constructor rather than read from `config.workflow`:
+ * the queues are wired during construction, before singleton services (and so
+ * before `config`) exist.
+ */
+export interface WorkflowQueueOptions {
+  /**
+   * - `'per-workflow'` (default) — each workflow gets its own
+   *   `wf-orchestrator-*` / `wf-step-*` queue. Complete isolation, and it's
+   *   what lets serverless providers deploy one unit per workflow. Costs one
+   *   set of pollers per queue, which adds up on pull-based backends.
+   * - `'shared-groups'` — every workflow shares the orchestrator/step-worker
+   *   queues and stays isolated via {@link queueGroupConcurrency}, so no
+   *   workflow can occupy more than its share. One set of pollers total.
+   *   Only for single-process (monolith) runtimes; a per-unit serverless
+   *   deploy needs the per-workflow queues to route to its units.
+   */
+  queueStrategy?: 'per-workflow' | 'shared-groups'
+  /**
+   * Total concurrent workflow jobs per node under `'shared-groups'`.
+   * Defaults to 20.
+   */
+  queueConcurrency?: number
+  /**
+   * How many jobs of one workflow may run at once under `'shared-groups'`.
+   * Defaults to 2. Tiers are keyed by workflow name, so a specific workflow
+   * can be given its own limit without any extra wiring.
+   *
+   * Note tiers can only lower a workflow's limit, not raise it above
+   * `default`: the backend's pre-fetch exclusion is applied per group using
+   * `default` alone. To give one workflow more room, raise `default` and
+   * restrict the others by tier.
+   */
+  queueGroupConcurrency?: number | GroupConcurrencyConfig
 }
 
 export interface WorkflowPlannedStep {

@@ -31,6 +31,36 @@ export interface PikkuWorkerConfig {
   maxStalledCount?: number
   /** Condition to start processor at instance creation */
   autorun?: boolean
+  /**
+   * Cap how many jobs of any one group ({@link JobOptions.group}) may run at
+   * once, so a single group can't occupy the whole worker. Lets one shared
+   * queue stay fair across producers instead of splitting it into one queue
+   * per producer — which multiplies polling cost on pull-based backends.
+   * Must not exceed {@link batchSize}.
+   */
+  groupConcurrency?: number | GroupConcurrencyConfig
+}
+
+/**
+ * Per-group concurrency limits, optionally varied by tier so slow groups can
+ * be allowed more (or fewer) slots than the default.
+ */
+export interface GroupConcurrencyConfig {
+  /** Limit applied to any group without a matching tier */
+  default: number
+  /** Per-tier overrides, keyed by {@link JobGroup.tier} */
+  tiers?: Record<string, number>
+}
+
+/**
+ * Fairness key for a job. Jobs sharing an `id` count against the same
+ * {@link PikkuWorkerConfig.groupConcurrency} limit.
+ */
+export interface JobGroup {
+  /** Group this job belongs to (e.g. a workflow name) */
+  id: string
+  /** Optional tier selecting a per-tier limit */
+  tier?: string
 }
 
 /**
@@ -113,6 +143,8 @@ export interface JobOptions {
   jobId?: string
   /** Pikku user ID to propagate to the queue worker for credential resolution */
   pikkuUserId?: string
+  /** Fairness key — counts against the worker's {@link PikkuWorkerConfig.groupConcurrency} */
+  group?: JobGroup
 }
 
 /**

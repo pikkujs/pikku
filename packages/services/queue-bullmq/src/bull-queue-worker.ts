@@ -111,6 +111,11 @@ export class BullQueueWorkers implements QueueWorkers {
 
     // Configurations that are not supported
     unsupported: {
+      groupConcurrency: {
+        reason: 'Job groups are a BullMQ Pro feature, not available in BullMQ',
+        explanation:
+          'Give each group its own queue instead — BullMQ is push-based, so extra queues cost no polling',
+      },
       visibilityTimeout: {
         reason: 'Bull does not use visibility timeout',
         explanation:

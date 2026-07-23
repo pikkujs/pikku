@@ -19,6 +19,13 @@ export const mapPikkuJobToPgBoss = (
     pgBossOptions.singletonKey = options.jobId
   }
 
+  if (options?.group !== undefined) {
+    pgBossOptions.group = {
+      id: options.group.id,
+      ...(options.group.tier !== undefined ? { tier: options.group.tier } : {}),
+    }
+  }
+
   // Map retry options
   if (options?.attempts !== undefined) {
     pgBossOptions.retryLimit = options.attempts - 1

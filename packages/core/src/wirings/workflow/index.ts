@@ -59,6 +59,7 @@ export type {
 // Re-export all types from workflow.types
 export type {
   WorkflowService,
+  WorkflowQueueOptions,
   WorkflowServiceConfig,
   WorkflowPlannedStep,
   WorkflowRunWire,

@@ -2,6 +2,7 @@ import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
   type WorkflowPlannedStep,
+  type WorkflowQueueOptions,
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
@@ -35,9 +36,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
    */
   constructor(
     connectionOrConfig: Redis | RedisOptions | string | undefined,
-    keyPrefix = 'workflows'
+    keyPrefix = 'workflows',
+    options: WorkflowQueueOptions = {}
   ) {
-    super()
+    super(options)
     this.keyPrefix = keyPrefix
 
     // Check if it's a Redis instance or config options
