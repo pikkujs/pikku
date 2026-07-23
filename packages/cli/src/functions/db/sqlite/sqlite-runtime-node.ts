@@ -90,7 +90,22 @@ async function importNodeSqlite(): Promise<NodeSqliteModule> {
   const dynamicImport = new Function(
     'return import("node:sqlite")'
   ) as () => Promise<NodeSqliteModule>
-  return dynamicImport()
+  try {
+    return await dynamicImport()
+  } catch (error: any) {
+    // node ships node:sqlite unflagged only from 24. The raw failure is
+    // ERR_UNKNOWN_BUILTIN_MODULE, which reads like a broken install rather than
+    // a runtime that is simply too old — so say which it is and how to get past it.
+    if (error?.code === 'ERR_UNKNOWN_BUILTIN_MODULE') {
+      throw new Error(
+        `This needs node:sqlite, which Node ${process.versions.node} does not provide ` +
+          `(it is unflagged from Node 24). Either upgrade Node, or run the CLI on bun, ` +
+          `which has it: \`bunx --bun pikku <command>\`.`,
+        { cause: error }
+      )
+    }
+    throw error
+  }
 }
 
 export async function createNodeSqliteRuntime(): Promise<SqliteRuntime> {

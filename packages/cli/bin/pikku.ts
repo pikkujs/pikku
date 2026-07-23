@@ -20,12 +20,28 @@ const __dirname = dirname(__filename)
  * Cannot be left to the package manager: the CLI has a node shebang, so `bunx
  * pikku dev` execs node and bun's own .env injection never reaches the process.
  * Existing variables win — a real env var must always beat a checked-out file.
+ *
+ * `process.loadEnvFile` is node-only, and the shebang is not a guarantee: under
+ * `bunx --bun pikku …` (which projects use so the CLI gets bun's `node:sqlite`)
+ * the process is bun and that method does not exist. Parse the file ourselves in
+ * that case rather than losing every secret in it.
  */
 function loadEnvFile(): void {
   const envPath = join(process.cwd(), '.env')
   if (!existsSync(envPath)) return
   try {
-    process.loadEnvFile(envPath)
+    if (typeof process.loadEnvFile === 'function') {
+      process.loadEnvFile(envPath)
+      return
+    }
+    for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
+      const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(
+        line
+      )
+      if (!match) continue
+      const value = match[2].trim().replace(/^(['"])(.*)\1$/s, '$2')
+      process.env[match[1]] ??= value
+    }
   } catch (error: any) {
     process.stderr.write(`  Could not read .env: ${error.message}\n`)
   }
