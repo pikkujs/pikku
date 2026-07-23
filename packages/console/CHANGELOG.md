@@ -1,3 +1,16 @@
+## 0.12.44
+
+### Patch Changes
+
+- d80a864: Let a read-only console browse the addon catalogue
+
+  A read-only console (`editable={false}`, e.g. a deployed stage) locked the addons
+  view to the `installed` filter and hid the filter control entirely, so the tab
+  rendered an empty gallery with no way to reach the catalogue. Read-only means you
+  cannot _install_ — the catalogue is still worth browsing. The filter now applies
+  as chosen and its control always renders; install actions stay gated on
+  `editable` in the detail drawer, as before.
+
 ## 0.12.43
 
 ### Patch Changes
@@ -153,8 +166,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-          "TypographyStylesProvider" is not exported by @pikku/mantine/core
-          "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+            "TypographyStylesProvider" is not exported by @pikku/mantine/core
+            "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
