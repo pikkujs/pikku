@@ -363,6 +363,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     }
 
+    // Workflows exist but no per-workflow orchestrator queue was registered:
+    // the generated queue meta never reached the runtime (most often the
+    // bootstrap doesn't import the queue-workers meta, so `queue.meta` is
+    // empty). Everything still "works" — dispatch silently falls back to the
+    // single shared orchestrator queue — but the isolation is gone: one slow
+    // workflow step head-of-line-blocks every other workflow behind it. That
+    // is invisible until a queue starves, so say so loudly at wiring time.
+    const workflowCount = Object.keys(
+      pikkuState(null, 'workflows', 'meta') ?? {}
+    ).length
+    const perWorkflowQueues = Object.keys(queueMeta).filter((name) =>
+      name.startsWith('wf-orchestrator-')
+    ).length
+    if (workflowCount > 0 && perWorkflowQueues === 0) {
+      this.logger?.warn?.(
+        `[pikku] ${workflowCount} workflow(s) registered but no per-workflow orchestrator queues were found in queue meta. ` +
+          `All workflows will share a single orchestrator queue, where one slow step blocks every other workflow behind it. ` +
+          `Check that the generated bootstrap imports the queue-workers meta (pikku-queue-workers-wirings-meta.gen.js).`
+      )
+    }
+
     if (!functions.has('pikkuWorkflowSleeper')) {
       addFunction('pikkuWorkflowSleeper', {
         func: pikkuWorkflowSleeperFunc,
