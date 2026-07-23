@@ -1,11 +1,12 @@
 import { KyselyWorkflowService } from '@pikku/kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { WorkflowQueueOptions } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 
 export class PgKyselyWorkflowService extends KyselyWorkflowService {
-  constructor(db: Kysely<KyselyPikkuDB>) {
-    super(db)
+  constructor(db: Kysely<KyselyPikkuDB>, options: WorkflowQueueOptions = {}) {
+    super(db, options)
   }
 
   private hashStringToInt(str: string): number {
