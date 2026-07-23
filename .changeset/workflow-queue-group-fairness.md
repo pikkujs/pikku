@@ -3,6 +3,7 @@
 '@pikku/queue-pg-boss': patch
 '@pikku/queue-bullmq': patch
 '@pikku/kysely': patch
+'@pikku/kysely-postgres': patch
 '@pikku/redis': patch
 '@pikku/mongodb': patch
 ---
