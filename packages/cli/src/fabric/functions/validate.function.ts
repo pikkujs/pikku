@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { added, changed, removed, dim } from '../lib/output.js'
+import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -15,7 +16,14 @@ const FindingSchema = z.object({
 })
 type Finding = z.infer<typeof FindingSchema>
 
-export const FabricValidateInput = z.object({})
+export const FabricValidateInput = z.object({
+  skipTypecheck: z
+    .boolean()
+    .optional()
+    .describe(
+      'Skip the frontend type-check stage (structural checks only, much faster)'
+    ),
+})
 
 export const FabricValidateOutput = z.object({
   ok: z.boolean(),
@@ -200,7 +208,8 @@ const POSTGRES_SQL_PATTERNS: Array<{ re: RegExp; label: string }> = [
 ]
 
 export async function runValidate(
-  startDir = process.cwd()
+  startDir = process.cwd(),
+  opts: { skipTypecheck?: boolean } = {}
 ): Promise<z.infer<typeof FabricValidateOutput>> {
   const root = await findProjectRoot(startDir)
   const findings: Finding[] = []
@@ -1841,6 +1850,55 @@ export async function runValidate(
     )
   }
 
+  // ── frontend type-check (what the build container actually runs) ───────
+  // Every check above is a heuristic standing in for this compile. The build
+  // container type-checks each deployable frontend and aborts the deploy on a
+  // non-zero exit, so running the same compile here is the difference between
+  // a 20-second local failure and a burned deploy out of the daily 10.
+  if (!opts.skipTypecheck) {
+    const frontends = Object.entries(
+      (fabricConfig?.frontends ?? {}) as Record<
+        string,
+        { cwd?: string; deploy?: boolean }
+      >
+    )
+      .filter(([, fe]) => fe.deploy !== false && fe.cwd)
+      .map(([name, fe]) => ({
+        name,
+        dir: join(root, fe.cwd!.replace(/^\.\//, '')),
+      }))
+      .filter(({ dir }) => existsSync(dir))
+
+    for (const result of await typeCheckFrontends(root, frontends)) {
+      if (result.skipped) {
+        w(
+          `frontend-typecheck-skipped-${result.name}`,
+          `could not type-check frontend "${result.name}" — ${result.skipped}`,
+          result.dir,
+          lines(
+            'The build container type-checks every deployable frontend and aborts the deploy if it fails.',
+            'Give the app a tsconfig.json and a "tsc" script so the same check runs locally.'
+          )
+        )
+        continue
+      }
+      if (result.errors.length === 0) continue
+      const shown = result.errors.slice(0, 20)
+      const extra = result.errors.length - shown.length
+      e(
+        `frontend-typecheck-${result.name}`,
+        `frontend "${result.name}" does not type-check — the build container aborts the deploy on this`,
+        result.dir,
+        lines(
+          ...shown,
+          ...(extra > 0 ? [`… and ${extra} more`] : []),
+          '',
+          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && npm run tsc`
+        )
+      )
+    }
+  }
+
   const ok = !findings.some((f) => f.severity === 'error')
   return { ok, root, findings }
 }
@@ -1850,7 +1908,8 @@ export const FabricValidate = pikkuSessionlessFunc({
     'Check the current project structure for fabric compatibility. Prints all missing or misconfigured items with fix hints so an AI agent or developer can resolve them.',
   input: FabricValidateInput,
   output: FabricValidateOutput,
-  func: async (_services) => runValidate(),
+  func: async (_services, { skipTypecheck }) =>
+    runValidate(process.cwd(), { skipTypecheck }),
 })
 
 export const renderValidate = (
