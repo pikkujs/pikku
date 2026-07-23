@@ -1,6 +1,10 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
+import {
+  execPrefix,
+  resolvePackageManager,
+} from '../lib/resolve-package-manager.js'
 
 export const installOpenapiAddon = pikkuSessionlessFunc<
   {
@@ -69,25 +73,14 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       pikkuArgs.push('--credential', credential)
     }
 
-    execFileSync('npx', pikkuArgs, {
+    const pm = resolvePackageManager(rootDir)
+    const [runner, ...runnerArgs] = execPrefix[pm]
+
+    execFileSync(runner, [...runnerArgs, ...pikkuArgs], {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,
     })
-
-    const pmLock: Record<string, string> = {
-      'yarn.lock': 'yarn',
-      'pnpm-lock.yaml': 'pnpm',
-      'package-lock.json': 'npm',
-      'bun.lockb': 'bun',
-    }
-    let pm = 'yarn'
-    for (const [lock, pmName] of Object.entries(pmLock)) {
-      if (existsSync(join(rootDir, lock))) {
-        pm = pmName
-        break
-      }
-    }
 
     execFileSync(pm, ['install'], {
       cwd: rootDir,
@@ -95,14 +88,14 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       timeout: 120_000,
     })
 
-    execFileSync('npx', ['pikku', 'all'], {
+    execFileSync(runner, [...runnerArgs, 'pikku', 'all'], {
       cwd: addonPath,
       stdio: 'pipe',
       timeout: 120_000,
     })
 
     try {
-      execFileSync('npx', ['tsc'], {
+      execFileSync(runner, [...runnerArgs, 'tsc'], {
         cwd: addonPath,
         stdio: 'pipe',
         timeout: 120_000,
@@ -125,7 +118,7 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       }
     }
 
-    execFileSync('npx', ['pikku', 'all'], {
+    execFileSync(runner, [...runnerArgs, 'pikku', 'all'], {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,
