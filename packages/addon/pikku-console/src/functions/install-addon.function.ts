@@ -10,6 +10,10 @@ import {
   readAddonDeclaredNames,
   type InstanceOverrides,
 } from '../lib/derive-instance-overrides.js'
+import {
+  installArgs,
+  resolvePackageManager,
+} from '../lib/resolve-package-manager.js'
 
 export const installAddon = pikkuSessionlessFunc<
   {
@@ -71,30 +75,11 @@ export const installAddon = pikkuSessionlessFunc<
 
     const pkg = version ? `${packageName}@${version}` : packageName
 
-    const pmLock: Record<string, string> = {
-      'yarn.lock': 'yarn',
-      'pnpm-lock.yaml': 'pnpm',
-      'package-lock.json': 'npm',
-      'bun.lockb': 'bun',
-    }
-    let pm = 'yarn'
-    for (const [lock, name] of Object.entries(pmLock)) {
-      if (existsSync(join(rootDir, lock))) {
-        pm = name
-        break
-      }
-    }
-
-    const installArgs: Record<string, string[]> = {
-      yarn: ['add', pkg],
-      npm: ['install', pkg],
-      pnpm: ['add', pkg],
-      bun: ['add', pkg],
-    }
+    const pm = resolvePackageManager(rootDir)
 
     const cp = 'node:child_process'
     const { execFileSync } = await import(cp)
-    execFileSync(pm, installArgs[pm]!, { cwd: rootDir, stdio: 'pipe' })
+    execFileSync(pm, installArgs[pm](pkg), { cwd: rootDir, stdio: 'pipe' })
 
     // A second-or-later instance of the SAME package would otherwise resolve to
     // the same secrets/variables/credentials as the first — namespace-scope the
