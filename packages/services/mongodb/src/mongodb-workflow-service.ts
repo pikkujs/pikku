@@ -2,6 +2,7 @@ import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
   type WorkflowPlannedStep,
+  type WorkflowQueueOptions,
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
@@ -77,8 +78,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   private stepHistory: Collection<WorkflowStepHistoryDoc>
   private versions: Collection<WorkflowVersionDoc>
 
-  constructor(db: Db) {
-    super()
+  constructor(db: Db, options: WorkflowQueueOptions = {}) {
+    super(options)
     this.runService = new MongoDBWorkflowRunService(db)
     this.runs = db.collection<WorkflowRunDoc>('workflow_runs')
     this.steps = db.collection<WorkflowStepDoc>('workflow_step')

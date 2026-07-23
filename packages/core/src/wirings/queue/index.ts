@@ -1,6 +1,8 @@
 export type {
   ConfigValidationResult,
   CoreQueueWorker,
+  GroupConcurrencyConfig,
+  JobGroup,
   JobOptions,
   PikkuJobConfig,
   PikkuWorkerConfig,

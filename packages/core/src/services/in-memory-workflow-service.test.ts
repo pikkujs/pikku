@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { getQueueWorkers } from '../wirings/queue/queue-runner.js'
-import { pikkuState } from '../pikku-state.js'
+import { pikkuState, resetPikkuState } from '../pikku-state.js'
 
 let service: InMemoryWorkflowService
 
@@ -389,6 +389,55 @@ describe('InMemoryWorkflowService', () => {
 
       assert.strictEqual(getQueueWorkers().has(stepQueue), true)
       assert.strictEqual(getQueueWorkers().has(orchQueue), true)
+    })
+
+    test('shared-groups leaves per-workflow queues unconsumed', () => {
+      const orchQueue = 'wf-orchestrator-shared-strategy-check'
+
+      const queueMeta = pikkuState(null, 'queue', 'meta')
+      queueMeta[orchQueue] = {
+        name: orchQueue,
+        pikkuFuncId: 'pikkuWorkflowOrchestrator:sharedStrategyCheck',
+      }
+
+      const ws = new InMemoryWorkflowService({
+        queueStrategy: 'shared-groups',
+      })
+      ws.wireQueueWorkers()
+
+      // The whole point: one set of pollers, not one per workflow.
+      assert.strictEqual(getQueueWorkers().has(orchQueue), false)
+      assert.strictEqual(
+        getQueueWorkers().has('pikku-workflow-orchestrator'),
+        true
+      )
+    })
+
+    test('shared-groups caps how much of the shared queue one workflow takes', () => {
+      // registerWorkflowFunc is first-write-wins, so start from clean state
+      // rather than inheriting the shared queues an earlier test registered.
+      resetPikkuState()
+      const ws = new InMemoryWorkflowService({
+        queueStrategy: 'shared-groups',
+        queueConcurrency: 20,
+        queueGroupConcurrency: 3,
+      })
+      ws.wireQueueWorkers()
+
+      const worker = getQueueWorkers().get('pikku-workflow-orchestrator')
+      assert.deepStrictEqual(worker?.config, {
+        batchSize: 20,
+        groupConcurrency: 3,
+      })
+    })
+
+    test('per-workflow (the default) leaves the shared queues unconstrained', () => {
+      resetPikkuState()
+      const ws = new InMemoryWorkflowService()
+      ws.wireQueueWorkers()
+
+      const worker = getQueueWorkers().get('pikku-workflow-orchestrator')
+      assert.strictEqual(worker?.config, undefined)
     })
   })
 })

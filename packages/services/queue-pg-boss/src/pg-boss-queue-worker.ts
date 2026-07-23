@@ -26,8 +26,9 @@ export const mapPikkuWorkerToPgBoss = (
   // freeze the entire worker and starve everything queued behind it.
   // `localConcurrency` spawns N pollers that each fetch+process a single job and
   // refill the instant they finish, so a slow job never holds up the others.
+  const localConcurrency = workerConfig?.batchSize ?? 10
   const workerOptions: WorkOptions = {
-    localConcurrency: workerConfig?.batchSize ?? 10,
+    localConcurrency,
     batchSize: 1,
   }
 
@@ -35,6 +36,30 @@ export const mapPikkuWorkerToPgBoss = (
     workerOptions.pollingIntervalSeconds = Math.round(
       workerConfig.pollInterval / 1000
     )
+  }
+
+  // Per-group fairness. `localGroupConcurrency` is in-memory and free — groups
+  // already at capacity are excluded from the fetch itself, so an at-capacity
+  // group costs nothing rather than being fetched and restored. pg-boss asserts
+  // every limit is <= localConcurrency, so clamp instead of letting a config
+  // that reads as "let this tier use more" throw at worker start.
+  if (workerConfig?.groupConcurrency !== undefined) {
+    const clamp = (limit: number) => Math.min(limit, localConcurrency)
+    workerOptions.localGroupConcurrency =
+      typeof workerConfig.groupConcurrency === 'number'
+        ? clamp(workerConfig.groupConcurrency)
+        : {
+            default: clamp(workerConfig.groupConcurrency.default),
+            ...(workerConfig.groupConcurrency.tiers
+              ? {
+                  tiers: Object.fromEntries(
+                    Object.entries(workerConfig.groupConcurrency.tiers).map(
+                      ([tier, limit]) => [tier, clamp(limit)]
+                    )
+                  ),
+                }
+              : {}),
+          }
   }
 
   return workerOptions
@@ -57,8 +82,12 @@ export class PgBossQueueWorkers implements QueueWorkers {
     supported: {
       batchSize: {
         queueProperty: 'localConcurrency',
+        description: 'Number of jobs to process concurrently',
+      },
+      groupConcurrency: {
+        queueProperty: 'localGroupConcurrency',
         description:
-          'Number of independent workers processing jobs concurrently (maps to pg-boss localConcurrency, not batch fetching, to avoid head-of-line blocking)',
+          'Maximum concurrent jobs per group, keeping one shared queue fair across groups',
       },
       pollInterval: {
         queueProperty: 'pollingIntervalSeconds',

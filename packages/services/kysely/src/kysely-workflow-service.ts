@@ -2,6 +2,7 @@ import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
   type WorkflowPlannedStep,
+  type WorkflowQueueOptions,
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
@@ -19,8 +20,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   private initialized = false
   private runService: KyselyWorkflowRunService
 
-  constructor(protected db: Kysely<KyselyPikkuDB>) {
-    super()
+  constructor(
+    protected db: Kysely<KyselyPikkuDB>,
+    options: WorkflowQueueOptions = {}
+  ) {
+    super(options)
     this.runService = new KyselyWorkflowRunService(db)
   }
 
