@@ -5704,7 +5704,7 @@ __metadata:
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
     "@pikku/better-auth": "npm:^0.12.19"
-    "@pikku/cli": "npm:^0.12.87"
+    "@pikku/cli": "npm:^0.12.89"
     "@pikku/core": "npm:^0.12.68"
     json-schema: "npm:^0.4.0"
     oauth2-mock-server: "npm:^7.1.1"
