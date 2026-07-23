@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box,
   Group,
@@ -8,19 +8,24 @@ import {
   SimpleGrid,
   SegmentedControl,
   ThemeIcon,
+  Loader,
+  Center,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Search, SlidersHorizontal } from 'lucide-react'
-import type { PackageMeta } from '../../pages/PackagesPage'
+import type { PackageMeta } from './packageMeta'
 import { CategoryRail } from './CategoryRail'
 import { AddonCard } from './AddonCard'
 import { PublishCta } from './PublishCta'
 import { AddonDetailDrawer } from './AddonDetailDrawer'
-import { deriveCategories, addonPrimaryCategory } from './addonCategoryMeta'
+import { toCategoryBuckets } from './addonCategoryMeta'
+
+export type SortKey = 'name' | 'functions' | 'agents'
 
 interface CommunityGalleryProps {
+  /** The rows loaded so far — already searched, filtered and sorted server-side. */
   addons: PackageMeta[]
   searchQuery: string
   installedNames: Set<string>
@@ -32,6 +37,31 @@ interface CommunityGalleryProps {
   actionError?: { name: string; message: string } | null
   /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
+  /**
+   * Catalogue-wide category counts, from the registry. Derived counts would
+   * only describe the pages already scrolled past.
+   */
+  categoryCounts: Record<string, number>
+  /**
+   * Size of the unfiltered catalogue — the rail's "All" count. Summing
+   * `categoryCounts` would overcount every package that declares more than one
+   * category.
+   */
+  catalogueTotal: number
+  /** How many rows match the current search/filter across the whole catalogue. */
+  total: number
+  category: string
+  onCategoryChange: (category: string) => void
+  /**
+   * Sorting is the registry's, so it is offered only where the registry can do
+   * it. The OpenAPI catalogue orders by name alone — omit both and the control
+   * is hidden rather than left inert.
+   */
+  sort?: SortKey
+  onSortChange?: (sort: SortKey) => void
+  hasMore: boolean
+  loadingMore: boolean
+  onLoadMore: () => void
   /** `namespace` is the user-chosen wireAddon name (addons only); APIs ignore it. */
   onInstall: (addon: PackageMeta, namespace?: string) => void
   /**
@@ -43,11 +73,6 @@ interface CommunityGalleryProps {
   onOpenInstalled?: (addon: PackageMeta) => void
 }
 
-type SortKey = 'name' | 'functions' | 'agents'
-
-const fnCount = (a: PackageMeta) => Object.keys(a.functions ?? {}).length
-const agentCount = (a: PackageMeta) => Object.keys(a.agents ?? {}).length
-
 export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   addons,
   searchQuery,
@@ -57,12 +82,20 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   installingName,
   actionError,
   kind = 'addon',
+  categoryCounts,
+  catalogueTotal,
+  total,
+  category,
+  onCategoryChange,
+  sort,
+  onSortChange,
+  hasMore,
+  loadingMore,
+  onLoadMore,
   onInstall,
   onOpenInstalled,
 }) => {
   useLocale()
-  const [category, setCategory] = useState('all')
-  const [sort, setSort] = useState<SortKey>('name')
   const [selected, setSelected] = useState<PackageMeta | null>(null)
 
   // An installed addon opens its full detail page (Setup/OAuth lives there); a
@@ -75,7 +108,10 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     }
   }
 
-  const categories = useMemo(() => deriveCategories(addons), [addons])
+  const categories = useMemo(
+    () => toCategoryBuckets(categoryCounts),
+    [categoryCounts]
+  )
 
   const sortData = useMemo(
     () => [
@@ -86,31 +122,28 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     []
   )
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    let list = addons.filter((a) => {
-      if (category !== 'all' && addonPrimaryCategory(a) !== category)
-        return false
-      if (!q) return true
-      return (
-        a.displayName?.toLowerCase().includes(q) ||
-        a.name?.toLowerCase().includes(q) ||
-        a.description?.toLowerCase().includes(q) ||
-        (a.tags ?? []).some((tag) => tag.toLowerCase().includes(q)) ||
-        (a.author ?? '').toLowerCase().includes(q)
-      )
-    })
-    const comparators: Record<
-      SortKey,
-      (x: PackageMeta, y: PackageMeta) => number
-    > = {
-      name: (x, y) =>
-        (x.displayName || x.name).localeCompare(y.displayName || y.name),
-      functions: (x, y) => fnCount(y) - fnCount(x),
-      agents: (x, y) => agentCount(y) - agentCount(x),
-    }
-    return [...list].sort(comparators[sort])
-  }, [addons, category, searchQuery, sort])
+  // Pull the next page when the sentinel below the grid scrolls into view.
+  // `onLoadMore` is read through a ref so the observer isn't torn down and
+  // rebuilt on every render — which would re-fire while it re-intersects.
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const loadMoreRef = useRef(onLoadMore)
+  loadMoreRef.current = onLoadMore
+
+  useEffect(() => {
+    const node = sentinelRef.current
+    if (!node || !hasMore || loadingMore) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadMoreRef.current()
+        }
+      },
+      // Start fetching a screenful early so scrolling doesn't visibly stall.
+      { rootMargin: '400px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasMore, loadingMore])
 
   const heading =
     category === 'all'
@@ -136,8 +169,8 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         <CategoryRail
           categories={categories}
           active={category}
-          total={addons.length}
-          onPick={setCategory}
+          total={catalogueTotal}
+          onPick={onCategoryChange}
         />
 
         <Stack gap="md" style={{ minWidth: 0, minHeight: '100%' }}>
@@ -147,26 +180,28 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
                 {heading}
               </Text>
               <Badge size="sm" variant="light" color="gray">
-                {asI18n(String(filtered.length))}
+                {asI18n(String(total))}
               </Badge>
             </Group>
-            <Group gap="xs" wrap="nowrap">
-              <ThemeIcon size="sm" variant="transparent" color="gray">
-                <SlidersHorizontal size={14} />
-              </ThemeIcon>
-              <SegmentedControl
-                size="xs"
-                value={sort}
-                onChange={(v) => setSort(v as SortKey)}
-                data={sortData}
-              />
-            </Group>
+            {sort && onSortChange && (
+              <Group gap="xs" wrap="nowrap">
+                <ThemeIcon size="sm" variant="transparent" color="gray">
+                  <SlidersHorizontal size={14} />
+                </ThemeIcon>
+                <SegmentedControl
+                  size="xs"
+                  value={sort}
+                  onChange={(v) => onSortChange(v as SortKey)}
+                  data={sortData}
+                />
+              </Group>
+            )}
           </Group>
 
           {/* Content region grows to fill, keeping the publish CTA pinned to
               the bottom whether the grid is short or the list is empty. */}
           <Box style={{ flex: 1, minHeight: 0 }}>
-            {filtered.length === 0 ? (
+            {addons.length === 0 ? (
               <Stack align="center" justify="center" gap={6} h="100%">
                 <ThemeIcon size={48} radius="md" variant="light" color="gray">
                   <Search size={22} />
@@ -179,17 +214,26 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
                 </Text>
               </Stack>
             ) : (
-              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-                {filtered.map((addon) => (
-                  <AddonCard
-                    key={addon.id}
-                    addon={addon}
-                    installed={installedNames.has(addon.name)}
-                    kind={kind}
-                    onOpen={openAddon}
-                  />
-                ))}
-              </SimpleGrid>
+              <>
+                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+                  {addons.map((addon) => (
+                    <AddonCard
+                      key={addon.id}
+                      addon={addon}
+                      installed={installedNames.has(addon.name)}
+                      kind={kind}
+                      onOpen={openAddon}
+                    />
+                  ))}
+                </SimpleGrid>
+                {hasMore && (
+                  <Box ref={sentinelRef} py="lg">
+                    <Center>
+                      <Loader size="sm" />
+                    </Center>
+                  </Box>
+                )}
+              </>
             )}
           </Box>
 

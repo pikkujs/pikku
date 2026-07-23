@@ -1,7 +1,14 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { CanvasDrawerData } from '../../context/DrawerContext'
-import { Box, Text, Stack, Group, UnstyledButton, Loader } from '@pikku/mantine/core'
+import {
+  Box,
+  Text,
+  Stack,
+  Group,
+  UnstyledButton,
+  Loader,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -441,7 +448,7 @@ const FunctionsView: React.FC<{
 
     const addonFuncNames = new Set<string>()
     if (addonMeta) {
-      for (const pkg of addonMeta as AddonMeta[]) {
+      for (const pkg of addonMeta) {
         for (const name of Object.keys(pkg.functions ?? {})) {
           addonFuncNames.add(name)
         }

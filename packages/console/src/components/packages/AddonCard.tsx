@@ -4,7 +4,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Check, ShieldCheck, FunctionSquare, Bot, Globe } from 'lucide-react'
-import type { PackageMeta } from '../../pages/PackagesPage'
+import type { PackageMeta } from './packageMeta'
 import {
   getCategoryMeta,
   addonPrimaryCategory,
@@ -20,7 +20,12 @@ interface AddonCardProps {
   onOpen: (addon: PackageMeta) => void
 }
 
-export const AddonCard: React.FC<AddonCardProps> = ({ addon, installed, kind = 'addon', onOpen }) => {
+export const AddonCard: React.FC<AddonCardProps> = ({
+  addon,
+  installed,
+  kind = 'addon',
+  onOpen,
+}) => {
   useLocale()
   const [hovered, setHovered] = useState(false)
   const isApi = kind === 'api'
@@ -167,7 +172,12 @@ export const AddonCard: React.FC<AddonCardProps> = ({ addon, installed, kind = '
           )}
         </Group>
         {installed && (
-          <Badge size="sm" variant="light" color="green" leftSection={<Check size={11} />}>
+          <Badge
+            size="sm"
+            variant="light"
+            color="green"
+            leftSection={<Check size={11} />}
+          >
             {isApi ? m.packages_imported() : m.packages_added()}
           </Badge>
         )}

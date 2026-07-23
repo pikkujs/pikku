@@ -13,7 +13,7 @@ import {
   Search,
   Wrench,
 } from 'lucide-react'
-import type { PackageMeta } from '../../pages/PackagesPage'
+import type { PackageMeta } from './packageMeta'
 
 export interface CategoryMeta {
   icon: ComponentType<{ size?: number }>
@@ -62,6 +62,24 @@ export interface CategoryBucket {
   id: string
   label: string
   count: number
+}
+
+/**
+ * Shape the registry's catalogue-wide category counts for the rail.
+ *
+ * Note these count every category a package declares, matching how the
+ * category filter itself matches (any category, not just the first). The old
+ * client-side derivation counted only `categories[0]`, so a multi-category
+ * package appeared under one heading but was returned by the filter for
+ * several — the counts and the filter now agree.
+ */
+export function toCategoryBuckets(
+  counts: Record<string, number>
+): CategoryBucket[] {
+  return Object.entries(counts)
+    .filter(([id]) => !!id)
+    .map(([id, count]) => ({ id, label: prettyCategory(id), count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
 }
 
 export function deriveCategories(addons: PackageMeta[]): CategoryBucket[] {

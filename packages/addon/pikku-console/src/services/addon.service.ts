@@ -67,6 +67,13 @@ export interface OpenApiListResult {
   nextCursor: number | null
 }
 
+/** One page of the addon catalogue, as the registry returns it. */
+export interface AddonMetaPage {
+  packages: AddonMeta[]
+  total: number
+  nextCursor: number | null
+}
+
 export interface OpenApiDetail extends OpenApiSummary {
   swaggerYamlUrl?: string
   categories: string[]
@@ -75,18 +82,64 @@ export interface OpenApiDetail extends OpenApiSummary {
   updated?: string
 }
 
+export interface AddonMetaQuery {
+  cursor?: number
+  limit?: number
+  /** Free-text search. Applied by the registry, across the whole catalogue. */
+  search?: string
+  category?: string
+  sort?: 'name' | 'functions' | 'agents'
+  /** First-party @pikku/addon-* packages only. */
+  official?: boolean
+  /** Comma-separated package names — the gallery's "Installed" filter. */
+  names?: string
+}
+
 export class AddonService {
   constructor(private fabricApiUrl: string) {}
 
-  async readAddonsMeta(): Promise<AddonMeta[]> {
+  async readAddonsMeta(query: AddonMetaQuery = {}): Promise<AddonMetaPage> {
+    const params = new URLSearchParams()
+    if (query.cursor != null) params.set('cursor', String(query.cursor))
+    params.set('limit', String(query.limit ?? 50))
+    // The registry calls the free-text param `query`; the console calls it
+    // `search` everywhere, so the rename happens here rather than in the UI.
+    if (query.search) params.set('query', query.search)
+    if (query.category) params.set('category', query.category)
+    if (query.sort) params.set('sort', query.sort)
+    if (query.official) params.set('official', 'true')
+    // Sent even when empty: an empty name list means "nothing installed", which
+    // must return nothing rather than falling back to the whole catalogue.
+    if (query.names != null) params.set('names', query.names)
+
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/packages?limit=500`
+      `${this.fabricApiUrl}/registry/packages?${params}`
     )
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)
     }
     const result = await response.json()
-    return result.packages ?? []
+    return {
+      packages: result.packages ?? [],
+      total: result.total ?? 0,
+      nextCursor: result.nextCursor ?? null,
+    }
+  }
+
+  /** Catalogue-wide category counts, for the gallery's category rail. */
+  async readAddonCategories(): Promise<Record<string, number>> {
+    const response = await fetch(
+      `${this.fabricApiUrl}/registry/packages/categories`
+    )
+    if (!response.ok) {
+      throw new Error(`Registry returned ${response.status}`)
+    }
+    // A registry without this route matches `/registry/packages/:id` instead and
+    // answers 204 with no body. The rail is decoration — degrade to no counts
+    // rather than taking the whole catalogue down with a parse error.
+    const text = await response.text()
+    if (!text) return {}
+    return JSON.parse(text)
   }
 
   async readAddon(id: string): Promise<AddonDetail | null> {
@@ -104,12 +157,14 @@ export class AddonService {
     limit: number
     offset: number
     search?: string
+    category?: string
   }): Promise<OpenApiListResult> {
     const params = new URLSearchParams({
       limit: String(opts.limit),
       offset: String(opts.offset),
     })
     if (opts.search) params.set('query', opts.search)
+    if (opts.category) params.set('category', opts.category)
     const response = await fetch(
       `${this.fabricApiUrl}/registry/openapis?${params.toString()}`
     )
@@ -117,6 +172,22 @@ export class AddonService {
       throw new Error(`Registry returned ${response.status}`)
     }
     return response.json()
+  }
+
+  /** Catalogue-wide category counts for the OpenAPI gallery's category rail. */
+  async readOpenapiCategories(): Promise<Record<string, number>> {
+    const response = await fetch(
+      `${this.fabricApiUrl}/registry/openapis/categories`
+    )
+    if (!response.ok) {
+      throw new Error(`Registry returned ${response.status}`)
+    }
+    // A registry without this route matches `/registry/openapis/:name` instead
+    // and answers 204 with no body. The rail is decoration — degrade to no
+    // counts rather than failing the catalogue on a parse error.
+    const text = await response.text()
+    if (!text) return {}
+    return JSON.parse(text)
   }
 
   /** Fetch one OpenAPI catalogue entry by name (returns null when absent). */

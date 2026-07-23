@@ -47,14 +47,33 @@ export function useFunctionMeta(pikkuFuncId: string) {
   }
 }
 
+/**
+ * The whole addon catalogue as one flat array, for the canvas drawer — which
+ * matches wired functions against every addon and so genuinely needs all of
+ * them. `console:getAddonMeta` is paged (the gallery scrolls it), so the walk
+ * lives here rather than being repeated by each backend's RPC adapter.
+ *
+ * The gallery must NOT use this: it wants one page at a time.
+ */
 export function useAddonMeta() {
   const rpc = usePikkuRPC()
 
   return useQuery({
     queryKey: ['addon', 'meta'],
     queryFn: async () => {
-      const x = await rpc.invoke('console:getAddonMeta')
-      return x
+      const addons = []
+      let cursor: number | undefined
+      // Bounded so a backend that always echoes a cursor can't spin forever.
+      for (let page = 0; page < 100; page++) {
+        const result = await rpc.invoke('console:getAddonMeta', {
+          limit: 250,
+          ...(cursor != null ? { cursor } : {}),
+        })
+        addons.push(...(result?.packages ?? []))
+        if (result?.nextCursor == null) break
+        cursor = result.nextCursor
+      }
+      return addons
     },
   })
 }
