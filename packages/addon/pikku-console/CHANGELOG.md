@@ -1,3 +1,9 @@
+## 0.12.31
+
+### Patch Changes
+
+- 9a9ed6f: Detect the project's package manager instead of defaulting to yarn when installing an addon
+
 ## 0.12.30
 
 ### Patch Changes

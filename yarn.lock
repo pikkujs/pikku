@@ -6408,7 +6408,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-postgres@npm:^0.12.13, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
+"@pikku/kysely-postgres@npm:^0.12.14, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"
   dependencies:
@@ -6744,7 +6744,7 @@ __metadata:
     "@pikku/ai-vercel": "npm:^0.12.8"
     "@pikku/core": "npm:^0.12.69"
     "@pikku/express": "npm:^0.12.7"
-    "@pikku/kysely-postgres": "npm:^0.12.13"
+    "@pikku/kysely-postgres": "npm:^0.12.14"
     "@pikku/schema-cfworker": "npm:^0.12.5"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.0"
@@ -6768,7 +6768,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
     "@pikku/aws-services": "npm:^0.12.7"
     "@pikku/core": "npm:^0.12.69"
-    "@pikku/kysely-postgres": "npm:^0.12.13"
+    "@pikku/kysely-postgres": "npm:^0.12.14"
     "@pikku/lambda": "npm:^0.12.5"
     "@types/aws-lambda": "npm:^8.10.161"
     "@types/node": "npm:^24"
@@ -7060,7 +7060,7 @@ __metadata:
     "@pikku/core": "npm:^0.12.69"
     "@pikku/express": "npm:^0.12.7"
     "@pikku/jose": "npm:^0.12.4"
-    "@pikku/kysely-postgres": "npm:^0.12.13"
+    "@pikku/kysely-postgres": "npm:^0.12.14"
     "@pikku/schema-cfworker": "npm:^0.12.5"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.0"
@@ -7133,7 +7133,7 @@ __metadata:
     "@pikku/core": "npm:^0.12.69"
     "@pikku/express": "npm:^0.12.7"
     "@pikku/inspector": "npm:^0.12.46"
-    "@pikku/kysely-postgres": "npm:^0.12.13"
+    "@pikku/kysely-postgres": "npm:^0.12.14"
     "@pikku/queue-pg-boss": "npm:^0.12.8"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.0"
