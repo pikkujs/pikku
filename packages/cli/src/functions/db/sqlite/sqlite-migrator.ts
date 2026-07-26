@@ -1,7 +1,6 @@
 import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
+import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../db-migrator.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
-
-const TRACKING_TABLE = 'sql_migrations'
 
 export class SqliteMigrationExecutor implements MigrationExecutor {
   constructor(private readonly db: SyncSqliteDatabase) {}

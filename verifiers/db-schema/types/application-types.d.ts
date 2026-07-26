@@ -9,7 +9,8 @@ import type { KyselyPikkuDB } from '@pikku/kysely'
 import type { LabelsDB } from '@pikku/verifier-db-addon/types'
 
 export interface Config extends CoreConfig {
-  sqliteDb: string
+  sqliteDb?: string
+  postgresUrl?: string
 }
 
 /**

@@ -1,26 +1,34 @@
 /**
- * End-to-end verifier for the schema-source registry.
+ * End-to-end verifier for the schema-source registry, on either dialect.
  *
  * Every source `pikku db generate` knows about is present and real: Better Auth
  * configured with plugins that add tables *and* columns, the `@pikku/kysely`
  * runtime declaration, and an addon that ships a table and publishes it with
- * `pikku db export`. Nothing is stubbed — the CLI binary runs against a file
+ * `pikku db export`. Nothing is stubbed — the CLI binary runs against a real
  * database, and the assertions read the migrations it wrote and the database it
  * migrated.
  *
+ * `node run.mjs` uses sqlite. `node run.mjs --postgres` uses the server at
+ * `DATABASE_URL`, which is worth running separately rather than trusting sqlite
+ * to stand in: the auth config asks for uuid keys, which postgres honours and
+ * sqlite cannot, so only there does the scope tables' foreign key to `user.id`
+ * have a type it must actually agree with — and only there was it silently
+ * rejected for as long as it was.
+ *
  * The sequence:
- *   1.  addon: pikku all + pikku db export      → publishes .pikku/db
- *   2.  link node_modules/<addon> → ./addon     (what a yarn workspace makes)
- *   3.  app:   pikku all                        → records the wireAddon declaration
- *   4.  app:   pikku db generate                → one migration per source, ordered
+ *   1.  addon: pikku all + pikku db export     → publishes .pikku/db, per dialect
+ *   2.  link node_modules/<addon> → ./addon    (what a yarn workspace makes)
+ *   3.  app:   pikku all                       → records the wireAddon declaration
+ *   4.  app:   pikku db generate               → one migration per source, ordered
  *   5.  assert the auth migration carries the plugin tables and columns
  *   6.  assert the runtime migration carries the tables that need `user.id`
  *   7.  assert the addon migration is the addon's own SQL, indexes intact
- *   8.  app:   pikku db migrate                 → applies all three
- *   9.  app:   pikku db check                   → clean
- *   10. app:   pikku db generate                → idempotent, writes nothing
- *   11. app:   tsc + runtime                    → addon reads its table, boot does no DDL
- *   12. app:   pikku db baseline                → adopts a database that already has it
+ *   8.  app:   pikku db migrate                → applies all three
+ *   9.  app:   pikku db check                  → clean
+ *   10. app:   pikku db generate               → idempotent, writes nothing
+ *   11. app:   tsc + runtime                   → addon reads its table, boot does no DDL
+ *   12. app:   pikku db baseline               → adopts a database that already has it
+ *   13. app:   pikku db baseline               → refuses one that is actually behind
  */
 import { execFileSync } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
@@ -34,6 +42,7 @@ import {
 } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import postgres from 'postgres'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(here, '../..')
@@ -43,11 +52,28 @@ const PIKKU = join(repoRoot, 'packages/cli/dist/bin/pikku.js')
 const TSC = join(repoRoot, 'node_modules/.bin/tsc')
 const TSX = join(repoRoot, 'node_modules/.bin/tsx')
 const ADDON_PKG = '@pikku/verifier-db-addon'
-const MIGRATIONS_DIR = join(here, 'db', 'sqlite')
-const DB_FILE = join(here, '.pikku-runtime', 'dev.db')
 
-/** The table the sqlite migrator records applied migrations in. */
+/** The table both migrators record applied migrations in. */
 const TRACKING_TABLE = 'sql_migrations'
+
+const usePostgres = process.argv.includes('--postgres')
+const postgresUrl = process.env.DATABASE_URL
+if (usePostgres && !postgresUrl) {
+  console.error('✗ --postgres needs DATABASE_URL to point at a postgres server')
+  process.exit(1)
+}
+
+const dialect = usePostgres ? 'postgres' : 'sqlite'
+const MIGRATIONS_DIR = join(here, 'db', dialect)
+const SQLITE_FILE = join(here, '.pikku-runtime', 'dev.db')
+
+/**
+ * The environment the CLI and the runtime both read to pick a dialect, so the
+ * two passes differ in the database and nothing else.
+ */
+const env = usePostgres
+  ? { ...process.env, PIKKU_VERIFIER_POSTGRES_URL: postgresUrl }
+  : { ...process.env, PIKKU_VERIFIER_POSTGRES_URL: undefined }
 
 let failures = 0
 
@@ -62,7 +88,19 @@ const contains = (haystack, needle, label) =>
 
 function run(label, file, args, cwd = here) {
   console.log(`\n▶ ${label}`)
-  execFileSync(file, args, { cwd, stdio: 'inherit' })
+  execFileSync(file, args, { cwd, stdio: 'inherit', env })
+}
+
+function capture(label, file, args, cwd = here) {
+  console.log(`\n▶ ${label}`)
+  const output = execFileSync(file, args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env,
+  })
+  process.stdout.write(output)
+  return output
 }
 
 /**
@@ -78,48 +116,79 @@ function expectFailure(label, args, cwd = here) {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      env,
     })
     process.stdout.write(output)
     return { status: 0, output }
   } catch (error) {
-    const output = `${error.stdout ?? ''}${error.stderr ?? ''}`
     console.log(`  (exited ${error.status})`)
-    return { status: error.status ?? 1, output }
+    return { status: error.status ?? 1 }
   }
 }
 
-/** How many migrations the tracking table claims are applied. */
-function appliedCount(file) {
-  if (!existsSync(file)) return 0
-  const db = new DatabaseSync(file)
-  try {
-    const row = db
-      .prepare(
-        `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
-      )
-      .get(TRACKING_TABLE)
-    if (row.n === 0) return 0
-    return db.prepare(`SELECT count(*) AS n FROM ${TRACKING_TABLE}`).get().n
-  } finally {
-    db.close()
-  }
-}
+/**
+ * The two things the verifier needs from the database itself, either dialect:
+ * put it back to empty, and read or clear the migrator's own tracking table.
+ */
+const store = usePostgres
+  ? (() => {
+      const sql = postgres(postgresUrl, { max: 1 })
+      return {
+        reset: async () => {
+          await sql.unsafe('DROP SCHEMA IF EXISTS public CASCADE')
+          await sql.unsafe('CREATE SCHEMA public')
+        },
+        clearHistory: async () => {
+          await sql.unsafe(`DELETE FROM ${TRACKING_TABLE}`)
+        },
+        appliedCount: async () => {
+          const [row] = await sql.unsafe(
+            `SELECT count(*)::int AS n FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = '${TRACKING_TABLE}'`
+          )
+          if (row.n === 0) return 0
+          const [applied] = await sql.unsafe(
+            `SELECT count(*)::int AS n FROM ${TRACKING_TABLE}`
+          )
+          return applied.n
+        },
+        close: async () => await sql.end(),
+      }
+    })()
+  : {
+      reset: async () => {
+        rmSync(join(here, '.pikku-runtime'), { recursive: true, force: true })
+      },
+      clearHistory: async () => {
+        const db = new DatabaseSync(SQLITE_FILE)
+        db.exec(`DELETE FROM ${TRACKING_TABLE}`)
+        db.close()
+      },
+      appliedCount: async () => {
+        if (!existsSync(SQLITE_FILE)) return 0
+        const db = new DatabaseSync(SQLITE_FILE)
+        try {
+          const { n } = db
+            .prepare(
+              `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
+            )
+            .get(TRACKING_TABLE)
+          if (n === 0) return 0
+          return db.prepare(`SELECT count(*) AS n FROM ${TRACKING_TABLE}`).get()
+            .n
+        } finally {
+          db.close()
+        }
+      },
+      close: async () => {},
+    }
 
-function capture(label, file, args, cwd = here) {
-  console.log(`\n▶ ${label}`)
-  const output = execFileSync(file, args, {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
-  process.stdout.write(output)
-  return output
-}
+console.log(`\n══ db-schema verifier (${dialect}) ══`)
 
 rmSync(MIGRATIONS_DIR, { recursive: true, force: true })
-rmSync(join(here, '.pikku-runtime'), { recursive: true, force: true })
 rmSync(join(here, '.pikku'), { recursive: true, force: true })
 rmSync(join(addonDir, '.pikku'), { recursive: true, force: true })
+await store.reset()
 
 // 1. The addon publishes what it needs. It never creates it.
 run('addon: pikku all', 'node', [PIKKU, 'all'], addonDir)
@@ -130,16 +199,16 @@ const artifactPath = join(addonDir, '.pikku', 'db', 'pikku-db-meta.gen.json')
 check(existsSync(artifactPath), 'pikku db export wrote .pikku/db')
 const artifact = JSON.parse(readFileSync(artifactPath, 'utf8'))
 check(
-  Object.keys(artifact).join(',') === 'sqlite',
-  `exported only the dialects the addon has migrations for (${Object.keys(artifact).join(',') || 'none'})`
+  Object.keys(artifact).sort().join(',') === 'postgres,sqlite',
+  `every dialect the addon has migrations for is published (${Object.keys(artifact).join(',') || 'none'})`
 )
+const exported = artifact[dialect]
 check(
-  artifact.sqlite?.tables?.labels?.map((c) => c.name).join(',') ===
-    'id,name,color',
-  'the artifact carries the introspected columns of `labels`'
+  exported?.tables?.labels?.map((c) => c.name).join(',') === 'id,name,color',
+  `the ${dialect} artifact carries the introspected columns of \`labels\``
 )
 contains(
-  artifact.sqlite?.sql ?? '',
+  exported?.sql ?? '',
   'CREATE UNIQUE INDEX labels_name_unique',
   'the artifact carries the SQL that creates it, indexes included'
 )
@@ -169,8 +238,14 @@ check(
   /auth/.test(authFile ?? ''),
   `auth is first, because everything else references user.id (${authFile})`
 )
-check(/runtime|pikku/.test(runtimeFile ?? ''), `runtime is second (${runtimeFile})`)
-check(/db-addon|addon/.test(addonFile ?? ''), `the addon is last (${addonFile})`)
+check(
+  /runtime|pikku/.test(runtimeFile ?? ''),
+  `runtime is second (${runtimeFile})`
+)
+check(
+  /db-addon|addon/.test(addonFile ?? ''),
+  `the addon is last (${addonFile})`
+)
 
 const sqlOf = (file) => readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
 
@@ -193,14 +268,34 @@ for (const column of [
 ]) {
   contains(authSql, column, 'plugin column on an existing table')
 }
+check(
+  usePostgres
+    ? /create table "user" \("id" uuid\b/i.test(authSql)
+    : /create table "user" \("id" text\b/i.test(authSql),
+  usePostgres
+    ? 'postgres made user.id a uuid, as generateId: uuid asks'
+    : 'sqlite made user.id text — it has no uuid type to ask for'
+)
 
 // 6. The cross-source assertion: these two exist only because the auth source
-//    ran into the same scratch database first and satisfied `user.id`.
+//    ran into the same scratch database first and satisfied `user.id`. The
+//    column type has to have been taken from `user.id` too — on postgres a
+//    `text` column referencing a `uuid` one is rejected outright, which is how
+//    this went unnoticed for so long.
 console.log('\n▶ assert: the runtime migration cleared its auth prerequisite')
 const runtimeSql = sqlOf(runtimeFile)
 for (const table of ['pikku_user_role', 'pikku_user_scope']) {
   contains(runtimeSql, table, 'requires user.id')
 }
+check(
+  new RegExp(
+    `"user_id" ${usePostgres ? 'uuid' : 'text'} not null references "user"`,
+    'i'
+  ).test(runtimeSql),
+  usePostgres
+    ? 'user_id took its type from user.id (uuid), not the text it used to declare'
+    : 'user_id took its type from user.id (text)'
+)
 for (const table of ['workflow_runs', 'ai_run', 'secrets']) {
   contains(runtimeSql, table, 'runtime table')
 }
@@ -216,7 +311,9 @@ const addonSql = sqlOf(addonFile)
 contains(addonSql, 'CREATE TABLE labels', 'the table')
 contains(addonSql, 'CREATE UNIQUE INDEX labels_name_unique', 'and its index')
 
-// 8-9. Apply it all, then ask the database whether it agrees.
+// 8-9. Apply it all, then ask the database whether it agrees. On postgres this
+//      is where a foreign key that only compiles is separated from one that the
+//      server will actually accept.
 run('app: pikku db migrate', 'node', [PIKKU, 'db', 'migrate'])
 const checked = capture('app: pikku db check', 'node', [PIKKU, 'db', 'check'])
 check(
@@ -250,9 +347,7 @@ run('app: runtime checks', TSX, ['src/start.ts'])
 console.log(
   '\n▶ baseline: a database that already has what the migrations describe'
 )
-const db = new DatabaseSync(DB_FILE)
-db.exec(`DELETE FROM ${TRACKING_TABLE}`)
-db.close()
+await store.clearHistory()
 
 const wouldFail = expectFailure('app: pikku db migrate (history wiped)', [
   PIKKU,
@@ -280,7 +375,7 @@ const settled = capture('app: pikku db migrate (baselined)', 'node', [
   'migrate',
 ])
 check(
-  !settled.includes('applied 0001-better-auth.sql'),
+  !settled.includes(`applied ${authFile}`),
   'migrate now has nothing pending, so the history has caught up with reality'
 )
 
@@ -288,7 +383,7 @@ check(
 //     that is genuinely behind would bury a real gap under a history claiming
 //     everything is applied.
 console.log('\n▶ baseline: refuses a database that is actually behind')
-rmSync(DB_FILE, { force: true })
+await store.reset()
 const refused = expectFailure('app: pikku db baseline (empty database)', [
   PIKKU,
   'db',
@@ -299,12 +394,16 @@ check(
   'baseline refused an empty database rather than recording a fiction'
 )
 check(
-  appliedCount(DB_FILE) === 0,
+  (await store.appliedCount()) === 0,
   'the refusal recorded nothing (a partial baseline is the worst outcome)'
 )
 
+await store.close()
+
 if (failures > 0) {
-  console.error(`\n✗ ${failures} assertion(s) failed`)
+  console.error(`\n✗ ${failures} assertion(s) failed on ${dialect}`)
   process.exit(1)
 }
-console.log('\n✓ schema sources, addon channel, migrate/check/baseline all verified')
+console.log(
+  `\n✓ ${dialect}: schema sources, addon channel, migrate/check/baseline all verified`
+)

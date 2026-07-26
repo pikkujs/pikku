@@ -2,6 +2,19 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+/**
+ * The migrator's own bookkeeping table, which belongs to no dialect and to no
+ * project's schema.
+ *
+ * Every introspector hides it for that reason. Leaving it visible on one
+ * dialect and not the other is not cosmetic: a schema source exported from a
+ * database that has been migrated would publish `sql_migrations` as one of its
+ * own tables, and the consumer — which also has it — would then read the source
+ * as partially covered and emit column deltas instead of the source's own SQL,
+ * silently dropping its primary keys, indexes and constraints.
+ */
+export const MIGRATION_TRACKING_TABLE = 'sql_migrations'
+
 export class MigrationDriftError extends Error {
   constructor(
     public readonly file: string,

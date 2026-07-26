@@ -1,6 +1,5 @@
 import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
-
-const TRACKING_TABLE = 'sql_migrations'
+import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../db-migrator.js'
 
 export interface PostgresMigrationClient {
   query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>

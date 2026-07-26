@@ -10,7 +10,7 @@ The tables the runtime needs — workflow, AI, scopes, secrets, credentials, web
 
 Auth is a declared prerequisite. `pikkuUserRole` and `pikkuUserScope` reference `user.id`, which Better Auth owns, so `scopeSchema` says so via `requires` and `applyPikkuSchemas` checks every prerequisite before creating anything — a project without auth gets a sentence naming what is missing and who owns it, not a foreign key error and not a half-applied database. `resolveRequirements` returns the same answer as data for callers that need to describe the gap rather than die on it.
 
-That prerequisite also fixes a fourth disagreement: `user_id` was declared `text`, but Better Auth generates a `uuid` primary key on postgres, and postgres refuses a text column referencing it. The whole statement was rejected, so `KyselyScopeService.init()` had never actually created these tables on a postgres project — one had a migration written by hand with a comment explaining why. The column now takes its type from the column it references.
+That prerequisite also fixes a fourth disagreement: `user_id` was declared `text`, but `user.id` has no fixed type — Better Auth decides it from config, giving `uuid` under `generateId: 'uuid'` and an identity `integer` under `'serial'`, and postgres refuses a `text` column referencing either. The whole statement was rejected, so `KyselyScopeService.init()` had never actually created these tables on such a project — one had a migration written by hand with a comment explaining why. The column now takes its type from the column it references, whatever that turns out to be.
 
 Three further disagreements the single declaration settled:
 
@@ -18,7 +18,7 @@ Three further disagreements the single declaration settled:
 - `workflowRuns`, `workflowStep` and `workflowStepHistory` defaulted their primary keys to `sql.raw("'" + crypto.randomUUID() + "'")`, evaluated once when the statement was built — one shared default for every row, not a generator. Dropped; the services supply the id.
 - `workflowStep.fromStepName` was backfilled by an `alterTable(...).execute().catch(() => {})` bolted on after the fact. It is part of the declaration.
 
-Every service's `init()` now goes through `ensurePikkuSchema`, which looks before it creates: all the tables present is a no-op, none present creates them from the declaration, and some present throws rather than filling in the rest. That last case is the point. `.ifNotExists()` turned every failure into a silent success — it is why nobody noticed the `user_id` type had been rejected on postgres since the day it was written — and a schema half-owned by a migration and half by a boot-time create is the condition all of this exists to end. Around 615 lines of duplicated DDL went with it.
+Every service's `init()` now goes through `ensurePikkuSchema`, which looks before it creates: all the tables present is a no-op, none present creates them from the declaration, and some present throws rather than filling in the rest. That last case is the point. `.ifNotExists()` turned every failure into a silent success — it is why nobody noticed the `user_id` type had been rejected since the day it was written — and a schema half-owned by a migration and half by a boot-time create is the condition all of this exists to end. Around 615 lines of duplicated DDL went with it.
 
 Creating at boot is now the fallback rather than the intent: run `pikku db generate` and `init()` takes the `present` path and issues no DDL at all.
 

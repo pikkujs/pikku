@@ -14,7 +14,9 @@
     "@pikku/schema-cfworker": "workspace:*",
     "better-auth": "^1.6.19",
     "better-sqlite3": "^12.10.0",
-    "kysely": "^0.29.0"
+    "kysely": "^0.29.0",
+    "kysely-postgres-js": "^3.0.0",
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
@@ -26,6 +28,7 @@
   },
   "scripts": {
     "tsc": "tsc --noEmit",
-    "test": "node run.mjs"
+    "test": "node run.mjs",
+    "test:db": "node run.mjs --postgres"
   }
 }

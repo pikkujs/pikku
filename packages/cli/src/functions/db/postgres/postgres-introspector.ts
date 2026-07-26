@@ -5,6 +5,7 @@ import type {
   ForeignKeyInfo,
   EnumInfo,
 } from '../db-introspector.js'
+import { MIGRATION_TRACKING_TABLE } from '../db-migrator.js'
 
 interface PgColumnRow {
   column_name: string
@@ -33,6 +34,18 @@ interface PgAllForeignKeyRow {
 /** Table display name matching `listTables` (schema-qualified unless `public`). */
 function tableKey(schema: string, table: string): string {
   return schema === 'public' ? table : `${schema}.${table}`
+}
+
+/**
+ * Whether a table is the migrator's own bookkeeping, which no schema owns.
+ *
+ * Matched on the bare name in any schema: the tracking table is created
+ * unqualified, so it lands wherever `search_path` points and there is no one
+ * schema to pin it to. The SQLite introspector hides the same name; see
+ * {@link MIGRATION_TRACKING_TABLE} for what showing it breaks.
+ */
+function isMigrationTracking(table: string): boolean {
+  return table === MIGRATION_TRACKING_TABLE
 }
 
 export interface QueryClient {
@@ -88,7 +101,9 @@ export class PostgresIntrospector implements DbIntrospector {
          AND table_type = 'BASE TABLE'
        ORDER BY table_schema, table_name`
     )
-    return result.rows.map((r) => tableKey(r.table_schema, r.table_name))
+    return result.rows
+      .filter((r) => !isMigrationTracking(r.table_name))
+      .map((r) => tableKey(r.table_schema, r.table_name))
   }
 
   async getColumns(table: string): Promise<ColumnInfo[]> {
@@ -207,6 +222,7 @@ export class PostgresIntrospector implements DbIntrospector {
 
     const byTable = new Map<string, ColumnInfo[]>()
     for (const r of result.rows) {
+      if (isMigrationTracking(r.table_name)) continue
       const key = tableKey(r.table_schema, r.table_name)
       let cols = byTable.get(key)
       if (!cols) {
@@ -251,6 +267,7 @@ export class PostgresIntrospector implements DbIntrospector {
 
     const byTable = new Map<string, ForeignKeyInfo[]>()
     for (const r of result.rows) {
+      if (isMigrationTracking(r.owner_table)) continue
       const key = tableKey(r.owner_schema, r.owner_table)
       let fks = byTable.get(key)
       if (!fks) {

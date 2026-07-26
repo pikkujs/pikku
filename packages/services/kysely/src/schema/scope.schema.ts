@@ -10,10 +10,12 @@ import { requiredType, type PikkuSchema } from './pikku-schema.types.js'
  * grant to, and the cascade that revokes grants when a user is deleted has
  * nothing to hang off.
  *
- * `userId` takes its type from `user.id` rather than declaring one. The old
- * hand-written DDL said `text`, which cannot reference the `uuid` primary key
- * Better Auth generates on postgres — so the whole statement was rejected and
- * projects wrote these tables by hand instead.
+ * `userId` takes its type from `user.id` rather than declaring one, because
+ * that type is Better Auth's to decide: `text` by default, `uuid` under
+ * `generateId: 'uuid'`, an identity `integer` under `'serial'`. The old
+ * hand-written DDL said `text`, and postgres rejects a `text` column
+ * referencing either of the others — so the whole statement failed and projects
+ * wrote these tables by hand instead.
  */
 export const scopeSchema: PikkuSchema = {
   name: 'scope',

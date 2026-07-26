@@ -41,3 +41,11 @@ On the other side, `db generate` folds each wired addon's schema into the consum
 ## A project with no migrations directory no longer crashes
 
 `db generate`, `db check` and `db migrate` read the migrations on disk to work out what is already covered, and threw `ENOENT` when there was no `db/<dialect>` directory to read. That is the first run on a new project — the exact case `db generate` exists to serve. A directory that does not exist means no migrations, which is an answer, not a failure.
+
+## The migration tracking table is no longer part of a postgres schema
+
+`sql_migrations` is the migrator's own bookkeeping and belongs to nobody's schema. The SQLite introspector had always hidden it; the postgres one reported it like any other table, and the two dialects disagreeing had consequences beyond a stray row in a listing.
+
+An addon exported from a migrated postgres database published `sql_migrations` as one of its own tables. The consumer has that table too, so `db generate` read the addon as _partially_ covered and wrote column deltas instead of the addon's own SQL — silently dropping its primary keys, indexes and constraints. The addon's tables were created, and created wrong.
+
+Both introspectors now hide it, and both migrators and both introspectors name it from one constant, so the two dialects cannot drift apart again. A postgres project regenerating its types with `pikku db codegen` loses the `SqlMigrations` interface it should never have had — SQLite projects never had one.
