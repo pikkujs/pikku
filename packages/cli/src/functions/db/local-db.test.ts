@@ -6,12 +6,14 @@ import {
   writeFileSync,
   rmSync,
   readFileSync,
+  existsSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
   resolveDb,
+  type ResolvedSqliteDb,
   parseDatabaseUrl,
   migrateAndCodegen,
   seed as runSeed,
@@ -400,6 +402,32 @@ INSERT INTO todos (title, done) VALUES ('seed from migration', FALSE);
   } finally {
     await kysely.destroy()
   }
+})
+
+test('scratch codegen types the postgres migrations without touching the configured database', async () => {
+  usePostgresProject()
+  const resolved = resolveDb({}, root, root)!
+
+  const scratch = await migrateAndCodegen(resolved, { scratch: true })
+  assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
+  assert.match(readFileSync(resolved.zodFile, 'utf8'), /export const TodosZ/)
+
+  // The configured database must be untouched — so a real migrate afterwards
+  // still sees the migration as pending. If the scratch run had recorded state
+  // anywhere real, this would come back skipped and the deploy would never
+  // apply it.
+  const live = await migrateAndCodegen(resolved)
+  assert.deepEqual(live.migrate.applied, ['0001-init.sql'])
+})
+
+test('scratch codegen types the sqlite migrations without creating the db file', async () => {
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'sqlite')
+
+  const scratch = await migrateAndCodegen(resolved, { scratch: true })
+  assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
+  assert.match(readFileSync(resolved.zodFile, 'utf8'), /export const TodosZ/)
+  assert.equal(existsSync((resolved as ResolvedSqliteDb).dbFile), false)
 })
 
 test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', async () => {

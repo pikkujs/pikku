@@ -264,8 +264,27 @@ export interface MigrateAndCodegenOutcome {
   classificationsJsonWritten: boolean
 }
 
+export interface MigrateAndCodegenOptions {
+  /**
+   * Apply the migrations to a throwaway database and introspect that, instead
+   * of touching the configured one.
+   *
+   * The generated types describe the schema the migrations define, which is the
+   * contract — a live database additionally carries whatever has drifted into
+   * it (tables a runtime bootstrapped, leftovers from a reverted branch), and
+   * introspecting one makes codegen depend on a reachable, already-migrated
+   * server. That ordering is the problem this solves: codegen can now run
+   * before deploy-time migrations, on a machine with no database at all.
+   *
+   * SQLite uses `:memory:`; Postgres uses an embedded PGlite (real Postgres,
+   * and it needs no `CREATEDB` privilege anywhere).
+   */
+  scratch?: boolean
+}
+
 export async function migrateAndCodegen(
-  resolved: ResolvedDb
+  resolved: ResolvedDb,
+  options: MigrateAndCodegenOptions = {}
 ): Promise<MigrateAndCodegenOutcome> {
   let migrateResult!: MigrateResult
   let codegenResult!: CodegenResult
@@ -278,9 +297,11 @@ export async function migrateAndCodegen(
   )
 
   if (resolved.dialect === 'sqlite') {
-    mkdirSync(dirname(resolved.dbFile), { recursive: true })
     const runtime = await loadSqliteRuntime()
-    const db = runtime.open(resolved.dbFile)
+    if (!options.scratch) {
+      mkdirSync(dirname(resolved.dbFile), { recursive: true })
+    }
+    const db = runtime.open(options.scratch ? ':memory:' : resolved.dbFile)
     try {
       const executor = new SqliteMigrationExecutor(db)
       migrateResult = await migrate(executor, resolved.migrationsDir)
@@ -300,7 +321,11 @@ export async function migrateAndCodegen(
       db.close()
     }
   } else {
-    await withPostgresClient(resolved, async (client) => {
+    const withClient = options.scratch
+      ? <T,>(r: ResolvedPostgresDb, run: (c: PostgresQueryClient) => Promise<T>) =>
+          withScratchPostgresDatabase(r, 'pikku_codegen', run)
+      : withPostgresClient
+    await withClient(resolved, async (client) => {
       const introspector = new PostgresIntrospector(client)
       await introspector.connect()
       try {
