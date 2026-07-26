@@ -471,6 +471,37 @@ test('db check reports tables the migrations never mention, without failing', as
   assert.equal(drift.inSync, true, 'an unrecorded table is reported, not fatal')
 })
 
+test('db check tells a runtime table apart from an unexplained one', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open((resolved as ResolvedSqliteDb).dbFile)
+  try {
+    // One table pikku declares, one nothing has ever heard of.
+    db.exec('CREATE TABLE workflow_runs (workflow_run_id TEXT PRIMARY KEY)')
+    db.exec('CREATE TABLE nobody_knows (id INTEGER PRIMARY KEY)')
+  } finally {
+    db.close()
+  }
+
+  const drift = await computeSchemaDrift(resolved)
+  assert.deepEqual(drift.runtimeTables, ['workflow_runs'])
+  assert.deepEqual(drift.extraTables, ['nobody_knows'])
+})
+
+test('db check does not demand runtime tables from a project that has none', async () => {
+  // The declaration recognises tables; it does not require them. A project that
+  // never constructs the workflow or AI services owes them nothing.
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const drift = await computeSchemaDrift(resolved)
+  assert.deepEqual(drift.missingTables, [])
+  assert.deepEqual(drift.runtimeTables, [])
+  assert.equal(drift.inSync, true)
+})
+
 test('db check reports a public copy shadowing a schema-qualified table', async () => {
   usePostgresProject({
     migrationSql: `CREATE SCHEMA app;

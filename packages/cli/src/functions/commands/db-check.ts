@@ -42,6 +42,18 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
         ? `public.${table}`
         : table
 
+    if (drift.runtimeTables.length) {
+      logger.info(
+        `db check: ${drift.runtimeTables.length} table(s) the pikku runtime created at boot, which no migration records:`
+      )
+      for (const table of drift.runtimeTables) {
+        logger.info(`  ${qualify(table)}`)
+      }
+      logger.info(
+        '  Run `pikku db generate` to write them down, so the schema stops depending on which services happened to start.'
+      )
+    }
+
     if (drift.extraTables.length) {
       logger.info(
         `db check: ${drift.extraTables.length} table(s) in the database that no migration creates:`

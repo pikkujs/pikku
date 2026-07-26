@@ -14,6 +14,7 @@ import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import { migrate, type MigrateResult } from './db-migrator.js'
 import type { DbIntrospector } from './db-introspector.js'
+import { applyPikkuSchemas, compilePikkuSchemas } from '@pikku/kysely'
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
@@ -659,10 +660,20 @@ function diffSchemas(
   return { missingTables, missingColumns }
 }
 
-export interface DesiredAuthSchema {
+/**
+ * A schema somebody other than the project's own migrations defines — Better
+ * Auth, the pikku runtime, an addon.
+ *
+ * Every such source answers the same two questions, which is what lets one
+ * mechanism serve all of them: `tables` is what must exist, and `sql` is what
+ * creates it.
+ */
+export interface DesiredSchema {
   tables: SchemaMap
   sql: string
 }
+
+export type DesiredAuthSchema = DesiredSchema
 
 function isPostgresAuthDatabase(options: {
   database?: { type?: string }
@@ -786,6 +797,68 @@ export async function desiredAuthSchema(
   }
 }
 
+/**
+ * The tables `@pikku/kysely`'s runtime services need, as declared.
+ *
+ * Materialized the same way the auth schema is: applied to a throwaway database
+ * and introspected, so one declaration answers both "what should exist" and
+ * "what SQL creates it" without a hand-written per-dialect copy.
+ *
+ * The scope tables carry foreign keys onto `user.id`, which Better Auth owns.
+ * A project using `@pikku/kysely` without Better Auth still has to be able to
+ * ask what the runtime schema is, so a bare `user(id)` stands in when nothing
+ * earlier created one — and is excluded from the result, because it belongs to
+ * whoever does create it, not to us.
+ */
+export async function desiredRuntimeSchema(
+  resolved: ResolvedDb
+): Promise<DesiredSchema> {
+  const collect = async (
+    db: Kysely<any>,
+    introspect: () => Promise<SchemaMap>
+  ): Promise<SchemaMap> => {
+    const before = await introspect()
+    if (!before.has('user')) {
+      await db.schema
+        .createTable('user')
+        .addColumn('id', 'text', (col) => col.primaryKey())
+        .execute()
+    }
+    await applyPikkuSchemas(db)
+    const after = await introspect()
+    for (const table of before.keys()) after.delete(table)
+    after.delete('user')
+    return after
+  }
+
+  if (resolved.dialect === 'sqlite') {
+    const runtime = await loadSqliteRuntime()
+    const db = runtime.open(':memory:')
+    try {
+      const kysely = createSqliteKysely({ db, camelCase: true })
+      const tables = await collect(kysely, () =>
+        introspectorToMap(new SqliteIntrospector(db))
+      )
+      return { tables, sql: compilePikkuSchemas(kysely) }
+    } finally {
+      db.close()
+    }
+  }
+
+  return withScratchPostgresDatabase(resolved, 'pikku_runtime', async (db) => {
+    const kysely = createPGliteKysely<any>({
+      db: db.__pglite!,
+      camelCase: true,
+    })
+    try {
+      const tables = await collect(kysely, () => postgresDatabaseToMap(db))
+      return { tables, sql: compilePikkuSchemas(kysely) }
+    } finally {
+      await kysely.destroy()
+    }
+  })
+}
+
 export async function introspectSchema(
   resolved: ResolvedDb
 ): Promise<SchemaMap> {
@@ -838,6 +911,11 @@ export interface SchemaDriftResult {
   /** In the migrations, absent from the database — it is behind. */
   missingTables: string[]
   missingColumns: { table: string; columns: string[] }[]
+  /**
+   * In the database and absent from the migrations, but declared by the pikku
+   * runtime — created by a service at boot rather than written down.
+   */
+  runtimeTables: string[]
   /** In the database, absent from the migrations — nobody wrote it down. */
   extraTables: string[]
   inSync: boolean
@@ -853,6 +931,14 @@ export interface SchemaDriftResult {
  * migrations is a table nobody wrote down: a runtime that created its own at
  * boot, or the remains of a reverted branch. Dropping those is how data gets
  * lost, so they are reported and never acted on.
+ *
+ * The pikku runtime declares tables of its own, and they are used here to
+ * recognise rather than to require. A project that never constructs the
+ * workflow or AI services should not be told it is missing their tables, so
+ * absence is not a finding. Presence is: a runtime table in the database that
+ * no migration creates gets reported as such, separately from the genuinely
+ * unexplained ones, because for those the remedy is known — `db generate`
+ * writes them down.
  */
 export async function computeSchemaDrift(
   resolved: ResolvedDb
@@ -875,13 +961,20 @@ export async function computeSchemaDrift(
   const coveredBare = new Set(
     [...covered.keys()].filter((t) => !t.includes('.'))
   )
-  const extraTables = [...actual.keys()].filter(
+  const unrecorded = [...actual.keys()].filter(
     (t) => !coveredFull.has(t) && !coveredBare.has(t.split('.').pop()!)
   )
+
+  const runtime = await desiredRuntimeSchema(resolved)
+  const runtimeTables = unrecorded.filter((t) =>
+    runtime.tables.has(t.split('.').pop()!)
+  )
+  const extraTables = unrecorded.filter((t) => !runtimeTables.includes(t))
 
   return {
     missingTables,
     missingColumns,
+    runtimeTables,
     extraTables,
     inSync: missingTables.length === 0 && missingColumns.length === 0,
   }
