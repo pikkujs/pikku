@@ -45,6 +45,9 @@ export const AddonCard: React.FC<AddonCardProps> = ({
       withBorder
       radius="md"
       padding={0}
+      data-testid="addon-card"
+      data-addon-package={addon.name}
+      data-addon-installed={installed || undefined}
       onClick={() => onOpen(addon)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

@@ -54,6 +54,7 @@ export const PackagesListPanel: React.FC<PackagesListPanelProps> = ({
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
+                data-testid="packages-search"
                 placeholder={
                   tab === 'apis'
                     ? m.packages_search_apis_placeholder()
