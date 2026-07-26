@@ -123,4 +123,12 @@ export interface WorkflowService {
   getAIGeneratedWorkflows(
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
+
+  /**
+   * One dynamic workflow by name, or `null` if there isn't one — the lookup
+   * both starting a run and every orchestrator tick actually need.
+   */
+  getDynamicWorkflow(
+    name: string
+  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null>
 }

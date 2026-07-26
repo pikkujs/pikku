@@ -11,6 +11,12 @@ import { runQueueJob } from '../wirings/queue/queue-runner.js'
  * a real queue — and redelivers a failed job up to `options.attempts` times with
  * backoff, so a transiently-failing workflow step recovers exactly as it would
  * on pg-boss/bullmq instead of being silently dropped on its first error.
+ *
+ * Payloads are JSON round-tripped on the way in, because every real backend
+ * puts the job on a wire (SQS body, Redis value, jsonb column) and the worker
+ * therefore never sees the caller's live object. Doing it here keeps dev
+ * behaviour honest, and keeps the callers — who cannot know which backend they
+ * are talking to — from having to serialise defensively.
  */
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults = false
@@ -25,13 +31,15 @@ export class InMemoryQueueService implements QueueService {
     const maxAttempts = Math.max(1, options?.attempts ?? 1)
     let attemptsMade = 0
     const createdAt = new Date()
+    const payload: T =
+      data === undefined ? data : (JSON.parse(JSON.stringify(data)) as T)
 
     const runAttempt = async () => {
       attemptsMade++
       const job: QueueJob<T> = {
         id: jobId,
         queueName,
-        data,
+        data: payload,
         status: () => 'active',
         metadata: () => ({ attemptsMade, maxAttempts, createdAt }),
         pikkuUserId: options?.pikkuUserId,

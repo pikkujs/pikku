@@ -55,6 +55,68 @@ const waitUntil = async (
   return predicate()
 }
 
+// Register a queue worker that records the payload each delivery carried.
+const registerRecordingWorker = (queueName: string) => {
+  const received: any[] = []
+  const funcId = `queue_${queueName}`
+  pikkuState(null, 'queue', 'meta')[queueName] = {
+    pikkuFuncId: funcId,
+    name: queueName,
+  }
+  pikkuState(null, 'function', 'meta')[funcId] = {
+    pikkuFuncId: funcId,
+    inputSchemaName: null,
+    outputSchemaName: null,
+    sessionless: true,
+  } as any
+  wireQueueWorker({
+    name: queueName,
+    func: {
+      auth: false,
+      func: async (_services: any, data: any) => {
+        received.push(data)
+      },
+    },
+  } as any)
+  return received
+}
+
+describe('InMemoryQueueService payload isolation', () => {
+  test('a job carries the payload as it was when added', async () => {
+    const received = registerRecordingWorker('mutated')
+    const queue = new InMemoryQueueService()
+    const payload = { items: ['a'] }
+
+    await queue.add('mutated', payload, { delay: 0 })
+    payload.items.push('b')
+
+    assert.equal(await waitUntil(() => received.length === 1), true)
+    assert.deepEqual(
+      received[0].items,
+      ['a'],
+      'the worker saw a mutation made after the job was queued — a real queue would have serialised it away'
+    )
+  })
+
+  test('a payload arrives shaped the way a real queue would deliver it', async () => {
+    const received = registerRecordingWorker('serialised')
+    const queue = new InMemoryQueueService()
+
+    await queue.add(
+      'serialised',
+      { when: new Date('2020-01-01T00:00:00.000Z') },
+      { delay: 0 }
+    )
+
+    assert.equal(await waitUntil(() => received.length === 1), true)
+    assert.equal(
+      received[0].when,
+      '2020-01-01T00:00:00.000Z',
+      'a Date survived as a Date, so dev behaviour diverges from every real queue backend'
+    )
+  })
+})
+
 describe('InMemoryQueueService retry', () => {
   test('redelivers a transiently-failing job until it succeeds', async () => {
     const calls = registerWorker('flaky', (count) => {

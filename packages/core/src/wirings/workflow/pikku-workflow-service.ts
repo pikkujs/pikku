@@ -1109,6 +1109,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
 
+  /**
+   * One dynamic workflow by name, or `null` if there isn't one.
+   *
+   * Starting a run and every orchestrator tick both need to resolve a single
+   * name, and used to do it by listing every dynamic workflow in the deployment
+   * and parsing each graph on the way past. Backends override this with a
+   * targeted lookup; the fallback keeps the old behavior for those that can't.
+   */
+  public async getDynamicWorkflow(
+    name: string
+  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
+    const workflows = await this.getAIGeneratedWorkflows()
+    return workflows.find((w) => w.workflowName === name) ?? null
+  }
+
   // ============================================================================
   // Workflow Lifecycle Methods
   // ============================================================================
@@ -1178,9 +1193,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const queueService = this.verifyQueueService()
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
-      JSON.parse(
-        JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
-      ),
+      { runId, stepName, rpcName, data, fromStepName },
       {
         ...this.resolveStepJobOptions(stepOptions),
         // Group by step function, mirroring how per-step queues split them —
@@ -1272,9 +1285,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     try {
       await getSingletonServices()!.queueService!.add(
         this.getStepWorkerQueueName(rpcName),
-        JSON.parse(
-          JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
-        ),
+        { runId, stepName, rpcName, data, fromStepName },
         {
           ...this.resolveStepJobOptions(stepOptions),
           group: this.getJobGroup(rpcName),
@@ -1367,8 +1378,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const packageName = resolved?.packageName ?? null
 
     if (!workflowMeta) {
-      const dynamicWorkflows = await this.getAIGeneratedWorkflows()
-      const match = dynamicWorkflows.find((w) => w.workflowName === name)
+      const match = await this.getDynamicWorkflow(name)
       if (match?.graph) {
         workflowMeta = match.graph
       }
@@ -1682,10 +1692,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     if (!workflowMeta) {
-      const dynamicWorkflows = await this.getAIGeneratedWorkflows()
-      const match = dynamicWorkflows.find(
-        (w) => w.workflowName === run.workflow
-      )
+      const match = await this.getDynamicWorkflow(run.workflow)
       if (match?.graph) {
         await continueGraph(this, runId, run.workflow, match.graph)
         const updatedRun = await this.getRun(runId)
