@@ -573,6 +573,22 @@ export class InMemoryWorkflowService
     return { graph: version.graph, source: version.source }
   }
 
+  override async getDynamicWorkflow(
+    name: string
+  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
+    for (const [key, value] of this.workflowVersions) {
+      if (value.source !== 'ai-agent' || value.status !== 'active') continue
+      const separatorIdx = key.lastIndexOf(':')
+      if (key.substring(0, separatorIdx) !== name) continue
+      return {
+        workflowName: name,
+        graphHash: key.substring(separatorIdx + 1),
+        graph: value.graph,
+      }
+    }
+    return null
+  }
+
   async getAIGeneratedWorkflows(
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {

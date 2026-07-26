@@ -260,4 +260,10 @@ export class PikkuWorkflowDoClient implements WorkflowService {
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
     return Promise.reject(notSupported('getAIGeneratedWorkflows'))
   }
+
+  getDynamicWorkflow(
+    _name: string
+  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
+    return Promise.reject(notSupported('getDynamicWorkflow'))
+  }
 }

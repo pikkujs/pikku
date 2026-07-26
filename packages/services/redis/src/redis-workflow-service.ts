@@ -1007,6 +1007,43 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
+  override async getDynamicWorkflow(
+    name: string
+  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
+    // Versions are keyed `…:version:<name>:<hash>`, so one name still means a
+    // scan — but over that name's handful of hashes rather than over every
+    // dynamic workflow in the deployment.
+    const escaped = name.replace(/[?*[\]\\]/g, (ch) => `\\${ch}`)
+    const pattern = `${this.keyPrefix}:version:${escaped}:*`
+    let cursor = '0'
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = nextCursor
+      for (const key of keys) {
+        const data = await this.redis.hgetall(key)
+        if (
+          !data.graph ||
+          data.source !== 'ai-agent' ||
+          data.status !== 'active'
+        )
+          continue
+        if (data.workflowName !== name || !data.graphHash) continue
+        return {
+          workflowName: name,
+          graphHash: data.graphHash,
+          graph: JSON.parse(data.graph),
+        }
+      }
+    } while (cursor !== '0')
+    return null
+  }
+
   async getAIGeneratedWorkflows(
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
