@@ -14,7 +14,14 @@ import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import { migrate, type MigrateResult } from './db-migrator.js'
 import type { DbIntrospector } from './db-introspector.js'
-import { applyPikkuSchemas, compilePikkuSchemas } from '@pikku/kysely'
+import {
+  applyPikkuSchemas,
+  compilePikkuSchemas,
+  pikkuSchemas,
+  resolveRequirements,
+  type PikkuSchema,
+  type RequiredTypes,
+} from '@pikku/kysely'
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
@@ -798,37 +805,94 @@ export async function desiredAuthSchema(
 }
 
 /**
+ * Run Better Auth's own migrator against `kysely`, if the project configures it.
+ *
+ * Separate from `desiredAuthSchema` because the auth tables are a prerequisite
+ * of the runtime ones, not just a peer of them: both have to land in the same
+ * throwaway database, in that order, for the scope tables' foreign keys onto
+ * `user.id` to resolve.
+ */
+async function applyAuthSchema(
+  kysely: Kysely<any>,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<boolean> {
+  const options = await loadAuthOptions({
+    rootDir,
+    srcDirectories,
+    kysely,
+    logger,
+  })
+  if (!options) return false
+  const { runMigrations } = await getAuthMigrations(options)
+  await runMigrations()
+  return true
+}
+
+/** A runtime schema left out because nothing in the project creates what it needs. */
+export interface SkippedRuntimeSchema {
+  schema: string
+  /** The prerequisite that was not there, as `table.column`. */
+  requires: string
+  owner: string
+}
+
+export interface DesiredRuntimeSchema extends DesiredSchema {
+  skipped: SkippedRuntimeSchema[]
+}
+
+/**
  * The tables `@pikku/kysely`'s runtime services need, as declared.
  *
  * Materialized the same way the auth schema is: applied to a throwaway database
  * and introspected, so one declaration answers both "what should exist" and
  * "what SQL creates it" without a hand-written per-dialect copy.
  *
- * The scope tables carry foreign keys onto `user.id`, which Better Auth owns.
- * A project using `@pikku/kysely` without Better Auth still has to be able to
- * ask what the runtime schema is, so a bare `user(id)` stands in when nothing
- * earlier created one — and is excluded from the result, because it belongs to
- * whoever does create it, not to us.
+ * Auth goes into the same database first, because it is a prerequisite — the
+ * scope tables grant to a user, so they reference the table Better Auth owns.
+ * Its tables are subtracted from the result: they are covered by auth's own
+ * source, and counting them twice would have `db generate` write them twice.
+ *
+ * A project with no auth configured is not an error here. It genuinely has no
+ * scope tables, so the schemas that wanted them are left out and returned in
+ * `skipped` — reported rather than dropped, because the tables they would have
+ * recognised now have nothing to explain them.
  */
 export async function desiredRuntimeSchema(
-  resolved: ResolvedDb
-): Promise<DesiredSchema> {
+  resolved: ResolvedDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<DesiredRuntimeSchema> {
+  const skipped: SkippedRuntimeSchema[] = []
+
   const collect = async (
     db: Kysely<any>,
     introspect: () => Promise<SchemaMap>
-  ): Promise<SchemaMap> => {
+  ): Promise<{
+    tables: SchemaMap
+    schemas: PikkuSchema[]
+    types: RequiredTypes
+  }> => {
+    await applyAuthSchema(db, rootDir, srcDirectories, logger)
     const before = await introspect()
-    if (!before.has('user')) {
-      await db.schema
-        .createTable('user')
-        .addColumn('id', 'text', (col) => col.primaryKey())
-        .execute()
+
+    const { types, unmet } = await resolveRequirements(db)
+    for (const { schema, requirement } of unmet) {
+      skipped.push({
+        schema: schema.name,
+        requires: `${requirement.table}.${requirement.column}`,
+        owner: requirement.owner,
+      })
     }
-    await applyPikkuSchemas(db)
+    const unavailable = new Set(unmet.map(({ schema }) => schema.name))
+    const schemas = pikkuSchemas.filter((s) => !unavailable.has(s.name))
+
+    await applyPikkuSchemas(db, schemas)
     const after = await introspect()
     for (const table of before.keys()) after.delete(table)
-    after.delete('user')
-    return after
+    return { tables: after, schemas, types }
   }
 
   if (resolved.dialect === 'sqlite') {
@@ -836,10 +900,14 @@ export async function desiredRuntimeSchema(
     const db = runtime.open(':memory:')
     try {
       const kysely = createSqliteKysely({ db, camelCase: true })
-      const tables = await collect(kysely, () =>
+      const { tables, schemas, types } = await collect(kysely, () =>
         introspectorToMap(new SqliteIntrospector(db))
       )
-      return { tables, sql: compilePikkuSchemas(kysely) }
+      return {
+        tables,
+        sql: compilePikkuSchemas(kysely, schemas, types),
+        skipped,
+      }
     } finally {
       db.close()
     }
@@ -851,8 +919,14 @@ export async function desiredRuntimeSchema(
       camelCase: true,
     })
     try {
-      const tables = await collect(kysely, () => postgresDatabaseToMap(db))
-      return { tables, sql: compilePikkuSchemas(kysely) }
+      const { tables, schemas, types } = await collect(kysely, () =>
+        postgresDatabaseToMap(db)
+      )
+      return {
+        tables,
+        sql: compilePikkuSchemas(kysely, schemas, types),
+        skipped,
+      }
     } finally {
       await kysely.destroy()
     }
@@ -918,6 +992,12 @@ export interface SchemaDriftResult {
   runtimeTables: string[]
   /** In the database, absent from the migrations — nobody wrote it down. */
   extraTables: string[]
+  /**
+   * Runtime schemas that could not be materialized, so their tables were not
+   * recognisable — the reason an `extraTables` entry may be a runtime table in
+   * disguise.
+   */
+  skippedRuntimeSchemas: SkippedRuntimeSchema[]
   inSync: boolean
 }
 
@@ -941,7 +1021,10 @@ export interface SchemaDriftResult {
  * writes them down.
  */
 export async function computeSchemaDrift(
-  resolved: ResolvedDb
+  resolved: ResolvedDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
 ): Promise<SchemaDriftResult> {
   const covered =
     resolved.dialect === 'sqlite'
@@ -965,7 +1048,12 @@ export async function computeSchemaDrift(
     (t) => !coveredFull.has(t) && !coveredBare.has(t.split('.').pop()!)
   )
 
-  const runtime = await desiredRuntimeSchema(resolved)
+  const runtime = await desiredRuntimeSchema(
+    resolved,
+    rootDir,
+    srcDirectories,
+    logger
+  )
   const runtimeTables = unrecorded.filter((t) =>
     runtime.tables.has(t.split('.').pop()!)
   )
@@ -976,6 +1064,7 @@ export async function computeSchemaDrift(
     missingColumns,
     runtimeTables,
     extraTables,
+    skippedRuntimeSchemas: runtime.skipped,
     inSync: missingTables.length === 0 && missingColumns.length === 0,
   }
 }

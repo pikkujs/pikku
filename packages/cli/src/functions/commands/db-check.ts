@@ -32,7 +32,12 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
       throw new Error('no database configured')
     }
 
-    const drift = await computeSchemaDrift(resolved)
+    const drift = await computeSchemaDrift(
+      resolved,
+      config.rootDir,
+      config.srcDirectories,
+      logger
+    )
 
     // Table names elide the `public` schema, which reads as ambiguous in a
     // report whose whole point can be a second copy of `app.orders` sitting in
@@ -64,6 +69,11 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
       logger.info(
         '  Left alone — a migration cannot know whether these hold data worth keeping.'
       )
+      for (const { schema, requires, owner } of drift.skippedRuntimeSchemas) {
+        logger.info(
+          `  Note: the runtime's '${schema}' tables could not be recognised — it needs '${requires}', which this project does not create. ${owner} owns it.`
+        )
+      }
     }
 
     if (drift.inSync) {

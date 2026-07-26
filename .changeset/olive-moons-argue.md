@@ -8,7 +8,11 @@ The tables the runtime needs — workflow, AI, scopes, secrets, credentials, web
 
 `pikkuSchemas` is now the single declaration, exported from `@pikku/kysely`: the same kysely schema-builder chains, moved out of `init()` and never executed at boot. `applyPikkuSchemas` materializes them onto a database, `compilePikkuSchemas` renders them as SQL for a dialect, and both bind `CamelCasePlugin` themselves so a declaration always compiles to the physical names the rest of the package queries.
 
-Three disagreements the single declaration settled:
+Auth is a declared prerequisite. `pikkuUserRole` and `pikkuUserScope` reference `user.id`, which Better Auth owns, so `scopeSchema` says so via `requires` and `applyPikkuSchemas` checks every prerequisite before creating anything — a project without auth gets a sentence naming what is missing and who owns it, not a foreign key error and not a half-applied database. `resolveRequirements` returns the same answer as data for callers that need to describe the gap rather than die on it.
+
+That prerequisite also fixes a fourth disagreement: `user_id` was declared `text`, but Better Auth generates a `uuid` primary key on postgres, and postgres refuses a text column referencing it. The whole statement was rejected, so `KyselyScopeService.init()` had never actually created these tables on a postgres project — one had a migration written by hand with a comment explaining why. The column now takes its type from the column it references.
+
+Three further disagreements the single declaration settled:
 
 - `aiRun` was created by two services with different columns. `KyselyAIStorageService` omitted `pendingApprovals`; `KyselyAIRunStateService` declared it and read it back through `as any` casts. Whichever ran first decided the shape, and where the storage service won, resolving an approval failed. The column is declared.
 - `workflowRuns`, `workflowStep` and `workflowStepHistory` defaulted their primary keys to `sql.raw("'" + crypto.randomUUID() + "'")`, evaluated once when the statement was built — one shared default for every row, not a generator. Dropped; the services supply the id.

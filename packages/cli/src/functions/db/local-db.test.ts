@@ -27,6 +27,18 @@ import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
 
 let root: string
 
+/**
+ * `computeSchemaDrift` with the arguments it needs to find an auth source.
+ *
+ * The fixture projects configure none, which is itself worth exercising: the
+ * runtime declaration must degrade to what it can materialize rather than
+ * refusing to answer.
+ */
+const driftOf = (resolved: Parameters<typeof computeSchemaDrift>[0]) =>
+  computeSchemaDrift(resolved, root, ['src'], {
+    error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+  })
+
 function usePostgresProject(options?: {
   migrationSql?: string
   seedSql?: string
@@ -444,7 +456,7 @@ ALTER TABLE todos ADD COLUMN priority INTEGER;
 `
   )
 
-  const drift = await computeSchemaDrift(resolved)
+  const drift = await driftOf(resolved)
   assert.equal(drift.inSync, false)
   assert.deepEqual(drift.missingTables, ['tags'])
   assert.deepEqual(drift.missingColumns, [
@@ -466,7 +478,7 @@ test('db check reports tables the migrations never mention, without failing', as
     db.close()
   }
 
-  const drift = await computeSchemaDrift(resolved)
+  const drift = await driftOf(resolved)
   assert.deepEqual(drift.extraTables, ['bootstrapped_at_boot'])
   assert.equal(drift.inSync, true, 'an unrecorded table is reported, not fatal')
 })
@@ -485,7 +497,7 @@ test('db check tells a runtime table apart from an unexplained one', async () =>
     db.close()
   }
 
-  const drift = await computeSchemaDrift(resolved)
+  const drift = await driftOf(resolved)
   assert.deepEqual(drift.runtimeTables, ['workflow_runs'])
   assert.deepEqual(drift.extraTables, ['nobody_knows'])
 })
@@ -496,7 +508,7 @@ test('db check does not demand runtime tables from a project that has none', asy
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
   await migrateAndCodegen(resolved)
 
-  const drift = await computeSchemaDrift(resolved)
+  const drift = await driftOf(resolved)
   assert.deepEqual(drift.missingTables, [])
   assert.deepEqual(drift.runtimeTables, [])
   assert.equal(drift.inSync, true)
@@ -525,7 +537,7 @@ CREATE TABLE app.orders (
     await kysely.destroy()
   }
 
-  const drift = await computeSchemaDrift(resolved)
+  const drift = await driftOf(resolved)
   assert.deepEqual(drift.extraTables, ['orders'])
   assert.deepEqual(drift.missingTables, [], 'app.orders is still accounted for')
 })

@@ -8,9 +8,16 @@ import {
   SqliteAdapter,
   SqliteIntrospector,
   SqliteQueryCompiler,
+  SqliteDialect,
   DummyDriver,
 } from 'kysely'
-import { pikkuSchemas, compilePikkuSchemas } from './index.js'
+import Database from 'better-sqlite3'
+import {
+  pikkuSchemas,
+  compilePikkuSchemas,
+  applyPikkuSchemas,
+  unsatisfiedRequirements,
+} from './index.js'
 
 const dialect = (kind: 'postgres' | 'sqlite') =>
   kind === 'postgres'
@@ -88,5 +95,96 @@ describe('pikku runtime schema', () => {
     const names = pikkuSchemas.map((s) => s.name)
     assert.equal(new Set(names).size, names.length, 'names must be unique')
     assert.ok(names.every((n) => /^[a-z][a-z-]*$/.test(n)))
+  })
+})
+
+describe('pikku runtime schema — prerequisites', () => {
+  const memoryDb = () =>
+    new Kysely<any>({
+      dialect: new SqliteDialect({ database: new Database(':memory:') }),
+    })
+
+  test('names the missing table and who owns it, before creating anything', async () => {
+    const db = memoryDb()
+    try {
+      await assert.rejects(
+        applyPikkuSchemas(db),
+        /The 'scope' schema requires 'user\.id', which nothing has created\. Better Auth owns it/
+      )
+
+      const created = await db.introspection.getTables()
+      assert.deepEqual(
+        created.map((t) => t.name),
+        [],
+        'a failed prerequisite must not leave a half-applied database'
+      )
+    } finally {
+      await db.destroy()
+    }
+  })
+
+  test('applies in full once the prerequisite is there', async () => {
+    const db = memoryDb()
+    try {
+      await db.schema
+        .createTable('user')
+        .addColumn('id', 'text', (col) => col.primaryKey())
+        .execute()
+
+      assert.deepEqual(await unsatisfiedRequirements(db), [])
+      await applyPikkuSchemas(db)
+
+      const created = new Set(
+        (await db.introspection.getTables()).map((t) => t.name)
+      )
+      assert.ok(created.has('pikku_user_role'))
+      assert.ok(created.has('workflow_runs'))
+    } finally {
+      await db.destroy()
+    }
+  })
+
+  test('takes the grant column type from the user id it references', () => {
+    // The hand-written DDL said `text`. Better Auth generates a `uuid` primary
+    // key on postgres, and postgres rejects a text column referencing it —
+    // which is why projects ended up writing these tables by hand.
+    const sql = compilePikkuSchemas(
+      new Kysely<any>({ dialect: dialect('postgres') }),
+      pikkuSchemas,
+      { 'user.id': 'uuid' }
+    )
+    assert.match(
+      sql,
+      /create table "pikku_user_role" \("user_id" uuid not null references "user" \("id"\)/
+    )
+    assert.match(
+      sql,
+      /create table "pikku_user_scope" \("user_id" uuid not null references "user" \("id"\)/
+    )
+  })
+
+  test('reports the gap as data, so a caller can describe it instead of dying', async () => {
+    const db = memoryDb()
+    try {
+      const unmet = await unsatisfiedRequirements(db)
+      assert.deepEqual(
+        unmet.map(({ schema, requirement }) => ({
+          schema: schema.name,
+          ...requirement,
+        })),
+        [{ schema: 'scope', table: 'user', column: 'id', owner: 'Better Auth' }]
+      )
+
+      // The rest of the declaration does not depend on auth, so it still applies.
+      const satisfiable = pikkuSchemas.filter((s) => s.name !== 'scope')
+      await applyPikkuSchemas(db, satisfiable)
+      const created = new Set(
+        (await db.introspection.getTables()).map((t) => t.name)
+      )
+      assert.ok(created.has('workflow_runs'))
+      assert.equal(created.has('pikku_user_role'), false)
+    } finally {
+      await db.destroy()
+    }
   })
 })

@@ -10,4 +10,6 @@ The runtime's declaration (`pikkuSchemas`, new in `@pikku/kysely`) is now used t
 
 Recognising, not requiring — absence of a runtime table is not a finding. A project that never constructs the workflow or AI services is not missing their tables.
 
+The runtime declaration names Better Auth as a prerequisite, so `db check` applies the project's auth schema into the same scratch database before materializing it. A project that configures no auth is not an error: the schemas that needed it are left out and reported, so an unexplained table is never silently the one that could not be recognised.
+
 Run against a real project this correctly attributed nine tables: four workflow tables in `app`, and five AI tables that a `pikku dev`/`pikku serve` connection had created unqualified in `public`, shadowing the `app` ones its migrations own.

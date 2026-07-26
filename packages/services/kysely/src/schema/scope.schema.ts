@@ -1,15 +1,23 @@
 import { sql } from 'kysely'
-import type { PikkuSchema } from './pikku-schema.types.js'
+import { requiredType, type PikkuSchema } from './pikku-schema.types.js'
 
 /**
  * Scopes, roles and the grants that bind them to users.
  *
  * `pikkuUserRole` and `pikkuUserScope` reference `user.id`, which Better Auth
- * owns — so this schema only applies after the auth one, and the composed order
- * in `pikkuSchemas` is load-bearing rather than alphabetical.
+ * owns. Auth is a prerequisite rather than an optional companion: a grant is
+ * made to a user, so without the table the user lives in there is nothing to
+ * grant to, and the cascade that revokes grants when a user is deleted has
+ * nothing to hang off.
+ *
+ * `userId` takes its type from `user.id` rather than declaring one. The old
+ * hand-written DDL said `text`, which cannot reference the `uuid` primary key
+ * Better Auth generates on postgres — so the whole statement was rejected and
+ * projects wrote these tables by hand instead.
  */
 export const scopeSchema: PikkuSchema = {
   name: 'scope',
+  requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
   statements: [
     (db) =>
       db.schema
@@ -40,10 +48,10 @@ export const scopeSchema: PikkuSchema = {
         )
         .addPrimaryKeyConstraint('pikku_role_scopes_pk', ['role', 'scope']),
 
-    (db) =>
+    (db, types) =>
       db.schema
         .createTable('pikkuUserRole')
-        .addColumn('userId', 'text', (col) =>
+        .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
           col.notNull().references('user.id').onDelete('cascade')
         )
         .addColumn('role', 'text', (col) =>
@@ -55,10 +63,10 @@ export const scopeSchema: PikkuSchema = {
         )
         .addPrimaryKeyConstraint('pikku_user_role_pk', ['userId', 'role']),
 
-    (db) =>
+    (db, types) =>
       db.schema
         .createTable('pikkuUserScope')
-        .addColumn('userId', 'text', (col) =>
+        .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
           col.notNull().references('user.id').onDelete('cascade')
         )
         .addColumn('scope', 'text', (col) =>
