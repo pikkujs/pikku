@@ -1,6 +1,7 @@
 {
   "name": "@pikku/next",
   "version": "0.12.7",
+  "description": "Next.js runtime for Pikku — SSR, route handlers, server actions and Better Auth integration",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

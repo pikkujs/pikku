@@ -1,7 +1,7 @@
 {
   "name": "@pikku/uws-handler",
   "version": "0.12.5",
-  "description": "The pikku uws handler",
+  "description": "uWebSockets.js HTTP and WebSocket handlers for Pikku — bring your own uWS app",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

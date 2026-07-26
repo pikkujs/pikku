@@ -1,6 +1,7 @@
 {
   "name": "@pikku/azure-functions",
   "version": "0.12.3",
+  "description": "Azure Functions runtime for Pikku — HTTP, timer and storage-queue handlers",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

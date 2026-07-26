@@ -1,7 +1,7 @@
 {
   "name": "@pikku/express",
   "version": "0.12.7",
-  "description": "An example pikku express server",
+  "description": "Express server for Pikku, with CORS, cookie and body parsing wired up",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

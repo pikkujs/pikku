@@ -1,6 +1,7 @@
 {
   "name": "@pikku/kysely-node-sqlite",
   "version": "0.12.3",
+  "description": "Kysely driver for Pikku backed by the built-in node:sqlite module",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",

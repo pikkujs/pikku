@@ -1,7 +1,7 @@
 {
   "name": "@pikku/fastify-plugin",
   "version": "0.12.4",
-  "description": "The pikku fastify plugin",
+  "description": "Fastify plugin for Pikku — mount Pikku wirings on an existing Fastify app",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

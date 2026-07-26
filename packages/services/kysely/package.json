@@ -1,6 +1,7 @@
 {
   "name": "@pikku/kysely",
   "version": "0.13.5",
+  "description": "Kysely-backed Pikku services — workflow state, secrets, sessions, scopes and audit",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",

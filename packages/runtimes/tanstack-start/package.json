@@ -1,6 +1,7 @@
 {
   "name": "@pikku/tanstack-start",
   "version": "0.12.3",
+  "description": "TanStack Start runtime for Pikku, with Better Auth integration",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
