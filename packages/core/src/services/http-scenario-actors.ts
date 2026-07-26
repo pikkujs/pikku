@@ -2,6 +2,8 @@ import type {
   ScenarioActor,
   ScenarioActorConfig,
   ScenarioActors,
+  ScenarioInvokeOptions,
+  ScenarioRpcResponse,
 } from './scenario-actors-service.js'
 import type {
   ConverseOptions,
@@ -64,17 +66,38 @@ export class HttpScenarioActor implements ScenarioActor {
   }
 
   async invoke(rpcName: string, data: unknown): Promise<unknown> {
+    const res = await this.invokeRaw(rpcName, data)
+    if (!res.ok) {
+      const body = JSON.stringify(res.body ?? '').slice(0, 300)
+      throw new Error(
+        `[scenario] '${rpcName}' as '${this.name}' returned ${res.status}: ${body}`
+      )
+    }
+    return res.body
+  }
+
+  async invokeRaw(
+    rpcName: string,
+    data: unknown,
+    options?: ScenarioInvokeOptions
+  ): Promise<ScenarioRpcResponse> {
     const cookie = this.cookie ?? (await this.login())
-    const res = await this.postRpc(rpcName, data, cookie)
+    let res = await this.postRpc(rpcName, data, cookie, options?.headers)
     if (res.status === 401) {
       // Session expired mid-run — re-login once and retry.
       this.cookie = null
-      return this.readRpcResponse(
+      res = await this.postRpc(
         rpcName,
-        await this.postRpc(rpcName, data, await this.login())
+        data,
+        await this.login(),
+        options?.headers
       )
     }
-    return this.readRpcResponse(rpcName, res)
+    return {
+      status: res.status,
+      ok: res.ok,
+      body: await readJsonBody(res),
+    }
   }
 
   async converse(options: ConverseOptions): Promise<ActorFlowVerdict> {
@@ -175,7 +198,12 @@ export class HttpScenarioActor implements ScenarioActor {
     return text ? JSON.parse(text) : undefined
   }
 
-  private async postRpc(rpcName: string, data: unknown, cookie: string) {
+  private async postRpc(
+    rpcName: string,
+    data: unknown,
+    cookie: string,
+    extraHeaders?: Record<string, string>
+  ) {
     const rpcPath = this.config.rpcPath ?? '/rpc'
     return fetch(`${this.config.apiUrl}${rpcPath}/${rpcName}`, {
       method: 'POST',
@@ -183,21 +211,10 @@ export class HttpScenarioActor implements ScenarioActor {
         'content-type': 'application/json',
         origin: this.origin,
         cookie,
+        ...extraHeaders,
       },
       body: JSON.stringify({ data }),
     })
-  }
-
-  private async readRpcResponse(rpcName: string, res: Response) {
-    if (!res.ok) {
-      const body = (await res.text().catch(() => '')).slice(0, 300)
-      throw new Error(
-        `[scenario] '${rpcName}' as '${this.name}' returned ${res.status}: ${body}`
-      )
-    }
-    if (res.status === 204) return undefined
-    const text = await res.text()
-    return text ? JSON.parse(text) : undefined
   }
 
   private async login(): Promise<string> {
@@ -229,6 +246,22 @@ export class HttpScenarioActor implements ScenarioActor {
     }
     this.cookie = cookie
     return cookie
+  }
+}
+
+/** Parse a JSON response body, treating an empty one as no body at all. */
+async function readJsonBody(res: Response): Promise<unknown> {
+  if (res.status === 204) {
+    return undefined
+  }
+  const text = await res.text().catch(() => '')
+  if (!text) {
+    return undefined
+  }
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text
   }
 }
 

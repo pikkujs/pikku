@@ -227,6 +227,10 @@ export const scenarioRun = pikkuSessionlessFunc<
     }
 
     const workflowService = new InMemoryWorkflowService()
+    workflowService.setScenarioEnvironment({
+      apiUrl: env.apiUrl,
+      appUrl: env.appUrl,
+    })
     pikkuState(null, 'package', 'singletonServices', {
       logger,
       workflowService,

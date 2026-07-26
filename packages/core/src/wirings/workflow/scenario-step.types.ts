@@ -1,3 +1,5 @@
+import type { ScenarioActor } from '../../services/scenario-actors-service.js'
+
 /**
  * Scenario steps: named, typed units of scenario behaviour.
  *
@@ -30,9 +32,24 @@ export interface ScenarioStepOptions {
 }
 
 /**
- * The `scenarioStep` wire, present on every scenario step invocation.
+ * The environment a scenario run targets, as declared in pikku.config.json
+ * under `scenarios.environments`.
  */
-export interface PikkuScenarioStepWire {
+export interface ScenarioEnvironment {
+  /** Base API URL of the target app, INCLUDING the HTTP prefix. */
+  apiUrl: string
+  /** Base URL of the app's UI, for environments with browser steps. */
+  appUrl?: string
+}
+
+/**
+ * The `scenarioStep` wire, present on every scenario step invocation.
+ *
+ * `TActor` is the project's own actor type, so a step reaches only the RPCs its
+ * actors can actually call. It defaults to the open `ScenarioActor` for a
+ * project that declares no registry.
+ */
+export interface PikkuScenarioStepWire<TActor = ScenarioActor> {
   /** Registered step name (also its pikkuFuncId) */
   name: string
   /** Durable key within the run; may carry an `#ordinal` suffix when repeated */
@@ -44,7 +61,13 @@ export interface PikkuScenarioStepWire {
    * (`actor.invoke(...)`) so they run against the target environment as that
    * persona.
    */
-  actor?: any
+  actor?: TActor
+  /**
+   * The environment this run targets. A step runs in the CLI process, where
+   * there is no `variables` service — this is how a raw-HTTP step learns the
+   * target's URL without reaching for `process.env`.
+   */
+  env?: ScenarioEnvironment
 }
 
 /**

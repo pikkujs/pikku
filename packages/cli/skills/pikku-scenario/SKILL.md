@@ -172,6 +172,7 @@ The **feature is the run unit**: `--flows` on a scenario whose every feature ent
 
 ```typescript
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { requireActor } from '@pikku/core/workflow'
 
 export const buysAnApple = pikkuScenarioStep<
   { qty: number },
@@ -181,9 +182,7 @@ export const buysAnApple = pikkuScenarioStep<
   description: 'buys an apple',
   template: 'buys {qty} apples',
   func: async (_services, { qty }, { scenarioStep }) => {
-    return (await scenarioStep!.actor.invoke('placeOrder', { qty })) as {
-      orderId: string
-    }
+    return await requireActor(scenarioStep).invoke('placeOrder', { qty })
   },
 })
 ```
@@ -202,6 +201,8 @@ Rules that bite:
 
 - **The step is referenced by its typed string name, not by importing the const** — exactly like `workflow.do`. The name is the step's `pikkuFuncId` and is checked against the generated step map. A non-literal target is a critical error (`PKU678`).
 - **Steps are not RPCs.** They are deliberately never network-callable — a browser-driving step must not be.
+- **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal *is* the assertion.
+- **`actor` and `env` are optional on the wire**, because a pure assertion step needs neither. Narrow them with `requireActor(scenarioStep)` and `requireScenarioEnv(scenarioStep)` from `@pikku/core/workflow` rather than a local guard — both name the step and say what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
 - **`description` documents the step; `template` is what the report renders.** `template`'s `{placeholders}` are filled from the input the step was called with, so one step reads differently for each call — `sees {state} addon {packageName}` reports as "sees available addon @pikku/addon-stripe". Reflect every input field in the template, and type the values so they read as words (`state?: 'installed' | 'available'`, not `installed?: boolean`). A placeholder with no value renders as nothing and the whitespace collapses.

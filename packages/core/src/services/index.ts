@@ -43,7 +43,11 @@ export type {
 export type {
   ScenarioActor,
   ScenarioActorConfig,
+  ScenarioActorOf,
   ScenarioActors,
+  ScenarioInvokeOptions,
+  ScenarioRpcMap,
+  ScenarioRpcResponse,
 } from './scenario-actors-service.js'
 export {
   HttpScenarioActor,

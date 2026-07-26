@@ -18,6 +18,7 @@ const actors = {
     name: 'admin',
     email: 'admin@actors.local',
     invoke: async () => ({}),
+    invokeRaw: async () => ({ status: 200, ok: true, body: {} }),
   },
 } as unknown as ScenarioActors
 

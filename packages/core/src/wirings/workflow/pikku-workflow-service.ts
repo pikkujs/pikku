@@ -92,6 +92,7 @@ import type {
   ScenarioBrowserProvider,
   ScenarioStepOptions,
   ScenarioStepPhase,
+  ScenarioEnvironment,
 } from './scenario-step.types.js'
 import {
   PikkuError,
@@ -312,6 +313,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   // process-local by nature, so they ride this map, never the persisted wire.
   private runActors = new Map<string, ScenarioActors>()
   private scenarioBrowserProvider?: ScenarioBrowserProvider
+  private scenarioEnvironment?: ScenarioEnvironment
 
   protected get logger() {
     return getSingletonServices()?.logger
@@ -1245,6 +1247,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       (await variables.get('SCENARIO_SIGN_IN_PATH')) ??
       '/api/auth/sign-in/actor'
     const rpcPath = (await variables.get('SCENARIO_RPC_PATH')) ?? '/rpc'
+    // A run started outside the CLI still targets an environment — its own.
+    this.scenarioEnvironment ??= {
+      apiUrl,
+      appUrl: (await variables.get('APP_URL')) ?? undefined,
+    }
     return createHttpScenarioActors({
       apiUrl,
       secret,
@@ -2945,6 +2952,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return this.scenarioBrowserProvider
   }
 
+  /**
+   * The environment scenario steps run against, set once by the runner. It is
+   * per-service rather than per-run because a runner process targets exactly
+   * one environment for every scenario it executes.
+   */
+  public setScenarioEnvironment(env: ScenarioEnvironment | undefined) {
+    this.scenarioEnvironment = env
+  }
+
+  public getScenarioEnvironment(): ScenarioEnvironment | undefined {
+    return this.scenarioEnvironment
+  }
+
   private async scenarioStep(
     phase: ScenarioStepPhase,
     context: ScenarioStepContext,
@@ -2993,6 +3013,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             runId,
             phase,
             actor,
+            env: this.scenarioEnvironment,
           },
         }
         if (this.requiresBrowser(packageName, resolvedStepFunc)) {

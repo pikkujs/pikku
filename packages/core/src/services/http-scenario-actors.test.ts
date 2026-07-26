@@ -38,11 +38,19 @@ const startTarget = async () => {
           res.writeHead(401).end()
           return
         }
+        const rpcName = req.url.slice('/api/rpc/'.length)
+        if (rpcName === 'forbidden') {
+          res
+            .writeHead(403, { 'content-type': 'application/json' })
+            .end(JSON.stringify({ message: 'MissingScopeError', scope: 'admin' }))
+          return
+        }
         res.writeHead(200, { 'content-type': 'application/json' }).end(
           JSON.stringify({
-            rpcName: req.url.slice('/api/rpc/'.length),
+            rpcName,
             echoed: body.data,
             cookie,
+            userHeader: req.headers['x-user-id'] ?? null,
           })
         )
         return
@@ -113,6 +121,49 @@ describe('HttpScenarioActor', async () => {
 
     assert.equal(target.loginCount(), loginsBefore + 1, 'one re-login')
     assert.match(result.cookie, new RegExp(`session=s${loginsBefore + 1}`))
+  })
+
+  test('invokeRaw returns the status and body instead of throwing', async () => {
+    const actors = makeActors()
+
+    // A refusal is the expected outcome of a permissions scenario, so the
+    // status and the payload that names the missing scope both have to survive.
+    const res = await actors.customer!.invokeRaw('forbidden', {})
+
+    assert.equal(res.status, 403)
+    assert.equal(res.ok, false)
+    assert.deepEqual(res.body, {
+      message: 'MissingScopeError',
+      scope: 'admin',
+    })
+  })
+
+  test('invokeRaw reports a success the same way', async () => {
+    const actors = makeActors()
+    const res = await actors.manager!.invokeRaw('listTodos', { page: 2 })
+
+    assert.equal(res.status, 200)
+    assert.equal(res.ok, true)
+    assert.deepEqual((res.body as any).echoed, { page: 2 })
+  })
+
+  test('invokeRaw passes extra headers through', async () => {
+    const actors = makeActors()
+    const res = await actors.manager!.invokeRaw(
+      'whoAmI',
+      {},
+      { headers: { 'x-user-id': 'impersonated-1' } }
+    )
+
+    assert.equal((res.body as any).userHeader, 'impersonated-1')
+  })
+
+  test('invoke still throws on a refusal, naming the status and body', async () => {
+    const actors = makeActors()
+    await assert.rejects(
+      actors.customer!.invoke('forbidden', {}),
+      /'forbidden' as 'customer' returned 403.*MissingScopeError/
+    )
   })
 
   test('a wrong impersonation secret surfaces status and body', async () => {

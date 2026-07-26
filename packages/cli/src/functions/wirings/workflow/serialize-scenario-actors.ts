@@ -2,7 +2,8 @@ import type { PikkuCLIConfig } from '../../../../types/config.js'
 
 export const serializeScenarioActors = (
   actors: NonNullable<NonNullable<PikkuCLIConfig['scenarios']>['actors']>,
-  agentMapImportPath: string
+  agentMapImportPath: string,
+  rpcMapImportPath: string
 ) => {
   return `/** Scenario actors declared in pikku.config.json (\`scenarios.actors\`) */
 import {
@@ -12,6 +13,7 @@ import {
   type ScenarioActorConfig,
 } from '@pikku/core/services'
 import type { AgentMap } from '${agentMapImportPath}'
+import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 
 export const scenarioActorConfigs = ${JSON.stringify(actors, null, 2)} as const satisfies Record<string, ScenarioActorConfig>
 
@@ -20,7 +22,7 @@ export type ScenarioActorName = keyof typeof scenarioActorConfigs
 export type AgentName = keyof AgentMap & string
 export type TypedScenarioActors = Record<
   ScenarioActorName,
-  ScenarioActor<AgentName>
+  ScenarioActor<AgentName, FlattenedRPCMap>
 >
 
 export const createScenarioActors = (

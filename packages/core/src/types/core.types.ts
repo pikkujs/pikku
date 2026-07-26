@@ -34,7 +34,10 @@ import type { DeploymentService } from '../services/deployment-service.js'
 import type { AIStorageService } from '../services/ai-storage-service.js'
 
 import type { ContentService } from '../services/content-service.js'
-import type { ScenarioActors } from '../services/scenario-actors-service.js'
+import type {
+  ScenarioActorOf,
+  ScenarioActors,
+} from '../services/scenario-actors-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
@@ -397,6 +400,7 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire | never = PikkuScenarioWire,
+  TypedActors extends ScenarioActors = ScenarioActors,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
   rpc: TypedRPC
@@ -419,9 +423,9 @@ export type PikkuWire<
   cli: PikkuCLI
   workflow: TypedWorkflow
   scenario: TypedScenario
-  actors: ScenarioActors
+  actors: TypedActors
   /** Present on every scenario step invocation */
-  scenarioStep: PikkuScenarioStepWire
+  scenarioStep: PikkuScenarioStepWire<ScenarioActorOf<TypedActors>>
   /** Present only when the runner provisioned a browser for this step */
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
