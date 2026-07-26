@@ -1,6 +1,7 @@
 {
   "name": "@pikku/redis",
   "version": "0.12.12",
+  "description": "Redis services for Pikku — workflow state, agent runs, secrets, sessions and channel stores",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",
