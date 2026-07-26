@@ -23,7 +23,10 @@ const registerWorker = (
 ) => {
   const calls = { count: 0 }
   const funcId = `queue_${queueName}`
-  pikkuState(null, 'queue', 'meta')[queueName] = { pikkuFuncId: funcId, name: queueName }
+  pikkuState(null, 'queue', 'meta')[queueName] = {
+    pikkuFuncId: funcId,
+    name: queueName,
+  }
   pikkuState(null, 'function', 'meta')[funcId] = {
     pikkuFuncId: funcId,
     inputSchemaName: null,

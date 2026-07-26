@@ -78,7 +78,10 @@ describe('waiting for a run to finish', () => {
     for (const gap of ws.gaps()) {
       assert.ok(gap < 80, `a wait of ${gap}ms overshot the 40ms ceiling`)
     }
-    assert.ok(ws.gaps().some((gap) => gap >= 35), 'never reached the ceiling')
+    assert.ok(
+      ws.gaps().some((gap) => gap >= 35),
+      'never reached the ceiling'
+    )
   })
 
   test('a run that is already finished is returned without any wait', async () => {
