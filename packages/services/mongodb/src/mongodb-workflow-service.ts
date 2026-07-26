@@ -255,25 +255,42 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       { _id: stepId },
       { $set: { status: 'running', updatedAt: new Date() } }
     )
-
-    const latestHistory = await this.stepHistory
-      .find({ workflowStepId: stepId })
-      .sort({ createdAt: -1 })
-      .limit(1)
-      .toArray()
-
-    if (latestHistory.length > 0) {
-      await this.stepHistory.updateOne(
-        { _id: latestHistory[0]!._id },
-        { $set: { status: 'running', runningAt: new Date() } }
-      )
-    }
+    await this.writeLatestHistory(stepId, 'running')
   }
 
   protected async setStepScheduledImpl(stepId: string): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },
       { $set: { status: 'scheduled', updatedAt: new Date() } }
+    )
+    await this.writeLatestHistory(stepId, 'scheduled')
+  }
+
+  /**
+   * Move the current attempt of a step's history to a status.
+   *
+   * Finding the newest attempt and then updating it by `_id` was two round
+   * trips with a window in between; `findOneAndUpdate` applies the same sort
+   * server-side and writes the row it selected, so nothing can move underneath
+   * it. The attempt is still identified by `createdAt` because Mongo keeps no
+   * attempt number — see `getStepState`, which counts history documents.
+   */
+  private async writeLatestHistory(
+    stepId: string,
+    status: string,
+    values: Record<string, unknown> = {}
+  ): Promise<void> {
+    const now = new Date()
+    const update: Record<string, unknown> = { status, ...values }
+    const timestampField = this.getTimestampFieldForStatus(status)
+    if (timestampField !== 'createdAt') {
+      update[timestampField] = now
+    }
+
+    await this.stepHistory.findOneAndUpdate(
+      { workflowStepId: stepId },
+      { $set: update as any },
+      { sort: { createdAt: -1 } }
     )
   }
 
@@ -351,18 +368,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       }
     )
 
-    const latestHistory = await this.stepHistory
-      .find({ workflowStepId: stepId })
-      .sort({ createdAt: -1 })
-      .limit(1)
-      .toArray()
-
-    if (latestHistory.length > 0) {
-      await this.stepHistory.updateOne(
-        { _id: latestHistory[0]!._id },
-        { $set: { status: 'succeeded', result, succeededAt: new Date() } }
-      )
-    }
+    await this.writeLatestHistory(stepId, 'succeeded', { result })
   }
 
   protected async setStepErrorImpl(
@@ -387,18 +393,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       }
     )
 
-    const latestHistory = await this.stepHistory
-      .find({ workflowStepId: stepId })
-      .sort({ createdAt: -1 })
-      .limit(1)
-      .toArray()
-
-    if (latestHistory.length > 0) {
-      await this.stepHistory.updateOne(
-        { _id: latestHistory[0]!._id },
-        { $set: { status: 'failed', error: serializedError, failedAt: new Date() } }
-      )
-    }
+    await this.writeLatestHistory(stepId, 'failed', {
+      error: serializedError,
+    })
   }
 
   protected async createRetryAttemptImpl(
@@ -508,7 +505,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return nodeIds.filter((id) => !existingStepNames.has(id))
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const rows = await this.steps
