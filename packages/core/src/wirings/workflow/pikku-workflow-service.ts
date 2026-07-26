@@ -437,19 +437,36 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private async safeMirror(fn: () => Promise<void>): Promise<void> {
-    if (!this.mirror) return
-    try {
-      await fn()
-    } catch (err: any) {
+  /**
+   * Perform a state write, then shadow it to the mirror.
+   *
+   * The mirror is an observability sink, never a second source of truth, and
+   * both halves of that follow from this one shape: it is only ever told about
+   * a write that already landed, and a mirror that is down or throwing cannot
+   * fail — or even be seen by — the workflow it is watching.
+   *
+   * @param write - the authoritative write; its result is what the caller gets
+   * @param mirror - shadows the write, given the live mirror and what was written
+   */
+  private async mirrored<T>(
+    write: () => Promise<T>,
+    mirror: (mirror: WorkflowRunMirror, written: T) => Promise<void>
+  ): Promise<T> {
+    const written = await write()
+    if (this.mirror) {
       try {
-        this.logger?.warn?.(
-          `[pikku] WorkflowRunMirror write failed: ${err?.message ?? err}`
-        )
-      } catch {
-        // logger unavailable (e.g. singleton services not initialized) — swallow
+        await mirror(this.mirror, written)
+      } catch (err: any) {
+        try {
+          this.logger?.warn?.(
+            `[pikku] WorkflowRunMirror write failed: ${err?.message ?? err}`
+          )
+        } catch {
+          // logger unavailable (e.g. singleton services not initialized) — swallow
+        }
       }
     }
+    return written
   }
 
   /**
@@ -624,26 +641,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       plannedSteps?: WorkflowPlannedStep[]
     }
   ): Promise<string> {
-    const runId = await this.createRunImpl(
-      workflowName,
-      input,
-      inline,
-      graphHash,
-      wire,
-      options
+    return this.mirrored(
+      () =>
+        this.createRunImpl(
+          workflowName,
+          input,
+          inline,
+          graphHash,
+          wire,
+          options
+        ),
+      (mirror, runId) =>
+        mirror.createRun(
+          runId,
+          workflowName,
+          input,
+          inline,
+          graphHash,
+          wire,
+          options
+        )
     )
-    await this.safeMirror(() =>
-      this.mirror!.createRun(
-        runId,
-        workflowName,
-        input,
-        inline,
-        graphHash,
-        wire,
-        options
-      )
-    )
-    return runId
   }
 
   protected abstract createRunImpl(
@@ -770,9 +788,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     output?: any,
     error?: SerializedError
   ): Promise<void> {
-    await this.updateRunStatusImpl(id, status, output, error)
-    await this.safeMirror(() =>
-      this.mirror!.updateRunStatus(id, status, output, error)
+    await this.mirrored(
+      () => this.updateRunStatusImpl(id, status, output, error),
+      (mirror) => mirror.updateRunStatus(id, status, output, error)
     )
     if (WORKFLOW_TERMINAL_STATES.has(status)) {
       // The run is over: release whatever this process opened for it. Queued
@@ -811,18 +829,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
-    const step = await this.insertStepStateImpl(
-      runId,
-      stepName,
-      rpcName,
-      data,
-      stepOptions,
-      fromStepName
+    return this.mirrored(
+      () =>
+        this.insertStepStateImpl(
+          runId,
+          stepName,
+          rpcName,
+          data,
+          stepOptions,
+          fromStepName
+        ),
+      (mirror, step) =>
+        mirror.insertStepState(runId, { ...step, stepName, rpcName, data })
     )
-    await this.safeMirror(() =>
-      this.mirror!.insertStepState(runId, { ...step, stepName, rpcName, data })
-    )
-    return step
   }
 
   protected abstract insertStepStateImpl(
@@ -848,8 +867,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param stepId - Step ID
    */
   public async setStepRunning(stepId: string): Promise<void> {
-    await this.setStepRunningImpl(stepId)
-    await this.safeMirror(() => this.mirror!.setStepRunning(stepId))
+    await this.mirrored(
+      () => this.setStepRunningImpl(stepId),
+      (mirror) => mirror.setStepRunning(stepId)
+    )
   }
 
   protected abstract setStepRunningImpl(stepId: string): Promise<void>
@@ -860,8 +881,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param stepId - Step ID
    */
   public async setStepScheduled(stepId: string): Promise<void> {
-    await this.setStepScheduledImpl(stepId)
-    await this.safeMirror(() => this.mirror!.setStepScheduled(stepId))
+    await this.mirrored(
+      () => this.setStepScheduledImpl(stepId),
+      (mirror) => mirror.setStepScheduled(stepId)
+    )
   }
 
   protected abstract setStepScheduledImpl(stepId: string): Promise<void>
@@ -873,8 +896,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param result - Step result
    */
   public async setStepResult(stepId: string, result: any): Promise<void> {
-    await this.setStepResultImpl(stepId, result)
-    await this.safeMirror(() => this.mirror!.setStepResult(stepId, result))
+    await this.mirrored(
+      () => this.setStepResultImpl(stepId, result),
+      (mirror) => mirror.setStepResult(stepId, result)
+    )
   }
 
   protected abstract setStepResultImpl(
@@ -891,9 +916,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepId: string,
     childRunId: string
   ): Promise<void> {
-    await this.setStepChildRunIdImpl(stepId, childRunId)
-    await this.safeMirror(() =>
-      this.mirror!.setStepChildRunId(stepId, childRunId)
+    await this.mirrored(
+      () => this.setStepChildRunIdImpl(stepId, childRunId),
+      (mirror) => mirror.setStepChildRunId(stepId, childRunId)
     )
   }
 
@@ -909,14 +934,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param error - Error object
    */
   public async setStepError(stepId: string, error: Error): Promise<void> {
-    await this.setStepErrorImpl(stepId, error)
-    const serialized: SerializedError = {
-      message: error.message,
-      stack: error.stack,
-      code: (error as any).code,
-      expected: isExpectedError(error),
-    }
-    await this.safeMirror(() => this.mirror!.setStepError(stepId, serialized))
+    await this.mirrored(
+      () => this.setStepErrorImpl(stepId, error),
+      (mirror) => {
+        const serialized: SerializedError = {
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code,
+          expected: isExpectedError(error),
+        }
+        return mirror.setStepError(stepId, serialized)
+      }
+    )
   }
 
   protected abstract setStepErrorImpl(
@@ -936,15 +965,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     failedStepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState> {
-    const newStep = await this.createRetryAttemptImpl(failedStepId, status)
-    const stepName = (newStep as any).stepName ?? ''
-    await this.safeMirror(() =>
-      this.mirror!.createRetryAttempt(failedStepId, {
-        ...newStep,
-        stepName,
-      })
+    return this.mirrored(
+      () => this.createRetryAttemptImpl(failedStepId, status),
+      (mirror, newStep) =>
+        mirror.createRetryAttempt(failedStepId, {
+          ...newStep,
+          stepName: (newStep as any).stepName ?? '',
+        })
     )
-    return newStep
   }
 
   protected abstract createRetryAttemptImpl(
@@ -1038,8 +1066,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepId: string,
     branchKey: string
   ): Promise<void> {
-    await this.setBranchTakenImpl(stepId, branchKey)
-    await this.safeMirror(() => this.mirror!.setBranchTaken(stepId, branchKey))
+    await this.mirrored(
+      () => this.setBranchTakenImpl(stepId, branchKey),
+      (mirror) => mirror.setBranchTaken(stepId, branchKey)
+    )
   }
 
   protected abstract setBranchTakenImpl(
@@ -1058,8 +1088,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     name: string,
     value: unknown
   ): Promise<void> {
-    await this.updateRunStateImpl(runId, name, value)
-    await this.safeMirror(() => this.mirror!.updateRunState(runId, name, value))
+    await this.mirrored(
+      () => this.updateRunStateImpl(runId, name, value),
+      (mirror) => mirror.updateRunState(runId, name, value)
+    )
   }
 
   protected abstract updateRunStateImpl(
@@ -1082,9 +1114,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     source: string,
     status?: WorkflowVersionStatus
   ): Promise<void> {
-    await this.upsertWorkflowVersionImpl(name, graphHash, graph, source, status)
-    await this.safeMirror(() =>
-      this.mirror!.upsertWorkflowVersion(name, graphHash, graph, source, status)
+    await this.mirrored(
+      () =>
+        this.upsertWorkflowVersionImpl(name, graphHash, graph, source, status),
+      (mirror) =>
+        mirror.upsertWorkflowVersion(name, graphHash, graph, source, status)
     )
   }
 
@@ -1101,9 +1135,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     graphHash: string,
     status: WorkflowVersionStatus
   ): Promise<void> {
-    await this.updateWorkflowVersionStatusImpl(name, graphHash, status)
-    await this.safeMirror(() =>
-      this.mirror!.updateWorkflowVersionStatus(name, graphHash, status)
+    await this.mirrored(
+      () => this.updateWorkflowVersionStatusImpl(name, graphHash, status),
+      (mirror) => mirror.updateWorkflowVersionStatus(name, graphHash, status)
     )
   }
 
@@ -1569,9 +1603,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     context.replay = { ordinals: new Map() }
     const steps = await this.listStepStates(runId)
     if (steps) {
-      context.replay.steps = new Map(
-        steps.map((step) => [step.stepName, step])
-      )
+      context.replay.steps = new Map(steps.map((step) => [step.stepName, step]))
     }
   }
 
