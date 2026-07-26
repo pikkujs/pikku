@@ -8,8 +8,10 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  * primary keys had `defaultTo(sql.raw("'" + crypto.randomUUID() + "'"))`, which
  * evaluates once while the statement is built — every row would have taken the
  * same default, so it was never a generator; the services supply the id. And
- * `workflowStep.fromStepName` was backfilled by an `alterTable(...).catch(() =>
- * {})` bolted on after the fact, which is the job a migration does.
+ * `workflowStep.fromStepName`, `workflowStep.currentAttempt` and
+ * `workflowStepHistory.attempt` were each backfilled by an
+ * `alterTable(...).catch(() => {})` bolted on after the fact, which is the job a
+ * migration does — they are declared here and nowhere else.
  *
  * `KyselyWorkflowMirror` created these same four tables separately. There is one
  * declaration now, and both services read it.
@@ -62,6 +64,7 @@ export const workflowSchema: PikkuSchema = {
         .addColumn('retries', 'integer')
         .addColumn('retryDelay', 'text')
         .addColumn('fromStepName', 'text')
+        .addColumn('currentAttempt', 'integer')
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
@@ -86,6 +89,7 @@ export const workflowSchema: PikkuSchema = {
         .addColumn('status', 'text', (col) => col.notNull())
         .addColumn('result', 'text')
         .addColumn('error', 'text')
+        .addColumn('attempt', 'integer')
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
@@ -109,5 +113,37 @@ export const workflowSchema: PikkuSchema = {
           'workflowName',
           'graphHash',
         ]),
+
+    // The indexes trail the tables so that a table is never indexed before it
+    // exists, whatever order the declarations are read in.
+    (db) =>
+      db.schema
+        .createIndex('idx_workflow_runs_status_created')
+        .on('workflowRuns')
+        .columns(['status', 'createdAt']),
+
+    (db) =>
+      db.schema
+        .createIndex('idx_workflow_runs_workflow_created')
+        .on('workflowRuns')
+        .columns(['workflow', 'createdAt']),
+
+    (db) =>
+      db.schema
+        .createIndex('idx_workflow_step_run_status')
+        .on('workflowStep')
+        .columns(['workflowRunId', 'status']),
+
+    (db) =>
+      db.schema
+        .createIndex('idx_workflow_step_history_step')
+        .on('workflowStepHistory')
+        .columns(['workflowStepId', 'createdAt']),
+
+    (db) =>
+      db.schema
+        .createIndex('idx_workflow_versions_source_status')
+        .on('workflowVersions')
+        .columns(['source', 'status']),
   ],
 }

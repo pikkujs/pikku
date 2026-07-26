@@ -198,6 +198,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
         'h.status',
         'h.result',
         'h.error',
+        'h.attempt',
         'h.createdAt',
         'h.runningAt',
         'h.scheduledAt',
@@ -205,7 +206,10 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
         'h.failedAt',
       ])
       .where('s.workflowRunId', '=', runId)
+      // `attempt` breaks the tie when a retry lands in the same millisecond as
+      // the attempt it replaces, which `createdAt` alone cannot order.
       .orderBy('h.createdAt', 'asc')
+      .orderBy('h.attempt', 'asc')
       .execute()
 
     let attemptCounters: Record<string, number> = {}

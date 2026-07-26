@@ -10,7 +10,7 @@ import {
   type WorkflowStatus,
   type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
-import type { Kysely } from 'kysely'
+import { sql, type Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { parseJson } from './kysely-json.js'
@@ -112,12 +112,13 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         retries: stepOptions?.retries ?? null,
         retryDelay: stepOptions?.retryDelay?.toString() ?? null,
         fromStepName: fromStepName ?? null,
+        currentAttempt: 1,
         createdAt: now,
         updatedAt: now,
       })
       .execute()
 
-    await this.insertHistoryRecord(stepId, 'pending')
+    await this.insertHistoryRecord(stepId, 'pending', 1)
 
     return {
       stepId,
@@ -135,31 +136,24 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   async getStepState(runId: string, stepName: string): Promise<StepState> {
     const row = await this.db
-      .selectFrom('workflowStep as s')
+      .selectFrom('workflowStep')
       .select([
-        's.workflowStepId',
-        's.status',
-        's.result',
-        's.error',
-        's.retries',
-        's.retryDelay',
-        's.fromStepName',
-        's.createdAt',
-        's.updatedAt',
+        'workflowStepId',
+        'status',
+        'result',
+        'error',
+        'retries',
+        'retryDelay',
+        'fromStepName',
+        // `current_attempt` is bumped alongside every history insert, so it is
+        // already the count this used to aggregate — and reading it keeps the
+        // engine's hottest query off a table that grows for the life of the run.
+        'currentAttempt',
+        'createdAt',
+        'updatedAt',
       ])
-      .select((eb) =>
-        eb
-          .selectFrom('workflowStepHistory')
-          .select(eb.fn.countAll<number>().as('cnt'))
-          .whereRef(
-            'workflowStepHistory.workflowStepId',
-            '=',
-            's.workflowStepId'
-          )
-          .as('attemptCount')
-      )
-      .where('s.workflowRunId', '=', runId)
-      .where('s.stepName', '=', stepName)
+      .where('workflowRunId', '=', runId)
+      .where('stepName', '=', stepName)
       .executeTakeFirst()
 
     if (!row) {
@@ -173,13 +167,49 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       status: row.status as StepState['status'],
       result: parseJson(row.result),
       error: parseJson(row.error),
-      attemptCount: Number(row.attemptCount),
+      attemptCount: Number(row.currentAttempt ?? 1),
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
+  }
+
+  protected override async listStepStates(
+    runId: string
+  ): Promise<Array<StepState & { stepName: string }>> {
+    const rows = await this.db
+      .selectFrom('workflowStep')
+      .select([
+        'workflowStepId',
+        'stepName',
+        'status',
+        'result',
+        'error',
+        'retries',
+        'retryDelay',
+        'fromStepName',
+        'currentAttempt',
+        'createdAt',
+        'updatedAt',
+      ])
+      .where('workflowRunId', '=', runId)
+      .execute()
+
+    return rows.map((row) => ({
+      stepId: row.workflowStepId,
+      stepName: row.stepName,
+      status: row.status as StepState['status'],
+      result: parseJson(row.result),
+      error: parseJson(row.error),
+      attemptCount: Number(row.currentAttempt ?? 1),
+      retries: row.retries != null ? Number(row.retries) : undefined,
+      retryDelay: row.retryDelay ?? undefined,
+      fromStepName: row.fromStepName ?? undefined,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+    }))
   }
 
   async getRunHistory(
@@ -189,27 +219,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   protected async setStepRunningImpl(stepId: string): Promise<void> {
-    await this.db
-      .updateTable('workflowStep')
-      .set({ status: 'running', updatedAt: new Date() })
-      .where('workflowStepId', '=', stepId)
-      .execute()
-
-    const latestHistory = await this.db
-      .selectFrom('workflowStepHistory')
-      .select('historyId')
-      .where('workflowStepId', '=', stepId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .executeTakeFirst()
-
-    if (latestHistory) {
-      await this.db
-        .updateTable('workflowStepHistory')
-        .set({ status: 'running', runningAt: new Date() })
-        .where('historyId', '=', latestHistory.historyId)
-        .execute()
-    }
+    await this.writeStepTransition(stepId, 'running', {
+      runningAt: new Date(),
+    })
   }
 
   protected async setStepScheduledImpl(stepId: string): Promise<void> {
@@ -220,9 +232,58 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .execute()
   }
 
+  /**
+   * Move a step and its current history attempt to the same status in one
+   * transaction.
+   *
+   * Both halves matter: a crash between them used to leave the step row saying
+   * `succeeded` while its history row still said `running`, which silently
+   * corrupts `getRunHistory` and every timeline reconstruction built on it.
+   * The history row is targeted by its `attempt` rather than by a `LIMIT 1`
+   * over `created_at`, so a retry that lands in the same millisecond as the
+   * attempt it replaces still resolves the newer row.
+   */
+  private async writeStepTransition(
+    stepId: string,
+    status: StepStatus,
+    historyValues: Record<string, unknown>
+  ): Promise<void> {
+    const now = new Date()
+    const stepValues: Record<string, unknown> = { status, updatedAt: now }
+    if ('result' in historyValues) stepValues.result = historyValues.result
+    if ('error' in historyValues) stepValues.error = historyValues.error
+    // A step carries only its latest outcome, so the other half is cleared.
+    if (status === 'succeeded') stepValues.error = null
+    if (status === 'failed') stepValues.result = null
+
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .updateTable('workflowStep')
+        .set(stepValues as any)
+        .where('workflowStepId', '=', stepId)
+        .execute()
+
+      await trx
+        .updateTable('workflowStepHistory')
+        .set({ status, ...historyValues } as any)
+        .where('workflowStepId', '=', stepId)
+        // Correlate through the step row rather than a MAX() over this table:
+        // MySQL rejects a subquery that reads the table being updated, and a
+        // primary-key lookup is cheaper than an aggregate anyway.
+        .where('attempt', '=', (eb) =>
+          eb
+            .selectFrom('workflowStep')
+            .select('currentAttempt')
+            .where('workflowStepId', '=', stepId)
+        )
+        .execute()
+    })
+  }
+
   private async insertHistoryRecord(
     stepId: string,
     status: string,
+    attempt: number,
     result?: any,
     error?: SerializedError
   ): Promise<void> {
@@ -231,6 +292,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       historyId: crypto.randomUUID(),
       workflowStepId: stepId,
       status,
+      attempt,
       result: result != null ? JSON.stringify(result) : null,
       error: error != null ? JSON.stringify(error) : null,
       createdAt: now,
@@ -280,38 +342,10 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     stepId: string,
     result: any
   ): Promise<void> {
-    const resultJson = JSON.stringify(result)
-
-    await this.db
-      .updateTable('workflowStep')
-      .set({
-        status: 'succeeded',
-        result: resultJson,
-        error: null,
-        updatedAt: new Date(),
-      })
-      .where('workflowStepId', '=', stepId)
-      .execute()
-
-    const latestHistory = await this.db
-      .selectFrom('workflowStepHistory')
-      .select('historyId')
-      .where('workflowStepId', '=', stepId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .executeTakeFirst()
-
-    if (latestHistory) {
-      await this.db
-        .updateTable('workflowStepHistory')
-        .set({
-          status: 'succeeded',
-          result: resultJson,
-          succeededAt: new Date(),
-        })
-        .where('historyId', '=', latestHistory.historyId)
-        .execute()
-    }
+    await this.writeStepTransition(stepId, 'succeeded', {
+      result: JSON.stringify(result),
+      succeededAt: new Date(),
+    })
   }
 
   protected async setStepErrorImpl(
@@ -323,73 +357,54 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       stack: error.stack,
       code: (error as any).code,
     }
-    const errorJson = JSON.stringify(serializedError)
-
-    await this.db
-      .updateTable('workflowStep')
-      .set({
-        status: 'failed',
-        error: errorJson,
-        result: null,
-        updatedAt: new Date(),
-      })
-      .where('workflowStepId', '=', stepId)
-      .execute()
-
-    const latestHistory = await this.db
-      .selectFrom('workflowStepHistory')
-      .select('historyId')
-      .where('workflowStepId', '=', stepId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .executeTakeFirst()
-
-    if (latestHistory) {
-      await this.db
-        .updateTable('workflowStepHistory')
-        .set({ status: 'failed', error: errorJson, failedAt: new Date() })
-        .where('historyId', '=', latestHistory.historyId)
-        .execute()
-    }
+    await this.writeStepTransition(stepId, 'failed', {
+      error: JSON.stringify(serializedError),
+      failedAt: new Date(),
+    })
   }
 
   protected async createRetryAttemptImpl(
     stepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState> {
+    // Read before writing: the new attempt number comes from the history this
+    // step already has, and the row it reads is the one returned below.
+    const previous = await this.db
+      .selectFrom('workflowStep')
+      .select('currentAttempt')
+      .where('workflowStepId', '=', stepId)
+      .executeTakeFirst()
+    const attempt = (previous?.currentAttempt ?? 0) + 1
+
     await this.db
       .updateTable('workflowStep')
-      .set({ status, result: null, error: null, updatedAt: new Date() })
+      .set({
+        status,
+        result: null,
+        error: null,
+        currentAttempt: attempt,
+        updatedAt: new Date(),
+      })
       .where('workflowStepId', '=', stepId)
       .execute()
 
-    await this.insertHistoryRecord(stepId, status)
+    await this.insertHistoryRecord(stepId, status, attempt)
 
     const row = await this.db
-      .selectFrom('workflowStep as s')
+      .selectFrom('workflowStep')
       .select([
-        's.workflowStepId',
-        's.status',
-        's.result',
-        's.error',
-        's.retries',
-        's.retryDelay',
-        's.fromStepName',
-        's.createdAt',
-        's.updatedAt',
+        'workflowStepId',
+        'status',
+        'result',
+        'error',
+        'retries',
+        'retryDelay',
+        'fromStepName',
+        'currentAttempt',
+        'createdAt',
+        'updatedAt',
       ])
-      .select((eb) =>
-        eb
-          .selectFrom('workflowStepHistory')
-          .select(eb.fn.countAll<number>().as('cnt'))
-          .whereRef(
-            'workflowStepHistory.workflowStepId',
-            '=',
-            's.workflowStepId'
-          )
-          .as('attemptCount')
-      )
-      .where('s.workflowStepId', '=', stepId)
+      .where('workflowStepId', '=', stepId)
       .executeTakeFirstOrThrow()
 
     return {
@@ -397,7 +412,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       status: row.status as StepState['status'],
       result: parseJson(row.result),
       error: parseJson(row.error),
-      attemptCount: Number(row.attemptCount),
+      attemptCount: Number(row.currentAttempt ?? 1),
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
@@ -526,23 +541,48 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .execute()
   }
 
+  /**
+   * Merge one key into the run's JSON state, as a single expression evaluated
+   * by the database.
+   *
+   * The SQL is dialect-specific, so subclasses override this rather than the
+   * caller. The default is the SQLite form; MySQL and Postgres differ in how
+   * they cast a JSON literal.
+   *
+   * @param path - JSON path to the key, already quoted (`$."key"`)
+   * @param json - The value as JSON text
+   */
+  protected jsonSetState(path: string, json: string) {
+    return sql<string>`json_set(coalesce(state, '{}'), ${path}, json(${json}))`
+  }
+
+  /**
+   * A JSON path for an arbitrary key. State keys are user-supplied (a graph's
+   * `setState` name, an approval's hex-encoded reason), so the key is quoted
+   * rather than interpolated bare — an unquoted `$.a.b` would silently address
+   * a nested path instead of the key literally called `a.b`.
+   */
+  private jsonPathFor(name: string): string {
+    return `$.${JSON.stringify(name)}`
+  }
+
   protected async updateRunStateImpl(
     runId: string,
     name: string,
     value: unknown
   ): Promise<void> {
-    const row = await this.db
-      .selectFrom('workflowRuns')
-      .select('state')
-      .where('workflowRunId', '=', runId)
-      .executeTakeFirst()
-
-    const state: Record<string, unknown> = parseJson(row?.state) ?? {}
-    state[name] = value
-
+    // Merged by the database, not read-modify-written in JS: two graph nodes
+    // calling setState concurrently used to race, and the later write silently
+    // dropped whichever key the earlier one had added.
     await this.db
       .updateTable('workflowRuns')
-      .set({ state: JSON.stringify(state), updatedAt: new Date() })
+      .set({
+        state: this.jsonSetState(
+          this.jsonPathFor(name),
+          JSON.stringify(value ?? null)
+        ),
+        updatedAt: new Date(),
+      })
       .where('workflowRunId', '=', runId)
       .execute()
   }
@@ -596,6 +636,30 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     graphHash: string
   ): Promise<{ graph: any; source: string } | null> {
     return this.runService.getWorkflowVersion(name, graphHash)
+  }
+
+  /**
+   * Resolve one dynamic workflow by name. Callers that need a single workflow
+   * used to pull every version and `.find()` through them, parsing each graph
+   * on the way past.
+   */
+  async getDynamicWorkflow(
+    name: string
+  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
+    const row = await this.db
+      .selectFrom('workflowVersions')
+      .select(['workflowName', 'graphHash', 'graph'])
+      .where('workflowName', '=', name)
+      .where('source', '=', 'dynamic-workflow')
+      .where('status', '=', 'active')
+      .executeTakeFirst()
+
+    if (!row) return null
+    return {
+      workflowName: row.workflowName,
+      graphHash: row.graphHash,
+      graph: parseJson(row.graph),
+    }
   }
 
   async getAIGeneratedWorkflows(

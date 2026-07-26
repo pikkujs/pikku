@@ -1447,9 +1447,90 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   // new step records where it came from. Rebuilt each replay alongside ordinals.
   private stepLineage = new Map<string, string>()
 
+  // Every step of the run as the current replay found it (runId → stepName →
+  // state). Absent when no replay is in flight, or when the backend cannot read
+  // the set in one go — either way the DSL falls back to per-step reads.
+  private stepSnapshots = new Map<string, Map<string, StepState>>()
+
   private resetStepOrdinals(runId: string): void {
     this.stepOrdinals.set(runId, new Map())
     this.stepLineage.delete(runId)
+  }
+
+  /**
+   * Every step of a run in one read, or `null` if this backend has no bulk read.
+   *
+   * A replay walks the DSL body from the top, and each step it passes asks for
+   * its own row — so a run of N steps costs N reads per replay and O(N^2) over
+   * its lifetime. Backends that can answer this in a single query collapse that
+   * to one read per replay.
+   */
+  protected async listStepStates(
+    _runId: string
+  ): Promise<Array<StepState & { stepName: string }> | null> {
+    return null
+  }
+
+  /**
+   * Begin a replay pass: fresh ordinal counters, and one read of the steps the
+   * run has already taken so the walk back to where it left off is served from
+   * memory. Safe because a pass reaches each step key at most once, and the
+   * steps it replays past are `succeeded` and therefore immutable.
+   */
+  private async beginReplay(runId: string): Promise<void> {
+    this.resetStepOrdinals(runId)
+    const steps = await this.listStepStates(runId)
+    if (steps) {
+      this.stepSnapshots.set(
+        runId,
+        new Map(steps.map((step) => [step.stepName, step]))
+      )
+    }
+  }
+
+  private endReplay(runId: string): void {
+    this.stepOrdinals.delete(runId)
+    this.stepSnapshots.delete(runId)
+  }
+
+  /**
+   * The step row for `stepName`, creating it if the run has not reached it
+   * before. Served from the replay snapshot when one is loaded.
+   */
+  private async loadOrCreateStep(
+    runId: string,
+    stepName: string,
+    create: () => Promise<StepState>
+  ): Promise<StepState> {
+    const snapshot = this.stepSnapshots.get(runId)
+    if (snapshot) {
+      const cached = snapshot.get(stepName)
+      if (cached) {
+        return cached
+      }
+    } else {
+      try {
+        return await this.getStepState(runId, stepName)
+      } catch {
+        // No row yet — fall through and create it.
+      }
+    }
+
+    let step: StepState
+    try {
+      step = await create()
+    } catch (error) {
+      // A concurrent replay of this run created the row after the snapshot was
+      // taken. Its state is the truth; if it isn't really there, the insert
+      // failed for its own reasons and that error is the one worth seeing.
+      try {
+        step = await this.getStepState(runId, stepName)
+      } catch {
+        throw error
+      }
+    }
+    snapshot?.set(stepName, step)
+    return step
   }
 
   /** The step the DSL walk last reached (the predecessor for the next step). */
@@ -1478,12 +1559,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
-    // Fresh ordinal counters per replay so step keys are deterministic.
-    this.resetStepOrdinals(runId)
+    // Fresh ordinal counters per replay so step keys are deterministic, and one
+    // read of the steps the run has already taken.
+    await this.beginReplay(runId)
     try {
       await this.runWorkflowJobInner(runId, rpcService)
     } finally {
-      this.stepOrdinals.delete(runId)
+      this.endReplay(runId)
     }
   }
 
@@ -2052,13 +2134,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       actor: stepOptions?.actor,
       onError: stepOptions?.onError,
     }
-    // Check if step already exists
-    let stepState: StepState
-    try {
-      stepState = await this.getStepState(runId, stepName)
-    } catch {
-      // Step doesn't exist - create it
-      stepState = await this.insertStepState(
+    // Reuse the step if the run already reached it, otherwise create it.
+    const stepState = await this.loadOrCreateStep(runId, stepName, () =>
+      this.insertStepState(
         runId,
         stepName,
         rpcName,
@@ -2066,7 +2144,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         resolvedStepOptions,
         fromStepName
       )
-    }
+    )
 
     if (stepState.status === 'succeeded') {
       // Return cached result
@@ -2222,13 +2300,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<any> {
     const fromStepName = this.lastStepName(runId)
     const stepName = this.nextStepKey(runId, logicalStepName)
-    // Check if step already exists
-    let stepState: StepState
-    try {
-      stepState = await this.getStepState(runId, stepName)
-    } catch {
-      // Step doesn't exist - create it (inline, so never dispatched)
-      stepState = await this.insertStepState(
+    // Reuse the step if the run already reached it, otherwise create it
+    // (inline, so never dispatched).
+    const stepState = await this.loadOrCreateStep(runId, stepName, () =>
+      this.insertStepState(
         runId,
         stepName,
         rpcName,
@@ -2236,7 +2311,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepOptions,
         fromStepName
       )
-    }
+    )
 
     if (stepState.status === 'succeeded') {
       // Return cached result
@@ -2288,13 +2363,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ) {
     const fromStepName = this.lastStepName(runId)
     const stepName = this.nextStepKey(runId, logicalStepName)
-    // Check if step already exists
-    let stepState: StepState
-    try {
-      stepState = await this.getStepState(runId, stepName)
-    } catch {
-      // Step doesn't exist - create it (sleep step, no RPC)
-      stepState = await this.insertStepState(
+    // Reuse the step if the run already reached it, otherwise create it
+    // (sleep step, no RPC).
+    const stepState = await this.loadOrCreateStep(runId, stepName, () =>
+      this.insertStepState(
         runId,
         stepName,
         null,
@@ -2302,7 +2374,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         undefined,
         fromStepName
       )
-    }
+    )
 
     if (stepState.status === 'succeeded') {
       // Sleep already completed, return immediately

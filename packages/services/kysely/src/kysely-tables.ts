@@ -52,6 +52,8 @@ export interface WorkflowStepTable {
   retries: number | null
   retryDelay: string | null
   fromStepName: string | null
+  /** The history attempt currently in flight; see WorkflowStepHistoryTable.attempt. */
+  currentAttempt: number | null
   createdAt: Generated<Date>
   updatedAt: Generated<Date>
 }
@@ -62,6 +64,12 @@ export interface WorkflowStepHistoryTable {
   status: StepStatus
   result: string | null
   error: string | null
+  /**
+   * Monotonic attempt number within the step, starting at 1. Orders attempts
+   * and identifies the live one without relying on `createdAt`, which cannot
+   * separate a retry from the attempt it replaces in the same millisecond.
+   */
+  attempt: number | null
   createdAt: Generated<Date>
   runningAt: Date | null
   scheduledAt: Date | null
