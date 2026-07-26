@@ -1,6 +1,7 @@
 {
   "name": "@pikku/kysely-mysql",
   "version": "0.12.20",
+  "description": "MySQL dialect services for Pikku, backed by Kysely",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",

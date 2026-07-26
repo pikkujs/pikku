@@ -1,6 +1,7 @@
 {
   "name": "@pikku/lambda",
   "version": "0.12.5",
+  "description": "AWS Lambda runtime for Pikku — HTTP, WebSocket, SQS queue and scheduled handlers",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

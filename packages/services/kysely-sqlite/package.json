@@ -1,6 +1,7 @@
 {
   "name": "@pikku/kysely-sqlite",
   "version": "0.12.8",
+  "description": "SQLite dialect services and libSQL web dialect for Pikku, backed by Kysely",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",

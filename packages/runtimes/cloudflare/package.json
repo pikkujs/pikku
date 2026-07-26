@@ -1,6 +1,7 @@
 {
   "name": "@pikku/cloudflare",
   "version": "0.12.15",
+  "description": "Cloudflare Workers runtime for Pikku — fetch, scheduled, queues, D1 and hibernating WebSockets",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

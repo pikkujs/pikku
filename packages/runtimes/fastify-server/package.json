@@ -1,7 +1,7 @@
 {
   "name": "@pikku/fastify",
   "version": "0.12.5",
-  "description": "The pikku fastify server",
+  "description": "Fastify server for Pikku, wrapping @pikku/fastify-plugin",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

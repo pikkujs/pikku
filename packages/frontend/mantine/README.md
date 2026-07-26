@@ -13,12 +13,14 @@ import { Button } from '@mantine/core'
 
 // after — @pikku/mantine rejects the raw string
 import { Button } from '@pikku/mantine/core'
-import { useI18n } from '@pikku/react/i18n'
-
-const { t } = useI18n()
-;<Button>{t('actions.save')}</Button> // ✅ branded
+import { m } from '@/i18n'
+;<Button>{m.actions_save()}</Button> // ✅ branded
 ;<Button>Save</Button> // ❌ type error
 ```
+
+`I18nString` is structurally Paraglide JS's `LocalizedString`, so a Paraglide
+`m()` message satisfies the gate natively — your app owns the locale store and
+`@pikku/react` only owns the brand.
 
 Aliasing `@mantine/core` → `@pikku/mantine/core` (e.g. via build-time resolution)
 therefore turns the whole app into a strict translation gate. Use `asI18n()` from
@@ -34,8 +36,8 @@ yarn add @pikku/mantine @pikku/react
 
 ## How it works
 
-The package re-exports the real Mantine component *values* and only re-casts their
-*types*. Polymorphism (`component="a"`), compound statics (`Menu.Item`,
+The package re-exports the real Mantine component _values_ and only re-casts their
+_types_. Polymorphism (`component="a"`), compound statics (`Menu.Item`,
 `Tabs.List`, `Menu.Divider`, …) and every other Mantine feature are preserved —
 see `src/core/helpers.ts` for the type machinery and `src/core/i18n.test-d.tsx`
 for the enforced positive/negative contract (`yarn test`).

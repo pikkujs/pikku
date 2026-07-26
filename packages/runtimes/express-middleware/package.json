@@ -1,7 +1,7 @@
 {
   "name": "@pikku/express-middleware",
   "version": "0.12.4",
-  "description": "The pikku express middleware",
+  "description": "Express middleware for Pikku — mount Pikku wirings on an existing Express app",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

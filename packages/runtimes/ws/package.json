@@ -1,7 +1,7 @@
 {
   "name": "@pikku/ws",
   "version": "0.12.4",
-  "description": "The pikku ws server",
+  "description": "WebSocket server for Pikku, built on ws",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

@@ -1,7 +1,7 @@
 {
   "name": "@pikku/uws",
   "version": "0.12.7",
-  "description": "The pikku uws server",
+  "description": "uWebSockets.js server for Pikku, wrapping @pikku/uws-handler",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
