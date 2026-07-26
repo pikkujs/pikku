@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 export class MigrationDriftError extends Error {
@@ -67,10 +67,19 @@ function sha256(bytes: Buffer): string {
  * executor. Hashes raw file bytes on apply; subsequent runs re-hash and bail
  * with `MigrationDriftError` if any applied file has changed on disk.
  */
+/**
+ * The migrations on disk, or none.
+ *
+ * A project that has never generated a migration has no directory to read, and
+ * that is the ordinary first-run state rather than a failure — it is precisely
+ * the project `db generate` exists to serve.
+ */
 const migrationFiles = (migrationsDir: string): string[] =>
-  readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort()
+  existsSync(migrationsDir)
+    ? readdirSync(migrationsDir)
+        .filter((f) => f.endsWith('.sql'))
+        .sort()
+    : []
 
 /**
  * Re-hash every applied migration and bail if one has changed on disk.

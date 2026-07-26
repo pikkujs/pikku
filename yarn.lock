@@ -7281,6 +7281,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-db-schema@workspace:verifiers/db-schema":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-db-schema@workspace:verifiers/db-schema"
+  dependencies:
+    "@pikku/better-auth": "workspace:*"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/kysely": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/better-sqlite3": "npm:^7.6.13"
+    "@types/node": "npm:^24"
+    better-auth: "npm:^1.6.19"
+    better-sqlite3: "npm:^12.10.0"
+    kysely: "npm:^0.29.0"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^6.0.3"
+    zod: "npm:^4"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"

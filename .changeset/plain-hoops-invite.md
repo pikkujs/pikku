@@ -37,3 +37,7 @@ An addon has no database of its own. It runs inside the consumer, against the co
 `pikku db export` runs in the addon's build and publishes what it needs to `.pikku/db/pikku-db-meta.gen.json` — one more channel beside `.pikku/function` and `.pikku/scopes`, resolved by package name. It materializes the addon's own `db/sqlite` and `db/postgres` migrations into a throwaway database and introspects them, so the artifact answers both "what must exist" and "what creates it" without a second description that drifts. Every dialect the package has migrations for is exported, since an addon is published once and consumed by projects on either engine.
 
 On the other side, `db generate` folds each wired addon's schema into the consumer's own migration history, where the project reviews it like anything else. A `wireRemoteAddon` addon contributes nothing — it runs on another host, against that host's database. An addon that publishes a schema for a dialect the consumer does not use is reported rather than skipped quietly: its services would fail at runtime.
+
+## A project with no migrations directory no longer crashes
+
+`db generate`, `db check` and `db migrate` read the migrations on disk to work out what is already covered, and threw `ENOENT` when there was no `db/<dialect>` directory to read. That is the first run on a new project — the exact case `db generate` exists to serve. A directory that does not exist means no migrations, which is an answer, not a failure.
