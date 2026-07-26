@@ -10,10 +10,12 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { sql } from 'kysely'
 
 import {
   resolveDb,
   type ResolvedSqliteDb,
+  computeSchemaDrift,
   parseDatabaseUrl,
   migrateAndCodegen,
   seed as runSeed,
@@ -428,6 +430,73 @@ test('scratch codegen types the sqlite migrations without creating the db file',
   assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
   assert.match(readFileSync(resolved.zodFile, 'utf8'), /export const TodosZ/)
   assert.equal(existsSync((resolved as ResolvedSqliteDb).dbFile), false)
+})
+
+test('db check reports a database that is behind its migrations', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // A migration written after the database was last migrated.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-tags.sql'),
+    `CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL);
+ALTER TABLE todos ADD COLUMN priority INTEGER;
+`
+  )
+
+  const drift = await computeSchemaDrift(resolved)
+  assert.equal(drift.inSync, false)
+  assert.deepEqual(drift.missingTables, ['tags'])
+  assert.deepEqual(drift.missingColumns, [
+    { table: 'todos', columns: ['priority'] },
+  ])
+})
+
+test('db check reports tables the migrations never mention, without failing', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // Something created a table outside the migration history — the shape of the
+  // bug this exists to surface.
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open((resolved as ResolvedSqliteDb).dbFile)
+  try {
+    db.exec('CREATE TABLE bootstrapped_at_boot (id INTEGER PRIMARY KEY)')
+  } finally {
+    db.close()
+  }
+
+  const drift = await computeSchemaDrift(resolved)
+  assert.deepEqual(drift.extraTables, ['bootstrapped_at_boot'])
+  assert.equal(drift.inSync, true, 'an unrecorded table is reported, not fatal')
+})
+
+test('db check reports a public copy shadowing a schema-qualified table', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE SCHEMA app;
+CREATE TABLE app.orders (
+  id SERIAL PRIMARY KEY,
+  total INTEGER NOT NULL
+);
+`,
+  })
+  const resolved = resolveDb({}, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // A second copy in the default schema — what a runtime that forgot to qualify
+  // its DDL leaves behind, and what matching on the bare name would hide.
+  const kysely = await createKysely<{}>(resolved)
+  try {
+    await sql`CREATE TABLE public.orders (id SERIAL PRIMARY KEY)`.execute(
+      kysely
+    )
+  } finally {
+    await kysely.destroy()
+  }
+
+  const drift = await computeSchemaDrift(resolved)
+  assert.deepEqual(drift.extraTables, ['orders'])
+  assert.deepEqual(drift.missingTables, [], 'app.orders is still accounted for')
 })
 
 test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', async () => {

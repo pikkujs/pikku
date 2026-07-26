@@ -19,6 +19,7 @@ import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbCodegen } from './functions/commands/db-codegen.js'
+import { dbCheck } from './functions/commands/db-check.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
@@ -388,6 +389,11 @@ wireCLI({
         generate: pikkuCLICommand({
           func: dbGenerate,
           description: 'Generate SQL migrations from detected schema changes',
+        }),
+        check: pikkuCLICommand({
+          func: dbCheck,
+          description:
+            'Report how the configured database differs from the schema its migrations define',
         }),
         codegen: pikkuCLICommand({
           func: dbCodegen,

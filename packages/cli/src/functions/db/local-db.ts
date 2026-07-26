@@ -322,8 +322,10 @@ export async function migrateAndCodegen(
     }
   } else {
     const withClient = options.scratch
-      ? <T,>(r: ResolvedPostgresDb, run: (c: PostgresQueryClient) => Promise<T>) =>
-          withScratchPostgresDatabase(r, 'pikku_codegen', run)
+      ? <T>(
+          r: ResolvedPostgresDb,
+          run: (c: PostgresQueryClient) => Promise<T>
+        ) => withScratchPostgresDatabase(r, 'pikku_codegen', run)
       : withPostgresClient
     await withClient(resolved, async (client) => {
       const introspector = new PostgresIntrospector(client)
@@ -830,6 +832,59 @@ async function coveredPostgresSchema(
       return postgresDatabaseToMap(client)
     }
   )
+}
+
+export interface SchemaDriftResult {
+  /** In the migrations, absent from the database — it is behind. */
+  missingTables: string[]
+  missingColumns: { table: string; columns: string[] }[]
+  /** In the database, absent from the migrations — nobody wrote it down. */
+  extraTables: string[]
+  inSync: boolean
+}
+
+/**
+ * Compare the schema the migration files define against the one the configured
+ * database actually has.
+ *
+ * The two halves are asymmetric and must stay that way. Something missing from
+ * the database is a database that is behind — the fix only ever adds, so it is
+ * safe to automate. Something present in the database but absent from the
+ * migrations is a table nobody wrote down: a runtime that created its own at
+ * boot, or the remains of a reverted branch. Dropping those is how data gets
+ * lost, so they are reported and never acted on.
+ */
+export async function computeSchemaDrift(
+  resolved: ResolvedDb
+): Promise<SchemaDriftResult> {
+  const covered =
+    resolved.dialect === 'sqlite'
+      ? await coveredSqliteSchema(resolved.migrationsDir)
+      : await coveredPostgresSchema(resolved, resolved.migrationsDir)
+  const actual = await introspectSchema(resolved)
+
+  const { missingTables, missingColumns } = diffSchemas(covered, actual)
+
+  // Compare on the full name. A migration that names no schema lands in
+  // whichever one is default, so a BARE covered name still matches a qualified
+  // table — but a QUALIFIED one must match exactly. Relaxing that second case
+  // hides the failure this is here to catch: a second copy of a table in the
+  // wrong schema (`public.orders` shadowing `app.orders`) would otherwise look
+  // like the table the migrations created.
+  const coveredFull = new Set(covered.keys())
+  const coveredBare = new Set(
+    [...covered.keys()].filter((t) => !t.includes('.'))
+  )
+  const extraTables = [...actual.keys()].filter(
+    (t) => !coveredFull.has(t) && !coveredBare.has(t.split('.').pop()!)
+  )
+
+  return {
+    missingTables,
+    missingColumns,
+    extraTables,
+    inSync: missingTables.length === 0 && missingColumns.length === 0,
+  }
 }
 
 export interface AuthDriftResult {
