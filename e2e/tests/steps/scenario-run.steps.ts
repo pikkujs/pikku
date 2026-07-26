@@ -51,6 +51,41 @@ When(
   }
 )
 
+When(
+  'I run the {string} scenario without a browser against the {string} environment',
+  async function (flow: string, environment: string) {
+    lastRun = await runScenario(environment, flow, ['--no-browser'])
+  }
+)
+
+Then('the scenario run ladder reads {string}', function (line: string) {
+  assert.ok(lastRun, 'no scenario run recorded')
+  assert.match(
+    lastRun.output,
+    new RegExp(`^\\s*${line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+✓`, 'm'),
+    `expected the step ladder to render "${line}":\n${lastRun.output}`
+  )
+})
+
+Then('the scenario run reports {string} skipped', function (flow: string) {
+  assert.ok(lastRun, 'no scenario run recorded')
+  assert.equal(
+    lastRun.code,
+    0,
+    `skipping a browser scenario must not fail the run:\n${lastRun.output}`
+  )
+  assert.match(
+    lastRun.output,
+    new RegExp(`^SKIP ${flow} \\(browser steps, --no-browser\\)`, 'm'),
+    `expected ${flow} to be reported as skipped:\n${lastRun.output}`
+  )
+  assert.match(
+    lastRun.output,
+    /1 skipped \(--no-browser\)/,
+    `expected the summary to count the skip:\n${lastRun.output}`
+  )
+})
+
 Then('the scenario run reports coverage for {string}', function (flow: string) {
   assert.ok(lastRun, 'no scenario run recorded')
   assert.match(

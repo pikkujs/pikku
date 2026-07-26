@@ -2,6 +2,7 @@ import { ADMIN_SCOPE_ROOT } from '@pikku/better-auth'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
+import { scenarioActorConfigs } from '#pikku/workflow/pikku-scenario-actors.gen.js'
 
 /** Role granting the console's own scope-admin capabilities. */
 export const CONSOLE_ADMIN_ROLE = 'console-admin'
@@ -39,6 +40,10 @@ const userIdByEmail = async (
  *   the scopes-console-permissions suite needs it to be: an admin holding no
  *   scope role, and therefore refused by the self-hosting scope RPCs.
  *   `guest@e2e.test` deliberately gets none of it.
+ * - The `admin` scenario actor gets the same umbrella `admin` scope, so a
+ *   browser step signed in as that actor passes the console's global admin
+ *   gate. Its user row is created by `seedScenarioActors`, which must therefore
+ *   run before this.
  *
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
@@ -66,7 +71,11 @@ export const seedScopes = async (services: SingletonServices) => {
   await scopeService.addScopeToUser(adminId, ADMIN_SCOPE_ROOT)
   await scopeService.addScopeToUser(staffId, ADMIN_SCOPE_ROOT)
 
+  const adminActorEmail = scenarioActorConfigs.admin.email
+  const adminActorId = await userIdByEmail(services, adminActorEmail)
+  await scopeService.addScopeToUser(adminActorId, ADMIN_SCOPE_ROOT)
+
   services.logger.info(
-    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${ADMIN_SCOPE_ROOT}, ${STAFF_USER.email} -> ${ADMIN_SCOPE_ROOT}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}`
+    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${ADMIN_SCOPE_ROOT}, ${STAFF_USER.email} -> ${ADMIN_SCOPE_ROOT}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${adminActorEmail} -> ${ADMIN_SCOPE_ROOT}`
   )
 }

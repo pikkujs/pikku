@@ -20,3 +20,17 @@ Feature: Scenario runs
   Scenario: scenario asserts stubbed service calls and per-actor fault injection
     When I run the "notificationScenario" scenario against the "local" environment
     Then the scenario run reports all flows passed
+
+  Scenario: declared steps render a readable ladder
+    When I run the "codeEditorScenario" scenario against the "local" environment
+    Then the scenario run reports all flows passed
+    And the scenario run ladder reads "When  the admin reads a function definition in the console"
+
+  Scenario: browser scenarios are skipped, not failed, without a browser
+    When I run the "codeEditorConsoleScenario" scenario without a browser against the "local" environment
+    Then the scenario run reports "codeEditorConsoleScenario" skipped
+
+  @console
+  Scenario: a browser step drives the console as its actor
+    When I run the "codeEditorConsoleScenario" scenario against the "local" environment
+    Then the scenario run reports all flows passed
