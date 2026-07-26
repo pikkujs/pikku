@@ -45,6 +45,40 @@ export function funcIdToTypeName(id: string): string {
     .join('')
 }
 
+/**
+ * `pikkuScenarioStep({ name })` is the one wrapper whose `name` is its identity:
+ * scenarios reference a step by that string, so it must become the pikkuFuncId
+ * (and hence the generated step map's key), not just a cosmetic label the way
+ * `pikkuMiddleware`/`pikkuAgent` use it.
+ */
+function extractScenarioStepName(
+  callExpr: ts.Node,
+  result: ExtractedFunctionName
+): void {
+  if (
+    !ts.isCallExpression(callExpr) ||
+    !ts.isIdentifier(callExpr.expression) ||
+    callExpr.expression.text !== 'pikkuScenarioStep'
+  ) {
+    return
+  }
+  const firstArg = callExpr.arguments[0]
+  if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) {
+    return
+  }
+  for (const prop of firstArg.properties) {
+    if (
+      ts.isPropertyAssignment(prop) &&
+      ts.isIdentifier(prop.name) &&
+      prop.name.text === 'name' &&
+      ts.isStringLiteral(prop.initializer)
+    ) {
+      result.explicitName = prop.initializer.text
+      return
+    }
+  }
+}
+
 export function extractFunctionName(
   callExpr: ts.Node,
   checker: ts.TypeChecker,
@@ -62,6 +96,8 @@ export function extractFunctionName(
     isHelper: false,
     version: null,
   }
+
+  extractScenarioStepName(callExpr, result)
 
   const workflowHelpers = new Set([
     'workflow',

@@ -22,6 +22,10 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepWire,
 } from '../wirings/workflow/workflow.types.js'
+import type {
+  PikkuBrowserWire,
+  PikkuScenarioStepWire,
+} from '../wirings/workflow/scenario-step.types.js'
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
 import type { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
 import type { PikkuGateway } from '../wirings/gateway/gateway.types.js'
@@ -123,6 +127,15 @@ export type FunctionRuntimeMeta = {
   scopes?: string[]
   expose?: boolean
   remote?: boolean
+  /**
+   * A step RPC: a name dispatched by a scenario run and refused everywhere
+   * else. It sits alongside `expose` (public) and `remote` as a kind of RPC
+   * rather than a separate concept — a step is invoked by name exactly as an
+   * RPC is, which is why a run records the step function in its `rpcName`.
+   * What makes it its own kind is that it is never network-callable: a step
+   * may drive a browser or assert against fixtures.
+   */
+  scenarioStep?: boolean
   mcp?: boolean
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
@@ -133,6 +146,10 @@ export type FunctionRuntimeMeta = {
   workflowRetries?: number
   /** Timeout when this function is used as a workflow step (e.g. '30s', '5m'). */
   workflowTimeout?: string
+  /** Scenario steps only: this step drives a browser, so the runner must provision one and an actor is mandatory. */
+  scenarioStepBrowser?: boolean
+  /** Scenario steps only: the prose a reporter renders, with `{placeholders}` filled from the step's recorded input. */
+  scenarioStepTemplate?: string
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
@@ -403,6 +420,10 @@ export type PikkuWire<
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: ScenarioActors
+  /** Present on every scenario step invocation */
+  scenarioStep: PikkuScenarioStepWire
+  /** Present only when the runner provisioned a browser for this step */
+  browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
   trigger: PikkuTrigger<TriggerOutput>

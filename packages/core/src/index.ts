@@ -55,6 +55,7 @@ export type {
   CorePikkuAuthConfig,
   CorePikkuFunction,
   CorePikkuFunctionConfig,
+  CorePikkuFunctionHook,
   CorePikkuPermission,
   CorePikkuPermissionConfig,
   CorePikkuPermissionFactory,

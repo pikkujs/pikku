@@ -6,6 +6,7 @@ import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeScenarioActors } from './serialize-scenario-actors.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
+import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -126,7 +127,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         workflows.files,
         workflows.graphFiles,
         packageMappings,
-        config.addonName
+        config.addonName,
+        workflows.featureFiles
       )
     )
 
@@ -155,6 +157,11 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       config.scopesFile,
       packageMappings
     )
+    const scenarioStepMapImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      config.scenarioStepMapDeclarationFile,
+      packageMappings
+    )
 
     await writeFileInDir(
       logger,
@@ -164,7 +171,22 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         rpcMapImportPath,
         workflowMapImportPath,
         agentMapImportPath,
-        scopesImportPath
+        scopesImportPath,
+        scenarioStepMapImportPath
+      )
+    )
+
+    // Rides the workflow command rather than getting its own codegen node, so
+    // it can't drift out of the two hand-maintained ordering lists.
+    await writeFileInDir(
+      logger,
+      config.scenarioStepMapDeclarationFile,
+      serializeScenarioStepMap(
+        logger,
+        config.scenarioStepMapDeclarationFile,
+        packageMappings,
+        typesMap,
+        functionState.meta
       )
     )
 

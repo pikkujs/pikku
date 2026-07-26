@@ -29,6 +29,7 @@ export type {
 
 // Internal registration functions (used by generated code)
 export { addWorkflow } from './dsl/workflow-runner.js'
+export { addFeature, resolveFeatureScenarios } from './feature.js'
 
 // Graph helpers (template, pikkuWorkflowGraph)
 export { template, type TemplateString } from './graph/template.js'
@@ -72,6 +73,9 @@ export type {
   WorkflowRunService,
   WorkflowRunMirror,
   CoreWorkflow,
+  CoreFeature,
+  CoreFeatureScenario,
+  FeaturePlanEntry,
   PikkuWorkflow,
   ContextVariable,
   WorkflowContext,
@@ -113,8 +117,22 @@ export type {
   SwitchStepMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
+  ScenarioStepInvocation,
+  ScenarioStepMeta,
   WorkflowStepMeta,
   WorkflowStepWire,
   PikkuWorkflowWire,
   PikkuScenarioWire,
 } from './workflow.types.js'
+
+// Re-export scenario step types
+export type {
+  ScenarioStepPhase,
+  ScenarioStepOptions,
+  PikkuScenarioStepWire,
+  PikkuBrowserWire,
+  ScenarioBrowserProvider,
+} from './scenario-step.types.js'
+
+// Renders the English a reporter shows for a scenario step
+export { composeStepProse, renderStepTemplate } from './scenario-prose.js'

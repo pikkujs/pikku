@@ -37,6 +37,44 @@ export function isWorkflowDoCall(
 }
 
 /**
+ * Placeholder recorded when a scenario step's target isn't a static string
+ * literal. The step is kept rather than dropped so post-processing can raise
+ * PKU678 against it — a dropped step is the silent-failure mode this repo has
+ * hit repeatedly on workflow graph round-trips.
+ */
+export const DYNAMIC_SCENARIO_STEP_TARGET = '<dynamic>'
+
+const SCENARIO_STEP_PHASES = ['step', 'given', 'when', 'then'] as const
+
+export type ScenarioStepPhaseName = (typeof SCENARIO_STEP_PHASES)[number]
+
+/**
+ * Check if a call expression is scenario.step()/given()/when()/then() — a
+ * declared `pikkuScenarioStep` invoked by name. `given`/`when`/`then` are pure
+ * sugar over `step`: the phase only changes the prose a reporter renders.
+ */
+export function isScenarioStepCall(node: ts.CallExpression): boolean {
+  return getScenarioStepPhase(node) !== undefined
+}
+
+/**
+ * The Gherkin-style phase of a scenario step call, or undefined when the call
+ * isn't one.
+ */
+export function getScenarioStepPhase(
+  node: ts.CallExpression
+): ScenarioStepPhaseName | undefined {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return
+  }
+  const propAccess = node.expression
+  if (!isWorkflowWireIdentifier(propAccess.expression)) {
+    return
+  }
+  return SCENARIO_STEP_PHASES.find((phase) => phase === propAccess.name.text)
+}
+
+/**
  * Check if a call expression is workflow.expectEventually()
  */
 export function isWorkflowExpectEventuallyCall(

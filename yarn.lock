@@ -6003,6 +6003,7 @@ __metadata:
     "@pikku/n8n-import": "npm:^0.0.3"
     "@pikku/node-http-server": "npm:^0.12.6"
     "@pikku/openapi-parser": "npm:^0.12.16"
+    "@pikku/playwright": "npm:^0.12.69"
     "@pikku/schedule": "npm:^0.12.4"
     "@pikku/ws": "npm:^0.12.4"
     "@types/cookie": "npm:^1.0.0"
@@ -6029,6 +6030,10 @@ __metadata:
     zod-to-ts: "npm:^2.1.0"
   peerDependencies:
     "@pikku/core": ^0.12.69
+    "@pikku/playwright": ^0.12.69
+  peerDependenciesMeta:
+    "@pikku/playwright":
+      optional: true
   bin:
     pikku: dist/bin/pikku.js
   languageName: unknown
@@ -6230,6 +6235,7 @@ __metadata:
     "@pikku/kysely-mysql": "workspace:*"
     "@pikku/kysely-postgres": "workspace:*"
     "@pikku/kysely-sqlite": "workspace:*"
+    "@pikku/playwright": "workspace:*"
     "@pikku/redis": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
     "@playwright/test": "npm:^1.50.0"
@@ -6625,6 +6631,19 @@ __metadata:
   peerDependencies:
     "@pikku/core": ^0.12.44
     pino: ^9.5.0
+  languageName: unknown
+  linkType: soft
+
+"@pikku/playwright@npm:^0.12.69, @pikku/playwright@workspace:*, @pikku/playwright@workspace:packages/playwright":
+  version: 0.0.0-use.local
+  resolution: "@pikku/playwright@workspace:packages/playwright"
+  dependencies:
+    "@playwright/test": "npm:^1.61.1"
+    "@types/node": "npm:^25.6.0"
+    typescript: "npm:^6.0.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.69
+    "@playwright/test": ^1.50.0
   languageName: unknown
   linkType: soft
 

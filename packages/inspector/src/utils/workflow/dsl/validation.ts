@@ -22,6 +22,11 @@ export interface ValidationError {
  * - ReturnStatement
  * - ThrowStatement (for WorkflowCancelledException)
  * - Block (containers)
+ *
+ * When `allowInline` is set (complex workflows and scenarios), the bodies of
+ * closures are skipped: a callback is ordinary TypeScript, not DSL, so holding
+ * it to the statement whitelist would reject valid code. Plain DSL workflows
+ * still descend into callbacks, which is what validates fanout bodies.
  */
 export function validateNoDisallowedPatterns(
   node: ts.Node,
@@ -54,6 +59,13 @@ export function validateNoDisallowedPatterns(
   }
 
   function visitNode(node: ts.Node) {
+    if (
+      options?.allowInline &&
+      (ts.isArrowFunction(node) || ts.isFunctionExpression(node))
+    ) {
+      return
+    }
+
     // Disallow while and do-while
     if (ts.isWhileStatement(node) || ts.isDoStatement(node)) {
       errors.push({

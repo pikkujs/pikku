@@ -386,14 +386,21 @@ export const addFunctions: AddWiring = (
   }
 
   // Match identifiers that contain both "pikku" and "func" (case insensitive),
-  // plus pikkuScenario (a workflow wrapper without "func" in its name)
+  // plus pikkuScenario and pikkuScenarioStep (workflow wrappers without "func"
+  // in their names)
   const pikkuFuncPattern = /pikku.*func/i
   if (
     !pikkuFuncPattern.test(expression.text) &&
-    expression.text !== 'pikkuScenario'
+    expression.text !== 'pikkuScenario' &&
+    expression.text !== 'pikkuScenarioStep'
   ) {
     return
   }
+
+  // A scenario step is bundled like any invoked function, but is deliberately
+  // never RPC-registered: a step may drive a browser, so exposing it over the
+  // network would put a test harness on the public API surface.
+  const isScenarioStep = expression.text === 'pikkuScenarioStep'
 
   // only handle calls like pikkuFunc(...)
   if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
@@ -427,6 +434,8 @@ export const addFunctions: AddWiring = (
   let workflowQueued: boolean | undefined
   let workflowRetries: number | undefined
   let workflowTimeout: string | undefined
+  let scenarioStepBrowser: boolean | undefined
+  let scenarioStepTemplate: string | undefined
   let scopes: string[] | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
@@ -530,6 +539,12 @@ export const addFunctions: AddWiring = (
       | number
       | undefined
     workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as
+      | string
+      | undefined
+    scenarioStepBrowser = getPropertyValue(firstArg, 'browser') as
+      | boolean
+      | undefined
+    scenarioStepTemplate = getPropertyValue(firstArg, 'template') as
       | string
       | undefined
     scopes = getArrayPropertyValue(firstArg, 'scopes') ?? undefined
@@ -1078,6 +1093,7 @@ export const addFunctions: AddWiring = (
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
     remote: remote || undefined,
+    scenarioStep: isScenarioStep || undefined,
     mcp: mcpEnabled || undefined,
     readonly: readonly_ || undefined,
     deploy: deploy || undefined,
@@ -1086,6 +1102,8 @@ export const addFunctions: AddWiring = (
     workflowQueued: workflowQueued === true ? true : undefined,
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
+    scenarioStepBrowser: scenarioStepBrowser === true ? true : undefined,
+    scenarioStepTemplate: scenarioStepTemplate || undefined,
     scopes: scopes ?? undefined,
     implementationHash,
     version,
@@ -1182,7 +1200,7 @@ export const addFunctions: AddWiring = (
       return
     }
 
-    if (remote) {
+    if (remote && !isScenarioStep) {
       state.rpc.invokedFunctions.add(pikkuFuncId)
       // The consumer-facing surface a wireRemoteAddon imports (mirrors exposedMeta)
       state.rpc.remoteMeta[name] = pikkuFuncId
@@ -1192,7 +1210,7 @@ export const addFunctions: AddWiring = (
       })
     }
 
-    if (expose) {
+    if (expose && !isScenarioStep) {
       state.rpc.exposedMeta[name] = pikkuFuncId
       state.rpc.exposedFiles.set(name, {
         path: node.getSourceFile().fileName,
@@ -1202,12 +1220,14 @@ export const addFunctions: AddWiring = (
       state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     }
 
-    // We add it to internal meta to allow autocomplete for everything
-    state.rpc.internalMeta[name] = pikkuFuncId
+    if (!isScenarioStep) {
+      // We add it to internal meta to allow autocomplete for everything
+      state.rpc.internalMeta[name] = pikkuFuncId
 
-    if (version !== undefined) {
-      state.rpc.internalMeta[pikkuFuncId] = pikkuFuncId
-      state.rpc.invokedFunctions.add(pikkuFuncId)
+      if (version !== undefined) {
+        state.rpc.internalMeta[pikkuFuncId] = pikkuFuncId
+        state.rpc.invokedFunctions.add(pikkuFuncId)
+      }
     }
 
     // But we only import the actual function if it's actually invoked to keep

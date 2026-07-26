@@ -74,6 +74,20 @@ const testMeta: CLIMeta = {
           positionals: [{ name: 'name', required: false }],
           options: {},
         },
+        serve: {
+          pikkuFuncId: 'serveFunc',
+          positionals: [],
+          options: {
+            browser: {
+              description: 'Open a browser',
+              default: true,
+            },
+            port: {
+              description: 'Port to listen on',
+              default: 8080,
+            },
+          },
+        },
       },
     },
   },
@@ -101,6 +115,52 @@ describe('Command Parser', () => {
       assert.deepStrictEqual(result.positionals, { name: 'Alice' })
       assert.deepStrictEqual(result.options, { loud: true, verbose: false })
       assert.strictEqual(result.errors.length, 0)
+    })
+
+    test('should turn a boolean option off with --no-<flag>', () => {
+      const result = parseCLIArguments(
+        ['serve', '--no-browser'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.strictEqual(result.options.browser, false)
+      assert.strictEqual(result.errors.length, 0)
+      assert.deepStrictEqual(
+        result.warnings ?? [],
+        [],
+        '--no-browser is the negation of a known option, not an unknown one'
+      )
+    })
+
+    test('should leave a boolean option at its default when not negated', () => {
+      const result = parseCLIArguments(['serve'], 'test-cli', testMeta)
+
+      assert.strictEqual(result.options.browser, true)
+    })
+
+    test('should not consume the next argument when negating', () => {
+      const result = parseCLIArguments(
+        ['serve', '--no-browser', '--port', '4077'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.strictEqual(result.options.browser, false)
+      assert.strictEqual(result.options.port, 4077)
+    })
+
+    test('should still warn about an unknown --no-<flag>', () => {
+      const result = parseCLIArguments(
+        ['serve', '--no-telemetry'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.ok(
+        (result.warnings ?? []).length > 0,
+        'negating an option that does not exist is a typo, not a feature'
+      )
     })
 
     test('should parse command with short flag', () => {

@@ -33,4 +33,31 @@ describe('serializeWorkflowTypes', () => {
       /keyof FlattenedAgentMap\[FuncMap\[N\]\]\['output'\] & string/
     )
   })
+
+  describe('scenario steps', () => {
+    test('emits the pikkuScenarioStep factory', () => {
+      const result = emit()
+      assert.match(result, /export function pikkuScenarioStep/)
+    })
+
+    test('a browser step gets a non-optional browser wire', () => {
+      const result = emit()
+      assert.match(result, /export type PikkuFunctionScenarioStep</)
+      assert.match(
+        result,
+        /B extends true \? 'scenarioStep' \| 'browser' : 'scenarioStep'/
+      )
+    })
+
+    test('TypedScenario narrows step/given/when/then over the step map', () => {
+      const result = emit()
+      for (const phase of ['step', 'given', 'when', 'then']) {
+        assert.match(
+          result,
+          new RegExp(`${phase}<K extends keyof FlattenedScenarioStepMap>`),
+          `expected TypedScenario to declare a typed '${phase}' overload`
+        )
+      }
+    })
+  })
 })

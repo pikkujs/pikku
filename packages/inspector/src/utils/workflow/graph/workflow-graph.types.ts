@@ -113,6 +113,7 @@ export type FlowType =
 // Import and re-export context types from core
 import type {
   ContextVariable,
+  ScenarioStepPhase,
   WorkflowContext,
   WorkflowPlannedStep,
 } from '@pikku/core/workflow'
@@ -153,6 +154,8 @@ export interface FunctionNode extends BaseNode {
   actor?: string
   /** True for workflow.expectEventually polling steps (scenarios) */
   expectEventually?: boolean
+  /** Gherkin-style phase for a declared scenario step (scenario.given/when/then) */
+  scenarioStepPhase?: ScenarioStepPhase
 }
 
 /**

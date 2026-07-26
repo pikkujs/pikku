@@ -248,6 +248,17 @@ export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined
 
+/**
+ * A lifecycle hook: the same call signature as the function it hangs off, but
+ * its return value is discarded. A hook is setup/teardown, not a step — it has
+ * no id, no meta and no schema, so it is never recorded and never replayed.
+ */
+export type CorePikkuFunctionHook<Services = any, Data = any, Wire = any> = (
+  services: Services,
+  data: Data,
+  wire: Wire
+) => Promise<void> | void
+
 export type CorePikkuFunctionConfig<
   PikkuFunction extends
     | CorePikkuFunction<any, any, any, any, any>
@@ -282,6 +293,8 @@ export type CorePikkuFunctionConfig<
   workflowRetries?: number
   /** Timeout for this function when used as a workflow step (e.g. '30s', '5m'). */
   workflowTimeout?: string
+  /** Scenario steps only: this step drives a browser, so the runner must provision one before calling it. */
+  browser?: boolean
   audit?:
     | boolean
     | {
@@ -289,6 +302,19 @@ export type CorePikkuFunctionConfig<
       }
   approvalDescription?: any
   func: PikkuFunction
+  /**
+   * Scenarios only: runs before the scenario body, with the scenario's own
+   * signature. Throwing skips the body and fails the run, but `after` still
+   * runs.
+   */
+  before?: CorePikkuFunctionHook
+  /**
+   * Scenarios only: always runs after the scenario body, in a `finally`.
+   * Throwing fails a run that would otherwise have passed; on an
+   * already-failed run it attaches as the `cause` and never replaces the
+   * original error.
+   */
+  after?: CorePikkuFunctionHook
   auth?: boolean
   /**
    * Scopes the session must hold to run this function. All of them are
