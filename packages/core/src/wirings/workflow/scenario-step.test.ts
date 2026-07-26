@@ -6,6 +6,10 @@ import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import type { ScenarioActor } from '../../services/scenario-actors-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
+import {
+  requireActor,
+  requireScenarioEnv,
+} from './scenario-step-guards.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
@@ -21,6 +25,10 @@ const fakeActor = (
     invoke: async (rpcName: string, data: unknown) => {
       calls.push({ rpcName, data })
       return handler(rpcName, data)
+    },
+    invokeRaw: async (rpcName: string, data: unknown) => {
+      calls.push({ rpcName, data })
+      return { status: 200, ok: true, body: await handler(rpcName, data) }
     },
   }
 }
@@ -514,5 +522,110 @@ describe('scenario step names its function on the run', () => {
 
     const steps = await ws.getRunSteps(runId)
     assert.equal(steps[0]!.rpcName ?? null, null)
+  })
+})
+
+describe('the scenario environment reaches the step wire', () => {
+  beforeEach(() => resetPikkuState())
+
+  test('a step reads the environment the run targets', async () => {
+    const ws = new InMemoryWorkflowService()
+    let seen: unknown
+    registerStep('readsEnv', {
+      func: async (_services, _data, wire) => {
+        seen = wire.scenarioStep!.env
+        return null
+      },
+    })
+    ws.setScenarioEnvironment({
+      apiUrl: 'https://staging.example.com/api',
+      appUrl: 'https://staging.example.com',
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.when('reads the environment', 'readsEnv')
+
+    assert.deepEqual(seen, {
+      apiUrl: 'https://staging.example.com/api',
+      appUrl: 'https://staging.example.com',
+    })
+  })
+
+  test('a run started without one carries no environment', async () => {
+    const ws = new InMemoryWorkflowService()
+    let seen: unknown = 'unset'
+    registerStep('readsEnv', {
+      func: async (_services, _data, wire) => {
+        seen = wire.scenarioStep!.env
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.when('reads the environment', 'readsEnv')
+
+    assert.equal(seen, undefined)
+  })
+})
+
+describe('requireActor / requireScenarioEnv', () => {
+  beforeEach(() => resetPikkuState())
+
+  test('requireActor returns the actor a step was called with', async () => {
+    const ws = new InMemoryWorkflowService()
+    const shopper = fakeActor('shopper', async () => null)
+    let resolved: unknown
+    registerStep('needsAnActor', {
+      func: async (_services, _data, wire) => {
+        resolved = requireActor(wire.scenarioStep)
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.when('shopper acts', 'needsAnActor', undefined, {
+      actor: shopper,
+    })
+
+    assert.equal(resolved, shopper)
+  })
+
+  test('requireActor names the step when it was called without one', async () => {
+    const ws = new InMemoryWorkflowService()
+    registerStep('needsAnActor', {
+      func: async (_services, _data, wire) => requireActor(wire.scenarioStep),
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await assert.rejects(
+      wire.when('nobody acts', 'needsAnActor'),
+      /needsAnActor.*actor/s
+    )
+  })
+
+  test('requireScenarioEnv returns the environment, or says how to declare one', async () => {
+    const ws = new InMemoryWorkflowService()
+    registerStep('needsAnEnv', {
+      func: async (_services, _data, wire) =>
+        requireScenarioEnv(wire.scenarioStep),
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await assert.rejects(
+      wire.when('reads the api url', 'needsAnEnv'),
+      /needsAnEnv.*environment/s
+    )
+
+    ws.setScenarioEnvironment({ apiUrl: 'http://localhost:4077/api' })
+    const runId2 = await setup(ws)
+    const wire2 = ws.createWorkflowWire('scenarioTest', runId2, {})
+    assert.deepEqual(await wire2.when('reads the api url', 'needsAnEnv'), {
+      apiUrl: 'http://localhost:4077/api',
+    })
   })
 })

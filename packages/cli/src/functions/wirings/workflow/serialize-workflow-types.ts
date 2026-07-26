@@ -4,7 +4,8 @@ export const serializeWorkflowTypes = (
   workflowMapImportPath: string,
   agentMapImportPath: string,
   scopesImportPath: string,
-  scenarioStepMapImportPath: string = './pikku-scenario-step-map.gen.js'
+  scenarioStepMapImportPath: string = './pikku-scenario-step-map.gen.js',
+  scenarioActorsImportPath: string = './pikku-scenario-actors.gen.js'
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
@@ -21,6 +22,9 @@ import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
+import type { TypedScenarioActors } from '${scenarioActorsImportPath}'
+
+export type { TypedScenarioActors }
 
 export { template }
 

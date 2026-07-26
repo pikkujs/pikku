@@ -162,6 +162,11 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       config.scenarioStepMapDeclarationFile,
       packageMappings
     )
+    const scenarioActorsImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      config.scenarioActorsFile,
+      packageMappings
+    )
 
     await writeFileInDir(
       logger,
@@ -172,7 +177,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         workflowMapImportPath,
         agentMapImportPath,
         scopesImportPath,
-        scenarioStepMapImportPath
+        scenarioStepMapImportPath,
+        scenarioActorsImportPath
       )
     )
 
@@ -190,17 +196,28 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
     )
 
-    const scenarioActors = config.scenarios?.actors
-    if (scenarioActors && Object.keys(scenarioActors).length > 0) {
+    // Written even for an empty registry, so `TypedScenarioActors` is always a
+    // resolvable import for the generated function types.
+    const scenarioActors = config.scenarios?.actors ?? {}
+    {
       const agentMapImportPath = getFileImportRelativePath(
         config.scenarioActorsFile,
         config.agentMapDeclarationFile,
         packageMappings
       )
+      const exposedRpcMapImportPath = getFileImportRelativePath(
+        config.scenarioActorsFile,
+        config.rpcMapDeclarationFile,
+        packageMappings
+      )
       await writeFileInDir(
         logger,
         config.scenarioActorsFile,
-        serializeScenarioActors(scenarioActors, agentMapImportPath)
+        serializeScenarioActors(
+          scenarioActors,
+          agentMapImportPath,
+          exposedRpcMapImportPath
+        )
       )
       // Fixed path getScenarioActorsMeta() reads; kept out of workflow/meta,
       // which getWorkflowMeta() globs as workflows.

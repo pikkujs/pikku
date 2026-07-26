@@ -132,7 +132,11 @@ export type {
   PikkuScenarioStepWire,
   PikkuBrowserWire,
   ScenarioBrowserProvider,
+  ScenarioEnvironment,
 } from './scenario-step.types.js'
+
+// Narrows the optional halves of the step wire, with a message that says what to do
+export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 
 // Renders the English a reporter shows for a scenario step
 export { composeStepProse, renderStepTemplate } from './scenario-prose.js'

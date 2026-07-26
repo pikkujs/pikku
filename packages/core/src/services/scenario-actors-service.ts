@@ -3,14 +3,64 @@ import type {
   ActorFlowVerdict,
 } from '../wirings/actor-flow/actor-flow.types.js'
 
+/** What the transport answered, for a step that treats the status as data. */
+export interface ScenarioRpcResponse {
+  status: number
+  ok: boolean
+  /** The parsed JSON body, or undefined for an empty response. */
+  body: unknown
+}
+
+/** Per-call transport options. */
+export interface ScenarioInvokeOptions {
+  /**
+   * Headers to send alongside the actor's own session. This is how a step
+   * expresses an identity the actor registry cannot — an impersonation header,
+   * or one of the header-shim principals a credential scenario invents.
+   */
+  headers?: Record<string, string>
+}
+
+/**
+ * The RPC surface an actor can reach, as name → input/output. A project binds
+ * its generated exposed RPC map here; the default leaves every name open, which
+ * is what an actor built by hand (or by a third-party driver) gets.
+ */
+export type ScenarioRpcMap = Record<string, { input: any; output: any }>
+
+/**
+ * The actor a step wire carries, for a project whose actor registry is known.
+ * An empty registry keeps the open actor type rather than collapsing to
+ * `never` — a project may still build actors itself.
+ */
+export type ScenarioActorOf<TActors> = [keyof TActors] extends [never]
+  ? ScenarioActor
+  : TActors[keyof TActors]
+
 /** A synthetic user (a user row flagged `actor`) that workflow steps run as over the real transport */
-export interface ScenarioActor<TAgentName extends string = string> {
+export interface ScenarioActor<
+  TAgentName extends string = string,
+  TRpcMap extends ScenarioRpcMap = ScenarioRpcMap,
+> {
   /** Stable actor name (the key in pikku.config.json's actor registry). */
   readonly name: string
   /** The actor's user email — flows use it for invites/lookups. */
   readonly email: string
   /** Invoke an exposed RPC as this actor over the real transport. */
-  invoke(rpcName: string, data: unknown): Promise<unknown>
+  invoke<TName extends keyof TRpcMap & string>(
+    rpcName: TName,
+    data: TRpcMap[TName]['input']
+  ): Promise<TRpcMap[TName]['output']>
+  /**
+   * The same call, reporting what the transport answered rather than throwing.
+   * A refusal is the expected outcome of a permissions or scopes scenario, and
+   * `invoke`'s error truncates the body that names which scope was missing.
+   */
+  invokeRaw<TName extends keyof TRpcMap & string>(
+    rpcName: TName,
+    data: TRpcMap[TName]['input'],
+    options?: ScenarioInvokeOptions
+  ): Promise<ScenarioRpcResponse>
   /** Converse with a Pikku AI agent in this actor's persona and return its verdict */
   converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
 }

@@ -22,7 +22,7 @@ export const serializeFunctionTypes = (
     : 'string'
   const workflowImport =
     workflowTypesImport ||
-    `import type { TypedWorkflow, TypedScenario } from '../workflow/pikku-workflow-types.gen.js'`
+    `import type { TypedWorkflow, TypedScenario, TypedScenarioActors } from '../workflow/pikku-workflow-types.gen.js'`
   // Falls back to `string` when a project has no scopes codegen, so that
   // `scopes` stays usable rather than resolving to an unbound type name.
   const scopesImport = scopesTypeImport || `type ScopeId = string`
@@ -315,7 +315,7 @@ export type PikkuFunctionSessionless<
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario, TypedScenarioActors>, RequiredWires>
   >
 
 /**
@@ -336,7 +336,7 @@ export type PikkuFunction<
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario, TypedScenarioActors>, RequiredWires>
   >
 
 /**
