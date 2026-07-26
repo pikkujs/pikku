@@ -19,7 +19,7 @@ describe('same step name invoked multiple times in one run', () => {
   test('each reach gets its own row + invocationId (no clobber)', async () => {
     const ws = inlineService()
     const runId = await ws.createRun('flow', {}, true, 'hash', { type: 'test' })
-    ;(ws as any).inlineRuns.add(runId)
+    ws.registerInlineRun(runId)
 
     // Two `do('process', fn)` reaches in the SAME replay (no reset between).
     const r1 = await (ws as any).inlineStep(runId, 'process', async () => 'first')
@@ -45,7 +45,7 @@ describe('same step name invoked multiple times in one run', () => {
   test('ordinal 0 is unchanged: a single call keeps the bare name + its old invocationId', async () => {
     const ws = inlineService()
     const runId = await ws.createRun('flow', {}, true, 'hash', { type: 'test' })
-    ;(ws as any).inlineRuns.add(runId)
+    ws.registerInlineRun(runId)
 
     await (ws as any).inlineStep(runId, 'solo', async () => 'x')
     // Stored under the bare name, and the dedupe key matches the pre-ordinal hash.
@@ -57,7 +57,7 @@ describe('same step name invoked multiple times in one run', () => {
   test('a fresh replay resets ordinals so the same call resolves to the same row', async () => {
     const ws = inlineService()
     const runId = await ws.createRun('flow', {}, true, 'hash', { type: 'test' })
-    ;(ws as any).inlineRuns.add(runId)
+    ws.registerInlineRun(runId)
 
     let runs = 0
     const r1 = await (ws as any).inlineStep(runId, 'once', async () => {
@@ -66,7 +66,7 @@ describe('same step name invoked multiple times in one run', () => {
     })
     // Next replay resets the counter; the same `do('once')` must hit the cached
     // row, not mint 'once#1'.
-    ;(ws as any).resetStepOrdinals(runId)
+    await (ws as any).beginReplay(runId)
     const r2 = await (ws as any).inlineStep(runId, 'once', async () => {
       runs++
       return 'v2'

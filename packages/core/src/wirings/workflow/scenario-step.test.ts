@@ -89,7 +89,7 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
 
     // Simulate replay: reset per-run ordinals so the same logical step name
     // resolves to the same durable step key.
-    ;(ws as any).resetStepOrdinals(runId)
+    await (ws as any).beginReplay(runId)
     const replayWire = ws.createWorkflowWire('scenarioTest', runId, {})
     const replayed = await replayWire.do(
       'step',

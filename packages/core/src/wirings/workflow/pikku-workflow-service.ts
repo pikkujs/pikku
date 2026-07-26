@@ -338,13 +338,65 @@ export interface WorkflowRunExtension {
 }
 
 /**
+ * States a run never leaves. `suspended` is deliberately absent: a suspended
+ * run stops a poll loop but can still be resumed, so anything the process holds
+ * for it has to survive.
+ */
+const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
+  'completed',
+  'failed',
+  'cancelled',
+])
+
+/**
  * Abstract workflow state service
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
  * Combines orchestration and step execution
  */
+/**
+ * Everything the engine holds in memory for a run that is executing in this
+ * process. One entry, one lifetime: created when the run starts executing here
+ * and dropped when nothing is holding it open any more.
+ *
+ * The `replay` half is rebuilt from scratch on every orchestrator tick; the
+ * rest outlives individual ticks and belongs to whoever started the run.
+ */
+type RunContext = {
+  /** Executing straight through in-process, without a queue. */
+  inline: boolean
+  replay?: {
+    /** How many times this walk has reached each logical step name. */
+    ordinals: Map<string, number>
+    /** The step key the walk last reached — the next step's predecessor. */
+    lastStep?: string
+    /** Every step of the run as this replay found it, keyed by step name. */
+    steps?: Map<string, StepState>
+    /** The run as this replay found it. Only its immutable half is reused. */
+    run?: WorkflowRun
+  }
+}
+
 export abstract class PikkuWorkflowService implements WorkflowService {
-  private inlineRuns = new Set<string>()
   private runExtension?: WorkflowRunExtension
+
+  private runContexts = new Map<string, RunContext>()
+
+  private contextFor(runId: string): RunContext {
+    let context = this.runContexts.get(runId)
+    if (!context) {
+      context = { inline: false }
+      this.runContexts.set(runId, context)
+    }
+    return context
+  }
+
+  /** Drop a run's context once nothing is holding it open. */
+  private releaseContext(runId: string): void {
+    const context = this.runContexts.get(runId)
+    if (!context) return
+    if (context.inline || context.replay) return
+    this.runContexts.delete(runId)
+  }
 
   protected get logger() {
     return getSingletonServices()?.logger
@@ -520,21 +572,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Check if a run is executing inline (without queues)
    */
   protected isInline(runId: string): boolean {
-    return this.inlineRuns.has(runId)
+    return this.runContexts.get(runId)?.inline === true
   }
 
   /**
    * Register a run as inline (for graph-runner to use)
    */
   public registerInlineRun(runId: string): void {
-    this.inlineRuns.add(runId)
+    this.contextFor(runId).inline = true
   }
 
   /**
    * Unregister a run from inline tracking
    */
   public unregisterInlineRun(runId: string): void {
-    this.inlineRuns.delete(runId)
+    const context = this.runContexts.get(runId)
+    if (!context) return
+    context.inline = false
+    this.releaseContext(runId)
   }
 
   public async registerWorkflowVersions(): Promise<void> {
@@ -706,6 +761,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.safeMirror(() =>
       this.mirror!.updateRunStatus(id, status, output, error)
     )
+    if (WORKFLOW_TERMINAL_STATES.has(status)) {
+      // The run is over: release whatever this process opened for it. Queued
+      // runs never pass through the inline path that does this, so their
+      // context was held for the life of the process.
+      this.runExtension?.detachRunContext(id)
+      this.releaseContext(id)
+    }
   }
 
   protected abstract updateRunStatusImpl(
@@ -1366,7 +1428,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.runExtension?.attachRunContext(runId, workflowMeta, options)
 
     if (shouldInline) {
-      this.inlineRuns.add(runId)
+      this.registerInlineRun(runId)
       try {
         await this.runWorkflowJob(runId, rpcService)
       } catch (error: any) {
@@ -1399,7 +1461,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw error
         }
       } finally {
-        this.inlineRuns.delete(runId)
+        this.unregisterInlineRun(runId)
         this.runExtension?.detachRunContext(runId)
       }
     } else {
@@ -1441,22 +1503,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  // Per-run, per-replay ordinal counters (runId → stepName → count).
-  private stepOrdinals = new Map<string, Map<string, number>>()
-  // Previous step key reached in the current DSL walk (runId → stepName), so a
-  // new step records where it came from. Rebuilt each replay alongside ordinals.
-  private stepLineage = new Map<string, string>()
-
-  // Every step of the run as the current replay found it (runId → stepName →
-  // state). Absent when no replay is in flight, or when the backend cannot read
-  // the set in one go — either way the DSL falls back to per-step reads.
-  private stepSnapshots = new Map<string, Map<string, StepState>>()
-
-  private resetStepOrdinals(runId: string): void {
-    this.stepOrdinals.set(runId, new Map())
-    this.stepLineage.delete(runId)
-  }
-
   /**
    * Every step of a run in one read, or `null` if this backend has no bulk read.
    *
@@ -1478,19 +1524,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * steps it replays past are `succeeded` and therefore immutable.
    */
   private async beginReplay(runId: string): Promise<void> {
-    this.resetStepOrdinals(runId)
+    const context = this.contextFor(runId)
+    context.replay = { ordinals: new Map() }
     const steps = await this.listStepStates(runId)
     if (steps) {
-      this.stepSnapshots.set(
-        runId,
-        new Map(steps.map((step) => [step.stepName, step]))
+      context.replay.steps = new Map(
+        steps.map((step) => [step.stepName, step])
       )
     }
   }
 
   private endReplay(runId: string): void {
-    this.stepOrdinals.delete(runId)
-    this.stepSnapshots.delete(runId)
+    const context = this.runContexts.get(runId)
+    if (!context) return
+    context.replay = undefined
+    this.releaseContext(runId)
   }
 
   /**
@@ -1502,7 +1550,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     create: () => Promise<StepState>
   ): Promise<StepState> {
-    const snapshot = this.stepSnapshots.get(runId)
+    const snapshot = this.runContexts.get(runId)?.replay?.steps
     if (snapshot) {
       const cached = snapshot.get(stepName)
       if (cached) {
@@ -1533,9 +1581,30 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return step
   }
 
+  /**
+   * The run's immutable half — which workflow it is, the wire it was started
+   * on, its input. `getRun` is otherwise called several times per step for
+   * answers that were all fixed at creation, so a replay reads it once and
+   * hands the same object to everyone who only needs that half.
+   *
+   * Anyone who needs `status`, `output`, `error` or `state` must call `getRun`:
+   * those move while the run executes, and a cached copy would be a lie.
+   */
+  private async getRunIdentity(runId: string): Promise<WorkflowRun | null> {
+    const replay = this.runContexts.get(runId)?.replay
+    if (replay?.run) {
+      return replay.run
+    }
+    const run = await this.getRun(runId)
+    if (run && replay) {
+      replay.run = run
+    }
+    return run
+  }
+
   /** The step the DSL walk last reached (the predecessor for the next step). */
   private lastStepName(runId: string): string | undefined {
-    return this.stepLineage.get(runId)
+    return this.runContexts.get(runId)?.replay?.lastStep
   }
 
   /**
@@ -1545,16 +1614,15 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * the rows clobbering. Deterministic given a deterministic DSL body.
    */
   private nextStepKey(runId: string, logicalStepName: string): string {
-    let perRun = this.stepOrdinals.get(runId)
-    if (!perRun) {
-      perRun = new Map()
-      this.stepOrdinals.set(runId, perRun)
-    }
-    const ordinal = perRun.get(logicalStepName) ?? 0
-    perRun.set(logicalStepName, ordinal + 1)
+    const context = this.contextFor(runId)
+    const replay: NonNullable<RunContext['replay']> = (context.replay ??= {
+      ordinals: new Map(),
+    })
+    const ordinal = replay.ordinals.get(logicalStepName) ?? 0
+    replay.ordinals.set(logicalStepName, ordinal + 1)
     const stepName =
       ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
-    this.stepLineage.set(runId, stepName)
+    replay.lastStep = stepName
     return stepName
   }
 
@@ -1573,7 +1641,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     rpcService: any
   ): Promise<void> {
-    const run = await this.getRun(runId)
+    // Caches the run for the rest of this replay, so the steps it walks don't
+    // each re-read the workflow name and wire it already has.
+    const run = await this.getRunIdentity(runId)
     if (!run) {
       throw new WorkflowRunNotFoundError(runId)
     }
@@ -1915,7 +1985,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             stepState,
             rpcName,
             data,
-            rpcService
+            rpcService,
+            run
           )
         }
       }
@@ -2020,11 +2091,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepState: StepState,
     rpcName: string,
     data: any,
-    rpcService: any
+    rpcService: any,
+    knownRun?: WorkflowRun | null
   ): Promise<any> {
     // Carry the run's pikkuUserId onto the step wire so authed steps rehydrate their
     // session on the queued path too (the bare job wire lacks it; inline already has it).
-    const run = await this.getRun(runId)
+    const run = knownRun ?? (await this.getRunIdentity(runId))
     return rpcService.rpcWithWire(rpcName, data, {
       ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
       workflowStep: {

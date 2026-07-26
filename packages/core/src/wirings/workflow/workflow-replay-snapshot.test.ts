@@ -31,7 +31,7 @@ function countStepReads(ws: any) {
 
 async function seedRun(ws: any, steps: number) {
   const runId = await ws.createRun('flow', {}, true, 'hash', { type: 'test' })
-  ws.inlineRuns.add(runId)
+  ws.registerInlineRun(runId)
   await ws.beginReplay(runId)
   for (let i = 0; i < steps; i++) {
     await ws.inlineStep(runId, `step-${i}`, async () => i)

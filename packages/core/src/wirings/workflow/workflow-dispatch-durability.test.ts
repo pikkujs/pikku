@@ -58,7 +58,7 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
     // and the step transitions to `scheduled`. A real replay runs through
     // runWorkflowJob which resets the ordinal counter; simulate that so the
     // second reach resolves to the same step key, not the next ordinal.
-    ;(ws as any).resetStepOrdinals(runId)
+    await (ws as any).beginReplay(runId)
     queueUp = true
     await assert.rejects(
       (ws as any).rpcStep(runId, 'thing', 'doThing', {}, {}),

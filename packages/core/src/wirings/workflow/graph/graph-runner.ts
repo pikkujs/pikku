@@ -538,8 +538,9 @@ export async function continueGraph(
     return
   }
 
-  const run = await workflowService.getRun(runId)
-  const triggerInput = run?.input
+  // The same run read a few lines up: nothing between here and there writes it,
+  // and `input` is fixed at creation anyway.
+  const triggerInput = currentRun?.input
 
   for (const fire of plan.toFire) {
     const node = nodes[fire.logical]
