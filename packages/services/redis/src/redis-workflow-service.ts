@@ -840,7 +840,9 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return result
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const instances: Array<{
@@ -920,37 +922,50 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
+  /**
+   * Hash holding one field per state variable of a run.
+   *
+   * The whole state used to be a single JSON blob on the run hash, which made
+   * every write a read-modify-write: two parallel branches each setting their
+   * own variable would both read the blob, add their key, and write it back,
+   * so whichever wrote second silently dropped the other's variable.
+   */
+  private runStateKey(runId: string): string {
+    return `${this.keyPrefix}:run-state:${runId}`
+  }
+
   protected async updateRunStateImpl(
     runId: string,
     name: string,
     value: unknown
   ): Promise<void> {
-    const key = this.runKey(runId)
-    const now = Date.now()
-
-    // Get existing state or create empty object
-    const existingState = await this.redis.hget(key, 'state')
-    const state = existingState ? JSON.parse(existingState) : {}
-
-    // Update the specific field
-    state[name] = value
-
-    await this.redis.hmset(
-      key,
-      'state',
-      JSON.stringify(state),
+    // HSET touches only the field it is named, so concurrent writers to
+    // different variables no longer race, and nothing has to parse and
+    // re-encode the values it is not writing.
+    await this.redis.hset(
+      this.runStateKey(runId),
+      name,
+      JSON.stringify(value) ?? 'null'
+    )
+    await this.redis.hset(
+      this.runKey(runId),
       'updatedAt',
-      now.toString()
+      Date.now().toString()
     )
   }
 
   async getRunState(runId: string): Promise<Record<string, unknown>> {
-    const key = this.runKey(runId)
-    const stateStr = await this.redis.hget(key, 'state')
-    if (!stateStr) {
-      return {}
+    // The blob is what a run started before the per-key layout still holds; a
+    // field written since wins, so a run in flight across the deploy keeps
+    // everything it had.
+    const blob = await this.redis.hget(this.runKey(runId), 'state')
+    const state: Record<string, unknown> = blob ? JSON.parse(blob) : {}
+
+    const fields = await this.redis.hgetall(this.runStateKey(runId))
+    for (const [name, value] of Object.entries(fields)) {
+      state[name] = JSON.parse(value)
     }
-    return JSON.parse(stateStr)
+    return state
   }
 
   private versionKey(name: string, graphHash: string): string {
