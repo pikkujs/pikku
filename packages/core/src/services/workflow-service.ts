@@ -64,6 +64,13 @@ export interface WorkflowService {
     rpcService: any,
     options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }>
+  /**
+   * Start a run and wait for it to end.
+   *
+   * `pollIntervalMs` is the ceiling on the wait between reads of the run, not a
+   * fixed cadence: polling starts far shorter than this and widens towards it,
+   * so a run that finishes quickly is not held for a whole interval.
+   */
   runToCompletion<I>(
     name: string,
     input: I,
