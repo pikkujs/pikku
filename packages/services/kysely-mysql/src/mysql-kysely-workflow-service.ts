@@ -11,6 +11,14 @@ export class MySQLKyselyWorkflowService extends KyselyWorkflowService {
     this.lockTimeout = lockTimeout
   }
 
+  /**
+   * MySQL has `JSON_SET` but no `json()`; a JSON literal is cast instead, so
+   * the value lands as a JSON value rather than as a quoted string.
+   */
+  protected override jsonSetState(path: string, json: string) {
+    return sql<string>`JSON_SET(COALESCE(state, '{}'), ${path}, CAST(${json} AS JSON))`
+  }
+
   async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const lockName = `pikku:run:${id}`
     const timeout = this.lockTimeout

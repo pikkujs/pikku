@@ -114,12 +114,13 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         retries: step.retries ?? null,
         retryDelay: step.retryDelay?.toString() ?? null,
         fromStepName: step.fromStepName ?? null,
+        currentAttempt: 1,
         createdAt: now,
         updatedAt: now,
       })
       .execute()
 
-    await this.insertHistoryRecord(step.stepId, step.status)
+    await this.insertHistoryRecord(step.stepId, step.status, 1)
   }
 
   async setStepRunning(stepId: string): Promise<void> {
@@ -178,17 +179,25 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
     failedStepId: string,
     newStep: StepState & { stepName: string }
   ): Promise<void> {
+    const previous = await this.db
+      .selectFrom('workflowStep')
+      .select('currentAttempt')
+      .where('workflowStepId', '=', failedStepId)
+      .executeTakeFirst()
+    const attempt = (previous?.currentAttempt ?? 0) + 1
+
     await this.db
       .updateTable('workflowStep')
       .set({
         status: newStep.status,
         result: null,
         error: null,
+        currentAttempt: attempt,
         updatedAt: new Date(),
       })
       .where('workflowStepId', '=', failedStepId)
       .execute()
-    await this.insertHistoryRecord(failedStepId, newStep.status)
+    await this.insertHistoryRecord(failedStepId, newStep.status, attempt)
   }
 
   async setBranchTaken(stepId: string, branchKey: string): Promise<void> {
@@ -274,6 +283,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
   private async insertHistoryRecord(
     stepId: string,
     status: string,
+    attempt: number,
     resultJson?: string | null,
     errorJson?: string | null
   ): Promise<void> {
@@ -282,6 +292,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
       historyId: crypto.randomUUID(),
       workflowStepId: stepId,
       status,
+      attempt,
       result: resultJson ?? null,
       error: errorJson ?? null,
       createdAt: now,
@@ -309,27 +320,40 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
     resultJson?: string,
     errorJson?: string
   ): Promise<void> {
-    const latest = await this.db
-      .selectFrom('workflowStepHistory')
-      .select('historyId')
+    const update: Record<string, any> = { status }
+    if (resultJson !== undefined) update.result = resultJson
+    if (errorJson !== undefined) update.error = errorJson
+    const tsField = timestampFieldFor(status)
+    if (tsField) update[tsField] = new Date()
+
+    const result = await this.db
+      .updateTable('workflowStepHistory')
+      .set(update)
       .where('workflowStepId', '=', stepId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
+      // Correlate through the step row rather than sorting this table by
+      // createdAt: two attempts can land in the same millisecond, and the
+      // step row already knows which attempt is current.
+      .where('attempt', '=', (eb) =>
+        eb
+          .selectFrom('workflowStep')
+          .select('currentAttempt')
+          .where('workflowStepId', '=', stepId)
+      )
       .executeTakeFirst()
 
-    if (latest) {
-      const update: Record<string, any> = { status }
-      if (resultJson !== undefined) update.result = resultJson
-      if (errorJson !== undefined) update.error = errorJson
-      const tsField = timestampFieldFor(status)
-      if (tsField) update[tsField] = new Date()
-      await this.db
-        .updateTable('workflowStepHistory')
-        .set(update)
-        .where('historyId', '=', latest.historyId)
-        .execute()
-    } else {
-      await this.insertHistoryRecord(stepId, status, resultJson, errorJson)
+    if (Number(result?.numUpdatedRows ?? 0n) === 0) {
+      const step = await this.db
+        .selectFrom('workflowStep')
+        .select('currentAttempt')
+        .where('workflowStepId', '=', stepId)
+        .executeTakeFirst()
+      await this.insertHistoryRecord(
+        stepId,
+        status,
+        step?.currentAttempt ?? 1,
+        resultJson,
+        errorJson
+      )
     }
   }
 }

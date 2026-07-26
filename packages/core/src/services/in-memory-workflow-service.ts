@@ -456,6 +456,18 @@ export class InMemoryWorkflowService
     return nodeIds.filter((id) => !existingSteps.has(id))
   }
 
+  protected override async listStepStates(
+    runId: string
+  ): Promise<Array<StepState & { stepName: string }>> {
+    const prefix = `${runId}:`
+    const steps: Array<StepState & { stepName: string }> = []
+    for (const [key, step] of this.steps.entries()) {
+      if (!key.startsWith(prefix)) continue
+      steps.push({ ...step, stepName: key.substring(prefix.length) })
+    }
+    return steps
+  }
+
   async getStepInstances(
     runId: string
   ): Promise<
