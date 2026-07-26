@@ -15,6 +15,7 @@ import type {
   SwitchCaseMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
+  ScenarioStepMeta,
   InputSource,
   OutputBinding,
   Condition,
@@ -24,6 +25,9 @@ import type {
 import {
   isWorkflowDoCall,
   isWorkflowExpectEventuallyCall,
+  isScenarioStepCall,
+  getScenarioStepPhase,
+  DYNAMIC_SCENARIO_STEP_TARGET,
   extractActorFromOptions,
   isWorkflowSleepCall,
   isWorkflowSuspendCall,
@@ -60,7 +64,7 @@ interface ExtractionContext {
   outputVars: Map<string, { type: ts.Type; node: ts.Node }>
   arrayVars: Set<string>
   conditionalVars: Set<string>
-  inputParamName: string
+  inputParamName: string | null
   errors: ValidationError[]
   /** Loop variables in scope (for fanout item variables) */
   loopVars: Set<string>
@@ -101,7 +105,7 @@ export function extractDSLWorkflow(
 
     // Extract input parameter name (second parameter)
     const inputParamName = extractInputParamName(arrowFunc)
-    if (!inputParamName) {
+    if (inputParamName === undefined) {
       return {
         status: 'error',
         reason: 'Could not determine input parameter name',
@@ -220,9 +224,17 @@ function findWorkflowFunction(node: ts.Node): ts.ArrowFunction | null {
 }
 
 /**
- * Extract the input parameter name from the arrow function
+ * Extract the input parameter name from the arrow function.
+ *
+ * Returns `null` when no input parameter is declared at all. That is
+ * legitimate — a workflow may ignore its input — and nothing in the body can
+ * reference it, so every name comparison against `null` correctly fails.
+ * Returns `undefined` when an input parameter is declared but is not a plain
+ * identifier (destructured), which the extractor cannot track by name.
  */
-function extractInputParamName(arrowFunc: ts.ArrowFunction): string | null {
+function extractInputParamName(
+  arrowFunc: ts.ArrowFunction
+): string | null | undefined {
   if (arrowFunc.parameters.length < 2) {
     return null
   }
@@ -232,7 +244,7 @@ function extractInputParamName(arrowFunc: ts.ArrowFunction): string | null {
     return secondParam.name.text
   }
 
-  return null
+  return undefined
 }
 
 /**
@@ -298,7 +310,27 @@ function extractStep(
 
   // For-of statement (sequential fanout)
   if (ts.isForOfStatement(statement)) {
-    return extractSequentialFanout(statement, context)
+    const fanout = extractSequentialFanout(statement, context)
+    if (!fanout) {
+      // A for-of the DSL can't model as a sequential fanout (its iterable is not
+      // a data-array identifier/field — e.g. a counting loop
+      // `for (const i of [...Array(N).keys()])`). Silently returning null here
+      // used to drop the loop AND every `workflow.do` inside it, so the workflow
+      // serialized with zero steps and its step functions were never registered
+      // (→ runtime "Function not found"). Fail loudly instead: pikkuWorkflowFunc
+      // reports INVALID_DSL_WORKFLOW; pikkuWorkflowComplexFunc falls back to the
+      // basic AST walk (which DOES register loop-invoked functions), so a genuine
+      // control-flow loop belongs in a complex workflow.
+      context.errors.push({
+        message:
+          `The for-of loop '${statement.getText().slice(0, 60)}' can't be expressed in a DSL workflow — ` +
+          `its iterable must be a data array (an identifier or field like 'data.items'), not a computed/inline ` +
+          `iterable such as '[...Array(n).keys()]'. Use pikkuWorkflowComplexFunc for a control-flow/counting loop, ` +
+          `or iterate over a real input array.`,
+        node: statement,
+      })
+    }
+    return fanout
   }
 
   // Return statement
@@ -363,10 +395,12 @@ function extractVariableDeclaration(
   // Check for await workflow.do(...)
   if (ts.isAwaitExpression(init) && ts.isCallExpression(init.expression)) {
     const call = init.expression
-    if (isWorkflowDoCall(call, context.checker)) {
-      const step = isInlineDoCall(call)
-        ? extractInlineStep(call, context)
-        : extractRpcStep(call, context, varName)
+    if (isWorkflowDoCall(call, context.checker) || isScenarioStepCall(call)) {
+      const step = isScenarioStepCall(call)
+        ? extractScenarioStep(call, context, varName)
+        : isInlineDoCall(call)
+          ? extractInlineStep(call, context)
+          : extractRpcStep(call, context, varName)
       if (step) {
         // Track output variable
         const type = context.checker.getTypeAtLocation(decl)
@@ -584,10 +618,12 @@ function extractExpressionStatement(
   if (ts.isAwaitExpression(expr) && ts.isCallExpression(expr.expression)) {
     const call = expr.expression
 
-    if (isWorkflowDoCall(call, context.checker)) {
-      const step = isInlineDoCall(call)
-        ? extractInlineStep(call, context)
-        : extractRpcStep(call, context, outputVar)
+    if (isWorkflowDoCall(call, context.checker) || isScenarioStepCall(call)) {
+      const step = isScenarioStepCall(call)
+        ? extractScenarioStep(call, context, outputVar)
+        : isInlineDoCall(call)
+          ? extractInlineStep(call, context)
+          : extractRpcStep(call, context, outputVar)
 
       // Track output variable if this is an assignment
       if (outputVar && step) {
@@ -686,6 +722,68 @@ function extractRpcStep(
   } catch (error) {
     context.errors.push({
       message: `Failed to extract RPC step: ${error instanceof Error ? error.message : String(error)}`,
+      node: call,
+    })
+    return null
+  }
+}
+
+/**
+ * Extract a scenario step from scenario.step/given/when/then(stepName,
+ * stepFunc, data?, options?).
+ *
+ * The step target must be a static string literal so it can be bundled, typed
+ * and drawn. When it isn't, the step is still recorded — with a `<dynamic>`
+ * target — so post-processing can raise PKU678 rather than the call silently
+ * vanishing from the graph.
+ */
+function extractScenarioStep(
+  call: ts.CallExpression,
+  context: ExtractionContext,
+  outputVar?: string
+): ScenarioStepMeta | null {
+  const phase = getScenarioStepPhase(call)
+  if (!phase) {
+    return null
+  }
+
+  const args = call.arguments
+  if (args.length < 2) {
+    return null
+  }
+
+  try {
+    const stepName = extractStringLiteral(args[0], context.checker)
+
+    let stepFunc = DYNAMIC_SCENARIO_STEP_TARGET
+    try {
+      stepFunc = extractStringLiteral(args[1], context.checker)
+    } catch {
+      // Left as '<dynamic>' — validated in post-processing (PKU678).
+    }
+
+    const inputs =
+      args.length >= 3 ? extractInputSources(args[2], context) : undefined
+
+    const optionsArg = args.length >= 4 ? args[3] : undefined
+    const options =
+      optionsArg && ts.isObjectLiteralExpression(optionsArg)
+        ? extractStepOptions(optionsArg, context)
+        : undefined
+
+    return {
+      type: 'scenarioStep',
+      stepName,
+      stepFunc,
+      phase,
+      outputVar,
+      inputs,
+      options,
+      actor: extractActorFromOptions(optionsArg),
+    }
+  } catch (error) {
+    context.errors.push({
+      message: `Failed to extract scenario step: ${error instanceof Error ? error.message : String(error)}`,
       node: call,
     })
     return null
@@ -1225,7 +1323,7 @@ function extractArrayPredicate(
 function extractFanoutBodyStep(
   stmt: ts.Statement,
   childContext: ExtractionContext,
-  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta>
+  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta | ScenarioStepMeta>
 ): void {
   if (ts.isVariableStatement(stmt)) {
     const declList = stmt.declarationList
@@ -1242,11 +1340,16 @@ function extractFanoutBodyStep(
       return
     }
     const call = init.expression
-    if (!isWorkflowDoCall(call, childContext.checker)) {
+    if (
+      !isWorkflowDoCall(call, childContext.checker) &&
+      !isScenarioStepCall(call)
+    ) {
       return
     }
     const varName = ts.isIdentifier(decl.name) ? decl.name.text : undefined
-    const step = extractRpcStep(call, childContext, varName)
+    const step = isScenarioStepCall(call)
+      ? extractScenarioStep(call, childContext, varName)
+      : extractRpcStep(call, childContext, varName)
     if (!step) {
       return
     }
@@ -1287,6 +1390,13 @@ function extractFanoutBodyStep(
       const suspendStep = extractSuspendStep(call, childContext)
       if (suspendStep && suspendStep.type === 'suspend') {
         body.push(suspendStep)
+      }
+      return
+    }
+    if (isScenarioStepCall(call)) {
+      const scenarioStep = extractScenarioStep(call, childContext)
+      if (scenarioStep) {
+        body.push(scenarioStep)
       }
       return
     }
@@ -1363,7 +1473,12 @@ function extractParallelFanout(
         ? expr
         : null
 
-    if (doCall && isWorkflowDoCall(doCall, context.checker)) {
+    if (doCall && isScenarioStepCall(doCall)) {
+      const step = extractScenarioStep(doCall, childContext)
+      if (step) {
+        body.push(step)
+      }
+    } else if (doCall && isWorkflowDoCall(doCall, context.checker)) {
       const step = extractRpcStep(doCall, childContext)
       if (step) {
         body.push(step)
@@ -1396,10 +1511,18 @@ function extractParallelGroup(
     return null
   }
 
-  const children: RpcStepMeta[] = []
+  const children: Array<RpcStepMeta | ScenarioStepMeta> = []
 
   for (const elem of arrayArg.elements) {
-    if (ts.isCallExpression(elem) && isWorkflowDoCall(elem, context.checker)) {
+    if (!ts.isCallExpression(elem)) {
+      continue
+    }
+    if (isScenarioStepCall(elem)) {
+      const step = extractScenarioStep(elem, context)
+      if (step) {
+        children.push(step)
+      }
+    } else if (isWorkflowDoCall(elem, context.checker)) {
       const step = extractRpcStep(elem, context)
       if (step) {
         children.push(step)
