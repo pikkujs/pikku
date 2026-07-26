@@ -38,6 +38,8 @@ export {
   pikkuSchemas,
   applyPikkuSchemas,
   compilePikkuSchemas,
+  ensurePikkuSchema,
+  type EnsureOutcome,
   resolveRequirements,
   unsatisfiedRequirements,
   rawStatement,

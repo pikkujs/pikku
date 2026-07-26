@@ -18,4 +18,8 @@ Three further disagreements the single declaration settled:
 - `workflowRuns`, `workflowStep` and `workflowStepHistory` defaulted their primary keys to `sql.raw("'" + crypto.randomUUID() + "'")`, evaluated once when the statement was built — one shared default for every row, not a generator. Dropped; the services supply the id.
 - `workflowStep.fromStepName` was backfilled by an `alterTable(...).execute().catch(() => {})` bolted on after the fact. It is part of the declaration.
 
-The services still create their tables in `init()`; this release only adds the declaration they will be derived from.
+Every service's `init()` now goes through `ensurePikkuSchema`, which looks before it creates: all the tables present is a no-op, none present creates them from the declaration, and some present throws rather than filling in the rest. That last case is the point. `.ifNotExists()` turned every failure into a silent success — it is why nobody noticed the `user_id` type had been rejected on postgres since the day it was written — and a schema half-owned by a migration and half by a boot-time create is the condition all of this exists to end. Around 615 lines of duplicated DDL went with it.
+
+Creating at boot is now the fallback rather than the intent: run `pikku db generate` and `init()` takes the `present` path and issues no DDL at all.
+
+`KyselyPikkuDB` stays hand-written, because it carries what introspection cannot recover — `WorkflowStatus` rather than `string`, `Generated<Date>` rather than `Date`. A test materializes the declaration and asserts the two agree on every table and column, which is the drift protection generating it would have bought. It found one on its first run: `ai_run.pending_approvals` was in the DDL and in `KyselyAIRunStateService`, but not in `AIRunTable` — the reason that service read it back through `as any`. Declared, and the casts are gone.

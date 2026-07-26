@@ -16,8 +16,10 @@ import {
   pikkuSchemas,
   compilePikkuSchemas,
   applyPikkuSchemas,
+  ensurePikkuSchema,
   unsatisfiedRequirements,
 } from './index.js'
+import { workflowSchema } from './workflow.schema.js'
 
 const dialect = (kind: 'postgres' | 'sqlite') =>
   kind === 'postgres'
@@ -183,6 +185,56 @@ describe('pikku runtime schema — prerequisites', () => {
       )
       assert.ok(created.has('workflow_runs'))
       assert.equal(created.has('pikku_user_role'), false)
+    } finally {
+      await db.destroy()
+    }
+  })
+})
+
+describe('ensurePikkuSchema — what a service does at boot', () => {
+  const memoryDb = () =>
+    new Kysely<any>({
+      dialect: new SqliteDialect({ database: new Database(':memory:') }),
+    })
+
+  test('creates the tables the first time and finds them the second', async () => {
+    const db = memoryDb()
+    try {
+      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'created')
+      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+    } finally {
+      await db.destroy()
+    }
+  })
+
+  test('two services declaring the same schema do not fight over it', async () => {
+    // The workflow service and the workflow mirror both own these tables, and
+    // both call init(). Whoever runs second must find them and stop, rather
+    // than issuing DDL the database will reject.
+    const db = memoryDb()
+    try {
+      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'created')
+      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+    } finally {
+      await db.destroy()
+    }
+  })
+
+  test('refuses a half-applied schema rather than filling in the rest', async () => {
+    // Something else already owns part of it — a migration, an older release,
+    // a hand-run script. Creating the remainder at boot leaves two authorities
+    // over one set of tables, which is the condition all of this exists to end.
+    const db = memoryDb()
+    try {
+      await db.schema
+        .createTable('workflow_runs')
+        .addColumn('workflow_run_id', 'text', (col) => col.primaryKey())
+        .execute()
+
+      await assert.rejects(
+        ensurePikkuSchema(db, workflowSchema),
+        /The 'workflow' schema is half applied/
+      )
     } finally {
       await db.destroy()
     }

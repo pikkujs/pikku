@@ -27,6 +27,13 @@ export class PostgresMigrationExecutor implements MigrationExecutor {
     return rows
   }
 
+  async recordMigration(name: string, hash: string): Promise<void> {
+    await this.client.query(
+      `INSERT INTO ${TRACKING_TABLE} (name, hash) VALUES ($1, $2)`,
+      [name, hash]
+    )
+  }
+
   async runMigration(sql: string, name: string, hash: string): Promise<void> {
     await this.client.query('BEGIN')
     try {

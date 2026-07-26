@@ -143,6 +143,83 @@ export const applyPikkuSchemas = async (
 }
 
 /**
+ * The tables a schema creates, read back out of its own compiled SQL.
+ *
+ * Derived rather than declared alongside the statements, because a hand-kept
+ * list of names is a second source of truth: rename a table in a statement and
+ * the list keeps answering for the old one.
+ */
+const declaredTables = (schema: PikkuSchema, db: Kysely<any>): string[] => {
+  const bound = bind(db)
+  const tables: string[] = []
+  for (const statement of schema.statements) {
+    const match = /^\s*create table "([^"]+)"/i.exec(
+      statement(bound, {}).compile().sql
+    )
+    if (match) tables.push(match[1]!)
+  }
+  return tables
+}
+
+/** What `ensurePikkuSchema` found when it looked. */
+export type EnsureOutcome = 'present' | 'created'
+
+const tablesOf = async (db: Kysely<any>): Promise<Set<string>> =>
+  new Set((await bind(db).introspection.getTables()).map((table) => table.name))
+
+/**
+ * Make sure one schema's tables are there, creating them only if none are.
+ *
+ * What a service calls at boot. It looks before it creates, which is the whole
+ * difference from the `.ifNotExists()` DDL this replaces: that spelling turned
+ * every failure into a silent no-op, and hid a foreign key onto `user.id` that
+ * postgres had been rejecting since the day it was written.
+ *
+ * A partially-present schema is refused rather than completed. Half a schema
+ * means something else already applied part of it — a migration, an older
+ * version, a hand-run script — and creating the remainder at boot would leave
+ * two authorities over one set of tables, which is the condition all of this
+ * exists to end.
+ *
+ * Creating at boot is the fallback, not the intent. `pikku db generate` writes
+ * the declaration down as a migration; a project that has done so takes the
+ * `present` path and this never issues DDL at all.
+ */
+export const ensurePikkuSchema = async (
+  db: Kysely<any>,
+  schema: PikkuSchema
+): Promise<EnsureOutcome> => {
+  const existing = await tablesOf(db)
+  const declared = declaredTables(schema, db)
+  const missing = declared.filter((table) => !existing.has(table))
+
+  if (missing.length === 0) return 'present'
+
+  if (missing.length < declared.length) {
+    throw new Error(
+      `The '${schema.name}' schema is half applied: ${missing.join(', ')} missing, ` +
+        `${declared.filter((table) => existing.has(table)).join(', ')} already there. ` +
+        'Something else owns part of it. Reconcile it with a migration — ' +
+        '`pikku db generate` writes the declaration down — rather than creating the rest at boot.'
+    )
+  }
+
+  try {
+    await applyPikkuSchemas(db, [schema])
+    return 'created'
+  } catch (error) {
+    // Two instances booting cold against one database can both see it empty
+    // before either has finished creating. If the other one got there, say so;
+    // anything else is a real failure and still throws. This is a courtesy, not
+    // a guarantee — a boot race is only fully answered by having run the
+    // migration, which is what `pikku db generate` is for.
+    const after = await tablesOf(db)
+    if (declared.every((table) => after.has(table))) return 'present'
+    throw error
+  }
+}
+
+/**
  * Render the declaration as SQL for the dialect `db` was built with.
  *
  * `types` comes from `resolveRequirements` against the database the migration

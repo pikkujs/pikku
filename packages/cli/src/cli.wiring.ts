@@ -20,6 +20,8 @@ import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbCodegen } from './functions/commands/db-codegen.js'
 import { dbCheck } from './functions/commands/db-check.js'
+import { dbBaseline } from './functions/commands/db-baseline.js'
+import { dbExport } from './functions/commands/db-export.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
@@ -395,10 +397,20 @@ wireCLI({
           description:
             'Report how the configured database differs from the schema its migrations define',
         }),
+        baseline: pikkuCLICommand({
+          func: dbBaseline,
+          description:
+            'Record pending migrations as applied, for a database that already has what they describe',
+        }),
         codegen: pikkuCLICommand({
           func: dbCodegen,
           description:
             'Regenerate db/schema.gen.ts and db/zod.gen.ts from the migration files, without connecting to a database',
+        }),
+        export: pikkuCLICommand({
+          func: dbExport,
+          description:
+            "Publish this package's schema so projects consuming it as an addon can create its tables",
         }),
         seed: pikkuCLICommand({
           func: dbSeed,

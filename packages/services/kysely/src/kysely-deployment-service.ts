@@ -7,8 +7,9 @@ import type {
 import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
+import { ensurePikkuSchema } from './schema/index.js'
+import { deploymentSchema } from './schema/deployment.schema.js'
 
 export class KyselyDeploymentService implements DeploymentService {
   private initialized = false
@@ -28,55 +29,8 @@ export class KyselyDeploymentService implements DeploymentService {
   }
 
   public async init(): Promise<void> {
-    if (this.initialized) {
-      return
-    }
-
-    await this.db.schema
-      .createTable('pikku_deployments')
-      .ifNotExists()
-      .addColumn('deployment_id', 'text', (col) => col.primaryKey())
-      .addColumn('endpoint', 'text', (col) => col.notNull())
-      .addColumn('last_heartbeat', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
-    await this.db.schema
-      .createTable('pikku_deployment_functions')
-      .ifNotExists()
-      .addColumn('deployment_id', 'text', (col) =>
-        col
-          .notNull()
-          .references('pikku_deployments.deployment_id')
-          .onDelete('cascade')
-      )
-      .addColumn('function_name', 'text', (col) => col.notNull())
-      .addPrimaryKeyConstraint('pikku_deployment_functions_pk', [
-        'deployment_id',
-        'function_name',
-      ])
-      .execute()
-
-    await this.createIndexSafe(
-      this.db.schema
-        .createIndex('idx_pikku_deployments_heartbeat')
-        .ifNotExists()
-        .on('pikku_deployments')
-        .column('last_heartbeat')
-    )
-
-    await this.createIndexSafe(
-      this.db.schema
-        .createIndex('idx_pikku_deployment_functions_name')
-        .ifNotExists()
-        .on('pikku_deployment_functions')
-        .column('function_name')
-    )
-
+    if (this.initialized) return
+    await ensurePikkuSchema(this.db, deploymentSchema)
     this.initialized = true
   }
 
@@ -190,19 +144,6 @@ export class KyselyDeploymentService implements DeploymentService {
     }
 
     return response.json()
-  }
-
-  private async createIndexSafe(builder: {
-    execute(): Promise<void>
-  }): Promise<void> {
-    try {
-      await builder.execute()
-    } catch (e: any) {
-      if (e?.code === 'ER_DUP_KEYNAME' || e?.errno === 1061) return
-      if (e?.code === '42P07') return
-      if (e?.message?.includes('already exists')) return
-      throw e
-    }
   }
 
   private async sendHeartbeat(): Promise<void> {

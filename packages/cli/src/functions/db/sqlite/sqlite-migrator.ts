@@ -24,6 +24,12 @@ export class SqliteMigrationExecutor implements MigrationExecutor {
       .all() as unknown as AppliedMigration[]
   }
 
+  async recordMigration(name: string, hash: string): Promise<void> {
+    this.db
+      .prepare(`INSERT INTO ${TRACKING_TABLE} (name, hash) VALUES (?, ?)`)
+      .run(name, hash)
+  }
+
   async runMigration(sql: string, name: string, hash: string): Promise<void> {
     this.db.exec('BEGIN')
     try {
