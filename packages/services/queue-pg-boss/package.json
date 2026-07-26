@@ -1,6 +1,7 @@
 {
   "name": "@pikku/queue-pg-boss",
   "version": "0.12.8",
+  "description": "pg-boss queue, worker and scheduler services for Pikku, backed by Postgres",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

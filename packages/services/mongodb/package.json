@@ -1,6 +1,7 @@
 {
   "name": "@pikku/mongodb",
   "version": "0.12.11",
+  "description": "MongoDB services for Pikku — workflow state, agent runs, secrets and channel stores",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",

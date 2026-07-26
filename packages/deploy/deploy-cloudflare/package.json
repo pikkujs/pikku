@@ -1,6 +1,7 @@
 {
   "name": "@pikku/deploy-cloudflare",
   "version": "0.12.8",
+  "description": "Cloudflare deploy adapter for Pikku — typed REST client for Workers, Queues, D1, R2, secrets and cron",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

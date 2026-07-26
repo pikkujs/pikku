@@ -2,7 +2,7 @@
  * This module provides a wrapper around the Websocket API that integrates with the Pikku framework.
  * It includes types for Channels.
  *
- * @module @pikku/ws
+ * @module @pikku/websocket
  */
 
 export { CorePikkuWebsocket } from './core-pikku-websocket.js'

@@ -1,6 +1,7 @@
 {
   "name": "@pikku/schedule",
   "version": "0.12.4",
+  "description": "In-memory scheduler service for Pikku cron wirings",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

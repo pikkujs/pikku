@@ -1,6 +1,7 @@
 {
   "name": "@pikku/addon-console",
   "version": "0.12.31",
+  "description": "Console addon for Pikku — functions powering the Pikku Console UI",
   "type": "module",
   "imports": {
     "#pikku": {

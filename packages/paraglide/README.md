@@ -14,7 +14,7 @@ generates a static, exhaustive lookup map from them:
 {
   "enum__health__idle": "Idle",
   "enum__health__backlogged": "Backlogged",
-  "enum__health__flowing": "Flowing"
+  "enum__health__flowing": "Flowing",
 }
 ```
 
@@ -94,7 +94,10 @@ import { paraglideEnums } from '@pikku/paraglide/vite'
 
 export default defineConfig({
   plugins: [
-    paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+    }),
     paraglideEnums({
       catalog: './messages/en.json',
       outFile: './src/i18n/i18n-enum.gen.ts',

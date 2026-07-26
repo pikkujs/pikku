@@ -1,6 +1,7 @@
 {
   "name": "@pikku/browser",
   "version": "0.12.44",
+  "description": "Browser automation service for Pikku, backed by puppeteer-core",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

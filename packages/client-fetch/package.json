@@ -1,6 +1,7 @@
 {
   "name": "@pikku/fetch",
   "version": "0.12.8",
+  "description": "Type-safe fetch client for Pikku, generated from your HTTP wirings",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
