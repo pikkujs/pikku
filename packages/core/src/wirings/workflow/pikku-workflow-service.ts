@@ -348,6 +348,19 @@ const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'cancelled',
 ])
 
+/** First wait when polling a run, before the backoff starts widening it. */
+const WORKFLOW_POLL_MIN_MS = 10
+
+/** How much each successive wait grows, up to the caller's ceiling. */
+const WORKFLOW_POLL_FACTOR = 1.6
+
+/**
+ * Ceiling for the wait on an inline sub-workflow. Lower than a top-level run's
+ * default, because the parent step is blocked on it and every wait here is
+ * added latency in the middle of a workflow rather than at its edge.
+ */
+const WORKFLOW_CHILD_POLL_MAX_MS = 500
+
 /**
  * Abstract workflow state service
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
@@ -1487,7 +1500,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: any,
     options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
   ): Promise<any> {
-    const pollInterval = options?.pollIntervalMs ?? 1000
     const { runId } = await this.startWorkflow(
       name,
       input,
@@ -1495,21 +1507,40 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       rpcService,
       { inline: true }
     )
+    const run = await this.awaitRunEnd(runId, options?.pollIntervalMs ?? 1000)
+    if (run.status === 'failed') {
+      throw new WorkflowRunFailedError(run.error?.message)
+    }
+    if (run.status === 'cancelled') {
+      throw new WorkflowRunCancelledError()
+    }
+    return run.output
+  }
+
+  /**
+   * Read a run until it reaches an end state, backing off as it drags on.
+   *
+   * A fixed interval is wrong at both ends: it makes a workflow that finished
+   * in milliseconds wait out the whole interval anyway, and it keeps reading a
+   * long-running one at full rate for as long as it lasts. Starting short and
+   * growing to `maxIntervalMs` returns quick runs promptly while a slow run's
+   * read cost grows logarithmically rather than linearly with its duration.
+   */
+  protected async awaitRunEnd(
+    runId: string,
+    maxIntervalMs: number
+  ): Promise<WorkflowRun> {
+    let interval = Math.min(WORKFLOW_POLL_MIN_MS, maxIntervalMs)
     while (true) {
       const run = await this.getRun(runId)
       if (!run) {
         throw new WorkflowRunNotFoundError(runId)
       }
       if (WORKFLOW_END_STATES.has(run.status)) {
-        if (run.status === 'failed') {
-          throw new WorkflowRunFailedError(run.error?.message)
-        }
-        if (run.status === 'cancelled') {
-          throw new WorkflowRunCancelledError()
-        }
-        return run.output
+        return run
       }
-      await new Promise((resolve) => setTimeout(resolve, pollInterval))
+      await new Promise((resolve) => setTimeout(resolve, interval))
+      interval = Math.min(interval * WORKFLOW_POLL_FACTOR, maxIntervalMs)
     }
   }
 
@@ -2317,24 +2348,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           )
           await this.setStepChildRunId(currentStepState.stepId, childRunId)
           // Poll until child workflow completes
-          while (true) {
-            const childRun = await this.getRun(childRunId)
-            if (!childRun) {
-              throw new WorkflowRunNotFoundError(childRunId)
-            }
-            if (WORKFLOW_END_STATES.has(childRun.status)) {
-              if (childRun.status === 'failed') {
-                throw new Error(
-                  childRun.error?.message || 'Sub-workflow failed'
-                )
-              }
-              if (childRun.status === 'cancelled') {
-                throw new Error('Sub-workflow was cancelled')
-              }
-              return childRun.output
-            }
-            await new Promise((resolve) => setTimeout(resolve, 500))
+          const childRun = await this.awaitRunEnd(
+            childRunId,
+            WORKFLOW_CHILD_POLL_MAX_MS
+          )
+          if (childRun.status === 'failed') {
+            throw new Error(childRun.error?.message || 'Sub-workflow failed')
           }
+          if (childRun.status === 'cancelled') {
+            throw new Error('Sub-workflow was cancelled')
+          }
+          return childRun.output
         }
         return this.invokeStepRpc(
           runId,
