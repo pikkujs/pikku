@@ -146,6 +146,40 @@ describe('DSL extraction — constructs that must not be silently dropped', () =
     )
   })
 
+  test('a counting for-of (Array(n).keys()) hard-errors instead of silently dropping its step', async () => {
+    const { invoked, steps, diags } = await inspectWorkflow(
+      [
+        '  for (const i of [...Array(3).keys()]) {',
+        "    await workflow.do(`poll #${i}`, 'rpcA', {})",
+        '  }',
+        '  return { ok: true }',
+      ].join('\n')
+    )
+
+    // The DSL extractor can't model a computed/counting iterable, so it must
+    // FAIL LOUDLY (INVALID_DSL_WORKFLOW), not swallow the loop and every
+    // workflow.do inside it — the silent drop is exactly what stranded
+    // checkSandboxHostCapacity out of invokedFunctions and bricked prod.
+    assert.ok(
+      diags.length > 0,
+      'a counting for-of must raise a diagnostic, not vanish silently'
+    )
+    assert.ok(
+      diags.some((d) => /for-of/i.test(d)),
+      `the diagnostic must name the offending for-of, got: ${JSON.stringify(diags)}`
+    )
+    // And it must NOT have quietly produced a fanout with zero body steps.
+    assert.ok(
+      !invoked.includes('rpcA') || diags.length > 0,
+      'if rpcA was dropped the user must be told'
+    )
+    const fanout = steps.find((s) => s.type === 'fanout')
+    assert.ok(
+      !fanout,
+      'a counting loop must not serialize as a fanout — it is not a data-array fanout'
+    )
+  })
+
   test('a brace-less for-of body is still extracted as a sequential fanout', async () => {
     const { invoked, steps } = await inspectWorkflow(
       [
