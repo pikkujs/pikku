@@ -1,6 +1,7 @@
 {
   "name": "@pikku/core",
   "version": "0.12.69",
+  "description": "The Pikku runtime — functions, wirings, services, middleware and types",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

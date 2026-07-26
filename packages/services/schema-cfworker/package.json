@@ -1,7 +1,7 @@
 {
   "name": "@pikku/schema-cfworker",
   "version": "0.12.5",
-  "description": "The pikku schema cfworker-json-schema package",
+  "description": "JSON schema validation for Pikku, backed by @cfworker/json-schema (Workers-compatible)",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

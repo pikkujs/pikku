@@ -1,6 +1,7 @@
 {
   "name": "@pikku/ai-voice",
   "version": "0.12.3",
+  "description": "DEPRECATED: use @pikku/core/ai-agent with an aiAgentRunner such as @pikku/ai-vercel",
   "deprecated": "voiceInput and voiceOutput moved to @pikku/core/ai-agent, and the speech/transcription service interfaces live in @pikku/core.",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

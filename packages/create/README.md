@@ -1,4 +1,4 @@
-# @pikku/create
+# create-pikku
 
 A CLI tool for generating new Pikku projects from templates.
 
@@ -9,10 +9,10 @@ A CLI tool for generating new Pikku projects from templates.
 npm create pikku@latest
 
 # Using npx
-npx @pikku/create
+npx create-pikku
 
 # Install globally
-npm install -g @pikku/create
+npm install -g create-pikku
 ```
 
 ## Usage

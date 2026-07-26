@@ -1,6 +1,7 @@
 {
   "name": "@pikku/ai-vercel",
   "version": "0.12.8",
+  "description": "Vercel AI SDK agent runner for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

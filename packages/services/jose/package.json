@@ -1,6 +1,7 @@
 {
   "name": "@pikku/jose",
   "version": "0.12.4",
+  "description": "JWT service for Pikku, backed by jose",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

@@ -1,6 +1,7 @@
 {
   "name": "pikku",
   "version": "0.12.2",
+  "description": "Pikku meta-package — core plus sensible default services (jose, ajv)",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",

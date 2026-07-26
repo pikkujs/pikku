@@ -1,7 +1,7 @@
 {
   "name": "@pikku/schema-ajv",
   "version": "0.12.5",
-  "description": "The pikku schema ajv package",
+  "description": "JSON schema validation for Pikku, backed by Ajv",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

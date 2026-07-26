@@ -1,6 +1,7 @@
 {
   "name": "@pikku/queue-bullmq",
   "version": "0.12.5",
+  "description": "BullMQ queue, worker and scheduler services for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

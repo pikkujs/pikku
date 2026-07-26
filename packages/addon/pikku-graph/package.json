@@ -1,6 +1,7 @@
 {
   "name": "@pikku/addon-graph",
   "version": "0.12.6",
+  "description": "Graph addon for Pikku — built-in graph:* primitives for workflow graphs",
   "type": "module",
   "imports": {
     "#pikku": {
