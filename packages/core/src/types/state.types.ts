@@ -40,6 +40,7 @@ import type {
 } from '../wirings/scheduler/scheduler.types.js'
 import type {
   CoreWorkflow,
+  CoreFeature,
   WorkflowsRuntimeMeta,
 } from '../wirings/workflow/workflow.types.js'
 import type {
@@ -129,6 +130,8 @@ export interface PikkuPackageState {
   }
   workflows: {
     registrations: Map<string, CoreWorkflow>
+    /** Scenario groups declared with `pikkuFeature`, keyed by export name. */
+    features: Map<string, CoreFeature>
     meta: WorkflowsRuntimeMeta
   }
   trigger: {

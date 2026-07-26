@@ -16,6 +16,8 @@ import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import type { WorkflowStepMeta } from '@pikku/core/workflow'
+import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
 
 /**
  * Stamp the inspected authorize/callbacks service set onto the generated auth
@@ -693,6 +695,101 @@ export function validateAgentModels(
         `AI agent '${meta.name}' uses model '${model}', which must be provider-qualified as '<provider>/<model>' (e.g. 'openai/gpt-4').`
       )
     }
+  }
+}
+
+/**
+ * Scenarios are pure stories of remote RPCs (same rule as client-side CLI
+ * renderers): the func may only destructure logger/config — everything else
+ * must go through actor steps so the flow runs against the TARGET
+ * environment, never local services.
+ *
+ * This runs in post-processing rather than in `addWorkflow` because
+ * `addWorkflow` runs in the `visitSetup` pass, which completes before
+ * `addFunctions` (`visitFunctions`) has populated `state.functions.meta` — so
+ * the check read `undefined` there and never fired.
+ */
+export function validateScenarioServices(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
+    if (!meta.scenario) continue
+    const funcMeta = state.functions.meta[meta.pikkuFuncId]
+    if (!funcMeta?.services) continue
+    const disallowed = funcMeta.services.services.filter(
+      (svc) => svc !== 'logger' && svc !== 'config'
+    )
+    if (disallowed.length > 0) {
+      logger.critical(
+        ErrorCode.SCENARIO_HAS_SERVICES,
+        `Scenario '${workflowName}' destructures services: ${disallowed.join(', ')}. ` +
+          `Scenarios may only use 'logger'/'config' — drive everything else through ` +
+          `actor steps (workflow.do(step, rpc, data, { actor: actors.x })) so the flow ` +
+          `runs against the target environment.`
+      )
+    }
+  }
+}
+
+/**
+ * Walk every scenario step, wherever it is nested, and validate the two things
+ * that can only be known once both the workflow meta and the function meta
+ * exist:
+ *
+ * - the step target must be a static string literal (PKU678) — otherwise it
+ *   can't be bundled, typed or drawn;
+ * - a `browser: true` step must be given an actor (PKU677), since the browser
+ *   context signs in as that persona.
+ *
+ * It also marks the step's function as used, so `scenario run` boots the
+ * singletons the step actually needs.
+ */
+export function validateScenarioSteps(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const visit = (workflowName: string, steps: WorkflowStepMeta[]): void => {
+    for (const step of steps) {
+      if (step.type === 'scenarioStep') {
+        if (step.stepFunc === DYNAMIC_SCENARIO_STEP_TARGET) {
+          logger.critical(
+            ErrorCode.SCENARIO_STEP_TARGET_NOT_STATIC,
+            `Scenario '${workflowName}' calls step '${step.stepName}' with a target that isn't a string literal. ` +
+              `A step target must be statically resolvable so it can be bundled, typed and drawn — ` +
+              `loop over data sets instead of computing the step name.`
+          )
+          continue
+        }
+        state.serviceAggregation.usedFunctions.add(step.stepFunc)
+        const stepMeta = state.functions.meta[step.stepFunc]
+        if (stepMeta?.scenarioStepBrowser && !step.actor) {
+          logger.critical(
+            ErrorCode.SCENARIO_BROWSER_STEP_NEEDS_ACTOR,
+            `Scenario '${workflowName}' calls browser step '${step.stepFunc}' without an actor. ` +
+              `Pass { actor: actors.<name> } so the browser context signs in as that persona.`
+          )
+        }
+        continue
+      }
+      if (step.type === 'branch') {
+        for (const branch of step.branches) visit(workflowName, branch.steps)
+        if (step.elseSteps) visit(workflowName, step.elseSteps)
+      } else if (step.type === 'switch') {
+        for (const c of step.cases ?? []) {
+          if (c.steps) visit(workflowName, c.steps)
+        }
+        if (step.defaultSteps) visit(workflowName, step.defaultSteps)
+      } else if (step.type === 'fanout' && step.body) {
+        visit(workflowName, step.body as WorkflowStepMeta[])
+      } else if (step.type === 'parallel' && step.children) {
+        visit(workflowName, step.children as WorkflowStepMeta[])
+      }
+    }
+  }
+
+  for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
+    visit(workflowName, meta.steps ?? [])
   }
 }
 

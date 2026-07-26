@@ -97,6 +97,10 @@ export function collectInvokedRPCs(
       if (step.options?.onError) {
         rpcs.add(step.options.onError)
       }
+    } else if (step.type === 'scenarioStep' && step.stepFunc) {
+      // Steps are bundled like RPCs — the runner calls them through
+      // runPikkuFunc — but they are deliberately never RPC-registered.
+      rpcs.add(step.stepFunc)
     } else if (step.type === 'branch') {
       for (const branch of step.branches) {
         collectInvokedRPCs(branch.steps, rpcs)
@@ -108,9 +112,9 @@ export function collectInvokedRPCs(
       }
       if (step.defaultSteps) collectInvokedRPCs(step.defaultSteps, rpcs)
     } else if (step.type === 'fanout' && step.body) {
-      collectInvokedRPCs(step.body, rpcs)
+      collectInvokedRPCs(step.body as WorkflowStepMeta[], rpcs)
     } else if (step.type === 'parallel' && step.children) {
-      collectInvokedRPCs(step.children, rpcs)
+      collectInvokedRPCs(step.children as WorkflowStepMeta[], rpcs)
     }
   }
 }
@@ -391,6 +395,15 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
         `Workflow '${workflowName}' does not conform to DSL workflow rules:\n${result.reason || 'Unknown error'}`
       )
       return
+    } else if (wrapperType === 'scenario') {
+      // The fallback below understands do/sleep but not step/given/when/then,
+      // so a scenario that lands here registers with zero steps. Silence would
+      // leave the whole scenario passing vacuously.
+      logger.critical(
+        ErrorCode.SCENARIO_NOT_EXTRACTABLE,
+        `Scenario '${workflowName}' could not be extracted, so none of its steps were recorded and it would run as an empty scenario:\n${result.reason || 'Unknown error'}`
+      )
+      return
     } else {
       // For pikkuWorkflowComplexFunc, fall back to basic extraction
       logger.debug(
@@ -436,39 +449,11 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     actors: actorNames.length > 0 ? actorNames : undefined,
   }
 
-  // Scenarios are pure stories of remote RPCs (same rule as client-side CLI
-  // renderers): the func may only destructure logger/config — everything else
-  // must go through actor steps so the flow runs against the TARGET
-  // environment, never local services.
-  const funcMeta = state.functions.meta[pikkuFuncId]
-  if (wrapperType === 'scenario' && funcMeta?.services) {
-    const disallowed = funcMeta.services.services.filter(
-      (svc) => svc !== 'logger' && svc !== 'config'
-    )
-    if (disallowed.length > 0) {
-      logger.critical(
-        ErrorCode.SCENARIO_HAS_SERVICES,
-        `Scenario '${workflowName}' destructures services: ${disallowed.join(', ')}. ` +
-          `Scenarios may only use 'logger'/'config' — drive everything else through ` +
-          `actor steps (workflow.do(step, rpc, data, { actor: actors.x })) so the flow ` +
-          `runs against the target environment.`
-      )
-      return
-    }
-  }
-
-  // Workflow functions require platform services that aren't visible
-  // through parameter destructuring (they're accessed via workflow.do/sleep)
-  if (funcMeta?.services) {
-    for (const svc of [
-      'workflowService',
-      'workflowRunService',
-      'schedulerService',
-      'queueService',
-    ]) {
-      if (!funcMeta.services.services.includes(svc)) {
-        funcMeta.services.services.push(svc)
-      }
-    }
-  }
+  // The scenario "logger/config only" rule (PKU673) and the implicit
+  // workflow platform-service injection both used to live here, reading
+  // state.functions.meta[pikkuFuncId]. addWorkflow runs in the visitSetup
+  // pass, which completes before addFunctions populates that meta, so both
+  // were dead. The rule now lives in validateScenarioServices (post-process),
+  // and aggregateRequiredServices already adds the platform services globally
+  // whenever any workflow exists.
 }

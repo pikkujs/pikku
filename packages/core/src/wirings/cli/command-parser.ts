@@ -210,8 +210,19 @@ export function parseCLIArguments(
 
     if (arg.startsWith('--')) {
       // Long option (--from-plan → fromPlan)
+      const negatedKey = arg.startsWith('--no-')
+        ? toCamelCase(arg.slice(5))
+        : undefined
       const equalIndex = arg.indexOf('=')
-      if (equalIndex > 0) {
+      if (
+        negatedKey &&
+        typeof availableOptions[negatedKey]?.default === 'boolean'
+      ) {
+        // --no-<flag> turns a boolean option off. Only options that declare a
+        // boolean default can be negated, so a literal `--no-something` option
+        // name still parses as itself.
+        optionArgs[negatedKey] = false
+      } else if (equalIndex > 0) {
         // --option=value format
         const key = toCamelCase(arg.slice(2, equalIndex))
         const optionDef = availableOptions[key]

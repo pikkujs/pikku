@@ -165,7 +165,7 @@ export class ContextAwareRPCService {
     if (!functionMeta) {
       throw new RPCNotFoundError(funcName)
     }
-    if (!functionMeta.expose) {
+    if (!functionMeta.expose || functionMeta.scenarioStep) {
       throw new RPCNotFoundError(funcName)
     }
     return await this.rpc(funcName, data)

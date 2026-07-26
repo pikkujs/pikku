@@ -30,6 +30,7 @@ import { addCredential } from './add/add-credential.js'
 import { addScope } from './add/add-scope.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
+import { addFeature } from './add/add-feature.js'
 import { addAIAgent } from './add/add-ai-agent.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 
@@ -165,6 +166,7 @@ export const visitRoutes = (
   addMCPResource(logger, node, checker, state, nextOptions)
   addMCPPrompt(logger, node, checker, state, nextOptions)
   addWorkflowGraph(logger, node, checker, state, nextOptions)
+  addFeature(logger, node, checker, state, nextOptions)
   addAIAgent(logger, node, checker, state, nextOptions)
 
   ts.forEachChild(node, (child) =>

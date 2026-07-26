@@ -29,11 +29,13 @@ const registerFunction = (
     expose,
     pikkuFuncId,
     tags,
+    scenarioStep,
   }: {
     packageName?: string | null
     expose?: boolean
     pikkuFuncId?: string
     tags?: string[]
+    scenarioStep?: boolean
   } = {}
 ) => {
   addFunction(funcName, { func } as never, packageName)
@@ -44,6 +46,7 @@ const registerFunction = (
     permissions: [],
     expose,
     tags,
+    scenarioStep,
   } as never
 }
 
@@ -308,6 +311,27 @@ describe('ContextAwareRPCService.rpcExposed', () => {
 
     await assert.rejects(
       () => service.rpcExposed('hiddenFunc', {}),
+      RPCNotFoundError
+    )
+  })
+
+  test('a scenario step is not callable over the network, even if marked exposed', async () => {
+    // A step may drive a browser or assert against fixtures, so it is a step
+    // RPC — dispatched by name inside a run, never reachable from outside it.
+    pikkuState(null, 'rpc', 'meta').seesAddonCard = 'seesAddonCard'
+    registerFunction('seesAddonCard', async () => ({ visible: true }), {
+      expose: true,
+      scenarioStep: true,
+    })
+
+    const service = new ContextAwareRPCService(
+      createServices(),
+      {} as never,
+      {}
+    )
+
+    await assert.rejects(
+      () => service.rpcExposed('seesAddonCard', {}),
       RPCNotFoundError
     )
   })
@@ -669,7 +693,9 @@ describe('wireRemoteAddon dispatch', () => {
         {}
       )
 
-      const result = await service.rpc('registry:getOpenApi', { name: 'stripe' })
+      const result = await service.rpc('registry:getOpenApi', {
+        name: 'stripe',
+      })
 
       assert.deepEqual(result, { echoed: 42 })
       assert.equal(calls.length, 1)
@@ -713,10 +739,7 @@ describe('wireRemoteAddon dispatch', () => {
       )
 
       await service.rpc('registry:getOpenApi', {})
-      assert.equal(
-        calls[0]!.init.headers.authorization,
-        'Bearer user-token-9'
-      )
+      assert.equal(calls[0]!.init.headers.authorization, 'Bearer user-token-9')
     } finally {
       restoreFetch()
     }

@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { performance } from 'perf_hooks'
-import { resolve } from 'path'
+import { dirname, resolve } from 'path'
 import { visitSetup, visitFunctions, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import type {
@@ -27,6 +27,8 @@ import {
   computeRequiredSchemas,
   computeDiagnostics,
   validateSchemaWiringSeparation,
+  validateScenarioServices,
+  validateScenarioSteps,
   validateWorkflowGraphAddons,
 } from './utils/post-process.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
@@ -121,6 +123,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Map(),
       graphMeta: {},
       graphFiles: new Map(),
+      featureFiles: new Map(),
       invokedWorkflows: new Set(),
     },
     rpc: {
@@ -240,6 +243,49 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
   }
 }
 
+/**
+ * The path mappings the inspector's program has to share with the project.
+ *
+ * The inspector builds its own program rather than reusing the project's, which
+ * is what keeps a cold run affordable — but a project that reaches its generated
+ * code through a tsconfig `paths` entry resolves that import through those
+ * mappings and nothing else. Without them the factory an inspected function is
+ * passed to resolves to `any`, so a function whose input type comes from the
+ * factory's contextual type (rather than an explicit generic or a named schema)
+ * silently records no input at all.
+ *
+ * Only resolution keys are copied. Type-inference options such as `strict` stay
+ * the inspector's own, because changing those would change the recorded types.
+ */
+const readProjectPathMappings = (
+  logger: InspectorLogger,
+  tsconfig: string | undefined
+): ts.CompilerOptions => {
+  if (!tsconfig) {
+    return {}
+  }
+  const configPath = resolve(tsconfig)
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile)
+  if (configFile.error || !configFile.config) {
+    logger.debug(
+      `Could not read ${configPath} for path mappings; imports that rely on them will not resolve`
+    )
+    return {}
+  }
+  const { options: projectOptions } = ts.parseJsonConfigFileContent(
+    configFile.config,
+    ts.sys,
+    dirname(configPath)
+  )
+  const { baseUrl, paths, rootDirs, pathsBasePath } = projectOptions
+  return {
+    ...(baseUrl !== undefined ? { baseUrl } : {}),
+    ...(paths !== undefined ? { paths } : {}),
+    ...(rootDirs !== undefined ? { rootDirs } : {}),
+    ...(pathsBasePath !== undefined ? { pathsBasePath } : {}),
+  }
+}
+
 export const inspect = async (
   logger: InspectorLogger,
   routeFiles: string[],
@@ -247,6 +293,7 @@ export const inspect = async (
 ): Promise<InspectorState> => {
   const normalizedRouteFiles = routeFiles.map((file) => resolve(file))
   const compilerOptions: ts.CompilerOptions = {
+    ...readProjectPathMappings(logger, options.tsconfig),
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.Node16,
     skipLibCheck: true,
@@ -407,6 +454,8 @@ export const inspect = async (
     computeDiagnostics(state)
     validateSchemaWiringSeparation(logger, state)
     validateWorkflowGraphAddons(logger, state)
+    validateScenarioServices(logger, state)
+    validateScenarioSteps(logger, state)
 
     if (options.openAPI) {
       state.openAPISpec = await generateOpenAPISpec(

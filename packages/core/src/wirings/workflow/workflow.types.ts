@@ -1,5 +1,8 @@
 import type { SerializedError, CommonWireMeta } from '../../types/core.types.js'
-import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionHook,
+} from '../../function/functions.types.js'
 import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
 
 // Re-export WorkflowService from services module
@@ -38,11 +41,22 @@ export type {
   SwitchStepMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
+  ScenarioStepInvocation,
+  ScenarioStepMeta,
   WorkflowStepMeta,
   WorkflowStepWire,
   PikkuWorkflowWire,
   PikkuScenarioWire,
 } from './dsl/workflow-dsl.types.js'
+
+// Re-export scenario step types
+export type {
+  ScenarioStepPhase,
+  ScenarioStepOptions,
+  PikkuScenarioStepWire,
+  PikkuBrowserWire,
+  ScenarioBrowserProvider,
+} from './scenario-step.types.js'
 
 import type { WorkflowStepMeta } from './dsl/workflow-dsl.types.js'
 
@@ -327,6 +341,48 @@ export type CoreWorkflow<
   middleware?: PikkuFunctionConfig['middleware']
   /** Tags for organization and filtering */
   tags?: string[]
+}
+
+/**
+ * A scenario as a feature references it: either the scenario itself, or the
+ * scenario paired with the input to run it with. The paired form is gherkin's
+ * `Examples:` — the same scenario run once per row, written as an ordinary
+ * loop rather than a table.
+ */
+export type CoreFeatureScenario =
+  | CorePikkuFunctionConfig<any, any, any>
+  | { scenario: CorePikkuFunctionConfig<any, any, any>; data: unknown }
+
+/**
+ * A feature: an ordered group of scenarios, mirroring gherkin's Feature ↔
+ * Scenario structure. Scenarios are referenced by imported identifier, so a
+ * renamed or deleted scenario is a compile error rather than a silent skip.
+ *
+ * Hooks run **once around the whole group** (`before → a → b → c → after`),
+ * not per scenario — per-scenario setup is the scenario's own `before`. That
+ * is the one thing a feature deliberately cannot express: gherkin's
+ * `Background:` runs per scenario.
+ */
+export type CoreFeature = {
+  /** Human-readable name. The export identifier is the id. */
+  name: string
+  description?: string
+  tags?: string[]
+  /** Readonly because `pikkuFeature`'s `const` generic infers a readonly tuple. */
+  scenarios: readonly CoreFeatureScenario[]
+  before?: CorePikkuFunctionHook
+  after?: CorePikkuFunctionHook
+}
+
+/** One planned scenario run, resolved from a feature's scenario list. */
+export type FeaturePlanEntry = {
+  featureId: string
+  featureName: string
+  scenarioName: string
+  /** The input this entry runs the scenario with, if the feature supplied one. */
+  data?: unknown
+  /** The scenario's own tags unioned with the containing feature's. */
+  tags: string[]
 }
 
 /**

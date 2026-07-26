@@ -111,6 +111,7 @@ export interface PikkuCLICoreOutputFiles {
   workflowsWiringMetaFile: string
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
+  scenarioStepMapDeclarationFile: string
   workflowTypesFile: string
   workflowMetaDir: string
   scenarioActorsFile: string
@@ -360,6 +361,8 @@ export type PikkuCLIInput = {
         signInPath?: string
         /** Exposed-RPC prefix under apiUrl. Default: /rpc */
         rpcPath?: string
+        /** Frontend base URL browser steps navigate against. Required for `browser: true` steps. */
+        appUrl?: string
       }
     >
   }

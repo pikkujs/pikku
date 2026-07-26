@@ -138,6 +138,41 @@ function convertStepToNode(
       return [node]
     }
 
+    // A declared step is a function node like any other — the console draws it
+    // the same way, with the phase available for the "Given/When/Then" prose.
+    case 'scenarioStep': {
+      const node: FunctionNode = {
+        nodeId,
+        rpcName: step.stepFunc,
+        stepName: step.stepName,
+        scenarioStepPhase: step.phase,
+        next: nextNodeId,
+      }
+      if (step.actor) {
+        node.actor = step.actor
+      }
+      if (step.inputs) {
+        if (step.inputs === 'passthrough') {
+          node.input = { $passthrough: { $ref: 'trigger' } }
+        } else {
+          node.input = {}
+          for (const [key, source] of Object.entries(step.inputs)) {
+            node.input[key] = convertInputSource(source as any)
+          }
+        }
+      }
+      if (step.outputVar) {
+        node.outputVar = step.outputVar
+      }
+      if (step.options) {
+        node.options = {
+          retries: step.options.retries,
+          retryDelay: step.options.retryDelay,
+        }
+      }
+      return [node]
+    }
+
     case 'sleep': {
       const node: FlowNode = {
         nodeId,

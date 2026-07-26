@@ -3,7 +3,8 @@ export const serializeWorkflowTypes = (
   rpcMapImportPath: string,
   workflowMapImportPath: string,
   agentMapImportPath: string,
-  scopesImportPath: string
+  scopesImportPath: string,
+  scenarioStepMapImportPath: string = './pikku-scenario-step-map.gen.js'
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
@@ -12,13 +13,14 @@ import {
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from '@pikku/core/workflow'
-import type { PikkuWorkflowWire, PikkuScenarioWire, WorkflowStepOptions } from '@pikku/core/workflow'
+import type { PikkuWorkflowWire, PikkuScenarioWire, WorkflowStepOptions, ScenarioStepOptions } from '@pikku/core/workflow'
 
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
+import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
 
 export { template }
 
@@ -44,7 +46,44 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
   ): Promise<T>
 }
 
-export type TypedScenario = TypedWorkflow & Omit<PikkuScenarioWire, keyof PikkuWorkflowWire>
+/**
+ * The typed half of a scenario wire: \`step\` and its \`given\`/\`when\`/\`then\`
+ * sugar, narrowed to the names declared by \`pikkuScenarioStep\` in this project.
+ * The phase only changes the prose the reporter renders.
+ */
+export interface TypedScenarioSteps {
+  step<K extends keyof FlattenedScenarioStepMap>(
+    stepName: string,
+    stepFunc: K,
+    data?: FlattenedScenarioStepMap[K]['input'],
+    options?: ScenarioStepOptions
+  ): Promise<FlattenedScenarioStepMap[K]['output']>
+
+  given<K extends keyof FlattenedScenarioStepMap>(
+    stepName: string,
+    stepFunc: K,
+    data?: FlattenedScenarioStepMap[K]['input'],
+    options?: ScenarioStepOptions
+  ): Promise<FlattenedScenarioStepMap[K]['output']>
+
+  when<K extends keyof FlattenedScenarioStepMap>(
+    stepName: string,
+    stepFunc: K,
+    data?: FlattenedScenarioStepMap[K]['input'],
+    options?: ScenarioStepOptions
+  ): Promise<FlattenedScenarioStepMap[K]['output']>
+
+  then<K extends keyof FlattenedScenarioStepMap>(
+    stepName: string,
+    stepFunc: K,
+    data?: FlattenedScenarioStepMap[K]['input'],
+    options?: ScenarioStepOptions
+  ): Promise<FlattenedScenarioStepMap[K]['output']>
+}
+
+export type TypedScenario = TypedWorkflow &
+  Omit<PikkuScenarioWire, keyof PikkuWorkflowWire | keyof TypedScenarioSteps> &
+  TypedScenarioSteps
 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { InferSchemaOutput, PikkuPermission, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
@@ -135,7 +174,32 @@ export type PikkuScenarioConfigWithSchema<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
   >
+  /**
+   * Runs before the scenario body. Same signature as \`func\`, but its return
+   * value is discarded — a hook is setup, not a step, so it is never recorded
+   * on the ladder. Throwing skips the body and fails the run; \`after\` still
+   * runs.
+   */
+  before?: PikkuScenarioHook<InputSchema>
+  /**
+   * Always runs after the scenario body, in a \`finally\`, whether it passed or
+   * failed. Throwing fails a run that would otherwise have passed; on an
+   * already-failed run it attaches as the \`cause\` and never replaces the
+   * original error.
+   */
+  after?: PikkuScenarioHook<InputSchema>
 }
+
+/**
+ * A scenario lifecycle hook: the scenario's own \`(services, data, wire)\`
+ * signature with its result discarded.
+ */
+export type PikkuScenarioHook<
+  InputSchema extends StandardSchemaV1 | undefined = undefined
+> = PikkuFunctionScenario<
+  InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
+  void
+>
 
 /**
  * A scenario: a complex workflow that drives the app the way users do.
@@ -156,6 +220,151 @@ export function pikkuScenario<In, Out = unknown>(
 ): PikkuFunctionConfig<In, Out, 'scenario' | 'actors'>
 export function pikkuScenario(func: any) {
   return typeof func === 'function' ? { func } : func
+}
+
+/**
+ * A scenario as a feature references it. Any \`pikkuScenario\` export is
+ * assignable; \`In\` is recovered from it so the paired form's \`data\` is
+ * checked against that scenario's own input.
+ */
+export type PikkuScenarioRef<In = any, Out = any> = PikkuFunctionConfig<
+  In,
+  Out,
+  'scenario' | 'actors',
+  PikkuFunctionScenario<In, Out>,
+  any,
+  any
+>
+
+/**
+ * One entry in a feature's \`scenarios\` list, validated against itself: a bare
+ * scenario, or a scenario paired with the input to run it with. The paired form
+ * is gherkin's \`Examples:\` written as an ordinary loop.
+ */
+export type PikkuFeatureEntry<Entry> = Entry extends {
+  scenario: PikkuScenarioRef<infer In>
+}
+  ? { scenario: PikkuScenarioRef<In>; data: In }
+  : Entry extends PikkuScenarioRef
+    ? Entry
+    : never
+
+export type PikkuFeatureConfig<Scenarios extends readonly unknown[]> = {
+  /** Human-readable name. The export identifier is the id. */
+  name: string
+  description?: string
+  tags?: string[]
+  scenarios: { [K in keyof Scenarios]: PikkuFeatureEntry<Scenarios[K]> }
+  /**
+   * Runs ONCE before the whole group — not before each scenario. Per-scenario
+   * setup is the scenario's own \`before\`; gherkin's \`Background:\` is
+   * deliberately not expressible here.
+   */
+  before?: PikkuScenarioHook
+  after?: PikkuScenarioHook
+}
+
+/**
+ * A feature: an ordered group of scenarios, mirroring gherkin's Feature ↔
+ * Scenario structure. Scenarios are referenced by imported identifier, so a
+ * renamed or deleted scenario is a compile error rather than a silent skip.
+ *
+ * A scenario does not have to belong to a feature — a void-input scenario
+ * still runs standalone.
+ *
+ * \`\`\`ts
+ * export const credentialFeature = pikkuFeature({
+ *   name: 'Credential API',
+ *   tags: ['credential'],
+ *   before: startsMockOAuthServer,
+ *   after: stopsMockOAuthServer,
+ *   scenarios: [
+ *     credentialLazyLoadScenario,
+ *     ...['stripe', 'google'].map((name) => ({
+ *       scenario: credentialRoundTripScenario,
+ *       data: { name },
+ *     })),
+ *   ],
+ * })
+ * \`\`\`
+ */
+export function pikkuFeature<const Scenarios extends readonly unknown[]>(
+  config: PikkuFeatureConfig<Scenarios>
+): PikkuFeatureConfig<Scenarios> {
+  return config
+}
+
+export type PikkuFunctionScenarioStep<
+  In = unknown,
+  Out = never,
+  B extends boolean = false
+> = PikkuFunctionSessionless<In, Out, B extends true ? 'scenarioStep' | 'browser' : 'scenarioStep'>
+
+export type PikkuScenarioStepConfigWithSchema<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  B extends boolean = false
+> = {
+  /** Registered name — this is the string \`scenario.step()\` references. */
+  name: string
+  /**
+   * What this step does, for the console and for whoever reads the source. It
+   * is also the fallback prose when no \`template\` is declared, in which case a
+   * reporter renders "Given the shopper buys an apple". Defaults to the call
+   * site's step name.
+   */
+  description?: string
+  /**
+   * The prose a reporter renders for this step, with \`{placeholders}\` filled
+   * from the input the step was called with — \`'sees {packageName}'\` reports as
+   * "Then the admin sees @pikku/addon-todos". Every input field should appear,
+   * so the report names the values under test rather than repeating one
+   * sentence per call site.
+   */
+  template?: string
+  /**
+   * This step drives a browser. The runner provisions one for the step's actor
+   * before calling it — which also makes an actor mandatory — and \`wire.browser\`
+   * is non-optional inside \`func\`.
+   */
+  browser?: B
+  title?: string
+  tags?: string[]
+  input?: InputSchema
+  output?: OutputSchema
+  errors?: Array<typeof PikkuError>
+  func: PikkuFunctionScenarioStep<
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
+    B
+  >
+}
+
+export type PikkuScenarioStepConfig<In, Out, B extends boolean = false> =
+  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined, B>, 'func' | 'input' | 'output'> & {
+    func: PikkuFunctionScenarioStep<In, Out, B>
+  }
+
+/**
+ * A named, reusable scenario step. Unlike \`scenario.do\`, which can only name an
+ * RPC, a step's body is an ordinary pikku function — so it may drive a browser,
+ * invoke RPCs as its actor, or run a workflow.
+ *
+ * Steps are deliberately NOT registered as RPCs: a browser-driving step must
+ * never be network-callable.
+ */
+export function pikkuScenarioStep<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  B extends boolean = false
+>(
+  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema, B>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, B extends true ? 'scenarioStep' | 'browser' : 'scenarioStep', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, B>, InputSchema, OutputSchema>
+export function pikkuScenarioStep<In, Out = unknown, B extends boolean = false>(
+  config: PikkuScenarioStepConfig<In, Out, B>
+): PikkuFunctionConfig<In, Out, B extends true ? 'scenarioStep' | 'browser' : 'scenarioStep'>
+export function pikkuScenarioStep(config: any) {
+  return config
 }
 
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }

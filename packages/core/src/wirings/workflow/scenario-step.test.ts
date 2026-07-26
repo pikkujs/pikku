@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
+import { addFunction } from '../../function/function-runner.js'
 import type { ScenarioActor } from '../../services/scenario-actors-service.js'
+import type { PikkuWire } from '../../types/core.types.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
@@ -134,6 +136,230 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
   })
 })
 
+const registerStep = (
+  name: string,
+  config: {
+    description?: string
+    browser?: boolean
+    func: (services: any, data: any, wire: PikkuWire) => Promise<unknown>
+  }
+) => {
+  addFunction(name, config as any)
+  // `pikkuScenarioStep` maps to PikkuFunctionSessionless, which is what the
+  // inspector records — a step is driven by an actor, not by a wire session.
+  pikkuState(null, 'function', 'meta')[name] = {
+    pikkuFuncId: name,
+    sessionless: true,
+  } as any
+}
+
+describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
+  beforeEach(() => resetPikkuState())
+
+  test('the step func is called with the phase, step identity and data on the wire', async () => {
+    const ws = new InMemoryWorkflowService()
+    const seen: PikkuWire[] = []
+    const payloads: unknown[] = []
+    registerStep('buysAnApple', {
+      func: async (_services, data, wire) => {
+        seen.push(wire)
+        payloads.push(data)
+        return { receipt: 'r1' }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    const result = await wire.given('shopper buys an apple', 'buysAnApple', {
+      qty: 2,
+    })
+
+    assert.deepEqual(result, { receipt: 'r1' })
+    assert.deepEqual(payloads, [{ qty: 2 }])
+    assert.equal(seen.length, 1)
+    assert.equal(seen[0]!.scenarioStep?.phase, 'given')
+    assert.equal(seen[0]!.scenarioStep?.name, 'buysAnApple')
+    assert.equal(seen[0]!.scenarioStep?.stepName, 'shopper buys an apple')
+    assert.equal(seen[0]!.scenarioStep?.runId, runId)
+  })
+
+  test('each phase records itself, and the scenario wire is reachable from the step', async () => {
+    const ws = new InMemoryWorkflowService()
+    const phases: string[] = []
+    registerStep('noop', {
+      func: async (_services, _data, wire) => {
+        phases.push(wire.scenarioStep!.phase)
+        assert.equal(
+          wire.scenario?.runId,
+          wire.scenarioStep!.runId,
+          'a step can call back into the scenario it belongs to'
+        )
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.step('a', 'noop')
+    await wire.given('b', 'noop')
+    await wire.when('c', 'noop')
+    await wire.then('d', 'noop')
+
+    assert.deepEqual(phases, ['step', 'given', 'when', 'then'])
+  })
+
+  test('the actor is handed to the step rather than used to dispatch it', async () => {
+    const ws = new InMemoryWorkflowService()
+    const shopper = fakeActor('shopper', async () => ({ ok: true }))
+    let received: unknown
+    registerStep('checksOut', {
+      func: async (_services, _data, wire) => {
+        received = wire.scenarioStep!.actor
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.when('shopper checks out', 'checksOut', undefined, {
+      actor: shopper,
+    })
+
+    assert.equal(received, shopper)
+    assert.equal(
+      shopper.calls.length,
+      0,
+      'a step runs locally — the actor is context, not the transport'
+    )
+  })
+
+  test('a repeated step name gets its own durable row (#1), not the cached first result', async () => {
+    const ws = new InMemoryWorkflowService()
+    let calls = 0
+    registerStep('clicksSave', {
+      func: async () => ++calls,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    const first = await wire.when('clicks save', 'clicksSave')
+    const second = await wire.when('clicks save', 'clicksSave')
+
+    assert.equal(first, 1)
+    assert.equal(second, 2, 'the second reach must actually run')
+    assert.equal((await ws.getStepState(runId, 'clicks save')).result, 1)
+    assert.equal((await ws.getStepState(runId, 'clicks save#1')).result, 2)
+  })
+
+  test('a throwing step is not retried', async () => {
+    const ws = new InMemoryWorkflowService()
+    let attempts = 0
+    registerStep('seesAReceipt', {
+      func: async () => {
+        attempts++
+        throw new Error('expected 1 item, got 0')
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.then('shopper sees a receipt', 'seesAReceipt'),
+      /expected 1 item, got 0/
+    )
+    assert.equal(
+      attempts,
+      1,
+      'retrying a failed assertion is the wrong default for a test primitive'
+    )
+  })
+
+  test('an explicit retries option still wins over the zero default', async () => {
+    const ws = new InMemoryWorkflowService()
+    let attempts = 0
+    registerStep('flaky', {
+      func: async () => {
+        if (++attempts < 3) {
+          throw new Error('not yet')
+        }
+        return 'settled'
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    const result = await wire.step('waits for the page', 'flaky', undefined, {
+      retries: 3,
+      retryDelay: 1,
+    })
+
+    assert.equal(result, 'settled')
+    assert.equal(attempts, 3)
+  })
+
+  test('a browser step fails loudly when no provider is registered', async () => {
+    const ws = new InMemoryWorkflowService()
+    const shopper = fakeActor('shopper', async () => ({}))
+    registerStep('visitsCheckout', {
+      browser: true,
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+        actor: shopper,
+      }),
+      /no browser provider is registered/
+    )
+  })
+
+  test('a registered provider hands the step a session keyed by the actor', async () => {
+    const ws = new InMemoryWorkflowService()
+    const shopper = fakeActor('shopper', async () => ({}))
+    const requested: string[] = []
+    const session = { actor: 'shopper' } as any
+    ws.setScenarioBrowserProvider({
+      sessionFor: async (actorName: string) => {
+        requested.push(actorName)
+        return session
+      },
+    } as any)
+
+    let handed: unknown
+    registerStep('visitsCheckout', {
+      browser: true,
+      func: async (_services, _data, wire) => {
+        handed = wire.browser
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    assert.deepEqual(requested, ['shopper'])
+    assert.equal(handed, session)
+  })
+
+  test('a non-string step target is rejected instead of silently dispatching', async () => {
+    const ws = new InMemoryWorkflowService()
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      (wire.step as any)('a name', async () => 'inline'),
+      /string/i
+    )
+  })
+})
+
 describe('workflow.expectEventually', () => {
   beforeEach(() => resetPikkuState())
 
@@ -194,5 +420,99 @@ describe('workflow.expectEventually', () => {
     )
     assert.deepEqual(result, { ready: true })
     assert.equal(polls, 2)
+  })
+})
+
+describe('scenario step input is recorded on the run', () => {
+  beforeEach(() => resetPikkuState())
+
+  test('the run records the input each step was called with', async () => {
+    const ws = new InMemoryWorkflowService()
+    registerStep('seesAddon', { func: async () => ({ visible: true }) })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.then('sees console', 'seesAddon', {
+      packageName: '@pikku/addon-console',
+      state: 'installed',
+    })
+    await wire.then('sees todos', 'seesAddon', {
+      packageName: '@pikku/addon-todos',
+    })
+
+    // A reporter renders each step's prose from this, so two calls to one step
+    // must be distinguishable by what they were asked to check.
+    const steps = await ws.getRunSteps(runId)
+    assert.deepEqual(
+      steps.map((step) => step.data),
+      [
+        { packageName: '@pikku/addon-console', state: 'installed' },
+        { packageName: '@pikku/addon-todos' },
+      ]
+    )
+  })
+
+  test('a step called with no input records none', async () => {
+    const ws = new InMemoryWorkflowService()
+    registerStep('resets', { func: async () => null })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('resets the app', 'resets')
+
+    const steps = await ws.getRunSteps(runId)
+    assert.equal(steps[0]!.data ?? null, null)
+  })
+})
+
+describe('scenario step names its function on the run', () => {
+  beforeEach(() => resetPikkuState())
+
+  test('the run records which step function ran, not only the step name', async () => {
+    const ws = new InMemoryWorkflowService()
+    registerStep('seesAddon', { func: async () => ({ visible: true }) })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.then('sees console', 'seesAddon', { packageName: 'console' })
+
+    const steps = await ws.getRunSteps(runId)
+    assert.equal(
+      steps[0]!.rpcName,
+      'seesAddon',
+      'a reporter joins a step back to its declaration by function name'
+    )
+  })
+
+  test('a step name built at runtime still names its function', async () => {
+    const ws = new InMemoryWorkflowService()
+    registerStep('seesAddon', { func: async () => ({ visible: true }) })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    // What a loop produces: the durable name is the interpolated one, so it
+    // matches no statically recorded step name.
+    for (const packageName of ['console', 'todos']) {
+      await wire.then(`sees ${packageName}`, 'seesAddon', { packageName })
+    }
+
+    const steps = await ws.getRunSteps(runId)
+    assert.deepEqual(
+      steps.map((step) => [step.stepName, step.rpcName]),
+      [
+        ['sees console', 'seesAddon'],
+        ['sees todos', 'seesAddon'],
+      ]
+    )
+  })
+
+  test('a plain inline step still records no function name', async () => {
+    const ws = new InMemoryWorkflowService()
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.do('computes', async () => 1)
+
+    const steps = await ws.getRunSteps(runId)
+    assert.equal(steps[0]!.rpcName ?? null, null)
   })
 })

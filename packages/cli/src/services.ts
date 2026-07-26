@@ -326,6 +326,7 @@ export const createSingletonServices: CreateSingletonServices<
         rootDir,
         isAddon: !!config.addon,
         oldProgram,
+        tsconfig: config.tsconfig,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,

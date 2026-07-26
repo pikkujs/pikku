@@ -7,6 +7,10 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import type { WorkflowRun } from '../workflow.types.js'
 import type { ScenarioActor } from '../../../services/scenario-actors-service.js'
+import type {
+  ScenarioStepOptions,
+  ScenarioStepPhase,
+} from '../scenario-step.types.js'
 
 /**
  * Workflow step options
@@ -78,6 +82,19 @@ export type WorkflowWireDoInline = <T>(
   fn: () => Promise<T> | T,
   options?: WorkflowStepOptions
 ) => Promise<T>
+
+/**
+ * Type signature for scenario.step/given/when/then - used by inspector.
+ *
+ * Deliberately mirrors WorkflowWireDoRPC's shape: the target is a string, not
+ * an imported symbol, so the extractor reads it as a literal.
+ */
+export type ScenarioStepInvocation = <TOutput = any, TInput = any>(
+  stepName: string,
+  stepFunc: string,
+  data?: TInput,
+  options?: ScenarioStepOptions
+) => Promise<TOutput>
 
 /**
  * Type signature for workflow.sleep() - used by inspector
@@ -181,6 +198,34 @@ export interface RpcStepMeta {
 }
 
 /**
+ * Scenario step metadata — a call to `scenario.step/given/when/then`.
+ *
+ * Distinct from RpcStepMeta on purpose: a step runs locally through
+ * runPikkuFunc and must never be treated as dispatchable on the queue/replay
+ * path, nor registered as a callable RPC (a browser-driving step must not be
+ * network-invocable).
+ */
+export interface ScenarioStepMeta {
+  type: 'scenarioStep'
+  /** Cache key (first argument), ordinal-suffixed by the engine when repeated */
+  stepName: string
+  /** Registered name of the step function being run */
+  stepFunc: string
+  /** Which keyword the reporter prefixes — given/when/then, or none for `step` */
+  phase: ScenarioStepPhase
+  /** Output variable name (if assigned) */
+  outputVar?: string
+  /** Input source mappings, or 'passthrough' when entire data is passed */
+  inputs?: Record<string, InputSource> | 'passthrough'
+  /** Step options */
+  options?: WorkflowStepOptions
+  /** Scenario actor name this step runs as ({ actor: actors.x }) */
+  actor?: string
+  /** Mirrors the step function's `browser: true` declaration */
+  browser?: boolean
+}
+
+/**
  * Simple condition expression (leaf node)
  */
 export interface SimpleCondition {
@@ -223,7 +268,7 @@ export interface BranchStepMeta {
 export interface ParallelGroupStepMeta {
   type: 'parallel'
   /** Child steps to execute in parallel */
-  children: RpcStepMeta[]
+  children: Array<RpcStepMeta | ScenarioStepMeta>
 }
 
 /**
@@ -244,7 +289,7 @@ export interface FanoutStepMeta {
   /** Execution mode */
   mode: 'parallel' | 'sequential'
   /** Steps to execute inline per iteration, in order */
-  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta>
+  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta | ScenarioStepMeta>
   /** Time between iterations (sequential mode only) */
   timeBetween?: string
 }
@@ -409,6 +454,7 @@ export interface ArrayPredicateStepMeta {
  */
 export type WorkflowStepMeta =
   | RpcStepMeta
+  | ScenarioStepMeta
   | BranchStepMeta
   | ParallelGroupStepMeta
   | FanoutStepMeta
@@ -508,6 +554,44 @@ export interface PikkuScenarioWire extends PikkuWorkflowWire {
     serviceMethod: string,
     options?: WorkflowExpectServiceOptions
   ) => Promise<void>
+
+  /**
+   * Run a registered scenario step. Shaped exactly like `do`'s RPC form —
+   * `(stepName, target, data, options)` — so the inspector reads the target as
+   * a string literal rather than resolving an imported symbol.
+   *
+   * The generated `TypedScenario` narrows these over `FlattenedScenarioStepMap`.
+   */
+  step(
+    stepName: string,
+    stepFunc: string,
+    data?: any,
+    options?: ScenarioStepOptions
+  ): Promise<any>
+
+  /** `step` with a "Given" prefix in the rendered prose */
+  given(
+    stepName: string,
+    stepFunc: string,
+    data?: any,
+    options?: ScenarioStepOptions
+  ): Promise<any>
+
+  /** `step` with a "When" prefix in the rendered prose */
+  when(
+    stepName: string,
+    stepFunc: string,
+    data?: any,
+    options?: ScenarioStepOptions
+  ): Promise<any>
+
+  /** `step` with a "Then" prefix in the rendered prose */
+  then(
+    stepName: string,
+    stepFunc: string,
+    data?: any,
+    options?: ScenarioStepOptions
+  ): Promise<any>
 
   runScheduledTask: (name: string) => Promise<unknown>
 }

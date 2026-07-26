@@ -474,6 +474,10 @@ wireCLI({
               description: 'Comma-separated flow names to run (default: all)',
               short: 'f',
             },
+            features: {
+              description:
+                'Comma-separated feature names to run (pikkuFeature exports) — the feature is the run unit, so its hooks run once around the group',
+            },
             tags: {
               description: 'Comma-separated tags — run flows matching any',
               short: 't',
@@ -482,6 +486,11 @@ wireCLI({
               description:
                 'Reset/snapshot server coverage per scenario (target must run with --coverage); writes coverage/scenario-coverage.json',
               default: false,
+            },
+            browser: {
+              description:
+                'Run scenarios with browser steps. --no-browser skips them (they are reported as skipped, not failed)',
+              default: true,
             },
           },
         }),

@@ -586,6 +586,12 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-map.gen.d.ts'
       )
     }
+    if (!result.scenarioStepMapDeclarationFile) {
+      result.scenarioStepMapDeclarationFile = join(
+        workflowDir,
+        'pikku-scenario-step-map.gen.d.ts'
+      )
+    }
     if (!result.workflowTypesFile) {
       result.workflowTypesFile = join(
         workflowDir,

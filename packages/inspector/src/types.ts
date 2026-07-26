@@ -273,6 +273,12 @@ export type InspectorOptions = Partial<{
   rootDir: string
   isAddon: boolean
   sourceFile: ts.SourceFile
+  /**
+   * The project's tsconfig, read for its path mappings only. The inspector's
+   * program needs them to resolve imports the project reaches through `paths`;
+   * unlike `schemaConfig.tsconfig` this is also needed on a setup-only run.
+   */
+  tsconfig: string
   types: Partial<{
     configFileType: string
     userSessionType: string
@@ -466,6 +472,12 @@ export interface InspectorState {
     files: Map<string, { path: string; exportedName: string }>
     graphMeta: SerializedWorkflowGraphs
     graphFiles: Map<string, { path: string; exportedName: string }>
+    /**
+     * `pikkuFeature` exports, keyed by export identifier. Only the location is
+     * recorded — a feature's scenario list is resolved at runtime by object
+     * identity, because it may be built by an ordinary loop.
+     */
+    featureFiles: Map<string, { path: string; exportedName: string }>
     invokedWorkflows: Set<string>
   }
   rpc: {
