@@ -160,3 +160,30 @@ export const readsActorUserId = pikkuScenarioStep<void, { userId: string }>({
     return { userId: session.userId }
   },
 })
+
+/**
+ * The caller cleared an authorization gate.
+ *
+ * Deliberately weaker than a 200: what is under test is the gate, not the
+ * function body, so any non-403 below 500 counts — a domain error from the
+ * function that ran is a pass, an authorization refusal is not.
+ */
+export const expectsRpcAllowed = pikkuScenarioStep<
+  { call: RawRpcResult },
+  { status: number }
+>({
+  name: 'expectsRpcAllowed',
+  description: 'expects a call to have cleared the authorization gate',
+  template: 'expects the call to be allowed',
+  func: async (_services, { call }) => {
+    if (call.status === 403) {
+      throw new Error(`Expected the call to be allowed, got ${call.serialized}`)
+    }
+    if (call.status >= 500) {
+      throw new Error(
+        `Expected the call to be allowed, the server failed with ${call.status}: ${call.serialized}`
+      )
+    }
+    return { status: call.status }
+  },
+})
