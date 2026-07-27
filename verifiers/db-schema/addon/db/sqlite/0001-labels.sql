@@ -1,5 +1,5 @@
 CREATE TABLE labels (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   color TEXT
 );

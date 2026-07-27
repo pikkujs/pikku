@@ -116,6 +116,11 @@ export const unsatisfiedRequirements = async (
  * Prerequisites are checked before anything is created, so a project missing
  * one is told which schema wanted what — rather than being handed a foreign key
  * error, or a half-applied database to clean up.
+ *
+ * The statements then run in one transaction, so the same promise holds for a
+ * failure the check cannot foresee: a statement that dies mid-list takes the
+ * ones before it with it. On an engine without transactional DDL the rollback
+ * is the engine's to give, not ours.
  */
 export const applyPikkuSchemas = async (
   db: Kysely<any>,
@@ -134,12 +139,14 @@ export const applyPikkuSchemas = async (
     )
   }
 
-  const bound = bind(db)
-  for (const schema of schemas) {
-    for (const statement of schema.statements) {
-      await statement(bound, types).execute()
+  await db.transaction().execute(async (trx) => {
+    const bound = bind(trx)
+    for (const schema of schemas) {
+      for (const statement of schema.statements) {
+        await statement(bound, types).execute()
+      }
     }
-  }
+  })
 }
 
 /**

@@ -26,13 +26,13 @@ import { pikkuBetterAuth } from '#pikku'
  * Nothing runs migrations at boot. `pikku db generate` writes them down and
  * `pikku db migrate` applies them; that is the behaviour under test.
  */
-export const auth = pikkuBetterAuth(async ({ secrets, kysely }) =>
+export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) =>
   betterAuth({
     secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
     baseURL: 'http://localhost',
     database: {
       db: kysely,
-      type: process.env.PIKKU_VERIFIER_POSTGRES_URL ? 'postgres' : 'sqlite',
+      type: config.postgresUrl ? 'postgres' : 'sqlite',
     },
     emailAndPassword: { enabled: true },
     advanced: { database: { generateId: 'uuid' } },

@@ -30,9 +30,13 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
   constructor(protected db: Kysely<KyselyPikkuDB>) {}
 
   /**
-   * Create the underlying tables if they don't exist. Safe to call from
-   * either the mirror or `KyselyWorkflowService.init()` — schema is the
-   * same and uses `ifNotExists`.
+   * Create the underlying tables if none of them exist yet.
+   *
+   * Safe to call from either the mirror or `KyselyWorkflowService.init()` —
+   * both apply the same `workflowSchema`, and `ensurePikkuSchema` is a no-op
+   * once the tables are there. A database holding only *part* of the schema
+   * throws rather than filling in the rest: something else owns those tables,
+   * and boot is not where that gets reconciled.
    */
   public async init(): Promise<void> {
     if (this.initialized) return

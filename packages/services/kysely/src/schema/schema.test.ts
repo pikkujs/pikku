@@ -18,6 +18,7 @@ import {
   applyPikkuSchemas,
   ensurePikkuSchema,
   unsatisfiedRequirements,
+  type PikkuSchema,
 } from './index.js'
 import { workflowSchema } from './workflow.schema.js'
 
@@ -185,6 +186,36 @@ describe('pikku runtime schema — prerequisites', () => {
       )
       assert.ok(created.has('workflow_runs'))
       assert.equal(created.has('pikku_user_role'), false)
+    } finally {
+      await db.destroy()
+    }
+  })
+
+  test('a statement failing part way takes the ones before it with it', async () => {
+    const db = memoryDb()
+    try {
+      await db.schema.createTable('taken').addColumn('id', 'text').execute()
+
+      // The prerequisite check cannot see this coming: nothing is missing, the
+      // second statement simply collides with a table the database already has.
+      const collides: PikkuSchema = {
+        name: 'collides',
+        statements: [
+          (db) => db.schema.createTable('first').addColumn('id', 'text'),
+          (db) => db.schema.createTable('taken').addColumn('id', 'text'),
+        ],
+      }
+
+      await assert.rejects(applyPikkuSchemas(db, [collides]))
+
+      const created = new Set(
+        (await db.introspection.getTables()).map((t) => t.name)
+      )
+      assert.equal(
+        created.has('first'),
+        false,
+        'the statement that succeeded must roll back with the one that did not'
+      )
     } finally {
       await db.destroy()
     }
