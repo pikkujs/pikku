@@ -1,4 +1,7 @@
-import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuFeature,
+  pikkuScenario,
+} from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const ORIGINAL_DESCRIPTION =
   'A function used for e2e testing of the code editor'
@@ -230,4 +233,11 @@ export const codeEditorConsoleScenario = pikkuScenario<
 
     return { panels: 2 }
   },
+})
+
+export const codeEditorFeature = pikkuFeature({
+  name: 'Code Editor',
+  description: 'Reading and editing source through the console',
+  tags: ['code-editor'],
+  scenarios: [codeEditorScenario, codeEditorConsoleScenario],
 })

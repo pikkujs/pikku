@@ -33,6 +33,11 @@ interface TableListPageProps<T> {
   data: T[]
   columns: Column<T>[]
   getKey: (item: T, index: number) => string
+  /**
+   * Extra attributes for one row, so a caller can identify a row by the record
+   * it renders rather than by the text that happens to be in it.
+   */
+  getRowProps?: (item: T, index: number) => Record<string, string>
   /** When provided, rows become keyboard-operable buttons; omit for read-only tables. */
   onRowClick?: (item: T) => void
   searchPlaceholder?: I18nString
@@ -55,6 +60,7 @@ export const TableListPage = <T,>({
   data,
   columns,
   getKey,
+  getRowProps,
   onRowClick,
   searchPlaceholder,
   searchFilter,
@@ -173,6 +179,7 @@ export const TableListPage = <T,>({
               {filtered.map((item, index) => (
                 <Table.Tr
                   key={getKey(item, index)}
+                  {...getRowProps?.(item, index)}
                   className={onRowClick ? classes.clickableText : undefined}
                   style={{ height: '3.75rem' }}
                   tabIndex={onRowClick ? 0 : undefined}

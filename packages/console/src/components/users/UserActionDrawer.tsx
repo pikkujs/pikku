@@ -127,6 +127,7 @@ export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
             label={m.users_set_password_label()}
             value={password}
             onChange={(e) => setPassword(e.currentTarget.value)}
+            data-testid="user-password-input"
           />
         )}
         {error && (
@@ -143,6 +144,7 @@ export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
             loading={running}
             disabled={action === 'password' && password.length === 0}
             onClick={run}
+            data-testid="user-action-confirm"
           >
             {confirmLabel}
           </Button>
