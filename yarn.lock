@@ -6227,6 +6227,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"
   dependencies:
+    "@electric-sql/pglite": "npm:^0.5.1"
     "@pikku/core": "npm:^0.12.69"
     "@pikku/kysely": "npm:^0.13.3"
     kysely: "npm:^0.29.0"
