@@ -7188,6 +7188,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifier-db-remote-addon@link:./remote-addon::locator=%40pikku%2Fverifiers-db-schema%40workspace%3Averifiers%2Fdb-schema":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifier-db-remote-addon@link:./remote-addon::locator=%40pikku%2Fverifiers-db-schema%40workspace%3Averifiers%2Fdb-schema"
+  languageName: node
+  linkType: soft
+
 "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry"
@@ -7290,6 +7296,7 @@ __metadata:
     "@pikku/core": "workspace:*"
     "@pikku/kysely": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
+    "@pikku/verifier-db-remote-addon": "link:./remote-addon"
     "@types/better-sqlite3": "npm:^7.6.13"
     "@types/node": "npm:^24"
     better-auth: "npm:^1.6.19"

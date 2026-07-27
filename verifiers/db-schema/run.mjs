@@ -8,6 +8,13 @@
  * database, and the assertions read the migrations it wrote and the database it
  * migrated.
  *
+ * A second addon is wired with `wireRemoteAddon`, and it must contribute
+ * nothing. Its artifact is on disk and is as complete as the local addon's, so
+ * the only thing standing between its table and this project's migrations is
+ * the declaration — which is exactly the claim worth running the whole pipeline
+ * to make. The unit tests pass `remote: true` in by hand; only here does it come
+ * from `wireRemoteAddon` in source, through the inspector, to the registry.
+ *
  * `node run.mjs` uses sqlite. `node run.mjs --postgres` uses the server at
  * `DATABASE_URL`, which is worth running separately rather than trusting sqlite
  * to stand in: the auth config asks for uuid keys, which postgres honours and
@@ -16,19 +23,20 @@
  * rejected for as long as it was.
  *
  * The sequence:
- *   1.  addon: pikku all + pikku db export     → publishes .pikku/db, per dialect
+ *   1.  addons: pikku all + pikku db export    → publishes .pikku/db, per dialect
  *   2.  link node_modules/<addon> → ./addon    (what a yarn workspace makes)
- *   3.  app:   pikku all                       → records the wireAddon declaration
+ *   3.  app:   pikku all                       → records both addon declarations
  *   4.  app:   pikku db generate               → one migration per source, ordered
  *   5.  assert the auth migration carries the plugin tables and columns
  *   6.  assert the runtime migration carries the tables that need `user.id`
  *   7.  assert the addon migration is the addon's own SQL, indexes intact
- *   8.  app:   pikku db migrate                → applies all three
- *   9.  app:   pikku db check                  → clean
- *   10. app:   pikku db generate               → idempotent, writes nothing
- *   11. app:   tsc + runtime                   → addon reads its table, boot does no DDL
- *   12. app:   pikku db baseline               → adopts a database that already has it
- *   13. app:   pikku db baseline               → refuses one that is actually behind
+ *   8.  assert the remote addon got no migration at all
+ *   9.  app:   pikku db migrate                → applies all three
+ *   10. app:   pikku db check                  → clean, and the remote table is absent
+ *   11. app:   pikku db generate               → idempotent, writes nothing
+ *   12. app:   tsc + runtime                   → addon reads its table, boot does no DDL
+ *   13. app:   pikku db baseline               → adopts a database that already has it
+ *   14. app:   pikku db baseline               → refuses one that is actually behind
  */
 import { execFileSync } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
@@ -40,6 +48,7 @@ import {
   rmSync,
   symlinkSync,
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import postgres from 'postgres'
@@ -47,11 +56,15 @@ import postgres from 'postgres'
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(here, '../..')
 const addonDir = join(here, 'addon')
+const remoteAddonDir = join(here, 'remote-addon')
 
 const PIKKU = join(repoRoot, 'packages/cli/dist/bin/pikku.js')
 const TSC = join(repoRoot, 'node_modules/.bin/tsc')
 const TSX = join(repoRoot, 'node_modules/.bin/tsx')
 const ADDON_PKG = '@pikku/verifier-db-addon'
+const REMOTE_ADDON_PKG = '@pikku/verifier-db-remote-addon'
+/** The table the remote addon ships, which belongs to the host's database. */
+const REMOTE_TABLE = 'notes'
 
 /** The table both migrators record applied migrations in. */
 const TRACKING_TABLE = 'sql_migrations'
@@ -127,8 +140,9 @@ function expectFailure(label, args, cwd = here) {
 }
 
 /**
- * The two things the verifier needs from the database itself, either dialect:
- * put it back to empty, and read or clear the migrator's own tracking table.
+ * What the verifier needs from the database itself, either dialect: put it back
+ * to empty, read or clear the migrator's own tracking table, and ask whether a
+ * table is there.
  */
 const store = usePostgres
   ? (() => {
@@ -151,6 +165,13 @@ const store = usePostgres
             `SELECT count(*)::int AS n FROM ${TRACKING_TABLE}`
           )
           return applied.n
+        },
+        hasTable: async (table) => {
+          const [row] = await sql.unsafe(
+            `SELECT count(*)::int AS n FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = '${table}'`
+          )
+          return row.n > 0
         },
         close: async () => await sql.end(),
       }
@@ -180,6 +201,20 @@ const store = usePostgres
           db.close()
         }
       },
+      hasTable: async (table) => {
+        if (!existsSync(SQLITE_FILE)) return false
+        const db = new DatabaseSync(SQLITE_FILE)
+        try {
+          const { n } = db
+            .prepare(
+              `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
+            )
+            .get(table)
+          return n > 0
+        } finally {
+          db.close()
+        }
+      },
       close: async () => {},
     }
 
@@ -188,11 +223,24 @@ console.log(`\n══ db-schema verifier (${dialect}) ══`)
 rmSync(MIGRATIONS_DIR, { recursive: true, force: true })
 rmSync(join(here, '.pikku'), { recursive: true, force: true })
 rmSync(join(addonDir, '.pikku'), { recursive: true, force: true })
+rmSync(join(remoteAddonDir, '.pikku'), { recursive: true, force: true })
+// Generated, but outside `.pikku` — and left behind, the next run inspects a
+// project whose auth wiring already exists, which is not the run CI does. The
+// two answers differed once (`kysely` required on the second run, unused on the
+// first); the verifier only sees that if it starts where a checkout starts.
+rmSync(join(here, 'src', 'scaffold'), { recursive: true, force: true })
 await store.reset()
 
-// 1. The addon publishes what it needs. It never creates it.
+// 1. Both addons publish what they need. Neither creates it.
 run('addon: pikku all', 'node', [PIKKU, 'all'], addonDir)
 run('addon: pikku db export', 'node', [PIKKU, 'db', 'export'], addonDir)
+run('remote addon: pikku all', 'node', [PIKKU, 'all'], remoteAddonDir)
+run(
+  'remote addon: pikku db export',
+  'node',
+  [PIKKU, 'db', 'export'],
+  remoteAddonDir
+)
 
 console.log('\n▶ assert: the published artifact describes the addon’s table')
 const artifactPath = join(addonDir, '.pikku', 'db', 'pikku-db-meta.gen.json')
@@ -213,6 +261,28 @@ contains(
   'the artifact carries the SQL that creates it, indexes included'
 )
 
+// The remote addon's artifact has to be just as complete, or the fact that no
+// migration comes out of it later proves nothing — an addon with nothing to
+// contribute is skipped for the wrong reason.
+const remoteArtifactPath = join(
+  remoteAddonDir,
+  '.pikku',
+  'db',
+  'pikku-db-meta.gen.json'
+)
+check(
+  existsSync(remoteArtifactPath),
+  'the remote addon published a schema too — its table is real, and not this project’s'
+)
+const remoteExported = JSON.parse(readFileSync(remoteArtifactPath, 'utf8'))[
+  dialect
+]
+check(
+  remoteExported?.tables?.[REMOTE_TABLE]?.map((c) => c.name).join(',') ===
+    'id,body',
+  `the ${dialect} artifact carries the introspected columns of \`${REMOTE_TABLE}\``
+)
+
 // 2. The symlink `yarn install` would make for a workspace member, so that
 //    `wireAddon({ package })` and `require.resolve` both find the addon by name.
 const linkPath = join(here, 'node_modules', ...ADDON_PKG.split('/'))
@@ -220,6 +290,20 @@ rmSync(linkPath, { recursive: true, force: true })
 mkdirSync(dirname(linkPath), { recursive: true })
 symlinkSync(relative(dirname(linkPath), addonDir), linkPath, 'dir')
 console.log(`\n▶ linked node_modules/${ADDON_PKG} → ./addon`)
+
+// The remote addon is not linked here: `wireRemoteAddon` requires the package
+// to be a devDependency (it ships types only, its handlers run on the host), and
+// `pikku all` fails the project if it is not — so it is declared in
+// package.json and yarn links it, which is also the only way that rule gets
+// exercised.
+check(
+  existsSync(
+    createRequire(join(here, 'package.json')).resolve(
+      `${REMOTE_ADDON_PKG}/.pikku/db/pikku-db-meta.gen.json`
+    )
+  ),
+  'the remote addon resolves by package name, so nothing is hidden from db generate'
+)
 
 // 3-4. The consumer discovers the addon because it is wired, then writes one
 //      migration per source.
@@ -311,17 +395,38 @@ const addonSql = sqlOf(addonFile)
 contains(addonSql, 'CREATE TABLE labels', 'the table')
 contains(addonSql, 'CREATE UNIQUE INDEX labels_name_unique', 'and its index')
 
-// 8-9. Apply it all, then ask the database whether it agrees. On postgres this
-//      is where a foreign key that only compiles is separated from one that the
-//      server will actually accept.
+// 8. The remote addon is the same channel, the same artifact, and the opposite
+//    answer. Three migrations above already says there is no fourth; this says
+//    its table did not get folded into one of the three either.
+console.log('\n▶ assert: the remote addon contributed nothing')
+check(
+  !files.some((file) => file.includes('remote')),
+  'no migration was written for the remote addon'
+)
+check(
+  !files.some((file) => sqlOf(file).includes(REMOTE_TABLE)),
+  `no migration mentions \`${REMOTE_TABLE}\` — the host's table stayed the host's`
+)
+check(
+  !generated.includes(REMOTE_ADDON_PKG),
+  'db generate did not report the remote addon as a source at all'
+)
+
+// 9-10. Apply it all, then ask the database whether it agrees. On postgres this
+//       is where a foreign key that only compiles is separated from one that the
+//       server will actually accept.
 run('app: pikku db migrate', 'node', [PIKKU, 'db', 'migrate'])
 const checked = capture('app: pikku db check', 'node', [PIKKU, 'db', 'check'])
 check(
   checked.includes('db check: the database matches its migrations'),
   'db check reports the database matches its migrations'
 )
+check(
+  !(await store.hasTable(REMOTE_TABLE)),
+  `\`${REMOTE_TABLE}\` is not in this database — the remote addon reads it on another one`
+)
 
-// 10. Running it again must be a no-op, or every deploy grows a migration.
+// 11. Running it again must be a no-op, or every deploy grows a migration.
 const again = capture('app: pikku db generate (again)', 'node', [
   PIKKU,
   'db',
@@ -336,11 +441,11 @@ check(
   'every source reported itself already covered'
 )
 
-// 11. What the migrated database is worth at runtime.
+// 12. What the migrated database is worth at runtime.
 run('app: tsc --noEmit', TSC, ['--noEmit', '-p', 'tsconfig.json'])
 run('app: runtime checks', TSX, ['src/start.ts'])
 
-// 12. Baselining: the deployment that already has the tables but no record of
+// 13. Baselining: the deployment that already has the tables but no record of
 //     how they got there — the shape you get when a runtime created them at boot
 //     and the migration writing them down was authored afterwards. Dropping the
 //     tracking rows reproduces it exactly: same schema, no history.
@@ -379,7 +484,7 @@ check(
   'migrate now has nothing pending, so the history has caught up with reality'
 )
 
-// 13. And it must refuse the database it would be lying about. Baselining one
+// 14. And it must refuse the database it would be lying about. Baselining one
 //     that is genuinely behind would bury a real gap under a history claiming
 //     everything is applied.
 console.log('\n▶ baseline: refuses a database that is actually behind')
