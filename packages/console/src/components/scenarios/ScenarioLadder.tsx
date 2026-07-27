@@ -9,7 +9,11 @@ type ScenarioLadderProps = {
   /** Display names for the actors the steps name, keyed by actor key. */
   actorNames?: Map<string, string>
   onOpenPersona?: (key: string) => void
-  onSelectStep?: (stepId: string, stepType: string) => void
+  onSelectStep?: (
+    stepId: string,
+    stepType: string,
+    metadata: Record<string, unknown>
+  ) => void
 }
 
 export const ScenarioLadder: React.FC<ScenarioLadderProps> = ({

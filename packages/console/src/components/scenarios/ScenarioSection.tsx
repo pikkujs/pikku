@@ -22,7 +22,12 @@ type ScenarioSectionProps = {
   workflow: unknown
   onOpen?: (name: string) => void
   onOpenPersona?: (key: string) => void
-  onSelectStep?: (workflow: unknown, stepId: string, stepType: string) => void
+  onSelectStep?: (
+    workflow: unknown,
+    stepId: string,
+    stepType: string,
+    metadata: Record<string, unknown>
+  ) => void
 }
 
 export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
@@ -84,8 +89,8 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
         steps={scenario.steps}
         actorNames={new Map(cast.map((persona) => [persona.key, persona.name]))}
         onOpenPersona={onOpenPersona}
-        onSelectStep={(stepId, stepType) =>
-          onSelectStep?.(workflow, stepId, stepType)
+        onSelectStep={(stepId, stepType, metadata) =>
+          onSelectStep?.(workflow, stepId, stepType, metadata)
         }
       />
 

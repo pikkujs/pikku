@@ -19,7 +19,11 @@ type LadderStepProps = {
   actorName?: string
   onOpenPersona?: (key: string) => void
   /** Opens the step's details panel; the page owns which workflow it reads. */
-  onSelectStep?: (stepId: string, stepType: string) => void
+  onSelectStep?: (
+    stepId: string,
+    stepType: string,
+    metadata: Record<string, unknown>
+  ) => void
 }
 
 export const LadderStep: React.FC<LadderStepProps> = ({
@@ -38,7 +42,20 @@ export const LadderStep: React.FC<LadderStepProps> = ({
       align="flex-start"
       wrap="nowrap"
       data-testid={`ladder-step-${step.id}`}
-      onClick={() => onSelectStep?.(step.id, step.repeat ? 'fanout' : 'rpc')}
+      onClick={() =>
+        onSelectStep?.(
+          step.id,
+          step.repeat ? 'fanout' : 'scenarioStep',
+          step.repeat
+            ? { stepName: step.id }
+            : {
+                stepName: step.sentence,
+                phase: step.phase,
+                actor,
+                actorName,
+              }
+        )
+      }
       className={classes.ladderStep}
       style={{ paddingLeft: 8 + step.depth * 24 }}
     >

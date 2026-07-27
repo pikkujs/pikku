@@ -737,6 +737,8 @@
   "scenarios_phase_given": "Given",
   "scenarios_phase_when": "When",
   "scenarios_phase_then": "Then",
+  "scenarios_phase_step": "Step",
+  "scenarios_step_definition": "Scenario step",
   "scenarios_repeat": "for each {item} in {source}",
   "scenarios_cast": "Cast",
   "scenarios_select_step": "Select a step to see its details",
