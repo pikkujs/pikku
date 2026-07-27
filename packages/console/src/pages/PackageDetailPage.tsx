@@ -935,7 +935,11 @@ export const PackageDetailPage: React.FC<{
             >
               <Tabs.List style={{ borderBottom: 'none' }}>
                 {hasSetup && (
-                  <Tabs.Tab value="setup" leftSection={<Wrench size={14} />}>
+                  <Tabs.Tab
+                    value="setup"
+                    leftSection={<Wrench size={14} />}
+                    data-testid="package-tab-setup"
+                  >
                     {m.package_detail_tab_setup()}
                   </Tabs.Tab>
                 )}

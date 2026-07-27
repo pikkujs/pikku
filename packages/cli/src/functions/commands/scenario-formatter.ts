@@ -44,11 +44,22 @@ export interface ScenarioResult {
   failure?: ScenarioFailureDetail
 }
 
+/** One scenario that was not run, and why. */
+export interface ScenarioSkip {
+  name: string
+  reason: string
+}
+
 export interface ScenarioRunReport {
   environment: string
   results: ScenarioResult[]
-  /** Scenarios not run at all, by name — today, browser ones under --no-browser. */
-  skipped: string[]
+  /**
+   * Scenarios not run at all, each carrying why. A skip is only useful if the
+   * reader can tell a browser scenario held back by `--no-browser` from one the
+   * project itself quarantined, so the reason travels with the name rather than
+   * being assumed by the formatter.
+   */
+  skipped: ScenarioSkip[]
   /** Feature-level hook failures, which belong to no single scenario. */
   hookFailures: string[]
 }
@@ -73,8 +84,8 @@ export const formatScenarioReport = (
   const info = (text: string) => lines.push({ level: 'info', text })
   const error = (text: string) => lines.push({ level: 'error', text })
 
-  for (const name of report.skipped) {
-    info(`SKIP ${name} (browser steps, --no-browser)`)
+  for (const { name, reason } of report.skipped) {
+    info(`SKIP ${name} (${reason})`)
   }
 
   for (const result of report.results) {
@@ -103,7 +114,7 @@ export const formatScenarioReport = (
 
   const failed = report.results.filter((r) => r.status === 'failed').length
   const skippedSuffix = report.skipped.length
-    ? `, ${report.skipped.length} skipped (--no-browser)`
+    ? `, ${report.skipped.length} skipped`
     : ''
   const hookSuffix = report.hookFailures.length
     ? `, ${report.hookFailures.length} feature hook failure(s)`

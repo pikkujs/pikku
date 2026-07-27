@@ -6,6 +6,13 @@ export type ScenarioPlanEntry = {
   scenarioName: string
   data?: unknown
   tags: string[]
+  /**
+   * Why this scenario is not part of a default run. It stays in the plan so
+   * the runner reports it as skipped rather than omitting it silently, and it
+   * is cleared when the scenario is named directly with `--flows` — the
+   * explicit ask that overrides the quarantine.
+   */
+  skip?: string
 }
 
 /**
@@ -22,7 +29,7 @@ export type ScenarioPlanGroup = {
 
 export type ScenarioPlanInput = {
   /** Scenarios the inspector found, in declaration order. */
-  scenarios: Array<{ name: string; tags: string[] }>
+  scenarios: Array<{ name: string; tags: string[]; skip?: string }>
   features: Map<string, CoreFeature>
   registrations: Map<string, CoreWorkflow>
   flows?: string[]
@@ -91,9 +98,21 @@ export const buildScenarioPlan = ({
     }
   }
 
+  const skipReasons = new Map(
+    scenarios
+      .filter((scenario) => scenario.skip)
+      .map((scenario) => [scenario.name, scenario.skip!])
+  )
+
   const wantedFlows = flows ? new Set(flows) : undefined
   const wantedFeatures = featureIds ? new Set(featureIds) : undefined
   const wantedTags = tags ? new Set(tags) : undefined
+
+  // Naming a scenario with `--flows` is the explicit ask that overrides its
+  // quarantine; narrowing to its feature is not — a feature is a group, and
+  // running the group should not silently drag a quarantined member in.
+  const skipFor = (scenarioName: string): string | undefined =>
+    wantedFlows?.has(scenarioName) ? undefined : skipReasons.get(scenarioName)
 
   const keep = (entry: ScenarioPlanEntry, featureId?: string): boolean => {
     if (wantedFeatures && !(featureId && wantedFeatures.has(featureId))) {
@@ -117,6 +136,7 @@ export const buildScenarioPlan = ({
         scenarioName,
         data,
         tags: entryTags,
+        skip: skipFor(scenarioName),
       }))
       .filter((entry) => keep(entry, featureId))
     if (kept.length === 0) continue
@@ -132,7 +152,11 @@ export const buildScenarioPlan = ({
   const inAFeature = new Set(entries.map((entry) => entry.scenarioName))
   for (const scenario of scenarios) {
     if (inAFeature.has(scenario.name)) continue
-    const entry = { scenarioName: scenario.name, tags: scenario.tags }
+    const entry = {
+      scenarioName: scenario.name,
+      tags: scenario.tags,
+      skip: skipFor(scenario.name),
+    }
     if (!keep(entry)) continue
     groups.push({ entries: [entry] })
   }

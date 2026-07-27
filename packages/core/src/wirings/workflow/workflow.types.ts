@@ -427,6 +427,13 @@ export type WorkflowsMeta = Record<
     expose?: boolean
     /** True for pikkuScenario workflows (complex + actor steps). */
     scenario?: boolean
+    /**
+     * Why a scenario is held out of a default run. Stating the reason in code
+     * keeps the quarantine next to the scenario it applies to, rather than in
+     * a CI invocation nobody reads. Naming the scenario with `--flows` runs it
+     * regardless.
+     */
+    skip?: string
     /** Actor names a scenario declares (personas it runs steps as). */
     actors?: string[]
   }

@@ -315,6 +315,12 @@ export type CorePikkuFunctionConfig<
    * original error.
    */
   after?: CorePikkuFunctionHook
+  /**
+   * Scenarios only: why this scenario is held out of a default run. It is
+   * reported as skipped rather than quietly omitted, and naming it directly
+   * with `--flows` runs it anyway.
+   */
+  skip?: string
   auth?: boolean
   /**
    * Scopes the session must hold to run this function. All of them are

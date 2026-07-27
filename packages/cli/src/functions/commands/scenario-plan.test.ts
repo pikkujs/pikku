@@ -213,3 +213,80 @@ describe('buildScenarioPlan', () => {
     assert.ok(groups.every((g) => g.featureId === undefined))
   })
 })
+
+/**
+ * A scenario carrying `skip` states, in code, why it is not part of a default
+ * run — a quarantine that travels with the scenario instead of living in a CI
+ * invocation nobody reads. It still appears in the plan, marked, so the runner
+ * can report it rather than silently omit it.
+ */
+describe('buildScenarioPlan skip', () => {
+  const skipFixture = () => {
+    const { registrations, features } = fixture()
+    const scenarios = [
+      { name: 'lazyLoadScenario', tags: ['credential'] },
+      { name: 'roundTripScenario', tags: ['credential'] },
+      {
+        name: 'smokeScenario',
+        tags: ['smoke'],
+        skip: 'needs a fresh server',
+      },
+    ]
+    return { registrations, features, scenarios }
+  }
+
+  const skipPlan = (overrides: Partial<ScenarioPlanInput> = {}) => {
+    const { registrations, features, scenarios } = skipFixture()
+    return buildScenarioPlan({
+      scenarios,
+      features,
+      registrations,
+      ...overrides,
+    })
+  }
+
+  test('a skipped scenario stays in the plan carrying its reason', () => {
+    const { groups } = skipPlan()
+    const smoke = groups
+      .flatMap((group) => group.entries)
+      .find((entry) => entry.scenarioName === 'smokeScenario')
+    assert.equal(smoke?.skip, 'needs a fresh server')
+  })
+
+  test('an unskipped scenario carries no reason', () => {
+    const { groups } = skipPlan()
+    const lazy = groups
+      .flatMap((group) => group.entries)
+      .find((entry) => entry.scenarioName === 'lazyLoadScenario')
+    assert.equal(lazy?.skip, undefined)
+  })
+
+  test('naming a skipped scenario with --flows runs it anyway', () => {
+    const { groups } = skipPlan({ flows: ['smokeScenario'] })
+    const entries = groups.flatMap((group) => group.entries)
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0]!.scenarioName, 'smokeScenario')
+    assert.equal(entries[0]!.skip, undefined)
+  })
+
+  test('selecting its feature does not un-skip it', () => {
+    const { registrations, features } = skipFixture()
+    const { groups } = buildScenarioPlan({
+      scenarios: [
+        {
+          name: 'lazyLoadScenario',
+          tags: ['credential'],
+          skip: 'needs a fresh server',
+        },
+        { name: 'roundTripScenario', tags: ['credential'] },
+      ],
+      features,
+      registrations,
+      featureIds: ['credentialFeature'],
+    })
+    const lazy = groups
+      .flatMap((group) => group.entries)
+      .find((entry) => entry.scenarioName === 'lazyLoadScenario')
+    assert.equal(lazy?.skip, 'needs a fresh server')
+  })
+})
