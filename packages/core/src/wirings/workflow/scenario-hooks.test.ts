@@ -1,7 +1,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { createScenarioRunner } from './pikku-scenario-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import type { ScenarioActors } from '../../services/scenario-actors-service.js'
@@ -37,7 +37,7 @@ const runScenario = async (
   config: ScenarioHooks & { func: (...args: any[]) => any },
   { input = {}, source = 'scenario' as 'scenario' | 'dsl' } = {}
 ) => {
-  const ws = new InMemoryWorkflowService()
+  const { workflowService: ws, scenarioService } = createScenarioRunner()
 
   pikkuState(null, 'package', 'singletonServices', {
     logger: noopLogger,

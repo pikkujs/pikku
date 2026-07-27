@@ -11,6 +11,11 @@ export {
   WorkflowApprovalResolvedError,
   DEFAULT_STEP_RETRIES,
 } from './pikku-workflow-service.js'
+export type {
+  RunLifecycleContext,
+  WorkflowRunEngine,
+  WorkflowRunExtension,
+} from './pikku-workflow-service.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
 
 // Time-travel: reconstruct run state at any point from durable history

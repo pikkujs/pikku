@@ -44,6 +44,30 @@ export async function loadUserBootstrap(pikkuDir: string): Promise<void> {
 }
 
 /**
+ * Load the generated `pikku-bootstrap-scenarios.gen.{ts,js}`, which imports the
+ * app bootstrap and then registers the scenarios, features and steps that are
+ * deliberately kept out of it. Falls back to the app bootstrap for a project
+ * generated before the split existed.
+ */
+export async function loadScenarioBootstrap(pikkuDir: string): Promise<void> {
+  const scenarioTs = join(pikkuDir, 'pikku-bootstrap-scenarios.gen.ts')
+  const scenarioJs = join(pikkuDir, 'pikku-bootstrap-scenarios.gen.js')
+  const scenarioPath = existsSync(scenarioTs)
+    ? scenarioTs
+    : existsSync(scenarioJs)
+      ? scenarioJs
+      : null
+
+  if (!scenarioPath) {
+    await loadUserBootstrap(pikkuDir)
+    return
+  }
+
+  ensureTsxRegistered()
+  await importUserPath(scenarioPath)
+}
+
+/**
  * Import a user-source TypeScript file (e.g. their config or services
  * factory) so it can be loaded from inside @pikku/cli's compiled JS.
  */

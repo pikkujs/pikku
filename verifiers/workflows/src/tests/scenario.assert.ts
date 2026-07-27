@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { createScenarioRunner } from '@pikku/core/scenario'
 import type { ScenarioActor } from '@pikku/core/services'
 import { rpcService } from '@pikku/core/rpc'
 
@@ -33,20 +33,32 @@ const fakeActor = (
   name: string
 ): ScenarioActor & { calls: Array<{ rpcName: string; data: any }> } => {
   const calls: Array<{ rpcName: string; data: any }> = []
-  return {
-    name,
-    email: `${name}@actors.local`,
-    calls,
-    invoke: async (rpcName: string, data: any) => {
-      calls.push({ rpcName, data })
-      return {
+  const invokeRaw = async (rpcName: string, data: any) => {
+    calls.push({ rpcName, data })
+    return {
+      status: 200,
+      ok: true,
+      body: {
         id: data.orderId,
         customerId: 'customer-1',
         items: [],
         total: 0,
         status: 'processing',
         createdAt: 'now',
-      }
+      },
+    }
+  }
+  return {
+    name,
+    email: `${name}@actors.local`,
+    calls,
+    invokeRaw,
+    invoke: async (rpcName: string, data: any) =>
+      (await invokeRaw(rpcName, data)).body,
+    converse: async () => {
+      throw new Error(
+        `[verifier] actor '${name}' has no agent — this verifier only exercises actor RPC steps`
+      )
     },
   }
 }
@@ -92,7 +104,7 @@ describe('pikkuScenario verification', () => {
     const customer = fakeActor('customer')
     const ops = fakeActor('ops')
 
-    const workflowService = new InMemoryWorkflowService()
+    const { workflowService } = createScenarioRunner()
     const singletonServices = await createSingletonServices(
       await createConfig(),
       { workflowService }

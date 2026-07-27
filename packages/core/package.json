@@ -23,6 +23,7 @@
     "./function": "./dist/function/index.js",
     "./channel": "./dist/wirings/channel/index.js",
     "./workflow": "./dist/wirings/workflow/index.js",
+    "./scenario": "./dist/wirings/workflow/pikku-scenario-service.js",
     "./workflow/timeline": "./dist/wirings/workflow/run-timeline.js",
     "./workflow/types": "./dist/wirings/workflow/workflow.types.js",
     "./actor-flow": "./dist/wirings/actor-flow/index.js",
