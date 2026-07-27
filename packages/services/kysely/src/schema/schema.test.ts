@@ -38,6 +38,21 @@ const dialect = (kind: 'postgres' | 'sqlite') =>
         createQueryCompiler: () => new SqliteQueryCompiler(),
       }
 
+/** A driver whose every query fails with `error` — for testing the failure path. */
+class ThrowingDriver extends DummyDriver {
+  constructor(private readonly error: Error) {
+    super()
+  }
+  override async acquireConnection() {
+    return {
+      executeQuery: async (): Promise<never> => {
+        throw this.error
+      },
+      streamQuery: async function* () {},
+    }
+  }
+}
+
 const compileFor = (kind: 'postgres' | 'sqlite') =>
   compilePikkuSchemas(new Kysely<any>({ dialect: dialect(kind) }))
 
@@ -289,7 +304,9 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
    * only thing `ensurePikkuSchema` reads before it decides. DummyDriver takes
    * whatever DDL follows.
    */
-  const introspecting = (tables: Array<{ schema: string; name: string }>) =>
+  const introspecting = (
+    tables: Array<{ schema: string | undefined; name: string }>
+  ) =>
     new Kysely<any>({
       dialect: {
         ...dialect('postgres'),
@@ -360,6 +377,50 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     )
 
     assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+  })
+
+  test('matches on the bare name when the engine reports no schemas', async () => {
+    // sqlite and mysql leave `TableMetadata.schema` unset. Holding out for the
+    // qualified pair there would read every existing table as missing — the
+    // same false negative this suite exists for, arrived at from the other side.
+    const db = introspecting(
+      WORKFLOW_TABLES.map((name) => ({ schema: undefined, name }))
+    )
+
+    assert.equal(
+      await ensurePikkuSchema(db.withSchema('main'), workflowSchema),
+      'present'
+    )
+  })
+
+  test('leaves a syntax error that is not sqlite refusing a qualifier alone', async () => {
+    // Postgres compiles the same qualified reference legitimately, and can
+    // raise a syntax error of its own on this DDL — a column type resolved from
+    // `requires` goes in verbatim. Answering for it in sqlite's name would be
+    // the misleading-error bug, reintroduced.
+    const pgError = Object.assign(
+      new Error('syntax error at or near "not"'),
+      { code: '42601' }
+    )
+    const db = new Kysely<any>({
+      dialect: {
+        ...dialect('postgres'),
+        createDriver: () => new ThrowingDriver(pgError),
+        createIntrospector: () => ({
+          getSchemas: async () => [],
+          getMetadata: async () => ({ tables: [] }),
+          getTables: async () => [],
+        }),
+      },
+    })
+
+    await assert.rejects(
+      ensurePikkuSchema(db.withSchema('app'), workflowSchema),
+      (error: Error) => {
+        assert.equal(error, pgError, 'the engine error must pass through as-is')
+        return true
+      }
+    )
   })
 
   test('explains the qualified foreign key sqlite cannot express', async () => {
