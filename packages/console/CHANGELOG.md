@@ -1,3 +1,54 @@
+## 0.12.45
+
+### Patch Changes
+
+- ea74ba4: Export the console as panels, not just screens.
+
+  Every page that mounted its own `PanelProvider` had to keep its table in a private
+  inner component so `usePanelContext` had a provider above it. Those tables are now
+  standalone panels a host can mount and arrange itself:
+  - `ConsoleSurface` mounts the panel context (deferring to a host's own, unless
+    `isolate` is passed), and `ConsoleInspectorPanel` renders the detail pane for
+    whatever is selected — entity-agnostic, so one inspector pairs with any list.
+  - `TabbedSurface` for the pages that are a tab strip over several panels.
+  - List panels for HTTP, MCP, queues, schedulers, triggers, middleware, permissions,
+    services, webhooks, auth providers, variables, secrets, functions, packages, users,
+    agents, email templates, scenario flows and personas, plus the security report and
+    audit log.
+  - The agent playground as `AgentPlaygroundSurface` with its conversations, chat and
+    selector panels.
+  - The data hooks behind each panel (`useHttpItems`, `useQueueItems`, `useAgentItems`,
+    `useAdminUsers`, …) and their item types.
+
+  Purely additive: every page keeps its existing prop surface and renders identically.
+
+- ea74ba4: Export the workflow surface as composable panels rather than a single screen.
+
+  `WorkflowSurface` mounts every workflow-scoped context (panels, run state, graph,
+  canvas drawer) and the panels below read from it, so a host can arrange them in
+  any order, anywhere in its own tree:
+
+  ```tsx
+  <WorkflowSurface workflowId={id}>
+    <WorkflowRunsPanel />
+    <WorkflowGraphPanel />
+    <WorkflowInspectorPanel />
+  </WorkflowSurface>
+  ```
+
+  New exports: `WorkflowSurface`, `useWorkflowSurface`, `useWorkflowSurfaceSafe`,
+  `WorkflowRunsPanel`, `WorkflowGraphPanel`, `WorkflowInspectorPanel`,
+  `WorkflowCanvasDrawer`, `WorkflowListPanel`, `WorkflowThreePane`.
+
+  Also exports the workflow-run query keys and an invalidation hook —
+  `workflowQueryKeys`, `useWorkflowRunRefresh`, plus the `isRunActive` /
+  `isStepActive` / `hasActiveStep` status predicates — so an embedder that shares
+  this package's QueryClient can refresh the panels through a supported API
+  instead of hardcoding key tuples.
+
+  Purely additive: `WorkflowsPage` keeps its existing props and renders the same
+  UI, now composed from these panels.
+
 ## 0.12.44
 
 ### Patch Changes
@@ -166,8 +217,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-            "TypographyStylesProvider" is not exported by @pikku/mantine/core
-            "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+              "TypographyStylesProvider" is not exported by @pikku/mantine/core
+              "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core

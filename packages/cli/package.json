@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.89",
+  "version": "0.12.90",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -32,8 +32,8 @@
     "@pikku/bun-server": "^0.12.4",
     "@pikku/deploy-cloudflare": "^0.12.8",
     "@pikku/fetch": "^0.12.8",
-    "@pikku/inspector": "^0.12.46",
-    "@pikku/kysely": "^0.13.3",
+    "@pikku/inspector": "^0.12.47",
+    "@pikku/kysely": "^0.13.4",
     "@pikku/kysely-node-sqlite": "^0.12.3",
     "@pikku/n8n-import": "^0.0.3",
     "@pikku/node-http-server": "^0.12.6",
