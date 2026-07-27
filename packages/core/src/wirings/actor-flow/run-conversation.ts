@@ -11,8 +11,8 @@ import type {
   AIAgentStepResult,
 } from '../../services/ai-agent-runner-service.js'
 
-/** One turn the persona takes: the message to send and whether it's finished. */
-const PERSONA_TURN_SCHEMA = {
+/** One turn the actor takes: the message to send and whether it's finished. */
+const ACTOR_TURN_SCHEMA = {
   type: 'object',
   properties: {
     message: { type: 'string' },
@@ -21,7 +21,7 @@ const PERSONA_TURN_SCHEMA = {
   required: ['message', 'done'],
 } as const
 
-/** The persona's approve/deny decision for each pending tool request. */
+/** The actor's approve/deny decision for each pending tool request. */
 const APPROVAL_DECISION_SCHEMA = {
   type: 'object',
   properties: {
@@ -41,7 +41,7 @@ const APPROVAL_DECISION_SCHEMA = {
   required: ['decisions'],
 } as const
 
-/** The persona's final verdict on whether the task was accomplished. */
+/** The actor's final verdict on whether the task was accomplished. */
 const EVALUATION_SCHEMA = {
   type: 'object',
   properties: {
@@ -55,23 +55,23 @@ const DEFAULT_MAX_TURNS = 12
 
 const DEFAULT_MAX_APPROVAL_ROUNDS = 16
 
-/** The LLM call the persona uses for its own turns/decisions/evaluation. */
-export type PersonaLLM = (
+/** The LLM call the actor uses for its own turns/decisions/evaluation. */
+export type ActorLLM = (
   params: AIAgentRunnerParams
 ) => Promise<AIAgentStepResult>
 
 export interface RunConversationParams {
-  /** Persona config (personality/jobTitle/name) that shapes how the actor talks. */
-  persona: ScenarioActorConfig
-  /** Stable persona name (for transcript labelling). */
-  personaName: string
+  /** The actor's own config (personality/jobTitle/name), which shapes how it talks. */
+  actor: ScenarioActorConfig
+  /** Stable actor name (for transcript labelling). */
+  actorName: string
   /** What the actor is trying to get the target agent to accomplish. */
   task: string
   /** Natural-language success criterion the actor evaluates at the end. */
   evaluate: string
   /** How the actor answers the target agent's tool-approval requests. */
   approvals?: ActorFlowApprovalPolicy
-  /** Model the persona uses for its own turns/decisions. */
+  /** Model the actor uses for its own turns/decisions. */
   model: string
   /** Hard cap on conversation turns. Default 12. */
   maxTurns?: number
@@ -79,8 +79,8 @@ export interface RunConversationParams {
   maxApprovalRounds?: number
   /** Transport that drives the target agent (HTTP in production). */
   target: TargetAgentDriver
-  /** The persona's own LLM. */
-  llm: PersonaLLM
+  /** The actor's own LLM. */
+  llm: ActorLLM
   /** Display name of the target agent (transcript labelling). */
   agentName: string
 }
@@ -109,16 +109,13 @@ function readObject<T>(result: { object?: unknown; text?: string }): T | null {
   return null
 }
 
-function personaInstructions(
-  persona: ScenarioActorConfig,
-  task: string
-): string {
+function actorInstructions(actor: ScenarioActorConfig, task: string): string {
   return [
     `You are role-playing a real user interacting with an AI assistant. Stay in character at all times — you are the user, not the assistant.`,
-    persona.name ? `Your name is ${persona.name}.` : '',
-    persona.jobTitle ? `Your role: ${persona.jobTitle}.` : '',
-    persona.personality
-      ? `Your personality and communication style: ${persona.personality}. Match this tone, vocabulary, and level of detail exactly.`
+    actor.name ? `Your name is ${actor.name}.` : '',
+    actor.jobTitle ? `Your role: ${actor.jobTitle}.` : '',
+    actor.personality
+      ? `Your personality and communication style: ${actor.personality}. Match this tone, vocabulary, and level of detail exactly.`
       : '',
     `Your goal in this conversation: ${task}.`,
     `Send one message at a time. Set "done" to true only once your goal is clearly accomplished, or clearly impossible.`,
@@ -127,7 +124,7 @@ function personaInstructions(
     .join('\n')
 }
 
-/** Route the target agent's pending tool approvals through the persona. */
+/** Route the target agent's pending tool approvals through the actor. */
 async function decideApprovals(
   params: RunConversationParams,
   instructions: string,
@@ -150,7 +147,7 @@ async function decideApprovals(
 
   const result = await params.llm({
     model: params.model,
-    instructions: `${instructions}\nThe assistant is asking permission to run tools on your behalf. Decide whether YOU, as this persona, would allow each one.`,
+    instructions: `${instructions}\nThe assistant is asking permission to run tools on your behalf. Decide whether YOU, as this actor, would allow each one.`,
     messages: [
       msg(
         'user',
@@ -178,7 +175,7 @@ async function decideApprovals(
   })
 }
 
-/** Drive the target to a non-suspended reply, routing approvals to the persona. */
+/** Drive the target to a non-suspended reply, routing approvals to the actor. */
 async function converseWithTarget(
   params: RunConversationParams,
   instructions: string,
@@ -209,7 +206,7 @@ async function converseWithTarget(
 }
 
 /**
- * Run a conversation: an LLM-driven persona holds a real multi-turn exchange
+ * Run a conversation: an LLM-driven actor holds a real multi-turn exchange
  * with a target agent (driven via the injected transport), answers the target's
  * tool-approval requests in-persona, then evaluates whether the task was met.
  * Deterministic checks are the caller's responsibility.
@@ -218,11 +215,11 @@ export async function runConversation(
   params: RunConversationParams
 ): Promise<ActorFlowVerdict> {
   const maxTurns = params.maxTurns ?? DEFAULT_MAX_TURNS
-  const instructions = personaInstructions(params.persona, params.task)
-  // Seed a kickoff so the very first persona turn has a non-empty message list
-  // (providers reject an empty prompt). It's an instruction TO the persona, so
+  const instructions = actorInstructions(params.actor, params.task)
+  // Seed a kickoff so the very first actor turn has a non-empty message list
+  // (providers reject an empty prompt). It's an instruction TO the actor, so
   // it never appears in the transcript.
-  const personaMessages: AIMessage[] = [
+  const actorMessages: AIMessage[] = [
     msg(
       'user',
       'Begin the conversation now — send your first message to the assistant to work towards your goal.'
@@ -231,29 +228,27 @@ export async function runConversation(
   const transcript: string[] = []
 
   for (let turn = 0; turn < maxTurns; turn++) {
-    const personaResult = await params.llm({
+    const actorResult = await params.llm({
       model: params.model,
       instructions,
-      messages: personaMessages,
+      messages: actorMessages,
       tools: [],
       maxSteps: 1,
       toolChoice: 'none',
-      outputSchema: PERSONA_TURN_SCHEMA as unknown as Record<string, unknown>,
+      outputSchema: ACTOR_TURN_SCHEMA as unknown as Record<string, unknown>,
     })
 
-    const turnData = readObject<{ message: string; done: boolean }>(
-      personaResult
-    )
-    const personaMessage = turnData?.message?.trim()
-    if (!personaMessage) {
+    const turnData = readObject<{ message: string; done: boolean }>(actorResult)
+    const actorMessage = turnData?.message?.trim()
+    if (!actorMessage) {
       break
     }
 
-    personaMessages.push(msg('assistant', personaMessage))
-    transcript.push(`${params.personaName}: ${personaMessage}`)
+    actorMessages.push(msg('assistant', actorMessage))
+    transcript.push(`${params.actorName}: ${actorMessage}`)
 
-    const reply = await converseWithTarget(params, instructions, personaMessage)
-    personaMessages.push(msg('user', reply.text ?? ''))
+    const reply = await converseWithTarget(params, instructions, actorMessage)
+    actorMessages.push(msg('user', reply.text ?? ''))
     transcript.push(`${params.agentName}: ${reply.text ?? ''}`)
 
     if (turnData?.done) {

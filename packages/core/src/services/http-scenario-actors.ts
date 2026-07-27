@@ -115,8 +115,8 @@ export class HttpScenarioActor implements ScenarioActor {
     const resourceId = `actor:${this.name}`
 
     return runConversation({
-      persona: this.actorConfig,
-      personaName: this.actorConfig.name ?? this.name,
+      actor: this.actorConfig,
+      actorName: this.actorConfig.name ?? this.name,
       agentName: options.agent,
       task: options.task,
       evaluate: options.evaluate,

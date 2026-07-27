@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { runConversation, type PersonaLLM } from './run-conversation.js'
+import { runConversation, type ActorLLM } from './run-conversation.js'
 import type {
   TargetAgentDriver,
   TargetAgentReply,
@@ -23,10 +23,10 @@ const scriptedLLM = (script: {
   turns: Array<{ message: string; done: boolean }>
   decisions: Array<{ toolCallId: string; approved: boolean }>
   evaluation: { passed: boolean; reasoning: string }
-}): { llm: PersonaLLM; calls: string[] } => {
+}): { llm: ActorLLM; calls: string[] } => {
   let turn = 0
   const calls: string[] = []
-  const llm: PersonaLLM = async (params) => {
+  const llm: ActorLLM = async (params) => {
     const props =
       (params.outputSchema as { properties?: Record<string, unknown> })
         ?.properties ?? {}
@@ -109,8 +109,8 @@ const alwaysSuspendingTarget = (): {
 }
 
 const base = {
-  persona: { email: 'pm@example.com', name: 'Priya', personality: 'concise' },
-  personaName: 'Priya',
+  actor: { email: 'pm@example.com', name: 'Priya', personality: 'concise' },
+  actorName: 'Priya',
   agentName: 'todoBot',
   task: 'Get a todo created',
   evaluate: 'A todo now exists',
@@ -168,7 +168,13 @@ describe('runConversation', () => {
     const { target, approveCalls } = alwaysSuspendingTarget()
 
     await assert.rejects(
-      runConversation({ ...base, approvals: 'always', maxApprovalRounds: 3, llm, target }),
+      runConversation({
+        ...base,
+        approvals: 'always',
+        maxApprovalRounds: 3,
+        llm,
+        target,
+      }),
       /approval rounds/
     )
     assert.equal(approveCalls(), 3)

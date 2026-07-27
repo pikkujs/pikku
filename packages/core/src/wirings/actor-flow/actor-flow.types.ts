@@ -21,7 +21,7 @@ export interface ConverseOptions<TAgentName extends string = string> {
   evaluate: string
   /** How the actor answers the agent's tool-approval requests. Default `'in-persona'`. */
   approvals?: ActorFlowApprovalPolicy
-  /** Model the persona uses for its own turns/decisions. Falls back to the actor service default. */
+  /** Model the actor uses for its own turns/decisions. Falls back to the actor service default. */
   model?: string
   /** Hard cap on conversation turns before forcing evaluation. Default 12. */
   maxTurns?: number
