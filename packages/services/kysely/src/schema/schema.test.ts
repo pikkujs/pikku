@@ -362,6 +362,28 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
   })
 
+  test('explains the qualified foreign key sqlite cannot express', async () => {
+    // `withSchema` qualifies foreign key targets too. Postgres needs that;
+    // sqlite refuses it, and says only `near ".": syntax error` — which names
+    // neither the schema nor the connection that produced it.
+    const db = new Kysely<any>({
+      dialect: new SqliteDialect({ database: new Database(':memory:') }),
+    })
+    try {
+      await assert.rejects(
+        ensurePikkuSchema(db.withSchema('main'), workflowSchema),
+        (error: Error) => {
+          assert.match(error.message, /bound to a schema/)
+          assert.match(error.message, /takes a bare table name/i)
+          assert.ok(error.cause, 'the engine error must survive as the cause')
+          return true
+        }
+      )
+    } finally {
+      await db.destroy()
+    }
+  })
+
   test('names the schema when it reports a half-applied one', async () => {
     const db = introspecting([{ schema: 'app', name: 'workflow_runs' }])
 

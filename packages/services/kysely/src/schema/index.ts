@@ -143,10 +143,48 @@ export const applyPikkuSchemas = async (
     const bound = bind(trx)
     for (const schema of schemas) {
       for (const statement of schema.statements) {
-        await statement(bound, types).execute()
+        const query = statement(bound, types)
+        try {
+          await query.execute()
+        } catch (error) {
+          throw explain(error, query.compile().sql, schema)
+        }
       }
     }
   })
+}
+
+/** `references "app"."workflow_runs"` — a foreign key onto a qualified table. */
+const QUALIFIED_REFERENCE = /references "[^"]+"\."[^"]+"/i
+
+/**
+ * Say what a schema-bound connection did to the DDL, when that is what failed.
+ *
+ * `withSchema(...)` qualifies foreign key targets along with everything else.
+ * Postgres needs that — an unqualified reference resolves against `search_path`,
+ * which a schema-bound connection does not control — and sqlite refuses it: a
+ * `REFERENCES` clause there takes a bare table name, because a foreign key can
+ * only point inside the same database, so there is no qualifier to give. One
+ * declaration cannot spell both, and what the engine says about it is
+ * `near ".": syntax error`, which names neither the schema nor the cause.
+ *
+ * Gated on the error as well as the SQL, so a qualified reference that failed
+ * for some other reason is still reported as itself.
+ */
+const explain = (error: unknown, sql: string, schema: PikkuSchema): unknown => {
+  const message = error instanceof Error ? error.message : String(error)
+  if (!QUALIFIED_REFERENCE.test(sql) || !/syntax error/i.test(message)) {
+    return error
+  }
+  return new Error(
+    `The '${schema.name}' schema has a foreign key, and this connection is bound to a schema, ` +
+      `so it compiled to a qualified 'references "schema"."table"' that the database rejected. ` +
+      'sqlite is the engine that does this: its REFERENCES clause takes a bare table name. ' +
+      'Use a connection without withSchema(...) there — sqlite has one schema to be in — ' +
+      'or write the schema down as a migration with `pikku db generate` and apply it yourself. ' +
+      `The database said: ${message}`,
+    { cause: error }
+  )
 }
 
 /** A table a schema creates, as the DDL addresses it. */
