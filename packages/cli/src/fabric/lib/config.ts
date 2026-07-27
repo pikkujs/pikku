@@ -91,10 +91,28 @@ export async function writeProjectConfig(
   const path = join(cwd, projectConfigName)
   let existing: Record<string, unknown> = {}
   if (existsSync(path)) {
+    // A read that fails for any reason other than the file's contents —
+    // permissions, a transient I/O error — tells us nothing about what the file
+    // holds. Rewriting it then is the exact clobber this function exists to
+    // prevent, so refuse the write instead.
+    let raw: string
     try {
-      const parsed = JSON.parse(await readFile(path, 'utf8')) as unknown
+      raw = await readFile(path, 'utf8')
+    } catch (error: any) {
+      throw new Error(
+        `Cannot read ${projectConfigName} at ${path} (${error.message}) — refusing to overwrite it`
+      )
+    }
+    try {
+      const parsed = JSON.parse(raw) as unknown
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         existing = parsed as Record<string, unknown>
+      } else {
+        // Valid JSON that is not an object holds nothing we can merge, but it is
+        // still the user's file — say so rather than dropping it silently.
+        console.warn(
+          `[fabric] ${projectConfigName} is not a JSON object — rewriting it`
+        )
       }
     } catch (error: any) {
       // An unparseable config is not a reason to lose the link; warn and start

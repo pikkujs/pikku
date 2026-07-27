@@ -8,6 +8,12 @@ export interface FrontendTypeCheckResult {
   name: string
   /** absolute directory that was type-checked */
   dir: string
+  /**
+   * The invocation that actually ran, e.g. `yarn run tsc` or `npx tsc --noEmit`.
+   * A finding tells the user to reproduce it, so it has to be the command this
+   * check chose — not a guess at their package manager.
+   */
+  command: string
   /** raw `file(line,col): error TSxxxx: message` lines, in tsc's order */
   errors: string[]
   /** set when the frontend could not be checked at all (no tsconfig, tsc missing) */
@@ -31,28 +37,54 @@ export async function typeCheckFrontends(
 ): Promise<FrontendTypeCheckResult[]> {
   const results: FrontendTypeCheckResult[] = []
   for (const { name, dir } of frontendDirs) {
+    const { command, args } = await resolveTypeCheckCommand(root, dir)
+    const invocation = [command, ...args].join(' ')
     if (!existsSync(join(dir, 'tsconfig.json'))) {
-      results.push({ name, dir, errors: [], skipped: 'no tsconfig.json' })
+      results.push({
+        name,
+        dir,
+        command: invocation,
+        errors: [],
+        skipped: 'no tsconfig.json',
+      })
       continue
     }
-    const pkg = await readPackageJson(dir)
-    const runner = await resolveRunner(root, dir)
-    const { command, args } = pkg?.scripts?.tsc
-      ? { command: runner, args: ['run', 'tsc'] }
-      : { command: runner === 'npm' ? 'npx' : runner, args: ['tsc', '--noEmit'] }
 
     const { code, output, spawnError } = await run(command, args, dir)
     if (spawnError) {
-      results.push({ name, dir, errors: [], skipped: spawnError })
+      results.push({
+        name,
+        dir,
+        command: invocation,
+        errors: [],
+        skipped: spawnError,
+      })
       continue
     }
     results.push({
       name,
       dir,
+      command: invocation,
       errors: code === 0 ? [] : parseTscErrors(output),
     })
   }
   return results
+}
+
+/**
+ * The frontend's own `tsc` script when it has one — that is what the build
+ * container runs — otherwise `tsc --noEmit` through the project's package
+ * manager, so the compiler resolved is the workspace-local one.
+ */
+export async function resolveTypeCheckCommand(
+  root: string,
+  dir: string
+): Promise<{ command: string; args: string[] }> {
+  const pkg = await readPackageJson(dir)
+  const runner = await resolveRunner(root, dir)
+  return pkg?.scripts?.tsc
+    ? { command: runner, args: ['run', 'tsc'] }
+    : { command: runner === 'npm' ? 'npx' : runner, args: ['tsc', '--noEmit'] }
 }
 
 interface PackageJson {
@@ -126,7 +158,7 @@ function run(
  * chatter ("$ tsc --noEmit", "error Command failed with exit code 2"), which is
  * noise in a finding.
  */
-function parseTscErrors(output: string): string[] {
+export function parseTscErrors(output: string): string[] {
   const diagnostic = /^\S.*?\(\d+,\d+\): (?:error|warning) TS\d+: /
   const errors = output
     .split('\n')
@@ -134,6 +166,11 @@ function parseTscErrors(output: string): string[] {
     .filter((line) => diagnostic.test(line))
   if (errors.length > 0) return errors
   // A non-zero exit with no parseable diagnostic still failed the build — keep
-  // the tail rather than reporting a clean pass.
-  return output.trim().split('\n').slice(-5).filter(Boolean)
+  // the tail rather than reporting a clean pass. A silent failure (no output at
+  // all) must still return something: an empty list here reads as "compiled
+  // fine" and lets the deploy the check exists to prevent go ahead.
+  const tail = output.trim().split('\n').slice(-5).filter(Boolean)
+  return tail.length > 0
+    ? tail
+    : ['type-check exited non-zero without producing any output']
 }

@@ -1361,31 +1361,77 @@ export async function runValidate(
     }
   }
 
+  // ── declared frontends ────────────────────────────────────────────────
+  // pikkufabric.config.json is unvalidated JSON, so every field below is a
+  // claim, not a guarantee: a null entry or a non-string cwd used to throw on
+  // property access and take down the whole validation run — the one thing that
+  // was supposed to report the broken config. Shape-check the entries once here
+  // and let the apps/ and type-check passes consume the narrowed list.
+  const declaredFrontends: Array<{
+    slug: string
+    cwd: string
+    dir: string
+    deploy: boolean
+  }> = []
+  /** every syntactically valid cwd, including ones whose directory is missing */
+  const declaredCwdList: string[] = []
+  const rawFrontends = fabricConfig?.frontends
+  if (
+    rawFrontends !== undefined &&
+    (!rawFrontends || typeof rawFrontends !== 'object')
+  ) {
+    e(
+      'frontends-invalid',
+      'pikkufabric.config.json "frontends" is not an object — no frontend will be built or type-checked',
+      fabricConfigPath,
+      `Set "frontends" to an object keyed by slug: { "app": { "cwd": "apps/app", "kind": "ssr" } }`
+    )
+  } else if (rawFrontends) {
+    for (const [slug, entry] of Object.entries(
+      rawFrontends as Record<string, unknown>
+    )) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        e(
+          `frontend-entry-invalid-${slug}`,
+          `pikkufabric.config.json frontend "${slug}" is not an object`,
+          fabricConfigPath,
+          `Give "${slug}" an object value: { "cwd": "apps/${slug}", "kind": "ssr" }`
+        )
+        continue
+      }
+      const { cwd, deploy } = entry as { cwd?: unknown; deploy?: unknown }
+      if (typeof cwd !== 'string' || cwd.trim() === '') {
+        e(
+          `frontend-cwd-invalid-${slug}`,
+          `pikkufabric.config.json frontend "${slug}" has no string "cwd" — the build container has nothing to build`,
+          fabricConfigPath,
+          `Set "cwd" to the app directory, e.g. { "${slug}": { "cwd": "apps/${slug}" } }`
+        )
+        continue
+      }
+      const rel = cwd.replace(/^\.\//, '')
+      declaredCwdList.push(rel)
+      const dir = join(root, rel)
+      if (!existsSync(dir)) {
+        // Reported here rather than inside the apps/ block below: a project
+        // without an apps/ directory used to validate cleanly while declaring a
+        // deployable frontend that does not exist.
+        e(
+          `frontend-cwd-missing-${slug}`,
+          `fabric.config.json frontend "${slug}" declares cwd "${rel}" but that directory does not exist`,
+          dir,
+          `Create the directory or update the cwd in fabric.config.json`
+        )
+        continue
+      }
+      declaredFrontends.push({ slug, cwd: rel, dir, deploy: deploy !== false })
+    }
+  }
+
   // ── apps/ vs fabric.config.json frontends ─────────────────────────────
   const appsDir = join(root, 'apps')
 
   if (existsSync(appsDir)) {
-    type FrontendEntry = { cwd?: string }
-
-    // Check declared frontends have a real directory on disk
-    if (fabricConfig) {
-      const frontends = (fabricConfig.frontends ?? {}) as Record<
-        string,
-        FrontendEntry
-      >
-      for (const [slug, fe] of Object.entries(frontends)) {
-        const cwd = fe.cwd?.replace(/^\.\//, '')
-        if (cwd && !existsSync(join(root, cwd))) {
-          e(
-            `frontend-cwd-missing-${slug}`,
-            `fabric.config.json frontend "${slug}" declares cwd "${cwd}" but that directory does not exist`,
-            join(root, cwd),
-            `Create the directory or update the cwd in fabric.config.json`
-          )
-        }
-      }
-    }
-
     // Check each app/ subdir is declared and has correct local deps
     let appEntries: string[] = []
     try {
@@ -1396,13 +1442,7 @@ export async function runValidate(
       /* ignore */
     }
 
-    const declaredCwds = fabricConfig
-      ? new Set(
-          Object.values(
-            (fabricConfig.frontends ?? {}) as Record<string, FrontendEntry>
-          ).map((f) => f.cwd?.replace(/^\.\//, '') ?? '')
-        )
-      : null
+    const declaredCwds = fabricConfig ? new Set(declaredCwdList) : null
 
     for (const name of appEntries) {
       const appPath = join(appsDir, name)
@@ -1856,18 +1896,9 @@ export async function runValidate(
   // non-zero exit, so running the same compile here is the difference between
   // a 20-second local failure and a burned deploy out of the daily 10.
   if (!opts.skipTypecheck) {
-    const frontends = Object.entries(
-      (fabricConfig?.frontends ?? {}) as Record<
-        string,
-        { cwd?: string; deploy?: boolean }
-      >
-    )
-      .filter(([, fe]) => fe.deploy !== false && fe.cwd)
-      .map(([name, fe]) => ({
-        name,
-        dir: join(root, fe.cwd!.replace(/^\.\//, '')),
-      }))
-      .filter(({ dir }) => existsSync(dir))
+    const frontends = declaredFrontends
+      .filter((fe) => fe.deploy)
+      .map((fe) => ({ name: fe.slug, dir: fe.dir }))
 
     for (const result of await typeCheckFrontends(root, frontends)) {
       if (result.skipped) {
@@ -1893,7 +1924,7 @@ export async function runValidate(
           ...shown,
           ...(extra > 0 ? [`… and ${extra} more`] : []),
           '',
-          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && npm run tsc`
+          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && ${result.command}`
         )
       )
     }
