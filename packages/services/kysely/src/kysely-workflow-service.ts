@@ -259,11 +259,18 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     await this.db.transaction().execute(async (trx) => {
       await trx
         .updateTable('workflowStep')
-        .set(stepValues as any)
+        .set({
+          ...stepValues,
+          // A step that somehow reaches a transition without a live attempt
+          // addresses no history row at all, so give it one here. Written as an
+          // expression over the row's own column rather than a subquery, which
+          // MySQL would reject against the table being updated.
+          currentAttempt: sql`coalesce(current_attempt, 1)`,
+        } as any)
         .where('workflowStepId', '=', stepId)
         .execute()
 
-      await trx
+      const written = await trx
         .updateTable('workflowStepHistory')
         .set({ status, ...historyValues } as any)
         .where('workflowStepId', '=', stepId)
@@ -276,7 +283,30 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
             .select('currentAttempt')
             .where('workflowStepId', '=', stepId)
         )
-        .execute()
+        .executeTakeFirst()
+
+      // Matching nothing means the attempt has no history row to move, which
+      // would commit the step's new status with no record of it — precisely
+      // the divergence this transaction exists to prevent. Write the missing
+      // row instead of letting the pair drift apart.
+      if (Number(written?.numUpdatedRows ?? 0n) === 0) {
+        const step = await trx
+          .selectFrom('workflowStep')
+          .select('currentAttempt')
+          .where('workflowStepId', '=', stepId)
+          .executeTakeFirst()
+        await trx
+          .insertInto('workflowStepHistory')
+          .values({
+            historyId: crypto.randomUUID(),
+            workflowStepId: stepId,
+            status,
+            attempt: step?.currentAttempt ?? 1,
+            createdAt: now,
+            ...historyValues,
+          } as any)
+          .execute()
+      }
     })
   }
 
@@ -652,6 +682,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .where('workflowName', '=', name)
       .where('source', '=', 'dynamic-workflow')
       .where('status', '=', 'active')
+      // A name is keyed with its hash, so it can hold several active versions.
+      // Newest wins, and the hash breaks a tie between two published in the
+      // same instant — without both, which one resolves is up to the planner.
+      .orderBy('createdAt', 'desc')
+      .orderBy('graphHash', 'desc')
       .executeTakeFirst()
 
     if (!row) return null

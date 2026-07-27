@@ -35,3 +35,17 @@ dispatched.
 Also: dispatch no longer JSON round-trips every step payload before handing it
 to a queue that serialises it anyway — the in-process dev queue, which is the
 only one that was relying on it, does it itself now.
+
+Two more defects. A transition whose step had no live attempt wrote its status
+to the step row and silently nothing to history — the exact divergence the
+transaction exists to prevent — and now repairs the step and writes the
+missing row. And resolving a dynamic workflow was non-deterministic on all
+three backends: a name can hold several active versions, and none of them
+ordered the candidates, so which one ran could change between two calls
+reading identical data. The newest version wins, with the graph hash breaking
+a tie.
+
+The two attempt columns and the five indexes are declared in the workflow
+schema, so a fresh database gets them at boot. An existing one gets them from
+a migration — `pikku db generate` writes the declaration down — rather than
+from DDL issued at boot.

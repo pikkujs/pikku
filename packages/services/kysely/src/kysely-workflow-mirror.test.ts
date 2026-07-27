@@ -1,6 +1,6 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely'
+import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
 import { SerializePlugin } from './serialize-plugin.js'
 import Database from 'better-sqlite3'
 
