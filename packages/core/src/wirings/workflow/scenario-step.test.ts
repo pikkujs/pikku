@@ -1,15 +1,13 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { createScenarioRunner } from './pikku-scenario-service.js'
+import type { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import type { ScenarioActor } from '../../services/scenario-actors-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
-import {
-  requireActor,
-  requireScenarioEnv,
-} from './scenario-step-guards.js'
+import { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
@@ -52,7 +50,7 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
   beforeEach(() => resetPikkuState())
 
   test('routes through the actor over the real transport, never internal rpc', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const customer = fakeActor('customer', async () => ({ todoId: 't1' }))
     let internalCalls = 0
 
@@ -80,7 +78,7 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
   })
 
   test('step is recorded durably and replay returns the cached result without re-invoking', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let invocations = 0
     const yasser = fakeActor('yasser', async () => ({ n: ++invocations }))
     const runId = await setup(ws)
@@ -105,7 +103,7 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
   })
 
   test('actor steps never queue, even when the function is queue-eligible', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let queued = 0
     const customer = fakeActor('customer', async () => ({}))
     const runId = await setup(ws, {
@@ -129,7 +127,7 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
   })
 
   test('actor step failure surfaces the actor error and fails after retries', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const broken = fakeActor('broken', async () => {
       throw new Error("[scenario] 'createTodo' as 'broken' returned 403: nope")
     })
@@ -165,7 +163,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   beforeEach(() => resetPikkuState())
 
   test('the step func is called with the phase, step identity and data on the wire', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const seen: PikkuWire[] = []
     const payloads: unknown[] = []
     registerStep('buysAnApple', {
@@ -192,7 +190,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('each phase records itself, and the scenario wire is reachable from the step', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const phases: string[] = []
     registerStep('noop', {
       func: async (_services, _data, wire) => {
@@ -217,7 +215,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('the actor is handed to the step rather than used to dispatch it', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const shopper = fakeActor('shopper', async () => ({ ok: true }))
     let received: unknown
     registerStep('checksOut', {
@@ -242,7 +240,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('a repeated step name gets its own durable row (#1), not the cached first result', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let calls = 0
     registerStep('clicksSave', {
       func: async () => ++calls,
@@ -260,7 +258,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('a throwing step is not retried', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let attempts = 0
     registerStep('seesAReceipt', {
       func: async () => {
@@ -284,7 +282,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('an explicit retries option still wins over the zero default', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let attempts = 0
     registerStep('flaky', {
       func: async () => {
@@ -307,7 +305,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('a browser step fails loudly when no provider is registered', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const shopper = fakeActor('shopper', async () => ({}))
     registerStep('visitsCheckout', {
       browser: true,
@@ -326,11 +324,11 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('a registered provider hands the step a session keyed by the actor', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const shopper = fakeActor('shopper', async () => ({}))
     const requested: string[] = []
     const session = { actor: 'shopper' } as any
-    ws.setScenarioBrowserProvider({
+    scenarioService.setScenarioBrowserProvider({
       sessionFor: async (actorName: string) => {
         requested.push(actorName)
         return session
@@ -357,7 +355,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
   })
 
   test('a non-string step target is rejected instead of silently dispatching', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
@@ -372,7 +370,7 @@ describe('workflow.expectEventually', () => {
   beforeEach(() => resetPikkuState())
 
   test('polls as the actor until the predicate passes', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let polls = 0
     const sarah = fakeActor('sarah', async () => ({
       notifications: ++polls >= 3 ? ['ping'] : [],
@@ -393,7 +391,7 @@ describe('workflow.expectEventually', () => {
   })
 
   test('fails with the last result when the deadline passes', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const sarah = fakeActor('sarah', async () => ({ notifications: [] }))
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
@@ -411,7 +409,7 @@ describe('workflow.expectEventually', () => {
   })
 
   test('polls internally (rpcWithWire) when no actor is given', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let polls = 0
     const runId = await setup(ws)
     const rpc = {
@@ -435,7 +433,7 @@ describe('scenario step input is recorded on the run', () => {
   beforeEach(() => resetPikkuState())
 
   test('the run records the input each step was called with', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     registerStep('seesAddon', { func: async () => ({ visible: true }) })
 
     const runId = await setup(ws)
@@ -461,7 +459,7 @@ describe('scenario step input is recorded on the run', () => {
   })
 
   test('a step called with no input records none', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     registerStep('resets', { func: async () => null })
 
     const runId = await setup(ws)
@@ -477,7 +475,7 @@ describe('scenario step names its function on the run', () => {
   beforeEach(() => resetPikkuState())
 
   test('the run records which step function ran, not only the step name', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     registerStep('seesAddon', { func: async () => ({ visible: true }) })
 
     const runId = await setup(ws)
@@ -493,7 +491,7 @@ describe('scenario step names its function on the run', () => {
   })
 
   test('a step name built at runtime still names its function', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     registerStep('seesAddon', { func: async () => ({ visible: true }) })
 
     const runId = await setup(ws)
@@ -515,7 +513,7 @@ describe('scenario step names its function on the run', () => {
   })
 
   test('a plain inline step still records no function name', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.do('computes', async () => 1)
@@ -529,7 +527,7 @@ describe('the scenario environment reaches the step wire', () => {
   beforeEach(() => resetPikkuState())
 
   test('a step reads the environment the run targets', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let seen: unknown
     registerStep('readsEnv', {
       func: async (_services, _data, wire) => {
@@ -537,7 +535,7 @@ describe('the scenario environment reaches the step wire', () => {
         return null
       },
     })
-    ws.setScenarioEnvironment({
+    scenarioService.setScenarioEnvironment({
       apiUrl: 'https://staging.example.com/api',
       appUrl: 'https://staging.example.com',
     })
@@ -553,7 +551,7 @@ describe('the scenario environment reaches the step wire', () => {
   })
 
   test('a run started without one carries no environment', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     let seen: unknown = 'unset'
     registerStep('readsEnv', {
       func: async (_services, _data, wire) => {
@@ -574,7 +572,7 @@ describe('requireActor / requireScenarioEnv', () => {
   beforeEach(() => resetPikkuState())
 
   test('requireActor returns the actor a step was called with', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     const shopper = fakeActor('shopper', async () => null)
     let resolved: unknown
     registerStep('needsAnActor', {
@@ -594,7 +592,7 @@ describe('requireActor / requireScenarioEnv', () => {
   })
 
   test('requireActor names the step when it was called without one', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     registerStep('needsAnActor', {
       func: async (_services, _data, wire) => requireActor(wire.scenarioStep),
     })
@@ -608,7 +606,7 @@ describe('requireActor / requireScenarioEnv', () => {
   })
 
   test('requireScenarioEnv returns the environment, or says how to declare one', async () => {
-    const ws = new InMemoryWorkflowService()
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
     registerStep('needsAnEnv', {
       func: async (_services, _data, wire) =>
         requireScenarioEnv(wire.scenarioStep),
@@ -621,7 +619,9 @@ describe('requireActor / requireScenarioEnv', () => {
       /needsAnEnv.*environment/s
     )
 
-    ws.setScenarioEnvironment({ apiUrl: 'http://localhost:4077/api' })
+    scenarioService.setScenarioEnvironment({
+      apiUrl: 'http://localhost:4077/api',
+    })
     const runId2 = await setup(ws)
     const wire2 = ws.createWorkflowWire('scenarioTest', runId2, {})
     assert.deepEqual(await wire2.when('reads the api url', 'needsAnEnv'), {

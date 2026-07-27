@@ -11,7 +11,6 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import { createHttpScenarioActors } from '../../services/http-scenario-actors.js'
 
 const resolveWorkflowMeta = (
   name: string
@@ -42,26 +41,14 @@ const resolveWorkflowMeta = (
   return null
 }
 
-/**
- * Everything a scenario step needs from the wire that created it. Passed as a
- * bundle so `given`/`when`/`then` stay one-liners.
- */
-interface ScenarioStepContext {
-  runId: string
-  workflowName: string
-  addonNamespace?: string | null
-  workflowWire: PikkuScenarioWire
-  rpcService: any
-}
-
 const toKebab = (s: string) =>
   s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 import type { PikkuWire, SerializedError } from '../../types/core.types.js'
 import type { QueueService } from '../queue/queue.types.js'
-import { runScheduledTask } from '../scheduler/scheduler-runner.js'
 import type {
   ApprovalOutcome,
-  PikkuScenarioWire,
+  CoreWorkflow,
+  PikkuWorkflowWire,
   StepState,
   StepStatus,
   WorkflowApprovalOptions,
@@ -75,9 +62,6 @@ import type {
   WorkflowQueueOptions,
   WorkflowServiceConfig,
   WorkflowStepOptions,
-  WorkflowExpectEventuallyOptions,
-  WorkflowExpectErrorOptions,
-  WorkflowExpectServiceOptions,
 } from './workflow.types.js'
 import {
   continueGraph,
@@ -87,13 +71,6 @@ import {
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
 import type { ScenarioActors } from '../../services/scenario-actors-service.js'
-import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
-import type {
-  ScenarioBrowserProvider,
-  ScenarioStepOptions,
-  ScenarioStepPhase,
-  ScenarioEnvironment,
-} from './scenario-step.types.js'
 import {
   PikkuError,
   addError,
@@ -114,19 +91,6 @@ import type {
   JobOptions,
   PikkuWorkerConfig,
 } from '../queue/queue.types.js'
-import { closeWireServices } from '../../utils.js'
-
-/**
- * A scenario lifecycle callback, erased to its runtime shape. The typed form a
- * project writes against lives on the generated `pikkuScenario` config; by the
- * time the service reaches it, it is just a function taking the same three
- * arguments the scenario body takes.
- */
-type ScenarioHook = (
-  services: any,
-  data: any,
-  wire: PikkuWire
-) => Promise<void> | void
 
 /**
  * Default number of retries for a workflow step when none is specified. The
@@ -197,30 +161,6 @@ export class WorkflowDispatchException extends Error {
     this.name = 'WorkflowDispatchException'
   }
 }
-
-/**
- * A scenario's `before` or `after` hook threw. The original error is kept as
- * the `cause` so the failure that actually happened is never lost behind the
- * label saying which phase it happened in.
- */
-export class ScenarioHookError extends PikkuError {
-  constructor(
-    public readonly scenarioName: string,
-    public readonly phase: 'before' | 'after',
-    cause: unknown
-  ) {
-    super(
-      `Scenario '${scenarioName}' ${phase} hook failed: ${
-        cause instanceof Error ? cause.message : String(cause)
-      }`
-    )
-    this.cause = cause
-  }
-}
-addError(ScenarioHookError, {
-  status: 500,
-  message: 'A scenario lifecycle hook failed.',
-})
 
 /**
  * Error class for workflow not found
@@ -303,17 +243,108 @@ const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * Everything an extension needs to run something of its own around a run's
+ * function: the registration it was resolved from, the run itself (so `input`
+ * is the same object the function is called with), and the wire it is given.
+ */
+export interface RunLifecycleContext {
+  runId: string
+  run: WorkflowRun
+  workflowMeta: any
+  workflow: CoreWorkflow
+  wire: PikkuWire
+  packageName: string | null
+}
+
+/**
+ * The slice of the run engine an extension is allowed to drive, handed to it at
+ * construction. It exists so that recording a durable step stays available to
+ * an extension without `inlineStep` and friends becoming public API on every
+ * workflow service a production app instantiates.
+ */
+export interface WorkflowRunEngine {
+  inlineStep(
+    runId: string,
+    logicalStepName: string,
+    fn: Function,
+    stepOptions?: WorkflowStepOptions,
+    data?: any,
+    funcName?: string
+  ): Promise<any>
+  updateRunStatus(
+    runId: string,
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<void>
+  onChildWorkflowFailed(run: WorkflowRun, error: unknown): Promise<void>
+  verifyStepName(stepName: unknown): void
+}
+
+/**
+ * A capability layered onto a run without being a workflow service itself.
+ *
+ * The engine names nothing about what an extension is for: a bundler drops an
+ * unused *module* but never an unused class member, so the alternative — a
+ * subclass carrying the capability — puts it in every server built on Pikku
+ * whether or not the app ever uses it. Scenarios are the one implementation
+ * today (`PikkuScenarioService` in `@pikku/core/scenario`).
+ */
+export interface WorkflowRunExtension {
+  /** Per-run state resolved once the run has an id. */
+  attachRunContext(
+    runId: string,
+    workflowMeta: any,
+    options?: Record<string, any>
+  ): Promise<void>
+  /** Release whatever `attachRunContext` stored. */
+  detachRunContext(runId: string): void
+  /** Contribute extra members to the wire a run's function is invoked with. */
+  decorateRunWire(
+    wire: PikkuWire,
+    context: {
+      runId: string
+      workflowMeta: any
+      workflowWire: PikkuWorkflowWire
+    }
+  ): void
+  /** Contribute extra members to the workflow wire itself, in place. */
+  decorateWorkflowWire(
+    workflowWire: PikkuWorkflowWire,
+    context: {
+      name: string
+      runId: string
+      rpcService: any
+      addonNamespace?: string | null
+    }
+  ): void
+  /**
+   * Called immediately before the run's function, inside the run lock. Throwing
+   * skips the function and fails the run.
+   */
+  onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
+  /**
+   * Called once the run reaches a terminal state, in a `finally`, so it runs
+   * whether the function passed or threw. `interrupted` means the run suspended
+   * or went async and is still mid-flight. Throwing here propagates, replacing
+   * a pending failure, so an extension that must not mask one handles that
+   * itself.
+   */
+  onAfterRunFunc(
+    context: RunLifecycleContext,
+    outcome: 'completed' | 'failed' | 'interrupted',
+    failure: unknown
+  ): Promise<void>
+}
+
+/**
  * Abstract workflow state service
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
  * Combines orchestration and step execution
  */
 export abstract class PikkuWorkflowService implements WorkflowService {
   private inlineRuns = new Set<string>()
-  // User-flow actors per run: live authenticated clients (cookie jars) are
-  // process-local by nature, so they ride this map, never the persisted wire.
-  private runActors = new Map<string, ScenarioActors>()
-  private scenarioBrowserProvider?: ScenarioBrowserProvider
-  private scenarioEnvironment?: ScenarioEnvironment
+  private runExtension?: WorkflowRunExtension
 
   protected get logger() {
     return getSingletonServices()?.logger
@@ -1223,42 +1254,28 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return true
   }
 
-  /** Build HTTP scenario actors for a run started without them; undefined when SCENARIO_ACTOR_SECRET or the API URL is missing */
-  private async resolveScenarioActors(): Promise<ScenarioActors | undefined> {
-    const services = getSingletonServices()
-    const variables = services?.variables
-    const metaService = services?.metaService
-    if (!variables || !metaService) {
-      return undefined
+  /**
+   * Install the one extension a run may have, built from a handle onto the run
+   * engine so that `inlineStep` and friends stay protected rather than becoming
+   * public API. Returns the extension, so the caller keeps a typed reference to
+   * whatever it just built.
+   */
+  public setRunExtension<T extends WorkflowRunExtension>(
+    create: (engine: WorkflowRunEngine) => T
+  ): T {
+    const engine: WorkflowRunEngine = {
+      inlineStep: this.inlineStep.bind(this),
+      updateRunStatus: this.updateRunStatus.bind(this),
+      onChildWorkflowFailed: this.onChildWorkflowFailed.bind(this),
+      verifyStepName: this.verifyStepName.bind(this),
     }
-    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
-    const apiUrl = await variables.get('API_URL')
-    if (!secret || !apiUrl) {
-      services?.logger?.warn(
-        'A scenario was started without actors but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without actors.'
-      )
-      return undefined
-    }
-    const actorsConfig = await metaService.getScenarioActorsMeta()
-    if (!actorsConfig || Object.keys(actorsConfig).length === 0) {
-      return undefined
-    }
-    const signInPath =
-      (await variables.get('SCENARIO_SIGN_IN_PATH')) ??
-      '/api/auth/sign-in/actor'
-    const rpcPath = (await variables.get('SCENARIO_RPC_PATH')) ?? '/rpc'
-    // A run started outside the CLI still targets an environment — its own.
-    this.scenarioEnvironment ??= {
-      apiUrl,
-      appUrl: (await variables.get('APP_URL')) ?? undefined,
-    }
-    return createHttpScenarioActors({
-      apiUrl,
-      secret,
-      actors: actorsConfig,
-      signInPath,
-      rpcPath,
-    })
+    const extension = create(engine)
+    this.runExtension = extension
+    return extension
+  }
+
+  public getRunExtension(): WorkflowRunExtension | undefined {
+    return this.runExtension
   }
 
   /**
@@ -1336,14 +1353,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     )
 
-    const actors =
-      options?.actors ??
-      (workflowMeta.source === 'scenario'
-        ? await this.resolveScenarioActors()
-        : undefined)
-    if (actors) {
-      this.runActors.set(runId, actors)
-    }
+    await this.runExtension?.attachRunContext(runId, workflowMeta, options)
 
     if (shouldInline) {
       this.inlineRuns.add(runId)
@@ -1380,7 +1390,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         }
       } finally {
         this.inlineRuns.delete(runId)
-        this.runActors.delete(runId)
+        this.runExtension?.detachRunContext(runId)
       }
     } else {
       await this.resumeWorkflow(runId)
@@ -1455,52 +1465,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
     this.stepLineage.set(runId, stepName)
     return stepName
-  }
-
-  /**
-   * Run a scenario `before`/`after` hook.
-   *
-   * A hook is not a pikku function: it has no id, no meta and no schema, so it
-   * cannot go through `runPikkuFunc` and the runner records nothing for it. It
-   * gets exactly what the scenario body gets — the same wire (so `actors` is
-   * how it reaches the app), and singleton services composed with this
-   * invocation's wire services — and nothing else.
-   */
-  private async runScenarioHook(
-    phase: 'before' | 'after',
-    scenarioName: string,
-    hook: ScenarioHook,
-    wire: PikkuWire,
-    data: unknown,
-    packageName: string | null
-  ): Promise<void> {
-    const singletonServices = getSingletonServices()!
-    let createWireServices = getCreateWireServices()
-    if (packageName) {
-      const factories = pikkuState(packageName, 'package', 'factories')
-      if (factories?.createWireServices) {
-        createWireServices = factories.createWireServices
-      }
-    }
-
-    let wireServices: Record<string, unknown> | undefined
-    try {
-      wireServices = (await createWireServices?.(
-        singletonServices,
-        wire as any
-      )) as Record<string, unknown> | undefined
-      const services =
-        wireServices && Object.keys(wireServices).length > 0
-          ? { ...singletonServices, ...wireServices }
-          : singletonServices
-      await hook(services, data, wire)
-    } catch (error) {
-      throw new ScenarioHookError(scenarioName, phase, error)
-    } finally {
-      if (wireServices && Object.keys(wireServices).length > 0) {
-        await closeWireServices(singletonServices.logger, wireServices)
-      }
-    }
   }
 
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
@@ -1597,41 +1561,32 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowWire.pikkuUserId = run.wire?.pikkuUserId
       const wire: PikkuWire = {
         workflow: workflowWire,
-        scenario:
-          workflowMeta?.source === 'scenario' ? workflowWire : undefined,
         pikkuUserId: run.wire?.pikkuUserId,
         session: rpcService?.wire?.session,
         rpc: rpcService?.wire?.rpc,
-        // User-flow actors registered for this run (see startWorkflow options)
-        actors: this.runActors.get(runId),
       }
-      // Hooks are a scenario affordance only: a plain workflow is durable and
-      // resumable, so a callback that reruns on every replay has no honest
-      // meaning there.
-      const hooks =
-        workflowMeta.source === 'scenario'
-          ? (workflow.func as {
-              before?: ScenarioHook
-              after?: ScenarioHook
-            })
-          : undefined
+      this.runExtension?.decorateRunWire(wire, {
+        runId,
+        workflowMeta,
+        workflowWire,
+      })
+
+      const lifecycle: RunLifecycleContext = {
+        runId,
+        run,
+        workflowMeta,
+        workflow,
+        wire,
+        packageName: pkgName,
+      }
 
       // `interrupted` means the run has not reached a terminal state — it is
-      // suspended or waiting — so teardown would run while the scenario is
-      // still mid-flight.
+      // suspended or waiting — so teardown would run while the run is still
+      // mid-flight.
       let outcome: 'completed' | 'failed' | 'interrupted' = 'completed'
       let failure: any
       try {
-        if (hooks?.before) {
-          await this.runScenarioHook(
-            'before',
-            workflowMeta.name,
-            hooks.before,
-            wire,
-            run.input,
-            pkgName
-          )
-        }
+        await this.runExtension?.onBeforeRunFunc(lifecycle)
 
         const result = await runPikkuFunc(
           'workflow',
@@ -1687,38 +1642,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
         throw error
       } finally {
-        if (hooks?.after && outcome !== 'interrupted') {
-          try {
-            await this.runScenarioHook(
-              'after',
-              workflowMeta.name,
-              hooks.after,
-              wire,
-              run.input,
-              pkgName
-            )
-          } catch (hookError: any) {
-            if (outcome === 'failed') {
-              // The scenario already failed for its own reason; a teardown
-              // failure is diagnostic context, never the headline.
-              if (failure instanceof Error && failure.cause === undefined) {
-                failure.cause = hookError
-              }
-              getSingletonServices()?.logger.error(
-                `Scenario ${workflowMeta.name} (run ${runId}) failed, and its after hook also failed:`,
-                hookError
-              )
-            } else {
-              await this.updateRunStatus(runId, 'failed', undefined, {
-                message: hookError.message,
-                stack: hookError.stack,
-                code: hookError.code,
-              })
-              await this.onChildWorkflowFailed(run, hookError)
-              throw hookError
-            }
-          }
-        }
+        await this.runExtension?.onAfterRunFunc(lifecycle, outcome, failure)
       }
     })
   }
@@ -1737,7 +1661,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.resumeWorkflow(parentRunId)
   }
 
-  private async onChildWorkflowFailed(
+  protected async onChildWorkflowFailed(
     childRun: WorkflowRun,
     error: Error
   ): Promise<void> {
@@ -2266,7 +2190,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     )
   }
 
-  private async inlineStep(
+  protected async inlineStep(
     runId: string,
     logicalStepName: string,
     fn: Function,
@@ -2686,15 +2610,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     rpcService: any,
     addonNamespace?: string | null
-  ): PikkuScenarioWire {
-    const scenarioStepContext = (): ScenarioStepContext => ({
-      runId,
-      workflowName: name,
-      addonNamespace,
-      workflowWire,
-      rpcService,
-    })
-    const workflowWire: PikkuScenarioWire = {
+  ): PikkuWorkflowWire {
+    const workflowWire: PikkuWorkflowWire = {
       name,
       runId,
       getRun: async () => (await this.getRun(runId)) as WorkflowRun,
@@ -2730,146 +2647,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         }
       },
 
-      // Durable polling step: invoke an RPC (as an actor when options.as is
-      // set) until the predicate passes or `within` elapses. The whole poll is
-      // ONE recorded step, so replay returns the cached outcome.
-      expectEventually: async (
-        stepName: string,
-        rpcName: string,
-        data: any,
-        predicate: (output: any) => boolean,
-        options?: WorkflowExpectEventuallyOptions
-      ) => {
-        this.verifyStepName(stepName)
-        const resolvedRpcName =
-          addonNamespace && !rpcName.includes(':')
-            ? `${addonNamespace}:${rpcName}`
-            : rpcName
-        const within = getDurationInMilliseconds(options?.within ?? '30s')
-        const interval = getDurationInMilliseconds(options?.interval ?? '1s')
-        return await this.inlineStep(
-          runId,
-          stepName,
-          async () => {
-            const deadline = Date.now() + within
-            let last: any
-            while (true) {
-              last = options?.actor
-                ? await options.actor.invoke(resolvedRpcName, data)
-                : await rpcService.rpcWithWire(resolvedRpcName, data, {})
-              if (predicate(last)) return last
-              if (Date.now() + interval > deadline) {
-                throw new Error(
-                  `[workflow] expectEventually '${stepName}' ('${resolvedRpcName}'` +
-                    `${options?.actor ? ` as '${options.actor.name}'` : ''}) did not pass within ${within}ms; ` +
-                    `last result: ${JSON.stringify(last)?.slice(0, 300)}`
-                )
-              }
-              await new Promise((resolve) => setTimeout(resolve, interval))
-            }
-          },
-          options
-        )
-      },
-
-      expectError: async (
-        stepName: string,
-        rpcName: string,
-        data: any,
-        options?: WorkflowExpectErrorOptions
-      ) => {
-        this.verifyStepName(stepName)
-        const resolvedRpcName =
-          addonNamespace && !rpcName.includes(':')
-            ? `${addonNamespace}:${rpcName}`
-            : rpcName
-        return await this.inlineStep(
-          runId,
-          stepName,
-          async () => {
-            let result: any
-            try {
-              result = options?.actor
-                ? await options.actor.invoke(resolvedRpcName, data)
-                : await rpcService.rpcWithWire(resolvedRpcName, data, {})
-            } catch (e: any) {
-              const message = e?.message ?? String(e)
-              if (options?.matches) {
-                const matched =
-                  typeof options.matches === 'string'
-                    ? message.includes(options.matches)
-                    : options.matches.test(message)
-                if (!matched) {
-                  throw new Error(
-                    `[workflow] expectError '${stepName}' ('${resolvedRpcName}') threw, but the message did not match ${options.matches}: ${message}`
-                  )
-                }
-              }
-              return message
-            }
-            throw new Error(
-              `[workflow] expectError '${stepName}' ('${resolvedRpcName}') expected an error but the call succeeded: ${JSON.stringify(result)?.slice(0, 300)}`
-            )
-          },
-          options
-        )
-      },
-
-      expectService: async (
-        stepName: string,
-        serviceMethod: string,
-        options?: WorkflowExpectServiceOptions
-      ) => {
-        this.verifyStepName(stepName)
-        const [service, method] = serviceMethod.split('.')
-        if (!service || !method) {
-          throw new Error(
-            `[workflow] expectService '${stepName}' needs 'service.method', got '${serviceMethod}'`
-          )
-        }
-        await this.inlineStep(
-          runId,
-          stepName,
-          async () => {
-            const rpcName = 'pikkuScenarioGetStubCalls'
-            const calls: Array<{
-              service: string
-              method: string
-              args: unknown[]
-            }> = options?.actor
-              ? await options.actor.invoke(rpcName, { service })
-              : await rpcService.rpcWithWire(rpcName, { service }, {})
-            const matching = (calls ?? []).filter(
-              (c) =>
-                c.service === service &&
-                c.method === method &&
-                (options?.calledWith === undefined ||
-                  JSON.stringify(c.args?.[0]) ===
-                    JSON.stringify(options.calledWith))
-            )
-            const expected = options?.times
-            const ok =
-              expected === undefined
-                ? matching.length > 0
-                : matching.length === expected
-            if (!ok) {
-              const seen =
-                (calls ?? [])
-                  .map(
-                    (c) =>
-                      `${c.service}.${c.method}(${JSON.stringify(c.args?.[0])?.slice(0, 120) ?? ''})`
-                  )
-                  .join('\n  ') || '(none)'
-              throw new Error(
-                `[workflow] expectService '${stepName}' expected ${expected ?? 'at least one'} call(s) to '${serviceMethod}'` +
-                  `${options?.calledWith !== undefined ? ` with ${JSON.stringify(options.calledWith)}` : ''}, found ${matching.length}. Recorded:\n  ${seen}`
-              )
-            }
-          },
-          options
-        )
-      },
-
       // Implement workflow.sleep()
       sleep: async (stepName: string, duration: string | number) => {
         this.verifyStepName(stepName)
@@ -2888,197 +2665,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       approval: (async (reason: string, options: WorkflowApprovalOptions) => {
         this.verifyStepName(reason)
         return await this.approvalStep(runId, reason, options)
-      }) as PikkuScenarioWire['approval'],
-
-      // Scenario steps: a named `pikkuScenarioStep` run as one durable step.
-      // `given`/`when`/`then` are pure sugar over `step` — the phase only
-      // changes the prose a reporter renders.
-      step: (stepName, stepFunc, data, options) =>
-        this.scenarioStep(
-          'step',
-          scenarioStepContext(),
-          stepName,
-          stepFunc,
-          data,
-          options
-        ),
-      given: (stepName, stepFunc, data, options) =>
-        this.scenarioStep(
-          'given',
-          scenarioStepContext(),
-          stepName,
-          stepFunc,
-          data,
-          options
-        ),
-      when: (stepName, stepFunc, data, options) =>
-        this.scenarioStep(
-          'when',
-          scenarioStepContext(),
-          stepName,
-          stepFunc,
-          data,
-          options
-        ),
-      then: (stepName, stepFunc, data, options) =>
-        this.scenarioStep(
-          'then',
-          scenarioStepContext(),
-          stepName,
-          stepFunc,
-          data,
-          options
-        ),
-
-      runScheduledTask: async (taskName: string) => {
-        await runScheduledTask({ name: taskName })
-      },
+      }) as PikkuWorkflowWire['approval'],
     }
+    this.runExtension?.decorateWorkflowWire(workflowWire, {
+      name,
+      runId,
+      rpcService,
+      addonNamespace,
+    })
     return workflowWire
   }
 
-  /**
-   * Registered by `@pikku/playwright` (or any other driver) before a scenario
-   * runs. Absent means browser steps cannot run, which the CLI checks up front
-   * so a run fails fast rather than mid-flow.
-   */
-  public setScenarioBrowserProvider(
-    provider: ScenarioBrowserProvider | undefined
-  ) {
-    this.scenarioBrowserProvider = provider
-  }
-
-  public getScenarioBrowserProvider(): ScenarioBrowserProvider | undefined {
-    return this.scenarioBrowserProvider
-  }
-
-  /**
-   * The environment scenario steps run against, set once by the runner. It is
-   * per-service rather than per-run because a runner process targets exactly
-   * one environment for every scenario it executes.
-   */
-  public setScenarioEnvironment(env: ScenarioEnvironment | undefined) {
-    this.scenarioEnvironment = env
-  }
-
-  public getScenarioEnvironment(): ScenarioEnvironment | undefined {
-    return this.scenarioEnvironment
-  }
-
-  private async scenarioStep(
-    phase: ScenarioStepPhase,
-    context: ScenarioStepContext,
-    stepName: string,
-    stepFunc: string,
-    data?: any,
-    options?: ScenarioStepOptions
-  ): Promise<any> {
-    const { runId, workflowName, addonNamespace, workflowWire, rpcService } =
-      context
-    // Also the guard for `then` being a wire member: an accidental
-    // `await scenario` calls it with a resolve function, which lands here as a
-    // loud, named error instead of a silent hang.
-    this.verifyStepName(stepName)
-    if (typeof stepFunc !== 'string') {
-      throw new WorkflowStepNameNotString(stepFunc)
-    }
-
-    const packageName =
-      addonNamespace && !stepFunc.includes(':') ? addonNamespace : null
-    const resolvedStepFunc =
-      addonNamespace && !stepFunc.includes(':')
-        ? `${addonNamespace}:${stepFunc}`
-        : stepFunc
-
-    const actor = options?.actor as ScenarioActors[string] | undefined
-    const description =
-      options?.description ??
-      this.scenarioStepDescription(packageName, resolvedStepFunc) ??
-      stepName
-
-    return await this.inlineStep(
-      runId,
-      stepName,
-      async () => {
-        const wire: PikkuWire = {
-          workflow: workflowWire,
-          scenario: workflowWire,
-          rpc: rpcService?.wire?.rpc,
-          session: rpcService?.wire?.session,
-          pikkuUserId: workflowWire.pikkuUserId,
-          actors: this.runActors.get(runId),
-          scenarioStep: {
-            name: resolvedStepFunc,
-            stepName,
-            runId,
-            phase,
-            actor,
-            env: this.scenarioEnvironment,
-          },
-        }
-        if (this.requiresBrowser(packageName, resolvedStepFunc)) {
-          if (!this.scenarioBrowserProvider) {
-            throw new Error(
-              `[scenario] step '${resolvedStepFunc}' declares 'browser: true' but no browser provider is registered. ` +
-                `Install @pikku/playwright and register its provider, or run with --no-browser to skip browser steps.`
-            )
-          }
-          if (!actor) {
-            throw new Error(
-              `[scenario] step '${resolvedStepFunc}' declares 'browser: true' but was called without an actor. ` +
-                `Pass { actor: actors.<name> } so the browser signs in as that persona.`
-            )
-          }
-          wire.browser = await this.scenarioBrowserProvider.sessionFor(
-            actor.name
-          )
-        }
-        return await runPikkuFunc('workflow', workflowName, resolvedStepFunc, {
-          singletonServices: getSingletonServices()!,
-          createWireServices: getCreateWireServices(),
-          data: () => data,
-          wire,
-          packageName: packageName ?? undefined,
-        })
-      },
-      {
-        description,
-        // Retrying a failed assertion is the wrong behaviour for a test
-        // primitive, so steps opt out of the workflow-wide retry default.
-        retries: options?.retries ?? 0,
-        retryDelay: options?.retryDelay,
-      },
-      data,
-      resolvedStepFunc
-    )
-  }
-
-  private scenarioStepConfig(
-    packageName: string | null,
-    stepFunc: string
-  ): CorePikkuFunctionConfig<any, any> | undefined {
-    const localName =
-      packageName && stepFunc.startsWith(`${packageName}:`)
-        ? stepFunc.slice(packageName.length + 1)
-        : stepFunc
-    return pikkuState(packageName, 'function', 'functions').get(localName)
-  }
-
-  private scenarioStepDescription(
-    packageName: string | null,
-    stepFunc: string
-  ): string | undefined {
-    return this.scenarioStepConfig(packageName, stepFunc)?.description
-  }
-
-  private requiresBrowser(
-    packageName: string | null,
-    stepFunc: string
-  ): boolean {
-    return this.scenarioStepConfig(packageName, stepFunc)?.browser === true
-  }
-
-  private verifyStepName(stepName: string) {
+  protected verifyStepName(stepName: string) {
     if (typeof stepName !== 'string') {
       throw new WorkflowStepNameNotString(stepName)
     }

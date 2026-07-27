@@ -6,16 +6,18 @@ import {
   InMemoryWorkflowService,
   createHttpScenarioActors,
 } from '@pikku/core/services'
+import { PikkuScenarioService } from '@pikku/core/scenario'
 import { pikkuState, getAllPackageStates } from '@pikku/core/internal'
 import { resolveFeatureScenarios } from '@pikku/core/workflow'
 import type { CoreFeature, CoreWorkflow } from '@pikku/core/workflow'
 
-import { loadUserBootstrap } from './load-user-project.js'
+import { loadScenarioBootstrap } from './load-user-project.js'
 import {
   buildStepLadder,
   collectScenarioStepProse,
   scenarioBrowserSteps,
 } from './scenario-ladder.js'
+import { resolveScenarioActors } from '../../utils/resolve-scenario-actors.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
 
@@ -64,7 +66,7 @@ export const scenarioList = pikkuSessionlessFunc<{}, void>({
       return
     }
 
-    await loadUserBootstrap(resolve(config.rootDir, config.outDir))
+    await loadScenarioBootstrap(resolve(config.rootDir, config.outDir))
     const { features, registrations } = collectRegisteredWirings()
     const { entries, unresolved } = resolveFeatureScenarios(
       features,
@@ -138,7 +140,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // Features live in runtime state, not inspector meta — their scenario lists
     // may be built by an ordinary loop — so the project has to be loaded before
     // anything can be selected.
-    await loadUserBootstrap(resolve(config.rootDir, config.outDir))
+    await loadScenarioBootstrap(resolve(config.rootDir, config.outDir))
     const { features: registeredFeatures, registrations } =
       collectRegisteredWirings()
 
@@ -181,10 +183,14 @@ export const scenarioRun = pikkuSessionlessFunc<
           'Export it in the environment running this command (never put it in pikku.config.json).'
       )
     }
+    // Declared actors plus one per persona nobody declared a body for. Resolved
+    // once: the HTTP actors and the Playwright provider below must see the same
+    // registry, and codegen resolved the same way to type `ScenarioActorName`.
+    const scenarioActors = resolveScenarioActors(config.scenarios)
     const actors = createHttpScenarioActors({
       apiUrl: env.apiUrl,
       secret,
-      actors: config.scenarios?.actors ?? {},
+      actors: scenarioActors,
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,
     })
@@ -227,7 +233,10 @@ export const scenarioRun = pikkuSessionlessFunc<
     }
 
     const workflowService = new InMemoryWorkflowService()
-    workflowService.setScenarioEnvironment({
+    const scenarioService = workflowService.setRunExtension(
+      (engine) => new PikkuScenarioService(engine)
+    )
+    scenarioService.setScenarioEnvironment({
       apiUrl: env.apiUrl,
       appUrl: env.appUrl,
     })
@@ -268,14 +277,14 @@ export const scenarioRun = pikkuSessionlessFunc<
         })
       const provider = new PlaywrightScenarioBrowserProvider({
         secret,
-        actors: config.scenarios?.actors ?? {},
+        actors: scenarioActors,
         signInPath: env.signInPath,
         config: browserConfigFromEnv({
           appUrl: env.appUrl,
           apiUrl: env.apiUrl,
         }),
       })
-      workflowService.setScenarioBrowserProvider(provider)
+      scenarioService.setScenarioBrowserProvider(provider)
       browserProvider = provider
     }
 
