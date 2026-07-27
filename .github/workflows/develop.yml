@@ -277,6 +277,9 @@ jobs:
         # --enable-source-maps so tsx-transpiled line numbers map back to the
         # original .ts before lcov is written. A single package's test failure
         # must not halt the sweep, so each run is isolated with `|| warning`.
+        # Each package is also capped with `timeout`, because a package whose
+        # test process never exits otherwise burns the whole job's 20 minutes
+        # and every package sorted after it is never run at all.
         env:
           NODE_OPTIONS: --enable-source-maps
         run: |
@@ -284,7 +287,7 @@ jobs:
           while IFS= read -r script; do
             dir=$(dirname "$script")
             echo "::group::coverage ${dir}"
-            (cd "$dir" && bash run-tests.sh --coverage) || { echo "::error::unit tests failed in ${dir}"; echo "$dir" >> unit-test-failures.txt; }
+            (cd "$dir" && timeout --signal=KILL 300 bash run-tests.sh --coverage) || { status=$?; [ "$status" = 137 ] && echo "::error::unit tests timed out after 300s in ${dir}" || echo "::error::unit tests failed in ${dir}"; echo "$dir" >> unit-test-failures.txt; }
             echo "::endgroup::"
           done < <(find packages -name run-tests.sh -not -path '*/node_modules/*' | sort)
       - name: Merge lcov reports and re-root paths to repo root
