@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Box, Group, Stack, Text, Badge } from '@pikku/mantine/core'
 import { Route } from 'lucide-react'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { PersonaAvatar } from './PersonaAvatar'
 import { personaVisual } from './personaVisual'
 import type { PersonaEntry } from './persona-types'
@@ -11,7 +12,10 @@ type PersonaCardProps = {
   onOpen?: (key: string) => void
 }
 
-export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onOpen }) => {
+export const PersonaCard: React.FC<PersonaCardProps> = ({
+  persona,
+  onOpen,
+}) => {
   const [hovered, setHovered] = useState(false)
   const { color } = personaVisual(persona.key, persona.jobTitle, persona.name)
   return (
@@ -59,35 +63,39 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onOpen }) => 
             </Text>
           )}
         </Stack>
-        <Stack gap={8} align="flex-end" style={{ flexShrink: 0, maxWidth: 260 }}>
+        <Stack
+          gap={8}
+          align="flex-end"
+          style={{ flexShrink: 0, maxWidth: 260 }}
+        >
           {persona.jobTitle && (
             <Badge variant="light" color={color} radius="sm" tt="none" fw={500}>
               {asI18n(persona.jobTitle)}
             </Badge>
           )}
-          {persona.flows.length > 0 ? (
+          {persona.scenarios.length > 0 ? (
             <Group gap={6} justify="flex-end" wrap="wrap">
-              {persona.flows.slice(0, 3).map((flow) => (
+              {persona.scenarios.slice(0, 3).map((scenario) => (
                 <Badge
-                  key={flow.name}
+                  key={scenario.name}
                   variant="default"
                   radius="sm"
                   tt="none"
                   fw={500}
                   leftSection={<Route size={11} />}
                 >
-                  {asI18n(flow.displayName)}
+                  {asI18n(scenario.displayName)}
                 </Badge>
               ))}
-              {persona.flows.length > 3 && (
+              {persona.scenarios.length > 3 && (
                 <Text size="xs" c="dimmed">
-                  {asI18n(`+${persona.flows.length - 3}`)}
+                  {asI18n(`+${persona.scenarios.length - 3}`)}
                 </Text>
               )}
             </Group>
           ) : (
             <Text size="xs" c="dimmed">
-              {asI18n('in no flows')}
+              {m.personas_in_no_scenarios()}
             </Text>
           )}
         </Stack>

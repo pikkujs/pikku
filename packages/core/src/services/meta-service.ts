@@ -13,7 +13,10 @@ import type {
   MCPToolMeta,
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
-import type { WorkflowsMeta } from '../wirings/workflow/workflow.types.js'
+import type {
+  FeaturesMeta,
+  WorkflowsMeta,
+} from '../wirings/workflow/workflow.types.js'
 import type { ScenarioActorConfig } from './scenario-actors-service.js'
 import type {
   TriggerMeta,
@@ -186,6 +189,7 @@ export interface MetaService {
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getScenarioActorsMeta(): Promise<Record<string, ScenarioActorConfig>>
+  getFeaturesMeta(): Promise<FeaturesMeta>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>
   getFunctionsMeta(): Promise<FunctionsMeta>
@@ -226,6 +230,7 @@ export class LocalMetaService implements MetaService {
   private workflowMetaCache: WorkflowsMeta | null = null
   private scenarioActorsMetaCache: Record<string, ScenarioActorConfig> | null =
     null
+  private featuresMetaCache: FeaturesMeta | null = null
   private triggerMetaCache: TriggerMeta | null = null
   private triggerSourceMetaCache: TriggerSourceMeta | null = null
   private functionsMetaCache: FunctionsMeta | null = null
@@ -328,6 +333,7 @@ export class LocalMetaService implements MetaService {
     this.rpcMetaCache = null
     this.workflowMetaCache = null
     this.scenarioActorsMetaCache = null
+    this.featuresMetaCache = null
     this.triggerMetaCache = null
     this.triggerSourceMetaCache = null
     this.functionsMetaCache = null
@@ -513,6 +519,14 @@ export class LocalMetaService implements MetaService {
     const content = await this.readFile('workflow/scenario-actors.gen.json')
     this.scenarioActorsMetaCache = content ? JSON.parse(content) : {}
     return this.scenarioActorsMetaCache!
+  }
+
+  async getFeaturesMeta(): Promise<FeaturesMeta> {
+    if (this.featuresMetaCache) return this.featuresMetaCache
+
+    const content = await this.readFile('scenarios/features.gen.json')
+    this.featuresMetaCache = content ? JSON.parse(content) : {}
+    return this.featuresMetaCache!
   }
 
   async getTriggerMeta(): Promise<TriggerMeta> {

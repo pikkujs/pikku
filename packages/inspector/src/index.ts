@@ -27,6 +27,7 @@ export type {
   VersionManifest,
   VersionManifestEntry,
 } from './utils/contract-hashes.js'
+export type { InspectorFeature, InspectorFeatureEntry } from './types.js'
 export { serializeMCPJson } from './utils/serialize-mcp-json.js'
 export type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 export {

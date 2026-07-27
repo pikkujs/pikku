@@ -374,6 +374,40 @@ export type CoreFeature = {
   after?: CorePikkuFunctionHook
 }
 
+/** One entry of a feature's scenario list, as extracted from the source. */
+export type FeatureMetaEntry = {
+  /** The scenario's declared export name — its key in `WorkflowsMeta`. */
+  scenario: string
+  /** The input this entry runs the scenario with — gherkin's `Examples:`. */
+  data?: unknown
+}
+
+/**
+ * A feature as the console reads it: the document structure around a group of
+ * scenarios. Generated to `scenarios/features.gen.json` and read off disk, so
+ * nothing app-facing has to import the scenario bootstrap to describe one.
+ */
+export type FeatureMeta = {
+  /** The export identifier. */
+  id: string
+  name: string
+  description?: string
+  tags: string[]
+  /** In declared order — a feature's reading order is its declaration order. */
+  entries: FeatureMetaEntry[]
+  /**
+   * Entries that could not be read statically (a spread, a `.map()`). Their
+   * membership is only known once the scenario bootstrap has been evaluated,
+   * so a non-zero count means this listing is partial.
+   */
+  unresolvedEntries: number
+  /** Hooks are runtime-only; only their presence is knowable from meta. */
+  hasBefore: boolean
+  hasAfter: boolean
+}
+
+export type FeaturesMeta = Record<string, FeatureMeta>
+
 /** One planned scenario run, resolved from a feature's scenario list. */
 export type FeaturePlanEntry = {
   featureId: string

@@ -1,6 +1,6 @@
 import type { MetaService } from '@pikku/core/services'
 import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { FeaturesMeta, WorkflowsMeta } from '@pikku/core/workflow'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -256,6 +256,7 @@ export interface PikkuMetaState {
     string,
     { email: string; name?: string; jobTitle?: string; personality?: string }
   >
+  features: FeaturesMeta
   triggerMeta: Record<string, TriggerMeta>
   triggerSourceMeta: Record<string, TriggerSourceMeta>
   middlewareGroupsMeta: MiddlewareGroupsMeta
@@ -295,6 +296,7 @@ export class WiringService {
       gatewayMetaRaw,
       workflows,
       scenarioActors,
+      features,
       triggerMeta,
       triggerSourceMeta,
       middlewareGroupsMeta,
@@ -316,6 +318,7 @@ export class WiringService {
       this.metaService.getGatewayMeta(),
       this.metaService.getWorkflowMeta(),
       this.metaService.getScenarioActorsMeta(),
+      this.metaService.getFeaturesMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
       this.metaService.getMiddlewareGroupsMeta(),
@@ -581,6 +584,7 @@ export class WiringService {
       gatewayMeta,
       workflows,
       scenarioActors,
+      features,
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:
         triggerSourceMeta as unknown as AllMeta['triggerSourceMeta'],

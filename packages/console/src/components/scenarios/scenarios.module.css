@@ -1,0 +1,12 @@
+.ladderStep {
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: -8px;
+  padding-right: 8px;
+  padding-left: 8px;
+  transition: background 100ms;
+}
+
+.ladderStep:hover {
+  background: var(--mantine-color-default-hover);
+}

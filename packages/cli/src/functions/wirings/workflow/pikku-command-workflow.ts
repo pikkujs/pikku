@@ -12,6 +12,7 @@ import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-ma
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { partitionScenarioWorkflows } from '../scenarios/scenario-partition.js'
 import { serializeScenarioRegistration } from '../scenarios/serialize-scenario-registration.js'
+import { buildFeaturesMeta } from '../scenarios/serialize-feature-meta.js'
 import { serializeScenarioWorkflowMeta } from '../scenarios/serialize-scenario-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
@@ -294,6 +295,14 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         JSON.stringify(scenarioActors, null, 2)
       )
     }
+
+    // Fixed path getFeaturesMeta() reads. Written even when empty so the
+    // console can tell "no features declared" from "meta not generated yet".
+    await writeFileInDir(
+      logger,
+      join(config.outDir, 'scenarios', 'features.gen.json'),
+      JSON.stringify(buildFeaturesMeta(workflows.featureFiles), null, 2)
+    )
 
     await writeFileInDir(
       logger,

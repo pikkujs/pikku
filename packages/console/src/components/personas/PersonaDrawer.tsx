@@ -12,6 +12,7 @@ import {
 } from '@pikku/mantine/core'
 import { Route, ChevronRight } from 'lucide-react'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { PersonaAvatar } from './PersonaAvatar'
 import type { PersonaEntry } from './persona-types'
 
@@ -56,29 +57,31 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
       }
     >
       {persona && (
-        <Stack gap="md" pt="xs">
+        <Stack gap="md" pt="xs" data-testid={`persona-drawer-${persona.key}`}>
           <Divider />
           <TextInput
-            label={asI18n('Name')}
+            label={m.personas_field_name()}
             value={persona.name}
             readOnly
             variant="filled"
           />
           <TextInput
-            label={asI18n('Email')}
+            label={m.personas_field_email()}
             value={persona.email}
             readOnly
             variant="filled"
-            styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+            styles={{
+              input: { fontFamily: 'var(--mantine-font-family-monospace)' },
+            }}
           />
           <TextInput
-            label={asI18n('Role label')}
+            label={m.personas_field_role()}
             value={persona.jobTitle ?? '—'}
             readOnly
             variant="filled"
           />
           <Textarea
-            label={asI18n('Personality — drives converse')}
+            label={m.personas_field_personality()}
             value={persona.personality ?? '—'}
             readOnly
             variant="filled"
@@ -88,16 +91,27 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
 
           <Stack gap={6}>
             <Text size="sm" fw={600}>
-              {asI18n(
-                `Appears in ${persona.flows.length} ${persona.flows.length === 1 ? 'flow' : 'flows'}`
-              )}
+              {m.personas_appears_in({
+                features:
+                  persona.features.length === 1
+                    ? m.personas_feature_count_one()
+                    : m.personas_feature_count({
+                        count: persona.features.length,
+                      }),
+                scenarios:
+                  persona.scenarios.length === 1
+                    ? m.personas_scenario_count_one()
+                    : m.personas_scenario_count({
+                        count: persona.scenarios.length,
+                      }),
+              })}
             </Text>
-            {persona.flows.length === 0 ? (
+            {persona.scenarios.length === 0 ? (
               <Text size="xs" c="dimmed">
-                {asI18n('Not cast in any scenario yet.')}
+                {m.personas_not_cast()}
               </Text>
             ) : (
-              persona.flows.map((flow) => (
+              persona.scenarios.map((flow) => (
                 <UnstyledButton
                   key={flow.name}
                   onClick={() => onOpenFlow?.(flow.name)}
@@ -125,9 +139,7 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
           </Stack>
 
           <Text size="xs" c="dimmed">
-            {asI18n(
-              'Personas are defined in pikku.config.json under scenarios.actors.'
-            )}
+            {m.personas_defined_in()}
           </Text>
         </Stack>
       )}

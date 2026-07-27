@@ -429,6 +429,36 @@ export interface AuthDefinition {
   services: FunctionServicesMeta
 }
 
+/** One statically resolved entry of a feature's `scenarios` array. */
+export interface InspectorFeatureEntry {
+  /** The scenario's declared export name, with any import alias followed back. */
+  scenario: string
+  /** A `{ scenario, data }` entry's literal data — gherkin's `Examples:`. */
+  data?: unknown
+}
+
+/** A `pikkuFeature` export, as far as it can be read from the source. */
+export interface InspectorFeature {
+  path: string
+  exportedName: string
+  name?: string
+  description?: string
+  tags?: string[]
+  entries: InspectorFeatureEntry[]
+  /**
+   * Entries that are not literal — a spread, a `.map()`, a call. Counted rather
+   * than dropped so the console can say the listing is partial instead of
+   * quietly showing a short feature.
+   */
+  unresolvedEntries: number
+  /**
+   * Feature hooks run once around the whole group, never per scenario, and are
+   * runtime-only — so only their presence is recorded.
+   */
+  hasBefore: boolean
+  hasAfter: boolean
+}
+
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -473,11 +503,14 @@ export interface InspectorState {
     graphMeta: SerializedWorkflowGraphs
     graphFiles: Map<string, { path: string; exportedName: string }>
     /**
-     * `pikkuFeature` exports, keyed by export identifier. Only the location is
-     * recorded — a feature's scenario list is resolved at runtime by object
-     * identity, because it may be built by an ordinary loop.
+     * `pikkuFeature` exports, keyed by export identifier.
+     *
+     * Everything the config states literally is extracted here, because a
+     * feature is the document structure the console renders. Entries built by
+     * an ordinary loop cannot be enumerated statically — those are counted in
+     * `unresolvedEntries` and resolved at runtime by object identity instead.
      */
-    featureFiles: Map<string, { path: string; exportedName: string }>
+    featureFiles: Map<string, InspectorFeature>
     invokedWorkflows: Set<string>
   }
   rpc: {

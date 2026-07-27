@@ -361,11 +361,12 @@ export const doesNotSeeTableRow = pikkuScenarioStep<
 })
 
 /**
- * Reads the personas a scenario card shows it is cast with.
+ * Reads the personas a scenario shows it is cast with.
  *
- * The cast renders as avatars with no accessible name, so the card carries the
- * persona key as a data attribute — reading that is what keeps this assertion
- * about who is in the cast rather than about how an avatar happens to look.
+ * The cast renders as avatars with no accessible name, so each member carries
+ * the persona key as a data attribute — reading that is what keeps this
+ * assertion about who is in the cast rather than about how an avatar happens to
+ * look.
  */
 export const readsFlowCast = pikkuScenarioStep<
   { flow: string },
@@ -373,16 +374,18 @@ export const readsFlowCast = pikkuScenarioStep<
   true
 >({
   name: 'readsFlowCast',
-  description: 'reads the personas cast in a scenario card',
+  description: 'reads the personas cast in a scenario',
   template: 'reads the cast of {flow}',
   browser: true,
   func: async (_services, { flow }, { browser }) => {
-    const card = browser.page.locator(`[data-testid="flow-card-${flow}"]`)
+    const card = browser.page.locator(
+      `[data-testid="scenario-section-${flow}"]`
+    )
     await card.first().waitFor({ state: 'visible', timeout: TIMEOUT })
     return {
       cast: await card
         .first()
-        .locator('[data-testid="flow-cast-member"]')
+        .locator('[data-testid="scenario-cast-member"]')
         .evaluateAll((nodes) =>
           nodes.map((node) => node.getAttribute('data-persona-key') ?? '')
         ),

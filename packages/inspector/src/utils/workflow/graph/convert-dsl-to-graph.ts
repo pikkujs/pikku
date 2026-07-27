@@ -519,6 +519,7 @@ export function convertDslToGraph(
     title: meta.title,
     description: meta.description,
     tags: meta.tags,
+    skip: meta.skip,
     actors: meta.actors,
     context: meta.context,
     nodes: nodesRecord,
