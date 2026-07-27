@@ -224,6 +224,62 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
   }
 )
 
+export const scenarioStepOpensAsStepScenario = pikkuScenario<
+  void,
+  { opened: true }
+>({
+  title: 'A step opens as the step it is, not as a bare RPC',
+  description:
+    'The details of a step name the phase it runs in, the actor it runs as, and the scenario step behind the sentence',
+  tags: ['scenario'],
+  func: async (_services, _data, { scenario, actors }) => {
+    if (!actors?.admin) {
+      throw new Error(
+        'scenarioStepOpensAsStepScenario needs the admin actor — run via `pikku scenario run <environment>`'
+      )
+    }
+
+    await scenario.given(
+      'opens the scenarios page',
+      'opensConsolePage',
+      { path: SCENARIOS_PAGE },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the ungrouped feature',
+      'clicksTestId',
+      { testId: `feature-nav-${UNGROUPED}` },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens a step',
+      'clicksTestId',
+      { testId: 'ladder-step-shopper doubles their order' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the phase the step runs in',
+      'seesTestId',
+      { testId: 'scenario-step-phase' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the actor the step runs as',
+      'seesTestId',
+      { testId: 'scenario-step-actor', containing: 'Shopper' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the scenario step behind the sentence',
+      'seesTestId',
+      { testId: 'scenario-step-rpc', containing: 'doubleValue' },
+      { actor: actors.admin }
+    )
+
+    return { opened: true }
+  },
+})
+
 export const skippedScenarioSaysWhyScenario = pikkuScenario<
   void,
   { explained: true }
@@ -327,6 +383,7 @@ export const scenariosConsoleFeature = pikkuFeature({
     featuresNavigableScenario,
     scenarioReadsAsProseScenario,
     scenarioCastListedScenario,
+    scenarioStepOpensAsStepScenario,
     skippedScenarioSaysWhyScenario,
     tagFilterNarrowsScenario,
   ],

@@ -59,6 +59,7 @@ import { CredentialUserPanel } from '../project/panels/CredentialUserPanel'
 import { AuthProviderPanel } from '../project/panels/AuthProviderPanel'
 import { DbColumnPanel } from '../project/panels/DbColumnPanel'
 import { EmailPreviewPanel } from '../project/panels/EmailPreviewPanel'
+import { ScenarioStepPanel } from '../scenarios/ScenarioStepPanel'
 
 interface PanelChild {
   id: string
@@ -195,8 +196,7 @@ const WorkflowTabbedPanel: React.FC<{
   const { workflow } = useWorkflowContext()
   const hasRun = !!runContext?.selectedRunId
   const isCreating = !!runContext?.isCreatingRun
-  const hasNodes =
-    !!workflow?.nodes && Object.keys(workflow.nodes).length > 0
+  const hasNodes = !!workflow?.nodes && Object.keys(workflow.nodes).length > 0
   const showGraph = renderGraph && hasNodes
 
   return (
@@ -253,12 +253,18 @@ export const createPanelChildren = (
         {
           id: 'step',
           title: 'Step',
-          content: (
-            <WorkflowStepTabbedPanel
-              stepId={panelData.id}
-              metadata={panelData.metadata}
-            />
-          ),
+          content:
+            panelData.metadata?.stepType === 'scenarioStep' ? (
+              <ScenarioStepPanel
+                stepId={panelData.id}
+                metadata={panelData.metadata}
+              />
+            ) : (
+              <WorkflowStepTabbedPanel
+                stepId={panelData.id}
+                metadata={panelData.metadata}
+              />
+            ),
         },
       ]
     }

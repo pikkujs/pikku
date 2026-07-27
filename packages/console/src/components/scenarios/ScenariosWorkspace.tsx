@@ -94,9 +94,9 @@ export const ScenariosWorkspace: React.FC = () => {
               feature={selected}
               onOpenScenario={(name) => navigateTo('scenarios', name)}
               onOpenPersona={setPersonaKey}
-              onSelectStep={(workflow, stepId, stepType) => {
+              onSelectStep={(workflow, stepId, stepType, metadata) => {
                 setStepWorkflow(workflow)
-                openWorkflowStep(stepId, stepType, { stepType })
+                openWorkflowStep(stepId, stepType, { ...metadata, stepType })
               }}
             />
           ) : (

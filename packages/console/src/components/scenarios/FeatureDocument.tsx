@@ -43,7 +43,12 @@ type FeatureDocumentProps = {
   feature: FeatureDoc
   onOpenScenario?: (name: string) => void
   onOpenPersona?: (key: string) => void
-  onSelectStep?: (workflow: unknown, stepId: string, stepType: string) => void
+  onSelectStep?: (
+    workflow: unknown,
+    stepId: string,
+    stepType: string,
+    metadata: Record<string, unknown>
+  ) => void
 }
 
 export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
