@@ -29,14 +29,13 @@ Use this skill as an execution checklist, not reference material.
 - `project.inlang/settings.json` — `baseLocale`, `locales`, the `@inlang/plugin-message-format` module, `pathPattern: "./messages/{locale}.json"`.
 - `vite.config.ts` — `paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' })` from `@inlang/paraglide-js` (devDependency), FIRST in the plugins array.
 - `src/paraglide/` — compiled output (`messages.js`, `runtime.js`, per-locale `messages/*.js`). Generated; it writes its own `.gitignore`.
-- `src/i18n/messages.ts` — re-exports the generated `m` wrapped so every message returns a branded `I18nString` (satisfies the `@pikku/mantine` `I18nNode` prop gate) and passes through `maskI18n` for debug mode. **Components import `m` from `@/i18n/messages`, never from `../paraglide/messages.js` directly** — a raw Paraglide call returns a plain `string` and fails the Mantine typing gate.
-- `src/i18n/config.ts` — locale plumbing: `supportedLocales`/`defaultLocale` (re-exported from `../paraglide/runtime.js`), `detectLocale`, `localeDir` (RTL for ar/he/fa/ur), a reactive locale store (`overwriteGetLocale` bridged to `useSyncExternalStore`), `setActiveLocale`, `useLocale()`, and the i18n-debug helpers.
+- `src/i18n/config.ts` — locale plumbing, and the ONLY hand-written i18n module: `supportedLocales`/`defaultLocale` (re-exported from `../paraglide/runtime.js`), `detectLocale`, `localeDir` (RTL for ar/he/fa/ur), a reactive locale store (`overwriteGetLocale` bridged to `useSyncExternalStore`), `setActiveLocale`, `useLocale()`. This is not a wrapper over messages — Paraglide's `getLocale()` is a module global with no React reactivity, and this bridges it. Wire `overwriteGetLocale` or `m.*()` will resolve a different locale than the app thinks is active.
 - `tsconfig.json` — `"allowJs": true, "checkJs": false` so `tsc` can consume Paraglide's JSDoc-typed JS output.
 
 ## Using messages in components
 
 ```tsx
-import { m } from '@/i18n/messages'
+import { m } from '../paraglide/messages.js'
 import { useLocale } from '@/i18n/config'
 
 function LoginPage() {
@@ -55,11 +54,41 @@ function LoginPage() {
 - Non-component helpers (formatters, status maps) call `m.some__key()` directly — the functions are plain ESM, no hook needed; the render-time subscription lives in the component that displays the result.
 - Locale switching: the root route persists to localStorage, sets `<html lang dir>` (`localeDir`), and calls `setActiveLocale` — in-SPA re-render, no page reload. Mirror `routes/__root.tsx` in the starter template.
 
+## Keys only known at runtime (enum labels, status maps)
+
+A DB value picking a label (`enums__document_status__${status}`) is the one case a
+generated message can't express. Paraglide's README (§ "What about dynamic or
+CMS-driven keys?") is explicit: use an **explicit mapping from value to message
+function**. Key it on the enum type, never `string`:
+
+```ts
+import { m } from '../paraglide/messages.js'
+
+const DOCUMENT_STATUS_LABEL: Record<DocumentStatus, () => string> = {
+  completed: m.enums__document_status__completed,
+  in_progress: m.enums__document_status__in_progress,
+  required: m.enums__document_status__required,
+}
+
+// call site — no fallback, because there is no missing case
+DOCUMENT_STATUS_LABEL[status]()
+```
+
+`Record<DocumentStatus, …>` is exhaustive: add a value to the enum without a
+label and the build fails. That is the entire point.
+
+Do NOT write `Record<string, () => string>` with a `?? status` fallback, and do
+NOT index the namespace with a computed key (`m[\`enums__${name}__${value}\`]`).
+Both compile, both render the raw identifier to users when a label is missing,
+and both reintroduce exactly the silent-fallback failure Paraglide exists to
+eliminate. If you find yourself writing a `resolveDynamicKey(key: string)`
+helper, stop — that helper IS the bug.
+
 ## Type safety — and why deploys block on i18n
 
 A message IS a function: a typo'd or deleted key (`m.auth__login__titel()`) is a missing export — a **TypeScript error**, not a silent runtime fallback string. Params are typed too. The deploy pipeline compiles Paraglide then runs each frontend's `tsc` (`"tsc": "tsc --noEmit"` script — keep it in every frontend's `package.json`) **before** building; a type error aborts the deploy. `vite build` does not type-check on its own, so this gate is the only thing standing between a broken message and production.
 
-The gate catches _invalid_ messages but not _inlined_ strings — the `@pikku/mantine` `I18nNode` prop typing catches those on Mantine props (a raw string literal fails to compile), and i18n-debug covers the rest.
+The gate catches _invalid_ messages but not _inlined_ strings. The `@pikku/mantine` `I18nNode` prop typing catches those: a raw string literal fails to compile on a gated prop, because `I18nString` is a branded type a bare `string` can't satisfy. Between the two, `tsc` is the whole safety net — there is no runtime fallback to inspect, by design.
 
 ## Compile step
 
@@ -79,12 +108,30 @@ The gate catches _invalid_ messages but not _inlined_ strings — the `@pikku/ma
 
 ## i18n debug mode (find inlined strings)
 
-`src/i18n/messages.ts` wraps every message in `maskI18n`: when enabled, every _translated_ string renders as block glyphs (`█`), so anything still readable on screen never went through a message — a hardcoded string. Off by default. Toggle: `?i18n-debug` in the URL, `localStorage['i18n-debug'] = '1'`, or `I18N_DEBUG=1` for SSR. The starter template wires this; mirror it when hand-wiring a new app.
+`tsc` catches invalid messages, and the `@pikku/mantine` gate catches raw strings on gated props — but neither sees a hardcoded string in plain JSX, an `aria-label`, `alt`, `document.title`, or anything passed to a non-Mantine component. Debug mode covers that gap: render every message as block glyphs (`█`), and whatever is still readable never went through a message.
+
+**Build it as a generated locale, never as a runtime wrapper.** Masked text is text, and rendering different text per locale is what Paraglide already does:
+
+1. A script generates `messages/zz.json` from `en.json`, replacing `\S` with `█` while leaving `{placeholders}` intact (they are message inputs — mangling them changes the compiled signature). Run it before `paraglide-js compile`; gitignore the output.
+2. Add `"zz"` to `locales` in `project.inlang/settings.json`.
+3. Switch to it in the locale bridge:
+   ```ts
+   overwriteGetLocale(() => (isI18nDebug() ? 'zz' : activeLocale))
+   ```
+
+Keep `zz` out of the app's own `supportedLocales` — that drives URL prefixes, hreflang and any backend `locale` param, none of which should see it.
+
+Generate the catalogue in dev only. With `messages/zz.json` absent, Paraglide compiles `zz` to an alias of the base locale (`const zz_x = en_x` — one line per message, no duplicated strings), so a production bundle carries the locale at effectively zero cost.
+
+Both the generator and the store bridge are being upstreamed (pikkujs/pikku#1036, #1035).
+
+The wrapper alternative — a module that walks the namespace and pipes each message through a `mask()` — is what this replaces. It defeats tree-shaking (touching every export), adds a check on every call, and forces every component to import `m` from the wrapper instead of Paraglide.
 
 ## What NOT to do
 
 - Don't hardcode display strings "just for now" — the message is the work.
 - Don't edit or commit anything under `src/paraglide/` — it's regenerated; change `messages/*.json` instead.
-- Don't import `m` from `../paraglide/messages.js` in components — go through `@/i18n/messages` (branding + debug mask).
+- **Don't wrap `m`.** No re-export module, no branding layer, no resolver. Components import `m` from `../paraglide/messages.js` and call it. `@pikku/react`'s `I18nString` is declared as `string & { readonly __brand: 'LocalizedString' }` — deliberately identical to Paraglide's own `LocalizedString` — so `m.some__key()` satisfies the `@pikku/mantine` `I18nNode` gate natively. A wrapper adds nothing and costs per-message tree-shaking.
+- Don't re-resolve messages by string key or re-implement `{param}` interpolation. A key-string resolver turns a missing key back into silent runtime text, surrendering the type safety that is the entire reason to use Paraglide.
 - Don't reach for i18next/react-i18next or a runtime-fetch translation loader — Paraglide's compiled functions are the whole delivery mechanism.
 - Don't tokenize backend error messages or logs here — those are not frontend display strings.
