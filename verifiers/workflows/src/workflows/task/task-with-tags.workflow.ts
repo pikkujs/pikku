@@ -30,16 +30,18 @@ export const taskWithTagsWorkflow = pikkuWorkflowFunc<
       addedTags.push(tag)
     }
 
-    // Step 3: Remove specified tags
-    const removedTags: string[] = []
-    for (const tag of data.tagsToRemove) {
-      if (addedTags.includes(tag)) {
-        await workflow.do(`Remove tag: ${tag}`, 'taskTagRemove', {
-          taskId: task.id,
-          tag,
-        })
-        removedTags.push(tag)
-      }
+    // Step 3: Remove specified tags. The "only the ones we added" condition is
+    // a filter rather than an `if` inside the loop, because a DSL fanout body
+    // is a flat list of steps with no branch member — `.filter` is how the DSL
+    // expresses a per-item condition, and it serializes as its own step.
+    const removedTags = data.tagsToRemove.filter((tag) =>
+      addedTags.includes(tag)
+    )
+    for (const tag of removedTags) {
+      await workflow.do(`Remove tag: ${tag}`, 'taskTagRemove', {
+        taskId: task.id,
+        tag,
+      })
     }
 
     return {

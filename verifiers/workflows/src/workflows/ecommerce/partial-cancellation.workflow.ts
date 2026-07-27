@@ -20,29 +20,33 @@ export const partialCancellationWorkflow = pikkuWorkflowFunc<
       orderId: data.orderId,
     })
 
-    // Step 2: Calculate refund amount for cancelled items
+    // Step 2: Calculate refund amount for cancelled items. The "is this one
+    // being cancelled?" test is a filter rather than an `if` inside the loop —
+    // a DSL fanout body is a flat list of steps with no branch member, so
+    // `.filter` is how the DSL expresses a per-item condition.
+    const cancelledItems = order.items.filter((item) =>
+      data.itemsToCancel.includes(item.productId)
+    )
     const itemsCancelled: string[] = []
     let refundAmount = 0
-    for (const item of order.items) {
-      if (data.itemsToCancel.includes(item.productId)) {
-        refundAmount += item.price * item.quantity
-        itemsCancelled.push(item.productId)
+    for (const item of cancelledItems) {
+      refundAmount += item.price * item.quantity
+      itemsCancelled.push(item.productId)
 
-        // Release inventory
-        await workflow.do(`Release ${item.productId}`, 'inventoryRelease', {
-          reservationId: `res-${data.orderId}-${item.productId}`,
-        })
+      // Release inventory
+      await workflow.do(`Release ${item.productId}`, 'inventoryRelease', {
+        reservationId: `res-${data.orderId}-${item.productId}`,
+      })
 
-        // Remove item from order
-        await workflow.do(
-          `Remove ${item.productId} from order`,
-          'orderItemRemove',
-          {
-            orderId: data.orderId,
-            productId: item.productId,
-          }
-        )
-      }
+      // Remove item from order
+      await workflow.do(
+        `Remove ${item.productId} from order`,
+        'orderItemRemove',
+        {
+          orderId: data.orderId,
+          productId: item.productId,
+        }
+      )
     }
 
     // Step 3: Process partial refund

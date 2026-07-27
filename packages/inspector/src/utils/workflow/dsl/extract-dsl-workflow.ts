@@ -310,8 +310,9 @@ function extractStep(
 
   // For-of statement (sequential fanout)
   if (ts.isForOfStatement(statement)) {
-    const fanout = extractSequentialFanout(statement, context)
-    if (!fanout) {
+    const reason: { message?: string } = {}
+    const fanout = extractSequentialFanout(statement, context, reason)
+    if (!fanout && containsWorkflowCall(statement.statement, context.checker)) {
       // A for-of the DSL can't model as a sequential fanout (its iterable is not
       // a data-array identifier/field — e.g. a counting loop
       // `for (const i of [...Array(N).keys()])`). Silently returning null here
@@ -321,12 +322,18 @@ function extractStep(
       // reports INVALID_DSL_WORKFLOW; pikkuWorkflowComplexFunc falls back to the
       // basic AST walk (which DOES register loop-invoked functions), so a genuine
       // control-flow loop belongs in a complex workflow.
+      //
+      // Guarded on the body actually containing a workflow call: a loop that only
+      // massages locals (building a lookup, summing a total) has no step to lose,
+      // and erroring on it would be a false positive — the whole hazard is a
+      // dropped `workflow.do`, not a dropped `for`.
       context.errors.push({
         message:
           `The for-of loop '${statement.getText().slice(0, 60)}' can't be expressed in a DSL workflow — ` +
-          `its iterable must be a data array (an identifier or field like 'data.items'), not a computed/inline ` +
-          `iterable such as '[...Array(n).keys()]'. Use pikkuWorkflowComplexFunc for a control-flow/counting loop, ` +
-          `or iterate over a real input array.`,
+          (reason.message ??
+            `its iterable must be a data array (an identifier or field like 'data.items'), not a computed/inline ` +
+              `iterable such as '[...Array(n).keys()]'. Use pikkuWorkflowComplexFunc for a control-flow/counting loop, ` +
+              `or iterate over a real input array.`),
         node: statement,
       })
     }
@@ -1544,9 +1551,40 @@ function extractParallelGroup(
 /**
  * Extract sequential fanout from for-of loop
  */
+/**
+ * Does this subtree call the workflow wire at all?
+ *
+ * Used to tell "the DSL can't model this loop, and a step would be silently
+ * lost" from "the DSL can't model this loop, and there is nothing in it to
+ * lose". Only the first is worth failing a build over.
+ */
+function containsWorkflowCall(node: ts.Node, checker: ts.TypeChecker): boolean {
+  let found = false
+  const visit = (child: ts.Node): void => {
+    if (found) return
+    if (ts.isCallExpression(child)) {
+      if (
+        isWorkflowDoCall(child, checker) ||
+        isScenarioStepCall(child) ||
+        isWorkflowSleepCall(child, checker) ||
+        isWorkflowSuspendCall(child, checker) ||
+        isWorkflowApprovalCall(child, checker) ||
+        isWorkflowExpectEventuallyCall(child)
+      ) {
+        found = true
+        return
+      }
+    }
+    ts.forEachChild(child, visit)
+  }
+  visit(node)
+  return found
+}
+
 function extractSequentialFanout(
   statement: ts.ForOfStatement,
-  context: ExtractionContext
+  context: ExtractionContext,
+  reason?: { message?: string }
 ): FanoutStepMeta | null {
   if (!isSequentialFanout(statement)) {
     return null
@@ -1645,6 +1683,18 @@ function extractSequentialFanout(
   }
 
   if (body.length === 0) {
+    // The iterable was fine — the body yielded nothing the DSL can model. The
+    // usual cause is a `workflow.do` nested inside an `if`/`switch`, because
+    // `FanoutStepMeta['body']` is a flat list of steps with no branch member:
+    // the DSL has no way to say "conditionally run this step per item".
+    const branching = bodyStatements.some(
+      (stmt) => ts.isIfStatement(stmt) || ts.isSwitchStatement(stmt)
+    )
+    if (reason) {
+      reason.message = branching
+        ? `its body only calls 'workflow.do' inside an if/switch, and a DSL fanout body is a flat list of steps with no branch member — the DSL cannot express a per-item condition. Use pikkuWorkflowComplexFunc, or lift the condition out of the loop.`
+        : `its body contains no 'workflow.do' call the DSL can model. Use pikkuWorkflowComplexFunc for a loop that does other work.`
+    }
     return null
   }
 

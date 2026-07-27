@@ -180,6 +180,70 @@ describe('DSL extraction — constructs that must not be silently dropped', () =
     )
   })
 
+  /**
+   * The diagnostic used to blame the iterable in every case, including this one
+   * where the iterable is a perfectly good data array. That sent readers looking
+   * at `data.tagsToRemove` when the real obstacle was the `if` in the body, so
+   * the message has to distinguish the two causes.
+   */
+  test('a branch inside a fanout body hard-errors, and the diagnostic blames the branch not the iterable', async () => {
+    const { steps, diags } = await inspectWorkflow(
+      [
+        '  for (const tag of data.tags) {',
+        '    if (tag.length > 2) {',
+        "      await workflow.do('add', 'rpcA', { tag })",
+        '    }',
+        '  }',
+        '  return { ok: true }',
+      ].join('\n')
+    )
+
+    assert.ok(
+      diags.length > 0,
+      'a branch inside a fanout body must raise a diagnostic, not vanish silently'
+    )
+    assert.ok(
+      diags.some((d) => /if\/switch/.test(d)),
+      `the diagnostic must name the branch as the cause, got: ${JSON.stringify(diags)}`
+    )
+    assert.ok(
+      !diags.some((d) => /iterable must be a data array/.test(d)),
+      `data.tags IS a data array — the diagnostic must not blame it, got: ${JSON.stringify(diags)}`
+    )
+    const fanout = steps.find((s) => s.type === 'fanout')
+    assert.ok(!fanout, 'a fanout whose body was dropped must not serialize')
+  })
+
+  /**
+   * The hazard the hard error exists for is a *dropped step*. A loop that only
+   * massages locals has no step to drop, so failing the build on it is a false
+   * positive — and it fired on real workflows that were doing nothing wrong.
+   */
+  test('a for-of that calls no workflow step is not an error — there is nothing to drop', async () => {
+    const { steps, diags } = await inspectWorkflow(
+      [
+        "  const first = await workflow.do('get', 'rpcA', {})",
+        '  const merged: Record<string, string> = {}',
+        '  for (const dup of data.duplicates) {',
+        '    if (dup.phone && !first.phone) {',
+        '      merged.phone = dup.phone',
+        '    }',
+        '  }',
+        '  return { ok: true }',
+      ].join('\n')
+    )
+
+    assert.deepEqual(
+      diags,
+      [],
+      `a pure-computation loop must not fail the build, got: ${JSON.stringify(diags)}`
+    )
+    assert.ok(
+      steps.some((s) => s.type === 'rpc'),
+      'the surrounding steps must still be extracted'
+    )
+  })
+
   test('a brace-less for-of body is still extracted as a sequential fanout', async () => {
     const { invoked, steps } = await inspectWorkflow(
       [

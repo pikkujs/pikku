@@ -37,15 +37,28 @@ export const nestedTaskHierarchyWorkflow = pikkuWorkflowFunc<
       totalTasksCreated++
     }
 
-    // Create second level of subtasks for each level 1 subtask
-    for (const parentId of level1Subtasks) {
+    // Create second level of subtasks for each level 1 subtask. The parent ×
+    // title cross product is built up front as plain locals, because a DSL
+    // fanout body is a flat list of steps with no nested-fanout member — one
+    // fanout over the pairs is how the DSL expresses a nested loop, and it
+    // visits them in exactly the order the nested loops did.
+    const level2Pairs: { parentTaskId: string; title: string }[] = []
+    for (const parentTaskId of level1Subtasks) {
       for (const title of data.level2Titles) {
-        await workflow.do(`Create level 2 subtask: ${title}`, 'subtaskCreate', {
-          parentTaskId: parentId,
-          title,
-        })
-        totalTasksCreated++
+        level2Pairs.push({ parentTaskId, title })
       }
+    }
+
+    for (const pair of level2Pairs) {
+      await workflow.do(
+        `Create level 2 subtask: ${pair.title}`,
+        'subtaskCreate',
+        {
+          parentTaskId: pair.parentTaskId,
+          title: pair.title,
+        }
+      )
+      totalTasksCreated++
     }
 
     return {
