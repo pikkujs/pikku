@@ -1,6 +1,8 @@
 import React from 'react'
 import { Group, Text, Badge } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import type { AuthPluginEntry } from '../../hooks/useAuthProviders'
 
 type AuthPluginsBarProps = {
@@ -8,6 +10,8 @@ type AuthPluginsBarProps = {
 }
 
 export const AuthPluginsBar: React.FC<AuthPluginsBarProps> = ({ plugins }) => {
+  useLocale()
+
   if (plugins.length === 0) {
     return null
   }
@@ -15,7 +19,7 @@ export const AuthPluginsBar: React.FC<AuthPluginsBarProps> = ({ plugins }) => {
   return (
     <Group gap="xs">
       <Text size="sm" fw={500}>
-        {asI18n('Plugins')}
+        {m.auth_plugins_label()}
       </Text>
       {plugins.map((plugin) => (
         <Badge

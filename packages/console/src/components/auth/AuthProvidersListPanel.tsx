@@ -67,10 +67,7 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
         key: 'status',
         header: 'STATUS',
         render: (p: AuthProviderDef) => (
-          <ConfiguredBadge
-            configured={isConfigured(p)}
-            testId={`auth-provider-configured-${p.name.toLowerCase()}`}
-          />
+          <ConfiguredBadge configured={isConfigured(p)} providerId={p.id} />
         ),
       },
       {
@@ -105,6 +102,10 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
       data={data}
       columns={columns}
       getKey={(p) => p.id}
+      getRowProps={(p) => ({
+        'data-testid': 'auth-provider-row',
+        'data-provider': p.id,
+      })}
       onRowClick={(p) => openAuthProvider(p.id, p)}
       externalSearch={externalSearch}
       searchFilter={(p, q) =>

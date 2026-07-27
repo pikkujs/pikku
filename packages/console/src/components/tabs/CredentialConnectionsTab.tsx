@@ -136,7 +136,7 @@ export const CredentialConnectionsTab: React.FC<{
   )
 
   return (
-    <Box p="md">
+    <Box p="md" data-testid="credential-connections">
       <Stack gap="md">
         {!auth?.user && (
           <Alert color="yellow" variant="light">
