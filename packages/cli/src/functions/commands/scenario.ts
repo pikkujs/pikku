@@ -71,7 +71,7 @@ const collectRegisteredWirings = () => {
 
 export const scenarioList = pikkuSessionlessFunc<{}, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const state = await getInspectorState()
+    const state = await getInspectorState(false, false, false, true)
     const flows = listScenarios(state)
     if (flows.length === 0) {
       logger.info('No scenarios found (pikkuScenario exports).')
@@ -148,7 +148,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       trace = false,
     }
   ) => {
-    const state = await getInspectorState(true)
+    const state = await getInspectorState(true, false, false, true)
 
     const environments = config.scenarios?.environments ?? {}
     const env = environments[environment]

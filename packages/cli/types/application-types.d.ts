@@ -24,10 +24,16 @@ export interface Config extends CoreConfig<PikkuCLIConfig> {
 export interface SingletonServices extends CoreSingletonServices<Config> {
   workflowService: WorkflowService
   logger: CLILogger
+  /** `unfiltered` skips the CLI filters (`--tags`, `--types`, …), which narrow
+   *  what gets generated. A command that RUNS the project rather than
+   *  generating from it needs the whole project: `--tags` on `pikku scenario
+   *  run` selects which scenarios to run, and narrowing the state by it would
+   *  strip out the very step functions the run is about to call. */
   getInspectorState: (
     refresh?: boolean,
     setupOnly?: boolean,
-    bootstrapMode?: boolean
+    bootstrapMode?: boolean,
+    unfiltered?: boolean
   ) => Promise<InspectorState>
   /** Marks the cached inspector state stale (a watcher saw a source-file
    *  change) so the next getInspectorState(refresh) truly re-inspects —
