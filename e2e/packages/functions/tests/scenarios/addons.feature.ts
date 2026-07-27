@@ -1,3 +1,13 @@
+/**
+ * The console addons gallery.
+ *
+ * The catalogue comes from this project's own registry stub
+ * (`src/mock-registry-server.ts`), not from the live Fabric registry, so the
+ * counts below are exact: they describe a fixture this repo checks in, and a
+ * catalogue that quietly lost rows fails here rather than passing a lower
+ * bound. The installed side is not the registry's — the console left-joins what
+ * the project actually wires — so those three names come from the fixture app.
+ */
 import {
   pikkuFeature,
   pikkuScenario,
@@ -65,15 +75,21 @@ export const communityAddonsScenario = pikkuScenario<void, { listed: true }>({
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the catalogue',
+      'sees the whole catalogue',
       'countsAddonCards',
-      { atLeast: 10 },
+      { count: 14 },
       { actor: actors.admin }
     )
     await scenario.when(
       'searches for stripe',
       'searchesAddons',
       { query: 'stripe' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the search narrow to one addon',
+      'countsAddonCards',
+      { count: 1 },
       { actor: actors.admin }
     )
     await scenario.then(

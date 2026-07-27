@@ -9,7 +9,7 @@
  * step, so everything here acts on a surface that page already rendered.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type {} from '@pikku/playwright'
+import { expect } from '@pikku/playwright'
 
 export const searchesAddons = pikkuScenarioStep<
   { query: string },
@@ -56,24 +56,25 @@ export const seesAddonCard = pikkuScenarioStep<
   },
 })
 
+/**
+ * Counts the cards on show, exactly.
+ *
+ * The catalogue is served by this project's own registry stub from a fixture
+ * it checks in, so the count is knowable — which is the point of the stub. A
+ * lower bound would pass on a catalogue that had silently lost half its rows.
+ */
 export const countsAddonCards = pikkuScenarioStep<
-  { atLeast: number },
+  { count: number },
   { count: number },
   true
 >({
   name: 'countsAddonCards',
   description: 'counts the addons on show',
-  template: 'sees at least {atLeast} addons on offer',
+  template: 'sees exactly {count} addons on offer',
   browser: true,
-  func: async (_services, { atLeast }, { browser }) => {
+  func: async (_services, { count }, { browser }) => {
     const cards = browser.page.locator('[data-testid="addon-card"]')
-    await cards.first().waitFor({ state: 'visible', timeout: 15_000 })
-    const count = await cards.count()
-    if (count < atLeast) {
-      throw new Error(
-        `Expected at least ${atLeast} addons on show, got ${count}`
-      )
-    }
+    await expect(cards).toHaveCount(count, { timeout: 15_000 })
     return { count }
   },
 })

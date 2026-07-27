@@ -5,6 +5,7 @@ import {
   spawnDevServer,
   type SpawnedServer,
 } from '@pikku/cli/server/spawn-dev-server'
+import { mockRegistryUrl } from '../src/mock-registry-server.js'
 
 const DEFAULT_API_URL = process.env.API_URL || 'http://localhost:4077'
 
@@ -14,15 +15,18 @@ export interface StartBackendOptions {
 
 /**
  * The defaults every e2e entry point runs under. `SCENARIO_ACTOR_SECRET` is
- * the shared secret this app's actor sign-in route checks, and `PIKKU_MOCK_LLM`
- * scripts the model instead of calling OpenAI — both are this project's
- * choices, not the framework's, which is why they stay here.
+ * the shared secret this app's actor sign-in route checks, `PIKKU_MOCK_LLM`
+ * scripts the model instead of calling OpenAI, and `FABRIC_API_URL` points the
+ * console's addon gallery at the catalogue this repo checks in rather than the
+ * live Fabric registry — all three are this project's choices, not the
+ * framework's, which is why they stay here.
  *
  * Opt out with PIKKU_MOCK_LLM=0 to run the @ai-live tier against a real key.
  */
 export const applyTestEnvDefaults = (): void => {
   process.env.SCENARIO_ACTOR_SECRET ??= 'e2e-actor-secret'
   process.env.PIKKU_MOCK_LLM ??= '1'
+  process.env.FABRIC_API_URL ??= mockRegistryUrl
 }
 
 /**

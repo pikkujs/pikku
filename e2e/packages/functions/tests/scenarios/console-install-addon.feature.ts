@@ -154,6 +154,12 @@ export const installAddonInvalidNameScenario = pikkuScenario<
 // covers the actual re-inspection time / getAddonInstalledPackage returns the
 // freshly-wired addon promptly, or (b) the harness gives each mutating
 // scenario a fast fresh server. Runs green against a fresh server (CI).
+//
+// A SECOND blocker was found while migrating this off cucumber, independent of
+// the first: `console:installAddon` shells out to `npm install`, and this
+// project is a yarn workspace whose manifests use `workspace:*`, which npm
+// refuses (`EUNSUPPORTEDPROTOCOL`). So the install 500s here before the poll
+// window is ever reached. Both have to be gone before this can be un-skipped.
 export const installAddonFreshNameScenario = pikkuScenario<
   void,
   { installed: string }
@@ -162,7 +168,7 @@ export const installAddonFreshNameScenario = pikkuScenario<
   description:
     'A fresh install writes the wiring and routes to the new instance setup',
   tags: ['scenario', 'console-install-addon', 'console', 'mutates-project'],
-  skip: 'installs into the fixture and needs a re-inspection a persistent dev server is too slow to finish — run it with --flows against a fresh server',
+  skip: 'installs into the fixture: needs a re-inspection a persistent dev server is too slow to finish, and npm cannot install inside this yarn workspace — see the note above',
   after: removesInstalledAddon,
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {

@@ -6,10 +6,15 @@ import {
   startMockOAuthServer,
   stopMockOAuthServer,
 } from '../tests/support/mock-oauth-server.js'
+import {
+  startMockRegistryServer,
+  stopMockRegistryServer,
+} from './mock-registry-server.js'
 
 export const lifecycle = pikkuServerLifecycle<SingletonServices>({
   afterStart: async (services) => {
     await startMockOAuthServer()
+    await startMockRegistryServer()
     const apiBase = process.env.API_URL ?? `http://localhost:3000`
     await seedAuthUsers(services, apiBase)
     await seedScenarioActors(services, apiBase)
@@ -17,5 +22,6 @@ export const lifecycle = pikkuServerLifecycle<SingletonServices>({
   },
   afterStop: async () => {
     stopMockOAuthServer()
+    stopMockRegistryServer()
   },
 })
