@@ -1,6 +1,7 @@
 import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import type { AgentWorld } from '../support/world.js'
+import { config } from '../support/types.js'
 import { ADMIN_USER, GUEST_USER } from '../../src/auth-fixtures.js'
 
 // Drives the real console UI (served by `pikku dev` at /console) to prove the
@@ -43,5 +44,37 @@ Then(
     await expect(
       this.page.getByText(/does not have admin access/i)
     ).toBeVisible()
+  }
+)
+
+// Store a credential under the authenticated console user — the identity the
+// browser is logged in as and that the agent playground's per-user credential
+// check runs under. Use this (not the userId-less "I set credential") whenever
+// a browser scenario opens the playground, so the gate actually sees it.
+When(
+  'I connect credential {string} with value:',
+  async function (this: AgentWorld, name: string, docString: string) {
+    const userId = await this.currentUserId()
+    await fetch(`${config.apiUrl}/rpc/setCredential`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { name, valueJson: docString, userId } }),
+    })
+  }
+)
+
+When(
+  'I connect the OAuth credential via the popup',
+  async function (this: AgentWorld) {
+    const popupPromise = this.page.waitForEvent('popup')
+    await this.page
+      .getByRole('button', { name: /^Connect / })
+      .last()
+      .click()
+    const popup = await popupPromise
+    await popup
+      .getByText('success', { exact: false })
+      .waitFor({ state: 'visible', timeout: 15_000 })
+    await popup.close()
   }
 )
