@@ -162,16 +162,38 @@ export const expectsStreamOrder = pikkuScenarioStep<
   },
 })
 
+/**
+ * The concatenated streamed text.
+ *
+ * `equals` is the assertion where the whole reply is scripted; `contains` /
+ * `doesNotContain` are for delegation, where what matters is which agent's voice
+ * reached the client, not the exact wording around it.
+ */
 export const expectsStreamText = pikkuScenarioStep<
-  { text: string; equals: unknown },
+  {
+    text: string
+    equals?: unknown
+    contains?: string
+    doesNotContain?: string
+  },
   { text: string }
 >({
   name: 'expectsStreamText',
   description: 'expects the streamed text',
-  func: async (_services, { text, equals }) => {
-    if (text !== equals) {
+  func: async (_services, { text, equals, contains, doesNotContain }) => {
+    if (equals !== undefined && text !== equals) {
       throw new Error(
         `Expected the streamed text to be ${JSON.stringify(equals)}, got ${JSON.stringify(text)}`
+      )
+    }
+    if (contains !== undefined && !text.includes(contains)) {
+      throw new Error(
+        `Expected the streamed text to contain ${JSON.stringify(contains)}, got ${JSON.stringify(text)}`
+      )
+    }
+    if (doesNotContain !== undefined && text.includes(doesNotContain)) {
+      throw new Error(
+        `Expected the streamed text NOT to contain ${JSON.stringify(doesNotContain)}, got ${JSON.stringify(text)}`
       )
     }
     return { text }
