@@ -336,13 +336,14 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
   test('a screenshot that fails never masks the failure being reported', async () => {
     const { browser } = fakeBrowser()
+    const failureDir = await mkdtemp(join(tmpdir(), 'pikku-failures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
       secret: 's',
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
-      failureDir: '/proc/nonexistent/cannot-write',
+      failureDir,
     })
 
     const admin = await provider.sessionFor('admin')
@@ -354,6 +355,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
     assert.equal(failure!.actor, 'admin', 'the actor is still reported')
     assert.equal(failure!.screenshot, undefined, 'just without an image')
+    await rm(failureDir, { recursive: true, force: true })
   })
 
   test('captureFailure on a run with no browser session reports nothing', async () => {
