@@ -22,6 +22,12 @@ function isServerMode(ctx: ActorDispatchContext): boolean {
   return pickle?.tags?.some((t) => t.name === '@server') ?? false
 }
 
+/**
+ * @deprecated Use a scenario actor instead — declare it under `scenarios.actors`
+ * in `pikku.config.json` and reach it as `actors.<name>` in a `pikkuScenario`.
+ * The scenario actor is typed against the project's RPC map and carries its own
+ * session, which is what this hand-rolled cookie jar was standing in for.
+ */
 export class Actor {
   private _headers: Record<string, string> = {}
   private _cookies: Record<string, string> = {}

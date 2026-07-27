@@ -5,7 +5,7 @@ import { seedScopes } from './seed-scopes.js'
 import {
   startMockOAuthServer,
   stopMockOAuthServer,
-} from '../tests/support/mock-oauth-server.js'
+} from './mock-oauth-server.js'
 import {
   startMockRegistryServer,
   stopMockRegistryServer,

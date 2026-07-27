@@ -92,6 +92,7 @@ const ToolCallDisplay: React.FC<{
     (p) => p.toolCallId === toolCallId && p.type === 'credential-request'
   )
   const isCredentialRequest = !!credentialPayload || !!pendingCredential
+  const cred = credentialPayload ?? pendingCredential
   const isApproval = status.type === 'requires-action' && !isCredentialRequest
   const approvalReason =
     (args as any)?.__approvalReason ??
@@ -135,6 +136,9 @@ const ToolCallDisplay: React.FC<{
         p="sm"
         my={4}
         bg="var(--mantine-color-yellow-light)"
+        data-testid="approval-card"
+        data-approval-state="pending"
+        data-tool-name={toolName}
       >
         <Group gap="xs" mb="xs">
           <ShieldAlert size={14} color="var(--mantine-color-orange-6)" />
@@ -143,12 +147,20 @@ const ToolCallDisplay: React.FC<{
           </Text>
         </Group>
         {approvalReason && (
-          <Text size="xs" mb={4}>
+          <Text size="xs" mb={4} data-testid="approval-reason">
             {asI18n(approvalReason)}
           </Text>
         )}
-        <Box component="p" style={{ fontSize: 'var(--mantine-font-size-xs)', color: 'var(--mantine-color-dimmed)', margin: '0 0 4px' }}>
-          {m.agent_approval_agent_wants_to_call()} <Code>{asI18n(toolName)}</Code>
+        <Box
+          component="p"
+          style={{
+            fontSize: 'var(--mantine-font-size-xs)',
+            color: 'var(--mantine-color-dimmed)',
+            margin: '0 0 4px',
+          }}
+        >
+          {m.agent_approval_agent_wants_to_call()}{' '}
+          <Code>{asI18n(toolName)}</Code>
         </Box>
         <Code block style={{ fontSize: 11, marginBottom: 8 }}>
           {asI18n(JSON.stringify(displayArgs, null, 2))}
@@ -159,10 +171,17 @@ const ToolCallDisplay: React.FC<{
             color="green"
             variant="light"
             onClick={handleApprove}
+            data-testid="approval-approve"
           >
             {m.agent_approval_approve()}
           </Button>
-          <Button size="xs" color="red" variant="light" onClick={handleDeny}>
+          <Button
+            size="xs"
+            color="red"
+            variant="light"
+            onClick={handleDeny}
+            data-testid="approval-deny"
+          >
             {m.agent_approval_deny()}
           </Button>
         </Group>
@@ -172,7 +191,15 @@ const ToolCallDisplay: React.FC<{
 
   if (isApproval && responded) {
     return (
-      <Paper withBorder radius="sm" p="sm" my={4}>
+      <Paper
+        withBorder
+        radius="sm"
+        p="sm"
+        my={4}
+        data-testid="approval-card"
+        data-approval-state={responded}
+        data-tool-name={toolName}
+      >
         <Group gap="xs" mb="xs">
           <ShieldAlert size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
@@ -182,7 +209,9 @@ const ToolCallDisplay: React.FC<{
             type="label"
             color={responded === 'approved' ? 'green' : 'red'}
           >
-            {responded === 'approved' ? m.agent_status_approved() : m.agent_status_denied()}
+            {responded === 'approved'
+              ? m.agent_status_approved()
+              : m.agent_status_denied()}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -190,7 +219,6 @@ const ToolCallDisplay: React.FC<{
   }
 
   if (isCredentialRequest && !responded) {
-    const cred = credentialPayload ?? pendingCredential
     const serverUrl = getServerUrl()
     const rawConnectUrl = cred?.connectUrl
     const connectUrl = rawConnectUrl?.startsWith('/')
@@ -243,6 +271,9 @@ const ToolCallDisplay: React.FC<{
         p="sm"
         my={4}
         bg="var(--mantine-color-orange-light)"
+        data-testid="credential-card"
+        data-credential-state="pending"
+        data-credential-name={cred?.credentialName ?? ''}
       >
         <Group gap="xs" mb="xs">
           <Wrench size={14} color="var(--mantine-color-orange-6)" />
@@ -253,7 +284,13 @@ const ToolCallDisplay: React.FC<{
             {m.agent_credential_required()}
           </PikkuBadge>
         </Group>
-        <Box component="p" style={{ fontSize: 'var(--mantine-font-size-sm)', margin: '0 0 var(--mantine-spacing-xs)' }}>
+        <Box
+          component="p"
+          style={{
+            fontSize: 'var(--mantine-font-size-sm)',
+            margin: '0 0 var(--mantine-spacing-xs)',
+          }}
+        >
           {m.agent_credential_action_requires()}{' '}
           <strong>{asI18n(cred?.credentialName ?? 'OAuth')}</strong>{' '}
           {m.agent_credential_to_be_connected()}
@@ -266,10 +303,21 @@ const ToolCallDisplay: React.FC<{
           </Text>
         )}
         <Group gap="xs">
-          <Button size="xs" variant="light" onClick={handleConnect}>
+          <Button
+            size="xs"
+            variant="light"
+            onClick={handleConnect}
+            data-testid="credential-connect"
+          >
             {asI18n(`Connect ${cred?.credentialName ?? 'OAuth'}`)}
           </Button>
-          <Button size="xs" color="gray" variant="light" onClick={handleIgnore}>
+          <Button
+            size="xs"
+            color="gray"
+            variant="light"
+            onClick={handleIgnore}
+            data-testid="credential-ignore"
+          >
             {m.agent_credential_ignore()}
           </Button>
         </Group>
@@ -279,7 +327,17 @@ const ToolCallDisplay: React.FC<{
 
   if (isCredentialRequest && responded) {
     return (
-      <Paper withBorder radius="sm" p="sm" my={4}>
+      <Paper
+        withBorder
+        radius="sm"
+        p="sm"
+        my={4}
+        data-testid="credential-card"
+        data-credential-state={
+          responded === 'approved' ? 'connected' : 'ignored'
+        }
+        data-credential-name={cred?.credentialName ?? ''}
+      >
         <Group gap="xs">
           <Wrench size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
@@ -289,7 +347,9 @@ const ToolCallDisplay: React.FC<{
             type="label"
             color={responded === 'approved' ? 'green' : 'gray'}
           >
-            {responded === 'approved' ? m.agent_credential_connected() : m.agent_credential_ignored()}
+            {responded === 'approved'
+              ? m.agent_credential_connected()
+              : m.agent_credential_ignored()}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -297,7 +357,15 @@ const ToolCallDisplay: React.FC<{
   }
 
   return (
-    <Paper withBorder radius="sm" p="xs" my={4}>
+    <Paper
+      withBorder
+      radius="sm"
+      p="xs"
+      my={4}
+      data-testid="tool-call"
+      data-tool-name={toolName}
+      data-tool-status={status.type}
+    >
       <UnstyledButton
         onClick={() => setOpened((o) => !o)}
         style={{ width: '100%' }}
@@ -340,9 +408,11 @@ const ToolCallDisplay: React.FC<{
                 {m.agent_toolcall_result()}
               </Text>
               <Code block style={{ fontSize: 11 }}>
-                {asI18n(typeof result === 'string'
-                  ? result
-                  : JSON.stringify(result, null, 2))}
+                {asI18n(
+                  typeof result === 'string'
+                    ? result
+                    : JSON.stringify(result, null, 2)
+                )}
               </Code>
             </>
           )}
@@ -445,8 +515,11 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
           input={
             <ComposerPrimitive.Input
               className={composerStyles.composerInput}
+              data-testid="agent-composer"
               placeholder={
-                disabled ? m.agent_composer_approval_placeholder() : m.agent_composer_message_placeholder()
+                disabled
+                  ? m.agent_composer_approval_placeholder()
+                  : m.agent_composer_message_placeholder()
               }
               rows={1}
               disabled={disabled ?? false}

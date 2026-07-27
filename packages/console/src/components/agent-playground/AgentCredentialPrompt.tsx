@@ -43,7 +43,14 @@ export const AgentCredentialPrompt: React.FC<AgentCredentialPromptProps> = ({
 
   return (
     <Center h="100%" p="xl">
-      <Paper withBorder radius="md" p="xl" maw={480} w="100%">
+      <Paper
+        withBorder
+        radius="md"
+        p="xl"
+        maw={480}
+        w="100%"
+        data-testid="agent-credential-prompt"
+      >
         <Stack gap="md" align="center">
           <KeyRound size={32} color="var(--mantine-color-orange-6)" />
           <Text fw={600} size="lg" ta="center">
@@ -58,6 +65,8 @@ export const AgentCredentialPrompt: React.FC<AgentCredentialPromptProps> = ({
                 key={req.credentialName}
                 justify="space-between"
                 p="sm"
+                data-testid="agent-credential-requirement"
+                data-credential-name={req.credentialName}
                 style={{
                   border: '1px solid var(--mantine-color-default-border)',
                   borderRadius: 'var(--mantine-radius-sm)',
