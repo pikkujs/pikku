@@ -73,6 +73,13 @@ export const fabricCommands = defineCLICommands({
     render: renderValidate,
     description:
       'Check the project structure for fabric compatibility — prints all missing or misconfigured items with fix hints',
+    options: {
+      skipTypecheck: {
+        description:
+          'Skip the frontend type-check the build container runs (structural checks only)',
+        default: false,
+      },
+    },
   }),
   smoke: pikkuCLICommand({
     func: FabricSmoke,

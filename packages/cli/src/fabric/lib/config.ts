@@ -76,13 +76,58 @@ export function isLinkedProjectId(projectId?: string | null): boolean {
   return !/^__.*__$/.test(projectId)
 }
 
+/**
+ * Merge into the existing config rather than replacing it. `link` and `init`
+ * only know the projectId, so a plain write silently deleted every other key —
+ * including `frontends`, which is what tells the build container an app exists.
+ * The symptom is a deploy that succeeds having built no frontend at all, long
+ * after the link that caused it. Unknown keys are preserved too; nothing here
+ * has any business dropping config it does not understand.
+ */
 export async function writeProjectConfig(
   cwd: string,
-  config: ProjectConfig
+  config: Partial<ProjectConfig> & { projectId: string }
 ): Promise<string> {
   const path = join(cwd, projectConfigName)
+  let existing: Record<string, unknown> = {}
+  if (existsSync(path)) {
+    // A read that fails for any reason other than the file's contents —
+    // permissions, a transient I/O error — tells us nothing about what the file
+    // holds. Rewriting it then is the exact clobber this function exists to
+    // prevent, so refuse the write instead.
+    let raw: string
+    try {
+      raw = await readFile(path, 'utf8')
+    } catch (error: any) {
+      throw new Error(
+        `Cannot read ${projectConfigName} at ${path} (${error.message}) — refusing to overwrite it`
+      )
+    }
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        existing = parsed as Record<string, unknown>
+      } else {
+        // Valid JSON that is not an object holds nothing we can merge, but it is
+        // still the user's file — say so rather than dropping it silently.
+        console.warn(
+          `[fabric] ${projectConfigName} is not a JSON object — rewriting it`
+        )
+      }
+    } catch (error: any) {
+      // An unparseable config is not a reason to lose the link; warn and start
+      // fresh rather than throwing away the command the user just ran.
+      console.warn(
+        `[fabric] ${projectConfigName} is not valid JSON (${error.message}) — rewriting it`
+      )
+    }
+  }
   await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, JSON.stringify(config, null, 2) + '\n', 'utf8')
+  await writeFile(
+    path,
+    JSON.stringify({ ...existing, ...config }, null, 2) + '\n',
+    'utf8'
+  )
   return path
 }
 

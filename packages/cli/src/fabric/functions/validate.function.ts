@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { added, changed, removed, dim } from '../lib/output.js'
+import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -15,7 +16,14 @@ const FindingSchema = z.object({
 })
 type Finding = z.infer<typeof FindingSchema>
 
-export const FabricValidateInput = z.object({})
+export const FabricValidateInput = z.object({
+  skipTypecheck: z
+    .boolean()
+    .optional()
+    .describe(
+      'Skip the frontend type-check stage (structural checks only, much faster)'
+    ),
+})
 
 export const FabricValidateOutput = z.object({
   ok: z.boolean(),
@@ -200,7 +208,8 @@ const POSTGRES_SQL_PATTERNS: Array<{ re: RegExp; label: string }> = [
 ]
 
 export async function runValidate(
-  startDir = process.cwd()
+  startDir = process.cwd(),
+  opts: { skipTypecheck?: boolean } = {}
 ): Promise<z.infer<typeof FabricValidateOutput>> {
   const root = await findProjectRoot(startDir)
   const findings: Finding[] = []
@@ -1352,31 +1361,77 @@ export async function runValidate(
     }
   }
 
+  // ── declared frontends ────────────────────────────────────────────────
+  // pikkufabric.config.json is unvalidated JSON, so every field below is a
+  // claim, not a guarantee: a null entry or a non-string cwd used to throw on
+  // property access and take down the whole validation run — the one thing that
+  // was supposed to report the broken config. Shape-check the entries once here
+  // and let the apps/ and type-check passes consume the narrowed list.
+  const declaredFrontends: Array<{
+    slug: string
+    cwd: string
+    dir: string
+    deploy: boolean
+  }> = []
+  /** every syntactically valid cwd, including ones whose directory is missing */
+  const declaredCwdList: string[] = []
+  const rawFrontends = fabricConfig?.frontends
+  if (
+    rawFrontends !== undefined &&
+    (!rawFrontends || typeof rawFrontends !== 'object')
+  ) {
+    e(
+      'frontends-invalid',
+      'pikkufabric.config.json "frontends" is not an object — no frontend will be built or type-checked',
+      fabricConfigPath,
+      `Set "frontends" to an object keyed by slug: { "app": { "cwd": "apps/app", "kind": "ssr" } }`
+    )
+  } else if (rawFrontends) {
+    for (const [slug, entry] of Object.entries(
+      rawFrontends as Record<string, unknown>
+    )) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        e(
+          `frontend-entry-invalid-${slug}`,
+          `pikkufabric.config.json frontend "${slug}" is not an object`,
+          fabricConfigPath,
+          `Give "${slug}" an object value: { "cwd": "apps/${slug}", "kind": "ssr" }`
+        )
+        continue
+      }
+      const { cwd, deploy } = entry as { cwd?: unknown; deploy?: unknown }
+      if (typeof cwd !== 'string' || cwd.trim() === '') {
+        e(
+          `frontend-cwd-invalid-${slug}`,
+          `pikkufabric.config.json frontend "${slug}" has no string "cwd" — the build container has nothing to build`,
+          fabricConfigPath,
+          `Set "cwd" to the app directory, e.g. { "${slug}": { "cwd": "apps/${slug}" } }`
+        )
+        continue
+      }
+      const rel = cwd.replace(/^\.\//, '')
+      declaredCwdList.push(rel)
+      const dir = join(root, rel)
+      if (!existsSync(dir)) {
+        // Reported here rather than inside the apps/ block below: a project
+        // without an apps/ directory used to validate cleanly while declaring a
+        // deployable frontend that does not exist.
+        e(
+          `frontend-cwd-missing-${slug}`,
+          `fabric.config.json frontend "${slug}" declares cwd "${rel}" but that directory does not exist`,
+          dir,
+          `Create the directory or update the cwd in fabric.config.json`
+        )
+        continue
+      }
+      declaredFrontends.push({ slug, cwd: rel, dir, deploy: deploy !== false })
+    }
+  }
+
   // ── apps/ vs fabric.config.json frontends ─────────────────────────────
   const appsDir = join(root, 'apps')
 
   if (existsSync(appsDir)) {
-    type FrontendEntry = { cwd?: string }
-
-    // Check declared frontends have a real directory on disk
-    if (fabricConfig) {
-      const frontends = (fabricConfig.frontends ?? {}) as Record<
-        string,
-        FrontendEntry
-      >
-      for (const [slug, fe] of Object.entries(frontends)) {
-        const cwd = fe.cwd?.replace(/^\.\//, '')
-        if (cwd && !existsSync(join(root, cwd))) {
-          e(
-            `frontend-cwd-missing-${slug}`,
-            `fabric.config.json frontend "${slug}" declares cwd "${cwd}" but that directory does not exist`,
-            join(root, cwd),
-            `Create the directory or update the cwd in fabric.config.json`
-          )
-        }
-      }
-    }
-
     // Check each app/ subdir is declared and has correct local deps
     let appEntries: string[] = []
     try {
@@ -1387,13 +1442,7 @@ export async function runValidate(
       /* ignore */
     }
 
-    const declaredCwds = fabricConfig
-      ? new Set(
-          Object.values(
-            (fabricConfig.frontends ?? {}) as Record<string, FrontendEntry>
-          ).map((f) => f.cwd?.replace(/^\.\//, '') ?? '')
-        )
-      : null
+    const declaredCwds = fabricConfig ? new Set(declaredCwdList) : null
 
     for (const name of appEntries) {
       const appPath = join(appsDir, name)
@@ -1841,6 +1890,46 @@ export async function runValidate(
     )
   }
 
+  // ── frontend type-check (what the build container actually runs) ───────
+  // Every check above is a heuristic standing in for this compile. The build
+  // container type-checks each deployable frontend and aborts the deploy on a
+  // non-zero exit, so running the same compile here is the difference between
+  // a 20-second local failure and a burned deploy out of the daily 10.
+  if (!opts.skipTypecheck) {
+    const frontends = declaredFrontends
+      .filter((fe) => fe.deploy)
+      .map((fe) => ({ name: fe.slug, dir: fe.dir }))
+
+    for (const result of await typeCheckFrontends(root, frontends)) {
+      if (result.skipped) {
+        w(
+          `frontend-typecheck-skipped-${result.name}`,
+          `could not type-check frontend "${result.name}" — ${result.skipped}`,
+          result.dir,
+          lines(
+            'The build container type-checks every deployable frontend and aborts the deploy if it fails.',
+            'Give the app a tsconfig.json and a "tsc" script so the same check runs locally.'
+          )
+        )
+        continue
+      }
+      if (result.errors.length === 0) continue
+      const shown = result.errors.slice(0, 20)
+      const extra = result.errors.length - shown.length
+      e(
+        `frontend-typecheck-${result.name}`,
+        `frontend "${result.name}" does not type-check — the build container aborts the deploy on this`,
+        result.dir,
+        lines(
+          ...shown,
+          ...(extra > 0 ? [`… and ${extra} more`] : []),
+          '',
+          `Reproduce with: cd ${result.dir.slice(root.length + 1)} && ${result.command}`
+        )
+      )
+    }
+  }
+
   const ok = !findings.some((f) => f.severity === 'error')
   return { ok, root, findings }
 }
@@ -1850,7 +1939,8 @@ export const FabricValidate = pikkuSessionlessFunc({
     'Check the current project structure for fabric compatibility. Prints all missing or misconfigured items with fix hints so an AI agent or developer can resolve them.',
   input: FabricValidateInput,
   output: FabricValidateOutput,
-  func: async (_services) => runValidate(),
+  func: async (_services, { skipTypecheck }) =>
+    runValidate(process.cwd(), { skipTypecheck }),
 })
 
 export const renderValidate = (
