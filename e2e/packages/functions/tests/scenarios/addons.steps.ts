@@ -110,3 +110,33 @@ export const opensAddonDrawer = pikkuScenarioStep<
     return { opened: packageName }
   },
 })
+
+/**
+ * Waits for a fresh install to land on the newly wired addon's setup.
+ *
+ * Both halves matter: the route carries the package id, and the Setup tab only
+ * renders once the console has read the installed package back — which is the
+ * part that depends on `pikku dev` finishing a re-inspection. The wait is
+ * longer than the shared 15s for exactly that reason, and the tab is addressed
+ * by test id rather than by its label, which is translated copy.
+ */
+export const landsOnAddonSetup = pikkuScenarioStep<
+  { packageName: string },
+  { url: string },
+  true
+>({
+  name: 'landsOnAddonSetup',
+  description: 'lands on the setup of a freshly installed addon',
+  template: 'lands on the setup for {packageName}',
+  browser: true,
+  func: async (_services, { packageName }, { browser }) => {
+    await browser.page.waitForURL(
+      (url) => url.href.includes(encodeURIComponent(packageName)),
+      { timeout: 30_000 }
+    )
+    await browser.page
+      .locator('[data-testid="package-tab-setup"]')
+      .waitFor({ state: 'visible', timeout: 30_000 })
+    return { url: browser.page.url() }
+  },
+})

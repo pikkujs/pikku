@@ -192,6 +192,13 @@ export type PikkuScenarioConfigWithSchema<
    * original error.
    */
   after?: PikkuScenarioHook<InputSchema>
+  /**
+   * Why this scenario is held out of a default run, stated where the scenario
+   * is. The scenario still appears in the plan and is reported as skipped
+   * rather than quietly omitted; naming it directly with \`--flows\` runs it
+   * anyway.
+   */
+  skip?: string
 }
 
 /**

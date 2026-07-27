@@ -286,6 +286,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   let description: string | undefined
   let errors: string[] | undefined
   let expose: boolean | undefined
+  let skip: string | undefined
 
   if (ts.isObjectLiteralExpression(firstArg)) {
     const metadata = getCommonWireMetaData(
@@ -303,6 +304,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     errors = metadata.errors
 
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
+    skip = (getPropertyValue(firstArg, 'skip') as string | null) ?? undefined
   }
 
   // Validate that we got a valid function
@@ -445,6 +447,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     errors,
     tags,
     expose,
+    skip,
     scenario: wrapperType === 'scenario' ? true : undefined,
     actors: actorNames.length > 0 ? actorNames : undefined,
   }

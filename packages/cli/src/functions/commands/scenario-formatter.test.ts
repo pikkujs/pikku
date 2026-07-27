@@ -200,14 +200,39 @@ describe('formatScenarioReport', () => {
     const lines = render({
       environment: 'local',
       results: [passing()],
-      skipped: ['codeEditorScenario', 'addonsScenario'],
+      skipped: [
+        { name: 'codeEditorScenario', reason: 'browser steps, --no-browser' },
+        { name: 'addonsScenario', reason: 'browser steps, --no-browser' },
+      ],
       hookFailures: [],
     })
 
-    assert.match(lines[0]!.text, /^SKIP codeEditorScenario \(browser steps/)
+    assert.match(
+      lines[0]!.text,
+      /^SKIP codeEditorScenario \(browser steps, --no-browser\)$/
+    )
     assert.equal(
       lines.at(-1)!.text,
-      "1/1 scenarios passed against 'local', 2 skipped (--no-browser)"
+      "1/1 scenarios passed against 'local', 2 skipped"
+    )
+  })
+
+  test('a scenario skipped in code reports the reason it declared', () => {
+    const lines = render({
+      environment: 'local',
+      results: [passing()],
+      skipped: [
+        {
+          name: 'installAddonScenario',
+          reason: 'mutates the project — needs a fresh server',
+        },
+      ],
+      hookFailures: [],
+    })
+
+    assert.equal(
+      lines[0]!.text,
+      'SKIP installAddonScenario (mutates the project — needs a fresh server)'
     )
   })
 

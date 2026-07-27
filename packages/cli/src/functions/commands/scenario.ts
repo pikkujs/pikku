@@ -42,6 +42,7 @@ const listScenarios = (state: any) =>
       name: wf.name ?? id,
       description: wf.description ?? wf.summary ?? wf.title ?? null,
       tags: wf.tags ?? [],
+      skip: wf.skip as string | undefined,
     }))
 
 /**
@@ -201,9 +202,10 @@ export const scenarioRun = pikkuSessionlessFunc<
       value ? value.split(',').map((part) => part.trim()) : undefined
 
     let { groups, unresolved } = buildScenarioPlan({
-      scenarios: listScenarios(state).map(({ name, tags: flowTags }) => ({
+      scenarios: listScenarios(state).map(({ name, tags: flowTags, skip }) => ({
         name,
         tags: flowTags,
+        skip,
       })),
       features: registeredFeatures,
       registrations,
@@ -267,20 +269,34 @@ export const scenarioRun = pikkuSessionlessFunc<
         .filter(([, steps]) => steps.length > 0)
     )
 
-    // `--no-browser` is the direct replacement for cucumber's `@console` tag:
-    // browser scenarios are SKIPPED, not failed, so a standard run stays green
-    // on a machine with no browser.
-    const skipped = browser ? [] : [...browserStepsByFlow.keys()]
-    if (skipped.length > 0) {
-      groups = groups
-        .map((group) => ({
-          ...group,
-          entries: group.entries.filter(
-            (entry) => !browserStepsByFlow.has(entry.scenarioName)
-          ),
-        }))
-        .filter((group) => group.entries.length > 0)
+    // Two reasons a scenario is held back, both reported as SKIP rather than
+    // failed. `--no-browser` is the direct replacement for cucumber's `@console`
+    // tag, so a standard run stays green on a machine with no browser; a `skip`
+    // on the scenario itself is the project quarantining it, and the plan has
+    // already cleared that reason for anything named directly with `--flows`.
+    const skipReasonFor = (entry: {
+      scenarioName: string
+      skip?: string
+    }): string | undefined => {
+      if (entry.skip) return entry.skip
+      if (!browser && browserStepsByFlow.has(entry.scenarioName)) {
+        return 'browser steps, --no-browser'
+      }
+      return undefined
     }
+
+    const skipped: Array<{ name: string; reason: string }> = []
+    groups = groups
+      .map((group) => ({
+        ...group,
+        entries: group.entries.filter((entry) => {
+          const reason = skipReasonFor(entry)
+          if (!reason) return true
+          skipped.push({ name: entry.scenarioName, reason })
+          return false
+        }),
+      }))
+      .filter((group) => group.entries.length > 0)
 
     const workflowService = new InMemoryWorkflowService()
     const scenarioService = workflowService.setRunExtension(
