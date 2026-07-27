@@ -30,12 +30,13 @@ export const applyTestEnvDefaults = (): void => {
 }
 
 /**
- * Starts the backend for the cucumber suite and waits until it reports ready —
- * which is after the `afterStart` lifecycle has seeded users and scopes, so a
- * sign-in immediately afterwards cannot race the seed.
+ * Starts the backend and waits until it reports ready — which is after the
+ * `afterStart` lifecycle has seeded users and scopes, so a sign-in immediately
+ * afterwards cannot race the seed.
  *
  * Scenario runs do not come through here: `pikku scenario run --spawn` does the
- * same thing inside the CLI. This exists only for as long as cucumber does.
+ * same thing inside the CLI. What still needs it is `tests/cli/`, whose
+ * node:test cases drive the CLI itself and so must bring their own server.
  */
 export const startBackend = async (
   options: StartBackendOptions = {}
