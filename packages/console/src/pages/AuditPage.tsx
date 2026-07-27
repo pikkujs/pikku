@@ -1,6 +1,5 @@
 import React from 'react'
-import { ShieldCheck } from 'lucide-react'
-import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
+import { AuditLogPanel } from '../components/audit/AuditLogPanel'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { Stack } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
@@ -15,13 +14,7 @@ export const AuditPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero
         description={m.audit_description()}
         docsHref="https://pikku.dev/docs"
       />
-      <EmptyStatePlaceholder
-        icon={ShieldCheck}
-        hero={emptyHero}
-        title={m.audit_empty_title()}
-        description={m.audit_empty_description()}
-        docsHref="https://pikku.dev/docs"
-      />
+      <AuditLogPanel emptyHero={emptyHero} />
     </Stack>
   )
 }

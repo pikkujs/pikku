@@ -1,9 +1,8 @@
-import React, { Suspense, useState } from 'react'
+import React, { Suspense } from 'react'
 import { Center, Loader } from '@pikku/mantine/core'
-import { useSearchParams } from '../router'
-import { PanelProvider } from '../context/PanelContext'
-import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { ListPageHeader } from '../components/layout/PageLayout'
+import type { I18nString } from '@pikku/react'
+import { TabbedSurface } from '../components/console/TabbedSurface'
+import type { TabbedSurfaceTab } from '../components/console/TabbedSurface'
 import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
@@ -12,16 +11,6 @@ import { GatewaysTab } from '../components/tabs/GatewaysTab'
 import { m, mKey } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-type ApisTab = 'http' | 'channels' | 'mcp' | 'cli' | 'gateways'
-
-const SEARCH_PLACEHOLDER_KEY: Record<ApisTab, string> = {
-  http: 'apis.search.http',
-  channels: 'apis.search.channels',
-  mcp: 'apis.search.mcp',
-  cli: 'apis.search.cli',
-  gateways: 'apis.search.gateways',
-}
-
 type ApisPageProps = {
   httpHero?: React.ReactNode
   channelsHero?: React.ReactNode
@@ -29,82 +18,55 @@ type ApisPageProps = {
   gatewaysHero?: React.ReactNode
 }
 
-const ApisPageInner: React.FC<ApisPageProps> = ({
+export const ApisPage: React.FC<ApisPageProps> = ({
   httpHero,
   channelsHero,
   mcpHero,
   gatewaysHero,
 }) => {
   useLocale()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState('')
-  const rawTab = searchParams.get('tab')
-  const tab: ApisTab =
-    rawTab === 'http' ||
-    rawTab === 'channels' ||
-    rawTab === 'mcp' ||
-    rawTab === 'cli' ||
-    rawTab === 'gateways'
-      ? rawTab
-      : 'http'
 
-  const handleTabChange = (value: ApisTab) => {
-    setSearchQuery('')
-    setSearchParams({ tab: value })
-  }
+  const tabs: TabbedSurfaceTab<I18nString>[] = [
+    {
+      value: 'http',
+      label: m.apis_tab_http(),
+      searchPlaceholder: mKey('apis.search.http'),
+      render: (searchQuery) => (
+        <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
+      ),
+    },
+    {
+      value: 'channels',
+      label: m.apis_tab_channels(),
+      searchPlaceholder: mKey('apis.search.channels'),
+      render: (searchQuery) => (
+        <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
+      ),
+    },
+    {
+      value: 'mcp',
+      label: m.apis_tab_mcp(),
+      searchPlaceholder: mKey('apis.search.mcp'),
+      render: (searchQuery) => (
+        <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
+      ),
+    },
+    {
+      value: 'cli',
+      label: m.apis_tab_cli(),
+      searchPlaceholder: mKey('apis.search.cli'),
+      render: (searchQuery) => <CliTab searchQuery={searchQuery} />,
+    },
+    {
+      value: 'gateways',
+      label: m.apis_tab_gateways(),
+      searchPlaceholder: mKey('apis.search.gateways'),
+      render: (searchQuery) => (
+        <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
+      ),
+    },
+  ]
 
-  const renderTab = () => {
-    switch (tab) {
-      case 'channels':
-        return <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
-      case 'mcp':
-        return <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
-      case 'cli':
-        return <CliTab searchQuery={searchQuery} />
-      case 'gateways':
-        return <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
-      default:
-        return <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
-    }
-  }
-
-  return (
-    <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <ListPageHeader
-            title={m.apis_title()}
-            description={m.apis_description()}
-            docsHref="https://pikku.dev/docs/wiring/http"
-            search={{
-              placeholder: mKey(SEARCH_PLACEHOLDER_KEY[tab]),
-              value: searchQuery,
-              onChange: setSearchQuery,
-              width: 240,
-            }}
-            selection={{
-              ariaLabel: m.apis_tab_aria(),
-              value: tab,
-              onChange: handleTabChange,
-              options: [
-                { value: 'http', label: m.apis_tab_http() },
-                { value: 'channels', label: m.apis_tab_channels() },
-                { value: 'mcp', label: m.apis_tab_mcp() },
-                { value: 'cli', label: m.apis_tab_cli() },
-                { value: 'gateways', label: m.apis_tab_gateways() },
-              ],
-            }}
-          />
-        }
-        emptyPanelMessage={m.common_select_item()}
-      >
-        {renderTab()}
-      </ResizablePanelLayout>
-    </PanelProvider>
-  )
-}
-
-export const ApisPage: React.FC<ApisPageProps> = (props) => {
   return (
     <Suspense
       fallback={
@@ -113,7 +75,15 @@ export const ApisPage: React.FC<ApisPageProps> = (props) => {
         </Center>
       }
     >
-      <ApisPageInner {...props} />
+      <TabbedSurface
+        controls="shell"
+        tabs={tabs}
+        tabAriaLabel={m.apis_tab_aria()}
+        title={m.apis_title()}
+        description={m.apis_description()}
+        docsHref="https://pikku.dev/docs/wiring/http"
+        emptyPanelMessage={m.common_select_item()}
+      />
     </Suspense>
   )
 }

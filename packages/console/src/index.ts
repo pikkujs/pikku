@@ -218,3 +218,135 @@ export {
 export { useWorkflowRunRefresh } from './hooks/useWorkflowRuns'
 export { PersonaTimeline } from './components/flows/timeline/PersonaTimeline'
 export type { FlowDirection } from './context/FlowDirectionContext'
+
+// The same building-block treatment, applied across the rest of the console.
+// `ConsoleSurface` mounts the panel context every list panel and inspector
+// reads from, and defers to a host-supplied one rather than nesting a second,
+// so panels drawn from several surfaces share one selection.
+export { ConsoleSurface } from './components/console/ConsoleSurface'
+export type { ConsoleSurfaceProps } from './components/console/ConsoleSurface'
+export { ConsoleInspectorPanel } from './components/console/ConsoleInspectorPanel'
+export type { ConsoleInspectorPanelProps } from './components/console/ConsoleInspectorPanel'
+export { usePanelContextSafe } from './context/PanelContext'
+
+// The shell behind the console's tabbed pages. `activeTab`/`onTabChange` are
+// optional: supply them to drive tabs from a host router, omit them to keep the
+// OSS `?tab=` search-param behaviour.
+export { TabbedSurface } from './components/console/TabbedSurface'
+export type {
+  TabbedSurfaceProps,
+  TabbedSurfaceTab,
+} from './components/console/TabbedSurface'
+
+// List panels. Each reads its own data and opens its own inspector panel, so it
+// can be mounted on its own — no page, no prop drilling.
+export { HttpListPanel } from './components/http/HttpListPanel'
+export type { HttpListPanelProps } from './components/http/HttpListPanel'
+export { McpListPanel } from './components/mcp/McpListPanel'
+export type { McpListPanelProps } from './components/mcp/McpListPanel'
+export { QueuesListPanel } from './components/queues/QueuesListPanel'
+export type { QueuesListPanelProps } from './components/queues/QueuesListPanel'
+export { SchedulersListPanel } from './components/schedulers/SchedulersListPanel'
+export type { SchedulersListPanelProps } from './components/schedulers/SchedulersListPanel'
+export { TriggersListPanel } from './components/triggers/TriggersListPanel'
+export type { TriggersListPanelProps } from './components/triggers/TriggersListPanel'
+export { MiddlewareListPanel } from './components/middleware/MiddlewareListPanel'
+export type { MiddlewareListPanelProps } from './components/middleware/MiddlewareListPanel'
+export { PermissionsListPanel } from './components/permissions/PermissionsListPanel'
+export type { PermissionsListPanelProps } from './components/permissions/PermissionsListPanel'
+export { ServicesListPanel } from './components/services/ServicesListPanel'
+export type { ServicesListPanelProps } from './components/services/ServicesListPanel'
+export { WebhooksListPanel } from './components/webhooks/WebhooksListPanel'
+export type { WebhooksListPanelProps } from './components/webhooks/WebhooksListPanel'
+export { AuthProvidersListPanel } from './components/auth/AuthProvidersListPanel'
+export type { AuthProvidersListPanelProps } from './components/auth/AuthProvidersListPanel'
+export { VariablesListPanel } from './components/variables/VariablesListPanel'
+export type { VariablesListPanelProps } from './components/variables/VariablesListPanel'
+export { SecretsListPanel } from './components/secrets/SecretsListPanel'
+export type { SecretsListPanelProps } from './components/secrets/SecretsListPanel'
+export { FunctionsListPanel } from './components/functions/FunctionsListPanel'
+export type { FunctionsListPanelProps } from './components/functions/FunctionsListPanel'
+export { PackagesListPanel } from './components/packages/PackagesListPanel'
+export type { PackagesListPanelProps } from './components/packages/PackagesListPanel'
+export { UsersDirectoryPanel } from './components/users/UsersDirectoryPanel'
+export type { UsersDirectoryPanelProps } from './components/users/UsersDirectoryPanel'
+export { AgentListPanel } from './components/agents/AgentListPanel'
+export type { AgentListPanelProps } from './components/agents/AgentListPanel'
+export { EmailTemplateListPanel } from './components/emails/EmailTemplateListPanel'
+export type { EmailTemplateListPanelProps } from './components/emails/EmailTemplateListPanel'
+export { SecurityReportPanel } from './components/security/SecurityReportPanel'
+export type { SecurityReportPanelProps } from './components/security/SecurityReportPanel'
+export { AuditLogPanel } from './components/audit/AuditLogPanel'
+export type { AuditLogPanelProps } from './components/audit/AuditLogPanel'
+
+// Scenario flows and personas as two independently-mountable panels, rather
+// than two halves of one segmented control.
+export { ScenarioFlowsPanel } from './components/flows/ScenarioFlowsPanel'
+export type { ScenarioFlowsPanelProps } from './components/flows/ScenarioFlowsPanel'
+export { ScenarioPersonasPanel } from './components/personas/ScenarioPersonasPanel'
+export type { ScenarioPersonasPanelProps } from './components/personas/ScenarioPersonasPanel'
+
+// Agent playground building blocks, mirroring the workflow surface:
+// `AgentPlaygroundSurface` mounts the contexts, the panels read from them, and
+// `AgentThreePane` is one arrangement of those panels rather than the only one.
+export { AgentPlaygroundSurface } from './components/agent-playground/AgentPlaygroundSurface'
+export type { AgentPlaygroundSurfaceProps } from './components/agent-playground/AgentPlaygroundSurface'
+export {
+  useAgentPlaygroundSurface,
+  AgentPlaygroundSurfaceCtx,
+} from './context/AgentPlaygroundSurfaceContext'
+export type {
+  AgentPlaygroundSurfaceContextType,
+  AgentPlaygroundSurfaceItem,
+} from './context/AgentPlaygroundSurfaceContext'
+export { AgentConversationsPanel } from './components/agent-playground/AgentConversationsPanel'
+export { AgentChatPanel } from './components/agent-playground/AgentChatPanel'
+export { AgentSelector } from './components/agent-playground/AgentSelector'
+export { AgentThreePane } from './components/agent-playground/AgentThreePane'
+export { AgentCredentialPrompt } from './components/agent-playground/AgentCredentialPrompt'
+export type {
+  AgentCredentialPromptProps,
+  AgentCredentialRequirement,
+} from './components/agent-playground/AgentCredentialPrompt'
+
+// The data behind each panel, so a host can drive its own UI from the same
+// derivations the console uses rather than re-deriving them from raw meta.
+export { useHttpItems } from './hooks/useHttpItems'
+export { useMcpItems } from './hooks/useMcpItems'
+export { useQueueItems } from './hooks/useQueueItems'
+export type { QueueItem } from './hooks/useQueueItems'
+export { useSchedulerItems } from './hooks/useSchedulerItems'
+export type { SchedulerItem } from './hooks/useSchedulerItems'
+export { useTriggerItems } from './hooks/useTriggerItems'
+export type { TriggerPair } from './hooks/useTriggerItems'
+export { useMiddlewareItems } from './hooks/useMiddlewareItems'
+export type { MiddlewareItem } from './hooks/useMiddlewareItems'
+export { usePermissionItems } from './hooks/usePermissionItems'
+export type { PermissionItem } from './hooks/usePermissionItems'
+export { useServiceItems } from './hooks/useServiceItems'
+export type { ServiceItem } from './hooks/useServiceItems'
+export {
+  useWebhookDeliveries,
+  useWebhookDelivery,
+} from './hooks/useWebhookDeliveries'
+export type {
+  WebhookDelivery,
+  WebhookAttempt,
+} from './hooks/useWebhookDeliveries'
+export {
+  useFunctionsMeta,
+  useFilteredFunctions,
+  isPikkuFunction,
+} from './hooks/useFunctionsMeta'
+export { useAdminUsers } from './hooks/useAdminUsers'
+export { useAgentEntries } from './hooks/useAgentEntries'
+export type { AgentEntries } from './hooks/useAgentEntries'
+export { useAgentItems } from './hooks/useAgentItems'
+export {
+  useScenarioFlowEntries,
+  useScenarioPersonaEntries,
+} from './hooks/useScenarioEntries'
+export type {
+  ScenarioFlowEntries,
+  ScenarioPersonaEntries,
+} from './hooks/useScenarioEntries'

@@ -1,84 +1,57 @@
-import React, { useState } from 'react'
-import { useSearchParams } from '../router'
-import { PanelProvider } from '../context/PanelContext'
-import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { ListPageHeader } from '../components/layout/PageLayout'
+import React from 'react'
+import type { I18nString } from '@pikku/react'
+import { TabbedSurface } from '../components/console/TabbedSurface'
+import type { TabbedSurfaceTab } from '../components/console/TabbedSurface'
 import { CredentialsOverviewTab } from '../components/tabs/CredentialsOverviewTab'
 import { CredentialUsersTab } from '../components/tabs/CredentialUsersTab'
 import { CredentialConnectionsTab } from '../components/tabs/CredentialConnectionsTab'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-type CredentialsTab = 'credentials' | 'connections' | 'users'
-
 export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
   emptyHero,
 }) => {
   useLocale()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState('')
-  const rawTab = searchParams.get('tab')
-  const tab: CredentialsTab =
-    rawTab === 'users' || rawTab === 'connections' || rawTab === 'credentials'
-      ? rawTab
-      : 'credentials'
 
-  const handleTabChange = (value: CredentialsTab) => {
-    setSearchQuery('')
-    setSearchParams({ tab: value })
-  }
+  const tabs: TabbedSurfaceTab<I18nString>[] = [
+    {
+      value: 'credentials',
+      label: m.credentials_tab_global(),
+      searchPlaceholder: m.credentials_search_credentials(),
+      hidePanel: true,
+      render: (searchQuery) => (
+        <CredentialsOverviewTab searchQuery={searchQuery} emptyHero={emptyHero} />
+      ),
+    },
+    {
+      value: 'connections',
+      label: m.credentials_tab_connections(),
+      searchPlaceholder: m.credentials_search_connections(),
+      hidePanel: true,
+      render: (searchQuery) => (
+        <CredentialConnectionsTab
+          searchQuery={searchQuery}
+          emptyHero={emptyHero}
+        />
+      ),
+    },
+    {
+      value: 'users',
+      label: m.credentials_tab_users(),
+      searchPlaceholder: m.credentials_search_users(),
+      render: (searchQuery) => <CredentialUsersTab searchQuery={searchQuery} />,
+    },
+  ]
 
   return (
-    <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <ListPageHeader
-            title={m.credentials_title()}
-            description={m.credentials_description()}
-            docsHref="https://pikku.dev/docs/core-features/credentials"
-            search={{
-              placeholder:
-                tab === 'users'
-                  ? m.credentials_search_users()
-                  : tab === 'connections'
-                    ? m.credentials_search_connections()
-                    : m.credentials_search_credentials(),
-              value: searchQuery,
-              onChange: setSearchQuery,
-              width: 240,
-            }}
-            selection={{
-              ariaLabel: m.credentials_tab_aria(),
-              value: tab,
-              onChange: handleTabChange,
-              options: [
-                { value: 'credentials', label: m.credentials_tab_global() },
-                {
-                  value: 'connections',
-                  label: m.credentials_tab_connections(),
-                },
-                { value: 'users', label: m.credentials_tab_users() },
-              ],
-            }}
-          />
-        }
-        emptyPanelMessage={m.credentials_select_user()}
-        hidePanel={tab !== 'users'}
-      >
-        {tab === 'users' ? (
-          <CredentialUsersTab searchQuery={searchQuery} />
-        ) : tab === 'connections' ? (
-          <CredentialConnectionsTab
-            searchQuery={searchQuery}
-            emptyHero={emptyHero}
-          />
-        ) : (
-          <CredentialsOverviewTab
-            searchQuery={searchQuery}
-            emptyHero={emptyHero}
-          />
-        )}
-      </ResizablePanelLayout>
-    </PanelProvider>
+    <TabbedSurface
+      controls="shell"
+      tabs={tabs}
+      tabAriaLabel={m.credentials_tab_aria()}
+      title={m.credentials_title()}
+      description={m.credentials_description()}
+      docsHref="https://pikku.dev/docs/core-features/credentials"
+      emptyPanelMessage={m.credentials_select_user()}
+    />
   )
 }
