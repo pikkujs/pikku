@@ -182,5 +182,39 @@ export { PanelContainer } from './components/panel/PanelContainer'
 export { WorkflowProvider } from './context/WorkflowContext'
 export { WorkflowGraphView } from './components/project/WorkflowGraphView'
 export type { WorkflowGraphViewProps } from './components/project/WorkflowGraphView'
+
+// Workflow building blocks. `WorkflowSurface` mounts every workflow-scoped
+// context; the panels below read from it and can then be arranged in any
+// order, anywhere in the tree — a host with its own navigation composes these
+// rather than embedding WorkflowsPage and prop-drilling holes into it.
+export { WorkflowSurface } from './components/workflow/WorkflowSurface'
+export type { WorkflowSurfaceProps } from './components/workflow/WorkflowSurface'
+export {
+  useWorkflowSurface,
+  useWorkflowSurfaceSafe,
+} from './context/WorkflowSurfaceContext'
+export type { WorkflowSurfaceContextType } from './context/WorkflowSurfaceContext'
+export { WorkflowRunsPanel } from './components/workflow/WorkflowRunsPanel'
+export { WorkflowGraphPanel } from './components/workflow/WorkflowGraphPanel'
+export { WorkflowInspectorPanel } from './components/workflow/WorkflowInspectorPanel'
+export type { WorkflowInspectorPanelProps } from './components/workflow/WorkflowInspectorPanel'
+export { WorkflowCanvasDrawer } from './components/workflow/WorkflowCanvasDrawer'
+export { WorkflowListPanel } from './components/workflow/WorkflowListPanel'
+export type { WorkflowListPanelProps } from './components/workflow/WorkflowListPanel'
+export { WorkflowThreePane } from './components/workflow/WorkflowThreePane'
+export type { WorkflowThreePaneProps } from './components/workflow/WorkflowThreePane'
+
+// Query keys and invalidation for the workflow-run domain — so a host that
+// learns a run has advanced out-of-band refreshes the panels through a
+// supported API instead of hardcoding key tuples against the QueryClient.
+export {
+  workflowQueryKeys,
+  ACTIVE_RUN_STATUSES,
+  ACTIVE_STEP_STATUSES,
+  isRunActive,
+  isStepActive,
+  hasActiveStep,
+} from './hooks/workflow-query-keys'
+export { useWorkflowRunRefresh } from './hooks/useWorkflowRuns'
 export { PersonaTimeline } from './components/flows/timeline/PersonaTimeline'
 export type { FlowDirection } from './context/FlowDirectionContext'
