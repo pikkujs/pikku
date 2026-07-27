@@ -2,7 +2,7 @@ import { ADMIN_SCOPE_ROOT } from '@pikku/better-auth'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
-import { scenarioActorConfigs } from '#pikku/workflow/pikku-scenario-actors.gen.js'
+import { scenarioActorList } from '#pikku/workflow/pikku-scenario-actors.gen.js'
 
 /** Role granting the console's own scope-admin capabilities. */
 export const CONSOLE_ADMIN_ROLE = 'console-admin'
@@ -40,17 +40,19 @@ const userIdByEmail = async (
  *   the scopes-console-permissions suite needs it to be: an admin holding no
  *   scope role, and therefore refused by the self-hosting scope RPCs.
  *   `guest@e2e.test` deliberately gets none of it.
- * - The `admin` scenario actor mirrors `admin@e2e.test` exactly: the umbrella
- *   `admin` scope so a browser step signed in as that actor passes the
- *   console's global admin gate, plus `console-admin` so it can drive the
- *   scope-admin RPCs — the `admin` root does not reach the `pikku:scopes:*`
- *   tree. Its user row is created by `seedScenarioActors`, which must therefore
- *   run before this.
- * - The `staff`, `guest` and `target` scenario actors mirror the fixture users
- *   of the same name, so a scenario expresses "an admin without a scope role",
- *   "a caller holding reports:read" and "a caller holding nothing" through the
- *   actor registry rather than by signing in with a fixture password. `target`
- *   is deliberately granted nothing.
+ * - The scenario actors carry their own `scopes`/`roles` in
+ *   `pikku.config.json`, and this applies whatever they declare. Pikku never
+ *   applies them itself: which scope store exists and which roles have been
+ *   created is the app's business, which is why the loop runs after the roles
+ *   above are composed. Their user rows are created by `seedScenarioActors`,
+ *   which must therefore run before this.
+ * - Those declarations mirror the fixture users of the same name, so a scenario
+ *   expresses "an admin without a scope role", "a caller holding reports:read"
+ *   and "a caller holding nothing" through the actor registry rather than by
+ *   signing in with a fixture password. The `admin` actor mirrors
+ *   `admin@e2e.test` exactly — the umbrella `admin` scope to pass the console's
+ *   global admin gate, plus `console-admin` to drive the scope-admin RPCs,
+ *   which the `admin` root does not reach. `target` declares nothing.
  *
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
@@ -78,24 +80,24 @@ export const seedScopes = async (services: SingletonServices) => {
   await scopeService.addScopeToUser(adminId, ADMIN_SCOPE_ROOT)
   await scopeService.addScopeToUser(staffId, ADMIN_SCOPE_ROOT)
 
-  const adminActorEmail = scenarioActorConfigs.admin.email
-  const adminActorId = await userIdByEmail(services, adminActorEmail)
-  await scopeService.addScopeToUser(adminActorId, ADMIN_SCOPE_ROOT)
-  await scopeService.addUserToRole(adminActorId, CONSOLE_ADMIN_ROLE)
-
-  const staffActorId = await userIdByEmail(
-    services,
-    scenarioActorConfigs.staff.email
-  )
-  await scopeService.addScopeToUser(staffActorId, ADMIN_SCOPE_ROOT)
-
-  const guestActorId = await userIdByEmail(
-    services,
-    scenarioActorConfigs.guest.email
-  )
-  await scopeService.addUserToRole(guestActorId, REPORT_VIEWER_ROLE)
+  const granted: string[] = []
+  for (const actor of scenarioActorList) {
+    const scopes = actor.scopes ?? []
+    const roles = actor.roles ?? []
+    if (scopes.length === 0 && roles.length === 0) {
+      continue
+    }
+    const actorId = await userIdByEmail(services, actor.email)
+    for (const scope of scopes) {
+      await scopeService.addScopeToUser(actorId, scope)
+    }
+    for (const role of roles) {
+      await scopeService.addUserToRole(actorId, role)
+    }
+    granted.push(`${actor.email} -> ${[...scopes, ...roles].join(' + ')}`)
+  }
 
   services.logger.info(
-    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${ADMIN_SCOPE_ROOT}, ${STAFF_USER.email} -> ${ADMIN_SCOPE_ROOT}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${adminActorEmail} -> ${ADMIN_SCOPE_ROOT}`
+    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${ADMIN_SCOPE_ROOT}, ${STAFF_USER.email} -> ${ADMIN_SCOPE_ROOT}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${granted.join(', ')}`
   )
 }

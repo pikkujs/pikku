@@ -393,6 +393,18 @@ export type PikkuCLIInput = {
          * case, where two actors must be different users of one persona.
          */
         persona?: string
+        /**
+         * Scopes this actor holds, granted directly rather than through a role.
+         * Declaring them here is what makes "a caller holding reports:read"
+         * readable at the call site as `{ actor: actors.guest }`.
+         */
+        scopes?: string[]
+        /**
+         * Roles this actor is a member of. Role names are the app's own — pikku
+         * never creates them, so the app's seed must have declared them before
+         * it applies this.
+         */
+        roles?: string[]
       }
     >
     /** Environments `pikku scenario run <environment>` can target; the actor secret comes from SCENARIO_ACTOR_SECRET, never config */

@@ -78,6 +78,14 @@ export interface ScenarioActorConfig {
    * isolation and peer-sharing scenarios are made of.
    */
   persona?: string
+  /**
+   * Scopes this actor holds, granted directly rather than through a role, and
+   * the roles it belongs to. Pikku carries them; it never applies them — which
+   * scope store exists and which roles have been created is the app's own, so
+   * the app's seed reads these back off `scenarioActorConfigs` and grants them.
+   */
+  scopes?: readonly string[]
+  roles?: readonly string[]
 }
 
 /** The injected `actors` service: actor name → actor. */

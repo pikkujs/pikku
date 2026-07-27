@@ -19,6 +19,16 @@ export const scenarioActorConfigs = ${JSON.stringify(actors, null, 2)} as const 
 
 export type ScenarioActorName = keyof typeof scenarioActorConfigs
 
+/**
+ * The same registry as a list, widened to \`ScenarioActorConfig\`. Iterating
+ * \`scenarioActorConfigs\` directly yields the literal type of each entry, on
+ * which an optional field an actor did not declare does not exist — so a seed
+ * reading \`scopes\`/\`roles\` off every actor needs this instead.
+ */
+export const scenarioActorList: ScenarioActorConfig[] = Object.values(
+  scenarioActorConfigs
+)
+
 export type AgentName = keyof AgentMap & string
 export type TypedScenarioActors = Record<
   ScenarioActorName,
