@@ -158,6 +158,17 @@ export const applyPikkuSchemas = async (
 const QUALIFIED_REFERENCE = /references "[^"]+"\."[^"]+"/i
 
 /**
+ * sqlite's own words for "you put a dot where a table name goes".
+ *
+ * Matched rather than a driver's `code`, because every sqlite binding
+ * (better-sqlite3, node:sqlite, bun:sqlite, libsql) passes the engine's message
+ * through verbatim while disagreeing about how to label it. Postgres phrases the
+ * same class of error the other way round — `syntax error at or near "."` — so
+ * this cannot fire on it.
+ */
+const SQLITE_REJECTED_QUALIFIER = /near "\.":\s*syntax error/i
+
+/**
  * Say what a schema-bound connection did to the DDL, when that is what failed.
  *
  * `withSchema(...)` qualifies foreign key targets along with everything else.
@@ -168,12 +179,17 @@ const QUALIFIED_REFERENCE = /references "[^"]+"\."[^"]+"/i
  * declaration cannot spell both, and what the engine says about it is
  * `near ".": syntax error`, which names neither the schema nor the cause.
  *
- * Gated on the error as well as the SQL, so a qualified reference that failed
- * for some other reason is still reported as itself.
+ * Gated on sqlite's exact phrasing as well as the SQL. Postgres compiles the
+ * same qualified reference legitimately, and can raise a syntax error of its own
+ * on this DDL — a column type resolved from `requires` goes in verbatim — so a
+ * looser `/syntax error/` would answer for postgres in sqlite's name.
  */
 const explain = (error: unknown, sql: string, schema: PikkuSchema): unknown => {
   const message = error instanceof Error ? error.message : String(error)
-  if (!QUALIFIED_REFERENCE.test(sql) || !/syntax error/i.test(message)) {
+  if (
+    !QUALIFIED_REFERENCE.test(sql) ||
+    !SQLITE_REJECTED_QUALIFIER.test(message)
+  ) {
     return error
   }
   return new Error(
@@ -243,21 +259,40 @@ export type EnsureOutcome = 'present' | 'created'
  * matched on the pair. Unqualified DDL resolves against the connection's
  * search_path, which is not knowable from here, so it falls back to the name.
  */
-const tablesOf = async (
-  db: Kysely<any>
-): Promise<{ qualified: Set<string>; bare: Set<string> }> => {
+interface ExistingTables {
+  qualified: Set<string>
+  bare: Set<string>
+  /** Whether this engine reports schemas at all. */
+  schemaAware: boolean
+}
+
+const tablesOf = async (db: Kysely<any>): Promise<ExistingTables> => {
   const tables = await bind(db).introspection.getTables()
   return {
-    qualified: new Set(tables.map((table) => `${table.schema}.${table.name}`)),
+    qualified: new Set(
+      tables
+        .filter((table) => table.schema)
+        .map((table) => `${table.schema}.${table.name}`)
+    ),
     bare: new Set(tables.map((table) => table.name)),
+    schemaAware: tables.some((table) => table.schema !== undefined),
   }
 }
 
-const isPresent = (
-  existing: { qualified: Set<string>; bare: Set<string> },
-  table: DeclaredTable
-): boolean =>
-  table.schema
+/**
+ * Qualified declarations match on the pair — but only where that pair means
+ * something.
+ *
+ * `TableMetadata.schema` is optional, and sqlite and mysql leave it unset:
+ * sqlite has one schema to be in, and mysql calls the thing a database. A
+ * `withSchema('main')` connection there declares `main.workflow_runs` while
+ * introspection can only offer `workflow_runs`, and holding out for the pair
+ * would read every existing table as missing — the same false negative this
+ * whole function exists to fix, arrived at from the other side. So when the
+ * engine reports no schemas, the bare name is the only name there is.
+ */
+const isPresent = (existing: ExistingTables, table: DeclaredTable): boolean =>
+  table.schema && existing.schemaAware
     ? existing.qualified.has(`${table.schema}.${table.name}`)
     : existing.bare.has(table.name)
 
