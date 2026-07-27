@@ -294,3 +294,67 @@ export const expectsToolResults = pikkuScenarioStep<
     return { results: results.length }
   },
 })
+
+/**
+ * The outcome of an RPC call, plus the leak guard the ownership scenarios rely on.
+ *
+ * `doesNotEcho` is not decoration: a refusal that quoted the threadId back would
+ * confirm the thread exists, turning the guard into an existence oracle. That is
+ * why the ForbiddenError is shaped the way it is, so it is asserted here.
+ */
+export const expectsRpcOutcome = pikkuScenarioStep<
+  {
+    call: { status: number; serialized: string }
+    refused: boolean
+    doesNotEcho?: string
+  },
+  { status: number }
+>({
+  name: 'expectsRpcOutcome',
+  description: 'expects an RPC call to be refused or to succeed',
+  template: 'expects refused={refused}',
+  func: async (_services, { call, refused, doesNotEcho }) => {
+    const body = JSON.parse(call.serialized)
+    const wasRefused =
+      call.status >= 400 || Boolean(body?.message ?? body?.errorId)
+    if (wasRefused !== refused) {
+      throw new Error(
+        refused
+          ? `Expected a refusal, got ${call.status} ${call.serialized}`
+          : `Expected success, got ${call.status} ${call.serialized}`
+      )
+    }
+    if (doesNotEcho !== undefined && call.serialized.includes(doesNotEcho)) {
+      throw new Error(
+        `The response echoed "${doesNotEcho}" back, which confirms the record exists: ${call.serialized}`
+      )
+    }
+    return { status: call.status }
+  },
+})
+
+/** What a listing RPC returned, by id. */
+export const expectsListedIds = pikkuScenarioStep<
+  { call: { serialized: string }; includes?: string; excludes?: string },
+  { ids: string[] }
+>({
+  name: 'expectsListedIds',
+  description: 'expects which records a listing returned',
+  func: async (_services, { call, includes, excludes }) => {
+    const body = JSON.parse(call.serialized)
+    const ids: string[] = (Array.isArray(body) ? body : []).map(
+      (record: any) => record?.id
+    )
+    if (includes !== undefined && !ids.includes(includes)) {
+      throw new Error(
+        `Expected the listing to include ${includes}, got ${ids.join(', ') || '(nothing)'}`
+      )
+    }
+    if (excludes !== undefined && ids.includes(excludes)) {
+      throw new Error(
+        `The listing leaked ${excludes} to a caller who does not own it`
+      )
+    }
+    return { ids }
+  },
+})
