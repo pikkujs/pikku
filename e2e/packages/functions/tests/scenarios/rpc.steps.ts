@@ -187,3 +187,62 @@ export const expectsRpcAllowed = pikkuScenarioStep<
     return { status: call.status }
   },
 })
+
+/**
+ * The response body is a collection.
+ *
+ * The console's list RPCs answer with a bare array, so there is no field to
+ * name — what a scenario asserts is that a collection came back at all, and
+ * sometimes that it is not empty.
+ */
+export const expectsRpcCollection = pikkuScenarioStep<
+  { call: RawRpcResult; minLength?: number },
+  { length: number }
+>({
+  name: 'expectsRpcCollection',
+  description: 'expects the response body to be an array',
+  template: 'expects a collection',
+  func: async (_services, { call, minLength }) => {
+    if (!Array.isArray(call.body)) {
+      throw new Error(`Expected an array, got ${call.serialized}`)
+    }
+    if (minLength !== undefined && call.body.length < minLength) {
+      throw new Error(
+        `Expected at least ${minLength} entries, got ${call.body.length}`
+      )
+    }
+    return { length: call.body.length }
+  },
+})
+
+/**
+ * The response body is a record carrying at least one of the named keys.
+ *
+ * `anyOf` rather than a single key because a run's identifier is reported as
+ * `id` by some readers and `runId` by others, and which one is the reader's
+ * business, not the scenario's.
+ */
+export const expectsRpcRecord = pikkuScenarioStep<
+  { call: RawRpcResult; anyOf?: string[] },
+  { keys: string[] }
+>({
+  name: 'expectsRpcRecord',
+  description: 'expects the response body to be a record',
+  template: 'expects a record',
+  func: async (_services, { call, anyOf }) => {
+    if (
+      call.body === null ||
+      typeof call.body !== 'object' ||
+      Array.isArray(call.body)
+    ) {
+      throw new Error(`Expected a record, got ${call.serialized}`)
+    }
+    const record = call.body as Record<string, unknown>
+    if (anyOf && !anyOf.some((name) => record[name] !== undefined)) {
+      throw new Error(
+        `Expected one of ${anyOf.join(', ')} to be present, got ${call.serialized}`
+      )
+    }
+    return { keys: Object.keys(record) }
+  },
+})
