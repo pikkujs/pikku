@@ -16,7 +16,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { PikkuBrowserWire } from '@pikku/core/workflow'
-import type {} from '@pikku/playwright'
+import { expect } from '@pikku/playwright'
 
 const TIMEOUT = 15_000
 
@@ -30,7 +30,7 @@ const TIMEOUT = 15_000
  * so matching on it adds no attribute for a scraper or a session recorder to
  * pick up, which putting the same value in a `data-` attribute would.
  */
-interface TestIdSelector {
+export interface TestIdSelector {
   testId: string
   prefix?: boolean
   where?: Record<string, string>
@@ -133,6 +133,7 @@ export const clicksLink = pikkuScenarioStep<
 export const clicksTestId = pikkuScenarioStep<
   {
     testId: string
+    where?: Record<string, string>
     containing?: string
     /** Scopes the lookup to one element, e.g. the row for one user. */
     within?: TestIdSelector
@@ -144,9 +145,13 @@ export const clicksTestId = pikkuScenarioStep<
   description: 'clicks an element by its test id',
   template: 'clicks {testId}',
   browser: true,
-  func: async (_services, { testId, containing, within }, { browser }) => {
+  func: async (
+    _services,
+    { testId, where, containing, within },
+    { browser }
+  ) => {
     const scope = within ? scopeFor(browser, within) : browser.page
-    const base = scope.locator(`${selectorFor({ testId })}:visible`)
+    const base = scope.locator(`${selectorFor({ testId, where })}:visible`)
     const target = containing ? base.filter({ hasText: containing }) : base
     await target.first().click({ timeout: TIMEOUT })
     return { clicked: containing ? `${testId}:${containing}` : testId }
@@ -414,24 +419,56 @@ export const fillsTestId = pikkuScenarioStep<
   },
 })
 
-export const expectsEnabled = pikkuScenarioStep<
-  { testId: string },
-  { enabled: true },
+/**
+ * Asserts what a control is currently offering: whether it is enabled, and
+ * whether it is ticked. Both are read from the element rather than from a
+ * mirrored `data-` attribute, so a control cannot claim a state it does not
+ * actually have — and both go through Playwright's retrying matchers, because
+ * a control whose state is server-owned only settles once the mutation behind
+ * it has round-tripped.
+ */
+export const expectsControl = pikkuScenarioStep<
+  {
+    testId: string
+    where?: Record<string, string>
+    within?: TestIdSelector
+    enabled?: boolean
+    checked?: boolean
+  },
+  { enabled: boolean; checked: boolean },
   true
 >({
-  name: 'expectsEnabled',
-  description: 'expects a control to be offered rather than disabled',
-  template: 'expects {testId} to be enabled',
+  name: 'expectsControl',
+  description: 'expects a control to be in a given enabled/checked state',
+  template: 'expects {testId} to be in the expected state',
   browser: true,
-  func: async (_services, { testId }, { browser }) => {
-    const target = browser.page
-      .locator(`[data-testid="${testId}"]:visible`)
+  func: async (
+    _services,
+    { testId, where, within, enabled, checked },
+    { browser }
+  ) => {
+    const scope = within ? scopeFor(browser, within) : browser.page
+    const target = scope
+      .locator(`${selectorFor({ testId, where })}:visible`)
       .first()
-    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
-    if (!(await target.isEnabled())) {
-      throw new Error(`Expected ${testId} to be enabled`)
+    if (enabled === true) {
+      await expect(target).toBeEnabled({ timeout: TIMEOUT })
     }
-    return { enabled: true }
+    if (enabled === false) {
+      await expect(target).toBeDisabled({ timeout: TIMEOUT })
+    }
+    if (checked === true) {
+      await expect(target).toBeChecked({ timeout: TIMEOUT })
+    }
+    if (checked === false) {
+      await expect(target).not.toBeChecked({ timeout: TIMEOUT })
+    }
+    return {
+      enabled: await target.isEnabled(),
+      // `isChecked` throws on anything that is not a checkbox or radio, so it
+      // is only asked when the caller actually asserted on it.
+      checked: checked === undefined ? false : await target.isChecked(),
+    }
   },
 })
 
@@ -478,5 +515,52 @@ export const expectsUrl = pikkuScenarioStep<
       timeout: TIMEOUT,
     })
     return { url: browser.page.url() }
+  },
+})
+
+/**
+ * Opens a row from the keyboard, which is the only way to prove the row is a
+ * real control rather than a mouse-only click target: a `<div onClick>` can be
+ * focused by script but will not act on Enter.
+ */
+export const opensTestIdWithKeyboard = pikkuScenarioStep<
+  { testId: string; where?: Record<string, string> },
+  { opened: string },
+  true
+>({
+  name: 'opensTestIdWithKeyboard',
+  description: 'focuses an element and opens it with the keyboard',
+  template: 'opens {testId} with the keyboard',
+  browser: true,
+  func: async (_services, { testId, where }, { browser }) => {
+    const target = browser.page
+      .locator(`${selectorFor({ testId, where })}:visible`)
+      .first()
+    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await target.focus()
+    await target.press('Enter')
+    return { opened: testId }
+  },
+})
+
+export const expectsTestIdValue = pikkuScenarioStep<
+  { testId: string; value: string },
+  { value: string },
+  true
+>({
+  name: 'expectsTestIdValue',
+  description: 'expects a form field to hold a given value',
+  template: 'expects {testId} to hold {value}',
+  browser: true,
+  func: async (_services, { testId, value }, { browser }) => {
+    const target = browser.page
+      .locator(`[data-testid="${testId}"]:visible`)
+      .first()
+    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    const actual = await target.inputValue()
+    if (actual !== value) {
+      throw new Error(`Expected ${testId} to hold "${value}", got "${actual}"`)
+    }
+    return { value: actual }
   },
 })

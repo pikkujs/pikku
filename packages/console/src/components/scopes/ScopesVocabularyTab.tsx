@@ -47,6 +47,10 @@ export const ScopesVocabularyTab: React.FC<ScopesVocabularyTabProps> = ({
       docsHref={DOCS_HREF}
       data={rows}
       getKey={(row) => row.id}
+      getRowProps={(row) => ({
+        'data-testid': 'scope-row',
+        'data-scope-id': row.id,
+      })}
       loading={declaredQuery.isLoading}
       externalSearch={search}
       searchFilter={(row, q) =>

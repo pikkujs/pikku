@@ -16,6 +16,14 @@ declare module '@pikku/core/workflow' {
   }
 }
 
+/**
+ * Playwright's own web-first assertions, re-exported so a step asserts through
+ * a retrying matcher instead of sampling a locator once and hand-rolling the
+ * wait. `@playwright/test` is this package's peer dependency, so a consumer
+ * reaches it here rather than depending on the test runner directly.
+ */
+export { expect } from '@playwright/test'
+
 export { browserConfigFromEnv, type BrowserConfig } from './config.js'
 export {
   loadElementMap,

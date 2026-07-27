@@ -44,6 +44,7 @@ export const ScopesPage: React.FC = () => {
                 size="xs"
                 leftSection={<Plus size={14} />}
                 onClick={() => openRole(null)}
+                data-testid="scopes-create-role"
               >
                 {m.scopes_create_role()}
               </Button>

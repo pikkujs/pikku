@@ -97,11 +97,9 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
     onClose()
   }
 
-  const error = (
-    createRole.error ||
+  const error = (createRole.error ||
     setRoleScopes.error ||
-    deleteRole.error
-  ) as Error | null
+    deleteRole.error) as Error | null
 
   return (
     <Drawer
@@ -113,7 +111,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
         isNew ? m.scopes_create_role() : m.scopes_edit_role({ name: role.name })
       }
     >
-      <Stack gap="md">
+      <Stack gap="md" data-testid="role-editor">
         <TextInput
           label={m.scopes_name()}
           placeholder={m.scopes_name_placeholder()}
@@ -128,6 +126,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
           withAsterisk={isNew}
           error={nameError}
           data-autofocus={isNew}
+          data-testid="role-name-input"
         />
         <Textarea
           label={m.scopes_col_description()}
@@ -160,6 +159,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
               leftSection={<Trash2 size={14} />}
               onClick={remove}
               loading={deleteRole.isPending}
+              data-testid="role-delete"
             >
               {confirmingDelete
                 ? m.scopes_delete_confirm({ name: role.name })
@@ -168,7 +168,11 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
           ) : (
             <span />
           )}
-          <Button onClick={save} loading={pending && !deleteRole.isPending}>
+          <Button
+            onClick={save}
+            loading={pending && !deleteRole.isPending}
+            data-testid="role-save"
+          >
             {m.common_save()}
           </Button>
         </Group>

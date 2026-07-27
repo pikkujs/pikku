@@ -35,7 +35,6 @@
     "test:impersonation": "cucumber-js --config tests/cucumber.mjs --tags @impersonation",
     "test:scopes": "cucumber-js --config tests/cucumber.mjs --tags @scopes",
     "test:user-admin": "cucumber-js --config tests/cucumber.mjs --tags @user-admin",
-    "test:scopes-console": "cucumber-js --config tests/cucumber.mjs --tags @scopes-console",
     "scenarios": "SCENARIO_ACTOR_SECRET=${SCENARIO_ACTOR_SECRET:-e2e-actor-secret} PIKKU_MOCK_LLM=${PIKKU_MOCK_LLM:-1} pikku scenario run",
     "test:scenarios": "yarn scenarios local --spawn --no-browser",
     "test:scenarios-ui": "yarn scenarios local --spawn --tags console",
