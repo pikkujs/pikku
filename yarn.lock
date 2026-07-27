@@ -7295,6 +7295,8 @@ __metadata:
     better-auth: "npm:^1.6.19"
     better-sqlite3: "npm:^12.10.0"
     kysely: "npm:^0.29.0"
+    kysely-postgres-js: "npm:^3.0.0"
+    postgres: "npm:^3.4.8"
     tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.3"
     zod: "npm:^4"
