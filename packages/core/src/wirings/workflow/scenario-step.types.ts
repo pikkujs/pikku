@@ -87,11 +87,47 @@ export interface PikkuBrowserWire {
 }
 
 /**
+ * What one actor's window looked like at the moment a scenario failed.
+ *
+ * A browser step fails with a selector timeout that says nothing about *why*
+ * the page never rendered. The answer is almost always in the page's own
+ * errors, which the driver has been collecting all along.
+ */
+export interface ScenarioBrowserFailure {
+  /** The actor whose window this is. */
+  actor: string
+  /** Where the window was pointed, when the driver can still report it. */
+  url?: string
+  /** Path the screenshot was written to; absent when none could be taken. */
+  screenshot?: string
+  consoleErrors: string[]
+  pageErrors: string[]
+  failedRequests: string[]
+  apiErrors: string[]
+}
+
+/**
  * Supplied by `@pikku/playwright` (or any other driver) and consumed by the
  * scenario runner. Declared here so the CLI depends only on core.
+ *
+ * `reset` and `captureFailure` are optional so a driver written against an
+ * earlier version keeps compiling; the runner treats a driver without them as
+ * one that simply offers no isolation and no diagnostics.
  */
 export interface ScenarioBrowserProvider {
   /** Resolve — creating on first use — the browser session for an actor. */
   sessionFor(actorName: string): Promise<PikkuBrowserWire>
+  /**
+   * Discard every actor's per-scenario state — cookies, storage, open pages —
+   * while keeping the browser itself. Called between scenarios, so one
+   * scenario cannot leave the next signed in as somebody else.
+   */
+  reset?(): Promise<void>
+  /**
+   * Snapshot every open window for a failed scenario. `label` identifies the
+   * scenario in artifact filenames. Never throws: a failure to capture must
+   * not replace the failure being captured.
+   */
+  captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
   close(): Promise<void>
 }

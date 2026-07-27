@@ -875,3 +875,58 @@ describe('pikku-workflow-service approval', () => {
     cleanup()
   })
 })
+
+describe('pikku-workflow-service run identity on failure', () => {
+  // A failing inline run throws before startWorkflow can return `{ runId }`,
+  // so a caller that wants to read the run back — its steps, which one failed,
+  // what it was called with — has nothing to read it by. `onRunCreated` fires
+  // as soon as the run exists, which is the only moment guaranteed to happen
+  // whether the run goes on to pass, fail, or suspend.
+  const runFailing = async (name: string) => {
+    resetPikkuState()
+    const ws = new InMemoryWorkflowService()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+    } as any)
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState[name] = {
+      name,
+      pikkuFuncId: name,
+      source: 'scenario',
+      graphHash: `${name}-hash`,
+    } as any
+    pikkuState(null, 'function', 'meta')[name] = {
+      name,
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    addWorkflow(name, {
+      func: async () => {
+        throw new Error('the scenario blew up')
+      },
+    } as any)
+
+    const created: string[] = []
+    let error: any
+    try {
+      await ws.startWorkflow(name, {}, {} as any, {}, {
+        onRunCreated: (runId: string) => created.push(runId),
+      } as any)
+    } catch (e: any) {
+      error = e
+    }
+    return { ws, created, error }
+  }
+
+  test('reports the run id of a run that fails inline', async () => {
+    const { ws, created, error } = await runFailing('onRunCreatedFailing')
+
+    assert.equal(error?.message, 'the scenario blew up')
+    assert.equal(created.length, 1, 'the run existed, so its id must be known')
+    const run = await ws.getRun(created[0]!)
+    assert.equal(run?.status, 'failed')
+    assert.equal(run?.error?.message, 'the scenario blew up')
+  })
+})
