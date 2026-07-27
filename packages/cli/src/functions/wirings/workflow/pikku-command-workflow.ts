@@ -4,17 +4,22 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeScenarioActors } from './serialize-scenario-actors.js'
+import { resolveScenarioActors } from '../../../utils/resolve-scenario-actors.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
+import { partitionScenarioWorkflows } from '../scenarios/scenario-partition.js'
+import { serializeScenarioRegistration } from '../scenarios/serialize-scenario-registration.js'
+import { serializeScenarioWorkflowMeta } from '../scenarios/serialize-scenario-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
 import { join } from 'path'
+import { rm } from 'fs/promises'
 
 type WorkflowCommandInput = {
   bootstrap?: boolean
@@ -51,6 +56,17 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
     const hasRelevantWorkflows = allWorkflowNames.length > 0
     const hasWorkflows = hasRelevantWorkflows
 
+    // Scenarios and features are held back from every app-facing artifact: they
+    // are only ever run by `pikku scenario run`, and registering them in the app
+    // bootstrap drags each scenario's steps — and whatever those import — into a
+    // deployed server.
+    const { appNames, scenarioNames, appFiles, scenarioFiles } =
+      partitionScenarioWorkflows(
+        allWorkflowNames,
+        workflows.files,
+        workflows.graphMeta
+      )
+
     if (hasWorkflows) {
       const singletonServices =
         visitState.serviceAggregation.allSingletonServices.length > 0
@@ -74,9 +90,13 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
     }
 
     if (hasWorkflows && workflowMetaDir) {
+      const scenarioNameSet = new Set(scenarioNames)
       for (const [name, graphMeta] of Object.entries(workflows.graphMeta)) {
+        const metaDir = scenarioNameSet.has(name)
+          ? config.scenarioMetaDir
+          : workflowMetaDir
         const minimalMeta = stripVerboseFields(graphMeta)
-        const minimalPath = join(workflowMetaDir, `${name}.gen.json`)
+        const minimalPath = join(metaDir, `${name}.gen.json`)
         await writeFileInDir(
           logger,
           minimalPath,
@@ -85,7 +105,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         )
 
         if (hasVerboseFields(graphMeta)) {
-          const verbosePath = join(workflowMetaDir, `${name}-verbose.gen.json`)
+          const verbosePath = join(metaDir, `${name}-verbose.gen.json`)
           await writeFileInDir(
             logger,
             verbosePath,
@@ -96,6 +116,19 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       }
     }
 
+    // A project generated before scenarios moved out has their meta sitting in
+    // workflow/meta, and getWorkflowMeta() reads both directories — leaving it
+    // there would serve a stale copy of every scenario forever.
+    if (workflowMetaDir) {
+      await Promise.all(
+        scenarioNames.flatMap((name) =>
+          [`${name}.gen.json`, `${name}-verbose.gen.json`].map((file) =>
+            rm(join(workflowMetaDir, file), { force: true })
+          )
+        )
+      )
+    }
+
     if (workflowsWiringMetaFile && workflowMetaDir) {
       await writeFileInDir(
         logger,
@@ -103,13 +136,48 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         serializeWorkflowMeta(
           workflowsWiringMetaFile,
           workflowMetaDir,
-          allWorkflowNames,
+          appNames,
           packageMappings,
           schema?.supportsImportAttributes ?? false,
           config.addonName
         )
       )
     }
+
+    await writeFileInDir(
+      logger,
+      config.scenarioWiringsMetaFile,
+      serializeScenarioWorkflowMeta(
+        config.scenarioWiringsMetaFile,
+        config.scenarioMetaDir,
+        getFileImportRelativePath(
+          config.scenarioWiringsMetaFile,
+          workflowsWiringMetaFile,
+          packageMappings
+        ),
+        scenarioNames,
+        packageMappings,
+        schema?.supportsImportAttributes ?? false,
+        config.addonName
+      )
+    )
+
+    await writeFileInDir(
+      logger,
+      config.scenarioWiringsFile,
+      serializeScenarioRegistration(
+        config.scenarioWiringsFile,
+        getFileImportRelativePath(
+          config.scenarioWiringsFile,
+          config.scenarioWiringsMetaFile,
+          packageMappings
+        ),
+        scenarioFiles,
+        workflows.featureFiles,
+        packageMappings,
+        config.addonName
+      )
+    )
 
     const metaImportPath = getFileImportRelativePath(
       workflowsWiringFile,
@@ -123,12 +191,11 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       serializeWorkflowRegistration(
         workflowsWiringFile,
         metaImportPath,
-        allWorkflowNames,
-        workflows.files,
+        appNames,
+        appFiles,
         workflows.graphFiles,
         packageMappings,
-        config.addonName,
-        workflows.featureFiles
+        config.addonName
       )
     )
 
@@ -198,7 +265,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
 
     // Written even for an empty registry, so `TypedScenarioActors` is always a
     // resolvable import for the generated function types.
-    const scenarioActors = config.scenarios?.actors ?? {}
+    const scenarioActors = resolveScenarioActors(config.scenarios)
     {
       const agentMapImportPath = getFileImportRelativePath(
         config.scenarioActorsFile,

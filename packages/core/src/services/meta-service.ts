@@ -456,34 +456,47 @@ export class LocalMetaService implements MetaService {
     }
   }
 
+  private async readWorkflowMetaDir(
+    dir: string,
+    into: WorkflowsMeta
+  ): Promise<void> {
+    const files = await this.readDir(dir)
+    const jsonFiles = files.filter((f) => f.endsWith('.gen.json'))
+    const verboseFiles = jsonFiles.filter((f) => f.includes('-verbose'))
+    const minimalFiles = jsonFiles.filter((f) => !f.includes('-verbose'))
+    const verboseNames = new Set(
+      verboseFiles.map((f) => f.replace('-verbose.gen.json', ''))
+    )
+    const filesToRead = [
+      ...verboseFiles,
+      ...minimalFiles.filter(
+        (f) => !verboseNames.has(f.replace('.gen.json', ''))
+      ),
+    ]
+
+    await Promise.all(
+      filesToRead.map(async (file) => {
+        const content = await this.readFile(`${dir}/${file}`)
+        if (content) {
+          const meta = JSON.parse(content)
+          into[meta.name] = meta
+        }
+      })
+    )
+  }
+
   async getWorkflowMeta(): Promise<WorkflowsMeta> {
     if (this.workflowMetaCache) return this.workflowMetaCache
 
     try {
-      const files = await this.readDir('workflow/meta')
-      const jsonFiles = files.filter((f) => f.endsWith('.gen.json'))
-      const verboseFiles = jsonFiles.filter((f) => f.includes('-verbose'))
-      const minimalFiles = jsonFiles.filter((f) => !f.includes('-verbose'))
-      const verboseNames = new Set(
-        verboseFiles.map((f) => f.replace('-verbose.gen.json', ''))
-      )
-      const filesToRead = [
-        ...verboseFiles,
-        ...minimalFiles.filter(
-          (f) => !verboseNames.has(f.replace('.gen.json', ''))
-        ),
-      ]
-
       const result: WorkflowsMeta = {}
-      await Promise.all(
-        filesToRead.map(async (file) => {
-          const content = await this.readFile(`workflow/meta/${file}`)
-          if (content) {
-            const meta = JSON.parse(content)
-            result[meta.name] = meta
-          }
-        })
-      )
+      // Scenarios keep their meta in `scenarios/meta` so nothing app-facing
+      // imports them, but they are still workflows to anything reading meta off
+      // disk — the console's scenario list among them.
+      await Promise.all([
+        this.readWorkflowMetaDir('workflow/meta', result),
+        this.readWorkflowMetaDir('scenarios/meta', result),
+      ])
 
       this.workflowMetaCache = result
       return this.workflowMetaCache
@@ -527,8 +540,16 @@ export class LocalMetaService implements MetaService {
   async getFunctionsMeta(): Promise<FunctionsMeta> {
     if (this.functionsMetaCache) return this.functionsMetaCache
 
-    const content = await this.readMetaJson('function', 'pikku-functions-meta')
-    this.functionsMetaCache = content ? JSON.parse(content) : {}
+    const [content, scenarioContent] = await Promise.all([
+      this.readMetaJson('function', 'pikku-functions-meta'),
+      // Scenario steps register only into the scenario bootstrap, but they are
+      // still functions to anything reading meta off disk.
+      this.readMetaJson('scenarios', 'pikku-scenario-functions-meta'),
+    ])
+    this.functionsMetaCache = {
+      ...(content ? JSON.parse(content) : {}),
+      ...(scenarioContent ? JSON.parse(scenarioContent) : {}),
+    }
     return this.functionsMetaCache!
   }
 

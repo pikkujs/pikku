@@ -12,7 +12,6 @@ const files = (entries: Array<[string, string, string]>) =>
 
 const serialize = (
   workflows: Map<string, { path: string; exportedName: string }>,
-  features: Map<string, { path: string; exportedName: string }> = new Map(),
   packageName?: string
 ) =>
   serializeWorkflowRegistration(
@@ -22,87 +21,43 @@ const serialize = (
     workflows,
     new Map(),
     {},
-    packageName,
-    features
+    packageName
   )
 
 describe('serializeWorkflowRegistration', () => {
-  test('a project with no features is unchanged', () => {
+  test('a workflow is imported and registered under its export name', () => {
     const output = serialize(
-      files([['lazyLoad', '/project/src/credential.scenario.ts', 'lazyLoad']])
+      files([['orderFlow', '/project/src/order.workflow.ts', 'orderFlow']])
     )
     assert.match(
       output,
       /^import \{ addWorkflow \} from '@pikku\/core\/workflow'/
     )
-    assert.ok(!output.includes('addFeature'))
-  })
-
-  test('a feature is imported and registered under its export name', () => {
-    const output = serialize(
-      files([['lazyLoad', '/project/src/credential.scenario.ts', 'lazyLoad']]),
-      files([
-        [
-          'credentialFeature',
-          '/project/src/credential.feature.ts',
-          'credentialFeature',
-        ],
-      ])
-    )
     assert.match(
       output,
-      /import \{ addWorkflow, addFeature \} from '@pikku\/core\/workflow'/
+      /import \{ orderFlow \} from '\.\.\/\.\.\/src\/order\.workflow\.js'/
     )
-    assert.match(
-      output,
-      /import \{ credentialFeature \} from '\.\.\/\.\.\/src\/credential\.feature\.js'/
-    )
-    assert.match(output, /addFeature\('credentialFeature', credentialFeature\)/)
-  })
-
-  test('features register after the workflows they reference', () => {
-    const output = serialize(
-      files([['lazyLoad', '/project/src/credential.scenario.ts', 'lazyLoad']]),
-      files([['f', '/project/src/credential.feature.ts', 'f']])
-    )
-    assert.ok(
-      output.indexOf("addWorkflow('lazyLoad'") <
-        output.indexOf("addFeature('f'"),
-      'a feature resolves against registered scenarios, so it must come second'
-    )
-  })
-
-  test('features are emitted in a stable order', () => {
-    const output = serialize(
-      new Map(),
-      files([
-        ['zebra', '/project/src/z.feature.ts', 'zebra'],
-        ['alpha', '/project/src/a.feature.ts', 'alpha'],
-      ])
-    )
-    assert.ok(
-      output.indexOf("addFeature('alpha'") <
-        output.indexOf("addFeature('zebra'")
-    )
+    assert.match(output, /addWorkflow\('orderFlow', orderFlow\)/)
   })
 
   test('an addon passes its package name through', () => {
     const output = serialize(
-      new Map(),
-      files([['f', '/project/src/credential.feature.ts', 'f']]),
+      files([['orderFlow', '/project/src/order.workflow.ts', 'orderFlow']]),
       '@acme/addon'
-    )
-    assert.match(output, /addFeature\('f', f, '@acme\/addon'\)/)
-  })
-
-  test('a features-only project still imports addFeature', () => {
-    const output = serialize(
-      new Map(),
-      files([['f', '/project/src/credential.feature.ts', 'f']])
     )
     assert.match(
       output,
-      /^import \{ addFeature \} from '@pikku\/core\/workflow'/
+      /addWorkflow\('orderFlow', orderFlow, '@acme\/addon'\)/
+    )
+  })
+
+  test('the app wirings never register a feature', () => {
+    const output = serialize(
+      files([['orderFlow', '/project/src/order.workflow.ts', 'orderFlow']])
+    )
+    assert.ok(
+      !output.includes('addFeature'),
+      'a feature groups scenarios, which only the scenario bootstrap may load'
     )
   })
 })

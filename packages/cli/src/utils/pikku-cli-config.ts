@@ -610,6 +610,48 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Scenarios
+    const scenarioDir = join(result.outDir, 'scenarios')
+    if (!result.scenarioStepsFile) {
+      result.scenarioStepsFile = join(
+        scenarioDir,
+        'pikku-scenario-functions.gen.ts'
+      )
+    }
+    if (!result.scenarioStepsMetaFile) {
+      result.scenarioStepsMetaFile = join(
+        scenarioDir,
+        'pikku-scenario-functions-meta.gen.ts'
+      )
+    }
+    if (!result.scenarioStepsMetaJsonFile) {
+      result.scenarioStepsMetaJsonFile = join(
+        scenarioDir,
+        'pikku-scenario-functions-meta.gen.json'
+      )
+    }
+    if (!result.scenarioWiringsFile) {
+      result.scenarioWiringsFile = join(
+        scenarioDir,
+        'pikku-scenario-wirings.gen.ts'
+      )
+    }
+    if (!result.scenarioWiringsMetaFile) {
+      result.scenarioWiringsMetaFile = join(
+        scenarioDir,
+        'pikku-scenario-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.scenarioMetaDir) {
+      result.scenarioMetaDir = join(scenarioDir, 'meta')
+    }
+    if (!result.scenarioBootstrapFile) {
+      result.scenarioBootstrapFile = join(
+        result.outDir,
+        'pikku-bootstrap-scenarios.gen.ts'
+      )
+    }
+
     // Services
     if (!result.servicesFile) {
       result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')
