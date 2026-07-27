@@ -160,3 +160,114 @@ export const expectsWorkflowOutcome = pikkuScenarioStep<
     return { outcome: run.outcome }
   },
 })
+
+export const expectsWorkflowOutput = pikkuScenarioStep<
+  { run: WorkflowRunResult; values: Record<string, unknown> },
+  { checked: number }
+>({
+  name: 'expectsWorkflowOutput',
+  description: 'expects a workflow run to have produced the given output',
+  template: 'expects the output to match',
+  func: async (_services, { run, values }) => {
+    const output = (run.body ?? {}) as Record<string, unknown>
+    for (const [key, want] of Object.entries(values)) {
+      const got = output[key]
+      if (String(got) !== String(want)) {
+        throw new Error(
+          `Expected output ${key} to be ${JSON.stringify(want)}, got ${JSON.stringify(got)}`
+        )
+      }
+    }
+    return { checked: Object.keys(values).length }
+  },
+})
+
+export interface WorkflowStreamResult {
+  count: number
+  /** The status carried by the last event that carried one, if any. */
+  lastStatus?: string
+}
+
+/**
+ * Drains the workflow status SSE stream to its end.
+ *
+ * The stream closes itself once the run is terminal, so reading the whole body
+ * is the same thing as following it to completion — no incremental reader is
+ * needed and none would survive a JSON step result.
+ */
+export const drainsWorkflowStatusStream = pikkuScenarioStep<
+  { run: WorkflowRunResult },
+  WorkflowStreamResult
+>({
+  name: 'drainsWorkflowStatusStream',
+  description: 'reads the workflow status stream until it closes',
+  template: 'streams the run status',
+  func: async (_services, { run }, { scenarioStep }) => {
+    if (!run.runId) {
+      throw new Error(`The run was never started: ${run.serialized}`)
+    }
+    const response = await fetch(
+      `${apiUrlOf(scenarioStep.env)}/workflow/${run.workflowName}/status/${run.runId}/stream`,
+      { headers: { accept: 'text/event-stream' } }
+    )
+    if (!response.ok) {
+      throw new Error(`The status stream refused with ${response.status}`)
+    }
+    const events: { status?: string }[] = []
+    for (const line of (await response.text()).split('\n')) {
+      if (!line.startsWith('data: ')) {
+        continue
+      }
+      try {
+        events.push(JSON.parse(line.slice(6)))
+      } catch {
+        continue
+      }
+    }
+    const withStatus = events.filter((event) => event.status)
+    return {
+      count: events.length,
+      lastStatus: withStatus[withStatus.length - 1]?.status,
+    }
+  },
+})
+
+export const expectsWorkflowStream = pikkuScenarioStep<
+  { stream: WorkflowStreamResult; minEvents?: number; lastStatus?: string },
+  { count: number }
+>({
+  name: 'expectsWorkflowStream',
+  description: 'expects the status stream to have carried the run to an end',
+  template: 'expects the stream to end {lastStatus}',
+  func: async (_services, { stream, minEvents, lastStatus }) => {
+    if (minEvents !== undefined && stream.count < minEvents) {
+      throw new Error(
+        `Expected at least ${minEvents} stream event(s), got ${stream.count}`
+      )
+    }
+    if (lastStatus !== undefined && stream.lastStatus !== lastStatus) {
+      throw new Error(
+        `Expected the last stream status to be ${lastStatus}, got ${stream.lastStatus ?? 'none'}`
+      )
+    }
+    return { count: stream.count }
+  },
+})
+
+export const expectsRunId = pikkuScenarioStep<
+  { run: WorkflowRunResult },
+  { runId: string }
+>({
+  name: 'expectsRunId',
+  description: 'expects a started workflow to have answered with a run id',
+  template: 'expects a run id',
+  func: async (_services, { run }) => {
+    if (!run.ok) {
+      throw new Error(`The workflow was refused with ${run.status}`)
+    }
+    if (typeof run.runId !== 'string' || run.runId.length === 0) {
+      throw new Error(`Expected a run id, got: ${run.serialized}`)
+    }
+    return { runId: run.runId }
+  },
+})
