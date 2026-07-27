@@ -38,7 +38,7 @@ import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { SchemaForm } from '../components/ui/SchemaForm'
 import { useRenderEmailPreview } from '../hooks/useWirings'
 import { useUpdateEmailTemplate } from '../hooks/useCodeEdit'
-import { PanelProvider } from '../context/PanelContext'
+import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuSwitch } from '../components/ui/PikkuSwitch'
@@ -210,7 +210,7 @@ export const EmailsPage: React.FC<{
 
   if (loading) {
     return (
-      <PanelProvider>
+      <ConsoleSurface>
         <ResizablePanelLayout
           hidePanel
           header={
@@ -224,13 +224,13 @@ export const EmailsPage: React.FC<{
             <Loader />
           </Center>
         </ResizablePanelLayout>
-      </PanelProvider>
+      </ConsoleSurface>
     )
   }
 
   if (templateNames.length === 0) {
     return (
-      <PanelProvider>
+      <ConsoleSurface>
         <ResizablePanelLayout
           hidePanel
           header={
@@ -249,13 +249,13 @@ export const EmailsPage: React.FC<{
             docsHref={EMAIL_DOCS_HREF}
           />
         </ResizablePanelLayout>
-      </PanelProvider>
+      </ConsoleSurface>
     )
   }
 
   if (!selectedTemplate || !selectedMeta || !selectedLocale) {
     return (
-      <PanelProvider>
+      <ConsoleSurface>
         <EmailsOverview
           templateNames={templateNames}
           templates={templates}
@@ -271,7 +271,7 @@ export const EmailsPage: React.FC<{
             })
           }}
         />
-      </PanelProvider>
+      </ConsoleSurface>
     )
   }
 
@@ -353,7 +353,7 @@ export const EmailsPage: React.FC<{
   )
 
   return (
-    <PanelProvider>
+    <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
         header={
@@ -576,6 +576,6 @@ export const EmailsPage: React.FC<{
           </Box>
         </Box>
       </ResizablePanelLayout>
-    </PanelProvider>
+    </ConsoleSurface>
   )
 }

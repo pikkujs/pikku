@@ -1,21 +1,18 @@
 import React, { useState } from 'react'
-import { Box, Button, Center, Loader, ScrollArea, Stack, Text } from '@pikku/mantine/core'
-import { Play, ShieldCheck } from 'lucide-react'
+import { Button, Loader, Stack } from '@pikku/mantine/core'
+import { Play } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
-import {
-  SecurityAuditView,
-  type SecurityLens,
-} from '../components/security/SecurityAuditView'
+import { SecurityReportPanel } from '../components/security/SecurityReportPanel'
+import type { SecurityLens } from '../components/security/SecurityAuditView'
 import { useSecurityAudit, useRunSecurityAudit } from '../hooks/useSecurityAudit'
 
 export const SecurityPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
   emptyHero,
 }) => {
   useLocale()
-  const { report, isLoading } = useSecurityAudit()
+  const { report } = useSecurityAudit()
   const runAudit = useRunSecurityAudit()
   const running = runAudit.isPending
 
@@ -79,34 +76,12 @@ export const SecurityPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
         }
       />
 
-      {isLoading ? (
-        <Center style={{ flex: 1 }}>
-          <Loader />
-        </Center>
-      ) : report ? (
-        <ScrollArea style={{ flex: 1 }}>
-          <Box p="lg">
-            {runAudit.isError && (
-              <Text c="red" mb="sm" data-testid="security-run-error">
-                {m.security_run_error()}
-              </Text>
-            )}
-            <SecurityAuditView report={report} lens={lens} query={query} />
-          </Box>
-        </ScrollArea>
-      ) : (
-        <EmptyStatePlaceholder
-          icon={ShieldCheck}
-          hero={emptyHero}
-          title={m.security_empty_title()}
-          description={
-            runAudit.isError
-              ? m.security_empty_error_description()
-              : m.security_empty_description()
-          }
-          docsHref="https://pikku.dev/docs"
-        />
-      )}
+      <SecurityReportPanel
+        lens={lens}
+        query={query}
+        emptyHero={emptyHero}
+        runError={runAudit.isError}
+      />
     </Stack>
   )
 }

@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Group, TextInput } from '@pikku/mantine/core'
-import { Mail, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { EntityCardList } from '../components/layout/EntityCardList'
-import type { EntityCardItem } from '../components/layout/EntityCardList'
+import { EmailTemplateListPanel } from '../components/emails/EmailTemplateListPanel'
 
 const EMAIL_DOCS_HREF = 'https://pikku.dev/docs'
 
@@ -25,25 +24,6 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
 }) => {
   useLocale()
   const [searchQuery, setSearchQuery] = useState('')
-
-  const allItems = useMemo((): EntityCardItem[] =>
-    templateNames.map((name): EntityCardItem => {
-      const t = templates[name]
-      const varCount = (t.variables ?? []).length
-      const localeCount = Object.keys(t.locales ?? {}).length
-      const metaTags: string[] = []
-      if (varCount > 0) metaTags.push(`${varCount} ${varCount === 1 ? 'variable' : 'variables'}`)
-      if (localeCount > 0) metaTags.push(`${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`)
-      return { name, meta: metaTags }
-    }),
-    [templateNames, templates]
-  )
-
-  const items = useMemo(() => {
-    const q = searchQuery.toLowerCase()
-    if (!q) return allItems
-    return allItems.filter((item) => item.name.toLowerCase().includes(q))
-  }, [allItems, searchQuery])
 
   return (
     <ResizablePanelLayout
@@ -69,12 +49,11 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
         />
       }
     >
-      <EntityCardList
-        items={items}
-        onOpen={onSelect}
-        icon={Mail}
-        emptyTitle={m.emails_empty_title()}
-        docsHref={EMAIL_DOCS_HREF}
+      <EmailTemplateListPanel
+        templateNames={templateNames}
+        templates={templates}
+        onSelect={onSelect}
+        searchQuery={searchQuery}
       />
     </ResizablePanelLayout>
   )

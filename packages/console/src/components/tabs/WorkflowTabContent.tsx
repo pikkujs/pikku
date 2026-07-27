@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { PanelProvider } from '../../context/PanelContext'
-import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { WorkflowCanvas } from '../project/WorkflowCanvas'
 import { Center, Loader } from '@pikku/mantine/core'
 import { GitBranch } from 'lucide-react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { WorkflowSurface } from '../workflow/WorkflowSurface'
+import { WorkflowThreePane } from '../workflow/WorkflowThreePane'
+import { workflowQueryKeys } from '../../hooks/workflow-query-keys'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -26,8 +26,11 @@ export const WorkflowTabContent: React.FC<{
   useLocale()
   const rpc = usePikkuRPC()
   const resolvedId = entityId ?? workflowId
+  // Resolved here as well as inside WorkflowSurface so this screen can render
+  // its own full-height loading and not-found states before any layout chrome
+  // appears. Same query key, so the surface reads it straight from the cache.
   const { data: workflow, isLoading } = useQuery({
-    queryKey: ['workflow-meta-by-id', resolvedId],
+    queryKey: workflowQueryKeys.meta(resolvedId),
     queryFn: () =>
       rpc.invoke('console:getWorkflowMetaById', { workflowId: resolvedId! }),
     enabled: !!resolvedId,
@@ -62,28 +65,17 @@ export const WorkflowTabContent: React.FC<{
     )
   }
 
-  const canvas = (
-    <WorkflowCanvas
-      workflow={workflow}
-      items={workflowItems}
-      onItemSelect={(name) => navigateTo('workflows', name)}
-      immersiveDetail={immersiveDetail}
-    />
-  )
-
   return (
-    <PanelProvider>
-      {readOnly ? (
-        canvas
-      ) : (
-        <WorkflowRunProvider
-          workflowName={resolvedId!}
-          currentGraphHash={(workflow as any).graphHash}
-          workflowNodes={(workflow as any).nodes}
-        >
-          {canvas}
-        </WorkflowRunProvider>
-      )}
-    </PanelProvider>
+    <WorkflowSurface
+      workflowId={resolvedId}
+      workflow={workflow}
+      readOnly={readOnly}
+    >
+      <WorkflowThreePane
+        items={workflowItems}
+        onItemSelect={(name) => navigateTo('workflows', name)}
+        immersiveDetail={immersiveDetail}
+      />
+    </WorkflowSurface>
   )
 }

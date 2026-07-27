@@ -1,14 +1,12 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import type { ReactNode } from 'react'
 import { Group, TextInput } from '@pikku/mantine/core'
-import { Bot, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useNavigate } from '../router'
-import { usePikkuMeta } from '../context/PikkuMetaContext'
-import { PanelProvider } from '../context/PanelContext'
+import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { EntityCardList } from '../components/layout/EntityCardList'
-import type { EntityCardItem } from '../components/layout/EntityCardList'
+import { AgentListPanel } from '../components/agents/AgentListPanel'
 import { useState } from 'react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -27,41 +25,7 @@ export const AgentsPage: React.FC<{
 }> = ({ onOpen, headerRight, emptyHero, metricSlot }) => {
   const navigate = useNavigate()
   useLocale()
-  const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
-
-  const allItems = useMemo((): EntityCardItem[] => {
-    if (!meta.agentsMeta) return []
-    return Object.entries(meta.agentsMeta)
-      .map(([name, data]: [string, any]): EntityCardItem => {
-        const toolCount = (data.tools ?? []).length
-        const agentCount = (data.agents ?? []).length
-        const badges = data.model ? [{ label: data.model, tone: 'neutral' as const }] : []
-        const metaTags: string[] = []
-        if (toolCount > 0) metaTags.push(`${toolCount} ${toolCount === 1 ? 'tool' : 'tools'}`)
-        if (agentCount > 0)
-          metaTags.push(`${agentCount} ${agentCount === 1 ? 'sub-agent' : 'sub-agents'}`)
-        return {
-          name,
-          badges,
-          meta: metaTags,
-          description: data.summary ?? data.description,
-          tags: data.tags,
-        }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.agentsMeta])
-
-  const items = useMemo(() => {
-    const q = searchQuery.toLowerCase()
-    if (!q) return allItems
-    return allItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q) ||
-        item.badges?.some((b) => b.label.toLowerCase().includes(q))
-    )
-  }, [allItems, searchQuery])
 
   const handleOpen = (name: string) => {
     if (onOpen) {
@@ -72,7 +36,7 @@ export const AgentsPage: React.FC<{
   }
 
   return (
-    <PanelProvider>
+    <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
         header={
@@ -96,18 +60,13 @@ export const AgentsPage: React.FC<{
           />
         }
       >
-        <EntityCardList
-          items={items}
+        <AgentListPanel
           onOpen={handleOpen}
-          loading={loading}
-          icon={Bot}
+          searchQuery={searchQuery}
           emptyHero={emptyHero}
-          emptyTitle={m.agents_empty_title()}
-          emptyDescription={m.agents_empty_description()}
-          docsHref="https://pikku.dev/docs/wiring/ai-agents"
           metricSlot={metricSlot}
         />
       </ResizablePanelLayout>
-    </PanelProvider>
+    </ConsoleSurface>
   )
 }

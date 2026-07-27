@@ -82,7 +82,9 @@ interface PanelContextType {
   setActiveChild: (panelId: string, childId: string) => void
 }
 
-const PanelContext = createContext<PanelContextType | undefined>(undefined)
+export const PanelContext = createContext<PanelContextType | undefined>(
+  undefined
+)
 
 export const usePanelContext = () => {
   const context = useContext(PanelContext)
@@ -91,6 +93,13 @@ export const usePanelContext = () => {
   }
   return context
 }
+
+/**
+ * The panel context if one is mounted, otherwise undefined. For components that
+ * render with or without a surface — a list that opens an inspector when there
+ * is one, and is merely read-only when there is not.
+ */
+export const usePanelContextSafe = () => useContext(PanelContext)
 
 interface PanelProviderProps {
   children: React.ReactNode
