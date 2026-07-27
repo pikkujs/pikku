@@ -18,6 +18,7 @@ import {
   scenarioBrowserSteps,
 } from './scenario-ladder.js'
 import { resolveScenarioActors } from '../../utils/resolve-scenario-actors.js'
+import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
 
@@ -116,12 +117,23 @@ export const scenarioRun = pikkuSessionlessFunc<
     tags?: string
     coverage?: boolean
     browser?: boolean
+    spawn?: boolean
+    keepAlive?: boolean
   },
   void
 >({
   func: async (
     { logger, config, getInspectorState, variables },
-    { environment, flows, features, tags, coverage, browser = true }
+    {
+      environment,
+      flows,
+      features,
+      tags,
+      coverage,
+      browser = true,
+      spawn = false,
+      keepAlive = false,
+    }
   ) => {
     const state = await getInspectorState(true)
 
@@ -135,6 +147,35 @@ export const scenarioRun = pikkuSessionlessFunc<
             ? `Configured environments: ${known.join(', ')}`
             : `Add scenarios.environments to pikku.config.json, e.g. { "${environment}": { "apiUrl": "https://app.example.com/api" } }`)
       )
+    }
+
+    if (spawn) {
+      const { hostname, port } = new URL(env.apiUrl)
+      const resolvedPort = Number(port || 80)
+      logger.info(`Starting a server for '${environment}' on ${env.apiUrl}`)
+      const server = await spawnDevServer({
+        cwd: config.rootDir,
+        port: resolvedPort,
+        hostname,
+        coverage,
+        env: { API_URL: env.apiUrl },
+        onOutput: (text) => process.stdout.write(text),
+      })
+      // Registered rather than wrapped in a try/finally: the run below sets
+      // process.exitCode and can throw, and an exit handler covers both without
+      // the whole command body having to nest inside one block.
+      if (!keepAlive) {
+        process.once('exit', server.stop)
+        process.once('SIGINT', () => {
+          server.stop()
+          process.exit(1)
+        })
+        process.once('SIGTERM', () => {
+          server.stop()
+          process.exit(1)
+        })
+      }
+      await server.waitUntilReady()
     }
 
     // Features live in runtime state, not inspector meta — their scenario lists

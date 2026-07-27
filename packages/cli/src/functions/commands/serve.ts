@@ -32,6 +32,7 @@ import {
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
+import { serverReadyLine } from '../../server/server-ready.js'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; console?: boolean },
@@ -198,6 +199,8 @@ export const serve = pikkuSessionlessFunc<
         `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
       )
     }
+
+    logger.info(serverReadyLine(hostname, resolvedPort))
 
     process.once('SIGINT', async () => {
       logger.info('Stopping server...')

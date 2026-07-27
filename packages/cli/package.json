@@ -82,7 +82,9 @@
     "node": ">=24"
   },
   "exports": {
-    ".": "./dist/bin/pikku.js"
+    ".": "./dist/bin/pikku.js",
+    "./server/spawn-dev-server": "./dist/src/server/spawn-dev-server.js",
+    "./server/server-ready": "./dist/src/server/server-ready.js"
   },
   "peerDependenciesMeta": {
     "@pikku/playwright": {

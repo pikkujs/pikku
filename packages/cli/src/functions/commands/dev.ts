@@ -40,6 +40,7 @@ import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { startCoverageService } from './start-coverage.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
+import { serverReadyLine } from '../../server/server-ready.js'
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -354,6 +355,8 @@ export const dev = pikkuSessionlessFunc<
         `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
       )
     }
+
+    logger.info(serverReadyLine(hostname, resolvedPort))
 
     let configWatcher: FSWatcher | undefined
     let watcher: FSWatcher | undefined
