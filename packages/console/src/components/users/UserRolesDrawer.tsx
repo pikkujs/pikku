@@ -87,7 +87,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
           <Loader />
         </Center>
       ) : (
-        <Stack gap="md">
+        <Stack gap="md" data-testid="user-roles-drawer">
           {mutationError && (
             <Alert color="red" variant="light" title={m.scopes_grant_failed()}>
               {asI18n(mutationError.message)}
@@ -107,11 +107,15 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                   key={role}
                   variant="light"
                   size="lg"
+                  data-testid="held-role"
+                  data-role-name={role}
                   rightSection={
                     <CloseButton
                       size="xs"
                       aria-label={m.scopes_revoke_role({ role })}
                       disabled={!userId}
+                      data-testid="revoke-role"
+                      data-role-name={role}
                       onClick={() => {
                         if (userId) {
                           removeRole.mutate({ userId, role })
@@ -134,6 +138,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                 leftSection={<Plus size={14} />}
                 disabled={available.length === 0}
                 w="fit-content"
+                data-testid="add-role"
               >
                 {m.scopes_add_role()}
               </Button>
@@ -142,9 +147,9 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
               {available.map((role) => (
                 <Menu.Item
                   key={role}
-                  onClick={() =>
-                    userId && addRole.mutate({ userId, role })
-                  }
+                  onClick={() => userId && addRole.mutate({ userId, role })}
+                  data-testid="add-role-option"
+                  data-role-name={role}
                 >
                   {asI18n(role)}
                 </Menu.Item>
@@ -180,6 +185,8 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
                     color="gray"
                     size="sm"
                     styles={{ label: { fontFamily: 'monospace' } }}
+                    data-testid="resolved-scope"
+                    data-scope-id={scope}
                   >
                     {asI18n(scope)}
                   </Badge>

@@ -73,8 +73,8 @@ export const addonRequirementsScenario = pikkuScenario<void, { setUp: true }>({
     )
     await scenario.then(
       'is offered the connect action',
-      'expectsEnabled',
-      { testId: 'requirement-connect-fake-crm' },
+      'expectsControl',
+      { testId: 'requirement-connect-fake-crm', enabled: true },
       { actor: actors.admin }
     )
     await scenario.then(

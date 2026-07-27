@@ -123,6 +123,7 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
                     onClick={() =>
                       setRolesFor({ id: u.id, label: u.email ?? u.id })
                     }
+                    data-testid="user-roles"
                   >
                     {m.users_roles_action()}
                   </Button>

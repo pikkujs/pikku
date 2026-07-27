@@ -228,6 +228,7 @@ export const ShellHeader = <T extends string = string>({
         readOnly={measurement}
         tabIndex={measurement ? -1 : undefined}
         aria-hidden={measurement || undefined}
+        data-testid={measurement ? undefined : 'page-search'}
         w={searchWidth}
         size="sm"
         styles={{

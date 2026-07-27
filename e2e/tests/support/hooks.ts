@@ -7,7 +7,6 @@ import {
   type ITestCaseHookParameter,
 } from '@cucumber/cucumber'
 import type { AgentWorld } from './world.js'
-import { STAFF_USER } from '../../src/auth-fixtures.js'
 import { randomUUID } from 'crypto'
 import { config } from './types.js'
 import { startBackend } from '../../bin/backend-harness.js'
@@ -99,13 +98,4 @@ Before('@agent-protocol', async function (this: AgentWorld) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   })
-})
-
-Before('@console-staff', async function (this: AgentWorld) {
-  await this.openBrowser()
-  await this.login(STAFF_USER)
-})
-
-After('@console-staff', async function (this: AgentWorld) {
-  await this.closeBrowser()
 })

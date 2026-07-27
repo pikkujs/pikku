@@ -39,13 +39,21 @@ export const RolesTab: React.FC<RolesTabProps> = ({
   if (loadError) {
     if (isForbiddenScopeError(loadError)) {
       return (
-        <Alert color="yellow" title={m.scopes_roles_forbidden_title()}>
+        <Alert
+          color="yellow"
+          title={m.scopes_roles_forbidden_title()}
+          data-testid="roles-forbidden"
+        >
           {m.scopes_roles_forbidden_body()}
         </Alert>
       )
     }
     return (
-      <Alert color="red" title={m.scopes_roles_load_error()}>
+      <Alert
+        color="red"
+        title={m.scopes_roles_load_error()}
+        data-testid="roles-load-error"
+      >
         {loadError instanceof Error ? asI18n(loadError.message) : null}
       </Alert>
     )
@@ -59,6 +67,10 @@ export const RolesTab: React.FC<RolesTabProps> = ({
         docsHref={DOCS_HREF}
         data={roles}
         getKey={(role) => role.name}
+        getRowProps={(role) => ({
+          'data-testid': 'role-row',
+          'data-role-name': role.name,
+        })}
         onRowClick={(role) => onOpenRole(role)}
         loading={rolesQuery.isLoading}
         externalSearch={search}
