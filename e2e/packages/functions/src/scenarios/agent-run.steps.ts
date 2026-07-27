@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto'
 import {
   apiUrlOf,
   postAgent,
+  postRpc,
   readModelCalls,
   type Identity,
   type MockLlmCall,
@@ -108,6 +109,45 @@ export const runsAgent = pikkuScenarioStep<
       error: outcome.body?.message ?? outcome.body?.errorId,
       modelCalls,
       ownCalls: modelCalls.filter((call) => call.userMessage === message),
+    }
+  },
+})
+
+export interface RpcCallResult {
+  status: number
+  ok: boolean
+  body: unknown
+  /** The whole response as text, so leak assertions can search it. */
+  serialized: string
+}
+
+/**
+ * Calls an exposed RPC as a given principal.
+ *
+ * The step target is a static literal; the RPC it dispatches is ordinary step
+ * data, which is what lets the four thread-management RPCs share one step. It
+ * never throws on a non-2xx — a refusal is the assertion in most of these
+ * scenarios, so status is data.
+ */
+export const callsRpcAs = pikkuScenarioStep<
+  { rpcName: string; data: Record<string, unknown>; identity?: Identity },
+  RpcCallResult
+>({
+  name: 'callsRpcAs',
+  description: 'calls an RPC as a principal',
+  template: 'calls {rpcName}',
+  func: async (_services, { rpcName, data, identity }, { scenarioStep }) => {
+    const outcome = await postRpc(
+      apiUrlOf(scenarioStep.env),
+      rpcName,
+      identity ?? {},
+      data
+    )
+    return {
+      status: outcome.status,
+      ok: outcome.ok,
+      body: outcome.body ?? null,
+      serialized: JSON.stringify(outcome.body ?? null),
     }
   },
 })
