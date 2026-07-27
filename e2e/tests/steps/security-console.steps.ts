@@ -1,4 +1,5 @@
-import { Before, When } from '@cucumber/cucumber'
+import { Before, When, Then } from '@cucumber/cucumber'
+import { expect } from '@playwright/test'
 import type { AgentWorld } from '../support/world.js'
 import { config } from '../support/types.js'
 import { rmSync } from 'node:fs'
@@ -21,5 +22,17 @@ When(
     await this.page
       .getByRole('button', { name: 'Run audit' })
       .waitFor({ state: 'visible', timeout: 15_000 })
+  }
+)
+
+// Moved here from the retired tests-console glue: security-console is now the
+// only feature that waits on a long-running console action to settle.
+Then(
+  'the {string} button becomes enabled',
+  { timeout: 90_000 },
+  async function (this: AgentWorld, buttonName: string) {
+    const button = this.page.getByRole('button', { name: buttonName })
+    await expect(button).toBeVisible({ timeout: 60_000 })
+    await expect(button).toBeEnabled({ timeout: 60_000 })
   }
 )
