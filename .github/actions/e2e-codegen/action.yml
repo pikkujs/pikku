@@ -44,3 +44,17 @@ runs:
         cd e2e/packages/fake-crm && npx pikku all
         cd ../../..
         cd e2e && npx pikku all
+    - name: Compile the regenerated packages
+      # Every package above is consumed through its `exports` as dist/, not as
+      # source, so the server loads whatever the build job compiled — the
+      # regeneration above never reaches it. Without this step a schema that
+      # codegen emits here is still missing from the running registry.
+      shell: bash
+      run: |
+        yarn workspace @pikku/addon-console build
+        yarn workspace @pikku/addon-graph build
+        yarn workspace @pikku/addon-todos build
+        yarn workspace @pikku/addon-emails build
+        yarn workspace @pikku/addon-hmac-signer build
+        yarn workspace @pikku/addon-oauth-api build
+        yarn workspace @pikku/addon-fake-crm build
