@@ -22,7 +22,6 @@
     "test:router": "cucumber-js --config tests/cucumber.mjs --tags @router",
     "test:workflow": "cucumber-js --config tests/cucumber.mjs --tags @workflow",
     "test:addons": "yarn scenarios local --spawn --features addonsFeature",
-    "test:workflow-ui": "cucumber-js --config tests/cucumber.mjs --tags @workflow-ui",
     "test:credential": "cucumber-js --config tests/cucumber.mjs --tags @credential",
     "test:credential-oauth": "cucumber-js --config tests/cucumber.mjs --tags @credential-oauth",
     "test:credential-agent": "cucumber-js --config tests/cucumber.mjs --tags @credential-agent",

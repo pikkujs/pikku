@@ -109,6 +109,7 @@ export const WorkflowTimelineDrawer: React.FC = () => {
                 color="blue"
                 onClick={goLive}
                 aria-label={asI18n('Follow live')}
+                data-testid="timeline-follow-live"
               >
                 <Radio size={15} />
               </ActionIcon>
@@ -136,6 +137,7 @@ export const WorkflowTimelineDrawer: React.FC = () => {
                 return (
                   <UnstyledButton
                     key={name}
+                    data-testid="timeline-step"
                     data-step={name}
                     onClick={() => jumpTo(seq)}
                     style={{

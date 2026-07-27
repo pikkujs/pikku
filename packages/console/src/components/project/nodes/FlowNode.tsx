@@ -124,7 +124,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
   const highlightIconColor = getHighlightIconColor(highlightType, theme)
   const runContext = useWorkflowRunContextSafe()
 
-  const runBgColor = React.useMemo(() => {
+  const runStatus = React.useMemo(() => {
     if (!runContext?.selectedRunId || !nodeId) return null
     const stepState = runContext.stepStates.get(nodeId)
     let status = stepState?.status
@@ -136,8 +136,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
     ) {
       status = 'failed'
     }
-    if (!status) return null
-    return runStatusColors[status] ?? null
+    return status ?? null
   }, [
     runContext?.selectedRunId,
     runContext?.stepStates,
@@ -146,12 +145,19 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
     hasInput,
   ])
 
+  const runBgColor = runStatus ? (runStatusColors[runStatus] ?? null) : null
+
   const iconColor =
     highlightIconColor ||
     (runBgColor ? 'white' : theme.colors.gray[5] || colorKey)
 
   return (
-    <Box style={{ width: size, overflow: 'visible' }}>
+    <Box
+      style={{ width: size, overflow: 'visible' }}
+      data-testid="workflow-node"
+      data-node-id={nodeId}
+      data-node-status={runStatus ?? 'none'}
+    >
       <Paper
         shadow="md"
         radius="md"
