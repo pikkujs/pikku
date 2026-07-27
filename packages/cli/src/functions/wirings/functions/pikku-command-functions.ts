@@ -8,6 +8,11 @@ import {
   hasVerboseFields,
   reattachFunctionServices,
 } from '../../../utils/strip-verbose-meta.js'
+import {
+  partitionScenarioFunctions,
+  partitionScenarioFunctionsMeta,
+} from '../scenarios/scenario-partition.js'
+import { serializeScenarioFunctionMeta } from '../scenarios/serialize-scenario-meta.js'
 
 export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -16,13 +21,19 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       functionsMetaFile,
       functionsMetaJsonFile,
       functionsFile,
+      scenarioStepsFile,
+      scenarioStepsMetaFile,
+      scenarioStepsMetaJsonFile,
       packageMappings,
       schema,
     } = config
 
-    let minimalMeta = stripVerboseFields(functions.meta)
+    const { app: appFunctionsMeta, scenario: scenarioFunctionsMeta } =
+      partitionScenarioFunctionsMeta(functions.meta)
+
+    let minimalMeta = stripVerboseFields(appFunctionsMeta)
     if (config.addonName) {
-      minimalMeta = reattachFunctionServices(minimalMeta, functions.meta)
+      minimalMeta = reattachFunctionServices(minimalMeta, appFunctionsMeta)
     }
     await writeFileInDir(
       logger,
@@ -31,7 +42,7 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
     )
 
     // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(functions.meta)) {
+    if (hasVerboseFields(appFunctionsMeta)) {
       const verbosePath = functionsMetaJsonFile.replace(
         /\.gen\.json$/,
         '-verbose.gen.json'
@@ -39,7 +50,7 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       await writeFileInDir(
         logger,
         verbosePath,
-        JSON.stringify(functions.meta, null, 2)
+        JSON.stringify(appFunctionsMeta, null, 2)
       )
     }
 
@@ -70,22 +81,64 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const shouldGenerateFunctionsFile = isAddon ? hasFunctions : hasRPCs
 
-    if (shouldGenerateFunctionsFile) {
-      // For addon packages, use all function files; for main packages, use internal RPC files
-      const filesToRegister = isAddon ? functions.files : rpc.internalFiles
+    // For addon packages, use all function files; for main packages, use internal RPC files
+    const filesToRegister = isAddon ? functions.files : rpc.internalFiles
+    const { app: appFiles, scenario: scenarioFiles } =
+      partitionScenarioFunctions(filesToRegister, functions.meta)
 
+    if (shouldGenerateFunctionsFile) {
       await writeFileInDir(
         logger,
         functionsFile,
         serializeFunctionImports(
           functionsFile,
-          filesToRegister,
-          functions.meta,
+          appFiles,
+          appFunctionsMeta,
           packageMappings,
           config.addonName
         )
       )
     }
+
+    // Always written, even when empty: a project that deletes its last scenario
+    // must stop registering the one it had, and the scenario bootstrap imports
+    // these unconditionally.
+    await writeFileInDir(
+      logger,
+      scenarioStepsMetaJsonFile,
+      JSON.stringify(stripVerboseFields(scenarioFunctionsMeta), null, 2)
+    )
+    await writeFileInDir(
+      logger,
+      scenarioStepsMetaFile,
+      serializeScenarioFunctionMeta(
+        getFileImportRelativePath(
+          scenarioStepsMetaFile,
+          scenarioStepsMetaJsonFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          scenarioStepsMetaFile,
+          functionsMetaFile,
+          packageMappings
+        ),
+        supportsImportAttributes,
+        config.addonName
+      )
+    )
+    await writeFileInDir(
+      logger,
+      scenarioStepsFile,
+      scenarioFiles.size === 0
+        ? 'export {}'
+        : serializeFunctionImports(
+            scenarioStepsFile,
+            scenarioFiles,
+            scenarioFunctionsMeta,
+            packageMappings,
+            config.addonName
+          )
+    )
 
     return shouldGenerateFunctionsFile
   },

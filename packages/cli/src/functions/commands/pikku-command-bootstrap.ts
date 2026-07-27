@@ -87,5 +87,26 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       .join('\n')
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
+
+    // The scenario bootstrap is the only entry point that registers scenarios,
+    // features and their steps. It pulls in the app bootstrap first so a runner
+    // needs to load one file, and so the meta files it merges onto are already
+    // in place however this module is reached.
+    const scenarioBootstrapImports = [
+      config.bootstrapFile,
+      config.scenarioStepsMetaFile,
+      config.scenarioStepsFile,
+      config.scenarioWiringsMetaFile,
+      config.scenarioWiringsFile,
+    ].map(
+      (to) =>
+        `import '${getFileImportRelativePath(config.scenarioBootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
+    )
+
+    await writeFileInDir(
+      logger,
+      config.scenarioBootstrapFile,
+      scenarioBootstrapImports.join('\n')
+    )
   },
 })

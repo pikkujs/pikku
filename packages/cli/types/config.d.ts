@@ -116,6 +116,16 @@ export interface PikkuCLICoreOutputFiles {
   workflowMetaDir: string
   scenarioActorsFile: string
 
+  // Scenarios — kept out of the app bootstrap so a deployed server never
+  // imports a step body (and whatever a step imports).
+  scenarioStepsFile: string
+  scenarioStepsMetaFile: string
+  scenarioStepsMetaJsonFile: string
+  scenarioWiringsFile: string
+  scenarioWiringsMetaFile: string
+  scenarioMetaDir: string
+  scenarioBootstrapFile: string
+
   // MCP
   mcpWiringsFile: string
   mcpWiringsMetaFile: string
@@ -342,6 +352,32 @@ export type PikkuCLIInput = {
   }
 
   scenarios?: {
+    /**
+     * The KINDS of person this app is for. A persona is what a scenario talks
+     * about ("the owner", "the viewer"); an actor is one body that signs in as
+     * one. Declaring a persona is enough for the common case — an actor is
+     * materialised for it automatically.
+     */
+    personas?: Record<
+      string,
+      {
+        /** Who this kind of person is, and what the app is for them. */
+        description: string
+        /**
+         * Whose experience the product actually is. Without one, every persona
+         * weighs the same and the app grows equal-weight surfaces for its
+         * secondary ones.
+         */
+        primary?: boolean
+        /**
+         * `system` is the app acting on its own — a schedule, a cleanup, a send.
+         * It gets no actor: there is nobody to sign in. Defaults to `person`.
+         */
+        kind?: 'person' | 'system'
+        /** How much UI they can take: density, shortcuts, how much is disclosed up front. */
+        proficiency?: 'casual' | 'power'
+      }
+    >
     /** Global scenario actor registry — any scenario can impersonate any actor */
     actors?: Record<
       string,
@@ -350,6 +386,13 @@ export type PikkuCLIInput = {
         name?: string
         jobTitle?: string
         personality?: string
+        /**
+         * The persona this body is one of. Defaults to the actor's own key when
+         * a persona of that name is declared. Write it explicitly only for a
+         * SECOND body of the same kind — the tenant-isolation and peer-sharing
+         * case, where two actors must be different users of one persona.
+         */
+        persona?: string
       }
     >
     /** Environments `pikku scenario run <environment>` can target; the actor secret comes from SCENARIO_ACTOR_SECRET, never config */
