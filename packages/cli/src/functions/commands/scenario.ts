@@ -126,6 +126,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     flows?: string
     features?: string
     tags?: string
+    excludeTags?: string
     coverage?: boolean
     browser?: boolean
     spawn?: boolean
@@ -141,6 +142,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       flows,
       features,
       tags,
+      excludeTags,
       coverage,
       browser = true,
       spawn = false,
@@ -212,6 +214,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       flows: split(flows),
       featureIds: split(features),
       tags: split(tags),
+      excludeTags: split(excludeTags),
     })
 
     if (unresolved.length > 0) {

@@ -290,3 +290,52 @@ describe('buildScenarioPlan skip', () => {
     assert.equal(lazy?.skip, 'needs a fresh server')
   })
 })
+
+/**
+ * `--tags` is match-any with no negation, so a default run cannot say "the
+ * server suite, but not the live-model ones" with it. `--exclude-tags` is that
+ * missing half: it subtracts from whatever the other selectors kept.
+ */
+describe('buildScenarioPlan excludeTags', () => {
+  test('a scenario carrying an excluded tag is dropped', () => {
+    const { groups } = plan({ excludeTags: ['smoke'] })
+    const names = groups.flatMap((group) =>
+      group.entries.map((entry) => entry.scenarioName)
+    )
+    assert.deepEqual(names, [
+      'lazyLoadScenario',
+      'roundTripScenario',
+      'roundTripScenario',
+    ])
+  })
+
+  test("an excluded tag on the feature drops the feature's scenarios", () => {
+    const { groups } = plan({ excludeTags: ['nightly'] })
+    const names = groups.flatMap((group) =>
+      group.entries.map((entry) => entry.scenarioName)
+    )
+    assert.deepEqual(names, ['smokeScenario'])
+  })
+
+  test('exclusion subtracts from what --tags kept', () => {
+    const { groups } = plan({
+      tags: ['credential', 'smoke'],
+      excludeTags: ['credential'],
+    })
+    const names = groups.flatMap((group) =>
+      group.entries.map((entry) => entry.scenarioName)
+    )
+    assert.deepEqual(names, ['smokeScenario'])
+  })
+
+  test('naming an excluded scenario with --flows runs it anyway', () => {
+    const { groups } = plan({
+      flows: ['smokeScenario'],
+      excludeTags: ['smoke'],
+    })
+    const names = groups.flatMap((group) =>
+      group.entries.map((entry) => entry.scenarioName)
+    )
+    assert.deepEqual(names, ['smokeScenario'])
+  })
+})

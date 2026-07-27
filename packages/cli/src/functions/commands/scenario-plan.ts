@@ -35,6 +35,12 @@ export type ScenarioPlanInput = {
   flows?: string[]
   featureIds?: string[]
   tags?: string[]
+  /**
+   * Tags that disqualify a scenario. `tags` is match-any with no negation, so
+   * without this a default run cannot express "everything except the
+   * live-model ones" — the shape every suite that holds a cluster back needs.
+   */
+  excludeTags?: string[]
 }
 
 export type ScenarioPlan = {
@@ -58,6 +64,7 @@ export const buildScenarioPlan = ({
   flows,
   featureIds,
   tags,
+  excludeTags,
 }: ScenarioPlanInput): ScenarioPlan => {
   const { entries, unresolved } = resolveFeatureScenarios(
     features,
@@ -107,6 +114,7 @@ export const buildScenarioPlan = ({
   const wantedFlows = flows ? new Set(flows) : undefined
   const wantedFeatures = featureIds ? new Set(featureIds) : undefined
   const wantedTags = tags ? new Set(tags) : undefined
+  const unwantedTags = excludeTags ? new Set(excludeTags) : undefined
 
   // Naming a scenario with `--flows` is the explicit ask that overrides its
   // quarantine; narrowing to its feature is not — a feature is a group, and
@@ -122,6 +130,16 @@ export const buildScenarioPlan = ({
       return false
     }
     if (wantedTags && !entry.tags.some((tag) => wantedTags.has(tag))) {
+      return false
+    }
+    // Naming a scenario with `--flows` is the explicit ask, the same override
+    // that lifts a quarantine: it outranks an exclusion the caller did not aim
+    // at this scenario in particular.
+    if (
+      unwantedTags &&
+      !wantedFlows?.has(entry.scenarioName) &&
+      entry.tags.some((tag) => unwantedTags.has(tag))
+    ) {
       return false
     }
     return true

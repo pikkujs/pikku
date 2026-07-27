@@ -78,7 +78,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
-        run: yarn test:e2e --force-exit
+        run: yarn test:e2e
 
   e2e-agent:
     name: E2E Agent (deterministic)

@@ -482,6 +482,10 @@ wireCLI({
               description: 'Comma-separated tags — run flows matching any',
               short: 't',
             },
+            excludeTags: {
+              description:
+                'Comma-separated tags to hold back — flows matching any are not run, unless named directly with --flows',
+            },
             coverage: {
               description:
                 'Reset/snapshot server coverage per scenario (target must run with --coverage); writes coverage/scenario-coverage.json',

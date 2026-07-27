@@ -81,7 +81,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
-        run: yarn test:e2e --force-exit
+        run: yarn test:e2e
 
   e2e-agent:
     name: E2E Agent (deterministic)
@@ -98,6 +98,26 @@ jobs:
       - uses: ./.github/actions/e2e-codegen
       - name: Run deterministic agent e2e tests
         run: yarn test:e2e:agent
+
+  # Newly guarded: the console browser scenarios ran in no CI job while they were
+  # cucumber, so their first exposure here is expected to surface real flake.
+  # `continue-on-error` keeps that from blocking; remove it once it settles.
+  e2e-console:
+    name: E2E Console
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 20
+    needs: build
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install native build tools
+        run: apt-get update && apt-get install -y build-essential python3 unzip
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
+      - name: Run console browser scenarios
+        run: yarn test:e2e:console
 
   verifiers:
     name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
