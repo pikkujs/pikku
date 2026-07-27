@@ -206,6 +206,17 @@ export type PikkuScenarioHook<
 >
 
 /**
+ * Declares a scenario hook. Returns the function verbatim — a hook is never
+ * registered, so this exists purely to give an inline hook a call site to be
+ * contextually typed from, the way every other pikku primitive is.
+ */
+export function pikkuScenarioHook<In = unknown>(
+  hook: PikkuFunctionScenario<In, void>
+): PikkuFunctionScenario<In, void> {
+  return hook
+}
+
+/**
  * A scenario: a complex workflow that drives the app the way users do.
  * Steps run as actors over the REAL transport — \`scenario.do(step, rpc,
  * data, { actor: actors.yasser })\` — so flows double as e2e tests and
