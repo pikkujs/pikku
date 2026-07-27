@@ -235,11 +235,16 @@ export const opensTheCart = pikkuScenarioStep<
 
 ## Configuration
 
-Actors and environments live in `pikku.config.json`:
+Personas, actors and environments live in `pikku.config.json`:
 
 ```json
 {
   "scenarios": {
+    "personas": {
+      "shopper": { "description": "Buys things here", "primary": true },
+      "support": { "description": "Answers for the shop", "proficiency": "power" },
+      "reminders": { "description": "The shop chasing abandoned carts", "kind": "system" }
+    },
     "actors": {
       "shopper": {
         "email": "shopper@actors.local",
@@ -247,7 +252,7 @@ Actors and environments live in `pikku.config.json`:
         "jobTitle": "First-time buyer",
         "personality": "Impatient shopper who abandons slow checkouts"
       },
-      "support": { "email": "support@actors.local", "name": "Support" }
+      "shopperB": { "persona": "shopper", "email": "shopper-b@actors.local" }
     },
     "environments": {
       "local": {
@@ -258,6 +263,19 @@ Actors and environments live in `pikku.config.json`:
   }
 }
 ```
+
+### Personas and actors
+
+A **persona** is a kind of person; an **actor** is one body that signs in as one. Above, `support` is declared only as a persona — its actor is materialised (`support@actors.local`), so `actors.support` works without an `actors` entry. Write an actor by hand only when you need something the materialised one wouldn't have:
+
+- a **real email or personality** for it, like `shopper`;
+- a **second body of the same persona**, like `shopperB` — which is what tenant isolation, peer sharing, and "another member's row" scenarios are made of. Two actors of one persona must be two different users, so **two actors sharing an email is an error**.
+
+A persona holds only what is true of that kind of person for the app's whole lifetime — `description`, `primary` (whose experience the product is), `kind`, `proficiency`. What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
+
+`kind: "system"` is the app acting on its own — a schedule, a cleanup, a send. It gets **no actor**: there is nobody to sign in. Give it one by hand only if it genuinely has a service account.
+
+An actor with no `persona` is its own persona, so a project that never declares any keeps working unchanged.
 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.

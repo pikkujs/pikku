@@ -18,5 +18,5 @@ export type {
 export {
   runConversation,
   type RunConversationParams,
-  type PersonaLLM,
+  type ActorLLM,
 } from './run-conversation.js'

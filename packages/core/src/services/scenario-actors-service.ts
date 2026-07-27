@@ -71,6 +71,13 @@ export interface ScenarioActorConfig {
   name?: string
   jobTitle?: string
   personality?: string
+  /**
+   * The persona this body is one of — the KIND of person, declared in
+   * `scenarios.personas`. Most personas have exactly one actor and it is
+   * materialised for them; a second body of the same persona is what tenant
+   * isolation and peer-sharing scenarios are made of.
+   */
+  persona?: string
 }
 
 /** The injected `actors` service: actor name → actor. */

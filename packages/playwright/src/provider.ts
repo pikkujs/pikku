@@ -68,7 +68,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     const actorConfig = this.options.actors[actorName]
     if (!actorConfig) {
       throw new Error(
-        `[scenario] browser actor '${actorName}' is not configured — add it to scenarios.actors in pikku.config.json`
+        `[scenario] browser actor '${actorName}' is not configured — declare it as a persona in scenarios.personas, or as a body in scenarios.actors, in pikku.config.json`
       )
     }
     // Cache the promise, not the resolved session, so two steps racing for the
