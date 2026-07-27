@@ -37,6 +37,10 @@
     "test:user-admin": "cucumber-js --config tests/cucumber.mjs --tags @user-admin",
     "test:user-admin-console": "cucumber-js --config tests/cucumber.mjs --tags @user-admin-console",
     "test:scopes-console": "cucumber-js --config tests/cucumber.mjs --tags @scopes-console",
+    "scenarios": "tsx bin/scenario-test.ts",
+    "test:scenarios": "tsx bin/scenario-test.ts local --no-browser",
+    "test:scenarios-ui": "tsx bin/scenario-test.ts local --tags console",
+    "test:unit": "node --import tsx --test bin/*.test.ts",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
