@@ -1,12 +1,13 @@
 import type { SecretService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import {
   envelopeEncrypt,
   envelopeDecrypt,
   envelopeRewrap,
 } from '@pikku/core/crypto-utils'
+import { ensurePikkuSchema } from './schema/index.js'
+import { secretSchema } from './schema/secret.schema.js'
 
 export interface KyselySecretServiceConfig {
   key: string
@@ -37,35 +38,7 @@ export class KyselySecretService implements SecretService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-
-    await this.db.schema
-      .createTable('secrets')
-      .ifNotExists()
-      .addColumn('key', 'varchar(255)', (col) => col.primaryKey())
-      .addColumn('ciphertext', 'text', (col) => col.notNull())
-      .addColumn('wrapped_dek', 'text', (col) => col.notNull())
-      .addColumn('key_version', 'integer', (col) => col.notNull())
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('updated_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
-    if (this.audit) {
-      await this.db.schema
-        .createTable('secrets_audit')
-        .ifNotExists()
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('secret_key', 'varchar(255)', (col) => col.notNull())
-        .addColumn('action', 'varchar(20)', (col) => col.notNull())
-        .addColumn('performed_at', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .execute()
-    }
-
+    await ensurePikkuSchema(this.db, secretSchema)
     this.initialized = true
   }
 
@@ -149,9 +122,9 @@ export class KyselySecretService implements SecretService {
     await this.logAudit(key, 'delete')
   }
 
-  async getSecrets<
-    T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<T> {
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<T> {
     const rows = await this.db
       .selectFrom('secrets')
       .select(['key', 'ciphertext', 'wrappedDek', 'keyVersion'])

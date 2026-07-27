@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "module": "node18",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "paths": {
+      "#pikku": ["./.pikku/pikku-types.gen.ts"]
+    }
+  },
+  "include": ["src/", "types/", ".pikku/*"],
+  "files": []
+}

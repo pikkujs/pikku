@@ -1,6 +1,5 @@
 import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
-
-const TRACKING_TABLE = 'sql_migrations'
+import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../db-migrator.js'
 
 export interface PostgresMigrationClient {
   query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>
@@ -25,6 +24,13 @@ export class PostgresMigrationExecutor implements MigrationExecutor {
       `SELECT name, hash, applied_at FROM ${TRACKING_TABLE} ORDER BY name`
     )
     return rows
+  }
+
+  async recordMigration(name: string, hash: string): Promise<void> {
+    await this.client.query(
+      `INSERT INTO ${TRACKING_TABLE} (name, hash) VALUES ($1, $2)`,
+      [name, hash]
+    )
   }
 
   async runMigration(sql: string, name: string, hash: string): Promise<void> {

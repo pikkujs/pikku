@@ -1,12 +1,13 @@
 import type { CredentialService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import {
   envelopeEncrypt,
   envelopeDecrypt,
   envelopeRewrap,
 } from '@pikku/core/crypto-utils'
+import { ensurePikkuSchema } from './schema/index.js'
+import { credentialSchema } from './schema/credential.schema.js'
 
 export interface KyselyCredentialServiceConfig {
   key: string
@@ -37,41 +38,7 @@ export class KyselyCredentialService implements CredentialService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-
-    await this.db.schema
-      .createTable('credentials')
-      .ifNotExists()
-      .addColumn('name', 'varchar(255)', (col) => col.notNull())
-      .addColumn('user_id', 'varchar(255)')
-      .addColumn('ciphertext', 'text', (col) => col.notNull())
-      .addColumn('wrapped_dek', 'text', (col) => col.notNull())
-      .addColumn('key_version', 'integer', (col) => col.notNull())
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('updated_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
-    await sql`CREATE UNIQUE INDEX IF NOT EXISTS credentials_name_user_id_unique ON credentials (name, COALESCE(user_id, ''))`.execute(
-      this.db
-    )
-
-    if (this.audit) {
-      await this.db.schema
-        .createTable('credentials_audit')
-        .ifNotExists()
-        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('credential_name', 'varchar(255)', (col) => col.notNull())
-        .addColumn('user_id', 'varchar(255)')
-        .addColumn('action', 'varchar(20)', (col) => col.notNull())
-        .addColumn('performed_at', 'timestamp', (col) =>
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .execute()
-    }
-
+    await ensurePikkuSchema(this.db, credentialSchema)
     this.initialized = true
   }
 

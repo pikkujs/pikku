@@ -1,0 +1,35 @@
+{
+  "name": "@pikku/verifiers-db-schema",
+  "type": "module",
+  "private": true,
+  "description": "Drives `pikku db generate/migrate/check/baseline` end to end against a real Better Auth config with schema-adding plugins and a real addon that ships a table",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/better-auth": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "better-auth": "^1.6.19",
+    "better-sqlite3": "^12.10.0",
+    "kysely": "^0.29.0",
+    "kysely-postgres-js": "^3.0.0",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/verifier-db-remote-addon": "link:./remote-addon",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "zod": "^4"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "test": "node run.mjs",
+    "test:db": "node run.mjs --postgres"
+  }
+}

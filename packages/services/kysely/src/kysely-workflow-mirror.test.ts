@@ -258,12 +258,12 @@ describe('KyselyWorkflowMirror — init', () => {
     // No-op on second call; just shouldn't throw.
   })
 
-  test('cohabits with KyselyWorkflowService schema (ifNotExists)', async () => {
-    // Same DB, schema already created by mirror.init() in beforeEach.
-    // If KyselyWorkflowService.init() ran on the same DB, both should
-    // succeed because both use ifNotExists. We can't import it without
-    // the singleton-services bootstrap, so simulate by re-calling our
-    // own init — proves the SQL is idempotent.
-    await assert.doesNotReject(mirror.init())
+  test('cohabits with KyselyWorkflowService, which declares the same tables', async () => {
+    // Both services own the workflow schema, so both call init() against the
+    // same database. The second one to run must find the tables and stop, not
+    // try to create them again. Importing the other service needs the
+    // singleton-services bootstrap, so a fresh instance stands in for it.
+    const second = new KyselyWorkflowMirror(db)
+    await assert.doesNotReject(second.init())
   })
 })

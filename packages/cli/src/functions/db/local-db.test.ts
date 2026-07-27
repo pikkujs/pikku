@@ -6,12 +6,21 @@ import {
   writeFileSync,
   rmSync,
   readFileSync,
+  existsSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { sql } from 'kysely'
 
 import {
   resolveDb,
+  type ResolvedSqliteDb,
+  type SchemaArtifact,
+  addonSchemaSources,
+  computeSchemaDrift,
+  baseline,
+  exportSchema,
+  generateMigrations,
   parseDatabaseUrl,
   migrateAndCodegen,
   seed as runSeed,
@@ -22,6 +31,23 @@ import { MigrationDriftError } from './db-migrator.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
 
 let root: string
+
+/**
+ * `computeSchemaDrift` with the arguments it needs to find an auth source.
+ *
+ * The fixture projects configure none, which is itself worth exercising: the
+ * runtime declaration must degrade to what it can materialize rather than
+ * refusing to answer.
+ */
+const driftOf = (resolved: Parameters<typeof computeSchemaDrift>[0]) =>
+  computeSchemaDrift(resolved, root, ['src'], {
+    error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+  })
+
+const baselineOf = (resolved: Parameters<typeof baseline>[0]) =>
+  baseline(resolved, root, ['src'], {
+    error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+  })
 
 function usePostgresProject(options?: {
   migrationSql?: string
@@ -402,6 +428,189 @@ INSERT INTO todos (title, done) VALUES ('seed from migration', FALSE);
   }
 })
 
+test('scratch codegen types the postgres migrations without touching the configured database', async () => {
+  usePostgresProject()
+  const resolved = resolveDb({}, root, root)!
+
+  const scratch = await migrateAndCodegen(resolved, { scratch: true })
+  assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
+  assert.match(readFileSync(resolved.zodFile, 'utf8'), /export const TodosZ/)
+
+  // The configured database must be untouched — so a real migrate afterwards
+  // still sees the migration as pending. If the scratch run had recorded state
+  // anywhere real, this would come back skipped and the deploy would never
+  // apply it.
+  const live = await migrateAndCodegen(resolved)
+  assert.deepEqual(live.migrate.applied, ['0001-init.sql'])
+})
+
+test('scratch codegen types the sqlite migrations without creating the db file', async () => {
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'sqlite')
+
+  const scratch = await migrateAndCodegen(resolved, { scratch: true })
+  assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
+  assert.match(readFileSync(resolved.zodFile, 'utf8'), /export const TodosZ/)
+  assert.equal(existsSync((resolved as ResolvedSqliteDb).dbFile), false)
+})
+
+test('db check reports a database that is behind its migrations', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // A migration written after the database was last migrated.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-tags.sql'),
+    `CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL);
+ALTER TABLE todos ADD COLUMN priority INTEGER;
+`
+  )
+
+  const drift = await driftOf(resolved)
+  assert.equal(drift.inSync, false)
+  assert.deepEqual(drift.missingTables, ['tags'])
+  assert.deepEqual(drift.missingColumns, [
+    { table: 'todos', columns: ['priority'] },
+  ])
+})
+
+test('db check reports tables the migrations never mention, without failing', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // Something created a table outside the migration history — the shape of the
+  // bug this exists to surface.
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open((resolved as ResolvedSqliteDb).dbFile)
+  try {
+    db.exec('CREATE TABLE bootstrapped_at_boot (id INTEGER PRIMARY KEY)')
+  } finally {
+    db.close()
+  }
+
+  const drift = await driftOf(resolved)
+  assert.deepEqual(drift.extraTables, ['bootstrapped_at_boot'])
+  assert.equal(drift.inSync, true, 'an unrecorded table is reported, not fatal')
+})
+
+test('db check tells a runtime table apart from an unexplained one', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open((resolved as ResolvedSqliteDb).dbFile)
+  try {
+    // One table pikku declares, one nothing has ever heard of.
+    db.exec('CREATE TABLE workflow_runs (workflow_run_id TEXT PRIMARY KEY)')
+    db.exec('CREATE TABLE nobody_knows (id INTEGER PRIMARY KEY)')
+  } finally {
+    db.close()
+  }
+
+  const drift = await driftOf(resolved)
+  assert.deepEqual(drift.runtimeTables, ['workflow_runs'])
+  assert.deepEqual(drift.extraTables, ['nobody_knows'])
+})
+
+test('db check does not demand runtime tables from a project that has none', async () => {
+  // The declaration recognises tables; it does not require them. A project that
+  // never constructs the workflow or AI services owes them nothing.
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const drift = await driftOf(resolved)
+  assert.deepEqual(drift.missingTables, [])
+  assert.deepEqual(drift.runtimeTables, [])
+  assert.equal(drift.inSync, true)
+})
+
+test('db check reports a public copy shadowing a schema-qualified table', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE SCHEMA app;
+CREATE TABLE app.orders (
+  id SERIAL PRIMARY KEY,
+  total INTEGER NOT NULL
+);
+`,
+  })
+  const resolved = resolveDb({}, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // A second copy in the default schema — what a runtime that forgot to qualify
+  // its DDL leaves behind, and what matching on the bare name would hide.
+  const kysely = await createKysely<{}>(resolved)
+  try {
+    await sql`CREATE TABLE public.orders (id SERIAL PRIMARY KEY)`.execute(
+      kysely
+    )
+  } finally {
+    await kysely.destroy()
+  }
+
+  const drift = await driftOf(resolved)
+  assert.deepEqual(drift.extraTables, ['orders'])
+  assert.deepEqual(drift.missingTables, [], 'app.orders is still accounted for')
+})
+
+test('db baseline records a migration whose tables the database already has', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // The shape baselining exists for: something created the table at boot, and
+  // the migration writing it down is authored afterwards. Applying it would
+  // fail on every database that already has it.
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open((resolved as ResolvedSqliteDb).dbFile)
+  try {
+    db.exec('CREATE TABLE bootstrapped (id INTEGER PRIMARY KEY)')
+  } finally {
+    db.close()
+  }
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-bootstrapped.sql'),
+    'CREATE TABLE bootstrapped (id INTEGER PRIMARY KEY);\n'
+  )
+
+  const result = await baselineOf(resolved)
+  assert.equal(result.status, 'recorded')
+  assert.deepEqual(result.status === 'recorded' ? result.recorded : [], [
+    '0002-bootstrapped.sql',
+  ])
+
+  // Recorded, not run — so a subsequent migrate has nothing to do and does not
+  // trip over the table already existing.
+  const after = await migrateAndCodegen(resolved)
+  assert.deepEqual(after.migrate.applied, [])
+  assert.deepEqual(after.migrate.skipped, [
+    '0001-init.sql',
+    '0002-bootstrapped.sql',
+  ])
+})
+
+test('db baseline refuses when the database is actually behind', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  // No table was created out of band this time, so the premise is false.
+  // Recording this would leave the database permanently missing `tags` with no
+  // pending migration left to reveal it.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-tags.sql'),
+    'CREATE TABLE tags (id INTEGER PRIMARY KEY, label TEXT NOT NULL);\n'
+  )
+
+  const result = await baselineOf(resolved)
+  assert.equal(result.status, 'behind')
+  assert.deepEqual(
+    result.status === 'behind' ? result.drift.missingTables : [],
+    ['tags']
+  )
+
+  // And it really did not record anything.
+  const after = await migrateAndCodegen(resolved)
+  assert.deepEqual(after.migrate.applied, ['0002-tags.sql'])
+})
+
 test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', async () => {
   usePostgresProject()
 
@@ -441,6 +650,243 @@ test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', a
   } finally {
     await freshKysely.destroy()
   }
+})
+
+describe('the addon schema channel', () => {
+  /** Install a package into the fixture that publishes the given schema. */
+  const publishAddon = (pkg: string, artifact: SchemaArtifact) => {
+    const dir = join(root, 'node_modules', pkg)
+    mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: pkg, version: '1.0.0' })
+    )
+    writeFileSync(
+      join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+      JSON.stringify(artifact)
+    )
+  }
+
+  const labels: SchemaArtifact = {
+    sqlite: {
+      sql: 'CREATE TABLE labels (id INTEGER PRIMARY KEY, name TEXT NOT NULL);',
+      tables: {
+        labels: [
+          {
+            name: 'id',
+            type: 'INTEGER',
+            notNull: true,
+            pk: true,
+            defaultValue: null,
+          },
+          {
+            name: 'name',
+            type: 'TEXT',
+            notNull: true,
+            pk: false,
+            defaultValue: null,
+          },
+        ],
+      },
+    },
+  }
+
+  const silent = { error: (msg: string) => assert.fail(`unexpected: ${msg}`) }
+
+  test('an addon publishes the migrations it ships, per dialect', async () => {
+    const artifact = await exportSchema(root)
+    assert.deepEqual(Object.keys(artifact), ['sqlite'])
+    assert.match(artifact.sqlite!.sql, /CREATE TABLE todos/)
+    assert.deepEqual(
+      artifact.sqlite!.tables['todos']?.map((c) => c.name),
+      ['id', 'title', 'done']
+    )
+  })
+
+  test('a wired addon becomes a schema source the consumer can migrate', async () => {
+    publishAddon('addon-labels', labels)
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [{ package: 'addon-labels' }],
+      silent
+    )
+    assert.equal(sources.length, 1)
+    assert.equal(sources[0]!.name, 'addon-labels')
+    assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
+  })
+
+  test('a remote addon contributes nothing — its tables live on the host', async () => {
+    publishAddon('addon-labels', labels)
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [{ package: 'addon-labels', remote: true }],
+      silent
+    )
+    assert.deepEqual(sources, [])
+  })
+
+  test('an addon that publishes no schema at all is not a finding', async () => {
+    const dir = join(root, 'node_modules', 'addon-quiet')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'addon-quiet', version: '1.0.0' })
+    )
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [{ package: 'addon-quiet' }],
+      silent
+    )
+    assert.deepEqual(sources, [])
+  })
+
+  test('an addon with no schema for this dialect is reported, not skipped quietly', async () => {
+    publishAddon('addon-labels', labels)
+    const errors: string[] = []
+
+    const sources = await addonSchemaSources(
+      root,
+      'postgres',
+      [{ package: 'addon-labels' }],
+      { error: (msg) => errors.push(msg) }
+    )
+    assert.deepEqual(sources, [])
+    assert.equal(errors.length, 1)
+    assert.match(errors[0]!, /addon-labels.*not for postgres/)
+  })
+})
+
+test('db generate writes an addon its own migration, in the consumer history', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+
+  const dir = join(root, 'node_modules', 'addon-labels')
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'addon-labels', version: '1.0.0' })
+  )
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify({
+      sqlite: {
+        sql: 'CREATE TABLE labels (id INTEGER PRIMARY KEY, name TEXT NOT NULL);',
+        tables: {
+          labels: [
+            {
+              name: 'id',
+              type: 'INTEGER',
+              notNull: true,
+              pk: true,
+              defaultValue: null,
+            },
+            {
+              name: 'name',
+              type: 'TEXT',
+              notNull: true,
+              pk: false,
+              defaultValue: null,
+            },
+          ],
+        },
+      },
+    } satisfies SchemaArtifact)
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-labels' }]
+  )
+
+  const addonMigration = written.find((w) => w.source === 'addon-labels')
+  assert.ok(addonMigration, 'the addon got a migration of its own')
+  const body = readFileSync(addonMigration.file, 'utf8')
+  assert.match(
+    body,
+    /Generated by `pikku db generate` from the 'addon-labels' addon/
+  )
+  assert.match(body, /CREATE TABLE labels/)
+
+  // And it is a real migration: applying it leaves the database matching.
+  await migrateAndCodegen(resolved)
+  const drift = await driftOf(resolved)
+  assert.equal(drift.inSync, true)
+  assert.deepEqual(drift.extraTables, [])
+})
+
+test('db generate adds only the columns a partially covered source is missing', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+
+  // The source claims a table the migrations already create, plus a column on
+  // it they do not. Re-emitting its whole schema would fail on the table that
+  // exists, so the only correct output is the delta.
+  const dir = join(root, 'node_modules', 'addon-priority')
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'addon-priority', version: '1.0.0' })
+  )
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify({
+      sqlite: {
+        sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, priority INTEGER, owner TEXT NOT NULL);',
+        tables: {
+          todos: [
+            {
+              name: 'id',
+              type: 'INTEGER',
+              notNull: true,
+              pk: true,
+              defaultValue: null,
+            },
+            {
+              name: 'priority',
+              type: 'INTEGER',
+              notNull: false,
+              pk: false,
+              defaultValue: '0',
+            },
+            {
+              name: 'owner',
+              type: 'TEXT',
+              notNull: true,
+              pk: false,
+              defaultValue: null,
+            },
+          ],
+        },
+      },
+    } satisfies SchemaArtifact)
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-priority' }]
+  )
+
+  const migration = written.find((w) => w.source === 'addon-priority')
+  assert.ok(migration, 'the missing columns were written')
+  const body = readFileSync(migration.file, 'utf8')
+  assert.doesNotMatch(body, /CREATE TABLE todos/, 'the table already exists')
+  assert.match(body, /ALTER TABLE todos ADD COLUMN priority INTEGER DEFAULT 0;/)
+  assert.match(body, /ALTER TABLE todos ADD COLUMN owner TEXT NOT NULL;/)
+
+  // NOT NULL with no default cannot be applied to a table that has rows, and
+  // what those rows should get is not the generator's decision to make.
+  assert.deepEqual(migration.needsBackfill, ['todos.owner'])
+  assert.match(body, /-- REVIEW: owner is NOT NULL with no default/)
 })
 
 describe('parseDatabaseUrl', () => {

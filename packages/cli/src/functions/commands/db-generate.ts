@@ -1,10 +1,10 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { resolveDb, generateAuthMigration } from '../db/local-db.js'
+import { resolveDb, generateMigrations } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbGenerate = pikkuSessionlessFunc<{}, void>({
   remote: true,
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
@@ -21,46 +21,42 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       throw new Error('no database configured')
     }
 
-    const result = await generateAuthMigration(
+    const state = await getInspectorState()
+    const addons = [...state.rpc.wireAddonDeclarations.values()].map(
+      ({ package: pkg, remote }) => ({ package: pkg, remote })
+    )
+
+    const { upToDate, written } = await generateMigrations(
       resolved,
       config.rootDir,
       config.srcDirectories,
-      logger
+      logger,
+      addons
     )
 
-    switch (result.status) {
-      case 'no-auth':
+    for (const source of upToDate) {
+      logger.info(
+        `db generate: ${source} is already covered by existing migrations`
+      )
+    }
+
+    if (written.length === 0) {
+      if (upToDate.length === 0) {
         logger.info(
-          'db generate: no pikkuBetterAuth found — nothing to generate'
-        )
-        return
-      case 'up-to-date':
-        logger.info(
-          'db generate: Better Auth schema already covered by existing migrations — nothing to generate'
-        )
-        return
-      case 'incremental-unsupported': {
-        const cols = (result.missingColumns ?? [])
-          .map((m) => `${m.table}(${m.columns.join(', ')})`)
-          .join('; ')
-        logger.error(
-          'db generate: the Better Auth config requires schema changes on top of an existing auth schema:'
-        )
-        if (result.missingTables?.length) {
-          logger.error(`  missing tables: ${result.missingTables.join(', ')}`)
-        }
-        if (cols) logger.error(`  missing columns: ${cols}`)
-        logger.error(
-          '  Write a forward migration adding these by hand (incremental auto-generation is not yet supported).'
-        )
-        throw new Error(
-          'incremental auth schema change requires a manual migration'
+          'db generate: nothing declares tables — nothing to generate'
         )
       }
-      case 'written':
-        logger.info(`db generate: wrote ${result.file}`)
-        logger.info('  Review it, then run `pikku db migrate` to apply.')
-        return
+      return
     }
+
+    for (const { source, file, needsBackfill } of written) {
+      logger.info(`db generate: wrote ${file} for ${source}`)
+      for (const column of needsBackfill) {
+        logger.warn(
+          `  ${column} is NOT NULL with no default — decide what existing rows get before applying.`
+        )
+      }
+    }
+    logger.info('  Review them, then run `pikku db migrate` to apply.')
   },
 })

@@ -7188,6 +7188,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifier-db-remote-addon@link:./remote-addon::locator=%40pikku%2Fverifiers-db-schema%40workspace%3Averifiers%2Fdb-schema":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifier-db-remote-addon@link:./remote-addon::locator=%40pikku%2Fverifiers-db-schema%40workspace%3Averifiers%2Fdb-schema"
+  languageName: node
+  linkType: soft
+
 "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry"
@@ -7278,6 +7284,29 @@ __metadata:
     "@types/node": "npm:^24"
     tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-db-schema@workspace:verifiers/db-schema":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-db-schema@workspace:verifiers/db-schema"
+  dependencies:
+    "@pikku/better-auth": "workspace:*"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/kysely": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@pikku/verifier-db-remote-addon": "link:./remote-addon"
+    "@types/better-sqlite3": "npm:^7.6.13"
+    "@types/node": "npm:^24"
+    better-auth: "npm:^1.6.19"
+    better-sqlite3: "npm:^12.10.0"
+    kysely: "npm:^0.29.0"
+    kysely-postgres-js: "npm:^3.0.0"
+    postgres: "npm:^3.4.8"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^6.0.3"
+    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 

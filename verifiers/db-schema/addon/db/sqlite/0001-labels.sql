@@ -1,0 +1,7 @@
+CREATE TABLE labels (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT
+);
+
+CREATE UNIQUE INDEX labels_name_unique ON labels (name);

@@ -34,6 +34,24 @@ export {
   type SerializePluginOptions,
 } from './serialize-plugin.js'
 
+export {
+  pikkuSchemas,
+  applyPikkuSchemas,
+  compilePikkuSchemas,
+  ensurePikkuSchema,
+  type EnsureOutcome,
+  resolveRequirements,
+  unsatisfiedRequirements,
+  rawStatement,
+  requiredType,
+  type PikkuSchema,
+  type RequiredTypes,
+  type SchemaRequirement,
+  type UnmetRequirement,
+  type SchemaStatement,
+  type SchemaStatementFactory,
+} from './schema/index.js'
+
 export type { KyselyPikkuDB } from './kysely-tables.js'
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'

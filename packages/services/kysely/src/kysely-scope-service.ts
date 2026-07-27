@@ -1,8 +1,9 @@
 import type { Role, ScopeService } from '@pikku/core/services'
 import type { FlatScope } from '@pikku/core/scope'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
+import { ensurePikkuSchema } from './schema/index.js'
+import { scopeSchema } from './schema/scope.schema.js'
 
 /**
  * Resolves and administers user scopes against four self-created tables.
@@ -22,86 +23,8 @@ export class KyselyScopeService implements ScopeService {
   constructor(private db: Kysely<KyselyPikkuDB>) {}
 
   public async init(): Promise<void> {
-    if (this.initialized) {
-      return
-    }
-
-    await this.db.schema
-      .createTable('pikku_scopes')
-      .ifNotExists()
-      .addColumn('name', 'text', (col) => col.primaryKey())
-      .addColumn('description', 'text')
-      .addColumn('declared', 'boolean', (col) => col.defaultTo(true).notNull())
-      .execute()
-
-    await this.db.schema
-      .createTable('pikku_roles')
-      .ifNotExists()
-      .addColumn('name', 'text', (col) => col.primaryKey())
-      .addColumn('description', 'text')
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
-    await this.db.schema
-      .createTable('pikku_role_scopes')
-      .ifNotExists()
-      .addColumn('role', 'text', (col) =>
-        col.notNull().references('pikku_roles.name').onDelete('cascade')
-      )
-      .addColumn('scope', 'text', (col) =>
-        col.notNull().references('pikku_scopes.name').onDelete('cascade')
-      )
-      .addPrimaryKeyConstraint('pikku_role_scopes_pk', ['role', 'scope'])
-      .execute()
-
-    await this.db.schema
-      .createTable('pikku_user_role')
-      .ifNotExists()
-      .addColumn('user_id', 'text', (col) =>
-        col.notNull().references('user.id').onDelete('cascade')
-      )
-      .addColumn('role', 'text', (col) =>
-        col.notNull().references('pikku_roles.name').onDelete('cascade')
-      )
-      .addColumn('granted_by', 'text')
-      .addColumn('granted_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addPrimaryKeyConstraint('pikku_user_role_pk', ['user_id', 'role'])
-      .execute()
-
-    await this.db.schema
-      .createTable('pikku_user_scope')
-      .ifNotExists()
-      .addColumn('user_id', 'text', (col) =>
-        col.notNull().references('user.id').onDelete('cascade')
-      )
-      .addColumn('scope', 'text', (col) =>
-        col.notNull().references('pikku_scopes.name').onDelete('cascade')
-      )
-      .addColumn('granted_by', 'text')
-      .addColumn('granted_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addPrimaryKeyConstraint('pikku_user_scope_pk', ['user_id', 'scope'])
-      .execute()
-
-    await this.db.schema
-      .createIndex('pikku_role_scopes_scope_idx')
-      .ifNotExists()
-      .on('pikku_role_scopes')
-      .column('scope')
-      .execute()
-
-    await this.db.schema
-      .createIndex('pikku_user_role_role_idx')
-      .ifNotExists()
-      .on('pikku_user_role')
-      .column('role')
-      .execute()
-
+    if (this.initialized) return
+    await ensurePikkuSchema(this.db, scopeSchema)
     this.initialized = true
   }
 

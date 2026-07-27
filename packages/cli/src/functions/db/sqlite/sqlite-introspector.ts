@@ -4,9 +4,10 @@ import type {
   ForeignKeyInfo,
   EnumInfo,
 } from '../db-introspector.js'
+import { MIGRATION_TRACKING_TABLE } from '../db-migrator.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
-const SKIP_TABLES = new Set(['sqlite_sequence', 'sql_migrations'])
+const SKIP_TABLES = new Set(['sqlite_sequence', MIGRATION_TRACKING_TABLE])
 
 interface SqliteColumnRow {
   name: string

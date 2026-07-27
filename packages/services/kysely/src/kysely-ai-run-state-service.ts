@@ -3,6 +3,8 @@ import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import type { AIRunStateService, CreateRunInput } from '@pikku/core/services'
 import type { AgentRunState, PendingApproval } from '@pikku/core/ai-agent'
+import { ensurePikkuSchema } from './schema/index.js'
+import { aiSchema } from './schema/ai.schema.js'
 
 export class KyselyAIRunStateService implements AIRunStateService {
   private initialized = false
@@ -11,30 +13,7 @@ export class KyselyAIRunStateService implements AIRunStateService {
 
   async init(): Promise<void> {
     if (this.initialized) return
-
-    await this.db.schema
-      .createTable('aiRun')
-      .ifNotExists()
-      .addColumn('runId', 'text', (col) => col.primaryKey())
-      .addColumn('agentName', 'text', (col) => col.notNull())
-      .addColumn('threadId', 'text', (col) => col.notNull())
-      .addColumn('resourceId', 'text', (col) => col.notNull())
-      .addColumn('status', 'text', (col) => col.defaultTo('running').notNull())
-      .addColumn('errorMessage', 'text')
-      .addColumn('suspendReason', 'text')
-      .addColumn('missingRpcs', 'text')
-      .addColumn('pendingApprovals', 'text')
-      .addColumn('usageInputTokens', 'integer', (col) => col.defaultTo(0))
-      .addColumn('usageOutputTokens', 'integer', (col) => col.defaultTo(0))
-      .addColumn('usageModel', 'text', (col) => col.defaultTo(''))
-      .addColumn('createdAt', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('updatedAt', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
+    await ensurePikkuSchema(this.db, aiSchema)
     this.initialized = true
   }
 
@@ -113,7 +92,7 @@ export class KyselyAIRunStateService implements AIRunStateService {
   ): Promise<void> {
     const rows = await this.db
       .selectFrom('aiRun')
-      .select(['runId', 'pendingApprovals' as any])
+      .select(['runId', 'pendingApprovals'])
       .where('status', '=', 'suspended')
       .execute()
 
@@ -121,7 +100,7 @@ export class KyselyAIRunStateService implements AIRunStateService {
       let approvals: PendingApproval[] = []
       if (row.pendingApprovals) {
         try {
-          approvals = JSON.parse(row.pendingApprovals as string)
+          approvals = JSON.parse(row.pendingApprovals)
         } catch {
           console.warn(
             `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
@@ -159,9 +138,9 @@ export class KyselyAIRunStateService implements AIRunStateService {
 
     for (const row of rows) {
       let approvals: PendingApproval[] = []
-      if ((row as any).pendingApprovals) {
+      if (row.pendingApprovals) {
         try {
-          approvals = JSON.parse((row as any).pendingApprovals)
+          approvals = JSON.parse(row.pendingApprovals)
         } catch {
           console.warn(
             `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`

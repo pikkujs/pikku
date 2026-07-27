@@ -11,10 +11,11 @@ import {
   type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { parseJson } from './kysely-json.js'
+import { ensurePikkuSchema } from './schema/index.js'
+import { workflowSchema } from './schema/workflow.schema.js'
 
 export class KyselyWorkflowService extends PikkuWorkflowService {
   private initialized = false
@@ -29,126 +30,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   public async init(): Promise<void> {
-    if (this.initialized) {
-      return
-    }
-
-    await this.db.schema
-      .createTable('workflow_runs')
-      .ifNotExists()
-      .addColumn('workflow_run_id', 'text', (col) =>
-        col
-          .primaryKey()
-          .defaultTo(sql`${sql.raw("'" + crypto.randomUUID() + "'")}`)
-      )
-      .addColumn('workflow', 'text', (col) => col.notNull())
-      .addColumn('status', 'text', (col) => col.notNull())
-      .addColumn('input', 'text', (col) => col.notNull())
-      .addColumn('output', 'text')
-      .addColumn('error', 'text')
-      .addColumn('state', 'text', (col) => col.defaultTo('{}'))
-      .addColumn('inline', 'boolean', (col) => col.defaultTo(false))
-      .addColumn('graph_hash', 'text')
-      .addColumn('deterministic', 'boolean', (col) => col.defaultTo(false))
-      .addColumn('planned_steps', 'text')
-      .addColumn('wire', 'text')
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('updated_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
-    await this.db.schema
-      .createTable('workflow_step')
-      .ifNotExists()
-      .addColumn('workflow_step_id', 'text', (col) =>
-        col
-          .primaryKey()
-          .defaultTo(sql`${sql.raw("'" + crypto.randomUUID() + "'")}`)
-      )
-      .addColumn('workflow_run_id', 'text', (col) =>
-        col
-          .notNull()
-          .references('workflow_runs.workflow_run_id')
-          .onDelete('cascade')
-      )
-      .addColumn('step_name', 'text', (col) => col.notNull())
-      .addColumn('rpc_name', 'text')
-      .addColumn('data', 'text')
-      .addColumn('status', 'text', (col) => col.notNull().defaultTo('pending'))
-      .addColumn('result', 'text')
-      .addColumn('error', 'text')
-      .addColumn('child_run_id', 'text')
-      .addColumn('branch_taken', 'text')
-      .addColumn('retries', 'integer')
-      .addColumn('retry_delay', 'text')
-      .addColumn('from_step_name', 'text')
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('updated_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addUniqueConstraint('workflow_step_run_name_unique', [
-        'workflow_run_id',
-        'step_name',
-      ])
-      .execute()
-
-    // Additive: backfill the column on tables created before from_step_name.
-    await this.db.schema
-      .alterTable('workflow_step')
-      .addColumn('from_step_name', 'text')
-      .execute()
-      .catch(() => {
-        // Column already exists (fresh tables include it above) — nothing to do.
-      })
-
-    await this.db.schema
-      .createTable('workflow_step_history')
-      .ifNotExists()
-      .addColumn('history_id', 'text', (col) =>
-        col
-          .primaryKey()
-          .defaultTo(sql`${sql.raw("'" + crypto.randomUUID() + "'")}`)
-      )
-      .addColumn('workflow_step_id', 'text', (col) =>
-        col
-          .notNull()
-          .references('workflow_step.workflow_step_id')
-          .onDelete('cascade')
-      )
-      .addColumn('status', 'text', (col) => col.notNull())
-      .addColumn('result', 'text')
-      .addColumn('error', 'text')
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('running_at', 'timestamp')
-      .addColumn('scheduled_at', 'timestamp')
-      .addColumn('succeeded_at', 'timestamp')
-      .addColumn('failed_at', 'timestamp')
-      .execute()
-
-    await this.db.schema
-      .createTable('workflow_versions')
-      .ifNotExists()
-      .addColumn('workflow_name', 'text', (col) => col.notNull())
-      .addColumn('graph_hash', 'text', (col) => col.notNull())
-      .addColumn('graph', 'text', (col) => col.notNull())
-      .addColumn('source', 'text', (col) => col.notNull())
-      .addColumn('status', 'text', (col) => col.notNull().defaultTo('active'))
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addPrimaryKeyConstraint('workflow_versions_pk', [
-        'workflow_name',
-        'graph_hash',
-      ])
-      .execute()
-
+    if (this.initialized) return
+    await ensurePikkuSchema(this.db, workflowSchema)
     this.initialized = true
   }
 
@@ -421,7 +304,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (latestHistory) {
       await this.db
         .updateTable('workflowStepHistory')
-        .set({ status: 'succeeded', result: resultJson, succeededAt: new Date() })
+        .set({
+          status: 'succeeded',
+          result: resultJson,
+          succeededAt: new Date(),
+        })
         .where('historyId', '=', latestHistory.historyId)
         .execute()
     }
@@ -590,7 +477,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return nodeIds.filter((id) => !existingStepNames.has(id))
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const rows = await this.db

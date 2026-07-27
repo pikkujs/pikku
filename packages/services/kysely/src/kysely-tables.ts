@@ -127,6 +127,8 @@ export interface AIRunTable {
   errorMessage: string | null
   suspendReason: 'approval' | 'credential' | 'rpc-missing' | null
   missingRpcs: string | null
+  /** JSON-serialized approvals the run is suspended on. */
+  pendingApprovals: string | null
   usageInputTokens: Generated<number>
   usageOutputTokens: Generated<number>
   usageModel: Generated<string>

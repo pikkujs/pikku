@@ -9,8 +9,9 @@ import {
 } from '@pikku/core/services'
 import type { QueueService } from '@pikku/core/queue'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
+import { ensurePikkuSchema } from './schema/index.js'
+import { webhookSchema } from './schema/webhook.schema.js'
 
 /**
  * Durable {@link QueueWebhookService}: still delivers through the
@@ -30,59 +31,8 @@ export class KyselyWebhookService extends QueueWebhookService {
   }
 
   public async init(): Promise<void> {
-    if (this.initialized) {
-      return
-    }
-
-    await this.db.schema
-      .createTable('webhook_delivery')
-      .ifNotExists()
-      .addColumn('delivery_id', 'text', (col) => col.primaryKey())
-      .addColumn('organization_id', 'text')
-      .addColumn('url', 'text', (col) => col.notNull())
-      .addColumn('event', 'text')
-      .addColumn('status', 'text', (col) => col.defaultTo('pending').notNull())
-      .addColumn('attempts', 'integer', (col) => col.defaultTo(0).notNull())
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('updated_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .addColumn('delivered_at', 'timestamp')
-      .execute()
-
-    await this.db.schema
-      .createTable('webhook_delivery_attempt')
-      .ifNotExists()
-      .addColumn('attempt_id', 'text', (col) => col.primaryKey())
-      .addColumn('delivery_id', 'text', (col) =>
-        col.notNull().references('webhook_delivery.delivery_id').onDelete('cascade')
-      )
-      .addColumn('attempt_number', 'integer', (col) => col.notNull())
-      .addColumn('status_code', 'integer')
-      .addColumn('response_body', 'text')
-      .addColumn('error', 'text')
-      .addColumn('created_at', 'timestamp', (col) =>
-        col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-      )
-      .execute()
-
-    await this.createIndexSafe(
-      this.db.schema
-        .createIndex('idx_webhook_delivery_org')
-        .ifNotExists()
-        .on('webhook_delivery')
-        .column('organization_id')
-    )
-    await this.createIndexSafe(
-      this.db.schema
-        .createIndex('idx_webhook_delivery_attempt_delivery')
-        .ifNotExists()
-        .on('webhook_delivery_attempt')
-        .column('delivery_id')
-    )
-
+    if (this.initialized) return
+    await ensurePikkuSchema(this.db, webhookSchema)
     this.initialized = true
   }
 
@@ -183,18 +133,5 @@ export class KyselyWebhookService extends QueueWebhookService {
       .orderBy('attemptNumber', 'asc')
       .execute()
     return { delivery, attempts }
-  }
-
-  private async createIndexSafe(builder: {
-    execute(): Promise<void>
-  }): Promise<void> {
-    try {
-      await builder.execute()
-    } catch (e: any) {
-      if (e?.code === 'ER_DUP_KEYNAME' || e?.errno === 1061) return
-      if (e?.code === '42P07') return
-      if (e?.message?.includes('already exists')) return
-      throw e
-    }
   }
 }

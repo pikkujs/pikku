@@ -154,6 +154,20 @@ export function aggregateRequiredServices(
     }
   })
 
+  // 1b. Services the auth factory touches, read from the definition rather than
+  // from the generated handler.
+  //
+  // `stampAuthHandlerServices` copies them onto that handler's meta, but on the
+  // first run in a clean checkout the handler's file has not been written yet,
+  // so there is nothing to stamp and nothing to aggregate — and the services map
+  // comes out claiming `kysely` (or whatever else `authorize` reads) is unused.
+  // The second run, with the file on disk, says the opposite. The definition is
+  // inspected from hand-written source either way, so taking the answer from
+  // there makes a clean build agree with an incremental one.
+  if (state.auth?.definition) {
+    addServices(state.auth.definition.services)
+  }
+
   // 2. Services from used middleware (individual + groups)
   usedMiddleware.forEach((middlewareName) => {
     const middlewareMeta = state.middleware.definitions[middlewareName]

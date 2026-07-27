@@ -63,6 +63,7 @@ function makeState(
     functionsMeta?: Record<string, any>
     addonFunctions?: Record<string, Record<string, any>>
     addonRequiredParentServices?: string[]
+    authServices?: string[]
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -99,6 +100,13 @@ function makeState(
     rpc: { internalMeta: {}, exposedMeta: {} },
     addonFunctions: overrides.addonFunctions ?? {},
     addonRequiredParentServices: overrides.addonRequiredParentServices ?? [],
+    auth: overrides.authServices
+      ? {
+          definition: {
+            services: { optimized: true, services: overrides.authServices },
+          },
+        }
+      : {},
   } as unknown as Omit<InspectorState, 'typesLookup'>
 }
 
@@ -306,6 +314,26 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   })
 })
 
+describe('aggregateRequiredServices — the auth factory’s own services', () => {
+  test('an auth definition contributes its services before its handler exists', () => {
+    // The state a clean checkout produces: the project declares
+    // `pikkuBetterAuth`, so the definition is inspected, but the handler the CLI
+    // generates from it has not been written yet — so nothing in functions.meta
+    // mentions the services `authorize` reads.
+    const state = makeState({ authServices: ['kysely', 'jwt'] })
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(required.has('kysely'))
+    assert.ok(required.has('jwt'))
+  })
+
+  test('a project without auth is unaffected', () => {
+    const state = makeState()
+    aggregateRequiredServices(state)
+    assert.equal(state.serviceAggregation.requiredServices.size, 0)
+  })
+})
+
 describe('override validation resolves the override target (value), not the logical key', () => {
   test('validateSecretOverrides accepts an override whose value is a declared secret', () => {
     const { logger, criticals } = makeCriticalLogger()
@@ -422,7 +450,10 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
         })
       )
       assert.equal(criticals.length, 1)
-      assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY)
+      assert.equal(
+        criticals[0]!.code,
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
+      )
       assert.match(criticals[0]!.message, /devDependencies/)
     } finally {
       rmSync(dir, { recursive: true, force: true })
@@ -441,7 +472,10 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
         })
       )
       assert.equal(criticals.length, 1)
-      assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY)
+      assert.equal(
+        criticals[0]!.code,
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
+      )
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

@@ -1,7 +1,6 @@
 import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
+import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../db-migrator.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
-
-const TRACKING_TABLE = 'sql_migrations'
 
 export class SqliteMigrationExecutor implements MigrationExecutor {
   constructor(private readonly db: SyncSqliteDatabase) {}
@@ -22,6 +21,12 @@ export class SqliteMigrationExecutor implements MigrationExecutor {
         `SELECT name, hash, applied_at FROM ${TRACKING_TABLE} ORDER BY name`
       )
       .all() as unknown as AppliedMigration[]
+  }
+
+  async recordMigration(name: string, hash: string): Promise<void> {
+    this.db
+      .prepare(`INSERT INTO ${TRACKING_TABLE} (name, hash) VALUES (?, ?)`)
+      .run(name, hash)
   }
 
   async runMigration(sql: string, name: string, hash: string): Promise<void> {
