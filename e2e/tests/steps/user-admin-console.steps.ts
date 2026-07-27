@@ -120,3 +120,34 @@ Then(
     await this.signInAs({ name: email, email, password })
   }
 )
+
+/**
+ * Resolve the credentials to sign in with for `email` — a user an earlier step
+ * in this scenario created or re-passworded. Moved here from
+ * `user-admin.steps.ts`, whose feature is now a pikkuScenario: this console
+ * suite is the only remaining caller, and every user it signs in as it created
+ * itself, so the seeded-fixture branch went with the move.
+ */
+const createdCredentials = (world: AgentWorld, email: string) => {
+  const password = world.createdUsers.get(email)
+  if (!password) {
+    throw new Error(`no user created in this scenario for ${email}`)
+  }
+  return { name: email, email, password }
+}
+
+Then(
+  '{string} should not be able to sign in',
+  async function (this: AgentWorld, email: string) {
+    await expect(
+      this.signInAs(createdCredentials(this, email))
+    ).rejects.toThrow(/sign-in failed/)
+  }
+)
+
+Then(
+  '{string} should be able to sign in',
+  async function (this: AgentWorld, email: string) {
+    await this.signInAs(createdCredentials(this, email))
+  }
+)
