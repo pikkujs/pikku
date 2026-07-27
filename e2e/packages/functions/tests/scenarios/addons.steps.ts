@@ -77,3 +77,36 @@ export const countsAddonCards = pikkuScenarioStep<
     return { count }
   },
 })
+
+/**
+ * Opens one addon's drawer from the gallery.
+ *
+ * The card is addressed by the package it renders, which is the addon's
+ * identity as declared in the catalogue. The drawer is confirmed open by the
+ * instance-name field rather than by the drawer element: Mantine's `Drawer`
+ * root stays attached and zero-sized whether it is open or shut, so waiting on
+ * it would pass before anything had opened.
+ */
+export const opensAddonDrawer = pikkuScenarioStep<
+  { packageName: string },
+  { opened: string },
+  true
+>({
+  name: 'opensAddonDrawer',
+  description: 'opens an addon drawer from the gallery',
+  template: 'opens the drawer for {packageName}',
+  browser: true,
+  func: async (_services, { packageName }, { browser }) => {
+    const card = browser.page
+      .locator(
+        `[data-testid="addon-card"][data-addon-package="${packageName}"]`
+      )
+      .first()
+    await card.waitFor({ state: 'visible', timeout: 15_000 })
+    await card.click()
+    await browser.page
+      .locator('[data-testid="addon-install-name"]')
+      .waitFor({ state: 'visible', timeout: 15_000 })
+    return { opened: packageName }
+  },
+})
