@@ -122,8 +122,16 @@ export const seesTestId = pikkuScenarioStep<
     /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
     prefix?: boolean
     containing?: string
+    /**
+     * Data attributes the element must also carry, e.g.
+     * `{ 'data-connected': 'false' }`. This is how a status is asserted without
+     * reading the console's own translated copy back to it.
+     */
+    where?: Record<string, string>
     count?: number
     atLeast?: number
+    /** Overrides the default wait, for a state that arrives via a redirect. */
+    timeoutMs?: number
   },
   { count: number },
   true
@@ -134,16 +142,21 @@ export const seesTestId = pikkuScenarioStep<
   browser: true,
   func: async (
     _services,
-    { testId, prefix, containing, count, atLeast },
+    { testId, prefix, containing, where, count, atLeast, timeoutMs },
     { browser }
   ) => {
+    const attributes = Object.entries(where ?? {})
+      .map(([name, value]) => `[${name}="${value}"]`)
+      .join('')
     const base = browser.page.locator(
       prefix
-        ? `[data-testid^="${testId}"]:visible`
-        : `[data-testid="${testId}"]:visible`
+        ? `[data-testid^="${testId}"]${attributes}:visible`
+        : `[data-testid="${testId}"]${attributes}:visible`
     )
     const target = containing ? base.filter({ hasText: containing }) : base
-    await target.first().waitFor({ state: 'visible', timeout: TIMEOUT })
+    await target
+      .first()
+      .waitFor({ state: 'visible', timeout: timeoutMs ?? TIMEOUT })
     const found = await target.count()
     if (count !== undefined && found !== count) {
       throw new Error(`Expected ${count} ${testId} element(s), got ${found}`)
@@ -342,6 +355,74 @@ export const fillsField = pikkuScenarioStep<
       .first()
       .fill(value, { timeout: TIMEOUT })
     return { filled: label }
+  },
+})
+
+export const fillsTestId = pikkuScenarioStep<
+  { testId: string; value: string },
+  { filled: string },
+  true
+>({
+  name: 'fillsTestId',
+  description: 'fills a form field by its test id',
+  template: 'fills {testId}',
+  browser: true,
+  func: async (_services, { testId, value }, { browser }) => {
+    await browser.page
+      .locator(`[data-testid="${testId}"]:visible`)
+      .first()
+      .fill(value, { timeout: TIMEOUT })
+    return { filled: testId }
+  },
+})
+
+export const expectsEnabled = pikkuScenarioStep<
+  { testId: string },
+  { enabled: true },
+  true
+>({
+  name: 'expectsEnabled',
+  description: 'expects a control to be offered rather than disabled',
+  template: 'expects {testId} to be enabled',
+  browser: true,
+  func: async (_services, { testId }, { browser }) => {
+    const target = browser.page
+      .locator(`[data-testid="${testId}"]:visible`)
+      .first()
+    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    if (!(await target.isEnabled())) {
+      throw new Error(`Expected ${testId} to be enabled`)
+    }
+    return { enabled: true }
+  },
+})
+
+/**
+ * Picks an option on a Mantine `Select`.
+ *
+ * The control renders a readonly `<input role="combobox">` that opens a portalled
+ * listbox, so the option is looked up on the page rather than inside the select.
+ * `exact` matters whenever one option's value is a prefix of another's.
+ */
+export const selectsOption = pikkuScenarioStep<
+  { testId: string; value: string },
+  { selected: string },
+  true
+>({
+  name: 'selectsOption',
+  description: 'picks an option on a select',
+  template: 'picks {value}',
+  browser: true,
+  func: async (_services, { testId, value }, { browser }) => {
+    await browser.page
+      .locator(`[data-testid="${testId}"]:visible`)
+      .first()
+      .click({ timeout: TIMEOUT })
+    await browser.page
+      .getByRole('option', { name: value, exact: true })
+      .first()
+      .click({ timeout: TIMEOUT })
+    return { selected: value }
   },
 })
 
