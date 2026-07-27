@@ -380,6 +380,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 description={m.packages_install_name_description()}
                 value={name}
                 onChange={(e) => setName(e.currentTarget.value)}
+                data-testid="addon-install-name"
                 error={
                   name.length > 0 && !nameValid
                     ? m.packages_install_name_invalid()
@@ -407,6 +408,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                     leftSection={<Download size={15} />}
                     loading={installing}
                     disabled={!nameValid}
+                    data-testid="addon-install-submit"
                     onClick={() => onInstall(addon, isApi ? undefined : name)}
                   >
                     {isApi
@@ -433,6 +435,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 color="red"
                 variant="light"
                 icon={<TriangleAlert size={15} />}
+                data-testid="addon-install-error"
               >
                 <Text size="sm">
                   {isApi
