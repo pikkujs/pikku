@@ -64,10 +64,11 @@ export const readsFunctionSource = pikkuScenarioStep<
   func: async (_services, { functionName }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
-    return (await actor.invoke(
-      'console:readFunctionSource',
-      location
-    )) as { wrapperName: string; config: Record<string, unknown>; body: string }
+    return (await actor.invoke('console:readFunctionSource', location)) as {
+      wrapperName: string
+      config: Record<string, unknown>
+      body: string
+    }
   },
 })
 
@@ -80,10 +81,9 @@ export const readsFunctionBody = pikkuScenarioStep<
   func: async (_services, { functionName }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
-    return (await actor.invoke(
-      'console:readFunctionBody',
-      location
-    )) as { body: string }
+    return (await actor.invoke('console:readFunctionBody', location)) as {
+      body: string
+    }
   },
 })
 
@@ -96,13 +96,10 @@ export const updatesFunctionConfig = pikkuScenarioStep<
   func: async (_services, { functionName, changes }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
-    const result = (await actor.invoke(
-      'console:updateFunctionConfig',
-      {
-        ...location,
-        changes,
-      }
-    )) as { success: boolean }
+    const result = (await actor.invoke('console:updateFunctionConfig', {
+      ...location,
+      changes,
+    })) as { success: boolean }
     if (!result.success) {
       throw new Error(`Updating ${functionName} config did not succeed`)
     }
@@ -139,10 +136,9 @@ export const readsAgentSource = pikkuScenarioStep<
   func: async (_services, { agentKey }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await agentLocation(actor, agentKey)
-    return (await actor.invoke(
-      'console:readAgentSource',
-      location
-    )) as { config: Record<string, unknown> }
+    return (await actor.invoke('console:readAgentSource', location)) as {
+      config: Record<string, unknown>
+    }
   },
 })
 

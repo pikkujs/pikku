@@ -16,6 +16,6 @@
       "#pikku/*": ["../../.pikku/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules", "dist"]
 }
