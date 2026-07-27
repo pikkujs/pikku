@@ -21,6 +21,7 @@ export const ImpersonationBanner: React.FC = () => {
       right={0}
       px="md"
       py={6}
+      data-testid="impersonation-banner"
       style={{
         zIndex: 1000,
         backgroundColor: 'var(--mantine-color-yellow-6)',
@@ -36,6 +37,7 @@ export const ImpersonationBanner: React.FC = () => {
           size="compact-xs"
           variant="filled"
           color="dark"
+          data-testid="impersonation-stop"
           onClick={() => impersonation!.clear()}
         >
           {m.impersonate_stop()}

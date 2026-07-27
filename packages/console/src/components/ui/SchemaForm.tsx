@@ -76,6 +76,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
           type="submit"
           leftSection={<Play size={16} />}
           loading={submitting}
+          data-testid="schema-form-submit"
         >
           {resolvedSubmitLabel}
         </Button>
@@ -84,7 +85,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   )
 
   return (
-    <div style={{ ['--rjsf-object-padding' as string]: '0' }}>
+    <div
+      style={{ ['--rjsf-object-padding' as string]: '0' }}
+      data-testid="schema-form"
+    >
       <style>{`.rjsf-field.rjsf-field-object > * { padding-inline: 0 !important; }`}</style>
       <Form
         schema={sanitizedSchema}

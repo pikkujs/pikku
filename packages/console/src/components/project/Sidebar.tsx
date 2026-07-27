@@ -57,6 +57,13 @@ export interface NavItem {
 }
 
 export interface NavSection {
+  /**
+   * Stable, untranslated key for the section. The accordion tracks which
+   * section is open by this key, so the open section survives a locale change;
+   * it also gives a section an identity that is declared in code rather than
+   * rendered to the user. Falls back to the title for callers that predate it.
+   */
+  id?: string
   title: I18nNode
   items: NavItem[]
 }
@@ -67,6 +74,7 @@ export function useDefaultNavSections(): NavSection[] {
   useLocale()
   return [
     {
+      id: 'run',
       title: m.nav_run(),
       items: [
         {
@@ -96,6 +104,7 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
+      id: 'data',
       title: m.nav_data(),
       items: [
         {
@@ -137,6 +146,7 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
+      id: 'config',
       title: m.nav_config(),
       items: [
         {
@@ -166,6 +176,7 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
+      id: 'auth',
       title: m.nav_auth(),
       items: [
         {
@@ -282,14 +293,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // the current page is the one expanded, so the rail always shows where you
   // are. Opening another section is a browsing move that the next navigation
   // resolves — hence no persistence.
+  const sectionKey = (section: NavSection) =>
+    section.id ?? String(section.title)
   const routeSection =
-    sections.find((s) => s.title && s.items.some(isActive))?.title ?? null
-  const [openedSection, setOpenedSection] = useState<I18nNode | null>(
-    routeSection
+    sections.find((s) => s.title && s.items.some(isActive)) ?? null
+  const routeSectionKey = routeSection ? sectionKey(routeSection) : null
+  const [openedSection, setOpenedSection] = useState<string | null>(
+    routeSectionKey
   )
-  const routeSectionKey = routeSection ? String(routeSection) : null
   useEffect(() => {
-    if (routeSection) setOpenedSection(routeSection)
+    if (routeSectionKey) setOpenedSection(routeSectionKey)
   }, [routeSectionKey])
 
   return (
@@ -361,21 +374,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {sections.map((section, sectionIndex) => {
           // Untitled sections and the collapsed (icon-only) rail are never
           // accordion-gated; only titled sections collapse in the expanded rail.
-          const isRouteSection =
-            !!section.title && String(section.title) === routeSectionKey
+          const key = sectionKey(section)
+          const isRouteSection = !!section.title && key === routeSectionKey
           const sectionOpen =
             collapsed ||
             !section.title ||
-            String(section.title) === String(openedSection ?? '')
+            key === openedSection
           return (
             <Box key={sectionIndex}>
               {sectionIndex > 0 && <Divider my={4} mx="sm" />}
               {section.title && !collapsed && (
                 <UnstyledButton
-                  onClick={() =>
-                    setOpenedSection(sectionOpen ? null : section.title!)
-                  }
+                  onClick={() => setOpenedSection(sectionOpen ? null : key)}
                   className={css.navSectionHeader}
+                  data-testid="nav-section"
+                  data-section={key}
                   data-active={isRouteSection || undefined}
                   aria-expanded={sectionOpen}
                 >
@@ -415,6 +428,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           <NavLink
                             component={Link}
                             to={item.href}
+                            data-testid="nav-link"
+                            data-href={item.href}
                             active={active}
                             leftSection={
                               <item.icon
@@ -446,6 +461,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <NavLink
                         component={Link}
                         to={item.href}
+                        data-testid="nav-link"
+                        data-href={item.href}
                         label={item.label}
                         leftSection={
                           <item.icon
@@ -498,6 +515,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <UnstyledButton
                 onClick={() => setImpersonateOpen(true)}
+                data-testid="impersonate-open"
                 px={collapsed ? 0 : 10}
                 py={8}
                 style={{
