@@ -52,7 +52,7 @@ if [ "$watch_mode" = true ]; then
 fi
 
 if [ "$coverage_mode" = true ]; then
-  node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info)
+  node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test-reporter=spec --test-reporter-destination=stdout)
   export PIKKU_TEST_COVERAGE=1
 fi
 
