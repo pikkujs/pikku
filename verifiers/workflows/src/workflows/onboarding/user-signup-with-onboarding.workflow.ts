@@ -17,42 +17,53 @@ export const userSignupWithOnboardingWorkflow = pikkuWorkflowFunc<
       name: data.name,
     })
 
-    // Step 2: Process onboarding steps
+    // Step 2: Process onboarding steps. A DSL fanout body is a flat list of
+    // steps with no branch member, so the "which onboarding step is this?"
+    // switch becomes one filtered fanout per step kind — `.filter` is how the
+    // DSL expresses a per-item condition. Consequence worth knowing: the kinds
+    // run grouped in the order written here, not interleaved in the caller's
+    // `onboardingSteps` order.
     const completedSteps: string[] = []
-    for (const step of data.onboardingSteps) {
-      switch (step) {
-        case 'verify_email':
-          const verification = await workflow.do(
-            'Send verification',
-            'userSendVerificationEmail',
-            {
-              userId: user.id,
-              email: data.email,
-            }
-          )
-          await workflow.do('Verify email', 'userVerify', {
-            userId: user.id,
-            token: verification.token,
-          })
-          completedSteps.push('verify_email')
-          break
-        case 'setup_profile':
-          await workflow.do('Setup profile', 'profileSetup', {
-            userId: user.id,
-          })
-          completedSteps.push('setup_profile')
-          break
-        case 'welcome_email':
-          await workflow.do('Send welcome', 'emailSend', {
-            to: data.email,
-            subject: 'Welcome!',
-            body: 'Welcome to our platform.',
-          })
-          completedSteps.push('welcome_email')
-          break
-        default:
-          break
-      }
+
+    const verifyEmailSteps = data.onboardingSteps.filter(
+      (step) => step === 'verify_email'
+    )
+    for (const step of verifyEmailSteps) {
+      const verification = await workflow.do(
+        'Send verification',
+        'userSendVerificationEmail',
+        {
+          userId: user.id,
+          email: data.email,
+        }
+      )
+      await workflow.do('Verify email', 'userVerify', {
+        userId: user.id,
+        token: verification.token,
+      })
+      completedSteps.push(step)
+    }
+
+    const setupProfileSteps = data.onboardingSteps.filter(
+      (step) => step === 'setup_profile'
+    )
+    for (const step of setupProfileSteps) {
+      await workflow.do('Setup profile', 'profileSetup', {
+        userId: user.id,
+      })
+      completedSteps.push(step)
+    }
+
+    const welcomeEmailSteps = data.onboardingSteps.filter(
+      (step) => step === 'welcome_email'
+    )
+    for (const step of welcomeEmailSteps) {
+      await workflow.do('Send welcome', 'emailSend', {
+        to: data.email,
+        subject: 'Welcome!',
+        body: 'Welcome to our platform.',
+      })
+      completedSteps.push(step)
     }
 
     return {

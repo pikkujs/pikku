@@ -9,16 +9,25 @@ import type { ScenarioActor } from '@pikku/core/services'
 import { rpcService } from '@pikku/core/rpc'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
+// Scenarios are not in the main bootstrap by design — a server must never
+// import a step body — so a test that runs one has to opt in explicitly.
+import '../../.pikku/pikku-bootstrap-scenarios.gen.js'
 import { createConfig, createSingletonServices } from '../services.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const META_DIR = join(__dirname, '../../.pikku/workflow/meta')
+// Scenarios emit under `.pikku/scenarios/` — they have their own bootstrap so a
+// server never imports a step body — while plain workflows stay under
+// `.pikku/workflow/`. Both are searched because this file asserts on each.
+const META_DIRS = [
+  join(__dirname, '../../.pikku/scenarios/meta'),
+  join(__dirname, '../../.pikku/workflow/meta'),
+]
 
 async function loadMeta(name: string) {
-  const files = [
-    join(META_DIR, `${name}-verbose.gen.json`),
-    join(META_DIR, `${name}.gen.json`),
-  ]
+  const files = META_DIRS.flatMap((dir) => [
+    join(dir, `${name}-verbose.gen.json`),
+    join(dir, `${name}.gen.json`),
+  ])
   for (const f of files) {
     try {
       return JSON.parse(await readFile(f, 'utf-8'))
