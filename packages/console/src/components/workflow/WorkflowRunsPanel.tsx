@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from 'react'
-import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { useWorkflowRunContext } from '../../context/WorkflowRunContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
@@ -13,6 +14,7 @@ import { RunsPanel, type RunItem } from '../layout/RunsPanel'
  * `WorkflowSurface` that was not created `readOnly`.
  */
 export const WorkflowRunsPanel: React.FC = () => {
+  useLocale()
   const { workflowName, runsWorkflowName } = useWorkflowSurface()
   const { selectedRunId, setSelectedRunId, setIsCreatingRun } =
     useWorkflowRunContext()
@@ -51,10 +53,10 @@ export const WorkflowRunsPanel: React.FC = () => {
       onSelect={setSelectedRunId}
       onClear={() => setSelectedRunId(null)}
       loading={isLoading}
-      emptyMessage={asI18n('No runs found')}
+      emptyMessage={m.runs_panel_empty()}
       statusFilters={[]}
       onNewClick={editable ? handleNewClick : undefined}
-      newButtonLabel={editable ? asI18n('New workflow run') : undefined}
+      newButtonLabel={editable ? m.workflow_runs_new() : undefined}
       onDelete={editable ? handleDelete : undefined}
     />
   )

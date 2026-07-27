@@ -590,3 +590,40 @@ export const expectsTestIdValue = pikkuScenarioStep<
     return { value: actual }
   },
 })
+
+/**
+ * Navigates through the sidebar rather than by URL.
+ *
+ * A URL navigation is a full page load, which throws away everything the SPA
+ * holds in memory — impersonation among it. Anything asserting on state that
+ * survives *within* a session has to move the way a user does, through the
+ * router.
+ *
+ * The rail is an accordion with one section open at a time, so a link may need
+ * its section revealed first. Both are addressed by keys declared in code — the
+ * route the link points at, and the section's `id` — never by their labels,
+ * which are translated.
+ */
+export const navigatesInConsole = pikkuScenarioStep<
+  { href: string; section?: string },
+  { href: string },
+  true
+>({
+  name: 'navigatesInConsole',
+  description: 'navigates through the console sidebar without reloading',
+  template: 'navigates to {href}',
+  browser: true,
+  func: async (_services, { href, section }, { browser }) => {
+    const link = browser.page.locator(
+      `[data-testid="nav-link"][data-href="${href}"]`
+    )
+    if (section && !(await link.isVisible().catch(() => false))) {
+      await browser.page
+        .locator(`[data-testid="nav-section"][data-section="${section}"]`)
+        .click({ timeout: TIMEOUT })
+    }
+    await link.click({ timeout: TIMEOUT })
+    await browser.page.waitForURL(`**${href}`, { timeout: TIMEOUT })
+    return { href }
+  },
+})

@@ -5,13 +5,9 @@ import {
   Stack,
   TextInput,
   Text,
-  Group,
-  Avatar,
-  UnstyledButton,
   Loader,
   Center,
   Alert,
-  Box,
 } from '@pikku/mantine/core'
 import { Search, AlertTriangle } from 'lucide-react'
 import { useDebouncedValue } from '@mantine/hooks'
@@ -20,6 +16,7 @@ import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import { useAuth, type AuthUser } from '../../context/AuthContext'
 import { useImpersonation } from '../../context/ImpersonationContext'
+import { ImpersonateUserRow } from './ImpersonateUserRow'
 
 export const ImpersonateDrawer: React.FC<{
   opened: boolean
@@ -57,6 +54,7 @@ export const ImpersonateDrawer: React.FC<{
           placeholder={m.impersonate_search_placeholder()}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
+          data-testid="impersonate-search"
           autoFocus
         />
 
@@ -75,7 +73,7 @@ export const ImpersonateDrawer: React.FC<{
         ) : (
           <Stack gap={4}>
             {users.map((u) => (
-              <UserRow
+              <ImpersonateUserRow
                 key={u.id}
                 user={u}
                 active={target?.id === u.id}
@@ -88,36 +86,3 @@ export const ImpersonateDrawer: React.FC<{
     </Drawer>
   )
 }
-
-const UserRow: React.FC<{
-  user: AuthUser
-  active: boolean
-  onClick: () => void
-}> = ({ user, active, onClick }) => (
-  <UnstyledButton
-    onClick={onClick}
-    p="xs"
-    style={{
-      borderRadius: 6,
-      backgroundColor: active
-        ? 'var(--mantine-color-yellow-light)'
-        : undefined,
-    }}
-  >
-    <Group gap="sm" wrap="nowrap">
-      <Avatar src={user.image ?? undefined} radius="xl" size="sm">
-        {(user.name ?? user.email).slice(0, 1).toUpperCase()}
-      </Avatar>
-      <Box style={{ minWidth: 0 }}>
-        {user.name && (
-          <Text size="sm" fw={500} truncate>
-            {asI18n(user.name)}
-          </Text>
-        )}
-        <Text size="xs" c="dimmed" truncate>
-          {asI18n(user.email)}
-        </Text>
-      </Box>
-    </Group>
-  </UnstyledButton>
-)

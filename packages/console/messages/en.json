@@ -22,6 +22,7 @@
   "runs_panel_filter_all": "All",
   "runs_panel_new": "New",
   "runs_panel_empty": "No runs found",
+  "workflow_runs_new": "New workflow run",
   "connection_title": "Pikku Console",
   "connection_server_url_label": "Pikku instance URL",
   "connection_reconnect": "Reconnect",

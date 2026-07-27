@@ -254,6 +254,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
                 px="sm"
                 style={{ flex: 1, minWidth: 0 }}
                 onClick={onNewClick}
+                data-testid="runs-panel-new"
               >
                 <Group gap="xs">
                   <Plus size={16} color="var(--mantine-color-primary-6)" />
