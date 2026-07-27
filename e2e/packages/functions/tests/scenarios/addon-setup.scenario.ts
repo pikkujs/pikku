@@ -16,7 +16,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-  type PikkuScenarioHook,
+  pikkuScenarioHook,
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const FAKE_CRM_SETUP =
@@ -38,13 +38,13 @@ const INSTANCE_SELECT = 'addon-instance-select'
  * Doing it in `after` also lets the scenario start from "Not connected" on a
  * second run against the same server.
  */
-const disconnectsFakeCrm: PikkuScenarioHook = async (
-  _services,
-  _data,
-  { actors }
-) => {
-  await actors?.admin?.invoke('console:credentialDelete', { name: 'fake-crm' })
-}
+const disconnectsFakeCrm = pikkuScenarioHook(
+  async (_services, _data, { actors }) => {
+    await actors.admin.invoke('console:credentialDelete', {
+      name: 'fake-crm',
+    })
+  }
+)
 
 export const addonRequirementsScenario = pikkuScenario<void, { setUp: true }>({
   after: disconnectsFakeCrm,
