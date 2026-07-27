@@ -99,6 +99,41 @@ export const expectsRpcResponse = pikkuScenarioStep<
 })
 
 /**
+ * Resolves a seeded person's Better Auth id from their email, through the
+ * directory the console itself reads.
+ *
+ * Only works for people: `pikkuAdminListUsers` filters out rows flagged
+ * `actor: true`, so an ACTOR's own id comes from `readsActorUserId` instead.
+ * The caller needs `admin:users:list`.
+ */
+export const readsUserIdByEmail = pikkuScenarioStep<
+  { email: string },
+  { userId: string }
+>({
+  name: 'readsUserIdByEmail',
+  description: 'resolves a seeded user id from an email via the directory',
+  template: 'resolves {email}',
+  func: async (_services, { email }, { scenarioStep }) => {
+    const actor = requireActor(scenarioStep)
+    const directory = (await actor.invoke(
+      'pikkuAdminListUsers' as never,
+      {
+        limit: 100,
+      } as never
+    )) as { users?: { id: string; email: string }[] }
+    const found = (directory.users ?? []).find((user) => user.email === email)
+    if (!found) {
+      throw new Error(
+        `No user with email ${email}, the directory holds ${describe(
+          (directory.users ?? []).map((user) => user.email)
+        )}`
+      )
+    }
+    return { userId: found.id }
+  },
+})
+
+/**
  * Asks the server which user the acting actor actually is.
  *
  * Better Auth owns the user table, so ids are only knowable at runtime, and an
