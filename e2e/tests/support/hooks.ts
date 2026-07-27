@@ -10,20 +10,16 @@ import type { AgentWorld } from './world.js'
 import { STAFF_USER } from '../../src/auth-fixtures.js'
 import { randomUUID } from 'crypto'
 import { config } from './types.js'
-import {
-  startBackend,
-  waitForSeededBackend,
-  type BackendHandle,
-} from '../../bin/backend-harness.js'
+import { startBackend } from '../../bin/backend-harness.js'
 
 // LLM calls can be slow
 setDefaultTimeout(config.responseTimeout)
 
-let backend: BackendHandle | undefined
+let backend: Awaited<ReturnType<typeof startBackend>> | undefined
 
 BeforeAll(async function () {
   backend = await startBackend({ apiUrl: config.apiUrl })
-  await waitForSeededBackend(config.apiUrl, { hasExited: backend.hasExited })
+  await backend.waitUntilReady()
 })
 
 AfterAll(async function () {

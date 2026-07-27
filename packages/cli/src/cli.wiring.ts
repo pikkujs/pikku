@@ -492,6 +492,16 @@ wireCLI({
                 'Run scenarios with browser steps. --no-browser skips them (they are reported as skipped, not failed)',
               default: true,
             },
+            spawn: {
+              description:
+                "Start `pikku dev` on the environment's apiUrl for the run and stop it afterwards. Without it, the environment must already be serving",
+              default: false,
+            },
+            keepAlive: {
+              description:
+                'With --spawn, leave the server running after the run (dev loop)',
+              default: false,
+            },
           },
         }),
         list: pikkuCLICommand({
