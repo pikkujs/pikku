@@ -237,7 +237,11 @@ describe('KyselyWorkflowService — step transitions stay consistent', () => {
     await service.setStepResult(retry.stepId, { ok: true })
 
     const history = await service.getRunHistory(runId)
-    assert.equal(history.length, 2, 'expected one attempt row plus one retry row')
+    assert.equal(
+      history.length,
+      2,
+      'expected one attempt row plus one retry row'
+    )
     assert.deepEqual(
       history.map((h) => h.status),
       ['failed', 'succeeded'],
@@ -290,10 +294,14 @@ describe('KyselyWorkflowService — attempt counting', () => {
       1,
       `expected one query for the whole run, got ${queries.length}`
     )
-    assert.deepEqual(
-      steps.map((s: any) => s.stepName).sort(),
-      ['s0', 's1', 's2', 's3', 's4', 's5']
-    )
+    assert.deepEqual(steps.map((s: any) => s.stepName).sort(), [
+      's0',
+      's1',
+      's2',
+      's3',
+      's4',
+      's5',
+    ])
   })
 })
 
@@ -331,6 +339,44 @@ describe('KyselyWorkflowService — run state writes', () => {
     assert.deepEqual(await service.getRunState(runId), {
       alpha: { nested: true },
     })
+  })
+
+  test('values keep their JSON type instead of becoming strings', async () => {
+    const runId = await seedRun('wf5')
+
+    await service.updateRunState(runId, 'empty', [])
+    await service.updateRunState(runId, 'zero', 0)
+    await service.updateRunState(runId, 'no', false)
+    await service.updateRunState(runId, 'nothing', null)
+    await service.updateRunState(runId, 'deep', { a: [1, { b: true }] })
+
+    assert.deepEqual(await service.getRunState(runId), {
+      empty: [],
+      zero: 0,
+      no: false,
+      nothing: null,
+      deep: { a: [1, { b: true }] },
+    })
+  })
+
+  test('a key containing a dot stays one key', async () => {
+    const runId = await seedRun('wf6')
+
+    await service.updateRunState(runId, 'a.b', 'flat')
+
+    assert.deepEqual(
+      await service.getRunState(runId),
+      { 'a.b': 'flat' },
+      'the key was read as a nested path instead of a literal name'
+    )
+  })
+
+  test('a key containing a quote does not break the statement', async () => {
+    const runId = await seedRun('wf7')
+
+    await service.updateRunState(runId, 'it\'s "quoted"', 1)
+
+    assert.deepEqual(await service.getRunState(runId), { 'it\'s "quoted"': 1 })
   })
 })
 
