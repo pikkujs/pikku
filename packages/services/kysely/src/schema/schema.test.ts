@@ -17,6 +17,7 @@ import {
   compilePikkuSchemas,
   applyPikkuSchemas,
   ensurePikkuSchema,
+  declaredTables,
   unsatisfiedRequirements,
   type PikkuSchema,
 } from './index.js'
@@ -269,5 +270,104 @@ describe('ensurePikkuSchema — what a service does at boot', () => {
     } finally {
       await db.destroy()
     }
+  })
+})
+
+describe('ensurePikkuSchema — a connection bound to a schema', () => {
+  const WORKFLOW_TABLES = [
+    'workflow_runs',
+    'workflow_step',
+    'workflow_step_history',
+    'workflow_versions',
+  ]
+
+  /**
+   * A postgres connection whose introspection answers with `tables`.
+   *
+   * Stubbed rather than run against a real database because sqlite has one
+   * schema and nothing else here speaks postgres — and introspection is the
+   * only thing `ensurePikkuSchema` reads before it decides. DummyDriver takes
+   * whatever DDL follows.
+   */
+  const introspecting = (tables: Array<{ schema: string; name: string }>) =>
+    new Kysely<any>({
+      dialect: {
+        ...dialect('postgres'),
+        createIntrospector: () => ({
+          getSchemas: async () => [],
+          getMetadata: async () => ({ tables: [] }),
+          getTables: async () =>
+            tables.map(({ schema, name }) => ({
+              schema,
+              name,
+              isView: false,
+              columns: [],
+            })),
+        }),
+      },
+    })
+
+  test('reads the schema out of its own DDL, not the table name', () => {
+    const db = new Kysely<any>({ dialect: dialect('postgres') })
+
+    assert.deepEqual(declaredTables(workflowSchema, db.withSchema('app')), [
+      { schema: 'app', name: 'workflow_runs' },
+      { schema: 'app', name: 'workflow_step' },
+      { schema: 'app', name: 'workflow_step_history' },
+      { schema: 'app', name: 'workflow_versions' },
+    ])
+
+    // Unqualified DDL resolves against the connection's search_path, which is
+    // not knowable from here — so there is no schema to report.
+    assert.deepEqual(
+      declaredTables(workflowSchema, db),
+      WORKFLOW_TABLES.map((name) => ({ schema: undefined, name }))
+    )
+  })
+
+  test('finds tables that already exist under that schema', async () => {
+    // The regression this exists for: a `withSchema('app')` connection reading
+    // its own `create table "app"."workflow_runs"` as a table called `app`,
+    // concluding every table was missing, and issuing a bare CREATE that the
+    // database rejects with `relation "workflow_runs" already exists` — on
+    // every boot, forever.
+    const db = introspecting(
+      WORKFLOW_TABLES.map((name) => ({ schema: 'app', name }))
+    )
+
+    assert.equal(
+      await ensurePikkuSchema(db.withSchema('app'), workflowSchema),
+      'present'
+    )
+  })
+
+  test('does not accept the same names in a different schema', async () => {
+    // `withSchema('app')` reads and writes `app.workflow_runs`. A
+    // `public.workflow_runs` is a different table and answers nothing.
+    const db = introspecting(
+      WORKFLOW_TABLES.map((name) => ({ schema: 'public', name }))
+    )
+
+    assert.equal(
+      await ensurePikkuSchema(db.withSchema('app'), workflowSchema),
+      'created'
+    )
+  })
+
+  test('still matches on the bare name when the connection is unbound', async () => {
+    const db = introspecting(
+      WORKFLOW_TABLES.map((name) => ({ schema: 'public', name }))
+    )
+
+    assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+  })
+
+  test('names the schema when it reports a half-applied one', async () => {
+    const db = introspecting([{ schema: 'app', name: 'workflow_runs' }])
+
+    await assert.rejects(
+      ensurePikkuSchema(db.withSchema('app'), workflowSchema),
+      /app\.workflow_step.*missing.*app\.workflow_runs already there/s
+    )
   })
 })

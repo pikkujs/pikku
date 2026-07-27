@@ -149,21 +149,46 @@ export const applyPikkuSchemas = async (
   })
 }
 
+/** A table a schema creates, as the DDL addresses it. */
+export interface DeclaredTable {
+  /** Present when the connection is `withSchema(...)`-bound. */
+  schema?: string
+  name: string
+}
+
+/** How a table reads in an error message: qualified only when it is. */
+const displayName = (table: DeclaredTable): string =>
+  table.schema ? `${table.schema}.${table.name}` : table.name
+
+/**
+ * `create table "workflow_runs"` and `create table "app"."workflow_runs"`.
+ *
+ * The schema half is optional and the table is always the LAST quoted
+ * identifier — matching the first one instead reads a `withSchema('app')`
+ * connection's DDL as a table called `app`, which is no table at all.
+ */
+const CREATE_TABLE =
+  /^\s*create table (?:if not exists\s+)?(?:"([^"]+)"\.)?"([^"]+)"/i
+
 /**
  * The tables a schema creates, read back out of its own compiled SQL.
  *
  * Derived rather than declared alongside the statements, because a hand-kept
  * list of names is a second source of truth: rename a table in a statement and
  * the list keeps answering for the old one.
+ *
+ * Compiled against `db` rather than in the abstract, so the answer carries the
+ * schema the DDL will actually target — the same binding the lookup has to use.
  */
-const declaredTables = (schema: PikkuSchema, db: Kysely<any>): string[] => {
+export const declaredTables = (
+  schema: PikkuSchema,
+  db: Kysely<any>
+): DeclaredTable[] => {
   const bound = bind(db)
-  const tables: string[] = []
+  const tables: DeclaredTable[] = []
   for (const statement of schema.statements) {
-    const match = /^\s*create table "([^"]+)"/i.exec(
-      statement(bound, {}).compile().sql
-    )
-    if (match) tables.push(match[1]!)
+    const match = CREATE_TABLE.exec(statement(bound, {}).compile().sql)
+    if (match) tables.push({ schema: match[1], name: match[2]! })
   }
   return tables
 }
@@ -171,8 +196,32 @@ const declaredTables = (schema: PikkuSchema, db: Kysely<any>): string[] => {
 /** What `ensurePikkuSchema` found when it looked. */
 export type EnsureOutcome = 'present' | 'created'
 
-const tablesOf = async (db: Kysely<any>): Promise<Set<string>> =>
-  new Set((await bind(db).introspection.getTables()).map((table) => table.name))
+/**
+ * What `db` already has, indexed both ways.
+ *
+ * Introspection reports every schema it can see, so the bare name alone cannot
+ * answer the question: a `workflow_runs` in some other schema is not the one a
+ * `withSchema('app')` connection reads or writes. Qualified declarations are
+ * matched on the pair. Unqualified DDL resolves against the connection's
+ * search_path, which is not knowable from here, so it falls back to the name.
+ */
+const tablesOf = async (
+  db: Kysely<any>
+): Promise<{ qualified: Set<string>; bare: Set<string> }> => {
+  const tables = await bind(db).introspection.getTables()
+  return {
+    qualified: new Set(tables.map((table) => `${table.schema}.${table.name}`)),
+    bare: new Set(tables.map((table) => table.name)),
+  }
+}
+
+const isPresent = (
+  existing: { qualified: Set<string>; bare: Set<string> },
+  table: DeclaredTable
+): boolean =>
+  table.schema
+    ? existing.qualified.has(`${table.schema}.${table.name}`)
+    : existing.bare.has(table.name)
 
 /**
  * Make sure one schema's tables are there, creating them only if none are.
@@ -198,14 +247,17 @@ export const ensurePikkuSchema = async (
 ): Promise<EnsureOutcome> => {
   const existing = await tablesOf(db)
   const declared = declaredTables(schema, db)
-  const missing = declared.filter((table) => !existing.has(table))
+  const missing = declared.filter((table) => !isPresent(existing, table))
 
   if (missing.length === 0) return 'present'
 
   if (missing.length < declared.length) {
     throw new Error(
-      `The '${schema.name}' schema is half applied: ${missing.join(', ')} missing, ` +
-        `${declared.filter((table) => existing.has(table)).join(', ')} already there. ` +
+      `The '${schema.name}' schema is half applied: ${missing.map(displayName).join(', ')} missing, ` +
+        `${declared
+          .filter((table) => isPresent(existing, table))
+          .map(displayName)
+          .join(', ')} already there. ` +
         'Something else owns part of it. Reconcile it with a migration — ' +
         '`pikku db generate` writes the declaration down — rather than creating the rest at boot.'
     )
@@ -221,7 +273,7 @@ export const ensurePikkuSchema = async (
     // a guarantee — a boot race is only fully answered by having run the
     // migration, which is what `pikku db generate` is for.
     const after = await tablesOf(db)
-    if (declared.every((table) => after.has(table))) return 'present'
+    if (declared.every((table) => isPresent(after, table))) return 'present'
     throw error
   }
 }
