@@ -52,6 +52,24 @@
         "name": "Admin",
         "jobTitle": "Console administrator",
         "personality": "Careful operator who edits code through the console and always restores it"
+      },
+      "staff": {
+        "email": "staff@actors.local",
+        "name": "Staff",
+        "jobTitle": "Console admin without a scope role",
+        "personality": "Support staff who can open the console but cannot administer scopes"
+      },
+      "guest": {
+        "email": "guest@actors.local",
+        "name": "Guest",
+        "jobTitle": "Report reader",
+        "personality": "Read-only user who can see reports and nothing else"
+      },
+      "target": {
+        "email": "target@actors.local",
+        "name": "Target",
+        "jobTitle": "Subject of user administration",
+        "personality": "Ordinary user who gets banned, unbanned and reset by other people"
       }
     },
     "environments": {
