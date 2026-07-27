@@ -187,11 +187,11 @@ jobs:
     needs: build
     services:
       redis:
-        image: redis
+        image: mirror.gcr.io/library/redis:7
         ports:
           - 6379:6379
       postgres:
-        image: postgres
+        image: mirror.gcr.io/library/postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
@@ -224,7 +224,7 @@ jobs:
     needs: build
     services:
       postgres:
-        image: postgres
+        image: mirror.gcr.io/library/postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
@@ -250,11 +250,11 @@ jobs:
     needs: build
     services:
       redis:
-        image: redis
+        image: mirror.gcr.io/library/redis:7
         ports:
           - 6379:6379
       postgres:
-        image: postgres
+        image: mirror.gcr.io/library/postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
