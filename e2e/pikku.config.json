@@ -2,7 +2,11 @@
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "rootDir": ".",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src", "packages/functions/src", "packages/functions/tests"],
+  "srcDirectories": [
+    "src",
+    "packages/functions/src",
+    "packages/functions/tests"
+  ],
   "outDir": ".pikku",
   "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
   "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
@@ -51,19 +55,31 @@
         "email": "admin@actors.local",
         "name": "Admin",
         "jobTitle": "Console administrator",
-        "personality": "Careful operator who edits code through the console and always restores it"
+        "personality": "Careful operator who edits code through the console and always restores it",
+        "scopes": [
+          "admin"
+        ],
+        "roles": [
+          "console-admin"
+        ]
       },
       "staff": {
         "email": "staff@actors.local",
         "name": "Staff",
         "jobTitle": "Console admin without a scope role",
-        "personality": "Support staff who can open the console but cannot administer scopes"
+        "personality": "Support staff who can open the console but cannot administer scopes",
+        "scopes": [
+          "admin"
+        ]
       },
       "guest": {
         "email": "guest@actors.local",
         "name": "Guest",
         "jobTitle": "Report reader",
-        "personality": "Read-only user who can see reports and nothing else"
+        "personality": "Read-only user who can see reports and nothing else",
+        "roles": [
+          "report-viewer"
+        ]
       },
       "target": {
         "email": "target@actors.local",
