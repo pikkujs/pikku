@@ -51,11 +51,15 @@ const postWorkflow = async (
   apiUrl: string,
   workflowName: string,
   action: string,
-  input: unknown
+  input: unknown,
+  userId?: string
 ): Promise<WorkflowRunResult> => {
   const response = await fetch(`${apiUrl}/workflow/${workflowName}/${action}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(userId ? { 'x-user-id': userId } : {}),
+    },
     body: JSON.stringify({ data: input ?? {} }),
   })
   const body = await readBody(response)
@@ -71,14 +75,20 @@ const postWorkflow = async (
 }
 
 export const runsWorkflow = pikkuScenarioStep<
-  { workflowName: string; input?: unknown },
+  { workflowName: string; input?: unknown; userId?: string },
   WorkflowRunResult
 >({
   name: 'runsWorkflow',
   description: 'runs a workflow to completion over HTTP and reports the run',
   template: 'runs {workflowName}',
-  func: async (_services, { workflowName, input }, { scenarioStep }) =>
-    postWorkflow(apiUrlOf(scenarioStep.env), workflowName, 'run', input),
+  func: async (_services, { workflowName, input, userId }, { scenarioStep }) =>
+    postWorkflow(
+      apiUrlOf(scenarioStep.env),
+      workflowName,
+      'run',
+      input,
+      userId
+    ),
 })
 
 export const startsWorkflow = pikkuScenarioStep<
