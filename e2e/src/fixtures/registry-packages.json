@@ -1,0 +1,117 @@
+[
+  {
+    "name": "@pikku/addon-stripe",
+    "displayName": "Stripe",
+    "description": "Charge cards, read balances and react to Stripe webhooks.",
+    "categories": ["payments"],
+    "tags": ["payments", "billing", "stripe"],
+    "functionCount": 12
+  },
+  {
+    "name": "@pikku/addon-email-send",
+    "displayName": "Email Send",
+    "description": "A provider-agnostic send-an-email function.",
+    "categories": ["email"],
+    "tags": ["email"],
+    "functionCount": 1,
+    "version": "latest"
+  },
+  {
+    "name": "@pikku/addon-mandrill",
+    "displayName": "Mandrill",
+    "description": "Transactional email through Mailchimp's Mandrill.",
+    "categories": ["email"],
+    "tags": ["email", "mandrill"],
+    "functionCount": 3,
+    "version": "latest"
+  },
+  {
+    "name": "@pikku/addon-mailgun",
+    "displayName": "Mailgun",
+    "description": "Transactional email through Mailgun.",
+    "categories": ["email"],
+    "tags": ["email", "mailgun"],
+    "functionCount": 4,
+    "version": "latest"
+  },
+  {
+    "name": "@pikku/addon-slack",
+    "displayName": "Slack",
+    "description": "Post messages and open conversations in Slack.",
+    "categories": ["realtime"],
+    "tags": ["chat", "slack"],
+    "functionCount": 6
+  },
+  {
+    "name": "@pikku/addon-github",
+    "displayName": "GitHub",
+    "description": "Read repositories, issues and pull requests.",
+    "categories": ["devtools"],
+    "tags": ["git", "github"],
+    "functionCount": 9
+  },
+  {
+    "name": "@pikku/addon-openai",
+    "displayName": "OpenAI",
+    "description": "Chat completions, embeddings and transcription.",
+    "categories": ["ai"],
+    "tags": ["ai", "llm", "openai"],
+    "functionCount": 7
+  },
+  {
+    "name": "@pikku/addon-postgres",
+    "displayName": "Postgres",
+    "description": "Query a Postgres database from a function.",
+    "categories": ["database"],
+    "tags": ["database", "sql", "postgres"],
+    "functionCount": 5
+  },
+  {
+    "name": "@pikku/addon-s3",
+    "displayName": "S3",
+    "description": "Read and write objects in S3-compatible storage.",
+    "categories": ["storage"],
+    "tags": ["storage", "s3", "files"],
+    "functionCount": 5
+  },
+  {
+    "name": "@pikku/addon-twilio",
+    "displayName": "Twilio",
+    "description": "Send SMS and place calls through Twilio.",
+    "categories": ["realtime"],
+    "tags": ["sms", "twilio"],
+    "functionCount": 4
+  },
+  {
+    "name": "@pikku/addon-sentry",
+    "displayName": "Sentry",
+    "description": "Report errors and read issue detail from Sentry.",
+    "categories": ["observability"],
+    "tags": ["errors", "sentry"],
+    "functionCount": 3
+  },
+  {
+    "name": "@pikku/addon-algolia",
+    "displayName": "Algolia",
+    "description": "Index records and run searches against Algolia.",
+    "categories": ["search"],
+    "tags": ["search", "algolia"],
+    "functionCount": 4
+  },
+  {
+    "name": "@pikku/addon-posthog",
+    "displayName": "PostHog",
+    "description": "Capture product analytics events.",
+    "categories": ["analytics"],
+    "tags": ["analytics", "posthog"],
+    "functionCount": 2
+  },
+  {
+    "name": "@acme/addon-widgets",
+    "displayName": "Acme Widgets",
+    "description": "A third-party addon, so the catalogue is not all first-party.",
+    "categories": ["devtools"],
+    "tags": ["community"],
+    "functionCount": 2
+  }
+]
