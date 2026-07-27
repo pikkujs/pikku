@@ -19,6 +19,20 @@ import {
   type MockLlmCall,
 } from './agent-transport.js'
 
+/**
+ * An image or file part sent alongside the message.
+ *
+ * `data` is base64 — the fixture bytes are a 1x1 PNG regardless of the declared
+ * media type, because every assertion here is about the media type and the part
+ * shape reaching the model, never about decoding the bytes.
+ */
+export interface AgentAttachment {
+  type: 'image' | 'file'
+  data: string
+  mediaType: string
+  filename?: string
+}
+
 /** One tool call the run is waiting on a human decision for. */
 export interface PendingApproval {
   toolCallId: string
@@ -81,6 +95,7 @@ export const runsAgent = pikkuScenarioStep<
     identity?: Identity
     context?: string
     temperature?: number
+    attachments?: AgentAttachment[]
   },
   AgentRunResult
 >({
@@ -98,6 +113,7 @@ export const runsAgent = pikkuScenarioStep<
       identity,
       context,
       temperature,
+      attachments,
     },
     { scenarioStep }
   ) => {
@@ -111,6 +127,7 @@ export const runsAgent = pikkuScenarioStep<
       model: `mock/${script}`,
       ...(context === undefined ? {} : { context }),
       ...(temperature === undefined ? {} : { temperature }),
+      ...(attachments === undefined ? {} : { attachments }),
     })
 
     const modelCalls = (await readModelCalls(apiUrl)).slice(before)

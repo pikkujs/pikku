@@ -159,6 +159,8 @@ export const expectsModelCall = pikkuScenarioStep<
     instructionsNonEmpty?: boolean
     instructionsInclude?: string
     messagesInclude?: string
+    hasNonTextPart?: boolean
+    attachmentMediaType?: string
     receivedToolResult?: boolean
   },
   { index: number }
@@ -176,6 +178,8 @@ export const expectsModelCall = pikkuScenarioStep<
       instructionsNonEmpty,
       instructionsInclude,
       messagesInclude,
+      hasNonTextPart,
+      attachmentMediaType,
       receivedToolResult,
     }
   ) => {
@@ -211,6 +215,32 @@ export const expectsModelCall = pikkuScenarioStep<
       if (!history.includes(messagesInclude)) {
         throw new Error(
           `Expected call ${index} to have replayed ${describe(messagesInclude)}, got ${history}`
+        )
+      }
+    }
+    if (hasNonTextPart || attachmentMediaType !== undefined) {
+      const userMessages = (call.messages ?? []).filter(
+        (message: any) => message.role === 'user'
+      )
+      if (hasNonTextPart) {
+        const parts = userMessages.flatMap((message: any) =>
+          Array.isArray(message.content) ? message.content : []
+        )
+        const nonText = parts.filter(
+          (part: any) => part.type && part.type !== 'text'
+        )
+        if (nonText.length === 0) {
+          throw new Error(
+            `Expected call ${index} to carry a non-text content part, got ${describe(parts)}`
+          )
+        }
+      }
+      if (
+        attachmentMediaType !== undefined &&
+        !JSON.stringify(userMessages).includes(attachmentMediaType)
+      ) {
+        throw new Error(
+          `Expected call ${index} to carry an attachment of ${attachmentMediaType}, got ${describe(userMessages)}`
         )
       }
     }
@@ -535,5 +565,67 @@ export const expectsModelCallMatching = pikkuScenarioStep<
       )
     }
     return { modelId }
+  },
+})
+
+/**
+ * The whole call log for one run, searched as text.
+ *
+ * The two voice assertions are existence and absence across every call the run
+ * made, not properties of a call at a known index — the transcript replaces the
+ * user message, so there is no stable index to read. Scoped to this run's calls
+ * rather than the process-global log, which is strictly narrower than the
+ * cucumber step it replaces.
+ */
+export const expectsCallLog = pikkuScenarioStep<
+  { calls: MockLlmCall[]; includes?: string; excludes?: string },
+  { calls: number }
+>({
+  name: 'expectsCallLog',
+  description: 'expects what the run’s model calls did and did not carry',
+  func: async (_services, { calls, includes, excludes }) => {
+    const serialized = JSON.stringify(calls)
+    if (includes !== undefined && !serialized.includes(includes)) {
+      throw new Error(
+        `No model call carried ${describe(includes)} — the run made ${calls.length}`
+      )
+    }
+    if (excludes !== undefined && serialized.includes(excludes)) {
+      throw new Error(
+        `A model call carried ${describe(excludes)}, which should never reach the model`
+      )
+    }
+    return { calls: calls.length }
+  },
+})
+
+/**
+ * A structured run result, field by field.
+ *
+ * An agent with an `output` schema and no tools surfaces `result.object` rather
+ * than the assistant text, so the assertion is that the result is an object at
+ * all and then that the parsed fields carry their scripted values.
+ */
+export const expectsResultObject = pikkuScenarioStep<
+  { run: { result: unknown }; fields: Record<string, unknown> },
+  { fields: string[] }
+>({
+  name: 'expectsResultObject',
+  description: 'expects a structured run result',
+  func: async (_services, { run, fields }) => {
+    if (run.result === null || typeof run.result !== 'object') {
+      throw new Error(
+        `Expected a structured object, got ${describe(run.result)}`
+      )
+    }
+    const result = run.result as Record<string, unknown>
+    for (const [field, expected] of Object.entries(fields)) {
+      if (JSON.stringify(result[field]) !== JSON.stringify(expected)) {
+        throw new Error(
+          `Expected ${field} to be ${describe(expected)}, got ${describe(result[field])}`
+        )
+      }
+    }
+    return { fields: Object.keys(fields) }
   },
 })
