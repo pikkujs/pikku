@@ -257,6 +257,32 @@ export const selectsSegment = pikkuScenarioStep<
   },
 })
 
+/**
+ * Picks a view on the page header's own switch, which is a `role="tablist"` of
+ * buttons rather than a Mantine `SegmentedControl` — a different control with a
+ * different DOM, so it gets its own step rather than a selector that guesses.
+ *
+ * The option is addressed by its value, which is declared in code, and never by
+ * its label, which is translated.
+ */
+export const selectsTab = pikkuScenarioStep<
+  { value: string },
+  { selected: string },
+  true
+>({
+  name: 'selectsTab',
+  description: 'picks a view on the page header switch',
+  template: 'switches to the {value} view',
+  browser: true,
+  func: async (_services, { value }, { browser }) => {
+    await browser.page
+      .locator(`[data-testid="switch-tab"][data-value="${value}"]:visible`)
+      .first()
+      .click({ timeout: TIMEOUT })
+    return { selected: value }
+  },
+})
+
 export const readsTestIdText = pikkuScenarioStep<
   { testId: string },
   { text: string },

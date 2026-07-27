@@ -13,7 +13,7 @@ export const NotAuthorized: React.FC = () => {
   return (
     <Center h="100vh">
       <Paper p="xl" radius="lg" maw={420} w="100%" withBorder>
-        <Stack gap="lg" align="center">
+        <Stack gap="lg" align="center" data-testid="console-not-authorized">
           <Box ta="center">
             <Center>
               <ShieldX size={48} color="var(--mantine-color-red-6)" />

@@ -75,7 +75,8 @@ export function PikkuSwitch<T extends string>({
             onClick={() => onChange(option.value)}
             aria-label={option.label}
             title={option.label}
-            data-testid={option['data-testid']}
+            data-testid={option['data-testid'] ?? 'switch-tab'}
+            data-value={option.value}
           >
             {option.icon && <span className={classes.icon}>{option.icon}</span>}
             <span className={classes.label}>
