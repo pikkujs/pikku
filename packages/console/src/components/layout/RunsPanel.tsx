@@ -108,6 +108,10 @@ const RunRow: React.FC<{
     <Box
       py="sm"
       px="sm"
+      data-testid="run-row"
+      data-run-id={run.id}
+      data-run-status={run.status}
+      data-selected={selected ? 'true' : 'false'}
       style={{
         backgroundColor: selected
           ? 'var(--mantine-color-blue-light)'
