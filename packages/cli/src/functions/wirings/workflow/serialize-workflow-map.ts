@@ -9,6 +9,14 @@ import type { FunctionsMeta } from '@pikku/core'
 import { parseVersionedId } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
+/**
+ * A workflow or graph node name is free-form prose written by a human, so an
+ * apostrophe or a backslash in it is ordinary. `JSON.stringify` emits a valid,
+ * escaped TypeScript string literal; interpolating the raw name into a quoted
+ * key terminates the string and the whole `.d.ts` stops parsing.
+ */
+const key = (name: string) => JSON.stringify(name)
+
 type WireAddonDeclarations = Map<
   string,
   { package: string; rpcEndpoint?: string }
@@ -144,7 +152,7 @@ function generateWorkflows(
 
   let workflowsStr = 'export type WorkflowMap = {\n'
   for (const [workflowName, handler] of Object.entries(workflowsObj)) {
-    workflowsStr += `  readonly '${workflowName}': WorkflowHandler<${handler.inputType}, ${handler.outputType}>,\n`
+    workflowsStr += `  readonly ${key(workflowName)}: WorkflowHandler<${handler.inputType}, ${handler.outputType}>,\n`
   }
   workflowsStr += '};'
 
@@ -189,9 +197,9 @@ function generateGraphs(
 
   let graphsStr = 'export type GraphsMap = {\n'
   for (const [graphName, nodes] of Object.entries(graphsObj)) {
-    graphsStr += `  readonly '${graphName}': {\n`
+    graphsStr += `  readonly ${key(graphName)}: {\n`
     for (const [nodeId, handler] of Object.entries(nodes)) {
-      graphsStr += `    readonly '${nodeId}': GraphNodeHandler<${handler.inputType}>,\n`
+      graphsStr += `    readonly ${key(nodeId)}: GraphNodeHandler<${handler.inputType}>,\n`
     }
     graphsStr += '  },\n'
   }

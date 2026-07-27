@@ -1,6 +1,14 @@
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 
+/**
+ * A workflow or graph node name is free-form prose written by a human, so an
+ * apostrophe or a backslash in it is ordinary. `JSON.stringify` emits a valid,
+ * escaped TypeScript string literal; interpolating the raw name into a quoted
+ * key terminates the string and the whole `.d.ts` stops parsing.
+ */
+const key = (name: string) => JSON.stringify(name)
+
 export const serializeWorkflowBootstrapMap = (
   workflowsMeta: WorkflowsMeta,
   graphMeta: SerializedWorkflowGraphs
@@ -9,7 +17,7 @@ export const serializeWorkflowBootstrapMap = (
     .sort()
     .map(
       (workflowName) =>
-        `  readonly '${workflowName}': WorkflowHandler<unknown, unknown>,`
+        `  readonly ${key(workflowName)}: WorkflowHandler<unknown, unknown>,`
     )
     .join('\n')
 
@@ -18,10 +26,12 @@ export const serializeWorkflowBootstrapMap = (
     .map(([graphName, graph]) => {
       const nodeEntries = Object.keys(graph.nodes)
         .sort()
-        .map((nodeId) => `    readonly '${nodeId}': GraphNodeHandler<unknown>,`)
+        .map(
+          (nodeId) => `    readonly ${key(nodeId)}: GraphNodeHandler<unknown>,`
+        )
         .join('\n')
 
-      return `  readonly '${graphName}': {\n${nodeEntries}\n  },`
+      return `  readonly ${key(graphName)}: {\n${nodeEntries}\n  },`
     })
     .join('\n')
 
