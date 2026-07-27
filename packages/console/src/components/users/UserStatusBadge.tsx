@@ -14,11 +14,23 @@ export const UserStatusBadge: React.FC<UserStatusBadgeProps> = ({ user }) => {
     return null
   }
   return user.banned ? (
-    <Badge color="red" variant="light" size="sm">
+    <Badge
+      color="red"
+      variant="light"
+      size="sm"
+      data-testid="user-status"
+      data-banned="true"
+    >
       {m.users_status_banned()}
     </Badge>
   ) : (
-    <Badge color="gray" variant="light" size="sm">
+    <Badge
+      color="gray"
+      variant="light"
+      size="sm"
+      data-testid="user-status"
+      data-banned="false"
+    >
       {m.users_status_active()}
     </Badge>
   )

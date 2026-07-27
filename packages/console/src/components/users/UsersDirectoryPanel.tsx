@@ -59,6 +59,10 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
           docsHref="https://pikku.dev/docs/core-features/permission-guards"
           data={users}
           getKey={(u) => u.id}
+          getRowProps={(u) => ({
+            'data-testid': 'user-row',
+            'data-user-id': u.id,
+          })}
           loading={usersQuery.isLoading}
           externalSearch={search}
           emptyTitle={m.users_empty()}

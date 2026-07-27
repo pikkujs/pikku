@@ -15,9 +15,40 @@
  *   is the subject of the assertion.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import type { PikkuBrowserWire } from '@pikku/core/workflow'
 import type {} from '@pikku/playwright'
 
 const TIMEOUT = 15_000
+
+/**
+ * Where an element is looked up: its test id, optionally as a prefix, plus the
+ * data attributes it has to carry. Attributes are how a status is asserted
+ * without reading the console's own translated copy back to it.
+ *
+ * `containing` narrows to the one match holding a piece of text, for the rows
+ * whose identity is the data they display — a user's email is rendered anyway,
+ * so matching on it adds no attribute for a scraper or a session recorder to
+ * pick up, which putting the same value in a `data-` attribute would.
+ */
+interface TestIdSelector {
+  testId: string
+  prefix?: boolean
+  where?: Record<string, string>
+  containing?: string
+}
+
+const selectorFor = ({ testId, prefix, where }: TestIdSelector): string => {
+  const attributes = Object.entries(where ?? {})
+    .map(([name, value]) => `[${name}="${value}"]`)
+    .join('')
+  const id = prefix ? `[data-testid^="${testId}"]` : `[data-testid="${testId}"]`
+  return `${id}${attributes}`
+}
+
+const scopeFor = (browser: PikkuBrowserWire, within: TestIdSelector) => {
+  const base = browser.page.locator(selectorFor(within))
+  return within.containing ? base.filter({ hasText: within.containing }) : base
+}
 
 export const seesText = pikkuScenarioStep<
   { text: string },
@@ -100,7 +131,12 @@ export const clicksLink = pikkuScenarioStep<
 })
 
 export const clicksTestId = pikkuScenarioStep<
-  { testId: string; containing?: string },
+  {
+    testId: string
+    containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
+  },
   { clicked: string },
   true
 >({
@@ -108,8 +144,9 @@ export const clicksTestId = pikkuScenarioStep<
   description: 'clicks an element by its test id',
   template: 'clicks {testId}',
   browser: true,
-  func: async (_services, { testId, containing }, { browser }) => {
-    const base = browser.page.locator(`[data-testid="${testId}"]:visible`)
+  func: async (_services, { testId, containing, within }, { browser }) => {
+    const scope = within ? scopeFor(browser, within) : browser.page
+    const base = scope.locator(`${selectorFor({ testId })}:visible`)
     const target = containing ? base.filter({ hasText: containing }) : base
     await target.first().click({ timeout: TIMEOUT })
     return { clicked: containing ? `${testId}:${containing}` : testId }
@@ -128,6 +165,8 @@ export const seesTestId = pikkuScenarioStep<
      * reading the console's own translated copy back to it.
      */
     where?: Record<string, string>
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
     count?: number
     atLeast?: number
     /** Overrides the default wait, for a state that arrives via a redirect. */
@@ -142,16 +181,12 @@ export const seesTestId = pikkuScenarioStep<
   browser: true,
   func: async (
     _services,
-    { testId, prefix, containing, where, count, atLeast, timeoutMs },
+    { testId, prefix, containing, where, within, count, atLeast, timeoutMs },
     { browser }
   ) => {
-    const attributes = Object.entries(where ?? {})
-      .map(([name, value]) => `[${name}="${value}"]`)
-      .join('')
-    const base = browser.page.locator(
-      prefix
-        ? `[data-testid^="${testId}"]${attributes}:visible`
-        : `[data-testid="${testId}"]${attributes}:visible`
+    const scope = within ? scopeFor(browser, within) : browser.page
+    const base = scope.locator(
+      `${selectorFor({ testId, prefix, where })}:visible`
     )
     const target = containing ? base.filter({ hasText: containing }) : base
     await target
@@ -171,7 +206,11 @@ export const seesTestId = pikkuScenarioStep<
 })
 
 export const doesNotSeeTestId = pikkuScenarioStep<
-  { testId: string },
+  {
+    testId: string
+    where?: Record<string, string>
+    containing?: string
+  },
   { absent: true },
   true
 >({
@@ -179,9 +218,8 @@ export const doesNotSeeTestId = pikkuScenarioStep<
   description: 'expects an element with a given test id to be absent',
   template: 'does not see {testId}',
   browser: true,
-  func: async (_services, { testId }, { browser }) => {
-    await browser.page
-      .locator(`[data-testid="${testId}"]`)
+  func: async (_services, { testId, where, containing }, { browser }) => {
+    await scopeFor(browser, { testId, where, containing })
       .first()
       .waitFor({ state: 'detached', timeout: TIMEOUT })
     return { absent: true }

@@ -49,6 +49,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
           variant="subtle"
           color="gray"
           aria-label={m.users_more_actions()}
+          data-testid="user-actions"
         >
           <MoreHorizontal size={16} />
         </ActionIcon>
@@ -56,13 +57,18 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
       <Menu.Dropdown>
         {canBan &&
           (user.banned ? (
-            <Menu.Item leftSection={<Undo2 size={14} />} onClick={unban}>
+            <Menu.Item
+              leftSection={<Undo2 size={14} />}
+              onClick={unban}
+              data-testid="user-action-unban"
+            >
               {m.users_unban_action()}
             </Menu.Item>
           ) : (
             <Menu.Item
               leftSection={<Ban size={14} />}
               onClick={() => onAction('ban')}
+              data-testid="user-action-ban"
             >
               {m.users_ban_action()}
             </Menu.Item>
@@ -71,6 +77,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
           <Menu.Item
             leftSection={<LogOut size={14} />}
             onClick={() => onAction('revoke')}
+            data-testid="user-action-revoke"
           >
             {m.users_revoke_sessions_action()}
           </Menu.Item>
@@ -79,6 +86,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
           <Menu.Item
             leftSection={<KeyRound size={14} />}
             onClick={() => onAction('password')}
+            data-testid="user-action-password"
           >
             {m.users_set_password_action()}
           </Menu.Item>
@@ -90,6 +98,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
               color="red"
               leftSection={<Trash2 size={14} />}
               onClick={() => onAction('remove')}
+              data-testid="user-action-remove"
             >
               {m.users_remove_action()}
             </Menu.Item>
