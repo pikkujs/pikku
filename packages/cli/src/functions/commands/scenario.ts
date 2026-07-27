@@ -13,10 +13,20 @@ import type { CoreFeature, CoreWorkflow } from '@pikku/core/workflow'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
-  buildStepLadder,
   collectScenarioStepProse,
   scenarioBrowserSteps,
+  scenarioFailureFromSteps,
+  scenarioStepRows,
 } from './scenario-ladder.js'
+import { formatScenarioReport } from './scenario-formatter.js'
+import type {
+  ScenarioFailureDetail,
+  ScenarioStepRow,
+} from './scenario-formatter.js'
+import {
+  resolveScenarioBrowserProvider,
+  scenarioBrowserLifecycle,
+} from './scenario-browser.js'
 import { resolveScenarioActors } from '../../utils/resolve-scenario-actors.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
@@ -119,6 +129,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     browser?: boolean
     spawn?: boolean
     keepAlive?: boolean
+    trace?: boolean
   },
   void
 >({
@@ -133,6 +144,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       browser = true,
       spawn = false,
       keepAlive = false,
+      trace = false,
     }
   ) => {
     const state = await getInspectorState(true)
@@ -268,9 +280,6 @@ export const scenarioRun = pikkuSessionlessFunc<
           ),
         }))
         .filter((group) => group.entries.length > 0)
-      for (const name of skipped) {
-        logger.info(`SKIP ${name} (browser steps, --no-browser)`)
-      }
     }
 
     const workflowService = new InMemoryWorkflowService()
@@ -299,35 +308,29 @@ export const scenarioRun = pikkuSessionlessFunc<
     const needsBrowser = groups.some((group) =>
       group.entries.some((entry) => browserStepsByFlow.has(entry.scenarioName))
     )
-    let browserProvider: { close(): Promise<void> } | undefined
-    if (needsBrowser) {
-      // Fail fast, before a single scenario runs: a missing driver or appUrl
-      // discovered mid-flow costs a whole run to find out.
-      if (!env.appUrl) {
-        throw new Error(
-          `Scenario environment '${environment}' has browser steps but no 'appUrl'. ` +
-            `Add it to scenarios.environments.${environment} in pikku.config.json, or run with --no-browser to skip them.`
-        )
-      }
-      const { PlaywrightScenarioBrowserProvider, browserConfigFromEnv } =
-        await import('@pikku/playwright').catch(() => {
-          throw new Error(
-            `Scenarios ${[...browserStepsByFlow.keys()].join(', ')} declare browser steps but @pikku/playwright is not installed. ` +
-              `Run 'yarn add -D @pikku/playwright @playwright/test', or run with --no-browser to skip them.`
-          )
-        })
-      const provider = new PlaywrightScenarioBrowserProvider({
-        secret,
-        actors: scenarioActors,
-        signInPath: env.signInPath,
-        config: browserConfigFromEnv({
-          appUrl: env.appUrl,
-          apiUrl: env.apiUrl,
-        }),
-      })
-      scenarioService.setScenarioBrowserProvider(provider)
-      browserProvider = provider
-    }
+    const failureDir = join(
+      resolve(config.rootDir, config.outDir),
+      'scenario-failures'
+    )
+    const browserLifecycle = scenarioBrowserLifecycle(
+      needsBrowser
+        ? await (async () => {
+            const provider = await resolveScenarioBrowserProvider({
+              environment,
+              apiUrl: env.apiUrl,
+              appUrl: env.appUrl,
+              secret,
+              actors: scenarioActors,
+              signInPath: env.signInPath,
+              failureDir,
+              browserScenarios: [...browserStepsByFlow.keys()],
+              driver: config.scenarios?.browserDriver,
+            })
+            scenarioService.setScenarioBrowserProvider(provider)
+            return provider
+          })()
+        : undefined
+    )
 
     const results: Array<{
       name: string
@@ -335,36 +338,41 @@ export const scenarioRun = pikkuSessionlessFunc<
       durationMs: number
       output?: unknown
       error?: string
-      ladder?: string[]
+      steps?: ScenarioStepRow[]
+      failure?: ScenarioFailureDetail
     }> = []
 
     /**
      * The step ladder is read back off the recorded run, so it needs no live
-     * step events — it is the same data the console renders.
+     * step events — it is the same data the console renders. Joining it to the
+     * declared prose happens here, where the inspector state is; laying it out
+     * is the formatter's job.
      */
-    const renderLadder = async (
+    const readRunSteps = async (
       service: InMemoryWorkflowService,
       runId: string,
       flowName: string
-    ): Promise<string[]> => {
+    ) => {
       const prose = collectScenarioStepProse(
         state.workflows?.meta?.[flowName],
         functionsMeta
       )
-      const steps = await service.getRunSteps(runId)
-      return buildStepLadder(
-        steps.map((step) => ({
-          stepName: step.stepName,
-          status: step.status,
-          durationMs: step.succeededAt
-            ? step.succeededAt.getTime() - step.createdAt.getTime()
-            : undefined,
-          error: step.error?.message,
-          input: step.data,
-          stepFunc: step.rpcName,
-        })),
-        prose
-      )
+      const steps = (await service.getRunSteps(runId)).map((step) => ({
+        stepName: step.stepName,
+        status: step.status,
+        durationMs: step.succeededAt
+          ? step.succeededAt.getTime() - step.createdAt.getTime()
+          : undefined,
+        error: step.error?.message,
+        stack: step.error?.stack,
+        expected: step.error?.expected,
+        input: step.data,
+        stepFunc: step.rpcName,
+      }))
+      return {
+        rows: scenarioStepRows(steps, prose),
+        failure: scenarioFailureFromSteps(steps, prose),
+      }
     }
 
     const coverageActor = coverage ? Object.values(actors)[0] : undefined
@@ -410,6 +418,9 @@ export const scenarioRun = pikkuSessionlessFunc<
       data: unknown
     ) => {
       const startedAt = Date.now()
+      // Before the scenario, not after it: the last scenario's window is left
+      // open for headed debugging, while this one still starts clean.
+      await browserLifecycle.reset()
       if (coverageActive) {
         const reset = await invokeCoverage('pikkuScenarioResetLiveCoverage')
         if (reset && reset.enabled === false) {
@@ -423,13 +434,17 @@ export const scenarioRun = pikkuSessionlessFunc<
         await coverageActor?.invoke('pikkuScenarioResetStubs', null)
       } catch {}
       let runId: string | undefined
+      let runError: { stack?: string; expected?: boolean } | undefined
       try {
+        // The id comes back through the callback rather than the return value
+        // because a failing scenario throws instead of returning — and a failed
+        // run is exactly the one whose steps are worth reading.
         ;({ runId } = await workflowService.startWorkflow(
           scenarioName,
           data,
           { type: 'cli' },
           guardRpc,
-          { actors }
+          { actors, onRunCreated: (id) => (runId = id) }
         ))
         const run = await workflowService.getRun(runId)
         if (run?.status === 'completed') {
@@ -440,6 +455,7 @@ export const scenarioRun = pikkuSessionlessFunc<
             output: run.output,
           })
         } else {
+          runError = run?.error
           results.push({
             name: label,
             status: 'failed',
@@ -448,6 +464,7 @@ export const scenarioRun = pikkuSessionlessFunc<
           })
         }
       } catch (e: any) {
+        runError = { stack: e?.stack }
         results.push({
           name: label,
           status: 'failed',
@@ -455,12 +472,24 @@ export const scenarioRun = pikkuSessionlessFunc<
           error: e?.message ?? String(e),
         })
       }
+      const result = results[results.length - 1]!
+      let stepFailure: ScenarioFailureDetail | undefined
       if (runId) {
-        results[results.length - 1]!.ladder = await renderLadder(
-          workflowService,
-          runId,
-          scenarioName
-        )
+        const read = await readRunSteps(workflowService, runId, scenarioName)
+        result.steps = read.rows
+        stepFailure = read.failure
+      }
+      if (result.status === 'failed') {
+        result.failure = {
+          // A scenario can also fail outside any step — a hook, or the start
+          // itself — and then the run's own error is all there is to report.
+          ...(stepFailure ?? {
+            message: result.error ?? 'unknown failure',
+            stack: runError?.stack,
+            expected: runError?.expected,
+          }),
+          browser: await browserLifecycle.captureFailure(label),
+        }
       }
       if (coverageActive) {
         const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
@@ -524,7 +553,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       }
     }
 
-    await browserProvider?.close()
+    await browserLifecycle.close()
 
     if (coverage && Object.keys(scenarioCoverage).length > 0) {
       const coverageDir = join(
@@ -548,31 +577,15 @@ export const scenarioRun = pikkuSessionlessFunc<
       logger.info(`Scenario coverage → ${outFile}`)
     }
 
+    const report = { environment, results, skipped, hookFailures }
+    for (const { level, text } of formatScenarioReport(report, {
+      trace,
+      projectRoot: config.rootDir,
+    })) {
+      logger[level](text)
+    }
+
     const failed = results.filter((r) => r.status === 'failed')
-    for (const r of results) {
-      if (r.status === 'passed') {
-        logger.info(
-          `PASS ${r.name} (${r.durationMs}ms)${r.output !== undefined ? ` → ${JSON.stringify(r.output)}` : ''}`
-        )
-      } else {
-        logger.error(`FAIL ${r.name} (${r.durationMs}ms): ${r.error}`)
-      }
-      for (const line of r.ladder ?? []) {
-        logger.info(line)
-      }
-    }
-    for (const hookFailure of hookFailures) {
-      logger.error(hookFailure)
-    }
-    const skippedSuffix = skipped.length
-      ? `, ${skipped.length} skipped (--no-browser)`
-      : ''
-    const hookSuffix = hookFailures.length
-      ? `, ${hookFailures.length} feature hook failure(s)`
-      : ''
-    logger.info(
-      `${results.length - failed.length}/${results.length} scenarios passed against '${environment}'${skippedSuffix}${hookSuffix}`
-    )
     if (failed.length > 0 || hookFailures.length > 0) {
       process.exitCode = 1
     }

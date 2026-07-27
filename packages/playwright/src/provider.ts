@@ -1,6 +1,11 @@
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { BrowserContext } from '@playwright/test'
 import type { ScenarioActorConfig } from '@pikku/core/services'
-import type { ScenarioBrowserProvider } from '@pikku/core/workflow'
+import type {
+  ScenarioBrowserFailure,
+  ScenarioBrowserProvider,
+} from '@pikku/core/workflow'
 import { ActorSession } from './actor-session.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'
 import { browserConfigFromEnv, type BrowserConfig } from './config.js'
@@ -37,6 +42,8 @@ export interface PlaywrightScenarioBrowserProviderOptions {
   actors: Record<string, ScenarioActorConfig>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
   signInPath?: string
+  /** Where `captureFailure` writes screenshots. Without it, none are taken. */
+  failureDir?: string
   connectBrowser?: () => Promise<BrowserConnection>
   signIn?: ActorSignIn
 }
@@ -81,12 +88,54 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     return opening
   }
 
-  async close(): Promise<void> {
+  /**
+   * Close every actor's context, keeping the browser. The next `sessionFor`
+   * opens a fresh context and re-runs the actor sign-in, so a scenario starts
+   * with no cookies, no storage and no pages from the one before it.
+   */
+  async reset(): Promise<void> {
     const sessions = [...this.sessions.values()]
     this.sessions.clear()
     for (const session of sessions) {
       await session.then((s) => s.close()).catch(() => {})
     }
+  }
+
+  async captureFailure(label: string): Promise<ScenarioBrowserFailure[]> {
+    const failures: ScenarioBrowserFailure[] = []
+    for (const [actorName, pending] of this.sessions) {
+      const session = await pending.catch(() => undefined)
+      if (!session) {
+        continue
+      }
+      const failure: ScenarioBrowserFailure = {
+        actor: actorName,
+        ...session.takeIssues(),
+      }
+      // Every read below can throw on a window the browser already tore down,
+      // and this runs while a scenario is ALREADY failing — losing the real
+      // error to a capture error would be the worst possible trade.
+      try {
+        failure.url = session.page.url()
+      } catch {}
+      if (this.options.failureDir) {
+        try {
+          const file = join(
+            this.options.failureDir,
+            `${slugify(label)}-${slugify(actorName)}.png`
+          )
+          await mkdir(this.options.failureDir, { recursive: true })
+          await session.screenshot(file)
+          failure.screenshot = file
+        } catch {}
+      }
+      failures.push(failure)
+    }
+    return failures
+  }
+
+  async close(): Promise<void> {
+    await this.reset()
     const connection = this.connection
     this.connection = undefined
     if (connection) {
@@ -133,6 +182,13 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     return this.connection
   }
 }
+
+/** A scenario label ("code editor › edits") as a usable filename. */
+const slugify = (value: string) =>
+  value
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase() || 'scenario'
 
 /**
  * Sign in via the Better Auth actor plugin and land its Set-Cookie headers in

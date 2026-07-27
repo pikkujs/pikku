@@ -408,6 +408,12 @@ export type PikkuCLIInput = {
         appUrl?: string
       }
     >
+    /**
+     * The package driving `browser: true` steps. Anything exporting a
+     * `ScenarioBrowserProvider` works — the runner never depends on a
+     * particular browser tool. Defaults to `@pikku/playwright`.
+     */
+    browserDriver?: string
   }
 
   scaffold?: {

@@ -137,6 +137,7 @@ export type {
   PikkuScenarioStepWire,
   PikkuBrowserWire,
   ScenarioBrowserProvider,
+  ScenarioBrowserFailure,
   ScenarioEnvironment,
 } from './scenario-step.types.js'
 

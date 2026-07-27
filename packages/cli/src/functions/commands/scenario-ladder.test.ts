@@ -2,10 +2,17 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  buildStepLadder,
   collectScenarioStepProse,
   scenarioBrowserSteps,
+  scenarioFailureFromSteps,
+  scenarioStepRows,
 } from './scenario-ladder.js'
+import { buildStepLadder } from './scenario-formatter.js'
+import type { ScenarioProse, ScenarioStepOutcome } from './scenario-ladder.js'
+
+/** What a reader sees: the run joined to its prose, then laid out. */
+const ladder = (steps: ScenarioStepOutcome[], prose: ScenarioProse) =>
+  buildStepLadder(scenarioStepRows(steps, prose))
 
 const workflowMeta = () => ({
   steps: [
@@ -104,7 +111,7 @@ describe('buildStepLadder', () => {
     collectScenarioStepProse(workflowMeta() as any, functionsMeta() as any)
 
   test('renders prose, outcome and duration per step', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         { stepName: 'buys an apple', status: 'succeeded', durationMs: 412 },
         { stepName: 'checks out', status: 'succeeded', durationMs: 1200 },
@@ -137,7 +144,7 @@ describe('buildStepLadder', () => {
   })
 
   test('a repeated step keeps its prose under the #ordinal key', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         { stepName: 'checks out', status: 'succeeded', durationMs: 10 },
         { stepName: 'checks out#1', status: 'succeeded', durationMs: 20 },
@@ -150,7 +157,7 @@ describe('buildStepLadder', () => {
   })
 
   test('a step with no recorded prose still appears, by its name', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         { stepName: 'buys an apple', status: 'succeeded', durationMs: 5 },
         { stepName: 'seeds data', status: 'succeeded', durationMs: 5 },
@@ -166,7 +173,7 @@ describe('buildStepLadder', () => {
   })
 
   test('a run with no steps renders nothing', () => {
-    assert.deepEqual(buildStepLadder([], prose()), [])
+    assert.deepEqual(ladder([], prose()), [])
   })
 })
 
@@ -189,7 +196,7 @@ describe('step templates', () => {
     collectScenarioStepProse(workflowMeta() as any, templatedMeta() as any)
 
   test('the ladder names the values the step was called with', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'sees a receipt',
@@ -205,7 +212,7 @@ describe('step templates', () => {
   })
 
   test('the same step reads differently for each input it is called with', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'sees a receipt',
@@ -230,7 +237,7 @@ describe('step templates', () => {
   })
 
   test('a call-site description still overrides the template', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'checks out',
@@ -261,7 +268,7 @@ describe('step templates', () => {
         },
       ],
     }
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'sees an apple',
@@ -286,7 +293,7 @@ describe('step templates', () => {
   })
 
   test('the step name still wins over the function fallback', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'checks out',
@@ -324,7 +331,7 @@ describe('step templates', () => {
         },
       ],
     }
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'sees an apple',
@@ -343,7 +350,7 @@ describe('step templates', () => {
   })
 
   test('a step with no template still renders its description', () => {
-    const lines = buildStepLadder(
+    const lines = ladder(
       [
         {
           stepName: 'buys an apple',
@@ -355,5 +362,39 @@ describe('step templates', () => {
     )
 
     assert.match(lines[0]!, /Given the shopper buys an apple/)
+  })
+})
+
+describe('scenarioFailureFromSteps', () => {
+  const failingSteps = () => [
+    { stepName: 'buys an apple', status: 'succeeded', durationMs: 4 },
+    {
+      stepName: 'checks out',
+      status: 'failed',
+      error: 'Timed out waiting for selector button[title="Edit"]',
+      stack:
+        'Error: Timed out waiting for selector button[title="Edit"]\n' +
+        '    at checksOut (/project/src/scenarios/checkout.steps.ts:71:5)\n' +
+        '    at Runner.step (/project/node_modules/@pikku/core/dist/run.js:12:9)',
+    },
+  ]
+
+  test('the failing step is joined back to the prose that declared it', () => {
+    const failure = scenarioFailureFromSteps(
+      failingSteps() as any,
+      collectScenarioStepProse(workflowMeta() as any, functionsMeta() as any)
+    )
+
+    assert.match(failure!.sentence!, /completes the checkout/)
+    assert.match(failure!.message, /Timed out waiting for selector/)
+  })
+
+  test('a run where every step passed has no step failure to report', () => {
+    const failure = scenarioFailureFromSteps(
+      [{ stepName: 'buys an apple', status: 'succeeded' }] as any,
+      collectScenarioStepProse(workflowMeta() as any, functionsMeta() as any)
+    )
+
+    assert.equal(failure, undefined)
   })
 })

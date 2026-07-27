@@ -1,18 +1,22 @@
 /**
- * The scenario step ladder — the readable report that replaces cucumber's
- * gherkin output.
+ * The scenario step ladder — joining a recorded run back to the English that
+ * declared it.
  *
- * Cucumber parsed English into calls; this renders English out of the typed
+ * Cucumber parsed English into calls; this recovers English out of the typed
  * calls the inspector already recorded, joined against the run the engine
- * already persisted. No engine change, no step-event bus.
+ * already persisted. No engine change, no step-event bus. Layout of the result
+ * belongs to `scenario-formatter.ts`; this module only decides what each step
+ * is called.
  */
 import { composeStepProse } from '@pikku/core/workflow'
 import type { ScenarioStepPhase } from '@pikku/core/workflow'
 import type { WorkflowStepMeta } from '@pikku/core/workflow/types'
 import type { FunctionsMeta } from '@pikku/core'
-
-/** The longest gherkin keyword ("Given"), so sentences line up under each other. */
-const KEYWORD_WIDTH = 5
+import { KEYWORD_WIDTH } from './scenario-formatter.js'
+import type {
+  ScenarioFailureDetail,
+  ScenarioStepRow,
+} from './scenario-formatter.js'
 
 export interface ScenarioStepProse {
   phase: ScenarioStepPhase
@@ -26,6 +30,13 @@ export interface ScenarioStepOutcome {
   status: string
   durationMs?: number
   error?: string
+  /** The failing error's stack, as recorded on the run. */
+  stack?: string
+  /**
+   * True when the failure was a deliberate one (a PikkuError). Its message is
+   * the whole story, so the stack is noise.
+   */
+  expected?: boolean
   /** The input this step was called with, as recorded on the run. */
   input?: unknown
   /** The step function that ran it, as recorded on the run. */
@@ -138,47 +149,61 @@ export const scenarioBrowserSteps = (
   return [...names]
 }
 
-export const buildStepLadder = (
+/**
+ * Render one step's gherkin sentence.
+ *
+ * A repeated step is stored as `name#1`; its prose lives under the bare name.
+ * Only once neither name matches does the step function decide it, so a step
+ * recorded under the name it was declared with is never re-resolved by a
+ * function shared with another call site.
+ */
+const stepSentence = (
+  step: ScenarioStepOutcome,
+  prose: ScenarioProse
+): string => {
+  const parts =
+    prose.byStepName.get(step.stepName) ??
+    prose.byStepName.get(baseName(step.stepName)) ??
+    (step.stepFunc ? prose.byStepFunc.get(step.stepFunc) : undefined)
+  return parts
+    ? composeStepProse({
+        ...parts,
+        input: step.input,
+        keywordWidth: KEYWORD_WIDTH,
+      })
+    : `${''.padEnd(KEYWORD_WIDTH)} ${step.stepName}`
+}
+
+/** The run's steps as renderable rows, in the order they were recorded. */
+export const scenarioStepRows = (
   steps: ScenarioStepOutcome[],
   prose: ScenarioProse
-): string[] => {
-  const rendered = steps.map((step) => {
-    // A repeated step is stored as `name#1`; its prose lives under the bare
-    // name. Only once neither name matches does the step function decide it,
-    // so a step recorded under the name it was declared with is never
-    // re-resolved by a function shared with another call site.
-    const parts =
-      prose.byStepName.get(step.stepName) ??
-      prose.byStepName.get(baseName(step.stepName)) ??
-      (step.stepFunc ? prose.byStepFunc.get(step.stepFunc) : undefined)
-    const sentence = parts
-      ? composeStepProse({
-          ...parts,
-          input: step.input,
-          keywordWidth: KEYWORD_WIDTH,
-        })
-      : `${''.padEnd(KEYWORD_WIDTH)} ${step.stepName}`
-    return { step, sentence }
-  })
-
-  const width = Math.max(0, ...rendered.map(({ sentence }) => sentence.length))
-  return rendered.map(({ step, sentence }) => {
-    const glyph = step.status === 'succeeded' ? '✓' : '✗'
-    const detail =
-      step.status === 'succeeded' || !step.error
-        ? formatDuration(step.durationMs)
-        : step.error
-    return `  ${sentence.padEnd(width)}  ${glyph}  ${detail}`
-  })
-}
+): ScenarioStepRow[] =>
+  steps.map((step) => ({
+    sentence: stepSentence(step, prose),
+    status: step.status,
+    durationMs: step.durationMs,
+    error: step.error,
+  }))
 
 const baseName = (stepName: string) => stepName.replace(/#\d+$/, '')
 
-const formatDuration = (durationMs?: number) => {
-  if (durationMs === undefined) {
-    return ''
+/**
+ * Find the step a run died on and join it back to its declared prose, so a
+ * failure names the sentence a reader recognises rather than a durable key.
+ */
+export const scenarioFailureFromSteps = (
+  steps: ScenarioStepOutcome[],
+  prose: ScenarioProse
+): ScenarioFailureDetail | undefined => {
+  const failed = steps.find((step) => step.status !== 'succeeded')
+  if (!failed) {
+    return undefined
   }
-  return durationMs < 1000
-    ? `${durationMs}ms`
-    : `${(durationMs / 1000).toFixed(1)}s`
+  return {
+    sentence: stepSentence(failed, prose).trimEnd(),
+    message: failed.error ?? `step status: ${failed.status}`,
+    stack: failed.stack,
+    expected: failed.expected,
+  }
 }

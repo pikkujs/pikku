@@ -1,5 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { PlaywrightScenarioBrowserProvider } from './provider.js'
 import type { BrowserConfig } from './config.js'
@@ -21,28 +24,36 @@ const config = (overrides: Partial<BrowserConfig> = {}): BrowserConfig =>
  * chromium.
  */
 const fakeBrowser = () => {
-  const contexts: Array<{ pages: number }> = []
+  const contexts: Array<{ pages: number; closed: boolean }> = []
+  const screenshots: Array<string | undefined> = []
   return {
     contexts,
+    screenshots,
     browser: {
       newContext: async () => {
-        const context = { pages: 0 }
+        const context = { pages: 0, closed: false }
         contexts.push(context)
         return {
           addInitScript: async () => {},
           addCookies: async () => {},
           cookies: async () => [],
           clearCookies: async () => {},
-          close: async () => {},
+          close: async () => {
+            context.closed = true
+          },
           newPage: async () => {
             context.pages += 1
             return {
               setDefaultTimeout: () => {},
               on: () => {},
+              url: () => 'https://app.test/console/functions',
               goto: async () => ({ status: () => 200 }),
               waitForSelector: async () => {},
               waitForTimeout: async () => {},
-              screenshot: async () => new Uint8Array([1]),
+              screenshot: async (options?: { path?: string }) => {
+                screenshots.push(options?.path)
+                return new Uint8Array([1])
+              },
               innerText: async () => '',
             }
           },
@@ -200,5 +211,161 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     await provider.close()
 
     assert.equal(browserClosed, 0)
+  })
+
+  test('reset closes every actor context, so the next scenario starts signed out', async () => {
+    const { browser, contexts } = fakeBrowser()
+    const signIns: string[] = []
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: {
+        shopper: { email: 'shopper@test' },
+        admin: { email: 'admin@test' },
+      },
+      connectBrowser: async () => ({ browser }),
+      signIn: async (_context, request) => {
+        signIns.push(request.email)
+      },
+    })
+
+    const before = await provider.sessionFor('shopper')
+    await provider.sessionFor('admin')
+    await provider.reset()
+
+    assert.deepEqual(
+      contexts.map((c) => c.closed),
+      [true, true],
+      'both actors lose their cookie jar, storage and pages'
+    )
+
+    const after = await provider.sessionFor('shopper')
+    assert.notEqual(after, before, 'the next scenario gets a fresh session')
+    assert.equal(contexts.length, 3, 'and a fresh context')
+    assert.deepEqual(
+      signIns,
+      ['shopper@test', 'admin@test', 'shopper@test'],
+      'a reset actor signs in again rather than inheriting a stale cookie'
+    )
+  })
+
+  test('reset keeps the browser connection, so chromium is launched once per run', async () => {
+    const { browser } = fakeBrowser()
+    let connects = 0
+    let released = 0
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: { shopper: { email: 'shopper@test' } },
+      connectBrowser: async () => {
+        connects++
+        return {
+          browser,
+          release: async () => {
+            released++
+          },
+        }
+      },
+      signIn: async () => {},
+    })
+
+    await provider.sessionFor('shopper')
+    await provider.reset()
+    await provider.sessionFor('shopper')
+    await provider.reset()
+    await provider.sessionFor('shopper')
+
+    assert.equal(connects, 1, 'reset is not a relaunch')
+    assert.equal(released, 0, 'and never releases the browser')
+
+    await provider.close()
+    assert.equal(released, 1, 'only close releases it')
+  })
+
+  test('captureFailure reports each open actor window, with its page issues', async () => {
+    const { browser } = fakeBrowser()
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: {
+        shopper: { email: 'shopper@test' },
+        admin: { email: 'admin@test' },
+      },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+    })
+
+    const admin = await provider.sessionFor('admin')
+    // What ActorSession collects during a navigation, and today discards.
+    ;(admin as any).issues.consoleErrors.push('TypeError: x is not a function')
+    ;(admin as any).issues.apiErrors.push('500 /api/rpc/console:readSource')
+
+    const failures = await provider.captureFailure('codeEditorScenario')
+
+    assert.equal(failures.length, 1, 'only actors with an open window')
+    const [failure] = failures
+    assert.equal(failure!.actor, 'admin')
+    assert.equal(failure!.url, 'https://app.test/console/functions')
+    assert.deepEqual(failure!.consoleErrors, ['TypeError: x is not a function'])
+    assert.deepEqual(failure!.apiErrors, ['500 /api/rpc/console:readSource'])
+  })
+
+  test('captureFailure writes a screenshot per actor when a failureDir is set', async () => {
+    const { browser, screenshots } = fakeBrowser()
+    const failureDir = await mkdtemp(join(tmpdir(), 'pikku-failures-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      failureDir,
+    })
+
+    await provider.sessionFor('admin')
+    const [failure] = await provider.captureFailure('code editor › edits')
+
+    assert.equal(
+      failure!.screenshot,
+      join(failureDir, 'code-editor-edits-admin.png'),
+      'the label is slugged so it is a usable filename'
+    )
+    assert.deepEqual(screenshots, [failure!.screenshot])
+    await rm(failureDir, { recursive: true, force: true })
+  })
+
+  test('a screenshot that fails never masks the failure being reported', async () => {
+    const { browser } = fakeBrowser()
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      failureDir: '/proc/nonexistent/cannot-write',
+    })
+
+    const admin = await provider.sessionFor('admin')
+    admin.page.screenshot = async () => {
+      throw new Error('target page, context or browser has been closed')
+    }
+
+    const [failure] = await provider.captureFailure('someScenario')
+
+    assert.equal(failure!.actor, 'admin', 'the actor is still reported')
+    assert.equal(failure!.screenshot, undefined, 'just without an image')
+  })
+
+  test('captureFailure on a run with no browser session reports nothing', async () => {
+    const { browser } = fakeBrowser()
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+    })
+
+    assert.deepEqual(await provider.captureFailure('someScenario'), [])
   })
 })

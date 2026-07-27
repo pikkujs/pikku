@@ -1283,13 +1283,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
    * @param options.inline - If true, execute workflow directly without queue service
    * @param options.startNode - Starting node ID for graph workflows (from wire config)
+   * @param options.onRunCreated - Called with the run id the moment the run exists.
+   * An inline run that fails throws instead of returning, so this is the only
+   * way a caller can still read that run back — its steps, and which one failed.
    */
   public async startWorkflow<I>(
     name: string,
     input: I,
     wire: WorkflowRunWire,
     rpcService: any,
-    options?: { inline?: boolean; startNode?: string; actors?: ScenarioActors }
+    options?: {
+      inline?: boolean
+      startNode?: string
+      actors?: ScenarioActors
+      onRunCreated?: (runId: string) => void
+    }
   ): Promise<{ runId: string }> {
     // Resolve workflow from static meta (root or addon namespace), then dynamic DB
     const resolved = resolveWorkflowMeta(name)
@@ -1352,6 +1360,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         plannedSteps: workflowMeta.plannedSteps,
       }
     )
+
+    options?.onRunCreated?.(runId)
 
     await this.runExtension?.attachRunContext(runId, workflowMeta, options)
 

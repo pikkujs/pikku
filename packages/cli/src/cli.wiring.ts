@@ -502,6 +502,11 @@ wireCLI({
                 'With --spawn, leave the server running after the run (dev loop)',
               default: false,
             },
+            trace: {
+              description:
+                'Keep every stack frame on a failure. Without it, only the project’s own frames are shown',
+              default: false,
+            },
           },
         }),
         list: pikkuCLICommand({

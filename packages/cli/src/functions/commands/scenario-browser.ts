@@ -1,0 +1,154 @@
+/**
+ * The scenario runner's browser lifecycle.
+ *
+ * Two jobs, both kept out of the run loop so they are testable without
+ * launching a browser: deciding whether a run needs a driver at all (and
+ * failing early, with instructions, when it does and cannot have one), and
+ * making the driver's optional isolation and diagnostics safe to call
+ * unconditionally.
+ */
+import type {
+  ScenarioBrowserFailure,
+  ScenarioBrowserProvider,
+} from '@pikku/core/workflow'
+import type { ScenarioActorConfig } from '@pikku/core/services'
+
+/** The default driver, used when a project names no other. */
+export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'
+
+export interface ScenarioBrowserDriverOptions {
+  secret: string
+  actors: Record<string, ScenarioActorConfig>
+  signInPath?: string
+  failureDir?: string
+  config: unknown
+}
+
+/**
+ * What a browser driver package exports.
+ *
+ * Nothing here is playwright-specific: a driver is anything that can hand a
+ * scenario step a `ScenarioBrowserProvider`. `@pikku/playwright` is the one
+ * pikku ships, named by `scenarios.browserDriver` only as a default.
+ */
+export interface ScenarioBrowserDriver {
+  createScenarioBrowserProvider?: (
+    options: ScenarioBrowserDriverOptions
+  ) => ScenarioBrowserProvider
+  /** The class form the bundled driver exports. */
+  PlaywrightScenarioBrowserProvider?: new (
+    options: ScenarioBrowserDriverOptions
+  ) => ScenarioBrowserProvider
+  /** Driver-specific config (headed, slowMo, timeouts) resolved from the env. */
+  browserConfigFromEnv?: (overrides: {
+    appUrl: string
+    apiUrl: string
+  }) => unknown
+}
+
+export interface ResolveScenarioBrowserProviderOptions {
+  /** The environment name, for error messages that tell the user what to edit. */
+  environment: string
+  apiUrl: string
+  appUrl?: string
+  secret: string
+  actors: Record<string, ScenarioActorConfig>
+  signInPath?: string
+  /** Where failure screenshots are written. */
+  failureDir: string
+  /** The scenarios that declared browser steps, named in the missing-driver error. */
+  browserScenarios: string[]
+  /** Package to drive the browser. Defaults to `@pikku/playwright`. */
+  driver?: string
+  importDriver?: (specifier: string) => Promise<ScenarioBrowserDriver>
+}
+
+/**
+ * Both failure modes here are discovered before the first scenario starts. A
+ * missing `appUrl` or an uninstalled driver found mid-run costs a whole run to
+ * learn about.
+ */
+export const resolveScenarioBrowserProvider = async ({
+  environment,
+  apiUrl,
+  appUrl,
+  secret,
+  actors,
+  signInPath,
+  failureDir,
+  browserScenarios,
+  driver = DEFAULT_BROWSER_DRIVER,
+  importDriver = (specifier) =>
+    import(specifier) as unknown as Promise<ScenarioBrowserDriver>,
+}: ResolveScenarioBrowserProviderOptions): Promise<ScenarioBrowserProvider> => {
+  if (!appUrl) {
+    throw new Error(
+      `Scenario environment '${environment}' has browser steps but no 'appUrl'. ` +
+        `Add it to scenarios.environments.${environment} in pikku.config.json, or run with --no-browser to skip them.`
+    )
+  }
+  const module = await importDriver(driver).catch(() => {
+    const install =
+      driver === DEFAULT_BROWSER_DRIVER
+        ? `Run 'yarn add -D ${driver} @playwright/test'`
+        : `Install '${driver}', or point scenarios.browserDriver at a package that is`
+    throw new Error(
+      `Scenarios ${browserScenarios.join(', ')} declare browser steps but '${driver}' could not be loaded. ` +
+        `${install}, or run with --no-browser to skip them.`
+    )
+  })
+  const options: ScenarioBrowserDriverOptions = {
+    secret,
+    actors,
+    signInPath,
+    failureDir,
+    config: module.browserConfigFromEnv?.({ appUrl, apiUrl }) ?? {
+      appUrl,
+      apiUrl,
+    },
+  }
+  if (module.createScenarioBrowserProvider) {
+    return module.createScenarioBrowserProvider(options)
+  }
+  if (module.PlaywrightScenarioBrowserProvider) {
+    return new module.PlaywrightScenarioBrowserProvider(options)
+  }
+  throw new Error(
+    `'${driver}' is not a scenario browser driver: it exports neither ` +
+      `'createScenarioBrowserProvider' nor a provider class. A driver returns an object with ` +
+      `sessionFor() and close(), and optionally reset() and captureFailure().`
+  )
+}
+
+/**
+ * The three calls the run loop makes, safe against a run with no browser and
+ * against a driver that implements neither optional member.
+ */
+export interface ScenarioBrowserLifecycle {
+  reset(): Promise<void>
+  captureFailure(label: string): Promise<ScenarioBrowserFailure[]>
+  close(): Promise<void>
+}
+
+export const scenarioBrowserLifecycle = (
+  provider: ScenarioBrowserProvider | undefined
+): ScenarioBrowserLifecycle => ({
+  // Deliberately NOT swallowed: a browser that cannot be reset would run the
+  // next scenario against the last one's session, and a scenario failing on
+  // its reset is far easier to diagnose than one failing on stale state.
+  reset: async () => {
+    await provider?.reset?.()
+  },
+  captureFailure: async (label) => {
+    try {
+      return (await provider?.captureFailure?.(label)) ?? []
+    } catch {
+      // This runs while a scenario is already failing. Whatever went wrong
+      // here matters less than the error we were called to describe.
+      return []
+    }
+  },
+  close: async () => {
+    await provider?.close()
+  },
+})
