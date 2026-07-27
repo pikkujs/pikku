@@ -11,7 +11,7 @@
  * have no seeded account at all, so there is no actor to be. Identity is
  * therefore step *data* here, and only here.
  */
-import type { MockLlmCall } from '../mock-llm/provider.js'
+import type { MockLlmCall } from '../../src/mock-llm/provider.js'
 
 export type { MockLlmCall }
 
