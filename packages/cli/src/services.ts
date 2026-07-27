@@ -218,10 +218,18 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
 
+  /**
+   * `unfiltered` is for commands that RUN the project rather than generate from
+   * it. The CLI filters narrow what gets written out, which is meaningless to a
+   * runner and actively wrong for one: `--tags` on `pikku scenario run` selects
+   * which scenarios to run, and if it also narrowed the state the runner would
+   * lose the very step functions it is about to call.
+   */
   const getInspectorState = async (
     refresh: boolean = false,
     setupOnly: boolean = false,
-    bootstrapMode: boolean = false
+    bootstrapMode: boolean = false,
+    unfiltered: boolean = false
   ) => {
     // In bootstrap mode, return a minimal "zero state" with core types
     // This allows bootstrap to run immediately without inspecting the codebase
@@ -384,6 +392,10 @@ export const createSingletonServices: CreateSingletonServices<
           // Don't throw - state saving is optional/nice-to-have
         }
       }
+    }
+
+    if (unfiltered) {
+      return unfilteredState as InspectorState
     }
 
     // Apply filters as a post-processing step
