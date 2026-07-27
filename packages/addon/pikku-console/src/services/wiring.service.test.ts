@@ -17,6 +17,7 @@ const makeMetaService = (
   getGatewayMeta: async () => ({}),
   getWorkflowMeta: async () => ({}),
   getScenarioActorsMeta: async () => ({}),
+  getFeaturesMeta: async () => ({}),
   getTriggerMeta: async () => ({}),
   getTriggerSourceMeta: async () => ({}),
   getMiddlewareGroupsMeta: async () => ({}),
