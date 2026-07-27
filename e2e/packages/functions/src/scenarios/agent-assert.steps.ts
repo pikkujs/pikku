@@ -92,13 +92,17 @@ export const expectsOfferedTools = pikkuScenarioStep<
     offered?: string[]
     notOffered?: string[]
     none?: boolean
+    allHaveSchemas?: boolean
   },
   { toolNames: string[] }
 >({
   name: 'expectsOfferedTools',
   description: 'expects which tools a model call was offered',
   template: 'expects call {index} tools',
-  func: async (_services, { calls, index, offered, notOffered, none }) => {
+  func: async (
+    _services,
+    { calls, index, offered, notOffered, none, allHaveSchemas }
+  ) => {
     const call = calls[index - 1]
     if (!call) {
       throw new Error(
@@ -124,7 +128,112 @@ export const expectsOfferedTools = pikkuScenarioStep<
         )
       }
     }
+    if (allHaveSchemas) {
+      if (toolNames.length === 0) {
+        throw new Error(
+          `Expected call ${index} to be offered at least one tool to check schemas against`
+        )
+      }
+      for (const tool of toolNames) {
+        if (!call.toolSchemas?.[tool]) {
+          throw new Error(`Tool "${tool}" was offered with no input schema`)
+        }
+      }
+    }
     return { toolNames }
+  },
+})
+
+/**
+ * The shape of one model call, other than its tools.
+ *
+ * One step rather than the five cucumber definitions it replaces, because each
+ * of those did the same `callsFor(...)` lookup and then read a single field.
+ */
+export const expectsModelCall = pikkuScenarioStep<
+  {
+    calls: MockLlmCall[]
+    index: number
+    temperature?: number
+    modelId?: string
+    instructionsNonEmpty?: boolean
+    instructionsInclude?: string
+    receivedToolResult?: boolean
+  },
+  { index: number }
+>({
+  name: 'expectsModelCall',
+  description: 'expects what one model call carried',
+  template: 'expects call {index}',
+  func: async (
+    _services,
+    {
+      calls,
+      index,
+      temperature,
+      modelId,
+      instructionsNonEmpty,
+      instructionsInclude,
+      receivedToolResult,
+    }
+  ) => {
+    const call = calls[index - 1]
+    if (!call) {
+      throw new Error(
+        `There is no model call ${index} — the run made ${calls.length}`
+      )
+    }
+    if (temperature !== undefined && call.temperature !== temperature) {
+      throw new Error(
+        `Expected call ${index} at temperature ${temperature}, got ${describe(call.temperature)}`
+      )
+    }
+    if (modelId !== undefined && call.modelId !== modelId) {
+      throw new Error(
+        `Expected call ${index} to use model ${modelId}, got ${describe(call.modelId)}`
+      )
+    }
+    if (instructionsNonEmpty && !call.instructions?.length) {
+      throw new Error(`Call ${index} carried no instructions`)
+    }
+    if (
+      instructionsInclude !== undefined &&
+      !(call.instructions ?? '').includes(instructionsInclude)
+    ) {
+      throw new Error(
+        `Expected call ${index} instructions to include "${instructionsInclude}", got ${describe(call.instructions)}`
+      )
+    }
+    if (receivedToolResult) {
+      const roles = (call.messages ?? []).map((message: any) => message.role)
+      if (!roles.includes('tool')) {
+        throw new Error(
+          `Expected call ${index} to have received a tool result, got roles ${roles.join(', ') || '(none)'}`
+        )
+      }
+    }
+    return { index }
+  },
+})
+
+/**
+ * Every model call is one agent step, so the indexes are the loop's own record
+ * of how many times it went round.
+ */
+export const expectsStepIndexes = pikkuScenarioStep<
+  { calls: MockLlmCall[]; indexes: number[] },
+  { indexes: number[] }
+>({
+  name: 'expectsStepIndexes',
+  description: 'expects the step index of each model call',
+  func: async (_services, { calls, indexes }) => {
+    const actual = calls.map((call) => call.stepIndex)
+    if (JSON.stringify(actual) !== JSON.stringify(indexes)) {
+      throw new Error(
+        `Expected step indexes ${indexes.join(', ')}, got ${actual.join(', ') || '(no calls)'}`
+      )
+    }
+    return { indexes: actual }
   },
 })
 
