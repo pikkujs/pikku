@@ -40,22 +40,23 @@ const STEPS = [
   '})',
 ].join('\n')
 
-const scenarioSource = (body: string[]) =>
+const scenarioSource = (body: string[], preamble: string[] = []) =>
   [
     "import { pikkuScenario } from '@pikku/core/workflow'",
     'declare const actors: Record<string, any>',
+    ...preamble,
     'export const shopFlow = pikkuScenario(async (_services, _input, { scenario }: any) => {',
     ...body.map((line) => `  ${line}`),
     '  return { ok: true }',
     '})',
   ].join('\n')
 
-async function run(body: string[]) {
+async function run(body: string[], preamble: string[] = []) {
   const rootDir = await mkdtemp(join(tmpdir(), 'pikku-scenario-step-'))
   const stepsFile = join(rootDir, 'shop.steps.ts')
   const scenarioFile = join(rootDir, 'shop.scenario.ts')
   await writeFile(stepsFile, STEPS)
-  await writeFile(scenarioFile, scenarioSource(body))
+  await writeFile(scenarioFile, scenarioSource(body, preamble))
   const criticals: Array<{ code: string; message: string }> = []
   const state = await inspect(
     makeLogger(criticals),
@@ -262,6 +263,47 @@ describe('pikkuScenarioStep', () => {
         `a try/catch inside a closure must not drop the scenario's steps, got ${steps.length}`
       )
       assert.equal(steps[0]!.stepFunc, 'buysAnApple')
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('destructuring a step result is reported, not silently dropped', async () => {
+    const { state, criticals, cleanup } = await run([
+      "const { ok } = await scenario.given('sees a receipt', 'seesAReceipt', {})",
+      'void ok',
+    ])
+    try {
+      const steps = scenarioSteps(state)
+      assert.equal(
+        steps.length,
+        0,
+        'the DSL does not model a destructured step result'
+      )
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU679'),
+        `a step the DSL cannot model must be loud, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a module-level constant used as step input is inlined, not read off the trigger', async () => {
+    const { state, cleanup } = await run(
+      [
+        "await scenario.given('buys an apple', 'buysAnApple', { qty: QTY }, { actor: actors.shopper })",
+      ],
+      ['const QTY = 3']
+    )
+    try {
+      const steps = scenarioSteps(state)
+      assert.equal(steps.length, 1)
+      assert.deepEqual(
+        steps[0]!.inputs?.qty,
+        { from: 'literal', value: 3 },
+        `a constant declared outside the scenario is not a trigger field, got: ${JSON.stringify(steps[0]!.inputs)}`
+      )
     } finally {
       await cleanup()
     }

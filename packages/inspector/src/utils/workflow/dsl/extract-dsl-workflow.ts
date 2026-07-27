@@ -549,6 +549,7 @@ function extractDestructuredDeclaration(
   const destructuresAStep =
     stepCall !== null &&
     (isWorkflowDoCall(stepCall, context.checker) ||
+      isScenarioStepCall(stepCall) ||
       isParallelGroup(stepCall) ||
       isParallelFanout(stepCall))
   if (!destructuresAStep) return null
@@ -1864,7 +1865,11 @@ function extractInputSources(
         } else if (context.outputVars.has(varName)) {
           source = { from: 'outputVar', name: varName }
         } else {
-          source = { from: 'input', path: varName }
+          const constant = resolveConstantValue(prop.name, context.checker)
+          source =
+            constant !== undefined
+              ? { from: 'literal', value: constant }
+              : { from: 'input', path: varName }
         }
       } else if (ts.isPropertyAssignment(prop)) {
         source = extractInputSource(prop.initializer, context)
@@ -1954,6 +1959,11 @@ function extractInputSource(
       return { from: 'outputVar', name: varName }
     }
 
+    const constant = resolveConstantValue(node, context.checker)
+    if (constant !== undefined) {
+      return { from: 'literal', value: constant }
+    }
+
     // Assume it's from input
     return { from: 'input', path: varName }
   }
@@ -2037,6 +2047,37 @@ function extractInputSource(
   }
 
   return null
+}
+
+/**
+ * Resolve an identifier that names a constant to the value it was declared with.
+ *
+ * Without this, a name the extractor does not recognise falls through to
+ * `{ from: 'input' }` and is serialized as `{ $ref: 'trigger', path: <name> }` —
+ * so a module-level `const RESOURCE_ID = 'x'` used as step input silently
+ * becomes a read of a trigger field that does not exist. Only `const`
+ * declarations with a fully literal initializer resolve; anything else (a name
+ * bound out of the trigger, a computed value) falls through unchanged.
+ */
+function resolveConstantValue(
+  node: ts.Identifier,
+  checker: ts.TypeChecker
+): unknown | undefined {
+  const symbol = checker.getSymbolAtLocation(node)
+  const declaration = symbol?.valueDeclaration ?? symbol?.declarations?.[0]
+  if (!declaration || !ts.isVariableDeclaration(declaration)) {
+    return undefined
+  }
+  const declarationList = declaration.parent
+  if (
+    !ts.isVariableDeclarationList(declarationList) ||
+    !(declarationList.flags & ts.NodeFlags.Const)
+  ) {
+    return undefined
+  }
+  return declaration.initializer
+    ? extractLiteralValue(declaration.initializer)
+    : undefined
 }
 
 /**
