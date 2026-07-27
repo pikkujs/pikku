@@ -1031,6 +1031,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const escaped = name.replace(/[?*[\]\\]/g, (ch) => `\\${ch}`)
     const pattern = `${this.keyPrefix}:version:${escaped}:*`
     let cursor = '0'
+    const candidates: Array<{
+      graphHash: string
+      graph: any
+      createdAt: number
+    }> = []
     do {
       const [nextCursor, keys] = await this.redis.scan(
         cursor,
@@ -1049,14 +1054,30 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         )
           continue
         if (data.workflowName !== name || !data.graphHash) continue
-        return {
-          workflowName: name,
+        candidates.push({
           graphHash: data.graphHash,
           graph: JSON.parse(data.graph),
-        }
+          createdAt: Number(data.createdAt ?? 0),
+        })
       }
     } while (cursor !== '0')
-    return null
+
+    if (candidates.length === 0) return null
+
+    // A name can hold several active versions, and SCAN promises no order, so
+    // taking the first key it yielded meant the version that resolved could
+    // change between two calls reading identical data. Newest wins, with the
+    // hash breaking a tie between two written in the same millisecond.
+    candidates.sort(
+      (a, b) =>
+        b.createdAt - a.createdAt || b.graphHash.localeCompare(a.graphHash)
+    )
+    const winner = candidates[0]!
+    return {
+      workflowName: name,
+      graphHash: winner.graphHash,
+      graph: winner.graph,
+    }
   }
 
   async getAIGeneratedWorkflows(

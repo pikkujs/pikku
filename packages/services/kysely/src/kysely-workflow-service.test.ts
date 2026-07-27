@@ -123,8 +123,12 @@ describe('KyselyWorkflowService — schema indexes', () => {
     )
   })
 
-  test('init() is idempotent — a second call does not throw on existing indexes', async () => {
-    await service.init()
+  test('init() is idempotent — a second boot does not throw on existing indexes', async () => {
+    // A fresh instance, because `init()` returns at its `initialized` guard on
+    // the same one — so calling it twice re-issues no DDL and never exercises
+    // the duplicate-index path this is here to cover.
+    await new KyselyWorkflowService(db, { wireQueues: false } as any).init()
+
     const indexes = await listIndexes('workflow_step_history')
     assert.ok(indexes.length > 0)
   })
@@ -409,3 +413,95 @@ describe('KyselyWorkflowService — dynamic workflow lookup', () => {
     assert.equal(await service.getDynamicWorkflow('ai:agent:nope'), null)
   })
 })
+
+/**
+ * A step whose `current_attempt` is NULL addresses no history row, so the
+ * history half of a transition silently writes nothing while the step half
+ * commits — the divergence the transaction exists to prevent.
+ */
+describe('KyselyWorkflowService — a transition that addresses no history row', () => {
+  const orphanStep = async () => {
+    const runId = await seedRun('wf-orphan')
+    const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await sql`UPDATE workflow_step SET current_attempt = NULL WHERE workflow_step_id = ${step.stepId}`.execute(
+      db
+    )
+    return { runId, step }
+  }
+
+  test('the history still records the outcome', async () => {
+    const { runId, step } = await orphanStep()
+
+    await service.setStepResult(step.stepId, { ok: true })
+
+    const history = await service.getRunHistory(runId)
+    assert.equal(
+      history.at(-1)?.status,
+      'succeeded',
+      'the step row says succeeded but no history row does'
+    )
+    assert.deepEqual(history.at(-1)?.result, { ok: true })
+  })
+
+  test('the step is repaired, so the next transition lands in place', async () => {
+    const { runId, step } = await orphanStep()
+
+    await service.setStepRunning(step.stepId)
+    await service.setStepResult(step.stepId, { ok: true })
+
+    const history = await service.getRunHistory(runId)
+    assert.equal(
+      history.length,
+      1,
+      'each transition appended a row instead of updating the one already there'
+    )
+    assert.equal(history[0]!.status, 'succeeded')
+  })
+})
+
+/**
+ * `(workflowName, graphHash)` is the primary key, so one name can hold several
+ * rows marked `active`. Which one a lookup returns has to be a decision, not
+ * whatever order the storage engine happens to scan in.
+ */
+describe('KyselyWorkflowService — resolving a dynamic workflow', () => {
+  const publishVersion = async (graphHash: string, createdAt: Date) => {
+    await db
+      .insertInto('workflowVersions')
+      .values({
+        workflowName: 'dyn',
+        graphHash,
+        graph: JSON.stringify({ hash: graphHash }),
+        source: 'dynamic-workflow',
+        status: 'active',
+        createdAt,
+      } as any)
+      .execute()
+  }
+
+  test('the newest active version wins', async () => {
+    await publishVersion('older', new Date('2020-01-01T00:00:00Z'))
+    await publishVersion('newer', new Date('2021-01-01T00:00:00Z'))
+
+    const resolved = await service.getDynamicWorkflow('dyn')
+
+    assert.equal(
+      resolved?.graphHash,
+      'newer',
+      'an older version resolved, so a redeploy is not picked up'
+    )
+  })
+
+  test('versions sharing a timestamp still resolve to the same one twice', async () => {
+    const sameInstant = new Date('2020-01-01T00:00:00Z')
+    await publishVersion('aaa', sameInstant)
+    await publishVersion('zzz', sameInstant)
+
+    const first = await service.getDynamicWorkflow('dyn')
+    const second = await service.getDynamicWorkflow('dyn')
+
+    assert.equal(first?.graphHash, second?.graphHash)
+    assert.equal(first?.graphHash, 'zzz')
+  })
+})
+

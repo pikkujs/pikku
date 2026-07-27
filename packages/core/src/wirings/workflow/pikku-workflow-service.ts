@@ -1573,9 +1573,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       if (WORKFLOW_END_STATES.has(run.status)) {
         return run
       }
-      await new Promise((resolve) => setTimeout(resolve, interval))
+      await this.waitBeforeNextRead(interval)
       interval = Math.min(interval * WORKFLOW_POLL_FACTOR, maxIntervalMs)
     }
+  }
+
+  /**
+   * Wait between two reads of a run.
+   *
+   * Its own method so the backoff schedule can be asserted on directly. Timing
+   * a poll loop by the clock measures the host's scheduler as much as the
+   * policy — `setTimeout(40)` routinely returns late on a loaded runner — which
+   * makes the obvious test both slow and flaky.
+   */
+  protected async waitBeforeNextRead(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   /**

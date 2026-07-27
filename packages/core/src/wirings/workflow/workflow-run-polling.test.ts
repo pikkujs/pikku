@@ -11,7 +11,13 @@ import type { WorkflowRun } from './workflow.types.js'
  */
 class PollProbe extends InMemoryWorkflowService {
   readonly reads: number[] = []
+  /** Every wait the loop asked for, in order — the schedule, not the clock. */
+  readonly waits: number[] = []
   endAfter = 1
+
+  override async waitBeforeNextRead(ms: number): Promise<void> {
+    this.waits.push(ms)
+  }
 
   override async startWorkflow(): Promise<{ runId: string }> {
     return { runId: 'run-1' }
@@ -26,10 +32,6 @@ class PollProbe extends InMemoryWorkflowService {
       output: 'result',
     } as WorkflowRun
   }
-
-  gaps(): number[] {
-    return this.reads.slice(1).map((t, i) => t - this.reads[i]!)
-  }
 }
 
 const probe = () => {
@@ -43,15 +45,14 @@ describe('waiting for a run to finish', () => {
   test('a run that finishes quickly is not held for a whole poll interval', async () => {
     const ws = probe()
     ws.endAfter = 2
-    const started = Date.now()
 
     const output = await ws.runToCompletion('flow', {}, {} as any)
 
     assert.equal(output, 'result')
-    const elapsed = Date.now() - started
+    assert.equal(ws.waits.length, 1)
     assert.ok(
-      elapsed < 200,
-      `a run that was done after one poll took ${elapsed}ms — a fixed interval makes every fast workflow pay the full wait`
+      ws.waits[0]! < 1000,
+      `a run done after one poll waited the full ${ws.waits[0]}ms default — a fixed interval makes every fast workflow pay for it`
     )
   })
 
@@ -61,12 +62,17 @@ describe('waiting for a run to finish', () => {
 
     await ws.runToCompletion('flow', {}, {} as any)
 
-    const gaps = ws.gaps()
-    assert.ok(gaps.length >= 6)
+    assert.ok(ws.waits.length >= 6)
     assert.ok(
-      gaps.at(-1)! > gaps[0]! * 2,
-      `waits stayed flat (${gaps.join('ms, ')}ms) — a run that drags on keeps costing the same read rate forever`
+      ws.waits.at(-1)! > ws.waits[0]! * 2,
+      `waits stayed flat (${ws.waits.join('ms, ')}ms) — a run that drags on keeps costing the same read rate forever`
     )
+    for (let i = 1; i < ws.waits.length; i++) {
+      assert.ok(
+        ws.waits[i]! >= ws.waits[i - 1]!,
+        `wait ${i} shrank (${ws.waits.join('ms, ')}ms)`
+      )
+    }
   })
 
   test('the wait never grows past the configured interval', async () => {
@@ -75,24 +81,24 @@ describe('waiting for a run to finish', () => {
 
     await ws.runToCompletion('flow', {}, {} as any, { pollIntervalMs: 40 })
 
-    for (const gap of ws.gaps()) {
-      assert.ok(gap < 80, `a wait of ${gap}ms overshot the 40ms ceiling`)
+    for (const wait of ws.waits) {
+      assert.ok(wait <= 40, `a wait of ${wait}ms overshot the 40ms ceiling`)
     }
-    assert.ok(
-      ws.gaps().some((gap) => gap >= 35),
-      'never reached the ceiling'
+    assert.equal(
+      ws.waits.at(-1),
+      40,
+      `the ceiling was never reached (${ws.waits.join('ms, ')}ms)`
     )
   })
 
   test('a run that is already finished is returned without any wait', async () => {
     const ws = probe()
     ws.endAfter = 1
-    const started = Date.now()
 
     await ws.runToCompletion('flow', {}, {} as any)
 
     assert.equal(ws.reads.length, 1)
-    assert.ok(Date.now() - started < 50)
+    assert.deepEqual(ws.waits, [])
   })
 })
 

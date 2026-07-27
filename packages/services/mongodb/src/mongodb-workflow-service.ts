@@ -624,11 +624,16 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   override async getDynamicWorkflow(
     name: string
   ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
-    const doc = await this.versions.findOne({
-      workflowName: name,
-      source: 'ai-agent',
-      status: 'active',
-    })
+    const doc = await this.versions.findOne(
+      {
+        workflowName: name,
+        source: 'ai-agent',
+        status: 'active',
+      },
+      // A name can hold several active versions; newest wins, with the hash
+      // breaking a tie between two published in the same instant.
+      { sort: { createdAt: -1, graphHash: -1 } }
+    )
     if (!doc) return null
     return {
       workflowName: doc.workflowName,

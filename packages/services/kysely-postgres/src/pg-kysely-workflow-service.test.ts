@@ -49,7 +49,7 @@ class PGliteDriver implements Driver {
           numAffectedRows: BigInt(result.affectedRows ?? 0),
         }
       },
-      async *streamQuery() {
+      streamQuery(): never {
         throw new Error('streaming is not supported by the PGlite test driver')
       },
     }

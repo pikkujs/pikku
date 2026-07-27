@@ -119,3 +119,46 @@ describe('a step transition reaches the history', () => {
     assert.equal(state.attemptCount, 2)
   })
 })
+
+/**
+ * `findOne` with no sort returns whatever the storage engine reaches first, so
+ * a name holding several active versions resolved unpredictably.
+ */
+describe('resolving a dynamic workflow', () => {
+  const publishVersion = async (graphHash: string, createdAt: Date) => {
+    await ws.upsertWorkflowVersion(
+      'dyn',
+      graphHash,
+      { hash: graphHash },
+      'ai-agent'
+    )
+    await db
+      .collection('workflowVersions')
+      .updateOne({ workflowName: 'dyn', graphHash }, { $set: { createdAt } })
+  }
+
+  test('the newest active version wins', async () => {
+    await publishVersion('older', new Date('2020-01-01T00:00:00Z'))
+    await publishVersion('newer', new Date('2021-01-01T00:00:00Z'))
+
+    const resolved = await ws.getDynamicWorkflow('dyn')
+
+    assert.equal(
+      resolved?.graphHash,
+      'newer',
+      'an older version resolved, so a redeploy is not picked up'
+    )
+  })
+
+  test('versions sharing a timestamp resolve to the same one twice', async () => {
+    const sameInstant = new Date('2020-01-01T00:00:00Z')
+    await publishVersion('aaa', sameInstant)
+    await publishVersion('zzz', sameInstant)
+
+    const first = await ws.getDynamicWorkflow('dyn')
+    const second = await ws.getDynamicWorkflow('dyn')
+
+    assert.equal(first?.graphHash, second?.graphHash)
+    assert.equal(first?.graphHash, 'zzz')
+  })
+})

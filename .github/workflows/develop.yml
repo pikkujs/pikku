@@ -56,6 +56,18 @@ jobs:
           download-build: 'false'
       - uses: ./.github/actions/build
 
+  # Ran only on main until now, so a branch could go green with a red unit
+  # suite and only break once it had already landed.
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: yarn test
+
   codegen-perf:
     name: Codegen Perf (500 functions ≤ 30s)
     runs-on: ubuntu-latest
