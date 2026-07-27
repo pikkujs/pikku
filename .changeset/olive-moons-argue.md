@@ -1,5 +1,5 @@
 ---
-'@pikku/kysely': minor
+'@pikku/kysely': patch
 ---
 
 Declare the pikku runtime tables instead of creating them at boot.

@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 Add `pikku db check` — report how the configured database differs from the schema its migrations define.

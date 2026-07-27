@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 `pikku db check` now tells a table the pikku runtime created apart from one nobody can explain.

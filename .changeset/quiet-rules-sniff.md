@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 Add `pikku db codegen` — regenerate the database types from the migration files without connecting to a database.
