@@ -158,6 +158,7 @@ export const expectsModelCall = pikkuScenarioStep<
     modelId?: string
     instructionsNonEmpty?: boolean
     instructionsInclude?: string
+    messagesInclude?: string
     receivedToolResult?: boolean
   },
   { index: number }
@@ -174,6 +175,7 @@ export const expectsModelCall = pikkuScenarioStep<
       modelId,
       instructionsNonEmpty,
       instructionsInclude,
+      messagesInclude,
       receivedToolResult,
     }
   ) => {
@@ -203,6 +205,14 @@ export const expectsModelCall = pikkuScenarioStep<
       throw new Error(
         `Expected call ${index} instructions to include "${instructionsInclude}", got ${describe(call.instructions)}`
       )
+    }
+    if (messagesInclude !== undefined) {
+      const history = JSON.stringify(call.messages ?? [])
+      if (!history.includes(messagesInclude)) {
+        throw new Error(
+          `Expected call ${index} to have replayed ${describe(messagesInclude)}, got ${history}`
+        )
+      }
     }
     if (receivedToolResult) {
       const roles = (call.messages ?? []).map((message: any) => message.role)
@@ -356,5 +366,174 @@ export const expectsListedIds = pikkuScenarioStep<
       )
     }
     return { ids }
+  },
+})
+
+/**
+ * Whether the run is waiting on human decisions, and what it is asking for.
+ *
+ * It reads the same three fields off a freshly suspended run and off a resumed
+ * one, so the suspend and the resume are asserted by one step rather than two —
+ * `runStatus` is the only thing that differs between them.
+ */
+export const expectsApprovalState = pikkuScenarioStep<
+  {
+    run: {
+      status: number
+      runStatus?: string
+      pendingApprovals: { toolName: string; reason: string }[]
+    }
+    suspended: boolean
+    count?: number
+    reasonContains?: string
+  },
+  { pending: number }
+>({
+  name: 'expectsApprovalState',
+  description: 'expects the run to be suspended for approval, or resumed',
+  template: 'expects suspended={suspended}',
+  func: async (_services, { run, suspended, count, reasonContains }) => {
+    const isSuspended = run.runStatus === 'suspended'
+    if (isSuspended !== suspended) {
+      throw new Error(
+        suspended
+          ? `Expected the run to be suspended, its status is ${describe(run.runStatus)}`
+          : `Expected the run to have resumed, it is still ${describe(run.runStatus)}`
+      )
+    }
+    if (!suspended && run.status !== 200) {
+      throw new Error(`Expected a resumed run to answer 200, got ${run.status}`)
+    }
+    if (count !== undefined && run.pendingApprovals.length !== count) {
+      throw new Error(
+        `Expected ${count} pending approval(s), got ${run.pendingApprovals.length}`
+      )
+    }
+    if (reasonContains !== undefined) {
+      const reasons = run.pendingApprovals.map((approval) => approval.reason)
+      if (!reasons.some((reason) => reason.includes(reasonContains))) {
+        throw new Error(
+          `No pending approval reason contains ${describe(reasonContains)}, got ${describe(reasons)}`
+        )
+      }
+    }
+    return { pending: run.pendingApprovals.length }
+  },
+})
+
+/**
+ * What the thread persisted, read back through `getAgentThreadMessages` or
+ * `getAgentThreadRuns`.
+ *
+ * `toolExecutions` counts tool-result records rather than store rows on purpose:
+ * the todo addon keys by a millisecond timestamp, so three adds in one turn
+ * collapse to one row. The framework-level observable is that every approved
+ * call actually ran, which is one tool result per call.
+ */
+export const expectsThreadRecords = pikkuScenarioStep<
+  {
+    call: { serialized: string }
+    contains?: string
+    hasRole?: string
+    count?: number
+    toolExecutions?: { name: string; count: number }
+  },
+  { records: number }
+>({
+  name: 'expectsThreadRecords',
+  description: 'expects what the thread persisted',
+  func: async (
+    _services,
+    { call, contains, hasRole, count, toolExecutions }
+  ) => {
+    const body = JSON.parse(call.serialized)
+    const records: any[] = Array.isArray(body) ? body : []
+
+    if (contains !== undefined && !call.serialized.includes(contains)) {
+      throw new Error(
+        `Expected the thread to have recorded ${describe(contains)}, got ${call.serialized}`
+      )
+    }
+    if (hasRole !== undefined) {
+      const roles = records.map((record) => record?.role)
+      if (!roles.includes(hasRole)) {
+        throw new Error(
+          `Expected a "${hasRole}" record, got roles ${roles.join(', ') || '(none)'}`
+        )
+      }
+    }
+    if (count !== undefined && records.length !== count) {
+      throw new Error(`Expected ${count} record(s), got ${records.length}`)
+    }
+    if (toolExecutions !== undefined) {
+      const executed = records
+        .filter((record) => record?.role === 'tool')
+        .flatMap((record) => record?.toolResults ?? [])
+        .filter((result: any) => result?.name === toolExecutions.name)
+      if (executed.length !== toolExecutions.count) {
+        throw new Error(
+          `Expected ${toolExecutions.count} execution(s) of ${toolExecutions.name}, got ${executed.length}`
+        )
+      }
+    }
+    return { records: records.length }
+  },
+})
+
+/** What the shared todo store holds, read back through `todos:listTodos`. */
+export const expectsTodos = pikkuScenarioStep<
+  { call: { body: unknown }; includes?: string; excludes?: string },
+  { titles: string[] }
+>({
+  name: 'expectsTodos',
+  description: 'expects which todos the store holds',
+  func: async (_services, { call, includes, excludes }) => {
+    const todos = (call.body as { todos?: { title: string }[] })?.todos ?? []
+    const titles = todos.map((todo) => todo.title)
+    const holds = (needle: string) =>
+      titles.some((title) => title.toLowerCase().includes(needle.toLowerCase()))
+
+    if (includes !== undefined && !holds(includes)) {
+      throw new Error(
+        `Expected a todo matching ${describe(includes)}, got ${describe(titles)}`
+      )
+    }
+    if (excludes !== undefined && holds(excludes)) {
+      throw new Error(
+        `Expected no todo matching ${describe(excludes)}, got ${describe(titles)}`
+      )
+    }
+    return { titles }
+  },
+})
+
+/**
+ * That some call in the log was made by a given model with a given message.
+ *
+ * Matched rather than indexed, because a sub-agent's call is interleaved with
+ * the parent's and its position depends on how many steps the parent took.
+ */
+export const expectsModelCallMatching = pikkuScenarioStep<
+  { calls: MockLlmCall[]; modelId: string; userMessage: string },
+  { modelId: string }
+>({
+  name: 'expectsModelCallMatching',
+  description: 'expects a model call by model and message',
+  template: 'expects {modelId} called with {userMessage}',
+  func: async (_services, { calls, modelId, userMessage }) => {
+    const match = calls.find(
+      (call) => call.modelId === modelId && call.userMessage === userMessage
+    )
+    if (!match) {
+      throw new Error(
+        `No model call by ${modelId} with message ${describe(userMessage)}, saw ${describe(
+          calls.map((call) => ({
+            modelId: call.modelId,
+            userMessage: call.userMessage,
+          }))
+        )}`
+      )
+    }
+    return { modelId }
   },
 })

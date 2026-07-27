@@ -87,6 +87,29 @@ export const postAgent = async (
     })
   )
 
+/**
+ * POSTs a batch of approval decisions to an agent's approve route.
+ *
+ * A separate route from the run itself, so it is a separate helper rather than
+ * a flag on `postAgent`.
+ */
+export const postAgentApproval = async (
+  apiUrl: string,
+  agent: string,
+  identity: Identity,
+  body: Record<string, unknown>
+): Promise<HttpOutcome> =>
+  readJson(
+    await fetch(`${apiUrl}/rpc/agent/${agent}/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...identityHeaders(identity),
+      },
+      body: JSON.stringify(body),
+    })
+  )
+
 /** Calls an exposed RPC as a given principal. */
 export const postRpc = async (
   apiUrl: string,
