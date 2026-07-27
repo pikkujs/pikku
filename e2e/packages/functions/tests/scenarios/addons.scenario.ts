@@ -23,8 +23,8 @@ export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
     )
     await scenario.when(
       'filters to installed addons',
-      'filtersAddons',
-      { filter: 'installed' },
+      'selectsSegment',
+      { value: 'installed' },
       { actor: actors.admin }
     )
 

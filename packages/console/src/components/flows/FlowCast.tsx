@@ -14,6 +14,8 @@ export const FlowCast: React.FC<FlowCastProps> = ({ cast, size = 26 }) => {
       {cast.map((ref, i) => (
         <Box
           key={ref.key}
+          data-testid="flow-cast-member"
+          data-persona-key={ref.key}
           style={{
             marginLeft: i === 0 ? 0 : -size * 0.32,
             borderRadius: '50%',

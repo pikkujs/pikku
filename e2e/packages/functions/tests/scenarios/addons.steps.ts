@@ -11,27 +11,6 @@
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type {} from '@pikku/playwright'
 
-export const filtersAddons = pikkuScenarioStep<
-  { filter: 'all' | 'official' | 'installed' },
-  { filtered: string },
-  true
->({
-  name: 'filtersAddons',
-  description: 'filters the addon gallery',
-  template: 'filters to {filter} addons',
-  browser: true,
-  func: async (_services, { filter: value }, { browser }) => {
-    // Mantine's SegmentedControl labels its options `<uuid>-<value>`, so keying
-    // off that keeps the step independent of the console's translated copy.
-    // `:visible` skips the header's off-screen measurement copy of its controls.
-    await browser.page
-      .locator(`label[for$="-${value}"]:visible`)
-      .first()
-      .click({ timeout: 15_000 })
-    return { filtered: value }
-  },
-})
-
 export const searchesAddons = pikkuScenarioStep<
   { query: string },
   { query: string },
