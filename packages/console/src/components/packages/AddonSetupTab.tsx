@@ -19,7 +19,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useOptionalAuth } from '../../context/AuthContext'
-import { useSetSecret } from '../../hooks/useSecrets'
+import { useSecretValue, useSetSecret } from '../../hooks/useSecrets'
 
 interface CredentialEntry {
   name: string
@@ -199,7 +199,15 @@ const OAuthRequirementCard: React.FC<{
   })
 
   return (
-    <Card shadow="xs" padding="lg" radius="md" withBorder>
+    <Card
+      shadow="xs"
+      padding="lg"
+      radius="md"
+      withBorder
+      data-testid={`oauth-requirement-${credential.name}`}
+      data-resolved-name={resolvedName}
+      data-connected={String(isConnected)}
+    >
       <Stack gap="xs">
         <Group justify="space-between">
           <Text fw={600} size="sm">
@@ -239,6 +247,7 @@ const OAuthRequirementCard: React.FC<{
                 disabled={!auth?.user}
                 onClick={() => connectMutation.mutate()}
                 loading={connectMutation.isPending}
+                data-testid={`requirement-reconnect-${credential.name}`}
               >
                 {m.credentials_reconnect()}
               </Button>
@@ -248,6 +257,7 @@ const OAuthRequirementCard: React.FC<{
                 color="red"
                 onClick={() => disconnectMutation.mutate()}
                 loading={disconnectMutation.isPending}
+                data-testid={`requirement-disconnect-${credential.name}`}
               >
                 {m.credentials_disconnect()}
               </Button>
@@ -259,6 +269,7 @@ const OAuthRequirementCard: React.FC<{
               onClick={() => connectMutation.mutate()}
               loading={connectMutation.isPending}
               leftSection={<Link2 size={12} />}
+              data-testid={`requirement-connect-${credential.name}`}
             >
               {m.credentials_connect()}
             </Button>
@@ -281,22 +292,17 @@ const SecretRequirementCard: React.FC<{
   resolvedSecretId: string
 }> = ({ secret, resolvedSecretId }) => {
   useLocale()
-  const rpc = usePikkuRPC()
   const setSecret = useSetSecret()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
 
-  const { data: status } = useQuery({
-    queryKey: ['addon-setup-secret-status', resolvedSecretId],
-    queryFn: async () => {
-      const result = (await rpc.invoke('pikkuConsoleGetSecret', {
-        secretId: resolvedSecretId,
-      })) as { exists: boolean }
-      return { exists: result?.exists === true }
-    },
-  })
+  // Deliberately the same query as everywhere else a secret's existence is
+  // read, so that saving one from here invalidates the status shown here —
+  // `useSetSecret` invalidates `secret-value`, and a second key for the same
+  // question would simply never be refreshed.
+  const { data: status } = useSecretValue(resolvedSecretId, true)
 
-  const isSet = status?.exists === true
+  const isSet = (status as { exists?: boolean } | undefined)?.exists === true
 
   const save = () => {
     setSecret.mutate(
@@ -311,7 +317,15 @@ const SecretRequirementCard: React.FC<{
   }
 
   return (
-    <Card shadow="xs" padding="lg" radius="md" withBorder>
+    <Card
+      shadow="xs"
+      padding="lg"
+      radius="md"
+      withBorder
+      data-testid={`secret-requirement-${secret.name}`}
+      data-secret-id={resolvedSecretId}
+      data-set={String(isSet)}
+    >
       <Stack gap="xs">
         <Group justify="space-between">
           <Text fw={600} size="sm">
@@ -345,6 +359,7 @@ const SecretRequirementCard: React.FC<{
               placeholder={m.addon_setup_secret_placeholder()}
               onChange={(e) => setValue(e.currentTarget.value)}
               autoFocus
+              data-testid={`secret-input-${secret.name}`}
             />
             <Group gap="xs">
               <Button
@@ -353,6 +368,7 @@ const SecretRequirementCard: React.FC<{
                 loading={setSecret.isPending}
                 disabled={value.length === 0}
                 leftSection={<Check size={12} />}
+                data-testid={`secret-save-${secret.name}`}
               >
                 {m.addon_setup_secret_save()}
               </Button>
@@ -376,6 +392,7 @@ const SecretRequirementCard: React.FC<{
               variant={isSet ? 'light' : undefined}
               onClick={() => setEditing(true)}
               leftSection={<KeyRound size={12} />}
+              data-testid={`secret-set-${secret.name}`}
             >
               {isSet
                 ? m.addon_setup_secret_update_action()

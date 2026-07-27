@@ -1003,6 +1003,7 @@ export const PackageDetailPage: React.FC<{
                       onChange={setSelectedInstance}
                       allowDeselect={false}
                       maw={320}
+                      data-testid="addon-instance-select"
                     />
                   </Box>
                 )}
