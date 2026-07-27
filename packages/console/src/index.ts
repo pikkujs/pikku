@@ -286,6 +286,31 @@ export type { ScenarioFlowsPanelProps } from './components/flows/ScenarioFlowsPa
 export { ScenarioPersonasPanel } from './components/personas/ScenarioPersonasPanel'
 export type { ScenarioPersonasPanelProps } from './components/personas/ScenarioPersonasPanel'
 
+// The scenario document: features as pages, scenarios as sections, steps as
+// prose. Exported piecewise so a host app can compose its own chrome around
+// them — Fabric mounts the document beside its own Personas section.
+export { FeatureNavigator } from './components/scenarios/FeatureNavigator'
+export { FeatureDocument } from './components/scenarios/FeatureDocument'
+export { ScenarioSection } from './components/scenarios/ScenarioSection'
+export { ScenarioCast } from './components/scenarios/ScenarioCast'
+export { ScenarioLadder } from './components/scenarios/ScenarioLadder'
+export { TagFilter } from './components/scenarios/TagFilter'
+export {
+  buildScenarioDocs,
+  filterFeatures,
+} from './components/scenarios/scenario-doc-model'
+export type {
+  ScenarioDoc,
+  ScenarioDocs,
+  ScenarioDocFilter,
+  ScenarioLadderStep,
+  ScenarioStepPhase,
+  FeatureDoc,
+  FeatureDocEntry,
+} from './components/scenarios/scenario-doc-model'
+export { useScenarioDocs, UNGROUPED_FEATURE_ID } from './hooks/useScenarioDocs'
+export type { ScenarioDocsResult } from './hooks/useScenarioDocs'
+
 // Agent playground building blocks, mirroring the workflow surface:
 // `AgentPlaygroundSurface` mounts the contexts, the panels read from them, and
 // `AgentThreePane` is one arrangement of those panels rather than the only one.

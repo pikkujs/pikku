@@ -77,7 +77,16 @@ describe('addFeature', () => {
         [
           [
             'credentialFeature',
-            { path: featureFile, exportedName: 'credentialFeature' },
+            {
+              path: featureFile,
+              exportedName: 'credentialFeature',
+              name: 'Credential API',
+              tags: ['credential'],
+              entries: [{ scenario: 'lazyLoadScenario' }],
+              unresolvedEntries: 0,
+              hasBefore: false,
+              hasAfter: false,
+            },
           ],
         ]
       )
@@ -86,9 +95,139 @@ describe('addFeature', () => {
     }
   })
 
-  test('a feature built by a loop is recorded like any other', async () => {
-    // The reason membership is resolved at runtime: this scenarios array cannot
-    // be enumerated statically, and recording the feature must not depend on it.
+  test('extracts the feature name, description and tags', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { lazyLoadScenario } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        "  description: 'How credentials are loaded and rotated',",
+        "  tags: ['credential', 'console'],",
+        '  scenarios: [lazyLoadScenario],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      const feature = state.workflows.featureFiles.get('credentialFeature')!
+      assert.equal(feature.name, 'Credential API')
+      assert.equal(
+        feature.description,
+        'How credentials are loaded and rotated'
+      )
+      assert.deepEqual(feature.tags, ['credential', 'console'])
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('resolves a literal scenarios array to scenario names, in order', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { lazyLoadScenario, roundTripScenario } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        '  scenarios: [roundTripScenario, lazyLoadScenario],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      const feature = state.workflows.featureFiles.get('credentialFeature')!
+      assert.deepEqual(feature.entries, [
+        { scenario: 'roundTripScenario' },
+        { scenario: 'lazyLoadScenario' },
+      ])
+      assert.equal(feature.unresolvedEntries, 0)
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('resolves an aliased import back to the declared scenario name', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { lazyLoadScenario as lazy } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        '  scenarios: [lazy],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      assert.deepEqual(
+        state.workflows.featureFiles.get('credentialFeature')!.entries,
+        [{ scenario: 'lazyLoadScenario' }]
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('resolves a { scenario, data } entry with its literal data', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { roundTripScenario } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        '  scenarios: [',
+        "    { scenario: roundTripScenario, data: { name: 'stripe', retries: 2 } },",
+        "    { scenario: roundTripScenario, data: { name: 'google', retries: 0 } },",
+        '  ],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      assert.deepEqual(
+        state.workflows.featureFiles.get('credentialFeature')!.entries,
+        [
+          {
+            scenario: 'roundTripScenario',
+            data: { name: 'stripe', retries: 2 },
+          },
+          {
+            scenario: 'roundTripScenario',
+            data: { name: 'google', retries: 0 },
+          },
+        ]
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('records whether the feature has before/after hooks', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { lazyLoadScenario } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        '  before: async () => {},',
+        '  scenarios: [lazyLoadScenario],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      const feature = state.workflows.featureFiles.get('credentialFeature')!
+      assert.equal(feature.hasBefore, true)
+      assert.equal(feature.hasAfter, false)
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a feature built by a loop keeps its literal entries and counts the rest', async () => {
+    // A spread of `.map()` cannot be enumerated statically — membership for it
+    // is resolved at runtime by object identity. Everything literal alongside it
+    // is still extracted, and the dynamic portion is counted rather than lost.
     const { state, criticals, cleanup } = await run(
       [
         "import { pikkuFeature } from '@pikku/core/workflow'",
@@ -107,10 +246,9 @@ describe('addFeature', () => {
     )
     try {
       assert.deepEqual(criticals, [])
-      assert.deepEqual(
-        [...state.workflows.featureFiles.keys()],
-        ['credentialFeature']
-      )
+      const feature = state.workflows.featureFiles.get('credentialFeature')!
+      assert.deepEqual(feature.entries, [{ scenario: 'lazyLoadScenario' }])
+      assert.equal(feature.unresolvedEntries, 1)
     } finally {
       await cleanup()
     }

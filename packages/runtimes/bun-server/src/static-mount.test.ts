@@ -75,7 +75,7 @@ describe('PikkuBunServer static mounts', () => {
   })
 
   test('SPA fallback serves index.html for unknown paths under the prefix', async () => {
-    const response = await fetch(`${origin}/console/tests/userflows?id=x`)
+    const response = await fetch(`${origin}/console/scenarios?id=x`)
     assert.equal(response.status, 200)
     assert.match(await response.text(), /<title>console<\/title>/)
   })

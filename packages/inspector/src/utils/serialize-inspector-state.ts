@@ -1,5 +1,9 @@
 import type { JSONValue } from '@pikku/core'
-import type { InspectorDiagnostic, InspectorState } from '../types.js'
+import type {
+  InspectorDiagnostic,
+  InspectorFeature,
+  InspectorState,
+} from '../types.js'
 import { TypesMap } from '../types-map.js'
 
 /**
@@ -139,7 +143,7 @@ export interface SerializableInspectorState {
     files: Array<[string, { path: string; exportedName: string }]>
     graphMeta: InspectorState['workflows']['graphMeta']
     graphFiles: Array<[string, { path: string; exportedName: string }]>
-    featureFiles: Array<[string, { path: string; exportedName: string }]>
+    featureFiles: Array<[string, InspectorFeature]>
     invokedWorkflows: string[]
   }
   rpc: {

@@ -1,17 +1,23 @@
 /**
- * The console scenarios page: the Flows and Personas views.
+ * The console scenarios page: living documentation of what this project's
+ * features are written to do.
  *
  * These carry the intent of two gherkin features, `scenarios-console` and
  * `tests-console`, both of which describe surfaces the console has since moved:
  *
  * - The Workflows/Scenarios/Personas toggle no longer lives on the workflows
- *   page. Scenarios and personas have their own page and the workflows page is
- *   a plain table, so "the workflows view hides scenarios" is asserted on that
+ *   page. Scenarios have their own page and the workflows page is a plain
+ *   table, so "the workflows view hides scenarios" is asserted on that
  *   workflows entity cards rather than on a toggle.
  * - The Tests page is gone entirely, and with it the "Run tests" button and the
  *   live scenario names it streamed. The console no longer runs anything —
  *   scenarios run through `pikku scenario run` — so what survives of that
- *   feature is that the console lists the scenarios it could tell you about.
+ *   feature is that the console reads back the scenarios it knows about.
+ * - The scenarios page itself is no longer a card list behind a Flows/Personas
+ *   segmented control. It is a document: features on the left, and on the
+ *   right the selected feature's scenarios, each as its declared prose ladder.
+ *   Personas are still first-class, but they read inline as a scenario's cast
+ *   rather than as a separate view.
  */
 import {
   pikkuFeature,
@@ -22,6 +28,9 @@ const WORKFLOWS_PAGE = '/console/workflow'
 const SCENARIOS_PAGE = '/console/scenarios'
 const SCENARIO = 'orderSupportScenario'
 const WORKFLOW = 'dslSequentialWorkflow'
+
+/** The synthetic feature holding scenarios that declare no `pikkuFeature`. */
+const UNGROUPED = '__ungrouped'
 
 export const workflowsExcludeScenariosScenario = pikkuScenario<
   void,
@@ -61,71 +70,18 @@ export const workflowsExcludeScenariosScenario = pikkuScenario<
   },
 })
 
-export const scenarioFlowsListedScenario = pikkuScenario<
+export const featuresNavigableScenario = pikkuScenario<
   void,
-  { cast: number }
+  { features: number }
 >({
-  title: 'The scenarios page lists scenarios with their cast',
+  title: 'The scenarios page opens on a feature',
   description:
-    'A scenario card names the personas the scenario is written to be run by',
+    'Features are the pages of the document, so the page lists them and opens one',
   tags: ['scenario'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
-        'scenarioFlowsListedScenario needs the admin actor — run via `pikku scenario run <environment>`'
-      )
-    }
-
-    await scenario.given(
-      'opens the scenarios page',
-      'opensConsolePage',
-      { path: SCENARIOS_PAGE },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees the scenario',
-      'seesTestId',
-      { testId: `flow-card-${SCENARIO}` },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'does not see the workflow',
-      'doesNotSeeTestId',
-      { testId: `flow-card-${WORKFLOW}` },
-      { actor: actors.admin }
-    )
-
-    const read = await scenario.when(
-      'reads the cast',
-      'readsFlowCast',
-      { flow: SCENARIO },
-      { actor: actors.admin }
-    )
-    const expected = await scenario.then(
-      'expects the cast',
-      'expectsFlowCast',
-      {
-        read,
-        personas: ['shopper', 'support'],
-      }
-    )
-
-    return { cast: expected.cast }
-  },
-})
-
-export const scenarioListIsPopulatedScenario = pikkuScenario<
-  void,
-  { flows: number }
->({
-  title: 'The scenarios page lists the project’s scenarios',
-  description:
-    'The page the console offers in place of a test runner is not empty',
-  tags: ['scenario'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.admin) {
-      throw new Error(
-        'scenarioListIsPopulatedScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        'featuresNavigableScenario needs the admin actor — run via `pikku scenario run <environment>`'
       )
     }
 
@@ -136,25 +92,150 @@ export const scenarioListIsPopulatedScenario = pikkuScenario<
       { actor: actors.admin }
     )
     const listed = await scenario.then(
-      'sees a populated list',
+      'sees a populated feature list',
       'seesTestId',
-      { testId: 'flow-card-', prefix: true, atLeast: 5 },
+      { testId: 'feature-nav-', prefix: true, atLeast: 5 },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the addons feature',
+      'clicksTestId',
+      { testId: 'feature-nav-addonsFeature' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the addons feature document',
+      'seesTestId',
+      { testId: 'feature-document-addonsFeature' },
       { actor: actors.admin }
     )
 
-    return { flows: listed.count }
+    return { features: listed.count }
   },
 })
 
-export const personasListedScenario = pikkuScenario<void, { listed: true }>({
-  title: 'The personas view renders the configured actors',
+export const scenarioReadsAsProseScenario = pikkuScenario<void, { read: true }>(
+  {
+    title: 'A scenario reads as the prose its author wrote',
+    description:
+      'The steps of a scenario are its sentences, shown in the order they were declared',
+    tags: ['scenario'],
+    func: async (_services, _data, { scenario, actors }) => {
+      if (!actors?.admin) {
+        throw new Error(
+          'scenarioReadsAsProseScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        )
+      }
+
+      await scenario.given(
+        'opens the scenarios page',
+        'opensConsolePage',
+        { path: SCENARIOS_PAGE },
+        { actor: actors.admin }
+      )
+      await scenario.when(
+        'opens the ungrouped feature',
+        'clicksTestId',
+        { testId: `feature-nav-${UNGROUPED}` },
+        { actor: actors.admin }
+      )
+      await scenario.then(
+        'sees the scenario section',
+        'seesTestId',
+        { testId: `scenario-section-${SCENARIO}` },
+        { actor: actors.admin }
+      )
+      await scenario.then(
+        'sees the shopper’s step in the author’s words',
+        'seesTestId',
+        { testId: 'ladder-step-shopper doubles their order' },
+        { actor: actors.admin }
+      )
+      await scenario.then(
+        'sees the support agent’s step in the author’s words',
+        'seesTestId',
+        { testId: 'ladder-step-support sees the greeting settle' },
+        { actor: actors.admin }
+      )
+
+      return { read: true }
+    },
+  }
+)
+
+export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
+  {
+    title: 'A scenario names the personas it casts',
+    description:
+      'The personas a scenario is written to be run by read alongside it, not on a page of their own',
+    tags: ['scenario'],
+    func: async (_services, _data, { scenario, actors }) => {
+      if (!actors?.admin) {
+        throw new Error(
+          'scenarioCastListedScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        )
+      }
+
+      await scenario.given(
+        'opens the scenarios page',
+        'opensConsolePage',
+        { path: SCENARIOS_PAGE },
+        { actor: actors.admin }
+      )
+      await scenario.when(
+        'opens the ungrouped feature',
+        'clicksTestId',
+        { testId: `feature-nav-${UNGROUPED}` },
+        { actor: actors.admin }
+      )
+      const read = await scenario.when(
+        'reads the cast',
+        'readsFlowCast',
+        { flow: SCENARIO },
+        { actor: actors.admin }
+      )
+      const expected = await scenario.then(
+        'expects the cast',
+        'expectsFlowCast',
+        {
+          read,
+          personas: ['shopper', 'support'],
+        }
+      )
+      await scenario.when(
+        'opens the shopper',
+        'clicksTestId',
+        {
+          testId: 'scenario-cast-member',
+          where: { 'data-persona-key': 'shopper' },
+          within: { testId: `scenario-section-${SCENARIO}` },
+        },
+        { actor: actors.admin }
+      )
+      await scenario.then(
+        'sees the shopper’s identity',
+        'seesTestId',
+        { testId: 'persona-drawer-shopper' },
+        { actor: actors.admin }
+      )
+
+      return { cast: expected.cast }
+    },
+  }
+)
+
+export const skippedScenarioSaysWhyScenario = pikkuScenario<
+  void,
+  { explained: true }
+>({
+  title: 'A skipped scenario says why it is skipped',
   description:
-    'Every persona declared under scenarios.actors is shown with its identity',
+    'Documentation that hides what is not running is documentation that lies',
   tags: ['scenario'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
-        'personasListedScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        'skippedScenarioSaysWhyScenario needs the admin actor — run via `pikku scenario run <environment>`'
       )
     }
 
@@ -165,96 +246,88 @@ export const personasListedScenario = pikkuScenario<void, { listed: true }>({
       { actor: actors.admin }
     )
     await scenario.when(
-      'switches to the personas view',
-      'selectsSegment',
-      { value: 'personas' },
+      'opens the install-addon feature',
+      'clicksTestId',
+      { testId: 'feature-nav-consoleInstallAddonFeature' },
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the shopper',
-      'seesTestId',
-      { testId: 'persona-card-shopper', containing: 'shopper@actors.local' },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees the support agent',
-      'seesTestId',
-      { testId: 'persona-card-support', containing: 'Support agent' },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees the support agent’s personality',
+      'sees the skipped scenario explain itself',
       'seesTestId',
       {
-        testId: 'persona-card-support',
-        containing: 'Methodical agent who double-checks every order',
+        testId: 'scenario-skip',
+        containing: 'npm cannot install inside this yarn workspace',
+        within: {
+          testId: 'scenario-section-installAddonFreshNameScenario',
+        },
       },
       { actor: actors.admin }
     )
 
-    return { listed: true }
+    return { explained: true }
   },
 })
 
-export const scenariosViewTogglesBackScenario = pikkuScenario<
-  void,
-  { restored: true }
->({
-  title: 'Switching back to Flows restores the scenario list',
-  description: 'The view toggle is reversible',
-  tags: ['scenario'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.admin) {
-      throw new Error(
-        'scenariosViewTogglesBackScenario needs the admin actor — run via `pikku scenario run <environment>`'
+export const tagFilterNarrowsScenario = pikkuScenario<void, { narrowed: true }>(
+  {
+    title: 'A tag narrows the document to the slice it names',
+    description:
+      'The same tags `pikku scenario run --tags` selects on also navigate the document',
+    tags: ['scenario'],
+    func: async (_services, _data, { scenario, actors }) => {
+      if (!actors?.admin) {
+        throw new Error(
+          'tagFilterNarrowsScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        )
+      }
+
+      await scenario.given(
+        'opens the scenarios page',
+        'opensConsolePage',
+        { path: SCENARIOS_PAGE },
+        { actor: actors.admin }
       )
-    }
+      await scenario.then(
+        'sees an untagged feature listed',
+        'seesTestId',
+        { testId: 'feature-nav-workflowApiFeature' },
+        { actor: actors.admin }
+      )
+      await scenario.when(
+        'filters to the addons tag',
+        'selectsOption',
+        { testId: 'scenario-tag-filter', value: 'addons' },
+        { actor: actors.admin }
+      )
+      await scenario.then(
+        'still sees the addons feature',
+        'seesTestId',
+        { testId: 'feature-nav-addonsFeature' },
+        { actor: actors.admin }
+      )
+      await scenario.then(
+        'no longer sees the workflow feature',
+        'doesNotSeeTestId',
+        { testId: 'feature-nav-workflowApiFeature' },
+        { actor: actors.admin }
+      )
 
-    await scenario.given(
-      'opens the scenarios page',
-      'opensConsolePage',
-      { path: SCENARIOS_PAGE },
-      { actor: actors.admin }
-    )
-    await scenario.when(
-      'switches to the personas view',
-      'selectsSegment',
-      { value: 'personas' },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees a persona',
-      'seesTestId',
-      { testId: 'persona-card-shopper' },
-      { actor: actors.admin }
-    )
-    await scenario.when(
-      'switches back to the flows view',
-      'selectsSegment',
-      { value: 'scenarios' },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees the scenario again',
-      'seesTestId',
-      { testId: `flow-card-${SCENARIO}` },
-      { actor: actors.admin }
-    )
-
-    return { restored: true }
-  },
-})
+      return { narrowed: true }
+    },
+  }
+)
 
 export const scenariosConsoleFeature = pikkuFeature({
   name: 'Scenarios Console Page',
   description:
-    'The console lists the project’s scenarios and the personas that run them',
+    'The console reads a project’s features back as living documentation: the scenarios they declare, the prose those scenarios are written in, and the personas that run them',
   tags: ['scenarios-console', 'console'],
   scenarios: [
     workflowsExcludeScenariosScenario,
-    scenarioFlowsListedScenario,
-    scenarioListIsPopulatedScenario,
-    personasListedScenario,
-    scenariosViewTogglesBackScenario,
+    featuresNavigableScenario,
+    scenarioReadsAsProseScenario,
+    scenarioCastListedScenario,
+    skippedScenarioSaysWhyScenario,
+    tagFilterNarrowsScenario,
   ],
 })

@@ -213,6 +213,8 @@ export interface SerializedWorkflowGraph {
   tags?: string[]
   /** Actor names a scenario's steps run as */
   actors?: string[]
+  /** Why a scenario is held out of a default run, stated where it is declared */
+  skip?: string
   /** If true, workflow always executes inline without queues */
   inline?: boolean
   /** Workflow context/state variables (from Zod schema) */

@@ -1,0 +1,122 @@
+import React, { useMemo, useState } from 'react'
+import { Group, TextInput, Center, Loader, Text } from '@pikku/mantine/core'
+import { Search } from 'lucide-react'
+import { m } from '@/i18n/messages'
+import { ListPageHeader } from '../layout/PageLayout'
+import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
+import { FeatureNavigator } from './FeatureNavigator'
+import { FeatureDocument } from './FeatureDocument'
+import { TagFilter } from './TagFilter'
+import { filterFeatures } from './scenario-doc-model'
+import { PersonaDrawer } from '../personas/PersonaDrawer'
+import { WorkflowProvider } from '../../context/WorkflowContext'
+import { usePanelContext } from '../../context/PanelContext'
+import { useScenarioDocs } from '../../hooks/useScenarioDocs'
+import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
+import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
+
+/**
+ * The scenarios reading surface: a feature list, the selected feature rendered
+ * as prose, and the step/persona details it opens. Lives below
+ * `ConsoleSurface` because it reads the panel context that mounts there.
+ */
+export const ScenariosWorkspace: React.FC = () => {
+  const { navigateTo } = useConsoleNavigator()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string>()
+  const [personaKey, setPersonaKey] = useState<string | null>(null)
+  const [stepWorkflow, setStepWorkflow] = useState<unknown>()
+  const { personas } = useScenarioPersonaEntries()
+  const { openWorkflowStep } = usePanelContext()
+
+  const { allFeatures, tags, loading } = useScenarioDocs(
+    m.scenarios_ungrouped()
+  )
+
+  const features = useMemo(
+    () =>
+      filterFeatures(allFeatures, { query: searchQuery, tags: selectedTags }),
+    [allFeatures, searchQuery, selectedTags]
+  )
+
+  const selected =
+    features.find((feature) => feature.id === selectedFeatureId) ?? features[0]
+
+  return (
+    <>
+      {/* the provider sits above the panel so a step's details can read its
+          own scenario's workflow meta, not just the document's */}
+      <WorkflowProvider workflow={stepWorkflow}>
+        <ResizablePanelLayout
+          header={
+            <ListPageHeader
+              title={m.nav_scenarios()}
+              description={m.scenarios_page_description()}
+              docsHref="https://pikku.dev/docs/wiring/workflows"
+              filters={
+                <Group gap="sm" wrap="wrap">
+                  <TextInput
+                    placeholder={m.scenarios_search_placeholder()}
+                    leftSection={<Search size={14} />}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    size="xs"
+                    style={{ width: 260 }}
+                  />
+                  <TagFilter
+                    tags={tags}
+                    selected={selectedTags}
+                    onChange={setSelectedTags}
+                  />
+                </Group>
+              }
+            />
+          }
+          leftDrawer={
+            loading ? null : (
+              <FeatureNavigator
+                features={features}
+                selectedId={selected?.id}
+                onSelect={setSelectedFeatureId}
+              />
+            )
+          }
+          emptyPanelMessage={m.scenarios_select_step()}
+          hidePanel={loading}
+        >
+          {loading ? (
+            <Center style={{ flex: 1 }}>
+              <Loader />
+            </Center>
+          ) : selected ? (
+            <FeatureDocument
+              feature={selected}
+              onOpenScenario={(name) => navigateTo('scenarios', name)}
+              onOpenPersona={setPersonaKey}
+              onSelectStep={(workflow, stepId, stepType) => {
+                setStepWorkflow(workflow)
+                openWorkflowStep(stepId, stepType, { stepType })
+              }}
+            />
+          ) : (
+            <Center p="xl">
+              <Text size="sm" c="dimmed">
+                {m.scenarios_select_feature()}
+              </Text>
+            </Center>
+          )}
+        </ResizablePanelLayout>
+      </WorkflowProvider>
+      <PersonaDrawer
+        persona={personas.find((persona) => persona.key === personaKey) ?? null}
+        opened={personaKey !== null}
+        onClose={() => setPersonaKey(null)}
+        onOpenFlow={(name) => {
+          setPersonaKey(null)
+          navigateTo('scenarios', name)
+        }}
+      />
+    </>
+  )
+}

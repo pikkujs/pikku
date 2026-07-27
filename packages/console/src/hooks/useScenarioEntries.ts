@@ -3,7 +3,7 @@ import { usePikkuMeta } from '../context/PikkuMetaContext'
 import type { FlowEntry } from '../components/flows/flow-types'
 import type {
   PersonaEntry,
-  PersonaFlowRef,
+  PersonaScenarioRef,
 } from '../components/personas/persona-types'
 import { toEnglishName } from '../lib/strings'
 
@@ -52,23 +52,42 @@ export function useScenarioFlowEntries(): ScenarioFlowEntries {
 
 /**
  * The personas scenarios sign in as, each carrying back-references to the
- * scenario flows that cast them.
+ * scenarios that cast them and the features those scenarios belong to.
  */
 export function useScenarioPersonaEntries(): ScenarioPersonaEntries {
   const { meta, loading } = usePikkuMeta()
 
   const personas = useMemo((): PersonaEntry[] => {
     const actors = meta.scenarioActors ?? {}
-    const flowsByActor = new Map<string, PersonaFlowRef[]>()
+
+    const featureByScenario = new Map<string, string>()
+    for (const feature of Object.values(meta.features ?? {}) as any[]) {
+      for (const entry of feature.entries ?? []) {
+        featureByScenario.set(entry.scenario, feature.name)
+      }
+    }
+
+    const scenariosByActor = new Map<string, PersonaScenarioRef[]>()
+    const featuresByActor = new Map<string, Set<string>>()
     for (const w of Object.values(meta.workflows ?? {}) as any[]) {
       if (!(w.source === 'scenario' || w.scenario === true)) continue
       if ((w.tags ?? []).includes('test-fixture')) continue
+      const feature = featureByScenario.get(w.name)
       for (const actor of w.actors ?? []) {
-        const list = flowsByActor.get(actor) ?? []
-        list.push({ name: w.name, displayName: toEnglishName(w.name) })
-        flowsByActor.set(actor, list)
+        const list = scenariosByActor.get(actor) ?? []
+        list.push({
+          name: w.name,
+          displayName: w.title ?? toEnglishName(w.name),
+        })
+        scenariosByActor.set(actor, list)
+        if (feature) {
+          const features = featuresByActor.get(actor) ?? new Set<string>()
+          features.add(feature)
+          featuresByActor.set(actor, features)
+        }
       }
     }
+
     return Object.entries(actors)
       .map(
         ([key, cfg]: [string, any]): PersonaEntry => ({
@@ -77,11 +96,12 @@ export function useScenarioPersonaEntries(): ScenarioPersonaEntries {
           email: cfg.email,
           jobTitle: cfg.jobTitle,
           personality: cfg.personality,
-          flows: flowsByActor.get(key) ?? [],
+          scenarios: scenariosByActor.get(key) ?? [],
+          features: [...(featuresByActor.get(key) ?? [])].sort(),
         })
       )
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.scenarioActors, meta.workflows])
+  }, [meta.scenarioActors, meta.workflows, meta.features])
 
   return { personas, loading }
 }

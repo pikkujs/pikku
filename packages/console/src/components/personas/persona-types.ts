@@ -1,4 +1,4 @@
-export interface PersonaFlowRef {
+export interface PersonaScenarioRef {
   name: string
   displayName: string
 }
@@ -9,7 +9,10 @@ export interface PersonaEntry {
   email: string
   jobTitle?: string
   personality?: string
-  flows: PersonaFlowRef[]
+  /** The scenarios that cast this persona. */
+  scenarios: PersonaScenarioRef[]
+  /** The names of the features those scenarios belong to. */
+  features: string[]
 }
 
 export interface PersonaRef {

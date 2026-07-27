@@ -88,7 +88,7 @@ describe('PikkuNodeHTTPServer static mounts', { concurrency: false }, () => {
   })
 
   test('SPA fallback serves index.html for unknown paths under the prefix', async () => {
-    const response = await fetch(`${origin}/console/tests/userflows?id=x`, {
+    const response = await fetch(`${origin}/console/scenarios?id=x`, {
       headers: { connection: 'close' },
     })
     assert.equal(response.status, 200)
