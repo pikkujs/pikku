@@ -17,9 +17,9 @@ export const serializeWorkflowMeta = (
 
   if (workflowNames.length === 0) {
     return `import { pikkuState } from '@pikku/core/internal'
-import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
+import type { WorkflowsRuntimeMeta } from '@pikku/core/workflow/types'
 
-const workflowsMeta: SerializedWorkflowGraphs = {}
+const workflowsMeta: WorkflowsRuntimeMeta = {}
 
 pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
   }
@@ -49,13 +49,13 @@ pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
     .join('\n')
 
   return `import { pikkuState } from '@pikku/core/internal'
-import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
+import type { WorkflowsRuntimeMeta } from '@pikku/core/workflow/types'
 
 ${imports}
 
 const workflowsMeta = {
 ${metaEntries}
-} as SerializedWorkflowGraphs
+} as WorkflowsRuntimeMeta
 
 pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
 }

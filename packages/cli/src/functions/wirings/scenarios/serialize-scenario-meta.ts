@@ -40,12 +40,12 @@ export const serializeScenarioWorkflowMeta = (
     .join('\n')
 
   return `import { pikkuState } from '@pikku/core/internal'
-import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
+import type { WorkflowsRuntimeMeta } from '@pikku/core/workflow/types'
 import '${appMetaImportPath}'
 ${imports ? `\n${imports}\n` : ''}
 const scenariosMeta = {
 ${metaEntries}
-} as SerializedWorkflowGraphs
+} as WorkflowsRuntimeMeta
 
 pikkuState(${pkg}, 'workflows', 'meta', {
   ...pikkuState(${pkg}, 'workflows', 'meta'),
