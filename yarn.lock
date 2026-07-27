@@ -6447,7 +6447,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/playwright@workspace:packages/playwright"
   dependencies:
-    "@playwright/test": "npm:^1.61.1"
+    "@playwright/test": "npm:1.58.2"
     "@types/node": "npm:^25.6.0"
     typescript: "npm:^6.0.3"
   peerDependencies:
@@ -7446,7 +7446,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/test@npm:^1.50.0":
+"@playwright/test@npm:1.58.2, @playwright/test@npm:^1.50.0":
   version: 1.58.2
   resolution: "@playwright/test@npm:1.58.2"
   dependencies:
