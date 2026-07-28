@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 `pikku fabric secrets set` now seals the value on this machine before sending it. The CLI fetches the stage's public key, encrypts against it, and sends only the sealed blob — so the plaintext never reaches fabric, and the value can be opened by the stage's own worker and by nothing else. `secrets list` returns names and write times; there is no value to show, which is the point.
