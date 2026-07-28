@@ -218,6 +218,16 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
         { testId: 'persona-drawer-shopper' },
         { actor: actors.admin }
       )
+      await scenario.then(
+        'sees the account the shopper signs in as',
+        'expectsTestIdValue',
+        {
+          testId: 'persona-field-email',
+          value: 'shopper@actors.local',
+          within: { testId: 'persona-drawer-shopper' },
+        },
+        { actor: actors.admin }
+      )
 
       return { cast: expected.cast }
     },
