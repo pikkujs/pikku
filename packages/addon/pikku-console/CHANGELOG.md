@@ -1,3 +1,32 @@
+## 0.12.32
+
+### Patch Changes
+
+- a436645: Redesign the console's scenarios screen as living documentation of a project's BDD features.
+
+  The inspector now statically extracts `pikkuFeature` declarations — name, description, tags, the scenarios each one groups (including `{ scenario, data }` examples), and whether it declares `before`/`after` — and the CLI writes them to `<outDir>/scenarios/features.gen.json`, which `MetaService.getFeaturesMeta()` reads and the console addon returns from `getAllMeta`.
+
+  The scenarios page reads that back as a document: features on the left, and on the right the selected feature's scenarios, each rendered as the given/when/then ladder of prose its author actually wrote, with repeats shown as `for each x in xs`, `Examples:` tables for parameterised entries, skip reasons stated rather than hidden, and each scenario's cast of personas inline. The Flows/Personas segmented control is gone; tags filter the document the same way `pikku scenario run --tags` filters a run.
+
+- Updated dependencies [539ee0b]
+- Updated dependencies [a1a6816]
+- Updated dependencies [dc3e11e]
+- Updated dependencies [24da616]
+- Updated dependencies [04bfe3f]
+- Updated dependencies [5962e51]
+- Updated dependencies [5962e51]
+- Updated dependencies [cd6453c]
+- Updated dependencies [a436645]
+- Updated dependencies [46cf63e]
+- Updated dependencies [9e666bc]
+- Updated dependencies [1c841d8]
+- Updated dependencies [47478a4]
+- Updated dependencies [9e666bc]
+- Updated dependencies [5962e51]
+- Updated dependencies [5962e51]
+- Updated dependencies [61b9bf8]
+  - @pikku/core@0.12.70
+
 ## 0.12.31
 
 ### Patch Changes
