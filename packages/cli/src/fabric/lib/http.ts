@@ -8,7 +8,7 @@ import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 export function getFabricRPC(opts: {
   apiUrl: string
   token: string | null
-}): any {
+}): PikkuRPC {
   const rpc = new PikkuRPC()
   rpc.setServerUrl(opts.apiUrl)
   rpc.setAuthorizationJWT(opts.token)
