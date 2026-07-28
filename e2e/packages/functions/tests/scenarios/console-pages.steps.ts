@@ -10,7 +10,11 @@
  * share.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor, requireScenarioEnv } from '@pikku/core/workflow'
+import {
+  pollUntil,
+  requireActor,
+  requireScenarioEnv,
+} from '@pikku/core/workflow'
 import type {} from '@pikku/playwright'
 import { rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -18,7 +22,6 @@ import { fileURLToPath } from 'node:url'
 
 const E2E_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
 const FIXTURES_ROOT = resolve(E2E_ROOT, 'tests/fixtures')
-const TIMEOUT = 15_000
 
 /**
  * Removes the audit artefact so the page starts from a known-clean slate.
@@ -54,7 +57,7 @@ export const opensChangesPage = pikkuScenarioStep<
     await browser.page
       .locator('[role="tab"]')
       .first()
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+      .waitFor({ state: 'visible' })
     return { url: browser.page.url() }
   },
 })
@@ -72,7 +75,7 @@ export const clicksTab = pikkuScenarioStep<
     await browser.page
       .getByRole('tab', { name: new RegExp(name, 'i') })
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     return { clicked: name }
   },
 })
@@ -97,7 +100,7 @@ export const expectsTabCounts = pikkuScenarioStep<
     const target = browser.page
       .getByRole('tab', { name: new RegExp(tab, 'i') })
       .first()
-    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await target.waitFor({ state: 'visible' })
     const label = (await target.textContent()) ?? ''
     for (const [marker, count] of [
       ['+', added],
@@ -133,22 +136,24 @@ export const triggersWebhookDelivery = pikkuScenarioStep<
     const sinkUrl = `${requireScenarioEnv(scenarioStep).apiUrl}/api/webhook/sink`
     await actor.invoke('triggerWebhook' as never, { url: sinkUrl } as never)
 
-    const deadline = Date.now() + (timeoutMs ?? TIMEOUT)
     let status: string | undefined
-    while (Date.now() < deadline) {
-      const deliveries = (await actor.invoke(
-        'console:listWebhookDeliveries' as never,
-        {} as never
-      )) as { url: string; status: string }[]
-      status = deliveries.find((delivery) => delivery.url === sinkUrl)?.status
-      if (status === 'delivered') {
-        return { sinkUrl, status }
-      }
-      await new Promise((done) => setTimeout(done, 250))
-    }
-    throw new Error(
-      `The webhook to ${sinkUrl} was ${status ?? 'never recorded'}, not delivered`
+    const delivered = await pollUntil(
+      async () => {
+        const deliveries = (await actor.invoke(
+          'console:listWebhookDeliveries' as never,
+          {} as never
+        )) as { url: string; status: string }[]
+        status = deliveries.find((delivery) => delivery.url === sinkUrl)?.status
+        return status === 'delivered' ? status : undefined
+      },
+      { timeoutMs }
     )
+    if (!delivered) {
+      throw new Error(
+        `The webhook to ${sinkUrl} was ${status ?? 'never recorded'}, not delivered`
+      )
+    }
+    return { sinkUrl, status: delivered }
   },
 })
 
@@ -166,7 +171,7 @@ export const opensWebhookDelivery = pikkuScenarioStep<
       .locator('table tbody tr')
       .filter({ hasText: sinkUrl })
       .first()
-    await row.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await row.waitFor({ state: 'visible' })
     const text = (await row.textContent()) ?? ''
     if (!text.includes(status)) {
       throw new Error(
@@ -174,9 +179,7 @@ export const opensWebhookDelivery = pikkuScenarioStep<
       )
     }
     await row.click()
-    await browser.page
-      .getByRole('dialog')
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+    await browser.page.getByRole('dialog').waitFor({ state: 'visible' })
     return { opened: true }
   },
 })
@@ -196,7 +199,7 @@ export const expectsDeliveryAttempt = pikkuScenarioStep<
       await drawer
         .getByText(text, { exact: false })
         .first()
-        .waitFor({ state: 'visible', timeout: TIMEOUT })
+        .waitFor({ state: 'visible' })
     }
     return { attempt }
   },

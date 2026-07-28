@@ -12,6 +12,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import {
+  pollUntil,
   readScenarioHttpResponse,
   requireScenarioEnv,
   type ScenarioHttpResponse,
@@ -117,27 +118,33 @@ export const awaitsWorkflowRun = pikkuScenarioStep<
       throw new Error(`The run was never started: ${run.serialized}`)
     }
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
-    const deadline = Date.now() + (timeoutMs ?? 30_000)
     let last = ''
-    while (Date.now() < deadline) {
-      const response = await readScenarioHttpResponse(
-        await fetch(
-          `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`
+    const finished = await pollUntil(
+      async () => {
+        const response = await readScenarioHttpResponse(
+          await fetch(
+            `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`
+          )
         )
+        last = response.serialized
+        const reported = (response.body as { status?: string } | null)?.status
+        return reported && TERMINAL.includes(reported)
+          ? {
+              ...response,
+              workflowName: run.workflowName,
+              runId: run.runId,
+              outcome: reported,
+            }
+          : undefined
+      },
+      { timeoutMs: timeoutMs ?? 30_000, intervalMs: 100 }
+    )
+    if (!finished) {
+      throw new Error(
+        `Run ${run.runId} never reached a terminal status: ${last}`
       )
-      last = response.serialized
-      const reported = (response.body as { status?: string } | null)?.status
-      if (reported && TERMINAL.includes(reported)) {
-        return {
-          ...response,
-          workflowName: run.workflowName,
-          runId: run.runId,
-          outcome: reported,
-        }
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100))
     }
-    throw new Error(`Run ${run.runId} never reached a terminal status: ${last}`)
+    return finished
   },
 })
 

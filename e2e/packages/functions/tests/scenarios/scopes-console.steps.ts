@@ -6,8 +6,6 @@
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type {} from '@pikku/playwright'
 
-const TIMEOUT = 15_000
-
 export const opensUserRolesDrawer = pikkuScenarioStep<
   { email: string },
   { opened: string },
@@ -22,18 +20,18 @@ export const opensUserRolesDrawer = pikkuScenarioStep<
     await browser
       .locate({ testId: 'user-row' })
       .first()
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+      .waitFor({ state: 'visible' })
     await browser
       .locate({
         testId: 'user-roles',
         within: { testId: 'user-row', containing: email },
       })
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     await browser
       .locate({ testId: 'user-roles-drawer' })
       .first()
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+      .waitFor({ state: 'visible' })
     return { opened: email }
   },
 })

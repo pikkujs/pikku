@@ -148,6 +148,9 @@ export type {
 // Narrows the optional halves of the step wire, with a message that says what to do
 export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 
+// Waits for the target to catch up, without every step writing the loop again
+export { pollUntil, type PollOptions } from './scenario-poll.js'
+
 // What the transport answered — an actor's `invokeRaw`, or a route reached directly
 export type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
 export { readScenarioHttpResponse } from '../../services/scenario-actors-service.js'

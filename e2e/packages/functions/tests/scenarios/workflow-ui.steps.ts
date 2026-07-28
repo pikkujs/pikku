@@ -8,8 +8,6 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-const TIMEOUT = 15_000
-
 export const opensWorkflowRun = pikkuScenarioStep<
   { workflowName: string; runId?: string },
   { opened: string },
@@ -31,7 +29,7 @@ export const opensWorkflowRun = pikkuScenarioStep<
     await browser
       .locate({ testId: 'workflow-node' })
       .first()
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+      .waitFor({ state: 'visible' })
     return { opened: runId }
   },
 })
