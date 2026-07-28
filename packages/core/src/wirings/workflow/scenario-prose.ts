@@ -77,3 +77,12 @@ export const composeStepProse = ({
 
 const capitalise = (value: string) =>
   value.charAt(0).toUpperCase() + value.slice(1)
+
+/**
+ * Renders a value the way an assertion message should quote it: a string as
+ * itself, anything else as JSON. A step comparing what it found against what
+ * was expected reaches for this so the failure names both, rather than saying
+ * `[object Object]`.
+ */
+export const describeValue = (value: unknown): string =>
+  typeof value === 'string' ? value : JSON.stringify(value)

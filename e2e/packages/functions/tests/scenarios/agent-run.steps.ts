@@ -8,14 +8,16 @@
  * of these scenarios, so status is data the assertion steps read.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireScenarioEnv } from '@pikku/core/workflow'
+import {
+  requireScenarioEnv,
+  type ScenarioHttpResponse,
+} from '@pikku/core/workflow'
 import { randomUUID } from 'node:crypto'
 import {
   postAgent,
   postAgentApproval,
   postRpc,
   readModelCalls,
-  type HttpOutcome,
   type Identity,
   type MockLlmCall,
 } from './agent-transport.js'
@@ -55,7 +57,7 @@ interface AgentReplyBody {
   pendingApprovals?: PendingApproval[]
 }
 
-const replyBody = ({ body }: HttpOutcome): AgentReplyBody =>
+const replyBody = ({ body }: ScenarioHttpResponse): AgentReplyBody =>
   (body ?? {}) as AgentReplyBody
 
 export interface AgentRunResult {
@@ -165,9 +167,6 @@ export const runsAgent = pikkuScenarioStep<
   },
 })
 
-/** What the call answered — the transport's own record, carried as step data. */
-export type RpcCallResult = HttpOutcome
-
 /**
  * Calls an exposed RPC as a given principal.
  *
@@ -178,7 +177,7 @@ export type RpcCallResult = HttpOutcome
  */
 export const callsRpcAs = pikkuScenarioStep<
   { rpcName: string; data: Record<string, unknown>; identity?: Identity },
-  RpcCallResult
+  ScenarioHttpResponse
 >({
   name: 'callsRpcAs',
   description: 'calls an RPC as a principal',

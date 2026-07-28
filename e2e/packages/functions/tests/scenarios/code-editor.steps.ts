@@ -7,7 +7,11 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { TypedScenarioActors } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor, type TestIdSelector } from '@pikku/core/workflow'
+import {
+  describeValue,
+  requireActor,
+  type TestIdSelector,
+} from '@pikku/core/workflow'
 import type {} from '@pikku/playwright'
 
 type Actor = TypedScenarioActors[keyof TypedScenarioActors]
@@ -161,9 +165,6 @@ export const updatesAgentConfig = pikkuScenarioStep<
     return result
   },
 })
-
-const describeValue = (value: unknown) =>
-  typeof value === 'string' ? value : JSON.stringify(value)
 
 export const expectsValues = pikkuScenarioStep<
   { actual: Record<string, unknown>; expected: Record<string, unknown> },

@@ -160,4 +160,8 @@ export type { ScenarioHttpResponse } from '../../services/scenario-actors-servic
 export { readScenarioHttpResponse } from '../../services/scenario-actors-service.js'
 
 // Renders the English a reporter shows for a scenario step
-export { composeStepProse, renderStepTemplate } from './scenario-prose.js'
+export {
+  composeStepProse,
+  describeValue,
+  renderStepTemplate,
+} from './scenario-prose.js'
