@@ -19,12 +19,9 @@ import {
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
 
-/** What the sign-in endpoint answered — status, and the body that says why. */
-export type SignInResult = ScenarioHttpResponse
-
 export const attemptsSignIn = pikkuScenarioStep<
   { email: string; password: string },
-  SignInResult
+  ScenarioHttpResponse
 >({
   name: 'attemptsSignIn',
   description: 'attempts an email sign-in and reports whether it was accepted',
@@ -42,7 +39,7 @@ export const attemptsSignIn = pikkuScenarioStep<
 })
 
 export const expectsSignIn = pikkuScenarioStep<
-  { attempt: SignInResult; accepted: boolean },
+  { attempt: ScenarioHttpResponse; accepted: boolean },
   { ok: boolean }
 >({
   name: 'expectsSignIn',

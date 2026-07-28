@@ -15,13 +15,11 @@
  * ordinary step data, which is what keeps it PKU678-clean.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor, type ScenarioHttpResponse } from '@pikku/core/workflow'
-
-/** What the call answered — the transport's own record, carried as step data. */
-export type RawRpcResult = ScenarioHttpResponse
-
-const describe = (value: unknown) =>
-  typeof value === 'string' ? value : JSON.stringify(value)
+import {
+  describeValue,
+  requireActor,
+  type ScenarioHttpResponse,
+} from '@pikku/core/workflow'
 
 export const invokesRpcRaw = pikkuScenarioStep<
   {
@@ -29,7 +27,7 @@ export const invokesRpcRaw = pikkuScenarioStep<
     data?: unknown
     headers?: Record<string, string>
   },
-  RawRpcResult
+  ScenarioHttpResponse
 >({
   name: 'invokesRpcRaw',
   description: 'invokes an RPC and reports what the transport answered',
@@ -54,7 +52,7 @@ export const invokesRpcRaw = pikkuScenarioStep<
  */
 export const expectsRpcResponse = pikkuScenarioStep<
   {
-    call: RawRpcResult
+    call: ScenarioHttpResponse
     status?: number
     contains?: string[]
     doesNotContain?: string[]
@@ -73,14 +71,14 @@ export const expectsRpcResponse = pikkuScenarioStep<
     for (const needle of contains ?? []) {
       if (!call.serialized.includes(needle)) {
         throw new Error(
-          `Expected the response to contain ${describe(needle)}, got ${call.serialized}`
+          `Expected the response to contain ${describeValue(needle)}, got ${call.serialized}`
         )
       }
     }
     for (const needle of doesNotContain ?? []) {
       if (call.serialized.includes(needle)) {
         throw new Error(
-          `Expected the response NOT to contain ${describe(needle)}, got ${call.serialized}`
+          `Expected the response NOT to contain ${describeValue(needle)}, got ${call.serialized}`
         )
       }
     }
@@ -114,7 +112,7 @@ export const readsUserIdByEmail = pikkuScenarioStep<
     const found = (directory.users ?? []).find((user) => user.email === email)
     if (!found) {
       throw new Error(
-        `No user with email ${email}, the directory holds ${describe(
+        `No user with email ${email}, the directory holds ${describeValue(
           (directory.users ?? []).map((user) => user.email)
         )}`
       )
@@ -144,7 +142,7 @@ export const readsActorUserId = pikkuScenarioStep<void, { userId: string }>({
     }
     if (!session.userId) {
       throw new Error(
-        `The session reported no user id: ${describe(session)}. The actor is signed out.`
+        `The session reported no user id: ${describeValue(session)}. The actor is signed out.`
       )
     }
     return { userId: session.userId }
@@ -159,7 +157,7 @@ export const readsActorUserId = pikkuScenarioStep<void, { userId: string }>({
  * function that ran is a pass, an authorization refusal is not.
  */
 export const expectsRpcAllowed = pikkuScenarioStep<
-  { call: RawRpcResult },
+  { call: ScenarioHttpResponse },
   { status: number }
 >({
   name: 'expectsRpcAllowed',
@@ -186,7 +184,7 @@ export const expectsRpcAllowed = pikkuScenarioStep<
  * sometimes that it is not empty.
  */
 export const expectsRpcCollection = pikkuScenarioStep<
-  { call: RawRpcResult; minLength?: number },
+  { call: ScenarioHttpResponse; minLength?: number },
   { length: number }
 >({
   name: 'expectsRpcCollection',
@@ -213,7 +211,7 @@ export const expectsRpcCollection = pikkuScenarioStep<
  * business, not the scenario's.
  */
 export const expectsRpcRecord = pikkuScenarioStep<
-  { call: RawRpcResult; anyOf?: string[] },
+  { call: ScenarioHttpResponse; anyOf?: string[] },
   { keys: string[] }
 >({
   name: 'expectsRpcRecord',

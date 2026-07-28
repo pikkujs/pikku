@@ -9,10 +9,8 @@
  * touches a DOM; `sees*` is reserved for browser-backed steps.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { describeValue } from '@pikku/core/workflow'
 import type { MockLlmCall } from './agent-transport.js'
-
-const describe = (value: unknown) =>
-  typeof value === 'string' ? value : JSON.stringify(value)
 
 /**
  * Whether the run was refused.
@@ -33,8 +31,8 @@ export const expectsRunOutcome = pikkuScenarioStep<
     if (wasRefused !== refused) {
       throw new Error(
         refused
-          ? `Expected a refusal, got ${run.status} (error: ${describe(run.error)})`
-          : `Expected success, got ${run.status} (error: ${describe(run.error)})`
+          ? `Expected a refusal, got ${run.status} (error: ${describeValue(run.error)})`
+          : `Expected success, got ${run.status} (error: ${describeValue(run.error)})`
       )
     }
     return { status: run.status }
@@ -50,7 +48,7 @@ export const expectsRunResult = pikkuScenarioStep<
   func: async (_services, { run, equals }) => {
     if (JSON.stringify(run.result) !== JSON.stringify(equals)) {
       throw new Error(
-        `Expected run result ${describe(equals)}, got ${describe(run.result)}`
+        `Expected run result ${describeValue(equals)}, got ${describeValue(run.result)}`
       )
     }
     return { matched: true }
@@ -191,12 +189,12 @@ export const expectsModelCall = pikkuScenarioStep<
     }
     if (temperature !== undefined && call.temperature !== temperature) {
       throw new Error(
-        `Expected call ${index} at temperature ${temperature}, got ${describe(call.temperature)}`
+        `Expected call ${index} at temperature ${temperature}, got ${describeValue(call.temperature)}`
       )
     }
     if (modelId !== undefined && call.modelId !== modelId) {
       throw new Error(
-        `Expected call ${index} to use model ${modelId}, got ${describe(call.modelId)}`
+        `Expected call ${index} to use model ${modelId}, got ${describeValue(call.modelId)}`
       )
     }
     if (instructionsNonEmpty && !call.instructions?.length) {
@@ -207,14 +205,14 @@ export const expectsModelCall = pikkuScenarioStep<
       !(call.instructions ?? '').includes(instructionsInclude)
     ) {
       throw new Error(
-        `Expected call ${index} instructions to include "${instructionsInclude}", got ${describe(call.instructions)}`
+        `Expected call ${index} instructions to include "${instructionsInclude}", got ${describeValue(call.instructions)}`
       )
     }
     if (messagesInclude !== undefined) {
       const history = JSON.stringify(call.messages ?? [])
       if (!history.includes(messagesInclude)) {
         throw new Error(
-          `Expected call ${index} to have replayed ${describe(messagesInclude)}, got ${history}`
+          `Expected call ${index} to have replayed ${describeValue(messagesInclude)}, got ${history}`
         )
       }
     }
@@ -231,7 +229,7 @@ export const expectsModelCall = pikkuScenarioStep<
         )
         if (nonText.length === 0) {
           throw new Error(
-            `Expected call ${index} to carry a non-text content part, got ${describe(parts)}`
+            `Expected call ${index} to carry a non-text content part, got ${describeValue(parts)}`
           )
         }
       }
@@ -240,7 +238,7 @@ export const expectsModelCall = pikkuScenarioStep<
         !JSON.stringify(userMessages).includes(attachmentMediaType)
       ) {
         throw new Error(
-          `Expected call ${index} to carry an attachment of ${attachmentMediaType}, got ${describe(userMessages)}`
+          `Expected call ${index} to carry an attachment of ${attachmentMediaType}, got ${describeValue(userMessages)}`
         )
       }
     }
@@ -427,8 +425,8 @@ export const expectsApprovalState = pikkuScenarioStep<
     if (isSuspended !== suspended) {
       throw new Error(
         suspended
-          ? `Expected the run to be suspended, its status is ${describe(run.runStatus)}`
-          : `Expected the run to have resumed, it is still ${describe(run.runStatus)}`
+          ? `Expected the run to be suspended, its status is ${describeValue(run.runStatus)}`
+          : `Expected the run to have resumed, it is still ${describeValue(run.runStatus)}`
       )
     }
     if (!suspended && run.status !== 200) {
@@ -443,7 +441,7 @@ export const expectsApprovalState = pikkuScenarioStep<
       const reasons = run.pendingApprovals.map((approval) => approval.reason)
       if (!reasons.some((reason) => reason.includes(reasonContains))) {
         throw new Error(
-          `No pending approval reason contains ${describe(reasonContains)}, got ${describe(reasons)}`
+          `No pending approval reason contains ${describeValue(reasonContains)}, got ${describeValue(reasons)}`
         )
       }
     }
@@ -481,7 +479,7 @@ export const expectsThreadRecords = pikkuScenarioStep<
 
     if (contains !== undefined && !call.serialized.includes(contains)) {
       throw new Error(
-        `Expected the thread to have recorded ${describe(contains)}, got ${call.serialized}`
+        `Expected the thread to have recorded ${describeValue(contains)}, got ${call.serialized}`
       )
     }
     if (hasRole !== undefined) {
@@ -525,12 +523,12 @@ export const expectsTodos = pikkuScenarioStep<
 
     if (includes !== undefined && !holds(includes)) {
       throw new Error(
-        `Expected a todo matching ${describe(includes)}, got ${describe(titles)}`
+        `Expected a todo matching ${describeValue(includes)}, got ${describeValue(titles)}`
       )
     }
     if (excludes !== undefined && holds(excludes)) {
       throw new Error(
-        `Expected no todo matching ${describe(excludes)}, got ${describe(titles)}`
+        `Expected no todo matching ${describeValue(excludes)}, got ${describeValue(titles)}`
       )
     }
     return { titles }
@@ -556,7 +554,7 @@ export const expectsModelCallMatching = pikkuScenarioStep<
     )
     if (!match) {
       throw new Error(
-        `No model call by ${modelId} with message ${describe(userMessage)}, saw ${describe(
+        `No model call by ${modelId} with message ${describeValue(userMessage)}, saw ${describeValue(
           calls.map((call) => ({
             modelId: call.modelId,
             userMessage: call.userMessage,
@@ -587,12 +585,12 @@ export const expectsCallLog = pikkuScenarioStep<
     const serialized = JSON.stringify(calls)
     if (includes !== undefined && !serialized.includes(includes)) {
       throw new Error(
-        `No model call carried ${describe(includes)} — the run made ${calls.length}`
+        `No model call carried ${describeValue(includes)} — the run made ${calls.length}`
       )
     }
     if (excludes !== undefined && serialized.includes(excludes)) {
       throw new Error(
-        `A model call carried ${describe(excludes)}, which should never reach the model`
+        `A model call carried ${describeValue(excludes)}, which should never reach the model`
       )
     }
     return { calls: calls.length }
@@ -615,14 +613,14 @@ export const expectsResultObject = pikkuScenarioStep<
   func: async (_services, { run, fields }) => {
     if (run.result === null || typeof run.result !== 'object') {
       throw new Error(
-        `Expected a structured object, got ${describe(run.result)}`
+        `Expected a structured object, got ${describeValue(run.result)}`
       )
     }
     const result = run.result as Record<string, unknown>
     for (const [field, expected] of Object.entries(fields)) {
       if (JSON.stringify(result[field]) !== JSON.stringify(expected)) {
         throw new Error(
-          `Expected ${field} to be ${describe(expected)}, got ${describe(result[field])}`
+          `Expected ${field} to be ${describeValue(expected)}, got ${describeValue(result[field])}`
         )
       }
     }

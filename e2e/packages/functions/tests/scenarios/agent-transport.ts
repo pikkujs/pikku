@@ -57,8 +57,6 @@ export type StreamEvent = { type: string; [key: string]: unknown }
  * What the transport answered. The same record `actor.invokeRaw` returns, so a
  * scenario reads a header-shim call and an actor call the same way.
  */
-export type HttpOutcome = ScenarioHttpResponse
-
 /**
  * POSTs to an agent's sync route as a given principal.
  *
@@ -70,7 +68,7 @@ export const postAgent = async (
   agent: string,
   identity: Identity,
   body: Record<string, unknown>
-): Promise<HttpOutcome> =>
+): Promise<ScenarioHttpResponse> =>
   readScenarioHttpResponse(
     await fetch(`${apiUrl}/rpc/agent/${agent}`, {
       method: 'POST',
@@ -93,7 +91,7 @@ export const postAgentApproval = async (
   agent: string,
   identity: Identity,
   body: Record<string, unknown>
-): Promise<HttpOutcome> =>
+): Promise<ScenarioHttpResponse> =>
   readScenarioHttpResponse(
     await fetch(`${apiUrl}/rpc/agent/${agent}/approve`, {
       method: 'POST',
@@ -111,7 +109,7 @@ export const postRpc = async (
   rpcName: string,
   identity: Identity,
   data: Record<string, unknown>
-): Promise<HttpOutcome> =>
+): Promise<ScenarioHttpResponse> =>
   readScenarioHttpResponse(
     await fetch(`${apiUrl}/rpc/${rpcName}`, {
       method: 'POST',
