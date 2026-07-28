@@ -292,6 +292,60 @@ export const scenarioStepOpensAsStepScenario = pikkuScenario<
   },
 })
 
+export const personaLinkStaysInTheDocumentScenario = pikkuScenario<
+  void,
+  { revealed: true }
+>({
+  title: 'A persona’s scenario link reads the scenario, not a graph of it',
+  description:
+    'Every scenario is documented as the prose it was written in, so following one from its cast lands back in the document',
+  tags: ['scenario'],
+  func: async (_services, _data, { scenario, actors }) => {
+    if (!actors?.admin) {
+      throw new Error(
+        'personaLinkStaysInTheDocumentScenario needs the admin actor — run via `pikku scenario run <environment>`'
+      )
+    }
+
+    await scenario.given(
+      'opens the scenarios page',
+      'opensConsolePage',
+      { path: SCENARIOS_PAGE },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the ungrouped feature',
+      'clicksTestId',
+      { testId: `feature-nav-${UNGROUPED}` },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the shopper',
+      'clicksTestId',
+      {
+        testId: 'scenario-cast-member',
+        where: { 'data-persona-key': 'shopper' },
+        within: { testId: `scenario-section-${SCENARIO}` },
+      },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'follows a scenario the shopper is cast in',
+      'clicksTestId',
+      { testId: `persona-scenario-${SCENARIO}` },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the scenario read as prose',
+      'seesTestId',
+      { testId: `ladder-step-shopper doubles their order` },
+      { actor: actors.admin }
+    )
+
+    return { revealed: true }
+  },
+})
+
 export const skippedScenarioSaysWhyScenario = pikkuScenario<
   void,
   { explained: true }
@@ -396,6 +450,7 @@ export const scenariosConsoleFeature = pikkuFeature({
     scenarioReadsAsProseScenario,
     scenarioCastListedScenario,
     scenarioStepOpensAsStepScenario,
+    personaLinkStaysInTheDocumentScenario,
     skippedScenarioSaysWhyScenario,
     tagFilterNarrowsScenario,
   ],

@@ -1,26 +1,22 @@
 import React, { Suspense, useContext } from 'react'
 import { Center, Loader } from '@pikku/mantine/core'
 import { useLocale } from '@/i18n/config'
-import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ScenariosWorkspace } from '../components/scenarios/ScenariosWorkspace'
 import {
   ConsoleNavigatorCtx,
   OSSConsoleNavigator,
-  useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
 
 const SCENARIOS_BASE_PATH = '/scenarios'
 
+/**
+ * A scenario has no detail view of its own: it is documented where it is
+ * declared, as the prose it was written in. The workflow graph a scenario
+ * compiles to is an implementation detail of running it, not how it reads.
+ */
 const ScenariosPageInner: React.FC = () => {
   useLocale()
-  const { scenarioId } = useConsoleNavigator()
-
-  if (scenarioId) {
-    // Read-only: scenarios run only via `pikku scenario run` (actor sign-in
-    // cookies can't be minted in the browser), never the workflow-start UI.
-    return <WorkflowTabContent immersiveDetail readOnly entityId={scenarioId} />
-  }
 
   return (
     <ConsoleSurface>

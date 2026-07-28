@@ -20,14 +20,14 @@ type PersonaDrawerProps = {
   persona: PersonaEntry | null
   opened: boolean
   onClose: () => void
-  onOpenFlow?: (name: string) => void
+  onOpenScenario?: (name: string) => void
 }
 
 export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
   persona,
   opened,
   onClose,
-  onOpenFlow,
+  onOpenScenario,
 }) => {
   return (
     <Drawer
@@ -114,7 +114,8 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
               persona.scenarios.map((flow) => (
                 <UnstyledButton
                   key={flow.name}
-                  onClick={() => onOpenFlow?.(flow.name)}
+                  data-testid={`persona-scenario-${flow.name}`}
+                  onClick={() => onOpenScenario?.(flow.name)}
                   style={{
                     borderRadius: 8,
                     border: '1px solid var(--mantine-color-default-border)',

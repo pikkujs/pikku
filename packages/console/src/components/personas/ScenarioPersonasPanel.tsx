@@ -4,7 +4,7 @@ import { PersonasView } from './PersonasView'
 
 export interface ScenarioPersonasPanelProps {
   /** Opens one of the scenario flows a persona is cast in. */
-  onOpenFlow?: (name: string) => void
+  onOpenScenario?: (name: string) => void
   /** Filters by key, name, email and personality. Omit for the full list. */
   searchQuery?: string
 }
@@ -14,7 +14,7 @@ export interface ScenarioPersonasPanelProps {
  * host can place it independently of the flows panel.
  */
 export const ScenarioPersonasPanel: React.FC<ScenarioPersonasPanelProps> = ({
-  onOpenFlow,
+  onOpenScenario,
   searchQuery = '',
 }) => {
   const { personas, loading } = useScenarioPersonaEntries()
@@ -35,7 +35,7 @@ export const ScenarioPersonasPanel: React.FC<ScenarioPersonasPanelProps> = ({
     <PersonasView
       personas={filteredPersonas}
       loading={loading}
-      onOpenFlow={onOpenFlow}
+      onOpenScenario={onOpenScenario}
     />
   )
 }
