@@ -13,7 +13,6 @@ import { WorkflowProvider } from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { useScenarioDocs } from '../../hooks/useScenarioDocs'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
-import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 
 /**
  * The scenarios reading surface: a feature list, the selected feature rendered
@@ -21,7 +20,6 @@ import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
  * `ConsoleSurface` because it reads the panel context that mounts there.
  */
 export const ScenariosWorkspace: React.FC = () => {
-  const { navigateTo } = useConsoleNavigator()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>()
@@ -42,6 +40,23 @@ export const ScenariosWorkspace: React.FC = () => {
 
   const selected =
     features.find((feature) => feature.id === selectedFeatureId) ?? features[0]
+
+  /**
+   * A scenario is read where it is declared, so following one from a persona
+   * opens the feature it belongs to and scrolls its section into view rather
+   * than navigating to a page of its own.
+   */
+  const revealScenario = (name: string) => {
+    const owner = features.find((feature) =>
+      feature.scenarios.some((entry) => entry.scenario.name === name)
+    )
+    if (owner) setSelectedFeatureId(owner.id)
+    requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-testid="scenario-section-${name}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   return (
     <>
@@ -92,7 +107,6 @@ export const ScenariosWorkspace: React.FC = () => {
           ) : selected ? (
             <FeatureDocument
               feature={selected}
-              onOpenScenario={(name) => navigateTo('scenarios', name)}
               onOpenPersona={setPersonaKey}
               onSelectStep={(workflow, stepId, stepType, metadata) => {
                 setStepWorkflow(workflow)
@@ -112,9 +126,9 @@ export const ScenariosWorkspace: React.FC = () => {
         persona={personas.find((persona) => persona.key === personaKey) ?? null}
         opened={personaKey !== null}
         onClose={() => setPersonaKey(null)}
-        onOpenFlow={(name) => {
+        onOpenScenario={(name) => {
           setPersonaKey(null)
-          navigateTo('scenarios', name)
+          revealScenario(name)
         }}
       />
     </>

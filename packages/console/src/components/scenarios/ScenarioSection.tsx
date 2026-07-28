@@ -20,7 +20,6 @@ type ScenarioSectionProps = {
    * of here, so it is handed back up with every step selection.
    */
   workflow: unknown
-  onOpen?: (name: string) => void
   onOpenPersona?: (key: string) => void
   onSelectStep?: (
     workflow: unknown,
@@ -35,7 +34,6 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
   examples,
   cast,
   workflow,
-  onOpen,
   onOpenPersona,
   onSelectStep,
 }) => (
@@ -50,16 +48,7 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
   >
     <Stack gap={10}>
       <Group gap="sm" align="baseline" wrap="nowrap">
-        <Text
-          fw={600}
-          size="md"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            cursor: onOpen ? 'pointer' : 'default',
-          }}
-          onClick={onOpen ? () => onOpen(scenario.name) : undefined}
-        >
+        <Text fw={600} size="md" style={{ flex: 1, minWidth: 0 }}>
           {asI18n(scenario.title)}
         </Text>
         <ScenarioRunPill scenarioName={scenario.name} />

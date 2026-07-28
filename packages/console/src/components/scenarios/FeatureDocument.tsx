@@ -41,7 +41,6 @@ const toSections = (feature: FeatureDoc): SectionModel[] => {
 
 type FeatureDocumentProps = {
   feature: FeatureDoc
-  onOpenScenario?: (name: string) => void
   onOpenPersona?: (key: string) => void
   onSelectStep?: (
     workflow: unknown,
@@ -53,7 +52,6 @@ type FeatureDocumentProps = {
 
 export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
   feature,
-  onOpenScenario,
   onOpenPersona,
   onSelectStep,
 }) => {
@@ -123,7 +121,6 @@ export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
                   section.scenario.name
                 ]
               }
-              onOpen={onOpenScenario}
               onOpenPersona={onOpenPersona}
               onSelectStep={onSelectStep}
             />
