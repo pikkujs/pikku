@@ -5,6 +5,7 @@ import type {
   ScenarioInvokeOptions,
   ScenarioHttpResponse,
 } from './scenario-actors-service.js'
+import { readScenarioHttpResponse } from './scenario-actors-service.js'
 import type {
   ConverseOptions,
   ActorFlowVerdict,
@@ -241,30 +242,6 @@ export class HttpScenarioActor implements ScenarioActor {
     }
     this.cookie = cookie
     return cookie
-  }
-}
-
-/**
- * Drain a response into the shape a step can carry: the parsed body (an empty
- * one counting as no body at all) alongside the text it was parsed from.
- */
-export async function readScenarioHttpResponse(
-  res: Response
-): Promise<ScenarioHttpResponse> {
-  const text = res.status === 204 ? '' : await res.text().catch(() => '')
-  return {
-    status: res.status,
-    ok: res.ok,
-    body: text ? parseJsonBody(text) : undefined,
-    serialized: text,
-  }
-}
-
-function parseJsonBody(text: string): unknown {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
   }
 }
 

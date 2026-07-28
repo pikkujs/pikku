@@ -148,5 +148,9 @@ export type {
 // Narrows the optional halves of the step wire, with a message that says what to do
 export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 
+// What the transport answered — an actor's `invokeRaw`, or a route reached directly
+export type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
+export { readScenarioHttpResponse } from '../../services/scenario-actors-service.js'
+
 // Renders the English a reporter shows for a scenario step
 export { composeStepProse, renderStepTemplate } from './scenario-prose.js'

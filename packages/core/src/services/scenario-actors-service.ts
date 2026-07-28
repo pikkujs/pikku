@@ -26,6 +26,34 @@ export interface ScenarioHttpResponse {
 /** @deprecated Renamed to `ScenarioHttpResponse` — it was never RPC-specific. */
 export type ScenarioRpcResponse = ScenarioHttpResponse
 
+/**
+ * Drain a response into the shape a step can carry: the parsed body (an empty
+ * one counting as no body at all) alongside the text it was parsed from.
+ *
+ * `invokeRaw` returns this, and a step that has to reach past an actor — a
+ * route with no RPC, an identity no actor can hold — reaches for this rather
+ * than writing the same record by hand.
+ */
+export const readScenarioHttpResponse = async (
+  res: Response
+): Promise<ScenarioHttpResponse> => {
+  const text = res.status === 204 ? '' : await res.text().catch(() => '')
+  return {
+    status: res.status,
+    ok: res.ok,
+    body: text ? parseJsonBody(text) : undefined,
+    serialized: text,
+  }
+}
+
+const parseJsonBody = (text: string): unknown => {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text
+  }
+}
+
 /** Per-call transport options. */
 export interface ScenarioInvokeOptions {
   /**
