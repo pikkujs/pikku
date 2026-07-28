@@ -207,8 +207,12 @@ export const seesTestId = pikkuScenarioStep<
 export const doesNotSeeTestId = pikkuScenarioStep<
   {
     testId: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
     where?: Record<string, string>
     containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
   },
   { absent: true },
   true
@@ -217,9 +221,13 @@ export const doesNotSeeTestId = pikkuScenarioStep<
   description: 'expects an element with a given test id to be absent',
   template: 'does not see {testId}',
   browser: true,
-  func: async (_services, { testId, where, containing }, { browser }) => {
+  func: async (
+    _services,
+    { testId, prefix, where, containing, within },
+    { browser }
+  ) => {
     await browser
-      .locate({ testId, where, containing }, { visible: false })
+      .locate({ testId, prefix, where, containing, within }, { visible: false })
       .first()
       .waitFor({ state: 'detached', timeout: TIMEOUT })
     return { absent: true }
@@ -279,7 +287,17 @@ export const selectsTab = pikkuScenarioStep<
 })
 
 export const readsTestIdText = pikkuScenarioStep<
-  { testId: string },
+  {
+    testId: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
+    /** Data attributes the element must also carry. */
+    where?: Record<string, string>
+    /** Narrow to the one match holding this text. */
+    containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
+  },
   { text: string },
   true
 >({
@@ -287,8 +305,14 @@ export const readsTestIdText = pikkuScenarioStep<
   description: 'reads the text of an element by its test id',
   template: 'reads {testId}',
   browser: true,
-  func: async (_services, { testId }, { browser }) => {
-    const target = browser.locate({ testId }).first()
+  func: async (
+    _services,
+    { testId, prefix, where, containing, within },
+    { browser }
+  ) => {
+    const target = browser
+      .locate({ testId, prefix, where, containing, within })
+      .first()
     await target.waitFor({ state: 'visible', timeout: TIMEOUT })
     return { text: (await target.textContent()) ?? '' }
   },
@@ -424,7 +448,18 @@ export const fillsField = pikkuScenarioStep<
 })
 
 export const fillsTestId = pikkuScenarioStep<
-  { testId: string; value: string },
+  {
+    testId: string
+    value: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
+    /** Data attributes the element must also carry. */
+    where?: Record<string, string>
+    /** Narrow to the one match holding this text. */
+    containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
+  },
   { filled: string },
   true
 >({
@@ -432,9 +467,13 @@ export const fillsTestId = pikkuScenarioStep<
   description: 'fills a form field by its test id',
   template: 'fills {testId}',
   browser: true,
-  func: async (_services, { testId, value }, { browser }) => {
+  func: async (
+    _services,
+    { testId, value, prefix, where, containing, within },
+    { browser }
+  ) => {
     await browser
-      .locate({ testId })
+      .locate({ testId, prefix, where, containing, within })
       .first()
       .fill(value, { timeout: TIMEOUT })
     return { filled: testId }
@@ -453,6 +492,8 @@ export const expectsControl = pikkuScenarioStep<
   {
     testId: string
     where?: Record<string, string>
+    /** Narrow to the one match holding this text. */
+    containing?: string
     within?: TestIdSelector
     enabled?: boolean
     checked?: boolean
@@ -466,10 +507,10 @@ export const expectsControl = pikkuScenarioStep<
   browser: true,
   func: async (
     _services,
-    { testId, where, within, enabled, checked },
+    { testId, where, containing, within, enabled, checked },
     { browser }
   ) => {
-    const target = browser.locate({ testId, where, within }).first()
+    const target = browser.locate({ testId, where, containing, within }).first()
     if (enabled === true) {
       await expect(target).toBeEnabled({ timeout: TIMEOUT })
     }
@@ -499,7 +540,18 @@ export const expectsControl = pikkuScenarioStep<
  * `exact` matters whenever one option's value is a prefix of another's.
  */
 export const selectsOption = pikkuScenarioStep<
-  { testId: string; value: string },
+  {
+    testId: string
+    value: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
+    /** Data attributes the element must also carry. */
+    where?: Record<string, string>
+    /** Narrow to the one match holding this text. */
+    containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
+  },
   { selected: string },
   true
 >({
@@ -507,8 +559,15 @@ export const selectsOption = pikkuScenarioStep<
   description: 'picks an option on a select',
   template: 'picks {value}',
   browser: true,
-  func: async (_services, { testId, value }, { browser }) => {
-    await browser.locate({ testId }).first().click({ timeout: TIMEOUT })
+  func: async (
+    _services,
+    { testId, value, prefix, where, containing, within },
+    { browser }
+  ) => {
+    await browser
+      .locate({ testId, prefix, where, containing, within })
+      .first()
+      .click({ timeout: TIMEOUT })
     await browser.page
       .getByRole('option', { name: value, exact: true })
       .first()
@@ -540,7 +599,17 @@ export const expectsUrl = pikkuScenarioStep<
  * focused by script but will not act on Enter.
  */
 export const opensTestIdWithKeyboard = pikkuScenarioStep<
-  { testId: string; where?: Record<string, string> },
+  {
+    testId: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
+    /** Data attributes the element must also carry. */
+    where?: Record<string, string>
+    /** Narrow to the one match holding this text. */
+    containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
+  },
   { opened: string },
   true
 >({
@@ -548,8 +617,14 @@ export const opensTestIdWithKeyboard = pikkuScenarioStep<
   description: 'focuses an element and opens it with the keyboard',
   template: 'opens {testId} with the keyboard',
   browser: true,
-  func: async (_services, { testId, where }, { browser }) => {
-    const target = browser.locate({ testId, where }).first()
+  func: async (
+    _services,
+    { testId, prefix, where, containing, within },
+    { browser }
+  ) => {
+    const target = browser
+      .locate({ testId, prefix, where, containing, within })
+      .first()
     await target.waitFor({ state: 'visible', timeout: TIMEOUT })
     await target.focus()
     await target.press('Enter')
@@ -558,7 +633,18 @@ export const opensTestIdWithKeyboard = pikkuScenarioStep<
 })
 
 export const expectsTestIdValue = pikkuScenarioStep<
-  { testId: string; value: string },
+  {
+    testId: string
+    value: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
+    /** Data attributes the element must also carry. */
+    where?: Record<string, string>
+    /** Narrow to the one match holding this text. */
+    containing?: string
+    /** Scopes the lookup to one element, e.g. the row for one user. */
+    within?: TestIdSelector
+  },
   { value: string },
   true
 >({
@@ -566,8 +652,14 @@ export const expectsTestIdValue = pikkuScenarioStep<
   description: 'expects a form field to hold a given value',
   template: 'expects {testId} to hold {value}',
   browser: true,
-  func: async (_services, { testId, value }, { browser }) => {
-    const target = browser.locate({ testId }).first()
+  func: async (
+    _services,
+    { testId, value, prefix, where, containing, within },
+    { browser }
+  ) => {
+    const target = browser
+      .locate({ testId, prefix, where, containing, within })
+      .first()
     await target.waitFor({ state: 'visible', timeout: TIMEOUT })
     const actual = await target.inputValue()
     if (actual !== value) {

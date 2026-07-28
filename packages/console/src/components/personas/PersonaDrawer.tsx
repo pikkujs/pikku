@@ -61,12 +61,14 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
           <Divider />
           <TextInput
             label={m.personas_field_name()}
+            data-testid="persona-field-name"
             value={persona.name}
             readOnly
             variant="filled"
           />
           <TextInput
             label={m.personas_field_email()}
+            data-testid="persona-field-email"
             value={persona.email}
             readOnly
             variant="filled"
@@ -76,6 +78,7 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
           />
           <TextInput
             label={m.personas_field_role()}
+            data-testid="persona-field-role"
             value={persona.jobTitle ?? '—'}
             readOnly
             variant="filled"
