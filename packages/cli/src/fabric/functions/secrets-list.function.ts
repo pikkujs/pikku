@@ -2,17 +2,20 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { resolveStageId } from '../lib/stage.js'
 
 export const FabricSecretsListInput = z.object({
   branch: z.string(),
   json: z.boolean().optional(),
 })
 
-export const FabricSecretsListOutput = z.object({ names: z.array(z.string()) })
+export const FabricSecretsListOutput = z.object({
+  secrets: z.array(z.object({ name: z.string(), updatedAt: z.string() })),
+})
 
 export const FabricSecretsList = pikkuSessionlessFunc({
   description:
-    'List secret names visible to a stage (values never leave the server).',
+    'List the secrets set on a stage, by name. Values are sealed to the stage and never leave it.',
   input: FabricSecretsListInput,
   output: FabricSecretsListOutput,
   func: async (_services, { branch, json }) => {
@@ -25,16 +28,17 @@ export const FabricSecretsList = pikkuSessionlessFunc({
       )
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const result = await rpc.invoke('listStageSecrets', {
-      projectId: ctx.projectId,
-      branch,
-    })
+    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
+    const result = await rpc.invoke('listStageSecretNames', { stageId })
+
     if (json) {
-      console.log(JSON.stringify({ branch, names: result.names }, null, 2))
-    } else if (result.names.length === 0) {
+      console.log(JSON.stringify({ branch, secrets: result.secrets }, null, 2))
+    } else if (result.secrets.length === 0) {
       console.log(`[fabric] no secrets set on ${branch}`)
     } else {
-      for (const name of result.names) console.log(name)
+      for (const { name, updatedAt } of result.secrets) {
+        console.log(`${name}\t${updatedAt}`)
+      }
     }
     return result
   },

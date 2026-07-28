@@ -3,6 +3,8 @@ import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { promptSecret } from '../lib/prompt.js'
+import { resolveStageId } from '../lib/stage.js'
+import { seal, serializeSealedValue } from '../lib/sealed-box.js'
 
 export const FabricSecretsSetInput = z.object({
   name: z.string(),
@@ -11,11 +13,14 @@ export const FabricSecretsSetInput = z.object({
   force: z.boolean().optional(),
 })
 
-export const FabricSecretsSetOutput = z.object({ ok: z.boolean() })
+export const FabricSecretsSetOutput = z.object({
+  name: z.string(),
+  keyId: z.string(),
+})
 
 export const FabricSecretsSet = pikkuSessionlessFunc({
   description:
-    'Set a stage-scoped secret. Encrypted with the stage KEK and stored in the project D1.',
+    'Set a stage-scoped secret. Sealed here to the stage public key — the plaintext never leaves this machine.',
   input: FabricSecretsSetInput,
   output: FabricSecretsSetOutput,
   func: async (_services, { name, branch, value }) => {
@@ -31,13 +36,23 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
     if (!plaintext) throw new Error('Empty secret value — aborting.')
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const result = await rpc.invoke('setStageSecret', {
-      projectId: ctx.projectId,
-      branch,
+    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
+
+    // Fabric holds only the public half of this keypair. The private half went
+    // to the stage's worker at deploy time and was dropped there, so the value
+    // sealed below can be opened by that worker and by nothing else — including
+    // by the fabric process that stores it.
+    const key = await rpc.invoke('getStageSealingKey', { stageId })
+    const sealed = seal(key.publicKey, key.keyId, plaintext)
+
+    const result = await rpc.invoke('setStageSealedSecret', {
+      stageId,
       name,
-      value: plaintext,
+      sealedValue: serializeSealedValue(sealed),
     })
-    console.log(`[fabric] ${name} set on ${branch}.`)
+    console.log(
+      `[fabric] ${name} sealed to ${result.keyId} and set on ${branch}.`
+    )
     return result
   },
 })
