@@ -1,5 +1,35 @@
 # @pikku/cucumber
 
+## 0.12.16
+
+### Patch Changes
+
+- 5546eb0: Deprecate `@pikku/cucumber` in favour of `pikkuScenario` / `pikkuScenarioStep`.
+
+  Pikku's own end-to-end suite no longer uses it. The package stays published so
+  existing suites keep building and receives no new features; `Actor` and the
+  barrel now carry `@deprecated` JSDoc pointing at scenario actors. Run
+  `npm deprecate @pikku/cucumber@'*'` alongside this release.
+
+- Updated dependencies [539ee0b]
+- Updated dependencies [a1a6816]
+- Updated dependencies [dc3e11e]
+- Updated dependencies [24da616]
+- Updated dependencies [04bfe3f]
+- Updated dependencies [5962e51]
+- Updated dependencies [5962e51]
+- Updated dependencies [cd6453c]
+- Updated dependencies [a436645]
+- Updated dependencies [46cf63e]
+- Updated dependencies [9e666bc]
+- Updated dependencies [1c841d8]
+- Updated dependencies [47478a4]
+- Updated dependencies [9e666bc]
+- Updated dependencies [5962e51]
+- Updated dependencies [5962e51]
+- Updated dependencies [61b9bf8]
+  - @pikku/core@0.12.70
+
 ## 0.12.15
 
 ### Patch Changes

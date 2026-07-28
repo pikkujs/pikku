@@ -1,3 +1,337 @@
+## 0.12.70
+
+### Patch Changes
+
+- 539ee0b: Give browser scenario steps a shared way to name an element: `browser.locate(selector)`. `TestIdSelector` (test id, `prefix`, `where` data attributes, `containing` text, `within` scope) is declared in core so a step's input stays structural, and `@pikku/playwright` resolves it against the page — applying `:visible` by default, since Mantine layouts routinely mount a hidden copy of a control.
+- a1a6816: Let a scenario actor declare the scopes and roles it holds
+
+  `scenarios.actors.<name>` in `pikku.config.json` now takes optional `scopes` and
+  `roles`, carried through to `scenarioActorConfigs`. Pikku never applies them —
+  which scope store exists and which roles have been created is the app's own — so
+  the generated actors file also exports `scenarioActorList`, the registry widened
+  to `ScenarioActorConfig`, which is what a seed needs to read an optional field
+  off every actor.
+
+- dc3e11e: Generate scenarios, features and scenario steps into `.pikku/scenarios/` with their own bootstrap, so a deployed server never imports a step body.
+
+  A `pikkuScenarioStep` body is an ordinary pikku function and a `pikkuScenario` is an ordinary workflow, so codegen wired both into `pikku-functions.gen.ts` and `pikku-workflow-wirings.gen.ts` — the files every server's bootstrap imports. A project's steps, and whatever a step imports (Playwright, fixtures, assertion helpers), therefore shipped in production. The e2e project's app bootstrap pulled in 20 step modules and 7 scenarios this way.
+
+  Codegen now partitions on the flags that already existed — `scenarioStep: true` in function meta and `source: 'scenario'` in workflow meta — and emits:
+
+  ```
+  .pikku/scenarios/pikku-scenario-functions.gen.ts       addFunction for every step
+  .pikku/scenarios/pikku-scenario-functions-meta.gen.ts  step meta, merged onto the app's
+  .pikku/scenarios/pikku-scenario-wirings.gen.ts         addWorkflow + addFeature
+  .pikku/scenarios/pikku-scenario-wirings-meta.gen.ts    scenario meta, merged onto the app's
+  .pikku/scenarios/meta/*.gen.json                       per-scenario graph meta
+  .pikku/pikku-bootstrap-scenarios.gen.ts                imports the app bootstrap, then the above
+  ```
+
+  `pikku scenario run` is the only thing that loads `pikku-bootstrap-scenarios.gen.ts`; `pikku dev` and `pikku serve` keep loading `pikku-bootstrap.gen.ts`. Bundling the e2e app bootstrap now resolves **zero** scenario or step modules.
+
+  Both meta files _merge_ rather than replace — `pikkuState(…, 'meta', value)` is a wholesale setter — and each imports the app meta file it merges onto, so the ordering holds regardless of entry point. Features move wholesale to the scenario side: `serializeWorkflowRegistration` no longer emits `addFeature` at all.
+
+  `LocalMetaService` reads the new locations alongside the old ones (`scenarios/meta` in `getWorkflowMeta()`, `pikku-scenario-functions-meta.gen.json` in `getFunctionsMeta()`), so the console's scenario list and function meta are unchanged — those read from disk, not from the bundle. Scenario meta left behind in `workflow/meta` by an earlier CLI is removed on the next codegen, so it cannot be served as a stale duplicate.
+
+  **Not included:** a scenario step's input/output JSON schemas still register in the app's `schemas/register.gen.ts`. They are inert data rather than a module edge, and splitting them safely means deriving "required only by a step" across every other schema consumer — a wrong answer there unregisters a schema the server validates against.
+
+- 24da616: `createCookieJar` is now the one place a scenario keeps a session. `HttpScenarioActor` is built on it rather than tracking a single cookie string of its own, which means it follows a cookie the target rotates on any response — previously only the sign-in response was read, so a rotated session cookie was dropped and the only recovery was the 401 re-login.
+
+  It is exported from `@pikku/core/workflow` because a step driving a real auth client SDK needs the same thing an actor does.
+
+  Two fixes to what the jar holds. A `Set-Cookie` with an empty value is how a target **deletes** a cookie, so the name is now dropped rather than held with a value that says it is gone; and a `cookie` header the caller already set is merged with the jar's rather than silently replaced, which matters when the jar is handed to an SDK as its `customFetchImpl`.
+
+  `HttpScenarioActor` no longer reads `jar.empty` to decide whether it is signed in — it tracks the sign-in. `empty` is a fact about the jar, not about the session: a target that sets a CSRF or locale cookie before anyone signs in filled it, which made the actor skip its first `login()` and send that call unauthenticated, and made the "sign-in returned no session cookie" guard pass without a session ever being established. That guard now checks the sign-in response's own `Set-Cookie`.
+
+- 04bfe3f: Scenarios get a fresh browser each time, a failure report worth reading, and a formatter that owns the output.
+
+  Three changes that only make sense together.
+
+  **A scenario no longer inherits the last one's browser.** `ScenarioBrowserProvider` gains an optional `reset()`, called between scenarios: every actor's context — cookies, storage, open pages, in-page listeners — is discarded, while the browser itself stays up. Before this, one browser context per actor lived for the whole run, so scenario 2 started signed in as whoever scenario 1 left behind. The boundary is the context rather than the browser because that is where the isolation actually lives, and re-opening one costs milliseconds instead of a relaunch. `reset()` runs _before_ each scenario, so the last one's window is still there to look at when a headed run stops.
+
+  **A failure says what happened.** The runner reported `run.error.message` and nothing else — which for a browser step is "Timed out waiting for selector" with every useful detail removed. `ScenarioBrowserProvider` gains an optional `captureFailure(label)`, and the driver's page diagnostics (console errors, uncaught exceptions, failed requests, 4xx/5xx API responses) — collected all along and until now thrown away — are reported under the failing step, with a screenshot written to `<outDir>/scenario-failures`:
+
+  ```
+    ✗ failed at: Then  the admin sees the edit button
+      Timed out waiting for selector button[title="Edit function"]
+      browser (admin): http://localhost:4077/console/functions
+        console:    TypeError: x is not a function
+        api:        500 /api/rpc/console:readFunctionSource
+        screenshot: .pikku/scenario-failures/code-editor-admin.png
+      at readsFunctionSource (…/code-editor.steps.ts:71:5)
+  ```
+
+  Stacks are trimmed to the project's own frames, because the framework's are never the bug; `--trace` keeps all of them. An expected failure (a `PikkuError`) prints its message alone — a stack adds nothing to a deliberate one.
+
+  **A failed scenario now shows its ladder at all.** It did not before, for a reason that took a live run to find: an inline run that fails throws out of `startWorkflow` instead of returning `{ runId }`, so the runner never learned the id of the one run whose steps were worth reading — and fell back to the run error alone. `startWorkflow` gains an `onRunCreated` option, called the moment the run exists, which is the only point guaranteed to happen whether the run goes on to pass, fail or suspend. A failure now prints every step that ran, marks the one that didn't, and names it in `✗ failed at:`.
+
+  A browser timeout's `message` carries its entire call log, so the summary line and the ladder row take its first line only — the block underneath still prints all of it. Three copies of the same paragraph, one of them wrapping mid-table, is not a report.
+
+  **All of that output now goes through one formatter.** `formatScenarioReport(report)` takes a plain serialisable report — no Maps, no meta handles — and returns the lines to print, the way `deploy plan` already works. Joining a run to the prose that declared it stays in `scenario-ladder.ts`, where the inspector state is; laying it out is the formatter's job. A second reporter (JSON, JUnit) is now a function rather than an excavation.
+
+  **Browser drivers are pluggable.** `scenarios.browserDriver` in `pikku.config.json` names the package that drives `browser: true` steps; it defaults to `@pikku/playwright` but nothing requires it. A driver is any package exporting `createScenarioBrowserProvider(options)` — or a provider class — returning an object with `sessionFor()` and `close()`. `reset()` and `captureFailure()` are optional, so a driver written against the earlier interface keeps working: it simply offers no isolation and no diagnostics. A package that is neither says so, instead of failing later in a way nobody can read.
+
+- 5962e51: Add `pikkuFeature`, a grouping primitive for scenarios.
+
+  A feature groups scenarios the way gherkin's `Feature:` groups `Scenario:`, and gets `Examples:` for free as an ordinary loop:
+
+  ```ts
+  export const credentialFeature = pikkuFeature({
+    name: 'Credential API',
+    tags: ['credential'],
+    before: startsMockOAuthServer,
+    after: stopsMockOAuthServer,
+    scenarios: [
+      credentialLazyLoadScenario,
+      ...['stripe', 'google', 'hmac-key'].map((name) => ({
+        scenario: credentialRoundTripScenario,
+        data: { name },
+      })),
+    ],
+  })
+  ```
+
+  - Scenarios are referenced by **imported identifier**, not by string name, so a renamed or deleted scenario is a compile error rather than a silent skip. A `{ scenario, data }` entry's `data` is typed against that scenario's own input.
+  - Feature hooks run **once around the whole group** (`before → a → b → c → after`), not per scenario, and `after` runs in a `finally`. Per-scenario setup stays the scenario's own `before`; gherkin's `Background:` is deliberately not expressible.
+  - A scenario's effective tags are its own plus its feature's, so `--tags credential` selects through the feature.
+  - New `--features` selector on `pikku scenario run`, and `pikku scenario list` now prints features with their scenarios indented. Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs its hooks exactly once around those two.
+  - The **feature is the run unit**: `--flows` on a scenario whose every feature entry carries `data` errors and names the features containing it, because the feature is what supplies that data. A scenario referenced bare anywhere, or in no feature at all, still runs standalone.
+
+  `pikkuFeature` infers its scenario list with a `const` generic, so `CoreFeature['scenarios']` is `readonly` — otherwise the emitted `addFeature(id, feature)` call does not typecheck.
+
+  Membership is resolved at runtime by object identity — `pikkuScenario` returns its config verbatim, so a feature holds the very object that was registered. That is what lets the scenario list be built by a loop, which no static analysis could enumerate. It also means a scenario constructed inline inside a feature is never registered, and is reported as unresolved rather than silently running as something else.
+
+- 5962e51: Add `before` / `after` hooks to `pikkuScenario`, and make an unextractable scenario a hard error.
+
+  A scenario config now takes `before` and `after`. Both have the same signature as `func` — `(services, data, wire)` — with the return value discarded, so there is no new type to learn and a hook reaches the app the same way the body does, through `wire.actors`:
+
+  ```ts
+  export const credentialScenario = pikkuScenario({
+    title: 'A credential is loaded on first use',
+    tags: ['scenario', 'credential'],
+    before: resetsCredentials,
+    after: removesInstalledAddon,
+    func: async (services, data, { scenario, actors }) => { ... },
+  })
+  ```
+
+  - `before` throwing skips the body and fails the run, but `after` still runs.
+  - `after` always runs, in a `finally`. Throwing fails a run that would otherwise have passed; on an already-failed run it attaches as the `cause` and never replaces the original error.
+  - Neither runs when the run is suspended or waiting — teardown only fires at a terminal outcome.
+  - Hooks are not ladder rows: the runner records nothing for them, and a failure is labelled by phase via the new `ScenarioHookError`.
+  - Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs — a workflow is durable and resumable, so a callback that reran on every replay would have no honest meaning.
+
+  Two fixes that scenarios needed to be safe to write:
+  - A closure in a complex-workflow or scenario body is no longer held to the DSL statement whitelist. A single `try`/`catch` inside any callback previously failed extraction, and the fallback path understands `do`/`sleep` but not `step`/`given`/`when`/`then` — so the scenario registered with **zero steps** and passed vacuously, with no diagnostic. Plain DSL workflows still descend into callbacks, which is what validates fanout bodies.
+  - New `PKU679`: a scenario that fails DSL extraction is now a critical error and refuses to register, instead of silently registering empty. A scenario that declares no input parameter at all is legitimate and still extracts.
+
+- cd6453c: `ScenarioHttpResponse` is what an actor's transport answers with.
+
+  Nothing about the shape (status, ok, body) is RPC-specific — it is an HTTP response with its body already drained — so it is not named for RPC, and it carries `serialized`, the body as text. `readScenarioHttpResponse(res)` is exported so a step that has to reach past `invokeRaw` for a non-RPC route drains the response the same way instead of inventing its own record, and `invoke`'s refusal error quotes the raw text, so an HTML or plain-text error body says what went wrong instead of `"undefined"`.
+
+  Both are generic in the body — `readScenarioHttpResponse<{ runId?: string }>(res)` — defaulting to `unknown`. A body that will not parse as JSON is carried as its raw text rather than dropped.
+
+  The whole scenario-actor surface is new and unreleased, so there is nothing here to migrate from.
+
+- a436645: Redesign the console's scenarios screen as living documentation of a project's BDD features.
+
+  The inspector now statically extracts `pikkuFeature` declarations — name, description, tags, the scenarios each one groups (including `{ scenario, data }` examples), and whether it declares `before`/`after` — and the CLI writes them to `<outDir>/scenarios/features.gen.json`, which `MetaService.getFeaturesMeta()` reads and the console addon returns from `getAllMeta`.
+
+  The scenarios page reads that back as a document: features on the left, and on the right the selected feature's scenarios, each rendered as the given/when/then ladder of prose its author actually wrote, with repeats shown as `for each x in xs`, `Examples:` tables for parameterised entries, skip reasons stated rather than hidden, and each scenario's cast of personas inline. The Flows/Personas segmented control is gone; tags filter the document the same way `pikku scenario run --tags` filters a run.
+
+- 46cf63e: Scenario personas — the KIND of person, separate from the body that signs in
+
+  `scenarios.actors` conflated two things: who a kind of person is, and which
+  synthetic user a step runs as. That works until a scenario needs two of the same
+  kind — tenant isolation, peer sharing, a member hitting another member's row —
+  at which point the registry grows two near-identical entries and neither says
+  they are the same kind of person.
+
+  `scenarios.personas` now declares the kinds:
+
+  ```json
+  "scenarios": {
+    "personas": {
+      "owner": { "description": "Owns their own entries", "primary": true },
+      "viewer": { "description": "Someone the owner shares with", "proficiency": "casual" },
+      "reminders": { "description": "The app sending reminders", "kind": "system" }
+    }
+  }
+  ```
+
+  A persona carries only what is true of that kind of person for the app's whole
+  lifetime — `description`, `primary` (whose experience the product is), `kind`
+  (`person` or `system`), `proficiency` (`casual` or `power`). What someone is
+  trying to get done, and the circumstances they are doing it in, belong to the
+  scenario, not to them.
+
+  Actors are materialised from personas, so the common case — one body per kind —
+  needs no `actors` block at all. Declare an actor by hand only for a second body
+  of one persona:
+
+  ```json
+  "actors": { "ownerB": { "persona": "owner", "email": "owner-b@actors.local" } }
+  ```
+
+  A `system` persona mints no actor: there is nobody to sign in.
+
+  Resolution is shared by codegen and `pikku scenario run` (previously three
+  independent reads of `config.scenarios.actors`), so the generated
+  `scenarioActorConfigs` — and therefore the `ScenarioActorName` union that types
+  `wire.scenarioStep.actor` — always matches the registry a run builds. Two actors
+  sharing an email is now an error rather than a silently-shared user row, which
+  is exactly the bug a second body exists to catch.
+
+  Fully backwards compatible: an actor with no `persona` resolves as its own
+  implicit persona, and a project with no `personas` block is untouched.
+
+  Because "persona" now names a config entity, actor-flow no longer uses it for
+  "the actor config the LLM plays": `RunConversationParams.persona`/`personaName`
+  are now `actor`/`actorName`, and the exported `PersonaLLM` type is `ActorLLM`.
+  The `'in-persona'` approval policy value is unchanged — it is the English idiom
+  ("stay in character"), not a reference to a declared persona.
+
+- 9e666bc: `postScenarioJson(url, { body, headers })` — one way for a scenario step to POST JSON at a route and keep what came back.
+
+  Every step that reaches past an actor was writing this by hand, and the copies had drifted. Two of them answered `response.json()`, which discards the status and **throws outright** when the target answers an empty body or an HTML error page — so a refusal, which is the expected outcome of a permissions scenario, surfaced as a parse error instead of as data. It returns a `ScenarioHttpResponse`, never throws on a non-2xx, and takes an optional `fetch` so a call that has to keep a session can be sent through a `ScenarioCookieJar`.
+
+  `ScenarioHttpResponse` and `readScenarioHttpResponse` are now generic in the body: `postScenarioJson<{ runId?: string }>(…)` types `body` at the call site instead of casting at every use. The default is still `unknown`, so nothing that omits the parameter changes.
+
+  `body`'s doc now says what it always did: a body that will not parse as JSON is carried as its raw text, not dropped.
+
+- 1c841d8: Move the scenario engine off `PikkuWorkflowService` onto a `PikkuScenarioService` the runner constructs, so no production bundle carries it.
+
+  Scenario support was built as members of `PikkuWorkflowService` — the class every Pikku server instantiates. A bundler drops an unused _module_, never an unused class _member_, so every deployed app was shipping the step runner, the lifecycle-hook runner, the actor registry, the browser-provider hooks and the `expectEventually`/`expectError`/`expectService` assertion wire, whether or not it had a single scenario. `resolveScenarioActors` pulled the HTTP actor client — and the AI persona conversation loop behind it — in with them.
+
+  All of it now lives in `PikkuScenarioService`, exported from a new `@pikku/core/scenario` entry point and reached only by `pikku scenario run`:
+
+  ```ts
+  import { createScenarioRunner } from '@pikku/core/scenario'
+
+  const { workflowService, scenarioService } = createScenarioRunner()
+  ```
+
+  Measured with esbuild against `InMemoryWorkflowService`: the production bundle drops 35 KB and every `sign-in/actor`, `runConversation`, `expectEventually` and `ScenarioHookError` occurrence, along with the scheduler runner that `wire.runScheduledTask` pulled in. The one remaining `scenarioStep` reference in a production bundle is the RPC guard that refuses to expose a step over `/rpc` — a security check, not scenario machinery.
+
+  `PikkuScenarioService` is **not** a workflow service. A scenario is not a different kind of run — it is the same durable run with a step vocabulary on top — so it is installed onto one rather than subclassing it. `PikkuWorkflowService` gains a single `setRunExtension(create)` slot, and calls the installed `WorkflowRunExtension` at six points: `attachRunContext`, `detachRunContext`, `decorateRunWire`, `decorateWorkflowWire`, `onBeforeRunFunc`, `onAfterRunFunc`. Nothing on that interface names scenarios.
+
+  The extension is built from a `WorkflowRunEngine` handle the service hands it — `inlineStep`, `updateRunStatus`, `onChildWorkflowFailed`, `verifyStepName` — which is what lets a scenario record a durable step without any of those becoming public API on the service every production app instantiates.
+
+  ```ts
+  const workflowService = new InMemoryWorkflowService()
+  const scenarioService = workflowService.setRunExtension(
+    (engine) => new PikkuScenarioService(engine)
+  )
+  ```
+
+  `{ actor }` on a workflow step is deliberately **not** part of the move: `scenario.do(name, rpc, data, { actor })` dispatches through the base wire's `do`, so the actor branch stays in `rpcStep`.
+
+  **Behaviour change:** a scenario started on a _server_ rather than through the runner (the console can start any registered workflow by name) no longer resolves actors or runs `before`/`after` hooks — a server's workflow service is not a scenario service. Run scenarios with `pikku scenario run`.
+
+- 47478a4: Let a scenario declare why it is held out of a default run.
+
+  `pikkuScenario({ skip: 'why' })` keeps the scenario in the plan and reports it as `SKIP <name> (<reason>)` on the ladder, instead of the alternatives available until now: deleting it, commenting it out, or leaving it red. Naming it directly with `--flows` clears the quarantine and runs it; selecting the feature it belongs to does not, because a feature is a group and running the group should not silently drag a quarantined member in.
+
+  The run report's `skipped` list now carries a reason per scenario rather than assuming `--no-browser`, so a browser scenario held back on a machine with no browser reads differently from one the project quarantined itself.
+
+  `@pikku/console` gains a test id on the addon detail page's Setup tab, which was previously only reachable through its translated label.
+
+- 9e666bc: Settle what a scenario step imports from `@pikku/core/workflow`.
+
+  Core carries what the scenario runtime contract needs — the step wire, the browser-driver interface, the transport's response shape — and what core itself implements. Two helpers that had been promoted alongside them are neither, and are not exported: `describeValue`, a one-line formatter for an assertion message, and `readScenarioSseEvents`, a general SSE reader with a scenario-flavoured name. Both are a test suite's own vocabulary, with no consumer inside the framework; a project that wants them owns them, at three and twenty lines. Neither shipped, so nothing to migrate.
+
+  What stays, and why:
+  - `requireActor(scenarioStep)` / `requireScenarioEnv(scenarioStep)` — narrow the optional halves of the step wire, naming the step and what to pass.
+  - `pollUntil(attempt, { timeoutMs, intervalMs })` — retries until `attempt` answers anything but `undefined`, then answers with it. Reaching the deadline answers `undefined` rather than throwing, because only the caller knows what was being waited for and can say so. `@pikku/playwright` waits on it too.
+  - `createCookieJar` and `readScenarioHttpResponse` / `postScenarioJson` — `HttpScenarioActor` is built on all three, so a step producing the same record reaches the same function.
+  - The browser-driver interface, and the reporter's `composeStepProse` / `renderStepTemplate`.
+
+  The export list is now grouped by who imports it — writing a step, driving a browser, reporting a run — rather than by the order the exports were added.
+
+- 5962e51: Add `template` to `pikkuScenarioStep`, so a step's reported prose names the values it was called with.
+
+  `description` documents what a step does, for the console and for whoever reads the source. `template` is what a reader of the report sees, with `{placeholders}` filled from the input the step was actually called with:
+
+  ```ts
+  export const seesAddonCard = pikkuScenarioStep<
+    { packageName: string; state?: 'installed' | 'available' },
+    { visible: true },
+    true
+  >({
+    name: 'seesAddonCard',
+    description: 'sees an addon in the gallery',
+    template: 'sees {state} addon {packageName}',
+    browser: true,
+    func: async (_services, { packageName, state }, { browser }) => { … },
+  })
+  ```
+
+  ```
+  Then  the admin sees at least 10 addons on offer          ✓  3ms
+  When  the admin searches for stripe                       ✓  10ms
+  Then  the admin sees available addon @pikku/addon-stripe  ✓  77ms
+  ```
+
+  Previously the only way to get that was a `description` at every call site, which meant writing the sentence once per call rather than once per step — and a call site that forgot it reported the same sentence three times in a row.
+  - A placeholder with no recorded value renders as nothing and the surrounding whitespace collapses, so an omitted optional input reads as a shorter sentence rather than leaking a literal `{state}` into the report. Type placeholder values so they read as words (`state?: 'installed' | 'available'`, not `installed?: boolean`).
+  - A call-site `description` still wins, the same way it already won over the step's `description`.
+  - `renderStepTemplate` is exported from `@pikku/core/workflow` alongside `composeStepProse`, so the CLI reporter and the console render identically.
+
+  Scenario steps now record their input on the run (`inlineStep` persisted `null` for every inline step, so there was nothing for a reporter to interpolate). This is what `getRunSteps` already exposes as `data` for RPC steps.
+
+  A step called from a loop gets its template too. Its durable name is built at runtime (`sees @pikku/addon-todos`) from a declaration the static meta records verbatim (`sees ${packageName}`), so the two can never match by name — it used to fall back to the bare name, with no keyword, actor or template:
+
+  ```
+          sees @pikku/addon-console                              ✓  85ms
+  Then    the admin sees installed addon @pikku/addon-console    ✓  92ms
+  ```
+
+  The join is by **step function**. A scenario step is dispatched by name exactly as an RPC is, so it now records that name in the run's existing `rpcName` slot — no new field, no schema change in any workflow store. Nothing dispatches off that value anywhere; step identity always comes from the code being replayed.
+
+  To keep the slot honest, a scenario step is now its own **kind of RPC**, alongside public / private / remote: `FunctionMeta.scenarioStep` marks it, and `rpcExposed` refuses it even if something marks it `expose: true`. Steps were already left out of the RPC registry; this makes "never network-callable" a property the runtime enforces rather than one the registration path happens to produce.
+
+  `collectScenarioStepProse` now returns `{ byStepName, byStepFunc }` rather than a bare `Map`, and `buildStepLadder` takes that. The step name still wins; the function index only decides steps recorded under a name no declaration carries, and a function called from several sites that disagree on their prose is left out rather than guessed at.
+
+- 5962e51: Add `pikkuScenarioStep` — named, typed scenario steps whose body is an ordinary pikku function.
+
+  A scenario step is referenced by typed string name, the same way `workflow.do` references an RPC, and is checked against a generated `FlattenedScenarioStepMap`:
+
+  ```ts
+  export const buysAnApple = pikkuScenarioStep({
+    name: 'buysAnApple',
+    description: 'buys an apple',
+    func: async (services, data: { qty: number }) => { ... },
+  })
+
+  await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })
+  // renders: Given the shopper buys an apple
+  ```
+
+  - `given`/`when`/`then` are sugar over `step`, setting only the prose prefix. The runner renders a step ladder from the recorded run.
+  - Steps default to `retries: 0` — a failed assertion is not retried.
+  - Steps are deliberately **not** registered as RPCs, so a browser-driving step is never network-callable.
+  - `browser: true` steps receive a browser handle on the wire. `@pikku/playwright` is a new package providing the Playwright-backed provider, signing each actor's browser context in through the same actor path the HTTP actors use. Without a provider, `pikku scenario run --no-browser` **skips** browser scenarios instead of failing them.
+  - New diagnostics: PKU677 (a `browser: true` step called without an actor) and PKU678 (a step target that is not a static string literal).
+  - Fixes `--no-<flag>` boolean negation in the CLI command parser, which previously parsed as an unknown option.
+  - Fixes PKU673 (a scenario func destructuring services), which never fired because it ran before function meta existed; it now runs in post-processing.
+  - Fixes scenario/workflow steps nested in `for...of` and `Promise.all` being dropped from workflow meta.
+
+- 61b9bf8: Type a scenario actor's `invoke` over the project's exposed RPC map, and give a step the environment it targets.
+
+  `ScenarioActor` is now generic in the RPC surface it can reach, and the generated `pikku-scenario-actors.gen.ts` binds it to `FlattenedRPCMap` — exactly the `/rpc/:name` surface an HTTP actor can reach. An unknown RPC name or a payload of the wrong shape is a compile error rather than a 400 mid-run, and the result is narrowed instead of `unknown`:
+
+  ```ts
+  const listed = await actor.invoke('todos:listTodos', { limit: 5 })
+  const todos: string[] = listed.todos
+  ```
+
+  `wire.scenarioStep.actor` stops being `any`: `PikkuWire` takes the project's actor registry as a type argument, threaded through the generated function types. The actors file is now written even for an empty registry, so `TypedScenarioActors` is always a resolvable import.
+
+  Alongside it:
+  - **`invokeRaw(rpcName, data, { headers })`** on `ScenarioActor`, reporting `{ status, ok, body }` rather than throwing. A refusal is the expected outcome of a permissions or scopes scenario, and `invoke`'s error truncates the body naming which scope was missing. `invoke` is now `invokeRaw` plus a throw on `!ok`. The `headers` option is how a step expresses an identity the actor registry cannot.
+  - **`scenarioStep.env`** — `{ apiUrl, appUrl? }`, from `scenarios.environments[<environment>]`. Steps run in the CLI process, where there is no `variables` service, so without this every raw-HTTP step would reach for `process.env`. A run started on a server falls back to its own `API_URL`/`APP_URL`.
+  - **`requireActor(scenarioStep)` and `requireScenarioEnv(scenarioStep)`** exported from `@pikku/core/workflow`, replacing the hand-rolled `actorOf(...)` guard each step file was writing. Both name the step and say what to pass.
+
 ## 0.12.69
 
 ### Patch Changes

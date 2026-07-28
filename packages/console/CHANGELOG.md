@@ -1,3 +1,82 @@
+## 0.12.46
+
+### Patch Changes
+
+- 47876f8: Give the addon install drawer test ids: the instance-name field, the add-to-project button and the inline install error. The error alert in particular had no handle, so asserting that a name conflict surfaces cleanly rather than as a raw 500 meant matching on rendered copy.
+- 2484739: Refresh an addon requirement's secret status after setting it from the Setup
+  tab. The card asked whether the secret existed under its own query key, which
+  nothing ever invalidated, so a secret you had just saved went on reading "Not
+  set" until the page was reloaded. It now shares the one `secret-value` query
+  that `useSetSecret` already invalidates.
+
+  The requirement cards, their connect/set actions and the instance selector also
+  carry test ids and their status as data attributes, so a test can assert that a
+  requirement is satisfied without reading the console's translated copy back to
+  it.
+
+- 97d342e: Make the auth providers page and the console gate addressable from a test without reading translated copy back. Each provider row carries `data-provider`, and its status is a single `auth-provider-status` element carrying `data-configured` — so "not configured" is an asserted state rather than a missing badge, which an unrendered row would also satisfy. The not-authorized screen and the credential connections surface carry test ids, and the page header's view switch tags each option with its value.
+
+  The badge and plugin labels move from `asI18n` string literals onto `messages/en.json` keys, so they translate with the rest of the console.
+
+- 67a6995: Give the addons gallery stable test hooks: `data-testid="addon-card"` with `data-addon-package` and `data-addon-installed` on each card, and `data-testid="packages-search"` on the search field.
+
+  Selecting a card previously meant reaching for an unexported Mantine card class, and selecting the filters meant matching the translated copy those controls render — so a copy change or a Mantine bump silently broke the browser tests. The names carry the addon's package and installed state, which is what the assertions actually want.
+
+- fbee186: Make the sidebar, the run form and the impersonation surface addressable from a test without reading translated copy back.
+
+  Nav sections gain an optional stable `id`, and the accordion now tracks which section is open by that id rather than by the section's rendered title — so the open section survives a locale change. Sections and nav links carry `nav-section`/`nav-link` with the key declared in code (the section id, the link's route), which replaces selecting a section by an `aria-expanded` heuristic and a link by its label.
+
+  The schema form and its submit button, the runs panel's new-run button, the impersonation banner and its stop button, the impersonate drawer's search and rows, and the sidebar's impersonate button all carry test ids. None of them carries a user's email: an email is personal data, and putting it in a `data-` attribute publishes it to anything reading the DOM for the sake of a selector — rows are matched on the email they already render.
+
+  The workflow runs panel's empty and new-run labels move from `asI18n` string literals onto `messages/en.json` keys, so they translate with the rest of the console, and the impersonate drawer's row moves into its own file.
+
+- 5546eb0: Add stable `data-testid` hooks to the agent playground.
+
+  Approval cards, credential cards, tool calls and the composer now expose
+  testids plus state attributes (`data-approval-state`, `data-credential-state`,
+  `data-tool-status`, `data-tool-name`, `data-credential-name`), so browser tests
+  select on structure rather than on rendered English copy — which goes through
+  the `m` i18n namespace and is not a stable selector. Purely additive: no copy,
+  markup or behaviour changes.
+
+- 2b71273: Give each avatar in a scenario card's cast a `data-testid="flow-cast-member"` and a `data-persona-key`, so a test can assert who a scenario is cast with. The cast renders as avatars with no accessible name, which previously left the casting unassertable without matching on how an avatar happens to look.
+- c462f8b: Hovering a scenario step now highlights the thing it will act on — the actor, or the step's sentence — rather than the whole row. The row holds two destinations (the actor opens their persona, everything else opens the step), so a row-wide highlight promised one action for both.
+- a436645: Redesign the console's scenarios screen as living documentation of a project's BDD features.
+
+  The inspector now statically extracts `pikkuFeature` declarations — name, description, tags, the scenarios each one groups (including `{ scenario, data }` examples), and whether it declares `before`/`after` — and the CLI writes them to `<outDir>/scenarios/features.gen.json`, which `MetaService.getFeaturesMeta()` reads and the console addon returns from `getAllMeta`.
+
+  The scenarios page reads that back as a document: features on the left, and on the right the selected feature's scenarios, each rendered as the given/when/then ladder of prose its author actually wrote, with repeats shown as `for each x in xs`, `Examples:` tables for parameterised entries, skip reasons stated rather than hidden, and each scenario's cast of personas inline. The Flows/Personas segmented control is gone; tags filter the document the same way `pikku scenario run --tags` filters a run.
+
+- 47478a4: Let a scenario declare why it is held out of a default run.
+
+  `pikkuScenario({ skip: 'why' })` keeps the scenario in the plan and reports it as `SKIP <name> (<reason>)` on the ladder, instead of the alternatives available until now: deleting it, commenting it out, or leaving it red. Naming it directly with `--flows` clears the quarantine and runs it; selecting the feature it belongs to does not, because a feature is a group and running the group should not silently drag a quarantined member in.
+
+  The run report's `skipped` list now carries a reason per scenario rather than assuming `--no-browser`, so a browser scenario held back on a machine with no browser reads differently from one the project quarantined itself.
+
+  `@pikku/console` gains a test id on the addon detail page's Setup tab, which was previously only reachable through its translated label.
+
+- 2f88989: Make the scopes page addressable from a test without selecting on translated copy: the roles table, the scopes vocabulary table, the role editor drawer, the scope checkboxes, the create-role action, the forbidden and load-error states, the user roles drawer and the header search all carry test ids, with `data-role-name` / `data-scope-id` identifying a row. The role editor and user roles drawers carry their test id on the drawer body rather than the drawer root, so it is present only while the drawer is open.
+- b733b59: Make the users directory addressable from a test without putting PII in the DOM: `TableListPage` accepts a `getRowProps` callback, and the users table uses it to tag each row with its user id. The status badge, the per-user actions menu, its items, the confirmation button and the set-password field carry test ids, so a caller reads ban state from `data-banned` rather than from the translated badge copy.
+- a022e3e: Report each workflow canvas node's run status as `data-node-status` alongside its step name, and tag run history rows with `data-run-id` / `data-run-status`. The status was previously only expressible as a background colour, so the only way to check that a run painted correctly was to read the computed rgb and classify the channels — which asserts the palette rather than the run. The timeline's step buttons and its follow-live control carry test ids for the same reason.
+- Updated dependencies [539ee0b]
+- Updated dependencies [a1a6816]
+- Updated dependencies [dc3e11e]
+- Updated dependencies [24da616]
+- Updated dependencies [04bfe3f]
+- Updated dependencies [5962e51]
+- Updated dependencies [5962e51]
+- Updated dependencies [cd6453c]
+- Updated dependencies [a436645]
+- Updated dependencies [46cf63e]
+- Updated dependencies [9e666bc]
+- Updated dependencies [1c841d8]
+- Updated dependencies [47478a4]
+- Updated dependencies [9e666bc]
+- Updated dependencies [5962e51]
+- Updated dependencies [5962e51]
+- Updated dependencies [61b9bf8]
+  - @pikku/core@0.12.70
+
 ## 0.12.45
 
 ### Patch Changes
@@ -217,8 +296,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-              "TypographyStylesProvider" is not exported by @pikku/mantine/core
-              "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
