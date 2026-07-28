@@ -1,5 +1,5 @@
 import React from 'react'
-import { Anchor, Box, Group, Stack, Text } from '@pikku/mantine/core'
+import { Anchor, Group, Stack, Tabs, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -70,29 +70,47 @@ export const ScenarioStepPanel: React.FC<ScenarioStepPanelProps> = ({
         </Text>
       </Stack>
 
-      <Box px="md">
-        <Stack gap="xl">
+      <Tabs defaultValue="details">
+        <Tabs.List px="md">
+          <Tabs.Tab value="details" data-testid="scenario-step-tab-details">
+            {m.scenarios_step_tab_details()}
+          </Tabs.Tab>
           {rpcName && (
-            <Stack gap={6}>
-              <SectionLabel>{m.scenarios_step_definition()}</SectionLabel>
-              <Anchor
-                component="span"
-                ff="monospace"
-                size="sm"
-                data-testid="scenario-step-rpc"
-                onClick={() => openFunction(rpcName)}
-                style={{ cursor: 'pointer' }}
-              >
-                {asI18n(rpcName)}
-              </Anchor>
-            </Stack>
+            <Tabs.Tab value="code" data-testid="scenario-step-tab-code">
+              {m.scenarios_step_tab_code()}
+            </Tabs.Tab>
           )}
-          {rpcName && <ScenarioStepCode rpcName={rpcName} />}
-          <WorkflowStepInput stepId={stepId} />
-          <WorkflowStepOutput stepId={stepId} />
-          <WorkflowStepConfiguration stepId={stepId} />
-        </Stack>
-      </Box>
+        </Tabs.List>
+
+        <Tabs.Panel value="details" pt="md" px="md">
+          <Stack gap="xl">
+            {rpcName && (
+              <Stack gap={6}>
+                <SectionLabel>{m.scenarios_step_definition()}</SectionLabel>
+                <Anchor
+                  component="span"
+                  ff="monospace"
+                  size="sm"
+                  data-testid="scenario-step-rpc"
+                  onClick={() => openFunction(rpcName)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {asI18n(rpcName)}
+                </Anchor>
+              </Stack>
+            )}
+            <WorkflowStepInput stepId={stepId} />
+            <WorkflowStepOutput stepId={stepId} />
+            <WorkflowStepConfiguration stepId={stepId} />
+          </Stack>
+        </Tabs.Panel>
+
+        {rpcName && (
+          <Tabs.Panel value="code" pt="md" px="md">
+            <ScenarioStepCode rpcName={rpcName} />
+          </Tabs.Panel>
+        )}
+      </Tabs>
     </Stack>
   )
 }

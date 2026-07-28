@@ -740,6 +740,8 @@
   "scenarios_phase_step": "Step",
   "scenarios_step_definition": "Scenario step",
   "scenarios_step_code": "Code",
+  "scenarios_step_tab_details": "Details",
+  "scenarios_step_tab_code": "Code",
   "scenarios_step_code_loading": "Reading the source…",
   "scenarios_step_code_unavailable": "No source on disk for this step.",
   "scenarios_repeat": "for each {item} in {source}",
