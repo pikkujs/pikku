@@ -782,12 +782,27 @@ export type ListStageCustomHostnamesOutput = {
     createdAt: string
   }[]
 }
-export type ListStageSecretsInput = {
-  projectId: string
-  branch: string
+export type GetDeveloperLiteLLMKeyInput = {}
+export type GetDeveloperLiteLLMKeyOutput = {
+  proxyUrl: string
+  apiKey: string
 }
-export type ListStageSecretsOutput = {
-  names: string[]
+export type GetStageSealingKeyInput = {
+  stageId: string
+}
+export type GetStageSealingKeyOutput = {
+  keyId: string
+  publicKey: string
+  algorithm: string
+}
+export type ListStageSecretNamesInput = {
+  stageId: string
+}
+export type ListStageSecretNamesOutput = {
+  secrets: {
+    name: string
+    updatedAt: string
+  }[]
 }
 export type ListStagesInput = {
   /** Project UUID or slug */
@@ -1005,14 +1020,14 @@ export type SetStageAutoDeployOutput = {
   stageId: string
   autoDeployOnPush: boolean
 }
-export type SetStageSecretInput = {
-  projectId: string
-  branch: string
+export type SetStageSealedSecretInput = {
+  stageId: string
   name: string
-  value: string
+  sealedValue: string
 }
-export type SetStageSecretOutput = {
-  ok: boolean
+export type SetStageSealedSecretOutput = {
+  name: string
+  keyId: string
 }
 export type SignContentKeyInput = {
   contentKey: string
@@ -1254,9 +1269,17 @@ export type RPCMap = {
     ListStageCustomHostnamesInput,
     ListStageCustomHostnamesOutput
   >
-  readonly listStageSecrets: RPCHandler<
-    ListStageSecretsInput,
-    ListStageSecretsOutput
+  readonly getDeveloperLiteLLMKey: RPCHandler<
+    GetDeveloperLiteLLMKeyInput,
+    GetDeveloperLiteLLMKeyOutput
+  >
+  readonly getStageSealingKey: RPCHandler<
+    GetStageSealingKeyInput,
+    GetStageSealingKeyOutput
+  >
+  readonly listStageSecretNames: RPCHandler<
+    ListStageSecretNamesInput,
+    ListStageSecretNamesOutput
   >
   readonly listStages: RPCHandler<ListStagesInput, ListStagesOutput>
   readonly mintConsoleToken: RPCHandler<
@@ -1280,7 +1303,10 @@ export type RPCMap = {
     SetStageAutoDeployInput,
     SetStageAutoDeployOutput
   >
-  readonly setStageSecret: RPCHandler<SetStageSecretInput, SetStageSecretOutput>
+  readonly setStageSealedSecret: RPCHandler<
+    SetStageSealedSecretInput,
+    SetStageSealedSecretOutput
+  >
   readonly syncStage: RPCHandler<SyncStageInput, SyncStageOutput>
   readonly confirmCliAuth: RPCHandler<ConfirmCliAuthInput, ConfirmCliAuthOutput>
   readonly pollCliAuth: RPCHandler<PollCliAuthInput, PollCliAuthOutput>
