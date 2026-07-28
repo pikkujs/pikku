@@ -151,6 +151,10 @@ export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 // Waits for the target to catch up, without every step writing the loop again
 export { pollUntil, type PollOptions } from './scenario-poll.js'
 
+// Persists cookies across a step's requests, the way a browser would
+export { createCookieJar } from './scenario-cookie-jar.js'
+export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
+
 // What the transport answered — an actor's `invokeRaw`, or a route reached directly
 export type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
 export { readScenarioHttpResponse } from '../../services/scenario-actors-service.js'

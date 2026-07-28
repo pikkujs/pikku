@@ -16,34 +16,13 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { createAuthClient } from 'better-auth/client'
-import { requireScenarioEnv } from '@pikku/core/workflow'
+import { createCookieJar, requireScenarioEnv } from '@pikku/core/workflow'
 
-const authClientFor = (apiUrl: string) => {
-  const jar = new Map<string, string>()
-  const cookieFetch: typeof fetch = async (input, init) => {
-    const headers = new Headers(init?.headers)
-    headers.set('origin', apiUrl)
-    if (jar.size > 0) {
-      headers.set(
-        'cookie',
-        [...jar].map(([name, value]) => `${name}=${value}`).join('; ')
-      )
-    }
-    const response = await fetch(input, { ...init, headers })
-    for (const raw of response.headers.getSetCookie()) {
-      const [pair] = raw.split(';')
-      const separator = pair!.indexOf('=')
-      if (separator > 0) {
-        jar.set(pair!.slice(0, separator), pair!.slice(separator + 1))
-      }
-    }
-    return response
-  }
-  return createAuthClient({
+const authClientFor = (apiUrl: string) =>
+  createAuthClient({
     baseURL: apiUrl,
-    fetchOptions: { customFetchImpl: cookieFetch },
+    fetchOptions: { customFetchImpl: createCookieJar(apiUrl).fetch },
   })
-}
 
 export interface AuthAttempt {
   /** Whether the call the step performed was accepted. */
