@@ -14,7 +14,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import {
-  readScenarioHttpResponse,
+  postScenarioJson,
   requireScenarioEnv,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
@@ -28,13 +28,10 @@ export const attemptsSignIn = pikkuScenarioStep<
   template: 'signs in as {email}',
   func: async (_services, { email, password }, { scenarioStep }) => {
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
-    return readScenarioHttpResponse(
-      await fetch(`${apiUrl}/api/auth/sign-in/email`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', origin: apiUrl },
-        body: JSON.stringify({ email, password }),
-      })
-    )
+    return postScenarioJson(`${apiUrl}/api/auth/sign-in/email`, {
+      body: { email, password },
+      headers: { origin: apiUrl },
+    })
   },
 })
 

@@ -56,6 +56,13 @@ export interface HttpScenarioActorsConfig {
  */
 export class HttpScenarioActor implements ScenarioActor {
   private jar: ScenarioCookieJar
+  /**
+   * Whether `login()` has succeeded since the last time the session was
+   * dropped. The jar cannot answer this — a target may set a cookie before
+   * anyone signs in, and it would then look like a session that was never
+   * established.
+   */
+  private signedIn = false
 
   constructor(
     readonly name: string,
@@ -84,13 +91,13 @@ export class HttpScenarioActor implements ScenarioActor {
     data: unknown,
     options?: ScenarioInvokeOptions
   ): Promise<ScenarioHttpResponse> {
-    if (this.jar.empty) {
+    if (!this.signedIn) {
       await this.login()
     }
     let res = await this.postRpc(rpcName, data, options?.headers)
     if (res.status === 401) {
       // Session expired mid-run — re-login once and retry.
-      this.jar.clear()
+      this.signOut()
       await this.login()
       res = await this.postRpc(rpcName, data, options?.headers)
     }
@@ -177,7 +184,7 @@ export class HttpScenarioActor implements ScenarioActor {
 
     let res = await send()
     if (res.status === 401) {
-      this.jar.clear()
+      this.signOut()
       await this.login()
       res = await send()
     }
@@ -205,6 +212,12 @@ export class HttpScenarioActor implements ScenarioActor {
     })
   }
 
+  /** Drop the session, so the next call signs in again before it goes out. */
+  private signOut(): void {
+    this.jar.clear()
+    this.signedIn = false
+  }
+
   private async login(): Promise<void> {
     const signInPath = this.config.signInPath ?? '/auth/sign-in/actor'
     const res = await this.jar.fetch(`${this.config.apiUrl}${signInPath}`, {
@@ -222,11 +235,14 @@ export class HttpScenarioActor implements ScenarioActor {
         `[scenario] actor sign-in failed for '${this.name}' (${res.status}): ${body}`
       )
     }
-    if (this.jar.empty) {
+    // What proves a session was established is this response setting a cookie,
+    // not the jar being non-empty — the target may have set one earlier.
+    if (res.headers.getSetCookie().length === 0) {
       throw new Error(
         `[scenario] actor sign-in for '${this.name}' returned no session cookie`
       )
     }
+    this.signedIn = true
   }
 }
 

@@ -9,7 +9,7 @@
  * touches a DOM; `sees*` is reserved for browser-backed steps.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { describeValue } from '@pikku/core/workflow'
+import { describeValue } from './support.js'
 import type { MockLlmCall } from './agent-transport.js'
 
 /**

@@ -8,33 +8,31 @@
  * is what is under test, so an actor cannot stand in for them.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireScenarioEnv } from '@pikku/core/workflow'
+import { postScenarioJson, requireScenarioEnv } from '@pikku/core/workflow'
 
-const callRpc = async (
+/**
+ * Calls one of the suite's unauthenticated credential RPCs and answers with its
+ * payload.
+ *
+ * These RPCs are setup, not the assertion — a scenario asserts on what the HMAC
+ * or OAuth addon then does with the credential — so a non-2xx here is a broken
+ * fixture and says so, rather than surfacing three steps later as a missing
+ * field.
+ */
+const callRpc = async <T>(
   apiUrl: string,
   rpcName: string,
   data: Record<string, unknown>
-): Promise<any> => {
-  const response = await fetch(`${apiUrl}/rpc/${rpcName}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ data }),
+): Promise<T> => {
+  const response = await postScenarioJson<T>(`${apiUrl}/rpc/${rpcName}`, {
+    body: { data },
   })
-  return response.json()
-}
-
-const postJson = async (
-  apiUrl: string,
-  path: string,
-  body: Record<string, unknown>,
-  headers: Record<string, string>
-) => {
-  const response = await fetch(`${apiUrl}${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify(body),
-  })
-  return { status: response.status, body: (await response.json()) as any }
+  if (!response.ok) {
+    throw new Error(
+      `[scenario] '${rpcName}' answered ${response.status}: ${response.serialized.slice(0, 300)}`
+    )
+  }
+  return response.body
 }
 
 /**
@@ -50,7 +48,7 @@ export const resetsCredentials = pikkuScenarioStep<void, { reset: true }>({
   description: 'clears every stored credential',
   template: 'resets the credentials',
   func: async (_services, _data, { scenarioStep }) => {
-    await callRpc(
+    await callRpc<unknown>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'resetCredentials',
       {}
@@ -92,7 +90,7 @@ export const readsCredential = pikkuScenarioStep<
   template: 'reads the {name} credential',
   func: async (_services, { name, userId }, { scenarioStep }) => {
     const data = { name, ...(userId ? { userId } : {}) }
-    const result = await callRpc(
+    const result = await callRpc<{ valueJson?: string | null }>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'getCredential',
       data
@@ -114,7 +112,7 @@ export const deletesCredential = pikkuScenarioStep<
   description: 'revokes a credential server-side, with no session anywhere',
   template: 'deletes the {name} credential',
   func: async (_services, { name, userId }, { scenarioStep }) => {
-    const result = await callRpc(
+    const result = await callRpc<{ success?: boolean }>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'deleteCredential',
       {
@@ -139,7 +137,7 @@ export const readsAllCredentials = pikkuScenarioStep<
   description: 'reads every credential belonging to one user',
   template: 'reads every credential of {userId}',
   func: async (_services, { userId }, { scenarioStep }) => {
-    const result = await callRpc(
+    const result = await callRpc<{ credentialsJson: string }>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'getAllCredentials',
       { userId }
@@ -234,12 +232,13 @@ export const signsMessage = pikkuScenarioStep<
     if (userId) {
       headers['x-user-id'] = userId
     }
-    const { status, body } = await postJson(
-      requireScenarioEnv(scenarioStep).apiUrl,
-      '/api/hmac/sign',
-      { message },
-      headers
-    )
+    const { status, body } = await postScenarioJson<{
+      message?: string
+      signature?: string
+    }>(`${requireScenarioEnv(scenarioStep).apiUrl}/api/hmac/sign`, {
+      body: { message },
+      headers,
+    })
     if (status >= 400) {
       return { ok: false, status, error: body?.message ?? JSON.stringify(body) }
     }
@@ -271,11 +270,9 @@ export const verifiesMessage = pikkuScenarioStep<
     if (userId) {
       headers['x-user-id'] = userId
     }
-    const { body } = await postJson(
-      requireScenarioEnv(scenarioStep).apiUrl,
-      '/api/hmac/verify',
-      { message, signature },
-      headers
+    const { body } = await postScenarioJson<{ valid?: boolean }>(
+      `${requireScenarioEnv(scenarioStep).apiUrl}/api/hmac/verify`,
+      { body: { message, signature }, headers }
     )
     return { valid: body.valid === true }
   },
@@ -345,12 +342,13 @@ export const readsOAuthProfile = pikkuScenarioStep<
   description: 'calls the OAuth addon profile endpoint as a given principal',
   template: 'reads the OAuth profile as {userId}',
   func: async (_services, { userId }, { scenarioStep }) => {
-    const { status, body } = await postJson(
-      requireScenarioEnv(scenarioStep).apiUrl,
-      '/api/oauth/profile',
-      {},
-      { 'x-user-id': userId }
-    )
+    const { status, body } = await postScenarioJson<{
+      authenticated?: boolean
+      token?: string
+    }>(`${requireScenarioEnv(scenarioStep).apiUrl}/api/oauth/profile`, {
+      body: {},
+      headers: { 'x-user-id': userId },
+    })
     return {
       status,
       authenticated: body?.authenticated === true,

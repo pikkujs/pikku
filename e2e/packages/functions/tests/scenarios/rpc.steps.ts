@@ -15,11 +15,8 @@
  * ordinary step data, which is what keeps it PKU678-clean.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import {
-  describeValue,
-  requireActor,
-  type ScenarioHttpResponse,
-} from '@pikku/core/workflow'
+import { requireActor, type ScenarioHttpResponse } from '@pikku/core/workflow'
+import { describeValue } from './support.js'
 
 export const invokesRpcRaw = pikkuScenarioStep<
   {
