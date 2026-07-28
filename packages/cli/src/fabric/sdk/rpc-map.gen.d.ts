@@ -804,6 +804,13 @@ export type ListStageSecretNamesOutput = {
     updatedAt: string
   }[]
 }
+export type RotateStageSealingKeyInput = {
+  stageId: string
+}
+export type RotateStageSealingKeyOutput = {
+  /** The key that will no longer be handed out. */
+  retiredKeyId: string
+}
 export type ListStagesInput = {
   /** Project UUID or slug */
   projectId: string
@@ -1282,6 +1289,10 @@ export type RPCMap = {
     ListStageSecretNamesOutput
   >
   readonly listStages: RPCHandler<ListStagesInput, ListStagesOutput>
+  readonly rotateStageSealingKey: RPCHandler<
+    RotateStageSealingKeyInput,
+    RotateStageSealingKeyOutput
+  >
   readonly mintConsoleToken: RPCHandler<
     MintConsoleTokenInput,
     MintConsoleTokenOutput

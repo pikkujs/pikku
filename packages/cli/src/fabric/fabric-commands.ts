@@ -48,6 +48,7 @@ import {
 import { FabricRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
+import { FabricSecretsRotate } from './functions/secrets-rotate.function.js'
 import { FabricLogs } from './functions/logs.function.js'
 import { FabricMetrics } from './functions/metrics.function.js'
 import { FabricTrace } from './functions/trace.function.js'
@@ -273,6 +274,17 @@ export const fabricCommands = defineCLICommands({
         options: {
           branch: { description: 'Target branch', short: 'b' },
           json: { description: 'Machine-readable output', default: false },
+        },
+      }),
+      rotate: pikkuCLICommand({
+        func: FabricSecretsRotate,
+        description: "Retire a stage's sealing key (secrets must be set again)",
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          force: {
+            description: 'Confirm that existing secrets become unreadable',
+            default: false,
+          },
         },
       }),
     },
