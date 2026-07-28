@@ -71,6 +71,30 @@ export interface PikkuScenarioStepWire<TActor = ScenarioActor> {
 }
 
 /**
+ * How a browser step names an element.
+ *
+ * A `data-testid` on its own is rarely enough to name exactly one: `where`
+ * matches the element's own data attributes (so a step asserts a status
+ * without reading translated copy back to the app), `prefix` matches a family
+ * of ids, `containing` picks the match holding a piece of text, and `within`
+ * scopes the lookup to one row or section.
+ *
+ * Declared here so a step's input type is structural; the driver
+ * (`@pikku/playwright`) is what resolves it against a real page.
+ */
+export interface TestIdSelector {
+  testId: string
+  /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+  prefix?: boolean
+  /** Data attributes the element must also carry, e.g. `{ 'data-open': 'true' }`. */
+  where?: Record<string, string>
+  /** Narrow to the one match holding this text. */
+  containing?: string
+  /** Scope the lookup to one enclosing element, e.g. the row for one user. */
+  within?: TestIdSelector
+}
+
+/**
  * Structural browser handle, present only when the runner provisioned a
  * browser for this step (`browser: true` on the step config).
  *

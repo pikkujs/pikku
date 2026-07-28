@@ -139,6 +139,7 @@ export type {
   ScenarioStepOptions,
   PikkuScenarioStepWire,
   PikkuBrowserWire,
+  TestIdSelector,
   ScenarioBrowserProvider,
   ScenarioBrowserFailure,
   ScenarioEnvironment,

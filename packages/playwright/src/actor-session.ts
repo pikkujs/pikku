@@ -1,6 +1,7 @@
-import type { Browser, BrowserContext, Page } from '@playwright/test'
-import type { PikkuBrowserWire } from '@pikku/core/workflow'
+import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
+import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
 import type { BrowserConfig } from './config.js'
+import { locateTestId, type LocateTestIdOptions } from './testid.js'
 
 /** Runtime problems collected for one page navigation. */
 export interface PageIssues {
@@ -120,6 +121,15 @@ export class ActorSession implements PikkuBrowserWire {
 
   async screenshot(name?: string): Promise<Uint8Array> {
     return this.page.screenshot(name ? { path: name } : undefined)
+  }
+
+  /**
+   * Resolve an element by its test id — the shared way a browser step names
+   * what it is acting on. Returns every match, so a step can count them or
+   * narrow to `.first()` itself.
+   */
+  locate(selector: TestIdSelector, options?: LocateTestIdOptions): Locator {
+    return locateTestId(this.page, selector, options)
   }
 
   /** Navigate within the app; returns the main document HTTP status. */

@@ -5,7 +5,9 @@
  * `wire.browser`; this package provides that session, one isolated context per
  * actor, signed in as that actor.
  */
-import type { Page, BrowserContext } from '@playwright/test'
+import type { Page, BrowserContext, Locator } from '@playwright/test'
+import type { TestIdSelector } from '@pikku/core/workflow'
+import type { LocateTestIdOptions } from './testid.js'
 
 declare module '@pikku/core/workflow' {
   interface PikkuBrowserWire {
@@ -13,6 +15,12 @@ declare module '@pikku/core/workflow' {
     page: Page
     /** The actor's isolated context (cookie jar, storage). */
     context: BrowserContext
+    /**
+     * Resolve an element by its test id, with the app-agnostic vocabulary in
+     * `TestIdSelector` — data attributes, id prefixes, text, and scoping.
+     * Returns every match; narrow with `.first()` to act on one.
+     */
+    locate(selector: TestIdSelector, options?: LocateTestIdOptions): Locator
   }
 }
 
@@ -45,4 +53,9 @@ export {
   type PlaywrightScenarioBrowserProviderOptions,
 } from './provider.js'
 export { staticRoutes, sweepAllPages } from './pages-sweep.js'
+export {
+  locateTestId,
+  testIdSelector,
+  type LocateTestIdOptions,
+} from './testid.js'
 export * as mantine from './locators.js'
