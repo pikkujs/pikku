@@ -8,13 +8,14 @@
  * of these scenarios, so status is data the assertion steps read.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { requireScenarioEnv } from '@pikku/core/workflow'
 import { randomUUID } from 'node:crypto'
 import {
-  apiUrlOf,
   postAgent,
   postAgentApproval,
   postRpc,
   readModelCalls,
+  type HttpOutcome,
   type Identity,
   type MockLlmCall,
 } from './agent-transport.js'
@@ -39,6 +40,23 @@ export interface PendingApproval {
   toolName: string
   reason: string
 }
+
+/**
+ * The envelope the agent routes answer with, whatever the outcome — a result,
+ * a refusal, or a run suspended on approvals. Named once here so the steps read
+ * a typed body off the transport's `unknown` instead of each doing it inline.
+ */
+interface AgentReplyBody {
+  result?: unknown
+  message?: string
+  errorId?: string
+  runId?: string
+  status?: string
+  pendingApprovals?: PendingApproval[]
+}
+
+const replyBody = ({ body }: HttpOutcome): AgentReplyBody =>
+  (body ?? {}) as AgentReplyBody
 
 export interface AgentRunResult {
   status: number
@@ -117,7 +135,7 @@ export const runsAgent = pikkuScenarioStep<
     },
     { scenarioStep }
   ) => {
-    const apiUrl = apiUrlOf(scenarioStep.env)
+    const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const before = (await readModelCalls(apiUrl)).length
 
     const outcome = await postAgent(apiUrl, agent, identity ?? {}, {
@@ -131,28 +149,24 @@ export const runsAgent = pikkuScenarioStep<
     })
 
     const modelCalls = (await readModelCalls(apiUrl)).slice(before)
+    const reply = replyBody(outcome)
 
     return {
       status: outcome.status,
       ok: outcome.ok,
-      result: outcome.body?.result ?? null,
-      error: outcome.body?.message ?? outcome.body?.errorId,
-      runId: outcome.body?.runId,
-      runStatus: outcome.body?.status,
-      pendingApprovals: outcome.body?.pendingApprovals ?? [],
+      result: reply.result ?? null,
+      error: reply.message ?? reply.errorId,
+      runId: reply.runId,
+      runStatus: reply.status,
+      pendingApprovals: reply.pendingApprovals ?? [],
       modelCalls,
       ownCalls: modelCalls.filter((call) => call.userMessage === message),
     }
   },
 })
 
-export interface RpcCallResult {
-  status: number
-  ok: boolean
-  body: unknown
-  /** The whole response as text, so leak assertions can search it. */
-  serialized: string
-}
+/** What the call answered — the transport's own record, carried as step data. */
+export type RpcCallResult = HttpOutcome
 
 /**
  * Calls an exposed RPC as a given principal.
@@ -171,17 +185,12 @@ export const callsRpcAs = pikkuScenarioStep<
   template: 'calls {rpcName}',
   func: async (_services, { rpcName, data, identity }, { scenarioStep }) => {
     const outcome = await postRpc(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       rpcName,
       identity ?? {},
       data
     )
-    return {
-      status: outcome.status,
-      ok: outcome.ok,
-      body: outcome.body ?? null,
-      serialized: JSON.stringify(outcome.body ?? null),
-    }
+    return { ...outcome, body: outcome.body ?? null }
   },
 })
 
@@ -223,7 +232,7 @@ export const resolvesApprovals = pikkuScenarioStep<
     { scenarioStep }
   ) => {
     const outcome = await postAgentApproval(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       agent,
       identity ?? {},
       {
@@ -234,11 +243,12 @@ export const resolvesApprovals = pikkuScenarioStep<
         })),
       }
     )
+    const reply = replyBody(outcome)
     return {
       status: outcome.status,
-      runStatus: outcome.body?.status,
-      pendingApprovals: outcome.body?.pendingApprovals ?? [],
-      result: outcome.body?.result ?? null,
+      runStatus: reply.status,
+      pendingApprovals: reply.pendingApprovals ?? [],
+      result: reply.result ?? null,
     }
   },
 })
@@ -253,7 +263,12 @@ export const resetsTodos = pikkuScenarioStep<void, { reset: true }>({
   name: 'resetsTodos',
   description: 'resets the todo list',
   func: async (_services, _data, { scenarioStep }) => {
-    await postRpc(apiUrlOf(scenarioStep.env), 'todos:resetTodos', {}, {})
+    await postRpc(
+      requireScenarioEnv(scenarioStep).apiUrl,
+      'todos:resetTodos',
+      {},
+      {}
+    )
     return { reset: true }
   },
 })

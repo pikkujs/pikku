@@ -8,7 +8,7 @@
  * is what is under test, so an actor cannot stand in for them.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { apiUrlOf } from './agent-transport.js'
+import { requireScenarioEnv } from '@pikku/core/workflow'
 
 const callRpc = async (
   apiUrl: string,
@@ -50,7 +50,11 @@ export const resetsCredentials = pikkuScenarioStep<void, { reset: true }>({
   description: 'clears every stored credential',
   template: 'resets the credentials',
   func: async (_services, _data, { scenarioStep }) => {
-    await callRpc(apiUrlOf(scenarioStep.env), 'resetCredentials', {})
+    await callRpc(
+      requireScenarioEnv(scenarioStep).apiUrl,
+      'resetCredentials',
+      {}
+    )
     return { reset: true }
   },
 })
@@ -63,7 +67,7 @@ export const setsCredential = pikkuScenarioStep<
   description: 'stores a credential, globally or for one user',
   template: 'sets the {name} credential',
   func: async (_services, { name, value, userId }, { scenarioStep }) => {
-    await callRpc(apiUrlOf(scenarioStep.env), 'setCredential', {
+    await callRpc(requireScenarioEnv(scenarioStep).apiUrl, 'setCredential', {
       name,
       valueJson: JSON.stringify(value),
       ...(userId ? { userId } : {}),
@@ -89,7 +93,7 @@ export const readsCredential = pikkuScenarioStep<
   func: async (_services, { name, userId }, { scenarioStep }) => {
     const data = { name, ...(userId ? { userId } : {}) }
     const result = await callRpc(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       'getCredential',
       data
     )
@@ -111,7 +115,7 @@ export const deletesCredential = pikkuScenarioStep<
   template: 'deletes the {name} credential',
   func: async (_services, { name, userId }, { scenarioStep }) => {
     const result = await callRpc(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       'deleteCredential',
       {
         name,
@@ -136,7 +140,7 @@ export const readsAllCredentials = pikkuScenarioStep<
   template: 'reads every credential of {userId}',
   func: async (_services, { userId }, { scenarioStep }) => {
     const result = await callRpc(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       'getAllCredentials',
       { userId }
     )
@@ -231,7 +235,7 @@ export const signsMessage = pikkuScenarioStep<
       headers['x-user-id'] = userId
     }
     const { status, body } = await postJson(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       '/api/hmac/sign',
       { message },
       headers
@@ -268,7 +272,7 @@ export const verifiesMessage = pikkuScenarioStep<
       headers['x-user-id'] = userId
     }
     const { body } = await postJson(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       '/api/hmac/verify',
       { message, signature },
       headers
@@ -342,7 +346,7 @@ export const readsOAuthProfile = pikkuScenarioStep<
   template: 'reads the OAuth profile as {userId}',
   func: async (_services, { userId }, { scenarioStep }) => {
     const { status, body } = await postJson(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       '/api/oauth/profile',
       {},
       { 'x-user-id': userId }

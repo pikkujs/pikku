@@ -11,6 +11,10 @@
  * have no seeded account at all, so there is no actor to be. Identity is
  * therefore step *data* here, and only here.
  */
+import {
+  readScenarioHttpResponse,
+  type ScenarioHttpResponse,
+} from '@pikku/core/workflow'
 import type { MockLlmCall } from '../../src/mock-llm/provider.js'
 
 export type { MockLlmCall }
@@ -49,20 +53,11 @@ export const AG_UI = {
 
 export type StreamEvent = { type: string; [key: string]: unknown }
 
-export interface HttpOutcome {
-  status: number
-  ok: boolean
-  body: any
-}
-
-const readJson = async (res: Response): Promise<HttpOutcome> => {
-  const text = await res.text()
-  try {
-    return { status: res.status, ok: res.ok, body: JSON.parse(text) }
-  } catch {
-    return { status: res.status, ok: res.ok, body: text }
-  }
-}
+/**
+ * What the transport answered. The same record `actor.invokeRaw` returns, so a
+ * scenario reads a header-shim call and an actor call the same way.
+ */
+export type HttpOutcome = ScenarioHttpResponse
 
 /**
  * POSTs to an agent's sync route as a given principal.
@@ -76,7 +71,7 @@ export const postAgent = async (
   identity: Identity,
   body: Record<string, unknown>
 ): Promise<HttpOutcome> =>
-  readJson(
+  readScenarioHttpResponse(
     await fetch(`${apiUrl}/rpc/agent/${agent}`, {
       method: 'POST',
       headers: {
@@ -99,7 +94,7 @@ export const postAgentApproval = async (
   identity: Identity,
   body: Record<string, unknown>
 ): Promise<HttpOutcome> =>
-  readJson(
+  readScenarioHttpResponse(
     await fetch(`${apiUrl}/rpc/agent/${agent}/approve`, {
       method: 'POST',
       headers: {
@@ -117,7 +112,7 @@ export const postRpc = async (
   identity: Identity,
   data: Record<string, unknown>
 ): Promise<HttpOutcome> =>
-  readJson(
+  readScenarioHttpResponse(
     await fetch(`${apiUrl}/rpc/${rpcName}`, {
       method: 'POST',
       headers: {
@@ -181,20 +176,4 @@ export const readModelCalls = async (
 ): Promise<MockLlmCall[]> => {
   const { body } = await postRpc(apiUrl, 'llmCallLog', {}, {})
   return Array.isArray(body) ? (body as MockLlmCall[]) : []
-}
-
-/**
- * Where a step reads the target's base URL.
- *
- * A step runs in the CLI process, where there is no `variables` service, so
- * `wire.env` is the only sanctioned source — reaching for `process.env` here
- * would silently target the wrong environment.
- */
-export const apiUrlOf = (env?: { apiUrl: string }): string => {
-  if (!env?.apiUrl) {
-    throw new Error(
-      'No environment on the step wire — run via `pikku scenario run <environment>`'
-    )
-  }
-  return env.apiUrl
 }

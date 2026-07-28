@@ -16,7 +16,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { createAuthClient } from 'better-auth/client'
-import { apiUrlOf } from './agent-transport.js'
+import { requireScenarioEnv } from '@pikku/core/workflow'
 
 const authClientFor = (apiUrl: string) => {
   const jar = new Map<string, string>()
@@ -65,7 +65,7 @@ export const signsUpUser = pikkuScenarioStep<
   description: 'signs a new user up and reads the session it established',
   template: 'signs up as {email}',
   func: async (_services, { email, password }, { scenarioStep }) => {
-    const client = authClientFor(apiUrlOf(scenarioStep.env))
+    const client = authClientFor(requireScenarioEnv(scenarioStep).apiUrl)
     const { error } = await client.signUp.email({
       name: email,
       email,
@@ -92,7 +92,7 @@ export const signsInAndReadsSession = pikkuScenarioStep<
   description: 'signs in and reads the session back on a second request',
   template: 'signs in as {email}',
   func: async (_services, { email, password }, { scenarioStep }) => {
-    const client = authClientFor(apiUrlOf(scenarioStep.env))
+    const client = authClientFor(requireScenarioEnv(scenarioStep).apiUrl)
     const { error } = await client.signIn.email({ email, password })
     if (error) {
       return { ok: false, error: `sign-in failed (${error.status})` }
@@ -115,7 +115,7 @@ export const signsOutAndReadsSession = pikkuScenarioStep<
   description: 'signs in, signs out and reads the session back',
   template: 'signs {email} out',
   func: async (_services, { email, password }, { scenarioStep }) => {
-    const client = authClientFor(apiUrlOf(scenarioStep.env))
+    const client = authClientFor(requireScenarioEnv(scenarioStep).apiUrl)
     const signIn = await client.signIn.email({ email, password })
     if (signIn.error) {
       throw new Error(

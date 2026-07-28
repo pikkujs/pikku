@@ -12,7 +12,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { createAuthClient } from 'better-auth/client'
-import { apiUrlOf } from './agent-transport.js'
+import { requireScenarioEnv } from '@pikku/core/workflow'
 
 export interface LinkUser {
   name: string
@@ -90,7 +90,7 @@ export const signsUpLinkUser = pikkuScenarioStep<{ name: string }, LinkUser>({
   description: 'signs a new user up and reports their Better Auth id',
   template: 'signs {name} up',
   func: async (_services, { name }, { scenarioStep }) => {
-    const apiUrl = apiUrlOf(scenarioStep.env)
+    const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const client = createAuthClient({
       baseURL: apiUrl,
       fetchOptions: { customFetchImpl: jarFetchFor(apiUrl) },
@@ -128,7 +128,7 @@ export const startsProviderLink = pikkuScenarioStep<
   description: 'starts an OAuth link and reports its redirect target',
   template: 'starts linking {providerId}',
   func: async (_services, { user, providerId }, { scenarioStep }) => {
-    const apiUrl = apiUrlOf(scenarioStep.env)
+    const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const { cookieFetch } = await sessionFor(apiUrl, user)
     const response = await requestLink(apiUrl, cookieFetch, providerId)
     if (!response.ok) {
@@ -158,7 +158,7 @@ export const linksProvider = pikkuScenarioStep<
   description: 'links an OAuth provider end to end through the mock provider',
   template: 'links {providerId}',
   func: async (_services, { user, providerId }, { scenarioStep }) => {
-    const apiUrl = apiUrlOf(scenarioStep.env)
+    const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const { cookieFetch } = await sessionFor(apiUrl, user)
     const start = await requestLink(apiUrl, cookieFetch, providerId)
     const started = (await start.json()) as { url?: string }
@@ -188,7 +188,10 @@ export const unlinksProvider = pikkuScenarioStep<
   description: "unlinks a provider through the user's own session",
   template: 'unlinks {providerId}',
   func: async (_services, { user, providerId }, { scenarioStep }) => {
-    const { client } = await sessionFor(apiUrlOf(scenarioStep.env), user)
+    const { client } = await sessionFor(
+      requireScenarioEnv(scenarioStep).apiUrl,
+      user
+    )
     const { error } = await client.unlinkAccount({ providerId })
     if (error) {
       throw new Error(
@@ -207,7 +210,10 @@ export const readsLinkedProviders = pikkuScenarioStep<
   description: 'reads the providers currently linked to a user',
   template: 'reads the linked providers',
   func: async (_services, { user }, { scenarioStep }) => {
-    const { client } = await sessionFor(apiUrlOf(scenarioStep.env), user)
+    const { client } = await sessionFor(
+      requireScenarioEnv(scenarioStep).apiUrl,
+      user
+    )
     const { data } = await client.listAccounts()
     return { providers: (data ?? []).map((account) => account.providerId) }
   },
