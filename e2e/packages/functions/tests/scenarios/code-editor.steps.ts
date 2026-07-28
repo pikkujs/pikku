@@ -7,7 +7,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { TypedScenarioActors } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor } from '@pikku/core/workflow'
+import { requireActor, type TestIdSelector } from '@pikku/core/workflow'
 import type {} from '@pikku/playwright'
 
 type Actor = TypedScenarioActors[keyof TypedScenarioActors]
@@ -198,8 +198,16 @@ export const expectsText = pikkuScenarioStep<
   },
 })
 
+/**
+ * Opens a console page and waits for it to have rendered something.
+ *
+ * `waitFor` names the element by test id, the way every other browser step
+ * names what it acts on — never as a raw CSS selector, so a page that has no
+ * test id for its landing element grows one rather than being addressed by its
+ * markup.
+ */
 export const opensConsolePage = pikkuScenarioStep<
-  { path: string; waitFor?: string },
+  { path: string; waitFor?: TestIdSelector },
   { url: string },
   true
 >({
@@ -210,7 +218,10 @@ export const opensConsolePage = pikkuScenarioStep<
   func: async (_services, { path, waitFor }, { browser }) => {
     await browser.goto(path)
     if (waitFor) {
-      await browser.page.waitForSelector(waitFor, { timeout: 15_000 })
+      await browser
+        .locate(waitFor)
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 })
     }
     return { url: browser.page.url() }
   },

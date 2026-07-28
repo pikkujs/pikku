@@ -162,6 +162,7 @@ export const TableListPage = <T,>({
         ) : (
           <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
             <Table
+              data-testid="data-table"
               highlightOnHover={!!onRowClick}
               withRowBorders
               className={classes.tableLastRowBorder}

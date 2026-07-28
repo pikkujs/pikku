@@ -33,7 +33,7 @@ export const credentialsConsoleAdminScenario = pikkuScenario<
     await scenario.given(
       'opens the credentials page',
       'opensConsolePage',
-      { path: CREDENTIALS_PAGE, waitFor: '[data-testid="page-search"]' },
+      { path: CREDENTIALS_PAGE, waitFor: { testId: 'page-search' } },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -79,7 +79,7 @@ export const credentialsConsoleNonAdminRefusedScenario = pikkuScenario<
       'opensConsolePage',
       {
         path: CREDENTIALS_PAGE,
-        waitFor: '[data-testid="console-not-authorized"]',
+        waitFor: { testId: 'console-not-authorized' },
       },
       { actor: actors.guest }
     )

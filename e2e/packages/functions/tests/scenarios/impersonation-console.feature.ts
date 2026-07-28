@@ -39,7 +39,7 @@ export const impersonationConsoleScopeScenario = pikkuScenario<
     await scenario.given(
       'opens the users page',
       'opensConsolePage',
-      { path: USERS_PAGE, waitFor: '[data-testid="user-row"]' },
+      { path: USERS_PAGE, waitFor: { testId: 'user-row' } },
       { actor: actors.admin }
     )
     await scenario.then(

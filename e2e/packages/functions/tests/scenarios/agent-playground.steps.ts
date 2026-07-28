@@ -20,26 +20,41 @@
  */
 import { randomUUID } from 'node:crypto'
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type { PikkuBrowserWire } from '@pikku/core/workflow'
+import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
+import { expect, testIdSelector } from '@pikku/playwright'
 
 /** How long a model-backed turn is given to complete. */
 const RESPONSE_TIMEOUT = 60_000
 
-const COMPOSER = '[data-testid="agent-composer"]'
-const PENDING_APPROVAL = '[data-testid="approval-card"][data-approval-state="pending"]'
+const COMPOSER: TestIdSelector = { testId: 'agent-composer' }
+const PENDING_APPROVAL: TestIdSelector = {
+  testId: 'approval-card',
+  where: { 'data-approval-state': 'pending' },
+}
+
+/** One approval card's own state, whatever it resolved to. */
+const approvalCard = (state: string): TestIdSelector => ({
+  testId: 'approval-card',
+  where: { 'data-approval-state': state },
+})
 
 /**
  * Waits for the composer to be enabled, which is the playground's signal that
  * the runtime is idle again.
+ *
+ * Read off the DOM rather than through a matcher because `disabled` on the
+ * composer is the signal, and it is the runtime's own flag — not a state
+ * Playwright can wait on without also waiting on visibility.
  */
 const waitForComposerEnabled = async (browser: PikkuBrowserWire) => {
   await browser.page.waitForFunction(
-    () => {
+    (selector) => {
       const composer = document.querySelector(
-        '[data-testid="agent-composer"]'
+        selector
       ) as HTMLTextAreaElement | null
       return composer && !composer.disabled
     },
+    testIdSelector(COMPOSER),
     { timeout: RESPONSE_TIMEOUT }
   )
 }
@@ -61,11 +76,11 @@ export const opensAgentPlayground = pikkuScenarioStep<
     // Either the composer or the credential gate is a legitimate landing
     // state — which one appears is the subject of the credential scenarios.
     await Promise.race([
-      browser.page
-        .locator(COMPOSER)
+      browser
+        .locate(COMPOSER)
         .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT }),
-      browser.page
-        .locator('[data-testid="agent-credential-prompt"]')
+      browser
+        .locate({ testId: 'agent-credential-prompt' })
         .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT }),
     ])
     return { threadId }
@@ -100,7 +115,7 @@ export const sendsAgentMessage = pikkuScenarioStep<
   template: 'sends {message}',
   browser: true,
   func: async (_services, { message }, { browser }) => {
-    const input = browser.page.locator(COMPOSER)
+    const input = browser.locate(COMPOSER)
     await waitForComposerEnabled(browser)
 
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -122,12 +137,13 @@ export const sendsAgentMessage = pikkuScenarioStep<
       try {
         await Promise.race([
           browser.page.waitForFunction(
-            () => {
+            (selector) => {
               const composer = document.querySelector(
-                '[data-testid="agent-composer"]'
+                selector
               ) as HTMLTextAreaElement | null
               return composer && composer.value === ''
             },
+            testIdSelector(COMPOSER),
             { timeout: 5_000 }
           ),
           new Promise((_, reject) =>
@@ -168,19 +184,10 @@ export const seesApprovalRequests = pikkuScenarioStep<
   template: 'sees the approval request(s)',
   browser: true,
   func: async (_services, { count }, { browser }) => {
-    const cards = browser.page.locator(PENDING_APPROVAL)
-    await cards
-      .first()
-      .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
+    const cards = browser.locate(PENDING_APPROVAL)
+    await cards.first().waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
     if (count !== undefined) {
-      await browser.page.waitForFunction(
-        (expected) =>
-          document.querySelectorAll(
-            '[data-testid="approval-card"][data-approval-state="pending"]'
-          ).length === expected,
-        count,
-        { timeout: RESPONSE_TIMEOUT }
-      )
+      await expect(cards).toHaveCount(count, { timeout: RESPONSE_TIMEOUT })
     }
     return { count: await cards.count() }
   },
@@ -202,9 +209,10 @@ export const expectsApprovalReason = pikkuScenarioStep<
   template: 'expects the approval reason to mention {containing}',
   browser: true,
   func: async (_services, { containing }, { browser }) => {
-    const reasons = browser.page.locator(
-      `${PENDING_APPROVAL} [data-testid="approval-reason"]`
-    )
+    const reasons = browser.locate({
+      testId: 'approval-reason',
+      within: PENDING_APPROVAL,
+    })
     await reasons
       .first()
       .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
@@ -230,8 +238,8 @@ export const respondsToApproval = pikkuScenarioStep<
   template: '{decision}s the request',
   browser: true,
   func: async (_services, { decision }, { browser }) => {
-    await browser.page
-      .locator(`${PENDING_APPROVAL} [data-testid="approval-${decision}"]`)
+    await browser
+      .locate({ testId: `approval-${decision}`, within: PENDING_APPROVAL })
       .first()
       .click({ timeout: RESPONSE_TIMEOUT })
     await waitForComposerEnabled(browser)
@@ -258,9 +266,10 @@ export const approvesAllPending = pikkuScenarioStep<
   func: async (_services, _data, { browser }) => {
     let approved = 0
     for (let round = 0; round < 10; round++) {
-      const buttons = browser.page.locator(
-        `${PENDING_APPROVAL} [data-testid="approval-approve"]`
-      )
+      const buttons = browser.locate({
+        testId: 'approval-approve',
+        within: PENDING_APPROVAL,
+      })
       const count = await buttons.count()
       if (count === 0) break
       for (let i = 0; i < count; i++) {
@@ -290,13 +299,13 @@ export const deniesNthApprovesRest = pikkuScenarioStep<
   template: 'denies request {nth} and approves the rest',
   browser: true,
   func: async (_services, { nth }, { browser }) => {
-    const pending = browser.page.locator(PENDING_APPROVAL)
+    const pending = browser.locate(PENDING_APPROVAL)
     const count = await pending.count()
     let approved = 0
     for (let i = 0; i < count; i++) {
       const action = i === nth - 1 ? 'deny' : 'approve'
-      await browser.page
-        .locator(`${PENDING_APPROVAL} [data-testid="approval-${action}"]`)
+      await browser
+        .locate({ testId: `approval-${action}`, within: PENDING_APPROVAL })
         .first()
         .click({ timeout: RESPONSE_TIMEOUT })
       if (action === 'approve') approved++
@@ -323,30 +332,22 @@ export const expectsApprovalOutcomes = pikkuScenarioStep<
   browser: true,
   func: async (_services, { approved, denied }, { browser }) => {
     const countOf = async (state: string) =>
-      browser.page
-        .locator(`[data-testid="approval-card"][data-approval-state="${state}"]`)
-        .count()
+      browser.locate(approvalCard(state)).count()
     if (approved !== undefined) {
-      await browser.page.waitForFunction(
-        (expected) =>
-          document.querySelectorAll(
-            '[data-testid="approval-card"][data-approval-state="approved"]'
-          ).length === expected,
+      await expect(browser.locate(approvalCard('approved'))).toHaveCount(
         approved,
         { timeout: RESPONSE_TIMEOUT }
       )
     }
     if (denied !== undefined) {
-      await browser.page.waitForFunction(
-        (expected) =>
-          document.querySelectorAll(
-            '[data-testid="approval-card"][data-approval-state="denied"]'
-          ).length === expected,
-        denied,
-        { timeout: RESPONSE_TIMEOUT }
-      )
+      await expect(browser.locate(approvalCard('denied'))).toHaveCount(denied, {
+        timeout: RESPONSE_TIMEOUT,
+      })
     }
-    return { approved: await countOf('approved'), denied: await countOf('denied') }
+    return {
+      approved: await countOf('approved'),
+      denied: await countOf('denied'),
+    }
   },
 })
 
@@ -417,16 +418,14 @@ export const lastAssistantMessageExcludes = pikkuScenarioStep<
   template: 'expects the last reply to omit {text}',
   browser: true,
   func: async (_services, { text }, { browser }) => {
-    const blocks = browser.page.locator('[data-testid="assistant-block"]')
+    const blocks = browser.locate({ testId: 'assistant-block' })
     const count = await blocks.count()
     if (count === 0) {
       throw new Error('No assistant message has been rendered')
     }
     const last = (await blocks.nth(count - 1).innerText()) ?? ''
     if (last.toLowerCase().includes(text.toLowerCase())) {
-      throw new Error(
-        `Expected the last reply to omit "${text}", got: ${last}`
-      )
+      throw new Error(`Expected the last reply to omit "${text}", got: ${last}`)
     }
     return { checked: last }
   },
@@ -451,7 +450,7 @@ export const expectsNoEmptyAssistantBlocks = pikkuScenarioStep<
   template: 'expects no empty assistant messages',
   browser: true,
   func: async (_services, _data, { browser }) => {
-    const blocks = browser.page.locator('[data-testid="assistant-block"]')
+    const blocks = browser.locate({ testId: 'assistant-block' })
     const count = await blocks.count()
     for (let i = 0; i < count; i++) {
       const text = ((await blocks.nth(i).innerText()) ?? '').trim()
@@ -482,10 +481,14 @@ export const seesCredentialCard = pikkuScenarioStep<
   template: 'sees the conversation ask for {credentialName}',
   browser: true,
   func: async (_services, { credentialName }, { browser }) => {
-    await browser.page
-      .locator(
-        `[data-testid="credential-card"][data-credential-state="pending"][data-credential-name="${credentialName}"]`
-      )
+    await browser
+      .locate({
+        testId: 'credential-card',
+        where: {
+          'data-credential-state': 'pending',
+          'data-credential-name': credentialName,
+        },
+      })
       .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
     return { credentialName }
   },
@@ -510,8 +513,8 @@ export const connectsCredentialViaPopup = pikkuScenarioStep<
   browser: true,
   func: async (_services, _data, { browser }) => {
     const popupOpened = browser.page.waitForEvent('popup')
-    await browser.page
-      .locator('[data-testid="credential-connect"]')
+    await browser
+      .locate({ testId: 'credential-connect' })
       .last()
       .click({ timeout: RESPONSE_TIMEOUT })
     const popup = await popupOpened
@@ -533,13 +536,14 @@ export const seesCredentialPrompt = pikkuScenarioStep<
   template: 'sees the gate asking for {credentialName}',
   browser: true,
   func: async (_services, { credentialName }, { browser }) => {
-    await browser.page
-      .locator('[data-testid="agent-credential-prompt"]')
+    await browser
+      .locate({ testId: 'agent-credential-prompt' })
       .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
-    await browser.page
-      .locator(
-        `[data-testid="agent-credential-requirement"][data-credential-name="${credentialName}"]`
-      )
+    await browser
+      .locate({
+        testId: 'agent-credential-requirement',
+        where: { 'data-credential-name': credentialName },
+      })
       .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
     return { credentialName }
   },

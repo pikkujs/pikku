@@ -35,7 +35,7 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
     await scenario.given(
       'opens the MCP tab',
       'opensConsolePage',
-      { path: MCP_TAB, waitFor: 'table' },
+      { path: MCP_TAB, waitFor: { testId: 'data-table' } },
       { actor: actors.admin }
     )
 
@@ -67,7 +67,7 @@ export const gatewayMetadataScenario = pikkuScenario<void, { listed: true }>({
     await scenario.given(
       'opens the Gateways tab',
       'opensConsolePage',
-      { path: GATEWAYS_TAB, waitFor: 'table' },
+      { path: GATEWAYS_TAB, waitFor: { testId: 'data-table' } },
       { actor: actors.admin }
     )
     await scenario.then(

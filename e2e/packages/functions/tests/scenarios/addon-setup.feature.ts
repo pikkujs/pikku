@@ -62,7 +62,7 @@ export const addonRequirementsScenario = pikkuScenario<void, { setUp: true }>({
     await scenario.given(
       'opens the addon’s setup',
       'opensConsolePage',
-      { path: FAKE_CRM_SETUP, waitFor: `[data-testid="${OAUTH_CARD}"]` },
+      { path: FAKE_CRM_SETUP, waitFor: { testId: OAUTH_CARD } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -153,7 +153,7 @@ export const addonInstanceOverridesScenario = pikkuScenario<
     await scenario.given(
       'opens the addon’s setup',
       'opensConsolePage',
-      { path: MAILGUN_SETUP, waitFor: `[data-testid="${INSTANCE_SELECT}"]` },
+      { path: MAILGUN_SETUP, waitFor: { testId: INSTANCE_SELECT } },
       { actor: actors.admin }
     )
     await scenario.then(
