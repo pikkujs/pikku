@@ -20,7 +20,7 @@ import {
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const SCOPES_PAGE = '/console/scopes'
-const ROLES_READY = '[data-testid="role-row"]'
+const ROLES_READY = { testId: 'role-row' }
 
 const roleRow = (name: string) => ({
   testId: 'role-row',
@@ -600,7 +600,7 @@ export const scopesForbiddenIsNotAnOutageScenario = pikkuScenario<
     await scenario.given(
       'opens the scopes page as staff',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: '[data-testid="roles-forbidden"]' },
+      { path: SCOPES_PAGE, waitFor: { testId: 'roles-forbidden' } },
       { actor: actors.staff }
     )
     await scenario.then(

@@ -15,7 +15,7 @@ import {
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const AUTH_PROVIDERS_PAGE = '/console/auth-providers'
-const PROVIDERS_READY = '[data-testid="auth-provider-row"]'
+const PROVIDERS_READY = { testId: 'auth-provider-row' }
 
 const providerStatus = (id: string, configured: boolean) => ({
   testId: 'auth-provider-status',

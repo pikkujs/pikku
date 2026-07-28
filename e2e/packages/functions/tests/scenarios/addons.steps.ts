@@ -21,8 +21,8 @@ export const searchesAddons = pikkuScenarioStep<
   template: 'searches for {query}',
   browser: true,
   func: async (_services, { query }, { browser }) => {
-    await browser.page
-      .locator('[data-testid="packages-search"]:visible')
+    await browser
+      .locate({ testId: 'packages-search' })
       .first()
       .fill(query, { timeout: 15_000 })
     return { query }
@@ -39,9 +39,10 @@ export const seesAddonCard = pikkuScenarioStep<
   template: 'sees {state} addon {packageName}',
   browser: true,
   func: async (_services, { packageName, state }, { browser }) => {
-    const card = browser.page.locator(
-      `[data-testid="addon-card"][data-addon-package="${packageName}"]`
-    )
+    const card = browser.locate({
+      testId: 'addon-card',
+      where: { 'data-addon-package': packageName },
+    })
     await card.first().waitFor({ state: 'visible', timeout: 15_000 })
     if (state !== undefined) {
       const marked =
@@ -73,7 +74,7 @@ export const countsAddonCards = pikkuScenarioStep<
   template: 'sees exactly {count} addons on offer',
   browser: true,
   func: async (_services, { count }, { browser }) => {
-    const cards = browser.page.locator('[data-testid="addon-card"]')
+    const cards = browser.locate({ testId: 'addon-card' })
     await expect(cards).toHaveCount(count, { timeout: 15_000 })
     return { count }
   },
@@ -98,15 +99,17 @@ export const opensAddonDrawer = pikkuScenarioStep<
   template: 'opens the drawer for {packageName}',
   browser: true,
   func: async (_services, { packageName }, { browser }) => {
-    const card = browser.page
-      .locator(
-        `[data-testid="addon-card"][data-addon-package="${packageName}"]`
-      )
+    const card = browser
+      .locate({
+        testId: 'addon-card',
+        where: { 'data-addon-package': packageName },
+      })
       .first()
     await card.waitFor({ state: 'visible', timeout: 15_000 })
     await card.click()
-    await browser.page
-      .locator('[data-testid="addon-install-name"]')
+    await browser
+      .locate({ testId: 'addon-install-name' })
+      .first()
       .waitFor({ state: 'visible', timeout: 15_000 })
     return { opened: packageName }
   },
@@ -135,8 +138,9 @@ export const landsOnAddonSetup = pikkuScenarioStep<
       (url) => url.href.includes(encodeURIComponent(packageName)),
       { timeout: 30_000 }
     )
-    await browser.page
-      .locator('[data-testid="package-tab-setup"]')
+    await browser
+      .locate({ testId: 'package-tab-setup' })
+      .first()
       .waitFor({ state: 'visible', timeout: 30_000 })
     return { url: browser.page.url() }
   },

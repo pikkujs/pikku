@@ -28,9 +28,10 @@ export const opensWorkflowRun = pikkuScenarioStep<
     await browser.goto(
       `/console/workflow?id=${encodeURIComponent(workflowName)}&runId=${encodeURIComponent(runId)}`
     )
-    await browser.page.waitForSelector('[data-testid="workflow-node"]', {
-      timeout: TIMEOUT,
-    })
+    await browser
+      .locate({ testId: 'workflow-node' })
+      .first()
+      .waitFor({ state: 'visible', timeout: TIMEOUT })
     return { opened: runId }
   },
 })

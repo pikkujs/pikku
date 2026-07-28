@@ -34,7 +34,7 @@ export const securityEmptyStateScenario = pikkuScenario<void, { empty: true }>({
     await scenario.when(
       'opens the security page',
       'opensConsolePage',
-      { path: SECURITY_PAGE, waitFor: '[data-testid="security-run-audit"]' },
+      { path: SECURITY_PAGE, waitFor: { testId: 'security-run-audit' } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -66,7 +66,7 @@ export const securityAuditRunScenario = pikkuScenario<void, { audited: true }>({
     await scenario.given(
       'opens the security page',
       'opensConsolePage',
-      { path: SECURITY_PAGE, waitFor: '[data-testid="security-run-audit"]' },
+      { path: SECURITY_PAGE, waitFor: { testId: 'security-run-audit' } },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -168,7 +168,7 @@ export const webhookDeliveryScenario = pikkuScenario<void, { delivered: true }>(
       await scenario.when(
         'opens the webhooks page',
         'opensConsolePage',
-        { path: WEBHOOKS_PAGE, waitFor: 'table' },
+        { path: WEBHOOKS_PAGE, waitFor: { testId: 'data-table' } },
         { actor: actors.admin }
       )
       await scenario.then(

@@ -19,18 +19,21 @@ export const opensUserRolesDrawer = pikkuScenarioStep<
   browser: true,
   func: async (_services, { email }, { browser }) => {
     await browser.goto('/console/users')
-    await browser.page.waitForSelector('[data-testid="user-row"]', {
-      timeout: TIMEOUT,
-    })
-    await browser.page
-      .locator('[data-testid="user-row"]')
-      .filter({ hasText: email })
-      .locator('[data-testid="user-roles"]')
+    await browser
+      .locate({ testId: 'user-row' })
+      .first()
+      .waitFor({ state: 'visible', timeout: TIMEOUT })
+    await browser
+      .locate({
+        testId: 'user-roles',
+        within: { testId: 'user-row', containing: email },
+      })
       .first()
       .click({ timeout: TIMEOUT })
-    await browser.page.waitForSelector('[data-testid="user-roles-drawer"]', {
-      timeout: TIMEOUT,
-    })
+    await browser
+      .locate({ testId: 'user-roles-drawer' })
+      .first()
+      .waitFor({ state: 'visible', timeout: TIMEOUT })
     return { opened: email }
   },
 })

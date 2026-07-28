@@ -196,7 +196,7 @@ export const codeEditorConsoleScenario = pikkuScenario<
     await scenario.given(
       'opens the functions page',
       'opensConsolePage',
-      { path: '/console/functions', waitFor: 'table' },
+      { path: '/console/functions', waitFor: { testId: 'data-table' } },
       { actor: actors.admin, description: 'opens the functions page' }
     )
     await scenario.when(
