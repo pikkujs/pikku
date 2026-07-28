@@ -18,8 +18,6 @@ import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { TestIdSelector } from '@pikku/core/workflow'
 import { expect } from '@pikku/playwright'
 
-const TIMEOUT = 15_000
-
 /**
  * Where an element is looked up: its test id, optionally as a prefix, plus the
  * data attributes it has to carry. Attributes are how a status is asserted
@@ -49,7 +47,7 @@ export const seesText = pikkuScenarioStep<
     await browser.page
       .getByText(text, { exact: false })
       .first()
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+      .waitFor({ state: 'visible' })
     return { visible: true }
   },
 })
@@ -74,7 +72,7 @@ export const doesNotSeeText = pikkuScenarioStep<
     await browser.page
       .getByText(text, { exact: false })
       .first()
-      .waitFor({ state: 'detached', timeout: TIMEOUT })
+      .waitFor({ state: 'detached' })
     return { absent: true }
   },
 })
@@ -93,7 +91,7 @@ export const clicksButton = pikkuScenarioStep<
       .getByRole('button', { name })
       .filter({ visible: true })
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     return { clicked: name }
   },
 })
@@ -108,10 +106,7 @@ export const clicksLink = pikkuScenarioStep<
   template: 'clicks the {name} link',
   browser: true,
   func: async (_services, { name }, { browser }) => {
-    await browser.page
-      .getByRole('link', { name })
-      .first()
-      .click({ timeout: TIMEOUT })
+    await browser.page.getByRole('link', { name }).first().click()
     return { clicked: name }
   },
 })
@@ -145,7 +140,7 @@ export const clicksTestId = pikkuScenarioStep<
       containing,
       within,
     })
-    await target.first().click({ timeout: TIMEOUT })
+    await target.first().click()
     return { clicked: containing ? `${testId}:${containing}` : testId }
   },
 })
@@ -188,9 +183,7 @@ export const seesTestId = pikkuScenarioStep<
       containing,
       within,
     })
-    await target
-      .first()
-      .waitFor({ state: 'visible', timeout: timeoutMs ?? TIMEOUT })
+    await target.first().waitFor({ state: 'visible', timeout: timeoutMs })
     const found = await target.count()
     if (count !== undefined && found !== count) {
       throw new Error(`Expected ${count} ${testId} element(s), got ${found}`)
@@ -229,7 +222,7 @@ export const doesNotSeeTestId = pikkuScenarioStep<
     await browser
       .locate({ testId, prefix, where, containing, within }, { visible: false })
       .first()
-      .waitFor({ state: 'detached', timeout: TIMEOUT })
+      .waitFor({ state: 'detached' })
     return { absent: true }
   },
 })
@@ -255,7 +248,7 @@ export const selectsSegment = pikkuScenarioStep<
     await browser.page
       .locator(`label[for$="-${value}"]:visible`)
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     return { selected: value }
   },
 })
@@ -281,7 +274,7 @@ export const selectsTab = pikkuScenarioStep<
     await browser
       .locate({ testId: 'switch-tab', where: { 'data-value': value } })
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     return { selected: value }
   },
 })
@@ -313,7 +306,7 @@ export const readsTestIdText = pikkuScenarioStep<
     const target = browser
       .locate({ testId, prefix, where, containing, within })
       .first()
-    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await target.waitFor({ state: 'visible' })
     return { text: (await target.textContent()) ?? '' }
   },
 })
@@ -339,7 +332,7 @@ export const seesTableRow = pikkuScenarioStep<
       .locator('table tbody tr')
       .filter({ hasText: containing })
       .first()
-    await row.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await row.waitFor({ state: 'visible' })
     if (andContaining !== undefined) {
       const text = (await row.textContent()) ?? ''
       if (!text.includes(andContaining)) {
@@ -365,7 +358,7 @@ export const doesNotSeeTableRow = pikkuScenarioStep<
     await browser.page
       .locator('table tbody tr')
       .first()
-      .waitFor({ state: 'visible', timeout: TIMEOUT })
+      .waitFor({ state: 'visible' })
     const rows = browser.page
       .locator('table tbody tr')
       .filter({ hasText: containing })
@@ -398,7 +391,7 @@ export const readsFlowCast = pikkuScenarioStep<
     const card = browser.page.locator(
       `[data-testid="scenario-section-${flow}"]`
     )
-    await card.first().waitFor({ state: 'visible', timeout: TIMEOUT })
+    await card.first().waitFor({ state: 'visible' })
     return {
       cast: await card
         .first()
@@ -439,10 +432,7 @@ export const fillsField = pikkuScenarioStep<
   template: 'fills {label}',
   browser: true,
   func: async (_services, { label, value }, { browser }) => {
-    await browser.page
-      .getByLabel(label)
-      .first()
-      .fill(value, { timeout: TIMEOUT })
+    await browser.page.getByLabel(label).first().fill(value)
     return { filled: label }
   },
 })
@@ -475,7 +465,7 @@ export const fillsTestId = pikkuScenarioStep<
     await browser
       .locate({ testId, prefix, where, containing, within })
       .first()
-      .fill(value, { timeout: TIMEOUT })
+      .fill(value)
     return { filled: testId }
   },
 })
@@ -512,16 +502,16 @@ export const expectsControl = pikkuScenarioStep<
   ) => {
     const target = browser.locate({ testId, where, containing, within }).first()
     if (enabled === true) {
-      await expect(target).toBeEnabled({ timeout: TIMEOUT })
+      await expect(target).toBeEnabled()
     }
     if (enabled === false) {
-      await expect(target).toBeDisabled({ timeout: TIMEOUT })
+      await expect(target).toBeDisabled()
     }
     if (checked === true) {
-      await expect(target).toBeChecked({ timeout: TIMEOUT })
+      await expect(target).toBeChecked()
     }
     if (checked === false) {
-      await expect(target).not.toBeChecked({ timeout: TIMEOUT })
+      await expect(target).not.toBeChecked()
     }
     return {
       enabled: await target.isEnabled(),
@@ -567,11 +557,11 @@ export const selectsOption = pikkuScenarioStep<
     await browser
       .locate({ testId, prefix, where, containing, within })
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     await browser.page
       .getByRole('option', { name: value, exact: true })
       .first()
-      .click({ timeout: TIMEOUT })
+      .click()
     return { selected: value }
   },
 })
@@ -586,9 +576,7 @@ export const expectsUrl = pikkuScenarioStep<
   template: 'expects the url to contain {contains}',
   browser: true,
   func: async (_services, { contains }, { browser }) => {
-    await browser.page.waitForURL((url) => url.href.includes(contains), {
-      timeout: TIMEOUT,
-    })
+    await browser.page.waitForURL((url) => url.href.includes(contains), {})
     return { url: browser.page.url() }
   },
 })
@@ -625,7 +613,7 @@ export const opensTestIdWithKeyboard = pikkuScenarioStep<
     const target = browser
       .locate({ testId, prefix, where, containing, within })
       .first()
-    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await target.waitFor({ state: 'visible' })
     await target.focus()
     await target.press('Enter')
     return { opened: testId }
@@ -660,7 +648,7 @@ export const expectsTestIdValue = pikkuScenarioStep<
     const target = browser
       .locate({ testId, prefix, where, containing, within })
       .first()
-    await target.waitFor({ state: 'visible', timeout: TIMEOUT })
+    await target.waitFor({ state: 'visible' })
     const actual = await target.inputValue()
     if (actual !== value) {
       throw new Error(`Expected ${testId} to hold "${value}", got "${actual}"`)
@@ -702,10 +690,10 @@ export const navigatesInConsole = pikkuScenarioStep<
           { testId: 'nav-section', where: { 'data-section': section } },
           { visible: false }
         )
-        .click({ timeout: TIMEOUT })
+        .click()
     }
-    await link.click({ timeout: TIMEOUT })
-    await browser.page.waitForURL(`**${href}`, { timeout: TIMEOUT })
+    await link.click()
+    await browser.page.waitForURL(`**${href}`)
     return { href }
   },
 })

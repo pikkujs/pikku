@@ -21,8 +21,6 @@ import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { PikkuBrowserWire } from '@pikku/core/workflow'
 import { expect } from '@pikku/playwright'
 
-const TIMEOUT = 15_000
-
 const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
 
 interface RecordedRequest {
@@ -68,15 +66,11 @@ export const impersonatesUser = pikkuScenarioStep<
   template: 'impersonates {email}',
   browser: true,
   func: async (_services, { email }, { browser }) => {
-    await browser
-      .locate({ testId: 'impersonate-open' })
-      .click({ timeout: TIMEOUT })
-    await browser
-      .locate({ testId: 'impersonate-search' })
-      .fill(email, { timeout: TIMEOUT })
+    await browser.locate({ testId: 'impersonate-open' }).click()
+    await browser.locate({ testId: 'impersonate-search' }).fill(email)
     await browser
       .locate({ testId: 'impersonate-user', containing: email })
-      .click({ timeout: TIMEOUT })
+      .click()
     return { impersonating: email }
   },
 })
@@ -91,9 +85,7 @@ export const stopsImpersonating = pikkuScenarioStep<
   template: 'stops impersonating',
   browser: true,
   func: async (_services, _data, { browser }) => {
-    await browser
-      .locate({ testId: 'impersonation-stop' })
-      .click({ timeout: TIMEOUT })
+    await browser.locate({ testId: 'impersonation-stop' }).click()
     return { stopped: true }
   },
 })
@@ -118,15 +110,11 @@ export const searchesUsers = pikkuScenarioStep<
   browser: true,
   func: async (_services, { query }, { browser }) => {
     const requests = await recording(browser, async () => {
-      await browser
-        .locate({ testId: 'page-search' })
-        .fill(query, { timeout: TIMEOUT })
-      await expect(browser.locate({ testId: 'user-row' })).toHaveCount(1, {
-        timeout: TIMEOUT,
-      })
+      await browser.locate({ testId: 'page-search' }).fill(query)
+      await expect(browser.locate({ testId: 'user-row' })).toHaveCount(1, {})
       await expect(
         browser.locate({ testId: 'user-row', containing: query })
-      ).toBeVisible({ timeout: TIMEOUT })
+      ).toBeVisible()
     })
     return { requests }
   },
@@ -152,26 +140,18 @@ export const startsWorkflowRunFromConsole = pikkuScenarioStep<
   template: 'starts a run from the console',
   browser: true,
   func: async (_services, { input }, { browser }) => {
-    await browser
-      .locate({ testId: 'runs-panel-new' })
-      .click({ timeout: TIMEOUT })
-    await browser
-      .locate({ testId: 'schema-form' })
-      .waitFor({ timeout: TIMEOUT })
+    await browser.locate({ testId: 'runs-panel-new' }).click()
+    await browser.locate({ testId: 'schema-form' }).waitFor()
 
     for (const [field, value] of Object.entries(input)) {
-      await browser.page
-        .locator(`#root_${field}`)
-        .fill(value, { timeout: TIMEOUT })
+      await browser.page.locator(`#root_${field}`).fill(value)
     }
 
     const requests = await recording(browser, async () => {
-      await browser
-        .locate({ testId: 'schema-form-submit' })
-        .click({ timeout: TIMEOUT })
+      await browser.locate({ testId: 'schema-form-submit' }).click()
       await expect(
         browser.locate({ testId: 'schema-form' }, { visible: false })
-      ).toBeHidden({ timeout: TIMEOUT })
+      ).toBeHidden()
     })
     return { requests }
   },

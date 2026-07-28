@@ -1,4 +1,5 @@
 import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
+import { pollUntil } from '@pikku/core/workflow'
 import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
 import type { BrowserConfig } from './config.js'
 import { locateTestId, type LocateTestIdOptions } from './testid.js'
@@ -162,35 +163,41 @@ export class ActorSession implements PikkuBrowserWire {
    * navigation / cookies touched).
    */
   async waitForServerReady(maxMs = 30_000) {
-    const deadline = Date.now() + maxMs
-    while (Date.now() < deadline) {
-      try {
-        const res = await fetch(this.url('/api/auth/get-session'), {
-          method: 'GET',
-          signal: AbortSignal.timeout(5_000),
-        })
-        const s = res.status
-        if (s !== 502 && s !== 503 && s !== 504) return
-      } catch {
-        // Connection refused/reset — server not back yet; keep polling.
-      }
-      await new Promise((r) => setTimeout(r, 500))
-    }
+    await pollUntil(
+      async () => {
+        try {
+          const res = await fetch(this.url('/api/auth/get-session'), {
+            method: 'GET',
+            signal: AbortSignal.timeout(5_000),
+          })
+          const s = res.status
+          return s !== 502 && s !== 503 && s !== 504 ? true : undefined
+        } catch {
+          // Connection refused/reset — server not back yet; keep polling.
+          return undefined
+        }
+      },
+      { timeoutMs: maxMs, intervalMs: 500 }
+    )
   }
 
   /** Resolve once in-flight /api requests have drained (stably), or the cap elapses. */
   private async waitForApiQuiet(maxMs: number) {
-    const deadline = Date.now() + maxMs
     let quietSince = 0
-    while (Date.now() < deadline) {
-      if (this.inflightApi <= 0) {
-        if (!quietSince) quietSince = Date.now()
-        else if (Date.now() - quietSince >= 150) return
-      } else {
-        quietSince = 0
-      }
-      await this.page.waitForTimeout(50)
-    }
+    await pollUntil(
+      () => {
+        if (this.inflightApi > 0) {
+          quietSince = 0
+          return undefined
+        }
+        if (!quietSince) {
+          quietSince = Date.now()
+          return undefined
+        }
+        return Date.now() - quietSince >= 150 ? true : undefined
+      },
+      { timeoutMs: maxMs, intervalMs: 50 }
+    )
   }
 
   async logout() {
@@ -201,24 +208,28 @@ export class ActorSession implements PikkuBrowserWire {
   /** Assert visible text, polling until the timeout (handles late renders). */
   async expectText(text: string, timeout = this.config.timeout) {
     const locator = this.page.getByText(text, { exact: false })
-    const deadline = Date.now() + timeout
-    while (Date.now() < deadline) {
-      const count = await locator.count()
-      for (let i = 0; i < count; i++) {
-        if (
-          await locator
-            .nth(i)
-            .isVisible()
-            .catch(() => false)
-        ) {
-          return
+    const seen = await pollUntil(
+      async () => {
+        const count = await locator.count()
+        for (let i = 0; i < count; i++) {
+          if (
+            await locator
+              .nth(i)
+              .isVisible()
+              .catch(() => false)
+          ) {
+            return true
+          }
         }
-      }
-      await this.page.waitForTimeout(100)
-    }
-    throw new Error(
-      `Timed out waiting for visible text (${this.actor}): ${text}`
+        return undefined
+      },
+      { timeoutMs: timeout, intervalMs: 100 }
     )
+    if (!seen) {
+      throw new Error(
+        `Timed out waiting for visible text (${this.actor}): ${text}`
+      )
+    }
   }
 
   async getPageText(): Promise<string> {
