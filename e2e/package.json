@@ -20,7 +20,7 @@
     "test:console": "yarn scenarios local --spawn --tags console --exclude-tags ai-live,test-fixture",
     "test:ai-live": "PIKKU_MOCK_LLM=0 yarn scenarios local --spawn --tags ai-live",
     "test:scenario-run": "node --import tsx --test tests/cli/*.test.ts",
-    "test:unit": "node --import tsx --test bin/*.test.ts",
+    "test:unit": "node --import tsx --test bin/*.test.ts packages/functions/tests/scenarios/*.test.ts",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {

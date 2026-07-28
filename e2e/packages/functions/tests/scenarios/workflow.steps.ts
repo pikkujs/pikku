@@ -13,11 +13,12 @@
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import {
   pollUntil,
+  postScenarioJson,
   readScenarioHttpResponse,
-  readScenarioSseEvents,
   requireScenarioEnv,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
+import { readSseEvents } from './support.js'
 
 /** What the workflow route answered, plus what it says about the run itself. */
 export interface WorkflowRunResult extends ScenarioHttpResponse {
@@ -48,20 +49,17 @@ const postWorkflow = async (
   input: unknown,
   userId?: string
 ): Promise<WorkflowRunResult> => {
-  const response = await readScenarioHttpResponse(
-    await fetch(`${apiUrl}/workflow/${workflowName}/${action}`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(userId ? { 'x-user-id': userId } : {}),
-      },
-      body: JSON.stringify({ data: input ?? {} }),
-    })
+  const response = await postScenarioJson<{ runId?: string } | undefined>(
+    `${apiUrl}/workflow/${workflowName}/${action}`,
+    {
+      body: { data: input ?? {} },
+      headers: userId ? { 'x-user-id': userId } : {},
+    }
   )
   return {
     ...response,
     workflowName,
-    runId: (response.body as { runId?: string } | null)?.runId,
+    runId: response.body?.runId,
     outcome: outcomeOf(response.status, response.body),
   }
 }
@@ -122,13 +120,15 @@ export const awaitsWorkflowRun = pikkuScenarioStep<
     let last = ''
     const finished = await pollUntil(
       async () => {
-        const response = await readScenarioHttpResponse(
+        const response = await readScenarioHttpResponse<
+          { status?: string } | undefined
+        >(
           await fetch(
             `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`
           )
         )
         last = response.serialized
-        const reported = (response.body as { status?: string } | null)?.status
+        const reported = response.body?.status
         return reported && TERMINAL.includes(reported)
           ? {
               ...response,
@@ -221,7 +221,7 @@ export const drainsWorkflowStatusStream = pikkuScenarioStep<
     if (!response.ok) {
       throw new Error(`The status stream refused with ${response.status}`)
     }
-    const events = await readScenarioSseEvents<{ status?: string }>(response)
+    const events = await readSseEvents<{ status?: string }>(response)
     const withStatus = events.filter((event) => event.status)
     return {
       count: events.length,

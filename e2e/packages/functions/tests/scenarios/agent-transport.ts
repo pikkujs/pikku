@@ -12,10 +12,10 @@
  * therefore step *data* here, and only here.
  */
 import {
-  readScenarioHttpResponse,
-  readScenarioSseEvents,
+  postScenarioJson,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
+import { readSseEvents } from './support.js'
 import type { MockLlmCall } from '../../src/mock-llm/provider.js'
 
 export type { MockLlmCall }
@@ -55,10 +55,6 @@ export const AG_UI = {
 export type StreamEvent = { type: string; [key: string]: unknown }
 
 /**
- * What the transport answered. The same record `actor.invokeRaw` returns, so a
- * scenario reads a header-shim call and an actor call the same way.
- */
-/**
  * POSTs to an agent's sync route as a given principal.
  *
  * Never throws on a non-2xx: a refusal is the expected outcome in twelve of
@@ -70,16 +66,10 @@ export const postAgent = async (
   identity: Identity,
   body: Record<string, unknown>
 ): Promise<ScenarioHttpResponse> =>
-  readScenarioHttpResponse(
-    await fetch(`${apiUrl}/rpc/agent/${agent}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...identityHeaders(identity),
-      },
-      body: JSON.stringify(body),
-    })
-  )
+  postScenarioJson(`${apiUrl}/rpc/agent/${agent}`, {
+    body,
+    headers: identityHeaders(identity),
+  })
 
 /**
  * POSTs a batch of approval decisions to an agent's approve route.
@@ -93,16 +83,10 @@ export const postAgentApproval = async (
   identity: Identity,
   body: Record<string, unknown>
 ): Promise<ScenarioHttpResponse> =>
-  readScenarioHttpResponse(
-    await fetch(`${apiUrl}/rpc/agent/${agent}/approve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...identityHeaders(identity),
-      },
-      body: JSON.stringify(body),
-    })
-  )
+  postScenarioJson(`${apiUrl}/rpc/agent/${agent}/approve`, {
+    body,
+    headers: identityHeaders(identity),
+  })
 
 /** Calls an exposed RPC as a given principal. */
 export const postRpc = async (
@@ -111,16 +95,10 @@ export const postRpc = async (
   identity: Identity,
   data: Record<string, unknown>
 ): Promise<ScenarioHttpResponse> =>
-  readScenarioHttpResponse(
-    await fetch(`${apiUrl}/rpc/${rpcName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...identityHeaders(identity),
-      },
-      body: JSON.stringify({ rpcName, data }),
-    })
-  )
+  postScenarioJson(`${apiUrl}/rpc/${rpcName}`, {
+    body: { rpcName, data },
+    headers: identityHeaders(identity),
+  })
 
 /**
  * POSTs to an agent's SSE route and drains the whole response.
@@ -147,7 +125,7 @@ export const postAgentStream = async (
 
   return {
     status: res.status,
-    events: await readScenarioSseEvents<StreamEvent>(res),
+    events: await readSseEvents<StreamEvent>(res),
   }
 }
 

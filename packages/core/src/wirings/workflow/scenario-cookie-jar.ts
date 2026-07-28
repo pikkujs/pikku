@@ -4,7 +4,12 @@ export interface ScenarioCookieJar {
   fetch: typeof fetch
   /** Forgets the session — what an actor does before signing in again. */
   clear(): void
-  /** Whether the target has set anything yet. */
+  /**
+   * Whether the target has set anything yet. This is a fact about the jar, not
+   * about the session: a target that sets a CSRF or locale cookie before anyone
+   * signs in fills the jar without establishing one. Whoever needs to know
+   * whether a sign-in happened has to track the sign-in.
+   */
   readonly empty: boolean
 }
 
@@ -29,18 +34,25 @@ export const createCookieJar = (apiUrl: string): ScenarioCookieJar => {
     fetch: async (input, init) => {
       const headers = new Headers(init?.headers)
       headers.set('origin', origin)
-      if (jar.size > 0) {
-        headers.set(
-          'cookie',
-          [...jar].map(([name, value]) => `${name}=${value}`).join('; ')
-        )
+      const held = [...jar].map(([name, value]) => `${name}=${value}`)
+      const caller = headers.get('cookie')
+      if (held.length > 0 || caller) {
+        headers.set('cookie', [caller, ...held].filter(Boolean).join('; '))
       }
       const response = await fetch(input, { ...init, headers })
       for (const raw of response.headers.getSetCookie()) {
         const [pair] = raw.split(';')
         const separator = pair!.indexOf('=')
         if (separator > 0) {
-          jar.set(pair!.slice(0, separator), pair!.slice(separator + 1))
+          const name = pair!.slice(0, separator)
+          const value = pair!.slice(separator + 1)
+          // An empty value is how a target deletes a cookie — drop the name
+          // rather than holding a cookie whose value says it is gone.
+          if (value) {
+            jar.set(name, value)
+          } else {
+            jar.delete(name)
+          }
         }
       }
       return response

@@ -133,15 +133,18 @@ export type {
   PikkuScenarioWire,
 } from './workflow.types.js'
 
-// Re-export scenario step types
+/* ------------------------------------------------------------------ *
+ * Scenarios — writing a step
+ *
+ * What a step file imports. Everything here is reached from inside a
+ * `pikkuScenarioStep` body.
+ * ------------------------------------------------------------------ */
+
+// The step's own wire, and the shape of what it was given
 export type {
   ScenarioStepPhase,
   ScenarioStepOptions,
   PikkuScenarioStepWire,
-  PikkuBrowserWire,
-  TestIdSelector,
-  ScenarioBrowserProvider,
-  ScenarioBrowserFailure,
   ScenarioEnvironment,
 } from './scenario-step.types.js'
 
@@ -155,16 +158,36 @@ export { pollUntil, type PollOptions } from './scenario-poll.js'
 export { createCookieJar } from './scenario-cookie-jar.js'
 export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
 
-// Drains an event stream into the events it carried, frames joined per spec
-export { readScenarioSseEvents } from './scenario-sse.js'
-
-// What the transport answered — an actor's `invokeRaw`, or a route reached directly
-export type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
-export { readScenarioHttpResponse } from '../../services/scenario-actors-service.js'
-
-// Renders the English a reporter shows for a scenario step
+// What the transport answered — an actor's `invokeRaw`, or a route reached
+// directly — and the one way to POST JSON at a route and keep its status
+export type {
+  ScenarioHttpResponse,
+  ScenarioJsonRequest,
+} from '../../services/scenario-actors-service.js'
 export {
-  composeStepProse,
-  describeValue,
-  renderStepTemplate,
-} from './scenario-prose.js'
+  readScenarioHttpResponse,
+  postScenarioJson,
+} from '../../services/scenario-actors-service.js'
+
+/* ------------------------------------------------------------------ *
+ * Scenarios — driving a browser
+ *
+ * How a step names an element, and what a driver package
+ * (`@pikku/playwright`, or another) implements.
+ * ------------------------------------------------------------------ */
+
+export type {
+  PikkuBrowserWire,
+  TestIdSelector,
+  ScenarioBrowserProvider,
+  ScenarioBrowserFailure,
+} from './scenario-step.types.js'
+
+/* ------------------------------------------------------------------ *
+ * Scenarios — reporting a run
+ *
+ * Used by the CLI reporter and the console, so the two render the same
+ * sentence for the same step. A step body needs none of it.
+ * ------------------------------------------------------------------ */
+
+export { composeStepProse, renderStepTemplate } from './scenario-prose.js'

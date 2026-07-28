@@ -112,15 +112,7 @@ export const clicksLink = pikkuScenarioStep<
 })
 
 export const clicksTestId = pikkuScenarioStep<
-  {
-    testId: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    where?: Record<string, string>
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector,
   { clicked: string },
   true
 >({
@@ -128,37 +120,15 @@ export const clicksTestId = pikkuScenarioStep<
   description: 'clicks an element by its test id',
   template: 'clicks {testId}',
   browser: true,
-  func: async (
-    _services,
-    { testId, prefix, where, containing, within },
-    { browser }
-  ) => {
-    const target = browser.locate({
-      testId,
-      prefix,
-      where,
-      containing,
-      within,
-    })
-    await target.first().click()
+  func: async (_services, selector, { browser }) => {
+    await browser.locate(selector).first().click()
+    const { testId, containing } = selector
     return { clicked: containing ? `${testId}:${containing}` : testId }
   },
 })
 
 export const seesTestId = pikkuScenarioStep<
-  {
-    testId: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    containing?: string
-    /**
-     * Data attributes the element must also carry, e.g.
-     * `{ 'data-connected': 'false' }`. This is how a status is asserted without
-     * reading the console's own translated copy back to it.
-     */
-    where?: Record<string, string>
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
+  TestIdSelector & {
     count?: number
     atLeast?: number
     /** Overrides the default wait, for a state that arrives via a redirect. */
@@ -173,24 +143,20 @@ export const seesTestId = pikkuScenarioStep<
   browser: true,
   func: async (
     _services,
-    { testId, prefix, containing, where, within, count, atLeast, timeoutMs },
+    { count, atLeast, timeoutMs, ...selector },
     { browser }
   ) => {
-    const target = browser.locate({
-      testId,
-      prefix,
-      where,
-      containing,
-      within,
-    })
+    const target = browser.locate(selector)
     await target.first().waitFor({ state: 'visible', timeout: timeoutMs })
     const found = await target.count()
     if (count !== undefined && found !== count) {
-      throw new Error(`Expected ${count} ${testId} element(s), got ${found}`)
+      throw new Error(
+        `Expected ${count} ${selector.testId} element(s), got ${found}`
+      )
     }
     if (atLeast !== undefined && found < atLeast) {
       throw new Error(
-        `Expected at least ${atLeast} ${testId} element(s), got ${found}`
+        `Expected at least ${atLeast} ${selector.testId} element(s), got ${found}`
       )
     }
     return { count: found }
@@ -198,15 +164,7 @@ export const seesTestId = pikkuScenarioStep<
 })
 
 export const doesNotSeeTestId = pikkuScenarioStep<
-  {
-    testId: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    where?: Record<string, string>
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector,
   { absent: true },
   true
 >({
@@ -214,13 +172,9 @@ export const doesNotSeeTestId = pikkuScenarioStep<
   description: 'expects an element with a given test id to be absent',
   template: 'does not see {testId}',
   browser: true,
-  func: async (
-    _services,
-    { testId, prefix, where, containing, within },
-    { browser }
-  ) => {
+  func: async (_services, selector, { browser }) => {
     await browser
-      .locate({ testId, prefix, where, containing, within }, { visible: false })
+      .locate(selector, { visible: false })
       .first()
       .waitFor({ state: 'detached' })
     return { absent: true }
@@ -280,17 +234,7 @@ export const selectsTab = pikkuScenarioStep<
 })
 
 export const readsTestIdText = pikkuScenarioStep<
-  {
-    testId: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    /** Data attributes the element must also carry. */
-    where?: Record<string, string>
-    /** Narrow to the one match holding this text. */
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector,
   { text: string },
   true
 >({
@@ -298,14 +242,8 @@ export const readsTestIdText = pikkuScenarioStep<
   description: 'reads the text of an element by its test id',
   template: 'reads {testId}',
   browser: true,
-  func: async (
-    _services,
-    { testId, prefix, where, containing, within },
-    { browser }
-  ) => {
-    const target = browser
-      .locate({ testId, prefix, where, containing, within })
-      .first()
+  func: async (_services, selector, { browser }) => {
+    const target = browser.locate(selector).first()
     await target.waitFor({ state: 'visible' })
     return { text: (await target.textContent()) ?? '' }
   },
@@ -438,18 +376,7 @@ export const fillsField = pikkuScenarioStep<
 })
 
 export const fillsTestId = pikkuScenarioStep<
-  {
-    testId: string
-    value: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    /** Data attributes the element must also carry. */
-    where?: Record<string, string>
-    /** Narrow to the one match holding this text. */
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector & { value: string },
   { filled: string },
   true
 >({
@@ -457,16 +384,9 @@ export const fillsTestId = pikkuScenarioStep<
   description: 'fills a form field by its test id',
   template: 'fills {testId}',
   browser: true,
-  func: async (
-    _services,
-    { testId, value, prefix, where, containing, within },
-    { browser }
-  ) => {
-    await browser
-      .locate({ testId, prefix, where, containing, within })
-      .first()
-      .fill(value)
-    return { filled: testId }
+  func: async (_services, { value, ...selector }, { browser }) => {
+    await browser.locate(selector).first().fill(value)
+    return { filled: selector.testId }
   },
 })
 
@@ -479,15 +399,7 @@ export const fillsTestId = pikkuScenarioStep<
  * it has round-tripped.
  */
 export const expectsControl = pikkuScenarioStep<
-  {
-    testId: string
-    where?: Record<string, string>
-    /** Narrow to the one match holding this text. */
-    containing?: string
-    within?: TestIdSelector
-    enabled?: boolean
-    checked?: boolean
-  },
+  TestIdSelector & { enabled?: boolean; checked?: boolean },
   { enabled: boolean; checked: boolean },
   true
 >({
@@ -495,12 +407,8 @@ export const expectsControl = pikkuScenarioStep<
   description: 'expects a control to be in a given enabled/checked state',
   template: 'expects {testId} to be in the expected state',
   browser: true,
-  func: async (
-    _services,
-    { testId, where, containing, within, enabled, checked },
-    { browser }
-  ) => {
-    const target = browser.locate({ testId, where, containing, within }).first()
+  func: async (_services, { enabled, checked, ...selector }, { browser }) => {
+    const target = browser.locate(selector).first()
     if (enabled === true) {
       await expect(target).toBeEnabled()
     }
@@ -530,18 +438,7 @@ export const expectsControl = pikkuScenarioStep<
  * `exact` matters whenever one option's value is a prefix of another's.
  */
 export const selectsOption = pikkuScenarioStep<
-  {
-    testId: string
-    value: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    /** Data attributes the element must also carry. */
-    where?: Record<string, string>
-    /** Narrow to the one match holding this text. */
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector & { value: string },
   { selected: string },
   true
 >({
@@ -549,15 +446,8 @@ export const selectsOption = pikkuScenarioStep<
   description: 'picks an option on a select',
   template: 'picks {value}',
   browser: true,
-  func: async (
-    _services,
-    { testId, value, prefix, where, containing, within },
-    { browser }
-  ) => {
-    await browser
-      .locate({ testId, prefix, where, containing, within })
-      .first()
-      .click()
+  func: async (_services, { value, ...selector }, { browser }) => {
+    await browser.locate(selector).first().click()
     await browser.page
       .getByRole('option', { name: value, exact: true })
       .first()
@@ -587,17 +477,7 @@ export const expectsUrl = pikkuScenarioStep<
  * focused by script but will not act on Enter.
  */
 export const opensTestIdWithKeyboard = pikkuScenarioStep<
-  {
-    testId: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    /** Data attributes the element must also carry. */
-    where?: Record<string, string>
-    /** Narrow to the one match holding this text. */
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector,
   { opened: string },
   true
 >({
@@ -605,34 +485,17 @@ export const opensTestIdWithKeyboard = pikkuScenarioStep<
   description: 'focuses an element and opens it with the keyboard',
   template: 'opens {testId} with the keyboard',
   browser: true,
-  func: async (
-    _services,
-    { testId, prefix, where, containing, within },
-    { browser }
-  ) => {
-    const target = browser
-      .locate({ testId, prefix, where, containing, within })
-      .first()
+  func: async (_services, selector, { browser }) => {
+    const target = browser.locate(selector).first()
     await target.waitFor({ state: 'visible' })
     await target.focus()
     await target.press('Enter')
-    return { opened: testId }
+    return { opened: selector.testId }
   },
 })
 
 export const expectsTestIdValue = pikkuScenarioStep<
-  {
-    testId: string
-    value: string
-    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
-    prefix?: boolean
-    /** Data attributes the element must also carry. */
-    where?: Record<string, string>
-    /** Narrow to the one match holding this text. */
-    containing?: string
-    /** Scopes the lookup to one element, e.g. the row for one user. */
-    within?: TestIdSelector
-  },
+  TestIdSelector & { value: string },
   { value: string },
   true
 >({
@@ -640,18 +503,14 @@ export const expectsTestIdValue = pikkuScenarioStep<
   description: 'expects a form field to hold a given value',
   template: 'expects {testId} to hold {value}',
   browser: true,
-  func: async (
-    _services,
-    { testId, value, prefix, where, containing, within },
-    { browser }
-  ) => {
-    const target = browser
-      .locate({ testId, prefix, where, containing, within })
-      .first()
+  func: async (_services, { value, ...selector }, { browser }) => {
+    const target = browser.locate(selector).first()
     await target.waitFor({ state: 'visible' })
     const actual = await target.inputValue()
     if (actual !== value) {
-      throw new Error(`Expected ${testId} to hold "${value}", got "${actual}"`)
+      throw new Error(
+        `Expected ${selector.testId} to hold "${value}", got "${actual}"`
+      )
     }
     return { value: actual }
   },
