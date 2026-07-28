@@ -12,7 +12,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { createAuthClient } from 'better-auth/client'
-import { requireScenarioEnv } from '@pikku/core/workflow'
+import { createCookieJar, requireScenarioEnv } from '@pikku/core/workflow'
 
 export interface LinkUser {
   name: string
@@ -24,31 +24,8 @@ export interface LinkUser {
 
 const PASSWORD = 'e2e-password'
 
-const jarFetchFor = (apiUrl: string): typeof fetch => {
-  const jar = new Map<string, string>()
-  return async (input, init) => {
-    const headers = new Headers(init?.headers)
-    headers.set('origin', apiUrl)
-    if (jar.size > 0) {
-      headers.set(
-        'cookie',
-        [...jar].map(([name, value]) => `${name}=${value}`).join('; ')
-      )
-    }
-    const response = await fetch(input, { ...init, headers })
-    for (const raw of response.headers.getSetCookie()) {
-      const [pair] = raw.split(';')
-      const separator = pair!.indexOf('=')
-      if (separator > 0) {
-        jar.set(pair!.slice(0, separator), pair!.slice(separator + 1))
-      }
-    }
-    return response
-  }
-}
-
 const sessionFor = async (apiUrl: string, user: LinkUser) => {
-  const cookieFetch = jarFetchFor(apiUrl)
+  const { fetch: cookieFetch } = createCookieJar(apiUrl)
   const client = createAuthClient({
     baseURL: apiUrl,
     fetchOptions: { customFetchImpl: cookieFetch },
@@ -93,7 +70,7 @@ export const signsUpLinkUser = pikkuScenarioStep<{ name: string }, LinkUser>({
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const client = createAuthClient({
       baseURL: apiUrl,
-      fetchOptions: { customFetchImpl: jarFetchFor(apiUrl) },
+      fetchOptions: { customFetchImpl: createCookieJar(apiUrl).fetch },
     })
     const email = `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
     const { data, error } = await client.signUp.email({

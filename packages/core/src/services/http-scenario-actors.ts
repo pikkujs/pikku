@@ -12,6 +12,10 @@ import type {
   TargetAgentReply,
 } from '../wirings/actor-flow/actor-flow.types.js'
 import { runConversation } from '../wirings/actor-flow/run-conversation.js'
+import {
+  createCookieJar,
+  type ScenarioCookieJar,
+} from '../wirings/workflow/scenario-cookie-jar.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
@@ -51,15 +55,14 @@ export interface HttpScenarioActorsConfig {
  * outlive a session).
  */
 export class HttpScenarioActor implements ScenarioActor {
-  private cookie: string | null = null
-  private origin: string
+  private jar: ScenarioCookieJar
 
   constructor(
     readonly name: string,
     private actorConfig: ScenarioActorConfig,
     private config: HttpScenarioActorsConfig
   ) {
-    this.origin = new URL(config.apiUrl).origin
+    this.jar = createCookieJar(config.apiUrl)
   }
 
   get email(): string {
@@ -81,17 +84,15 @@ export class HttpScenarioActor implements ScenarioActor {
     data: unknown,
     options?: ScenarioInvokeOptions
   ): Promise<ScenarioHttpResponse> {
-    const cookie = this.cookie ?? (await this.login())
-    let res = await this.postRpc(rpcName, data, cookie, options?.headers)
+    if (this.jar.empty) {
+      await this.login()
+    }
+    let res = await this.postRpc(rpcName, data, options?.headers)
     if (res.status === 401) {
       // Session expired mid-run — re-login once and retry.
-      this.cookie = null
-      res = await this.postRpc(
-        rpcName,
-        data,
-        await this.login(),
-        options?.headers
-      )
+      this.jar.clear()
+      await this.login()
+      res = await this.postRpc(rpcName, data, options?.headers)
     }
     return readScenarioHttpResponse(res)
   }
@@ -167,21 +168,18 @@ export class HttpScenarioActor implements ScenarioActor {
   private async postAgent(subPath: string, body: unknown): Promise<unknown> {
     const rpcPath = this.config.rpcPath ?? '/rpc'
     const url = `${this.config.apiUrl}${rpcPath}/${subPath}`
-    const send = (cookie: string | null) =>
-      fetch(url, {
+    const send = () =>
+      this.jar.fetch(url, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          origin: this.origin,
-          ...(cookie ? { cookie } : {}),
-        },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       })
 
-    let res = await send(this.cookie)
+    let res = await send()
     if (res.status === 401) {
-      this.cookie = null
-      res = await send(await this.login())
+      this.jar.clear()
+      await this.login()
+      res = await send()
     }
     if (!res.ok) {
       const text = (await res.text().catch(() => '')).slice(0, 300)
@@ -197,27 +195,21 @@ export class HttpScenarioActor implements ScenarioActor {
   private async postRpc(
     rpcName: string,
     data: unknown,
-    cookie: string,
     extraHeaders?: Record<string, string>
   ) {
     const rpcPath = this.config.rpcPath ?? '/rpc'
-    return fetch(`${this.config.apiUrl}${rpcPath}/${rpcName}`, {
+    return this.jar.fetch(`${this.config.apiUrl}${rpcPath}/${rpcName}`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        origin: this.origin,
-        cookie,
-        ...extraHeaders,
-      },
+      headers: { 'content-type': 'application/json', ...extraHeaders },
       body: JSON.stringify({ data }),
     })
   }
 
-  private async login(): Promise<string> {
+  private async login(): Promise<void> {
     const signInPath = this.config.signInPath ?? '/auth/sign-in/actor'
-    const res = await fetch(`${this.config.apiUrl}${signInPath}`, {
+    const res = await this.jar.fetch(`${this.config.apiUrl}${signInPath}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: this.origin },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         email: this.actorConfig.email,
         name: this.actorConfig.name ?? this.name,
@@ -230,18 +222,11 @@ export class HttpScenarioActor implements ScenarioActor {
         `[scenario] actor sign-in failed for '${this.name}' (${res.status}): ${body}`
       )
     }
-    const setCookies = res.headers.getSetCookie?.() ?? []
-    const cookie = setCookies
-      .map((c) => c.split(';')[0]!)
-      .filter(Boolean)
-      .join('; ')
-    if (!cookie) {
+    if (this.jar.empty) {
       throw new Error(
         `[scenario] actor sign-in for '${this.name}' returned no session cookie`
       )
     }
-    this.cookie = cookie
-    return cookie
   }
 }
 
