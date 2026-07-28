@@ -68,10 +68,12 @@ export const LadderStep: React.FC<LadderStepProps> = ({
       </Box>
       {step.repeat ? (
         <Text size="sm" c="dimmed" fs="italic" style={{ lineHeight: 1.6 }}>
-          {m.scenarios_repeat({
-            item: step.repeat.itemVar,
-            source: step.repeat.sourceVar,
-          })}
+          <span className={classes.ladderSentence}>
+            {m.scenarios_repeat({
+              item: step.repeat.itemVar,
+              source: step.repeat.sourceVar,
+            })}
+          </span>
         </Text>
       ) : (
         <Text size="sm" style={{ lineHeight: 1.6 }}>
@@ -81,6 +83,7 @@ export const LadderStep: React.FC<LadderStepProps> = ({
               fw={600}
               data-testid="ladder-actor"
               data-persona-key={actor}
+              className={classes.ladderActor}
               onClick={(event: React.MouseEvent) => {
                 event.stopPropagation()
                 onOpenPersona?.(actor)
@@ -93,7 +96,9 @@ export const LadderStep: React.FC<LadderStepProps> = ({
               {asI18n(actorName ?? actor)}
             </Anchor>
           ) : null}
-          {asI18n(step.sentence)}
+          <span className={classes.ladderSentence}>
+            {asI18n(step.sentence)}
+          </span>
         </Text>
       )}
     </Group>

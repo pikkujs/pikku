@@ -4,9 +4,27 @@
   margin-left: -8px;
   padding-right: 8px;
   padding-left: 8px;
-  transition: background 100ms;
 }
 
-.ladderStep:hover {
-  background: var(--mantine-color-default-hover);
+/*
+ * A row holds two destinations: the actor opens their persona, everything else
+ * opens the step. Highlighting the whole row would promise one action for both,
+ * so the highlight lands on whichever of the two the pointer is about to act on
+ * — the actor when it is over the actor, the sentence anywhere else in the row.
+ */
+.ladderActor,
+.ladderSentence {
+  text-decoration: none;
+  transition:
+    color 100ms,
+    text-decoration-color 100ms;
+}
+
+.ladderStep:hover:not(:has(.ladderActor:hover)) .ladderSentence {
+  color: var(--mantine-primary-color-filled);
+}
+
+.ladderActor:hover {
+  color: var(--mantine-primary-color-filled);
+  text-decoration: underline;
 }
