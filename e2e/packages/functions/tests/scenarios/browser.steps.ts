@@ -15,7 +15,7 @@
  *   is the subject of the assertion.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type { PikkuBrowserWire } from '@pikku/core/workflow'
+import type { TestIdSelector } from '@pikku/core/workflow'
 import { expect } from '@pikku/playwright'
 
 const TIMEOUT = 15_000
@@ -29,26 +29,12 @@ const TIMEOUT = 15_000
  * whose identity is the data they display — a user's email is rendered anyway,
  * so matching on it adds no attribute for a scraper or a session recorder to
  * pick up, which putting the same value in a `data-` attribute would.
+ *
+ * The vocabulary and its resolution are `@pikku/core` and `@pikku/playwright`:
+ * `browser.locate(selector)` is the same in every app. Re-exported here so the
+ * step files that build these selectors keep one import.
  */
-export interface TestIdSelector {
-  testId: string
-  prefix?: boolean
-  where?: Record<string, string>
-  containing?: string
-}
-
-const selectorFor = ({ testId, prefix, where }: TestIdSelector): string => {
-  const attributes = Object.entries(where ?? {})
-    .map(([name, value]) => `[${name}="${value}"]`)
-    .join('')
-  const id = prefix ? `[data-testid^="${testId}"]` : `[data-testid="${testId}"]`
-  return `${id}${attributes}`
-}
-
-const scopeFor = (browser: PikkuBrowserWire, within: TestIdSelector) => {
-  const base = browser.page.locator(selectorFor(within))
-  return within.containing ? base.filter({ hasText: within.containing }) : base
-}
+export type { TestIdSelector }
 
 export const seesText = pikkuScenarioStep<
   { text: string },
@@ -133,6 +119,8 @@ export const clicksLink = pikkuScenarioStep<
 export const clicksTestId = pikkuScenarioStep<
   {
     testId: string
+    /** Match every test id beginning with `testId`, e.g. every `flow-card-*`. */
+    prefix?: boolean
     where?: Record<string, string>
     containing?: string
     /** Scopes the lookup to one element, e.g. the row for one user. */
@@ -147,12 +135,16 @@ export const clicksTestId = pikkuScenarioStep<
   browser: true,
   func: async (
     _services,
-    { testId, where, containing, within },
+    { testId, prefix, where, containing, within },
     { browser }
   ) => {
-    const scope = within ? scopeFor(browser, within) : browser.page
-    const base = scope.locator(`${selectorFor({ testId, where })}:visible`)
-    const target = containing ? base.filter({ hasText: containing }) : base
+    const target = browser.locate({
+      testId,
+      prefix,
+      where,
+      containing,
+      within,
+    })
     await target.first().click({ timeout: TIMEOUT })
     return { clicked: containing ? `${testId}:${containing}` : testId }
   },
@@ -189,11 +181,13 @@ export const seesTestId = pikkuScenarioStep<
     { testId, prefix, containing, where, within, count, atLeast, timeoutMs },
     { browser }
   ) => {
-    const scope = within ? scopeFor(browser, within) : browser.page
-    const base = scope.locator(
-      `${selectorFor({ testId, prefix, where })}:visible`
-    )
-    const target = containing ? base.filter({ hasText: containing }) : base
+    const target = browser.locate({
+      testId,
+      prefix,
+      where,
+      containing,
+      within,
+    })
     await target
       .first()
       .waitFor({ state: 'visible', timeout: timeoutMs ?? TIMEOUT })
@@ -224,7 +218,8 @@ export const doesNotSeeTestId = pikkuScenarioStep<
   template: 'does not see {testId}',
   browser: true,
   func: async (_services, { testId, where, containing }, { browser }) => {
-    await scopeFor(browser, { testId, where, containing })
+    await browser
+      .locate({ testId, where, containing }, { visible: false })
       .first()
       .waitFor({ state: 'detached', timeout: TIMEOUT })
     return { absent: true }
@@ -275,8 +270,8 @@ export const selectsTab = pikkuScenarioStep<
   template: 'switches to the {value} view',
   browser: true,
   func: async (_services, { value }, { browser }) => {
-    await browser.page
-      .locator(`[data-testid="switch-tab"][data-value="${value}"]:visible`)
+    await browser
+      .locate({ testId: 'switch-tab', where: { 'data-value': value } })
       .first()
       .click({ timeout: TIMEOUT })
     return { selected: value }
@@ -293,9 +288,7 @@ export const readsTestIdText = pikkuScenarioStep<
   template: 'reads {testId}',
   browser: true,
   func: async (_services, { testId }, { browser }) => {
-    const target = browser.page
-      .locator(`[data-testid="${testId}"]:visible`)
-      .first()
+    const target = browser.locate({ testId }).first()
     await target.waitFor({ state: 'visible', timeout: TIMEOUT })
     return { text: (await target.textContent()) ?? '' }
   },
@@ -440,8 +433,8 @@ export const fillsTestId = pikkuScenarioStep<
   template: 'fills {testId}',
   browser: true,
   func: async (_services, { testId, value }, { browser }) => {
-    await browser.page
-      .locator(`[data-testid="${testId}"]:visible`)
+    await browser
+      .locate({ testId })
       .first()
       .fill(value, { timeout: TIMEOUT })
     return { filled: testId }
@@ -476,10 +469,7 @@ export const expectsControl = pikkuScenarioStep<
     { testId, where, within, enabled, checked },
     { browser }
   ) => {
-    const scope = within ? scopeFor(browser, within) : browser.page
-    const target = scope
-      .locator(`${selectorFor({ testId, where })}:visible`)
-      .first()
+    const target = browser.locate({ testId, where, within }).first()
     if (enabled === true) {
       await expect(target).toBeEnabled({ timeout: TIMEOUT })
     }
@@ -518,10 +508,7 @@ export const selectsOption = pikkuScenarioStep<
   template: 'picks {value}',
   browser: true,
   func: async (_services, { testId, value }, { browser }) => {
-    await browser.page
-      .locator(`[data-testid="${testId}"]:visible`)
-      .first()
-      .click({ timeout: TIMEOUT })
+    await browser.locate({ testId }).first().click({ timeout: TIMEOUT })
     await browser.page
       .getByRole('option', { name: value, exact: true })
       .first()
@@ -562,9 +549,7 @@ export const opensTestIdWithKeyboard = pikkuScenarioStep<
   template: 'opens {testId} with the keyboard',
   browser: true,
   func: async (_services, { testId, where }, { browser }) => {
-    const target = browser.page
-      .locator(`${selectorFor({ testId, where })}:visible`)
-      .first()
+    const target = browser.locate({ testId, where }).first()
     await target.waitFor({ state: 'visible', timeout: TIMEOUT })
     await target.focus()
     await target.press('Enter')
@@ -582,9 +567,7 @@ export const expectsTestIdValue = pikkuScenarioStep<
   template: 'expects {testId} to hold {value}',
   browser: true,
   func: async (_services, { testId, value }, { browser }) => {
-    const target = browser.page
-      .locator(`[data-testid="${testId}"]:visible`)
-      .first()
+    const target = browser.locate({ testId }).first()
     await target.waitFor({ state: 'visible', timeout: TIMEOUT })
     const actual = await target.inputValue()
     if (actual !== value) {
@@ -617,12 +600,16 @@ export const navigatesInConsole = pikkuScenarioStep<
   template: 'navigates to {href}',
   browser: true,
   func: async (_services, { href, section }, { browser }) => {
-    const link = browser.page.locator(
-      `[data-testid="nav-link"][data-href="${href}"]`
+    const link = browser.locate(
+      { testId: 'nav-link', where: { 'data-href': href } },
+      { visible: false }
     )
     if (section && !(await link.isVisible().catch(() => false))) {
-      await browser.page
-        .locator(`[data-testid="nav-section"][data-section="${section}"]`)
+      await browser
+        .locate(
+          { testId: 'nav-section', where: { 'data-section': section } },
+          { visible: false }
+        )
         .click({ timeout: TIMEOUT })
     }
     await link.click({ timeout: TIMEOUT })
