@@ -8,9 +8,9 @@
  * — and the ordering helpers become module-local functions here.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { requireScenarioEnv } from '@pikku/core/workflow'
 import {
   AG_UI,
-  apiUrlOf,
   postAgentStream,
   type Identity,
   type StreamEvent,
@@ -51,7 +51,7 @@ export const streamsAgent = pikkuScenarioStep<
     { scenarioStep }
   ) => {
     const { status, events } = await postAgentStream(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       agent,
       identity ?? {},
       { message, threadId, resourceId, model: `mock/${script}` }

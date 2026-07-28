@@ -15,15 +15,10 @@
  * ordinary step data, which is what keeps it PKU678-clean.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor } from '@pikku/core/workflow'
+import { requireActor, type ScenarioHttpResponse } from '@pikku/core/workflow'
 
-export interface RawRpcResult {
-  status: number
-  ok: boolean
-  body: unknown
-  /** The whole response as text, so substring assertions can search it. */
-  serialized: string
-}
+/** What the call answered — the transport's own record, carried as step data. */
+export type RawRpcResult = ScenarioHttpResponse
 
 const describe = (value: unknown) =>
   typeof value === 'string' ? value : JSON.stringify(value)
@@ -46,12 +41,7 @@ export const invokesRpcRaw = pikkuScenarioStep<
       (data ?? null) as never,
       headers ? { headers } : undefined
     )
-    return {
-      status: response.status,
-      ok: response.ok,
-      body: response.body ?? null,
-      serialized: JSON.stringify(response.body ?? null),
-    }
+    return { ...response, body: response.body ?? null }
   },
 })
 

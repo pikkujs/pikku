@@ -11,17 +11,18 @@
  * that a workflow failed or was cancelled.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { apiUrlOf } from './agent-transport.js'
+import {
+  readScenarioHttpResponse,
+  requireScenarioEnv,
+  type ScenarioHttpResponse,
+} from '@pikku/core/workflow'
 
-export interface WorkflowRunResult {
-  status: number
-  ok: boolean
+/** What the workflow route answered, plus what it says about the run itself. */
+export interface WorkflowRunResult extends ScenarioHttpResponse {
   workflowName: string
   runId?: string
   /** `completed`, `failed` or `cancelled`, as the caller would see it. */
   outcome: string
-  body: unknown
-  serialized: string
 }
 
 const outcomeOf = (status: number, body: unknown): string => {
@@ -38,15 +39,6 @@ const outcomeOf = (status: number, body: unknown): string => {
 
 const TERMINAL = ['completed', 'failed', 'cancelled']
 
-const readBody = async (response: Response): Promise<unknown> => {
-  const text = await response.text()
-  try {
-    return text ? JSON.parse(text) : null
-  } catch {
-    return text
-  }
-}
-
 const postWorkflow = async (
   apiUrl: string,
   workflowName: string,
@@ -54,23 +46,21 @@ const postWorkflow = async (
   input: unknown,
   userId?: string
 ): Promise<WorkflowRunResult> => {
-  const response = await fetch(`${apiUrl}/workflow/${workflowName}/${action}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(userId ? { 'x-user-id': userId } : {}),
-    },
-    body: JSON.stringify({ data: input ?? {} }),
-  })
-  const body = await readBody(response)
+  const response = await readScenarioHttpResponse(
+    await fetch(`${apiUrl}/workflow/${workflowName}/${action}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(userId ? { 'x-user-id': userId } : {}),
+      },
+      body: JSON.stringify({ data: input ?? {} }),
+    })
+  )
   return {
-    status: response.status,
-    ok: response.ok,
+    ...response,
     workflowName,
-    runId: (body as { runId?: string } | null)?.runId,
-    outcome: outcomeOf(response.status, body),
-    body,
-    serialized: JSON.stringify(body ?? null),
+    runId: (response.body as { runId?: string } | null)?.runId,
+    outcome: outcomeOf(response.status, response.body),
   }
 }
 
@@ -83,7 +73,7 @@ export const runsWorkflow = pikkuScenarioStep<
   template: 'runs {workflowName}',
   func: async (_services, { workflowName, input, userId }, { scenarioStep }) =>
     postWorkflow(
-      apiUrlOf(scenarioStep.env),
+      requireScenarioEnv(scenarioStep).apiUrl,
       workflowName,
       'run',
       input,
@@ -99,7 +89,12 @@ export const startsWorkflow = pikkuScenarioStep<
   description: 'starts a workflow over HTTP without waiting for it',
   template: 'starts {workflowName}',
   func: async (_services, { workflowName, input }, { scenarioStep }) =>
-    postWorkflow(apiUrlOf(scenarioStep.env), workflowName, 'start', input),
+    postWorkflow(
+      requireScenarioEnv(scenarioStep).apiUrl,
+      workflowName,
+      'start',
+      input
+    ),
 })
 
 /**
@@ -121,33 +116,28 @@ export const awaitsWorkflowRun = pikkuScenarioStep<
     if (!run.runId) {
       throw new Error(`The run was never started: ${run.serialized}`)
     }
-    const apiUrl = apiUrlOf(scenarioStep.env)
+    const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const deadline = Date.now() + (timeoutMs ?? 30_000)
-    let body: unknown = null
-    let status = 0
+    let last = ''
     while (Date.now() < deadline) {
-      const response = await fetch(
-        `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`
+      const response = await readScenarioHttpResponse(
+        await fetch(
+          `${apiUrl}/workflow/${run.workflowName}/status/${run.runId}`
+        )
       )
-      status = response.status
-      body = await readBody(response)
-      const reported = (body as { status?: string } | null)?.status
+      last = response.serialized
+      const reported = (response.body as { status?: string } | null)?.status
       if (reported && TERMINAL.includes(reported)) {
         return {
-          status,
-          ok: response.ok,
+          ...response,
           workflowName: run.workflowName,
           runId: run.runId,
           outcome: reported,
-          body,
-          serialized: JSON.stringify(body ?? null),
         }
       }
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
-    throw new Error(
-      `Run ${run.runId} never reached a terminal status: ${JSON.stringify(body ?? null)}`
-    )
+    throw new Error(`Run ${run.runId} never reached a terminal status: ${last}`)
   },
 })
 
@@ -217,7 +207,7 @@ export const drainsWorkflowStatusStream = pikkuScenarioStep<
       throw new Error(`The run was never started: ${run.serialized}`)
     }
     const response = await fetch(
-      `${apiUrlOf(scenarioStep.env)}/workflow/${run.workflowName}/status/${run.runId}/stream`,
+      `${requireScenarioEnv(scenarioStep).apiUrl}/workflow/${run.workflowName}/status/${run.runId}/stream`,
       { headers: { accept: 'text/event-stream' } }
     )
     if (!response.ok) {

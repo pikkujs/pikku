@@ -13,12 +13,14 @@
  * the credentials were accepted or refused.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { apiUrlOf } from './agent-transport.js'
+import {
+  readScenarioHttpResponse,
+  requireScenarioEnv,
+  type ScenarioHttpResponse,
+} from '@pikku/core/workflow'
 
-export interface SignInResult {
-  status: number
-  ok: boolean
-}
+/** What the sign-in endpoint answered — status, and the body that says why. */
+export type SignInResult = ScenarioHttpResponse
 
 export const attemptsSignIn = pikkuScenarioStep<
   { email: string; password: string },
@@ -28,13 +30,14 @@ export const attemptsSignIn = pikkuScenarioStep<
   description: 'attempts an email sign-in and reports whether it was accepted',
   template: 'signs in as {email}',
   func: async (_services, { email, password }, { scenarioStep }) => {
-    const apiUrl = apiUrlOf(scenarioStep.env)
-    const response = await fetch(`${apiUrl}/api/auth/sign-in/email`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: apiUrl },
-      body: JSON.stringify({ email, password }),
-    })
-    return { status: response.status, ok: response.ok }
+    const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
+    return readScenarioHttpResponse(
+      await fetch(`${apiUrl}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: apiUrl },
+        body: JSON.stringify({ email, password }),
+      })
+    )
   },
 })
 
@@ -49,7 +52,7 @@ export const expectsSignIn = pikkuScenarioStep<
     if (attempt.ok !== accepted) {
       throw new Error(
         accepted
-          ? `Expected the sign-in to be accepted, got ${attempt.status}`
+          ? `Expected the sign-in to be accepted, got ${attempt.status}: ${attempt.serialized}`
           : `Expected the sign-in to be refused, got ${attempt.status}`
       )
     }

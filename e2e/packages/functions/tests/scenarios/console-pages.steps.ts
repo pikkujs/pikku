@@ -10,8 +10,7 @@
  * share.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor } from '@pikku/core/workflow'
-import { apiUrlOf } from './agent-transport.js'
+import { requireActor, requireScenarioEnv } from '@pikku/core/workflow'
 import type {} from '@pikku/playwright'
 import { rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -131,7 +130,7 @@ export const triggersWebhookDelivery = pikkuScenarioStep<
   template: 'triggers a webhook delivery',
   func: async (_services, { timeoutMs }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
-    const sinkUrl = `${apiUrlOf(scenarioStep.env)}/api/webhook/sink`
+    const sinkUrl = `${requireScenarioEnv(scenarioStep).apiUrl}/api/webhook/sink`
     await actor.invoke('triggerWebhook' as never, { url: sinkUrl } as never)
 
     const deadline = Date.now() + (timeoutMs ?? TIMEOUT)
