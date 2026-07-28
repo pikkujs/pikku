@@ -9,6 +9,7 @@ import {
   WorkflowStepOutput,
   WorkflowStepConfiguration,
 } from '../project/panels/WorkflowStepPanels'
+import { ScenarioStepCode } from './ScenarioStepCode'
 import { useWorkflowNode } from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
 
@@ -86,6 +87,7 @@ export const ScenarioStepPanel: React.FC<ScenarioStepPanelProps> = ({
               </Anchor>
             </Stack>
           )}
+          {rpcName && <ScenarioStepCode rpcName={rpcName} />}
           <WorkflowStepInput stepId={stepId} />
           <WorkflowStepOutput stepId={stepId} />
           <WorkflowStepConfiguration stepId={stepId} />

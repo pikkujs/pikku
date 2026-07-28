@@ -108,6 +108,16 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       scenarioStepsMetaJsonFile,
       JSON.stringify(stripVerboseFields(scenarioFunctionsMeta), null, 2)
     )
+    // The bootstrap imports the stripped copy; the verbose one is read off disk
+    // by whatever documents a scenario — the console needs `sourceFile` and
+    // `exportedName` to show the code a step runs.
+    if (hasVerboseFields(scenarioFunctionsMeta)) {
+      await writeFileInDir(
+        logger,
+        scenarioStepsMetaJsonFile.replace(/\.gen\.json$/, '-verbose.gen.json'),
+        JSON.stringify(scenarioFunctionsMeta, null, 2)
+      )
+    }
     await writeFileInDir(
       logger,
       scenarioStepsMetaFile,

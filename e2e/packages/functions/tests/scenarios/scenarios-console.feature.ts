@@ -275,6 +275,12 @@ export const scenarioStepOpensAsStepScenario = pikkuScenario<
       { testId: 'scenario-step-rpc', containing: 'doubleValue' },
       { actor: actors.admin }
     )
+    await scenario.then(
+      'sees the code the step runs',
+      'seesTestId',
+      { testId: 'scenario-step-code', containing: 'value' },
+      { actor: actors.admin }
+    )
 
     return { opened: true }
   },
