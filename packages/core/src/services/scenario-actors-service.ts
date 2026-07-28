@@ -23,9 +23,6 @@ export interface ScenarioHttpResponse {
   serialized: string
 }
 
-/** @deprecated Renamed to `ScenarioHttpResponse` — it was never RPC-specific. */
-export type ScenarioRpcResponse = ScenarioHttpResponse
-
 /**
  * Drain a response into the shape a step can carry: the parsed body (an empty
  * one counting as no body at all) alongside the text it was parsed from.

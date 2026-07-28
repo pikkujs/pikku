@@ -48,7 +48,6 @@ export type {
   ScenarioInvokeOptions,
   ScenarioRpcMap,
   ScenarioHttpResponse,
-  ScenarioRpcResponse,
 } from './scenario-actors-service.js'
 export { readScenarioHttpResponse } from './scenario-actors-service.js'
 export {
