@@ -1,158 +1,69 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for coding agents working in the Pikku repository.
 
-## Project Overview
+## What Pikku is
 
-Pikku is a TypeScript-powered framework that normalizes all the different ways you can interact with Node.js servers. It provides a unified approach to handling HTTP requests, WebSocket connections, scheduled tasks, and channels across different runtime environments (Express, Fastify, Next.js, AWS Lambda, Cloudflare Workers, etc.).
+A TypeScript framework that normalizes the different ways you interact with Node.js servers — HTTP requests, WebSocket connections, scheduled tasks, and channels — across runtimes (Express, Fastify, Next.js, AWS Lambda, Cloudflare Workers, …).
 
-## Fabric Console — Build vs Platform Mode
+### Core packages
 
-The Fabric Console (`/git/pikku/fabric`) has a top-level mode toggle in the header (top-right area of the screen). The two modes are:
+- **@pikku/core** — HTTP handlers, channel handlers, schedulers, services, middleware
+- **@pikku/cli** — code generation: type-safe clients and server wrappers from your function definitions
+- **@pikku/client-fetch** — type-safe HTTP client generated from your API definitions
+- **@pikku/client-websocket** — type-safe WebSocket client
+- **Runtime packages** — adapters per environment
 
-- **`build`** — minimal, beginner-friendly UI (Lovable-style). Focused on development via sandboxes. Default mode.
-- **`platform`** — full-featured UI (Vercel-style). Exposes all platform functionality including stages, branches, deployments, and advanced settings.
+### Key concepts
 
-### Key implementation details
+- **pikkuFunc** — the core abstraction; handles data from params, query, or body without knowing the source
+- **Services** — initialized at server startup, available to all functions (JWT, logger, schema validation, …)
+- **Channels** — WebSocket-style realtime communication with pub/sub
+- **Schedulers** — cron-like scheduled execution
+- **Type generation** — type-safe clients generated from server definitions
 
-| Aspect              | Detail                                                                                                      |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Type                | `ConsoleMode = 'build' \| 'platform'`                                                                       |
-| Storage             | `localStorage` key `'console-mode'`, default `'build'`                                                      |
-| Context             | `ConsoleModeProvider` in `apps/console/src/contexts/ConsoleModeProvider.tsx`                                |
-| Hook                | `useConsoleMode()` — returns `{ mode, setMode }`                                                            |
-| Toggle UI           | `ConsoleHeader` component (`apps/console/src/components/ConsoleHeader.tsx`), `div.modeSwitch` in the header |
-| Mode switch handler | `handleModeSelect(nextMode)` — also navigates to the builder sandbox when switching to `build`              |
+### Repository layout
 
-The mode is **not part of the URL** — the same routes render differently depending on `mode`. Components read `useConsoleMode()` and conditionally show/hide sections. The `ProjectSidebar` is one example: it shows different nav items depending on whether the user is in `build` or `platform` mode.
+A Yarn workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 
-## Architecture
+- `packages/` — the Pikku packages
+- `templates/` — runtime templates
+- `verifiers/` — verifier suites (see Testing)
+- `e2e/` — end-to-end project
+- `benchmarks/`, `docs/`, `scripts/`
 
-### Core Components
+## Commands
 
-- **@pikku/core**: The main framework containing HTTP handlers, channel handlers, schedulers, services, and middleware
-- **@pikku/cli**: Code generation tool that creates type-safe clients and server wrappers from your function definitions
-- **@pikku/client-fetch**: Type-safe HTTP client generated from your API definitions
-- **@pikku/client-websocket**: Type-safe WebSocket client for real-time communication
-- **Runtime packages**: Adapters for different environments (Express, Fastify, Next.js, AWS Lambda, etc.)
-
-### Project Structure
-
-This repository contains multiple sub-projects:
-
-- `pikku/`: Main monorepo with all Pikku packages
-- `nextjs-app-starter/`: Example Next.js integration
-- `workspace-starter/`: Full-featured example with multiple backend and frontend apps
-- `website/`: Documentation site (Docusaurus)
-- `presentation/`: Reveal.js presentation
-
-### Key Concepts
-
-- **pikkuFunc**: Core abstraction that handles data from params, query, or body without needing to know the source
-- **Services**: Initialized at server startup and available to all functions (JWT, logger, schema validation, etc.)
-- **Channels**: WebSocket-like real-time communication with pub/sub capabilities
-- **Schedulers**: Cron-like scheduled task execution
-- **Type Generation**: Automatic generation of type-safe clients from server definitions
-
-## Development Commands
-
-Always use `yarn` for all commands in this monorepo. Do not use npm or bun.
-
-### Main Pikku Framework (pikku/)
+Use `yarn` throughout this monorepo.
 
 ```bash
-# Install dependencies
-yarn
-
-# Type checking
-yarn tsc
-
-# Build all packages
-yarn build
-
-# Run tests
-yarn test
-
-# Run tests with coverage
-yarn test:coverage
-
-# Lint code
+yarn                  # install
+yarn tsc              # type check
+yarn build            # build all packages
+yarn test             # run tests
+yarn test:coverage    # tests with coverage
+yarn test:verifiers   # verifier suites
+yarn test:templates   # template suites
+yarn test:e2e         # end-to-end
 yarn lint
-
-# Format code
 yarn prettier
-
-# Generate documentation
 yarn typedoc
-
-# Create changeset (for PRs)
-yarn changeset
-
-# Publish release
+yarn changeset        # for PRs
 yarn release
 ```
 
-> **When creating a changeset, every package name listed MUST exist as a workspace package.** Run `yarn workspaces list --json` to get the exact names before writing the `.changeset/*.md` file. A wrong name (e.g. `@pikku/services-redis` instead of `@pikku/redis`) causes `changeset status` to throw and blocks CI.
+Individual packages carry their own runner: `./run-tests.sh` from inside the package, with `--watch` or `--coverage`.
 
-```bash
-```
-
-### Individual Package Testing
-
-Each package has its own test runner:
-
-```bash
-# Run tests for a specific package
-./run-tests.sh
-
-# Run tests in watch mode
-./run-tests.sh --watch
-
-# Run tests with coverage
-./run-tests.sh --coverage
-```
-
-### Next.js App Starter
-
-```bash
-# Install dependencies
-npm install
-
-# Prepare build (generates Pikku types)
-npm run prebuild
-
-# Start development server
-npm run start
-```
-
-### Workspace Starter
-
-```bash
-# Install dependencies
-yarn install
-
-# Generate types and setup
-yarn prebuild
-
-# Start specific backend (Express example)
-cd backends/express && yarn start
-
-# Start Next.js app
-cd apps/next-app && yarn dev
-```
+**Changesets: every package name listed must exist as a workspace package.** Run `yarn workspaces list --json` for the exact names before writing the `.changeset/*.md` file — a wrong name (`@pikku/services-redis` for `@pikku/redis`) makes `changeset status` throw and blocks CI.
 
 ## Configuration
 
-### pikku.config.json
+`pikku.config.json` is the main configuration file:
 
-This is the main configuration file for Pikku projects:
-
-- `srcDirectories`: Where to find your function definitions
-- `outDir`: Where to generate output files
-- `packageMappings`: Map local packages to published package names
-- `openAPI`: OpenAPI specification generation settings
-
-Example structure:
+- `srcDirectories` — where your function definitions live
+- `outDir` — where generated output goes
+- `packageMappings` — map local packages to published names
+- `openAPI` — OpenAPI generation settings
 
 ```json
 {
@@ -164,149 +75,97 @@ Example structure:
 }
 ```
 
-## Code Generation
+## Code generation
 
-Pikku uses a CLI tool to generate type-safe clients and server code:
+`npx pikku prebuild` (or `yarn prebuild`) generates HTTP clients, WebSocket clients, and type definitions. Run it after modifying function definitions.
 
-- Run `npx pikku prebuild` or `yarn prebuild` to generate types
-- Generated files include HTTP clients, WebSocket clients, and type definitions
-- Always run prebuild after modifying function definitions
+**Generated DB files are output** — change the source and regenerate:
 
-### Generated DB files — never hand-edit
-
-- `outDir/db/schema.d.ts` — Kysely types with `Private<T>`/`Secret<T>` brands; regenerated by `pikku db migrate`. Schema changes go through SQL migrations first.
-- `outDir/db/classification.gen.ts` — classification manifest (per-column `private`/`secret`/`public` + anonymize strategy); also regenerated by `pikku db migrate`. To change a column's classification, update the `-- @private`, `-- @secret`, or `-- @public` SQL comment annotation and re-run migrate.
-- `outDir/db/coercion.gen.ts` — runtime coercion map; same regeneration path.
+- `outDir/db/schema.d.ts` — Kysely types with `Private<T>`/`Secret<T>` brands, regenerated by `pikku db migrate`. Schema changes go through a SQL migration first.
+- `outDir/db/classification.gen.ts` — per-column `private`/`secret`/`public` manifest plus anonymize strategy, same regeneration path. To change a column's classification, edit its `-- @private` / `-- @secret` / `-- @public` SQL comment annotation and re-run migrate.
+- `outDir/db/coercion.gen.ts` — runtime coercion map, same path.
 
 ## Testing
 
-- Uses Node.js built-in test runner with tsx for TypeScript support
-- Test files follow `*.test.ts` pattern
-- Each package has isolated tests
-- Coverage reports generated with `--experimental-test-coverage`
-- For any change, branch, or PR to be accepted, it must include verifier coverage that follows a TDD/BDD flow: the verifier test must fail before the code change and pass after the code change.
+- Node's built-in test runner with tsx; test files follow `*.test.ts`; each package's tests are isolated; coverage via `--experimental-test-coverage`.
+- **Every change, branch, or PR needs verifier coverage following a TDD/BDD flow** — the verifier test fails before the code change and passes after.
 
-### Testing Templates
+### Testing templates
 
-**IMPORTANT**: When testing workflow templates (or any templates), you MUST create a proper test app from the template - DO NOT test directly in the `templates/` directory!
-
-To test a template properly:
+Build a real app from the template rather than testing inside `templates/` — that's the only way code generation (workflow workers, queue processors, …) runs properly, the app is structured as end users see it, dependencies are linked as they would be, and tests run in the right environment.
 
 ```bash
-# Navigate to create package
 cd packages/create
-
-# Create test app from template
-node ./dist/index.js --template workflows-pg --version workflow-retries --name ../../../test-app --install --package-manager yarn --yarn-link ../pikku
-
-# Navigate to test app
+node ./dist/index.js --template workflows-pg --version workflow-retries \
+  --name ../../../test-app --install --package-manager yarn --yarn-link ../pikku
 cd ../test-app
-
-# Link packages and install dependencies
 yarn link -A ../pikku && yarn install
-
-# Build and run tests
 yarn run tsc && yarn run test
 ```
 
-This ensures:
+### Running the OSS console against the e2e project
 
-- All code generation runs properly (including workflow workers, queue processors, etc.)
-- The app is structured exactly as end users would see it
-- All dependencies are correctly linked and installed
-- Tests run in the correct environment
+`pikku dev` serves the console same-origin at `/console` (as does `pikku serve --console`), but only when the console app is bundled at `packages/cli/console-app`. A plain package build does not produce that directory — only `packages/cli/build.sh` copies it — so a freshly built CLI serves no console UI and the `Pikku Console available at …/console` log line is absent. There is no separate `pikku console` command.
 
-### Running the OSS console on the e2e project
-
-`pikku dev` serves the OSS Pikku Console same-origin at `/console` (and `pikku serve` does too when passed the explicit `--console` flag), but only when the console app is bundled at `packages/cli/console-app`. A plain package build does **not** produce that directory (only `packages/cli/build.sh` copies it), so a freshly-built CLI serves no console UI (the `Pikku Console available at …/console` log line is absent). There is no separate `pikku console` command.
-
-To spin it up against the e2e project (backend on `4077` — from `e2e/tests/support/types.ts`):
+Against the e2e project (backend on `4077`, from `e2e/tests/support/types.ts`):
 
 ```bash
-# 1. Build the console and bundle it into the CLI (what build.sh's copy step does)
+# 1. Build the console and bundle it into the CLI
 cd packages/console && yarn build           # → packages/console/dist
 cd ../cli && rm -rf console-app && cp -r ../console/dist console-app
-chmod +x dist/bin/pikku.js                   # ensure the bin is executable
+chmod +x dist/bin/pikku.js
 
-# 2. Serve the e2e backend (pass OPENAI_API_KEY so the agent playground works)
+# 2. Serve the e2e backend (OPENAI_API_KEY makes the agent playground work)
 cd ../../e2e
 OPENAI_API_KEY=<key> API_URL=http://localhost:4077 \
   npx pikku serve --port 4077 --console
 ```
 
-The console is then at **http://localhost:4077/console** (`Pikku Console available at http://localhost:4077/console` in the log). Being same-origin with the API, cookies are first-party and no `?server=` param is needed.
+The console lands at **http://localhost:4077/console**. Being same-origin with the API, cookies are first-party and no `?server=` param is needed.
 
-## Git Workflow
+## Git workflow
 
-**Never run `git stash`.** Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make. `git stash` is global to the worktree — it sweeps up every other agent's uncommitted work, not just yours, and silently breaks them.
+Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make.
 
-- To rebase/pull with a dirty tree, do NOT stash. Either commit only your own files first (`git add <your files> && git commit`), or rebase a branch that contains just your commits — leave everyone else's working-tree changes untouched.
-- Only ever `git add` the specific files you changed. Never `git add -A`/`git add .` — you'll stage other agents' work.
-- Before amending or force-anything, confirm HEAD is your commit; never force-push shared `main`.
+- **`git stash` is off-limits.** It is global to the worktree — it sweeps up every other agent's uncommitted work, not just yours, and silently breaks them. To rebase or pull with a dirty tree, commit only your own files first (`git add <your files> && git commit`), or rebase a branch containing just your commits.
+- **`git add` the specific files you changed.** `git add -A` / `git add .` stages other agents' work.
+- Confirm HEAD is your commit before amending, and leave shared `main` un-force-pushed.
 
-## Workspace Structure
-
-This is a Yarn workspace monorepo with:
-
-- `packages/`: Core Pikku packages
-- `templates/`: Example templates for different runtimes
-- Strict TypeScript configuration with comprehensive type checking
-- Husky pre-commit hooks for code quality
-
-## Code Style Guidelines
+## Code style
 
 ### Comments
 
-**DO NOT add new inline comments** when writing or modifying code. The code should be self-documenting through:
+**Write self-documenting code** — clear names, well-structured types, sensible organization — and add a comment only for a complex algorithm that resists refactoring, a non-obvious reason for an approach, or a workaround for a known limitation. A comment that restates the code is one the code should have made unnecessary.
 
-- Clear, descriptive variable and function names
-- Well-structured TypeScript types and interfaces
-- Proper function and class organization
+**Preserve existing comments and JSDoc.** When refactoring, keep them; if one references something you renamed, update it to match.
 
-**DO NOT remove existing comments or JSDoc blocks.** When refactoring or modifying code, preserve all existing comments and JSDoc. If a comment references something that changed (e.g., a renamed parameter), update the comment to match — do not delete it.
+### Function type signatures
 
-Only add new comments when absolutely necessary to explain:
-
-- Complex algorithms or business logic that cannot be made clearer through refactoring
-- Why a particular approach was chosen (when it's not obvious)
-- Workarounds for known issues or limitations
-
-Avoid comments that simply restate what the code does. Instead, focus on making the code itself more readable.
-
-### Function Type Signatures
-
-Pikku function wrappers (`pikkuFunc`, `pikkuSessionlessFunc`, `pikkuWorkflowFunc`, `pikkuWorkflowComplexFunc`) support **either** generics **or** `input`/`output` schema properties — never both. When using `input` and `output` schemas (e.g. Zod), do NOT pass type generics. When using generics, do NOT pass `input`/`output`. Mixing them causes type conflicts and `as any` casts.
+`pikkuFunc`, `pikkuSessionlessFunc`, `pikkuWorkflowFunc`, and `pikkuWorkflowComplexFunc` take **either** generics **or** `input`/`output` schemas. Mixing them causes type conflicts and `as any` casts.
 
 ```typescript
-// Correct — schema-based (no generics)
+// Schema-based — no generics
 export const myFunc = pikkuFunc({
   input: MyInput,
   output: MyOutput,
   func: async (services, data) => { ... }
 })
 
-// Correct — generic-based (no input/output)
+// Generic-based — no input/output
 export const myFunc = pikkuFunc<MyIn, MyOut>({
-  func: async (services, data) => { ... }
-})
-
-// WRONG — do not mix
-export const myFunc = pikkuFunc<MyIn, MyOut>({
-  input: MyInput as any,  // ← never do this
-  output: MyOutput as any,
   func: async (services, data) => { ... }
 })
 ```
 
-### Environment Variables
+### Environment variables
 
-**DO NOT use `process.env` inside pikku functions.** Use the `variables` service instead (`services.variables.get('VAR_NAME')`). `process.env` access belongs in server bootstrap code (e.g. `start.ts`, `server.ts`), not in business logic functions.
+Inside pikku functions, read configuration through the `variables` service (`services.variables.get('VAR_NAME')`). `process.env` belongs in server bootstrap code (`start.ts`, `server.ts`), not in business logic.
 
-### React Components
+### React components
 
-**One JSX-returning component per `.tsx` file.** When a file would contain a second component, extract it to its own file. This is annoying up front but keeps components discoverable and reusable instead of buried as private helpers inside a page. Non-component exports — `type`/`interface` (e.g. `Props`), hooks, constants, and a Provider's own `createContext` — may stay co-located with the single component they belong to.
+**One JSX-returning component per `.tsx` file.** A second component moves to its own file — annoying up front, but it keeps components discoverable and reusable rather than buried as private helpers inside a page. Non-component exports (`type`/`interface` such as `Props`, hooks, constants, a Provider's own `createContext`) may stay with the single component they belong to.
 
-**Type components with `React.FC`, never `React.FunctionComponent` or an untyped `function`.** Use the `const` arrow form:
+**Type components with `React.FC`** in the `const` arrow form:
 
 ```tsx
 type StatusPillProps = { status: DiffEntry['status'] }
@@ -320,10 +179,10 @@ Props with more than one or two fields get a named `Props` type rather than an i
 
 ### Internationalization (console / any `@pikku/react` UI)
 
-**GOLDEN RULE — `asI18n` wraps VARIABLES, NEVER string literals.** `asI18n` exists to pass a *dynamic runtime value* — a role name, an error message, a scope id — through the i18n gate: `asI18n(role.name)`, `asI18n(error.message)`, `asI18n(scope)`. It must **never** wrap a hardcoded English string. `asI18n('Create role')` injects untranslatable English straight into the UI and is **always wrong**, no exceptions.
+**`asI18n` wraps variables.** It exists to pass a *dynamic runtime value* — a role name, an error message, a scope id — through the i18n gate: `asI18n(role.name)`, `asI18n(error.message)`, `asI18n(scope)`. A hardcoded English string inside it (`asI18n('Create role')`) injects untranslatable copy straight into the UI.
 
-- Every fixed piece of UI copy lives in `messages/en.json` and is referenced through the typed `m` namespace: `m.scopes_create_role()`. Add the key to `en.json`, then call `m.<key>()`.
-- A fixed label that contains a variable is a **parameterized message** — `m.scopes_delete_confirm({ name })` with `"scopes_delete_confirm": "Delete {name} for everyone — confirm"` — never English concatenated around an `asI18n(...)`.
+- Fixed UI copy lives in `messages/en.json` and is referenced through the typed `m` namespace: add the key, then call `m.scopes_create_role()`.
+- A fixed label containing a variable is a **parameterized message** — `m.scopes_delete_confirm({ name })` with `"scopes_delete_confirm": "Delete {name} for everyone — confirm"` — rather than English concatenated around an `asI18n(...)`.
 - Computed keys use `mKey(...)`.
 
-If you catch yourself typing `asI18n('` followed by a letter (not a variable), stop — it's the wrong call.
+Typing `asI18n('` followed by a letter rather than a variable is the signal you want `m.<key>()` instead.
