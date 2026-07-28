@@ -3,13 +3,28 @@ import type {
   ActorFlowVerdict,
 } from '../wirings/actor-flow/actor-flow.types.js'
 
-/** What the transport answered, for a step that treats the status as data. */
-export interface ScenarioRpcResponse {
+/**
+ * What the transport answered, for a step that treats the status as data.
+ *
+ * An HTTP response with its body already drained: the stream can only be read
+ * once, and a step's return value crosses into the run record, so the response
+ * object itself cannot travel. This is the shape every caller ends up with.
+ */
+export interface ScenarioHttpResponse {
   status: number
   ok: boolean
   /** The parsed JSON body, or undefined for an empty response. */
   body: unknown
+  /**
+   * The whole body as text, so an assertion can search it without knowing the
+   * payload's shape — and so an error body that is HTML rather than JSON still
+   * says what went wrong.
+   */
+  serialized: string
 }
+
+/** @deprecated Renamed to `ScenarioHttpResponse` — it was never RPC-specific. */
+export type ScenarioRpcResponse = ScenarioHttpResponse
 
 /** Per-call transport options. */
 export interface ScenarioInvokeOptions {
@@ -60,7 +75,7 @@ export interface ScenarioActor<
     rpcName: TName,
     data: TRpcMap[TName]['input'],
     options?: ScenarioInvokeOptions
-  ): Promise<ScenarioRpcResponse>
+  ): Promise<ScenarioHttpResponse>
   /** Converse with a Pikku AI agent in this actor's persona and return its verdict */
   converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
 }

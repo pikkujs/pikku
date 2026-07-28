@@ -47,11 +47,13 @@ export type {
   ScenarioActors,
   ScenarioInvokeOptions,
   ScenarioRpcMap,
+  ScenarioHttpResponse,
   ScenarioRpcResponse,
 } from './scenario-actors-service.js'
 export {
   HttpScenarioActor,
   createHttpScenarioActors,
+  readScenarioHttpResponse,
   type HttpScenarioActorsConfig,
 } from './http-scenario-actors.js'
 export type { JWTService } from './jwt-service.js'
