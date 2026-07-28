@@ -3,7 +3,7 @@ import type {
   ScenarioActorConfig,
   ScenarioActors,
   ScenarioInvokeOptions,
-  ScenarioRpcResponse,
+  ScenarioHttpResponse,
 } from './scenario-actors-service.js'
 import type {
   ConverseOptions,
@@ -68,9 +68,8 @@ export class HttpScenarioActor implements ScenarioActor {
   async invoke(rpcName: string, data: unknown): Promise<unknown> {
     const res = await this.invokeRaw(rpcName, data)
     if (!res.ok) {
-      const body = JSON.stringify(res.body ?? '').slice(0, 300)
       throw new Error(
-        `[scenario] '${rpcName}' as '${this.name}' returned ${res.status}: ${body}`
+        `[scenario] '${rpcName}' as '${this.name}' returned ${res.status}: ${res.serialized.slice(0, 300)}`
       )
     }
     return res.body
@@ -80,7 +79,7 @@ export class HttpScenarioActor implements ScenarioActor {
     rpcName: string,
     data: unknown,
     options?: ScenarioInvokeOptions
-  ): Promise<ScenarioRpcResponse> {
+  ): Promise<ScenarioHttpResponse> {
     const cookie = this.cookie ?? (await this.login())
     let res = await this.postRpc(rpcName, data, cookie, options?.headers)
     if (res.status === 401) {
@@ -93,11 +92,7 @@ export class HttpScenarioActor implements ScenarioActor {
         options?.headers
       )
     }
-    return {
-      status: res.status,
-      ok: res.ok,
-      body: await readJsonBody(res),
-    }
+    return readScenarioHttpResponse(res)
   }
 
   async converse(options: ConverseOptions): Promise<ActorFlowVerdict> {
@@ -249,15 +244,23 @@ export class HttpScenarioActor implements ScenarioActor {
   }
 }
 
-/** Parse a JSON response body, treating an empty one as no body at all. */
-async function readJsonBody(res: Response): Promise<unknown> {
-  if (res.status === 204) {
-    return undefined
+/**
+ * Drain a response into the shape a step can carry: the parsed body (an empty
+ * one counting as no body at all) alongside the text it was parsed from.
+ */
+export async function readScenarioHttpResponse(
+  res: Response
+): Promise<ScenarioHttpResponse> {
+  const text = res.status === 204 ? '' : await res.text().catch(() => '')
+  return {
+    status: res.status,
+    ok: res.ok,
+    body: text ? parseJsonBody(text) : undefined,
+    serialized: text,
   }
-  const text = await res.text().catch(() => '')
-  if (!text) {
-    return undefined
-  }
+}
+
+function parseJsonBody(text: string): unknown {
   try {
     return JSON.parse(text)
   } catch {

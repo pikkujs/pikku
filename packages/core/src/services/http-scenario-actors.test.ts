@@ -39,10 +39,18 @@ const startTarget = async () => {
           return
         }
         const rpcName = req.url.slice('/api/rpc/'.length)
+        if (rpcName === 'html-error') {
+          res
+            .writeHead(500, { 'content-type': 'text/html' })
+            .end('<html><body>Gateway blew up</body></html>')
+          return
+        }
         if (rpcName === 'forbidden') {
           res
             .writeHead(403, { 'content-type': 'application/json' })
-            .end(JSON.stringify({ message: 'MissingScopeError', scope: 'admin' }))
+            .end(
+              JSON.stringify({ message: 'MissingScopeError', scope: 'admin' })
+            )
           return
         }
         res.writeHead(200, { 'content-type': 'application/json' }).end(
@@ -145,6 +153,31 @@ describe('HttpScenarioActor', async () => {
     assert.equal(res.status, 200)
     assert.equal(res.ok, true)
     assert.deepEqual((res.body as any).echoed, { page: 2 })
+  })
+
+  test('invokeRaw carries the response text so a step can search it', async () => {
+    const actors = makeActors()
+    const res = await actors.customer!.invokeRaw('forbidden', {})
+
+    assert.match(res.serialized, /MissingScopeError/)
+    assert.match(res.serialized, /admin/)
+  })
+
+  test('invokeRaw keeps a non-JSON error body instead of failing to parse it', async () => {
+    const actors = makeActors()
+    const res = await actors.manager!.invokeRaw('html-error', {})
+
+    assert.equal(res.status, 500)
+    assert.equal(res.ok, false)
+    assert.equal(res.body, '<html><body>Gateway blew up</body></html>')
+    assert.match(res.serialized, /Gateway blew up/)
+  })
+
+  test('invokeRaw reports an empty body as an empty string', async () => {
+    const actors = makeActors()
+    const res = await actors.manager!.invokeRaw('listTodos', {})
+
+    assert.equal(typeof res.serialized, 'string')
   })
 
   test('invokeRaw passes extra headers through', async () => {
