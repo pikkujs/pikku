@@ -14,6 +14,7 @@ import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import {
   pollUntil,
   readScenarioHttpResponse,
+  readScenarioSseEvents,
   requireScenarioEnv,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
@@ -220,17 +221,7 @@ export const drainsWorkflowStatusStream = pikkuScenarioStep<
     if (!response.ok) {
       throw new Error(`The status stream refused with ${response.status}`)
     }
-    const events: { status?: string }[] = []
-    for (const line of (await response.text()).split('\n')) {
-      if (!line.startsWith('data: ')) {
-        continue
-      }
-      try {
-        events.push(JSON.parse(line.slice(6)))
-      } catch {
-        continue
-      }
-    }
+    const events = await readScenarioSseEvents<{ status?: string }>(response)
     const withStatus = events.filter((event) => event.status)
     return {
       count: events.length,

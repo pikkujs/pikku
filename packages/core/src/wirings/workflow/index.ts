@@ -155,6 +155,9 @@ export { pollUntil, type PollOptions } from './scenario-poll.js'
 export { createCookieJar } from './scenario-cookie-jar.js'
 export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
 
+// Drains an event stream into the events it carried, frames joined per spec
+export { readScenarioSseEvents } from './scenario-sse.js'
+
 // What the transport answered — an actor's `invokeRaw`, or a route reached directly
 export type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
 export { readScenarioHttpResponse } from '../../services/scenario-actors-service.js'

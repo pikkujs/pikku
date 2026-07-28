@@ -13,6 +13,7 @@
  */
 import {
   readScenarioHttpResponse,
+  readScenarioSseEvents,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
 import type { MockLlmCall } from '../../src/mock-llm/provider.js'
@@ -144,28 +145,10 @@ export const postAgentStream = async (
     body: JSON.stringify(body),
   })
 
-  if (!res.body) {
-    return { status: res.status, events: [] }
+  return {
+    status: res.status,
+    events: await readScenarioSseEvents<StreamEvent>(res),
   }
-
-  const raw = await res.text()
-  const events: StreamEvent[] = []
-
-  for (const block of raw.split('\n\n')) {
-    const data = block
-      .split('\n')
-      .filter((line) => line.startsWith('data:'))
-      .map((line) => line.slice(5).trim())
-      .join('')
-    if (!data || data === '[DONE]') continue
-    try {
-      events.push(JSON.parse(data) as StreamEvent)
-    } catch {
-      // Non-JSON keep-alive or comment frame — not an event.
-    }
-  }
-
-  return { status: res.status, events }
 }
 
 /** The whole process-global mock LLM call log, oldest first. */
