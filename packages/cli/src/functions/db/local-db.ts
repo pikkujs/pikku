@@ -328,6 +328,7 @@ export async function migrateAndCodegen(
         camelCase: resolved.camelCase,
         rootDir: resolved.rootDir,
         dialect: 'sqlite',
+        migrationsDir: resolved.migrationsDir,
       })
     } finally {
       db.close()
@@ -355,6 +356,7 @@ export async function migrateAndCodegen(
           camelCase: resolved.camelCase,
           rootDir: resolved.rootDir,
           dialect: 'postgres',
+          migrationsDir: resolved.migrationsDir,
         })
       } finally {
         await introspector.close()

@@ -9,6 +9,10 @@ import {
   type ColAnnotation,
 } from './annotation-parser.js'
 import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
+import {
+  bareUnquotedTableName,
+  readMigrationProvenance,
+} from './migration-provenance.js'
 import { ErrorCode, type CodedDiagnostic } from '@pikku/inspector'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
@@ -445,6 +449,12 @@ export interface CodegenOptions {
   rootDir?: string
   /** DB dialect — drives real-type-aware date typing. Defaults to 'sqlite'. */
   dialect?: Dialect
+  /**
+   * Where the project's migrations live. Only used to attribute each table in
+   * `schemaJsonFile` to whoever declared it; omitting it makes every table read
+   * as app-owned, which is what a project with no generated migrations is.
+   */
+  migrationsDir?: string
 }
 
 export interface CodegenResult {
@@ -652,8 +662,16 @@ export async function generateSchemaTypes(
   let schemaJsonBody: string | null = null
   if (options.schemaJsonFile) {
     const fkMap = await introspector.getAllForeignKeys()
+    // Attribution comes from the migrations rather than from `schemaSources()`:
+    // the JSON is written by `db migrate`, which has no reason to load the
+    // project's Better Auth config, and the generated migrations already record
+    // both the source and its prose. See `readMigrationProvenance`.
+    const provenance = options.migrationsDir
+      ? readMigrationProvenance(options.migrationsDir)
+      : new Map()
     const jsonTables = tables.map((t) => ({
       name: t.name,
+      ...(provenance.get(bareUnquotedTableName(t.name)) ?? { source: 'app' }),
       columns: t.columns.map((c) => {
         const fk = fkMap.get(t.name)?.find((f) => f.column === c.name)
         return {
