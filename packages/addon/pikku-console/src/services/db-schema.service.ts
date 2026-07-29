@@ -16,6 +16,17 @@ export interface DbColumn {
 export interface DbTable {
   name: string
   columns: DbColumn[]
+  /**
+   * Who declared this table: `app` for the project's own migrations, otherwise
+   * the source label `pikku db generate` gave the migration that created it
+   * (`better-auth`, `pikku-runtime`, an addon's package name).
+   *
+   * Absent when the schema JSON predates provenance — a consumer that needs to
+   * tell framework tables apart has to fall back rather than assume `app`.
+   */
+  source?: string
+  /** Human prose naming where the table's SQL came from, for a tooltip. */
+  origin?: string
 }
 
 export interface DbEnum {
@@ -88,6 +99,8 @@ interface RawColumn {
 interface RawTable {
   name: string
   columns: RawColumn[]
+  source?: string
+  origin?: string
 }
 
 interface RawSchema {
@@ -109,7 +122,7 @@ export class DbSchemaService {
 
     const tables: DbTable[] = parsed.tables.map((t) => {
       const tableAnns = annotations[bareTableName(t.name)] ?? {}
-      return {
+      const table: DbTable = {
         name: t.name,
         columns: t.columns.map((c) => {
           const ann = tableAnns[c.name]
@@ -125,6 +138,9 @@ export class DbSchemaService {
           return col
         }),
       }
+      if (t.source) table.source = t.source
+      if (t.origin) table.origin = t.origin
+      return table
     })
 
     return { tables, enums: parsed.enums }

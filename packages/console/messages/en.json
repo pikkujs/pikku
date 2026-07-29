@@ -72,7 +72,7 @@
   "database_title": "Database",
   "database_description": "Visual schema for your local development database.",
   "database_search_placeholder": "Filter tables / columns…",
-  "database_show_internal_tables": "Show Pikku internal tables",
+  "database_show_internal_tables": "Show framework tables (Better Auth, Pikku runtime, addons)",
   "database_no_db_title": "No database configured",
   "database_no_db_description": "Add a SQLite or Postgres database to your pikku project.",
   "database_no_visible_tables": "No visible tables",

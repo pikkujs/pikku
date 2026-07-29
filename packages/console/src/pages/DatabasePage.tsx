@@ -43,9 +43,16 @@ interface DbColumn {
   enumType?: string
 }
 
+/**
+ * Mirrors `DbTable` in @pikku/addon-console's db-schema.service — the console
+ * has no type-level import of the addon, so the two move together by hand.
+ */
 interface DbTable {
   name: string
   columns: DbColumn[]
+  /** `app`, or the source that declared it (`better-auth`, `pikku-runtime`, an addon). */
+  source?: string
+  origin?: string
 }
 
 interface DbEnum {
@@ -435,19 +442,49 @@ const nodeTypes = { databaseSchema: DatabaseSchemaNode }
 
 // ── Filter helpers ────────────────────────────────────────────────────────────
 
-const INTERNAL_TABLE_PREFIXES = [
-  'workflow_',
-  'ai_',
-  'pikku_',
-]
-
+/**
+ * Bookkeeping tables the migration runner keeps for itself. Not framework
+ * tables in the provenance sense — nobody declared them — so they are hidden
+ * unconditionally rather than by owner.
+ */
 const ALWAYS_SKIP = new Set(['migrations', 'sql_migrations', 'pgmigrations'])
 
-function shouldShowTable(name: string, hideInternal: boolean): boolean {
-  const bare = name.includes('.') ? name.split('.').pop()! : name
-  if (ALWAYS_SKIP.has(bare)) return false
+/**
+ * The guess this page made before the schema JSON carried provenance. Kept only
+ * for a stale `pikku-db-schema.gen.json`: it is wrong about Better Auth's
+ * tables, the secrets and channel tables, and every addon's, which is why it
+ * was replaced.
+ */
+const LEGACY_INTERNAL_PREFIXES = ['workflow_', 'ai_', 'pikku_']
+
+function bareName(name: string): string {
+  return name.includes('.') ? name.split('.').pop()! : name
+}
+
+/**
+ * A table the project itself declared, as opposed to Better Auth, the pikku
+ * runtime, or an addon.
+ *
+ * `hasProvenance` is the schema-wide fallback switch: a JSON generated before
+ * provenance existed leaves every `source` undefined, and treating that as
+ * "all app-owned" would silently show every framework table. Falling back to
+ * the old prefix guess keeps such a project on the behaviour it already had.
+ */
+function isAppTable(table: DbTable, hasProvenance: boolean): boolean {
+  if (hasProvenance) return (table.source ?? 'app') === 'app'
+  return !LEGACY_INTERNAL_PREFIXES.some((prefix) =>
+    bareName(table.name).startsWith(prefix)
+  )
+}
+
+function shouldShowTable(
+  table: DbTable,
+  hideInternal: boolean,
+  hasProvenance: boolean
+): boolean {
+  if (ALWAYS_SKIP.has(bareName(table.name))) return false
   if (!hideInternal) return true
-  return !INTERNAL_TABLE_PREFIXES.some((prefix) => bare.startsWith(prefix))
+  return isAppTable(table, hasProvenance)
 }
 
 // ── Canvas component ──────────────────────────────────────────────────────────
@@ -488,9 +525,10 @@ function DatabaseCanvas({
       }
 
       const q = search.trim().toLowerCase()
+      const hasProvenance = schema.tables.some((t) => t.source !== undefined)
       const filtered = schema.tables
         .filter((t) => {
-          if (!shouldShowTable(t.name, hideInternal)) return false
+          if (!shouldShowTable(t, hideInternal, hasProvenance)) return false
           if (classificationFilter !== 'all' && !t.columns.some((col) => col.classification === classificationFilter)) return false
           if (q && !t.name.toLowerCase().includes(q) && !t.columns.some((col) => col.name.toLowerCase().includes(q))) return false
           return true
