@@ -8,11 +8,16 @@ import { ListPageHeader } from '../layout/PageLayout'
 import { AddonsList } from './AddonsList'
 import { ApisList } from './ApisList'
 import type { AddonFilter } from './packageMeta'
-
-type MainTab = 'addons' | 'apis'
+import type { PackagesBrowse, PackagesTab } from '../../hooks/usePackagesBrowse'
 
 export interface PackagesListPanelProps {
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
+  /**
+   * Browse state from `usePackagesBrowse()`. Pass it and the host owns where the
+   * category rail lives (`PackagesBrowseRail` in its own panel or sheet) while
+   * this panel drops its inline copy; omit it and the panel is self-contained.
+   */
+  browse?: PackagesBrowse
 }
 
 /**
@@ -22,15 +27,18 @@ export interface PackagesListPanelProps {
  */
 export const PackagesListPanel: React.FC<PackagesListPanelProps> = ({
   onSelect,
+  browse,
 }) => {
-  const [tab, setTab] = useState<MainTab>('addons')
+  const [ownTab, setOwnTab] = useState<PackagesTab>('addons')
+  const tab = browse?.tab ?? ownTab
   const [filter, setFilter] = useState<AddonFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   useLocale()
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
-    setTab(value as MainTab)
+    if (browse) browse.setTab(value as PackagesTab)
+    else setOwnTab(value as PackagesTab)
   }
 
   const mainTabs = [
@@ -86,12 +94,18 @@ export const PackagesListPanel: React.FC<PackagesListPanelProps> = ({
       }
     >
       {tab === 'apis' ? (
-        <ApisList searchQuery={searchQuery} />
+        <ApisList
+          searchQuery={searchQuery}
+          category={browse?.category}
+          onCategoryChange={browse?.setCategory}
+        />
       ) : (
         <AddonsList
           searchQuery={searchQuery}
           filter={filter}
           onSelect={onSelect}
+          category={browse?.category}
+          onCategoryChange={browse?.setCategory}
         />
       )}
     </ResizablePanelLayout>

@@ -20,7 +20,7 @@ import { CategoryRail } from './CategoryRail'
 import { AddonCard } from './AddonCard'
 import { PublishCta } from './PublishCta'
 import { AddonDetailDrawer } from './AddonDetailDrawer'
-import { toCategoryBuckets } from './addonCategoryMeta'
+import type { CategoryBucket } from './addonCategoryMeta'
 
 export type SortKey = 'name' | 'functions' | 'agents'
 
@@ -38,16 +38,22 @@ interface CommunityGalleryProps {
   /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
   /**
-   * Catalogue-wide category counts, from the registry. Derived counts would
-   * only describe the pages already scrolled past.
+   * Catalogue-wide category buckets, from the registry. Derived counts would
+   * only describe the pages already scrolled past. Still needed when the rail is
+   * mounted elsewhere: the heading names the picked category.
    */
-  categoryCounts: Record<string, number>
+  categories: CategoryBucket[]
   /**
    * Size of the unfiltered catalogue — the rail's "All" count. Summing
-   * `categoryCounts` would overcount every package that declares more than one
+   * `categories` would overcount every package that declares more than one
    * category.
    */
   catalogueTotal: number
+  /**
+   * Set false when the host mounts the rail itself (`PackagesBrowseRail`), so
+   * the gallery is the grid alone and there is only ever one rail on screen.
+   */
+  withRail?: boolean
   /** How many rows match the current search/filter across the whole catalogue. */
   total: number
   category: string
@@ -82,8 +88,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   installingName,
   actionError,
   kind = 'addon',
-  categoryCounts,
+  categories,
   catalogueTotal,
+  withRail = true,
   total,
   category,
   onCategoryChange,
@@ -107,11 +114,6 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
       setSelected(addon)
     }
   }
-
-  const categories = useMemo(
-    () => toCategoryBuckets(categoryCounts),
-    [categoryCounts]
-  )
 
   const sortData = useMemo(
     () => [
@@ -154,94 +156,111 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           : m.packages_all_addons()
       : asI18n(categories.find((c) => c.id === category)?.label ?? category)
 
+  // The grid — rail beside cards — is how the gallery stands on its own. A host
+  // that has mounted the rail as its own panel gets the cards alone, filling the
+  // width they were sharing.
+  const grid = (
+    <Stack
+      gap="md"
+      style={
+        withRail
+          ? { minWidth: 0, minHeight: '100%' }
+          : { minWidth: 0, minHeight: 0, flex: 1 }
+      }
+    >
+      <Group justify="space-between" wrap="nowrap">
+        <Group gap="sm" wrap="nowrap">
+          <Text fw={700} size="sm">
+            {heading}
+          </Text>
+          <Badge size="sm" variant="light" color="gray">
+            {asI18n(String(total))}
+          </Badge>
+        </Group>
+        {sort && onSortChange && (
+          <Group gap="xs" wrap="nowrap">
+            <ThemeIcon size="sm" variant="transparent" color="gray">
+              <SlidersHorizontal size={14} />
+            </ThemeIcon>
+            <SegmentedControl
+              size="xs"
+              value={sort}
+              onChange={(v) => onSortChange(v as SortKey)}
+              data={sortData}
+            />
+          </Group>
+        )}
+      </Group>
+
+      {/* Content region grows to fill, keeping the publish CTA pinned to
+              the bottom whether the grid is short or the list is empty. */}
+      <Box style={{ flex: 1, minHeight: 0 }}>
+        {addons.length === 0 ? (
+          <Stack align="center" justify="center" gap={6} h="100%">
+            <ThemeIcon size={48} radius="md" variant="light" color="gray">
+              <Search size={22} />
+            </ThemeIcon>
+            <Text fw={600} size="sm">
+              {m.packages_no_matches()}
+            </Text>
+            <Text size="sm" c="dimmed">
+              {m.packages_no_matches_hint()}
+            </Text>
+          </Stack>
+        ) : (
+          <>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {addons.map((addon) => (
+                <AddonCard
+                  key={addon.id}
+                  addon={addon}
+                  installed={installedNames.has(addon.name)}
+                  kind={kind}
+                  onOpen={openAddon}
+                />
+              ))}
+            </SimpleGrid>
+            {hasMore && (
+              <Box ref={sentinelRef} py="lg">
+                <Center>
+                  <Loader size="sm" />
+                </Center>
+              </Box>
+            )}
+          </>
+        )}
+      </Box>
+
+      {/* Publishing is an authoring action — hide it on a read-only console
+          (e.g. a deployed stage) where you can't install or edit anyway. */}
+      {kind === 'addon' && editable && <PublishCta />}
+    </Stack>
+  )
+
   return (
     <Stack gap="lg" style={{ minHeight: '100%' }}>
-      <Box
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 210px) minmax(0, 1fr)',
-          gap: 'var(--mantine-spacing-xl)',
-          alignItems: 'stretch',
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        <CategoryRail
-          categories={categories}
-          active={category}
-          total={catalogueTotal}
-          onPick={onCategoryChange}
-        />
-
-        <Stack gap="md" style={{ minWidth: 0, minHeight: '100%' }}>
-          <Group justify="space-between" wrap="nowrap">
-            <Group gap="sm" wrap="nowrap">
-              <Text fw={700} size="sm">
-                {heading}
-              </Text>
-              <Badge size="sm" variant="light" color="gray">
-                {asI18n(String(total))}
-              </Badge>
-            </Group>
-            {sort && onSortChange && (
-              <Group gap="xs" wrap="nowrap">
-                <ThemeIcon size="sm" variant="transparent" color="gray">
-                  <SlidersHorizontal size={14} />
-                </ThemeIcon>
-                <SegmentedControl
-                  size="xs"
-                  value={sort}
-                  onChange={(v) => onSortChange(v as SortKey)}
-                  data={sortData}
-                />
-              </Group>
-            )}
-          </Group>
-
-          {/* Content region grows to fill, keeping the publish CTA pinned to
-              the bottom whether the grid is short or the list is empty. */}
-          <Box style={{ flex: 1, minHeight: 0 }}>
-            {addons.length === 0 ? (
-              <Stack align="center" justify="center" gap={6} h="100%">
-                <ThemeIcon size={48} radius="md" variant="light" color="gray">
-                  <Search size={22} />
-                </ThemeIcon>
-                <Text fw={600} size="sm">
-                  {m.packages_no_matches()}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {m.packages_no_matches_hint()}
-                </Text>
-              </Stack>
-            ) : (
-              <>
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-                  {addons.map((addon) => (
-                    <AddonCard
-                      key={addon.id}
-                      addon={addon}
-                      installed={installedNames.has(addon.name)}
-                      kind={kind}
-                      onOpen={openAddon}
-                    />
-                  ))}
-                </SimpleGrid>
-                {hasMore && (
-                  <Box ref={sentinelRef} py="lg">
-                    <Center>
-                      <Loader size="sm" />
-                    </Center>
-                  </Box>
-                )}
-              </>
-            )}
-          </Box>
-
-          {/* Publishing is an authoring action — hide it on a read-only console
-              (e.g. a deployed stage) where you can't install or edit anyway. */}
-          {kind === 'addon' && editable && <PublishCta />}
-        </Stack>
-      </Box>
+      {withRail ? (
+        <Box
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 210px) minmax(0, 1fr)',
+            gap: 'var(--mantine-spacing-xl)',
+            alignItems: 'stretch',
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          <CategoryRail
+            categories={categories}
+            active={category}
+            total={catalogueTotal}
+            onPick={onCategoryChange}
+          />
+          {grid}
+        </Box>
+      ) : (
+        grid
+      )}
 
       <AddonDetailDrawer
         addon={selected}
