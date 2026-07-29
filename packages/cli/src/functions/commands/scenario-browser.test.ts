@@ -147,8 +147,71 @@ describe('resolveScenarioBrowserProvider', () => {
         ...options({ appUrl: undefined }),
         importDriver: driver().importDriver,
       } as any),
-      /environment 'local' has browser steps but no 'appUrl'/
+      /environment 'local' has browser steps but no 'appUrl'[\s\S]*--app-url/
     )
+  })
+
+  test('a driver that knows the target from its own environment supplies the appUrl', async () => {
+    let seen: any
+    await resolveScenarioBrowserProvider({
+      ...options({ appUrl: undefined }),
+      driver: '@acme/sandbox-driver',
+      importDriver: async () => ({
+        // The sandbox case: the driver reads a hostname nothing in the config
+        // could have known.
+        browserConfigFromEnv: (overrides: any) => ({
+          ...overrides,
+          appUrl: overrides.appUrl ?? 'https://sandbox-a1b2.example.com',
+          appUrlSource: overrides.appUrl ? 'override' : 'env',
+        }),
+        createScenarioBrowserProvider: (opts: any) => {
+          seen = opts
+          return { sessionFor: async () => ({}) as any, close: async () => {} }
+        },
+      }),
+    } as any)
+
+    assert.equal(seen.config.appUrl, 'https://sandbox-a1b2.example.com')
+  })
+
+  test('a driver falling back to its own placeholder is reported as a missing appUrl', async () => {
+    await assert.rejects(
+      resolveScenarioBrowserProvider({
+        ...options({ appUrl: undefined }),
+        driver: '@acme/sandbox-driver',
+        importDriver: async () => ({
+          browserConfigFromEnv: () => ({
+            appUrl: 'http://localhost:5001',
+            appUrlSource: 'default',
+          }),
+          createScenarioBrowserProvider: () => ({
+            sessionFor: async () => ({}) as any,
+            close: async () => {},
+          }),
+        }),
+      } as any),
+      /environment 'local' has browser steps but no 'appUrl'[\s\S]*resolved none from the environment/
+    )
+  })
+
+  test('the configured appUrl still wins over anything the driver would resolve', async () => {
+    let seen: any
+    await resolveScenarioBrowserProvider({
+      ...options(),
+      driver: '@acme/sandbox-driver',
+      importDriver: async () => ({
+        browserConfigFromEnv: (overrides: any) => ({
+          appUrl: overrides.appUrl ?? 'https://sandbox-a1b2.example.com',
+          appUrlSource: overrides.appUrl ? 'override' : 'env',
+        }),
+        createScenarioBrowserProvider: (opts: any) => {
+          seen = opts
+          return { sessionFor: async () => ({}) as any, close: async () => {} }
+        },
+      }),
+    } as any)
+
+    assert.equal(seen.config.appUrl, 'http://localhost:4077/console')
   })
 
   test('a missing driver names the scenarios that needed it and how to install it', async () => {
@@ -204,6 +267,22 @@ describe('resolveScenarioBrowserProvider', () => {
       appUrl: 'http://localhost:4077/console',
       apiUrl: 'http://localhost:4077',
     })
+  })
+
+  test('a driver with no config of its own cannot rescue a missing appUrl', async () => {
+    await assert.rejects(
+      resolveScenarioBrowserProvider({
+        ...options({ appUrl: undefined }),
+        driver: '@acme/minimal-driver',
+        importDriver: async () => ({
+          createScenarioBrowserProvider: () => ({
+            sessionFor: async () => ({}) as any,
+            close: async () => {},
+          }),
+        }),
+      } as any),
+      /environment 'local' has browser steps but no 'appUrl'/
+    )
   })
 
   test('a package that is not a driver at all says so, rather than crashing later', async () => {

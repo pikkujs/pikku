@@ -31,6 +31,7 @@ import { resolveScenarioActors } from '../../utils/resolve-scenario-actors.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
+import { resolveScenarioEnvironment } from './scenario-environment.js'
 
 const isScenario = (wf: any) => wf?.scenario === true
 
@@ -132,6 +133,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     spawn?: boolean
     keepAlive?: boolean
     trace?: boolean
+    apiUrl?: string
+    appUrl?: string
   },
   void
 >({
@@ -148,19 +151,25 @@ export const scenarioRun = pikkuSessionlessFunc<
       spawn = false,
       keepAlive = false,
       trace = false,
+      apiUrl,
+      appUrl,
     }
   ) => {
     const state = await getInspectorState(true, false, false, true)
 
-    const environments = config.scenarios?.environments ?? {}
-    const env = environments[environment]
-    if (!env) {
-      const known = Object.keys(environments)
-      throw new Error(
-        `Unknown scenario environment '${environment}'. ` +
-          (known.length
-            ? `Configured environments: ${known.join(', ')}`
-            : `Add scenarios.environments to pikku.config.json, e.g. { "${environment}": { "apiUrl": "https://app.example.com/api" } }`)
+    // Resolved once, so actors, step env, the browser driver and any spawned
+    // server all target the same place — including when the target only exists
+    // at run time and arrives through --api-url/--app-url.
+    const env = resolveScenarioEnvironment({
+      environment,
+      environments: config.scenarios?.environments ?? {},
+      apiUrl,
+      appUrl,
+      spawn,
+    })
+    if (apiUrl || appUrl) {
+      logger.info(
+        `Overriding '${environment}': apiUrl ${env.apiUrl}${env.appUrl ? `, appUrl ${env.appUrl}` : ''}`
       )
     }
 
