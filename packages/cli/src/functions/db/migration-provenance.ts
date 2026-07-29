@@ -30,11 +30,9 @@ const MIGRATION_LABEL = /^\d+-(.+)\.sql$/
  * Strip `--` line comments so a `CREATE TABLE` quoted inside a REVIEW note is
  * not mistaken for one the migration actually runs.
  */
-const stripComments = (sql: string): string =>
-  sql.replace(/--[^\n]*/g, '')
+const stripComments = (sql: string): string => sql.replace(/--[^\n]*/g, '')
 
-const CREATE_TABLE =
-  /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(;]+)/gi
+const CREATE_TABLE = /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(;]+)/gi
 
 /**
  * Drop the schema qualifier and any quoting, so `"app"."user"` and `user` are
