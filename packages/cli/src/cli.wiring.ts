@@ -511,6 +511,14 @@ wireCLI({
                 'Keep every stack frame on a failure. Without it, only the project’s own frames are shown',
               default: false,
             },
+            apiUrl: {
+              description:
+                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+            },
+            appUrl: {
+              description:
+                "Override the environment's appUrl for this run (the frontend browser steps navigate against)",
+            },
           },
         }),
         list: pikkuCLICommand({

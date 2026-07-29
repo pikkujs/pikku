@@ -39,9 +39,17 @@ export interface ScenarioBrowserDriver {
   PlaywrightScenarioBrowserProvider?: new (
     options: ScenarioBrowserDriverOptions
   ) => ScenarioBrowserProvider
-  /** Driver-specific config (headed, slowMo, timeouts) resolved from the env. */
+  /**
+   * Driver-specific config (headed, slowMo, timeouts) resolved from the env.
+   *
+   * A driver may resolve `appUrl` itself when the caller passes none — that is
+   * how a target known only at run time (a sandbox hostname in the env) is
+   * reached without a config file per deployment. A driver that answers with a
+   * placeholder rather than a real target must say so with
+   * `appUrlSource: 'default'`, which the runner reports as a missing appUrl.
+   */
   browserConfigFromEnv?: (overrides: {
-    appUrl: string
+    appUrl?: string
     apiUrl: string
   }) => unknown
 }
@@ -64,9 +72,26 @@ export interface ResolveScenarioBrowserProviderOptions {
 }
 
 /**
+ * What the driver answered with, once it has had its say about `appUrl`.
+ * `appUrlSource` is optional: a driver that resolves a URL and does not
+ * classify it is taken at its word.
+ */
+interface ResolvedBrowserConfig {
+  appUrl?: string
+  appUrlSource?: 'override' | 'env' | 'default'
+}
+
+/**
  * Both failure modes here are discovered before the first scenario starts. A
  * missing `appUrl` or an uninstalled driver found mid-run costs a whole run to
  * learn about.
+ *
+ * `appUrl` is checked after the driver has resolved its config rather than
+ * before, so a driver that knows the target from its own environment (a
+ * sandbox hostname) is allowed to supply it. The check is not dropped: a driver
+ * reporting `appUrlSource: 'default'` resolved nothing and fails the same way,
+ * because a run against a placeholder URL is worse than one that refuses to
+ * start.
  */
 export const resolveScenarioBrowserProvider = async ({
   environment,
@@ -81,12 +106,6 @@ export const resolveScenarioBrowserProvider = async ({
   importDriver = (specifier) =>
     import(specifier) as unknown as Promise<ScenarioBrowserDriver>,
 }: ResolveScenarioBrowserProviderOptions): Promise<ScenarioBrowserProvider> => {
-  if (!appUrl) {
-    throw new Error(
-      `Scenario environment '${environment}' has browser steps but no 'appUrl'. ` +
-        `Add it to scenarios.environments.${environment} in pikku.config.json, or run with --no-browser to skip them.`
-    )
-  }
   const module = await importDriver(driver).catch(() => {
     const install =
       driver === DEFAULT_BROWSER_DRIVER
@@ -97,15 +116,22 @@ export const resolveScenarioBrowserProvider = async ({
         `${install}, or run with --no-browser to skip them.`
     )
   })
+  const config = (module.browserConfigFromEnv?.({ appUrl, apiUrl }) ?? {
+    appUrl,
+    apiUrl,
+  }) as ResolvedBrowserConfig
+  if (!config.appUrl || config.appUrlSource === 'default') {
+    throw new Error(
+      `Scenario environment '${environment}' has browser steps but no 'appUrl', and '${driver}' resolved none from the environment. ` +
+        `Add it to scenarios.environments.${environment} in pikku.config.json, pass --app-url for a target that only exists at run time, or run with --no-browser to skip them.`
+    )
+  }
   const options: ScenarioBrowserDriverOptions = {
     secret,
     actors,
     signInPath,
     failureDir,
-    config: module.browserConfigFromEnv?.({ appUrl, apiUrl }) ?? {
-      appUrl,
-      apiUrl,
-    },
+    config,
   }
   if (module.createScenarioBrowserProvider) {
     return module.createScenarioBrowserProvider(options)

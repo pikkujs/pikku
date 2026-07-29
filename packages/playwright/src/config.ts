@@ -15,6 +15,12 @@ import { loadElementMap, type ElementMap } from './elements.js'
 export interface BrowserConfig {
   /** Base URL of the running frontend. */
   appUrl: string
+  /**
+   * Where `appUrl` came from. `default` means nothing named a target and the
+   * local dev fallback was used — the scenario runner treats that as a
+   * misconfiguration rather than silently testing localhost.
+   */
+  appUrlSource?: 'override' | 'env' | 'default'
   /** Base URL of the API (default: same origin under /api). */
   apiUrl: string
   /** Per-action Playwright timeout (ms). */
@@ -51,13 +57,12 @@ export function browserConfigFromEnv(
   env: Record<string, string | undefined> = process.env
 ): BrowserConfig {
   const host = env.SANDBOX_HOSTNAME
-  const appUrl =
-    overrides.appUrl ??
-    env.E2E_APP_URL ??
-    env.APP_URL ??
-    (host ? `https://${host}` : 'http://localhost:5001')
+  const envAppUrl =
+    env.E2E_APP_URL ?? env.APP_URL ?? (host ? `https://${host}` : undefined)
+  const appUrl = overrides.appUrl ?? envAppUrl ?? 'http://localhost:5001'
   return {
     appUrl,
+    appUrlSource: overrides.appUrl ? 'override' : envAppUrl ? 'env' : 'default',
     apiUrl:
       overrides.apiUrl ?? env.E2E_API_URL ?? env.API_URL ?? `${appUrl}/api`,
     timeout: overrides.timeout ?? Number(env.E2E_TIMEOUT ?? 30_000),
