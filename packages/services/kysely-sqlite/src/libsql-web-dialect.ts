@@ -189,6 +189,16 @@ class LibsqlWebConnection implements DatabaseConnection {
   }
 }
 
+/**
+ * Encodes one Kysely bind parameter as a Hrana value.
+ *
+ * The Date and plain-object branches exist for parity with the `coerce()` in
+ * the CLI's node:sqlite dev runtime (`db/sqlite/sqlite-kysely.ts`). Without
+ * them a query that binds a timestamp or a JSON column passes under
+ * `pikku dev` and throws `unsupported argument type object` once deployed to
+ * a Worker — so every write in a deployed libsql app fails while the same
+ * code works locally.
+ */
 function encodeArg(v: unknown): HranaValue {
   if (v === null || v === undefined) return { type: 'null' }
   if (typeof v === 'string') return { type: 'text', value: v }
@@ -201,6 +211,9 @@ function encodeArg(v: unknown): HranaValue {
   if (v instanceof ArrayBuffer)
     return { type: 'blob', base64: bytesToBase64(new Uint8Array(v)) }
   if (v instanceof Uint8Array) return { type: 'blob', base64: bytesToBase64(v) }
+  if (v instanceof Date) return { type: 'text', value: v.toISOString() }
+  if (typeof v === 'object')
+    return { type: 'text', value: JSON.stringify(v) }
   throw new Error(`libsql: unsupported argument type ${typeof v}`)
 }
 
