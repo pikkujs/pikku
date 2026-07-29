@@ -120,5 +120,8 @@ test('the migration that creates a table owns it, not one that recreates it', ()
     ),
   })
 
-  assert.equal(readMigrationProvenance(dir).get('account')?.source, 'better-auth')
+  assert.equal(
+    readMigrationProvenance(dir).get('account')?.source,
+    'better-auth'
+  )
 })
