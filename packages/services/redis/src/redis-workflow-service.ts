@@ -42,9 +42,17 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     super(options)
     this.keyPrefix = keyPrefix
 
-    // Check if it's a Redis instance or config options
-    if (connectionOrConfig instanceof Redis) {
-      this.redis = connectionOrConfig
+    // An already-connected client is recognised by the commands it exposes
+    // rather than by `instanceof Redis`, so a compatible client that is not an
+    // ioredis subclass — a test double, a wrapper — is used as given instead of
+    // being silently ignored in favour of a fresh connection to localhost.
+    if (
+      typeof connectionOrConfig === 'object' &&
+      connectionOrConfig !== null &&
+      'hgetall' in connectionOrConfig &&
+      'hset' in connectionOrConfig
+    ) {
+      this.redis = connectionOrConfig as Redis
       this.ownsConnection = false
     } else {
       this.redis = new Redis(connectionOrConfig as any)

@@ -17,7 +17,7 @@
  *      default budget and the workflow completes.
  *
  * Usage:
- *   yarn test:retry-idempotency:pg      # pg-boss + Postgres (KyselyWorkflowService)
+ *   yarn test:retry-idempotency:pg      # pg-boss + Postgres (PgKyselyWorkflowService)
  *   yarn test:retry-idempotency:redis   # bullmq + Redis (RedisWorkflowService)
  */
 
@@ -48,7 +48,7 @@ async function setup(backend: Backend): Promise<{
   const config = await createConfig()
 
   if (backend === 'pg') {
-    const { KyselyWorkflowService } = await import('@pikku/kysely')
+    const { PgKyselyWorkflowService } = await import('@pikku/kysely-postgres')
     const { PgBossServiceFactory } = await import('@pikku/queue-pg-boss')
     const { Kysely, CamelCasePlugin } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
@@ -60,13 +60,13 @@ async function setup(backend: Backend): Promise<{
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
     const sql = postgres(connectionString)
-    // KyselyWorkflowService creates snake_case tables but queries in camelCase —
+    // PgKyselyWorkflowService creates snake_case tables but queries in camelCase —
     // it requires the CamelCasePlugin to bridge the two.
     const db = new Kysely<any>({
       dialect: new PostgresJSDialect({ postgres: sql }),
       plugins: [new CamelCasePlugin()],
     })
-    const workflowService = new KyselyWorkflowService(db)
+    const workflowService = new PgKyselyWorkflowService(db)
     await workflowService.init()
 
     await createSingletonServices(config, {
@@ -120,7 +120,8 @@ function assert(condition: boolean, message: string): void {
 const attemptCounts = (execs: StepExecution[]) =>
   execs.map((e) => e.attemptCount)
 const allSameInvocationId = (execs: StepExecution[]) =>
-  execs.length > 0 && execs.every((e) => e.invocationId === execs[0]!.invocationId)
+  execs.length > 0 &&
+  execs.every((e) => e.invocationId === execs[0]!.invocationId)
 
 async function main(): Promise<void> {
   const backend = parseBackend()
@@ -174,103 +175,91 @@ async function main(): Promise<void> {
   }
 
   // 1) Idempotent dedupe across retries
-  await test(
-    'idempotent dedupe: same invocationId across retries, side effect once',
-    async () => {
-      const key = 'dedupe'
-      tracker.reset(key)
-      const status = await runToTerminal('idempotentDedupeWorkflow', {
-        trackerKey: key,
-        failTimes: 2,
-      })
-      const execs = tracker.executions(key)
-      assert(status === 'completed', `expected completed, got ${status}`)
-      assert(execs.length === 3, `expected 3 executions, got ${execs.length}`)
-      assert(
-        allSameInvocationId(execs),
-        `invocationId must be stable across retries, got ${JSON.stringify(execs.map((e) => e.invocationId))}`
-      )
-      assert(
-        JSON.stringify(attemptCounts(execs)) === JSON.stringify([1, 2, 3]),
-        `expected attemptCounts [1,2,3], got ${JSON.stringify(attemptCounts(execs))}`
-      )
-      // The payoff: a side effect keyed on the stable invocationId runs exactly
-      // once even though the step body executed 3 times. (stepId is deliberately
-      // NOT asserted here — whether it changes per attempt is store-specific;
-      // invocationId is the cross-store dedupe key, which is the whole point.)
-      assert(
-        tracker.sideEffectCount(key) === 1,
-        `idempotent side effect must run once, ran ${tracker.sideEffectCount(key)} times`
-      )
-    }
-  )
+  await test('idempotent dedupe: same invocationId across retries, side effect once', async () => {
+    const key = 'dedupe'
+    tracker.reset(key)
+    const status = await runToTerminal('idempotentDedupeWorkflow', {
+      trackerKey: key,
+      failTimes: 2,
+    })
+    const execs = tracker.executions(key)
+    assert(status === 'completed', `expected completed, got ${status}`)
+    assert(execs.length === 3, `expected 3 executions, got ${execs.length}`)
+    assert(
+      allSameInvocationId(execs),
+      `invocationId must be stable across retries, got ${JSON.stringify(execs.map((e) => e.invocationId))}`
+    )
+    assert(
+      JSON.stringify(attemptCounts(execs)) === JSON.stringify([1, 2, 3]),
+      `expected attemptCounts [1,2,3], got ${JSON.stringify(attemptCounts(execs))}`
+    )
+    // The payoff: a side effect keyed on the stable invocationId runs exactly
+    // once even though the step body executed 3 times. (stepId is deliberately
+    // NOT asserted here — whether it changes per attempt is store-specific;
+    // invocationId is the cross-store dedupe key, which is the whole point.)
+    assert(
+      tracker.sideEffectCount(key) === 1,
+      `idempotent side effect must run once, ran ${tracker.sideEffectCount(key)} times`
+    )
+  })
 
   // 2) retries: 0 is honored — exactly one execution, workflow fails
-  await test(
-    'retries:0 honored: step runs exactly once and workflow fails',
-    async () => {
-      const key = 'noretry'
-      tracker.reset(key)
-      const status = await runToTerminal('noRetryWorkflow', { trackerKey: key })
-      const execs = tracker.executions(key)
-      assert(status === 'failed', `expected failed, got ${status}`)
-      assert(
-        execs.length === 1,
-        `retries:0 must run exactly once, ran ${execs.length} times`
-      )
-      assert(
-        execs[0]!.attemptCount === 1,
-        `expected attemptCount 1, got ${execs[0]?.attemptCount}`
-      )
-    }
-  )
+  await test('retries:0 honored: step runs exactly once and workflow fails', async () => {
+    const key = 'noretry'
+    tracker.reset(key)
+    const status = await runToTerminal('noRetryWorkflow', { trackerKey: key })
+    const execs = tracker.executions(key)
+    assert(status === 'failed', `expected failed, got ${status}`)
+    assert(
+      execs.length === 1,
+      `retries:0 must run exactly once, ran ${execs.length} times`
+    )
+    assert(
+      execs[0]!.attemptCount === 1,
+      `expected attemptCount 1, got ${execs[0]?.attemptCount}`
+    )
+  })
 
   // 3) Default retries exhausted — exactly DEFAULT_STEP_RETRIES + 1 executions
-  await test(
-    `default retries: exhausts at DEFAULT_STEP_RETRIES+1 (${DEFAULT_STEP_RETRIES + 1}) then fails`,
-    async () => {
-      const key = 'exhaust'
-      tracker.reset(key)
-      const status = await runToTerminal('defaultRetryExhaustWorkflow', {
-        trackerKey: key,
-      })
-      const execs = tracker.executions(key)
-      assert(status === 'failed', `expected failed, got ${status}`)
-      assert(
-        execs.length === DEFAULT_STEP_RETRIES + 1,
-        `expected ${DEFAULT_STEP_RETRIES + 1} executions, got ${execs.length}`
-      )
-      assert(
-        allSameInvocationId(execs),
-        `invocationId must be stable across all attempts`
-      )
-      const expected = Array.from(
-        { length: DEFAULT_STEP_RETRIES + 1 },
-        (_, i) => i + 1
-      )
-      assert(
-        JSON.stringify(attemptCounts(execs)) === JSON.stringify(expected),
-        `expected attemptCounts ${JSON.stringify(expected)}, got ${JSON.stringify(attemptCounts(execs))}`
-      )
-    }
-  )
+  await test(`default retries: exhausts at DEFAULT_STEP_RETRIES+1 (${DEFAULT_STEP_RETRIES + 1}) then fails`, async () => {
+    const key = 'exhaust'
+    tracker.reset(key)
+    const status = await runToTerminal('defaultRetryExhaustWorkflow', {
+      trackerKey: key,
+    })
+    const execs = tracker.executions(key)
+    assert(status === 'failed', `expected failed, got ${status}`)
+    assert(
+      execs.length === DEFAULT_STEP_RETRIES + 1,
+      `expected ${DEFAULT_STEP_RETRIES + 1} executions, got ${execs.length}`
+    )
+    assert(
+      allSameInvocationId(execs),
+      `invocationId must be stable across all attempts`
+    )
+    const expected = Array.from(
+      { length: DEFAULT_STEP_RETRIES + 1 },
+      (_, i) => i + 1
+    )
+    assert(
+      JSON.stringify(attemptCounts(execs)) === JSON.stringify(expected),
+      `expected attemptCounts ${JSON.stringify(expected)}, got ${JSON.stringify(attemptCounts(execs))}`
+    )
+  })
 
   // 4) Default retries recover — completes within the default budget
-  await test(
-    'default retries: recovers within the default budget and completes',
-    async () => {
-      const key = 'recover'
-      tracker.reset(key)
-      const status = await runToTerminal('defaultRetryRecoverWorkflow', {
-        trackerKey: key,
-        failTimes: 2,
-      })
-      const execs = tracker.executions(key)
-      assert(status === 'completed', `expected completed, got ${status}`)
-      assert(execs.length === 3, `expected 3 executions, got ${execs.length}`)
-      assert(allSameInvocationId(execs), `invocationId must be stable`)
-    }
-  )
+  await test('default retries: recovers within the default budget and completes', async () => {
+    const key = 'recover'
+    tracker.reset(key)
+    const status = await runToTerminal('defaultRetryRecoverWorkflow', {
+      trackerKey: key,
+      failTimes: 2,
+    })
+    const execs = tracker.executions(key)
+    assert(status === 'completed', `expected completed, got ${status}`)
+    assert(execs.length === 3, `expected 3 executions, got ${execs.length}`)
+    assert(allSameInvocationId(execs), `invocationId must be stable`)
+  })
 
   console.log('\n=== Summary ===')
   const passed = results.filter((r) => r.ok).length

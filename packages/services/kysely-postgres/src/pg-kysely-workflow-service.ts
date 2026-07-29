@@ -14,14 +14,17 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
    * the merge and back afterwards; `||` is used rather than `jsonb_set` because
    * `jsonb_set` will not create a key that is not already present.
    *
-   * The value is cast explicitly to jsonb rather than passed as a bare
-   * parameter, so it lands as a JSON value and not as a JSON string that
-   * happens to contain JSON.
+   * The value is carried as text and only then cast to jsonb, so it lands as a
+   * JSON value and not as a JSON string that happens to contain JSON. The
+   * intermediate `::text` is what makes that true for every driver: postgres.js
+   * infers a parameter's type from the cast that follows it and JSON-encodes
+   * anything it believes is jsonb, so a bare `$1::jsonb` would arrive
+   * double-encoded — `1` stored as `"1"`, and a counter read back as a string.
    */
   protected override jsonSetState(path: string, json: string) {
     // The base builds `$."key"`; Postgres addresses jsonb keys by bare name.
     const key = JSON.parse(path.slice(2))
-    return sql<string>`(coalesce(state, '{}')::jsonb || jsonb_build_object(${key}::text, ${json}::jsonb))::text`
+    return sql<string>`(coalesce(state, '{}')::jsonb || jsonb_build_object(${key}::text, (${json}::text)::jsonb))::text`
   }
 
   private hashStringToInt(str: string): number {

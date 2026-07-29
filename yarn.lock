@@ -7396,6 +7396,7 @@ __metadata:
     "@pikku/core": "workspace:*"
     "@pikku/inspector": "workspace:*"
     "@pikku/kysely": "workspace:*"
+    "@pikku/kysely-postgres": "workspace:*"
     "@pikku/queue-bullmq": "workspace:*"
     "@pikku/queue-pg-boss": "workspace:*"
     "@pikku/redis": "workspace:*"

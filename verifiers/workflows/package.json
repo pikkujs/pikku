@@ -9,6 +9,7 @@
   "dependencies": {
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/queue-bullmq": "workspace:*",
     "@pikku/queue-pg-boss": "workspace:*",
     "@pikku/redis": "workspace:*",
