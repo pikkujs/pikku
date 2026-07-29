@@ -11,6 +11,11 @@ interface CategoryRailProps {
   active: string
   total: number
   onPick: (id: string) => void
+  /**
+   * Drop the "Browse" heading — for a host that mounts the rail as its own
+   * panel and already names it in that panel's header.
+   */
+  withHeading?: boolean
 }
 
 export const CategoryRail: React.FC<CategoryRailProps> = ({
@@ -18,6 +23,7 @@ export const CategoryRail: React.FC<CategoryRailProps> = ({
   active,
   total,
   onPick,
+  withHeading = true,
 }) => {
   useLocale()
   return (
@@ -25,17 +31,19 @@ export const CategoryRail: React.FC<CategoryRailProps> = ({
       component="nav"
       style={{ position: 'sticky', top: 0, alignSelf: 'flex-start' }}
     >
-      <Text
-        size="xs"
-        fw={700}
-        tt="uppercase"
-        c="dimmed"
-        px="xs"
-        mb={6}
-        style={{ letterSpacing: '0.06em' }}
-      >
-        {m.packages_browse()}
-      </Text>
+      {withHeading && (
+        <Text
+          size="xs"
+          fw={700}
+          tt="uppercase"
+          c="dimmed"
+          px="xs"
+          mb={6}
+          style={{ letterSpacing: '0.06em' }}
+        >
+          {m.packages_browse()}
+        </Text>
+      )}
 
       <NavLink
         active={active === 'all'}

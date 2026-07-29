@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
+import { useOpenapiCategories } from '../../hooks/useOpenapiCategories'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { CommunityGallery } from './CommunityGallery'
 import { deriveNamespace } from './deriveNamespace'
@@ -51,15 +52,22 @@ const apiToPackageMeta = (item: OpenApiEntry): PackageMeta => ({
   totalOperations: item.totalOperations,
 })
 
-export const ApisList: React.FC<{ searchQuery: string }> = ({
-  searchQuery,
-}) => {
+export const ApisList: React.FC<{
+  searchQuery: string
+  /** Same contract as `AddonsList` — see its `category` / `onCategoryChange`. */
+  category?: string
+  onCategoryChange?: (category: string) => void
+}> = ({ searchQuery, category: controlledCategory, onCategoryChange }) => {
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
   const queryClient = useQueryClient()
 
-  const [category, setCategory] = useState('all')
+  const [ownCategory, setOwnCategory] = useState('all')
+  const category = controlledCategory ?? ownCategory
+  const setCategory = onCategoryChange ?? setOwnCategory
+  const withRail = !onCategoryChange
+  const { categories, catalogueTotal } = useOpenapiCategories()
 
   const {
     data,
@@ -86,32 +94,6 @@ export const ApisList: React.FC<{ searchQuery: string }> = ({
     },
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     staleTime: 60 * 1000,
-    retry: false,
-  })
-
-  const { data: categoryCounts } = useQuery<Record<string, number>>({
-    queryKey: ['openapi-categories'],
-    queryFn: async () =>
-      (await rpc.invoke('console:getOpenapiCategories')) as Record<
-        string,
-        number
-      >,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-
-  // The rail's "All" count: the whole catalogue, independent of the filters
-  // applied to the list above.
-  const { data: catalogueTotal } = useQuery<number>({
-    queryKey: ['openapis', 'total'],
-    queryFn: async () => {
-      const result = (await rpc.invoke('console:getOpenapis', {
-        limit: 1,
-        offset: 0,
-      })) as { total?: number }
-      return result.total ?? 0
-    },
-    staleTime: 5 * 60 * 1000,
     retry: false,
   })
 
@@ -198,8 +180,9 @@ export const ApisList: React.FC<{ searchQuery: string }> = ({
     <CommunityGallery
       addons={apis}
       searchQuery={searchQuery}
-      categoryCounts={categoryCounts ?? {}}
-      catalogueTotal={catalogueTotal ?? 0}
+      categories={categories}
+      catalogueTotal={catalogueTotal}
+      withRail={withRail}
       total={data.pages[0]?.total ?? 0}
       category={category}
       onCategoryChange={setCategory}

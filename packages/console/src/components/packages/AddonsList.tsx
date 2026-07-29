@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
+import { useAddonCategories } from '../../hooks/useAddonCategories'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { CommunityGallery } from './CommunityGallery'
 import type { SortKey } from './CommunityGallery'
@@ -40,13 +41,30 @@ export const AddonsList: React.FC<{
   searchQuery: string
   filter: AddonFilter
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
-}> = ({ searchQuery, filter, onSelect }) => {
+  /**
+   * Hand these in (from `usePackagesBrowse`) to drive the category from a rail
+   * the host mounted elsewhere; omit them and the list owns its own, with the
+   * rail inside the gallery.
+   */
+  category?: string
+  onCategoryChange?: (category: string) => void
+}> = ({
+  searchQuery,
+  filter,
+  onSelect,
+  category: controlledCategory,
+  onCategoryChange,
+}) => {
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
   const queryClient = useQueryClient()
-  const [category, setCategory] = useState('all')
+  const [ownCategory, setOwnCategory] = useState('all')
+  const category = controlledCategory ?? ownCategory
+  const setCategory = onCategoryChange ?? setOwnCategory
+  const withRail = !onCategoryChange
   const [sort, setSort] = useState<SortKey>('name')
+  const { categories, catalogueTotal } = useAddonCategories()
 
   const { data: installedAddons } = useQuery<InstalledAddonRow[]>({
     queryKey: ['installed-addons'],
@@ -126,31 +144,6 @@ export const AddonsList: React.FC<{
     retry: false,
   })
 
-  const { data: categoryCounts } = useQuery<Record<string, number>>({
-    queryKey: ['addon-categories'],
-    queryFn: async () =>
-      (await rpc.invoke('console:getAddonCategories')) as Record<
-        string,
-        number
-      >,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-
-  // The "All" count in the rail is the size of the unfiltered catalogue, so it
-  // can't come from the filtered list query above.
-  const { data: catalogueTotal } = useQuery<number>({
-    queryKey: ['addons', 'total'],
-    queryFn: async () => {
-      const result = (await rpc.invoke('console:getAddonMeta', {
-        limit: 1,
-      })) as CataloguePage
-      return result.total ?? 0
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-
   const catalogue = useMemo(
     () => (data?.pages ?? []).flatMap((page) => page.packages ?? []),
     [data]
@@ -220,8 +213,9 @@ export const AddonsList: React.FC<{
     <CommunityGallery
       addons={visible}
       searchQuery={searchQuery}
-      categoryCounts={categoryCounts ?? {}}
-      catalogueTotal={catalogueTotal ?? 0}
+      categories={categories}
+      catalogueTotal={catalogueTotal}
+      withRail={withRail}
       total={isInstalledView ? visible.length : (data.pages[0]?.total ?? 0)}
       category={category}
       onCategoryChange={setCategory}
