@@ -50,7 +50,7 @@ async function createWorkflowService(backend: Backend): Promise<{
   cleanup: () => Promise<void>
 }> {
   if (backend === 'pg') {
-    const { KyselyWorkflowService } = await import('@pikku/kysely')
+    const { PgKyselyWorkflowService } = await import('@pikku/kysely-postgres')
     const postgres = (await import('postgres')).default
     const { Kysely } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
@@ -61,7 +61,7 @@ async function createWorkflowService(backend: Backend): Promise<{
     const db = new Kysely<KyselyPikkuDB>({
       dialect: new PostgresJSDialect({ postgres: sql }),
     })
-    const workflowService = new KyselyWorkflowService(db)
+    const workflowService = new PgKyselyWorkflowService(db)
     await workflowService.init()
     return {
       workflowService,

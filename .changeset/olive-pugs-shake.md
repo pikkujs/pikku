@@ -1,6 +1,8 @@
 ---
 '@pikku/core': patch
 '@pikku/kysely': patch
+'@pikku/kysely-mysql': patch
+'@pikku/kysely-postgres': patch
 '@pikku/mongodb': patch
 '@pikku/redis': patch
 '@pikku/cloudflare': patch

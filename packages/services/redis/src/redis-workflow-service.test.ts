@@ -4,6 +4,8 @@ import Redis from 'ioredis-mock'
 
 import { RedisWorkflowService } from './redis-workflow-service.js'
 
+const KEY_PREFIX = 'workflows'
+
 let ws: RedisWorkflowService
 let redis: any
 
@@ -12,7 +14,7 @@ const newRun = () =>
 
 beforeEach(() => {
   redis = new Redis()
-  ws = new RedisWorkflowService(redis)
+  ws = new RedisWorkflowService(redis, KEY_PREFIX)
 })
 
 afterEach(() => {
@@ -134,7 +136,7 @@ describe('resolving a dynamic workflow', () => {
       'ai-agent'
     )
     await redis.hset(
-      `pikku:version:${name}:${graphHash}`,
+      `${KEY_PREFIX}:version:${name}:${graphHash}`,
       'createdAt',
       String(createdAt)
     )

@@ -279,7 +279,7 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
   })
 
   test('dispatchStep returns false for inline runs (does not call worker)', async () => {
-    ;(service as any).inlineRuns.add(RUN_ID)
+    ;(service as any).registerInlineRun(RUN_ID)
     const ok = await (service as any).dispatchStep(RUN_ID, 's', 'r', {})
     assert.equal(ok, false)
     assert.equal(dispatched.length, 0)
