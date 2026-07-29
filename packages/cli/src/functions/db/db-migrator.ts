@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { assertSnakeCaseIdentifiers } from './migration-identifiers.js'
+
 /**
  * The migrator's own bookkeeping table, which belongs to no dialect and to no
  * project's schema.
@@ -123,10 +125,27 @@ function assertNoDrift(
   }
 }
 
+/**
+ * Every migration on disk, read once.
+ *
+ * The identifier check reads all of them and not just the pending ones, so that
+ * whether a migration is rejected depends on the files alone. A camelCase
+ * column that had already been applied somewhere would otherwise pass on that
+ * machine and fail on a fresh checkout, which is the opposite of deterministic.
+ */
+const readMigrations = (
+  migrationsDir: string
+): Array<{ name: string; sql: string }> =>
+  migrationFiles(migrationsDir).map((name) => ({
+    name,
+    sql: readFileSync(join(migrationsDir, name), 'utf8'),
+  }))
+
 export async function migrate(
   executor: MigrationExecutor,
   migrationsDir: string
 ): Promise<MigrateResult> {
+  assertSnakeCaseIdentifiers(readMigrations(migrationsDir))
   await executor.ensureTrackingTable()
   const applied = await executor.getApplied()
   assertNoDrift(applied, migrationsDir)
