@@ -30,6 +30,7 @@ import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
 import { createCoercionPlugin, type CoercionMap } from './coercion-plugin.js'
+import { tableCreationSql } from './schema-sql.js'
 import { SqliteMigrationExecutor } from './sqlite/sqlite-migrator.js'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
@@ -1469,6 +1470,14 @@ export interface GenerateResult {
  * Partially covered writes the delta, because re-emitting the whole schema
  * would fail on the tables that already exist.
  *
+ * The delta is itself two different things, and only one of them is a diff. A
+ * table the migrations already have but a column short is a genuine alteration,
+ * so it becomes `ALTER TABLE … ADD COLUMN`. A table they do not have at all —
+ * what enabling a Better Auth plugin or upgrading an addon produces — has
+ * nothing to diff against, so it is lifted verbatim out of the source's own SQL
+ * for the same reason the first-time case is: the column map it would otherwise
+ * be rendered from knows nothing about keys, constraints or indexes.
+ *
  * Migrations are written one file per source, numbered in dependency order, so
  * a project can review and apply them independently.
  */
@@ -1516,10 +1525,22 @@ export async function generateMigrations(
     } else {
       const statements: string[] = []
       for (const table of missingTables) {
+        // A wholly new table is the first-time case in miniature: nothing to
+        // diff against, and the source's own SQL already says exactly how to
+        // build it. Rendering the column map instead would drop the primary
+        // key, the foreign keys and the indexes — a table that applies cleanly
+        // and is permanently wrong.
+        const own = tableCreationSql(source.desired.sql, table)
+        if (own.length > 0) {
+          statements.push(own.join('\n\n'))
+          continue
+        }
+
         const columns = source.desired.tables.get(table)
         statements.push(
-          `-- REVIEW: ${table} is new. Copy its CREATE TABLE from the source's own SQL —\n` +
-            `-- the column list below carries no indexes, constraints or foreign keys.\n` +
+          `-- REVIEW: ${table} is new, and its CREATE TABLE could not be found in the\n` +
+            `-- source's own SQL. The column list below carries no indexes, constraints\n` +
+            `-- or foreign keys — copy the real statement over it before applying.\n` +
             `CREATE TABLE ${table} (\n` +
             [...(columns?.values() ?? [])]
               .map(

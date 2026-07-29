@@ -27,6 +27,7 @@ import {
   reset as runReset,
   createKysely,
 } from './local-db.js'
+import type { ColumnInfo } from './db-introspector.js'
 import { MigrationDriftError } from './db-migrator.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
 
@@ -887,6 +888,174 @@ test('db generate adds only the columns a partially covered source is missing', 
   // what those rows should get is not the generator's decision to make.
   assert.deepEqual(migration.needsBackfill, ['todos.owner'])
   assert.match(body, /-- REVIEW: owner is NOT NULL with no default/)
+})
+
+/**
+ * Publish an addon's schema artifact under `root/node_modules`, overwriting any
+ * earlier one.
+ *
+ * Republishing is the point: a source growing a table between two `db generate`
+ * runs is what enabling a Better Auth plugin or upgrading an addon looks like.
+ */
+function publishAddonSchema(
+  pkg: string,
+  artifact: SchemaArtifact,
+  at: string
+): void {
+  const dir = join(at, 'node_modules', pkg)
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: pkg, version: '1.0.0' })
+  )
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify(artifact)
+  )
+}
+
+const column = (
+  name: string,
+  type: string,
+  extra: Partial<ColumnInfo> = {}
+): ColumnInfo => ({
+  name,
+  type,
+  notNull: false,
+  pk: false,
+  defaultValue: null,
+  ...extra,
+})
+
+/** The source before the plugin is enabled: one table, and nothing else. */
+const beforePlugin: SchemaArtifact['sqlite'] = {
+  sql: 'CREATE TABLE person (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL);',
+  tables: {
+    person: [
+      column('id', 'TEXT', { notNull: true, pk: true }),
+      column('name', 'TEXT', { notNull: true }),
+    ],
+  },
+}
+
+/** The same source after it: a new table, and a new column on the old one. */
+const afterPlugin: SchemaArtifact['sqlite'] = {
+  sql:
+    'CREATE TABLE person (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, two_factor_enabled INTEGER);\n' +
+    'CREATE TABLE two_factor (id TEXT NOT NULL PRIMARY KEY, secret TEXT NOT NULL, person_id TEXT NOT NULL REFERENCES person (id));\n' +
+    'CREATE INDEX two_factor_person_id_idx ON two_factor (person_id);',
+  tables: {
+    person: [
+      column('id', 'TEXT', { notNull: true, pk: true }),
+      column('name', 'TEXT', { notNull: true }),
+      column('two_factor_enabled', 'INTEGER'),
+    ],
+    two_factor: [
+      column('id', 'TEXT', { notNull: true, pk: true }),
+      column('secret', 'TEXT', { notNull: true }),
+      column('person_id', 'TEXT', { notNull: true }),
+    ],
+  },
+}
+
+test('db generate writes a new table on a covered source from the source’s own SQL', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  const generate = () =>
+    generateMigrations(
+      resolved,
+      root,
+      ['src'],
+      { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+      [{ package: 'addon-auth' }]
+    )
+
+  publishAddonSchema('addon-auth', { sqlite: beforePlugin }, root)
+  const first = await generate()
+  const initial = first.written.find((w) => w.source === 'addon-auth')
+  assert.ok(initial, 'the source got its first migration')
+  assert.equal(
+    readFileSync(initial.file, 'utf8').includes(beforePlugin!.sql),
+    true,
+    'the first-time path still writes the source SQL verbatim'
+  )
+
+  // The plugin is enabled. `person` is already covered, so this goes through the
+  // diff path — the one that used to render a new table from its column list.
+  publishAddonSchema('addon-auth', { sqlite: afterPlugin }, root)
+  const second = await generate()
+  const migration = second.written.find((w) => w.source === 'addon-auth')
+  assert.ok(migration, 'the new table and column were written')
+  const body = readFileSync(migration.file, 'utf8')
+
+  // The table arrives whole: key, foreign key and index, none of which a column
+  // list can express.
+  assert.match(body, /CREATE TABLE two_factor \(id TEXT NOT NULL PRIMARY KEY/)
+  assert.match(body, /person_id TEXT NOT NULL REFERENCES person \(id\)/)
+  assert.match(
+    body,
+    /CREATE INDEX two_factor_person_id_idx ON two_factor \(person_id\);/
+  )
+  assert.doesNotMatch(body, /REVIEW/, 'nothing is left for a human to copy')
+
+  // And the column-level diff on the table that already exists is untouched.
+  assert.match(
+    body,
+    /ALTER TABLE person ADD COLUMN two_factor_enabled INTEGER;/
+  )
+  assert.doesNotMatch(body, /CREATE TABLE person/, 'person already exists')
+
+  // The whole thing is a real migration: it applies, and leaves no drift.
+  await migrateAndCodegen(resolved)
+  const drift = await driftOf(resolved)
+  assert.equal(drift.inSync, true)
+  assert.deepEqual(drift.extraTables, [])
+})
+
+test('the same holds on postgres', async () => {
+  usePostgresProject()
+  const resolved = resolveDb({}, root, root)!
+  const generate = () =>
+    generateMigrations(
+      resolved,
+      root,
+      ['src'],
+      { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+      [{ package: 'addon-auth' }]
+    )
+
+  const before: SchemaArtifact = {
+    postgres: {
+      sql: 'CREATE TABLE person (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL);',
+      tables: beforePlugin!.tables,
+    },
+  }
+  const after: SchemaArtifact = {
+    postgres: {
+      sql: afterPlugin!.sql,
+      tables: afterPlugin!.tables,
+    },
+  }
+
+  publishAddonSchema('addon-auth', before, root)
+  await generate()
+  publishAddonSchema('addon-auth', after, root)
+  const migration = (await generate()).written.find(
+    (w) => w.source === 'addon-auth'
+  )
+  assert.ok(migration, 'the new table and column were written')
+  const body = readFileSync(migration.file, 'utf8')
+
+  assert.match(body, /CREATE TABLE two_factor \(id TEXT NOT NULL PRIMARY KEY/)
+  assert.match(body, /REFERENCES person \(id\)/)
+  assert.match(body, /CREATE INDEX two_factor_person_id_idx/)
+  assert.doesNotMatch(body, /REVIEW/)
+  assert.match(
+    body,
+    /ALTER TABLE person ADD COLUMN two_factor_enabled INTEGER;/
+  )
+
+  await migrateAndCodegen(resolved)
+  assert.equal((await driftOf(resolved)).inSync, true)
 })
 
 describe('parseDatabaseUrl', () => {
