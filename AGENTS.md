@@ -2,6 +2,13 @@
 
 Guidance for coding agents working in the Pikku repository.
 
+## Knowledge
+
+Durable project knowledge — decisions, gotchas, working agreements, project
+status, plans — lives in `knowledge/`, an OKF v0.2 bundle. **Read it there, and
+save new knowledge there, rather than in the `~/.claude` memory store.** Start
+at `knowledge/index.md`; the `knowledge` skill has the read/write protocol.
+
 ## What Pikku is
 
 A TypeScript framework that normalizes the different ways you interact with Node.js servers — HTTP requests, WebSocket connections, scheduled tasks, and channels — across runtimes (Express, Fastify, Next.js, AWS Lambda, Cloudflare Workers, …).
