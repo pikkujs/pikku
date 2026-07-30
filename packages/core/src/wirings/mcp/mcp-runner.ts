@@ -12,6 +12,7 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
+import { isProduction } from '../../env.js'
 import { closeWireServices } from '../../utils.js'
 import {
   pikkuState,
@@ -35,6 +36,11 @@ export class MCPError extends Error {
 
 export type RunMCPEndpointParams<Tools extends string = any> = {
   mcp?: PikkuMCP<Tools>
+  /**
+   * Surface the error message + stack on unexpected internal errors.
+   * Defaults to enabled outside of production.
+   */
+  exposeErrors?: boolean
 }
 
 export type JsonRpcError = {
@@ -187,7 +193,7 @@ async function runMCPPikkuFunc(
   name: string,
   mcp: CoreMCPResource | CoreMCPPrompt | undefined,
   pikkuFuncId: string | undefined,
-  { mcp: mcpWire }: RunMCPEndpointParams
+  { mcp: mcpWire, exposeErrors = !isProduction() }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
@@ -289,7 +295,10 @@ async function runMCPPikkuFunc(
         id: request.id,
         code: -32603,
         message: 'Internal error',
-        data: { message: e.message, stack: e.stack },
+        data:
+          exposeErrors && !isProduction() && e instanceof Error
+            ? { message: e.message, stack: e.stack }
+            : undefined,
       })
     }
   } finally {
