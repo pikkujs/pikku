@@ -17,6 +17,10 @@ import {
   getCloudflareEnv,
   setCloudflareEnv,
 } from './env.js'
+import {
+  dispatchUnauthorizedResponse,
+  isDispatchAuthorized,
+} from './dispatch-auth.js'
 
 export { getCloudflareEnv, type CloudflareEnv }
 
@@ -166,13 +170,18 @@ export function createCloudflareHandler(
       // via real CF Queues — namespace scripts can't bind as queue consumers).
       // Body: { queueName, data, jobId, traceId }. Status codes: 204 = ack,
       // 422 = ack-no-retry (PikkuMissingMetaError, QueueJobDiscardedError),
-      // 503 = retry (other thrown errors). The fabric dispatcher + pg-boss
-      // worker map these onto pg-boss outcomes.
+      // 503 = retry (other thrown errors), 401 = bad/missing dispatch secret.
+      // The fabric dispatcher + pg-boss worker map these onto pg-boss
+      // outcomes. Because it runs ahead of every other route it is gated on
+      // the PIKKU_DISPATCH_SECRET shared secret and fails closed when unset.
       const reqUrl = new URL(request.url)
       if (
         reqUrl.pathname === '/__pikku/queue-job' &&
         request.method === 'POST'
       ) {
+        if (!(await isDispatchAuthorized(request, this.env))) {
+          return dispatchUnauthorizedResponse()
+        }
         try {
           await setupServices(this.env, factories)
           const body = (await request.json()) as {
@@ -232,11 +241,15 @@ export function createCloudflareHandler(
       // `/__pikku/scheduler-job` is the fabric WfP scheduler-delivery route.
       // Mirrors `/__pikku/queue-job` for schedule-triggered units that have no
       // public HTTP surface. Body: { taskName }. Status codes: 204 = ok,
-      // 422 = no-retry, 503 = retry (transient).
+      // 422 = no-retry, 503 = retry (transient), 401 = bad/missing dispatch
+      // secret. Gated on PIKKU_DISPATCH_SECRET exactly like `/__pikku/queue-job`.
       if (
         reqUrl.pathname === '/__pikku/scheduler-job' &&
         request.method === 'POST'
       ) {
+        if (!(await isDispatchAuthorized(request, this.env))) {
+          return dispatchUnauthorizedResponse()
+        }
         try {
           await setupServices(this.env, factories)
           const body = (await request.json()) as { taskName: string }
