@@ -1,9 +1,25 @@
 import { existsSync } from 'node:fs'
 import { readFile, readdir, stat } from 'node:fs/promises'
-import { basename, join, relative } from 'node:path'
+import { basename, join, posix, relative, sep } from 'node:path'
 import { z } from 'zod'
 
 export const KNOWLEDGE_DIR = 'knowledge'
+
+/** A note path in the one separator every reader of it splits on. */
+export const toPosix = (path: string): string => path.split(sep).join(posix.sep)
+
+/**
+ * The section a note sits in: `knowledge/decisions/design/a.md` →
+ * `decisions/design`; a note at the root of the bundle → `''`.
+ *
+ * Lives here rather than in each caller because validating, indexing and graphing
+ * all key on the section, and separate copies of this rule are separate chances
+ * for the three of them to disagree about what a section is.
+ */
+export const sectionOf = (path: string): string => {
+  const parts = toPosix(path).split(posix.sep)
+  return parts.slice(parts.indexOf(KNOWLEDGE_DIR) + 1, -1).join(posix.sep)
+}
 
 /**
  * A note in an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)

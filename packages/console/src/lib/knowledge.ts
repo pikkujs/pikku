@@ -126,6 +126,24 @@ export const readableBody = (body: string): string =>
     .replace(/\n{3,}/g, '\n\n')
 
 /**
+ * The body without the heading that repeats the note's own title.
+ *
+ * A note is written to be read as a file, so it opens with `# Its Title` — right
+ * in the repo, and duplicated here, where the title is already the heading of the
+ * page. Only the opening heading is considered, and only when it says the same
+ * thing as the title: a note whose first heading is a real section keeps it.
+ */
+export const bodyWithoutTitle = (body: string, title: string): string => {
+  const heading = /^\s*#{1,6}[ \t]+(.+?)[ \t]*(?:\n|$)/.exec(body)
+  if (
+    !heading ||
+    heading[1]!.trim().toLowerCase() !== title.trim().toLowerCase()
+  )
+    return body
+  return body.slice(heading[0].length).replace(/^\s+/, '')
+}
+
+/**
  * The note a reader should land on: the bundle's entry point, which is the
  * `index.md` at the root of `knowledge/`. Falling back to the first note in path
  * order opens whichever section happens to sort first — `decisions/` — rather
@@ -167,8 +185,14 @@ export const resolveNoteLink = (
   const resolved: string[] = []
   for (const part of parts) {
     if (part === '' || part === '.') continue
-    if (part === '..') resolved.pop()
-    else resolved.push(part)
+    if (part === '..') {
+      // A link that climbs past the repo root is not a link to a note. Popping an
+      // empty stack instead would clamp it back inside — `../../elsewhere.md`
+      // from a root note would resolve to `elsewhere.md`, which is a different
+      // file, and possibly one that exists.
+      if (resolved.length === 0) return null
+      resolved.pop()
+    } else resolved.push(part)
   }
   return resolved.join('/')
 }
@@ -190,6 +214,44 @@ export interface KnowledgeGroup {
  * but it tells the reader the section exists and what belongs in it, which is the
  * whole point of having written it.
  */
+export interface KnowledgeNavSection {
+  /** `''` for the notes at the root of knowledge/. */
+  section: string
+  /** The last segment — `security`, not `decisions/security`, since the parent is directly above. */
+  label: string
+  /** How far to indent: `decisions/security` sits one level in from `decisions`. */
+  depth: number
+  description?: string
+  /** The section's own index.md, which its header opens. */
+  indexPath?: string
+  /** Everything in the section except that index. */
+  notes: KnowledgeNote[]
+}
+
+/**
+ * The navigator's shape: a section's `index.md` becomes the section's own header
+ * rather than a row beside the notes it indexes.
+ *
+ * A bundle is mostly indexes — five of this harness's thirteen notes — and listing
+ * them as peers gives a reader four rows called `index.md` to tell apart, while
+ * the heading that would have told them apart sits right above. The heading is
+ * the index, so it opens it.
+ */
+export const toNavSections = (
+  groups: KnowledgeGroup[]
+): KnowledgeNavSection[] =>
+  groups.map((group) => {
+    const index = group.notes.find((note) => note.reserved === 'index')
+    return {
+      section: group.section,
+      label: group.section.split('/').pop() ?? '',
+      depth: group.section ? group.section.split('/').length - 1 : 0,
+      description: group.description,
+      indexPath: index?.path,
+      notes: group.notes.filter((note) => note !== index),
+    }
+  })
+
 export const groupNotesBySection = (
   bundle: Pick<KnowledgeBundle, 'notes' | 'sections'>
 ): KnowledgeGroup[] => {

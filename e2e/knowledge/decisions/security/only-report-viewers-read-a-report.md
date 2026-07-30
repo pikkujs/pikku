@@ -3,7 +3,7 @@ type: decision
 title: Only report-viewers read a report
 description: The scope gate is the only way in, and no role or admin grant substitutes for it
 tags: scopes
-resource: func:getReport
+resource: func:getReport, scope:reports:read, scope:admin
 ---
 
 # Only report-viewers read a report
@@ -19,7 +19,7 @@ widen — no passing permission and no role hierarchy substitutes for a declared
 scope.
 
 That is why the seed grants `reports:read` to `guest` and withholds it from
-`admin`: it makes the admin the *authenticated-but-unscoped* caller, which is
+`admin`: it makes the admin the _authenticated-but-unscoped_ caller, which is
 the only caller that proves the gate is a gate rather than an authentication
 check.
 

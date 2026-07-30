@@ -163,6 +163,24 @@ describe('runKnowledgeValidate', () => {
     assert.match(result.findings[0]!.fixHint, /pikku\.config\.json/)
   })
 
+  test('a forbidden section with a sub-section is reported once, not per level', async () => {
+    // The finding is about the directory, and deleting it takes the sub-sections
+    // with it. Reporting each level put the same id in the list twice, which
+    // reads as two problems and offers no way to tell them apart.
+    const result = await validate(
+      await project({
+        ...CLEAN,
+        'knowledge/personas/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/personas/owner.md': '---\ntype: note\n---\nx',
+        'knowledge/personas/admin/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/personas/admin/root.md': '---\ntype: note\n---\nx',
+      })
+    )
+    assert.deepEqual(ids(result.findings), [
+      'knowledge-forbidden-section-personas',
+    ])
+  })
+
   test('names the right home for each forbidden section', async () => {
     const result = await validate(
       await project({
@@ -300,6 +318,27 @@ describe('runKnowledgeValidate on resources', () => {
       )
     )
     assert.equal(result.ok, false)
+  })
+
+  test('two notes with the same dangling resource are two findings', async () => {
+    // Each note is its own thing to fix, so each needs an id something can key
+    // on — an id built from the uri alone made the second finding a duplicate of
+    // the first.
+    const dangling = SLICE.replace(
+      'entities: entry',
+      'entities: entry\nresource: func:gone'
+    )
+    const root = await project({
+      ...CLEAN,
+      '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
+      'knowledge/slices/02-b.md': dangling,
+      'knowledge/slices/03-c.md': dangling,
+    })
+    const resourceIds = ids((await validate(root)).findings).filter((id) =>
+      id.startsWith('knowledge-resource-')
+    )
+    assert.equal(resourceIds.length, 2)
+    assert.equal(new Set(resourceIds).size, 2)
   })
 
   test('a resolving resource adds no finding', async () => {

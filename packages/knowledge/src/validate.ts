@@ -1,7 +1,13 @@
-import { basename, posix, sep } from 'node:path'
+import { basename, posix } from 'node:path'
 import { z } from 'zod'
 import { checkKnowledgeResources } from './check-resources.js'
-import { KNOWLEDGE_DIR, readKnowledgeNotes } from './notes.js'
+import {
+  KNOWLEDGE_DIR,
+  type KnowledgeNote,
+  readKnowledgeNotes,
+  sectionOf,
+  toPosix,
+} from './notes.js'
 
 export const KnowledgeFindingSchema = z.object({
   id: z.string(),
@@ -55,25 +61,24 @@ const SLICE_STATUSES = ['proposed', 'dispatched', 'built'] as const
 /** Max entities per slice: more than three and it is not one buildable piece. */
 const MAX_SLICE_ENTITIES = 3
 
-/** `knowledge/slices/01-a.md` → `slices`; `knowledge/decisions/design/a.md` → `decisions/design`. */
-const sectionOf = (path: string): string => {
-  const rel = path.split(sep).join(posix.sep)
-  const parts = rel.split(posix.sep)
-  const at = parts.indexOf(KNOWLEDGE_DIR)
-  const inside = parts.slice(at + 1, -1)
-  return inside.join(posix.sep)
-}
-
 const isGherkinFirstPerson = (body: string): boolean =>
   /^\s*(given|when|then|and|but)\s+(i|we|my|our)\b/im.test(body)
 
 const hasGherkinBlock = (body: string): boolean => /```gherkin/i.test(body)
 
+/**
+ * @param alreadyRead the notes to validate, for a caller that has just read them
+ * itself. Passing them keeps the verdict and whatever the caller built from those
+ * same notes describing one revision of the files: a knowledge base is edited by
+ * hand and by agents while a console is open, so two reads a moment apart can
+ * straddle a save and report findings against a note nobody is being shown.
+ */
 export const runKnowledgeValidate = async (
   root: string,
-  outDir: string
+  outDir: string,
+  alreadyRead?: KnowledgeNote[]
 ): Promise<KnowledgeValidateResult> => {
-  const notes = await readKnowledgeNotes(root)
+  const notes = alreadyRead ?? (await readKnowledgeNotes(root))
   const findings: KnowledgeFinding[] = []
   const add = (
     severity: KnowledgeFinding['severity'],
@@ -96,9 +101,7 @@ export const runKnowledgeValidate = async (
     return { ok: true, notes: 0, findings }
   }
 
-  const paths = new Set(
-    notes.map((note) => note.path.split(sep).join(posix.sep))
-  )
+  const paths = new Set(notes.map((note) => toPosix(note.path)))
   const has = (rel: string): boolean => paths.has(`${KNOWLEDGE_DIR}/${rel}`)
 
   if (!has('index.md')) {
@@ -124,6 +127,12 @@ export const runKnowledgeValidate = async (
     }
   }
 
+  // A forbidden directory is one thing to delete however deep it goes, so it is
+  // reported against its top level only — `personas/` and `personas/admin/` are
+  // the same finding, and emitting it per sub-section would put the same id in
+  // the list twice with nothing to distinguish the copies.
+  const reportedForbidden = new Set<string>()
+
   for (const section of [...sections].sort()) {
     if (!has(`${section}/index.md`)) {
       add(
@@ -138,7 +147,8 @@ export const runKnowledgeValidate = async (
     }
     const top = section.split(posix.sep)[0]!
     const forbidden = FORBIDDEN_SECTIONS[top]
-    if (forbidden) {
+    if (forbidden && !reportedForbidden.has(top)) {
+      reportedForbidden.add(top)
       add(
         'error',
         `knowledge-forbidden-section-${top}`,
@@ -244,7 +254,10 @@ export const runKnowledgeValidate = async (
   for (const problem of resources.problems) {
     add(
       'error',
-      `knowledge-resource-${problem.reason}-${problem.uri}`,
+      // The note path is part of the id here for the same reason it is in every
+      // other finding: two notes naming one deleted function are two things to
+      // fix, and an id that named only the uri would collapse them into one.
+      `knowledge-resource-${problem.reason}-${problem.path}-${problem.uri}`,
       `${problem.path}: ${problem.detail}`,
       problem.path,
       problem.reason === 'unknown-prefix'

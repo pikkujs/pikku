@@ -1,6 +1,6 @@
-import { posix, sep } from 'node:path'
+import { posix } from 'node:path'
 import { z } from 'zod'
-import { KNOWLEDGE_DIR, type KnowledgeNote, resourceIds } from './notes.js'
+import { type KnowledgeNote, resourceIds, sectionOf, toPosix } from './notes.js'
 import { KNOWLEDGE_SECTIONS } from './validate.js'
 
 export const KnowledgeGraphNoteSchema = z.object({
@@ -47,14 +47,6 @@ export const KnowledgeGraphSchema = z.object({
 })
 
 export type KnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>
-
-const toPosix = (path: string): string => path.split(sep).join(posix.sep)
-
-/** `knowledge/decisions/design/a.md` → `decisions/design`; a root note → `''`. */
-const sectionOf = (path: string): string => {
-  const parts = toPosix(path).split(posix.sep)
-  return parts.slice(parts.indexOf(KNOWLEDGE_DIR) + 1, -1).join(posix.sep)
-}
 
 /**
  * Fenced and inline code, removed before links are read.

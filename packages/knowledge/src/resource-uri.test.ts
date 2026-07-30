@@ -1,17 +1,25 @@
 import assert from 'node:assert'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, test } from 'node:test'
+import { describe, test, type TestContext } from 'node:test'
 import {
   RESOURCE_PREFIXES,
   collectKnownResources,
   parseResourceUri,
 } from './resource-uri.js'
 
-/** A project on disk: `{ 'relative/path.json': <json or string> }`. */
-const project = async (files: Record<string, unknown>): Promise<string> => {
+/**
+ * A project on disk: `{ 'relative/path.json': <json or string> }`, removed when
+ * the test that asked for it ends. A suite that leaves a temp tree behind on
+ * every run is a slow leak in whichever machine runs it most.
+ */
+const project = async (
+  t: TestContext,
+  files: Record<string, unknown> = {}
+): Promise<string> => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-resource-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
   for (const [rel, contents] of Object.entries(files)) {
     const full = join(root, rel)
     await mkdir(join(full, '..'), { recursive: true })
@@ -42,6 +50,13 @@ describe('parseResourceUri', () => {
     })
   })
 
+  test('keeps colons inside the id, which namespaced scopes carry', () => {
+    assert.deepEqual(parseResourceUri('scope:reports:read'), {
+      prefix: 'scope',
+      id: 'reports:read',
+    })
+  })
+
   test('rejects an unknown prefix rather than inventing a kind', () => {
     assert.equal(parseResourceUri('service:kysely'), null)
   })
@@ -56,14 +71,18 @@ describe('parseResourceUri', () => {
   test('trims the id', () => {
     assert.equal(parseResourceUri('func: createEntry ')?.id, 'createEntry')
   })
+})
 
-  test('every prefix in the scheme is resolvable by collectKnownResources', async () => {
+describe('collectKnownResources', () => {
+  test('every prefix in the scheme is resolvable', async (t) => {
     // The design rule of the scheme: a prefix that cannot be checked is worse
     // than no prefix, because notes then accumulate references nothing validates.
     // Adding a prefix without teaching the collector to resolve it breaks that,
     // silently — nothing else fails.
-    const root = await project({
-      '.pikku/function/pikku-functions-meta.gen.json': { f: {} },
+    const root = await project(t, {
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        f: { scopes: ['reports:read'] },
+      },
       '.pikku/workflow/meta/w.gen.json': {},
       '.pikku/schemas/schemas/S.schema.json': {},
       '.pikku/http/pikku-http-wirings-meta.gen.json': { get: { '/r': {} } },
@@ -79,11 +98,9 @@ describe('parseResourceUri', () => {
       [...RESOURCE_PREFIXES].sort()
     )
   })
-})
 
-describe('collectKnownResources', () => {
-  test('takes func ids from the function meta keys', async () => {
-    const root = await project({
+  test('takes func ids from the function meta keys', async (t) => {
+    const root = await project(t, {
       '.pikku/function/pikku-functions-meta.gen.json': {
         createEntry: { pikkuFuncId: 'createEntry' },
         'channel:chat:connect': {},
@@ -95,16 +112,16 @@ describe('collectKnownResources', () => {
     ])
   })
 
-  test('takes workflow ids from the meta filenames, ignoring the verbose twins', async () => {
-    const root = await project({
+  test('takes workflow ids from the meta filenames, ignoring the verbose twins', async (t) => {
+    const root = await project(t, {
       '.pikku/workflow/meta/autoRestock.gen.json': {},
       '.pikku/workflow/meta/autoRestock-verbose.gen.json': {},
     })
     assert.deepEqual([...(await known(root)).get('workflow')!], ['autoRestock'])
   })
 
-  test('takes schema ids from the schema filenames', async () => {
-    const root = await project({
+  test('takes schema ids from the schema filenames', async (t) => {
+    const root = await project(t, {
       '.pikku/schemas/schemas/CreateEntryInput.schema.json': {},
       '.pikku/schemas/schemas/index.ts': 'export {}',
     })
@@ -114,11 +131,11 @@ describe('collectKnownResources', () => {
     )
   })
 
-  test('resolves an http note by route, by method:route, or by its function', async () => {
+  test('resolves an http note by route, by method:route, or by its function', async (t) => {
     // A note author picks whichever of the three reads naturally; all three name
     // the same wiring, so making them learn which one pikku calls the id would
     // only produce false danglings.
-    const root = await project({
+    const root = await project(t, {
       '.pikku/http/pikku-http-wirings-meta.gen.json': {
         get: { '/api/entries': { pikkuFuncId: 'listEntries' } },
       },
@@ -129,9 +146,9 @@ describe('collectKnownResources', () => {
     assert.ok(http.has('listEntries'))
   })
 
-  test('ignores the contracts meta sitting beside the wirings meta', async () => {
+  test('ignores the contracts meta sitting beside the wirings meta', async (t) => {
     // It is keyed by type name, so reading it would resolve ids no note means.
-    const root = await project({
+    const root = await project(t, {
       '.pikku/http/pikku-http-wirings-meta.gen.json': {
         get: { '/real': { pikkuFuncId: 'realFunc' } },
       },
@@ -144,8 +161,8 @@ describe('collectKnownResources', () => {
     assert.ok(!http.has('SomeContractType'))
   })
 
-  test('resolves queue, cron and channel by wiring name', async () => {
-    const root = await project({
+  test('resolves queue, cron and channel by wiring name', async (t) => {
+    const root = await project(t, {
       '.pikku/queue/pikku-queue-workers-wirings-meta.gen.json': {
         'test-queue': { name: 'test-queue', pikkuFuncId: 'work' },
       },
@@ -163,8 +180,8 @@ describe('collectKnownResources', () => {
     assert.ok(resources.get('channel')!.has('chat'))
   })
 
-  test('takes table names from the generated db schema', async () => {
-    const root = await project({
+  test('takes table names from the generated db schema', async (t) => {
+    const root = await project(t, {
       '.pikku/db/pikku-db-schema.gen.json': {
         tables: [{ name: 'entry' }, { name: 'day' }],
         enums: {},
@@ -173,8 +190,8 @@ describe('collectKnownResources', () => {
     assert.deepEqual([...(await known(root)).get('table')!], ['entry', 'day'])
   })
 
-  test('resolves an addon by package name or bare name', async () => {
-    const root = await project({
+  test('resolves an addon by package name or bare name', async (t) => {
+    const root = await project(t, {
       'package.json': {
         dependencies: { '@pikku/addon-stripe': '1', kysely: '1' },
       },
@@ -189,8 +206,39 @@ describe('collectKnownResources', () => {
     assert.ok(!addons.has('kysely'))
   })
 
-  test('takes personas from the config, the one prefix with no codegen behind it', async () => {
-    const root = await project({
+  test('takes scopes from the functions that gate themselves with them', async (t) => {
+    const root = await project(t, {
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        getReport: { scopes: ['reports:read'] },
+        listReports: { scopes: ['reports:read', 'reports:list'] },
+        open: {},
+      },
+    })
+    assert.deepEqual([...(await known(root)).get('scope')!].sort(), [
+      'reports:list',
+      'reports:read',
+    ])
+  })
+
+  test('takes scopes granted to an actor too, which no function declares', async (t) => {
+    // An umbrella scope like `admin` is granted in the config and checked by the
+    // app's own permission, so it appears in no function meta. A note about it is
+    // about something the project declared, not drift.
+    const root = await project(t, {
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        getReport: { scopes: ['reports:read'] },
+      },
+      'pikku.config.json': {
+        scenarios: { actors: { admin: { scopes: ['admin'] }, guest: {} } },
+      },
+    })
+    const scopes = (await known(root)).get('scope')!
+    assert.ok(scopes.has('reports:read'))
+    assert.ok(scopes.has('admin'))
+  })
+
+  test('takes personas from the config, the one prefix with no codegen behind it', async (t) => {
+    const root = await project(t, {
       'pikku.config.json': {
         scenarios: { personas: { owner: {}, guest: {} } },
       },
@@ -201,27 +249,28 @@ describe('collectKnownResources', () => {
     )
   })
 
-  test('leaves a prefix absent when its meta is missing, never empty', async () => {
+  test('leaves a prefix absent when its meta is missing, never empty', async (t) => {
     // An empty set would read as "nothing resolves", failing every note that
     // mentions a queue in a project that simply has no queues. Absent means the
     // caller skips the prefix instead.
-    const root = await project({
+    const root = await project(t, {
       '.pikku/function/pikku-functions-meta.gen.json': { f: {} },
     })
     const resources = await known(root)
     assert.deepEqual([...resources.keys()], ['func'])
     for (const prefix of RESOURCE_PREFIXES) {
-      assert.notEqual(resources.get(prefix)?.size, 0)
+      if (prefix === 'func') continue
+      assert.equal(resources.has(prefix), false)
     }
   })
 
-  test('a project with no codegen at all resolves nothing and does not throw', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'pikku-resource-'))
+  test('a project with no codegen at all resolves nothing and does not throw', async (t) => {
+    const root = await project(t)
     assert.equal((await known(root)).size, 0)
   })
 
-  test('survives malformed json rather than aborting the whole check', async () => {
-    const root = await project({
+  test('survives malformed json rather than aborting the whole check', async (t) => {
+    const root = await project(t, {
       '.pikku/function/pikku-functions-meta.gen.json': '{ not json',
       '.pikku/db/pikku-db-schema.gen.json': { tables: [{ name: 'entry' }] },
     })

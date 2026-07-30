@@ -211,6 +211,67 @@ export const knowledgeReportsNoIssuesScenario = pikkuScenario<
   },
 })
 
+export const knowledgeOpensTheDetailsScenario = pikkuScenario<
+  void,
+  { opened: true }
+>({
+  title: 'A note’s frontmatter is there when asked for',
+  description:
+    'The details a note declares — its entities, its resources, its edges — are folded away until the reader opens them',
+  tags: ['scenario', 'knowledge-console', 'console'],
+  func: async (_services, _data, { scenario, actors }) => {
+    if (!actors?.admin) {
+      throw new Error(
+        'knowledgeOpensTheDetailsScenario needs the admin actor — run via `pikku scenario run <environment>`'
+      )
+    }
+
+    await scenario.given(
+      'opens the knowledge page',
+      'opensConsolePage',
+      { path: KNOWLEDGE_PAGE, waitFor: NAVIGATOR_READY },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the slice about reading a report',
+      'clicksTestId',
+      navRow(SLICE),
+      { actor: actors.admin }
+    )
+    // Folded by default: a note has more frontmatter than prose in the small
+    // cases, and a header that fills the screen buries what the note was written
+    // to say.
+    await scenario.then(
+      'is shown the note, not its filing',
+      'doesNotSeeTestId',
+      { testId: 'knowledge-note-details' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'asks for the details',
+      'clicksTestId',
+      { testId: 'knowledge-note-details-toggle' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees them',
+      'seesTestId',
+      { testId: 'knowledge-note-details' },
+      { actor: actors.admin }
+    )
+    // The note's own frontmatter, and a resource kind that only resolves because
+    // the scope is declared in the code this note is about.
+    await scenario.then(
+      'sees the scope the slice is gated on',
+      'seesText',
+      { text: 'scope:reports:read' },
+      { actor: actors.admin }
+    )
+
+    return { opened: true }
+  },
+})
+
 export const knowledgeConsoleFeature = pikkuFeature({
   name: 'Knowledge Console',
   description: "Reading the project's knowledge notes in the console",
@@ -220,5 +281,6 @@ export const knowledgeConsoleFeature = pikkuFeature({
     knowledgeOpensASliceScenario,
     knowledgeFollowsALinkScenario,
     knowledgeReportsNoIssuesScenario,
+    knowledgeOpensTheDetailsScenario,
   ],
 })

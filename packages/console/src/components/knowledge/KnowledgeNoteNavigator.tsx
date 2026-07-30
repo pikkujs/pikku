@@ -1,5 +1,11 @@
 import React from 'react'
-import { Box, Group, ScrollArea, Stack, Text } from '@pikku/mantine/core'
+import {
+  Box,
+  ScrollArea,
+  Stack,
+  Text,
+  UnstyledButton,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import type {
@@ -7,9 +13,11 @@ import type {
   KnowledgeGroup,
   KnowledgeSelection,
 } from '../../lib/knowledge'
-import { maxSeverity, noteFileName } from '../../lib/knowledge'
+import { maxSeverity, toNavSections } from '../../lib/knowledge'
+import { KnowledgeSectionIcon, KnowledgeTypeIcon } from './KnowledgeIcon'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
+import classes from '../ui/console.module.css'
 
 type KnowledgeNoteNavigatorProps = {
   groups: KnowledgeGroup[]
@@ -20,60 +28,112 @@ type KnowledgeNoteNavigatorProps = {
 
 const isSelected = (
   selection: KnowledgeSelection | null,
-  path: string
-): boolean => selection?.kind === 'note' && selection.path === path
+  path: string | undefined
+): boolean =>
+  path !== undefined && selection?.kind === 'note' && selection.path === path
 
-const rowStyle = (selected: boolean): React.CSSProperties => ({
-  padding: '6px 10px',
-  borderRadius: 8,
-  cursor: 'pointer',
-  background: selected ? 'var(--mantine-color-default-hover)' : 'transparent',
+/** One indent per level of nesting, so `security` reads as part of `decisions`. */
+const INDENT = 12
+
+const indent = (depth: number): React.CSSProperties => ({
+  paddingLeft: 10 + depth * INDENT,
 })
 
+/**
+ * The notes, in the shape the bundle is organised in: a section heading that
+ * opens the section's own `index.md`, the notes under it, and a sub-section
+ * indented under its parent.
+ *
+ * Sections carry the icon of what they hold and notes the icon of their `type:`,
+ * because a drawer of a dozen markdown files is otherwise a dozen identical rows
+ * that have to be read one at a time.
+ */
 export const KnowledgeNoteNavigator: React.FC<KnowledgeNoteNavigatorProps> = ({
   groups,
   findings,
   selected,
   onSelect,
 }) => {
+  const sections = toNavSections(groups)
+
   return (
     <ScrollArea style={{ height: '100%' }} data-testid="knowledge-navigator">
       <Stack gap="xs" p="xs">
         {findings.length > 0 && (
-          <Box
+          <UnstyledButton
             data-testid="knowledge-nav-findings"
+            data-selected={selected?.kind === 'findings' || undefined}
             onClick={() => onSelect({ kind: 'findings' })}
-            style={rowStyle(selected?.kind === 'findings')}
+            className={classes.knowledgeRow}
+            style={indent(0)}
           >
-            <Group gap={6} wrap="nowrap">
-              <KnowledgeSeverityIcon
-                severity={maxSeverity(findings)}
-                size={13}
-              />
-              <Text size="sm" fw={500}>
-                {findings.length === 1
-                  ? m.knowledge_issue_count_one()
-                  : m.knowledge_issue_count({ count: findings.length })}
-              </Text>
-            </Group>
-          </Box>
+            <KnowledgeSeverityIcon severity={maxSeverity(findings)} size={13} />
+            <Text size="sm" fw={500}>
+              {findings.length === 1
+                ? m.knowledge_issue_count_one()
+                : m.knowledge_issue_count({ count: findings.length })}
+            </Text>
+          </UnstyledButton>
         )}
 
-        {groups.map((group) => (
-          <Stack gap={2} key={group.section || 'root'}>
-            <Text size="xs" c="dimmed" tt="uppercase" fw={600} px={10} pt={4}>
-              {group.section
-                ? asI18n(group.section)
-                : m.knowledge_section_root()}
-            </Text>
-            {group.notes.map((note) => (
-              <Box
-                key={note.path}
-                data-testid={`knowledge-nav-${note.path}`}
-                onClick={() => onSelect({ kind: 'note', path: note.path })}
-                style={rowStyle(isSelected(selected, note.path))}
-              >
-                <Group gap={6} wrap="nowrap" align="baseline">
+        {sections.map((section) => {
+          const label = section.section ? (
+            asI18n(section.label)
+          ) : (
+            <>{m.knowledge_section_root()}</>
+          )
+
+          return (
+            <Stack gap={2} key={section.section || 'root'}>
+              {/*
+                The heading is the section's index, not a label above it: a reader
+                who wants to know what belongs in `decisions/` clicks the word
+                `decisions`, which is where they were already looking. A section
+                with no index of its own is a heading and nothing more.
+              */}
+              {section.indexPath ? (
+                <UnstyledButton
+                  data-testid={`knowledge-nav-${section.indexPath}`}
+                  data-selected={
+                    isSelected(selected, section.indexPath) || undefined
+                  }
+                  onClick={() =>
+                    onSelect({ kind: 'note', path: section.indexPath! })
+                  }
+                  className={classes.knowledgeRow}
+                  style={indent(section.depth)}
+                >
+                  <KnowledgeSectionIcon section={section.section} />
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                    {label}
+                  </Text>
+                </UnstyledButton>
+              ) : (
+                <Box
+                  className={classes.knowledgeRow}
+                  style={indent(section.depth)}
+                >
+                  <KnowledgeSectionIcon section={section.section} />
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                    {label}
+                  </Text>
+                </Box>
+              )}
+
+              {section.notes.map((note) => (
+                <UnstyledButton
+                  key={note.path}
+                  data-testid={`knowledge-nav-${note.path}`}
+                  data-selected={isSelected(selected, note.path) || undefined}
+                  onClick={() => onSelect({ kind: 'note', path: note.path })}
+                  // The drawer is narrow and a note title is a sentence, so the
+                  // clamped ones are readable on hover rather than only by
+                  // opening them.
+                  title={asI18n(note.title)}
+                  className={classes.knowledgeRow}
+                  style={indent(section.depth + 1)}
+                >
+                  <KnowledgeTypeIcon type={note.type} />
                   <Text
                     size="sm"
                     fw={isSelected(selected, note.path) ? 600 : 500}
@@ -83,14 +143,11 @@ export const KnowledgeNoteNavigator: React.FC<KnowledgeNoteNavigatorProps> = ({
                     {asI18n(note.title)}
                   </Text>
                   {note.status && <KnowledgeStatusBadge status={note.status} />}
-                </Group>
-                <Text size="xs" c="dimmed" ff="monospace" lineClamp={1}>
-                  {asI18n(noteFileName(note.path))}
-                </Text>
-              </Box>
-            ))}
-          </Stack>
-        ))}
+                </UnstyledButton>
+              ))}
+            </Stack>
+          )
+        })}
       </Stack>
     </ScrollArea>
   )

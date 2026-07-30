@@ -26,10 +26,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Define the pattern to match your test files
-pattern="src/*.test.ts"
+pattern="src/**/*.test.ts"
 
-# Expand the pattern into an array of files
-files=($(find src -type f -name "*.test.ts"))
+# Expand the pattern into an array of files. Read null-delimited rather than
+# splitting find's output on whitespace: a directory with a space in its name
+# would otherwise arrive as two half-paths, and node would fail on both.
+files=()
+while IFS= read -r -d '' file; do
+  files+=("$file")
+done < <(find src -type f -name "*.test.ts" -print0)
 
 # Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then

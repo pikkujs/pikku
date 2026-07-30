@@ -2,6 +2,10 @@ import assert from 'node:assert'
 import { describe, test } from 'node:test'
 import { buildKnowledgeGraph, outboundLinks } from './graph.js'
 import { parseNote } from './notes.js'
+// The descriptions come from the profile, so they are read from it here too:
+// rewording a section is a copy change, and it should not fail a test about
+// counting and ordering.
+import { KNOWLEDGE_SECTIONS } from './validate.js'
 
 const note = (path: string, raw: string) => parseNote(path, raw)
 
@@ -158,13 +162,12 @@ describe('buildKnowledgeGraph', () => {
     assert.deepEqual(graph.sections, [
       {
         name: 'slices',
-        description:
-          'one buildable piece of the app, with the scenario that proves it',
+        description: KNOWLEDGE_SECTIONS['slices'],
         count: 1,
       },
       {
         name: 'decisions',
-        description: 'a rule that was chosen, and what it rules out',
+        description: KNOWLEDGE_SECTIONS['decisions'],
         count: 1,
       },
     ])
@@ -209,12 +212,12 @@ describe('buildKnowledgeGraph', () => {
     assert.deepEqual(graph.sections, [
       {
         name: 'decisions',
-        description: 'a rule that was chosen, and what it rules out',
+        description: KNOWLEDGE_SECTIONS['decisions'],
         count: 0,
       },
       {
         name: 'decisions/security',
-        description: 'a rule about who may do what',
+        description: KNOWLEDGE_SECTIONS['decisions/security'],
         count: 1,
       },
     ])

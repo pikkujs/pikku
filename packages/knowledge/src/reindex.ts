@@ -1,10 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { basename, dirname, join, posix, sep } from 'node:path'
+import { basename, dirname, join, posix } from 'node:path'
 import { z } from 'zod'
 import {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
   readKnowledgeNotes,
+  sectionOf,
+  toPosix,
 } from './notes.js'
 import { KNOWLEDGE_SECTIONS } from './validate.js'
 
@@ -40,14 +42,6 @@ export const KnowledgeIndexOutput = z.object({
 })
 
 export type KnowledgeIndexResult = z.infer<typeof KnowledgeIndexOutput>
-
-const toPosix = (path: string): string => path.split(sep).join(posix.sep)
-
-/** `knowledge/decisions/design/a.md` → `decisions/design`; a root note → `''`. */
-const sectionOf = (path: string): string => {
-  const parts = toPosix(path).split(posix.sep)
-  return parts.slice(parts.indexOf(KNOWLEDGE_DIR) + 1, -1).join(posix.sep)
-}
 
 /**
  * What to call a note in a listing. The frontmatter `title` wins; otherwise the

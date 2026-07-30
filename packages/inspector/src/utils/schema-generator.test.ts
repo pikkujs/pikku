@@ -188,7 +188,7 @@ describe('schemaRuntimeFile', () => {
     )
   })
 
-  test('.d.mts and .d.cts keep their own extension', () => {
+  test('.d.mts resolves to the ESM file beside it', () => {
     writeFileSync(
       join(projectDir, 'src', 'esm.d.mts'),
       'export declare const a: number\n'
@@ -197,6 +197,21 @@ describe('schemaRuntimeFile', () => {
     assert.equal(
       schemaRuntimeFile(join(projectDir, 'src', 'esm.d.mts')),
       join(projectDir, 'src', 'esm.mjs')
+    )
+  })
+
+  test('.d.cts resolves to the CommonJS file beside it', () => {
+    // Its own test rather than a second assertion above: the two extensions are
+    // separate branches, and one covering both is one that passes while half of
+    // it is broken.
+    writeFileSync(
+      join(projectDir, 'src', 'commonjs.d.cts'),
+      'export declare const a: number\n'
+    )
+    writeFileSync(join(projectDir, 'src', 'commonjs.cjs'), 'exports.a = 1\n')
+    assert.equal(
+      schemaRuntimeFile(join(projectDir, 'src', 'commonjs.d.cts')),
+      join(projectDir, 'src', 'commonjs.cjs')
     )
   })
 

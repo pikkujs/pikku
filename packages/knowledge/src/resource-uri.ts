@@ -20,6 +20,10 @@ export const RESOURCE_PREFIXES = [
   'channel',
   'table',
   'addon',
+  // A scope is declared twice over: by the functions that gate themselves with
+  // it, which codegen writes into the function meta, and by the actors granted
+  // it in `pikku.config.json`. Both are declarations, so both resolve.
+  'scope',
   // The only prefix that does not resolve to generated code: a persona is
   // declared in `pikku.config.json` (`scenarios.personas`). It still resolves,
   // which is the bar — a note naming a persona nobody declared is exactly the
@@ -42,10 +46,28 @@ export const parseResourceUri = (uri: string): ResourceUri | null => {
   return { prefix: prefix as ResourcePrefix, id }
 }
 
+/**
+ * A meta file, or null when there is nothing usable in it.
+ *
+ * The two ways to get null are not the same thing. A file that is not there is
+ * ordinary — a project with no database has no db schema — so it passes in
+ * silence. A file that is there and does not parse is a broken build artifact,
+ * and staying silent about it would hide the cause: every note pointing into that
+ * meta simply stops being checked, and the run reports nothing wrong.
+ */
 const readJson = async (path: string): Promise<unknown | null> => {
+  let raw: string
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as unknown
+    raw = await readFile(path, 'utf8')
   } catch {
+    return null
+  }
+  try {
+    return JSON.parse(raw) as unknown
+  } catch (error) {
+    console.warn(
+      `knowledge: ignoring ${path} — it is not valid JSON (${(error as Error).message}). Resources of this kind will not be checked.`
+    )
     return null
   }
 }
@@ -143,12 +165,15 @@ const addonIds = async (root: string): Promise<string[]> => {
   for (const entry of await listDir(join(root, 'packages'))) {
     manifests.push(join(root, 'packages', entry, 'package.json'))
   }
+  // Read together rather than one after another: no manifest tells us anything
+  // about where the next one is, so waiting for each in turn only adds up their
+  // latencies across a workspace that can hold dozens.
+  const packages = (await Promise.all(manifests.map(readJson))) as ({
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  } | null)[]
   const ids: string[] = []
-  for (const manifest of manifests) {
-    const pkg = (await readJson(manifest)) as {
-      dependencies?: Record<string, string>
-      devDependencies?: Record<string, string>
-    } | null
+  for (const pkg of packages) {
     const deps = { ...pkg?.dependencies, ...pkg?.devDependencies }
     for (const name of Object.keys(deps)) {
       if (!name.startsWith('@pikku/addon-')) continue
@@ -158,17 +183,54 @@ const addonIds = async (root: string): Promise<string[]> => {
   return ids
 }
 
+type PikkuConfig = {
+  scenarios?: {
+    personas?: Record<string, unknown>
+    actors?: Record<string, { scopes?: unknown } | undefined>
+  }
+}
+
+const readConfig = async (root: string): Promise<PikkuConfig | null> =>
+  (await readJson(join(root, 'pikku.config.json'))) as PikkuConfig | null
+
 /**
  * Persona names, which is `scenarios.personas` and NOT `scenarios.actors`. A
  * persona is the KIND of person; an actor is one body that signs in as one. A
  * note is about the kind, and the two sets differ the moment a scenario needs two
  * bodies of the same kind.
  */
-const personaIds = async (root: string): Promise<string[]> => {
-  const config = (await readJson(join(root, 'pikku.config.json'))) as {
-    scenarios?: { personas?: Record<string, unknown> }
-  } | null
-  return Object.keys(config?.scenarios?.personas ?? {})
+const personaIds = (config: PikkuConfig | null): string[] =>
+  Object.keys(config?.scenarios?.personas ?? {})
+
+/**
+ * Every scope the project declares: the ones functions gate themselves with, and
+ * the ones actors are granted.
+ *
+ * Both sides are needed. A gate is only declared where the function is —
+ * `scopes: ['reports:read']` ends up in the function meta — while an umbrella
+ * scope like `admin` is often granted to an actor and checked by an app's own
+ * permission, so it appears nowhere in the meta. A note about either is about
+ * something the project actually declared, which is the bar.
+ */
+const scopeIds = (functions: unknown, config: PikkuConfig | null): string[] => {
+  const ids: string[] = []
+  if (functions && typeof functions === 'object') {
+    for (const entry of Object.values(functions as Record<string, unknown>)) {
+      const scopes = (entry as { scopes?: unknown })?.scopes
+      if (!Array.isArray(scopes)) continue
+      for (const scope of scopes) {
+        if (typeof scope === 'string') ids.push(scope)
+      }
+    }
+  }
+  for (const actor of Object.values(config?.scenarios?.actors ?? {})) {
+    const scopes = actor?.scopes
+    if (!Array.isArray(scopes)) continue
+    for (const scope of scopes) {
+      if (typeof scope === 'string') ids.push(scope)
+    }
+  }
+  return ids
 }
 
 /**
@@ -223,7 +285,10 @@ export const collectKnownResources = async (
   put('channel', wireIds(await findWireMeta(outDir, 'channel')))
   put('table', await tableIds(outDir))
   put('addon', await addonIds(root))
-  put('persona', await personaIds(root))
+
+  const config = await readConfig(root)
+  put('scope', scopeIds(functions, config))
+  put('persona', personaIds(config))
 
   return known
 }

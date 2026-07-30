@@ -2,6 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  bodyWithoutTitle,
   entryPointNote,
   findingsForNote,
   groupNotesBySection,
@@ -10,6 +11,7 @@ import {
   noteMatches,
   readableBody,
   resolveNoteLink,
+  toNavSections,
   type KnowledgeFinding,
   type KnowledgeNote,
 } from './knowledge.js'
@@ -144,6 +146,108 @@ describe('resolveNoteLink', () => {
     assert.equal(resolveNoteLink(from, 'mailto:a@b.c'), null)
     assert.equal(resolveNoteLink(from, '#the-rule'), null)
     assert.equal(resolveNoteLink(from, '../src/entry.ts'), null)
+  })
+
+  test('a link that climbs past the repo root is not clamped back inside it', () => {
+    // Popping an empty stack would clamp `../../../../elsewhere.md` to
+    // `elsewhere.md` — a different file, and one that may well exist. The graph
+    // normalises the same link to a path starting `../`, which matches no note
+    // either, so both sides agree it is not an edge.
+    assert.equal(resolveNoteLink(from, '../../../elsewhere.md'), null)
+    assert.equal(
+      resolveNoteLink('knowledge/index.md', '../elsewhere.md'),
+      'elsewhere.md',
+      'still inside the repo, so it resolves — and resolves to no note'
+    )
+  })
+})
+
+describe('bodyWithoutTitle', () => {
+  test('drops the opening heading that repeats the title', () => {
+    assert.equal(
+      bodyWithoutTitle(
+        '# Read a report\n\nThe narrowest slice.\n',
+        'Read a report'
+      ),
+      'The narrowest slice.\n'
+    )
+  })
+
+  test('matches the title however it was cased or spaced', () => {
+    assert.equal(
+      bodyWithoutTitle('#  read A report  \nbody', 'Read a report'),
+      'body'
+    )
+  })
+
+  test('keeps an opening heading that says something else', () => {
+    const body = '# The rule\n\nprose'
+    assert.equal(bodyWithoutTitle(body, 'Read a report'), body)
+  })
+
+  test('keeps a matching heading that is not the opening one', () => {
+    // A note may well have a section named after itself further down; only the
+    // heading the page already shows is the duplicate.
+    const body = 'prose\n\n# Read a report\n\nmore'
+    assert.equal(bodyWithoutTitle(body, 'Read a report'), body)
+  })
+})
+
+describe('toNavSections', () => {
+  const groups = [
+    {
+      section: '',
+      notes: [
+        note({ path: 'knowledge/index.md', section: '', reserved: 'index' }),
+      ],
+    },
+    {
+      section: 'decisions/security',
+      description: 'a rule about who may do what',
+      notes: [
+        note({
+          path: 'knowledge/decisions/security/a.md',
+          section: 'decisions/security',
+          title: 'A rule',
+        }),
+        note({
+          path: 'knowledge/decisions/security/index.md',
+          section: 'decisions/security',
+          reserved: 'index',
+        }),
+      ],
+    },
+  ]
+
+  test("the section's own index becomes the header, not a row beside its notes", () => {
+    const security = toNavSections(groups)[1]!
+    assert.equal(security.indexPath, 'knowledge/decisions/security/index.md')
+    assert.deepEqual(
+      security.notes.map((n) => n.path),
+      ['knowledge/decisions/security/a.md']
+    )
+  })
+
+  test('the label is the last segment, since the parent is directly above it', () => {
+    assert.equal(toNavSections(groups)[1]!.label, 'security')
+  })
+
+  test('depth is how far the section nests, and the root sits at zero', () => {
+    assert.deepEqual(
+      toNavSections(groups).map((section) => section.depth),
+      [0, 1]
+    )
+  })
+
+  test('a section with no index of its own has no header to open', () => {
+    const [section] = toNavSections([
+      {
+        section: 'wishlist',
+        notes: [note({ path: 'knowledge/wishlist/a.md', section: 'wishlist' })],
+      },
+    ])
+    assert.equal(section!.indexPath, undefined)
+    assert.equal(section!.notes.length, 1)
   })
 })
 

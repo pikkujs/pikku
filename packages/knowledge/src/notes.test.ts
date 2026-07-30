@@ -1,8 +1,8 @@
 import assert from 'node:assert'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, test } from 'node:test'
+import { describe, test, type TestContext } from 'node:test'
 import { parseNote, readKnowledgeNotes, resourceIds } from './notes.js'
 
 const note = (body: string) => parseNote('knowledge/slices/01-a.md', body)
@@ -124,8 +124,17 @@ describe('resourceIds', () => {
 })
 
 describe('readKnowledgeNotes', () => {
-  const bundle = async (files: Record<string, string>): Promise<string> => {
+  /**
+   * A bundle on disk: `{ 'relative/path.md': <contents> }`, removed when the test
+   * that asked for it ends. A suite that leaves a temp tree behind on every run
+   * is a slow leak in whichever machine runs it most.
+   */
+  const bundle = async (
+    t: TestContext,
+    files: Record<string, string> = {}
+  ): Promise<string> => {
     const root = await mkdtemp(join(tmpdir(), 'pikku-knowledge-'))
+    t.after(() => rm(root, { recursive: true, force: true }))
     for (const [rel, contents] of Object.entries(files)) {
       const full = join(root, rel)
       await mkdir(join(full, '..'), { recursive: true })
@@ -134,13 +143,12 @@ describe('readKnowledgeNotes', () => {
     return root
   }
 
-  test('is empty when the project has no knowledge directory', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'pikku-knowledge-'))
-    assert.deepEqual(await readKnowledgeNotes(root), [])
+  test('is empty when the project has no knowledge directory', async (t) => {
+    assert.deepEqual(await readKnowledgeNotes(await bundle(t)), [])
   })
 
-  test('reads nested notes, path-sorted, with paths relative to the root', async () => {
-    const root = await bundle({
+  test('reads nested notes, path-sorted, with paths relative to the root', async (t) => {
+    const root = await bundle(t, {
       'knowledge/index.md': '---\ntype: overview\n---\nroot',
       'knowledge/slices/01-a.md': '---\ntype: slice\n---\na',
       'knowledge/decisions/why.md': '---\ntype: decision\n---\nwhy',
@@ -155,8 +163,8 @@ describe('readKnowledgeNotes', () => {
     )
   })
 
-  test('takes markdown and text, and skips everything else', async () => {
-    const root = await bundle({
+  test('takes markdown and text, and skips everything else', async (t) => {
+    const root = await bundle(t, {
       'knowledge/a.md': '---\ntype: note\n---\na',
       'knowledge/b.markdown': '---\ntype: note\n---\nb',
       'knowledge/c.txt': '---\ntype: note\n---\nc',
@@ -169,8 +177,8 @@ describe('readKnowledgeNotes', () => {
     )
   })
 
-  test('skips dotfiles and dot-directories', async () => {
-    const root = await bundle({
+  test('skips dotfiles and dot-directories', async (t) => {
+    const root = await bundle(t, {
       'knowledge/a.md': '---\ntype: note\n---\na',
       'knowledge/.hidden.md': '---\ntype: note\n---\nhidden',
       'knowledge/.drafts/b.md': '---\ntype: note\n---\ndraft',

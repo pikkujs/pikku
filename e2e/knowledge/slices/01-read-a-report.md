@@ -4,7 +4,7 @@ title: Read a report
 description: A scope gate that opens for the holder and refuses everyone else
 status: built
 entities: report
-resource: func:getReport
+resource: func:getReport, scope:reports:read
 tags: scopes
 ---
 
@@ -12,7 +12,7 @@ tags: scopes
 
 The narrowest useful slice in the harness: one function, one declared scope, two
 callers on opposite sides of it. Its whole job is to make a scope gate
-*observable* — a passing call and a refused call, both authenticated, differing
+_observable_ — a passing call and a refused call, both authenticated, differing
 only in what the session resolves.
 
 The refusal has to name the missing scope. A 403 that says only "forbidden"

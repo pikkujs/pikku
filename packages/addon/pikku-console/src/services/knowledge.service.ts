@@ -27,11 +27,16 @@ export class KnowledgeService {
   ) {}
 
   async getBundle(): Promise<KnowledgeBundle> {
+    // One read, both graphed and validated. Letting validate re-read would let a
+    // save land between the two, and the page would then carry findings about a
+    // note it is not showing — the one situation where a reader cannot act on
+    // what they are being told.
     const notes = await readKnowledgeNotes(this.projectRoot)
     const graph = buildKnowledgeGraph(notes)
     const { ok, findings } = await runKnowledgeValidate(
       this.projectRoot,
-      this.outDir
+      this.outDir,
+      notes
     )
     return { ...graph, ok, findings }
   }

@@ -62,6 +62,8 @@ export const KnowledgeFindings: React.FC<KnowledgeFindingsProps> = ({
                 <KnowledgeSeverityIcon severity={finding.severity} />
                 {notePaths.has(finding.path) ? (
                   <Anchor
+                    component="button"
+                    type="button"
                     size="xs"
                     ff="monospace"
                     onClick={() => onOpenNote(finding.path)}
