@@ -154,17 +154,6 @@ export function useWorkflowRunNames() {
   })
 }
 
-export function useAIWorkflows() {
-  const rpc = usePikkuRPC()
-
-  return useQuery({
-    queryKey: workflowQueryKeys.aiWorkflows(),
-    queryFn: async () => {
-      return await rpc.invoke('console:getAIWorkflows', {})
-    },
-  })
-}
-
 /**
  * Invalidates the workflow-run queries the panels read from.
  *

@@ -351,13 +351,6 @@ export type AIStreamEvent =
     }
   | { type: 'audio-done'; agent?: string; session?: string }
   | {
-      type: 'workflow-created'
-      workflowName: string
-      graph: any
-      agent?: string
-      session?: string
-    }
-  | {
       type: 'data'
       name: string
       data: unknown

@@ -202,22 +202,6 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
     }
   }
 
-  async getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    const filter: Record<string, any> = { source: 'ai-agent', status: 'active' }
-    if (agentName) {
-      const escaped = agentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      filter.workflowName = { $regex: `^ai:${escaped}:` }
-    }
-    const rows = await this.versions.find(filter).toArray()
-    return rows.map((row) => ({
-      workflowName: row.workflowName,
-      graphHash: row.graphHash,
-      graph: row.graph,
-    }))
-  }
-
   async deleteRun(id: string): Promise<boolean> {
     const steps = await this.steps.find({ workflowRunId: id }).toArray()
     const stepIds = steps.map((s) => s._id)

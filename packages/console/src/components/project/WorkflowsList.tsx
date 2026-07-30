@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Text, Badge, Tooltip, ActionIcon, Group } from '@pikku/mantine/core'
+import { Text, Tooltip, ActionIcon, Group } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { ExternalLink, GitBranch } from 'lucide-react'
@@ -7,7 +7,7 @@ import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 
-type FilterValue = 'all' | 'dsl' | 'graph' | 'dynamic-workflow'
+type FilterValue = 'all' | 'dsl' | 'graph'
 type Workflow = WorkflowsMeta[string] & {
   nodes?: Record<string, unknown>
   source?: string
@@ -18,14 +18,7 @@ const COLUMNS = [
     key: 'name',
     header: 'NAME',
     render: (w: Workflow) => (
-      <Text fw={500}>
-        {asI18n(w.name)}
-        {w.source === 'dynamic-workflow' && (
-          <Badge size="sm" variant="light" color="violet" ml={8}>
-            {asI18n('Dynamic')}
-          </Badge>
-        )}
-      </Text>
+      <Text fw={500}>{asI18n(w.name)}</Text>
     ),
   },
   {
@@ -50,11 +43,6 @@ export interface WorkflowExtraColumn {
 
 interface WorkflowsListProps {
   workflows: WorkflowsMeta
-  aiWorkflows?: Array<{
-    workflowName: string
-    graphHash: string
-    graph: any
-  }>
   extraColumns?: WorkflowExtraColumn[]
   headerRight?: React.ReactNode
   icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
@@ -62,7 +50,6 @@ interface WorkflowsListProps {
 
 export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   workflows,
-  aiWorkflows,
   extraColumns = [],
   headerRight,
   icon = GitBranch,
@@ -73,33 +60,13 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   const sortedWorkflows = useMemo(() => {
     const all: Workflow[] = workflows ? Object.values(workflows) : []
 
-    if (aiWorkflows) {
-      const existingNames = new Set(all.map((w) => w.name))
-      for (const ai of aiWorkflows) {
-        if (!existingNames.has(ai.workflowName)) {
-          all.push({
-            name: ai.workflowName,
-            pikkuFuncId: ai.workflowName,
-            steps: [],
-            source: 'dynamic-workflow',
-            nodes: ai.graph?.nodes,
-          })
-        }
-      }
-    }
-
     return all.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  }, [workflows, aiWorkflows])
+  }, [workflows])
 
   const filteredByType = useMemo(() => {
     if (filter === 'dsl') return sortedWorkflows.filter((w) => w.dsl === true)
     if (filter === 'graph') {
-      return sortedWorkflows.filter(
-        (w) => w.dsl !== true && w.source !== 'dynamic-workflow'
-      )
-    }
-    if (filter === 'dynamic-workflow') {
-      return sortedWorkflows.filter((w) => w.source === 'dynamic-workflow')
+      return sortedWorkflows.filter((w) => w.dsl !== true)
     }
     return sortedWorkflows
   }, [sortedWorkflows, filter])

@@ -167,48 +167,6 @@ export class RedisWorkflowRunService implements WorkflowRunService {
     }
   }
 
-  async getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    const pattern = agentName
-      ? `${this.keyPrefix}:version:ai:${agentName}:*`
-      : `${this.keyPrefix}:version:ai:*`
-    const results: Array<{
-      workflowName: string
-      graphHash: string
-      graph: any
-    }> = []
-    let cursor = '0'
-    do {
-      const [nextCursor, keys] = await this.redis.scan(
-        cursor,
-        'MATCH',
-        pattern,
-        'COUNT',
-        100
-      )
-      cursor = nextCursor
-      for (const key of keys) {
-        const data = await this.redis.hgetall(key)
-        if (
-          data.source === 'ai-agent' &&
-          data.graph &&
-          data.status === 'active'
-        ) {
-          const workflowName = data.workflowName
-          const graphHash = data.graphHash
-          if (!workflowName || !graphHash) continue
-          results.push({
-            workflowName,
-            graphHash,
-            graph: JSON.parse(data.graph),
-          })
-        }
-      }
-    } while (cursor !== '0')
-    return results
-  }
-
   async deleteRun(id: string): Promise<boolean> {
     const exists = await this.redis.exists(this.runKey(id))
     if (!exists) return false

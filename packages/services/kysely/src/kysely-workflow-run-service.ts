@@ -130,7 +130,9 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       .select((eb) =>
         eb
           .selectFrom('workflowStepHistory')
-          .select((eb2) => eb2.fn.max('workflowStepHistory.succeededAt').as('m'))
+          .select((eb2) =>
+            eb2.fn.max('workflowStepHistory.succeededAt').as('m')
+          )
           .whereRef(
             'workflowStepHistory.workflowStepId',
             '=',
@@ -272,25 +274,6 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       graph: parseJson(row.graph),
       source: row.source,
     }
-  }
-
-  async getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    let query = this.db
-      .selectFrom('workflowVersions')
-      .select(['workflowName', 'graphHash', 'graph'])
-      .where('source', '=', 'dynamic-workflow')
-      .where('status', '=', 'active')
-    if (agentName) {
-      query = query.where('workflowName', 'like', `ai:${agentName}:%`)
-    }
-    const rows = await query.execute()
-    return rows.map((row) => ({
-      workflowName: row.workflowName,
-      graphHash: row.graphHash,
-      graph: parseJson(row.graph),
-    }))
   }
 
   async deleteRun(id: string): Promise<boolean> {

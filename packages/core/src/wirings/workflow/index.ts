@@ -44,12 +44,6 @@ export {
   type PikkuWorkflowGraphResult,
 } from './graph/wire-workflow-graph.js'
 
-// Graph validation and dynamic workflow utilities
-export {
-  validateWorkflowWiring,
-  computeEntryNodeIds,
-} from './graph/graph-validation.js'
-
 // Queue worker functions (registered by codegen, executed at runtime)
 export {
   pikkuWorkflowWorkerFunc,

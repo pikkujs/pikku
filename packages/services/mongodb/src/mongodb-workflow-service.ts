@@ -621,42 +621,5 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getWorkflowVersion(name, graphHash)
   }
 
-  override async getDynamicWorkflow(
-    name: string
-  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
-    const doc = await this.versions.findOne(
-      {
-        workflowName: name,
-        source: 'ai-agent',
-        status: 'active',
-      },
-      // A name can hold several active versions; newest wins, with the hash
-      // breaking a tie between two published in the same instant.
-      { sort: { createdAt: -1, graphHash: -1 } }
-    )
-    if (!doc) return null
-    return {
-      workflowName: doc.workflowName,
-      graphHash: doc.graphHash,
-      graph: doc.graph,
-    }
-  }
-
-  async getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    const filter: Record<string, any> = { source: 'ai-agent', status: 'active' }
-    if (agentName) {
-      const escaped = agentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      filter.workflowName = { $regex: `^ai:${escaped}:` }
-    }
-    const docs = await this.versions.find(filter).toArray()
-    return docs.map((doc) => ({
-      workflowName: doc.workflowName,
-      graphHash: doc.graphHash,
-      graph: doc.graph,
-    }))
-  }
-
   async close(): Promise<void> {}
 }

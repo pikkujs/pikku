@@ -368,7 +368,9 @@ export class PikkuWorkflowDoService<
     return result
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     this.assertOwn(runId)
@@ -478,14 +480,6 @@ export class PikkuWorkflowDoService<
   ): Promise<{ graph: any; source: string } | null> {
     const v = await this.storage.get<any>(`version:${name}:${graphHash}`)
     return v ? { graph: v.graph, source: v.source } : null
-  }
-
-  async getAIGeneratedWorkflows(
-    _agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    // v0.1: cross-run query — needs an external index. For per-run DO
-    // there's no useful answer here.
-    return []
   }
 
   // ─── Transport hooks (overriding queue-based defaults) ────────────
