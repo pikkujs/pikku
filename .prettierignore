@@ -1,0 +1,3 @@
+# The embedded skill manifest is one generated 500 KB object literal; formatting it
+# explodes it into tens of thousands of lines and makes every skill edit unreviewable.
+packages/skills/src/skills.gen.ts

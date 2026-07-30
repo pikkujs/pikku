@@ -1,51 +1,25 @@
-import { readdir, readFile, mkdir, writeFile } from 'fs/promises'
+import { readdir, mkdir, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
-import { join, dirname, sep } from 'path'
-import { fileURLToPath } from 'url'
+import { dirname, join, sep } from 'path'
+import { listSkillFiles, listSkillNames, readSkillFile } from '@pikku/skills'
 import { pikkuSessionlessFunc } from '#pikku'
 
 /**
- * Walk up from this compiled file to find the package root (the directory
- * containing the @pikku/cli package.json), then resolve `<root>/skills/`.
- * Works whether the file is loaded from `dist/...` (published package) or
- * `src/...` (local dev via tsx/vitest).
+ * Write one skill's files out to `dest`, reading through @pikku/skills rather
+ * than off a directory we resolved ourselves. That package reads from its own
+ * `skills/` folder when there is one and from its embedded manifest otherwise,
+ * which is what makes this work inside the `bun --compile` binaries — they carry
+ * no filesystem copy, so the old "walk up to the @pikku/cli package root"
+ * lookup threw on every Homebrew install.
  */
-async function findSkillsDir(): Promise<string> {
-  let dir = dirname(fileURLToPath(import.meta.url))
-  for (let i = 0; i < 8; i++) {
-    const pkgPath = join(dir, 'package.json')
-    if (existsSync(pkgPath)) {
-      try {
-        const pkg = JSON.parse(await readFile(pkgPath, 'utf-8')) as {
-          name?: string
-        }
-        if (pkg.name === '@pikku/cli') {
-          const skills = join(dir, 'skills')
-          if (existsSync(skills)) return skills
-        }
-      } catch {}
-    }
-    const parent = dirname(dir)
-    if (parent === dir) break
-    dir = parent
-  }
-  throw new Error(
-    'Could not locate bundled skills directory. Was @pikku/cli installed correctly?'
-  )
-}
-
-async function copyDir(src: string, dest: string): Promise<void> {
-  await mkdir(dest, { recursive: true })
-  const entries = await readdir(src, { withFileTypes: true })
-  for (const entry of entries) {
-    const s = join(src, entry.name)
-    const d = join(dest, entry.name)
-    if (entry.isDirectory()) {
-      await copyDir(s, d)
-    } else if (entry.isFile()) {
-      const content = await readFile(s)
-      await writeFile(d, content)
-    }
+async function writeSkill(name: string, dest: string): Promise<void> {
+  for (const path of await listSkillFiles(name)) {
+    const contents = await readSkillFile(path)
+    if (contents === null) continue
+    // Paths are relative to the skills root, so drop the leading skill name.
+    const target = join(dest, ...path.split('/').slice(1))
+    await mkdir(dirname(target), { recursive: true })
+    await writeFile(target, contents, 'utf-8')
   }
 }
 
@@ -94,20 +68,15 @@ function parseInstallGroups(frontmatter: string): string[] {
   return []
 }
 
-async function readSkillInstallGroups(
-  skillsDir: string,
-  skillName: string
-): Promise<string[]> {
-  const skillPath = join(skillsDir, skillName, 'SKILL.md')
-  if (!existsSync(skillPath)) return []
-  const content = await readFile(skillPath, 'utf-8')
+async function readSkillInstallGroups(skillName: string): Promise<string[]> {
+  const content = await readSkillFile(`${skillName}/SKILL.md`)
+  if (content === null) return []
   const match = content.match(/^---\n([\s\S]*?)\n---/)
   if (!match) return []
   return parseInstallGroups(match[1])
 }
 
 async function getWantedSkills(
-  skillsDir: string,
   allEntries: string[],
   {
     only,
@@ -133,7 +102,7 @@ async function getWantedSkills(
 
   if (requestedGroups.length > 0) {
     for (const name of allEntries) {
-      const groups = await readSkillInstallGroups(skillsDir, name)
+      const groups = await readSkillInstallGroups(name)
       if (requestedGroups.some((group) => groups.includes(group))) {
         wanted.add(name)
       }
@@ -145,11 +114,7 @@ async function getWantedSkills(
 
 export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
   func: async ({ logger }) => {
-    const skillsDir = await findSkillsDir()
-    const entries = (await readdir(skillsDir, { withFileTypes: true }))
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort()
+    const entries = await listSkillNames()
 
     const installed = new Set<string>()
     for (const relative of Object.values(AGENT_SKILL_DIRS)) {
@@ -204,13 +169,9 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       return
     }
 
-    const skillsDir = await findSkillsDir()
-    const allEntries = (await readdir(skillsDir, { withFileTypes: true }))
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort()
+    const allEntries = await listSkillNames()
 
-    const wanted = await getWantedSkills(skillsDir, allEntries, {
+    const wanted = await getWantedSkills(allEntries, {
       only,
       core,
       fabric,
@@ -228,13 +189,12 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     let installed = 0
     let skipped = 0
     for (const name of wanted) {
-      const src = join(skillsDir, name)
       const dest = join(installRoot, name)
       if (existsSync(dest) && !update) {
         skipped++
         continue
       }
-      await copyDir(src, dest)
+      await writeSkill(name, dest)
       installed++
     }
 

@@ -3,7 +3,7 @@
   "version": "0.12.7",
   "description": "AWS services for Pikku — S3 content, Secrets Manager and SQS queues",
   "author": "yasser.fadl@gmail.com",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "module": "dist/index.js",
   "main": "dist/index.js",
   "type": "module",

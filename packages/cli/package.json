@@ -40,6 +40,7 @@
     "@pikku/node-http-server": "^0.12.6",
     "@pikku/openapi-parser": "^0.12.16",
     "@pikku/schedule": "^0.12.4",
+    "@pikku/skills": "^0.12.0",
     "@pikku/ws": "^0.12.4",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
@@ -75,7 +76,6 @@
   "files": [
     "dist",
     "console-app",
-    "skills",
     "cli.schema.json"
   ],
   "engines": {

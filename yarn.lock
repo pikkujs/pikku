@@ -5816,6 +5816,7 @@ __metadata:
     "@pikku/openapi-parser": "npm:^0.12.16"
     "@pikku/playwright": "npm:^0.12.70"
     "@pikku/schedule": "npm:^0.12.4"
+    "@pikku/skills": "npm:^0.12.0"
     "@pikku/ws": "npm:^0.12.4"
     "@types/cookie": "npm:^1.0.0"
     "@types/istanbul-lib-instrument": "npm:^1.7.7"
@@ -6542,6 +6543,16 @@ __metadata:
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@pikku/core": ^0.12.58
+  languageName: unknown
+  linkType: soft
+
+"@pikku/skills@npm:^0.12.0, @pikku/skills@workspace:packages/skills":
+  version: 0.0.0-use.local
+  resolution: "@pikku/skills@workspace:packages/skills"
+  dependencies:
+    "@types/node": "npm:^24.11.0"
+    typescript: "npm:^6.0.3"
+    yaml: "npm:^2.8.2"
   languageName: unknown
   linkType: soft
 

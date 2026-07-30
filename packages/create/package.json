@@ -25,5 +25,6 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js"
-  }
+  },
+  "license": "MIT"
 }
