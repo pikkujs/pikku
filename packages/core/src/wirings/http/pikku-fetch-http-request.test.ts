@@ -221,6 +221,95 @@ test('data() throws on boolean conflict', async () => {
 
 // --- Safe fallback: only one source
 
+// --- Body size limits
+
+const streamedRequest = (chunks) =>
+  new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(new TextEncoder().encode(chunk))
+        }
+        controller.close()
+      },
+    }),
+    duplex: 'half',
+  })
+
+test('arrayBuffer() rejects a body larger than the configured limit', async () => {
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: 'x'.repeat(64),
+  })
+  const pikkuReq = new PikkuFetchHTTPRequest(req, { maxBodySize: 16 })
+  await assert.rejects(async () => await pikkuReq.arrayBuffer(), {
+    name: 'PayloadTooLargeError',
+  })
+})
+
+test('arrayBuffer() rejects an oversized body with no content-length header', async () => {
+  const req = streamedRequest(['x'.repeat(32), 'y'.repeat(32)])
+  assert.equal(req.headers.get('content-length'), null)
+  const pikkuReq = new PikkuFetchHTTPRequest(req, { maxBodySize: 16 })
+  await assert.rejects(async () => await pikkuReq.arrayBuffer(), {
+    name: 'PayloadTooLargeError',
+  })
+})
+
+test('arrayBuffer() rejects a body whose content-length under-reports its size', async () => {
+  const req = new Request('http://localhost', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': '4',
+    },
+    body: new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('z'.repeat(128)))
+        controller.close()
+      },
+    }),
+    duplex: 'half',
+  })
+  const pikkuReq = new PikkuFetchHTTPRequest(req, { maxBodySize: 16 })
+  await assert.rejects(async () => await pikkuReq.arrayBuffer(), {
+    name: 'PayloadTooLargeError',
+  })
+})
+
+test('data() surfaces PayloadTooLargeError rather than wrapping it', async () => {
+  const req = createRequest(
+    'POST',
+    'http://localhost',
+    { padding: 'x'.repeat(256) },
+    { 'Content-Type': 'application/json' }
+  )
+  const pikkuReq = new PikkuFetchHTTPRequest(req, { maxBodySize: 16 })
+  await assert.rejects(async () => await pikkuReq.data(), {
+    name: 'PayloadTooLargeError',
+  })
+})
+
+test('data() accepts a body within the configured limit', async () => {
+  const req = createRequest(
+    'POST',
+    'http://localhost',
+    { ok: true },
+    { 'Content-Type': 'application/json' }
+  )
+  const pikkuReq = new PikkuFetchHTTPRequest(req, { maxBodySize: 1024 })
+  assert.deepEqual(await pikkuReq.data(), { ok: true })
+})
+
+test('data() accepts a streamed body within the default limit', async () => {
+  const req = streamedRequest(['{"ok"', ':true}'])
+  const pikkuReq = new PikkuFetchHTTPRequest(req)
+  assert.deepEqual(await pikkuReq.data(), { ok: true })
+})
+
 test('data() works when only body has values', async () => {
   const req = createRequest(
     'POST',

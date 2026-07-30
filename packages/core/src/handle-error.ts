@@ -14,6 +14,8 @@ import type { PikkuHTTP } from './wirings/http/http.types.js'
  * @param {number[]} logWarningsForStatusCodes - HTTP status codes to log as warnings
  * @param {boolean} respondWith404 - Whether to respond with 404 for NotFoundError
  * @param {boolean} bubbleError - Whether to throw the error after handling
+ * @param {boolean} exposeErrors - Whether to include internal error details (message, stack and
+ * payload of 5xx errors) in the response body. Ignored in production.
  */
 export const handleHTTPError = (
   e: any,
@@ -33,15 +35,21 @@ export const handleHTTPError = (
   // Get appropriate error response
   const errorResponse = getErrorResponse(e)
   if (errorResponse != null) {
+    const clientFacing =
+      errorResponse.status < 500 || (exposeErrors && !isProduction())
+
     // Set status and response body
     http?.response?.status(errorResponse.status)
     http?.response?.json({
       name: e instanceof Error ? e.name : undefined,
       message:
-        e instanceof Error && e.message && e.message !== 'An error occurred'
+        clientFacing &&
+        e instanceof Error &&
+        e.message &&
+        e.message !== 'An error occurred'
           ? e.message
           : errorResponse.message,
-      payload: (e as any).payload,
+      payload: clientFacing ? (e as any).payload : undefined,
       errorId: traceId,
     })
 

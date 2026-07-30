@@ -1,7 +1,22 @@
 import { parse as parseQuery } from 'picoquery'
 import { parse as parseCookie } from 'cookie'
 import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from './http.types.js'
-import { UnprocessableContentError } from '../../errors/errors.js'
+import {
+  PayloadTooLargeError,
+  UnprocessableContentError,
+} from '../../errors/errors.js'
+
+/**
+ * The largest request body read into memory when no limit is configured. Ample
+ * for JSON APIs and typical uploads while keeping a single request's memory
+ * footprint bounded.
+ */
+export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024
+
+export type PikkuFetchHTTPRequestOptions = Partial<{
+  /** Maximum request body size in bytes. Defaults to {@link DEFAULT_MAX_BODY_SIZE}. */
+  maxBodySize: number
+}>
 
 /**
  * Abstract class representing a pikku request.
@@ -17,9 +32,14 @@ export class PikkuFetchHTTPRequest<
   #rawBodyText: string | undefined
   #rawBodyBuffer: ArrayBuffer | undefined
   #rawBufferPromise: Promise<ArrayBuffer> | undefined
+  #maxBodySize: number
 
-  constructor(private request: Request) {
+  constructor(
+    private request: Request,
+    { maxBodySize = DEFAULT_MAX_BODY_SIZE }: PikkuFetchHTTPRequestOptions = {}
+  ) {
     this.#url = new URL(request.url)
+    this.#maxBodySize = maxBodySize
   }
 
   public method(): HTTPMethod {
@@ -78,11 +98,70 @@ export class PikkuFetchHTTPRequest<
       )
       return this.#rawBufferPromise
     }
-    this.#rawBufferPromise = this.request.arrayBuffer().then((buf) => {
+    this.#rawBufferPromise = this.#readBoundedBuffer().then((buf) => {
       this.#rawBodyBuffer = buf
       return buf
     })
     return this.#rawBufferPromise
+  }
+
+  /**
+   * Reads the body while refusing to buffer more than `maxBodySize` bytes. The
+   * declared `content-length` is rejected up front so an oversized body is never
+   * transferred, and the stream is measured as it arrives because that header is
+   * both optional and attacker-controlled.
+   */
+  async #readBoundedBuffer(): Promise<ArrayBuffer> {
+    const contentLength = this.request.headers.get('content-length')
+    if (contentLength !== null) {
+      const declaredSize = Number(contentLength)
+      if (Number.isFinite(declaredSize) && declaredSize > this.#maxBodySize) {
+        throw this.#payloadTooLarge()
+      }
+    }
+
+    const stream = this.request.body
+    if (stream === null) {
+      const buffer = await this.request.arrayBuffer()
+      if (buffer.byteLength > this.#maxBodySize) {
+        throw this.#payloadTooLarge()
+      }
+      return buffer
+    }
+
+    const reader = stream.getReader()
+    const chunks: Uint8Array[] = []
+    let size = 0
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) {
+          break
+        }
+        size += value.byteLength
+        if (size > this.#maxBodySize) {
+          await reader.cancel()
+          throw this.#payloadTooLarge()
+        }
+        chunks.push(value)
+      }
+    } finally {
+      reader.releaseLock()
+    }
+
+    const body = new Uint8Array(size)
+    let offset = 0
+    for (const chunk of chunks) {
+      body.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return body.buffer as ArrayBuffer
+  }
+
+  #payloadTooLarge(): PayloadTooLargeError {
+    return new PayloadTooLargeError(
+      `Request body exceeds the maximum size of ${this.#maxBodySize} bytes`
+    )
   }
 
   async #readRawText(): Promise<string> {
@@ -214,6 +293,9 @@ export class PikkuFetchHTTPRequest<
         )
       }
     } catch (e) {
+      if (e instanceof PayloadTooLargeError) {
+        throw e
+      }
       throw new UnprocessableContentError(`Error parsing body: ${e}`)
     }
     return body

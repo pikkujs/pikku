@@ -1,11 +1,12 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { handleHTTPError } from './handle-error.js'
-import { addError } from './errors/error-handler.js'
+import { addError, PikkuError } from './errors/error-handler.js'
 import {
   NotFoundError,
   BadRequestError,
   ForbiddenError,
+  MissingScopeError,
 } from './errors/errors.js'
 import { resetPikkuState } from './pikku-state.js'
 
@@ -397,6 +398,112 @@ describe('handleHTTPError', () => {
 
     assert.strictEqual(http._state.statusCode, 500)
     assert.deepStrictEqual(http._state.jsonBody, { errorId: 'tracker-str' })
+  })
+
+  test('should not leak the payload of a registered server error', () => {
+    class LeakyInternalError extends PikkuError {}
+    addError(LeakyInternalError, {
+      status: 500,
+      message: 'Something went wrong',
+    })
+
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+    const error = new LeakyInternalError(
+      'connection to 10.0.0.1 refused'
+    ) as any
+    error.payload = { connectionString: 'postgres://user:hunter2@10.0.0.1' }
+
+    handleHTTPError(
+      error,
+      http as any,
+      'tracker-leak',
+      logger as any,
+      [],
+      true,
+      false
+    )
+
+    assert.strictEqual(http._state.statusCode, 500)
+    assert.strictEqual(http._state.jsonBody.payload, undefined)
+  })
+
+  test('should not leak the raw message of a registered server error', () => {
+    class InternalMessageError extends PikkuError {}
+    addError(InternalMessageError, {
+      status: 500,
+      message: 'Something went wrong',
+    })
+
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+    const error = new InternalMessageError('secret internal detail')
+
+    handleHTTPError(
+      error,
+      http as any,
+      'tracker-msg',
+      logger as any,
+      [],
+      true,
+      false
+    )
+
+    assert.strictEqual(http._state.statusCode, 500)
+    assert.strictEqual(http._state.jsonBody.message, 'Something went wrong')
+  })
+
+  test('should keep the payload of a client facing error', () => {
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+    const error = new MissingScopeError('admin:write')
+
+    handleHTTPError(
+      error,
+      http as any,
+      'tracker-scope',
+      logger as any,
+      [],
+      true,
+      false
+    )
+
+    assert.strictEqual(http._state.statusCode, 403)
+    assert.deepStrictEqual(http._state.jsonBody.payload, {
+      error: 'missing_scope',
+      scope: 'admin:write',
+    })
+    assert.strictEqual(
+      http._state.jsonBody.message,
+      'Missing required scope: admin:write'
+    )
+  })
+
+  test('should expose server error details when exposeErrors is true', () => {
+    class ExposableInternalError extends PikkuError {}
+    addError(ExposableInternalError, {
+      status: 500,
+      message: 'Something went wrong',
+    })
+
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+    const error = new ExposableInternalError('internal detail') as any
+    error.payload = { debug: true }
+
+    handleHTTPError(
+      error,
+      http as any,
+      'tracker-expose-known',
+      logger as any,
+      [],
+      true,
+      false,
+      true
+    )
+
+    assert.strictEqual(http._state.jsonBody.message, 'internal detail')
+    assert.deepStrictEqual(http._state.jsonBody.payload, { debug: true })
   })
 
   test('should handle warning log without trackerId', () => {
