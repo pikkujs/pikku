@@ -482,8 +482,6 @@ export type PikkuCLIInput = {
   stateOutput?: string
   stateInput?: string
 
-  verboseMeta?: boolean
-
   /**
    * Run the data-classification security lint (scans function return types for
    * Private/Pii/Secret leaks). Off by default — it forces expensive return-type

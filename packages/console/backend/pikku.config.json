@@ -13,6 +13,5 @@
     "pikkuDir": "src",
     "rpc": "no-auth",
     "workflow": "no-auth"
-  },
-  "verboseMeta": true
+  }
 }

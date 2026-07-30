@@ -3,7 +3,6 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "verboseMeta": true,
   "addon": {
     "displayName": "Pikku Console",
     "description": "Console management and monitoring",

@@ -4,7 +4,6 @@
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
   "addon": true,
-  "verboseMeta": true,
   "node": {
     "displayName": "Pikku Utils",
     "description": "Data transformation and utility functions",

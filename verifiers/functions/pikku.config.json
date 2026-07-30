@@ -6,7 +6,6 @@
   "schema": {
     "supportsImportAttributes": true
   },
-  "verboseMeta": true,
   "clientFiles": {
     "fetchFile": ".pikku/pikku-fetch.gen.ts",
     "websocketFile": ".pikku/pikku-websocket.gen.ts",

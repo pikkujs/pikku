@@ -24,7 +24,6 @@
   "schema": {
     "supportsImportAttributes": true
   },
-  "verboseMeta": true,
   "scaffold": {
     "pikkuDir": "packages/functions/src/pikku",
     "addonDir": "packages",

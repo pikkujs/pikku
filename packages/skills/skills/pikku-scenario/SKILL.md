@@ -300,13 +300,13 @@ Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, the
 
 Coverage is attributed by running scenarios against a server that is collecting it. It is **not** derived from unit tests.
 
-Prerequisites in `pikku.config.json`:
+Prerequisite in `pikku.config.json`:
 
 ```json
-{ "scaffold": { "scenarios": "auth" }, "verboseMeta": true }
+{ "scaffold": { "scenarios": "auth" } }
 ```
 
-`scaffold.scenarios` generates the coverage and stub RPCs into your project (`pikkuScenarioTakeLiveCoverage`, `pikkuScenarioResetLiveCoverage`, `pikkuScenarioResetStubs`, `pikkuScenarioGetStubCalls`), so scenario runs work against any server. `verboseMeta` is required — the coverage RPC reads the verbose functions meta and returns `null` without it.
+`scaffold.scenarios` generates the coverage and stub RPCs into your project (`pikkuScenarioTakeLiveCoverage`, `pikkuScenarioResetLiveCoverage`, `pikkuScenarioResetStubs`, `pikkuScenarioGetStubCalls`), so scenario runs work against any server. The coverage RPC reads `<outDir>/function/pikku-functions-meta-verbose.gen.json` off disk at request time — codegen always writes it, but it has to be deployed alongside the app or the RPC returns `null`.
 
 ```bash
 pikku dev --coverage                                   # V8 precise coverage, in-process
@@ -375,7 +375,7 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | Assuming a clean database                     | There is no state reset — it may be a staging server. Scope what you create.                              |
 | `sleep()` before asserting                    | Use `expectEventually`.                                                                                   |
 | `expectEventually` in a `pikkuWorkflowFunc`   | `PKU675` — scenario-only.                                                                                 |
-| Coverage silently 0                           | Server not run with `--coverage`, `verboseMeta` off, `scaffold.scenarios` unset, or no actors configured. |
+| Coverage silently 0                           | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
 
 `@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `PersonaData`, `DbUtils`) — out of scope here.
 
