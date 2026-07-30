@@ -329,6 +329,46 @@ describe('runMCPTool', () => {
       }
     )
   })
+
+  test('withholds the error message and stack from internal MCP errors in production', async () => {
+    pikkuState(null, 'mcp', 'toolsMeta').prodBoom = {
+      name: 'prodBoom',
+      title: 'Prod Boom',
+      description: 'Prod Boom',
+      pikkuFuncId: 'prodBoomFunc',
+      inputSchema: null,
+      outputSchema: null,
+    } as never
+    registerFunction('prodBoomFunc', async () => {
+      throw new Error('secret internal detail')
+    })
+
+    const originalNodeEnv = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    try {
+      await assert.rejects(
+        () =>
+          runMCPTool(
+            { jsonrpc: '2.0', id: 'prod-boom-1', params: {} },
+            { mcp: mcpWire as never },
+            'prodBoom'
+          ),
+        (error: unknown) => {
+          assert.ok(error instanceof MCPError)
+          assert.equal(error.error.code, -32603)
+          assert.equal(error.error.message, 'Internal error')
+          assert.equal(error.error.data, undefined)
+          return true
+        }
+      )
+    } finally {
+      if (originalNodeEnv === undefined) {
+        delete process.env.NODE_ENV
+      } else {
+        process.env.NODE_ENV = originalNodeEnv
+      }
+    }
+  })
 })
 
 describe('runMCPPrompt', () => {
