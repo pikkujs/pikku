@@ -15,7 +15,7 @@ Use this skill as an execution checklist, not reference material.
    pikku fabric validate --json
    ```
    This prints every missing file, misconfigured field, and dependency gap with a `fixHint`. Address all `error` findings before proceeding — they block deploy. Resolve `warn` findings before testing — they cause runtime failures. `info` findings are best-practice gaps that are safe to defer.
-2. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
 3. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
 4. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
 5. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
@@ -31,7 +31,7 @@ Always run project discovery first:
 yarn pikku meta context --json
 ```
 
-In OpenCode, call the `pikku-meta` tool before grepping or editing a Fabric app.
+Call the `pikku-meta` tool before grepping or editing a Fabric app.
 
 - Use `section: "context"` for the project map: functions, wires, workflows, capabilities, and source files.
 - Use `section: "clients"` before frontend/RPC work.
@@ -40,7 +40,7 @@ In OpenCode, call the `pikku-meta` tool before grepping or editing a Fabric app.
 
 Do not load every schema body by default; that wastes context and usually makes the model worse.
 
-For database work in OpenCode:
+For database work:
 
 - Use `pikku-db` for the actual attached Fabric database state: tables, columns, foreign keys, and applied migrations.
 - Use `pikku-meta` `section: "schemas"` for code-level JSON Schema contracts, not database introspection.
