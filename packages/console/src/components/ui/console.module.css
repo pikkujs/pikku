@@ -262,20 +262,50 @@
   outline-offset: -2px;
 }
 
-/* A note's rendered markdown. Mantine's Typography styles prose but leaves a
-   fenced block as a run of inline `code` — one background box per line, ragged
-   down the right — and a gherkin scenario is the whole point of a slice note, so
-   it has to read as one block. Links get the anchor colour for the same reason:
-   a link between notes is the graph, and an unstyled one is invisible. */
+/* Rendered markdown, wherever it comes from — a note, a README, an agent's
+   reply. Mantine's Typography styles prose but leaves a fenced block as a run of
+   inline `code` — one background box per line, ragged down the right — and a
+   gherkin scenario or an install snippet has to read as one block. */
+
+/* Headings at document scale. Typography hands every nested `h1..h6` the theme's
+   heading font and sizes — 45px JetBrains Mono for an `h1` — which is right for
+   the title of a page somebody designed and absurd for the third `###` in a note
+   or the first line of a README.
+   It has to be fixed here rather than by rendering the headings as `<Text size>`:
+   Typography's rule is `.m_Typography :where(h1)`, and `:where()` contributes
+   nothing, so that rule and Mantine's `.mantine-Text-root` tie on specificity and
+   the later one in the bundle wins — which is Typography's. An element selector
+   inside the module class outranks both, whatever the source order. */
+.markdownBody :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--mantine-font-family);
+  margin-top: var(--mantine-spacing-lg);
+  margin-bottom: 4px;
+  line-height: 1.35;
+}
+
+.markdownBody h1 {
+  font-size: var(--mantine-font-size-lg);
+  font-weight: 700;
+}
+
+.markdownBody h2 {
+  font-size: var(--mantine-font-size-md);
+  font-weight: 600;
+}
+
+.markdownBody :is(h3, h4, h5, h6) {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+}
 /* The console's primary colour is gray, so an anchor styled from the theme is
    the same colour as the sentence around it. The accent is what the rest of the
    console uses to say "this responds to you". */
-.knowledgeBody a {
+.markdownBody a {
   color: var(--app-accent, var(--mantine-color-anchor));
   text-decoration: none;
 }
 
-.knowledgeBody a:hover {
+.markdownBody a:hover {
   text-decoration: underline;
 }
 
@@ -285,7 +315,7 @@
   color: var(--app-accent, var(--mantine-color-anchor));
 }
 
-.knowledgeBody pre {
+.markdownBody pre {
   background: var(--app-surface, var(--mantine-color-default));
   border: 1px solid var(--app-row-border);
   border-radius: 8px;
@@ -293,7 +323,7 @@
   overflow-x: auto;
 }
 
-.knowledgeBody pre code {
+.markdownBody pre code {
   background: transparent;
   padding: 0;
   font-size: var(--mantine-font-size-xs);

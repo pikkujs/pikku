@@ -13,7 +13,6 @@ import {
   Code,
   Container,
   Button,
-  Typography,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -43,8 +42,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { ComposerShell, composerStyles } from '../ui/ComposerShell'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { Markdown } from '../ui/Markdown'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
 import { getServerUrl } from '../../context/serverUrl'
@@ -468,11 +466,9 @@ const AssistantMessage: React.FC = () => {
           <MessagePrimitive.Content
             components={{
               Text: ({ text }) => (
-                <Typography p={0} m={0} fz="sm">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {text}
-                  </ReactMarkdown>
-                </Typography>
+                <Markdown p={0} m={0} fz="sm">
+                  {text}
+                </Markdown>
               ),
               tools: {
                 Fallback: (props) => (

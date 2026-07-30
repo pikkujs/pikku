@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react'
+import React, { useId, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -8,20 +8,19 @@ import {
   Group,
   Stack,
   Text,
-  Typography,
   UnstyledButton,
 } from '@pikku/mantine/core'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { asI18n, type I18nNode } from '@pikku/react'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import type { Components } from 'react-markdown'
 import type { KnowledgeFinding, KnowledgeNote } from '../../lib/knowledge'
 import {
   bodyWithoutTitle,
   readableBody,
   resolveNoteLink,
 } from '../../lib/knowledge'
+import { Markdown, asMarkdownContent } from '../ui/Markdown'
 import { MetaRow } from '../ui/MetaRow'
 import { KnowledgeNoteLinks } from './KnowledgeNoteLinks'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
@@ -34,51 +33,6 @@ type KnowledgeNoteDocumentProps = {
   findings: KnowledgeFinding[]
   titleFor: (path: string) => string | undefined
   onOpenNote: (path: string) => void
-}
-
-/**
- * Rendered markdown is the note's own words — untranslated by definition, since
- * a note is a file in the repo — so it is outside the i18n gate the same way
- * `asI18n` puts a dynamic string outside it. Nodes rather than a string, which is
- * what react-markdown hands a component.
- */
-const asContent = (children: React.ReactNode): I18nNode => children as I18nNode
-
-/**
- * A markdown heading at the console's document scale.
- *
- * Mantine's `Typography` hands every nested `h1..h6` the theme's heading font and
- * sizes — 40px JetBrains Mono for an `h1` — which is right for the title of a page
- * somebody designed and absurd for the third `###` in a decision note. Scoped to
- * this document rather than fixed in the theme: every other heading in the console
- * is one a component chose, and markdown is the only place the level comes from
- * the text itself.
- */
-const markdownHeading = (
-  component: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6',
-  size: 'lg' | 'md' | 'sm',
-  fw: number
-): React.FC<{ children?: React.ReactNode }> => {
-  const Heading: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-    <Text component={component} ff="text" size={size} fw={fw} mt="lg" mb={4}>
-      {asContent(children)}
-    </Text>
-  )
-  Heading.displayName = `MarkdownHeading(${component})`
-  return Heading
-}
-
-/**
- * Built once: a components map rebuilt per render remounts the whole document on
- * every keystroke elsewhere on the page.
- */
-const MARKDOWN_HEADINGS = {
-  h1: markdownHeading('h1', 'lg', 700),
-  h2: markdownHeading('h2', 'md', 600),
-  h3: markdownHeading('h3', 'sm', 600),
-  h4: markdownHeading('h4', 'sm', 600),
-  h5: markdownHeading('h5', 'sm', 600),
-  h6: markdownHeading('h6', 'sm', 600),
 }
 
 /**
@@ -104,6 +58,55 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
 }) => {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const detailsId = useId()
+
+  // Memoized on what it actually closes over. A renderer rebuilt per render is a
+  // new component type per render, and react-markdown would remount the entire
+  // body — losing the scroll position — every time anything on the page changes.
+  const linkRenderer = useMemo<Components>(
+    () => ({
+      a: ({ href, children }) => {
+        const target = href ? resolveNoteLink(note.path, href) : null
+        // Not a note: an http(s) link, an anchor, a source file. The one kind of
+        // link the browser can follow on its own.
+        if (target === null) {
+          return (
+            <a href={href} target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          )
+        }
+        // A note that names a note nobody has written yet. Legal in OKF, and not
+        // a link: the href is a repo-relative path this console has nothing to
+        // serve for, and offering it as one leads somewhere that 404s.
+        if (titleFor(target) === undefined) {
+          return (
+            <Text
+              component="span"
+              c="dimmed"
+              style={{ textDecoration: 'underline dotted' }}
+              title={asI18n(target)}
+            >
+              {asMarkdownContent(children)}
+            </Text>
+          )
+        }
+        // A link between notes is a move within this page, not a navigation: the
+        // note it names is already loaded.
+        return (
+          <a
+            href={href}
+            onClick={(event) => {
+              event.preventDefault()
+              onOpenNote(target)
+            }}
+          >
+            {children}
+          </a>
+        )
+      },
+    }),
+    [note.path, titleFor, onOpenNote]
+  )
 
   const hasDetails =
     note.entities.length > 0 ||
@@ -250,57 +253,9 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
 
         <Divider />
 
-        <Typography className={classes.knowledgeBody}>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              ...MARKDOWN_HEADINGS,
-              a: ({ href, children }) => {
-                const target = href ? resolveNoteLink(note.path, href) : null
-                // Not a note: an http(s) link, an anchor, a source file. The one
-                // kind of link the browser can follow on its own.
-                if (target === null) {
-                  return (
-                    <a href={href} target="_blank" rel="noopener noreferrer">
-                      {children}
-                    </a>
-                  )
-                }
-                // A note that names a note nobody has written yet. Legal in OKF,
-                // and not a link: the href is a repo-relative path this console
-                // has nothing to serve for, and offering it as one leads
-                // somewhere that 404s.
-                if (titleFor(target) === undefined) {
-                  return (
-                    <Text
-                      component="span"
-                      c="dimmed"
-                      style={{ textDecoration: 'underline dotted' }}
-                      title={asI18n(target)}
-                    >
-                      {asContent(children)}
-                    </Text>
-                  )
-                }
-                // A link between notes is a move within this page, not a
-                // navigation: the note it names is already loaded.
-                return (
-                  <a
-                    href={href}
-                    onClick={(event) => {
-                      event.preventDefault()
-                      onOpenNote(target)
-                    }}
-                  >
-                    {children}
-                  </a>
-                )
-              },
-            }}
-          >
-            {bodyWithoutTitle(readableBody(note.body), note.title)}
-          </ReactMarkdown>
-        </Typography>
+        <Markdown components={linkRenderer}>
+          {bodyWithoutTitle(readableBody(note.body), note.title)}
+        </Markdown>
       </Stack>
     </Box>
   )
