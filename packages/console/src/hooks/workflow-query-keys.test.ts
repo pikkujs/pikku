@@ -39,7 +39,6 @@ describe('workflowQueryKeys', () => {
       'abc',
     ])
     assert.deepEqual(workflowQueryKeys.runNames(), ['workflow-run-names'])
-    assert.deepEqual(workflowQueryKeys.aiWorkflows(), ['ai-workflows'])
   })
 
   test('allRuns is a prefix of runs, so it invalidates every variant', () => {

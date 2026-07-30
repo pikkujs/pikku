@@ -510,22 +510,6 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.deepEqual(c.value.data, [{ title: 'foo' }])
   })
 
-  it('emits CUSTOM pikku:workflow-created', () => {
-    const { channel, events } = makeChannel()
-    const wrapped = wrapChannelWithAGUI(channel)
-
-    wrapped.send({
-      type: 'workflow-created',
-      workflowName: 'myFlow',
-      graph: { nodes: [] },
-    } as AIStreamEvent)
-
-    const c = find(events, 'CUSTOM', 'pikku:workflow-created')
-    assert.ok(c)
-    assert.equal(c.value.workflowName, 'myFlow')
-    assert.deepEqual(c.value.graph, { nodes: [] })
-  })
-
   it('emits CUSTOM pikku:agent-call', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)

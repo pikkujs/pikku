@@ -114,12 +114,12 @@ describe('KyselyWorkflowService — schema indexes', () => {
     )
   })
 
-  test('workflow_versions is indexed for the dynamic-workflow lookup', async () => {
+  test('workflow_versions is indexed for the version lookup', async () => {
     const indexes = await listIndexes('workflow_versions')
     assert.notEqual(
       indexes.length,
       0,
-      'getAIGeneratedWorkflows filters on (source, status) with no index'
+      'workflow_versions is queried on every version-mismatch replay with no index'
     )
   })
 
@@ -384,36 +384,6 @@ describe('KyselyWorkflowService — run state writes', () => {
   })
 })
 
-describe('KyselyWorkflowService — dynamic workflow lookup', () => {
-  test('resolving one dynamic workflow does not fetch and parse every version', async () => {
-    for (let i = 0; i < 25; i++) {
-      await service.upsertWorkflowVersion(
-        `ai:agent:wf-${i}`,
-        `hash-${i}`,
-        { nodes: {}, source: 'dynamic-workflow' },
-        'dynamic-workflow'
-      )
-    }
-
-    queries.length = 0
-    const match = await service.getDynamicWorkflow('ai:agent:wf-7')
-    assert.equal(match?.graphHash, 'hash-7')
-    assert.equal(
-      queries.length,
-      1,
-      `expected a single targeted query, got ${queries.length}`
-    )
-    assert.ok(
-      queries[0]?.includes('workflow_name'),
-      `expected the query to filter by workflow_name, got: ${queries[0]}`
-    )
-  })
-
-  test('a dynamic workflow that does not exist resolves to null', async () => {
-    assert.equal(await service.getDynamicWorkflow('ai:agent:nope'), null)
-  })
-})
-
 /**
  * A step whose `current_attempt` is NULL addresses no history row, so the
  * history half of a transition silently writes nothing while the step half
@@ -456,52 +426,6 @@ describe('KyselyWorkflowService — a transition that addresses no history row',
       'each transition appended a row instead of updating the one already there'
     )
     assert.equal(history[0]!.status, 'succeeded')
-  })
-})
-
-/**
- * `(workflowName, graphHash)` is the primary key, so one name can hold several
- * rows marked `active`. Which one a lookup returns has to be a decision, not
- * whatever order the storage engine happens to scan in.
- */
-describe('KyselyWorkflowService — resolving a dynamic workflow', () => {
-  const publishVersion = async (graphHash: string, createdAt: Date) => {
-    await db
-      .insertInto('workflowVersions')
-      .values({
-        workflowName: 'dyn',
-        graphHash,
-        graph: JSON.stringify({ hash: graphHash }),
-        source: 'dynamic-workflow',
-        status: 'active',
-        createdAt,
-      } as any)
-      .execute()
-  }
-
-  test('the newest active version wins', async () => {
-    await publishVersion('older', new Date('2020-01-01T00:00:00Z'))
-    await publishVersion('newer', new Date('2021-01-01T00:00:00Z'))
-
-    const resolved = await service.getDynamicWorkflow('dyn')
-
-    assert.equal(
-      resolved?.graphHash,
-      'newer',
-      'an older version resolved, so a redeploy is not picked up'
-    )
-  })
-
-  test('versions sharing a timestamp still resolve to the same one twice', async () => {
-    const sameInstant = new Date('2020-01-01T00:00:00Z')
-    await publishVersion('aaa', sameInstant)
-    await publishVersion('zzz', sameInstant)
-
-    const first = await service.getDynamicWorkflow('dyn')
-    const second = await service.getDynamicWorkflow('dyn')
-
-    assert.equal(first?.graphHash, second?.graphHash)
-    assert.equal(first?.graphHash, 'zzz')
   })
 })
 

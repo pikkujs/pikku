@@ -1152,25 +1152,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     graphHash: string
   ): Promise<{ graph: any; source: string } | null>
 
-  abstract getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
-
-  /**
-   * One dynamic workflow by name, or `null` if there isn't one.
-   *
-   * Starting a run and every orchestrator tick both need to resolve a single
-   * name, and used to do it by listing every dynamic workflow in the deployment
-   * and parsing each graph on the way past. Backends override this with a
-   * targeted lookup; the fallback keeps the old behavior for those that can't.
-   */
-  public async getDynamicWorkflow(
-    name: string
-  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
-    const workflows = await this.getAIGeneratedWorkflows()
-    return workflows.find((w) => w.workflowName === name) ?? null
-  }
-
   // ============================================================================
   // Workflow Lifecycle Methods
   // ============================================================================
@@ -1419,26 +1400,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       onRunCreated?: (runId: string) => void
     }
   ): Promise<{ runId: string }> {
-    // Resolve workflow from static meta (root or addon namespace), then dynamic DB
+    // Resolve workflow from static meta (root or addon namespace)
     const resolved = resolveWorkflowMeta(name)
-    let workflowMeta = resolved?.meta
+    const workflowMeta = resolved?.meta
     const packageName = resolved?.packageName ?? null
-
-    if (!workflowMeta) {
-      const match = await this.getDynamicWorkflow(name)
-      if (match?.graph) {
-        workflowMeta = match.graph
-      }
-    }
 
     if (!workflowMeta) {
       throw new WorkflowNotFoundError(name)
     }
 
-    if (
-      workflowMeta.source === 'graph' ||
-      workflowMeta.source === 'dynamic-workflow'
-    ) {
+    if (workflowMeta.source === 'graph') {
       const shouldInline =
         options?.inline || !getSingletonServices()?.queueService
       return runWorkflowGraph(
@@ -1746,10 +1717,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       return
     }
 
-    if (
-      workflowMeta?.source === 'graph' ||
-      workflowMeta?.source === 'dynamic-workflow'
-    ) {
+    if (workflowMeta?.source === 'graph') {
       await continueGraph(this, runId, run.workflow)
       const updatedRun = await this.getRun(runId)
       if (updatedRun?.status === 'completed') {
@@ -1764,26 +1732,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         )
       }
       return
-    }
-
-    if (!workflowMeta) {
-      const match = await this.getDynamicWorkflow(run.workflow)
-      if (match?.graph) {
-        await continueGraph(this, runId, run.workflow, match.graph)
-        const updatedRun = await this.getRun(runId)
-        if (updatedRun?.status === 'completed') {
-          await this.onChildWorkflowCompleted(updatedRun, updatedRun.output)
-        } else if (
-          updatedRun?.status === 'failed' ||
-          updatedRun?.status === 'cancelled'
-        ) {
-          await this.onChildWorkflowFailed(
-            updatedRun,
-            new Error(updatedRun.error?.message || 'Child workflow failed')
-          )
-        }
-        return
-      }
     }
 
     const registrations = pikkuState(pkgName, 'workflows', 'registrations')
@@ -1998,9 +1946,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const meta = pikkuState(null, 'workflows', 'meta')
       const workflowMeta = meta[run.workflow]
 
-      const isGraphWorkflow =
-        workflowMeta?.source === 'graph' ||
-        workflowMeta?.source === 'dynamic-workflow'
+      const isGraphWorkflow = workflowMeta?.source === 'graph'
       // Map the physical step key back to its logical node: a revisit instance
       // is `node#N` (ordinal), which isn't a literal key in `nodes`.
       let graphNodeId: string | undefined

@@ -28,7 +28,6 @@ export const workflowQueryKeys = {
   version: (name: string | null, graphHash: string | null) =>
     ['workflow-version', name, graphHash] as const,
   runNames: () => ['workflow-run-names'] as const,
-  aiWorkflows: () => ['ai-workflows'] as const,
 }
 
 /**

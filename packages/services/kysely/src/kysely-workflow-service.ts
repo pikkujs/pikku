@@ -668,53 +668,5 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return this.runService.getWorkflowVersion(name, graphHash)
   }
 
-  /**
-   * Resolve one dynamic workflow by name. Callers that need a single workflow
-   * used to pull every version and `.find()` through them, parsing each graph
-   * on the way past.
-   */
-  async getDynamicWorkflow(
-    name: string
-  ): Promise<{ workflowName: string; graphHash: string; graph: any } | null> {
-    const row = await this.db
-      .selectFrom('workflowVersions')
-      .select(['workflowName', 'graphHash', 'graph'])
-      .where('workflowName', '=', name)
-      .where('source', '=', 'dynamic-workflow')
-      .where('status', '=', 'active')
-      // A name is keyed with its hash, so it can hold several active versions.
-      // Newest wins, and the hash breaks a tie between two published in the
-      // same instant — without both, which one resolves is up to the planner.
-      .orderBy('createdAt', 'desc')
-      .orderBy('graphHash', 'desc')
-      .executeTakeFirst()
-
-    if (!row) return null
-    return {
-      workflowName: row.workflowName,
-      graphHash: row.graphHash,
-      graph: parseJson(row.graph),
-    }
-  }
-
-  async getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    let query = this.db
-      .selectFrom('workflowVersions')
-      .select(['workflowName', 'graphHash', 'graph'])
-      .where('source', '=', 'dynamic-workflow')
-      .where('status', '=', 'active')
-    if (agentName) {
-      query = query.where('workflowName', 'like', `ai:${agentName}:%`)
-    }
-    const rows = await query.execute()
-    return rows.map((row) => ({
-      workflowName: row.workflowName,
-      graphHash: row.graphHash,
-      graph: typeof row.graph === 'string' ? JSON.parse(row.graph) : row.graph,
-    }))
-  }
-
   async close(): Promise<void> {}
 }

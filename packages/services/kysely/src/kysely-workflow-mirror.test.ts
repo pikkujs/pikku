@@ -237,18 +237,6 @@ describe('KyselyWorkflowMirror — workflow versions', () => {
       .executeTakeFirst()
     assert.equal(row?.status, 'archived')
   })
-
-  test('AI-generated workflows surface via getAIGeneratedWorkflows', async () => {
-    await mirror.upsertWorkflowVersion(
-      'ai:agent-x:foo',
-      'h1',
-      { nodes: [] },
-      'dynamic-workflow'
-    )
-    const list = await runService.getAIGeneratedWorkflows('agent-x')
-    assert.equal(list.length, 1)
-    assert.equal(list[0]!.workflowName, 'ai:agent-x:foo')
-  })
 })
 
 describe('KyselyWorkflowMirror — init', () => {

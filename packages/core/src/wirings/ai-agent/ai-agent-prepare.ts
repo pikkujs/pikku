@@ -462,8 +462,7 @@ export function createScopedChannel(
         event.type === 'tool-call' ||
         event.type === 'tool-result' ||
         event.type === 'usage' ||
-        event.type === 'error' ||
-        event.type === 'workflow-created'
+        event.type === 'error'
       ) {
         parent.send({ ...event, agent: agentName, session } as AIStreamEvent)
       } else {

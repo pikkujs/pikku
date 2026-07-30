@@ -366,11 +366,6 @@ describe('PikkuWorkflowDoService — workflow versions', () => {
     const stored = (await storage.get('version:wf:h')) as any
     assert.equal(stored.status, 'archived')
   })
-
-  test('getAIGeneratedWorkflows returns empty (v0.1 stub)', async () => {
-    const res = await service.getAIGeneratedWorkflows()
-    assert.deepEqual(res, [])
-  })
 })
 
 describe('PikkuWorkflowDoService — locks', () => {

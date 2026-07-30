@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { GitBranch } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { useAIWorkflows } from '../../hooks/useWorkflowRuns'
 import { EntityCardList } from '../layout/EntityCardList'
 import type {
   EntityCardItem,
@@ -20,8 +19,8 @@ export interface WorkflowListPanelProps {
 }
 
 /**
- * Every workflow in the project as selectable cards — dynamic AI workflows
- * folded in, scenarios left out (they have their own surface).
+ * Every workflow in the project as selectable cards — scenarios left out (they
+ * have their own surface).
  *
  * Reads the project meta rather than a `WorkflowSurface`: this is the panel a
  * host shows *before* one workflow has been chosen.
@@ -34,7 +33,6 @@ export const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({
   icon = GitBranch,
 }) => {
   const { meta, loading } = usePikkuMeta()
-  const { data: aiWorkflows } = useAIWorkflows()
 
   const scenarioNames = useMemo(() => {
     const names = new Set<string>()
@@ -47,29 +45,13 @@ export const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({
   const allItems = useMemo((): EntityCardItem[] => {
     const workflows = meta.workflows ?? {}
     const all = Object.values(workflows) as any[]
-    if (aiWorkflows) {
-      const existingNames = new Set(all.map((w: any) => w.name))
-      for (const ai of aiWorkflows as unknown as any[]) {
-        if (!existingNames.has(ai.workflowName)) {
-          all.push({
-            name: ai.workflowName,
-            pikkuFuncId: ai.workflowName,
-            steps: [],
-            source: 'dynamic-workflow',
-            nodes: ai.graph?.nodes,
-          })
-        }
-      }
-    }
     return all
       .map((w: any): EntityCardItem => {
         const stepCount = w.nodes
           ? Object.keys(w.nodes).length
           : (w.steps?.length ?? 0)
         const badges: EntityCardBadge[] = []
-        if (w.source === 'dynamic-workflow')
-          badges.push({ label: 'Dynamic', tone: 'accent' as const })
-        else if (w.source === 'scenario')
+        if (w.source === 'scenario')
           badges.push({ label: 'Scenario', tone: 'accent' as const })
         else if (w.dsl === true)
           badges.push({ label: 'DSL', tone: 'neutral' as const })
@@ -86,7 +68,7 @@ export const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.workflows, aiWorkflows])
+  }, [meta.workflows])
 
   const items = useMemo(() => {
     const base = allItems.filter((item) => !scenarioNames.has(item.name))

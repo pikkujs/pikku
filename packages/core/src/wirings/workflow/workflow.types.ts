@@ -254,9 +254,6 @@ export interface WorkflowRunService {
     name: string,
     graphHash: string
   ): Promise<{ graph: any; source: string } | null>
-  getAIGeneratedWorkflows(
-    agentName?: string
-  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
   deleteRun(id: string): Promise<boolean>
 }
 
@@ -484,7 +481,7 @@ export interface WorkflowRuntimeMeta {
   /** Pikku function name (for execution) */
   pikkuFuncId: string
   /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph', 'scenario' (complex + actor steps) */
-  source: 'dsl' | 'complex' | 'graph' | 'dynamic-workflow' | 'scenario'
+  source: 'dsl' | 'complex' | 'graph' | 'scenario'
   /** Optional description */
   description?: string
   /** Tags for organization */

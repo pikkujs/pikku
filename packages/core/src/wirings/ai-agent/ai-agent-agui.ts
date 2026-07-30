@@ -333,15 +333,6 @@ export function wrapChannelWithAGUI(
           break
         }
 
-        case 'workflow-created': {
-          send({
-            type: 'CUSTOM',
-            name: 'pikku:workflow-created',
-            value: { workflowName: event.workflowName, graph: event.graph },
-          })
-          break
-        }
-
         case 'agent-call': {
           send({
             type: 'CUSTOM',

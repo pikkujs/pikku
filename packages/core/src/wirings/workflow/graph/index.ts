@@ -12,8 +12,4 @@ export {
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from './wire-workflow-graph.js'
-export {
-  validateWorkflowWiring,
-  computeEntryNodeIds,
-  generateMermaidDiagram,
-} from './graph-validation.js'
+export { generateMermaidDiagram } from './graph-validation.js'
