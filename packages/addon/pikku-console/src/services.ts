@@ -4,6 +4,7 @@ import { AddonService } from './services/addon.service.js'
 import type { CodeEditService } from './services/code-edit.service.js'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
+import { KnowledgeService } from './services/knowledge.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 
 export const createSingletonServices = pikkuAddonServices(
@@ -44,10 +45,12 @@ export const createSingletonServices = pikkuAddonServices(
     let codeEditService: CodeEditService | null = null
     let stateDiffService: StateDiffService | null = null
     let dbSchemaService: DbSchemaService | null = null
+    let knowledgeService: KnowledgeService | null = null
     if (metaBasePath) {
       const projectRoot = findProjectRoot(metaBasePath)
       stateDiffService = new StateDiffService(projectRoot)
       dbSchemaService = new DbSchemaService(metaService)
+      knowledgeService = new KnowledgeService(projectRoot, metaBasePath)
       // code-edit.service pulls in the TypeScript compiler and is deliberately a
       // lazy, separately-bundled module. Self-contained bundles (e.g. the sandbox
       // orchestrator standalone artifact) don't ship it, so a failed import must
@@ -81,6 +84,7 @@ export const createSingletonServices = pikkuAddonServices(
       codeEditService,
       stateDiffService,
       dbSchemaService,
+      knowledgeService,
       auth,
     }
   }

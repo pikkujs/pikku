@@ -105,20 +105,31 @@ async function makeValidProject(root: string) {
     '// db column annotations\nexport const annotations = {}\n',
     'utf8'
   )
-  await mkdir(join(root, 'knowledge'), { recursive: true })
+  // A knowledge base in the sectioned profile. The three flat files this fixture
+  // used to write (design-language.md, security.md, technology.md) are exactly
+  // what the profile rejects: untyped documents at the root of knowledge/ that
+  // nothing can link into and no gate can read.
+  await mkdir(join(root, 'knowledge', 'decisions', 'design'), {
+    recursive: true,
+  })
   await writeFile(
-    join(root, 'knowledge', 'design-language.md'),
-    '# Design Language\n',
+    join(root, 'knowledge', 'index.md'),
+    '---\ntype: overview\ntitle: Knowledge\n---\n\n# Knowledge\n\nWhat this app is.\n',
     'utf8'
   )
   await writeFile(
-    join(root, 'knowledge', 'security.md'),
-    '# Security\n',
+    join(root, 'knowledge', 'decisions', 'index.md'),
+    '---\ntype: overview\ntitle: Decisions\n---\n\n# Decisions\n\nRules that were chosen.\n',
     'utf8'
   )
   await writeFile(
-    join(root, 'knowledge', 'technology.md'),
-    '# Technology\n',
+    join(root, 'knowledge', 'decisions', 'design', 'index.md'),
+    '---\ntype: overview\ntitle: Design\n---\n\n# Design\n\nHow the app looks and behaves.\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'knowledge', 'decisions', 'design', 'inline-not-toasts.md'),
+    '---\ntype: decision\ntitle: Inline, not toasts\n---\n\nErrors appear beside the field.\n',
     'utf8'
   )
   await writeFile(
@@ -1360,6 +1371,106 @@ describe('pikku fabric validate', () => {
         lines.some((l) => l.includes('packages/functions/src/services.ts'))
       )
     })
+  })
+})
+
+describe('knowledge base (live validate.function)', () => {
+  test('the old flat shape is reported instead of being required', async () => {
+    // This check used to demand knowledge/design-language.md, security.md and
+    // technology.md. Those are three documents, not a knowledge base — nothing
+    // links into them and no gate reads them. Requiring them taught every project
+    // to write the one shape the profile rejects.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'knowledge'), { recursive: true, force: true })
+      await mkdir(join(tmp, 'knowledge'), { recursive: true })
+      for (const name of [
+        'design-language.md',
+        'security.md',
+        'technology.md',
+      ]) {
+        await writeFile(join(tmp, 'knowledge', name), `# ${name}\n`, 'utf8')
+      }
+
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const ids = result.findings.map((f) => f.id)
+
+      assert.ok(
+        !ids.some((id) => id.startsWith('missing-required-file-knowledge')),
+        'no longer demands the flat files'
+      )
+      assert.ok(
+        ids.includes('knowledge-no-index'),
+        'reports the missing entry point'
+      )
+      for (const name of [
+        'design-language.md',
+        'security.md',
+        'technology.md',
+      ]) {
+        assert.ok(
+          ids.includes(`knowledge-flat-note-${name}`),
+          `reports ${name} as a flat note`
+        )
+      }
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the sectioned shape passes, and db/annotations.ts is still required', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'db', 'annotations.ts'), { force: true })
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        !ids.some((id) => id.startsWith('knowledge-')),
+        `expected a clean knowledge base, got ${ids.filter((id) => id.startsWith('knowledge-')).join(', ')}`
+      )
+      assert.ok(ids.includes('missing-required-file-db-annotations-ts'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a dangling resource: in a note fails the project', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await mkdir(join(tmp, 'packages', 'functions', '.pikku', 'function'), {
+        recursive: true,
+      })
+      await writeFile(
+        join(
+          tmp,
+          'packages',
+          'functions',
+          '.pikku',
+          'function',
+          'pikku-functions-meta.gen.json'
+        ),
+        '{"createEntry":{}}',
+        'utf8'
+      )
+      await writeFile(
+        join(tmp, 'knowledge', 'decisions', 'design', 'inline-not-toasts.md'),
+        '---\ntype: decision\ntitle: Inline\nresource: func:renamedAway\n---\n\nx\n',
+        'utf8'
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some((f) =>
+          f.id.startsWith('knowledge-resource-dangling-')
+        ),
+        'resolves resource: against the outDir from pikku.config.json'
+      )
+      assert.strictEqual(result.ok, false)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
   })
 })
 

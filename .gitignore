@@ -165,6 +165,12 @@ verifiers/addon-registry/consumer/pikku-addons.json
 verifiers/db-schema/db/
 verifiers/db-schema/.pikku-runtime/
 
-# Local OKF knowledge bundle: untracked on purpose. It holds commercial strategy,
-# open security findings and memories from unrelated repos, and pikkujs/pikku is public.
-knowledge/
+# This repo's OWN OKF knowledge bundle: untracked on purpose. It holds commercial
+# strategy, open security findings and memories from unrelated repos, and
+# pikkujs/pikku is public.
+#
+# Anchored to the root with a leading slash. Unanchored, it matched every
+# directory named `knowledge` at any depth — which silently swallowed the
+# `@pikku/knowledge` package, the console's knowledge components, and the e2e
+# harness's own bundle, all of which are source and must be committed.
+/knowledge/

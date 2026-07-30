@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { added, changed, removed, dim } from '../lib/output.js'
 import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
+import { runKnowledgeValidate } from '@pikku/knowledge'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -470,12 +471,7 @@ export async function runValidate(
   // ── required project files ────────────────────────────────────────────
   // These files must exist and be committed — they are seeded from the sandbox
   // but belong to the project so the AI agent can read and update them.
-  for (const relPath of [
-    'db/annotations.ts',
-    'knowledge/design-language.md',
-    'knowledge/security.md',
-    'knowledge/technology.md',
-  ]) {
+  for (const relPath of ['db/annotations.ts']) {
     if (!existsSync(join(root, relPath))) {
       w(
         `missing-required-file-${relPath.replace(/[^a-z0-9]/gi, '-')}`,
@@ -487,6 +483,23 @@ export async function runValidate(
         )
       )
     }
+  }
+
+  // ── knowledge base ─────────────────────────────────────────────────────
+  // Delegated to the shared checker rather than asserting a list of filenames.
+  // The three flat files this used to require (design-language.md, security.md,
+  // technology.md) are not a knowledge base — they are three documents nothing
+  // can link into, and the profile now organises the same content into sections
+  // of notes. Fabric adds decisions/design/ on top of what is checked here.
+  const knowledge = await runKnowledgeValidate(
+    root,
+    join(
+      root,
+      typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
+    )
+  )
+  for (const finding of knowledge.findings) {
+    findings.push({ ...finding, path: join(root, finding.path) })
   }
 
   // ── root package.json ──────────────────────────────────────────────────
@@ -1039,7 +1052,12 @@ export async function runValidate(
       // must not use.
       const constructsKysely = /new\s+Kysely\s*[<(]/.test(servicesText)
 
-      if (dbEngine !== 'postgres' && usesKysely && constructsKysely && !usesLibsql) {
+      if (
+        dbEngine !== 'postgres' &&
+        usesKysely &&
+        constructsKysely &&
+        !usesLibsql
+      ) {
         e(
           'services-wrong-db-adapter',
           'services.ts uses Kysely but not LibsqlWebDialect — Fabric injects a Turso/libSQL DATABASE_URL at runtime, not a PostgreSQL URL',

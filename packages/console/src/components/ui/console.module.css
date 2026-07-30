@@ -61,7 +61,10 @@
   flex-shrink: 0;
   min-height: 0;
   overflow: hidden;
-  transition: width 180ms ease, min-width 180ms ease, opacity 180ms ease;
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    opacity 180ms ease;
 }
 
 /* ── Grid header (column headings row) ── */
@@ -228,11 +231,111 @@
   white-space: nowrap;
 }
 
+/* ── Knowledge navigator ── */
+
+/* A row in the knowledge drawer — a section header or a note. A button rather
+   than a styled box: the drawer is the only way to reach a note, so it has to be
+   reachable by keyboard, and hover has to say "clickable" before the pointer
+   changes shape. Depth indentation is set inline; everything else lives here so
+   the hover and focus rings match the rest of the console. */
+.knowledgeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 10px;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 120ms ease;
+}
+
+.knowledgeRow:hover {
+  background: var(--app-hover, rgba(128, 128, 128, 0.1));
+}
+
+.knowledgeRow[data-selected] {
+  background: var(--mantine-color-default-hover);
+}
+
+.knowledgeRow:focus-visible {
+  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
+  outline-offset: -2px;
+}
+
+/* Rendered markdown, wherever it comes from — a note, a README, an agent's
+   reply. Mantine's Typography styles prose but leaves a fenced block as a run of
+   inline `code` — one background box per line, ragged down the right — and a
+   gherkin scenario or an install snippet has to read as one block. */
+
+/* Headings at document scale. Typography hands every nested `h1..h6` the theme's
+   heading font and sizes — 45px JetBrains Mono for an `h1` — which is right for
+   the title of a page somebody designed and absurd for the third `###` in a note
+   or the first line of a README.
+   It has to be fixed here rather than by rendering the headings as `<Text size>`:
+   Typography's rule is `.m_Typography :where(h1)`, and `:where()` contributes
+   nothing, so that rule and Mantine's `.mantine-Text-root` tie on specificity and
+   the later one in the bundle wins — which is Typography's. An element selector
+   inside the module class outranks both, whatever the source order. */
+.markdownBody :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--mantine-font-family);
+  margin-top: var(--mantine-spacing-lg);
+  margin-bottom: 4px;
+  line-height: 1.35;
+}
+
+.markdownBody h1 {
+  font-size: var(--mantine-font-size-lg);
+  font-weight: 700;
+}
+
+.markdownBody h2 {
+  font-size: var(--mantine-font-size-md);
+  font-weight: 600;
+}
+
+.markdownBody :is(h3, h4, h5, h6) {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+}
+/* The console's primary colour is gray, so an anchor styled from the theme is
+   the same colour as the sentence around it. The accent is what the rest of the
+   console uses to say "this responds to you". */
+.markdownBody a {
+  color: var(--app-accent, var(--mantine-color-anchor));
+  text-decoration: none;
+}
+
+.markdownBody a:hover {
+  text-decoration: underline;
+}
+
+/* The same accent for the links in a note's details table, which are the same
+   graph edges shown as a list. */
+.knowledgeLink {
+  color: var(--app-accent, var(--mantine-color-anchor));
+}
+
+.markdownBody pre {
+  background: var(--app-surface, var(--mantine-color-default));
+  border: 1px solid var(--app-row-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+.markdownBody pre code {
+  background: transparent;
+  padding: 0;
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.6;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .paneCollapseTransition,
   .railCollapseTransition,
   .paneStub,
   .navSectionHeader,
+  .knowledgeRow,
   .detailDrawerPane,
   .listItem {
     transition: none;

@@ -10,6 +10,7 @@ import type { AddonService } from '../src/services/addon.service.js'
 import type { CodeEditService } from '../src/services/code-edit.service.js'
 import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
+import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { BetterAuthInstance } from '@pikku/better-auth'
 
 export interface Config extends CoreConfig {}
@@ -23,6 +24,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   codeEditService: CodeEditService | null
   stateDiffService: StateDiffService | null
   dbSchemaService: DbSchemaService | null
+  knowledgeService: KnowledgeService | null
   /**
    * The host's resolved better-auth instance, wired by `pikkuBetterAuth`. The
    * console never constructs it — it is declared here only so the functions

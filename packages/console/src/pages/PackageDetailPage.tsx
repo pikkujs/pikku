@@ -15,12 +15,12 @@ import {
   Tabs,
   Text,
   ThemeIcon,
-  Typography,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import styles from '../components/ui/console.module.css'
+import { Markdown } from '../components/ui/Markdown'
 import {
   Package,
   Code2,
@@ -37,8 +37,6 @@ import {
   ArrowUp,
   Wrench,
 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../context/ConsoleEditableContext'
@@ -1022,7 +1020,7 @@ export const PackageDetailPage: React.FC<{
 
             {pkg.readme && (
               <Tabs.Panel value="readme">
-                <Typography
+                <Markdown
                   px="xl"
                   py="md"
                   style={{
@@ -1030,10 +1028,8 @@ export const PackageDetailPage: React.FC<{
                     overflow: 'auto',
                   }}
                 >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {pkg.readme}
-                  </ReactMarkdown>
-                </Typography>
+                  {pkg.readme}
+                </Markdown>
               </Tabs.Panel>
             )}
 

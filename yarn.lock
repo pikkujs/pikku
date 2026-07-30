@@ -5517,6 +5517,7 @@ __metadata:
     "@pikku/better-auth": "npm:^0.12.19"
     "@pikku/cli": "npm:^0.12.92"
     "@pikku/core": "npm:^0.12.71"
+    "@pikku/knowledge": "npm:^0.12.0"
     json-schema: "npm:^0.4.0"
     oauth2-mock-server: "npm:^7.1.1"
     open: "npm:^10.0.0"
@@ -5809,6 +5810,7 @@ __metadata:
     "@pikku/deploy-cloudflare": "npm:^0.12.9"
     "@pikku/fetch": "npm:^0.12.8"
     "@pikku/inspector": "npm:^0.12.49"
+    "@pikku/knowledge": "npm:^0.12.0"
     "@pikku/kysely": "npm:^0.13.6"
     "@pikku/kysely-node-sqlite": "npm:^0.12.3"
     "@pikku/n8n-import": "npm:^0.0.3"
@@ -6181,6 +6183,16 @@ __metadata:
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@pikku/core": ^0.12.44
+  languageName: unknown
+  linkType: soft
+
+"@pikku/knowledge@npm:^0.12.0, @pikku/knowledge@workspace:packages/knowledge":
+  version: 0.0.0-use.local
+  resolution: "@pikku/knowledge@workspace:packages/knowledge"
+  dependencies:
+    "@types/node": "npm:^24.11.0"
+    typescript: "npm:^6.0.3"
+    zod: "npm:^4.1.13"
   languageName: unknown
   linkType: soft
 
@@ -25746,7 +25758,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^4.4.3":
+"zod@npm:^4.1.13, zod@npm:^4.4.3":
   version: 4.4.3
   resolution: "zod@npm:4.4.3"
   checksum: 10/804b9a42aa8f35f2b3c5a8dff906291cb749115f83ee2afe3576d70b5b5c53c965365c7f4967690647a9c54af9838ff232a85ff9577a0a36c44b68bc6cdefe36

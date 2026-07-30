@@ -34,6 +34,7 @@
     "@pikku/deploy-cloudflare": "^0.12.9",
     "@pikku/fetch": "^0.12.8",
     "@pikku/inspector": "^0.12.49",
+    "@pikku/knowledge": "^0.12.0",
     "@pikku/kysely": "^0.13.6",
     "@pikku/kysely-node-sqlite": "^0.12.3",
     "@pikku/n8n-import": "^0.0.3",
