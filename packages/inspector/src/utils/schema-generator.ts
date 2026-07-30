@@ -339,6 +339,25 @@ function generateTSSchemas(
 }
 
 /**
+ * Where the RUNTIME value of a schema lives, given where TypeScript resolved it.
+ *
+ * A schema imported from a built workspace package resolves to that package's
+ * declaration file, and importing a `.d.ts` yields a module with no exports at
+ * all — every one of them is a type. The value is in the emitted JS beside it, so
+ * that is what gets imported.
+ *
+ * Falls back to the original path when no sibling JS exists, which keeps the
+ * "could not find exported schema" error pointing at the file the developer
+ * actually wrote.
+ */
+export const schemaRuntimeFile = (sourceFile: string): string => {
+  const match = /\.d\.([cm]?)ts$/.exec(sourceFile)
+  if (!match) return sourceFile
+  const emitted = sourceFile.replace(/\.d\.([cm]?)ts$/, '.$1js')
+  return existsSync(emitted) ? emitted : sourceFile
+}
+
+/**
  * Import all source files in parallel using tsx's register() API.
  *
  * tsx's register() sets up the TypeScript loader once, then all subsequent
@@ -472,7 +491,9 @@ async function generateZodSchemas(
 
   // Collect unique source files and batch-import them in parallel
   const uniqueSourceFiles = [
-    ...new Set([...schemaLookup.values()].map((ref) => ref.sourceFile)),
+    ...new Set(
+      [...schemaLookup.values()].map((ref) => schemaRuntimeFile(ref.sourceFile))
+    ),
   ]
   logger.debug(
     `[TIMING] Zod schemas: ${schemaLookup.size} schemas from ${uniqueSourceFiles.length} files`
@@ -492,12 +513,13 @@ async function generateZodSchemas(
   const fallbackSchemas: [string, SchemaRef][] = []
 
   for (const [schemaName, ref] of schemaLookup.entries()) {
-    const mod = importedModules?.get(ref.sourceFile)
+    const runtimeFile = schemaRuntimeFile(ref.sourceFile)
+    const mod = importedModules?.get(runtimeFile)
     if (mod) {
       const zodSchema = mod[ref.variableName]
       if (!zodSchema) {
         errors.push(
-          `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`
+          `Could not find exported schema '${ref.variableName}' in ${runtimeFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`
         )
         continue
       }
@@ -531,12 +553,13 @@ async function generateZodSchemas(
       `Falling back to register() import for ${fallbackSchemas.length} schema(s)`
     )
     for (const [schemaName, ref] of fallbackSchemas) {
+      const runtimeFile = schemaRuntimeFile(ref.sourceFile)
       try {
-        const module = await importWithRegister(ref.sourceFile)
+        const module = await importWithRegister(runtimeFile)
         const zodSchema = module[ref.variableName]
         if (!zodSchema) {
           errors.push(
-            `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
+            `Could not find exported schema '${ref.variableName}' in ${runtimeFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
           )
           continue
         }

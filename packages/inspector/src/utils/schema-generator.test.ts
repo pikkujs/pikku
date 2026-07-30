@@ -5,7 +5,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 import { getInitialInspectorState } from '../inspector.js'
-import { generateAllSchemas } from './schema-generator.js'
+import { generateAllSchemas, schemaRuntimeFile } from './schema-generator.js'
 
 const debugLines: string[] = []
 const logger = {
@@ -160,5 +160,51 @@ describe('generateAllSchemas', () => {
       Object.keys(schemas).length > 0,
       'expected at least one generated schema'
     )
+  })
+})
+
+/**
+ * A schema imported from a built workspace package resolves to that package's
+ * declaration file, and a `.d.ts` has no runtime exports at all — every one of
+ * them is a type. Importing it to read the zod object yields an empty module and
+ * every schema in it is reported missing, so the emitted JS beside it is what has
+ * to be imported.
+ */
+describe('schemaRuntimeFile', () => {
+  test('a source file the developer wrote is imported as it is', () => {
+    const written = join(projectDir, 'src', 'types.ts')
+    assert.equal(schemaRuntimeFile(written), written)
+  })
+
+  test('a declaration file resolves to the JS emitted beside it', () => {
+    writeFileSync(
+      join(projectDir, 'src', 'reindex.d.ts'),
+      'export declare const a: number\n'
+    )
+    writeFileSync(join(projectDir, 'src', 'reindex.js'), 'export const a = 1\n')
+    assert.equal(
+      schemaRuntimeFile(join(projectDir, 'src', 'reindex.d.ts')),
+      join(projectDir, 'src', 'reindex.js')
+    )
+  })
+
+  test('.d.mts and .d.cts keep their own extension', () => {
+    writeFileSync(
+      join(projectDir, 'src', 'esm.d.mts'),
+      'export declare const a: number\n'
+    )
+    writeFileSync(join(projectDir, 'src', 'esm.mjs'), 'export const a = 1\n')
+    assert.equal(
+      schemaRuntimeFile(join(projectDir, 'src', 'esm.d.mts')),
+      join(projectDir, 'src', 'esm.mjs')
+    )
+  })
+
+  test('a declaration file with no emitted JS keeps its own path', () => {
+    // So the "could not find exported schema" error still names a file the
+    // developer can open, rather than one that was never written.
+    const orphan = join(projectDir, 'src', 'types-only.d.ts')
+    writeFileSync(orphan, 'export declare const a: number\n')
+    assert.equal(schemaRuntimeFile(orphan), orphan)
   })
 })

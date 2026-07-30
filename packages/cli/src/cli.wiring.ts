@@ -32,6 +32,14 @@ import {
   workspaceValidate,
   renderWorkspaceValidate,
 } from './functions/commands/workspace-validate.js'
+import {
+  knowledgeValidate,
+  renderKnowledgeValidate,
+} from './functions/commands/knowledge-validate.js'
+import {
+  knowledgeIndex,
+  renderKnowledgeIndex,
+} from './functions/commands/knowledge-index.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
@@ -444,6 +452,31 @@ wireCLI({
               description:
                 'Actually delete. Without it, prune only reports the blast radius',
               short: 'y',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
+    knowledge: {
+      description:
+        'Inspect and maintain the knowledge base — what this app is, in the language its users use',
+      subcommands: {
+        validate: pikkuCLICommand({
+          func: knowledgeValidate,
+          render: renderKnowledgeValidate,
+          description:
+            'Check the knowledge base against the app-project profile, including every resource: reference',
+        }),
+        index: pikkuCLICommand({
+          func: knowledgeIndex,
+          render: renderKnowledgeIndex,
+          description:
+            'Refresh every index.md so each section lists the notes actually in it',
+          options: {
+            check: {
+              description:
+                'Report stale indexes without writing anything, for use as a CI gate',
               default: false,
             },
           },
