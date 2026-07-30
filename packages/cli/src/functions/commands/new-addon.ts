@@ -123,7 +123,27 @@ function sanitizeAddonName(raw: string): string {
   return name || raw
 }
 
-interface AddonVars {
+/**
+ * `--display-name` and `--description` are free-form prose, so an apostrophe in
+ * them is ordinary — "Bob's CRM". `JSON.stringify` emits a valid, escaped
+ * string literal; interpolating the raw text into a quoted one terminates the
+ * string and the scaffolded file no longer parses. Prose composed with other
+ * words is stringified as a whole, not swapped in place.
+ */
+const literal = (value: string) => JSON.stringify(value)
+
+/**
+ * The same prose inside a generated template literal, where a backtick or a
+ * `${` opens an interpolation rather than ending the string — so the emitted
+ * message keeps its own `\${response.status}` holes.
+ */
+const inTemplate = (value: string) =>
+  value.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
+
+/** The same prose on a `//` comment line, where a newline ends the comment. */
+const inComment = (value: string) => value.replace(/\s+/g, ' ').trim()
+
+export interface AddonVars {
   name: string
   camelName: string
   pascalName: string
@@ -134,7 +154,7 @@ interface AddonVars {
   addonDepProtocol: string
 }
 
-function getAddonFiles(
+export function getAddonFiles(
   vars: AddonVars,
   flags: {
     secret: boolean
@@ -266,7 +286,7 @@ ${description}
 `
 
   // src/index.ts
-  files['src/index.ts'] = `// ${displayName} functions
+  files['src/index.ts'] = `// ${inComment(displayName)} functions
 // export { ${camelName}Operation } from './functions/operation.function.js'
 `
 
@@ -286,10 +306,10 @@ export const createWireServices = pikkuAddonWireServices(
     }
     const cred = await wire.getCredential<{ token: string; expiresAt?: number }>('${camelName}')
     if (!cred?.token) {
-      throw new UnauthorizedError('No ${displayName} session — sign in again')
+      throw new UnauthorizedError(${literal(`No ${displayName} session — sign in again`)})
     }
     if (cred.expiresAt && cred.expiresAt * 1000 < Date.now()) {
-      throw new UnauthorizedError('${displayName} session expired — sign in again')
+      throw new UnauthorizedError(${literal(`${displayName} session expired — sign in again`)})
     }
     const ${camelName} = new ${pascalName}Service(cred, variables)
 
@@ -335,7 +355,7 @@ export const createWireServices = pikkuAddonWireServices(
     }
     const cred = await wire.getCredential<{ accessToken: string }>('${camelName}')
     if (!cred?.accessToken) {
-      throw new UnauthorizedError('No ${displayName} connection — connect ${displayName} first')
+      throw new UnauthorizedError(${literal(`No ${displayName} connection — connect ${displayName} first`)})
     }
     const ${camelName} = new ${pascalName}Service(cred, variables)
 
@@ -424,7 +444,7 @@ export class ${pascalName}Service {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
+      throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorText}\`)
     }
 
     return response.json() as Promise<T>
@@ -476,7 +496,7 @@ export class ${pascalName}Service {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
+      throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorText}\`)
     }
 
     return response.json() as Promise<T>
@@ -523,7 +543,7 @@ export class ${pascalName}Service {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
+      throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorText}\`)
     }
 
     return response.json() as Promise<T>
@@ -565,7 +585,7 @@ export class ${pascalName}Service {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
+      throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorText}\`)
     }
 
     return response.json() as Promise<T>
@@ -614,23 +634,23 @@ export interface Services extends CoreServices<SingletonServices> {}
 import { wireCredential } from '@pikku/core/credential'
 
 export const ${camelName}CredentialSchema = z.object({
-  apiKey: z.string().describe('${displayName} API key'),
+  apiKey: z.string().describe(${literal(`${displayName} API key`)}),
 })
 
 wireCredential({
   name: '${camelName}',
-  displayName: '${displayName}',
-  description: '${description}',
+  displayName: ${literal(displayName)},
+  description: ${literal(description)},
   type: 'wire',
   schema: ${camelName}CredentialSchema,
 })
 `
   } else if (flags.credential === 'bearer') {
     const credentialFields = flags.delegated
-      ? `  token: z.string().describe('${displayName} session token captured at delegated sign-in'),
+      ? `  token: z.string().describe(${literal(`${displayName} session token captured at delegated sign-in`)}),
   expiresAt: z.number().optional().describe('Token expiry (epoch seconds)'),
   tenantId: z.string().optional().describe('Upstream tenant id'),`
-      : `  token: z.string().describe('${displayName} bearer token'),`
+      : `  token: z.string().describe(${literal(`${displayName} bearer token`)}),`
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
 import { wireCredential } from '@pikku/core/credential'
 
@@ -640,8 +660,8 @@ ${credentialFields}
 
 wireCredential({
   name: '${camelName}',
-  displayName: '${displayName}',
-  description: '${description}',
+  displayName: ${literal(displayName)},
+  description: ${literal(description)},
   type: 'wire',
   schema: ${camelName}CredentialSchema,
 })
@@ -658,8 +678,8 @@ export const ${camelName}TokenSchema = z.object({
 
 wireCredential({
   name: '${camelName}',
-  displayName: '${displayName}',
-  description: '${description}',
+  displayName: ${literal(displayName)},
+  description: ${literal(description)},
   type: 'wire',
   schema: ${camelName}TokenSchema,
   oauth2: {
@@ -673,8 +693,8 @@ wireCredential({
 
 wireSecret({
   name: '${camelName}OAuthApp',
-  displayName: '${displayName} OAuth App',
-  description: 'OAuth2 app credentials for ${displayName}',
+  displayName: ${literal(`${displayName} OAuth App`)},
+  description: ${literal(`OAuth2 app credentials for ${displayName}`)},
   secretId: '${screamingName}_OAUTH_APP',
 })
 `
@@ -683,7 +703,7 @@ wireSecret({
 import { wireSecret } from '@pikku/core/secret'
 
 export const ${camelName}SecretsSchema = z.object({
-  apiKey: z.string().describe('${displayName} API key'),
+  apiKey: z.string().describe(${literal(`${displayName} API key`)}),
   // Add other secret fields as needed
 })
 
@@ -691,8 +711,8 @@ export type ${pascalName}Secrets = z.infer<typeof ${camelName}SecretsSchema>
 
 wireSecret({
   name: '${camelName}',
-  displayName: '${displayName} API',
-  description: '${description}',
+  displayName: ${literal(`${displayName} API`)},
+  description: ${literal(description)},
   secretId: '${screamingName}_CREDENTIALS',
   schema: ${camelName}SecretsSchema,
 })
@@ -708,7 +728,7 @@ export const ${camelName}VariableSchema = z.string().optional().describe('TODO: 
 
 wireVariable({
   name: '${camelName}_variable',
-  displayName: '${displayName} Variable',
+  displayName: ${literal(`${displayName} Variable`)},
   description: 'TODO: describe this variable',
   variableId: '${screamingName}_VARIABLE',
   schema: ${camelName}VariableSchema,

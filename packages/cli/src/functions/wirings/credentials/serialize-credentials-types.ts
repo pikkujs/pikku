@@ -3,6 +3,14 @@ import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/credentia
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
+/**
+ * A display name is the human-facing label a developer wrote, so an apostrophe
+ * in it is ordinary. `JSON.stringify` emits a valid, escaped TypeScript string
+ * literal; interpolating the raw text into a quoted one terminates the string
+ * and the generated file stops parsing.
+ */
+const literal = (value: string) => JSON.stringify(value)
+
 export interface SerializeCredentialsOptions {
   definitions: CredentialDefinitions
   schemaLookup: Map<string, SchemaRef>
@@ -47,7 +55,7 @@ export const serializeCredentialsTypes = ({
 
     const metaParts = [
       `name: '${name}'`,
-      `displayName: '${meta.displayName}'`,
+      `displayName: ${literal(meta.displayName)}`,
       `type: '${meta.type}'`,
     ]
     if (meta.oauth2) {
