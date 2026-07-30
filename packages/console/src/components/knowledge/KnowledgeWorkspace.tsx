@@ -11,6 +11,7 @@ import { KnowledgeNoteDocument } from './KnowledgeNoteDocument'
 import { KnowledgeNoteNavigator } from './KnowledgeNoteNavigator'
 import { useKnowledge } from '../../hooks/useKnowledge'
 import {
+  entryPointNote,
   findingsForNote,
   groupNotesBySection,
   noteMatches,
@@ -54,9 +55,10 @@ export const KnowledgeWorkspace: React.FC = () => {
 
   // A search that hides the selected note leaves the selection alone — it is
   // still what the reader is reading, and narrowing the list is not deselecting.
+  const fallback = entryPointNote(matching)
   const selected =
     selection ??
-    (matching[0] ? { kind: 'note' as const, path: matching[0].path } : null)
+    (fallback ? { kind: 'note' as const, path: fallback.path } : null)
   const selectedNote =
     selected?.kind === 'note' ? byPath.get(selected.path) : undefined
 

@@ -91,6 +91,23 @@ export const outboundLinks = (note: KnowledgeNote): string[] => {
 }
 
 /**
+ * Where a section sorts: the order the profile declares them in, which is the
+ * order they are read in — a slice, the entities it is about, the decisions that
+ * govern it, then what is still open. Alphabetical would lead with `decisions`
+ * and bury `slices` at the end, and would separate `decisions` from
+ * `decisions/security` by everything in between.
+ *
+ * A section the profile does not name sorts after all of them, alphabetically,
+ * which puts a parent ahead of its own children for free.
+ */
+const SECTION_RANK = new Map(
+  Object.keys(KNOWLEDGE_SECTIONS).map((name, index) => [name, index])
+)
+
+const sectionRank = (name: string): number =>
+  SECTION_RANK.get(name) ?? SECTION_RANK.size
+
+/**
  * The notes, the links between them, and the counts a browser needs — derived in
  * one pass so a reader can be shown what points AT a note, which is the half of
  * the graph a markdown file cannot express on its own.
@@ -126,9 +143,13 @@ export const buildKnowledgeGraph = (notes: KnowledgeNote[]): KnowledgeGraph => {
   const graphNotes = notes.map((note): KnowledgeGraphNote => {
     const self = toPosix(note.path)
     const section = sectionOf(note.path)
-    if (!note.reserved) {
-      sectionCounts.set(section, (sectionCounts.get(section) ?? 0) + 1)
-    }
+    // Registered whatever is in it, counted only for notes a reader would list.
+    // A section holding nothing but its own index.md still exists, and leaving it
+    // out drops it from the navigator while its notes are shown regardless.
+    sectionCounts.set(
+      section,
+      (sectionCounts.get(section) ?? 0) + (note.reserved ? 0 : 1)
+    )
     for (const tag of note.tags ?? []) {
       tagCounts[tag] = (tagCounts[tag] ?? 0) + 1
     }
@@ -153,9 +174,23 @@ export const buildKnowledgeGraph = (notes: KnowledgeNote[]): KnowledgeGraph => {
     }
   })
 
+  // A section that holds nothing but sub-sections is still a section: with only
+  // `decisions/security/` written, `decisions` has no notes of its own and would
+  // otherwise be missing from the list its own child appears in.
+  //
+  // Snapshotted, because the loop adds to the map it is walking.
+  const sectionsWithNotes = [...sectionCounts.keys()]
+  for (const section of sectionsWithNotes) {
+    const parts = section.split(posix.sep)
+    for (let depth = 1; depth < parts.length; depth++) {
+      const ancestor = parts.slice(0, depth).join(posix.sep)
+      if (!sectionCounts.has(ancestor)) sectionCounts.set(ancestor, 0)
+    }
+  }
+
   const sections = [...sectionCounts]
     .filter(([name]) => name)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => sectionRank(a) - sectionRank(b) || a.localeCompare(b))
     .map(([name, count]) => ({
       name,
       description: KNOWLEDGE_SECTIONS[name],

@@ -157,14 +157,64 @@ describe('buildKnowledgeGraph', () => {
     const graph = buildKnowledgeGraph(bundle())
     assert.deepEqual(graph.sections, [
       {
+        name: 'slices',
+        description:
+          'one buildable piece of the app, with the scenario that proves it',
+        count: 1,
+      },
+      {
         name: 'decisions',
         description: 'a rule that was chosen, and what it rules out',
         count: 1,
       },
+    ])
+  })
+
+  test('orders sections the way the profile declares them, not alphabetically', () => {
+    // Alphabetical leads with `decisions` and buries `slices` last, which is the
+    // reverse of how a base is read: the slice first, then what governs it.
+    const graph = buildKnowledgeGraph([
+      note('knowledge/questions/open.md', '---\ntype: question\n---\nq'),
+      note('knowledge/decisions/why.md', '---\ntype: decision\n---\nd'),
+      note('knowledge/entities/entry.md', '---\ntype: entity\n---\ne'),
+      note('knowledge/slices/01-a.md', '---\ntype: slice\n---\ns'),
+    ])
+    assert.deepEqual(
+      graph.sections.map((section) => section.name),
+      ['slices', 'entities', 'decisions', 'questions']
+    )
+  })
+
+  test('a section not in the profile sorts after the ones that are', () => {
+    const graph = buildKnowledgeGraph([
+      note('knowledge/archive/old.md', '---\ntype: note\n---\na'),
+      note('knowledge/slices/01-a.md', '---\ntype: slice\n---\ns'),
+    ])
+    assert.deepEqual(
+      graph.sections.map((section) => section.name),
+      ['slices', 'archive']
+    )
+  })
+
+  test('a section holding only sub-sections is still listed, at count zero', () => {
+    // `decisions/` with nothing but `decisions/security/` under it: it has no
+    // notes of its own, and dropping it would hide the parent of a section that
+    // is itself shown.
+    const graph = buildKnowledgeGraph([
+      note(
+        'knowledge/decisions/security/who-reads.md',
+        '---\ntype: decision\n---\nd'
+      ),
+    ])
+    assert.deepEqual(graph.sections, [
       {
-        name: 'slices',
-        description:
-          'one buildable piece of the app, with the scenario that proves it',
+        name: 'decisions',
+        description: 'a rule that was chosen, and what it rules out',
+        count: 0,
+      },
+      {
+        name: 'decisions/security',
+        description: 'a rule about who may do what',
         count: 1,
       },
     ])

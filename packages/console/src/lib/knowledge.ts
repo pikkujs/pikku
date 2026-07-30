@@ -100,6 +100,43 @@ export const maxSeverity = (
     findings.some((finding) => finding.severity === severity)
   ) ?? 'info'
 
+/**
+ * The body as a reader should see it, with HTML comments removed.
+ *
+ * `pikku knowledge index` wraps the listing it generates in
+ * `<!-- pikku:knowledge-index -->` markers so it can rewrite that block without
+ * touching the prose around it. Markdown is rendered without raw-HTML support —
+ * deliberately, since a note is untrusted text — so a comment arrives as a text
+ * node and is drawn on the page, which is the one place those markers are
+ * meant never to appear.
+ *
+ * Fenced code is left alone: a note about HTML that quotes a comment is showing
+ * it on purpose.
+ */
+export const readableBody = (body: string): string =>
+  body
+    .split(/(```[\s\S]*?```)/g)
+    .map((part, index) =>
+      // Odd indices are the captured fences.
+      index % 2 === 1 ? part : part.replace(/<!--[\s\S]*?-->/g, '')
+    )
+    .join('')
+    // A comment on its own line leaves the blank lines that surrounded it, which
+    // markdown renders as a gap where the marker used to be.
+    .replace(/\n{3,}/g, '\n\n')
+
+/**
+ * The note a reader should land on: the bundle's entry point, which is the
+ * `index.md` at the root of `knowledge/`. Falling back to the first note in path
+ * order opens whichever section happens to sort first — `decisions/` — rather
+ * than the one note written to be read first.
+ */
+export const entryPointNote = (
+  notes: KnowledgeNote[]
+): KnowledgeNote | undefined =>
+  notes.find((note) => note.section === '' && note.reserved === 'index') ??
+  notes[0]
+
 /** The findings that point at one note. */
 export const findingsForNote = (
   findings: KnowledgeFinding[],
@@ -147,7 +184,7 @@ export interface KnowledgeGroup {
 /**
  * Notes grouped for the navigator: the root first — `knowledge/index.md` is the
  * entry point and reads as one — then each section in the order the bundle
- * reports, which is alphabetical.
+ * reports, which is the order the profile declares them in.
  *
  * A section carrying only an `index.md` is still shown. It has no notes to list,
  * but it tells the reader the section exists and what belongs in it, which is the

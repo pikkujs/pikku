@@ -2,11 +2,13 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  entryPointNote,
   findingsForNote,
   groupNotesBySection,
   maxSeverity,
   noteFileName,
   noteMatches,
+  readableBody,
   resolveNoteLink,
   type KnowledgeFinding,
   type KnowledgeNote,
@@ -192,5 +194,71 @@ describe('groupNotesBySection', () => {
       grouped.map((group) => group.section),
       ['wishlist']
     )
+  })
+})
+
+describe('readableBody', () => {
+  test('removes the markers pikku knowledge index wraps its listing in', () => {
+    // Without raw-HTML rendering a comment arrives as a text node and is drawn
+    // on the page — the one place these markers must never appear.
+    const body = [
+      '# Decisions',
+      '',
+      '<!-- pikku:knowledge-index -->',
+      '- [security](security/index.md) — a rule about who may do what',
+      '<!-- /pikku:knowledge-index -->',
+      '',
+    ].join('\n')
+    const readable = readableBody(body)
+    assert.ok(!readable.includes('<!--'), readable)
+    assert.ok(
+      readable.includes('- [security](security/index.md)'),
+      'the listing itself is content and stays'
+    )
+  })
+
+  test('a comment inside a fence is being shown on purpose', () => {
+    const body = '```html\n<!-- keep me -->\n```'
+    assert.equal(readableBody(body), body)
+  })
+
+  test('a multi-line comment goes entirely', () => {
+    assert.equal(readableBody('a\n\n<!--\nnote to self\n-->\n\nb'), 'a\n\nb')
+  })
+
+  test('a body with no comments is untouched', () => {
+    const body = '# Title\n\nSome prose with a < and an -- in it.\n'
+    assert.equal(readableBody(body), body)
+  })
+})
+
+describe('entryPointNote', () => {
+  const entry = note({
+    path: 'knowledge/index.md',
+    section: '',
+    reserved: 'index',
+  })
+  const decision = note({
+    path: 'knowledge/decisions/index.md',
+    section: 'decisions',
+    reserved: 'index',
+  })
+
+  test('lands on the root index rather than whatever sorts first', () => {
+    // Path order opens `decisions/index.md`, which is a section index, not the
+    // note written to be read first.
+    assert.equal(entryPointNote([decision, entry])?.path, 'knowledge/index.md')
+  })
+
+  test('a section index is not mistaken for the entry point', () => {
+    assert.equal(
+      entryPointNote([decision])?.path,
+      'knowledge/decisions/index.md',
+      'with no root index the first note is still better than nothing'
+    )
+  })
+
+  test('an empty list has no entry point', () => {
+    assert.equal(entryPointNote([]), undefined)
   })
 })

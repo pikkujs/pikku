@@ -14,7 +14,7 @@ import { m } from '@/i18n/messages'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { KnowledgeFinding, KnowledgeNote } from '../../lib/knowledge'
-import { resolveNoteLink } from '../../lib/knowledge'
+import { readableBody, resolveNoteLink } from '../../lib/knowledge'
 import { KnowledgeNoteLinks } from './KnowledgeNoteLinks'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
@@ -155,7 +155,7 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
             },
           }}
         >
-          {note.body}
+          {readableBody(note.body)}
         </ReactMarkdown>
       </Typography>
 
