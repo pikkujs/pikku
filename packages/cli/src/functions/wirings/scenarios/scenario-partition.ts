@@ -14,6 +14,15 @@ export const isScenarioStep = (
   meta: FunctionsMeta[string] | undefined
 ): boolean => meta?.scenarioStep === true
 
+/**
+ * A scenario's own body is a function too, so the app meta used to carry every
+ * scenario's name, schemas and hashes — and a deployed bundle imports that meta
+ * wholesale. Both kinds belong on the scenario side of the split.
+ */
+export const isScenarioFunction = (
+  meta: FunctionsMeta[string] | undefined
+): boolean => isScenarioStep(meta) || meta?.scenario === true
+
 export const partitionScenarioFunctions = (
   files: WiringFileMap,
   functionsMeta: FunctionsMeta
@@ -21,7 +30,7 @@ export const partitionScenarioFunctions = (
   const app: WiringFileMap = new Map()
   const scenario: WiringFileMap = new Map()
   for (const [name, entry] of files) {
-    if (isScenarioStep(functionsMeta[name])) {
+    if (isScenarioFunction(functionsMeta[name])) {
       scenario.set(name, entry)
     } else {
       app.set(name, entry)
@@ -36,7 +45,7 @@ export const partitionScenarioFunctionsMeta = (
   const app: FunctionsMeta = {}
   const scenario: FunctionsMeta = {}
   for (const [name, meta] of Object.entries(functionsMeta)) {
-    if (isScenarioStep(meta)) {
+    if (isScenarioFunction(meta)) {
       scenario[name] = meta
     } else {
       app[name] = meta
@@ -82,3 +91,24 @@ export const partitionScenarioWorkflows = (
 
   return { appNames, scenarioNames, appFiles, scenarioFiles }
 }
+
+/**
+ * Drop every scenario and step from a function meta map. The deploy analyzer
+ * reads inspector state rather than the partitioned codegen output, so it needs
+ * the same split applied before it decides what a deployment contains.
+ */
+export const withoutScenarios = (functionsMeta: FunctionsMeta): FunctionsMeta =>
+  Object.fromEntries(
+    Object.entries(functionsMeta).filter(
+      ([, meta]) => !isScenarioFunction(meta)
+    )
+  )
+
+export const withoutScenarioWorkflows = (
+  graphMeta: SerializedWorkflowGraphs
+): SerializedWorkflowGraphs =>
+  Object.fromEntries(
+    Object.entries(graphMeta ?? {}).filter(
+      ([name]) => !isScenarioWorkflow(graphMeta, name)
+    )
+  ) as SerializedWorkflowGraphs

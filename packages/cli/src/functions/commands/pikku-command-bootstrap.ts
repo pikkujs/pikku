@@ -94,6 +94,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     // in place however this module is reached.
     const scenarioBootstrapImports = [
       config.bootstrapFile,
+      join(config.scenarioSchemaDirectory, 'register.gen.ts'),
       config.scenarioStepsMetaFile,
       config.scenarioStepsFile,
       config.scenarioWiringsMetaFile,

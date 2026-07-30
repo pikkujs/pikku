@@ -124,6 +124,8 @@ export interface PikkuCLICoreOutputFiles {
   scenarioWiringsFile: string
   scenarioWiringsMetaFile: string
   scenarioMetaDir: string
+  /** Where schemas only a scenario or a step needs are written and registered. */
+  scenarioSchemaDirectory: string
   scenarioBootstrapFile: string
 
   // MCP

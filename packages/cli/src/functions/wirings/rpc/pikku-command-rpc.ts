@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { withoutScenarios } from '../scenarios/scenario-partition.js'
 
 export function filterInternalRPCMeta(
   internalMeta: Record<string, string>,
@@ -29,9 +30,13 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
     // Keep direct function ids and unversioned aliases whose target function
     // survived filtering. Without the second check, aliases like `listCards`
     // get dropped even though `listCards@v2` still exists.
+    // Scenarios are excluded along with the steps they call: a scenario name in
+    // the app's RPC meta is a name a deployed bundle carries and, in principle,
+    // dispatches. Scenario runs don't need the entry — the mapping is the
+    // identity, which is also the fallback when a name is absent.
     const filteredInternalMeta = filterInternalRPCMeta(
       rpc.internalMeta,
-      functions.meta
+      withoutScenarios(functions.meta)
     )
 
     if (Object.keys(filteredInternalMeta).length > 0) {

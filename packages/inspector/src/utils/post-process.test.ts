@@ -64,6 +64,7 @@ function makeState(
     addonFunctions?: Record<string, Record<string, any>>
     addonRequiredParentServices?: string[]
     authServices?: string[]
+    graphMeta?: Record<string, any>
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -95,7 +96,7 @@ function makeState(
     scheduledTasks: { meta: {} },
     mcpEndpoints: { toolsMeta: {}, promptsMeta: {}, resourcesMeta: {} },
     agents: { agentsMeta: {} },
-    workflows: { meta: {}, graphMeta: {} },
+    workflows: { meta: {}, graphMeta: overrides.graphMeta ?? {} },
     wireServicesMeta: new Map(),
     rpc: { internalMeta: {}, exposedMeta: {} },
     addonFunctions: overrides.addonFunctions ?? {},
@@ -116,6 +117,34 @@ const CONSOLE_PARENT_SERVICES = [
   'deploymentService',
   'credentialService',
 ]
+
+describe('aggregateRequiredServices — synthetic workflow queue workers', () => {
+  const graphMeta = {
+    orderWorkflow: {
+      name: 'orderWorkflow',
+      source: 'dsl',
+      nodes: { 'step-1': { rpcName: 'chargeCard' } },
+    },
+    loginScenario: {
+      name: 'loginScenario',
+      source: 'scenario',
+      nodes: { 'step-1': { rpcName: 'opensPage' } },
+    },
+  }
+
+  // A scenario IS a workflow, so it used to be handed an orchestrator queue
+  // worker in the app's queue meta — which the app bootstrap registers and every
+  // deployed bundle therefore carries, leaving a provider to create a production
+  // queue named after a test. Nothing dispatches a scenario through a queue:
+  // `pikku scenario run` executes its steps in-process.
+  test('a scenario gets no orchestrator queue worker', () => {
+    const state = makeState({ graphMeta })
+    aggregateRequiredServices(state)
+    assert.deepEqual(Object.keys(state.queueWorkers.meta), [
+      'wf-orchestrator-order-workflow',
+    ])
+  })
+})
 
 describe('aggregateRequiredServices — per-function addon services', () => {
   test('a used addon function adds only its own parent services', () => {
