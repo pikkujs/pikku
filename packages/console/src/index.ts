@@ -229,6 +229,18 @@ export { ConsoleInspectorPanel } from './components/console/ConsoleInspectorPane
 export type { ConsoleInspectorPanelProps } from './components/console/ConsoleInspectorPanel'
 export { usePanelContextSafe } from './context/PanelContext'
 
+// A host that already cards its screens and has its own end-edge panel wraps the
+// console page in `HostConsoleChrome`: the page's surfaces then render flush
+// inside the host's card, and the layout stops docking its own panel column, so
+// the host can render `PanelContainer` beside the page instead of inside it.
+export {
+  ConsoleChromeContext,
+  HostConsoleChrome,
+  useConsoleChrome,
+  useListSurfaceClass,
+} from './context/ConsoleChromeContext'
+export type { ConsoleChrome } from './context/ConsoleChromeContext'
+
 // The shell behind the console's tabbed pages. `activeTab`/`onTabChange` are
 // optional: supply them to drive tabs from a host router, omit them to keep the
 // OSS `?tab=` search-param behaviour.

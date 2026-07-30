@@ -15,6 +15,7 @@ import { useLocale } from '@/i18n/config'
 import { Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { usePageGate } from '../../context/PageGateContext'
+import { useListSurfaceClass } from '../../context/ConsoleChromeContext'
 import classes from '../ui/console.module.css'
 
 interface Column<T> {
@@ -74,6 +75,7 @@ export const TableListPage = <T,>({
   headerRight,
 }: TableListPageProps<T>) => {
   const gate = usePageGate()
+  const surfaceClass = useListSurfaceClass()
   useLocale()
   const [internalSearch, setInternalSearch] = useState('')
   const searchQuery =
@@ -91,7 +93,7 @@ export const TableListPage = <T,>({
 
   if (loading) {
     return (
-      <Box className={classes.listSurfaceCard}>
+      <Box className={surfaceClass}>
         <Center h="100%">
           <Loader />
         </Center>
@@ -114,7 +116,7 @@ export const TableListPage = <T,>({
   }
 
   return (
-    <Box className={classes.listSurfaceCard}>
+    <Box className={surfaceClass}>
       <Stack gap={0} className={classes.flexColumn}>
         {description && (
           <Box
