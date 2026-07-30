@@ -1,9 +1,48 @@
 import { writeFileInDir } from './file-writer.js'
-import { mkdir, readdir, unlink, writeFile } from 'fs/promises'
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  unlink,
+  writeFile,
+} from 'fs/promises'
 import type { JSONValue } from '@pikku/core'
 import type { CLILogger } from '../services/cli-logger.service.js'
 
 const SCHEMA_FILE_SUFFIX = '.schema.json'
+
+/**
+ * Write a schema file without ever exposing a half-written one.
+ *
+ * `writeFile` truncates and then writes, so a reader that opens the path in
+ * between sees an empty file. That reader is real: `pikku scenario run --spawn`
+ * bundles the register while the dev server it just spawned is running codegen,
+ * and esbuild fails the whole run with "Unexpected end of file in JSON" on
+ * whichever schema it happened to catch mid-write. A rename is atomic, so a
+ * reader gets either the previous complete file or the new one.
+ *
+ * Unchanged content is not rewritten at all. Most runs regenerate hundreds of
+ * byte-identical schemas, and every one of those is a window that does not need
+ * to exist — it also stops file watchers waking on output that did not change.
+ */
+async function writeSchemaFile(path: string, contents: string) {
+  try {
+    if ((await readFile(path, 'utf-8')) === contents) {
+      return
+    }
+  } catch {
+    // Unreadable or absent — fall through and write it.
+  }
+  const tmp = `${path}.${process.pid}.tmp`
+  try {
+    await writeFile(tmp, contents, 'utf-8')
+    await rename(tmp, path)
+  } catch (e) {
+    await unlink(tmp).catch(() => {})
+    throw e
+  }
+}
 
 function toValidIdentifier(name: string): string {
   let result = name.replace(/[-./: ]/g, '_')
@@ -98,10 +137,9 @@ export async function saveSchemas(
   await Promise.all(
     Object.entries(schemas).map(async ([schemaName, schema]) => {
       if (requiredSchemas.has(schemaName)) {
-        await writeFile(
+        await writeSchemaFile(
           `${schemaParentDir}/schemas/${schemaName}.schema.json`,
-          JSON.stringify(schema),
-          'utf-8'
+          JSON.stringify(schema)
         )
       }
     })

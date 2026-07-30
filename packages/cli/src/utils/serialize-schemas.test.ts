@@ -5,6 +5,7 @@ import {
   readdir,
   readFile,
   rm,
+  stat,
   writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -50,6 +51,60 @@ afterEach(async () => {
 })
 
 describe('saveSchemas', () => {
+  test('a byte-identical schema is left untouched, and no temp file survives', async () => {
+    // Generated files are read while they are generated: `pikku scenario run
+    // --spawn` bundles the registers while the dev server it spawned regenerates
+    // them. A rewrite is a window in which a reader can see a truncated file, so
+    // an unchanged schema must not be rewritten at all — and the rewrite that
+    // does happen goes through a temp file that must never be left behind for
+    // the register (or the prune) to trip over.
+    const parent = await makeDir()
+    const schema = { KeptInput: { type: 'object', properties: {} } }
+
+    await saveSchemas(noopLogger, parent, schema, new Set(['KeptInput']), true)
+    const first = await stat(join(parent, 'schemas', 'KeptInput.schema.json'))
+
+    await saveSchemas(noopLogger, parent, schema, new Set(['KeptInput']), true)
+    const second = await stat(join(parent, 'schemas', 'KeptInput.schema.json'))
+
+    assert.equal(
+      second.mtimeMs,
+      first.mtimeMs,
+      'unchanged schema was rewritten'
+    )
+    assert.deepEqual(await listSchemaFiles(parent), ['KeptInput.schema.json'])
+  })
+
+  test('a changed schema is replaced, leaving no temp file', async () => {
+    const parent = await makeDir()
+
+    await saveSchemas(
+      noopLogger,
+      parent,
+      { KeptInput: { type: 'object', properties: {} } },
+      new Set(['KeptInput']),
+      true
+    )
+    await saveSchemas(
+      noopLogger,
+      parent,
+      {
+        KeptInput: {
+          type: 'object',
+          properties: { title: { type: 'string' } },
+        },
+      },
+      new Set(['KeptInput']),
+      true
+    )
+
+    assert.deepEqual(await listSchemaFiles(parent), ['KeptInput.schema.json'])
+    const written = JSON.parse(
+      await readFile(join(parent, 'schemas', 'KeptInput.schema.json'), 'utf-8')
+    )
+    assert.deepEqual(Object.keys(written.properties), ['title'])
+  })
+
   test('removes schema files that are no longer required', async () => {
     const parent = await makeDir()
     await seedExistingSchema(parent, 'CreateClassInput')
