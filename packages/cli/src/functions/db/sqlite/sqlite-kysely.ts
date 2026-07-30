@@ -11,12 +11,34 @@ import type {
   SyncSqliteStatement,
 } from './sqlite-runtime.js'
 
+/**
+ * Whether a value is a JSON column's worth of data rather than some other
+ * object that merely happens to be one. A `Map`, a `RegExp` or a class
+ * instance stringifies to `"{}"` or to a partial view of itself, which would
+ * silently persist an empty JSON blob where the caller meant something.
+ *
+ * Kept in lockstep with `isJsonEncodable` in `@pikku/kysely-sqlite`'s
+ * LibsqlWebDialect: whatever binds here under `pikku dev` has to bind the same
+ * way once the app is deployed, or the dev and deployed runtimes disagree
+ * about what a query may do.
+ */
+function isJsonEncodable(v: object): boolean {
+  if (Array.isArray(v)) return true
+  const proto = Object.getPrototypeOf(v)
+  return proto === Object.prototype || proto === null
+}
+
 function coerce(v: unknown): unknown {
   if (v === null || v === undefined) return null
   if (typeof v === 'boolean') return v ? 1 : 0
   if (v instanceof Date) return v.toISOString()
   if (v instanceof Uint8Array) return v
-  if (typeof v === 'object') return JSON.stringify(v)
+  if (typeof v === 'object') {
+    if (isJsonEncodable(v)) return JSON.stringify(v)
+    throw new Error(
+      `sqlite: unsupported argument type ${v.constructor?.name ?? 'object'}`
+    )
+  }
   return v
 }
 
