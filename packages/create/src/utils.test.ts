@@ -251,10 +251,9 @@ describe('Functions Test Suite', () => {
     wranglerChanges(testDir, appName)
 
     const updatedContent = fs.readFileSync(wranglerPath, 'utf-8')
-    const currentDate = new Date().toISOString().split('T')[0]
     assert.ok(
-      updatedContent.includes(`compatibility_date = "${currentDate}"`),
-      'compatibility_date should be updated'
+      updatedContent.includes('compatibility_date = "2020-01-01"'),
+      'compatibility_date should be left at the value the template pins'
     )
     assert.ok(
       updatedContent.includes(appName),

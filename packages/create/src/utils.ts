@@ -224,12 +224,7 @@ export function wranglerChanges(targetPath: string, appName: string): void {
   if (!fs.existsSync(wranglerFilePath)) return
 
   let wranglerConfig = fs.readFileSync(wranglerFilePath, 'utf-8')
-  const currentDate = new Date().toISOString().split('T')[0]
   wranglerConfig = wranglerConfig
-    .replace(
-      /compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/,
-      `compatibility_date = "${currentDate}"`
-    )
     .replace('pikku-cloudflare-workers', appName)
     .replace('pikku-cloudflare-websockets', appName)
   fs.writeFileSync(wranglerFilePath, wranglerConfig)
