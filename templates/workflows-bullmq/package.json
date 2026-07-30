@@ -14,17 +14,17 @@
     "test": "bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.70",
+    "@pikku/core": "^0.12.71",
     "@pikku/express": "^0.12.7",
     "@pikku/queue-bullmq": "^0.12.5",
-    "@pikku/redis": "^0.12.12",
+    "@pikku/redis": "^0.12.13",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.91",
-    "@pikku/inspector": "^0.12.48",
+    "@pikku/cli": "^0.12.92",
+    "@pikku/inspector": "^0.12.49",
     "@types/node": "^24"
   },
   "exports": {

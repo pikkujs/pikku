@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.91",
+  "version": "0.12.92",
   "description": "Pikku CLI — code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
@@ -31,17 +31,17 @@
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
     "@pikku/better-auth": "^0.12.19",
     "@pikku/bun-server": "^0.12.4",
-    "@pikku/deploy-cloudflare": "^0.12.8",
+    "@pikku/deploy-cloudflare": "^0.12.9",
     "@pikku/fetch": "^0.12.8",
-    "@pikku/inspector": "^0.12.48",
+    "@pikku/inspector": "^0.12.49",
     "@pikku/knowledge": "^0.12.0",
-    "@pikku/kysely": "^0.13.4",
+    "@pikku/kysely": "^0.13.6",
     "@pikku/kysely-node-sqlite": "^0.12.3",
     "@pikku/n8n-import": "^0.0.3",
     "@pikku/node-http-server": "^0.12.6",
     "@pikku/openapi-parser": "^0.12.16",
     "@pikku/schedule": "^0.12.4",
-    "@pikku/skills": "^0.12.0",
+    "@pikku/skills": "^0.12.1",
     "@pikku/ws": "^0.12.4",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
@@ -63,12 +63,12 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.70",
-    "@pikku/playwright": "^0.12.70"
+    "@pikku/core": "^0.12.71",
+    "@pikku/playwright": "^0.12.71"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.70",
-    "@pikku/playwright": "^0.12.70",
+    "@pikku/core": "^0.12.71",
+    "@pikku/playwright": "^0.12.71",
     "@types/istanbul-lib-instrument": "^1.7.7",
     "@types/node": "^24.11.0",
     "@types/pg": "^8.11.0",
