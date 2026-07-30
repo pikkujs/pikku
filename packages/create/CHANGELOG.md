@@ -1,3 +1,19 @@
+## 0.12.4
+
+### Patch Changes
+
+- 637e668: State every package's license in the package itself.
+
+  Eight publishable packages had no `license` field, `@pikku/aws-services` said `UNLICENSED` by accident, and no package carried a LICENSE file at all — the grant lived only in the repo root, which npm tarballs never include. Every publishable package now declares its license and ships the matching LICENSE file, and `yarn check:licenses` fails the release if the two ever disagree.
+
+  `@pikku/console` is now explicitly BUSL-1.1 and named in the root LICENSE's Licensed Work alongside `@pikku/cli` and `@pikku/inspector`; the Additional Use Grant still permits production use for any purpose, including in free and open source software. Everything else — runtimes, services, clients, deploy adapters and the agent skills — is MIT, as the root LICENSE already said.
+
+- def0f17: Stop stamping today's date into a scaffolded project's `wrangler.toml`.
+
+  `wranglerChanges` rewrote `compatibility_date` to the current date, which a released `workerd` can never honour — it lags the calendar, and answers `This Worker requires compatibility date "<today>", but the newest date supported by this server binary is "<earlier>"`, then fails to start. So `wrangler dev` was broken in every freshly created cloudflare project, and pikku's own cloudflare template CI jobs failed for the same reason.
+
+  The template's pinned `compatibility_date` is now left alone, matching how `@pikku/deploy-cloudflare` pins its own `COMPAT_DATE`. Bumping it stays a deliberate act, which is what a compatibility date is for.
+
 ## 0.12.3
 
 ### Patch Changes

@@ -1,3 +1,100 @@
+## 0.12.92
+
+### Patch Changes
+
+- 837c2a5: Generated files are written atomically, and unchanged schemas are not rewritten.
+
+  `writeFile` truncates before it writes, so anything reading a generated file during codegen can see it empty. That reader is real: `pikku scenario run --spawn` bundles the registers while the dev server it just spawned is regenerating them, and esbuild fails the entire run with `Unexpected end of file in JSON` on whichever schema it caught mid-write. The scenario schema split made this reachable in practice — a project with hundreds of scenario schemas rewrote every one of them on every run, right as the runner was loading the register that imports them.
+
+  Codegen now writes to a temp file and renames it into place, so a concurrent reader gets either the previous complete file or the new one. Schema files whose contents are unchanged are not rewritten at all, which removes the window entirely for the common case and stops file watchers waking on output that did not change.
+
+- 826af9f: `pikku db generate` now writes a wholly-new table from the source's own SQL, instead of rendering it from a column list.
+
+  When a schema source the migrations already cover grows a table — enabling a Better Auth plugin, upgrading an addon, a new `@pikku/kysely` runtime service — the generator took the diff path, which only had names and types to work from. The table it emitted had no primary key, no foreign keys and no indexes, and carried a `-- REVIEW:` note telling you to go copy the real statement by hand. Applied unreviewed, which is what an automated build does, it left a permanently degraded table.
+
+  The source already ships the correct DDL, and the first-time path already used it. Now the new-table case does too: its `CREATE TABLE`, its indexes and any `ALTER TABLE` that constrains it are lifted out of the source's SQL in the order it wrote them. Column-level changes to a table that already exists still go through `ALTER TABLE … ADD COLUMN`, and the `-- REVIEW:` note for a `NOT NULL` column with no default is unchanged.
+
+- 7586408: `pikku db migrate` now fails when a migration declares a camelCase column or table.
+
+  Pikku's Kysely runs with `CamelCasePlugin`, so `priceCents` in TypeScript is `price_cents` in SQL and nothing else. A migration that spells the column `priceCents` half-works, which is what made it expensive: `.selectAll()` compiles to `SELECT *` and never names an identifier, so the table reads back perfectly, while the first query that names the column asks for `price_cents` and gets `no such column`. The plugin looks broken, and the fix looks like a raw `sql` template.
+
+  Every `.sql` file in the migrations directory is now parsed before anything is applied, and every camelCase identifier a `CREATE TABLE` column list or an `ALTER TABLE … ADD COLUMN` declares is reported at once with its file, table and snake_case name. Comments, string literals, quoted identifiers and nested parens (`NUMERIC(10,2)`, `CHECK (…)`) are all read as SQL rather than as text, so prose mentioning `createdAt` does not trip it.
+
+  There is no exception to opt out of. The generated Better Auth schema is snake_case for the same reason, because Better Auth is handed the app's own Kysely.
+
+- 4c59a92: `db/pikku-db-schema.gen.json` now records who declared each table. Every entry carries a `source` — `app`, `better-auth`, `pikku-runtime`, or an addon's package name — and framework-declared tables also carry the `origin` prose from their migration header.
+
+  The console's Database view filters on that instead of guessing from a table-name prefix. The old guess (`workflow_`, `ai_`, `pikku_`) missed Better Auth's `user`, `session`, `account` and `verification`, the secrets, credentials, channel and webhook-delivery tables, and every addon's, all of which rendered as if the project owned them. A schema JSON generated before this change still falls back to the prefix guess, so an un-regenerated project sees no behaviour change.
+
+  Provenance is read back out of the generated migrations at codegen time — each one already names its source in its filename and its origin in its header — so `db migrate` needs no new inputs and does not have to load the project's Better Auth config.
+
+- 66598d4: `pikku fabric secrets set` now seals the value on this machine before sending it. The CLI fetches the stage's public key, encrypts against it, and sends only the sealed blob — so the plaintext never reaches fabric, and the value can be opened by the stage's own worker and by nothing else. `secrets list` returns names and write times; there is no value to show, which is the point.
+
+  Both commands were previously calling RPCs fabric no longer serves (`setStageSecret`, `listStageSecrets`) and failing at runtime. `getFabricRPC` returned `any`, so nothing caught it — it is typed now, which is also what surfaced `getDeveloperLiteLLMKey` missing from the bundled RPC map.
+
+- ede74d7: `pikku fabric secrets rotate` retires a stage's sealing key so the next deploy issues a new one. This is the way out of the one dead end in client-side sealing: a worker that does not hold the stage's private key cannot read that stage's secrets, and fabric cannot hand it the key because fabric keeps no copy. Rotating makes every secret already set on the stage unreadable — fabric cannot re-seal values it cannot open — so it requires `--force` and says exactly that first.
+- c335f73: `LibsqlWebDialect` now encodes a `Date` bind parameter as an ISO-8601 string and an array or plain record as JSON, instead of throwing `libsql: unsupported argument type object`.
+
+  This closes a dev/prod split that broke every write in a deployed libsql app. The CLI's `node:sqlite` dev runtime already coerced dates and objects before binding them, so a query that stamps a `createdAt` or writes a JSON column passed under `pikku dev` — and then threw on the same code path once the app was deployed to a Worker, where this dialect is the one in use. Reads were unaffected, so the symptom was an app whose every insert and update failed while every list and get worked.
+
+  Both runtimes also stop accepting objects JSON cannot faithfully represent. A `Map`, a `RegExp` or a class instance stringifies to `"{}"` or to a partial view of itself, so binding one used to persist an empty JSON blob where the caller meant something; it now throws. Only arrays and plain records (including null-prototype ones) are JSON-encoded. The two coercions are deliberately identical — a value that binds under `pikku dev` binds the same way once deployed, which is the property whose absence caused the original bug.
+
+  Unsupported values now name their constructor — `unsupported argument type Map` rather than `unsupported argument type object`.
+
+- 426610a: Scenario instrumentation is no longer scaffolded into projects, and no longer deploys.
+
+  `scaffold.scenarios` generated four functions — `pikkuScenarioTakeLiveCoverage`, `pikkuScenarioResetLiveCoverage`, `pikkuScenarioResetStubs`, `pikkuScenarioGetStubCalls` — into the project's own source. As project source they were indistinguishable from application code: registered in the app bootstrap, listed in the app's function and RPC meta, and shipped `expose: true` inside every deployed bundle. Coverage and stub inspection are things you do to a development server; production carried two endpoints that fingerprint the build and one that resets a global tracker, gated only by whether a metadata file happened to sit beside the bundle.
+
+  `pikku dev` now registers the implementations itself, after the app bootstrap. Nothing is generated, nothing is written to the project, and a bundle cannot carry what was never in its bootstrap — `pikku serve` and every deployed unit have no trace of them. The scenario runner reaches them over `/rpc/<name>` exactly as before.
+
+  Also:
+  - The inspector ignores these four names wherever it finds them, so a project that has not regenerated — and still has the scaffolded file checked in — stops deploying it immediately. Codegen deletes the retired scaffold on its next run.
+  - They no longer count towards a project's function total, so `pikku scenario --coverage` stops reporting four permanently-uncovered functions that were never the project's to cover.
+  - The instrumentation no longer carries schemas (there was nothing to validate but one optional string), which drops the `zod` dependency the scaffold silently required of every project that enabled it.
+  - They are registered sessionless, so `scaffold.scenarios: true` — as opposed to `'auth'` — now genuinely means "no session required". As a sessioned `pikkuFunc` with `auth: false`, it demanded a session anyway and logged a warning saying so.
+
+- fc84daf: `pikku scenario run` can now target a URL that only exists at run time.
+
+  The environment named on the command line was the whole answer: its `apiUrl` and `appUrl` are literal strings in `pikku.config.json`, frozen when the config was written. A suite that wants to run against something provisioned moments earlier — a freshly deployed sandbox with a unique origin — had nowhere to put that address short of synthesising a config file per run.
+
+  `--api-url` and `--app-url` now override the named environment's URLs for one invocation. The environment is still looked up by name and must still exist, so the flags override a target rather than inventing one, and the override is applied once where the environment is resolved: actors, raw-HTTP steps, the browser driver and a `--spawn`ed server all see the same address. A value that is not an absolute http(s) URL is rejected where it was typed, and `--spawn` with a non-local `--api-url` is refused instead of trying to bind a server to a host this machine does not own.
+
+  Browser steps get the same reach. A driver that knows the target from its own environment — `@pikku/playwright` reading `SANDBOX_HOSTNAME`, `E2E_APP_URL` or `APP_URL` — is now allowed to supply the `appUrl` when the config names none; previously the runner refused before the driver was ever consulted. The check still fires when nothing resolved a real target: a driver reporting `appUrlSource: 'default'`, as `@pikku/playwright` now does for its `http://localhost:5001` placeholder, fails the run exactly as a missing `appUrl` always did.
+
+- 09973b9: Scenarios, features and steps no longer reach a deployment.
+
+  Steps were already held back from the app bootstrap, so a deployed server never imported a step body. Everything _about_ a scenario still travelled with the application: a `pikkuScenario(...)` is a function, so its name, schemas and hashes sat in the app function meta; the schemas it and its steps validate against sat in the app's `register.gen.ts` — on one project 458 of the 582 registered schemas belonged to tests; its name sat in the internal RPC meta; and because a scenario is _also_ a workflow, the inspector synthesised a `wf-orchestrator-<scenario>` queue worker for each one. The deploy analyzer, which reads inspector state rather than the partitioned codegen output, then read all of it back as application code: a unit per scenario, a `WorkflowDefinition` per scenario, and a real queue per scenario. A 13-scenario suite turned into 13 production queues named after tests, waiting for a provider to create them.
+
+  The existing scenario/app partition is now applied everywhere it was missing. `FunctionRuntimeMeta` gains a `scenario` marker (the counterpart of `scenarioStep`) so a scenario body is recognisable without walking the workflow graph; scenario bodies join their steps on the scenario side of the function-meta and registration split; schemas only a scenario or step needs are written and registered under `.pikku/scenarios/schemas/` and imported by the scenario bootstrap alone; scenario names are dropped from the internal RPC meta; no orchestrator queue worker is synthesised for a scenario; and the deploy analyzer drops both scenario functions and scenario workflows before it decides what a deployment contains.
+
+  The MCP metas are keyed by wiring rather than by function, so a scenario wired as an MCP tool, resource or prompt was the one id that still reached the manifest after the function and workflow filters — as an endpoint on the gateway plus a gateway dependency on a unit that was never emitted. Those ids are now filtered too.
+
+  `scenarioSchemaDirectory` is rejected when it resolves to the same directory as `schemaDirectory`. A schema write owns its directory — it emits `register.gen.ts` and prunes every schema file its own required-set does not name — so sharing one would replace the application register with the scenario-only one and delete the app's schema files, which nothing downstream can detect.
+
+  Nothing changes for `pikku scenario run` — the scenario bootstrap still registers every scenario, feature, step, meta and schema. What changes is that a bundle stops carrying them.
+
+- 637e668: Move the bundled agent skills out of `@pikku/cli` into a new MIT-licensed `@pikku/skills` package.
+
+  The skills are the open core — the instruction set any harness reads to build, wire and deploy a Pikku project — but they shipped inside `@pikku/cli`, whose `files` array carried `skills/` under BUSL-1.1 with no carve-out. Their terms now stand on their own package and no longer depend on the CLI that installs them.
+
+  This also fixes `pikku skills install` on the native binaries. `bun build --compile` only bundles the JS import graph, so 81 markdown files reached through `readdir` never made it in: every Homebrew install failed with `Could not locate bundled skills directory`, while npm installs worked. `@pikku/skills` ships both the `skills/` directory and an embedded path → contents manifest, and reads prefer the directory when one exists — so skill edits stay live in development, and the binary falls back to the manifest it now carries.
+
+  No skill content changed, and `pikku skills install` takes the same flags.
+
+- Updated dependencies [637e668]
+- Updated dependencies [8a2c993]
+- Updated dependencies [a261006]
+- Updated dependencies [426610a]
+- Updated dependencies [fc84daf]
+- Updated dependencies [09973b9]
+- Updated dependencies [637e668]
+  - @pikku/deploy-cloudflare@0.12.9
+  - @pikku/core@0.12.71
+  - @pikku/kysely@0.13.6
+  - @pikku/inspector@0.12.49
+  - @pikku/playwright@0.12.71
+  - @pikku/skills@0.12.1
+
 ## 0.12.91
 
 ### Patch Changes
