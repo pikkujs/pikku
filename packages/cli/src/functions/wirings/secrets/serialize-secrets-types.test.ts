@@ -1,5 +1,6 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
+import ts from 'typescript'
 import { serializeSecretsTypes } from './serialize-secrets-types.js'
 import type { SecretDefinitions } from '@pikku/core/secret'
 
@@ -10,6 +11,31 @@ const serialize = (definitions: SecretDefinitions) =>
     secretsFile: '/project/.pikku/secrets/pikku-secrets.gen.ts',
     packageMappings: {},
   })
+
+const parseErrors = (source: string) => {
+  const file = ts.createSourceFile(
+    'pikku-secrets.gen.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true
+  )
+  return (file as unknown as { parseDiagnostics: ts.Diagnostic[] })
+    .parseDiagnostics
+}
+
+const oauth2Secret = (displayName: string): SecretDefinitions => [
+  {
+    name: 'stripe',
+    displayName,
+    secretId: 'STRIPE_KEY',
+    oauth2: {
+      tokenSecretId: 'STRIPE_TOKENS',
+      authorizationUrl: 'https://example.com/authorize',
+      tokenUrl: 'https://example.com/token',
+      scopes: [],
+    },
+  },
+]
 
 describe('serializeSecretsTypes — shipping the declared set', () => {
   // tsc only copies a .json into the build output when something imports it,
@@ -46,6 +72,22 @@ describe('serializeSecretsTypes — shipping the declared set', () => {
     const output = serialize([])
 
     assert.match(output, /pikku-secrets-meta\.gen\.json/)
+  })
+
+  test('emits a parseable file for an ordinary display name', () => {
+    assert.deepEqual(parseErrors(serialize(oauth2Secret('Stripe'))), [])
+  })
+
+  /**
+   * A display name is prose written by a human — "Stripe's live key", a Windows
+   * path — and interpolated raw into a quoted string it terminates the literal
+   * and the whole generated file stops parsing.
+   */
+  test('emits a parseable file for a display name needing escaping', () => {
+    assert.deepEqual(
+      parseErrors(serialize(oauth2Secret(`Stripe's "live" key \\ prod`))),
+      []
+    )
   })
 
   test('still exposes the typed service', () => {

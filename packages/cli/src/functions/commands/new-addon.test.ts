@@ -3,7 +3,12 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test, afterEach } from 'node:test'
-import { resolveAddonDepProtocol } from './new-addon.js'
+import ts from 'typescript'
+import {
+  getAddonFiles,
+  resolveAddonDepProtocol,
+  type AddonVars,
+} from './new-addon.js'
 
 const created: string[] = []
 
@@ -74,5 +79,96 @@ describe('resolveAddonDepProtocol', () => {
     await mkdir(target, { recursive: true })
 
     assert.equal(resolveAddonDepProtocol(target), 'file:..')
+  })
+})
+
+const vars = (displayName: string, description: string): AddonVars => ({
+  name: 'crm',
+  camelName: 'crm',
+  pascalName: 'Crm',
+  screamingName: 'CRM',
+  displayName,
+  description,
+  category: 'General',
+  addonDepProtocol: 'workspace:*',
+})
+
+/** Every flag combination that embeds the prose in a different shape. */
+const flagVariants: Parameters<typeof getAddonFiles>[1][] = [
+  { secret: false, variable: false, oauth: false },
+  { secret: true, variable: true, oauth: false },
+  { secret: false, variable: false, oauth: true },
+  { secret: false, variable: false, oauth: false, credential: 'apikey' },
+  { secret: false, variable: false, oauth: false, credential: 'bearer' },
+  {
+    secret: false,
+    variable: false,
+    oauth: false,
+    credential: 'bearer',
+    delegated: true,
+  },
+  { secret: false, variable: false, oauth: false, credential: 'oauth2' },
+]
+
+const parseErrors = (fileName: string, source: string) => {
+  const file = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true
+  )
+  return (file as unknown as { parseDiagnostics: ts.Diagnostic[] })
+    .parseDiagnostics
+}
+
+const scaffoldErrors = (displayName: string, description: string) => {
+  const errors: string[] = []
+  for (const flags of flagVariants) {
+    const files = getAddonFiles(vars(displayName, description), flags)
+    for (const [path, source] of Object.entries(files)) {
+      if (!path.endsWith('.ts')) {
+        continue
+      }
+      for (const diagnostic of parseErrors(path, source)) {
+        errors.push(`${path}: ${diagnostic.messageText}`)
+      }
+    }
+  }
+  return errors
+}
+
+describe('getAddonFiles', () => {
+  test('scaffolds parseable sources for ordinary prose', () => {
+    assert.deepEqual(scaffoldErrors('Acme CRM', 'Acme CRM integration'), [])
+  })
+
+  /**
+   * `--display-name` and `--description` are free-form prose, and interpolated
+   * raw into a quoted string an apostrophe terminated the literal — the
+   * scaffolded addon did not compile before the user had written a line of it.
+   * A backtick or a `${` does the same inside the generated template literals.
+   */
+  test('scaffolds parseable sources for prose needing escaping', () => {
+    assert.deepEqual(
+      scaffoldErrors(
+        'Bob\'s "Big" CRM \\ Ltd ${escape} `tick`',
+        'Bob\'s "Big" CRM \\ integration'
+      ),
+      []
+    )
+  })
+
+  test('keeps composed prose in a single string literal', () => {
+    const files = getAddonFiles(vars("Bob's CRM", 'desc'), {
+      secret: true,
+      variable: false,
+      oauth: false,
+    })
+
+    assert.match(
+      files['src/crm.secret.ts']!,
+      /describe\("Bob's CRM API key"\)/,
+      'the display name and the words around it are one literal'
+    )
   })
 })
