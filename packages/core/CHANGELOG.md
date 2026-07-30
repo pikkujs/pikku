@@ -1,3 +1,91 @@
+## 0.12.71
+
+### Patch Changes
+
+- 8a2c993: Make the workflow service cheaper to run, and fix two ways it lost state.
+
+  The SQL workflow tables had no indexes at all, so every step read, every
+  history walk and every orchestrator tick was a sequential scan; five indexes
+  now cover the columns the engine actually queries by. A replay used to ask for
+  each step's row individually — O(N) reads per replay, O(N^2) over a run — and
+  now takes one read of the run's steps and serves the walk from it. A step
+  transition wrote the step row and its history row as two separate statements,
+  so a crash between them left a step saying `succeeded` whose history still said
+  `running`; both halves are now one transaction, and the history row is found by
+  attempt number rather than by sorting on `created_at`, which two attempts can
+  share. Resolving a dynamic workflow read and parsed every AI-generated workflow
+  in the deployment to `.find()` one by name; it is a point lookup now.
+
+  Waiting on a run no longer polls at a fixed interval. `pollIntervalMs` became a
+  ceiling rather than a cadence: polling starts at 10ms and widens towards it, so
+  a workflow that finishes in milliseconds is no longer held for a full second,
+  and a long-running one is not read at full rate for its whole life.
+
+  Two backend-specific defects: Redis kept a run's state as one JSON blob and
+  read-modified-wrote it, so parallel branches setting different variables
+  overwrote each other — state is a field per variable now, with the old blob
+  still read underneath so runs in flight keep what they had. Mongo's
+  `setStepScheduled` never wrote history, leaving a queued step reading as never
+  dispatched.
+
+  Also: dispatch no longer JSON round-trips every step payload before handing it
+  to a queue that serialises it anyway — the in-process dev queue, which is the
+  only one that was relying on it, does it itself now.
+
+  Two more defects. A transition whose step had no live attempt wrote its status
+  to the step row and silently nothing to history — the exact divergence the
+  transaction exists to prevent — and now repairs the step and writes the
+  missing row. And resolving a dynamic workflow was non-deterministic on all
+  three backends: a name can hold several active versions, and none of them
+  ordered the candidates, so which one ran could change between two calls
+  reading identical data. The newest version wins, with the graph hash breaking
+  a tie.
+
+  The two attempt columns and the five indexes are declared in the workflow
+  schema, so a fresh database gets them at boot. An existing one gets them from
+  a migration — `pikku db generate` writes the declaration down — rather than
+  from DDL issued at boot.
+
+- a261006: **Breaking:** removed dynamic workflows — runtime-defined workflow graphs stored in the database and resolved by name instead of by codegen.
+
+  The feature was already half-gone. Its authoring surface (`createAgentWorkflow`, `saveAgentWorkflow`, `listAgentWorkflows`, `executeAgentWorkflow`, and the AI-agent instruction builder) was deleted in April 2026 along with its entire e2e suite, and nothing has written a dynamic workflow since. What remained could not execute one either: `executeAgentWorkflow` gated on `pikkuState('workflows', 'meta')`, which only codegen ever populates, so a graph that existed solely in the database was never findable. The two backend families had also drifted onto different `source` sentinels (`'ai-agent'` vs `'dynamic-workflow'`), and the two Redis implementations disagreed on key escaping — so at least one of them matched nothing. Rather than keep shipping plumbing for a path no caller could complete, it is removed until it can be reintroduced deliberately.
+
+  Removed:
+  - `getAIGeneratedWorkflows` from `WorkflowService` and `WorkflowRunService`, and from every backend (in-memory, Redis, MongoDB, Kysely, and the Cloudflare Durable Object service and client — the last two were already a `return []` stub and a rejection).
+  - The database-lookup fallbacks in `startWorkflow` and `runWorkflowJob` that resolved a workflow name against stored graphs when static meta had no match.
+  - `'dynamic-workflow'` from the `WorkflowRuntimeMeta['source']` union.
+  - `validateWorkflowWiring` and `computeEntryNodeIds` from `@pikku/core/workflow`. These validated AI-authored graphs and had no callers in core; the inspector keeps its own private entry-node computation for static graph wiring, which is unaffected.
+  - The `workflow-created` AI stream event and its AG-UI `pikku:workflow-created` custom event. Its only emitter went with the April deletion, so it could never fire.
+  - The console's `console:getAIWorkflows` RPC, the `useAIWorkflows` hook, the "Dynamic" workflow filter and badge, and the trigger-schema scraper that derived an input form from a stored graph's `$ref` bindings.
+
+  Kept, because static graph workflows depend on them and this is not a change to versioning:
+  - `upsertWorkflowVersion`, `getWorkflowVersion`, `updateWorkflowVersionStatus`, and the `workflowVersions` storage in every backend. These back version-mismatch replay: when a deployed graph's hash changes, in-flight runs continue against the exact graph they started on. No schema migration is needed — the table, its columns, and its `(workflowName, graphHash)` upsert key are unchanged.
+  - `generateMermaidDiagram`, which renders any workflow graph and is not specific to dynamic ones.
+
+  Static `pikkuWorkflowGraph` and DSL workflows are entirely unaffected: they resolve from codegen'd meta, which was always the only path that worked.
+
+  To revive this post-MVP, the deleted authoring code is recoverable in full — its prompt engineering (a compact tool table upfront, full schemas with flattened dotted output paths returned only after a validation failure) is worth reading before rewriting:
+
+  ```
+  git show f52f3308b^:packages/core/src/wirings/ai-agent/agent-dynamic-workflow.ts
+  git show f52f3308b^:packages/core/src/wirings/workflow/graph/graph-validation.ts
+  git show f52f3308b --stat   # the April removal, incl. the three e2e feature files
+  ```
+
+  Note that reviving it needs more than restoring those files: the queued-step path (`executeWorkflowStep`), `onError` compensation, and sub-workflow resolution all read static meta only and would need a fallback for a graph that exists solely in the database.
+
+- 09973b9: Scenarios, features and steps no longer reach a deployment.
+
+  Steps were already held back from the app bootstrap, so a deployed server never imported a step body. Everything _about_ a scenario still travelled with the application: a `pikkuScenario(...)` is a function, so its name, schemas and hashes sat in the app function meta; the schemas it and its steps validate against sat in the app's `register.gen.ts` — on one project 458 of the 582 registered schemas belonged to tests; its name sat in the internal RPC meta; and because a scenario is _also_ a workflow, the inspector synthesised a `wf-orchestrator-<scenario>` queue worker for each one. The deploy analyzer, which reads inspector state rather than the partitioned codegen output, then read all of it back as application code: a unit per scenario, a `WorkflowDefinition` per scenario, and a real queue per scenario. A 13-scenario suite turned into 13 production queues named after tests, waiting for a provider to create them.
+
+  The existing scenario/app partition is now applied everywhere it was missing. `FunctionRuntimeMeta` gains a `scenario` marker (the counterpart of `scenarioStep`) so a scenario body is recognisable without walking the workflow graph; scenario bodies join their steps on the scenario side of the function-meta and registration split; schemas only a scenario or step needs are written and registered under `.pikku/scenarios/schemas/` and imported by the scenario bootstrap alone; scenario names are dropped from the internal RPC meta; no orchestrator queue worker is synthesised for a scenario; and the deploy analyzer drops both scenario functions and scenario workflows before it decides what a deployment contains.
+
+  The MCP metas are keyed by wiring rather than by function, so a scenario wired as an MCP tool, resource or prompt was the one id that still reached the manifest after the function and workflow filters — as an endpoint on the gateway plus a gateway dependency on a unit that was never emitted. Those ids are now filtered too.
+
+  `scenarioSchemaDirectory` is rejected when it resolves to the same directory as `schemaDirectory`. A schema write owns its directory — it emits `register.gen.ts` and prunes every schema file its own required-set does not name — so sharing one would replace the application register with the scenario-only one and delete the app's schema files, which nothing downstream can detect.
+
+  Nothing changes for `pikku scenario run` — the scenario bootstrap still registers every scenario, feature, step, meta and schema. What changes is that a bundle stops carrying them.
+
 ## 0.12.70
 
 ### Patch Changes

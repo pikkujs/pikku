@@ -1,3 +1,84 @@
+## 0.13.6
+
+### Patch Changes
+
+- 8a2c993: Make the workflow service cheaper to run, and fix two ways it lost state.
+
+  The SQL workflow tables had no indexes at all, so every step read, every
+  history walk and every orchestrator tick was a sequential scan; five indexes
+  now cover the columns the engine actually queries by. A replay used to ask for
+  each step's row individually — O(N) reads per replay, O(N^2) over a run — and
+  now takes one read of the run's steps and serves the walk from it. A step
+  transition wrote the step row and its history row as two separate statements,
+  so a crash between them left a step saying `succeeded` whose history still said
+  `running`; both halves are now one transaction, and the history row is found by
+  attempt number rather than by sorting on `created_at`, which two attempts can
+  share. Resolving a dynamic workflow read and parsed every AI-generated workflow
+  in the deployment to `.find()` one by name; it is a point lookup now.
+
+  Waiting on a run no longer polls at a fixed interval. `pollIntervalMs` became a
+  ceiling rather than a cadence: polling starts at 10ms and widens towards it, so
+  a workflow that finishes in milliseconds is no longer held for a full second,
+  and a long-running one is not read at full rate for its whole life.
+
+  Two backend-specific defects: Redis kept a run's state as one JSON blob and
+  read-modified-wrote it, so parallel branches setting different variables
+  overwrote each other — state is a field per variable now, with the old blob
+  still read underneath so runs in flight keep what they had. Mongo's
+  `setStepScheduled` never wrote history, leaving a queued step reading as never
+  dispatched.
+
+  Also: dispatch no longer JSON round-trips every step payload before handing it
+  to a queue that serialises it anyway — the in-process dev queue, which is the
+  only one that was relying on it, does it itself now.
+
+  Two more defects. A transition whose step had no live attempt wrote its status
+  to the step row and silently nothing to history — the exact divergence the
+  transaction exists to prevent — and now repairs the step and writes the
+  missing row. And resolving a dynamic workflow was non-deterministic on all
+  three backends: a name can hold several active versions, and none of them
+  ordered the candidates, so which one ran could change between two calls
+  reading identical data. The newest version wins, with the graph hash breaking
+  a tie.
+
+  The two attempt columns and the five indexes are declared in the workflow
+  schema, so a fresh database gets them at boot. An existing one gets them from
+  a migration — `pikku db generate` writes the declaration down — rather than
+  from DDL issued at boot.
+
+- a261006: **Breaking:** removed dynamic workflows — runtime-defined workflow graphs stored in the database and resolved by name instead of by codegen.
+
+  The feature was already half-gone. Its authoring surface (`createAgentWorkflow`, `saveAgentWorkflow`, `listAgentWorkflows`, `executeAgentWorkflow`, and the AI-agent instruction builder) was deleted in April 2026 along with its entire e2e suite, and nothing has written a dynamic workflow since. What remained could not execute one either: `executeAgentWorkflow` gated on `pikkuState('workflows', 'meta')`, which only codegen ever populates, so a graph that existed solely in the database was never findable. The two backend families had also drifted onto different `source` sentinels (`'ai-agent'` vs `'dynamic-workflow'`), and the two Redis implementations disagreed on key escaping — so at least one of them matched nothing. Rather than keep shipping plumbing for a path no caller could complete, it is removed until it can be reintroduced deliberately.
+
+  Removed:
+  - `getAIGeneratedWorkflows` from `WorkflowService` and `WorkflowRunService`, and from every backend (in-memory, Redis, MongoDB, Kysely, and the Cloudflare Durable Object service and client — the last two were already a `return []` stub and a rejection).
+  - The database-lookup fallbacks in `startWorkflow` and `runWorkflowJob` that resolved a workflow name against stored graphs when static meta had no match.
+  - `'dynamic-workflow'` from the `WorkflowRuntimeMeta['source']` union.
+  - `validateWorkflowWiring` and `computeEntryNodeIds` from `@pikku/core/workflow`. These validated AI-authored graphs and had no callers in core; the inspector keeps its own private entry-node computation for static graph wiring, which is unaffected.
+  - The `workflow-created` AI stream event and its AG-UI `pikku:workflow-created` custom event. Its only emitter went with the April deletion, so it could never fire.
+  - The console's `console:getAIWorkflows` RPC, the `useAIWorkflows` hook, the "Dynamic" workflow filter and badge, and the trigger-schema scraper that derived an input form from a stored graph's `$ref` bindings.
+
+  Kept, because static graph workflows depend on them and this is not a change to versioning:
+  - `upsertWorkflowVersion`, `getWorkflowVersion`, `updateWorkflowVersionStatus`, and the `workflowVersions` storage in every backend. These back version-mismatch replay: when a deployed graph's hash changes, in-flight runs continue against the exact graph they started on. No schema migration is needed — the table, its columns, and its `(workflowName, graphHash)` upsert key are unchanged.
+  - `generateMermaidDiagram`, which renders any workflow graph and is not specific to dynamic ones.
+
+  Static `pikkuWorkflowGraph` and DSL workflows are entirely unaffected: they resolve from codegen'd meta, which was always the only path that worked.
+
+  To revive this post-MVP, the deleted authoring code is recoverable in full — its prompt engineering (a compact tool table upfront, full schemas with flattened dotted output paths returned only after a validation failure) is worth reading before rewriting:
+
+  ```
+  git show f52f3308b^:packages/core/src/wirings/ai-agent/agent-dynamic-workflow.ts
+  git show f52f3308b^:packages/core/src/wirings/workflow/graph/graph-validation.ts
+  git show f52f3308b --stat   # the April removal, incl. the three e2e feature files
+  ```
+
+  Note that reviving it needs more than restoring those files: the queued-step path (`executeWorkflowStep`), `onError` compensation, and sub-workflow resolution all read static meta only and would need a fallback for a graph that exists solely in the database.
+
+- Updated dependencies [8a2c993]
+- Updated dependencies [a261006]
+- Updated dependencies [09973b9]
+  - @pikku/core@0.12.71
+
 ## 0.13.5
 
 ### Patch Changes

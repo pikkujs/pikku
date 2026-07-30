@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy-serverless",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Serverless Framework deploy adapter for Pikku — generates serverless.yml and Lambda entry points",
   "type": "module",
   "main": "dist/index.js",

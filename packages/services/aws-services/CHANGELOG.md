@@ -1,3 +1,18 @@
+## 0.12.8
+
+### Patch Changes
+
+- 637e668: State every package's license in the package itself.
+
+  Eight publishable packages had no `license` field, `@pikku/aws-services` said `UNLICENSED` by accident, and no package carried a LICENSE file at all — the grant lived only in the repo root, which npm tarballs never include. Every publishable package now declares its license and ships the matching LICENSE file, and `yarn check:licenses` fails the release if the two ever disagree.
+
+  `@pikku/console` is now explicitly BUSL-1.1 and named in the root LICENSE's Licensed Work alongside `@pikku/cli` and `@pikku/inspector`; the Additional Use Grant still permits production use for any purpose, including in free and open source software. Everything else — runtimes, services, clients, deploy adapters and the agent skills — is MIT, as the root LICENSE already said.
+
+- Updated dependencies [8a2c993]
+- Updated dependencies [a261006]
+- Updated dependencies [09973b9]
+  - @pikku/core@0.12.71
+
 ## 0.12.7
 
 ### Patch Changes

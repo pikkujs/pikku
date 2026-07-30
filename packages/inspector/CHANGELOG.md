@@ -1,3 +1,36 @@
+## 0.12.49
+
+### Patch Changes
+
+- 426610a: Scenario instrumentation is no longer scaffolded into projects, and no longer deploys.
+
+  `scaffold.scenarios` generated four functions — `pikkuScenarioTakeLiveCoverage`, `pikkuScenarioResetLiveCoverage`, `pikkuScenarioResetStubs`, `pikkuScenarioGetStubCalls` — into the project's own source. As project source they were indistinguishable from application code: registered in the app bootstrap, listed in the app's function and RPC meta, and shipped `expose: true` inside every deployed bundle. Coverage and stub inspection are things you do to a development server; production carried two endpoints that fingerprint the build and one that resets a global tracker, gated only by whether a metadata file happened to sit beside the bundle.
+
+  `pikku dev` now registers the implementations itself, after the app bootstrap. Nothing is generated, nothing is written to the project, and a bundle cannot carry what was never in its bootstrap — `pikku serve` and every deployed unit have no trace of them. The scenario runner reaches them over `/rpc/<name>` exactly as before.
+
+  Also:
+  - The inspector ignores these four names wherever it finds them, so a project that has not regenerated — and still has the scaffolded file checked in — stops deploying it immediately. Codegen deletes the retired scaffold on its next run.
+  - They no longer count towards a project's function total, so `pikku scenario --coverage` stops reporting four permanently-uncovered functions that were never the project's to cover.
+  - The instrumentation no longer carries schemas (there was nothing to validate but one optional string), which drops the `zod` dependency the scaffold silently required of every project that enabled it.
+  - They are registered sessionless, so `scaffold.scenarios: true` — as opposed to `'auth'` — now genuinely means "no session required". As a sessioned `pikkuFunc` with `auth: false`, it demanded a session anyway and logged a warning saying so.
+
+- 09973b9: Scenarios, features and steps no longer reach a deployment.
+
+  Steps were already held back from the app bootstrap, so a deployed server never imported a step body. Everything _about_ a scenario still travelled with the application: a `pikkuScenario(...)` is a function, so its name, schemas and hashes sat in the app function meta; the schemas it and its steps validate against sat in the app's `register.gen.ts` — on one project 458 of the 582 registered schemas belonged to tests; its name sat in the internal RPC meta; and because a scenario is _also_ a workflow, the inspector synthesised a `wf-orchestrator-<scenario>` queue worker for each one. The deploy analyzer, which reads inspector state rather than the partitioned codegen output, then read all of it back as application code: a unit per scenario, a `WorkflowDefinition` per scenario, and a real queue per scenario. A 13-scenario suite turned into 13 production queues named after tests, waiting for a provider to create them.
+
+  The existing scenario/app partition is now applied everywhere it was missing. `FunctionRuntimeMeta` gains a `scenario` marker (the counterpart of `scenarioStep`) so a scenario body is recognisable without walking the workflow graph; scenario bodies join their steps on the scenario side of the function-meta and registration split; schemas only a scenario or step needs are written and registered under `.pikku/scenarios/schemas/` and imported by the scenario bootstrap alone; scenario names are dropped from the internal RPC meta; no orchestrator queue worker is synthesised for a scenario; and the deploy analyzer drops both scenario functions and scenario workflows before it decides what a deployment contains.
+
+  The MCP metas are keyed by wiring rather than by function, so a scenario wired as an MCP tool, resource or prompt was the one id that still reached the manifest after the function and workflow filters — as an endpoint on the gateway plus a gateway dependency on a unit that was never emitted. Those ids are now filtered too.
+
+  `scenarioSchemaDirectory` is rejected when it resolves to the same directory as `schemaDirectory`. A schema write owns its directory — it emits `register.gen.ts` and prunes every schema file its own required-set does not name — so sharing one would replace the application register with the scenario-only one and delete the app's schema files, which nothing downstream can detect.
+
+  Nothing changes for `pikku scenario run` — the scenario bootstrap still registers every scenario, feature, step, meta and schema. What changes is that a bundle stops carrying them.
+
+- Updated dependencies [8a2c993]
+- Updated dependencies [a261006]
+- Updated dependencies [09973b9]
+  - @pikku/core@0.12.71
+
 ## 0.12.48
 
 ### Patch Changes

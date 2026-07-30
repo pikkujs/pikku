@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-graph",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "description": "Graph addon for Pikku — built-in graph:* primitives for workflow graphs",
   "type": "module",
   "imports": {
@@ -32,7 +32,7 @@
     "zod": "^4"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.83",
+    "@pikku/cli": "^0.12.92",
     "@pikku/core": "*",
     "typescript": "^6.0.3",
     "zod": "^4"
