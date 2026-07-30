@@ -27,6 +27,14 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=0.12.83}"
 : "${PIKKU_INSPECTOR_VERSION:=0.12.43}"
 : "${PIKKU_BETTER_AUTH_VERSION:=0.12.12}"
+# core 0.12.64 went out 40 seconds before cli 0.12.83, so it is the third member
+# of that same wave. It is a *peer* of both the CLI and the inspector, which is
+# why it has to be named here to exist at all once peer resolution is off.
+: "${PIKKU_CORE_VERSION:=0.12.64}"
+# The other peer that has to be named: @pikku/better-auth peers on the upstream
+# `better-auth` library and imports it at module load, so without it the
+# bootstrap CLI dies on "Cannot find package 'better-auth'".
+: "${BETTER_AUTH_LIB_VERSION:=1.6.25}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
@@ -48,15 +56,29 @@ cat > "$_bootstrap_dir/package.json" <<JSON
   "dependencies": {
     "@pikku/cli": "${PIKKU_CLI_VERSION}",
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
-    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}"
+    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
+    "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
   "overrides": {
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
-    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}"
+    "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
+    "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
 }
 JSON
-(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock)
+# --legacy-peer-deps, because this tree is a throwaway runner for one codegen
+# pass and every package it needs is now pinned above. Left on, peer resolution
+# reaches across the whole floating transitive graph — @pikku/cli@0.12.83 depends
+# on `@pikku/kysely: ^0.13.1`, so every release wave drags in a kysely whose peer
+# on @pikku/core has moved ahead of what the registry is serving for this tree.
+# That is not hypothetical: publishing @pikku/kysely@0.13.6 (peer core ^0.12.71)
+# seconds before @pikku/cli@0.12.92 sent npm backtracking for thirty minutes over
+# ~100k ERESOLVE warnings until it aborted, and the CLI was the one package in
+# that release that did not publish. Peers here buy nothing — nothing consumes
+# this tree — and cost the release.
+(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock --legacy-peer-deps)
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
