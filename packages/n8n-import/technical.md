@@ -14,7 +14,7 @@ Importing n8n is split into two halves that compound instead of compete:
   invoked by `pikku import n8n <export.json>`. It does the provable, mechanical
   conversion and leaves everything it can't prove as a **typed stub that throws at
   runtime**. Treat it as **frozen**.
-- **`pikku-n8n-import`** — a **Claude skill** (`packages/cli/skills/pikku-n8n-import/`)
+- **`pikku-n8n-import`** — a **Claude skill** (`packages/skills/skills/pikku-n8n-import/`)
   that runs the compiler, triages the stubs, fills them with judgment, reports
   missing `@pikku/addon-*` integrations, and verifies (`pikku all` + `tsc` + zero
   surviving stubs).

@@ -4,7 +4,7 @@
   "description": "The pikku monorepo",
   "repository": "git@github.com:pikkujs/pikku.git",
   "author": "yasser.fadl@gmail.com",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "workspaces": {
     "packages": [
@@ -34,10 +34,11 @@
     "build:templates": "yarn workspaces foreach -p -A --include 'templates/**' run build",
     "build:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run build",
     "build": "yarn build:packages && yarn pikku && yarn build:addons && yarn build:templates",
+    "check:licenses": "node scripts/check-licenses.mjs",
     "check:workspace-protocol": "node scripts/check-no-workspace-protocol.mjs",
     "check:no-publish-rebuild": "node scripts/check-no-publish-time-cli-rebuild.mjs",
     "check:readme-imports": "node scripts/check-readme-imports.mjs",
-    "release": "yarn check:workspace-protocol && yarn check:no-publish-rebuild && yarn check:readme-imports && yarn build:packages && yarn pikku && yarn build:addons && yarn build:console && npx changeset publish",
+    "release": "yarn check:licenses && yarn check:workspace-protocol && yarn check:no-publish-rebuild && yarn check:readme-imports && yarn build:packages && yarn pikku && yarn build:addons && yarn build:console && npx changeset publish",
     "ncu": "yarn workspaces foreach -p -A run ncu",
     "ncu:pikku": "yarn workspaces foreach -p -A run ncu -f '/@pikku/.*/'",
     "test:verifiers": "yarn workspaces foreach -A --include 'verifiers/**' --exclude '@pikku/verifiers-deploy-azure' run test",

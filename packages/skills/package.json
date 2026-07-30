@@ -1,0 +1,36 @@
+{
+  "name": "@pikku/skills",
+  "version": "0.12.0",
+  "description": "The Pikku agent skills — the instruction set coding agents read to build, wire and deploy Pikku projects",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "embed": "node scripts/embed.mjs",
+    "tsc": "yarn embed && tsc",
+    "build": "yarn embed && tsc -b",
+    "ncu": "npx npm-check-updates",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "devDependencies": {
+    "@types/node": "^24.11.0",
+    "typescript": "^6.0.3",
+    "yaml": "^2.8.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

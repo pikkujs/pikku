@@ -3,11 +3,16 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, test } from 'node:test'
+import { skillsDir as skillsPackageDir } from '@pikku/skills'
 import ts from 'typescript'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const packageRoot = join(here, '..', '..', '..')
-const skillsDir = join(packageRoot, 'skills')
+
+// This suite cross-checks skill prose against CLI and core *source*, so it lives
+// with the CLI even though the skills themselves moved to @pikku/skills.
+assert.ok(skillsPackageDir, 'expected @pikku/skills to expose its skills/ dir')
+const skillsDir = skillsPackageDir
 const wiringPath = join(packageRoot, 'src', 'cli.wiring.ts')
 const secretServicePath = join(
   packageRoot,

@@ -13,5 +13,6 @@
   },
   "exports": {
     ".": "./dist/index.js"
-  }
+  },
+  "license": "MIT"
 }

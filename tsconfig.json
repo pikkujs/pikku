@@ -35,7 +35,9 @@
       "@pikku/queue-bullmq": ["./packages/services/queue-bullmq"],
       "@pikku/queue-bullmq/*": ["./packages/services/queue-bullmq/*"],
       "@pikku/queue-pg-boss": ["./packages/services/queue-pg-boss"],
-      "@pikku/queue-pg-boss/*": ["./packages/services/queue-pg-boss/*"]
+      "@pikku/queue-pg-boss/*": ["./packages/services/queue-pg-boss/*"],
+      "@pikku/skills": ["./packages/skills"],
+      "@pikku/skills/*": ["./packages/skills/*"]
     }
   },
   "exclude": ["node_modules", ".typedocs"]

@@ -39,5 +39,6 @@
   },
   "dependencies": {
     "dayjs": "^1.11.19"
-  }
+  },
+  "license": "MIT"
 }

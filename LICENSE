@@ -3,7 +3,8 @@ Business Source License 1.1
 Parameters
 
 Licensor:             Yasser Fadl and Pikku contributors
-Licensed Work:        Pikku Inspector (@pikku/inspector) and Pikku CLI (@pikku/cli)
+Licensed Work:        Pikku Inspector (@pikku/inspector), Pikku CLI (@pikku/cli) and
+                      Pikku Console (@pikku/console)
                       The Licensed Work is (c) 2021 - present Yasser Fadl and Pikku contributors
 Additional Use Grant: You may make production use of the Licensed Work for any purpose,
                       including creating free or open source software. However, you may
@@ -94,4 +95,12 @@ recipients of the licensed work to be provided by Licensor:
 
 -----------------------------------------------------------------------------
 
-Note: All other Pikku packages (@pikku/core, @pikku/*, etc.) remain under the MIT License.
+Note: Every other Pikku package — @pikku/core, the runtimes, the services, the clients,
+and @pikku/skills — is licensed under the MIT License. Each package ships its own LICENSE
+file stating its terms; that file governs, and this one covers only the Licensed Work
+named above.
+
+In particular, the Pikku agent skills (@pikku/skills) are MIT. They are the instruction
+set coding agents read to build, wire and deploy Pikku projects, and they are meant to be
+adopted, forked and extended by any harness — so their terms do not depend on the CLI
+that happens to install them.
