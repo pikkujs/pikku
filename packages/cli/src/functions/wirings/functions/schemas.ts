@@ -1,31 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import type { FunctionsMeta } from '@pikku/core'
 import { saveSchemas } from '../../../utils/serialize-schemas.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { partitionScenarioFunctionsMeta } from '../scenarios/scenario-partition.js'
-
-/**
- * The schema names a set of functions validates against, resolved the same way
- * `computeRequiredSchemas` resolves them so the two cannot disagree about which
- * name a type ended up under.
- */
-const schemaNamesFor = (
-  meta: FunctionsMeta,
-  getUniqueName: (name: string) => string
-): Set<string> => {
-  const names = new Set<string>()
-  for (const { inputs, outputs } of Object.values(meta)) {
-    for (const type of [inputs?.[0], outputs?.[0]]) {
-      if (!type) continue
-      try {
-        names.add(getUniqueName(type))
-      } catch {
-        names.add(type)
-      }
-    }
-  }
-  return names
-}
+import { partitionRequiredSchemas } from '../scenarios/scenario-schema-partition.js'
 
 export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -49,31 +25,13 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
     const supportsImportAttributes =
       config.schema?.supportsImportAttributes ?? true
 
-    // A scenario's input/output schemas are as test-only as its body. Left in the
-    // app's register.gen.ts they are imported by every deployed bundle — on one
-    // project half the registered schemas belonged to scenarios and steps.
-    // Anything an application function also needs stays on the app side: a shared
-    // schema registered twice is worse than a schema registered in one place.
-    const { app: appFunctionsMeta, scenario: scenarioFunctionsMeta } =
-      partitionScenarioFunctionsMeta(visitState.functions.meta)
-    const getUniqueName = (name: string) =>
-      visitState.functions.typesMap.getUniqueName(name)
-    const appSchemaNames = schemaNamesFor(appFunctionsMeta, getUniqueName)
-    // `schemasFromTypes` names types the project asked for by hand, whatever
-    // references them. A schema required for any other reason but referenced
-    // only by scenarios exists only because a scenario needs it.
-    const requestedByHand = new Set(config.schemasFromTypes ?? [])
-    const scenarioOnly = new Set(
-      [...schemaNamesFor(scenarioFunctionsMeta, getUniqueName)].filter(
-        (name) =>
-          visitState.requiredSchemas.has(name) &&
-          !appSchemaNames.has(name) &&
-          !requestedByHand.has(name)
-      )
-    )
-    const appRequired = new Set(
-      [...visitState.requiredSchemas].filter((name) => !scenarioOnly.has(name))
-    )
+    const { appRequired, scenarioOnly } = partitionRequiredSchemas({
+      functionsMeta: visitState.functions.meta,
+      requiredSchemas: visitState.requiredSchemas,
+      getUniqueName: (name) =>
+        visitState.functions.typesMap.getUniqueName(name),
+      schemasFromTypes: config.schemasFromTypes,
+    })
 
     await saveSchemas(
       logger,

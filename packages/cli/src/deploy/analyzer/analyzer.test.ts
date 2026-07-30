@@ -105,6 +105,60 @@ describe('analyzeDeployment - scenarios are not deployable', () => {
     assert.deepEqual(manifest.queues, [])
   })
 
+  test('a scenario wired as an MCP tool reaches neither the gateway nor its dependencies', () => {
+    // The MCP metas are keyed by wiring, so they are the one place a scenario id
+    // can still arrive from raw state after the function and workflow filters. A
+    // gateway listing one would depend on a unit that was never emitted.
+    const state = stateWithScenario()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        loginScenario: { pikkuFuncId: 'loginScenario', name: 'loginScenario' },
+      },
+      resourcesMeta: {
+        opensPage: { pikkuFuncId: 'opensPage', name: 'opensPage' },
+      },
+      promptsMeta: {},
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+
+    assert.deepEqual(manifest.mcpEndpoints, [])
+    assert.equal(
+      manifest.units.some((u) => u.role === 'mcp'),
+      false
+    )
+    assert.deepEqual(
+      manifest.units.flatMap((u) => u.dependsOn ?? []),
+      []
+    )
+  })
+
+  test('an application MCP tool still gets its gateway alongside a scenario', () => {
+    const state = stateWithScenario()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+        loginScenario: { pikkuFuncId: 'loginScenario', name: 'loginScenario' },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+
+    assert.deepEqual(manifest.mcpEndpoints, [
+      {
+        unitName: 'mcp-server',
+        toolFunctionIds: ['createTodo'],
+        resourceFunctionIds: [],
+        promptFunctionIds: [],
+      },
+    ])
+    assert.deepEqual(manifest.units.find((u) => u.role === 'mcp')?.dependsOn, [
+      'create-todo',
+    ])
+  })
+
   test('an exposed step gets no /rpc route', () => {
     const manifest = analyzeDeployment(stateWithScenario(), {
       projectId: 'test',
