@@ -3,6 +3,7 @@ import * as assert from 'assert'
 import {
   addSchema,
   getSchema,
+  applyDefaultsFromSchema,
   coerceTopLevelDataFromSchema,
   validateSchema,
   compileAllSchemas,
@@ -108,6 +109,108 @@ describe('Schema', () => {
       const data = { createdAt: '2024-01-01T00:00:00Z' } as any
       coerceTopLevelDataFromSchema('dateSchema', data)
       assert.ok(data.createdAt instanceof Date)
+    })
+  })
+
+  describe('applyDefaultsFromSchema', () => {
+    before(() => {
+      addSchema('defaultsSchema', {
+        properties: {
+          page: { type: 'number', default: 1 },
+          limit: { type: 'number', default: 50 },
+          addons: { type: 'array', default: [] },
+          mode: { type: 'string', default: 'manual' },
+          enabled: { type: 'boolean', default: true },
+          name: { type: 'string' },
+        },
+      })
+
+      addSchema('noDefaultsSchema', {
+        properties: { name: { type: 'string' } },
+      })
+
+      addSchema('booleanPropSchema', {
+        properties: { isActive: true, page: { type: 'number', default: 1 } },
+      })
+    })
+
+    test('should fill in absent properties from their default', () => {
+      const data = applyDefaultsFromSchema('defaultsSchema', {})
+      assert.strictEqual(data.page, 1)
+      assert.strictEqual(data.limit, 50)
+      assert.strictEqual(data.mode, 'manual')
+      assert.strictEqual(data.enabled, true)
+    })
+
+    test('should not overwrite a supplied value', () => {
+      const data = applyDefaultsFromSchema('defaultsSchema', {
+        page: 7,
+        limit: 200,
+      })
+      assert.strictEqual(data.page, 7)
+      assert.strictEqual(data.limit, 200)
+    })
+
+    // `false` and `0` are the values a truthiness check silently replaces, and
+    // the reason this tests presence rather than falsiness.
+    test('should not overwrite a supplied falsy value', () => {
+      const data = applyDefaultsFromSchema('defaultsSchema', {
+        page: 0,
+        enabled: false,
+      })
+      assert.strictEqual(data.page, 0)
+      assert.strictEqual(data.enabled, false)
+    })
+
+    test('should fill defaults into nullish data', () => {
+      assert.strictEqual(
+        applyDefaultsFromSchema('defaultsSchema', undefined).page,
+        1
+      )
+      assert.strictEqual(
+        applyDefaultsFromSchema('defaultsSchema', null).limit,
+        50
+      )
+    })
+
+    test('should leave properties without a default absent', () => {
+      const data = applyDefaultsFromSchema('defaultsSchema', {})
+      assert.ok(!('name' in data))
+    })
+
+    // Two requests sharing one array default would let the first request's
+    // pushes show up in the second.
+    test('should clone object and array defaults per call', () => {
+      const first = applyDefaultsFromSchema('defaultsSchema', {})
+      const second = applyDefaultsFromSchema('defaultsSchema', {})
+      first.addons.push('leaked')
+      assert.deepStrictEqual(second.addons, [])
+    })
+
+    test('should return the same data when the schema has no defaults', () => {
+      const data = { name: 'x' }
+      assert.strictEqual(
+        applyDefaultsFromSchema('noDefaultsSchema', data),
+        data
+      )
+    })
+
+    test('should return data untouched for an unknown schema', () => {
+      const data = { name: 'x' }
+      assert.strictEqual(applyDefaultsFromSchema('nonExistent', data), data)
+    })
+
+    test('should leave a primitive body for the validator to reject', () => {
+      assert.strictEqual(
+        applyDefaultsFromSchema('defaultsSchema', 'nope'),
+        'nope'
+      )
+    })
+
+    test('should skip boolean schema properties', () => {
+      const data = applyDefaultsFromSchema('booleanPropSchema', {})
+      assert.strictEqual(data.page, 1)
+      assert.ok(!('isActive' in data))
     })
   })
 

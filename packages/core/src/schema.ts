@@ -94,6 +94,57 @@ const validateAllSchemasLoaded = (
   }
 }
 
+/**
+ * Fill in absent top-level properties from their schema `default`.
+ *
+ * A `default` reaches the generated JSON Schema and keeps the property out of
+ * `required`, so omitting it validates — but nothing was ever filling it in.
+ * JSON Schema validators are pure by specification and none of the ones Pikku
+ * ships with (`@cfworker/json-schema`, and Ajv unless `useDefaults` is set)
+ * annotate the instance, so the function received `undefined` for a property
+ * its generated type declares as present. That is the worst shape a mismatch
+ * can take: validation permits the omission, the type says the value is there,
+ * and the body reads `undefined`.
+ *
+ * Applied unconditionally rather than alongside `coerceTopLevelDataFromSchema`,
+ * whose `coerceDataFromSchema` flag is about decoding transport-encoded values
+ * (a query string's `"1,2"` into an array). Defaults are a property of the
+ * schema, not of how the call arrived, so gating them on that flag would apply
+ * them over HTTP and skip them on a direct RPC invocation.
+ *
+ * Returns the data to use, which is a new object only when defaults had to be
+ * added to a nullish input — a call made with no arguments at all still gets
+ * them. Values are cloned so an object or array default (`[]`, `{}`) is never
+ * shared as one mutable instance across every request.
+ */
+export const applyDefaultsFromSchema = (
+  schemaName: string,
+  data: any,
+  packageName: string | null = null
+) => {
+  const schema = pikkuState(packageName, 'misc', 'schemas').get(schemaName)
+  if (!schema?.properties) return data
+
+  // A primitive body cannot carry named properties; leave it for the validator
+  // to reject rather than reshaping it into something that would pass.
+  if (data != null && typeof data !== 'object') return data
+
+  let result = data
+  for (const key in schema.properties) {
+    const property = schema.properties[key]
+    if (typeof property === 'boolean' || !('default' in property)) {
+      continue
+    }
+    // Allocated only once a default is actually found, so a schema without any
+    // leaves the caller's data (and its absence) exactly as it was.
+    result ??= {}
+    if (result[key] === undefined) {
+      result[key] = structuredClone(property.default)
+    }
+  }
+  return result
+}
+
 export const coerceTopLevelDataFromSchema = (
   schemaName: string,
   data: any,

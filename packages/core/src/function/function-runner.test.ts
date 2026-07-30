@@ -7,6 +7,7 @@ import {
   runPikkuFunc,
 } from './function-runner.js'
 import { addGlobalPermission, addTagMiddleware } from '../index.js'
+import { addSchema } from '../schema.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
@@ -1493,5 +1494,79 @@ describe('runPikkuFunc - scopes', () => {
         }),
       MissingScopeError
     )
+  })
+
+  describe('schema defaults', () => {
+    const addPagedFunction = (funcName: string, seen: { data?: any }) => {
+      addSchema('PagedInput', {
+        properties: {
+          page: { type: 'number', default: 1 },
+          limit: { type: 'number', default: 50 },
+        },
+      })
+      addTestFunction(funcName, {
+        func: async (_services: any, data: any) => {
+          seen.data = data
+          return 'ok'
+        },
+      })
+      pikkuState(null, 'function', 'meta')[funcName]!.inputSchemaName =
+        'PagedInput'
+    }
+
+    // The whole point of the fix: `{}` validates because a defaulted property
+    // is not `required`, so without this the body reads `undefined` for a value
+    // its generated type declares as a number.
+    test('a function called with {} receives its schema defaults', async () => {
+      const seen: { data?: any } = {}
+      addPagedFunction('paged', seen)
+
+      await runPikkuFunc('rpc', Math.random().toString(), 'paged', {
+        singletonServices: mockSingletonServices,
+        getAllServices: () => mockServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      })
+
+      assert.equal(seen.data.page, 1)
+      assert.equal(seen.data.limit, 50)
+    })
+
+    // `coerceDataFromSchema` is not passed here, exactly as a direct RPC
+    // invocation leaves it. Defaults belong to the schema rather than to the
+    // transport, so they must not ride on that flag — and a call made with no
+    // arguments at all still has to get them.
+    test('defaults apply with coercion off and no data', async () => {
+      const seen: { data?: any } = {}
+      addPagedFunction('pagedNoCoerce', seen)
+
+      await runPikkuFunc('rpc', Math.random().toString(), 'pagedNoCoerce', {
+        singletonServices: mockSingletonServices,
+        getAllServices: () => mockServices,
+        data: () => undefined,
+        auth: false,
+        wire: {},
+      })
+
+      assert.equal(seen.data.page, 1)
+      assert.equal(seen.data.limit, 50)
+    })
+
+    test('a supplied value survives', async () => {
+      const seen: { data?: any } = {}
+      addPagedFunction('pagedSupplied', seen)
+
+      await runPikkuFunc('rpc', Math.random().toString(), 'pagedSupplied', {
+        singletonServices: mockSingletonServices,
+        getAllServices: () => mockServices,
+        data: () => ({ page: 3 }),
+        auth: false,
+        wire: {},
+      })
+
+      assert.equal(seen.data.page, 3)
+      assert.equal(seen.data.limit, 50)
+    })
   })
 })

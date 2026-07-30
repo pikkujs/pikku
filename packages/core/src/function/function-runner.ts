@@ -5,7 +5,11 @@ import {
 } from '../wirings/channel/channel-middleware-runner.js'
 import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
-import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
+import {
+  applyDefaultsFromSchema,
+  coerceTopLevelDataFromSchema,
+  validateSchema,
+} from '../schema.js'
 import type {
   CoreUserSession,
   CorePikkuMiddleware,
@@ -293,11 +297,20 @@ export const runPikkuFunc = async <In = any, Out = any>(
     verifyScopes(funcConfig.scopes ?? funcMeta.scopes, session)
 
     // Evaluate the data from the lazy function
-    const actualData = await data()
+    let actualData = await data()
 
     // Validate and coerce data if schema is defined
     const inputSchemaName = funcMeta.inputSchemaName
     if (inputSchemaName) {
+      // Fill in schema defaults before anything reads the data. Unconditional:
+      // a default belongs to the schema, not to the transport the call arrived
+      // on. Runs before coercion so a defaulted value and a supplied one are
+      // treated identically from here on.
+      actualData = applyDefaultsFromSchema(
+        inputSchemaName,
+        actualData,
+        packageName
+      )
       // Coerce (top level) data types before validation (e.g. string→array, string→date)
       if (coerceDataFromSchema) {
         coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
