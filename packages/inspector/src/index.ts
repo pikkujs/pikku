@@ -6,6 +6,11 @@ export { ErrorCode } from './error-codes.js'
 export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
 export { AUTH_HANDLER_FUNC_ID } from './add/add-auth.js'
 export {
+  SCENARIO_INSTRUMENTATION_FUNCTIONS,
+  isScenarioInstrumentationFunction,
+} from './add/scenario-instrumentation.js'
+export type { ScenarioInstrumentationFunction } from './add/scenario-instrumentation.js'
+export {
   serializeInspectorState,
   deserializeInspectorState,
 } from './utils/serialize-inspector-state.js'

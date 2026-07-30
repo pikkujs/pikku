@@ -21,6 +21,7 @@ import { resolvePermissions } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import { findPiiPaths } from '../utils/check-pii-output.js'
+import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
 import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
@@ -421,6 +422,17 @@ export const addFunctions: AddWiring = (
   )
 
   if (!pikkuFuncId || pikkuFuncId.startsWith('__temp_')) {
+    return
+  }
+
+  // pikku's own scenario instrumentation, which older projects still carry as a
+  // scaffolded file in their source. It is not application code and must not be
+  // registered, metadata'd or deployed as if it were — `pikku dev` registers the
+  // implementations itself, and that is the only server that should have them.
+  if (
+    isScenarioInstrumentationFunction(pikkuFuncId) ||
+    isScenarioInstrumentationFunction(name)
+  ) {
     return
   }
 

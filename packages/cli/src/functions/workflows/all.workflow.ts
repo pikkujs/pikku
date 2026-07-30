@@ -1,7 +1,10 @@
 import { existsSync } from 'fs'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
-import { pruneLegacyScaffoldFiles } from '../../utils/remove-legacy-scaffold-file.js'
+import {
+  pruneLegacyScaffoldFiles,
+  removeRetiredScaffoldFiles,
+} from '../../utils/remove-legacy-scaffold-file.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -12,7 +15,6 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuConsoleFunctions'
-  | 'pikkuScenarioFunctions'
   | 'pikkuUserAdminFunctions'
   | 'pikkuPublicAgent'
   | 'pikkuEventsScaffold'
@@ -33,11 +35,6 @@ const scaffoldFiles = (
     files.push({
       file: config.consoleFunctionsFile,
       generator: 'pikkuConsoleFunctions',
-    })
-  if (config.scaffold?.scenarios && config.scenariosFunctionsFile)
-    files.push({
-      file: config.scenariosFunctionsFile,
-      generator: 'pikkuScenarioFunctions',
     })
   if (config.scaffold?.userAdmin && config.userAdminFunctionsFile)
     files.push({
@@ -65,6 +62,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await assertSingleCoreVersion(config.rootDir, logger)
 
     await pruneLegacyScaffoldFiles(config)
+    await removeRetiredScaffoldFiles(config)
 
     const allImports: string[] = []
     let typesDeclarationFileExists = true
@@ -214,7 +212,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
-      workflow.do('Scenario functions', 'pikkuScenarioFunctions', null),
       workflow.do('User admin functions', 'pikkuUserAdminFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),
