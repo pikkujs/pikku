@@ -74,7 +74,7 @@ describe('LibsqlWebDialect bind-parameter encoding', () => {
     })
   })
 
-  test('encodes a plain object and an array as JSON text', async () => {
+  test('encodes a plain object as JSON text', async () => {
     await db()
       .insertInto('entry')
       .values({ id: 'a', payload: { tags: [1, 2] } as never } as never)
@@ -84,6 +84,25 @@ describe('LibsqlWebDialect bind-parameter encoding', () => {
       type: 'text',
       value: '{"tags":[1,2]}',
     })
+  })
+
+  test('encodes an array bound directly as JSON text', async () => {
+    await db()
+      .insertInto('entry')
+      .values({ id: 'a', payload: [1, 2] as never } as never)
+      .execute()
+
+    assert.deepEqual(sentArgs[1], { type: 'text', value: '[1,2]' })
+  })
+
+  test('encodes a null-prototype record as JSON text', async () => {
+    const payload = Object.assign(Object.create(null), { tags: [1] })
+    await db()
+      .insertInto('entry')
+      .values({ id: 'a', payload: payload as never } as never)
+      .execute()
+
+    assert.deepEqual(sentArgs[1], { type: 'text', value: '{"tags":[1]}' })
   })
 
   test('keeps the primitive encodings intact', async () => {
@@ -106,5 +125,27 @@ describe('LibsqlWebDialect bind-parameter encoding', () => {
         .execute(),
       /unsupported argument type symbol/
     )
+  })
+
+  // A Map or a class instance stringifies to "{}" or to a partial view of
+  // itself, so it must fail loudly rather than persist an empty JSON blob.
+  test('rejects an object JSON cannot faithfully represent', async () => {
+    class Money {
+      constructor(public cents: number) {}
+    }
+
+    for (const [value, expected] of [
+      [new Map([['a', 1]]), /unsupported argument type Map/],
+      [/abc/i, /unsupported argument type RegExp/],
+      [new Money(100), /unsupported argument type Money/],
+    ] as const) {
+      await assert.rejects(
+        db()
+          .insertInto('entry')
+          .values({ id: 'a', payload: value as never } as never)
+          .execute(),
+        expected
+      )
+    }
   })
 })

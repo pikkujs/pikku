@@ -190,6 +190,22 @@ class LibsqlWebConnection implements DatabaseConnection {
 }
 
 /**
+ * Whether a value is a JSON column's worth of data rather than some other
+ * object that merely happens to be one.
+ *
+ * A `Map`, a `RegExp` or a class instance all stringify to `"{}"` or to a
+ * partial view of themselves, so accepting every object would silently persist
+ * an empty JSON blob where the caller meant something. Those fall through to
+ * the unsupported-type error instead. Kept in lockstep with the `coerce()` in
+ * the CLI's node:sqlite dev runtime (`db/sqlite/sqlite-kysely.ts`).
+ */
+function isJsonEncodable(v: object): boolean {
+  if (Array.isArray(v)) return true
+  const proto = Object.getPrototypeOf(v)
+  return proto === Object.prototype || proto === null
+}
+
+/**
  * Encodes one Kysely bind parameter as a Hrana value.
  *
  * The Date and plain-object branches exist for parity with the `coerce()` in
@@ -212,9 +228,13 @@ function encodeArg(v: unknown): HranaValue {
     return { type: 'blob', base64: bytesToBase64(new Uint8Array(v)) }
   if (v instanceof Uint8Array) return { type: 'blob', base64: bytesToBase64(v) }
   if (v instanceof Date) return { type: 'text', value: v.toISOString() }
-  if (typeof v === 'object')
+  if (typeof v === 'object' && isJsonEncodable(v))
     return { type: 'text', value: JSON.stringify(v) }
-  throw new Error(`libsql: unsupported argument type ${typeof v}`)
+  // Name the constructor for objects: "unsupported argument type object" is
+  // what made the missing Date branch so hard to place in the first place.
+  const kind =
+    typeof v === 'object' ? (v.constructor?.name ?? 'object') : typeof v
+  throw new Error(`libsql: unsupported argument type ${kind}`)
 }
 
 function decodeValue(v: HranaValue): unknown {
