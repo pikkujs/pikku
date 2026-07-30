@@ -48,6 +48,33 @@ async function findConfigFile(): Promise<string> {
   throw new Error('Config file pikku.config.json not found')
 }
 
+/** A config that was found and parsed, but says something impossible. */
+export class PikkuCLIConfigError extends Error {}
+
+/**
+ * The two schema registers must be two directories.
+ *
+ * `saveSchemas` owns whatever directory it is given: it writes `register.gen.ts`
+ * and prunes every schema file that its own required-set does not name. Point the
+ * scenario write at `schemaDirectory` and the second call overwrites the app's
+ * register with the scenario-only one and deletes the app's schema files — the
+ * exact leak the split exists to prevent, silently, and only in a deployed
+ * bundle. Nothing downstream can detect it, so it is rejected here.
+ */
+export const assertSchemaDirectoriesAreDistinct = (
+  config: Pick<PikkuCLIConfig, 'schemaDirectory' | 'scenarioSchemaDirectory'>
+) => {
+  const { schemaDirectory, scenarioSchemaDirectory } = config
+  if (!schemaDirectory || !scenarioSchemaDirectory) {
+    return
+  }
+  if (resolve(schemaDirectory) === resolve(scenarioSchemaDirectory)) {
+    throw new PikkuCLIConfigError(
+      `scenarioSchemaDirectory must not be the same directory as schemaDirectory (both resolve to ${resolve(schemaDirectory)}). Scenario schemas are written with their own register, which would replace the application one.`
+    )
+  }
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -894,6 +921,8 @@ const _getPikkuCLIConfig = async (
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
 
+    assertSchemaDirectoriesAreDistinct(result)
+
     if (result.addon) {
       const packageJsonPath = join(result.rootDir, 'package.json')
       try {
@@ -920,6 +949,11 @@ const _getPikkuCLIConfig = async (
 
     return result
   } catch (e: any) {
+    // A config that parsed but is contradictory is not a missing config, and
+    // saying so sends the reader looking for the wrong problem.
+    if (e instanceof PikkuCLIConfigError) {
+      throw e
+    }
     logger.error(e)
     throw new Error(`Config file not found: ${configFile}`)
   }

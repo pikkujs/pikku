@@ -1,5 +1,12 @@
 import assert from 'node:assert'
-import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  mkdtemp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
@@ -25,7 +32,10 @@ async function seedExistingSchema(parent: string, name: string) {
   await mkdir(join(parent, 'schemas'), { recursive: true })
   await writeFile(
     join(parent, 'schemas', `${name}.schema.json`),
-    JSON.stringify({ type: 'object', properties: { stale: { type: 'string' } } }),
+    JSON.stringify({
+      type: 'object',
+      properties: { stale: { type: 'string' } },
+    }),
     'utf-8'
   )
 }
@@ -34,7 +44,9 @@ const listSchemaFiles = async (parent: string) =>
   (await readdir(join(parent, 'schemas'))).sort()
 
 afterEach(async () => {
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(
+    dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))
+  )
 })
 
 describe('saveSchemas', () => {
@@ -46,12 +58,19 @@ describe('saveSchemas', () => {
     await saveSchemas(
       noopLogger,
       parent,
-      { CreateClassInput: { type: 'object', properties: { title: { type: 'string' } } } },
+      {
+        CreateClassInput: {
+          type: 'object',
+          properties: { title: { type: 'string' } },
+        },
+      },
       new Set(['CreateClassInput']),
       true
     )
 
-    assert.deepEqual(await listSchemaFiles(parent), ['CreateClassInput.schema.json'])
+    assert.deepEqual(await listSchemaFiles(parent), [
+      'CreateClassInput.schema.json',
+    ])
   })
 
   test('the surviving file is the one this run generated, not the stale copy', async () => {
@@ -61,13 +80,21 @@ describe('saveSchemas', () => {
     await saveSchemas(
       noopLogger,
       parent,
-      { CreateClassInput: { type: 'object', properties: { title: { type: 'string' } } } },
+      {
+        CreateClassInput: {
+          type: 'object',
+          properties: { title: { type: 'string' } },
+        },
+      },
       new Set(['CreateClassInput']),
       true
     )
 
     const written = JSON.parse(
-      await readFile(join(parent, 'schemas', 'CreateClassInput.schema.json'), 'utf-8')
+      await readFile(
+        join(parent, 'schemas', 'CreateClassInput.schema.json'),
+        'utf-8'
+      )
     )
     assert.deepEqual(Object.keys(written.properties), ['title'])
   })
@@ -104,15 +131,25 @@ describe('saveSchemas', () => {
     await saveSchemas(noopLogger, parent, {}, new Set(), true)
 
     assert.deepEqual(await listSchemaFiles(parent), [])
+    // The register has to be rewritten too, not just emptied of files: the
+    // scenario bootstrap imports it unconditionally, so a project whose last
+    // scenario was deleted must stop registering the schemas it used to have.
+    const register = await readFile(join(parent, 'register.gen.ts'), 'utf-8')
+    assert.equal(register.includes('addSchema('), false)
   })
 
   test('reports a schema it could not delete instead of failing the build', async () => {
     const parent = await makeDir()
     // A directory cannot be unlink()ed, so this stands in for any undeletable entry.
-    await mkdir(join(parent, 'schemas', 'Undeletable.schema.json'), { recursive: true })
+    await mkdir(join(parent, 'schemas', 'Undeletable.schema.json'), {
+      recursive: true,
+    })
 
     const errors: string[] = []
-    const logger = { ...noopLogger, error: (m: string) => errors.push(m) } as CLILogger
+    const logger = {
+      ...noopLogger,
+      error: (m: string) => errors.push(m),
+    } as CLILogger
 
     await saveSchemas(
       logger,
@@ -131,7 +168,13 @@ describe('saveSchemas', () => {
   test('keeps a `false` schema, which is valid and rejects everything', async () => {
     const parent = await makeDir()
 
-    await saveSchemas(noopLogger, parent, { DenyAll: false }, new Set(['DenyAll']), true)
+    await saveSchemas(
+      noopLogger,
+      parent,
+      { DenyAll: false },
+      new Set(['DenyAll']),
+      true
+    )
 
     assert.deepEqual(await listSchemaFiles(parent), ['DenyAll.schema.json'])
     const register = await readFile(join(parent, 'register.gen.ts'), 'utf-8')
@@ -141,7 +184,11 @@ describe('saveSchemas', () => {
   test('leaves an unrelated file in the schemas dir alone', async () => {
     const parent = await makeDir()
     await mkdir(join(parent, 'schemas'), { recursive: true })
-    await writeFile(join(parent, 'schemas', 'notes.md'), 'not codegen output', 'utf-8')
+    await writeFile(
+      join(parent, 'schemas', 'notes.md'),
+      'not codegen output',
+      'utf-8'
+    )
 
     await saveSchemas(
       noopLogger,

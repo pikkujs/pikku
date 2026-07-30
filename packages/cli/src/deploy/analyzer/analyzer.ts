@@ -16,6 +16,7 @@ import type { FunctionMeta } from '@pikku/core'
 import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import {
+  isScenarioFunction,
   withoutScenarios,
   withoutScenarioWorkflows,
 } from '../../functions/wirings/scenarios/scenario-partition.js'
@@ -294,15 +295,20 @@ export function analyzeDeployment(
   }
 
   // ── Step 3: MCP gateway ────────────────────────────────────────────
-  const mcpToolIds = values(state.mcpEndpoints.toolsMeta).map(
-    (t) => t.pikkuFuncId
-  )
-  const mcpResourceIds = values(state.mcpEndpoints.resourcesMeta).map(
-    (r) => r.pikkuFuncId
-  )
-  const mcpPromptIds = values(state.mcpEndpoints.promptsMeta).map(
-    (p) => p.pikkuFuncId
-  )
+  // The MCP metas are keyed by wiring, not by function, so they are the one
+  // place a scenario or step id can still arrive from raw state. A gateway that
+  // lists one would depend on a unit that was never emitted.
+  const deployableFuncId = (funcId: string) =>
+    !isScenarioFunction(state.functions.meta[funcId])
+  const mcpToolIds = values(state.mcpEndpoints.toolsMeta)
+    .map((t) => t.pikkuFuncId)
+    .filter(deployableFuncId)
+  const mcpResourceIds = values(state.mcpEndpoints.resourcesMeta)
+    .map((r) => r.pikkuFuncId)
+    .filter(deployableFuncId)
+  const mcpPromptIds = values(state.mcpEndpoints.promptsMeta)
+    .map((p) => p.pikkuFuncId)
+    .filter(deployableFuncId)
 
   // Include functions explicitly marked mcp: true
   for (const [funcId, funcMeta] of entries(functionsMeta)) {
