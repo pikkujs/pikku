@@ -531,6 +531,7 @@ export const fetchData = async <In, Out>(
     exposeErrors = !isProduction(),
     generateRequestId,
     traceId: externalTraceId,
+    maxBodySize,
   }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
   const singletonServices = getSingletonServices()
@@ -540,7 +541,9 @@ export const fetchData = async <In, Out>(
 
   // Combine the request and response into one wire object
   const pikkuRequest =
-    request instanceof Request ? new PikkuFetchHTTPRequest(request) : request
+    request instanceof Request
+      ? new PikkuFetchHTTPRequest(request, { maxBodySize })
+      : request
 
   // Resolve traceId: external (e.g. CF-Ray) > x-request-id header > generated
   let requestId: string | null = externalTraceId ?? null

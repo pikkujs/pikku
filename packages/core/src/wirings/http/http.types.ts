@@ -38,6 +38,8 @@ export type RunHTTPWiringOptions = Partial<{
   generateRequestId: () => string
   /** Pre-resolved trace ID (e.g. CF-Ray). Falls back to x-request-id header or generated ID. */
   traceId: string
+  /** Maximum request body size in bytes, applied when pikku wraps a fetch `Request`. */
+  maxBodySize: number
 }>
 
 /**
