@@ -9,15 +9,30 @@ import {
   toPosix,
 } from './notes.js'
 
+/**
+ * Declared, not inferred from the schema below.
+ *
+ * A finding crosses an RPC boundary as part of the `getKnowledge` payload, and a
+ * `z.infer<>` is not a type a JSON-schema generator can walk: zod's inference
+ * bottoms out in `this` types, so ts-json-schema-generator fails outright on it.
+ * An interface generates. The `satisfies` is what keeps the two from drifting —
+ * a field added to one and not the other is a compile error.
+ */
+export interface KnowledgeFinding {
+  id: string
+  severity: 'error' | 'warn' | 'info'
+  message: string
+  path: string
+  fixHint: string
+}
+
 export const KnowledgeFindingSchema = z.object({
   id: z.string(),
   severity: z.enum(['error', 'warn', 'info']),
   message: z.string(),
   path: z.string(),
   fixHint: z.string(),
-})
-
-export type KnowledgeFinding = z.infer<typeof KnowledgeFindingSchema>
+}) satisfies z.ZodType<KnowledgeFinding>
 
 export const KnowledgeValidateInput = z.object({})
 

@@ -3,6 +3,56 @@ import { z } from 'zod'
 import { type KnowledgeNote, resourceIds, sectionOf, toPosix } from './notes.js'
 import { KNOWLEDGE_SECTIONS } from './validate.js'
 
+/**
+ * Declared rather than inferred, for the reason given on `KnowledgeFinding`:
+ * this shape is the body of the `getKnowledge` RPC's output, and a `z.infer<>`
+ * is not something a JSON-schema generator can walk.
+ *
+ * Note this is necessary but not sufficient for that RPC to ship an output
+ * schema — `KnowledgeBundle` reaches this type across a package boundary, and
+ * the inspector registers no type whose base is declared in another package.
+ */
+export interface KnowledgeGraphNote {
+  path: string
+  /** `''` for a note at the root of knowledge/. */
+  section: string
+  type?: string
+  title: string
+  description?: string
+  tags: string[]
+  /** The `<kind>:<id>` URIs from `resource:`, already split. */
+  resource: string[]
+  status?: string
+  entities: string[]
+  reserved?: 'index' | 'log'
+  body: string
+  /** Notes this one links to, as bundle-relative paths. */
+  outbound: string[]
+  /** Notes that link to this one. */
+  inbound: string[]
+  /** Link targets that resolve to no note. Legal in OKF — a note not written yet. */
+  dangling: string[]
+}
+
+export interface KnowledgeSection {
+  name: string
+  description?: string
+  count: number
+}
+
+export interface KnowledgeGraph {
+  notes: KnowledgeGraphNote[]
+  sections: KnowledgeSection[]
+  /** Tag → how many notes carry it, for a browsable facet. */
+  tagCounts: Record<string, number>
+  stats: {
+    notes: number
+    sections: number
+    links: number
+    dangling: number
+  }
+}
+
 export const KnowledgeGraphNoteSchema = z.object({
   path: z.string(),
   /** `''` for a note at the root of knowledge/. */
@@ -23,15 +73,13 @@ export const KnowledgeGraphNoteSchema = z.object({
   inbound: z.array(z.string()),
   /** Link targets that resolve to no note. Legal in OKF — a note not written yet. */
   dangling: z.array(z.string()),
-})
-
-export type KnowledgeGraphNote = z.infer<typeof KnowledgeGraphNoteSchema>
+}) satisfies z.ZodType<KnowledgeGraphNote>
 
 export const KnowledgeSectionSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   count: z.number(),
-})
+}) satisfies z.ZodType<KnowledgeSection>
 
 export const KnowledgeGraphSchema = z.object({
   notes: z.array(KnowledgeGraphNoteSchema),
@@ -44,9 +92,7 @@ export const KnowledgeGraphSchema = z.object({
     links: z.number(),
     dangling: z.number(),
   }),
-})
-
-export type KnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>
+}) satisfies z.ZodType<KnowledgeGraph>
 
 /**
  * Fenced and inline code, removed before links are read.
