@@ -37,6 +37,7 @@ import {
   type ResolvedDb,
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
+import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
@@ -207,6 +208,15 @@ export const dev = pikkuSessionlessFunc<
     }
 
     await loadUserBootstrap(pikkuDir)
+
+    // Scenario instrumentation exists only on a development server: the runner
+    // calls it over RPC to reset and snapshot coverage and stub calls. It is
+    // registered here, after the app bootstrap, rather than generated into the
+    // project — an app bootstrap is what a deployed bundle imports, and coverage
+    // endpoints have no business in one.
+    if (config.scaffold?.scenarios) {
+      registerScenarioInstrumentation(config.scaffold.scenarios === 'auth')
+    }
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
