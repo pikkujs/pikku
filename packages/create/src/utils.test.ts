@@ -251,10 +251,11 @@ describe('Functions Test Suite', () => {
     wranglerChanges(testDir, appName)
 
     const updatedContent = fs.readFileSync(wranglerPath, 'utf-8')
-    const currentDate = new Date().toISOString().split('T')[0]
+    // The template's pinned date must survive: today's date is newer than any
+    // released workerd supports, so stamping it breaks `wrangler dev` outright.
     assert.ok(
-      updatedContent.includes(`compatibility_date = "${currentDate}"`),
-      'compatibility_date should be updated'
+      updatedContent.includes('compatibility_date = "2020-01-01"'),
+      'compatibility_date should be left as the template pinned it'
     )
     assert.ok(
       updatedContent.includes(appName),

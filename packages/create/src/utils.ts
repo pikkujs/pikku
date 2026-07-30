@@ -217,6 +217,15 @@ export function cleanPikkuConfig(
 
 /**
  * Applies changes to wranger
+ *
+ * The `compatibility_date` is deliberately left as the template pinned it. It
+ * used to be stamped with today's date, which cannot work: a compatibility date
+ * is only honoured by a workerd that already knows about it, and every released
+ * workerd lags the calendar by days ("This Worker requires compatibility date
+ * X, but the newest date supported by this server binary is X-1"). So a freshly
+ * scaffolded project could not `wrangler dev` on the day it was created. Bumping
+ * it is a deliberate act — the same reason @pikku/deploy-cloudflare pins its own
+ * COMPAT_DATE rather than computing one.
  */
 export function wranglerChanges(targetPath: string, appName: string): void {
   const wranglerFilePath = path.join(targetPath, 'wrangler.toml')
@@ -224,12 +233,7 @@ export function wranglerChanges(targetPath: string, appName: string): void {
   if (!fs.existsSync(wranglerFilePath)) return
 
   let wranglerConfig = fs.readFileSync(wranglerFilePath, 'utf-8')
-  const currentDate = new Date().toISOString().split('T')[0]
   wranglerConfig = wranglerConfig
-    .replace(
-      /compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/,
-      `compatibility_date = "${currentDate}"`
-    )
     .replace('pikku-cloudflare-workers', appName)
     .replace('pikku-cloudflare-websockets', appName)
   fs.writeFileSync(wranglerFilePath, wranglerConfig)
