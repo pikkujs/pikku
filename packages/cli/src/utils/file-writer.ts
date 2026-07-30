@@ -1,5 +1,5 @@
 import { dirname, join } from 'path'
-import { mkdir, readFile, writeFile, rm } from 'fs/promises'
+import { mkdir, readFile, rename, writeFile, rm } from 'fs/promises'
 import { existsSync } from 'fs'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { getCLIVersion } from './get-cli-version.js'
@@ -53,7 +53,18 @@ export const writeFileInDir = async (
   // Only write if content has changed or file doesn't exist
   if (existingContent !== content) {
     await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, content, 'utf-8')
+    // Atomically, because generated files are read while they are generated:
+    // `pikku scenario run --spawn` bundles the registers while the dev server it
+    // spawned is regenerating them, and `writeFile` truncates before it writes —
+    // a reader that lands in that window gets an empty file, not an old one.
+    const tmp = `${path}.${process.pid}.tmp`
+    try {
+      await writeFile(tmp, content, 'utf-8')
+      await rename(tmp, path)
+    } catch (e) {
+      await rm(tmp, { force: true }).catch(() => {})
+      throw e
+    }
     if (TS_FILE_REGEX.test(path)) {
       tsWriteGeneration++
     }
