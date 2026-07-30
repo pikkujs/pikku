@@ -372,6 +372,19 @@
   overflow: hidden;
 }
 
+/* The same list surface with no chrome of its own, for a host that already put
+   the screen in a page card (see ConsoleChromeContext) — there the surface IS
+   that card's content, and keeping its border would read as a card in a card.
+   Only the screen's outermost surface swaps to this: the panes inside a
+   two-pane layout still need their borders to read as separate panes. */
+.listSurfaceFlush {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* ── Badge variants ── */
 
 .tagBadge {
