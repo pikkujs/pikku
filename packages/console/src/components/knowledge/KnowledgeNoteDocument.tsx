@@ -25,7 +25,7 @@ import { MetaRow } from '../ui/MetaRow'
 import { KnowledgeNoteLinks } from './KnowledgeNoteLinks'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
-import { KnowledgeTypeIcon } from './KnowledgeIcon'
+import { KnowledgeTypeIcon } from './KnowledgeTypeIcon'
 import classes from '../ui/console.module.css'
 
 type KnowledgeNoteDocumentProps = {

@@ -14,7 +14,8 @@ import type {
   KnowledgeSelection,
 } from '../../lib/knowledge'
 import { maxSeverity, toNavSections } from '../../lib/knowledge'
-import { KnowledgeSectionIcon, KnowledgeTypeIcon } from './KnowledgeIcon'
+import { KnowledgeSectionIcon } from './KnowledgeSectionIcon'
+import { KnowledgeTypeIcon } from './KnowledgeTypeIcon'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
 import classes from '../ui/console.module.css'
@@ -63,6 +64,7 @@ export const KnowledgeNoteNavigator: React.FC<KnowledgeNoteNavigatorProps> = ({
           <UnstyledButton
             data-testid="knowledge-nav-findings"
             data-selected={selected?.kind === 'findings' || undefined}
+            aria-current={selected?.kind === 'findings' || undefined}
             onClick={() => onSelect({ kind: 'findings' })}
             className={classes.knowledgeRow}
             style={indent(0)}
@@ -97,6 +99,9 @@ export const KnowledgeNoteNavigator: React.FC<KnowledgeNoteNavigatorProps> = ({
                   data-selected={
                     isSelected(selected, section.indexPath) || undefined
                   }
+                  aria-current={
+                    isSelected(selected, section.indexPath) || undefined
+                  }
                   onClick={() =>
                     onSelect({ kind: 'note', path: section.indexPath! })
                   }
@@ -125,6 +130,7 @@ export const KnowledgeNoteNavigator: React.FC<KnowledgeNoteNavigatorProps> = ({
                   key={note.path}
                   data-testid={`knowledge-nav-${note.path}`}
                   data-selected={isSelected(selected, note.path) || undefined}
+                  aria-current={isSelected(selected, note.path) || undefined}
                   onClick={() => onSelect({ kind: 'note', path: note.path })}
                   // The drawer is narrow and a note title is a sentence, so the
                   // clamped ones are readable on hover rather than only by
