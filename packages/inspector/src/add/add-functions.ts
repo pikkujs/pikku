@@ -402,6 +402,11 @@ export const addFunctions: AddWiring = (
   // network would put a test harness on the public API surface.
   const isScenarioStep = expression.text === 'pikkuScenarioStep'
 
+  // A scenario's own body. Marked so the codegen partitions and the deploy
+  // analyzer can tell it apart from an application workflow without having to
+  // reach into the workflow graph.
+  const isScenario = expression.text === 'pikkuScenario'
+
   // only handle calls like pikkuFunc(...)
   if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
     return
@@ -1094,6 +1099,7 @@ export const addFunctions: AddWiring = (
     expose: expose || undefined,
     remote: remote || undefined,
     scenarioStep: isScenarioStep || undefined,
+    scenario: isScenario || undefined,
     mcp: mcpEnabled || undefined,
     readonly: readonly_ || undefined,
     deploy: deploy || undefined,

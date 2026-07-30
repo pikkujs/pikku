@@ -11,6 +11,7 @@ import { mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 
 import { analyzeDeployment } from './analyzer/index.js'
+import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
 import type { DeploymentManifest } from './analyzer/manifest.js'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
 import type { Bundler } from './bundler/bundler.interface.js'
@@ -128,7 +129,10 @@ export async function runBuildPipeline(options: {
       name: unitName,
       role: 'function',
       target: 'serverless',
-      functionIds: Object.keys(inspectorState.functions.meta),
+      // Scenarios and steps are excluded for the same reason the analyzer drops
+      // them: a single-unit bundle is still a deployment, and a test harness has
+      // no business inside one.
+      functionIds: Object.keys(withoutScenarios(inspectorState.functions.meta)),
       services: [],
       dependsOn: [],
       handlers: [],

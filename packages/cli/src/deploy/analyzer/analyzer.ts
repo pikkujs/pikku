@@ -15,6 +15,10 @@ import {
 import type { FunctionMeta } from '@pikku/core'
 import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
+import {
+  withoutScenarios,
+  withoutScenarioWorkflows,
+} from '../../functions/wirings/scenarios/scenario-partition.js'
 
 import type {
   DeploymentManifest,
@@ -80,7 +84,13 @@ export function analyzeDeployment(
   const mcpEndpoints: MCPEndpointDefinition[] = []
   const workflows: WorkflowDefinition[] = []
 
-  const functionsMeta = state.functions.meta
+  // Scenarios, features and steps are test artifacts that happen to be built out
+  // of functions and workflows, so without this they analyze like application
+  // code: every scenario became its own unit, its own `WorkflowDefinition` and —
+  // because a scenario IS a workflow — a `wf-orchestrator-<scenario>` queue that
+  // a provider would then create in production.
+  const functionsMeta = withoutScenarios(state.functions.meta)
+  const graphMeta = withoutScenarioWorkflows(state.workflows.graphMeta)
   const httpMeta = state.http.meta
 
   // ── Step 1: Create function units ──────────────────────────────────
@@ -359,7 +369,7 @@ export function analyzeDeployment(
 
   // ── Step 5: Workflows ──────────────────────────────────────────────
   buildWorkflows(
-    state.workflows.graphMeta,
+    graphMeta,
     functionsMeta,
     { ...state.rpc?.exposedMeta, ...state.rpc?.internalMeta },
     httpMeta,

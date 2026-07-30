@@ -139,6 +139,13 @@ export type FunctionRuntimeMeta = {
    * may drive a browser or assert against fixtures.
    */
   scenarioStep?: boolean
+  /**
+   * The function behind a `pikkuScenario(...)` — a scenario's own body, as
+   * opposed to the steps it calls. Marked for the same reason as
+   * `scenarioStep`: a scenario is only ever run by `pikku scenario run`, so it
+   * has to be held back from the app bootstrap and from every deployed unit.
+   */
+  scenario?: boolean
   mcp?: boolean
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'

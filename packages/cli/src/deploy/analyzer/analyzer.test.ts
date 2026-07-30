@@ -30,6 +30,95 @@ function stateWithAgent(agentKey: string, humanName: string): InspectorState {
   } as unknown as InspectorState
 }
 
+/**
+ * A project whose scenarios live under `srcDirectories` — one application
+ * function wired to HTTP, one scenario made of one step.
+ */
+function stateWithScenario(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+        opensPage: {
+          pikkuFuncId: 'opensPage',
+          name: 'opensPage',
+          scenarioStep: true,
+          expose: true,
+        },
+        loginScenario: {
+          pikkuFuncId: 'loginScenario',
+          name: 'loginScenario',
+          scenario: true,
+        },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/todo': {
+            pikkuFuncId: 'createTodo',
+            method: 'post',
+            route: '/todo',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: {
+      graphMeta: {
+        loginScenario: {
+          name: 'loginScenario',
+          pikkuFuncId: 'loginScenario',
+          source: 'scenario',
+          nodes: {
+            'step-1': { rpcName: 'opensPage', stepName: 'opens the page' },
+          },
+          entryNodeIds: ['step-1'],
+        },
+      },
+    },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - scenarios are not deployable', () => {
+  // A pikkuScenario IS a workflow and a step IS a function, so before this the
+  // analyzer treated a test suite as application code: a unit per scenario and
+  // per step, a WorkflowDefinition per scenario, and a real
+  // `wf-orchestrator-<scenario>` queue that the provider would then create in
+  // production. One project ended up with 13 of them.
+  test('no unit, workflow, or queue is created for a scenario or its steps', () => {
+    const manifest = analyzeDeployment(stateWithScenario(), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(
+      manifest.units.map((u) => u.name),
+      ['create-todo']
+    )
+    assert.deepEqual(manifest.workflows, [])
+    assert.deepEqual(manifest.queues, [])
+  })
+
+  test('an exposed step gets no /rpc route', () => {
+    const manifest = analyzeDeployment(stateWithScenario(), {
+      projectId: 'test',
+    })
+    const routes = manifest.units.flatMap((u) =>
+      u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+    )
+    assert.equal(
+      routes.some((r) => r.route.includes('opensPage')),
+      false
+    )
+  })
+})
+
 describe('toSafeKebab', () => {
   test('converts camelCase to kebab-case', () => {
     assert.equal(toSafeKebab('myFunction'), 'my-function')

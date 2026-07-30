@@ -645,6 +645,12 @@ const _getPikkuCLIConfig = async (
     if (!result.scenarioMetaDir) {
       result.scenarioMetaDir = join(scenarioDir, 'meta')
     }
+    // Schemas only a scenario or a step validates against. They live here rather
+    // than in `schemaDirectory` because the app's `register.gen.ts` is imported
+    // by every deployed bundle, and a test-only schema has no business in one.
+    if (!result.scenarioSchemaDirectory) {
+      result.scenarioSchemaDirectory = join(scenarioDir, 'schemas')
+    }
     if (!result.scenarioBootstrapFile) {
       result.scenarioBootstrapFile = join(
         result.outDir,

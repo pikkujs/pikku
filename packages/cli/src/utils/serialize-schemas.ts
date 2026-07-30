@@ -77,7 +77,9 @@ export async function saveSchemas(
   schemas: Record<string, JSONValue>,
   requiredSchemas: Set<string>,
   supportsImportAttributes: boolean,
-  packageName?: string | null
+  packageName?: string | null,
+  /** Names the set in log output — there is more than one now (app, scenario). */
+  label = 'schemas'
 ) {
   if (requiredSchemas.size === 0) {
     await writeFileInDir(
@@ -88,7 +90,7 @@ export async function saveSchemas(
     // Every file in schemas/ is now an orphan: register.gen.ts registers nothing, so
     // leaving them would be exactly the misleading state this prune exists to prevent.
     await pruneOrphanedSchemaFiles(logger, schemaParentDir, new Set())
-    logger.info(`• Skipping schemas since none found.\x1b[0m`)
+    logger.info(`• Skipping ${label} since none found.\x1b[0m`)
     return
   }
 
@@ -114,7 +116,11 @@ export async function saveSchemas(
     .sort()
 
   // Keep exactly what register.gen.ts is about to import — the two must not disagree.
-  await pruneOrphanedSchemaFiles(logger, schemaParentDir, new Set(availableSchemas))
+  await pruneOrphanedSchemaFiles(
+    logger,
+    schemaParentDir,
+    new Set(availableSchemas)
+  )
 
   const packageNameArg = packageName ? `, '${packageName}'` : ''
 

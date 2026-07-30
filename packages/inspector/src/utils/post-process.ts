@@ -262,6 +262,12 @@ export function aggregateRequiredServices(
   // per-workflow queue entries and falls back to shared queue names.
   for (const [, graph] of Object.entries(state.workflows.graphMeta)) {
     if (!graph.nodes || !graph.name) continue
+    // A scenario is a workflow, but it only ever runs in-process under
+    // `pikku scenario run` — no step of one is dispatched through a queue. The
+    // synthetic entries were pure leakage: they put a
+    // `wf-orchestrator-<scenario>` worker into the app's queue meta, which every
+    // bundle imports and a provider then creates as a real production queue.
+    if (graph.source === 'scenario') continue
 
     const toKebab = (s: string) =>
       s
