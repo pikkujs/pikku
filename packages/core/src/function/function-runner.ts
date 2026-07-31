@@ -40,6 +40,7 @@ import {
 } from '../services/audit-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { getOrCreatePackageSingletonServices } from '../wirings/rpc/addon-runner.js'
+import { resolveAddonScopes } from '../wirings/rpc/wire-addon.js'
 import type { AddonInstance } from '../wirings/rpc/addon-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -293,7 +294,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
       invocationWire.beginChanges = beginChanges
     }
 
-    verifyScopes(funcConfig.scopes ?? funcMeta.scopes, session)
+    // knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md
+    const addonScopes = resolveAddonScopes(
+      packageName,
+      addonInstance?.namespace
+    )
+    const functionScopes = funcConfig.scopes ?? funcMeta.scopes
+    verifyScopes(
+      addonScopes.length > 0
+        ? [...addonScopes, ...(functionScopes ?? [])]
+        : functionScopes,
+      session
+    )
 
     let actualData = await data()
 

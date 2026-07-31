@@ -90,6 +90,8 @@ export interface PikkuPackageState {
         rpcEndpoint?: string
         auth?: boolean
         tags?: string[]
+        /** Required of every function in this package, on top of the function's own */
+        scopes?: string[]
         /** Per-instance name-aliases: logical name the addon reads -> actual project secret name */
         secretOverrides?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project variable name */

@@ -106,6 +106,84 @@ function registerTests(name: string, getDb: () => Db) {
       assert.equal(logs[0]!.action, 'write')
     })
   })
+
+  describe(`MongoDBSecretService decryption failures [${name}]`, () => {
+    const kek = 'test-key-encryption-key-32chars!'
+    const otherKek = 'a-totally-different-kek-32chars!'
+
+    test('getSecrets throws naming a secret it cannot decrypt', async () => {
+      const writer = new MongoDBSecretService(getDb(), { key: kek })
+      await writer.init()
+      await writer.setSecret('undecryptable', { token: 'abc' })
+
+      const reader = new MongoDBSecretService(getDb(), { key: otherKek })
+      await reader.init()
+
+      await assert.rejects(
+        () => reader.getSecrets(['undecryptable']),
+        (error: Error) => {
+          assert.equal(
+            error.message,
+            'Failed to decrypt secret "undecryptable" (key_version 1): ' +
+              'the configured KEK does not match the key it was wrapped under'
+          )
+          assert.ok(error.cause, 'the underlying crypto failure is preserved')
+          return true
+        }
+      )
+    })
+
+    test('getSecrets throws when no KEK is available for a stored key_version', async () => {
+      const writer = new MongoDBSecretService(getDb(), {
+        key: kek,
+        keyVersion: 7,
+      })
+      await writer.init()
+      await writer.setSecret('old-version', 'value')
+
+      const reader = new MongoDBSecretService(getDb(), {
+        key: kek,
+        keyVersion: 8,
+      })
+      await reader.init()
+
+      await assert.rejects(
+        () => reader.getSecrets(['old-version']),
+        (error: Error) => {
+          assert.equal(
+            error.message,
+            'Failed to decrypt secret "old-version" (key_version 7): ' +
+              'the configured KEK does not match the key it was wrapped under'
+          )
+          return true
+        }
+      )
+    })
+
+    test('getSecrets returns every secret when they all decrypt', async () => {
+      const service = new MongoDBSecretService(getDb(), { key: kek })
+      await service.init()
+      await service.setSecret('batch-a', { v: 1 })
+      await service.setSecret('batch-b', 'two')
+
+      const out = await service.getSecrets<{
+        'batch-a': { v: number }
+        'batch-b': string
+      }>(['batch-a', 'batch-b'])
+
+      assert.deepEqual(out, { 'batch-a': { v: 1 }, 'batch-b': 'two' })
+    })
+
+    test('getSecrets omits keys that were never stored', async () => {
+      const service = new MongoDBSecretService(getDb(), { key: kek })
+      await service.init()
+      await service.setSecret('present', 'here')
+
+      const out = await service.getSecrets(['present', 'never-stored'])
+
+      assert.deepEqual(out, { present: 'here' })
+    })
+  })
 }
 
 describe('MongoDB Services - In-Memory', () => {

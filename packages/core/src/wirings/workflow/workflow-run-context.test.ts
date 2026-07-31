@@ -62,23 +62,23 @@ describe('per-run state is released when the run stops executing here', () => {
     const runId = await newRun(ws)
 
     ws.registerInlineRun(runId)
-    assert.equal(ws.isInline(runId), true)
+    assert.equal(await ws.isInline(runId), true)
 
     ws.unregisterInlineRun(runId)
-    assert.equal(ws.isInline(runId), false)
+    assert.equal(await ws.isInline(runId), false)
     assert.equal(ws.runContexts.size, 0)
   })
 
-  test('a replay inside an inline run does not release the inline flag', async () => {
+  test('a replay inside an inline run does not change what the run is', async () => {
     const ws = service()
-    const runId = await newRun(ws)
+    const runId = await newRun(ws, true)
 
     ws.registerInlineRun(runId)
     await ws.beginReplay(runId)
     ws.endReplay(runId)
 
     assert.equal(
-      ws.isInline(runId),
+      await ws.isInline(runId),
       true,
       'ending a replay dropped state the run still needs'
     )

@@ -125,12 +125,29 @@ export class RedisSecretService implements SecretService {
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
   ): Promise<T> {
-    const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
+    const rows = await Promise.all(
+      keys.map(async (key) => ({
+        key,
+        data: await this.redis.hgetall(this.secretKey(key)),
+      }))
+    )
+
     const out: Record<string, unknown> = {}
-    keys.forEach((key, i) => {
-      const result = results[i]
-      if (result?.status === 'fulfilled') out[key] = result.value
-    })
+    for (const { key, data } of rows) {
+      if (!data.ciphertext) continue
+
+      const keyVersion = Number(data.key_version)
+      try {
+        const kek = await this.getKEK(keyVersion)
+        out[key] = await envelopeDecrypt(kek, data.ciphertext, data.wrapped_dek!)
+      } catch (cause) {
+        throw new Error(
+          `Failed to decrypt secret "${key}" (key_version ${keyVersion}): ` +
+            `the configured KEK does not match the key it was wrapped under`,
+          { cause }
+        )
+      }
+    }
     return out as T
   }
 
