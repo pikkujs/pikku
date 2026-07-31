@@ -39,6 +39,24 @@ export type RunAIAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   /** Credential accessor for the current request — used to read per-user overrides (e.g. AI_API_KEY). */
   getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
+  /** Ephemeral owner identity minted for a sessionless request; never client-supplied, never reused across requests. */
+  anonymousOwnerResourceId?: string
+}
+
+export function resolveSessionPrincipal(
+  params: RunAIAgentParams,
+  sessionScope: SessionScope | undefined
+): string | undefined {
+  const session = params.sessionService?.get()
+  if ((sessionScope ?? 'user') === 'org') {
+    if (!session?.orgId) {
+      throw new ForbiddenError(
+        'This agent is org-scoped but the session has no organization'
+      )
+    }
+    return session.orgId
+  }
+  return session?.userId
 }
 
 export function resolveOwnerResourceId(
@@ -46,20 +64,13 @@ export function resolveOwnerResourceId(
   sessionScope: SessionScope | undefined,
   requestedResourceId: string
 ): string {
-  const session = params.sessionService?.get()
-  let principal: string | undefined
-  if ((sessionScope ?? 'user') === 'org') {
-    if (!session?.orgId) {
-      throw new ForbiddenError(
-        'This agent is org-scoped but the session has no organization'
-      )
-    }
-    principal = session.orgId
-  } else {
-    principal = session?.userId
+  const principal = resolveSessionPrincipal(params, sessionScope)
+
+  if (!principal) {
+    params.anonymousOwnerResourceId ??= `anon-${randomUUID()}`
+    return params.anonymousOwnerResourceId
   }
 
-  if (!principal) return requestedResourceId
   if (
     requestedResourceId === principal ||
     requestedResourceId.startsWith(`${principal}:`)
@@ -67,6 +78,18 @@ export function resolveOwnerResourceId(
     return requestedResourceId
   }
   return `${principal}:${requestedResourceId}`
+}
+
+export function assertResourcePrincipalOwner(
+  params: RunAIAgentParams,
+  sessionScope: SessionScope | undefined,
+  storedResourceId: string,
+  kind: 'thread' | 'run'
+): void {
+  const principal = resolveSessionPrincipal(params, sessionScope)
+  if (!principal || !isOwnedByPrincipal(storedResourceId, principal)) {
+    throw new ForbiddenError(`Not authorized to access this ${kind}`)
+  }
 }
 
 export function agentSessionScope(agentName: string): SessionScope {
@@ -103,9 +126,8 @@ export function isOwnedByPrincipal(
 
 export function threadOwnerConstraint(
   session: { userId?: string; orgId?: string } | undefined
-): string[] | undefined {
-  const principals = sessionPrincipals(session)
-  return principals.length > 0 ? principals : undefined
+): string[] {
+  return sessionPrincipals(session)
 }
 
 export function canAccessThread(
@@ -113,7 +135,7 @@ export function canAccessThread(
   session: { userId?: string; orgId?: string } | undefined
 ): boolean {
   const principals = sessionPrincipals(session)
-  if (principals.length === 0) return true
+  if (principals.length === 0) return false
   return principals.some((principal) =>
     isOwnedByPrincipal(storedResourceId, principal)
   )

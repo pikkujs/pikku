@@ -10,7 +10,7 @@
  */
 
 import type { EventHubService } from '@pikku/core'
-import type { Logger } from '@pikku/core/services'
+import type { JWTService, Logger } from '@pikku/core/services'
 import type { NodeHTTPServerConfig } from '@pikku/node-http-server'
 
 export interface DevServerInstance {
@@ -23,6 +23,15 @@ export interface DevServerInstance {
 /** Config shape both runtimes accept (Core config + host/port/content). */
 export type DevServerConfig = NodeHTTPServerConfig
 
+export type DevServerOptions = {
+  /**
+   * The JWTService the dev server's content service signs asset URLs with.
+   * The transport verifies signed asset reads with it, so it must be the same
+   * instance — otherwise every signed URL is rejected.
+   */
+  contentSigningJWT?: JWTService
+}
+
 export interface DevServerRunner {
   /**
    * Create the EventHub for this runtime. Shared into singleton services so
@@ -31,5 +40,9 @@ export interface DevServerRunner {
    */
   createEventHub(): Promise<EventHubService<any>>
   /** Create the dev HTTP/WS server. Must be called after `createEventHub`. */
-  createServer(config: DevServerConfig, logger: Logger): DevServerInstance
+  createServer(
+    config: DevServerConfig,
+    logger: Logger,
+    options?: DevServerOptions
+  ): DevServerInstance
 }

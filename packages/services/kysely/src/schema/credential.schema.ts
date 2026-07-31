@@ -34,6 +34,15 @@ export const credentialSchema: PikkuSchema = {
 
     (db) =>
       db.schema
+        .createTable('credentialKekSalts')
+        .addColumn('keyVersion', 'integer', (col) => col.primaryKey())
+        .addColumn('salt', 'varchar(64)', (col) => col.notNull())
+        .addColumn('createdAt', 'timestamp', (col) =>
+          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
+        ),
+
+    (db) =>
+      db.schema
         .createTable('credentialsAudit')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
         .addColumn('credentialName', 'varchar(255)', (col) => col.notNull())

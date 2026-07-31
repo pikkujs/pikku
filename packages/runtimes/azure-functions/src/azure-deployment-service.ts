@@ -12,7 +12,7 @@
 import type { DeploymentService, DeploymentConfig } from '@pikku/core/services'
 import type { JWTService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
-import { encryptJSON } from '@pikku/core/crypto-utils'
+import { buildRemoteHeaders } from '@pikku/core/remote'
 
 export class AzureDeploymentService implements DeploymentService {
   private bindings: Map<string, string>
@@ -43,32 +43,13 @@ export class AzureDeploymentService implements DeploymentService {
       )
     }
 
-    const headers: Record<string, string> = {
-      'content-type': 'application/json',
-      ...(traceId && { 'x-request-id': traceId }),
-    }
-
-    // Sign session as JWT for pikkuRemoteAuthMiddleware
-    let secret: string | undefined
-    try {
-      secret = await this.secrets.getSecret('PIKKU_REMOTE_SECRET')
-    } catch {}
-
-    if (secret && this.jwt) {
-      const sessionEnc = session
-        ? await encryptJSON(secret, { session })
-        : undefined
-      const token = await this.jwt.encode(
-        { value: 5, unit: 'minute' },
-        {
-          aud: 'pikku-remote',
-          fn: funcName,
-          iat: Math.floor(Date.now() / 1000),
-          session: sessionEnc,
-        }
-      )
-      headers.authorization = `Bearer ${token}`
-    }
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
 
     const url = `${functionUrl}/remote/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {

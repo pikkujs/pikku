@@ -43,8 +43,18 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
     loadSchemas: _loadSchemas,
     ...runOptions
   } = pikku
-  fastify.all('/*', async (req, res) => {
-    const request = new FastifyPikkuHTTPRequest(req)
+  // Fastify buffers the body itself, so its own `bodyLimit` is where an
+  // oversized request has to be stopped. Left unset, fastify's stricter 1MB
+  // default stands rather than being loosened to Pikku's 10MB fallback.
+  const routeOptions =
+    runOptions.maxBodySize === undefined
+      ? {}
+      : { bodyLimit: runOptions.maxBodySize }
+
+  fastify.all('/*', routeOptions, async (req, res) => {
+    const request = new FastifyPikkuHTTPRequest(req, {
+      maxBodySize: runOptions.maxBodySize,
+    })
     const response = new FastifyPikkuHTTPResponse(res)
     await fetchData(request, response, runOptions)
     response.flush()
