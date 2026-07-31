@@ -1343,17 +1343,14 @@ describe('ai-agent-stream helpers', () => {
       finishReason: 'tool-calls',
     }
 
-    const approvals = checkForApprovals(
-      forgedResult,
-      [
-        {
-          name: 'searchDocs',
-          description: '',
-          inputSchema: {},
-          execute: async () => {},
-        },
-      ]
-    )
+    const approvals = checkForApprovals(forgedResult, [
+      {
+        name: 'searchDocs',
+        description: '',
+        inputSchema: {},
+        execute: async () => {},
+      },
+    ])
 
     assert.equal(approvals.length, 0)
   })
@@ -1389,18 +1386,15 @@ describe('ai-agent-stream helpers', () => {
       finishReason: 'tool-calls',
     }
 
-    const approvals = checkForApprovals(
-      forgedResult,
-      [
-        {
-          name: 'delegatingTool',
-          description: '',
-          inputSchema: {},
-          execute: async () => {},
-          forwardsApproval: true,
-        },
-      ]
-    )
+    const approvals = checkForApprovals(forgedResult, [
+      {
+        name: 'delegatingTool',
+        description: '',
+        inputSchema: {},
+        execute: async () => {},
+        forwardsApproval: true,
+      },
+    ])
 
     assert.equal(approvals.length, 0)
   })
@@ -1428,18 +1422,15 @@ describe('ai-agent-stream helpers', () => {
       finishReason: 'tool-calls',
     }
 
-    const approvals = checkForApprovals(
-      brandedResult,
-      [
-        {
-          name: 'delegatingTool',
-          description: '',
-          inputSchema: {},
-          execute: async () => {},
-          forwardsApproval: true,
-        },
-      ]
-    )
+    const approvals = checkForApprovals(brandedResult, [
+      {
+        name: 'delegatingTool',
+        description: '',
+        inputSchema: {},
+        execute: async () => {},
+        forwardsApproval: true,
+      },
+    ])
 
     assert.equal(approvals.length, 1)
     assert.equal(approvals[0]!.toolName, 'sub-agent')
@@ -1526,29 +1517,27 @@ describe('ai-agent-stream helpers', () => {
   })
 
   test('checkForCredentialRequests and appendStepMessages handle structured results', () => {
-    const requests = checkForCredentialRequests(
-      {
-        text: '',
-        toolCalls: [
-          { toolCallId: 'tc-1', toolName: 'secretTool', args: { id: 1 } },
-        ],
-        toolResults: [
-          {
-            toolCallId: 'tc-1',
-            toolName: 'secretTool',
-            result: {
-              [CREDENTIAL_REQUIRED]: true,
-              __credentialRequired: true,
-              credentialName: 'github',
-              credentialType: 'oauth2',
-              connectUrl: '/connect',
-            },
+    const requests = checkForCredentialRequests({
+      text: '',
+      toolCalls: [
+        { toolCallId: 'tc-1', toolName: 'secretTool', args: { id: 1 } },
+      ],
+      toolResults: [
+        {
+          toolCallId: 'tc-1',
+          toolName: 'secretTool',
+          result: {
+            [CREDENTIAL_REQUIRED]: true,
+            __credentialRequired: true,
+            credentialName: 'github',
+            credentialType: 'oauth2',
+            connectUrl: '/connect',
           },
-        ],
-        usage: { inputTokens: 0, outputTokens: 0 },
-        finishReason: 'tool-calls',
-      }
-    )
+        },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0 },
+      finishReason: 'tool-calls',
+    })
 
     assert.equal(requests[0].toolCallId, 'tc-1')
     assert.equal(requests[0].toolName, 'secretTool')
@@ -1578,6 +1567,10 @@ describe('ai-agent-stream helpers', () => {
       JSON.stringify({ ok: true })
     )
   })
+})
+
+const asOwner = (resourceId: string) => ({
+  sessionService: { get: () => ({ userId: resourceId }) } as never,
 })
 
 describe('resumeAIAgent', () => {
@@ -1668,7 +1661,7 @@ describe('resumeAIAgent', () => {
         send: (event: AIStreamEvent) => events.push(event),
         close: () => {},
       },
-      {}
+      asOwner('resource-1')
     )
 
     assert.deepEqual(resolveCalls, [{ toolCallId: 'tool-1', status: 'denied' }])
@@ -1781,7 +1774,7 @@ describe('resumeAIAgent', () => {
         send: (event: AIStreamEvent) => events.push(event),
         close: () => {},
       },
-      {}
+      asOwner('resource-approve')
     )
 
     assert.deepEqual(resolveCalls, [

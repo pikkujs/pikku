@@ -1,6 +1,8 @@
 import type { SecretService } from '@pikku/core/services'
 import { Redis, type RedisOptions } from 'ioredis'
 import {
+  deriveKEK,
+  generateKEKSalt,
   envelopeEncrypt,
   envelopeDecrypt,
   envelopeRewrap,
@@ -20,6 +22,8 @@ export class RedisSecretService implements SecretService {
   private keyVersion: number
   private previousKey?: string
   private keyPrefix: string
+  private kekSalts = new Map<number, string>()
+  private keks = new Map<number, CryptoKey>()
 
   constructor(
     connectionOrConfig: Redis | RedisOptions | string,
@@ -50,17 +54,49 @@ export class RedisSecretService implements SecretService {
     return `${this.keyPrefix}:secret:${key}`
   }
 
-  private getKEK(version: number): string {
-    if (version === this.keyVersion) return this.key
-    if (this.previousKey) return this.previousKey
-    throw new Error(`No KEK available for key_version ${version}`)
+  private saltKey(): string {
+    return `${this.keyPrefix}:kek-salt`
+  }
+
+  private async getKEKSalt(version: number): Promise<string> {
+    const cached = this.kekSalts.get(version)
+    if (cached) return cached
+
+    const field = String(version)
+    let salt = await this.redis.hget(this.saltKey(), field)
+    if (!salt) {
+      await this.redis.hsetnx(this.saltKey(), field, generateKEKSalt())
+      salt = await this.redis.hget(this.saltKey(), field)
+      if (!salt) {
+        throw new Error(
+          `Failed to persist a KEK salt for key_version ${version}`
+        )
+      }
+    }
+
+    this.kekSalts.set(version, salt)
+    return salt
+  }
+
+  private async getKEK(version: number): Promise<CryptoKey> {
+    const cached = this.keks.get(version)
+    if (cached) return cached
+
+    const passphrase = version === this.keyVersion ? this.key : this.previousKey
+    if (!passphrase) {
+      throw new Error(`No KEK available for key_version ${version}`)
+    }
+
+    const kek = await deriveKEK(passphrase, await this.getKEKSalt(version))
+    this.keks.set(version, kek)
+    return kek
   }
 
   async getSecret<T = string>(key: string): Promise<T> {
     const data = await this.redis.hgetall(this.secretKey(key))
     if (!data.ciphertext) throw new Error('Requested secret not found')
 
-    const kek = this.getKEK(Number(data.key_version))
+    const kek = await this.getKEK(Number(data.key_version))
     return envelopeDecrypt<T>(kek, data.ciphertext!, data.wrapped_dek!)
   }
 
@@ -70,7 +106,10 @@ export class RedisSecretService implements SecretService {
   }
 
   async setSecret(key: string, value: unknown): Promise<void> {
-    const { ciphertext, wrappedDEK } = await envelopeEncrypt(this.key, value)
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(
+      await this.getKEK(this.keyVersion),
+      value
+    )
 
     await this.redis.hset(this.secretKey(key), {
       ciphertext,
@@ -83,9 +122,9 @@ export class RedisSecretService implements SecretService {
     await this.redis.del(this.secretKey(key))
   }
 
-  async getSecrets<
-    T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<T> {
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<T> {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
@@ -99,6 +138,9 @@ export class RedisSecretService implements SecretService {
     if (!this.previousKey) {
       throw new Error('No previousKey configured — nothing to rotate from')
     }
+
+    const oldKEK = await this.getKEK(this.keyVersion - 1)
+    const newKEK = await this.getKEK(this.keyVersion)
 
     const pattern = `${this.keyPrefix}:secret:*`
     let cursor = '0'
@@ -120,8 +162,8 @@ export class RedisSecretService implements SecretService {
         if (version >= this.keyVersion) continue
 
         const newWrappedDEK = await envelopeRewrap(
-          this.previousKey,
-          this.key,
+          oldKEK,
+          newKEK,
           data.wrapped_dek!
         )
         await this.redis.hset(redisKey, {

@@ -172,6 +172,12 @@ export interface SecretsTable {
   updatedAt: Generated<Date>
 }
 
+export interface KekSaltsTable {
+  keyVersion: number
+  salt: string
+  createdAt: Generated<Date>
+}
+
 export interface SecretsAuditTable {
   id: string
   secretKey: string
@@ -295,8 +301,10 @@ export interface KyselyPikkuDB {
   pikkuDeployments: PikkuDeploymentsTable
   pikkuDeploymentFunctions: PikkuDeploymentFunctionsTable
   secrets: SecretsTable
+  secretKekSalts: KekSaltsTable
   secretsAudit: SecretsAuditTable
   credentials: CredentialsTable
+  credentialKekSalts: KekSaltsTable
   credentialsAudit: CredentialsAuditTable
   pikkuUserSessions: UserSessionsTable
   webhookDelivery: WebhookDeliveryTable

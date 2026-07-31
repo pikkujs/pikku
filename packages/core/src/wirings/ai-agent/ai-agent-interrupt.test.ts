@@ -579,7 +579,10 @@ describe('non-streaming agent interruption', () => {
     } as any)
 
     await assert.rejects(
-      () => resumeAIAgentSync('run-sync-resume', [], {}),
+      () =>
+        resumeAIAgentSync('run-sync-resume', [], {
+          sessionService: { get: () => ({ userId: 'resource-sync-resume' }) },
+        } as any),
       (error: unknown) => error instanceof AgentInterruptedError
     )
 
@@ -658,7 +661,9 @@ describe('streaming resume interruption', () => {
         send: (event: AIStreamEvent) => events.push(event),
         close: () => {},
       } as any,
-      {}
+      {
+        sessionService: { get: () => ({ userId: 'resource-stream-resume' }) },
+      } as any
     )
 
     // Recorded as interrupted, not failed: nothing went wrong.

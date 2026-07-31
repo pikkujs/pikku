@@ -1,3 +1,5 @@
+import { WeakKeyMaterialError } from './errors/errors.js'
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -45,13 +47,35 @@ const fromBase64Url = (input: string): Uint8Array => {
   return base64Decode(base64)
 }
 
-const deriveKey = async (secret: string): Promise<CryptoKey> => {
+const SALT_BYTES = 16
+const IV_BYTES = 12
+const TAG_BYTES = 16
+const PBKDF2_ITERATIONS = 600_000
+
+const deriveKey = async (
+  secret: string,
+  salt: Uint8Array
+): Promise<CryptoKey> => {
   const subtle = getSubtle()
-  const hash = await subtle.digest('SHA-256', encoder.encode(secret))
-  return subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, [
-    'encrypt',
-    'decrypt',
-  ])
+  const material = await subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  )
+  return subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: salt as BufferSource,
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256',
+    },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
 }
 
 export const encryptJSON = async (
@@ -63,8 +87,9 @@ export const encryptJSON = async (
     throw new Error('WebCrypto not available')
   }
   const subtle = getSubtle()
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const key = await deriveKey(secret)
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
+  const key = await deriveKey(secret, salt)
   const plaintext = encoder.encode(JSON.stringify(value))
   const encrypted = await subtle.encrypt(
     { name: 'AES-GCM', iv },
@@ -72,9 +97,10 @@ export const encryptJSON = async (
     plaintext
   )
   const cipherBytes = new Uint8Array(encrypted)
-  const out = new Uint8Array(iv.length + cipherBytes.length)
-  out.set(iv, 0)
-  out.set(cipherBytes, iv.length)
+  const out = new Uint8Array(salt.length + iv.length + cipherBytes.length)
+  out.set(salt, 0)
+  out.set(iv, salt.length)
+  out.set(cipherBytes, salt.length + iv.length)
   return toBase64Url(out)
 }
 
@@ -84,12 +110,113 @@ export const decryptJSON = async <T>(
 ): Promise<T> => {
   const subtle = getSubtle()
   const data = fromBase64Url(token)
-  if (data.length < 13) {
+  if (data.length <= SALT_BYTES + IV_BYTES + TAG_BYTES) {
     throw new Error('Invalid encrypted payload')
   }
-  const iv = data.slice(0, 12)
-  const ciphertext = data.slice(12)
-  const key = await deriveKey(secret)
+  const salt = data.slice(0, SALT_BYTES)
+  const iv = data.slice(SALT_BYTES, SALT_BYTES + IV_BYTES)
+  const ciphertext = data.slice(SALT_BYTES + IV_BYTES)
+  const key = await deriveKey(secret, salt)
+  const decrypted = await subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  )
+  return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
+}
+
+/**
+ * Namespaces the remote-RPC session key so the same deployment secret used for
+ * another purpose derives a different key. See knowledge/crypto.md.
+ */
+export const REMOTE_SESSION_INFO = 'pikku:remote-session'
+
+export const MIN_KEY_MATERIAL_LENGTH = 32
+
+export const assertStrongKeyMaterial = (
+  name: string,
+  keyMaterial: string
+): void => {
+  if (keyMaterial.length < MIN_KEY_MATERIAL_LENGTH) {
+    throw new WeakKeyMaterialError(
+      name,
+      MIN_KEY_MATERIAL_LENGTH,
+      keyMaterial.length
+    )
+  }
+}
+
+const expandKeyMaterial = async (
+  keyMaterial: string,
+  info: string,
+  salt: Uint8Array
+): Promise<CryptoKey> => {
+  const subtle = getSubtle()
+  const material = await subtle.importKey(
+    'raw',
+    encoder.encode(keyMaterial),
+    'HKDF',
+    false,
+    ['deriveKey']
+  )
+  return subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: salt as BufferSource,
+      info: encoder.encode(info) as BufferSource,
+    },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+export const encryptWithKeyMaterial = async (
+  name: string,
+  keyMaterial: string,
+  info: string,
+  value: unknown
+): Promise<string> => {
+  assertStrongKeyMaterial(name, keyMaterial)
+  const crypto = globalThis.crypto
+  if (!crypto?.getRandomValues) {
+    throw new Error('WebCrypto not available')
+  }
+  const subtle = getSubtle()
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
+  const key = await expandKeyMaterial(keyMaterial, info, salt)
+  const encrypted = await subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(JSON.stringify(value))
+  )
+  const cipherBytes = new Uint8Array(encrypted)
+  const out = new Uint8Array(salt.length + iv.length + cipherBytes.length)
+  out.set(salt, 0)
+  out.set(iv, salt.length)
+  out.set(cipherBytes, salt.length + iv.length)
+  return toBase64Url(out)
+}
+
+export const decryptWithKeyMaterial = async <T>(
+  name: string,
+  keyMaterial: string,
+  info: string,
+  token: string
+): Promise<T> => {
+  assertStrongKeyMaterial(name, keyMaterial)
+  const subtle = getSubtle()
+  const data = fromBase64Url(token)
+  if (data.length <= SALT_BYTES + IV_BYTES + TAG_BYTES) {
+    throw new Error('Invalid encrypted payload')
+  }
+  const salt = data.slice(0, SALT_BYTES)
+  const iv = data.slice(SALT_BYTES, SALT_BYTES + IV_BYTES)
+  const ciphertext = data.slice(SALT_BYTES + IV_BYTES)
+  const key = await expandKeyMaterial(keyMaterial, info, salt)
   const decrypted = await subtle.decrypt(
     { name: 'AES-GCM', iv },
     key,
@@ -109,38 +236,17 @@ const importRawKey = async (rawBytes: Uint8Array): Promise<CryptoKey> => {
   )
 }
 
-export const generateDEK = async (): Promise<string> => {
-  const raw = globalThis.crypto.getRandomValues(new Uint8Array(32))
-  return toBase64Url(raw)
-}
-
-export const wrapDEK = async (
-  kek: string,
-  plaintextDEK: string
-): Promise<string> => {
-  return encryptJSON(kek, plaintextDEK)
-}
-
-export const unwrapDEK = async (
-  kek: string,
-  wrappedDEK: string
-): Promise<string> => {
-  return decryptJSON<string>(kek, wrappedDEK)
-}
-
-const encryptWithDEK = async (
-  dekBase64: string,
+const encryptWithCryptoKey = async (
+  key: CryptoKey,
   value: unknown
 ): Promise<string> => {
   const crypto = globalThis.crypto
   const subtle = getSubtle()
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const key = await importRawKey(fromBase64Url(dekBase64))
-  const plaintext = encoder.encode(JSON.stringify(value))
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
   const encrypted = await subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
-    plaintext
+    encoder.encode(JSON.stringify(value))
   )
   const cipherBytes = new Uint8Array(encrypted)
   const out = new Uint8Array(iv.length + cipherBytes.length)
@@ -149,18 +255,17 @@ const encryptWithDEK = async (
   return toBase64Url(out)
 }
 
-const decryptWithDEK = async <T>(
-  dekBase64: string,
+const decryptWithCryptoKey = async <T>(
+  key: CryptoKey,
   token: string
 ): Promise<T> => {
   const subtle = getSubtle()
   const data = fromBase64Url(token)
-  if (data.length < 13) {
+  if (data.length < IV_BYTES + TAG_BYTES) {
     throw new Error('Invalid encrypted payload')
   }
-  const iv = data.slice(0, 12)
-  const ciphertext = data.slice(12)
-  const key = await importRawKey(fromBase64Url(dekBase64))
+  const iv = data.slice(0, IV_BYTES)
+  const ciphertext = data.slice(IV_BYTES)
   const decrypted = await subtle.decrypt(
     { name: 'AES-GCM', iv },
     key,
@@ -169,13 +274,71 @@ const decryptWithDEK = async <T>(
   return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
 }
 
+export const generateDEK = async (): Promise<string> => {
+  const raw = globalThis.crypto.getRandomValues(new Uint8Array(32))
+  return toBase64Url(raw)
+}
+
+/**
+ * One salt per (deployment, key version), stored beside the wrapped DEKs.
+ * See knowledge/crypto.md.
+ */
+export const generateKEKSalt = (): string => {
+  const crypto = globalThis.crypto
+  if (!crypto?.getRandomValues) {
+    throw new Error('WebCrypto not available')
+  }
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(SALT_BYTES)))
+}
+
+export const deriveKEK = async (
+  passphrase: string,
+  salt: string
+): Promise<CryptoKey> => {
+  return deriveKey(passphrase, fromBase64Url(salt))
+}
+
+export const wrapDEK = async (
+  kek: CryptoKey,
+  plaintextDEK: string
+): Promise<string> => {
+  return encryptWithCryptoKey(kek, plaintextDEK)
+}
+
+export const unwrapDEK = async (
+  kek: CryptoKey,
+  wrappedDEK: string
+): Promise<string> => {
+  return decryptWithCryptoKey<string>(kek, wrappedDEK)
+}
+
+const encryptWithDEK = async (
+  dekBase64: string,
+  value: unknown
+): Promise<string> => {
+  return encryptWithCryptoKey(
+    await importRawKey(fromBase64Url(dekBase64)),
+    value
+  )
+}
+
+const decryptWithDEK = async <T>(
+  dekBase64: string,
+  token: string
+): Promise<T> => {
+  return decryptWithCryptoKey<T>(
+    await importRawKey(fromBase64Url(dekBase64)),
+    token
+  )
+}
+
 export interface EnvelopeEncryptResult {
   ciphertext: string
   wrappedDEK: string
 }
 
 export const envelopeEncrypt = async (
-  kek: string,
+  kek: CryptoKey,
   value: unknown
 ): Promise<EnvelopeEncryptResult> => {
   const dek = await generateDEK()
@@ -185,7 +348,7 @@ export const envelopeEncrypt = async (
 }
 
 export const envelopeDecrypt = async <T>(
-  kek: string,
+  kek: CryptoKey,
   ciphertext: string,
   wrappedDEK: string
 ): Promise<T> => {
@@ -194,8 +357,8 @@ export const envelopeDecrypt = async <T>(
 }
 
 export const envelopeRewrap = async (
-  oldKEK: string,
-  newKEK: string,
+  oldKEK: CryptoKey,
+  newKEK: CryptoKey,
   wrappedDEK: string
 ): Promise<string> => {
   const dek = await unwrapDEK(oldKEK, wrappedDEK)

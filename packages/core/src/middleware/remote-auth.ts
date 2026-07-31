@@ -1,6 +1,10 @@
 import { UnauthorizedError } from '../errors/errors.js'
 import { pikkuMiddleware } from '../types/core.types.js'
-import { decryptJSON } from '../crypto-utils.js'
+import {
+  assertStrongKeyMaterial,
+  decryptWithKeyMaterial,
+  REMOTE_SESSION_INFO,
+} from '../crypto-utils.js'
 
 export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
   async ({ secrets, jwt }, { http, setSession }, next) => {
@@ -17,6 +21,8 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
       }
       return next()
     }
+    assertStrongKeyMaterial('PIKKU_REMOTE_SECRET', secret)
+
     if (!jwt) {
       throw new Error('PIKKU_REMOTE_SECRET set but JWT service missing')
     }
@@ -56,8 +62,10 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
 
     if (payload?.session) {
       try {
-        const decrypted = await decryptJSON<{ session?: unknown }>(
+        const decrypted = await decryptWithKeyMaterial<{ session?: unknown }>(
+          'PIKKU_REMOTE_SECRET',
           secret,
+          REMOTE_SESSION_INFO,
           payload.session
         )
         if (decrypted?.session && setSession) {

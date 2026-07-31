@@ -24,12 +24,42 @@ export interface LocalContentConfig {
   sizeLimit?: string
 }
 
+/**
+ * The representation of an asset that gets bound into a signed URL's
+ * signature, and that a server can reconstruct from an incoming request:
+ * the decoded path, without origin or query string.
+ *
+ * Both sides must derive it the same way, so signer and verifier share this
+ * function. Percent escapes are decoded so that a client re-encoding an
+ * optional character still matches; a malformed escape is left verbatim
+ * rather than throwing, which keeps both sides in agreement.
+ */
+export const signedContentPath = (urlOrPath: string): string => {
+  let pathname: string
+  try {
+    pathname = new URL(urlOrPath, 'http://pikku.local').pathname
+  } catch {
+    pathname = urlOrPath
+  }
+  try {
+    return decodeURIComponent(pathname)
+  } catch {
+    return pathname
+  }
+}
+
 export class LocalContent implements ContentService {
   constructor(
     private config: LocalContentConfig,
     private logger: Logger,
-    private jwt?: JWTService
-  ) {}
+    private jwt: JWTService
+  ) {
+    if (!jwt) {
+      throw new Error(
+        'LocalContent requires a JWTService: without one it cannot sign asset URLs, and unsigned URLs cannot be verified.'
+      )
+    }
+  }
 
   private safePath(bucket: string, key: string): string {
     const base = resolve(this.config.localFileUploadPath)
@@ -48,6 +78,7 @@ export class LocalContent implements ContentService {
   public async init() {}
 
   private async signParams(
+    url: string,
     dateLessThan: Date,
     dateGreaterThan?: Date
   ): Promise<string> {
@@ -60,33 +91,34 @@ export class LocalContent implements ContentService {
     if (dateGreaterThan) {
       params.set('notBefore', String(dateGreaterThan.getTime()))
     }
-    if (this.jwt) {
-      const expiresInSeconds = Math.max(
-        1,
-        Math.floor((expiresAt - signedAt) / 1000)
-      )
-      const payload: {
-        signedAt: number
-        expiresAt: number
-        notBefore?: number
-      } = {
-        signedAt,
-        expiresAt,
-      }
-      if (dateGreaterThan) {
-        payload.notBefore = dateGreaterThan.getTime()
-      }
-      const signature = await this.jwt.encode(
-        { value: expiresInSeconds, unit: 'second' },
-        payload
-      )
-      params.set('signature', signature)
+    const expiresInSeconds = Math.max(
+      1,
+      Math.floor((expiresAt - signedAt) / 1000)
+    )
+    const payload: {
+      signedAt: number
+      expiresAt: number
+      notBefore?: number
+      path: string
+    } = {
+      signedAt,
+      expiresAt,
+      path: signedContentPath(url),
     }
+    if (dateGreaterThan) {
+      payload.notBefore = dateGreaterThan.getTime()
+    }
+    const signature = await this.jwt.encode(
+      { value: expiresInSeconds, unit: 'second' },
+      payload
+    )
+    params.set('signature', signature)
     return params.toString()
   }
 
   public async signURL(args: SignURLArgs): Promise<string> {
     const params = await this.signParams(
+      args.url,
       args.dateLessThan,
       args.dateGreaterThan
     )

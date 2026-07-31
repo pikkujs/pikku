@@ -40,7 +40,9 @@ export const pikkuExpressMiddleware = ({
   }
 
   return async (req, res, next) => {
-    const request = new ExpressPikkuHTTPRequest(req)
+    const request = new ExpressPikkuHTTPRequest(req, {
+      maxBodySize: runOptions.maxBodySize,
+    })
     const response = new ExpressPikkuHTTPResponse(res)
     await fetchData(request, response, {
       respondWith404,

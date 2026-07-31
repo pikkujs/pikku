@@ -2,6 +2,8 @@ import type { SecretService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import {
+  deriveKEK,
+  generateKEKSalt,
   envelopeEncrypt,
   envelopeDecrypt,
   envelopeRewrap,
@@ -19,6 +21,8 @@ export interface KyselySecretServiceConfig {
 
 export class KyselySecretService implements SecretService {
   private initialized = false
+  private kekSalts = new Map<number, string>()
+  private keks = new Map<number, CryptoKey>()
   private key: string
   private keyVersion: number
   private previousKey?: string
@@ -60,10 +64,52 @@ export class KyselySecretService implements SecretService {
       .execute()
   }
 
-  private getKEK(version: number): string {
-    if (version === this.keyVersion) return this.key
-    if (this.previousKey) return this.previousKey
-    throw new Error(`No KEK available for key_version ${version}`)
+  private async getKEKSalt(version: number): Promise<string> {
+    const cached = this.kekSalts.get(version)
+    if (cached) return cached
+
+    const existing = await this.db
+      .selectFrom('secretKekSalts')
+      .select('salt')
+      .where('keyVersion', '=', version)
+      .executeTakeFirst()
+
+    let salt = existing?.salt
+    if (!salt) {
+      await this.db
+        .insertInto('secretKekSalts')
+        .values({
+          keyVersion: version,
+          salt: generateKEKSalt(),
+          createdAt: new Date().toISOString() as unknown as Date,
+        })
+        .onConflict((oc) => oc.column('keyVersion').doNothing())
+        .execute()
+
+      const row = await this.db
+        .selectFrom('secretKekSalts')
+        .select('salt')
+        .where('keyVersion', '=', version)
+        .executeTakeFirstOrThrow()
+      salt = row.salt
+    }
+
+    this.kekSalts.set(version, salt)
+    return salt
+  }
+
+  private async getKEK(version: number): Promise<CryptoKey> {
+    const cached = this.keks.get(version)
+    if (cached) return cached
+
+    const passphrase = version === this.keyVersion ? this.key : this.previousKey
+    if (!passphrase) {
+      throw new Error(`No KEK available for key_version ${version}`)
+    }
+
+    const kek = await deriveKEK(passphrase, await this.getKEKSalt(version))
+    this.keks.set(version, kek)
+    return kek
   }
 
   async getSecret<T = string>(key: string): Promise<T> {
@@ -75,7 +121,7 @@ export class KyselySecretService implements SecretService {
 
     if (!row) throw new Error('Requested secret not found')
 
-    const kek = this.getKEK(row.keyVersion)
+    const kek = await this.getKEK(row.keyVersion)
     const result = await envelopeDecrypt<T>(kek, row.ciphertext, row.wrappedDek)
     await this.logAudit(key, 'read')
     return result
@@ -91,7 +137,10 @@ export class KyselySecretService implements SecretService {
   }
 
   async setSecret(key: string, value: unknown): Promise<void> {
-    const { ciphertext, wrappedDEK } = await envelopeEncrypt(this.key, value)
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(
+      await this.getKEK(this.keyVersion),
+      value
+    )
     const now = new Date().toISOString()
 
     await this.db
@@ -134,7 +183,7 @@ export class KyselySecretService implements SecretService {
     const out: Record<string, unknown> = {}
     for (const row of rows) {
       try {
-        const kek = this.getKEK(row.keyVersion)
+        const kek = await this.getKEK(row.keyVersion)
         out[row.key] = await envelopeDecrypt(
           kek,
           row.ciphertext,
@@ -168,12 +217,11 @@ export class KyselySecretService implements SecretService {
       .where('keyVersion', '<', this.keyVersion)
       .execute()
 
+    const oldKEK = await this.getKEK(this.keyVersion - 1)
+    const newKEK = await this.getKEK(this.keyVersion)
+
     for (const row of rows) {
-      const newWrappedDEK = await envelopeRewrap(
-        this.previousKey,
-        this.key,
-        row.wrappedDek
-      )
+      const newWrappedDEK = await envelopeRewrap(oldKEK, newKEK, row.wrappedDek)
       await this.db
         .updateTable('secrets')
         .set({

@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 
 import { pikkuState, resetPikkuState } from '@pikku/core/internal'
+import { LocalContent } from '@pikku/core/services/local-content'
 
 import { PikkuNodeHTTPServer } from './pikku-node-http-server.js'
 
@@ -47,9 +48,11 @@ const createSignedAssetUrl = async (options?: {
       signedAt: number
       expiresAt: number
       notBefore?: number
+      path: string
     } = {
       signedAt,
       expiresAt,
+      path: decodeURIComponent(url.pathname),
     }
     if (notBefore != null) {
       payload.notBefore = notBefore
@@ -122,6 +125,12 @@ describe(
     })
 
     test('uploads files through the configured reaper path and serves them back', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
+
       server = new PikkuNodeHTTPServer(
         {
           hostname: '127.0.0.1',
@@ -156,7 +165,7 @@ describe(
         'hello world'
       )
 
-      const signedAssetUrl = await createSignedAssetUrl({ origin })
+      const signedAssetUrl = await createSignedAssetUrl({ origin, jwt })
       const assetResponse = await fetch(signedAssetUrl, {
         headers: {
           connection: 'close',
@@ -345,6 +354,171 @@ describe(
 
       assert.equal(assetResponse.status, 403)
       assert.equal(await assetResponse.text(), 'Invalid signed URL')
+    })
+  }
+)
+
+describe(
+  'PikkuNodeHTTPServer signed asset verification',
+  { concurrency: false },
+  () => {
+    const contentConfig = {
+      localFileUploadPath: join(tmpdir(), 'pikku-signed-asset-verification'),
+      uploadUrlPrefix: '/reaper',
+      assetUrlPrefix: '/assets',
+      server: 'http://127.0.0.1:3000',
+    }
+
+    beforeEach(() => {
+      resetPikkuState()
+      pikkuState(null, 'package', 'singletonServices', {
+        schema: {
+          compileSchema: async () => {},
+          getSchemaNames: () => new Set<string>(),
+        },
+      } as any)
+    })
+
+    const createSigner = (jwt: ReturnType<typeof createMockJwt>) =>
+      new LocalContent(contentConfig, createMockLogger() as any, jwt)
+
+    const createServer = (
+      contentSigningJWT?: ReturnType<typeof createMockJwt>
+    ) =>
+      new PikkuNodeHTTPServer(
+        { hostname: '127.0.0.1', port: 0, content: contentConfig } as any,
+        createMockLogger() as any,
+        contentSigningJWT ? { contentSigningJWT } : {}
+      )
+
+    const validate = (
+      server: PikkuNodeHTTPServer,
+      url: string | URL
+    ): Promise<{ ok: true } | { ok: false; status: number; body: string }> =>
+      (server as any).validateSignedAssetRequest(new URL(url))
+
+    test('rejects a signed URL whose path was swapped to another key', async () => {
+      const jwt = createMockJwt()
+      const signed = await createSigner(jwt).signContentKey({
+        bucket: 'public',
+        contentKey: 'thumbnail.png',
+        dateLessThan: new Date(Date.now() + 60_000),
+      })
+
+      const tampered = new URL(signed)
+      tampered.pathname = '/assets/private/passport-scan.png'
+
+      const result = await validate(createServer(jwt), tampered)
+      assert.equal(
+        result.ok,
+        false,
+        'a signature for one key must not authorize another key'
+      )
+      assert.equal(result.ok === false && result.status, 403)
+    })
+
+    test('accepts the URL for the key it was signed for', async () => {
+      const jwt = createMockJwt()
+      const signed = await createSigner(jwt).signContentKey({
+        bucket: 'public',
+        contentKey: 'thumbnail.png',
+        dateLessThan: new Date(Date.now() + 60_000),
+        dateGreaterThan: new Date(Date.now() - 1_000),
+      })
+
+      const result = await validate(createServer(jwt), signed)
+      assert.equal(result.ok, true)
+    })
+
+    test('accepts nested keys and keys needing url encoding', async () => {
+      const jwt = createMockJwt()
+      const signer = createSigner(jwt)
+      const server = createServer(jwt)
+
+      for (const contentKey of [
+        'nested/deep/thumbnail.png',
+        'nested/deep/my file (1).png',
+        'reports/2024 Q1 & Q2.pdf',
+      ]) {
+        const signed = await signer.signContentKey({
+          bucket: 'public',
+          contentKey,
+          dateLessThan: new Date(Date.now() + 60_000),
+        })
+        const result = await validate(server, signed)
+        assert.equal(result.ok, true, `expected ${contentKey} to verify`)
+      }
+    })
+
+    test('rejects an expired signed URL', async () => {
+      const jwt = createMockJwt()
+      const signed = await createSigner(jwt).signContentKey({
+        bucket: 'public',
+        contentKey: 'thumbnail.png',
+        dateLessThan: new Date(Date.now() - 1_000),
+      })
+
+      const result = await validate(createServer(jwt), signed)
+      assert.equal(result.ok, false)
+      assert.equal(result.ok === false && result.status, 403)
+    })
+
+    test('rejects a signed URL that is not yet valid', async () => {
+      const jwt = createMockJwt()
+      const signed = await createSigner(jwt).signContentKey({
+        bucket: 'public',
+        contentKey: 'thumbnail.png',
+        dateLessThan: new Date(Date.now() + 120_000),
+        dateGreaterThan: new Date(Date.now() + 60_000),
+      })
+
+      const result = await validate(createServer(jwt), signed)
+      assert.equal(result.ok, false)
+      assert.equal(result.ok === false && result.status, 403)
+    })
+
+    test('rejects signature params when no signing key is available', async () => {
+      const jwt = createMockJwt()
+      const signed = await createSigner(jwt).signContentKey({
+        bucket: 'public',
+        contentKey: 'thumbnail.png',
+        dateLessThan: new Date(Date.now() + 60_000),
+      })
+
+      const result = await validate(createServer(), signed)
+      assert.equal(
+        result.ok,
+        false,
+        'a request that cannot be verified must never be accepted'
+      )
+      assert.equal(result.ok === false && result.status, 403)
+    })
+
+    test('rejects forged timestamps when no signing key is available', async () => {
+      const forged = new URL('http://127.0.0.1:3000/assets/private/secret.png')
+      forged.searchParams.set('signedAt', '0')
+      forged.searchParams.set('expiresAt', '99999999999999')
+
+      const result = await validate(createServer(), forged)
+      assert.equal(result.ok, false)
+      assert.equal(result.ok === false && result.status, 403)
+    })
+
+    test('falls back to the jwt service in singleton services', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
+
+      const signed = await createSigner(jwt).signContentKey({
+        bucket: 'public',
+        contentKey: 'thumbnail.png',
+        dateLessThan: new Date(Date.now() + 60_000),
+      })
+
+      const result = await validate(createServer(), signed)
+      assert.equal(result.ok, true)
     })
   }
 )
