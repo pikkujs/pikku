@@ -1,3 +1,75 @@
+## 0.12.49
+
+### Patch Changes
+
+- b3a6498: Expose which agent the playground is pointed at.
+
+  `AgentPlaygroundPage` resolved the agent from the URL against the project meta
+  inline, so a host composing the playground panels itself — putting the
+  conversations rail in a panel of its own rather than in `AgentThreePane`'s
+  column — had to repeat that resolution to know what to pass
+  `AgentPlaygroundSurface`.
+
+  `useAgentPlaygroundState()` is that answer, and the page now uses it too.
+
+- e8841de: Let a host mount the emails compose form and the knowledge note rail as their own panels.
+
+  Both screens welded a secondary surface into the page as a bordered column: the
+  emails variables form beside the preview, and the knowledge note list as the
+  layout's own drawer. A host embedding either got a card inside its own card, and
+  neither column could collapse or become a sheet on a phone.
+
+  `useEmailsCompose()` now owns the selected template and locale, the typed
+  variables and the preview they render; hand it to `EmailsComposePanel` to put
+  the form anywhere and to `EmailsPage` via the new `compose` prop so the preview
+  takes the full width. `useKnowledgeBrowse()` does the same for the note search
+  and selection, with `KnowledgeBrowseRail` and `KnowledgePage`'s new `browse`
+  prop — and `KnowledgePage` is now exported, which it was not before.
+
+  This is the shape `usePackagesBrowse` and `useScenariosBrowse` already give the
+  packages and scenarios screens. Standalone, nothing changes: with no state
+  passed in, each page mounts its own and renders the surface exactly where it was.
+
+- 3710502: Open a persona in the panel instead of a drawer.
+
+  Clicking a persona — from a feature's cast or the personas list — slid a
+  right-hand `Drawer` over the screen. That ignored wherever the surrounding app
+  actually puts detail surfaces, so an embedding host got a drawer across its own
+  end-edge panel, and the console got a second overlay competing with the pane it
+  already has.
+
+  Personas are now a panel type like every other detail: `openPersona(key, title,
+{ persona, onOpenScenario })` from `usePanelContext`, rendered by
+  `PanelContainer` as the new exported `PersonaDetail`. `PersonaDrawer` is gone —
+  it had no callers outside the two this replaces.
+
+- abb7538: Let a host mount the scenarios feature rail as its own panel.
+
+  The feature list was rendered as the scenarios layout's own drawer, and the
+  search, tag filter and picked feature that drive it lived inside
+  `ScenariosWorkspace` — so a host embedding `ScenariosPage` could not give the
+  rail the side-panel treatment its other screens use.
+
+  `useScenariosBrowse()` now owns that state and the filtered feature list. Hand it
+  to `ScenariosBrowseRail` to put the rail anywhere, and to `ScenariosPage` via the
+  new `browse` prop so the page drops its own drawer. This is the same shape
+  `usePackagesBrowse` / `PackagesBrowseRail` already gives the packages screen.
+
+  Standalone, nothing changes: with no `browse` the page mounts the state itself
+  and renders the rail exactly where it was.
+
+- cab5549: Stop the three-pane layout drawing a details pane the host already draws.
+
+  `ThreePaneLayout` renders its own `PanelContainer` in a right-hand column, fed
+  by the same panel context a host reads. A host that owns the chrome mounts that
+  container itself — as an end-edge panel, or a sheet on a phone — so opening a
+  panel showed its body twice at once, once in the column and once in the host's
+  panel.
+
+  The column now follows `ConsoleChromeContext` the way `ResizablePanelLayout`
+  already does: with `chrome="host"` it and its collapse rail are not rendered,
+  and the panel opens only where the host put it. Standalone, nothing changes.
+
 ## 0.12.48
 
 ### Patch Changes
@@ -407,8 +479,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                    "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                    "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                      "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                      "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
