@@ -1,3 +1,82 @@
+## 0.12.93
+
+### Patch Changes
+
+- e14c530: Dropped the OpenCode-specific discovery guidance from the bundled agent skills.
+
+  Every skill's discover step told the agent to "prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command" — a distinction that no longer holds, so the step now just points at the `pikku meta` command. The `pikku-fabric` skill loses the same framing around its `pikku-meta` and database sections.
+
+  This is documentation shipped inside the package; `pikku skills install` still supports `--agent opencode`.
+
+- 1d6c1e2: Drop the unused `verboseMeta` config option
+
+  `verboseMeta` was declared on `PikkuCLIConfig`, and so appeared in the generated
+  `cli.schema.json` as a supported option, but no code path ever read it. Setting
+  it did nothing; leaving it unset withheld nothing.
+
+  The verbose meta files it appeared to gate are written unconditionally:
+  `writeMetaFiles` emits `<name>-verbose.gen.json` whenever the meta actually
+  carries verbose fields, alongside the stripped `<name>.gen.json` that runtime
+  imports. Consumers pick the verbose file up from disk when it is there —
+  `metaService` prefers it and falls back to the minimal one, and the scenario
+  coverage RPC reads `pikku-functions-meta-verbose.gen.json` at request time.
+
+  The option's only real effect was to mislead: the `pikku-scenario` skill
+  documented it as required for live coverage, so a `null` coverage report sent
+  you to a config flag instead of to the actual cause — the verbose meta not
+  being deployed next to the app. The skill has been corrected.
+
+  Removed from the config type and from the templates and verifiers that set it.
+  Projects carrying `"verboseMeta": true` should drop the key: the generated
+  schema sets `additionalProperties: false`, so an unknown key fails validation.
+
+- cfb828d: Escaped display names and descriptions in generated and scaffolded sources.
+
+  A `displayName` is the human-facing label a developer writes — "Stripe's live key" — and it was interpolated raw into a single-quoted string in `pikku-secrets.gen.ts`, `pikku-variables.gen.ts`, and `pikku-credentials.gen.ts`. An apostrophe terminated the literal and the whole generated file stopped parsing, with `tsc` reporting a cascade of syntax errors in generated code rather than anything about the name. The three serializers now emit the value through `JSON.stringify`, which also covers a quote or a backslash — the same treatment the workflow map keys already get.
+
+  `pikku new-addon` had the same hole: `--display-name "Bob's CRM"` scaffolded an addon that did not compile before its author had written a line of it. Its prose now goes through the same escaping, composed with the words around it so a message stays one literal, and through a template-literal-aware escape where the scaffolded code interpolates a response status.
+
+- b89d3b3: Bring the knowledge base into OSS: a package, a CLI gate, a console browser and a skill
+
+  `knowledge/` is where a project records the things `pikku meta` cannot tell you —
+  what a slice is for, which rule was chosen and what it rules out, what is still an
+  open question. Tables, routes, schemas and permissions are generated, so a note
+  that repeats them is a copy that will drift, and the profile refuses the sections
+  where that happens.
+  - **`@pikku/knowledge`** (new) reads the notes, builds the link graph in both
+    directions, and validates the app-project profile: every note typed, every
+    section indexed, every slice carrying a third-person gherkin scenario and at
+    most three entities, and every `resource:` URI resolving against the generated
+    meta. The resource check fails closed on drift and open on ignorance — a prefix
+    whose meta is absent is skipped rather than called dangling.
+  - **`pikku knowledge validate`** and **`pikku knowledge index`** replace the dead
+    three-flat-files check. Both exit non-zero on an inconsistent base, so a
+    pipeline can stop on one; `index` refreshes each `index.md` listing while
+    leaving the prose around it alone, and now gives a section that holds only
+    sub-sections an index of its own instead of leaving it unreachable.
+  - **The console** gains a read-only Knowledge page: notes grouped by section,
+    a rendered document with its tags, resources, links in both directions and the
+    findings against it, and intra-bundle markdown links that open the linked note
+    instead of leaving the page. Read-only by design — a note is edited in the repo,
+    in the same commit as the code it describes.
+  - **The `pikku-knowledge` skill** documents the format for agents, and Fabric
+    builds on it rather than restating it.
+  - **`@pikku/inspector`**: a zod schema imported from a built workspace package
+    resolved to that package's `.d.ts`, which has no runtime exports at all, so
+    every schema in it was reported missing. The emitted JS beside it is imported
+    instead.
+
+- Updated dependencies [384e484]
+- Updated dependencies [b5a73fb]
+- Updated dependencies [6be5ab0]
+- Updated dependencies [b89d3b3]
+- Updated dependencies [b89d3b3]
+- Updated dependencies [e14c530]
+  - @pikku/core@0.12.72
+  - @pikku/knowledge@0.12.1
+  - @pikku/inspector@0.12.50
+  - @pikku/skills@0.12.2
+
 ## 0.12.92
 
 ### Patch Changes

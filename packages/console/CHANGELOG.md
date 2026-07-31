@@ -1,3 +1,55 @@
+## 0.12.48
+
+### Patch Changes
+
+- 4c702ed: Let an embedding host own the console's card and detail panel.
+
+  `HostConsoleChrome` marks a console screen as living inside a host that already
+  puts every page in its own card and has its own end-edge panel (Fabric). Under
+  it, a screen's outermost list surface renders flush instead of painting a second
+  card inside the host's one, `ResizablePanelLayout` drops the page padding the
+  host already supplies, and it stops docking the detail panel as a column — the
+  host mounts `PanelProvider` and renders `PanelContainer` beside the page, so the
+  panel opens on the end edge like every other panel in the host.
+
+  Nothing changes for the standalone console, which stays on the default `self`
+  chrome.
+
+- b89d3b3: Bring the knowledge base into OSS: a package, a CLI gate, a console browser and a skill
+
+  `knowledge/` is where a project records the things `pikku meta` cannot tell you —
+  what a slice is for, which rule was chosen and what it rules out, what is still an
+  open question. Tables, routes, schemas and permissions are generated, so a note
+  that repeats them is a copy that will drift, and the profile refuses the sections
+  where that happens.
+  - **`@pikku/knowledge`** (new) reads the notes, builds the link graph in both
+    directions, and validates the app-project profile: every note typed, every
+    section indexed, every slice carrying a third-person gherkin scenario and at
+    most three entities, and every `resource:` URI resolving against the generated
+    meta. The resource check fails closed on drift and open on ignorance — a prefix
+    whose meta is absent is skipped rather than called dangling.
+  - **`pikku knowledge validate`** and **`pikku knowledge index`** replace the dead
+    three-flat-files check. Both exit non-zero on an inconsistent base, so a
+    pipeline can stop on one; `index` refreshes each `index.md` listing while
+    leaving the prose around it alone, and now gives a section that holds only
+    sub-sections an index of its own instead of leaving it unreachable.
+  - **The console** gains a read-only Knowledge page: notes grouped by section,
+    a rendered document with its tags, resources, links in both directions and the
+    findings against it, and intra-bundle markdown links that open the linked note
+    instead of leaving the page. Read-only by design — a note is edited in the repo,
+    in the same commit as the code it describes.
+  - **The `pikku-knowledge` skill** documents the format for agents, and Fabric
+    builds on it rather than restating it.
+  - **`@pikku/inspector`**: a zod schema imported from a built workspace package
+    resolved to that package's `.d.ts`, which has no runtime exports at all, so
+    every schema in it was reported missing. The emitted JS beside it is imported
+    instead.
+
+- Updated dependencies [384e484]
+- Updated dependencies [b5a73fb]
+- Updated dependencies [6be5ab0]
+  - @pikku/core@0.12.72
+
 ## 0.12.47
 
 ### Patch Changes
@@ -355,8 +407,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                  "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                  "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                    "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                    "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core

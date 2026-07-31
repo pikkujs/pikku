@@ -1,3 +1,58 @@
+## 0.12.72
+
+### Patch Changes
+
+- 384e484: Apply schema defaults, which nothing was ever filling in
+
+  A `default` on an input property reaches the generated JSON Schema and keeps
+  that property out of `required`, so a call that omits it validates. Nothing
+  then filled it in: JSON Schema validators are pure by specification, and
+  neither `@cfworker/json-schema` nor Ajv (without `useDefaults`) annotates the
+  instance being checked. The function received `undefined` for a property its
+  own generated type declares as present.
+
+  That is the worst shape the mismatch can take. Validation permits the omission,
+  the type promises a value, and the body reads `undefined` — so it surfaces far
+  from its cause, as `const offset = (page - 1) * limit` evaluating to `NaN` and
+  `.limit(undefined)` reaching the database on a paginated call made with no
+  arguments.
+
+  Defaults are now filled in before validation, on every path. Deliberately not
+  gated on `coerceDataFromSchema`, the flag guarding the neighbouring coercion
+  step: that flag is about decoding transport-encoded values (a query string's
+  `"1,2"` into an array) and is absent on a direct RPC invocation. A default
+  belongs to the schema rather than to the transport a call arrived on, so
+  gating it there would fill defaults over HTTP and skip them on RPC.
+
+  Filling is by presence rather than truthiness, so a supplied `0` or `false`
+  survives, and a call made with no arguments at all still gets its defaults.
+  Values are cloned, because an object or array default would otherwise be a
+  single mutable instance shared by every request in the process — one request's
+  `push` showing up in the next.
+
+  Nothing needs to change in generated types or call sites: both were already
+  written as though defaults worked. This makes them true.
+
+- b5a73fb: fix: stop leaking internal error detail and bound the request body size
+
+  HTTP error responses no longer forward an error's `payload` or its raw `message` for
+  registered 5xx errors — those responses carry the registered error message instead, so an
+  internal error that happens to hold a `payload` cannot leak it to the client. Errors
+  registered with a 4xx status keep their message and payload, and `exposeErrors` still
+  surfaces the full detail outside production.
+
+  `PikkuFetchHTTPRequest` now caps how much of a request body it buffers, rejecting the
+  declared `content-length` up front and measuring the stream as it arrives so a lying or
+  absent header cannot exhaust memory. Exceeding the limit throws `PayloadTooLargeError`
+  (413). The ceiling defaults to 10MB and is configurable via the new `maxBodySize` option on
+  the constructor and on `RunHTTPWiringOptions`.
+
+- 6be5ab0: Security hardening: removed the gopass secret service and stopped MCP internal errors leaking stack traces.
+
+  **Breaking:** `GopassSecretService` and the `@pikku/core/services/gopass-secrets` subpath export are gone. The service shelled out to the `gopass` binary and its key validation accepted `../`, so a caller-supplied key could traverse out of the configured prefix namespace and read secrets outside it. Rather than harden a shell-out that few projects used, the service is removed. Anyone importing it should implement `SecretService` against their own secret backend. Pre-0.13 breaking changes still ship as a patch.
+
+  MCP internal errors (JSON-RPC `-32603`) previously always attached `data: { message, stack }`, handing any MCP client an internal stack trace. That payload is now gated on `exposeErrors`, which defaults to `!isProduction()` — the same convention `handleHTTPError` already uses. In production a client receives a bare `Internal error` with no `message` and no `stack`. `RunMCPEndpointParams` accepts an explicit `exposeErrors` to suppress the detail outside production as well; it cannot force the detail on in production, because the check is `exposeErrors && !isProduction()` — again matching `handleHTTPError`.
+
 ## 0.12.71
 
 ### Patch Changes
