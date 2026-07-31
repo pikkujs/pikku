@@ -5,50 +5,37 @@ import {
   handleDevQuickLogin,
   isDevQuickLoginRequest,
 } from './dev-quick-login.js'
+import {
+  CROSS_SITE_SET_COOKIE_HEADER,
+  crossSiteCookies,
+  encodeSetCookies,
+  getSetCookies,
+  mergeRelayedCookies,
+  toCrossSite,
+} from './cross-site-cookies.js'
 
 /**
- * When the app runs embedded in a cross-site iframe (e.g. the Fabric sandbox
- * preview, where the top-level page and the app are different sites) a
- * SameSite=Lax session cookie is silently dropped by the browser — sign-in
- * "succeeds" but the next request arrives with no cookie. Setting
- * AUTH_COOKIE_CROSS_SITE makes every better-auth cookie SameSite=None; Secure;
- * Partitioned so it survives the third-party context. Only the embedding runtime
- * (the sandbox) sets the flag; deployed apps never do and keep the tighter Lax
- * default — first-party traffic gets no needless cross-site exposure.
- */
-const crossSiteCookies = (): boolean => {
-  if (typeof process === 'undefined') return false
-  const v = process.env?.AUTH_COOKIE_CROSS_SITE
-  return v === 'true' || v === '1'
-}
-
-const toCrossSite = (cookie: string): string => {
-  let c = cookie.replace(/;\s*SameSite=(Lax|Strict|None)/gi, '')
-  c += '; SameSite=None'
-  if (!/;\s*Secure\b/i.test(c)) c += '; Secure'
-  if (!/;\s*Partitioned\b/i.test(c)) c += '; Partitioned'
-  return c
-}
-
-/**
- * Rewrite every Set-Cookie on the auth handler's response for cross-site use.
+ * Rewrite every Set-Cookie on the auth handler's response for cross-site use,
+ * and echo the rewritten cookies in a JS-readable header so a client whose
+ * browser refuses third-party cookies outright (any WebKit one, i.e. every
+ * browser on iOS) can relay them back itself — see cross-site-cookies.ts.
+ *
  * Read the cookies via getSetCookie() (which keeps them split) BEFORE copying
  * the rest of the headers — copying a Headers merges duplicate Set-Cookie into a
  * single comma-joined value, so we delete and re-append the clean ones.
  */
 const rewriteSetCookies = (response: Response): Response => {
-  const cookies =
-    typeof response.headers.getSetCookie === 'function'
-      ? response.headers.getSetCookie()
-      : ([response.headers.get('set-cookie')].filter(Boolean) as string[])
+  const cookies = getSetCookies(response.headers)
   if (cookies.length === 0) {
     return response
   }
   const headers = new Headers(response.headers)
   headers.delete('set-cookie')
-  for (const cookie of cookies) {
-    headers.append('set-cookie', toCrossSite(cookie))
+  const rewritten = cookies.map(toCrossSite)
+  for (const cookie of rewritten) {
+    headers.append('set-cookie', cookie)
   }
+  headers.set(CROSS_SITE_SET_COOKIE_HEADER, encodeSetCookies(rewritten))
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -66,6 +53,10 @@ export const createAuthHandler = (): {
     }
     const auth = (await (services as any).auth()) as BetterAuthInstance
     const webRequest = toWebRequest(request)
+    // The relayed cookies stand in for the ones the browser refused to store,
+    // so better-auth must see them as cookies: /get-session, sign-out and
+    // /update-user all read the session off the Cookie header.
+    mergeRelayedCookies(webRequest.headers)
     const basePath = (auth as any).options?.basePath ?? '/api/auth'
     const response = isDevQuickLoginRequest(webRequest, basePath)
       ? await handleDevQuickLogin(

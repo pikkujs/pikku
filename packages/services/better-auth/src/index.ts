@@ -1,5 +1,11 @@
 export { createAuthHandler } from './auth-handler.js'
 export {
+  CROSS_SITE_COOKIE_HEADER,
+  CROSS_SITE_SET_COOKIE_HEADER,
+  crossSiteCookies,
+  mergeRelayedCookies,
+} from './cross-site-cookies.js'
+export {
   DEV_QUICK_LOGIN_USER,
   DEV_QUICK_LOGIN_SUBPATH,
   devQuickLoginEnabled,

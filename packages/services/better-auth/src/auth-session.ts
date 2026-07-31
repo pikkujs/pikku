@@ -12,6 +12,7 @@ import {
 } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { syncProjectedAdminRole } from './admin-role-sync.js'
+import { mergeRelayedCookies } from './cross-site-cookies.js'
 
 type BetterAuthSessionResult = { user: any; session: any }
 
@@ -135,7 +136,10 @@ export const betterAuthSession = (
       // otherwise read the single-use request body just to discard it,
       // starving the route handler that actually needs it.
       result = (await auth.api.getSession({
-        headers: new Headers(request.headers()),
+        // mergeRelayedCookies is a no-op unless this runtime embeds its apps
+        // cross-site; there it folds the client-relayed cookies back in, for
+        // browsers that refuse to store them at all (cross-site-cookies.ts).
+        headers: mergeRelayedCookies(new Headers(request.headers())),
       })) as BetterAuthSessionResult | null
     } catch (e: any) {
       services.logger?.error(
