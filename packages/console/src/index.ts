@@ -361,6 +361,8 @@ export { AgentConversationsPanel } from './components/agent-playground/AgentConv
 export { AgentChatPanel } from './components/agent-playground/AgentChatPanel'
 export { AgentSelector } from './components/agent-playground/AgentSelector'
 export { AgentThreePane } from './components/agent-playground/AgentThreePane'
+export { useAgentPlaygroundState } from './hooks/useAgentPlaygroundState'
+export type { AgentPlaygroundState } from './hooks/useAgentPlaygroundState'
 export { AgentCredentialPrompt } from './components/agent-playground/AgentCredentialPrompt'
 export type {
   AgentCredentialPromptProps,
