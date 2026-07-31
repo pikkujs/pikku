@@ -3,6 +3,7 @@ import { Center, Loader } from '@pikku/mantine/core'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ScenariosWorkspace } from '../components/scenarios/ScenariosWorkspace'
+import type { ScenariosBrowse } from '../hooks/useScenariosBrowse'
 import {
   ConsoleNavigatorCtx,
   OSSConsoleNavigator,
@@ -15,17 +16,22 @@ const SCENARIOS_BASE_PATH = '/scenarios'
  * declared, as the prose it was written in. The workflow graph a scenario
  * compiles to is an implementation detail of running it, not how it reads.
  */
-const ScenariosPageInner: React.FC = () => {
+const ScenariosPageInner: React.FC<ScenariosPageProps> = ({ browse }) => {
   useLocale()
 
   return (
     <ConsoleSurface>
-      <ScenariosWorkspace />
+      <ScenariosWorkspace browse={browse} />
     </ConsoleSurface>
   )
 }
 
-export const ScenariosPage: React.FC = () => {
+export interface ScenariosPageProps {
+  /** Forwarded to `ScenariosWorkspace` — see its `browse` prop. */
+  browse?: ScenariosBrowse
+}
+
+export const ScenariosPage: React.FC<ScenariosPageProps> = ({ browse }) => {
   // Host apps (e.g. the Fabric console) provide their own navigator; only
   // fall back to the OSS query-param navigator when none is present.
   const hostNavigator = useContext(ConsoleNavigatorCtx)
@@ -37,7 +43,7 @@ export const ScenariosPage: React.FC = () => {
         </Center>
       }
     >
-      <ScenariosPageInner />
+      <ScenariosPageInner browse={browse} />
     </Suspense>
   )
   if (hostNavigator) return page

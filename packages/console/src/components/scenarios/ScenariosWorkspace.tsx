@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { Group, TextInput, Center, Loader, Text } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
@@ -7,39 +7,47 @@ import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { FeatureNavigator } from './FeatureNavigator'
 import { FeatureDocument } from './FeatureDocument'
 import { TagFilter } from './TagFilter'
-import { filterFeatures } from './scenario-doc-model'
 import { PersonaDrawer } from '../personas/PersonaDrawer'
 import { WorkflowProvider } from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
-import { useScenarioDocs } from '../../hooks/useScenarioDocs'
+import { useScenariosBrowse } from '../../hooks/useScenariosBrowse'
+import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
+
+export interface ScenariosWorkspaceProps {
+  /** Browse state owned by the host (see `useScenariosBrowse`). Supplying it
+   *  means the host mounts the feature rail itself, so this drops its own. */
+  browse?: ScenariosBrowse
+}
 
 /**
  * The scenarios reading surface: a feature list, the selected feature rendered
  * as prose, and the step/persona details it opens. Lives below
  * `ConsoleSurface` because it reads the panel context that mounts there.
  */
-export const ScenariosWorkspace: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [selectedFeatureId, setSelectedFeatureId] = useState<string>()
+export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
+  browse: hostBrowse,
+}) => {
   const [personaKey, setPersonaKey] = useState<string | null>(null)
   const [stepWorkflow, setStepWorkflow] = useState<unknown>()
   const { personas } = useScenarioPersonaEntries()
   const { openWorkflowStep } = usePanelContext()
 
-  const { allFeatures, tags, loading } = useScenarioDocs(
-    m.scenarios_ungrouped()
-  )
-
-  const features = useMemo(
-    () =>
-      filterFeatures(allFeatures, { query: searchQuery, tags: selectedTags }),
-    [allFeatures, searchQuery, selectedTags]
-  )
-
-  const selected =
-    features.find((feature) => feature.id === selectedFeatureId) ?? features[0]
+  // Always mounted so the hook order never depends on the prop; the host's
+  // state wins when there is one, and the two share one query cache.
+  const ownBrowse = useScenariosBrowse()
+  const browse = hostBrowse ?? ownBrowse
+  const {
+    features,
+    tags,
+    selectedTags,
+    setSelectedTags,
+    searchQuery,
+    setSearchQuery,
+    setSelectedId,
+    selected,
+    loading,
+  } = browse
 
   /**
    * A scenario is read where it is declared, so following one from a persona
@@ -50,7 +58,7 @@ export const ScenariosWorkspace: React.FC = () => {
     const owner = features.find((feature) =>
       feature.scenarios.some((entry) => entry.scenario.name === name)
     )
-    if (owner) setSelectedFeatureId(owner.id)
+    if (owner) setSelectedId(owner.id)
     requestAnimationFrame(() => {
       document
         .querySelector(`[data-testid="scenario-section-${name}"]`)
@@ -89,11 +97,11 @@ export const ScenariosWorkspace: React.FC = () => {
             />
           }
           leftDrawer={
-            loading ? null : (
+            loading || hostBrowse ? null : (
               <FeatureNavigator
                 features={features}
                 selectedId={selected?.id}
-                onSelect={setSelectedFeatureId}
+                onSelect={setSelectedId}
               />
             )
           }

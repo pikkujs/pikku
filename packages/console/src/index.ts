@@ -136,6 +136,7 @@ export { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
 export { PackagesPage } from './pages/PackagesPage'
 export { ChangesPage } from './pages/ChangesPage'
 export { ScenariosPage } from './pages/ScenariosPage'
+export type { ScenariosPageProps } from './pages/ScenariosPage'
 export { SecretsPage } from './pages/SecretsPage'
 export { VariablesPage } from './pages/VariablesPage'
 export { EmailsPage } from './pages/EmailsPage'
@@ -305,6 +306,13 @@ export type { ScenarioPersonasPanelProps } from './components/personas/ScenarioP
 // them — Fabric mounts the document beside its own Personas section.
 export { FeatureNavigator } from './components/scenarios/FeatureNavigator'
 export { FeatureDocument } from './components/scenarios/FeatureDocument'
+// The scenarios feature rail as its own mountable surface, so a host that gives
+// every list-driven screen a side panel can put it there instead of leaving it
+// as a drawer inside the page. Same shape as the packages browse rail above.
+export { ScenariosBrowseRail } from './components/scenarios/ScenariosBrowseRail'
+export type { ScenariosBrowseRailProps } from './components/scenarios/ScenariosBrowseRail'
+export { useScenariosBrowse } from './hooks/useScenariosBrowse'
+export type { ScenariosBrowse } from './hooks/useScenariosBrowse'
 export { ScenarioSection } from './components/scenarios/ScenarioSection'
 export { ScenarioCast } from './components/scenarios/ScenarioCast'
 export { ScenarioLadder } from './components/scenarios/ScenarioLadder'
