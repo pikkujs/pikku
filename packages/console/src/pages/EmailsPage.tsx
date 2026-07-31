@@ -2,15 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
-import type { RJSFSchema } from '@rjsf/utils'
 import {
   Alert,
-  Badge,
   Box,
   Button,
   Center,
   Code,
-  Divider,
   Group,
   Loader,
   Select,
@@ -33,10 +30,10 @@ import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { EditorView } from '@codemirror/view'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
-import { useSearchParams } from '../router'
-import { usePikkuMeta } from '../context/PikkuMetaContext'
-import { SchemaForm } from '../components/ui/SchemaForm'
-import { useRenderEmailPreview } from '../hooks/useWirings'
+import { EmailsComposePanel } from '../components/emails/EmailsComposePanel'
+import { useEmailsCompose } from '../hooks/useEmailsCompose'
+import type { EmailsCompose } from '../hooks/useEmailsCompose'
+import { useListSurfaceClass } from '../context/ConsoleChromeContext'
 import { useUpdateEmailTemplate } from '../hooks/useCodeEdit'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -45,16 +42,16 @@ import { PikkuSwitch } from '../components/ui/PikkuSwitch'
 import { EmailsOverview } from './EmailsOverview'
 import classes from '../components/ui/console.module.css'
 
-type EmailPreviewValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | Record<string, unknown>
-  | Array<unknown>
-
 const EMAIL_DOCS_HREF = 'https://pikku.dev/docs'
+
+export interface EmailsPageProps {
+  hero?: React.ReactNode
+  headerRight?: React.ReactNode
+  /** Compose state owned by the host (see `useEmailsCompose`). Supplying it
+   *  means the host mounts `EmailsComposePanel` itself, so this drops its own
+   *  form column and gives the preview the full width. */
+  compose?: EmailsCompose
+}
 
 /** "confirm-email" -> "Confirm Email" for human-friendly display. */
 function humanizeTemplateName(name: string): string {
@@ -65,45 +62,34 @@ function humanizeTemplateName(name: string): string {
     .join(' ')
 }
 
-function buildVariablesSchema(variables: string[]): RJSFSchema {
-  return {
-    type: 'object',
-    properties: Object.fromEntries(
-      variables.map((name) => [
-        name,
-        {
-          type: 'string',
-          title: name,
-        },
-      ])
-    ),
-  }
-}
-
-export const EmailsPage: React.FC<{
-  hero?: React.ReactNode
-  headerRight?: React.ReactNode
-}> = ({ hero, headerRight }) => {
+export const EmailsPage: React.FC<EmailsPageProps> = ({
+  hero,
+  headerRight,
+  compose: hostCompose,
+}) => {
   useLocale()
   const colorScheme = useComputedColorScheme('dark')
-  const { meta, loading } = usePikkuMeta()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [previewInput, setPreviewInput] = useState<
-    Record<string, EmailPreviewValue>
-  >({})
+  const surfaceClass = useListSurfaceClass()
   const [previewMode, setPreviewMode] = useState<
     'desktop' | 'mobile' | 'html' | 'text'
   >('desktop')
   const [editorValue, setEditorValue] = useState<string>('')
 
-  const templates = meta.emailsMeta?.templates || {}
-  const templateNames = useMemo(
-    () => Object.keys(templates).sort((a, b) => a.localeCompare(b)),
-    [templates]
-  )
+  // Always mounted so the hook order never depends on the prop; inert when the
+  // host owns the state, so it issues no preview of its own.
+  const ownCompose = useEmailsCompose({ enabled: !hostCompose })
+  const compose = hostCompose ?? ownCompose
+  const {
+    templates,
+    templateNames,
+    selectedTemplate,
+    selectedMeta,
+    selectedLocale,
+    localeOptions,
+    preview,
+    loading,
+  } = compose
 
-  const selectedTemplate = searchParams.get('template')
-  const selectedMeta = selectedTemplate ? templates[selectedTemplate] : null
   const templateItems = useMemo(
     () =>
       templateNames.map((templateName) => ({
@@ -113,49 +99,6 @@ export const EmailsPage: React.FC<{
     [templateNames]
   )
 
-  const localeOptions = useMemo(
-    () =>
-      Object.keys(selectedMeta?.locales ?? {})
-        .sort((a, b) => a.localeCompare(b))
-        .map((locale) => ({
-          label: locale,
-          value: locale,
-        })),
-    [selectedMeta]
-  )
-
-  const selectedLocaleParam = searchParams.get('locale')
-  const selectedLocale = selectedMeta
-    ? localeOptions.find((option) => option.value === selectedLocaleParam)
-        ?.value ||
-      localeOptions[0]?.value ||
-      'en'
-    : null
-
-  useEffect(() => {
-    if (!selectedTemplate || !selectedLocale) return
-    if (searchParams.get('locale') !== selectedLocale) {
-      setSearchParams(
-        {
-          template: selectedTemplate,
-          locale: selectedLocale,
-        },
-        { replace: true }
-      )
-    }
-  }, [searchParams, selectedLocale, selectedTemplate, setSearchParams])
-
-  const preview = useRenderEmailPreview(
-    selectedTemplate,
-    selectedLocale ?? undefined,
-    previewInput,
-    !!selectedTemplate && !!selectedLocale
-  )
-
-  const schema = useMemo(
-    () => buildVariablesSchema(selectedMeta?.variables ?? []),
-    [selectedMeta]
-  )
   const editorTheme = useMemo(
     () =>
       EditorView.theme(
@@ -260,30 +203,10 @@ export const EmailsPage: React.FC<{
           templateNames={templateNames}
           templates={templates}
           headerRight={headerRight}
-          onSelect={(templateName) => {
-            setPreviewInput({})
-            setSearchParams({
-              template: templateName,
-              locale:
-                Object.keys(templates[templateName]?.locales ?? {}).sort(
-                  (a, b) => a.localeCompare(b)
-                )[0] ?? 'en',
-            })
-          }}
+          onSelect={compose.selectTemplate}
         />
       </ConsoleSurface>
     )
-  }
-
-  const handleTemplateSelect = (templateName: string) => {
-    setPreviewInput({})
-    setSearchParams({
-      template: templateName,
-      locale:
-        Object.keys(templates[templateName]?.locales ?? {}).sort((a, b) =>
-          a.localeCompare(b)
-        )[0] ?? 'en',
-    })
   }
 
   const headerControls = (
@@ -297,7 +220,7 @@ export const EmailsPage: React.FC<{
         value={selectedTemplate}
         onChange={(value) => {
           if (!value) return
-          handleTemplateSelect(value)
+          compose.selectTemplate(value)
         }}
         allowDeselect={false}
         searchable
@@ -314,8 +237,7 @@ export const EmailsPage: React.FC<{
         value={selectedLocale}
         onChange={(value) => {
           if (!value) return
-          setPreviewInput({})
-          setSearchParams({ template: selectedTemplate, locale: value })
+          compose.selectLocale(value)
         }}
         allowDeselect={false}
         size="xs"
@@ -376,7 +298,7 @@ export const EmailsPage: React.FC<{
         >
           {/* Preview area */}
           <Box
-            className={classes.listSurfaceCard}
+            className={hostCompose ? surfaceClass : classes.listSurfaceCard}
             style={{
               flex: 1,
               minWidth: 0,
@@ -535,45 +457,21 @@ export const EmailsPage: React.FC<{
             </Box>
           </Box>
 
-          {/* Form / render panel */}
-          <Box
-            className={classes.listSurfaceCard}
-            style={{
-              width: 300,
-              maxWidth: 300,
-              flexShrink: 0,
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }} p="md">
-              <Stack gap="lg">
-                <SchemaForm
-                  key={`${selectedTemplate}:${selectedLocale}`}
-                  schema={schema}
-                  submitLabel={m.emails_render_preview()}
-                  onSubmit={(formData) => setPreviewInput(formData ?? {})}
-                />
-                <Divider />
-                <Stack gap="xs">
-                  <Text fw={600}>{m.emails_template_details()}</Text>
-                  <Group gap="xs">
-                    <Badge variant="light">
-                      {asI18n(`${selectedMeta.variables.length} variables`)}
-                    </Badge>
-                    <Badge variant="light">
-                      {asI18n(
-                        `${Object.keys(selectedMeta.locales).length} locales`
-                      )}
-                    </Badge>
-                  </Group>
-                  {preview.data?.hash ? (
-                    <Code block>{preview.data.hash}</Code>
-                  ) : null}
-                </Stack>
-              </Stack>
+          {/* Form / render panel — omitted when the host mounts it itself. */}
+          {!hostCompose && (
+            <Box
+              className={classes.listSurfaceCard}
+              style={{
+                width: 300,
+                maxWidth: 300,
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <EmailsComposePanel compose={compose} />
             </Box>
-          </Box>
+          )}
         </Box>
       </ResizablePanelLayout>
     </ConsoleSurface>

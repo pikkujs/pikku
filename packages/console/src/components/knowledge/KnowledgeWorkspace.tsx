@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React from 'react'
 import { Box, Center, Loader, Text } from '@pikku/mantine/core'
 import { BookOpen } from 'lucide-react'
 import { m } from '@/i18n/messages'
@@ -9,14 +9,9 @@ import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { KnowledgeFindings } from './KnowledgeFindings'
 import { KnowledgeNoteDocument } from './KnowledgeNoteDocument'
 import { KnowledgeNoteNavigator } from './KnowledgeNoteNavigator'
-import { useKnowledge } from '../../hooks/useKnowledge'
-import {
-  entryPointNote,
-  findingsForNote,
-  groupNotesBySection,
-  noteMatches,
-  type KnowledgeSelection,
-} from '../../lib/knowledge'
+import { useKnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
+import type { KnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
+import { findingsForNote } from '../../lib/knowledge'
 import classes from '../ui/console.module.css'
 
 const DOCS_HREF = 'https://pikku.dev/docs/core-features/knowledge'
@@ -26,50 +21,44 @@ const DOCS_HREF = 'https://pikku.dev/docs/core-features/knowledge'
  * answers, the selected one rendered as the document it is, and what
  * `pikku knowledge validate` has to say about the base as a whole.
  */
-export const KnowledgeWorkspace: React.FC = () => {
+export interface KnowledgeWorkspaceProps {
+  /** Browse state owned by the host (see `useKnowledgeBrowse`). Supplying it
+   *  means the host mounts the note rail itself, so this drops its own. */
+  browse?: KnowledgeBrowse
+}
+
+export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
+  browse: hostBrowse,
+}) => {
   useLocale()
-  const { bundle, isLoading } = useKnowledge()
-  const [search, setSearch] = useState('')
-  const [selection, setSelection] = useState<KnowledgeSelection | null>(null)
+  // Always mounted so the hook order never depends on the prop; the host's
+  // state wins when there is one, and the two share one query cache.
+  const ownBrowse = useKnowledgeBrowse()
+  const browse = hostBrowse ?? ownBrowse
+  const {
+    groups,
+    findings,
+    search,
+    setSearch,
+    selected,
+    setSelected: setSelection,
+    selectedNote,
+    byPath,
+    stats,
+    noteCount,
+    isLoading,
+  } = browse
 
-  const notes = bundle?.notes ?? []
-  const findings = bundle?.findings ?? []
-
-  const matching = useMemo(
-    () => notes.filter((note) => noteMatches(note, search)),
-    [notes, search]
-  )
-  const groups = useMemo(
-    () =>
-      groupNotesBySection({
-        notes: matching,
-        sections: bundle?.sections ?? [],
-      }),
-    [matching, bundle?.sections]
-  )
-  const byPath = useMemo(
-    () => new Map(notes.map((note) => [note.path, note])),
-    [notes]
-  )
   const titleFor = (path: string): string | undefined => byPath.get(path)?.title
-
-  // A search that hides the selected note leaves the selection alone — it is
-  // still what the reader is reading, and narrowing the list is not deselecting.
-  const fallback = entryPointNote(matching)
-  const selected =
-    selection ??
-    (fallback ? { kind: 'note' as const, path: fallback.path } : null)
-  const selectedNote =
-    selected?.kind === 'note' ? byPath.get(selected.path) : undefined
 
   const header = (
     <ListPageHeader
       title={m.knowledge_title()}
       description={
-        bundle
+        stats
           ? m.knowledge_stats({
-              notes: bundle.stats.notes,
-              links: bundle.stats.links,
+              notes: stats.notes,
+              links: stats.links,
             })
           : undefined
       }
@@ -92,7 +81,7 @@ export const KnowledgeWorkspace: React.FC = () => {
     )
   }
 
-  if (notes.length === 0) {
+  if (noteCount === 0) {
     return (
       <ResizablePanelLayout header={header} hidePanel>
         <EmptyStatePlaceholder
@@ -110,14 +99,16 @@ export const KnowledgeWorkspace: React.FC = () => {
       header={header}
       hidePanel
       leftDrawer={
-        <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
-          <KnowledgeNoteNavigator
-            groups={groups}
-            findings={findings}
-            selected={selected}
-            onSelect={setSelection}
-          />
-        </Box>
+        hostBrowse ? null : (
+          <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
+            <KnowledgeNoteNavigator
+              groups={groups}
+              findings={findings}
+              selected={selected}
+              onSelect={setSelection}
+            />
+          </Box>
+        )
       }
     >
       {selected?.kind === 'findings' ? (
