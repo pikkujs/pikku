@@ -1,10 +1,5 @@
 import React from 'react'
-import {
-  ActionIcon,
-  Box,
-  Tooltip,
-  UnstyledButton,
-} from '@pikku/mantine/core'
+import { ActionIcon, Box, Tooltip, UnstyledButton } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { useLocalStorage } from '@mantine/hooks'
 import {
@@ -17,6 +12,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
+import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
 import classes from '../ui/console.module.css'
 
@@ -60,6 +56,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
 }) => {
   useLocale()
   const { panels } = usePanelContext()
+  const ownsChrome = useConsoleChrome() === 'self'
   const alwaysVisible = !showTabs
 
   const [leftCollapsed, setLeftCollapsed] = useLocalStorage({
@@ -72,7 +69,14 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   })
 
   const hasLeft = !!runsPanel && runsPanelVisible
+  /**
+   * The details pane is this layout's own copy of `PanelContainer`, driven by
+   * the same panel context a host reads. A host that draws the chrome mounts
+   * that container itself (an end-edge panel, a sheet), so keeping the column
+   * would render the open panel twice at once.
+   */
   const hasRight =
+    ownsChrome &&
     !hidePanel &&
     (panels.size !== 0 || (alwaysVisible && !collapseWhenEmpty))
 
