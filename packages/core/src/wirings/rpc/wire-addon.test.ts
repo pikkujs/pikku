@@ -2,7 +2,7 @@ import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
-import { wireAddon } from './wire-addon.js'
+import { resolveAddonScopes, wireAddon } from './wire-addon.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -17,6 +17,7 @@ describe('wireAddon', () => {
       auth: true,
       mcp: true,
       tags: ['payments', 'billing'],
+      scopes: ['admin'],
       secretOverrides: { apiKey: 'STRIPE_API_KEY' },
       variableOverrides: { region: 'AWS_REGION' },
       credentialOverrides: { oauth: 'stripeOAuth' },
@@ -27,6 +28,7 @@ describe('wireAddon', () => {
       rpcEndpoint: 'https://rpc.example.com',
       auth: true,
       tags: ['payments', 'billing'],
+      scopes: ['admin'],
       secretOverrides: { apiKey: 'STRIPE_API_KEY' },
       variableOverrides: { region: 'AWS_REGION' },
       credentialOverrides: { oauth: 'stripeOAuth' },
@@ -56,5 +58,45 @@ describe('wireAddon', () => {
       auth: true,
       tags: ['new'],
     })
+  })
+
+  test('omits scopes entirely when none are declared', () => {
+    wireAddon({ name: 'stripe', package: '@addon/stripe' })
+
+    assert.equal(
+      'scopes' in pikkuState(null, 'addons', 'packages').get('stripe')!,
+      false
+    )
+  })
+})
+
+describe('resolveAddonScopes', () => {
+  test('returns nothing for a package that is not a wired addon', () => {
+    wireAddon({ name: 'stripe', package: '@addon/stripe', scopes: ['admin'] })
+
+    assert.deepEqual(resolveAddonScopes('@addon/other'), [])
+    assert.deepEqual(resolveAddonScopes(null), [])
+  })
+
+  test('reads the scopes of the named namespace', () => {
+    wireAddon({ name: 'live', package: '@addon/stripe', scopes: ['admin'] })
+    wireAddon({ name: 'test', package: '@addon/stripe', scopes: ['sandbox'] })
+
+    assert.deepEqual(resolveAddonScopes('@addon/stripe', 'live'), ['admin'])
+    assert.deepEqual(resolveAddonScopes('@addon/stripe', 'test'), ['sandbox'])
+  })
+
+  test('unions every namespace when the caller has no namespace', () => {
+    wireAddon({ name: 'live', package: '@addon/stripe', scopes: ['admin'] })
+    wireAddon({ name: 'test', package: '@addon/stripe', scopes: ['sandbox'] })
+
+    assert.deepEqual(resolveAddonScopes('@addon/stripe'), ['admin', 'sandbox'])
+  })
+
+  test('falls back to the package union when the namespace names another package', () => {
+    wireAddon({ name: 'live', package: '@addon/stripe', scopes: ['admin'] })
+    wireAddon({ name: 'mail', package: '@addon/mail' })
+
+    assert.deepEqual(resolveAddonScopes('@addon/stripe', 'mail'), ['admin'])
   })
 })

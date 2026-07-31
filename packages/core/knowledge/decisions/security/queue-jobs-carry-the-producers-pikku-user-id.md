@@ -16,6 +16,12 @@ set by whoever enqueues the job. The adapter surfaces it as
 `defaultPikkuUserIdResolver` and loads that user's session out of the
 `sessionStore`. The worker function runs with that session.
 
+The claim is now HMAC-signed at enqueue and verified in `runQueueJob` — see
+[[queue-job-identities-are-signed-at-enqueue]], which supersedes the "any
+producer may name any user" reading below. Everything here still holds for the
+*authorization* question: signing proves the producer held the deployment
+secret, not that it was entitled to name that user.
+
 There is no re-authentication at the worker boundary — the queue payload *is* the
 credential. Workers run with `auth: false`, so nothing downstream re-checks that
 the producer was entitled to name that user. This is deliberate: the whole point
@@ -26,6 +32,8 @@ is in the store.
 
 **What this rules out:** exposing job enqueue to untrusted callers, or letting a
 client-supplied field flow into `JobOptions.pikkuUserId` without an authorization
-check first. It also rules out treating the queue as a trust boundary — do not
-add a "the worker validated it" assumption anywhere downstream, and do not drop
-the id from the wire on the theory that workers are unauthenticated anyway.
+check first. It also rules out treating the queue as an authorization boundary —
+do not add a "the worker validated the producer's rights" assumption anywhere
+downstream, and do not drop the id from the wire on the theory that workers are
+unauthenticated anyway. Dropping an id that fails *signature* verification is a
+different matter and is what the worker now does.

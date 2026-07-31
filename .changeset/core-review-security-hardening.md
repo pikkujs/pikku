@@ -1,6 +1,7 @@
 ---
 '@pikku/core': patch
 '@pikku/cli': patch
+'@pikku/addon-console': patch
 '@pikku/node-http-server': patch
 '@pikku/kysely': patch
 '@pikku/mongodb': patch
@@ -15,9 +16,9 @@
 '@pikku/next': patch
 ---
 
-Close five security weaknesses found in a review of `@pikku/core`. Four of the
-five are breaking, and two invalidate data or credentials already in the wild —
-read the migration notes before upgrading.
+Close nine security weaknesses found in a review of `@pikku/core`. Most are
+breaking, and two invalidate data or credentials already in the wild — read the
+migration notes before upgrading.
 
 **Breaking: AI agent thread ownership now fails closed.** Reading, listing,
 resuming or approving an existing thread or run requires a resolved session
@@ -83,3 +84,63 @@ paths can only reject rather than prevent, and are documented as such:
 `express-middleware` mounted on your own app receives an already-parsed body, so
 that deployment must bound its own parser; Next server actions bottom out at
 `experimental.serverActions.bodySizeLimit`.
+
+**Breaking: the console addon's privileged functions are gated by default.**
+`wireAddon` gains a `scopes` option that applies to every function in the
+addon's namespace, and the console scaffold now generates
+`wireAddon({ name: 'console', package: '@pikku/addon-console', scopes: ['admin'] })`.
+Previously the console's entire privileged surface — around 54 functions
+including `credentialGet`, which returns a resolved OAuth token for an arbitrary
+`userId`, `updateFunctionBody`, and `installAddon`, which shells out to a
+package install — was protected only by an optional host-registered
+`addGlobalPermission`. `resolveGlobalPermissions` returns `[]` when none is
+registered and permission checking then no-ops, so an app that never registered
+one served those functions to anyone, and with the template's default
+`scaffold.rpc: "no-auth"` that meant unauthenticated. All of them now return 403
+`MissingScopeError` without an `admin`, `admin:*` or `*` scope. **Regenerating
+is required** — an app holding an old `console.gen.ts` stays open.
+`installAddon` and `installOpenapiAddon` additionally declare their own
+`auth: true, scopes: ['admin']`, and `getAgentThreads` now scopes its listing to
+the session's own threads unless the caller holds admin.
+
+Addon scopes are enforced in `runPikkuFunc` rather than at the RPC boundary,
+because a wiring can reference an addon function directly — the inspector
+records the addon's `packageName` on HTTP, channel, schedule, queue, CLI,
+trigger, gateway and MCP wirings — and those paths never call `resolveNamespace`.
+Enforcing at the RPC seam would have covered only the `namespace:function` form
+while reading as complete.
+
+**Queue job identities are signed.** A job carried the producer's `pikkuUserId`
+as a plain string and the worker resolved a session from it with no
+verification, so write access to the queue backend was act-as-any-user. The
+identity is now `pq1.<claim>.<hmac>`, HMAC-SHA256 over the claim and the
+canonicalized job payload, keyed by HKDF expansion of a new
+`PIKKU_QUEUE_IDENTITY_SECRET`. Producers opt in by wrapping their queue service
+with `SignedQueueService`. This fails safe rather than closed: with no secret
+configured the identity is dropped and jobs still process, warning once per
+process, so no existing deployment breaks on upgrade — it simply loses queue
+identity until the secret is set. The payload rather than the job id is bound
+because SQS, Cloudflare Queues, Azure and the in-memory service all mint ids
+after `add` returns.
+
+**Workflow inline state is read from the run record.** `isInline` consulted a
+process-local `Map`, while `WorkflowRun.inline` is durable. Any instance that
+did not start a run disagreed with the record, so one instance could dispatch a
+queued job for a workflow another was already executing in-process. It is now
+async and resolves through the durable identity, cached only when a context
+already exists so a passive reader allocates nothing. The same `Map` also leaked:
+`nextStepKey` fabricated replay state on every step, and `releaseContext`
+refused to free anything carrying it, so runs whose steps executed outside a
+`beginReplay` bracket — the step-worker queue path — stranded their context and
+step state for the process lifetime. Contexts are now released by an explicit
+execution counter. Step ordinals reset per execution rather than accumulating
+across step-worker invocations in one process, which makes step naming
+independent of how work was distributed.
+
+**Secret reads fail loud in every store.** `MongoDBSecretService.getSecrets`
+skipped rows that failed to decrypt, and the redis equivalent dropped every
+rejection via `Promise.allSettled`, including the "No KEK available for
+key_version N" configuration error. Both now throw, naming the key and its key
+version, matching the kysely behaviour. This matters most alongside the KEK
+change above: without it, an upgrade surfaces as a partial secrets map and an
+opaque downstream failure instead of an error naming the secret to re-enter.

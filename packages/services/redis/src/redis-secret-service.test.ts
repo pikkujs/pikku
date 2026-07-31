@@ -45,4 +45,76 @@ describe('RedisSecretService', () => {
     assert.deepEqual(r2, { from: 'app2' })
     prefixRedis.disconnect()
   })
+
+  describe('decryption failures', () => {
+    const kek = 'test-key-encryption-key-32chars!'
+    const otherKek = 'a-totally-different-kek-32chars!'
+
+    test('getSecrets throws naming a secret it cannot decrypt', async () => {
+      const writer = new RedisSecretService(redis as any, { key: kek })
+      await writer.setSecret('undecryptable', { token: 'abc' })
+
+      const reader = new RedisSecretService(redis as any, { key: otherKek })
+
+      await assert.rejects(
+        () => reader.getSecrets(['undecryptable']),
+        (error: Error) => {
+          assert.equal(
+            error.message,
+            'Failed to decrypt secret "undecryptable" (key_version 1): ' +
+              'the configured KEK does not match the key it was wrapped under'
+          )
+          assert.ok(error.cause, 'the underlying crypto failure is preserved')
+          return true
+        }
+      )
+    })
+
+    test('getSecrets throws when no KEK is available for a stored key_version', async () => {
+      const writer = new RedisSecretService(redis as any, {
+        key: kek,
+        keyVersion: 7,
+      })
+      await writer.setSecret('old-version', 'value')
+
+      const reader = new RedisSecretService(redis as any, {
+        key: kek,
+        keyVersion: 8,
+      })
+
+      await assert.rejects(
+        () => reader.getSecrets(['old-version']),
+        (error: Error) => {
+          assert.equal(
+            error.message,
+            'Failed to decrypt secret "old-version" (key_version 7): ' +
+              'the configured KEK does not match the key it was wrapped under'
+          )
+          return true
+        }
+      )
+    })
+
+    test('getSecrets returns every secret when they all decrypt', async () => {
+      const service = new RedisSecretService(redis as any, { key: kek })
+      await service.setSecret('batch-a', { v: 1 })
+      await service.setSecret('batch-b', 'two')
+
+      const out = await service.getSecrets<{
+        'batch-a': { v: number }
+        'batch-b': string
+      }>(['batch-a', 'batch-b'])
+
+      assert.deepEqual(out, { 'batch-a': { v: 1 }, 'batch-b': 'two' })
+    })
+
+    test('getSecrets omits keys that were never stored', async () => {
+      const service = new RedisSecretService(redis as any, { key: kek })
+      await service.setSecret('present', 'here')
+
+      const out = await service.getSecrets(['present', 'never-stored'])
+
+      assert.deepEqual(out, { present: 'here' })
+    })
+  })
 })

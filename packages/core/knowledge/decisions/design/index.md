@@ -10,6 +10,7 @@ A rule about how core behaves: what runs where, in what order, and what a
 caller is entitled to assume.
 
 <!-- pikku:knowledge-index -->
+- [A secret that fails to decrypt fails the whole read](a-secret-that-fails-to-decrypt-fails-the-whole-read.md) — getSecrets throws naming the key and its key_version rather than omitting the row, because a silent omission surfaces as an unrelated failure much later
 - [An actor conversation starts from a seeded kickoff message](actor-flow-conversations-seed-a-hidden-kickoff-message.md) — The actor's first turn needs a non-empty message list because providers reject an empty prompt; the seed is an instruction and stays out of the transcript
 - [The actor-flow conversation engine only sees a transport-agnostic target driver](actor-flow-drives-the-target-through-a-transport-seam.md) — The engine never imports the agent runner; the target is injected as run/approve, so scenarios exercise the real wire path
 - [An actor-flow verdict is the persona's self-evaluation, not an assertion](actor-flow-verdicts-are-llm-self-evaluations.md) — The engine returns what the actor judged plus the transcript; deterministic checks stay with the caller
@@ -80,6 +81,7 @@ caller is entitled to assume.
 - [TypedSecretService caches for the process lifetime](typed-secret-service-caches-for-the-process-lifetime.md) — Resolved secrets are cached with no TTL, so a secret rotated out of band is not picked up until restart — tracked as pikkujs/pikku#964
 - [Webhook delivery history records every attempt, best effort](webhook-delivery-history-records-every-attempt-best-effort.md) — The webhook worker persists each attempt before it throws, and a failure to persist is logged rather than allowed to mask the delivery result
 - [Webhook service collaborators are constructor args, not locator lookups](webhook-service-collaborators-are-constructor-args-not-locator-lookups.md) — QueueWebhookService takes its queue as a constructor parameter so a project wiring webhooks without a queue fails to compile instead of at first send
+- [Whether a run is inline is read from the run record](whether-a-run-is-inline-is-read-from-the-run-record.md) — The runContexts map is a read-through cache over WorkflowRun.inline and a lifetime for replay ordinals, never the answer to what a run is
 - [Workflow approval expiry is decided from a recorded deadline, not from a timer firing](workflow-approval-expiry-is-decided-from-a-recorded-deadline.md) — The wake-up job is best-effort liveness; losing, duplicating or delaying it cannot change the gate's answer
 - [Core declares the scenario browser surface structurally and never imports a driver](workflow-core-never-imports-a-browser-driver.md) — `@pikku/core` must stay dependency-free for edge runtimes, so playwright augments the interface instead of being imported by it
 - [Workflow DSL meta keeps runtime expressions in their own field, apart from literal values](workflow-dsl-meta-separates-runtime-expressions-from-literals.md) — A string `value` regenerates as a string literal; an `expression` regenerates as code, so the two can never share a field

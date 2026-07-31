@@ -10,6 +10,16 @@ test('serializeConsoleFunctions includes console HTTP route wiring', () => {
   assert.match(functions, /wireAddon\(\{/)
 })
 
+test('serializeConsoleFunctions gates the console addon behind the admin scope', () => {
+  const { functions } = serializeConsoleFunctions('#pikku', '#agents', '/api')
+
+  assert.match(functions, /wireAddon\(\{[^}]*scopes: \['admin'\][^}]*\}\)/)
+  assert.ok(
+    !functions.includes('addGlobalPermission'),
+    'the gate is declared on the addon, not recommended in a comment'
+  )
+})
+
 test('serializeConsoleFunctions describes every payload with a zod schema', () => {
   const { schemas, functions } = serializeConsoleFunctions(
     '#pikku',

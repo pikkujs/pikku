@@ -139,13 +139,7 @@ export const consoleRoutes = defineHTTPRoutes({
   },
 })
 
-// The console addon's functions have no authorization of their own. An app
-// gates the whole privileged surface (credential read/write, source editing,
-// package install) with a single package-scoped global permission —
-// addGlobalPermission([isAdmin], '@pikku/addon-console') — which is resolved in
-// the addon's package namespace, so it applies to every one of its functions at
-// once. Apps that don't register one are unaffected (no globals => allow).
-wireAddon({ name: 'console', package: '@pikku/addon-console' })
+wireAddon({ name: 'console', package: '@pikku/addon-console', scopes: ['admin'] })
 wireHTTPRoutes({ basePath: '${globalHTTPPrefix}', routes: { console: consoleRoutes } })
 `
 
