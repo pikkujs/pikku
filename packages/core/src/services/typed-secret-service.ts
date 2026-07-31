@@ -17,13 +17,7 @@ export type CredentialMeta = {
 export class TypedSecretService<
   TMap = Record<string, unknown>,
 > implements SecretService {
-  /**
-   * In-process cache of resolved secrets, so callers can read naively without
-   * re-hitting the underlying service on every call. Only successful reads are
-   * cached (a miss throws and isn't stored); `setSecret`/`deleteSecret`
-   * invalidate the key. No TTL — a secret rotated out-of-band won't refresh
-   * until restart (see pikkujs/pikku#964).
-   */
+  // knowledge: decisions/design/typed-secret-service-caches-for-the-process-lifetime.md
   private cache = new Map<string, unknown>()
 
   constructor(

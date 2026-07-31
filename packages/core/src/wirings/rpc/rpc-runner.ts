@@ -27,7 +27,6 @@ addError(RPCNotFoundError, {
   message: 'RPC function not found.',
 })
 
-/** A `wireRemoteAddon` namespace is missing a usable `serverUrl`. */
 export class RemoteAddonConfigError extends PikkuError {
   constructor(namespace: string, detail: string) {
     super(`Remote addon '${namespace}' is misconfigured: ${detail}`)
@@ -38,7 +37,6 @@ addError(RemoteAddonConfigError, {
   message: 'Remote addon is misconfigured.',
 })
 
-/** The hosted addon returned a non-2xx response for a remote RPC. */
 export class RemoteAddonRequestError extends PikkuError {
   public readonly httpStatus: number
   constructor(
@@ -68,10 +66,6 @@ import {
 } from '../ai-agent/ai-agent-stream.js'
 import { wrapChannelWithAGUI } from '../ai-agent/ai-agent-agui.js'
 
-/**
- * Resolve a namespaced function reference to package and function names
- * Uses pikkuState to look up the namespace -> package mapping
- */
 export const resolveNamespace = (
   namespacedFunction: string
 ): ResolvedFunction | null => {
@@ -96,18 +90,10 @@ export const resolveNamespace = (
   }
 }
 
-/**
- * Resolve a bare (non-namespaced) RPC name to its pikkuFuncId, preferring
- * the caller's addon package when provided. Returns the function name plus
- * the package scope that resolved it (null = root), so callers can thread
- * the scope into runPikkuFunc without a second lookup.
- */
 const resolvePikkuFunction = (
   rpcName: string,
   packageName: string | null = null
 ): { pikkuFuncId: string; packageName: string | null } => {
-  // Addon-scoped calls: try the caller's package function meta first.
-  // (RPC meta only lives in root; addon functions are registered under their package.)
   if (packageName) {
     const pkgFunctions = pikkuState(packageName, 'function', 'meta')
     const pkgMeta = pkgFunctions?.[rpcName]
@@ -139,7 +125,30 @@ const resolvePikkuFunction = (
   return { pikkuFuncId: rpcMeta, packageName: null }
 }
 
-// Context-aware RPC client for use within services
+/**
+ * Marks an addon RPC name that could not be resolved. Module-private on purpose:
+ * resolution failure must never be conflated with an `RPCNotFoundError` thrown by
+ * a function that already started executing, and it must never escape to callers.
+ */
+const NOT_RESOLVED = Symbol('pikku:rpc-not-resolved')
+
+type AddonCall =
+  | {
+      kind: 'remote'
+      namespace: string
+      fnName: string
+      addonConfig: ResolvedFunction['addonConfig']
+    }
+  | {
+      kind: 'local'
+      namespacedFunction: string
+      packageName: string
+      pikkuFuncId: string
+      auth: boolean | undefined
+      tags: string[]
+      addonInstance: AddonInstance
+    }
+
 export class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
@@ -183,48 +192,22 @@ export class ContextAwareRPCService {
       ...this.wire,
     }
 
-    // Check addon namespace first (e.g. 'stripe:createCharge')
     if (funcName.includes(':')) {
-      try {
-        return await this.invokeAddonFunction<In, Out>(
-          funcName,
+      const addonCall = this.resolveAddonFunction(funcName)
+      if (addonCall !== NOT_RESOLVED) {
+        return await this.executeAddonFunction<In, Out>(
+          addonCall,
           data,
           updatedWire
         )
-      } catch (addonErr) {
-        if (!(addonErr instanceof RPCNotFoundError)) throw addonErr
-        // Not an addon — fall through to local lookup
       }
     }
 
-    // Bare name: resolve via caller's package scope first (if any), then root.
-    // Note: intra-addon bare calls do NOT re-apply the addon's external
-    // addonConfig.auth/tags — those gates are only applied on the external
-    // 'namespace:func' boundary via invokeAddonFunction.
+    let resolved: { pikkuFuncId: string; packageName: string | null }
     try {
-      const resolved = resolvePikkuFunction(funcName, this.packageName)
-      const addonInstance = resolved.packageName
-        ? addonInstanceForNamespace(
-            this.wire.addonNamespace,
-            resolved.packageName
-          )
-        : undefined
-      return await runPikkuFunc<In, Out>(
-        'rpc',
-        funcName,
-        resolved.pikkuFuncId,
-        {
-          auth: this.options.requiresAuth,
-          singletonServices: this.services,
-          data: () => data,
-          wire: updatedWire,
-          packageName: resolved.packageName,
-          addonInstance,
-        }
-      )
+      resolved = resolvePikkuFunction(funcName, this.packageName)
     } catch (e) {
       if (e instanceof RPCNotFoundError) {
-        // Fall back to deployment service (e.g. CF service binding, Lambda Invoke)
         if (this.services.deploymentService) {
           const session =
             this.wire.getSession && typeof this.wire.getSession === 'function'
@@ -240,23 +223,34 @@ export class ContextAwareRPCService {
       }
       throw e
     }
+
+    const addonInstance = resolved.packageName
+      ? addonInstanceForNamespace(
+          this.wire.addonNamespace,
+          resolved.packageName
+        )
+      : undefined
+    return await runPikkuFunc<In, Out>('rpc', funcName, resolved.pikkuFuncId, {
+      auth: this.options.requiresAuth,
+      singletonServices: this.services,
+      data: () => data,
+      wire: updatedWire,
+      packageName: resolved.packageName,
+      addonInstance,
+    })
   }
 
   /**
-   * Invoke a function from an addon package
-   * Addon packages register their functions in pikkuState under their package name.
-   * The function is executed using the parent services (shared singleton services).
-   * @private
+   * Resolution half of an addon RPC call: never executes anything, so an
+   * `RPCNotFoundError` thrown by the function itself can never be mistaken for
+   * an unresolvable name.
    */
-  private async invokeAddonFunction<In = any, Out = any>(
-    namespacedFunction: string,
-    data: In,
-    wire: PikkuRawWire
-  ): Promise<Out> {
-    // Resolve namespace to package name
+  private resolveAddonFunction(
+    namespacedFunction: string
+  ): AddonCall | typeof NOT_RESOLVED {
     const resolved = resolveNamespace(namespacedFunction)
     if (!resolved) {
-      throw new RPCNotFoundError(namespacedFunction)
+      return NOT_RESOLVED
     }
 
     const namespace = namespacedFunction.slice(
@@ -264,72 +258,81 @@ export class ContextAwareRPCService {
       namespacedFunction.indexOf(':')
     )
 
-    // wireRemoteAddon: the addon ships as a devDependency (types only) and its
-    // handlers run on the host — dispatch over HTTP, not through local meta.
     if (resolved.addonConfig?.remote) {
-      return this.invokeRemoteAddonFunction<In, Out>(
+      const addonConfig = pikkuState(null, 'addons', 'packages').get(namespace)
+      if (!addonConfig?.remote) {
+        return NOT_RESOLVED
+      }
+      return {
+        kind: 'remote',
         namespace,
-        resolved.function,
-        data
-      )
+        fnName: resolved.function,
+        addonConfig,
+      }
     }
 
-    // Get the function meta from the addon package
-    // Addon packages use function meta, not RPC meta
     const addonFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
     const funcMeta = addonFunctionMeta[resolved.function]
     if (!funcMeta) {
-      throw new RPCNotFoundError(namespacedFunction)
-    }
-    const funcName = funcMeta.pikkuFuncId || resolved.function
-
-    const auth = resolved.addonConfig?.auth ?? this.options.requiresAuth
-    const tags = [
-      ...(resolved.addonConfig?.tags ?? []),
-      ...(funcMeta.tags ?? []),
-    ]
-
-    // The namespace is the consumer-facing wireAddon name; it selects the
-    // per-instance singleton services and secret/variable/credential overrides.
-    const addonInstance: AddonInstance = {
-      namespace,
-      secretOverrides: resolved.addonConfig?.secretOverrides,
-      variableOverrides: resolved.addonConfig?.variableOverrides,
-      credentialOverrides: resolved.addonConfig?.credentialOverrides,
+      return NOT_RESOLVED
     }
 
-    // Execute the function using runPikkuFunc with the addon package's state
-    // We use the parent services (this.services) since addon packages share services
-    // Pass the function's tags so tag-based middleware/permissions are applied
-    return runPikkuFunc<In, Out>('rpc', namespacedFunction, funcName, {
-      auth,
-      singletonServices: this.services,
-      data: () => data,
-      wire,
+    return {
+      kind: 'local',
+      namespacedFunction,
       packageName: resolved.package,
-      tags,
-      addonInstance,
-    })
+      pikkuFuncId: funcMeta.pikkuFuncId || resolved.function,
+      auth: resolved.addonConfig?.auth ?? this.options.requiresAuth,
+      tags: [...(resolved.addonConfig?.tags ?? []), ...(funcMeta.tags ?? [])],
+      addonInstance: {
+        namespace,
+        secretOverrides: resolved.addonConfig?.secretOverrides,
+        variableOverrides: resolved.addonConfig?.variableOverrides,
+        credentialOverrides: resolved.addonConfig?.credentialOverrides,
+      },
+    }
   }
 
   /**
-   * Dispatch a `wireRemoteAddon` RPC over HTTP to the hosting service.
-   *
-   * The consumer sends the addon's own function name (not the namespaced form)
-   * to the host's `/remote/rpc/:rpcName` endpoint, authenticating as a client
-   * with the token bound in `wireRemoteAddon({ auth })`. The addon's handlers
-   * live on the host, so there is no local function meta to resolve.
+   * Execution half of an addon RPC call. Must never be called from inside a
+   * `try` that catches `RPCNotFoundError`.
    */
+  private async executeAddonFunction<In = any, Out = any>(
+    addonCall: AddonCall,
+    data: In,
+    wire: PikkuRawWire
+  ): Promise<Out> {
+    if (addonCall.kind === 'remote') {
+      return this.invokeRemoteAddonFunction<In, Out>(
+        addonCall.namespace,
+        addonCall.fnName,
+        data,
+        addonCall.addonConfig
+      )
+    }
+
+    return runPikkuFunc<In, Out>(
+      'rpc',
+      addonCall.namespacedFunction,
+      addonCall.pikkuFuncId,
+      {
+        auth: addonCall.auth,
+        singletonServices: this.services,
+        data: () => data,
+        wire,
+        packageName: addonCall.packageName,
+        tags: addonCall.tags,
+        addonInstance: addonCall.addonInstance,
+      }
+    )
+  }
+
   private async invokeRemoteAddonFunction<In = any, Out = any>(
     namespace: string,
     fnName: string,
-    data: In
+    data: In,
+    cfg: ResolvedFunction['addonConfig']
   ): Promise<Out> {
-    const cfg = pikkuState(null, 'addons', 'packages').get(namespace)
-    if (!cfg?.remote) {
-      throw new RPCNotFoundError(`${namespace}:${fnName}`)
-    }
-
     const serverUrl =
       typeof cfg.serverUrl === 'function'
         ? await cfg.serverUrl(this.services)
@@ -368,7 +371,6 @@ export class ContextAwareRPCService {
     )
 
     if (!res.ok) {
-      // Best-effort body read to enrich the thrown error (mirrors postRpc).
       const detail = (await res.text().catch(() => '')).slice(0, 300)
       throw new RemoteAddonRequestError(namespace, remoteFn, res.status, detail)
     }
@@ -391,25 +393,16 @@ export class ContextAwareRPCService {
     }
 
     if (rpcName.includes(':')) {
-      return this.invokeAddonFunction<In, Out>(rpcName, data, mergedWire)
+      const addonCall = this.resolveAddonFunction(rpcName)
+      if (addonCall === NOT_RESOLVED) {
+        throw new RPCNotFoundError(rpcName)
+      }
+      return this.executeAddonFunction<In, Out>(addonCall, data, mergedWire)
     }
 
+    let resolved: { pikkuFuncId: string; packageName: string | null }
     try {
-      const resolved = resolvePikkuFunction(rpcName, this.packageName)
-      const addonInstance = resolved.packageName
-        ? addonInstanceForNamespace(
-            this.wire.addonNamespace,
-            resolved.packageName
-          )
-        : undefined
-      return await runPikkuFunc<In, Out>('rpc', rpcName, resolved.pikkuFuncId, {
-        auth: this.options.requiresAuth,
-        singletonServices: this.services,
-        data: () => data,
-        wire: mergedWire,
-        packageName: resolved.packageName,
-        addonInstance,
-      })
+      resolved = resolvePikkuFunction(rpcName, this.packageName)
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {
         const session =
@@ -425,6 +418,21 @@ export class ContextAwareRPCService {
       }
       throw e
     }
+
+    const addonInstance = resolved.packageName
+      ? addonInstanceForNamespace(
+          this.wire.addonNamespace,
+          resolved.packageName
+        )
+      : undefined
+    return await runPikkuFunc<In, Out>('rpc', rpcName, resolved.pikkuFuncId, {
+      auth: this.options.requiresAuth,
+      singletonServices: this.services,
+      data: () => data,
+      wire: mergedWire,
+      packageName: resolved.packageName,
+      addonInstance,
+    })
   }
 
   public async startWorkflow<In = any>(
@@ -583,12 +591,10 @@ export class ContextAwareRPCService {
   }
 }
 
-// RPC Service class for the global interface
 export class PikkuRPCService<
   Services extends CoreServices,
   TypedRPC = PikkuRPC,
 > {
-  // Convenience function for initializing
   getContextRPCService(
     services: Services,
     wire: PikkuRawWire,
@@ -628,5 +634,4 @@ export class PikkuRPCService<
   }
 }
 
-// Create a singleton instance
 export const rpcService = new PikkuRPCService()

@@ -155,8 +155,6 @@ async function synthesizeAudio(
       'voiceOutput requires an aiAgentRunner with generateSpeech support'
     )
   }
-  // Label chunks with the format the provider actually returned (config.format
-  // is only a request), falling back to the requested format then pcm16.
   return {
     bytes: result.audio.uint8Array,
     format: result.audio.format || input.format || 'pcm16',

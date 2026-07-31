@@ -667,11 +667,6 @@ describe('wrapChannelWithAGUI — channel proxy', () => {
   })
 })
 
-/**
- * Replicates the ordering rules enforced by @ag-ui/client's verifyEvents so
- * the bridge's output is checked against the same contract the browser
- * applies. Throws on the first violation.
- */
 function assertClientAcceptsStream(events: any[]): void {
   let started = false
   let finished = false

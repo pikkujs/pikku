@@ -12,11 +12,6 @@ import {
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 
-/**
- * Registers a trigger with the Pikku framework.
- * Declares a trigger name and its target pikku function.
- * Runs everywhere. Inspector extracts at build time.
- */
 export const wireTrigger = (trigger: CoreTrigger) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]
@@ -33,11 +28,7 @@ export const wireTrigger = (trigger: CoreTrigger) => {
   triggers.set(trigger.name, trigger as any)
 }
 
-/**
- * Registers a trigger source with the Pikku framework.
- * Provides the actual subscription function and input data.
- * Only imported in the trigger worker process.
- */
+// knowledge: decisions/design/trigger-declaration-is-split-from-trigger-source.md
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: CoreTriggerSource<TInput, TOutput>
 ) => {
@@ -63,23 +54,12 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   )
 }
 
-/**
- * Parameters for setting up a trigger
- */
 export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
   input?: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
 
-/**
- * Sets up a registered trigger and starts listening for events.
- * Returns a TriggerInstance with a teardown function.
- *
- * @param name - The trigger name (must be registered via wireTrigger)
- * @param input - The input to pass to the trigger function
- * @param onTrigger - Callback invoked when the trigger fires
- */
 export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   name,
   input,
@@ -122,16 +102,10 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   return { name, teardown }
 }
 
-/**
- * Gets all registered triggers
- */
 export const getRegisteredTriggers = () => {
   return pikkuState(null, 'trigger', 'triggers')
 }
 
-/**
- * Gets trigger metadata
- */
 export const getTriggerMeta = () => {
   return pikkuState(null, 'trigger', 'meta')
 }

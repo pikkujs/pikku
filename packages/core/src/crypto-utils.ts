@@ -98,16 +98,6 @@ export const decryptJSON = async <T>(
   return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
 }
 
-/**
- * Envelope encryption utilities.
- *
- * Each secret gets its own random DEK (data encryption key).
- * The DEK is wrapped (encrypted) by a KEK (key encryption key) — typically an env var.
- * The actual secret is encrypted with the DEK.
- *
- * KEK rotation only re-wraps the DEK, never touches the ciphertext.
- */
-
 const importRawKey = async (rawBytes: Uint8Array): Promise<CryptoKey> => {
   const subtle = getSubtle()
   return subtle.importKey(

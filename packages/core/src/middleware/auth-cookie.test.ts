@@ -117,7 +117,6 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        // Simulate session change
         SessionService.set(mockUserSession)
       }
     )
@@ -381,7 +380,6 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        // Simulate session change
         SessionService.set(mockUserSession)
       }
     )
@@ -425,12 +423,10 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        // Simulate session change
         SessionService.set(mockUserSession)
       }
     )
 
-    // Should complete without errors even though response is not available
     assert.equal(SessionService.get(), mockUserSession)
   })
 
@@ -468,7 +464,6 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        // Modify session to trigger cookie setting
         SessionService.set({ ...mockUserSession, extra: 'data' })
       }
     )
@@ -519,7 +514,6 @@ describe('authCookie middleware', () => {
     const expiresDate = setCookies[0].options.expires
     assert(expiresDate instanceof Date)
 
-    // Expiration should be approximately 15 minutes from now
     const expectedExpiry = new Date(beforeTime.getTime() + 15 * 60 * 1000)
     const timeDiff = Math.abs(expiresDate.getTime() - expectedExpiry.getTime())
     // Allow 5 second tolerance for test execution time

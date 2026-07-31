@@ -42,11 +42,6 @@ export type { AGUIEvent }
 export type AGUIChannelOptions = {
   threadId?: string
   runId?: string
-  /**
-   * Late-bound runId source, resolved when the run is opened (first event).
-   * Lets the stream path report the AIRunStateService runId on RUN_STARTED
-   * even though that id is only created after the channel is wrapped.
-   */
   getRunId?: () => string | undefined
 }
 
@@ -85,8 +80,6 @@ export function wrapChannelWithAGUI(
   let usageModel: string | undefined
   const usageTotals = { input: 0, output: 0 }
 
-  // The AG-UI client rejects any event arriving before RUN_STARTED, so the
-  // run is opened lazily with the first translated event.
   function send(event: AGUIEvent): void {
     if (!runStartedSent) {
       runStartedSent = true
@@ -141,11 +134,6 @@ export function wrapChannelWithAGUI(
     return thinkingMessageId
   }
 
-  // The AG-UI client treats RUN_FINISHED as terminal and rejects everything
-  // after it, so it is emitted exactly once — on 'done' — with the usage
-  // accumulated across all steps (per-step 'usage' events must NOT finish
-  // the run: on multi-step tool runs later steps would arrive after
-  // RUN_FINISHED and the client would drop the whole stream).
   function finishRun(): void {
     endTextMessage()
     endThinkingMessage()
@@ -265,9 +253,6 @@ export function wrapChannelWithAGUI(
           break
         }
 
-        // Step names must be unique among active steps on the client and
-        // sub-agents reuse step numbers on the shared channel, so each
-        // step-start closes the previous step and gets a sequential name.
         case 'step-start': {
           endTextMessage()
           endThinkingMessage()

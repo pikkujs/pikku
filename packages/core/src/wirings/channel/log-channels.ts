@@ -1,10 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { Logger } from '../../services/index.js'
 
-/**
- * Logs all the loaded channels.
- * @param logger - A logger for logging information.
- */
 export const logChannels = (logger: Logger) => {
   const channels = pikkuState(null, 'channel', 'channels')
   if (channels.size === 0) {

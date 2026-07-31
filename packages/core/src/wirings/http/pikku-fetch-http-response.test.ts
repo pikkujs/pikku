@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'assert'
-import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js' // Adjust path if needed
+import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 
 describe('PikkuFetchHTTPResponse', () => {
   test('sets status code', () => {

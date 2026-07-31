@@ -171,7 +171,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const resolvedFunctionId = funcMeta.pikkuFuncId ?? funcName
 
-  // For addon packages, get or create their singleton services
   const resolvedSingletonServices = packageName
     ? await getOrCreatePackageSingletonServices(
         packageName,
@@ -180,7 +179,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
       )
     : singletonServices
 
-  // Get the package's createWireServices if available
   let resolvedCreateWireServices = createWireServices
   if (packageName) {
     const factories = pikkuState(packageName, 'package', 'factories')
@@ -204,11 +202,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
       : wire
 
-  // Set up credential wire service early so middleware can use setCredential.
-  // An addon instance with credentialOverrides always gets a fresh alias-aware
-  // service so its logical credential names resolve to instance-specific ones,
-  // even when a parent credential service is already present on the wire.
-  // Otherwise skip if already set up (e.g. addon functions reuse the parent wire).
+  // Set up early so middleware can use setCredential. An addon instance with
+  // credentialOverrides always gets a fresh alias-aware service, even when a
+  // parent credential service is already present on the wire.
   if (addonInstance?.credentialOverrides) {
     // Credentials belong to the consuming project, so resolve them via the
     // project's credentialService (the addon's own singletons may not carry it).
@@ -252,7 +248,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
     invocationWire.addonNamespace = addonInstance.namespace
   }
 
-  // Helper function to run permissions and execute the function
   const executeFunction = async () => {
     await resolveSession(
       invocationWire,
@@ -298,32 +293,20 @@ export const runPikkuFunc = async <In = any, Out = any>(
       invocationWire.beginChanges = beginChanges
     }
 
-    // Scopes gate before the data is evaluated: they depend only on the
-    // session, so a denied request never pays to parse or validate its body.
-    // Scopes are an AND gate and stay separate from runPermissions, which
-    // evaluates the function's own OR-groups against request data.
     verifyScopes(funcConfig.scopes ?? funcMeta.scopes, session)
 
-    // Evaluate the data from the lazy function
     let actualData = await data()
 
-    // Validate and coerce data if schema is defined
     const inputSchemaName = funcMeta.inputSchemaName
     if (inputSchemaName) {
-      // Fill in schema defaults before anything reads the data. Unconditional:
-      // a default belongs to the schema, not to the transport the call arrived
-      // on. Runs before coercion so a defaulted value and a supplied one are
-      // treated identically from here on.
       actualData = applyDefaultsFromSchema(
         inputSchemaName,
         actualData,
         packageName
       )
-      // Coerce (top level) data types before validation (e.g. string→array, string→date)
       if (coerceDataFromSchema) {
         coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
       }
-      // Validate request data against the defined schema, if any
       await validateSchema(
         resolvedSingletonServices.logger,
         resolvedSingletonServices.schema,
@@ -352,13 +335,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
           : resolvedSingletonServices
-      // The audit gate is per-function, but the auditLog wire service is
-      // created per-transport-invocation — a nested/exposed-RPC call would
-      // otherwise inherit an auditLog constructed while the OUTER wire's
-      // audit was unset (e.g. the generated rpcCaller has no audit config),
-      // silently dropping every write. Re-gate here: if this function
-      // declares audit and the inherited auditLog wasn't built for this
-      // invocation (config identity check), bind a fresh one to this wire.
+      // knowledge: decisions/design/core-function-runner-restores-the-wire-fields-it-overwrites.md
       if (
         resolvedAuditConfig &&
         resolvedSingletonServices.audit &&
@@ -454,6 +431,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
       delete (invocationWire as any).audit
     } else {
       invocationWire.audit = previousAudit
+    }
+    if (previousAddonNamespace === undefined) {
+      delete (invocationWire as any).addonNamespace
+    } else {
+      invocationWire.addonNamespace = previousAddonNamespace
     }
   }
 }

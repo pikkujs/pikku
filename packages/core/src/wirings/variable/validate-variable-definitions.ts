@@ -2,11 +2,9 @@ import type {
   VariableDefinitions,
   VariableDefinitionsMeta,
 } from './variable.types.js'
+import type { SchemaRefLike } from '../../types/core.types.js'
 
-export interface SchemaRefLike {
-  variableName: string
-  sourceFile: string
-}
+export type { SchemaRefLike }
 
 export function validateAndBuildVariableDefinitionsMeta(
   definitions: VariableDefinitions,

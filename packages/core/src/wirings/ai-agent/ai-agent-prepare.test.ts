@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import {
+  CREDENTIAL_REQUIRED,
   agentSessionScope,
   assertResourceOwner,
   canAccessThread,
@@ -17,7 +18,10 @@ import {
   sessionPrincipals,
   threadOwnerConstraint,
 } from './ai-agent-prepare.js'
-import { ForbiddenError } from '../../errors/errors.js'
+import {
+  ForbiddenError,
+  MissingCredentialError,
+} from '../../errors/errors.js'
 import { pikkuAuth } from '../../function/functions.types.js'
 import type {
   AIStreamChannel,
@@ -300,9 +304,6 @@ describe('ai-agent-prepare', () => {
         `Delete the todo called "${todoStore.get(id)?.title ?? id}"`,
     })
 
-    // The addon builds `todoStore` in its own singleton services, which are NOT
-    // in the root services and are only cached the first time the addon runs.
-    // The approval is raised before the tool executes, so the cache is cold.
     pikkuState('@test/todos-addon', 'package', 'factories', {
       createSingletonServices: async () => ({
         todoStore: {
@@ -376,6 +377,53 @@ describe('ai-agent-prepare', () => {
     assert.match(String(errorCalls[0][0]), /searchInventory.*execute/)
   })
 
+  test('buildToolDefs turns a MissingCredentialError into a Symbol-branded credential result', async () => {
+    addAgent('creds-agent')
+    pikkuState(null, 'agent', 'agentsMeta')['creds-agent'] = {
+      ...pikkuState(null, 'agent', 'agentsMeta')['creds-agent'],
+      tools: ['listRepos'],
+    } as any
+    pikkuState(null, 'rpc', 'meta').listRepos = 'listRepos'
+    pikkuState(null, 'function', 'meta').listRepos = {
+      description: 'List repos',
+      inputSchemaName: 'ListReposInput',
+      sessionless: true,
+    }
+    pikkuState(null, 'misc', 'schemas').set('ListReposInput', {
+      type: 'object',
+    })
+    pikkuState(null, 'function', 'functions').set('listRepos', {
+      func: async () => {
+        throw new MissingCredentialError('github', 'oauth2', '/connect/github')
+      },
+    })
+
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { warn: () => {}, error: () => {} },
+    } as any)
+
+    const { tools } = await buildToolDefs(
+      {},
+      new Map<string, string>(),
+      'resource-1',
+      'creds-agent',
+      null
+    )
+
+    assert.equal(tools.length, 1)
+    const result = (await tools[0].execute({})) as Record<string | symbol, any>
+
+    assert.equal(
+      result[CREDENTIAL_REQUIRED],
+      true,
+      'the producer must stamp the non-forgeable brand'
+    )
+    assert.equal(result.__credentialRequired, true)
+    assert.equal(result.credentialName, 'github')
+    assert.equal(result.credentialType, 'oauth2')
+    assert.equal(result.connectUrl, '/connect/github')
+  })
+
   test('buildToolDefs skips permissioned tools without a session and adds sub-agent tools', async () => {
     addAgent('manager', {
       agents: ['assistant'],
@@ -431,13 +479,6 @@ describe('ai-agent-prepare', () => {
     })
   })
 
-  /**
-   * The permission's `pikkuAuth` brand survives only on the live objects in the
-   * function config, not on the metadata. Reading the metadata's by-name
-   * reference resolves against a registry nothing populates, so it collects no
-   * predicate and lets every gated tool through — this pins that the live config
-   * is what gets evaluated.
-   */
   const addFilterAgent = (allow: boolean) => {
     addAgent('gatekeeper', { tools: ['gated'] })
     pikkuState(null, 'agent', 'agentsMeta').gatekeeper = {
@@ -712,9 +753,6 @@ describe('thread-read ownership (session principals)', () => {
     )
   })
 
-  // A deployment with no session has explicitly opted out of authorization
-  // (agent `no-auth`), so there is no ownership model to enforce — matching
-  // resolveOwnerResourceId's own sessionless fallback to a bare resourceId.
   test('a sessionless deployment has no ownership model and is not gated', () => {
     assert.equal(canAccessThread('anything', undefined), true)
     assert.equal(canAccessThread('anything', {}), true)
@@ -736,8 +774,6 @@ describe('thread-read ownership (session principals)', () => {
     )
   })
 
-  // undefined, not [] — [] means "match nothing", which would hide every thread
-  // from a no-auth deployment that never had an ownership model to begin with.
   test('threadOwnerConstraint is undefined for a sessionless caller', () => {
     assert.equal(threadOwnerConstraint(undefined), undefined)
     assert.equal(threadOwnerConstraint({}), undefined)
@@ -778,12 +814,6 @@ describe('C2 sessionScope + resume ownership', () => {
 })
 
 describe('buildSubAgentRunInput (parent context forwarding)', () => {
-  // A delegated sub-agent's tool-call schema only carries { message, session }.
-  // If its run input does not inherit the parent's `context` (the identifier
-  // block with organizationId / project ids), the sub-agent never sees the
-  // authoritative ids and depends on the model re-typing them into `message` —
-  // which weak models botch, causing schema/permission rejections and retry
-  // loops. These pin that the parent context is always forwarded.
   test('forwards the parent context onto the sub-agent run input', () => {
     const input = buildSubAgentRunInput(
       'find failing functions',

@@ -13,10 +13,6 @@ import type {
   RunChannelParams,
 } from './channel.types.js'
 
-/**
- * Adds a channel and registers all functions referenced in it using the
- * function names already stored in the channel metadata
- */
 export const wireChannel = <
   In,
   Channel extends string,
@@ -32,7 +28,6 @@ export const wireChannel = <
     ChannelFunction
   >
 ) => {
-  // Get the channel metadata
   const channelsMeta = pikkuState(null, 'channel', 'meta')
   const channelMeta = channelsMeta[channel.name]
   if (!channelMeta) {
@@ -42,17 +37,14 @@ export const wireChannel = <
     return
   }
 
-  // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {
     addFunction(channelMeta.connect.pikkuFuncId, channel.onConnect as any)
   }
 
-  // Register onDisconnect function if provided
   if (channel.onDisconnect && channelMeta.disconnect) {
     addFunction(channelMeta.disconnect.pikkuFuncId, channel.onDisconnect as any)
   }
 
-  // Register onMessage function if provided
   if (channel.onMessage && channelMeta.message?.pikkuFuncId) {
     addFunction(
       channelMeta.message.pikkuFuncId,
@@ -62,20 +54,15 @@ export const wireChannel = <
     )
   }
 
-  // Register functions in onMessageWiring
   if (channel.onMessageWiring && channelMeta.messageWirings) {
-    // Iterate through each channel in onMessageWiring
     Object.entries(channel.onMessageWiring).forEach(([channelKey, wirings]) => {
       const channelWirings = channelMeta.messageWirings[channelKey]
       if (!channelWirings) return
 
-      // Iterate through each wiring in the channel
       Object.entries(wirings).forEach(([wiringKey, handler]) => {
         const wiringMeta = channelWirings[wiringKey]
         if (!wiringMeta) return
 
-        // Register the function using the pikku name from metadata
-        // It could be a FuncConfig or a wiring override with a funcConfig
         addFunction(
           wiringMeta.pikkuFuncId,
           (handler as any).func instanceof Function
@@ -86,7 +73,6 @@ export const wireChannel = <
     })
   }
 
-  // Store the channel configuration
   pikkuState(null, 'channel', 'channels').set(channel.name, channel as any)
 }
 

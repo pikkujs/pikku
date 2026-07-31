@@ -16,17 +16,12 @@ import type {
   CoreUserSession,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
-  WireServices,
   PikkuRawWire,
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
-import {
-  closeWireServices,
-  createWeakUID,
-  isSerializable,
-} from '../../utils.js'
+import { createWeakUID, isSerializable } from '../../utils.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -46,9 +41,6 @@ import { httpRouter } from './routers/http-router.js'
 import { validateSchema } from '../../schema.js'
 import { runMiddleware } from '../../middleware-runner.js'
 
-/**
- * Extract headers from a PikkuHTTPRequest based on the schema keys
- */
 function extractHeadersFromRequest(
   request: PikkuHTTPRequest,
   headerKeys: string[]
@@ -63,35 +55,6 @@ function extractHeadersFromRequest(
   return headers
 }
 
-/**
- * Registers HTTP middleware for a specific route pattern.
- *
- * This function registers middleware at runtime that will be applied to
- * HTTP routes matching the specified pattern.
- *
- * For tree-shaking benefits, wrap in a factory function:
- * `export const x = () => addHTTPMiddleware('pattern', [...])`
- *
- * @template PikkuMiddleware The middleware type.
- * @param {string} pattern - Route pattern (e.g., '*' for all routes, '/api/*' for specific routes).
- * @param {CorePikkuMiddlewareGroup} middleware - Array of middleware for this route pattern.
- *
- * @returns {CorePikkuMiddlewareGroup} The middleware array (for chaining/wrapping).
- *
- * @example
- * ```typescript
- * // Recommended: tree-shakeable
- * export const httpGlobal = () => addHTTPMiddleware('*', [
- *   corsMiddleware,
- *   loggingMiddleware
- * ])
- *
- * // Also works: no tree-shaking
- * export const apiMiddleware = addHTTPMiddleware('/api/*', [
- *   authMiddleware
- * ])
- * ```
- */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   pattern: string,
   middleware: CorePikkuMiddlewareGroup,
@@ -125,21 +88,6 @@ export const addHTTPPermission = (
   )
 }
 
-/**
- * Adds a new route to the global HTTP route registry.
- *
- * The route configuration includes the HTTP method, route path, permissions,
- * middleware, and the handler function that implements the route's logic.
- *
- * @template In Expected input type.
- * @template Out Expected output type.
- * @template Route Route pattern as a string.
- * @template PikkuFunction Type for the route handler function.
- * @template PikkuFunctionSessionless Type for a sessionless handler.
- * @template PikkuPermissionGroup Type representing required permissions.
- * @template PikkuMiddleware Middleware type to be used with the route.
- * @param {CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware>} httpWiring - The HTTP wiring configuration object.
- */
 export const wireHTTP = <
   In,
   Out,
@@ -164,10 +112,6 @@ export const wireHTTP = <
   const httpMeta = pikkuState(null, 'http', 'meta')
   const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
-    // In deploy units with filtered metadata, wiring files may include
-    // routes for functions not in this unit. This happens when multiple
-    // wirings share a file — split them into separate files for better
-    // tree-shaking.
     console.warn(
       `[pikku] Skipping HTTP route '${httpWiring.method.toUpperCase()} ${httpWiring.route}' — metadata not found. Consider moving this wiring to its own file.`
     )
@@ -185,17 +129,6 @@ export const wireHTTP = <
     ?.set(httpWiring.route, httpWiring as any)
 }
 
-/**
- * Finds a matching route based on the HTTP method and URL path.
- *
- * Iterates over all registered routes, skipping those with a mismatched method.
- * When a route pattern matches the incoming request path, this function aggregates
- * any global middleware along with route-specific middleware and identifies any input schema.
- *
- * @param {string} requestType - The HTTP method (e.g., GET, POST).
- * @param {string} requestPath - The URL path of the incoming request.
- * @returns {Object | undefined} An object with matched route details or undefined if no match.
- */
 const getMatchingRoute = (requestType: string, requestPath: string) => {
   const matchedPath = httpRouter.match(
     requestType.toLowerCase() as HTTPMethod,
@@ -219,16 +152,6 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
   }
 }
 
-/**
- * Combines the request and response objects into a single HTTP wire object.
- *
- * This utility function creates an object that holds both the HTTP request and response,
- * which simplifies passing these around through middleware and route execution.
- *
- * @param {PikkuHTTPRequest | undefined} request - The HTTP request object.
- * @param {PikkuHTTPResponse | undefined} response - The HTTP response object.
- * @returns {PikkuHTTP | undefined} The combined HTTP wire object or undefined if none provided.
- */
 export const createHTTPWire = (
   request: PikkuHTTPRequest | undefined,
   response: PikkuHTTPResponse | undefined
@@ -248,26 +171,6 @@ export const createHTTPWire = (
   return http
 }
 
-/**
- * Validates the input data and executes the route handler
- *
- * This function performs these steps:
- *  1. Sets URL parameters on the request.
- *  2. Validates the user session if required.
- *  3. Creates session-specific services.
- *  4. Validates the incoming data against a schema.
- *  5. Optionally coerces query string values to arrays.
- *  6. Checks route-specific permissions.
- *  7. Executes the route handler.
- *  8. Sends the appropriate response.
- *
- * @param {Object} services - A collection of shared services and utilities.
- * @param {Object} matchedRoute - Contains route details, URL parameters, and optional schema.
- * @param {PikkuHTTP | undefined} http - The HTTP wire object.
- * @param {Object} options - Options for route execution (e.g., whether to coerce query strings to arrays).
- * @returns {Promise<any>} An object containing the route handler result and wire services (if any).
- * @throws Throws errors like MissingSessionError or ForbiddenError on validation failures.
- */
 const executeRoute = async (
   services: {
     singletonServices: any
@@ -293,10 +196,8 @@ const executeRoute = async (
     singletonServices.sessionStore
   )
 
-  // Attach URL parameters to the request object
   http?.request?.setParams(params)
 
-  // Validate request headers if schema is defined
   if (meta.headersSchemaName && http.request && singletonServices.schema) {
     const headerKeys = singletonServices.schema.getSchemaKeys(
       meta.headersSchemaName
@@ -311,14 +212,12 @@ const executeRoute = async (
   }
 
   const requiresSession = route.auth !== false
-  let wireServices: any
   let result: any
 
   singletonServices.logger.info(
     `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`
   )
 
-  // Ensure session is available when required
   if (skipUserSession && requiresSession) {
     throw new Error("Can't skip trying to get user session if auth is required")
   }
@@ -371,9 +270,6 @@ const executeRoute = async (
       remote: unsupportedChannelRemote,
     }
 
-    // Register the SSE channel with the eventHub (if present) so that
-    // eventHub.publish() can deliver messages to SSE subscribers.
-    // The channel handler wraps the SSE channel to match PikkuChannelHandler.
     if (singletonServices.eventHub?.onChannelOpened) {
       const channelRef = channel
       const channelHandler = {
@@ -436,12 +332,11 @@ const executeRoute = async (
         http?.response?.arrayBuffer(JSON.stringify({ type: 'done' }))
       } catch {}
       channel?.close()
-      return wireServices ? { result, wireServices } : { result }
+      return { result }
     }
     throw e
   }
   if (matchedRoute.route.sse) {
-    // Flush headers after middleware has run so CORS/auth headers are included
     http?.response?.flushHeaders?.()
   } else {
     if (result instanceof Response) {
@@ -456,24 +351,9 @@ const executeRoute = async (
     }
   }
 
-  return wireServices ? { result, wireServices } : { result }
+  return { result }
 }
 
-/**
- * Executes an HTTP route for a given Fetch API request.
- *
- * This function wraps the entire lifecycle of handling an HTTP request:
- *  - Matching the request to a registered route.
- *  - Validating input and session state.
- *  - Running middleware and the route handler.
- *  - Handling errors and forming the response.
- *
- * @template In Expected input data type.
- * @template Out Expected output data type.
- * @param {Request} request - The native Fetch API Request object.
- * @param {RunHTTPWiringOptions} params - Additional options including services and session management.
- * @returns {Promise<Response>} A promise that resolves to a Fetch API Response object.
- */
 export const fetch = async <In, Out>(
   request: Request,
   params: RunHTTPWiringOptions = {}
@@ -483,18 +363,6 @@ export const fetch = async <In, Out>(
   return pikkuResponse.toResponse()
 }
 
-/**
- * Executes an HTTP route using a Pikku-specific request wrapper.
- *
- * This variant accepts either a native Request or a PikkuHTTPRequest object and returns
- * a PikkuFetchHTTPResponse for further manipulation if needed.
- *
- * @template In Expected input data type.
- * @template Out Expected output data type.
- * @param {Request | PikkuHTTPRequest} request - The request object.
- * @param {RunHTTPWiringOptions} params - Execution options including services and session configuration.
- * @returns {Promise<PikkuFetchHTTPResponse>} A promise that resolves to a PikkuFetchHTTPResponse object.
- */
 export const pikkuFetch = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   params: RunHTTPWiringOptions = {}
@@ -504,24 +372,6 @@ export const pikkuFetch = async <In, Out>(
   return pikkuResponse
 }
 
-/**
- * Core function to process an HTTP request through route matching, validation,
- * middleware execution, error handling, and session service cleanup.
- *
- * This function does the following:
- *  - Wraps the incoming request and response into an HTTP wire object.
- *  - Determines the correct route based on HTTP method and path.
- *  - Executes middleware and the route handler.
- *  - Catches and handles errors, optionally bubbling them if configured.
- *  - Cleans up any wire services created during processing.
- *
- * @template In Expected input data type.
- * @template Out Expected output data type.
- * @param {Request | PikkuHTTPRequest} request - The incoming HTTP request.
- * @param {PikkuHTTPResponse} response - The response object to be populated.
- * @param {RunHTTPWiringOptions} options - Options such as singleton services, session handling, and error configuration.
- * @returns {Promise<Out | void>} The output from the route handler or void if an error occurred.
- */
 export const fetchData = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   response: PikkuHTTPResponse,
@@ -531,7 +381,6 @@ export const fetchData = async <In, Out>(
     logWarningsForStatusCodes = [],
     coerceDataFromSchema = true,
     bubbleErrors = false,
-    // Surface the error message + stack on unexpected 500s unless in production.
     exposeErrors = !isProduction(),
     generateRequestId,
     traceId: externalTraceId,
@@ -540,16 +389,13 @@ export const fetchData = async <In, Out>(
 ): Promise<Out | void> => {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  let wireServices: WireServices<typeof singletonServices> | undefined
   let result: Out
 
-  // Combine the request and response into one wire object
   const pikkuRequest =
     request instanceof Request
       ? new PikkuFetchHTTPRequest(request, { maxBodySize })
       : request
 
-  // Resolve traceId: external (e.g. CF-Ray) > x-request-id header > generated
   let requestId: string | null = externalTraceId ?? null
   if (!requestId) {
     try {
@@ -558,15 +404,12 @@ export const fetchData = async <In, Out>(
   }
   requestId = requestId || generateRequestId?.() || createWeakUID()
 
-  // Scoped logger for HTTP runner internal logging (error handling, route matching)
-  // Functions/middleware receive singletonServices.logger directly for compatibility
   const scopedLogger =
     singletonServices.logger.scope?.(requestId) ?? singletonServices.logger
   const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
 
-  // Locate the matching route based on the HTTP method and path
   const matchedRoute = getMatchingRoute(apiType, apiRoute)
   try {
     if (!matchedRoute) {
@@ -592,8 +435,7 @@ export const fetchData = async <In, Out>(
       throw new NotFoundError()
     }
 
-    // Execute the matched route along with its middleware and session management
-    ;({ result, wireServices } = await executeRoute(
+    ;({ result } = await executeRoute(
       {
         singletonServices,
         createWireServices,
@@ -617,10 +459,5 @@ export const fetchData = async <In, Out>(
       bubbleErrors,
       exposeErrors
     )
-  } finally {
-    // Clean up any session-specific services created during processing
-    if (wireServices) {
-      await closeWireServices(singletonServices.logger, wireServices)
-    }
   }
 }

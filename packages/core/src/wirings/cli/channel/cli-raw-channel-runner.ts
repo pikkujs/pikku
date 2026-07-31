@@ -67,7 +67,6 @@ export async function handleRawCLI({
     return { error: `Program "${programName}" not found`, exitCode: 1 }
   }
 
-  // Handle empty input or explicit help
   if (
     args.length === 0 ||
     args.includes('--help') ||
@@ -81,11 +80,8 @@ export async function handleRawCLI({
     return { help: helpText, exitCode: 0 }
   }
 
-  // Parse the args
   const parsed = parseCLIArguments(args, programName, allCLIMeta)
 
-  // If there are errors or the command resolves to a group (no function), show
-  // help — but an unparseable invocation is still a failure, so it exits 1.
   if (parsed.errors.length > 0 || parsed.commandPath.length === 0) {
     const helpText = generateCommandHelp(
       programName,
@@ -101,7 +97,6 @@ export async function handleRawCLI({
     }
   }
 
-  // Check if the resolved command has a pikkuFuncId (is executable)
   let current:
     | { pikkuFuncId?: string; subcommands?: Record<string, any> }
     | undefined = programMeta.commands[parsed.commandPath[0]]
@@ -109,7 +104,6 @@ export async function handleRawCLI({
     current = current?.subcommands?.[parsed.commandPath[i]]
   }
   if (!current?.pikkuFuncId) {
-    // It's a group command — show help scoped to that group
     const helpText = generateCommandHelp(
       programName,
       allCLIMeta,
@@ -118,7 +112,6 @@ export async function handleRawCLI({
     return { help: helpText, exitCode: 0 }
   }
 
-  // Execute the command
   const data = { ...parsed.positionals, ...parsed.options }
   const commandId = parsed.commandPath.join('.')
 

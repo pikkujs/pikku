@@ -23,9 +23,12 @@ export const closeWireServices = async (
   )
 }
 
-const _uidPrefix = Date.now().toString(36)
+let _uidPrefix: string | undefined
 let _uidCounter = 0
-export const createWeakUID = () => `${_uidPrefix}-${++_uidCounter}`
+export const createWeakUID = () => {
+  _uidPrefix ??= globalThis.crypto.randomUUID().slice(0, 8)
+  return `${_uidPrefix}-${++_uidCounter}`
+}
 
 export const isSerializable = (data: any): boolean => {
   return !(
@@ -78,9 +81,6 @@ export const freezeDedupe = <T>(
   return Object.freeze(out)
 }
 
-/**
- * Stop a single service by calling its stop method if it exists
- */
 const stopService = async (
   logger: Logger,
   name: string,
@@ -97,21 +97,14 @@ const stopService = async (
   }
 }
 
-/**
- * Stop all singleton services, including addon package services.
- * Addon package services are stopped first, then the parent services.
- *
- * @param singletonServices - The parent singleton services to stop
- */
+/** Stops addon package services first, then the parent singleton services. */
 export const stopSingletonServices = async (): Promise<void> => {
   const singletonServices = getSingletonServices()
   const logger = singletonServices.logger
 
-  // Stop all addon package singleton services
   const stateMap = getAllPackageStates()
   if (stateMap.size > 0) {
     for (const [packageName, packageState] of stateMap) {
-      // Skip main package - we handle it separately
       if (packageName === '__main__') continue
 
       const packageServices = packageState.package?.singletonServices
@@ -120,13 +113,11 @@ export const stopSingletonServices = async (): Promise<void> => {
         for (const [name, service] of Object.entries(packageServices)) {
           await stopService(logger, `${packageName}/${name}`, service)
         }
-        // Clear the cached services
         packageState.package.singletonServices = null
       }
     }
   }
 
-  // Then stop the parent singleton services
   for (const [name, service] of Object.entries(singletonServices)) {
     await stopService(logger, name, service)
   }

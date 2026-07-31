@@ -1,7 +1,3 @@
-/**
- * @module @pikku/core
- */
-
 export { LogLevel } from './logger.js'
 export { ScopedSecretService } from './scoped-secret-service.js'
 export {

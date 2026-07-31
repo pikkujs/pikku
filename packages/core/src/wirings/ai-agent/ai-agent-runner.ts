@@ -236,11 +236,7 @@ export async function runAIAgent(
 
       if (stepResult.toolCalls.length === 0) break
 
-      const approvalsNeeded = checkForApprovals(
-        stepResult,
-        runnerParams.tools,
-        runId
-      )
+      const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
       if (approvalsNeeded.length > 0) {
         for (const approval of approvalsNeeded) {
           const toolDef = runnerParams.tools.find(
@@ -251,9 +247,7 @@ export async function runAIAgent(
               approval.reason = await toolDef.approvalDescriptionFn(
                 approval.args
               )
-            } catch {
-              // If description generation fails, continue without it
-            }
+            } catch {}
           }
         }
 
@@ -402,9 +396,7 @@ export async function runAIAgent(
             stepNumber: -1,
             messages: runnerParams.messages,
           })
-        } catch {
-          // onError hooks must not affect error flow
-        }
+        } catch {}
       }
     }
     await aiRunState.updateRun(runId, {
@@ -451,9 +443,6 @@ export async function resumeAIAgentSync(
 
   const { agent, packageName, resolvedName } = resolveAgent(run.agentName)
 
-  // Resuming re-runs the agent, so it re-runs the agent's gate. Run ownership
-  // alone is not enough: a grant revoked while the run was suspended must stop
-  // the caller from approving its pending tool calls.
   await assertAgentAuthorized(agent, params, packageName)
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
@@ -516,7 +505,6 @@ export async function resumeAIAgentSync(
         typeof pending.args === 'string'
           ? JSON.parse(pending.args)
           : pending.args
-      // Strip null values recursively — LLMs send null for optional fields but Zod expects undefined
       const toolArgs = stripNulls(rawArgs) ?? {}
       try {
         const toolResult = await matchingTool.execute(toolArgs)
@@ -715,11 +703,7 @@ async function continueAfterToolResultSync(
 
       if (stepResult.toolCalls.length === 0) break
 
-      const approvalsNeeded = checkForApprovals(
-        stepResult,
-        runnerParams.tools,
-        run.runId
-      )
+      const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
       if (approvalsNeeded.length > 0) {
         for (const approval of approvalsNeeded) {
           const toolDef = runnerParams.tools.find(
@@ -730,9 +714,7 @@ async function continueAfterToolResultSync(
               approval.reason = await toolDef.approvalDescriptionFn(
                 approval.args
               )
-            } catch {
-              // ignore
-            }
+            } catch {}
           }
         }
 
@@ -880,9 +862,7 @@ async function continueAfterToolResultSync(
             stepNumber: -1,
             messages: runnerParams.messages,
           })
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
     }
     await aiRunState.updateRun(run.runId, {

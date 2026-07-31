@@ -5,11 +5,6 @@ import { InMemoryWorkflowService } from '../../services/in-memory-workflow-servi
 import { pikkuState } from '../../pikku-state.js'
 import type { WorkflowRunMirror } from './workflow.types.js'
 
-/**
- * Every method on `WorkflowRunMirror`. A mirror method that is added to the
- * interface but never wired into the service writes nothing at runtime, and
- * nothing else would catch that — so the list is spelled out here.
- */
 const MIRROR_METHODS = [
   'createRun',
   'updateRunStatus',
@@ -28,7 +23,6 @@ const MIRROR_METHODS = [
 
 type Call = { method: string; args: any[] }
 
-/** A mirror that records every call, and optionally throws on all of them. */
 const recordingMirror = (
   onCall?: (method: string) => void
 ): { mirror: WorkflowRunMirror; calls: Call[] } => {
@@ -52,7 +46,6 @@ const service = (mirror?: WorkflowRunMirror) => {
   return ws
 }
 
-/** Drive every write the service mirrors, in dependency order. */
 const driveEveryWrite = async (ws: any) => {
   const runId = await ws.createRun('flow', { a: 1 }, false, 'hash', {
     type: 'test',

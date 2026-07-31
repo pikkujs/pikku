@@ -2,10 +2,6 @@ import { LocalVariablesService } from './local-variables.js'
 import type { SecretService } from './secret-service.js'
 import type { VariablesService } from './variables-service.js'
 
-/**
- * Service for retrieving secrets from environment variables.
- * Supports storing secrets locally in memory for CLI operations.
- */
 export class LocalSecretService implements SecretService {
   private localSecrets: Map<string, string> = new Map()
 

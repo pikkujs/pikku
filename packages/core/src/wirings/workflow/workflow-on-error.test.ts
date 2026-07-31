@@ -3,11 +3,6 @@ import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 
-/**
- * Drive the real failure branch: a step that is already terminally failed must
- * invoke its onError handler and still throw. Only the nested compensation
- * call is intercepted, so the branch under test is the production one.
- */
 class TestWorkflowService extends InMemoryWorkflowService {
   public compensations: Array<{ rpcName: string; data: any }> = []
   public dispatches = 0
@@ -44,10 +39,6 @@ class TestWorkflowService extends InMemoryWorkflowService {
   }
 }
 
-/**
- * Seed a step in a non-terminal state, as a replay would find one that is
- * waiting on the queue rather than one that has failed.
- */
 async function seedPendingStep(ws: TestWorkflowService, stepName: string) {
   const runId = await ws.createRun('wf', {}, true, 'hash', {
     type: 'inline',

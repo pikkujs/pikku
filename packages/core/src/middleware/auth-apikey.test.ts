@@ -95,7 +95,6 @@ describe('authAPIKey middleware', () => {
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
-        // Should use header value, not query value
         assert.equal(token, 'header-key')
         return mockUserSession
       },

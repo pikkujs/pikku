@@ -110,7 +110,49 @@ export type {
 } from './wirings/mcp/mcp.types.js'
 export { runQueueJob } from './wirings/queue/queue-runner.js'
 export { runScheduledTask } from './wirings/scheduler/scheduler-runner.js'
-export { NotFoundError } from './errors/errors.js'
+export {
+  AIProviderAuthError,
+  AIProviderNotConfiguredError,
+  BadGatewayError,
+  BadRequestError,
+  ConflictError,
+  ExpectationFailedError,
+  ForbiddenError,
+  GatewayTimeoutError,
+  GoneError,
+  HTTPVersionNotSupportedError,
+  InternalServerError,
+  InvalidMiddlewareWireError,
+  InvalidOriginError,
+  InvalidSessionError,
+  LengthRequiredError,
+  LocalEnvironmentOnlyError,
+  LockedError,
+  MaxComputeTimeReachedError,
+  MethodNotAllowedError,
+  MissingCredentialError,
+  MissingSchemaError,
+  MissingScopeError,
+  MissingServiceError,
+  MissingSessionError,
+  NotAcceptableError,
+  NotFoundError,
+  NotImplementedError,
+  PayloadTooLargeError,
+  PaymentRequiredError,
+  PikkuMissingMetaError,
+  PreconditionFailedError,
+  ProxyAuthenticationRequiredError,
+  RangeNotSatisfiableError,
+  ReadonlySessionError,
+  RequestTimeoutError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+  URITooLongError,
+  UnauthorizedError,
+  UnprocessableContentError,
+  UnsupportedMediaTypeError,
+} from './errors/errors.js'
 export { PikkuError, isExpectedError } from './errors/error-handler.js'
 export type { EventHubService } from './wirings/channel/eventhub-service.js'
 export type { QueueService } from './wirings/queue/queue.types.js'

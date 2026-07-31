@@ -4,15 +4,8 @@ import assert from 'node:assert/strict'
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
 
-// A queued workflow step is executed with the bare job wire (payload is just
-// { runId }), so its wire has no `pikkuUserId`. Without threading it from the
-// persisted run wire, an authed step (`pikkuFunc`) sees no session and throws
-// "Authentication required". These tests pin that `invokeStepRpc` merges the
-// run wire's `pikkuUserId` into the step wire override so the session rehydrates.
-
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
-// rpcService stand-in whose only job is to capture the wire override it's handed.
 function capturingRpcService(): {
   service: { rpcWithWire: (n: string, d: any, w: any) => Promise<any> }
   wire: () => any

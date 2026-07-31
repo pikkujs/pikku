@@ -6,11 +6,6 @@ import {
   UnprocessableContentError,
 } from '../../errors/errors.js'
 
-/**
- * The largest request body read into memory when no limit is configured. Ample
- * for JSON APIs and typical uploads while keeping a single request's memory
- * footprint bounded.
- */
 export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024
 
 export type PikkuFetchHTTPRequestOptions = Partial<{
@@ -19,8 +14,6 @@ export type PikkuFetchHTTPRequestOptions = Partial<{
 }>
 
 /**
- * Abstract class representing a pikku request.
- * @template In - The type of the request body.
  * @group RequestResponse
  */
 export class PikkuFetchHTTPRequest<
@@ -50,35 +43,15 @@ export class PikkuFetchHTTPRequest<
     return this.#url.pathname
   }
 
-  /**
-   * Retrieves the request body.
-   * @returns A promise that resolves to the request body.
-   */
   public async json(): Promise<In> {
     const text = await this.#readRawText()
     return JSON.parse(text) as In
   }
 
-  /**
-   * Retrieves the raw request body as a Buffer.
-   * @returns A promise that resolves to the raw request body.
-   */
   public async arrayBuffer(): Promise<ArrayBuffer> {
     return this.#readRawBuffer()
   }
 
-  /**
-   * Reads the underlying single-use request body exactly once and memoises both
-   * the in-flight promise and the result. `json()`, `arrayBuffer()`, `body()`
-   * and `toWebRequest()` all funnel through here, so a request whose body is
-   * consumed in more than one place can no longer race on the underlying stream
-   * and fail with "Body has already been used".
-   *
-   * If a second consumer asks for the body while the first read is still in
-   * flight, that is the concurrent double-read that used to crash — now safe,
-   * but warned about so the redundant consumer is found and removed at the
-   * source rather than silently leaning on this cache.
-   */
   async #readRawBuffer(): Promise<ArrayBuffer> {
     if (this.#rawBodyBuffer !== undefined) {
       return this.#rawBodyBuffer
@@ -105,12 +78,6 @@ export class PikkuFetchHTTPRequest<
     return this.#rawBufferPromise
   }
 
-  /**
-   * Reads the body while refusing to buffer more than `maxBodySize` bytes. The
-   * declared `content-length` is rejected up front so an oversized body is never
-   * transferred, and the stream is measured as it arrives because that header is
-   * both optional and attacker-controlled.
-   */
   async #readBoundedBuffer(): Promise<ArrayBuffer> {
     const contentLength = this.request.headers.get('content-length')
     if (contentLength !== null) {
@@ -177,19 +144,10 @@ export class PikkuFetchHTTPRequest<
     return Object.fromEntries(this.request.headers.entries())
   }
 
-  /**
-   * Retrieves the value of a specific header.
-   * @param headerName - The name of the header to retrieve.
-   * @returns The value of the header, or undefined if the header is not found.
-   */
   public header(headerName: string): string | null {
     return this.request.headers.get(headerName.toLowerCase())
   }
 
-  /**
-   * Retrieves the cookies from the request.
-   * @returns An object containing the cookies.
-   */
   public cookie(cookieName: string): string | null {
     if (this.#cookies?.[cookieName]) {
       return this.#cookies[cookieName]
@@ -199,36 +157,20 @@ export class PikkuFetchHTTPRequest<
     return this.#cookies[cookieName] || null
   }
 
-  /**
-   * Retrieves the request parameters.
-   * @returns An object containing the request parameters.
-   */
   public params(): Partial<Record<string, string | string[]>> {
     return this.#params
   }
 
-  /**
-   * Sets the request parameters.
-   * @param params - An object containing the request parameters to set.
-   */
   public setParams(
     params: Record<string, string | string[] | undefined>
   ): void {
     this.#params = params
   }
 
-  /**
-   * Retrieves the query parameters from the request.
-   * @returns An object containing the query parameters.
-   */
   public query(): PikkuQuery {
     return parseQuery(this.#url.searchParams.toString()) as PikkuQuery
   }
 
-  /**
-   * Retrieves the combined data from the request, including parameters, query, and body.
-   * @returns A promise that resolves to an object containing the combined data.
-   */
   public async data(): Promise<In> {
     const body = await this.body()
     const parts = [this.params(), this.query(), body]

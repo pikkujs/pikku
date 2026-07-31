@@ -79,7 +79,6 @@ describe('combineChannelMiddleware', () => {
 
     assert.deepEqual(first, [shared])
 
-    // Re-registering after the first resolve does not change the cached result.
     addChannelMiddleware('chat:outbound', [async () => {}])
 
     const cached = combineChannelMiddleware('channel', 'cached-1', {

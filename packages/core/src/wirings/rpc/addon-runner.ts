@@ -6,11 +6,6 @@ import type {
 import type { SecretService } from '../../services/secret-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 
-/**
- * A single wired addon instance: a namespace (wireAddon `name`) plus the
- * per-instance name-aliases that remap the logical names the addon reads to
- * the actual project secret/variable/credential names.
- */
 export type AddonInstance = {
   namespace: string
   secretOverrides?: Record<string, string>
@@ -18,10 +13,6 @@ export type AddonInstance = {
   credentialOverrides?: Record<string, string>
 }
 
-/**
- * Wrap a SecretService so that the logical secret names an addon reads are
- * remapped to the actual project secret names via the instance's overrides.
- */
 const aliasSecretService = (
   secrets: SecretService,
   overrides: Record<string, string>
@@ -46,10 +37,6 @@ const aliasSecretService = (
   }
 }
 
-/**
- * Wrap a VariablesService so that the logical variable names an addon reads
- * are remapped to the actual project variable names via the instance's overrides.
- */
 const aliasVariablesService = (
   variables: VariablesService,
   overrides: Record<string, string>
@@ -78,10 +65,6 @@ const aliasVariablesService = (
   }
 }
 
-/**
- * Find the consumer-defined namespace (from wireAddon) for a given addon package.
- * Returns null if the package isn't registered as an addon.
- */
 const findAddonNamespaceForPackage = (packageName: string): string | null => {
   const addons = pikkuState(null, 'addons', 'packages')
   if (!addons) return null
@@ -91,18 +74,6 @@ const findAddonNamespaceForPackage = (packageName: string): string | null => {
   return null
 }
 
-/**
- * Wrap a workflow service so that bare workflow names passed from inside an
- * addon function are auto-prefixed with the addon's consumer-facing namespace.
- * Without this, `runToCompletion('myWorkflow')` from inside an addon misses
- * the workflow registered under the addon's package scope and throws
- * WorkflowNotFoundError — forcing addons to hardcode their consumer-defined
- * namespace, which couples the addon to its caller.
- *
- * Explicit `'ns:name'` and bare names that already exist in root meta are
- * unaffected; only bare names that would otherwise miss resolution get
- * prefixed.
- */
 const wrapWorkflowServiceForPackage = <T extends object>(
   service: T,
   packageName: string,
@@ -114,8 +85,6 @@ const wrapWorkflowServiceForPackage = <T extends object>(
         const original = Reflect.get(target, prop, receiver) as Function
         return function (this: any, name: string, ...rest: any[]) {
           if (typeof name === 'string' && !name.includes(':')) {
-            // Prefer the known instance namespace; fall back to the
-            // package's sole namespace when invoked without an instance.
             const ns = namespace ?? findAddonNamespaceForPackage(packageName)
             if (ns) {
               name = `${ns}:${name}`
@@ -129,23 +98,11 @@ const wrapWorkflowServiceForPackage = <T extends object>(
   })
 }
 
-/**
- * Get or create singleton services for an addon instance.
- * Services are cached in pikkuState to avoid recreation on each call.
- *
- * @param packageName - The addon package name
- * @param parentServices - The parent/caller's singleton services (used as base)
- * @param addonInstance - The wired instance whose overrides shape the services
- * @returns The instance's singleton services
- */
 export const getOrCreatePackageSingletonServices = async (
   packageName: string,
   parentServices: CoreSingletonServices,
   addonInstance?: AddonInstance
 ): Promise<CoreSingletonServices> => {
-  // Cache per instance (namespace), not per package, so two instances of one
-  // package get separate services built with their own overrides. A bare
-  // package-scoped call (no instance) falls back to per-package caching.
   const cacheKey = addonInstance?.namespace ?? packageName
 
   const cachedServices = pikkuState(cacheKey, 'package', 'singletonServices')
@@ -155,13 +112,9 @@ export const getOrCreatePackageSingletonServices = async (
 
   const factories = pikkuState(packageName, 'package', 'factories')
   if (!factories || !factories.createSingletonServices) {
-    // No factories registered, use parent services
     return parentServices
   }
 
-  // Apply this instance's secret/variable overrides by aliasing the resolver
-  // services the addon reads from, so its createSingletonServices resolves
-  // instance-specific secrets/variables.
   let existingServices = parentServices
   if (addonInstance?.secretOverrides && parentServices.secrets) {
     existingServices = {
@@ -182,20 +135,16 @@ export const getOrCreatePackageSingletonServices = async (
     }
   }
 
-  // Create config for the package (use parent config if no factory)
   let config: CoreConfig = existingServices.config
   if (factories.createConfig) {
     config = await factories.createConfig(existingServices.variables)
   }
 
-  // Create singleton services for the package, passing parent services as existing
   const packageServices = await factories.createSingletonServices(
     config,
     existingServices
   )
 
-  // Wrap workflowService so that bare names used inside the addon's functions
-  // resolve to workflows registered under the addon's package scope.
   if (
     packageServices.workflowService &&
     typeof packageServices.workflowService === 'object'
@@ -212,11 +161,6 @@ export const getOrCreatePackageSingletonServices = async (
   return packageServices
 }
 
-/**
- * Build the addon instance descriptor (namespace + per-instance overrides) for
- * a bare intra-addon call, using the namespace currently executing on the wire.
- * Returns undefined unless that namespace maps to the resolved package.
- */
 export const addonInstanceForNamespace = (
   namespace: string | undefined,
   expectedPackage: string

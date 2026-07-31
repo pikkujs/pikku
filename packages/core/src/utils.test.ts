@@ -34,6 +34,17 @@ describe('createWeakUID', () => {
     const uid = createWeakUID()
     assert.ok(uid.includes('-'))
   })
+
+  test('separate module instances get different prefixes', async () => {
+    const [a, b] = await Promise.all([
+      import('./utils.js?instance=a'),
+      import('./utils.js?instance=b'),
+    ])
+    assert.notStrictEqual(
+      a.createWeakUID().split('-')[0],
+      b.createWeakUID().split('-')[0]
+    )
+  })
 })
 
 describe('isSerializable', () => {
@@ -238,7 +249,6 @@ describe('closeWireServices', () => {
     }
 
     await closeWireServices(mockLogger as any, wireServices as any)
-    // Should not throw
   })
 })
 
@@ -295,7 +305,6 @@ describe('stopSingletonServices', () => {
     pikkuState(null, 'package', 'singletonServices', mockServices as any)
 
     await stopSingletonServices()
-    // Should not throw
   })
 
   test('should handle errors during stop gracefully', async () => {

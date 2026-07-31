@@ -829,25 +829,6 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
-  async getNodesWithoutSteps(
-    runId: string,
-    nodeIds: string[]
-  ): Promise<string[]> {
-    if (nodeIds.length === 0) return []
-
-    const result: string[] = []
-
-    for (const nodeId of nodeIds) {
-      const key = this.stepKey(runId, nodeId)
-      const exists = await this.redis.exists(key)
-      if (!exists) {
-        result.push(nodeId)
-      }
-    }
-
-    return result
-  }
-
   async getStepInstances(
     runId: string
   ): Promise<

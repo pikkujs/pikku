@@ -6,14 +6,11 @@ import type {
   CLIOption,
 } from './cli.types.js'
 
-/** Convert kebab-case to camelCase: "from-plan" → "fromPlan" */
+/** "from-plan" → "fromPlan"; the parser accepts either spelling. */
 function toCamelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
 
-/** Convert camelCase to kebab-case for display: "autoApply" → "auto-apply".
- *  Flags are stored camelCase (matching the function input field) but shown
- *  kebab; the parser accepts both forms via toCamelCase. */
 function toKebabCase(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 }
@@ -21,8 +18,7 @@ function toKebabCase(str: string): string {
 /** Options the runner handles itself — never reported as unknown. */
 const RESERVED_OPTIONS = new Set(['help'])
 
-/** Levenshtein distance, capped-free and dependency-free. Used only to suggest
- *  a near-miss option name, so the naive O(n*m) implementation is fine. */
+/** Naive O(n*m); only ever used to suggest a near-miss option name. */
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0
   if (a.length === 0) return b.length
@@ -40,8 +36,7 @@ function levenshtein(a: string, b: string): number {
   return prev[b.length]
 }
 
-/** Finds the closest declared option (distance <= 2) to what the user typed.
- *  Compares against the kebab-case rendering, since that is what is typed. */
+/** Returns null beyond a distance of 2. */
 function suggestOption(
   typed: string,
   availableOptions: Record<string, CLIOption>
@@ -64,9 +59,7 @@ function suggestOption(
   return best
 }
 
-/** Records a warning that an unknown long option was accepted but ignored.
- *  Unknown options stay non-fatal for forward compatibility (a newer command
- *  version may understand them) — they are just no longer silent. */
+// knowledge: decisions/design/cli-unknown-long-options-warn-instead-of-failing.md
 function warnUnknownOption(
   typed: string,
   availableOptions: Record<string, CLIOption>,
@@ -83,22 +76,16 @@ function warnUnknownOption(
   )
 }
 
-/**
- * Result of parsing CLI arguments
- */
 export interface ParsedCommand {
   program: string
   commandPath: string[]
   positionals: Record<string, any>
   options: Record<string, any>
   errors: string[]
-  /** Non-fatal diagnostics (e.g. unknown options that were accepted+ignored) */
+  /** Non-fatal: the command still runs. */
   warnings: string[]
 }
 
-/**
- * Parses raw CLI arguments into structured data for a specific program
- */
 export function parseCLIArguments(
   args: string[],
   programName: string,
@@ -122,11 +109,9 @@ export function parseCLIArguments(
   let currentIndex = 0
   let currentMeta = meta
 
-  // Parse command path (non-flag arguments at the beginning)
   while (currentIndex < args.length && !args[currentIndex].startsWith('-')) {
     const arg = args[currentIndex]
 
-    // Check if this is a known subcommand
     if (currentMeta.commands && currentMeta.commands[arg]) {
       result.commandPath.push(arg)
       currentMeta = {
@@ -141,13 +126,11 @@ export function parseCLIArguments(
       }
       currentIndex++
     } else {
-      // Not a subcommand, must be a positional argument
       break
     }
   }
 
-  // If no command was parsed, check for a default command
-  // Only use default if user didn't provide any non-flag arguments
+  // A default command only applies when the user named no command at all.
   const hasNonFlagArgs = args.some(
     (arg, idx) => idx >= currentIndex && !arg.startsWith('-')
   )
@@ -169,10 +152,8 @@ export function parseCLIArguments(
     }
   }
 
-  // Get the final command metadata
   const commandMeta = getCommandMeta(meta, result.commandPath)
   if (!commandMeta) {
-    // If we have no command path but there are non-flag args, the first arg is likely an unknown command
     if (
       result.commandPath.length === 0 &&
       hasNonFlagArgs &&
@@ -186,9 +167,7 @@ export function parseCLIArguments(
     return result
   }
 
-  // A group/parent command — has subcommands but no runnable function of its
-  // own — cannot be executed directly. Surface a routable error so the runner
-  // shows its subcommand help instead of attempting to run a missing function.
+  // knowledge: decisions/design/cli-parse-errors-are-routed-by-message-prefix.md
   if (
     !commandMeta.pikkuFuncId &&
     commandMeta.subcommands &&
@@ -198,10 +177,8 @@ export function parseCLIArguments(
     return result
   }
 
-  // Collect all available options (global + inherited)
   const availableOptions = collectAvailableOptions(meta, result.commandPath)
 
-  // Parse remaining arguments as positionals and options
   const positionalArgs: string[] = []
   const optionArgs: Record<string, any> = {}
 
@@ -209,7 +186,6 @@ export function parseCLIArguments(
     const arg = args[currentIndex]
 
     if (arg.startsWith('--')) {
-      // Long option (--from-plan → fromPlan)
       const negatedKey = arg.startsWith('--no-')
         ? toCamelCase(arg.slice(5))
         : undefined
@@ -218,17 +194,13 @@ export function parseCLIArguments(
         negatedKey &&
         typeof availableOptions[negatedKey]?.default === 'boolean'
       ) {
-        // --no-<flag> turns a boolean option off. Only options that declare a
-        // boolean default can be negated, so a literal `--no-something` option
-        // name still parses as itself.
+        // Requiring a boolean default keeps a literal `--no-something` option
+        // name parsing as itself rather than as a negation.
         optionArgs[negatedKey] = false
       } else if (equalIndex > 0) {
-        // --option=value format
         const key = toCamelCase(arg.slice(2, equalIndex))
         const optionDef = availableOptions[key]
 
-        // Unknown options are allowed for forward compatibility, but warned
-        // about so they are not silently dropped by the input schema.
         if (!optionDef) {
           warnUnknownOption(arg.slice(2, equalIndex), availableOptions, result)
         }
@@ -236,18 +208,14 @@ export function parseCLIArguments(
         const value = arg.slice(equalIndex + 1)
         optionArgs[key] = parseOptionValue(value, optionDef)
       } else {
-        // --option value format
         const key = toCamelCase(arg.slice(2))
         const optionDef = availableOptions[key]
 
-        // Unknown options are allowed for forward compatibility, but warned
-        // about so they are not silently dropped by the input schema.
         if (!optionDef) {
           warnUnknownOption(arg.slice(2), availableOptions, result)
         }
 
         if (optionDef && optionDef.array) {
-          // Array option - collect all following non-flag values
           currentIndex++
           const values: any[] = []
           while (
@@ -263,23 +231,19 @@ export function parseCLIArguments(
           currentIndex + 1 < args.length &&
           !args[currentIndex + 1].startsWith('-')
         ) {
-          // Next arg is the value
           currentIndex++
           optionArgs[key] = parseOptionValue(args[currentIndex], optionDef)
         } else {
-          // Boolean flag
           optionArgs[key] = true
         }
       }
     } else if (arg.startsWith('-') && arg.length > 1) {
-      // Short option(s)
       for (let i = 1; i < arg.length; i++) {
         const shortFlag = arg[i]
 
-        // Find the corresponding long option
         const longOption = findLongOption(shortFlag, availableOptions)
         if (longOption) {
-          // Check if this is the last character and there's a value
+          // Only the last flag in a cluster can take a value.
           if (
             i === arg.length - 1 &&
             currentIndex + 1 < args.length &&
@@ -291,7 +255,6 @@ export function parseCLIArguments(
               availableOptions[longOption]
             )
           } else {
-            // Boolean flag
             optionArgs[longOption] = true
           }
         } else {
@@ -299,17 +262,14 @@ export function parseCLIArguments(
         }
       }
     } else {
-      // Positional argument
       positionalArgs.push(arg)
     }
 
     currentIndex++
   }
 
-  // Map positional arguments to named parameters
   mapPositionalArguments(commandMeta.positionals, positionalArgs, result)
 
-  // Apply option defaults and validation
   applyOptionDefaults(availableOptions, optionArgs, result)
 
   result.options = optionArgs
@@ -317,9 +277,6 @@ export function parseCLIArguments(
   return result
 }
 
-/**
- * Gets the command metadata for a given path
- */
 function getCommandMeta(
   meta: CLIProgramMeta,
   path: string[]
@@ -343,9 +300,6 @@ function getCommandMeta(
   return current
 }
 
-/**
- * Collects all available options through the inheritance chain
- */
 function collectAvailableOptions(
   meta: CLIProgramMeta,
   path: string[]
@@ -356,7 +310,6 @@ function collectAvailableOptions(
     return options
   }
 
-  // Walk through the command path, merging options
   let current = meta.commands[path[0]]
   if (current) {
     options = { ...options, ...current.options }
@@ -372,9 +325,6 @@ function collectAvailableOptions(
   return options
 }
 
-/**
- * Finds the long option name for a short flag
- */
 function findLongOption(
   shortFlag: string,
   options: Record<string, CLIOption>
@@ -387,12 +337,8 @@ function findLongOption(
   return null
 }
 
-/**
- * Parses an option value based on its definition
- */
 function parseOptionValue(value: string, optionDef?: CLIOption): any {
   if (!optionDef) {
-    // No definition, try to infer type
     if (value === 'true') return true
     if (value === 'false') return false
     if (/^\d+$/.test(value)) return parseInt(value, 10)
@@ -400,7 +346,6 @@ function parseOptionValue(value: string, optionDef?: CLIOption): any {
     return value
   }
 
-  // Use default type from option definition
   const defaultValue = optionDef.default
   if (typeof defaultValue === 'boolean') {
     return value === 'true' || value === '1' || value === 'yes'
@@ -409,18 +354,14 @@ function parseOptionValue(value: string, optionDef?: CLIOption): any {
     return parseFloat(value)
   }
 
-  // Check choices
   if (optionDef.choices && !optionDef.choices.includes(value as any)) {
-    // Invalid choice, but return anyway (validation will catch it)
+    // Deliberately not an error here — applyOptionDefaults reports bad choices.
     return value
   }
 
   return value
 }
 
-/**
- * Maps positional arguments to named parameters
- */
 function mapPositionalArguments(
   positionalDefs: CLIPositional[],
   args: string[],
@@ -430,7 +371,6 @@ function mapPositionalArguments(
 
   for (const def of positionalDefs) {
     if (def.variadic) {
-      // Collect all remaining arguments
       if (argIndex < args.length) {
         result.positionals[def.name] = args.slice(argIndex)
         argIndex = args.length
@@ -440,7 +380,6 @@ function mapPositionalArguments(
         result.positionals[def.name] = []
       }
     } else {
-      // Single argument
       if (argIndex < args.length) {
         result.positionals[def.name] = args[argIndex]
         argIndex++
@@ -450,7 +389,6 @@ function mapPositionalArguments(
     }
   }
 
-  // Check for extra positional arguments
   if (argIndex < args.length) {
     result.errors.push(
       `Unexpected arguments: ${args.slice(argIndex).join(' ')}`
@@ -458,26 +396,20 @@ function mapPositionalArguments(
   }
 }
 
-/**
- * Applies option defaults and validates choices
- */
 function applyOptionDefaults(
   optionDefs: Record<string, CLIOption>,
   options: Record<string, any>,
   result: ParsedCommand
 ) {
   for (const [name, def] of Object.entries(optionDefs)) {
-    // Apply default if not provided
     if (!(name in options) && def.default !== undefined) {
       options[name] = def.default
     }
 
-    // Check required
     if (def.required && !(name in options)) {
       result.errors.push(`Missing required option: --${toKebabCase(name)}`)
     }
 
-    // Validate choices
     if (def.choices && name in options) {
       const value = options[name]
       if (Array.isArray(value)) {
@@ -497,9 +429,6 @@ function applyOptionDefaults(
   }
 }
 
-/**
- * Generates help text for a command in a specific program
- */
 export function generateCommandHelp(
   programName: string,
   allMeta: CLIMeta,
@@ -513,7 +442,6 @@ export function generateCommandHelp(
   }
 
   if (commandPath.length === 0) {
-    // Root help for the program
     lines.push(`Usage: ${programName} <command> [options]`)
     lines.push('')
     lines.push('Commands:')
@@ -530,13 +458,11 @@ export function generateCommandHelp(
       formatOptions(meta.options, lines)
     }
   } else {
-    // Command-specific help
     const commandMeta = getCommandMeta(meta, commandPath)
     if (!commandMeta) {
       return `Unknown command: ${commandPath.join(' ')}`
     }
 
-    // Usage line
     let usage = `${programName} ${commandPath.join(' ')}`
     if (commandMeta.parameters) {
       usage += ' ' + commandMeta.parameters
@@ -548,7 +474,6 @@ export function generateCommandHelp(
       lines.push(commandMeta.description)
     }
 
-    // Positional arguments
     if (commandMeta.positionals.length > 0) {
       lines.push('')
       lines.push('Arguments:')
@@ -559,7 +484,6 @@ export function generateCommandHelp(
       }
     }
 
-    // Subcommands
     if (
       commandMeta.subcommands &&
       Object.keys(commandMeta.subcommands).length > 0
@@ -572,7 +496,6 @@ export function generateCommandHelp(
       }
     }
 
-    // Options
     const availableOptions = collectAvailableOptions(meta, commandPath)
     if (Object.keys(availableOptions).length > 0) {
       lines.push('')
@@ -584,9 +507,6 @@ export function generateCommandHelp(
   return lines.join('\n')
 }
 
-/**
- * Formats options for help text
- */
 function formatOptions(options: Record<string, CLIOption>, lines: string[]) {
   for (const [name, opt] of Object.entries(options)) {
     let line = '  '

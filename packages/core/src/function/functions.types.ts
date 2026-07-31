@@ -18,14 +18,6 @@ import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js
  */
 export type ZodLike<T = any> = StandardSchemaV1<T, T>
 
-/**
- * Represents a core API function that performs an operation using core services and a user session.
- *
- * @template In - The input type.
- * @template Out - The output type.
- * @template Services - The services type, defaults to `CoreServices`.
- * @template Wire - The wire type, defaults to `PikkuWire<In, Out>`.
- */
 export type CorePikkuFunction<
   In,
   Out,
@@ -39,14 +31,6 @@ export type CorePikkuFunction<
   wire: Wire
 ) => Wire['channel'] extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
-/**
- * Represents a core API function that can be used without a session.
- *
- * @template In - The input type.
- * @template Out - The output type.
- * @template Services - The services type, defaults to `CoreServices`.
- * @template Wire - The wire type, defaults to `PikkuWire<In, Out>`.
- */
 export type CorePikkuFunctionSessionless<
   In,
   Out,
@@ -60,13 +44,6 @@ export type CorePikkuFunctionSessionless<
   wire: Wire
 ) => Wire['channel'] extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
-/**
- * Represents a function that checks permissions for a given operation.
- *
- * @template In - The input type.
- * @template Services - The services type, defaults to `CoreServices`.
- * @template Session - The session type, defaults to `CoreUserSession`.
- */
 export type CorePikkuPermission<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
@@ -74,52 +51,17 @@ export type CorePikkuPermission<
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
 
-/**
- * Configuration object for creating a permission with metadata
- *
- * @template In - The input type.
- * @template Services - The services type, defaults to `CoreServices`.
- * @template Session - The session type, defaults to `CoreUserSession`.
- */
 export type CorePikkuPermissionConfig<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
   Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = {
-  /** The permission function */
   func: CorePikkuPermission<In, Services, Wire>
-  /** Optional human-readable name for the permission */
   name?: string
-  /** Optional description of what the permission checks */
   description?: string
 }
 
-/**
- * Factory function for creating permissions with tree-shaking support
- * Supports both direct function and configuration object syntax
- *
- * @example
- * ```typescript
- * // Direct function syntax
- * export const adminPermission = pikkuPermission(
- *   async ({ logger }, _data, { getSession }) => {
- *     const currentSession = await getSession()
- *     return currentSession?.role === 'admin'
- *   }
- * )
- *
- * // Configuration object syntax with metadata
- * export const adminPermission = pikkuPermission({
- *   name: 'Admin Permission',
- *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, _data, { getSession }) => {
- *     const currentSession = await getSession()
- *     return currentSession?.role === 'admin'
- *   }
- * })
- * ```
- */
 export const pikkuPermission = <
   In = any,
   Services extends CoreSingletonServices = CoreServices,
@@ -138,14 +80,6 @@ export const pikkuPermission = <
   return typeof permission === 'function' ? permission : permission.func
 }
 
-/**
- * A factory function that takes input and returns a permission
- * Used when permissions need configuration/input parameters
- *
- * @template In - The input type for the factory.
- * @template Services - The services type, defaults to `CoreServices`.
- * @template Session - The session type, defaults to `CoreUserSession`.
- */
 export type CorePikkuPermissionFactory<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
@@ -153,26 +87,6 @@ export type CorePikkuPermissionFactory<
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (input: In) => CorePikkuPermission<any, Services, Wire>
 
-/**
- * Factory function for creating permission factories
- * Use this when your permission needs configuration/input parameters
- *
- * @example
- * ```typescript
- * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
- *   role
- * }) => {
- *   return pikkuPermission(async ({ logger }, data, { getSession }) => {
- *      const currentSession = await getSession()
- *     if (!currentSession || currentSession.role !== role) {
- *       logger.warn(`Permission denied: required role '${role}'`)
- *       return false
- *     }
- *     return true
- *   })
- * })
- * ```
- */
 export const pikkuPermissionFactory = <In = any>(
   factory: CorePikkuPermissionFactory<In>
 ): CorePikkuPermissionFactory<In> => {
@@ -180,30 +94,14 @@ export const pikkuPermissionFactory = <In = any>(
 }
 
 /**
- * A function that generates a human-readable description of a pending approval action.
- * Used by AI agents to show meaningful approval prompts instead of raw tool arguments.
- *
- * @template In - The input type (same as the function it describes).
- * @template Services - The services type, defaults to `CoreSingletonServices`.
+ * Renders a human-readable approval prompt for an AI agent, in place of the
+ * raw tool arguments.
  */
 export type CorePikkuApprovalDescription<
   In = any,
   Services extends CoreSingletonServices = CoreSingletonServices,
 > = (services: Services, data: In) => Promise<string>
 
-/**
- * Factory function for creating approval description functions with tree-shaking support.
- *
- * @example
- * ```typescript
- * export const deleteTodoApproval = pikkuApprovalDescription(
- *   async ({ todoStore }, { id }) => {
- *     const todo = await todoStore.get(id)
- *     return `Delete todo: "${todo.title}"`
- *   }
- * )
- * ```
- */
 export const pikkuApprovalDescription = <
   In = any,
   Services extends CoreSingletonServices = CoreSingletonServices,
@@ -250,9 +148,9 @@ export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | undefined
 
 /**
- * A lifecycle hook: the same call signature as the function it hangs off, but
- * its return value is discarded. A hook is setup/teardown, not a step — it has
- * no id, no meta and no schema, so it is never recorded and never replayed.
+ * A lifecycle hook: same call signature as the function it hangs off, return
+ * value discarded. Setup/teardown, not a step — no id, no meta, no schema, so
+ * it is never recorded and never replayed.
  */
 export type CorePikkuFunctionHook<Services = any, Data = any, Wire = any> = (
   services: Services,
@@ -274,9 +172,7 @@ export type CorePikkuFunctionConfig<
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   Scope extends string = string,
 > = {
-  /** Short human-readable name (e.g. "Create Todo") */
   title?: string
-  /** Longer-form description of what the function does */
   description?: string
   /** Explicit logical name override; lets multiple exports share a versioned base */
   override?: string
@@ -314,26 +210,22 @@ export type CorePikkuFunctionConfig<
    */
   before?: CorePikkuFunctionHook
   /**
-   * Scenarios only: always runs after the scenario body, in a `finally`.
-   * Throwing fails a run that would otherwise have passed; on an
-   * already-failed run it attaches as the `cause` and never replaces the
-   * original error.
+   * Scenarios only: always runs after the body, in a `finally`. Throwing fails
+   * an otherwise-passing run; on an already-failed run it attaches as `cause`
+   * and never replaces the original error.
    */
   after?: CorePikkuFunctionHook
   /**
-   * Scenarios only: why this scenario is held out of a default run. It is
-   * reported as skipped rather than quietly omitted, and naming it directly
-   * with `--flows` runs it anyway.
+   * Scenarios only: why this scenario is held out of a default run. Reported
+   * as skipped rather than quietly omitted; naming it in `--flows` runs it.
    */
   skip?: string
   auth?: boolean
   /**
-   * Scopes the session must hold to run this function. All of them are
-   * required (AND), and they are checked before `permissions` — unlike
-   * permissions, which OR together, a scope can only narrow access.
-   *
-   * Narrowed to the generated `ScopeId` union in a project's own
-   * `pikku-types.gen.ts`, so an undeclared scope is a compile error.
+   * Scopes the session must hold; all are required (AND) and checked before
+   * `permissions`, which OR together — a scope can only narrow access.
+   * Narrowed to the generated `ScopeId` union, so an undeclared scope is a
+   * compile error.
    */
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>

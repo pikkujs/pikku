@@ -3,11 +3,9 @@ import type { SecretService } from './services/secret-service.js'
 import { encryptJSON } from './crypto-utils.js'
 
 /**
- * Build Authorization headers with JWT-signed session and traceId for
- * pikkuRemoteAuthMiddleware on the receiving end.
- *
- * Used by all deployment services (Kysely, Redis, MongoDB, Lambda, CF, Azure)
- * regardless of transport (HTTP, Lambda Invoke, service bindings).
+ * Authorization headers carrying a JWT-signed session and traceId for
+ * `pikkuRemoteAuthMiddleware` on the receiving end. Used by every deployment
+ * service regardless of transport (HTTP, Lambda Invoke, service bindings).
  */
 export async function buildRemoteHeaders(
   jwt: JWTService | undefined,

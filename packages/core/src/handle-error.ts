@@ -4,19 +4,6 @@ import { NotFoundError } from './errors/errors.js'
 import type { Logger } from './services/logger.js'
 import type { PikkuHTTP } from './wirings/http/http.types.js'
 
-/**
- * Handle errors that occur during route processing
- *
- * @param {any} e - The error that occurred
- * @param {PikkuHTTP | undefined} http - HTTP wire object
- * @param {string} traceId - Unique ID for tracking this error
- * @param {Logger} logger - Logger service
- * @param {number[]} logWarningsForStatusCodes - HTTP status codes to log as warnings
- * @param {boolean} respondWith404 - Whether to respond with 404 for NotFoundError
- * @param {boolean} bubbleError - Whether to throw the error after handling
- * @param {boolean} exposeErrors - Whether to include internal error details (message, stack and
- * payload of 5xx errors) in the response body. Ignored in production.
- */
 export const handleHTTPError = (
   e: any,
   http: PikkuHTTP | undefined,
@@ -27,18 +14,15 @@ export const handleHTTPError = (
   bubbleError: boolean,
   exposeErrors: boolean = false
 ) => {
-  // Skip 404 handling if configured to do so
   if (e instanceof NotFoundError && !respondWith404) {
     return
   }
 
-  // Get appropriate error response
   const errorResponse = getErrorResponse(e)
   if (errorResponse != null) {
     const clientFacing =
       errorResponse.status < 500 || (exposeErrors && !isProduction())
 
-    // Set status and response body
     http?.response?.status(errorResponse.status)
     http?.response?.json({
       name: e instanceof Error ? e.name : undefined,
@@ -53,7 +37,6 @@ export const handleHTTPError = (
       errorId: traceId,
     })
 
-    // Log certain status codes as warnings
     if (logWarningsForStatusCodes.includes(errorResponse.status)) {
       if (traceId) {
         logger.warn(`Warning id: ${traceId}`)
@@ -61,7 +44,6 @@ export const handleHTTPError = (
       logger.warn(e instanceof Error ? e.message : e)
     }
   } else {
-    // Handle unexpected errors
     logger.error(e instanceof Error ? e.message : e)
     http?.response?.status(500)
 

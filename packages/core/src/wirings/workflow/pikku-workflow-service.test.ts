@@ -30,9 +30,6 @@ describe('pikku-workflow-service worker registration', () => {
 })
 
 describe('pikku-workflow-service per-workflow queue warning', () => {
-  // Losing the per-workflow orchestrator queues is silent — dispatch just falls
-  // back to the single shared queue and one slow step starves every workflow
-  // behind it. These assert the misconfiguration is announced at wiring time.
   const setup = (workflowNames: string[], perWorkflowQueues: string[] = []) => {
     resetPikkuState()
     const warnings: string[] = []
@@ -106,7 +103,6 @@ describe('pikku-workflow-service run-level inline', () => {
     const workflowName = 'testRunInlineNoQueue'
     const graphHash = 'run-inline-no-queue-hash'
 
-    // No queueService configured at all → the run executes inline.
     pikkuState(null, 'package', 'singletonServices', {
       logger: {
         error: () => {},
@@ -139,7 +135,6 @@ describe('pikku-workflow-service run-level inline', () => {
 
     const { runId } = await ws.startWorkflow(workflowName, {}, {}, {})
 
-    // With no queue service the run is created as inline.
     const run = await ws.getRun(runId)
     assert.equal(run?.inline, true, 'run should be marked as inline')
 
@@ -168,7 +163,6 @@ describe('pikku-workflow-service run-level inline', () => {
       pikkuFuncId: workflowName,
       source: 'dsl',
       graphHash,
-      // no inline flag
     }
 
     const functionMetaState = pikkuState(null, 'function', 'meta')
@@ -186,7 +180,6 @@ describe('pikku-workflow-service run-level inline', () => {
 
     await ws.startWorkflow(workflowName, {}, {})
 
-    // Wait a tick
     await new Promise((r) => setTimeout(r, 50))
 
     assert.equal(queued, true, 'workflow should have been queued')
@@ -198,9 +191,6 @@ describe('pikku-workflow-service run-level inline', () => {
 })
 
 describe('pikku-workflow-service per-function step dispatch', () => {
-  // Expose the protected dispatchStep so we can assert the dispatch decision
-  // in isolation: a step queues only when its function opts out of inline
-  // execution (workflowQueued: true).
   class TestWorkflowService extends InMemoryWorkflowService {
     public callDispatchStep(rpcName: string) {
       return this.dispatchStep('run-1', 'step-1', rpcName, {})
@@ -263,7 +253,6 @@ describe('pikku-workflow-service per-function step dispatch', () => {
     const ws = new TestWorkflowService()
     pikkuState(null, 'package', 'singletonServices', {
       logger: { error() {}, info() {}, warn() {}, debug() {} },
-      // no queueService
     } as any)
 
     setupFunction('queuedStepNoQueue', true)
@@ -504,7 +493,6 @@ describe('pikku-workflow-service suspend', () => {
       type: 'test',
     })
 
-    // First suspend: 'await_build' pauses the run.
     await assert.rejects(
       ws.runWorkflowJob(runId, {}),
       (error: unknown) => error instanceof WorkflowSuspendedException
@@ -513,8 +501,6 @@ describe('pikku-workflow-service suspend', () => {
     assert.equal(run?.status, 'suspended')
     assert.equal(run?.error?.message, 'Building')
 
-    // Resuming must hit the SECOND suspend ('awaiting_approval'), not fall
-    // through it — this is what the shared-step-name bug broke.
     await ws.resumeWorkflow(runId)
     await assert.rejects(
       ws.runWorkflowJob(runId, {}),
@@ -524,7 +510,6 @@ describe('pikku-workflow-service suspend', () => {
     assert.equal(run?.status, 'suspended')
     assert.equal(run?.error?.message, 'Awaiting approval')
 
-    // Resuming again completes the workflow.
     await ws.resumeWorkflow(runId)
     await ws.runWorkflowJob(runId, {})
     run = await ws.getRun(runId)
@@ -537,11 +522,6 @@ describe('pikku-workflow-service suspend', () => {
   })
 })
 
-/**
- * A minimal StandardSchemaV1 — the same interface zod/valibot/arktype expose via
- * `~standard`. Hand-rolled here because @pikku/core deliberately has no zod
- * dependency: schemas reach it through the standard-schema spec only.
- */
 const approvalDecisionSchema: StandardSchemaV1<
   { approved: boolean; comment?: string },
   { approved: boolean; comment?: string }
@@ -638,8 +618,6 @@ describe('pikku-workflow-service approval', () => {
     )
     assert.equal((await ws.getRun(runId))?.status, 'suspended')
 
-    // THE point of an approval vs a suspend: a bare resume with no decision
-    // recorded must re-suspend, not walk past the gate.
     await ws.resumeWorkflow(runId)
     await assert.rejects(
       ws.runWorkflowJob(runId, {}),
@@ -717,19 +695,14 @@ describe('pikku-workflow-service approval', () => {
       (error: unknown) => error instanceof WorkflowSuspendedException
     )
 
-    // The resume payload crosses an HTTP boundary from an untrusted caller.
-    // approveStep only records it; validation happens on replay, inside the
-    // workflow body, which is the only place the schema value is in scope.
     await ws.approveStep(runId, 'Approve invoice', { approved: 'yes-please' })
 
-    // An invalid decision must leave the gate closed rather than fail the run.
     await assert.rejects(
       ws.runWorkflowJob(runId, {}),
       (error: unknown) => error instanceof WorkflowSuspendedException
     )
     assert.equal((await ws.getRun(runId))?.status, 'suspended')
 
-    // ...and the rejection is legible to whoever tries to approve next.
     const state = await ws.getRunState(runId)
     assert.match(
       JSON.stringify(state),
@@ -737,7 +710,6 @@ describe('pikku-workflow-service approval', () => {
       'expected the validation failure to be recorded in run state'
     )
 
-    // A subsequent valid decision still lands.
     await ws.approveStep(runId, 'Approve invoice', { approved: false })
     await ws.runWorkflowJob(runId, {})
     const run = await ws.getRun(runId)
@@ -811,14 +783,11 @@ describe('pikku-workflow-service approval', () => {
       (error: unknown) => error instanceof WorkflowSuspendedException
     )
 
-    // Let the gate expire and resolve.
     await new Promise((resolve) => setTimeout(resolve, 25))
     await ws.resumeWorkflow(runId)
     await ws.runWorkflowJob(runId, {})
     assert.equal((await ws.getRun(runId))?.status, 'completed')
 
-    // The gate caches its outcome and never re-reads state, so accepting this
-    // would discard it silently. The approver must be told it did not land.
     await assert.rejects(
       ws.approveStep(runId, 'Approve invoice', { approved: true }),
       (error: unknown) =>
@@ -826,7 +795,6 @@ describe('pikku-workflow-service approval', () => {
         error.payload.outcome === 'expired'
     )
 
-    // The resolved outcome stands.
     const run = await ws.getRun(runId)
     assert.deepEqual(run?.output, { decision: { status: 'expired' } })
 
@@ -860,8 +828,6 @@ describe('pikku-workflow-service approval', () => {
 
     await ws.approveStep(runId, 'Approve invoice', { approved: true })
 
-    // Expiry fires unconditionally (an enqueued durable timer can't be
-    // retracted), so it must no-op once a decision has landed.
     await new Promise((resolve) => setTimeout(resolve, 25))
     await ws.resumeWorkflow(runId)
     await ws.runWorkflowJob(runId, {})
@@ -877,11 +843,6 @@ describe('pikku-workflow-service approval', () => {
 })
 
 describe('pikku-workflow-service run identity on failure', () => {
-  // A failing inline run throws before startWorkflow can return `{ runId }`,
-  // so a caller that wants to read the run back — its steps, which one failed,
-  // what it was called with — has nothing to read it by. `onRunCreated` fires
-  // as soon as the run exists, which is the only moment guaranteed to happen
-  // whether the run goes on to pass, fail, or suspend.
   const runFailing = async (name: string) => {
     resetPikkuState()
     const ws = new InMemoryWorkflowService()

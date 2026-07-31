@@ -12,7 +12,6 @@ type HistoryEntry = StepState & { stepName: string }
 
 const T = (ms: number) => new Date(1_700_000_000_000 + ms)
 
-/** A succeeded step attempt with the standard lifecycle timestamps. */
 const ok = (
   stepName: string,
   base: number,
@@ -56,25 +55,19 @@ describe('buildRunTimeline', () => {
       tl.map((e) => e.type),
       ['pending', 'running', 'succeeded']
     )
-    // seq is monotonic from 0
     assert.deepEqual(
       tl.map((e) => e.seq),
       [0, 1, 2]
     )
-    // result rides only on the succeeded event
     assert.deepEqual(tl[2]!.result, { n: 1 })
     assert.equal(tl[0]!.result, undefined)
   })
 
   test('orders across steps by timestamp, lifecycle, then history index', () => {
-    // two steps; b created at the same instant begin succeeds
     const tl = buildRunTimeline([
       ok('begin', 0, { result: 1 }),
       ok('next', 2, { from: 'begin', result: 2 }),
     ])
-    // begin.pending(0) begin.running(1) begin.succeeded(2)==next.pending(2)
-    // → succeeded sorts before pending at the same instant (lifecycle 3 vs 0)?
-    // No: pending=0 < succeeded=3, so next.pending precedes begin.succeeded.
     const at2 = tl.filter((e) => e.at.getTime() === T(2).getTime())
     assert.deepEqual(
       at2.map((e) => `${e.stepName}:${e.type}`),
@@ -93,8 +86,6 @@ describe('buildRunTimeline', () => {
   })
 
   test('terminal event is driven by status, not lifecycle timestamps', () => {
-    // Kysely leaves succeededAt/runningAt null but the row's status + result
-    // are authoritative — the terminal event must still fire (off updatedAt).
     const noStamps = {
       stepId: 's-1',
       stepName: 'begin',
@@ -121,7 +112,6 @@ describe('buildRunTimeline', () => {
 })
 
 describe('reconstructStateAt', () => {
-  // begin → next → finish, each succeeding in order
   const history: HistoryEntry[] = [
     ok('begin', 0, { result: { step: 'begin' } }),
     ok('next', 10, { from: 'begin', result: { step: 'next' } }),
@@ -138,30 +128,25 @@ describe('reconstructStateAt', () => {
   })
 
   test('mid-run by seq: only steps up to that event exist', () => {
-    // fold through begin.succeeded (seq 2)
     const s = reconstructStateAt(tl, 2)
     assert.deepEqual(s.path, ['begin'])
     assert.equal(s.steps[0]!.status, 'succeeded')
     assert.deepEqual(s.results, { begin: { step: 'begin' } })
-    // next hasn't been created yet at this point
     assert.equal(s.phase, 'idle')
   })
 
   test('mid-run captures an in-flight step as running', () => {
-    // begin done (0,1,2), next created+running (3,4) but not yet succeeded
     const s = reconstructStateAt(tl, 4)
     assert.deepEqual(s.path, ['begin', 'next'])
     assert.equal(s.steps[1]!.stepName, 'next')
     assert.equal(s.steps[1]!.status, 'running')
     assert.equal(s.steps[1]!.fromStepName, 'begin')
     assert.equal(s.phase, 'running')
-    // next's result not yet available in the replay cache
     assert.deepEqual(s.results, { begin: { step: 'begin' } })
   })
 
   test('time-travel by Date folds every event at or before the instant', () => {
     const s = reconstructStateAt(tl, T(12))
-    // begin fully done (<=2), next created(10)+running(11) but succeeded at 12
     assert.deepEqual(s.path, ['begin', 'next'])
     assert.equal(s.steps[1]!.status, 'succeeded')
     assert.deepEqual(s.results, {
@@ -183,7 +168,6 @@ describe('reconstructStateAt', () => {
 })
 
 describe('reconstructStateAt — retries', () => {
-  // attempt 1 fails, attempt 2 (created later) succeeds
   const history: HistoryEntry[] = [
     failed('flaky', 0, { message: 'first try' }),
     ok('flaky', 10, { result: { ok: true }, attempt: 2 }),
@@ -191,7 +175,7 @@ describe('reconstructStateAt — retries', () => {
   const tl = buildRunTimeline(history)
 
   test('between attempts the step is failed', () => {
-    const s = reconstructStateAt(tl, T(2)) // through failedAt of attempt 1
+    const s = reconstructStateAt(tl, T(2))
     assert.equal(s.steps[0]!.status, 'failed')
     assert.equal(s.steps[0]!.error?.message, 'first try')
     assert.equal(s.phase, 'failed')
@@ -199,7 +183,7 @@ describe('reconstructStateAt — retries', () => {
   })
 
   test("the retry's created event reopens the step and clears the error", () => {
-    const s = reconstructStateAt(tl, T(10)) // attempt-2 pending
+    const s = reconstructStateAt(tl, T(10))
     assert.equal(s.steps[0]!.status, 'pending')
     assert.equal(s.steps[0]!.error, undefined)
     assert.equal(s.steps[0]!.attemptCount, 2)

@@ -226,12 +226,6 @@ describe('PikkuWorkflowDoService — graph state', () => {
     assert.deepEqual(graph.branchKeys, { A: 'left' })
   })
 
-  test('getNodesWithoutSteps filters already-inserted names', async () => {
-    await service.insertStepState(RUN_ID, 'A', 'rpc.A', {})
-    const missing = await service.getNodesWithoutSteps(RUN_ID, ['A', 'B', 'C'])
-    assert.deepEqual(missing.sort(), ['B', 'C'])
-  })
-
   test('getNodeResults returns only succeeded steps', async () => {
     const a = await service.insertStepState(RUN_ID, 'A', 'rpc.A', {})
     await service.setStepResult(a.stepId, 'done')

@@ -6,11 +6,7 @@ import { join } from 'node:path'
 
 import { LocalMetaService } from './meta-service.js'
 
-/**
- * Scenarios and their steps are generated into `.pikku/scenarios/` so that no
- * app-facing module imports them. Everything that reads meta off disk — the
- * console's scenario list among them — must still see them.
- */
+// knowledge: decisions/design/scenario-meta-lives-apart-from-app-meta-but-merges-when-read-off-disk.md
 describe('LocalMetaService reads the scenario meta alongside the app meta', () => {
   let pikkuDir: string
 

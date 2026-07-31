@@ -259,6 +259,192 @@ describe('ContextAwareRPCService.rpc', () => {
   })
 })
 
+describe('RPCNotFoundError raised from inside a resolved function', () => {
+  test('a local function that throws RPCNotFoundError is not re-dispatched remotely', async () => {
+    const sideEffects: string[] = []
+    const remoteCalls: unknown[][] = []
+
+    pikkuState(null, 'rpc', 'meta').chargeCard = 'chargeCardFunc'
+    registerFunction('chargeCardFunc', async () => {
+      sideEffects.push('charged')
+      throw new RPCNotFoundError('doesNotExist')
+    })
+
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      {} as never,
+      {}
+    )
+
+    await assert.rejects(
+      () => service.rpc('chargeCard', { amount: 10 }),
+      (error: unknown) => {
+        assert.ok(error instanceof RPCNotFoundError)
+        assert.equal(error.rpcName, 'doesNotExist')
+        return true
+      }
+    )
+
+    assert.deepEqual(sideEffects, ['charged'])
+    assert.deepEqual(remoteCalls, [])
+  })
+
+  test('an addon function that throws RPCNotFoundError is not retried locally or remotely', async () => {
+    const sideEffects: string[] = []
+    const remoteCalls: unknown[][] = []
+
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as never)
+    registerFunction(
+      'createCharge',
+      async () => {
+        sideEffects.push('charged')
+        throw new RPCNotFoundError('doesNotExist')
+      },
+      { packageName: '@addon/stripe' }
+    )
+
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      {} as never,
+      {}
+    )
+
+    await assert.rejects(
+      () => service.rpc('stripe:createCharge', { amount: 10 }),
+      (error: unknown) => {
+        assert.ok(error instanceof RPCNotFoundError)
+        assert.equal(error.rpcName, 'doesNotExist')
+        return true
+      }
+    )
+
+    assert.deepEqual(sideEffects, ['charged'])
+    assert.deepEqual(remoteCalls, [])
+  })
+
+  test('rpcWithWire does not re-dispatch a local function that throws RPCNotFoundError', async () => {
+    const sideEffects: string[] = []
+    const remoteCalls: unknown[][] = []
+
+    pikkuState(null, 'rpc', 'meta').chargeCard = 'chargeCardFunc'
+    registerFunction('chargeCardFunc', async () => {
+      sideEffects.push('charged')
+      throw new RPCNotFoundError('doesNotExist')
+    })
+
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      {} as never,
+      {}
+    )
+
+    await assert.rejects(
+      () => service.rpcWithWire('chargeCard', { amount: 10 }, {} as never),
+      RPCNotFoundError
+    )
+
+    assert.deepEqual(sideEffects, ['charged'])
+    assert.deepEqual(remoteCalls, [])
+  })
+
+  test('a genuinely missing namespaced rpc still throws RPCNotFoundError', async () => {
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as never)
+
+    const service = new ContextAwareRPCService(
+      createServices(),
+      {} as never,
+      {}
+    )
+
+    await assert.rejects(
+      () => service.rpc('stripe:missingFunc', {}),
+      (error: unknown) => {
+        assert.ok(error instanceof RPCNotFoundError)
+        assert.equal(
+          error.message,
+          'RPC function not found: stripe:missingFunc'
+        )
+        return true
+      }
+    )
+  })
+
+  test('a missing namespaced rpc still reaches deploymentService when one is configured', async () => {
+    const remoteCalls: unknown[][] = []
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as never)
+
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      { traceId: 'trace-addon' } as never,
+      {}
+    )
+
+    const result = await service.rpc('stripe:missingFunc', { value: 3 })
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(remoteCalls, [
+      ['stripe:missingFunc', { value: 3 }, undefined, 'trace-addon'],
+    ])
+  })
+
+  test('an unknown namespace still falls through to the local/remote lookup', async () => {
+    const remoteCalls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      { traceId: 'trace-ns' } as never,
+      {}
+    )
+
+    const result = await service.rpc('unknownNs:someFunc', { value: 1 })
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(remoteCalls, [
+      ['unknownNs:someFunc', { value: 1 }, undefined, 'trace-ns'],
+    ])
+  })
+})
+
 describe('ContextAwareRPCService.rpcExposed', () => {
   test('resolves unversioned exposed rpc names through latest rpc metadata', async () => {
     pikkuState(null, 'rpc', 'meta').listCards = 'listCards@v2'
@@ -316,8 +502,6 @@ describe('ContextAwareRPCService.rpcExposed', () => {
   })
 
   test('a scenario step is not callable over the network, even if marked exposed', async () => {
-    // A step may drive a browser or assert against fixtures, so it is a step
-    // RPC — dispatched by name inside a run, never reachable from outside it.
     pikkuState(null, 'rpc', 'meta').seesAddonCard = 'seesAddonCard'
     registerFunction('seesAddonCard', async () => ({ visible: true }), {
       expose: true,

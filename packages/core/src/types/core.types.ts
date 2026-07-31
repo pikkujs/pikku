@@ -85,12 +85,6 @@ export interface FunctionWiresMeta {
   wires: string[]
 }
 
-/**
- * Metadata for middleware at any level
- * - type: 'http' = HTTP route middleware group (references httpGroup in pikkuState)
- * - type: 'tag' = Tag-based middleware group (references tagGroup in pikkuState)
- * - type: 'wire' = Wire-level individual middleware
- */
 export type MiddlewareMetadata =
   | {
       type: 'http'
@@ -98,30 +92,22 @@ export type MiddlewareMetadata =
     }
   | {
       type: 'tag'
-      tag: string // Tag name
+      tag: string
     }
   | {
       type: 'wire'
       name: string
-      inline?: boolean // true if inline middleware
+      inline?: boolean
     }
 
 /**
- * Metadata for permissions at any level
- * - type: 'http' = HTTP route permission group (references httpGroup in pikkuState)
- * - type: 'tag' = Tag-based permission group (references tagGroup in pikkuState)
- * - type: 'wire' = Wire-level individual permission
- */
-/**
- * A reference to a permission function a function declares, resolved by name.
- * Used at filter time (e.g. listing agent tools) to run the session-only
- * (pikkuAuth) predicates without request data. Permissions are function-scoped
- * only — there are no wire- or tag-level permission references.
+ * A reference to a permission function, resolved by name. Function-scoped
+ * only: there are no wire- or tag-level permission references.
  */
 export type PermissionMetadata = {
   type: 'wire'
   name: string
-  inline?: boolean // true if inline permission
+  inline?: boolean
 }
 
 export type FunctionRuntimeMeta = {
@@ -133,19 +119,13 @@ export type FunctionRuntimeMeta = {
   expose?: boolean
   remote?: boolean
   /**
-   * A step RPC: a name dispatched by a scenario run and refused everywhere
-   * else. It sits alongside `expose` (public) and `remote` as a kind of RPC
-   * rather than a separate concept — a step is invoked by name exactly as an
-   * RPC is, which is why a run records the step function in its `rpcName`.
-   * What makes it its own kind is that it is never network-callable: a step
-   * may drive a browser or assert against fixtures.
+   * A step RPC: invoked by name only from a scenario run and refused
+   * everywhere else, so it is never network-callable.
    */
   scenarioStep?: boolean
   /**
-   * The function behind a `pikkuScenario(...)` — a scenario's own body, as
-   * opposed to the steps it calls. Marked for the same reason as
-   * `scenarioStep`: a scenario is only ever run by `pikku scenario run`, so it
-   * has to be held back from the app bootstrap and from every deployed unit.
+   * The body of a `pikkuScenario(...)`. Only ever run by `pikku scenario run`,
+   * so it is held back from the app bootstrap and from every deployed unit.
    */
   scenario?: boolean
   mcp?: boolean
@@ -217,19 +197,11 @@ export type FunctionMeta = FunctionRuntimeMeta &
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
 export type FunctionsMeta = Record<string, FunctionMeta>
 
-// Optimized runtime metadata with only essential fields
-
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
 
-/**
- * Represents a JSON primitive type which can be a string, number, boolean, null, or undefined.
- */
 export type JSONPrimitive = string | number | boolean | null | undefined
 
-/**
- * Represents a JSON value which can be a primitive, an array, or an object.
- */
 export type JSONValue =
   | JSONPrimitive
   | JSONValue[]
@@ -237,28 +209,17 @@ export type JSONValue =
       [key: string]: JSONValue
     }
 
-/**
- * Utility type for making certain keys required and leaving the rest as optional.
- */
 export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
-/**
- * Utility type for making certain keys optional while keeping the rest required.
- */
 export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 
-/**
- * Utility type that ensures at least one key in the given type `T` is required.
- */
 export type RequireAtLeastOne<T> = {
   [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
 }[keyof T]
 
 /**
- * Runtime options for the Postgres adapter (@pikku/kysely-postgres).
- * The connection string itself stays the flat `postgresUrl` config field (the
- * contract the CLI's db commands read); this block is purely runtime pool
- * tuning that the CLI never touches.
+ * Runtime pool tuning for the Postgres adapter. The connection string stays
+ * the flat `postgresUrl` config field — the contract the CLI's db commands read.
  */
 export interface PostgresConfig {
   /** Max connections in the postgres.js pool. Defaults to postgres.js's 10. */
@@ -285,25 +246,15 @@ export interface PostgresConfig {
   prepare?: boolean
 }
 
-/**
- * Interface for the core configuration settings of Pikku.
- */
 export type CoreConfig<Config extends Record<string, unknown> = {}> = {
-  /** The log level for the application. */
   logLevel?: LogLevel
-  /** Secrets used by the application (optional). */
   secrets?: {}
 
   workflow?: WorkflowServiceConfig
-  /** Default retry and signing settings for outgoing webhooks. */
   webhook?: WebhookServiceConfig
-  /** Runtime Postgres adapter options (pool sizing). */
   postgres?: PostgresConfig
 } & Config
 
-/**
- * Represents a core user session, which can be extended for more specific session information.
- */
 export interface CoreUserSession {
   userId?: string
   orgId?: string
@@ -311,112 +262,73 @@ export interface CoreUserSession {
   actor?: boolean
   /**
    * Scopes granted to this session, checked against a function's `scopes`.
-   * Populated by whoever builds the session (e.g. better-auth's `mapSession`
-   * resolving them via a ScopeService) — core reads them and never fetches.
+   * Populated by whoever builds the session — core reads them, never fetches.
    */
   scopes?: string[]
 }
 
 /**
- * The shape pikku needs from whatever auth library a project wires: something
- * that can answer an HTTP request and expose its own endpoints as callable
- * methods. Kept structural so core stays independent of any one auth package —
- * `@pikku/better-auth`'s `BetterAuthInstance` is this type.
+ * Kept structural so core stays independent of any one auth package —
+ * `@pikku/better-auth`'s `BetterAuthInstance` satisfies it.
  */
 export interface AuthInstance {
   handler: (request: Request) => Promise<Response>
   api: Record<string, any>
-  /**
-   * The auth library's resolved context. Optional because a hand-built instance
-   * may omit it.
-   */
   $context?: Promise<any>
 }
 
-/**
- * Interface for core singleton services provided by Pikku.
- */
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
-  /** The schema library used to validate data */
   schema?: SchemaService
-  /** The JWT service used to encode and decode tokens */
   jwt?: JWTService
-  /** The core configuration for the application. */
   config: Config
-  /** The logger used by the application. */
   logger: Logger
-  /** The variable service to be used */
   variables: VariablesService
-  /** The secrets service to retrieve secrets */
   secrets: SecretService
-  /** The workflow orchestrator service */
   workflowService?: WorkflowService
-  /** The queue service */
   queueService?: QueueService
-  /** Event hub for realtime pub/sub across channels */
   eventHub?: EventHubService<Record<string, any>>
-  /** The scheduler service */
   schedulerService?: SchedulerService
-  /** The deployment service for service discovery */
   deploymentService?: DeploymentService
-  /** AI agent storage service (threads, messages, working memory) */
   aiStorage?: AIStorageService
 
-  /** Content service for file storage and retrieval */
   content?: ContentService
-  /** AI agent runner service (model calls + tool loop) */
   aiAgentRunner?: AIAgentRunnerService
-  /** Dedicated embedding service (vector stores use it at index & query time) */
   aiEmbedding?: AIEmbeddingService
-  /** AI run state service (run lifecycle + approval persistence) */
   aiRunState?: AIRunStateService
-  /** Agent run service (listing threads, runs, steps) */
   agentRunService?: AgentRunService
-  /** Workflow run service (listing workflow runs) */
   workflowRunService?: WorkflowRunService
-  /** Credential service for dynamic/managed credentials (OAuth tokens, per-user API keys) */
   credentialService?: CredentialService
-  /** Email service for outbound messages and template-backed delivery */
   emailService?: EmailService
   /**
-   * Webhook service for outgoing webhook delivery via a queue. A store-backed
-   * implementation (e.g. `KyselyWebhookService`) additionally records delivery
-   * history; the queue-only default throws on the delivery-read methods.
+   * Queue-backed outgoing webhook delivery. The queue-only default throws on
+   * the delivery-read methods; a store-backed implementation records history.
    */
   webhookService?: WebhookService
-  /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
-  /** Audit service for durable or staged audit event capture */
   audit?: AuditService
   /**
-   * Per-invocation audit log. Typically created in `createWireServices` via
-   * `createInvocationAudit(audit, wire)` and returned as a wire service so the
-   * runner flushes its buffer (via `close()`) when the invocation ends. Distinct
-   * from `audit` (the durable sink): this is the request-scoped buffer that
-   * writes into it.
+   * Request-scoped audit buffer that writes into `audit` (the durable sink).
+   * Returned as a wire service so the runner flushes it via `close()` when the
+   * invocation ends.
    */
   auditLog?: AuditLog
   /** Session store for persisting user sessions keyed by pikkuUserId */
   sessionStore?: SessionStore
   /**
-   * Resolves and administers user scopes. Called when building a session (e.g.
-   * better-auth's `mapSession`), never by the function runner.
+   * Resolves and administers user scopes. Called when building a session,
+   * never by the function runner.
    */
   scopeService?: ScopeService
   /**
-   * The project's resolved auth instance, built once by the factory an auth
-   * package registers (e.g. `pikkuBetterAuth`) and injected by the generated
-   * `pikkuServices` wrapper — which is why service factories are forbidden from
-   * returning it themselves. Absent when the project wires no auth.
+   * Built once by the factory an auth package registers and injected by the
+   * generated `pikkuServices` wrapper — service factories must not return it
+   * themselves. Absent when the project wires no auth.
    */
   auth?: () => Promise<AuthInstance>
 }
 
-/**
- * Represents different forms of wire within Pikku and the outside world.
- */
 export type PikkuWire<
   In = unknown,
   Out = unknown,
@@ -437,9 +349,7 @@ export type PikkuWire<
   wireId: string
   /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
   traceId: string
-  /** Function id for the current invocation */
   functionId: string
-  /** The addon instance namespace (wireAddon name) currently executing, if any */
   addonNamespace: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
@@ -466,15 +376,11 @@ export type PikkuWire<
   session: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined
-  /** Update and persist the current session */
   setSession: (session: UserSession) => Promise<void> | void
-  /** Clear and persist the current session */
   clearSession: () => Promise<void> | void
   /** Fetch the latest session (may read from backing store) */
   getSession: () => Promise<UserSession> | UserSession | undefined
-  /** Whether the session was modified during this run */
   hasSessionChanged: () => boolean
-  /** The resolved user identity for credential lookups */
   pikkuUserId: string
   /** Set a credential value (available in middleware) */
   setCredential: (name: string, value: unknown) => void
@@ -484,7 +390,6 @@ export type PikkuWire<
   getCredentials: () =>
     | Record<string, unknown>
     | Promise<Record<string, unknown>>
-  /** Resolved function audit metadata for this invocation, if enabled */
   audit: {
     durability: AuditDurability
   }
@@ -504,14 +409,9 @@ export type PikkuWire<
   beginChanges: () => Promise<void>
 }>
 
-/**
- * Wire object as constructed by runners, before rpc is lazily added by the function runner.
- */
+/** Wire as constructed by runners, before the function runner lazily adds `rpc`. */
 export type PikkuRawWire = Omit<PikkuWire, 'rpc'>
 
-/**
- * A function that can wrap an wire and be called before or after
- */
 export type CorePikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
@@ -522,14 +422,8 @@ export type CorePikkuMiddleware<
 ) => Promise<void>
 
 /**
- * Priority levels for middleware execution order.
- * Lower priority runs first (outermost in the onion model).
- *
- * - `highest` — Runs first (outermost). Use for telemetry, request tracing.
- * - `high` — Runs early. Use for CORS, rate limiting.
- * - `medium` — Default. Use for auth, most user middleware.
- * - `low` — Runs late. Use for post-auth processing.
- * - `lowest` — Runs last (innermost, closest to function). Use for inner telemetry.
+ * Execution order: `highest` runs first (outermost in the onion), `lowest`
+ * runs last, closest to the function.
  */
 export type MiddlewarePriority =
   | 'highest'
@@ -538,40 +432,23 @@ export type MiddlewarePriority =
   | 'low'
   | 'lowest'
 
-/**
- * Configuration object for creating middleware with metadata
- *
- * @template SingletonServices - The singleton services type
- * @template UserSession - The user session type
- */
 export type CorePikkuMiddlewareConfig<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
 > = {
-  /** The middleware function */
   func: CorePikkuMiddleware<SingletonServices, UserSession>
-  /** Optional human-readable name for the middleware */
   name?: string
-  /** Optional description of what the middleware does */
   description?: string
   /** Execution priority. Lower runs first (outermost). Defaults to 'medium'. */
   priority?: MiddlewarePriority
 }
 
-/**
- * A factory function that takes input and returns middleware
- * Used when middleware needs configuration/input parameters
- */
 export type CorePikkuMiddlewareFactory<
   In = any,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
 
-/**
- * A group of middleware (combination of regular middleware and factories)
- * Used with addMiddleware() and addHTTPMiddleware() to group related middleware together
- */
 export type CorePikkuMiddlewareGroup<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
@@ -580,31 +457,6 @@ export type CorePikkuMiddlewareGroup<
   | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
 >
 
-/**
- * Factory function for creating middleware with tree-shaking support
- * Supports both direct function and configuration object syntax
- *
- * @example
- * ```typescript
- * // Direct function syntax
- * export const logMiddleware = pikkuMiddleware(
- *   async ({ logger }, next) => {
- *     logger.info('Request started')
- *     await next()
- *   }
- * )
- *
- * // Configuration object syntax with metadata
- * export const logMiddleware = pikkuMiddleware({
- *   name: 'Request Logger',
- *   description: 'Logs request information',
- *   func: async ({ logger }, next) => {
- *     logger.info('Request started')
- *     await next()
- *   }
- * })
- * ```
- */
 export const pikkuMiddleware = <
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
@@ -624,23 +476,6 @@ export const pikkuMiddleware = <
   return func
 }
 
-/**
- * Factory function for creating middleware factories
- * Use this when your middleware needs configuration/input parameters
- *
- * @example
- * ```typescript
- * export const logMiddleware = pikkuMiddlewareFactory<LogOptions>(({
- *   message,
- *   level = 'info'
- * }) => {
- *   return pikkuMiddleware(async ({ logger }, next) => {
- *     logger[level](message)
- *     await next()
- *   })
- * })
- * ```
- */
 export const pikkuMiddlewareFactory = <In = any>(
   factory: CorePikkuMiddlewareFactory<In>
 ): CorePikkuMiddlewareFactory<In> => {
@@ -671,9 +506,6 @@ export const pikkuAIMiddleware = <
   hooks: PikkuAIMiddlewareHooks<State, SingletonServices>
 ): PikkuAIMiddlewareHooks<State, SingletonServices> => hooks
 
-/**
- * Represents the core services used by Pikku, including singleton services.
- */
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
 
@@ -682,9 +514,6 @@ export type WireServices<
   Services = CoreServices<SingletonServices>,
 > = Omit<Services, keyof SingletonServices | 'session'>
 
-/**
- * Defines a function type for creating singleton services from the given configuration.
- */
 export type CreateSingletonServices<
   Config extends CoreConfig,
   SingletonServices extends CoreSingletonServices,
@@ -693,9 +522,6 @@ export type CreateSingletonServices<
   existingServices?: Partial<SingletonServices>
 ) => Promise<SingletonServices>
 
-/**
- * Defines a function type for creating session-specific services.
- */
 export type CreateWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services extends CoreServices<SingletonServices> =
@@ -706,15 +532,11 @@ export type CreateWireServices<
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
 
-/**
- * Defines a function type for creating config.
- */
 export type CreateConfig<
   Config extends CoreConfig,
   RemainingArgs extends any[] = unknown[],
 > = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
 
-/** Server lifecycle hooks for startup and shutdown phases. */
 export type ServerLifecycle<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > = {
@@ -724,9 +546,6 @@ export type ServerLifecycle<
   afterStop?: (services: SingletonServices) => void | Promise<void>
 }
 
-/**
- * Represents the documentation for a route, including summary, description, tags, and errors.
- */
 export type CommonWireMeta = {
   pikkuFuncId: string
   packageName?: string
@@ -742,9 +561,8 @@ export type CommonWireMeta = {
 }
 
 /**
- * Dependency security audit artifact — the shape of `.pikku/audit.json` written
- * by `pikku audit`. Canonical home for the type shared by the CLI (writer), the
- * console addon (reader), and the console UI (renderer).
+ * The shape of `.pikku/audit.json`. Shared by the CLI (writer), the console
+ * addon (reader) and the console UI (renderer).
  */
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
@@ -790,16 +608,21 @@ export interface SecurityAuditReport {
   summary: SecurityAuditSummary
 }
 
-/**
- * Serialized error for storage
- */
 export interface SerializedError {
   message: string
   stack?: string
   code?: string
-  // True when the original error was a deliberate, expected failure (a
-  // PikkuError). Survives the step-boundary rehydration so the workflow runner
-  // can log the message alone instead of a stack trace. See isExpectedError.
+  // Set for a deliberate PikkuError; survives step-boundary rehydration so
+  // the workflow runner logs the message alone rather than a stack trace.
   expected?: boolean
   [key: string]: any
+}
+
+/**
+ * A generated schema's declaration site, used by the credential/secret/variable
+ * definition validators to point conflicting definitions at their source.
+ */
+export interface SchemaRefLike {
+  variableName: string
+  sourceFile: string
 }

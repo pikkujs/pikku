@@ -8,9 +8,6 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 
-/**
- * Represents metadata for scheduled tasks, including title, schedule, and documentation.
- */
 export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
   Record<
     string,
@@ -21,9 +18,6 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
     }
   >
 
-/**
- * Represents a core scheduled task.
- */
 export type CoreScheduledTask<
   PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<void, void>
@@ -37,17 +31,10 @@ export type CoreScheduledTask<
   middleware?: PikkuMiddleware[]
 }
 
-/**
- * Represents a scheduled task wire object for middleware
- * Provides information about the current scheduled task execution
- */
 export interface PikkuScheduledTask {
-  /** The name of the scheduled task being executed */
   name: string
-  /** The cron schedule expression */
   schedule: string
-  /** Current execution timestamp */
   executionTime: Date
-  /** Skip the current task execution */
+  /** Never returns — throws to abort the run. */
   skip: (reason?: string) => void
 }

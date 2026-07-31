@@ -33,11 +33,6 @@ const setup = async (ws: InMemoryWorkflowService) => {
   return runId
 }
 
-/**
- * The scenario wire, wrapped rather than returned directly: it carries a
- * `then` — the Gherkin phase, not a promise — so awaiting one is awaiting a
- * thenable, and the runtime calls it as a step.
- */
 const scenarioWire = async (rpcService: any = {}): Promise<{ wire: any }> => {
   const { workflowService } = createScenarioRunner()
   const ws = workflowService as InMemoryWorkflowService

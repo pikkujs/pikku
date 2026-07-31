@@ -88,8 +88,6 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
     const first = await wire.do('step', 'someRpc', {}, { actor: yasser })
     assert.deepEqual(first, { n: 1 })
 
-    // Simulate replay: reset per-run ordinals so the same logical step name
-    // resolves to the same durable step key.
     await (ws as any).beginReplay(runId)
     const replayWire = ws.createWorkflowWire('scenarioTest', runId, {})
     const replayed = await replayWire.do(
@@ -114,7 +112,6 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
         },
       },
     })
-    // Function meta says this RPC would normally dispatch via the queue.
     pikkuState(null, 'function', 'meta').queuedRpc = {
       pikkuFuncId: 'queuedRpc',
       workflowQueued: true,
@@ -152,8 +149,6 @@ const registerStep = (
   }
 ) => {
   addFunction(name, config as any)
-  // `pikkuScenarioStep` maps to PikkuFunctionSessionless, which is what the
-  // inspector records — a step is driven by an actor, not by a wire session.
   pikkuState(null, 'function', 'meta')[name] = {
     pikkuFuncId: name,
     sessionless: true,
@@ -600,8 +595,6 @@ describe('scenario step input is recorded on the run', () => {
       packageName: '@pikku/addon-todos',
     })
 
-    // A reporter renders each step's prose from this, so two calls to one step
-    // must be distinguishable by what they were asked to check.
     const steps = await ws.getRunSteps(runId)
     assert.deepEqual(
       steps.map((step) => step.data),
@@ -650,8 +643,6 @@ describe('scenario step names its function on the run', () => {
 
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    // What a loop produces: the durable name is the interpolated one, so it
-    // matches no statically recorded step name.
     for (const packageName of ['console', 'todos']) {
       await wire.then(`sees ${packageName}`, 'seesAddon', { packageName })
     }

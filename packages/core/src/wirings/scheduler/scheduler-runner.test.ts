@@ -36,7 +36,6 @@ describe('wireScheduler', () => {
       },
     }
 
-    // Set up metadata first
     pikkuState(null, 'scheduler', 'meta')['test-task'] = {
       pikkuFuncId: 'scheduler_test-task',
       name: 'test-task',
@@ -76,17 +75,14 @@ describe('wireScheduler', () => {
       },
     }
 
-    // Set up metadata
     pikkuState(null, 'scheduler', 'meta')['duplicate-task'] = {
       pikkuFuncId: 'scheduler_duplicate-task',
       name: 'duplicate-task',
       schedule: '0 0 * * *',
     }
 
-    // Wire first time
     wireScheduler(mockTask)
 
-    // Try to wire again
     assert.throws(
       () => wireScheduler(mockTask),
       (error: any) => {
@@ -147,7 +143,6 @@ describe('runScheduledTask', () => {
       },
     }
 
-    // Set up metadata and task
     pikkuState(null, 'scheduler', 'meta')['simple-task'] = {
       pikkuFuncId: 'scheduler_simple-task',
       name: 'simple-task',
@@ -247,7 +242,6 @@ describe('runScheduledTask', () => {
       },
     }
 
-    // Add task but not metadata
     pikkuState(null, 'scheduler', 'tasks').set('task-without-meta', mockTask)
 
     const mockLogger = createMockLogger()
@@ -581,10 +575,9 @@ describe('runScheduledTask', () => {
       })
     })
 
-    // Error should be re-thrown
     const logs = mockLogger.getLogs()
     const infoLogs = logs.filter((l) => l.level === 'info')
-    assert(infoLogs.length > 0) // Should have at least started logging
+    assert(infoLogs.length > 0)
   })
 
   test('should execute task with middleware', async () => {

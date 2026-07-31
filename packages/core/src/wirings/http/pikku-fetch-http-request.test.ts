@@ -147,8 +147,6 @@ test('data() parses application/x-www-form-urlencoded correctly', async () => {
   })
 })
 
-// --- Compatible types
-
 test('data() treats "123" and 123 as equivalent', async () => {
   const req = createRequest(
     'POST',
@@ -160,7 +158,7 @@ test('data() treats "123" and 123 as equivalent', async () => {
   )
 
   const r = new PikkuFetchHTTPRequest(req)
-  r.setParams({ id: '123' }) // All match
+  r.setParams({ id: '123' })
   const result = await r.data()
   assert.deepEqual(result, { id: '123' })
 })
@@ -176,12 +174,10 @@ test('data() treats "true" and true as equivalent', async () => {
   )
 
   const r = new PikkuFetchHTTPRequest(req)
-  r.setParams({ flag: 'true' }) // All match
+  r.setParams({ flag: 'true' })
   const result = await r.data()
   assert.deepEqual(result, { flag: 'true' })
 })
-
-// --- Conflicts
 
 test('data() throws on conflicting values', async () => {
   const req = createRequest(
@@ -218,10 +214,6 @@ test('data() throws on boolean conflict', async () => {
     message: 'Conflicting values for key "debug": "false" vs "true"',
   })
 })
-
-// --- Safe fallback: only one source
-
-// --- Body size limits
 
 const streamedRequest = (chunks) =>
   new Request('http://localhost', {

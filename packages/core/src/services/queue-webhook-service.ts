@@ -13,23 +13,11 @@ import {
   WebhookService,
 } from './webhook-service.js'
 
-/** Cap on the response body captured on a failed attempt. */
 const MAX_CAPTURED_RESPONSE_BODY = 2_000
 
-/**
- * Default {@link WebhookService} implementation: serializes and signs the
- * payload, then enqueues a delivery job onto the `pikku-outgoing-webhooks`
- * queue. The signature is computed at enqueue time so the signing key never
- * enters the queue payload; the actual HTTP POST happens in
- * {@link pikkuWebhookWorkerFunc}, and the queue's `attempts`/`backoff`
- * options drive retries.
- */
+// knowledge: decisions/security/webhook-bodies-are-signed-before-they-are-enqueued.md
 export class QueueWebhookService extends WebhookService {
-  /**
-   * The queue is a constructor dependency rather than a `getSingletonServices()`
-   * lookup so that a project wiring up outgoing webhooks without a queue fails
-   * to compile, instead of throwing on the first `send()`.
-   */
+  // knowledge: decisions/design/webhook-service-collaborators-are-constructor-args-not-locator-lookups.md
   constructor(protected queueService: QueueService) {
     super()
   }
@@ -45,10 +33,8 @@ export class QueueWebhookService extends WebhookService {
   }
 
   /**
-   * Build the signed job payload and its retry options — the shared work a
-   * `send()` does before enqueueing. Factored out (and `protected`) so a
-   * store-backed subclass can persist a delivery row and attach its
-   * `deliveryId` without re-implementing signing or the retry policy.
+   * `protected` so a store-backed subclass can persist a delivery row and attach
+   * its `deliveryId` without re-implementing signing or the retry policy.
    */
   protected async prepareDelivery(
     input: SendWebhookInput
@@ -65,7 +51,7 @@ export class QueueWebhookService extends WebhookService {
 
     let secret = input.secret
     if (secret === undefined && webhookConfig?.secret) {
-      // Naive read — any caching is the secret service's concern, not ours.
+      // Naive read: caching is the secret service's concern, not ours.
       secret = await services.secrets.getSecret(webhookConfig.secret)
       if (!secret) {
         services.logger.error(
@@ -89,13 +75,7 @@ export class QueueWebhookService extends WebhookService {
     return { jobData, options: this.resolveJobOptions(input) }
   }
 
-  /**
-   * Resolve a delivery's retry policy into queue job options, mirroring the
-   * workflow service: per-call values win over `config.webhook` defaults, an
-   * explicitly-set `retries` (including 0) is always honored, and `attempts`
-   * is ALWAYS passed so the queue can never fall back to its own default.
-   * Backoff is exponential unless a concrete `retryDelay` selects a fixed one.
-   */
+  // knowledge: decisions/design/queue-jobs-always-carry-an-explicit-attempts-count.md
   private resolveJobOptions(input: SendWebhookInput): JobOptions {
     const webhookConfig = getSingletonServices().config?.webhook
     const retries =
@@ -111,18 +91,7 @@ export class QueueWebhookService extends WebhookService {
   }
 }
 
-/**
- * Queue worker for the `pikku-outgoing-webhooks` queue: POSTs the delivery to its
- * target URL. Any non-2xx response (or network error) throws so the queue
- * retries the job according to the `attempts`/`backoff` set at enqueue time;
- * the queue runner logs each failed attempt.
- *
- * A `deliveryId` is only present when a store-backed `webhookService` (e.g.
- * `KyselyWebhookService`) enqueued the job, so each attempt (success or failure)
- * is persisted via `webhookService.recordAttempt` before the throw — the console
- * delivery history reflects every try, not just the outcome. The queue-only
- * default never sets a `deliveryId`, so its base `recordAttempt` is never hit.
- */
+// knowledge: decisions/design/webhook-delivery-history-records-every-attempt-best-effort.md
 export async function pikkuWebhookWorkerFunc(
   services: { logger: Logger; webhookService?: WebhookService },
   { url, body, headers, deliveryId }: WebhookJobData
@@ -136,8 +105,8 @@ export async function pikkuWebhookWorkerFunc(
   try {
     allowedHosts = getSingletonServices().config?.webhook?.allowedHosts
   } catch {
-    // Singleton services not initialised (e.g. a bare worker invocation) — fall
-    // back to the default private-host block with no allowlist.
+    // Uninitialised singletons (a bare worker invocation): fall back to the
+    // default private-host block rather than failing the delivery.
   }
 
   try {
@@ -165,7 +134,6 @@ export async function pikkuWebhookWorkerFunc(
   }
 
   if (deliveryId && services.webhookService) {
-    // Best-effort history: a store failure must not mask the delivery result.
     await services.webhookService
       .recordAttempt(deliveryId, { statusCode, responseBody, error, delivered })
       .catch((storeError) =>

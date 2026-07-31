@@ -354,20 +354,6 @@ export class PikkuWorkflowDoService<
     return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
-  async getNodesWithoutSteps(
-    runId: string,
-    nodeIds: string[]
-  ): Promise<string[]> {
-    this.assertOwn(runId)
-    if (nodeIds.length === 0) return []
-    const result: string[] = []
-    for (const id of nodeIds) {
-      const existing = await this.storage.get<string>(stepNameKey(id))
-      if (!existing) result.push(id)
-    }
-    return result
-  }
-
   async getStepInstances(
     runId: string
   ): Promise<

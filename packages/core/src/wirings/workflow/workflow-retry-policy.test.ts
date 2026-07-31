@@ -11,7 +11,6 @@ import type { WorkflowStepOptions } from './workflow.types.js'
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
-// Expose the protected retry-policy resolver for direct assertion.
 class TestWorkflowService extends InMemoryWorkflowService {
   public resolve(options?: WorkflowStepOptions) {
     return (this as PikkuWorkflowService as any).resolveStepJobOptions(options)
@@ -29,8 +28,6 @@ describe('resolveStepJobOptions — workflow owns retry policy', () => {
   })
 
   test('retries: 0 → attempts: 1 and NO backoff (the non-idempotent opt-out)', () => {
-    // The whole point: an explicit 0 must never inherit the queue default and
-    // re-run a step the workflow said to run exactly once.
     assert.deepEqual(ws.resolve({ retries: 0 }), { attempts: 1 })
   })
 
@@ -89,11 +86,9 @@ describe('executeWorkflowStep surfaces a stable invocationId', () => {
     })
     await ws.insertStepState(runId, 'updateUser', 'doUpdateUser', {})
 
-    // First attempt fails (default retries not exhausted → throws, not failed-run).
     await assert.rejects(
       ws.executeWorkflowStep(runId, 'updateUser', 'doUpdateUser', {}, rpc)
     )
-    // Retry attempt succeeds.
     await ws.executeWorkflowStep(runId, 'updateUser', 'doUpdateUser', {}, rpc)
 
     assert.equal(captured.length, 2, 'step ran twice')

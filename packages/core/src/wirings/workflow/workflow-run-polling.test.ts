@@ -5,13 +5,8 @@ import { InMemoryWorkflowService } from '../../services/in-memory-workflow-servi
 import { pikkuState } from '../../pikku-state.js'
 import type { WorkflowRun } from './workflow.types.js'
 
-/**
- * A workflow service whose run reads are counted and timestamped, and whose
- * run finishes only once it has been read `endAfter` times.
- */
 class PollProbe extends InMemoryWorkflowService {
   readonly reads: number[] = []
-  /** Every wait the loop asked for, in order — the schedule, not the clock. */
   readonly waits: number[] = []
   endAfter = 1
 

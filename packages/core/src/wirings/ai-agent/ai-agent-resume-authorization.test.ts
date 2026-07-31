@@ -125,8 +125,6 @@ describe('resumeAIAgentSync authorization', () => {
     setup('scoped-agent-ok')
     addAgent('scoped-agent-ok', { scopes: ['admin:refund'] })
 
-    // Gets past authorization and fails later on the unconfigured provider,
-    // which is how we know the gate admitted it.
     await assert.rejects(
       () =>
         resumeAIAgentSync(

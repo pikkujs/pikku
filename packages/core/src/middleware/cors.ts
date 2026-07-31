@@ -1,40 +1,9 @@
 import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
 /**
- * CORS middleware that handles cross-origin requests including OPTIONS preflight.
- *
- * Sets appropriate CORS headers on all responses and short-circuits OPTIONS
- * preflight requests with a 204 No Content response.
- *
- * @param options.origin - Allowed origin(s). Use `'*'` for any origin, `true` to reflect the request origin, a string for a single origin, or an array for multiple origins. Defaults to `'*'`.
- * @param options.methods - Allowed HTTP methods. Defaults to common methods.
- * @param options.headers - Allowed request headers. Defaults to common headers.
- * @param options.exposeHeaders - Response headers a cross-origin caller is allowed to read, beyond the CORS-safelisted ones. Defaults to none.
- * @param options.credentials - Whether to allow credentials. Defaults to `false`.
- * @param options.maxAge - Preflight cache duration in seconds. Defaults to `86400` (24 hours).
- *
- * @example
- * ```typescript
- * import { cors } from '@pikku/core/middleware'
- *
- * // Allow all origins
- * addHTTPMiddleware('*', [cors()])
- *
- * // Specific origin with credentials
- * addHTTPMiddleware('*', [
- *   cors({
- *     origin: 'https://app.example.com',
- *     credentials: true,
- *   })
- * ])
- *
- * // Multiple origins
- * addHTTPMiddleware('*', [
- *   cors({
- *     origin: ['https://app.example.com', 'https://admin.example.com'],
- *   })
- * ])
- * ```
+ * Sets CORS headers on every response and short-circuits OPTIONS preflight
+ * with a 204. `origin: true` reflects the request origin; an array reflects a
+ * matching origin and otherwise falls back to its first entry.
  */
 export const cors = pikkuMiddlewareFactory<{
   origin?: string | string[] | true

@@ -97,9 +97,6 @@ export const voiceInput = (config?: {
       )
       if (!hasAudio) return { messages, instructions }
 
-      // Process parts in order, replacing each audio part with its transcription
-      // in place. Sequential, so no unbounded parallel downloads/transcriptions
-      // and original content ordering is preserved.
       const updatedContent: AIContentPart[] = []
       for (const p of parts) {
         if (!(p.type === 'file' && p.mediaType?.startsWith('audio/'))) {
