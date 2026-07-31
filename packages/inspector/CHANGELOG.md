@@ -1,3 +1,63 @@
+## 0.12.50
+
+### Patch Changes
+
+- b89d3b3: Bring the knowledge base into OSS: a package, a CLI gate, a console browser and a skill
+
+  `knowledge/` is where a project records the things `pikku meta` cannot tell you —
+  what a slice is for, which rule was chosen and what it rules out, what is still an
+  open question. Tables, routes, schemas and permissions are generated, so a note
+  that repeats them is a copy that will drift, and the profile refuses the sections
+  where that happens.
+  - **`@pikku/knowledge`** (new) reads the notes, builds the link graph in both
+    directions, and validates the app-project profile: every note typed, every
+    section indexed, every slice carrying a third-person gherkin scenario and at
+    most three entities, and every `resource:` URI resolving against the generated
+    meta. The resource check fails closed on drift and open on ignorance — a prefix
+    whose meta is absent is skipped rather than called dangling.
+  - **`pikku knowledge validate`** and **`pikku knowledge index`** replace the dead
+    three-flat-files check. Both exit non-zero on an inconsistent base, so a
+    pipeline can stop on one; `index` refreshes each `index.md` listing while
+    leaving the prose around it alone, and now gives a section that holds only
+    sub-sections an index of its own instead of leaving it unreachable.
+  - **The console** gains a read-only Knowledge page: notes grouped by section,
+    a rendered document with its tags, resources, links in both directions and the
+    findings against it, and intra-bundle markdown links that open the linked note
+    instead of leaving the page. Read-only by design — a note is edited in the repo,
+    in the same commit as the code it describes.
+  - **The `pikku-knowledge` skill** documents the format for agents, and Fabric
+    builds on it rather than restating it.
+  - **`@pikku/inspector`**: a zod schema imported from a built workspace package
+    resolved to that package's `.d.ts`, which has no runtime exports at all, so
+    every schema in it was reported missing. The emitted JS beside it is imported
+    instead.
+
+- b89d3b3: Invalidate the TS-schema cache when a type it was built from changes
+
+  The on-disk schema cache was keyed on the synthesized custom-types source, the
+  generator options and the inspector version — but not on the types it actually
+  resolves. A named type (anything a function declares as its input or output)
+  appears in that source only as a name; its definition is read out of a project
+  file or a dependency's `.d.ts`. Change the shape without changing the name and
+  the key is identical, so pikku serves a schema for a type that no longer looks
+  like that, and requests are validated against it.
+
+  The stale schema also outlives `rm -rf .pikku`, because the cache lives in
+  `node_modules/.cache/pikku/ts-schemas.json`.
+
+  Codegen now records the files each schema set was derived from, storing their
+  mtime and size beside it, and regenerates when any of them moves or disappears.
+  The schema program is rooted at the virtual types file, so its source files are
+  exactly the transitive closure the schemas depend on. A cache written by an
+  earlier version carries no dep list and is treated as stale. The check costs
+  about 3ms per cache hit, and also guards the in-process cache, so `pikku dev`
+  picks up a type edit without a restart.
+
+- Updated dependencies [384e484]
+- Updated dependencies [b5a73fb]
+- Updated dependencies [6be5ab0]
+  - @pikku/core@0.12.72
+
 ## 0.12.49
 
 ### Patch Changes
