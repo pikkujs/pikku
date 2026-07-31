@@ -35,7 +35,6 @@ import type {
 import type { AIAgentMeta } from '../wirings/ai-agent/ai-agent.types.js'
 import type { GatewaysMeta } from '../wirings/gateway/gateway.types.js'
 
-// Re-export core types for consumers
 export type {
   FunctionMeta,
   FunctionsMeta,
@@ -147,38 +146,25 @@ export interface EmailTemplateAssets {
   missing: string[]
 }
 
-/**
- * Abstraction over .pikku metadata file access.
- * All paths are relative to the .pikku root directory.
- *
- * Node.js uses LocalMetaService (filesystem).
- * Cloudflare uses an R2/KV implementation.
- */
+/** Every `relativePath` below is relative to the `.pikku` root directory. */
 export interface MetaService {
-  /** Base path for local filesystem implementations. Undefined for remote/non-local implementations. */
+  /** Undefined for remote/non-local implementations. */
   readonly basePath?: string
-  /** Read a file's content by relative path. Returns null if not found. */
   readFile(relativePath: string): Promise<string | null>
-  /** List files in a directory by relative path. Returns empty array if not found. */
   readDir(relativePath: string): Promise<string[]>
-  /** Read a project source file relative to the project root (one level above .pikku). */
+  /** Relative to the project root, one level above `.pikku`. */
   readProjectFile(relativePath: string): Promise<string | null>
   /**
-   * Read a file from an *installed addon package's* own `.pikku` directory
-   * (resolved from node_modules), NOT the app's `.pikku`. `relativePath` is
-   * relative to that package's `.pikku` root (use `../` to reach the package
-   * root itself, e.g. `../README.md`). Returns null if the package or file is
-   * absent. Only local/Node implementations resolve packages; remote impls omit
-   * this and callers guard with `?.`.
+   * Reads an *installed addon package's* own `.pikku`, not the app's, with
+   * `relativePath` rooted there (`../README.md` reaches the package root).
+   * Optional because only local/Node implementations resolve packages — remote
+   * ones omit it and callers guard with `?.`.
    */
   readPackageFile?(
     packageName: string,
     relativePath: string
   ): Promise<string | null>
-  /** List a directory inside an installed addon package's `.pikku`. */
   readPackageDir?(packageName: string, relativePath: string): Promise<string[]>
-
-  // -- Typed metadata accessors --
 
   getHttpMeta(): Promise<HTTPWiringsMeta>
   getChannelsMeta(): Promise<ChannelsMeta>
@@ -222,10 +208,6 @@ export interface MetaService {
   clearCache(): void
 }
 
-/**
- * Node.js filesystem implementation of MetaService.
- * Reads .gen.json files from a local .pikku directory.
- */
 export class LocalMetaService implements MetaService {
   public readonly basePath: string
 
@@ -281,10 +263,7 @@ export class LocalMetaService implements MetaService {
     }
   }
 
-  // Resolve an installed addon package's root dir from the app's node_modules.
-  // The addon packages have no main `exports` entry, so `require.resolve(pkg)`
-  // throws; instead we walk the node_modules search paths (anchored at the app
-  // root, one level above `.pikku`) and pick the first that contains the package.
+  // knowledge: decisions/design/addon-package-roots-resolve-by-walking-node-module-search-paths.md
   private packageRootCache = new Map<string, string | null>()
   private resolvePackageRoot(packageName: string): string | null {
     const cached = this.packageRootCache.get(packageName)
@@ -358,8 +337,6 @@ export class LocalMetaService implements MetaService {
     this.schemaCache.clear()
   }
 
-  // -- Private helpers --
-
   private async readMetaJson<T>(
     dir: string,
     baseName: string
@@ -370,8 +347,6 @@ export class LocalMetaService implements MetaService {
     if (minimal) return minimal
     return null
   }
-
-  // -- Typed metadata accessors --
 
   async getHttpMeta(): Promise<HTTPWiringsMeta> {
     if (this.httpMetaCache) return this.httpMetaCache
@@ -507,9 +482,7 @@ export class LocalMetaService implements MetaService {
 
     try {
       const result: WorkflowsMeta = {}
-      // Scenarios keep their meta in `scenarios/meta` so nothing app-facing
-      // imports them, but they are still workflows to anything reading meta off
-      // disk — the console's scenario list among them.
+      // knowledge: decisions/design/scenario-meta-lives-apart-from-app-meta-but-merges-when-read-off-disk.md
       await Promise.all([
         this.readWorkflowMetaDir('workflow/meta', result),
         this.readWorkflowMetaDir('scenarios/meta', result),
@@ -576,8 +549,6 @@ export class LocalMetaService implements MetaService {
 
     const [content, scenarioContent] = await Promise.all([
       this.readMetaJson('function', 'pikku-functions-meta'),
-      // Scenario steps register only into the scenario bootstrap, but they are
-      // still functions to anything reading meta off disk.
       this.readMetaJson('scenarios', 'pikku-scenario-functions-meta'),
     ])
     this.functionsMetaCache = {
@@ -655,12 +626,7 @@ export class LocalMetaService implements MetaService {
   }
 
   async getEmailMeta(): Promise<EmailsMeta> {
-    // Read fresh every call — never cache. The email meta file is generated by
-    // `pikku all`/`pikku emails generate` and is regenerated DURING a long-lived
-    // session (sandbox boots the orchestrator before the user project's codegen
-    // has written it). Caching here once returned an empty {templates:{}} that
-    // then stuck for the whole session, leaving the console emails screen blank
-    // even after the file appeared. A local JSON read is essentially free.
+    // knowledge: decisions/design/email-meta-is-read-uncached-because-codegen-rewrites-it-mid-session.md
     const content = await this.readFile('email/pikku-emails-meta.gen.json')
     return content
       ? JSON.parse(content)
@@ -682,9 +648,7 @@ export class LocalMetaService implements MetaService {
       )
     }
 
-    // emailsMeta.src is an absolute path resolved by the CLI at generation time.
-    // Read directly rather than through readProjectFile (which prepends the project
-    // root and produces a wrong compound path when baseDir is absolute).
+    // knowledge: decisions/design/generated-src-paths-in-pikku-meta-are-absolute.md
     const baseDir = emailsMeta.src
     const readEmailFile = async (rel: string): Promise<string | null> => {
       try {
@@ -720,10 +684,6 @@ export class LocalMetaService implements MetaService {
     ]
 
     if (missing.length > 0) {
-      // Diagnostic for the intermittent "Missing source files" report: logs which
-      // process and which resolved baseDir saw the gap. Different pids across
-      // failures => multiple runtime workers with divergent cached `src`; same pid
-      // + transient absence => files being rewritten under us (e.g. regeneration).
       console.warn(
         `[email-assets] pid=${process.pid} template=${templateName} locale=${locale} baseDir=${baseDir} missing=${missing.join(',')}`
       )

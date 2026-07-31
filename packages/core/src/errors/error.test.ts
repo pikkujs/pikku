@@ -115,7 +115,6 @@ describe('getErrorResponse', () => {
     const customError = new CustomError()
     const customErrorDetails = { status: 400, message: 'Custom Error' }
 
-    // Add the custom error to the apiErrors map
     addError(CustomError, customErrorDetails)
 
     const response = getErrorResponse(customError)
@@ -194,4 +193,34 @@ describe('all built-in error classes', () => {
       assert.ok(error instanceof PikkuError)
     })
   }
+})
+
+describe('getErrorResponse resolution order', () => {
+  test('a subclass of a registered error inherits its registered status', () => {
+    class TenantNotFoundError extends NotFoundError {}
+    const expected = getErrorResponse(new NotFoundError())
+    assert.deepStrictEqual(getErrorResponse(new TenantNotFoundError()), expected)
+  })
+
+  test('an unregistered, non-colliding error class resolves to undefined', () => {
+    class TotallyUnknownError extends Error {}
+    assert.strictEqual(getErrorResponse(new TotallyUnknownError()), undefined)
+  })
+
+  test('name matching is a deliberate fallback for duplicate package copies', () => {
+    const Shadow = class NotFoundError extends Error {}
+    assert.deepStrictEqual(
+      getErrorResponse(new Shadow()),
+      getErrorResponse(new NotFoundError())
+    )
+  })
+
+  test('a registered class is matched by identity, not by scanning names', () => {
+    class DirectlyRegisteredError extends PikkuError {}
+    addError(DirectlyRegisteredError, { status: 418, message: 'teapot' })
+    assert.deepStrictEqual(getErrorResponse(new DirectlyRegisteredError()), {
+      status: 418,
+      message: 'teapot',
+    })
+  })
 })

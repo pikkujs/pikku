@@ -4,82 +4,11 @@ import type {
   RefValue,
 } from './workflow-graph.types.js'
 
-/**
- * Standard RPC handler interface (matches generated FlattenedRPCMap entries)
- */
 export interface RPCHandler<I = any, O = any> {
   input: I
   output: O
 }
 
-/**
- * Compute output types for all nodes based on their func (RPC name)
- */
-export type NodeOutputMap<
-  Nodes extends Record<string, { func: string }>,
-  RPCMap extends Record<string, RPCHandler>,
-> = {
-  [K in keyof Nodes]: Nodes[K]['func'] extends keyof RPCMap
-    ? RPCMap[Nodes[K]['func']]['output']
-    : unknown
-}
-
-/**
- * Node definition with RPC name reference
- */
-export interface GraphNodeDef<
-  RPCMap extends Record<string, RPCHandler>,
-  NodeIds extends string = string,
-  NodeOutputs extends Record<string, any> = Record<string, any>,
-> {
-  /** RPC function name (must be a key in RPCMap) */
-  func: keyof RPCMap & string
-  /** Input mapping - reference outputs from other nodes with autocomplete */
-  input?: (
-    ref: <N extends keyof NodeOutputs & string>(
-      nodeId: N,
-      path: keyof NodeOutputs[N] & string
-    ) => RefValue
-  ) => Record<string, unknown>
-  /** Next node(s) to execute */
-  next?: NextConfig<NodeIds>
-  /** Error handling - node(s) to execute on error */
-  onError?: NodeIds | NodeIds[]
-  /** Maximum retry attempts allowed (excludes the initial attempt) */
-  retries?: number
-  /** Delay between retries — milliseconds, duration string, or 'exponential' */
-  retryDelay?: string | number
-}
-
-/**
- * Helper to create a type-safe graph definition with RPC autocomplete.
- * Pass node IDs as first type parameter for type-safe next/ref/output key completion.
- *
- * @example
- * ```typescript
- * // Import the typed graph from generated types
- * import { pikkuWorkflowGraph } from './.pikku/workflow/pikku-workflow-types.gen.js'
- *
- * export const myGraph = pikkuWorkflowGraph({
- *   name: 'myWorkflow',
- *   nodes: {
- *     entry: 'createUserProfile',  // autocompletes RPC names
- *     sendWelcome: 'sendEmail',
- *   },
- *   config: {
- *     entry: { next: 'sendWelcome' },
- *     sendWelcome: {
- *       input: (ref) => ({
- *         to: ref('entry', 'email'),  // 'entry' and 'email' both autocomplete
- *       }),
- *     },
- *   },
- * })
- * ```
- */
-/**
- * Type to compute output types for all nodes based on their func mapping
- */
 type ComputeNodeOutputs<
   FuncMap extends Record<string, string>,
   RPCMap extends Record<string, RPCHandler>,
@@ -89,9 +18,6 @@ type ComputeNodeOutputs<
     : unknown
 }
 
-/**
- * Type to compute input types for all nodes based on their func mapping
- */
 type ComputeNodeInputs<
   FuncMap extends Record<string, string>,
   RPCMap extends Record<string, RPCHandler>,
@@ -101,15 +27,8 @@ type ComputeNodeInputs<
     : unknown
 }
 
-/**
- * Typed ref value - carries the type of the referenced field as a phantom type.
- * At runtime this is just RefValue, but TypeScript tracks the type T.
- */
 export type TypedRef<T> = RefValue & { __phantomType?: T }
 
-/**
- * Map input type fields to allow TypedRef of matching type as an alternative
- */
 type InputWithRefs<T> = {
   [K in keyof T]: T[K] | TypedRef<T[K]>
 }
@@ -126,7 +45,6 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
   > => {
     type NodeIds = Extract<keyof FuncMap, string>
 
-    // If no nodes provided, return just the funcMap converted to graph nodes
     if (!nodesOrBuilder) {
       const result: Record<string, GraphNodeConfig<string>> = {}
       for (const [nodeId, rpcName] of Object.entries(funcMap)) {
@@ -159,9 +77,6 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
   }
 }
 
-/**
- * Type helper for node configuration map
- */
 type GraphNodeConfigMap<
   FuncMap extends Record<string, string>,
   RPCMap extends Record<string, RPCHandler>,
@@ -180,57 +95,6 @@ type GraphNodeConfigMap<
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
     retries?: number
     retryDelay?: string | number
-    /** Free-text node documentation. Non-semantic — excluded from graphHash. */
     notes?: string
   }
-}
-
-/**
- * Untyped graph for use without RPC map.
- * Pass node IDs as type parameter for type-safe next/ref, or omit for untyped usage.
- *
- * @example
- * ```typescript
- * // Typed usage - next and ref are type-checked
- * graph<'entry' | 'sendWelcome'>({
- *   entry: { func: 'createUserProfile', next: 'sendWelcome' },
- *   sendWelcome: { func: 'sendEmail', input: (ref) => ({ to: ref('entry', 'email') }) },
- * })
- *
- * // Untyped usage - no type checking on next/ref
- * graph({
- *   entry: { func: 'createUserProfile', next: 'sendWelcome' },
- *   sendWelcome: { func: 'sendEmail' },
- * })
- * ```
- */
-export function graph<NodeIds extends string = string>(
-  nodes: Record<
-    NodeIds,
-    {
-      func: string
-      next?: NextConfig<NodeIds>
-      input?: (
-        ref: (nodeId: NodeIds, path: string) => RefValue
-      ) => Record<string, unknown>
-      onError?: NodeIds | NodeIds[]
-      retries?: number
-      retryDelay?: string | number
-    }
-  >
-): Record<NodeIds, GraphNodeConfig<NodeIds>> {
-  const result: Record<string, GraphNodeConfig<string>> = {}
-
-  for (const [nodeId, def] of Object.entries(nodes) as [string, any][]) {
-    result[nodeId] = {
-      func: def.func,
-      input: def.input as any,
-      next: def.next,
-      onError: def.onError,
-      retries: def.retries,
-      retryDelay: def.retryDelay,
-    }
-  }
-
-  return result as Record<NodeIds, GraphNodeConfig<NodeIds>>
 }

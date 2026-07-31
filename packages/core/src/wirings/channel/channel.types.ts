@@ -149,19 +149,14 @@ export interface PikkuChannel<
   out Out,
   Remote extends (...args: any[]) => any = ChannelRemote,
 > {
-  // The channel identifier
   channelId: string
-  // The data the channel was created with. This could be query parameters
-  // or parameters in the url.
+  // Query parameters or url parameters the channel was created with.
   openingData: OpeningData
-  // The data to send. This will fail is the stream has been closed.
+  // Fails once the stream has been closed.
   send(data: Out, isBinary?: boolean): Promise<void> | void
   sendBinary(data: BinaryData): Promise<void> | void
-  // This will close the channel.
   close(): Promise<void> | void
-  // The current state of the channel
   state: 'initial' | 'open' | 'closed'
-  // Per-socket ephemeral state scoped to this channel connection.
   setState<T>(state: T): Promise<void> | void
   getState<T>(): Promise<T | undefined> | T | undefined
   clearState(): Promise<void> | void

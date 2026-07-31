@@ -49,8 +49,6 @@ describe('pollUntil', () => {
   })
 
   test('treats a falsy-but-defined answer as an answer', async () => {
-    // `false` is what a "did it happen?" probe returns, and it is a result —
-    // only `undefined` means "not yet".
     let attempts = 0
     const found = await pollUntil(
       () => {

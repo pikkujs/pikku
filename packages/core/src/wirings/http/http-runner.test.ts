@@ -187,7 +187,6 @@ describe('fetch', () => {
       func: { func: routeFunc, middleware: [sessionMiddleware] },
     })
 
-    // Initialize router after adding route (for tests)
     httpRouter.initialize()
 
     const result = await fetch(request)

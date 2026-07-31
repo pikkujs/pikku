@@ -1,11 +1,3 @@
-/**
- * Queue worker functions for workflow orchestration.
- *
- * These are registered as queue consumers by the codegen pipeline
- * (injected into queue meta when workflows exist). They provide
- * the runtime implementations that process queued workflow jobs.
- */
-
 import { getSingletonServices } from '../../pikku-state.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 
@@ -14,7 +6,6 @@ export interface WorkflowStepInput {
   stepName: string
   rpcName: string
   data: unknown
-  /** Predecessor step name (the walked transition); undefined for entry steps. */
   fromStepName?: string
 }
 
@@ -27,10 +18,6 @@ export interface PikkuWorkflowSleeperInput {
   stepId: string
 }
 
-/**
- * Step worker — executes individual workflow steps dispatched via queue.
- * The orchestrator queues steps here when they're async (not inline).
- */
 export async function pikkuWorkflowWorkerFunc(
   _services: Record<string, unknown>,
   { runId, stepName, rpcName, data }: WorkflowStepInput,
@@ -51,10 +38,6 @@ export async function pikkuWorkflowWorkerFunc(
   )
 }
 
-/**
- * Orchestrator — resumes workflow execution after an async step completes.
- * Called when a step worker finishes and the workflow needs to continue.
- */
 export async function pikkuWorkflowOrchestratorFunc(
   _services: Record<string, unknown>,
   { runId }: PikkuWorkflowOrchestratorInput,
@@ -69,10 +52,6 @@ export async function pikkuWorkflowOrchestratorFunc(
   await services.workflowService.orchestrateWorkflow(runId, rpc)
 }
 
-/**
- * Sleeper — wakes a workflow after a workflow.sleep() duration expires.
- * Triggered by a delayed queue message or scheduler callback.
- */
 export async function pikkuWorkflowSleeperFunc(
   _services: Record<string, unknown>,
   { runId, stepId }: PikkuWorkflowSleeperInput

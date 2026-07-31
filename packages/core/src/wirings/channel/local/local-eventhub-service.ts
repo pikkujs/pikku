@@ -1,26 +1,12 @@
 import type { PikkuChannelHandler } from '../channel.types.js'
 import type { EventHubService } from '../eventhub-service.js'
 
-/**
- * Implementation of the SubscriptionService interface.
- * Manages subscriptions and publishes messages to subscribers.
- */
 export class LocalEventHubService<
   Data extends Record<string, any> = {},
 > implements EventHubService<Data> {
   private channels = new Map<string, PikkuChannelHandler>()
-
-  /**
-   * A map storing topics and their associated connection IDs.
-   */
   private subscriptions: Map<keyof Data, Set<string>> = new Map()
 
-  /**
-   * Subscribes a connection to a specific topic.
-   * Creates the topic if it does not already exist.
-   * @param topic - The topic to subscribe to.
-   * @param channelId - The unique ID of the connection to subscribe.
-   */
   public subscribe<T extends keyof Data>(
     topic: T,
     channelId: string
@@ -31,12 +17,6 @@ export class LocalEventHubService<
     this.subscriptions.get(topic)!.add(channelId)
   }
 
-  /**
-   * Unsubscribes a connection from a specific topic.
-   * Removes the topic if it has no more subscribers.
-   * @param topic - The topic to unsubscribe from.
-   * @param channelId - The unique ID of the connection to unsubscribe.
-   */
   public unsubscribe<T extends keyof Data>(
     topic: T,
     channelId: string
@@ -50,11 +30,6 @@ export class LocalEventHubService<
     }
   }
 
-  /**
-   * Sends data to all connections subscribed to a topic.
-   * @param topic - The topic to send data to.
-   * @param data - The data to send to the subscribers.
-   */
   public publish<T extends keyof Data>(
     topic: T,
     channelId: string | null,
@@ -66,37 +41,27 @@ export class LocalEventHubService<
       return
     }
     for (const toChannelId of subscribedChannelIds) {
-      if (channelId === toChannelId) continue // Skip sending to the sender
+      if (channelId === toChannelId) continue
       const channel = this.channels.get(toChannelId)
       if (channel) {
         try {
           channel.send(data, isBinary)
         } catch {
-          // Channel closed (e.g. SSE ReadableStream controller already closed on browser disconnect) — clean up
           this.onChannelClosed(toChannelId)
         }
       }
     }
   }
 
-  /**
-   * Registers a channel on open
-   */
   public onChannelOpened(channelHandler: PikkuChannelHandler): void {
     this.channels.set(channelHandler.getChannel().channelId, channelHandler)
   }
 
-  /**
-   * Handles cleanup when a channel is closed.
-   * Removes the channel from all topics it is subscribed to.
-   * Deletes the topic if no more channels are subscribed to it.
-   * @param channelId - The ID of the channel that was closed.
-   */
   public onChannelClosed(channelId: string): void {
     for (const [topic, channelIds] of this.subscriptions.entries()) {
       channelIds.delete(channelId)
       if (channelIds.size === 0) {
-        this.subscriptions.delete(topic) // Cleanup empty topics
+        this.subscriptions.delete(topic)
       }
     }
     this.channels.delete(channelId)

@@ -5,8 +5,6 @@ import { InMemoryWorkflowService } from '../../services/in-memory-workflow-servi
 import { pikkuState } from '../../pikku-state.js'
 import { WorkflowDispatchException } from './pikku-workflow-service.js'
 
-// Register a `workflowQueued: true` function so the workflow's `do()` routes
-// the step through the queue (dispatchStep) instead of running it inline.
 function registerDispatchedFn(rpcName: string): void {
   const funcId = `fn:${rpcName}`
   pikkuState(null, 'rpc', 'meta', { [rpcName]: funcId } as any)
@@ -36,15 +34,12 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
     })
     await ws.insertStepState(runId, 'thing', 'doThing', {})
 
-    // Queue is down → dispatch throws the TRANSIENT exception (not a step failure).
     await assert.rejects(
       (ws as any).rpcStep(runId, 'thing', 'doThing', {}, {}),
       (err: any) => err instanceof WorkflowDispatchException,
       'a queue outage surfaces as WorkflowDispatchException'
     )
 
-    // The step must NOT be stranded in `scheduled` — otherwise replay would pause
-    // forever on a job that was never enqueued.
     const afterFail = await ws.getStepState(runId, 'thing')
     assert.equal(
       afterFail.status,
@@ -52,7 +47,6 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
       'step stays pending after a failed dispatch'
     )
 
-    // The run itself must stay alive (not failed) — it is the snapshot we replay.
     const runAfterFail = await ws.getRun(runId)
     assert.notEqual(
       runAfterFail?.status,
@@ -60,10 +54,6 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
       'run is not failed by a queue blip'
     )
 
-    // Queue recovers → replaying the step now dispatches (pauses via async exception)
-    // and the step transitions to `scheduled`. A real replay runs through
-    // runWorkflowJob which resets the ordinal counter; simulate that so the
-    // second reach resolves to the same step key, not the next ordinal.
     await (ws as any).beginReplay(runId)
     queueUp = true
     await assert.rejects(
@@ -87,7 +77,6 @@ describe('orchestrateWorkflow treats a dispatch failure as non-terminal', () => 
       logger: silentLogger,
     } as any)
     const ws = new InMemoryWorkflowService()
-    // Override the replay to throw whatever the test wants.
     ;(ws as any).runWorkflowJob = async () => throwIt()
     return ws
   }

@@ -5,10 +5,8 @@ import type {
 } from '../../function/functions.types.js'
 import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
 
-// Re-export WorkflowService from services module
 export type { WorkflowService } from '../../services/workflow-service.js'
 
-// Re-export DSL types from dsl module
 export type {
   WorkflowStepOptions,
   WorkflowExpectEventuallyOptions,
@@ -49,7 +47,6 @@ export type {
   PikkuScenarioWire,
 } from './dsl/workflow-dsl.types.js'
 
-// Re-export scenario step types
 export type {
   ScenarioStepPhase,
   ScenarioStepOptions,
@@ -65,7 +62,6 @@ export interface WorkflowRunWire {
   id?: string
   parentRunId?: string
   parentStepId?: string
-  /** Pikku user ID propagated from the originating request for credential resolution */
   pikkuUserId?: string
 }
 
@@ -77,54 +73,17 @@ export interface WorkflowServiceConfig {
   sleeperRPCName: string
 }
 
-/**
- * How a workflow service spreads its jobs across queues.
- *
- * Passed to the service constructor rather than read from `config.workflow`:
- * the queues are wired during construction, before singleton services (and so
- * before `config`) exist.
- */
 export interface WorkflowQueueOptions {
-  /**
-   * - `'per-workflow'` (default) — each workflow gets its own
-   *   `wf-orchestrator-*` / `wf-step-*` queue. Complete isolation, and it's
-   *   what lets serverless providers deploy one unit per workflow. Costs one
-   *   set of pollers per queue, which adds up on pull-based backends.
-   * - `'shared-groups'` — every workflow shares the orchestrator/step-worker
-   *   queues and stays isolated via {@link queueGroupConcurrency}, so no
-   *   workflow can occupy more than its share. One set of pollers total.
-   *   Only for single-process (monolith) runtimes; a per-unit serverless
-   *   deploy needs the per-workflow queues to route to its units.
-   */
   queueStrategy?: 'per-workflow' | 'shared-groups'
-  /**
-   * Total concurrent workflow jobs per node under `'shared-groups'`.
-   * Defaults to 20.
-   */
   queueConcurrency?: number
-  /**
-   * How many jobs of one workflow may run at once under `'shared-groups'`.
-   * Defaults to 2. Tiers are keyed by workflow name, so a specific workflow
-   * can be given its own limit without any extra wiring.
-   *
-   * Note tiers can only lower a workflow's limit, not raise it above
-   * `default`: the backend's pre-fetch exclusion is applied per group using
-   * `default` alone. To give one workflow more room, raise `default` and
-   * restrict the others by tier.
-   */
   queueGroupConcurrency?: number | GroupConcurrencyConfig
 }
 
 export interface WorkflowPlannedStep {
-  /** Durable step key — matches the runtime step name stored in the DB */
   stepName: string
-  /** Optional human-readable label for the UI timeline (falls back to stepName) */
   displayName?: string
 }
 
-/**
- * Workflow run status
- */
 export type WorkflowStatus =
   | 'running'
   | 'suspended'
@@ -132,14 +91,8 @@ export type WorkflowStatus =
   | 'failed'
   | 'cancelled'
 
-/**
- * Workflow version status (for AI-generated workflows)
- */
 export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
 
-/**
- * Workflow step status
- */
 export type StepStatus =
   | 'pending'
   | 'running'
@@ -148,72 +101,37 @@ export type StepStatus =
   | 'failed'
   | 'suspended'
 
-/**
- * Workflow run representation
- */
 export interface WorkflowRun {
-  /** Unique run ID */
   id: string
-  /** Workflow name */
   workflow: string
-  /** Current status */
   status: WorkflowStatus
-  /** Input data */
   input: any
-  /** Output data (if completed) */
   output?: any
-  /** Error (if failed) */
   error?: SerializedError
-  /** If true, workflow executes inline without queues */
   inline?: boolean
-  /** Graph hash of the workflow definition at run creation time */
   graphHash?: string
-  /** True when the workflow has a static, pre-computable step timeline */
   deterministic?: boolean
-  /** Static planned steps snapshot captured at run start */
   plannedSteps?: WorkflowPlannedStep[]
-  /** Wire origin info (how this run was started) */
   wire: WorkflowRunWire
-  /** Creation timestamp */
   createdAt: Date
-  /** Last update timestamp */
   updatedAt: Date
 }
 
-/**
- * Step state representation
- */
 export interface StepState {
-  /** Unique step ID */
   stepId: string
-  /** Step status */
   status: StepStatus
-  /** Step result (if done) */
   result?: any
-  /** Step error (if error) */
   error?: SerializedError
-  /** Number of attempts made (starts at 1) */
   attemptCount: number
-  /** Maximum retry attempts allowed */
   retries?: number
-  /** Delay between retries */
   retryDelay?: string | number
-  /** Step name of the predecessor that scheduled this step (the transition/edge
-   *  walked to reach it); undefined for entry steps. Reconstructs the path. */
   fromStepName?: string
-  /** Creation timestamp */
   createdAt: Date
-  /** Last update timestamp */
   updatedAt: Date
-  /** Child workflow run ID (if this step spawned a sub-workflow) */
   childRunId?: string
-  /** Timestamp when step started running */
   runningAt?: Date
-  /** Timestamp when step was scheduled */
   scheduledAt?: Date
-  /** Timestamp when step succeeded */
   succeededAt?: Date
-  /** Timestamp when step failed */
   failedAt?: Date
 }
 
@@ -228,7 +146,6 @@ export interface WorkflowRunStatus {
     name: string
     status: StepStatus
     duration?: number
-    /** Number of attempts for this step (1 = first try; > 1 means it retried). */
     attempts?: number
   }>
   output?: unknown
@@ -257,16 +174,6 @@ export interface WorkflowRunService {
   deleteRun(id: string): Promise<boolean>
 }
 
-/**
- * Write-only companion to `WorkflowRunService`. An executor (a
- * `PikkuWorkflowService` subclass) can be given a mirror; every write
- * the executor makes to its own canonical store is then forwarded here,
- * so an external read store (e.g. a DB queried by the console UI) stays
- * in sync with DO/Redis/etc-driven runs.
- *
- * Mirror failures are logged but never fail the workflow — the mirror is
- * an index, not the source of truth.
- */
 export interface WorkflowRunMirror {
   createRun(
     runId: string,
@@ -323,131 +230,69 @@ export interface WorkflowRunMirror {
   ): Promise<void>
 }
 
-/**
- * Core workflow definition
- */
 export type CoreWorkflow<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
     CorePikkuFunctionConfig<any, any, any>,
 > = {
-  /** Unique workflow name */
   name: string
-  /** The workflow function */
   func: PikkuFunctionConfig
-  /** Middleware chain for this workflow */
   middleware?: PikkuFunctionConfig['middleware']
-  /** Tags for organization and filtering */
   tags?: string[]
 }
 
-/**
- * A scenario as a feature references it: either the scenario itself, or the
- * scenario paired with the input to run it with. The paired form is gherkin's
- * `Examples:` — the same scenario run once per row, written as an ordinary
- * loop rather than a table.
- */
 export type CoreFeatureScenario =
   | CorePikkuFunctionConfig<any, any, any>
   | { scenario: CorePikkuFunctionConfig<any, any, any>; data: unknown }
 
-/**
- * A feature: an ordered group of scenarios, mirroring gherkin's Feature ↔
- * Scenario structure. Scenarios are referenced by imported identifier, so a
- * renamed or deleted scenario is a compile error rather than a silent skip.
- *
- * Hooks run **once around the whole group** (`before → a → b → c → after`),
- * not per scenario — per-scenario setup is the scenario's own `before`. That
- * is the one thing a feature deliberately cannot express: gherkin's
- * `Background:` runs per scenario.
- */
 export type CoreFeature = {
-  /** Human-readable name. The export identifier is the id. */
   name: string
   description?: string
   tags?: string[]
-  /** Readonly because `pikkuFeature`'s `const` generic infers a readonly tuple. */
   scenarios: readonly CoreFeatureScenario[]
   before?: CorePikkuFunctionHook
   after?: CorePikkuFunctionHook
 }
 
-/** One entry of a feature's scenario list, as extracted from the source. */
 export type FeatureMetaEntry = {
-  /** The scenario's declared export name — its key in `WorkflowsMeta`. */
   scenario: string
-  /** The input this entry runs the scenario with — gherkin's `Examples:`. */
   data?: unknown
 }
 
-/**
- * A feature as the console reads it: the document structure around a group of
- * scenarios. Generated to `scenarios/features.gen.json` and read off disk, so
- * nothing app-facing has to import the scenario bootstrap to describe one.
- */
 export type FeatureMeta = {
-  /** The export identifier. */
   id: string
   name: string
   description?: string
   tags: string[]
-  /** In declared order — a feature's reading order is its declaration order. */
   entries: FeatureMetaEntry[]
-  /**
-   * Entries that could not be read statically (a spread, a `.map()`). Their
-   * membership is only known once the scenario bootstrap has been evaluated,
-   * so a non-zero count means this listing is partial.
-   */
   unresolvedEntries: number
-  /** Hooks are runtime-only; only their presence is knowable from meta. */
   hasBefore: boolean
   hasAfter: boolean
 }
 
 export type FeaturesMeta = Record<string, FeatureMeta>
 
-/** One planned scenario run, resolved from a feature's scenario list. */
 export type FeaturePlanEntry = {
   featureId: string
   featureName: string
   scenarioName: string
-  /** The input this entry runs the scenario with, if the feature supplied one. */
   data?: unknown
-  /** The scenario's own tags unioned with the containing feature's. */
   tags: string[]
 }
 
-/**
- * Workflow client interface
- */
 export interface PikkuWorkflow {
-  /** Start a new workflow run */
   start: <I>(input: I) => Promise<{ runId: string }>
-  /** Get a workflow run by ID */
   getRun: (runId: string) => Promise<WorkflowRun>
-  /** Cancel a running workflow */
   cancelRun: (runId: string) => Promise<void>
 }
 
-/**
- * Context variable definition (serialized from Zod schema or type inference)
- */
 export interface ContextVariable {
-  /** Variable type */
   type: 'string' | 'number' | 'boolean' | 'object' | 'array'
-  /** Default value */
   default?: unknown
-  /** Description for UI/docs */
   description?: string
 }
 
-/**
- * Workflow context - state variables with defaults and types
- */
 export type WorkflowContext = Record<string, ContextVariable>
 
-/**
- * Workflows metadata for inspector/CLI (DSL step-based format)
- */
 export type WorkflowsMeta = Record<
   string,
   CommonWireMeta & {
@@ -456,72 +301,24 @@ export type WorkflowsMeta = Record<
     context?: WorkflowContext
     dsl?: boolean
     expose?: boolean
-    /** True for pikkuScenario workflows (complex + actor steps). */
     scenario?: boolean
-    /**
-     * Why a scenario is held out of a default run. Stating the reason in code
-     * keeps the quarantine next to the scenario it applies to, rather than in
-     * a CI invocation nobody reads. Naming the scenario with `--flows` runs it
-     * regardless.
-     */
     skip?: string
-    /** Actor names a scenario declares (personas it runs steps as). */
     actors?: string[]
   }
 >
 
-/**
- * Unified workflow runtime meta (used by runtime to execute workflows)
- * This is the format stored in pikkuState('workflows', 'meta')
- * Both DSL and graph-based workflows are converted to this format
- */
 export interface WorkflowRuntimeMeta {
-  /** Workflow name (used as key in registrations) */
   name: string
-  /** Pikku function name (for execution) */
   pikkuFuncId: string
-  /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph', 'scenario' (complex + actor steps) */
   source: 'dsl' | 'complex' | 'graph' | 'scenario'
-  /** Optional description */
   description?: string
-  /** Tags for organization */
   tags?: string[]
-  /** Actor names a scenario declares (personas it runs steps as). */
   actors?: string[]
-  /** Serialized nodes */
   nodes?: Record<string, any>
-  /** Entry node IDs for graph workflows (computed at build time) */
   entryNodeIds?: string[]
-  /** Hash of graph topology (nodes, edges, input mappings) */
   graphHash?: string
-  /** True when the workflow has a static, pre-computable step timeline */
   deterministic?: boolean
-  /** Static planned steps metadata for deterministic workflows */
   plannedSteps?: WorkflowPlannedStep[]
 }
 
-/**
- * Unified workflow runtime metadata map
- */
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
-
-/**
- * Worker input types for generated queue workers
- */
-export type WorkflowStepInput = {
-  runId: string
-  stepName: string
-  rpcName: string
-  data: any
-  /** Predecessor step name (the walked transition); undefined for entry steps. */
-  fromStepName?: string
-}
-
-export type WorkflowOrchestratorInput = {
-  runId: string
-}
-
-export type WorkflowSleeperInput = {
-  runId: string
-  stepId: string
-}

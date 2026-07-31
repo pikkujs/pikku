@@ -40,7 +40,7 @@ const runUpgradeMiddleware = async (
   const wireInheritedMiddleware = httpGroups['*']
     ? [{ type: 'http' as const, route: '*' }]
     : undefined
-  const middleware = combineMiddleware('channel', `upgrade:${request.path()}`, {
+  const middleware = combineMiddleware('channel', 'upgrade', {
     wireInheritedMiddleware,
   })
 

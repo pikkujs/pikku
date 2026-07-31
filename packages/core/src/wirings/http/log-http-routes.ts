@@ -1,10 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
 import type { Logger } from '../../services/index.js'
 
-/**
- * Logs all the loaded routes.
- * @param logger - A logger for logging information.
- */
 export const logRoutes = (logger: Logger) => {
   const routesByType = pikkuState(null, 'http', 'routes')
   if (routesByType.size === 0) {

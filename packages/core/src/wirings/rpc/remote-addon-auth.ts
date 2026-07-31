@@ -1,10 +1,6 @@
 import type { CoreServices, PikkuRawWire } from '../../types/core.types.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 
-/**
- * How a `wireRemoteAddon` consumer supplies the token the hosted addon expects.
- * This is a CLIENT authenticating to a hosted library — not the trusted mesh.
- */
 export type RemoteAddonAuthBinding =
   | { credentialId: string }
   | { secretId: string }
@@ -15,7 +11,6 @@ export type RemoteAddonAuthBinding =
       ) => string | Promise<string>
     }
 
-/** The addon's auth was bound but the source produced no token — fail closed. */
 export class RemoteAddonAuthError extends PikkuError {
   public readonly namespace: string
   constructor(namespace: string, detail: string) {
@@ -28,13 +23,7 @@ addError(RemoteAddonAuthError, {
   message: 'Remote addon authentication could not be resolved.',
 })
 
-/**
- * Resolve the bearer token for a remote addon call from the consumer's bound
- * source. Returns `null` only when no auth is bound (a public surface).
- *
- * Security: the resolved token is never logged or traced; per-user credentials
- * are read via the wire (scoped to `pikkuUserId`); an empty result fails closed.
- */
+/** Returns `null` only when no auth is bound; an empty resolved token throws. */
 export async function resolveRemoteAddonToken(
   auth: RemoteAddonAuthBinding | undefined,
   services: CoreServices,
@@ -42,7 +31,6 @@ export async function resolveRemoteAddonToken(
   namespace: string
 ): Promise<string | null> {
   if (!auth) {
-    // No auth bound → the addon declares its remote surface public.
     return null
   }
 

@@ -1,9 +1,5 @@
 import type { SecretService } from './secret-service.js'
 
-/**
- * A read-only wrapper around SecretService that restricts access
- * to only a defined set of allowed secret keys.
- */
 export class ScopedSecretService implements SecretService {
   constructor(
     private secrets: SecretService,

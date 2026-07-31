@@ -42,9 +42,6 @@ export type RunHTTPWiringOptions = Partial<{
   maxBodySize: number
 }>
 
-/**
- * Represents the HTTP methods supported for API HTTP wirings.
- */
 export type HTTPMethod =
   | 'post'
   | 'get'
@@ -54,17 +51,10 @@ export type HTTPMethod =
   | 'put'
   | 'options'
 
-/**
- * Header schema type for request header validation.
- * Uses Standard Schema interface - works with Zod, Valibot, ArkType, Effect Schema, etc.
- */
 export type HTTPHeadersSchema = StandardSchemaV1<
   Record<string, string | string[] | undefined>
 >
 
-/**
- * Common HTTP route configuration shared between wireHTTP and wireHTTPRoutes
- */
 export type HTTPRouteBaseConfig = {
   contentType?: 'xml' | 'json'
   timeout?: number
@@ -72,47 +62,26 @@ export type HTTPRouteBaseConfig = {
   headers?: HTTPHeadersSchema
 }
 
-/**
- * Represents an API HTTP wiring without a function, including metadata such as content type, route, and timeout settings.
- */
 export type CoreHTTPFunction = HTTPRouteBaseConfig & {
   route: string
   eventChannel?: false
   returnsJSON?: false
 }
-/**
- * Represents a http wire within Pikku, including a request and response.
- */
+
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
 }
 
-/**
- * Represents request headers as either a record or a function to get headers by name.
- */
 export type RequestHeaders =
   | Record<string, string | string[] | undefined>
   | ((headerName: string) => string | string[] | undefined)
 
-/**
- * Represents a query object for Pikku, where each key can be a string, a value, or an array of values.
- */
 export type PikkuQuery<T = Record<string, string | undefined>> = Record<
   string,
   string | T | null | Array<T | null>
 >
 
-/**
- * Represents a core API HTTP wiring, which can have different configurations depending on whether it requires authentication and permissions.
- *
- * @template In - The input type.
- * @template Out - The output type.
- * @template R - The route string type.
- * @template PikkuFunction - The API function type, defaults to `CorePikkuFunction`.
- * @template PikkuFunctionSessionless - The sessionless API function type, defaults to `CorePikkuFunctionSessionless`.
- * @template PikkuPermission - The permission function type, defaults to `CorePikkuPermission`.
- */
 export type CoreHTTPFunctionWiring<
   In,
   Out,
@@ -208,18 +177,12 @@ export type CoreHTTPFunctionWiring<
       sse?: undefined
     })
 
-/**
- * Represents the input types for HTTP wiring metadata, including parameters, query, and body types.
- */
 export type HTTPFunctionMetaInputTypes = {
   params?: string
   query?: string
   body?: string
 }
 
-/**
- * Represents metadata for a set of HTTP wirings, including HTTP wiring details, methods, input/output types, and documentation.
- */
 export type HTTPWiringMeta = CommonWireMeta & {
   route: string
   method: HTTPMethod
@@ -283,9 +246,6 @@ export interface PikkuHTTPResponse<Out = unknown> {
   flushHeaders?: () => void
 }
 
-/**
- * Single route configuration - supports all wireHTTP options
- */
 export type HTTPRouteConfig<
   PikkuFunction extends
     | CorePikkuFunction<any, any, any, any, any>
@@ -299,24 +259,14 @@ export type HTTPRouteConfig<
     any
   >,
 > = HTTPRouteBaseConfig & {
-  // Required
   method: HTTPMethod
   route: string
   func: CorePikkuFunctionConfig<PikkuFunction, PikkuPermission, PikkuMiddleware>
-
-  // Auth
   auth?: boolean
-
-  // Middleware
   middleware?: PikkuMiddleware[]
-
-  // SSE support
   sse?: boolean
 }
 
-/**
- * Group-level configuration applied to all routes
- */
 export type HTTPRoutesGroupConfig<
   PikkuPermission extends CorePikkuPermission<any, any, any> =
     CorePikkuPermission<any, any, any>,
@@ -331,25 +281,15 @@ export type HTTPRoutesGroupConfig<
   middleware?: PikkuMiddleware[]
 }
 
-/**
- * Nested route map - allows hierarchical organization
- * Can contain individual routes, nested maps, or contracts with config
- */
 export type HTTPRouteMap = {
   [key: string]: HTTPRouteConfig | HTTPRouteMap | HTTPRouteContract
 }
 
-/**
- * A route contract with optional group config (returned by defineRoutes)
- */
 export type HTTPRouteContract<T extends HTTPRouteMap = HTTPRouteMap> =
   HTTPRoutesGroupConfig & {
     routes: T
   }
 
-/**
- * Full configuration for wireHTTPRoutes
- */
 export type WireHTTPRoutesConfig = HTTPRoutesGroupConfig & {
   routes: HTTPRouteMap | HTTPRouteConfig[]
 }

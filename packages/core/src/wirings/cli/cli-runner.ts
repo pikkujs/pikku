@@ -32,10 +32,7 @@ import {
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
-/**
- * CLI command execution error - thrown when CLI execution fails
- * Should be caught by the wrapper to call process.exit()
- */
+/** The caller is expected to catch this and call `process.exit(exitCode)`. */
 export class CLIError extends Error {
   constructor(
     message: string,
@@ -46,18 +43,11 @@ export class CLIError extends Error {
   }
 }
 
-/**
- * Default JSON renderer for CLI output. Emits single-line NDJSON so
- * the output stays machine-parseable when the CLI is run with
- * `--output json`; pretty-printing here would break NDJSON consumers.
- */
+// knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
 const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
   console.log(JSON.stringify(data))
 }
 
-/**
- * Registers a CLI command tree and all its functions
- */
 export const wireCLI = <
   Commands extends Record<string, CoreCLICommandConfig<any, any, any>>,
   GlobalOptions,
@@ -66,7 +56,6 @@ export const wireCLI = <
 >(
   cli: CoreCLI<Commands, GlobalOptions, PikkuMiddleware, GlobalOutput>
 ) => {
-  // Get the existing metadata that was generated during inspection
   const cliMeta = pikkuState(null, 'cli', 'meta') || {}
 
   if (!cliMeta.programs?.[cli.program]) {
@@ -76,7 +65,6 @@ export const wireCLI = <
     return
   }
 
-  // Get existing programs state and add this program
   const programs: Record<string, CLIProgramState> =
     pikkuState(null, 'cli', 'programs') || {}
   programs[cli.program] = {
@@ -88,7 +76,6 @@ export const wireCLI = <
   }
   pikkuState(null, 'cli', 'programs', programs)
 
-  // Register all command functions recursively
   registerCLICommands(
     cli.commands as Record<string, any>,
     [],
@@ -97,10 +84,6 @@ export const wireCLI = <
   )
 }
 
-/**
- * Unwraps a function from pikku wrappers (pikkuFunc, pikkuSessionlessFunc, etc.)
- * These wrappers return { func, middleware, ... } but we need the actual function
- */
 function unwrapFunc(command: any): {
   func: Function
   middleware?: any[]
@@ -112,7 +95,6 @@ function unwrapFunc(command: any): {
     return { func: command }
   }
 
-  // If command has a func property that's an object with func, unwrap it
   if (
     command.func &&
     typeof command.func === 'object' &&
@@ -127,36 +109,29 @@ function unwrapFunc(command: any): {
     }
   }
 
-  // Otherwise return as-is
   return command
 }
 
-/**
- * Registers CLI commands and their functions recursively
- */
 function registerCLICommands(
   commands: Record<string, any>,
   path: string[] = [],
   inheritedOptions: Record<string, CLIOption> = {},
   program: string
 ) {
-  // Get the CLI metadata to find actual function names
   const cliMeta = pikkuState(null, 'cli', 'meta').programs[program]
 
   for (const [name, command] of Object.entries(commands)) {
     const fullPath = [...path, name]
     const commandId = fullPath.join('.')
 
-    // Navigate metadata to find the actual function name
     let currentMeta: CLICommandMeta | undefined = cliMeta?.commands[fullPath[0]]
     for (let i = 1; i < fullPath.length; i++) {
       currentMeta = currentMeta?.subcommands?.[fullPath[i]]
     }
     const funcName = currentMeta?.pikkuFuncId
 
-    // Skip if no function name (could be a command group)
+    // A command group has no function of its own.
     if (!funcName) {
-      // Recursively register subcommands if they exist
       if (typeof command === 'object' && command.subcommands) {
         const commandOptions = command.options || {}
         const mergedOptions = { ...inheritedOptions, ...commandOptions }
@@ -170,12 +145,10 @@ function registerCLICommands(
       continue
     }
 
-    // Merge options (inherited + local)
     const commandOptions =
       typeof command === 'object' ? command.options || {} : {}
     const mergedOptions = { ...inheritedOptions, ...commandOptions }
 
-    // Store the options and middleware in program state for use during execution
     const programs: Record<string, CLIProgramState> = pikkuState(
       null,
       'cli',
@@ -187,7 +160,6 @@ function registerCLICommands(
       }
       programs[program].commandOptions![commandId] = mergedOptions
 
-      // Store command middleware from the wire config
       if (typeof command === 'object' && command.middleware) {
         if (!programs[program].commandMiddleware) {
           programs[program].commandMiddleware = {}
@@ -198,23 +170,18 @@ function registerCLICommands(
 
     addFunction(funcName, unwrapFunc(command), currentMeta?.packageName)
 
-    // Register renderer if provided
     if (typeof command === 'object' && command.render) {
       if (programs[program]) {
         programs[program].renderers[commandId] = command.render
       }
     }
 
-    // Recursively register subcommands
     if (typeof command === 'object' && command.subcommands) {
       registerCLICommands(command.subcommands, fullPath, mergedOptions, program)
     }
   }
 }
 
-/**
- * Plucks only the data that the function expects based on its schema
- */
 function pluckCLIData(
   mergedData: Record<string, any>,
   funcName: string,
@@ -229,32 +196,26 @@ function pluckCLIData(
     : null
 
   if (schema && schema.properties) {
-    // If we have a schema, only include fields that are in the schema
     const result: Record<string, any> = {}
     for (const key of Object.keys(schema.properties)) {
       if (key in mergedData) {
+        // CLI values always arrive as strings; split comma lists the schema wants as arrays.
         let value = mergedData[key]
-        // CLI passes all values as strings — coerce to array when schema expects one
         const propSchema = schema.properties[key]
         if (propSchema?.type === 'array' && !Array.isArray(value)) {
           value = typeof value === 'string' ? value.split(',') : [value]
         }
         result[key] = value
       } else if (availableOptions[key]?.default !== undefined) {
-        // Apply default if not provided
         result[key] = availableOptions[key].default
       }
     }
     return result
   } else {
-    // No schema, include all data
     return { ...mergedData }
   }
 }
 
-/**
- * Executes a CLI command for a specific program
- */
 export async function runCLICommand({
   program,
   commandPath,
@@ -288,14 +249,12 @@ export async function runCLICommand({
    */
   transport?: PikkuChannel<unknown, any, any>
 }): Promise<any> {
-  // Get the command metadata to find the function name
   const cliMeta = pikkuState(null, 'cli', 'meta')
   const programMeta = cliMeta.programs?.[program]
   if (!programMeta) {
     throw new NotFoundError(`Program not found: ${program}`)
   }
 
-  // Navigate command tree to find the function name
   let currentCommand = programMeta.commands[commandPath[0]]
   if (!currentCommand) {
     throw new NotFoundError(`Command not found: ${commandPath.join(' ')}`)
@@ -313,17 +272,14 @@ export async function runCLICommand({
 
   const funcName = currentCommand.pikkuFuncId
 
-  // Get program-specific data
   const programs: Record<string, CLIProgramState> =
     pikkuState(null, 'cli', 'programs') || {}
   const programData = programs[program]
 
-  // Combine program middleware + command middleware from the hierarchy
   const allWireMiddleware: CorePikkuMiddleware[] = [
     ...(programData?.middleware || []),
   ]
 
-  // Walk through the command path and collect middleware from the runtime config
   const commandParts: string[] = []
   for (const part of commandPath) {
     commandParts.push(part)
@@ -334,18 +290,14 @@ export async function runCLICommand({
     }
   }
 
-  // Get command ID and options
   const commandId = commandPath.join('.')
   const availableOptions = programData?.commandOptions?.[commandId] || {}
 
-  // Pluck only the fields the function expects
   const pluckedData = () => pluckCLIData(data, funcName, availableOptions)
 
-  // Get the renderer
   const renderer =
     programData?.renderers[commandId] || programData?.defaultRenderer
 
-  // Create a CLI channel for progressive output
   let cliState: unknown
   const channel: PikkuChannel<unknown, unknown> = {
     channelId: `cli:${program}:${commandId}`,
@@ -412,11 +364,8 @@ export async function runCLICommand({
       packageName: currentCommand.packageName,
     })
 
-    // Render the final result. `--json` / `--output json` routes the result
-    // through the global JSON renderer, but only for commands that opted into
-    // result-rendering by declaring a `render` — inline-printing commands (no
-    // per-command renderer) keep emitting their own output untouched.
-    // Skip if result is undefined (void functions handle their own output).
+    // knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
+    // A void function has already emitted its own output.
     //
     // `onOutput` is progressive output only — the result goes back to the
     // caller, and emitting it here too would deliver it twice.
@@ -441,14 +390,10 @@ export async function runCLICommand({
 
     return result
   } finally {
-    // Close the channel
     channel.close()
   }
 }
 
-/**
- * Factory function for CLI-specific renderers
- */
 export const pikkuCLIRender = <
   Data,
   Services extends CoreSingletonServices = CoreServices,
@@ -463,12 +408,6 @@ export const pikkuCLIRender = <
   return renderer
 }
 
-/**
- * Execute a CLI program with the given arguments
- * This is the main entry point for CLI programs
- *
- * @throws {CLIError} When CLI execution fails - should be caught by wrapper to call process.exit()
- */
 export async function executeCLI({
   programName,
   args,
@@ -489,7 +428,6 @@ export async function executeCLI({
   }
 
   try {
-    // Get CLI metadata from state
     const allCLIMeta = pikkuState(null, 'cli', 'meta') as unknown as
       | CLIMeta
       | undefined
@@ -504,11 +442,9 @@ export async function executeCLI({
       throw new CLIError(`CLI program "${programName}" not found`, 1)
     }
 
-    // Parse arguments for this specific program
     const parsed = parseCLIArguments(args, programName, allCLIMeta)
 
-    // Handle help (check after parsing to support subcommand help)
-    // Show help if --help/-h is present, or if no args AND no default command
+    // Parsed first so that `<command> --help` resolves to that command's help.
     const shouldShowHelp =
       args.includes('--help') ||
       args.includes('-h') ||
@@ -524,12 +460,11 @@ export async function executeCLI({
       return
     }
 
-    // Non-fatal diagnostics (unknown options are still accepted) go to stderr
-    // so they never pollute a command's machine-readable stdout.
+    // knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
     parsed.warnings.forEach((warning) => console.error(`Warning: ${warning}`))
 
     if (parsed.errors.length > 0) {
-      // Check if any error is about an unknown command
+      // knowledge: decisions/design/cli-parse-errors-are-routed-by-message-prefix.md
       const hasUnknownCommand = parsed.errors.some(
         (error) =>
           error.startsWith('Unknown command:') ||
@@ -538,7 +473,6 @@ export async function executeCLI({
       )
 
       if (hasUnknownCommand) {
-        // Show help instead of error for unknown commands
         const helpText = generateCommandHelp(
           programName,
           allCLIMeta,
@@ -547,26 +481,21 @@ export async function executeCLI({
         console.log(helpText)
         throw new CLIError('Unknown command', 1)
       } else {
-        // Show errors for other types of errors
         console.error('Errors:')
         parsed.errors.forEach((error) => console.error(`  ${error}`))
         throw new CLIError(parsed.errors.join('\n'), 1)
       }
     }
 
-    // Merge positionals and options into single data object
     const data = { ...parsed.positionals, ...parsed.options }
 
-    // Create config (pass data in case it needs to use any parsed options)
     const config = createConfig
       ? await createConfig(new LocalVariablesService(), data)
       : ({} as any)
 
-    // Create services with config and register in global state
     const singletonServices = await createSingletonServices(config)
     pikkuState(null, 'package', 'singletonServices', singletonServices)
 
-    // Execute the command
     await runCLICommand({
       program: programName,
       commandPath: parsed.commandPath,
@@ -575,22 +504,17 @@ export async function executeCLI({
       createWireServices,
     })
   } catch (error: any) {
-    // Re-throw CLIError as-is
     if (error instanceof CLIError) {
       throw error
     }
 
-    // An expected failure (a deliberate PikkuError, e.g. a build gate
-    // tripping) — its message says everything, so print that alone (no
-    // `Error:` prefix). Anything else is an uncaught error: log the object so
-    // its stack shows.
+    // An expected PikkuError's message is written to be the whole output.
     if (isExpectedError(error)) {
       console.error(error.message)
     } else {
       console.error('Error:', error)
     }
 
-    // Show stack trace in verbose mode (even for expected errors).
     if (args.includes('--verbose') || args.includes('-v')) {
       console.error('Stack trace:', error.stack)
     }

@@ -22,11 +22,7 @@ type IstanbulCoverageGlobal = Record<string, IstanbulFileCoverage>
 const getCoverageGlobal = (): IstanbulCoverageGlobal | undefined =>
   (globalThis as { __coverage__?: IstanbulCoverageGlobal }).__coverage__
 
-/**
- * Reads istanbul-instrumented counters from the `__coverage__` global —
- * the coverage backend for runtimes without V8 precise coverage (e.g. Bun,
- * where source files are instrumented at load time by a Bun loader plugin).
- */
+/** The coverage backend for runtimes without V8 precise coverage, e.g. Bun. */
 export class IstanbulCoverageService implements CoverageService {
   async start(): Promise<void> {}
 
@@ -39,9 +35,7 @@ export class IstanbulCoverageService implements CoverageService {
         hits = new Map()
         lineHits.set(file.path, hits)
       }
-      // istanbul line semantics: a statement's count belongs to its start
-      // line only, so an enclosing multi-line statement never masks an
-      // unexecuted inner statement (e.g. a throw inside a taken if).
+      // knowledge: decisions/design/istanbul-statement-counts-attach-to-the-start-line-only.md
       for (const [id, location] of Object.entries(file.statementMap)) {
         const count = file.s[id] ?? 0
         const line = location.start.line

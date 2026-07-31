@@ -6,22 +6,7 @@ import {
   resolveGatewayAdapter,
 } from '../wirings/gateway/gateway-runner.js'
 
-/**
- * Local GatewayService implementation.
- *
- * Starts all registered listener gateways unconditionally (single-process).
- * For distributed deployments, implement `GatewayService` with leader
- * election or similar coordination.
- *
- * @example
- * ```typescript
- * const gatewayService = new LocalGatewayService()
- * await gatewayService.start()
- *
- * // On shutdown
- * await gatewayService.stop()
- * ```
- */
+// knowledge: decisions/design/local-trigger-and-gateway-services-assume-a-single-process.md
 export class LocalGatewayService implements GatewayService {
   private activeAdapters = new Map<string, GatewayAdapter>()
 
@@ -57,7 +42,7 @@ export class LocalGatewayService implements GatewayService {
             e
           )
         } catch {
-          // logger may not be available during shutdown
+          // The logger may already be gone during shutdown.
         }
       }
     }

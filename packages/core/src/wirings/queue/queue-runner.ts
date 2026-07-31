@@ -12,18 +12,13 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-/**
- * Error class for queue processor not found
- */
+
 class QueueWorkerNotFoundError extends PikkuError {
   constructor(name: string) {
     super(`Queue processor not found: ${name}`)
   }
 }
 
-/**
- * Error class for when a queue job is explicitly failed
- */
 export class QueueJobFailedError extends PikkuError {
   constructor(jobId: string, reason?: string) {
     super(`Queue job ${jobId} failed${reason ? `: ${reason}` : ''}`)
@@ -31,18 +26,13 @@ export class QueueJobFailedError extends PikkuError {
   }
 }
 
-/**
- * Error class for when a queue job is explicitly discarded
- */
 export class QueueJobDiscardedError extends PikkuError {
   constructor(jobId: string, reason?: string) {
     super(`Queue job ${jobId} discarded${reason ? `: ${reason}` : ''}`)
     this.name = 'QueueJobDiscardedError'
   }
 }
-/**
- * Add a queue processor to the system
- */
+
 export const wireQueueWorker = <
   InputData = any,
   OutputData = any,
@@ -54,7 +44,6 @@ export const wireQueueWorker = <
 >(
   queueWorker: CoreQueueWorker<PikkuFunctionConfig>
 ) => {
-  // Get processor metadata
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[queueWorker.name]
   if (!processorMeta) {
@@ -64,7 +53,6 @@ export const wireQueueWorker = <
     return
   }
 
-  // Register the function with pikku
   addFunction(processorMeta.pikkuFuncId, {
     func: queueWorker.func.func,
     auth: queueWorker.func.auth,
@@ -73,21 +61,14 @@ export const wireQueueWorker = <
     tags: queueWorker.func.tags,
   })
 
-  // Store processor definition in state - runtime adapters will pick this up
   const registrations = pikkuState(null, 'queue', 'registrations')
   registrations.set(queueWorker.name, queueWorker)
 }
 
-/**
- * Get all registered queue processors
- */
 export function getQueueWorkers(): Map<string, CoreQueueWorker> {
   return pikkuState(null, 'queue', 'registrations')
 }
 
-/**
- * Stop and remove a queue processor
- */
 export async function removeQueueWorker(name: string): Promise<void> {
   const registrations = pikkuState(null, 'queue', 'registrations')
   const registration = registrations.get(name)
@@ -99,9 +80,6 @@ export async function removeQueueWorker(name: string): Promise<void> {
   registrations.delete(name)
 }
 
-/**
- * Process a single queue job - this function is called by queue consumers
- */
 export async function runQueueJob({
   job,
   updateProgress,
@@ -109,7 +87,6 @@ export async function runQueueJob({
 }: {
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
-  /** Pre-resolved trace ID (e.g. from queue message metadata) */
   traceId?: string
 }): Promise<void> {
   const singletonServices = getSingletonServices()
@@ -127,14 +104,12 @@ export async function runQueueJob({
     )
   }
 
-  // Get the queue worker registration to access middleware
   const registrations = pikkuState(null, 'queue', 'registrations')
   const queueWorker = registrations.get(job.queueName)
   if (!queueWorker) {
     throw new Error(`Queue worker registration not found for: ${job.queueName}`)
   }
 
-  // Create the queue wire object
   const queue: PikkuQueue = {
     queueName: job.queueName,
     jobId: job.id,
@@ -143,7 +118,6 @@ export async function runQueueJob({
       updateProgress ||
       (async (progress: number | string | object) => {
         logger.info(`Job ${job.id} progress: ${progress}`)
-        // Default implementation - just log the progress
       }),
     fail: async (reason?: string) => {
       throw new QueueJobFailedError(job.id, reason)
@@ -161,7 +135,6 @@ export async function runQueueJob({
       queue,
     }
 
-    // Execute the pikku function with the job data
     const result = await runPikkuFunc(
       'queue',
       job.queueName,
@@ -194,7 +167,6 @@ export async function runQueueJob({
       logger.error('Processed error response:', errorResponse)
     }
 
-    // Re-throw the error so the queue service can handle retries/DLQ
     throw error
   }
 }

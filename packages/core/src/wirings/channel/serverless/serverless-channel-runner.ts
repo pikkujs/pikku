@@ -148,7 +148,6 @@ export const runChannelConnect = async ({
       })
     }
 
-    // Store the pikkuUserId mapping after auth middleware has run
     const pikkuUserId = userSession.getPikkuUserId()
     if (pikkuUserId) {
       await channelStore.setPikkuUserId(channelId, pikkuUserId)
@@ -181,10 +180,6 @@ export const runChannelDisconnect = async ({
   const createWireServices = getCreateWireServices()
   let wireServices: WireServices | undefined
 
-  // Try to get channel from store. In serverless environments (especially with
-  // serverless-offline or worker threads), disconnect can be called multiple times
-  // or after the channel has already been cleaned up. If channel doesn't exist,
-  // there's nothing to disconnect, so we can return early.
   let channelData
   try {
     channelData = await channelStore.getChannel(channelId)

@@ -6,10 +6,6 @@ import { pikkuState } from '../../pikku-state.js'
 
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
-/**
- * Captures what the workflow service hands the queue, so a test can tell
- * whether core serialised the payload on the way past.
- */
 function serviceWithCapturingQueue() {
   const added: Array<{ queueName: string; data: any }> = []
   pikkuState(null, 'package', 'singletonServices', {

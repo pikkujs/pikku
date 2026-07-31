@@ -6,15 +6,12 @@ import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 import type { CorePikkuMiddleware } from '../../types/core.types.js'
 
-// Mock function for testing
 const mockFunc = async () => ({ success: true })
 
-// Mock middleware
 const mockMiddleware: CorePikkuMiddleware = async (_services, _wire, next) => {
   await next()
 }
 
-// Helper to set up function metadata for routes
 const setupFunctionMeta = (
   routes: Array<{ method: string; route: string }>
 ) => {

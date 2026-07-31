@@ -30,11 +30,6 @@ const trackDetaches = (ws: any): string[] => {
   return detached
 }
 
-/**
- * A long-lived process orchestrates many runs. Anything it keeps per run has to
- * be released when that run stops executing here, or the engine grows for the
- * life of the deployment.
- */
 describe('per-run state is released when the run stops executing here', () => {
   test('a finished replay leaves nothing behind', async () => {
     const ws = service()

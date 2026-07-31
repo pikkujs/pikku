@@ -2,94 +2,58 @@ import type { CommonWireMeta } from '../../types/core.types.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { QueueConfigMapping } from './validate-worker-config.js'
 
-/**
- * Configuration for queue workers - how jobs are processed
- */
-/**
- * Configuration for queue workers - how jobs are processed
- */
 export interface PikkuWorkerConfig {
-  /** Optional worker name for identification and monitoring */
   name?: string
-  /** Number of messages to process in batch / in parallel */
+  /** Total worker concurrency. */
   batchSize?: number
-  /** Number of messages to prefetch for efficiency */
   prefetch?: number
-  /** Polling interval for pull-based queues in ms */
+  /** Milliseconds. */
   pollInterval?: number
-  /** Message visibility timeout in seconds */
+  /** Seconds. */
   visibilityTimeout?: number
-  /** Duration of job lock in milliseconds */
+  /** Milliseconds. */
   lockDuration?: number
-  /** Number of seconds to wait when queue is empty before polling again */
+  /** Seconds. */
   drainDelay?: number
-  /** Keep N completed jobs for inspection */
+  /** Number of completed jobs to retain, not an age. */
   removeOnComplete?: number
-  /** Keep N failed jobs for inspection */
+  /** Number of failed jobs to retain, not an age. */
   removeOnFail?: number
-  /** Maximum number of times a job can be recovered from stalled state */
   maxStalledCount?: number
-  /** Condition to start processor at instance creation */
   autorun?: boolean
-  /**
-   * Cap how many jobs of any one group ({@link JobOptions.group}) may run at
-   * once, so a single group can't occupy the whole worker. Lets one shared
-   * queue stay fair across producers instead of splitting it into one queue
-   * per producer — which multiplies polling cost on pull-based backends.
-   * Must not exceed {@link batchSize}.
-   */
+  /** Must not exceed {@link batchSize}. */
   groupConcurrency?: number | GroupConcurrencyConfig
 }
 
-/**
- * Per-group concurrency limits, optionally varied by tier so slow groups can
- * be allowed more (or fewer) slots than the default.
- */
 export interface GroupConcurrencyConfig {
-  /** Limit applied to any group without a matching tier */
+  /** Limit applied to any group without a matching tier. */
   default: number
-  /** Per-tier overrides, keyed by {@link JobGroup.tier} */
+  /** Keyed by {@link JobGroup.tier}. */
   tiers?: Record<string, number>
 }
 
-/**
- * Fairness key for a job. Jobs sharing an `id` count against the same
- * {@link PikkuWorkerConfig.groupConcurrency} limit.
- */
 export interface JobGroup {
-  /** Group this job belongs to (e.g. a workflow name) */
   id: string
-  /** Optional tier selecting a per-tier limit */
   tier?: string
 }
 
-/**
- * Configuration for individual jobs - how jobs behave
- */
 export interface PikkuJobConfig {
-  /** Maximum retry attempts for failed jobs */
   retryAttempts?: number
-  /** Initial retry delay in milliseconds */
+  /** Milliseconds. */
   retryDelay?: number
-  /** Retry backoff strategy */
   retryBackoff?: 'linear' | 'exponential' | 'fixed'
-  /** Queue for failed messages after max retries */
   deadLetterQueue?: string
-  /** How long to retain completed jobs in seconds */
+  /** Seconds. */
   messageRetention?: number
-  /** Job priority (higher numbers = higher priority) */
+  /** Higher numbers run first. */
   priority?: number
-  /** Enable FIFO ordering where supported */
   fifo?: boolean
-  /** Job timeout in milliseconds */
+  /** Milliseconds. */
   timeout?: number
-  /** Delay before job execution in milliseconds */
+  /** Milliseconds. */
   delay?: number
 }
 
-/**
- * Configuration validation result with warnings and fallbacks
- */
 export interface ConfigValidationResult {
   applied: Partial<PikkuWorkerConfig>
   ignored: Partial<PikkuWorkerConfig>
@@ -97,9 +61,6 @@ export interface ConfigValidationResult {
   fallbacks: { [key: string]: any }
 }
 
-/**
- * Queue job representation
- */
 export type QueueJobStatus =
   | 'waiting'
   | 'active'
@@ -126,13 +87,9 @@ export interface QueueJob<T = any, R = any> {
   result?: R
   waitForCompletion?: (ttl?: number) => Promise<R>
   metadata?: () => Promise<QueueJobMetadata> | QueueJobMetadata
-  /** Pikku user ID propagated from the job producer */
   pikkuUserId?: string
 }
 
-/**
- * Job options for queue operations
- */
 export interface JobOptions {
   priority?: number
   delay?: number
@@ -141,46 +98,30 @@ export interface JobOptions {
   removeOnComplete?: number
   removeOnFail?: number
   jobId?: string
-  /** Pikku user ID to propagate to the queue worker for credential resolution */
+  // knowledge: decisions/security/queue-jobs-carry-the-producers-pikku-user-id.md
   pikkuUserId?: string
-  /** Fairness key — counts against the worker's {@link PikkuWorkerConfig.groupConcurrency} */
+  /** Counts against the worker's {@link PikkuWorkerConfig.groupConcurrency}. */
   group?: JobGroup
 }
 
-/**
- * Queue provider interface for job publishing operations
- */
 export interface QueueService {
-  /** Whether this queue provider supports job results */
   readonly supportsResults: boolean
 
-  /** Add a job to the queue with type safety */
   add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
 
-  /** Get job status and result */
   getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
 }
 
-/**
- * Queue service interface that queue adapters implement
- */
 export interface QueueWorkers {
-  /** Service name identifier */
   name: string
 
-  /** Whether this queue service supports job results */
   supportsResults: boolean
 
-  /** Configuration mapping for validation */
   configMappings: QueueConfigMapping
 
-  /** Scan state and register all compatible processors */
   registerQueues(): Promise<Record<string, ConfigValidationResult[]>>
 }
 
-/**
- * Queue processor metadata
- */
 export type QueueWorkersMeta = Record<
   string,
   CommonWireMeta & {
@@ -189,9 +130,6 @@ export type QueueWorkersMeta = Record<
   }
 >
 
-/**
- * Core queue processor definition
- */
 export type CoreQueueWorker<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
     CorePikkuFunctionConfig<any, any, any>,
@@ -204,21 +142,13 @@ export type CoreQueueWorker<
   middleware?: PikkuFunctionConfig['middleware']
 }
 
-/**
- * Represents a queue wire object for middleware
- * Provides information and actions for the current queue job execution
- */
 export interface PikkuQueue {
-  /** The name of the queue being processed */
   queueName: string
-  /** The current job ID */
   jobId: string
-  /** Pikku user ID propagated from the job producer for credential resolution */
   pikkuUserId?: string
-  /** Update job progress (0-100 or custom value) */
   updateProgress: (progress: number | string | object) => Promise<void>
-  /** Fail the current job with optional reason */
+  /** Never returns — throws QueueJobFailedError. */
   fail: (reason?: string) => Promise<void>
-  /** Discard/delete the job without retrying */
+  /** Never returns — throws QueueJobDiscardedError. */
   discard: (reason?: string) => Promise<void>
 }

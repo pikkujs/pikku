@@ -41,6 +41,7 @@ import {
   ToolApprovalRequired,
   ToolCredentialRequired,
   APPROVAL_REQUIRED,
+  CREDENTIAL_REQUIRED,
   type RunAIAgentParams,
   type StreamAIAgentOptions,
   type StreamContext,
@@ -124,14 +125,6 @@ function createPersistingChannel(
     }
   }
 
-  /**
-   * `send` is synchronous and so cannot await the flush. A rejection would have
-   * nothing to propagate to and would take the process down as an unhandled
-   * rejection — a model reusing a toolCallId, which is a primary key in AI
-   * storage, is enough to trigger it. Persistence from inside `send` is
-   * therefore best-effort: the run carries on, and the awaited `flush()` on the
-   * suspend paths still surfaces failures to its caller.
-   */
   const flushDetached = () => {
     void flushStep().catch((error) => {
       logger?.error('Failed to persist agent messages', {
@@ -256,7 +249,6 @@ type StepLoopParams = {
   streamChannel: AIStreamChannel
   persistingChannel: PersistingChannel
   channel: AIStreamChannel
-  runId: string
   aiMiddlewares: PikkuAIMiddlewareHooks[]
 }
 
@@ -275,7 +267,6 @@ async function runStreamStepLoop(
     agentRunner,
     streamChannel,
     channel,
-    runId,
     aiMiddlewares,
   } = params
 
@@ -316,13 +307,8 @@ async function runStreamStepLoop(
 
     if (stepResult.toolCalls.length === 0) break
 
-    const approvalsNeeded = checkForApprovals(
-      stepResult,
-      runnerParams.tools,
-      runId
-    )
+    const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
     if (approvalsNeeded.length > 0) {
-      // For each approval, call approvalDescriptionFn if available
       for (const approval of approvalsNeeded) {
         const toolDef = runnerParams.tools.find(
           (t) => t.name === approval.toolName
@@ -330,17 +316,14 @@ async function runStreamStepLoop(
         if (toolDef?.approvalDescriptionFn && !approval.reason) {
           try {
             approval.reason = await toolDef.approvalDescriptionFn(approval.args)
-          } catch {
-            // If description generation fails, continue without it
-          }
+          } catch {}
         }
       }
       return { outcome: 'approval', approvals: approvalsNeeded }
     }
 
-    const credentialRequests = checkForCredentialRequests(stepResult, runId)
+    const credentialRequests = checkForCredentialRequests(stepResult)
     if (credentialRequests.length > 0) {
-      // Append step messages so the tool result is preserved for resume
       appendStepMessages(runnerParams, stepResult)
       return { outcome: 'credential', credentialRequests }
     }
@@ -353,8 +336,7 @@ async function runStreamStepLoop(
 
 export function checkForApprovals(
   stepResult: AIAgentStepResult,
-  tools: AIAgentRunnerParams['tools'],
-  runId: string
+  tools: AIAgentRunnerParams['tools']
 ): ToolApprovalRequired[] {
   const approvals: ToolApprovalRequired[] = []
   for (const tc of stepResult.toolCalls) {
@@ -367,12 +349,6 @@ export function checkForApprovals(
       continue
     }
 
-    // The approval marker is only trusted from a framework tool declared with
-    // `forwardsApproval` (the sub-agent delegating tools) AND carrying the
-    // non-forgeable `APPROVAL_REQUIRED` Symbol brand. A plain tool's output — or
-    // a delegating tool's LLM-shaped `result.object`, which an attacker can
-    // influence — is plain JSON and can never carry the Symbol, so it can never
-    // forge an approval/suspension.
     if (!toolDef?.forwardsApproval) {
       continue
     }
@@ -433,15 +409,15 @@ export function checkForApprovals(
 }
 
 export function checkForCredentialRequests(
-  stepResult: AIAgentStepResult,
-  runId: string
+  stepResult: AIAgentStepResult
 ): ToolCredentialRequired[] {
   const requests: ToolCredentialRequired[] = []
   for (const tr of stepResult.toolResults) {
+    // knowledge: decisions/security/ai-agent-credential-requests-are-symbol-branded.md
     if (
       tr.result &&
       typeof tr.result === 'object' &&
-      '__credentialRequired' in (tr.result as object)
+      CREDENTIAL_REQUIRED in (tr.result as object)
     ) {
       const r = tr.result as {
         credentialName: string
@@ -595,10 +571,6 @@ function handleCredentialRequests(
       pendingApprovals,
     })
 
-    // The __credentialRequired tool result is suppressed from the stream, so
-    // credential-request events (with the runId needed for /resume) are the
-    // client's signal to show Connect/Ignore buttons — mirroring how
-    // approval-request suspensions work.
     for (const req of requests) {
       channel.send({
         type: 'credential-request',
@@ -642,7 +614,6 @@ export async function streamAIAgent(
   }
 
   const streamContext: StreamContext = { channel, options }
-  // delegateState is attached after prepareAgentRun resolves the agent config
 
   const {
     agent,
@@ -792,10 +763,6 @@ export async function streamAIAgent(
         ).channel as AIStreamChannel)
       : persistingChannel
 
-  // Tool results carrying the __credentialRequired marker must never reach
-  // the client or persisted history: the run suspends with credential-request
-  // events instead (mirroring approvals), and leaving the tool call
-  // unresulted is what lets the client resume it after connecting.
   const credentialFilteredChannel: AIStreamChannel = {
     ...wrappedChannel,
     // Returns what the inner send returns. Middleware runs asynchronously, so
@@ -815,11 +782,7 @@ export async function streamAIAgent(
     },
   }
 
-  // In delegate mode (default), suppress parent's text from reaching the client
-  // AFTER a sub-agent has been called. If the parent responds directly (no delegation),
-  // its text goes through normally. Sub-agent text bypasses this path entirely
-  // (goes through subChannel → channel directly).
-  const isDelegateMode = agent.agentMode !== 'supervise' && meta.agents?.length
+  const isDelegateMode = agent.agentMode !== 'supervise' && meta?.agents?.length
   const delegateState = { delegated: false }
   if (isDelegateMode) {
     streamContext.delegateState = delegateState
@@ -848,7 +811,6 @@ export async function streamAIAgent(
       streamChannel: outputChannel,
       persistingChannel,
       channel,
-      runId,
       aiMiddlewares,
     })
 
@@ -926,9 +888,7 @@ export async function streamAIAgent(
             stepNumber: -1,
             messages: runnerParams.messages,
           })
-        } catch {
-          // onError hooks must not affect error flow
-        }
+        } catch {}
       }
     }
     await aiRunState.updateRun(runId, {
@@ -1051,10 +1011,6 @@ export async function resumeAIAgent(
 
   const { agent, packageName, resolvedName } = resolveAgent(run.agentName)
 
-  // Gate before resolving the approval: recording it is a persisted side
-  // effect, so an unauthorized caller must not reach it. Run ownership alone is
-  // not enough — a grant revoked while the run was suspended must stop the
-  // caller from approving its pending tool calls.
   await assertAgentAuthorized(agent, params, packageName)
 
   await aiRunState.resolveApproval(
@@ -1108,12 +1064,10 @@ export async function resumeAIAgent(
       result: denialResult,
     })
 
-    // Check remaining pending approvals
     const updatedRun = await aiRunState.getRun(run.runId)
     const remaining = updatedRun?.pendingApprovals ?? []
 
     if (remaining.length > 0) {
-      // Still waiting for more approvals - don't continue step loop
       channel.send({ type: 'done' })
       channel.close()
       return
@@ -1261,12 +1215,10 @@ export async function resumeAIAgent(
     })
   }
 
-  // Check remaining pending approvals after processing this one
   const updatedRun = await aiRunState.getRun(run.runId)
   const remaining = updatedRun?.pendingApprovals ?? []
 
   if (remaining.length > 0) {
-    // Still waiting for more approvals - don't continue step loop
     channel.send({ type: 'done' })
     channel.close()
     return
@@ -1452,7 +1404,6 @@ async function continueAfterToolResult(
       streamChannel: wrappedChannel,
       persistingChannel,
       channel,
-      runId: run.runId,
       aiMiddlewares,
     })
 
@@ -1525,9 +1476,7 @@ async function continueAfterToolResult(
             stepNumber: -1,
             messages: runnerParams.messages,
           })
-        } catch {
-          // onError hooks must not affect error flow
-        }
+        } catch {}
       }
     }
     await aiRunState.updateRun(run.runId, {

@@ -7,7 +7,6 @@ import type { HTTPMethod } from '../http.types.js'
 describe('PathToRegexRouter', () => {
   let router: PathToRegexRouter
 
-  // Helper to create mock route wiring
   const mockRoute = (route: string) => ({
     route,
     method: 'get' as HTTPMethod,
@@ -21,7 +20,6 @@ describe('PathToRegexRouter', () => {
 
   describe('Static Route Optimization', () => {
     test('should correctly identify static routes', () => {
-      // Setup test routes
       pikkuState(
         null,
         'http',
@@ -42,7 +40,6 @@ describe('PathToRegexRouter', () => {
 
       router.initialize()
 
-      // Test static routes - should return exact matches with empty params
       const staticResult = router.match('get', '/static')
       assert.ok(staticResult, 'Static route should match')
       assert.strictEqual(staticResult.route, '/static')
@@ -55,7 +52,6 @@ describe('PathToRegexRouter', () => {
     })
 
     test('should handle dynamic routes with parameters', () => {
-      // Setup test routes with parameters
       pikkuState(
         null,
         'http',
@@ -78,7 +74,6 @@ describe('PathToRegexRouter', () => {
 
       router.initialize()
 
-      // Test dynamic routes - should return matches with extracted parameters
       const userResult = router.match('get', '/api/users/123')
       assert.ok(userResult, 'Dynamic route should match')
       assert.strictEqual(userResult.route, '/api/users/:id')
@@ -98,7 +93,6 @@ describe('PathToRegexRouter', () => {
     })
 
     test('should handle multi-parameter routes', () => {
-      // Setup routes with multiple parameters
       pikkuState(
         null,
         'http',
@@ -124,7 +118,6 @@ describe('PathToRegexRouter', () => {
 
       router.initialize()
 
-      // Test multi-parameter routes
       const apiResult = router.match('get', '/api/v2/users/456')
       assert.ok(apiResult, 'Multi-parameter route should match')
       assert.strictEqual(apiResult.route, '/api/:version/users/:userId')
@@ -140,7 +133,6 @@ describe('PathToRegexRouter', () => {
     })
 
     test('should prioritize static routes over dynamic routes for performance', () => {
-      // Setup mixed routes where static could conflict with dynamic
       pikkuState(
         null,
         'http',
@@ -149,8 +141,8 @@ describe('PathToRegexRouter', () => {
           [
             'get',
             new Map([
-              ['/api/users', mockRoute('/api/users')], // static
-              ['/api/:resource', mockRoute('/api/:resource')], // dynamic that could match above
+              ['/api/users', mockRoute('/api/users')],
+              ['/api/:resource', mockRoute('/api/:resource')],
             ]),
           ],
         ])
@@ -160,10 +152,9 @@ describe('PathToRegexRouter', () => {
 
       router.initialize()
 
-      // Static route should be found first (O(1) lookup)
       const result = router.match('get', '/api/users')
       assert.ok(result, 'Route should match')
-      assert.strictEqual(result.route, '/api/users') // Should match static, not dynamic
+      assert.strictEqual(result.route, '/api/users')
       assert.deepStrictEqual(result.params, {})
     })
   })
@@ -178,7 +169,7 @@ describe('PathToRegexRouter', () => {
           [
             'get',
             new Map([
-              ['test', mockRoute('test')], // route without leading slash
+              ['test', mockRoute('test')],
               ['api/health', mockRoute('api/health')],
             ]),
           ],
@@ -189,7 +180,6 @@ describe('PathToRegexRouter', () => {
 
       router.initialize()
 
-      // Should match with or without leading slash in request
       const result1 = router.match('get', '/test')
       assert.ok(result1, 'Should match /test')
       assert.strictEqual(result1.route, 'test')
@@ -220,7 +210,6 @@ describe('PathToRegexRouter', () => {
 
       router.initialize()
 
-      // Channel routes should be accessible via GET method
       const wsResult = router.match('get', '/ws/test')
       assert.ok(wsResult, 'Static channel route should match')
       assert.strictEqual(wsResult.route, '/ws/test')
@@ -259,7 +248,6 @@ describe('PathToRegexRouter', () => {
 
       const result = router.match('get', '/api/test')
       assert.ok(result, 'Route should match')
-      // Router only returns route and params, middleware is handled separately
       assert.strictEqual(result.route, '/api/test')
       assert.deepStrictEqual(result.params, {})
     })
@@ -310,7 +298,6 @@ describe('PathToRegexRouter', () => {
       pikkuState(null, 'http', 'middleware', new Map())
       pikkuState(null, 'channel', 'channels', new Map())
 
-      // Don't call initialize manually
       const result = router.match('get', '/test')
       assert.ok(result, 'Should auto-initialize and match')
       assert.strictEqual(result.route, '/test')

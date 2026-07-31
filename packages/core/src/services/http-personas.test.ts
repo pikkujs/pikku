@@ -4,8 +4,8 @@ import { createServer, type Server } from 'node:http'
 
 import { createHttpPersonas } from './http-personas.js'
 
-// Minimal target app: actor sign-in endpoint + exposed RPC endpoint, session
-// via cookie. Mirrors the Better Auth actor plugin's contract.
+// Minimal target app mirroring the Better Auth actor plugin's contract:
+// sign-in endpoint, exposed RPC endpoint, session by cookie.
 const startTarget = async () => {
   let logins = 0
   let expireNext = false

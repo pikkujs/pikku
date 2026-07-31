@@ -1,23 +1,5 @@
 import type { ScenarioStepPhase } from './scenario-step.types.js'
 
-/**
- * Renders the English sentence a reporter shows for a scenario step.
- *
- * This is the inversion of cucumber: rather than parsing English into a call,
- * we render English out of a typed call, so the readable report survives
- * without a regex registry paying for it.
- *
- * Lives in core so the CLI reporter and the console render identically.
- */
-/**
- * Fill a step's `template` from the input that step was actually called with,
- * so the reported sentence names the values under test — "sees @pikku/addon-todos"
- * rather than "sees an addon in the gallery" repeated three times.
- *
- * A placeholder with no recorded value renders as nothing and the surrounding
- * whitespace collapses, so an optional input that was omitted reads as a shorter
- * sentence rather than a literal `{state}` leaking into the report.
- */
 export const renderStepTemplate = (
   template: string,
   input: unknown
@@ -50,19 +32,9 @@ export const composeStepProse = ({
 }: {
   phase: ScenarioStepPhase
   description: string
-  /**
-   * The prose this step renders, with `{placeholders}` filled from `input`.
-   * Unlike `description`, which documents what the step does, this is what a
-   * reader of the report sees. Falls back to `description` when absent.
-   */
   template?: string
-  /** The input this step was called with, as recorded on the run. */
   input?: unknown
   actor?: string
-  /**
-   * Pad the keyword to this width so a ladder of steps lines its sentences up
-   * under each other. Omit for inline prose.
-   */
   keywordWidth?: number
 }): string => {
   const keyword = phase === 'step' ? '' : capitalise(phase)

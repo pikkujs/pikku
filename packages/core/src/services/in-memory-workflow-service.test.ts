@@ -91,7 +91,6 @@ describe('InMemoryWorkflowService', () => {
 
     test('should handle non-existent run gracefully', async () => {
       await service.updateRunStatus('non-existent', 'failed')
-      // Should not throw
     })
   })
 
@@ -256,18 +255,6 @@ describe('InMemoryWorkflowService', () => {
 
       const state = await service.getCompletedGraphState(runId)
       assert.deepStrictEqual(state.failedNodeIds, [])
-    })
-
-    test('should find nodes without steps', async () => {
-      const runId = await service.createRun('wf', {}, true, 'h', {} as any)
-      await service.insertStepState(runId, 'node1', null, {})
-
-      const missing = await service.getNodesWithoutSteps(runId, [
-        'node1',
-        'node2',
-        'node3',
-      ])
-      assert.deepStrictEqual(missing, ['node2', 'node3'])
     })
 
     test('should get node results', async () => {

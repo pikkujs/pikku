@@ -41,17 +41,10 @@ const readJson = async (
 }
 
 /**
- * Re-reads the codegen output (wiring meta + JSON schemas) into the running
- * process so new and changed functions become callable without a server
- * restart. The generated `*-meta.gen.ts` files are plain
- * `pikkuState(area, key, <json>)` side effects, but they cannot be
- * re-imported after a dev-time codegen — the ESM cache pins both the wrapper
- * and its JSON import — so this reads the JSON sources directly and applies
- * the same state.
- *
- * Meant to be called by a dev-server watcher after each codegen pass. Routes
- * registered by NEW `wireHTTP` files are not picked up (their modules were
- * never imported); those still need a restart.
+ * Re-reads codegen output (wiring meta + JSON schemas) into the running
+ * process, so new and changed functions become callable without a restart.
+ * Called by a dev-server watcher after each codegen pass. Routes registered by
+ * NEW `wireHTTP` files are not picked up — their modules were never imported.
  */
 export async function reloadGeneratedMeta(
   options: ReloadGeneratedMetaOptions
@@ -63,11 +56,7 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'function/pikku-functions-meta.gen.json')
   )
-  // Merge over the existing map, don't replace it: framework internals like
-  // pikkuWorkflowOrchestrator / the per-workflow queue workers are registered
-  // at service-init (pikku-workflow-service.ts), never in the generated JSON —
-  // a wholesale replace drops them and workflow jobs then fail with
-  // "Function meta not found: pikkuWorkflowOrchestrator".
+  // knowledge: decisions/design/core-hot-reload-merges-generated-meta-never-replaces-it.md
   if (functionsMeta) {
     const existing = pikkuState(null, 'function', 'meta') ?? {}
     pikkuState(null, 'function', 'meta', { ...existing, ...functionsMeta })
@@ -89,9 +78,6 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'queue/pikku-queue-workers-wirings-meta.gen.json')
   )
-  // Same reason as function meta: the workflow service adds its orchestrator /
-  // step queues (and wf-orchestrator-* / wf-step-* per-workflow queues) here at
-  // init, absent from the generated JSON — merge so they survive the reload.
   if (queueMeta) {
     const existing = pikkuState(null, 'queue', 'meta') ?? {}
     pikkuState(null, 'queue', 'meta', { ...existing, ...queueMeta })
@@ -105,7 +91,6 @@ export async function reloadGeneratedMeta(
     pikkuState(null, 'agent', 'agentsMeta', agentMeta.agentsMeta)
   }
 
-  // Generated JSON schemas: <outDir>/schemas/schemas/<Name>.schema.json.
   // Re-adding replaces the map entry; the schema service recompiles any
   // validator whose stored schema value no longer matches.
   const schemasDir = join(dir, 'schemas', 'schemas')
@@ -138,16 +123,11 @@ export async function reloadGeneratedMeta(
 }
 
 /**
- * Prunes the live addon registry down to what the current source still declares.
+ * Prunes the live addon registry to the namespaces the current source still
+ * declares. Hot reload only re-imports files that exist, so a deleted
+ * `*.addon.ts` otherwise leaves its `wireAddon` entry stranded until a restart.
  *
- * Dev hot-reload re-imports only changed/added files, so a deleted `*.addon.ts`
- * leaves its `wireAddon` entry stranded in `pikkuState(null,'addons','packages')`
- * until a full restart — the reason `getInstalledAddons` reports removed addons.
- * The Map holds definitions (namespace → package config), not runtime state, so
- * dropping any namespace the fresh inspection no longer declares is safe.
- *
- * `declaredNamespaces` is the set of `wireAddon` names from the just-regenerated
- * inspection (`inspectorState.rpc.wireAddonDeclarations.keys()`).
+ * `declaredNamespaces` is `inspectorState.rpc.wireAddonDeclarations.keys()`.
  */
 export function reconcileAddonRegistry(
   declaredNamespaces: Iterable<string>,

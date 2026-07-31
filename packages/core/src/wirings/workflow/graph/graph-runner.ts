@@ -29,7 +29,6 @@ function buildTemplateRegex(nodeId: string): RegExp | null {
   return new RegExp(`^${escaped}$`)
 }
 
-/** Strip a trailing revisit ordinal (`node#2` → `node`); leaves other names as-is. */
 function stripInstanceOrdinal(name: string): string {
   const hash = name.lastIndexOf('#')
   if (hash <= 0) return name
@@ -48,7 +47,6 @@ function remapStepNamesToNodeIds(
   }
   return stepNames.map((name) => {
     if (nodes[name]) return name
-    // Revisit instance (`node#N`) maps to its logical node.
     const base = stripInstanceOrdinal(name)
     if (base !== name && nodes[base]) return base
     const matches: string[] = []
@@ -69,8 +67,6 @@ function remapStepNamesToNodeIds(
 
 const ENTRY_FROM = '__entry__'
 
-/** Whether `target` can reach `source` over `next` edges — i.e. an edge
- *  source→target closes a cycle (a back-edge), vs a plain forward edge. */
 function closesCycle(
   source: string,
   target: string,
@@ -88,15 +84,6 @@ function closesCycle(
   return false
 }
 
-/**
- * Decide which next steps to fire this tick. Two kinds of edge:
- *  - forward edge → node-once: fire the target only if it has no instance yet,
- *    so converging edges (joins) collapse to a single run (unchanged behavior).
- *  - back-edge (target can reach the source, closing a cycle) → revisit: fire a
- *    fresh ordinal instance (`target#1`, …), edge-once on `from → target` so it
- *    doesn't re-fire every tick. Cycles terminate when branch routing stops
- *    looping back; a node always records the predecessor it was reached from.
- */
 function planGraphTransitions(
   nodes: Record<string, any>,
   instances: Array<{ stepName: string; status: string; fromStepName?: string }>,
@@ -122,7 +109,6 @@ function planGraphTransitions(
   const completed = instances.filter((i) => i.status === 'succeeded')
   const completedLogical = new Set(completed.map((i) => toLogical(i.stepName)))
 
-  // Available edges: entry edges + each completed instance's resolved `next`.
   const edges: Array<{
     from?: string
     fromKey: string
@@ -163,7 +149,6 @@ function planGraphTransitions(
     const isBackEdge =
       edge.fromLogical !== undefined &&
       closesCycle(edge.fromLogical, target, nodes)
-    // Forward edge into an already-started node = a join; node-once.
     if (!isBackEdge && visits > 0) {
       consumed.add(edgeKey)
       continue
@@ -462,8 +447,6 @@ async function queueGraphNode(
   nodeConfig?: { retries?: number; retryDelay?: string | number },
   fromStepName?: string
 ): Promise<void> {
-  // Default to the workflow-wide retry policy when the node sets none, so the
-  // persisted step retries match the queue `attempts` (see resolveStepJobOptions).
   const stepOptions = {
     retries: nodeConfig?.retries ?? DEFAULT_STEP_RETRIES,
     retryDelay: nodeConfig?.retryDelay,
@@ -505,8 +488,6 @@ export async function continueGraph(
     failedNodeIds: rawFailed,
     branchKeys: branchByStep,
   } = await workflowService.getCompletedGraphState(runId)
-  // Validate step/branch names map to unambiguous nodes (planning keys
-  // physically; these calls only surface ambiguous template configs).
   remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
   remapBranchKeys(branchByStep, nodes, graphName)
   const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
@@ -536,15 +517,12 @@ export async function continueGraph(
   )
 
   if (plan.toFire.length === 0) {
-    // Nothing left to fire and nothing running/blocked → the run is done.
     if (!plan.hasInFlight && !plan.blockedWaiting) {
       await workflowService.updateRunStatus(runId, 'completed')
     }
     return
   }
 
-  // The same run read a few lines up: nothing between here and there writes it,
-  // and `input` is fixed at creation anyway.
   const triggerInput = currentRun?.input
 
   for (const fire of plan.toFire) {
@@ -574,13 +552,6 @@ export async function continueGraph(
   }
 }
 
-/**
- * Invoke a graph node's RPC with the graph + workflow wires, capturing any
- * branch the node selects and persisting it. Shared by the queued
- * (executeGraphStep) and inline (executeGraphNodeInline) executors so both build
- * the wire and record the branch identically — only their child-workflow and
- * onError handling differs around this call.
- */
 async function invokeGraphNodeRpc(
   workflowService: PikkuWorkflowService,
   rpcService: any,
@@ -757,9 +728,6 @@ async function executeGraphNodeInline(
 
   const rpcName = node.rpcName
 
-  // Persist under the physical instance key (node, node#1 … for revisits) and
-  // record the predecessor — same as the queued path (queueGraphNode), so an
-  // inline graph run stores identical step rows + provenance.
   const stepState = await workflowService.insertStepState(
     runId,
     instanceKey,
@@ -869,19 +837,12 @@ async function continueGraphInline(
   triggerInput: any,
   entryNodeIds: string[]
 ): Promise<void> {
-  // Drive the run to completion in-process using the SAME planner as the queued
-  // path (continueGraph): each loop plans the next wave of transitions, executes
-  // them inline (vs queueGraphNode dispatch), then re-plans. Sharing the planner
-  // gives the inline path joins, cycle revisits and fromStepName provenance
-  // identical to the queue — instead of a second, weaker traversal.
   while (true) {
     const {
       failedNodeIds: rawFailed,
       branchKeys: branchByStep,
       completedNodeIds: rawCompleted,
     } = await workflowService.getCompletedGraphState(runId)
-    // Validate step/branch names map to unambiguous nodes (planning keys
-    // physically; these calls only surface ambiguous template configs).
     remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
     remapBranchKeys(branchByStep, nodes, graphName)
     const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
@@ -947,7 +908,6 @@ async function continueGraphInline(
         )
       })
     )
-    // Nothing executable fired (e.g. nodes without an rpcName) → can't progress.
     if (executed === 0) return
   }
 }

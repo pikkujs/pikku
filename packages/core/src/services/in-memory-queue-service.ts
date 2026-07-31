@@ -5,19 +5,7 @@ import type {
 } from '../wirings/queue/queue.types.js'
 import { runQueueJob } from '../wirings/queue/queue-runner.js'
 
-/**
- * In-process queue for local/dev runs. Schedules jobs on the macrotask queue
- * (setTimeout) so dispatch is genuinely asynchronous — the same timing shape as
- * a real queue — and redelivers a failed job up to `options.attempts` times with
- * backoff, so a transiently-failing workflow step recovers exactly as it would
- * on pg-boss/bullmq instead of being silently dropped on its first error.
- *
- * Payloads are JSON round-tripped on the way in, because every real backend
- * puts the job on a wire (SQS body, Redis value, jsonb column) and the worker
- * therefore never sees the caller's live object. Doing it here keeps dev
- * behaviour honest, and keeps the callers — who cannot know which backend they
- * are talking to — from having to serialise defensively.
- */
+// knowledge: decisions/design/the-dev-queue-copies-prod-timing-and-serialization-semantics.md
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults = false
   private jobCounter = 0
@@ -48,7 +36,6 @@ export class InMemoryQueueService implements QueueService {
         await runQueueJob({ job })
       } catch (e: any) {
         if (attemptsMade < maxAttempts) {
-          // Transient failure — redeliver with backoff, mirroring a real queue.
           setTimeout(
             runAttempt,
             this.backoffDelay(options?.backoff, attemptsMade)
@@ -68,7 +55,6 @@ export class InMemoryQueueService implements QueueService {
     return jobId
   }
 
-  /** Delay before the next redelivery, honoring the job's backoff policy. */
   private backoffDelay(
     backoff: JobOptions['backoff'],
     attemptsMade: number

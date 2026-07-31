@@ -27,11 +27,6 @@ type ScenarioHooks = {
   after?: (services: any, data: any, wire: any) => Promise<void> | void
 }
 
-/**
- * Registers a scenario (or, with `source: 'dsl'`, a plain workflow) and runs it
- * inline, returning the error it threw rather than propagating — every hook
- * assertion here is about what ran, not about how the caller saw it.
- */
 const runScenario = async (
   name: string,
   config: ScenarioHooks & { func: (...args: any[]) => any },

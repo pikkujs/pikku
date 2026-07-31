@@ -24,16 +24,6 @@ export abstract class ChannelStore<
     | Promise<TypedChannel & { pikkuUserId?: string }>
     | (TypedChannel & { pikkuUserId?: string })
 
-  /**
-   * Persist per-socket scratch state scoped to a single channel (keyed by
-   * channelId). This is intentionally separate from `SessionStore` (which is
-   * keyed by `pikkuUserId` and holds the user session — shared across HTTP
-   * and channel transports).
-   *
-   * Use this for ephemeral, channel-local data: a per-socket subscription
-   * filter, a step in a connection-bound state machine, the last command sent
-   * on this socket, etc. It is cleared when the channel is removed.
-   */
   public abstract setState(
     channelId: string,
     state: unknown

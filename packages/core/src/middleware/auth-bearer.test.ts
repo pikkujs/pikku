@@ -15,7 +15,6 @@ beforeEach(() => {
 
 const createMockHTTPRequest = (headers: Record<string, string> = {}) => ({
   header: (name: string) => {
-    // Check both lowercase and exact case
     return headers[name.toLowerCase()] || headers[name] || null
   },
 })
@@ -102,7 +101,6 @@ describe('authBearer middleware', () => {
     const jwtService = {
       encode: async () => 'token',
       decode: async () => {
-        // Should not be called in static token mode
         assert.fail('JWT decode should not be called in static token mode')
         return null
       },
@@ -268,7 +266,6 @@ describe('authBearer middleware', () => {
     const jwtService = {
       encode: async () => 'token',
       decode: async () => {
-        // Should not be called when static token is provided
         assert.fail('JWT decode should not be called in static token mode')
         return null
       },

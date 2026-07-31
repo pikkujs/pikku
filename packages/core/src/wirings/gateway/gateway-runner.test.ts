@@ -11,8 +11,6 @@ import type {
 } from './gateway.types.js'
 import type { CorePikkuMiddleware } from '../../types/core.types.js'
 
-// --- Mock adapter ----------------------------------------------------------
-
 const createMockAdapter = (
   opts: {
     name?: string
@@ -63,8 +61,6 @@ const createMockAdapter = (
   }
 }
 
-// --- Test helpers -----------------------------------------------------------
-
 const setupState = () => {
   resetPikkuState()
   httpRouter.reset()
@@ -86,7 +82,7 @@ const setupState = () => {
   } as any)
 }
 
-// Mirrors the inspector's wireGateway -> compiled HTTP/function meta projection
+// Mirrors what the inspector compiles for a wireGateway call.
 const seedCompiledMeta = () => {
   const httpMeta = pikkuState(null, 'http', 'meta') as any
   const funcMeta = pikkuState(null, 'function', 'meta') as any
@@ -110,8 +106,6 @@ const seedCompiledMeta = () => {
     }
   }
 }
-
-// --- Tests ------------------------------------------------------------------
 
 describe('wireGateway', () => {
   beforeEach(() => {
@@ -148,18 +142,15 @@ describe('wireGateway', () => {
       const response = await fetch(request)
       assert.equal(response.status, 200)
 
-      // Verify func was called with parsed message
       assert.equal(funcCalls.length, 1)
       assert.equal(funcCalls[0].data.senderId, 'user-1')
       assert.equal(funcCalls[0].data.text, 'hello')
 
-      // Verify wire.gateway was populated
       assert.equal(funcCalls[0].gateway.gatewayName, 'test-webhook')
       assert.equal(funcCalls[0].gateway.senderId, 'user-1')
       assert.equal(funcCalls[0].gateway.platform, 'mock')
       assert.equal(typeof funcCalls[0].gateway.send, 'function')
 
-      // Verify auto-send of response
       assert.equal(adapter.sentMessages.length, 1)
       assert.equal(adapter.sentMessages[0].senderId, 'user-1')
       assert.equal(adapter.sentMessages[0].message.text, 'reply')
@@ -185,7 +176,6 @@ describe('wireGateway', () => {
       seedCompiledMeta()
       httpRouter.initialize()
 
-      // Factory must NOT run at wiring time
       assert.equal(factoryCalls.length, 0)
 
       const makeRequest = () =>
@@ -202,11 +192,9 @@ describe('wireGateway', () => {
       const second = await makeRequest()
       assert.equal(second.status, 200)
 
-      // Factory ran exactly once, with the singleton services
       assert.equal(factoryCalls.length, 1)
       assert.equal(typeof factoryCalls[0].logger.info, 'function')
 
-      // Messages flowed through the resolved adapter (auto-send reply)
       assert.equal(adapter.sentMessages.length, 2)
       assert.equal(adapter.sentMessages[0].message.text, 'pong')
     })
@@ -265,7 +253,6 @@ describe('wireGateway', () => {
       const response = await fetch(request)
       assert.equal(response.status, 200)
 
-      // Func should NOT be called
       assert.equal(funcCalls.length, 0)
     })
 
@@ -310,9 +297,7 @@ describe('wireGateway', () => {
 
       await fetch(request)
 
-      // Middleware should have run
       assert.equal(middlewareCalls.length, 1)
-      // Middleware should see wire.gateway
       assert.equal(middlewareCalls[0].gateway.senderId, 'user-2')
       assert.equal(middlewareCalls[0].gateway.platform, 'mock')
     })
@@ -418,9 +403,7 @@ describe('wireGateway', () => {
         func: {
           func: async (_services: any, _data: any, wire: any) => {
             capturedGateway = wire.gateway
-            // Send a proactive message via gateway
             await wire.gateway.send({ text: 'proactive msg' })
-            // Don't return a response (no auto-send)
           },
         },
       })
@@ -436,7 +419,6 @@ describe('wireGateway', () => {
 
       await fetch(request)
 
-      // Proactive message was sent
       assert.equal(adapter.sentMessages.length, 1)
       assert.equal(adapter.sentMessages[0].message.text, 'proactive msg')
     })
@@ -502,7 +484,6 @@ describe('wireGateway', () => {
         singletonServices
       )
 
-      // Simulate incoming message
       await handleMessage({
         senderId: 'listener-user',
         text: 'hello from listener',
@@ -513,7 +494,6 @@ describe('wireGateway', () => {
       assert.equal(funcCalls[0].data.text, 'hello from listener')
       assert.equal(funcCalls[0].gateway.platform, 'mock')
 
-      // Auto-send response
       assert.equal(adapter.sentMessages.length, 1)
       assert.equal(adapter.sentMessages[0].message.text, 'listener-reply')
     })

@@ -354,14 +354,12 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       pikkuDir: tmpDir,
     })
 
-    // Write updated function via file system and let the watcher pick it up
     const jsV2 = `export const hotTask = { func: async () => { return { reloaded: true }; }, auth: false };\n`
     await writeFile(join(tmpDir, 'hotTask.js'), jsV2)
     await writeFile(join(tmpDir, 'hotTask.ts'), `// trigger ${Date.now()}`)
 
     await wait(300)
 
-    // Verify the function was reloaded via the watcher
     const reloadLog = mockLogger
       .getLogs()
       .find(
@@ -370,8 +368,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       )
     assert.ok(reloadLog, 'Should log hot-reload for hotTask')
 
-    // runScheduledTask uses runPikkuFunc which reads from the functions Map,
-    // so it will pick up the hot-reloaded function (no longer sets taskResult.ref)
     await runScheduledTask({ name: 'hotTask' })
 
     // The reloaded function no longer sets taskResult.ref, so it should

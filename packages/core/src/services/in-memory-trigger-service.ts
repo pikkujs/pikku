@@ -1,24 +1,7 @@
 import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js'
 import { getSingletonServices } from '../pikku-state.js'
 
-/**
- * In-memory TriggerService implementation.
- *
- * Reads both `wireTrigger` declarations and `wireTriggerSource` registrations
- * from pikkuState. Only starts triggers that have both a declaration and a source.
- * On fire, invokes target via `ContextAwareRPCService`.
- *
- * Single owner — one process runs triggers, no distributed claiming.
- *
- * @example
- * ```typescript
- * const triggerService = new InMemoryTriggerService()
- * await triggerService.start()
- *
- * // On shutdown
- * await triggerService.stop()
- * ```
- */
+// knowledge: decisions/design/local-trigger-and-gateway-services-assume-a-single-process.md
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void> {
     const singletonServices = getSingletonServices()

@@ -17,25 +17,6 @@ import {
   wrapChannelWithMiddleware,
 } from './channel-middleware-runner.js'
 
-/**
- * Runs a channel lifecycle function (onConnect or onDisconnect) with proper middleware handling.
- *
- * This function:
- * 1. Extracts inline middleware from the lifecycle config if present
- * 2. Combines metadata middleware with inline middleware using combineMiddleware()
- * 3. Wraps the channel with channel middleware if present
- * 4. Runs the lifecycle function with middleware support
- *
- * @param channelConfig - The channel configuration
- * @param meta - Metadata for the lifecycle function (connect or disconnect)
- * @param lifecycleConfig - The onConnect or onDisconnect config (can be function or object with middleware)
- * @param lifecycleType - Type of lifecycle for cache key ('connect' or 'disconnect')
- * @param services - All services (singleton + session)
- * @param channel - The channel instance
- * @param data - Optional data to pass to the lifecycle function (for onConnect)
- * @param channelMiddlewareMeta - Optional channel middleware metadata for wrapping channel.send()
- * @returns Promise<unknown> - Result from the lifecycle function (if any)
- */
 export const runChannelLifecycleWithMiddleware = async ({
   channelConfig,
   meta,

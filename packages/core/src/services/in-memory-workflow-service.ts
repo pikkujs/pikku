@@ -21,21 +21,7 @@ interface InternalStepData {
   stepName: string
 }
 
-/**
- * In-memory implementation of WorkflowService for inline-only execution
- *
- * This is a lightweight workflow service that stores all state in memory.
- * It only supports inline execution (no queue workers) and is ideal for:
- * - CLI tools that need workflow-like step orchestration
- * - Testing and development
- * - Single-process applications without persistence requirements
- *
- * @example
- * ```typescript
- * const workflowService = new InMemoryWorkflowService()
- * await workflowService.startWorkflow('myWorkflow', input, { type: 'cli' }, rpc, { inline: true })
- * ```
- */
+// knowledge: decisions/design/the-in-memory-workflow-service-is-inline-only-and-single-process.md
 export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
@@ -169,7 +155,7 @@ export class InMemoryWorkflowService
     this.steps.set(key, step)
     this.stepData.set(stepId, { rpcName, data, stepName })
 
-    // Add to history (same reference so mutations are reflected)
+    // knowledge: decisions/design/in-memory-workflow-history-aliases-the-live-step-object.md
     const history = this.stepHistory.get(runId) || []
     history.push(step)
     this.stepHistory.set(runId, history)
@@ -262,7 +248,6 @@ export class InMemoryWorkflowService
     failedStepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState> {
-    // Find the failed step
     let failedStep: StepState | undefined
     let runId: string | undefined
     let stepName: string | undefined
@@ -304,12 +289,11 @@ export class InMemoryWorkflowService
     const key = `${runId}:${stepName}`
     this.steps.set(key, newStep)
 
-    // Copy step data to new step
     if (failedStepData) {
       this.stepData.set(newStepId, { ...failedStepData })
     }
 
-    // Add to history (same reference so mutations are reflected)
+    // knowledge: decisions/design/in-memory-workflow-history-aliases-the-live-step-object.md
     const history = this.stepHistory.get(runId) || []
     history.push(newStep)
     this.stepHistory.set(runId, history)
@@ -380,7 +364,7 @@ export class InMemoryWorkflowService
   }
 
   async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
-    // In-memory service doesn't need locking for inline execution
+    // knowledge: decisions/design/the-in-memory-workflow-service-is-inline-only-and-single-process.md
     return fn()
   }
 
@@ -389,7 +373,6 @@ export class InMemoryWorkflowService
     _stepName: string,
     fn: () => Promise<T>
   ): Promise<T> {
-    // In-memory service doesn't need locking for inline execution
     return fn()
   }
 
@@ -398,7 +381,6 @@ export class InMemoryWorkflowService
       clearTimeout(timer)
     }
     this.sleepTimers.clear()
-    // Clear all in-memory state
     this.runs.clear()
     this.steps.clear()
     this.stepData.clear()
@@ -407,8 +389,6 @@ export class InMemoryWorkflowService
     this.branchKeys.clear()
     this.workflowVersions.clear()
   }
-
-  // Graph workflow methods
 
   async getCompletedGraphState(runId: string): Promise<{
     completedNodeIds: string[]
@@ -440,20 +420,6 @@ export class InMemoryWorkflowService
     }
 
     return { completedNodeIds, failedNodeIds, branchKeys }
-  }
-
-  async getNodesWithoutSteps(
-    runId: string,
-    nodeIds: string[]
-  ): Promise<string[]> {
-    const existingSteps = new Set<string>()
-    const prefix = `${runId}:`
-    for (const [key] of this.steps.entries()) {
-      if (key.startsWith(prefix)) {
-        existingSteps.add(key.substring(prefix.length))
-      }
-    }
-    return nodeIds.filter((id) => !existingSteps.has(id))
   }
 
   protected override async listStepStates(
