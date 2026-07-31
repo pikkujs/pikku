@@ -11,6 +11,7 @@ import {
 } from './auth-session-impersonation.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
+import { mergeRelayedCookies } from './cross-site-cookies.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -75,7 +76,10 @@ export const betterAuthStatelessSession = (
       // not throw.
       let cached: CachedSession | null
       try {
-        const headers = new Headers(request.headers())
+        // No-op unless this runtime embeds its apps cross-site; there it folds
+        // the client-relayed cookies back in, for browsers that refuse to store
+        // a third-party cookie at all (see cross-site-cookies.ts).
+        const headers = mergeRelayedCookies(new Headers(request.headers()))
         // Cookie is `__Secure-`-prefixed when secure, unprefixed otherwise; try
         // both since NODE_ENV is unreliable in serverless. Only one cookie exists.
         cached =
