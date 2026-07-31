@@ -5,26 +5,24 @@ export type CoreSecret<T = unknown> = {
   secretId: string
   schema: T
   /**
-   * Link to documentation explaining how to obtain this value — a provider's
-   * API-key page, a setup guide, an internal runbook. Surfaced by consoles and
-   * deploy UIs so a user facing a missing value has somewhere to go instead of
-   * an opaque identifier.
+   * Where a user goes to obtain this value — a provider's API-key page, a setup
+   * guide, an internal runbook. Consoles and deploy UIs surface it beside a
+   * missing value. The same field on every credential/variable definition means
+   * the same thing.
    */
   docsUrl?: string
-  /**
-   * Optional rotation cadence for this secret, e.g. '1d', '30day', '1w'.
-   * Stored in the generated secrets metadata so consumers can tell when a
-   * secret was last updated and whether it is due for rotation.
-   */
+  /** Rotation cadence as a duration string, e.g. `'1d'`, `'30day'`, `'1w'`. */
   rotationPeriod?: string
 }
 
 export type OAuth2CredentialConfig = {
+  /** Where access/refresh tokens are stored */
   tokenSecretId: string
   authorizationUrl: string
   tokenUrl: string
   scopes: string[]
   pkce?: boolean
+  /** Appended to the authorization URL's query string. */
   additionalParams?: Record<string, string>
 }
 
@@ -34,12 +32,6 @@ export type SecretDefinitionMeta = {
   description?: string
   secretId: string
   schema?: Record<string, unknown> | string
-  /**
-   * Link to documentation explaining how to obtain this value — a provider's
-   * API-key page, a setup guide, an internal runbook. Surfaced by consoles and
-   * deploy UIs so a user facing a missing value has somewhere to go instead of
-   * an opaque identifier.
-   */
   docsUrl?: string
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string

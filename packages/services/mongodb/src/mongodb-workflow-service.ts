@@ -487,24 +487,6 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
-  async getNodesWithoutSteps(
-    runId: string,
-    nodeIds: string[]
-  ): Promise<string[]> {
-    if (nodeIds.length === 0) return []
-
-    const result = await this.steps
-      .find({
-        workflowRunId: runId,
-        stepName: { $in: nodeIds },
-      })
-      .project({ stepName: 1 })
-      .toArray()
-
-    const existingStepNames = new Set(result.map((r) => r.stepName))
-    return nodeIds.filter((id) => !existingStepNames.has(id))
-  }
-
   async getStepInstances(
     runId: string
   ): Promise<

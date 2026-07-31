@@ -19,15 +19,9 @@ export interface DeploymentService {
   start(config: DeploymentConfig): Promise<void>
   stop(): Promise<void>
   /**
-   * Dispatch a remote RPC call to a function.
-   * The deployment service owns the full transport:
-   * - Resolving the target (endpoint, service binding, etc.)
-   * - Session propagation (JWT signing, headers)
-   * - The actual network call
-   *
-   * @param funcName - The function to invoke
-   * @param data - Input data for the function
-   * @param session - User session to propagate (optional)
+   * The implementation owns the whole transport: resolving the target
+   * (endpoint, service binding), propagating the session (JWT signing,
+   * headers) and making the call. Callers supply no transport detail.
    */
   invoke(
     funcName: string,

@@ -5,17 +5,10 @@ import type {
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { CoreNodeConfig } from '../node/node.types.js'
 
-/**
- * The trigger interaction object passed to trigger functions via the wire.
- * Call trigger() to fire the trigger and start a new workflow/execution.
- */
 export interface PikkuTrigger<TOutput = unknown> {
   invoke: (data: TOutput) => void
 }
 
-/**
- * Metadata for registered triggers stored in state.
- */
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 
 export type TriggerSourceMeta = Record<
@@ -23,14 +16,6 @@ export type TriggerSourceMeta = Record<
   { name: string; pikkuFuncId: string; packageName?: string }
 >
 
-/**
- * A trigger function that sets up a subscription and returns a teardown function.
- * The trigger is fired via wire.trigger.invoke(data).
- *
- * @template TInput - Input type (configuration passed when wired)
- * @template TOutput - Output type produced when trigger fires
- * @template Services - Services available to the trigger
- */
 export type CorePikkuTriggerFunction<
   TInput = unknown,
   TOutput = unknown,
@@ -41,9 +26,6 @@ export type CorePikkuTriggerFunction<
   wire: { trigger: { invoke: (data: TOutput) => void } }
 ) => Promise<() => void | Promise<void>>
 
-/**
- * Configuration object for creating a trigger function with metadata
- */
 export type CorePikkuTriggerFunctionConfig<
   TInput = unknown,
   TOutput = unknown,
@@ -51,56 +33,15 @@ export type CorePikkuTriggerFunctionConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
 > = {
-  /** Optional human-readable title for the trigger */
   title?: string
-  /** Optional description of what the trigger does */
   description?: string
-  /** Optional tags for categorization */
   tags?: string[]
-  /** The trigger function */
   func: CorePikkuTriggerFunction<TInput, TOutput, Services>
-  /** Optional Zod schema for input validation */
   input?: InputSchema
-  /** Optional Zod schema for output validation */
   output?: OutputSchema
-  /** Optional node configuration */
   node?: CoreNodeConfig
 }
 
-/**
- * Factory function for creating trigger functions
- * Supports both direct function and configuration object syntax
- *
- * @example
- * ```typescript
- * // Direct function syntax
- * export const redisSubscribeTrigger = pikkuTriggerFunc<
- *   { channel: string },
- *   { message: string }
- * >(async ({ redis }, { channel }, { trigger }) => {
- *   const subscriber = redis.duplicate()
- *   await subscriber.subscribe(channel, (msg) => {
- *     trigger.invoke({ message: msg })
- *   })
- *   return () => subscriber.unsubscribe()
- * })
- *
- * // Configuration object syntax with metadata
- * export const redisSubscribeTrigger = pikkuTriggerFunc({
- *   title: 'Redis Subscribe Trigger',
- *   description: 'Listens to Redis pub/sub channel',
- *   input: z.object({ channel: z.string() }),
- *   output: z.object({ message: z.string() }),
- *   func: async ({ redis }, { channel }, { trigger }) => {
- *     const subscriber = redis.duplicate()
- *     await subscriber.subscribe(channel, (msg) => {
- *       trigger.invoke({ message: msg })
- *     })
- *     return () => subscriber.unsubscribe()
- *   }
- * })
- * ```
- */
 export const pikkuTriggerFunc = <
   TInput = unknown,
   TOutput = unknown,
@@ -130,44 +71,22 @@ export const pikkuTriggerFunc = <
   return triggerOrConfig
 }
 
-/**
- * Core trigger definition for registration.
- *
- * @template TInput - Input type (configuration passed when wired)
- * @template TOutput - Output type
- */
 export interface CoreTrigger<PikkuFunctionConfig = any> {
-  /** Unique name for this trigger */
   name: string
-  /** The target RPC function to invoke when the trigger fires */
   func: PikkuFunctionConfig
-  /** Optional description */
   description?: string
-  /** Optional tags for categorization */
   tags?: string[]
-  /** Whether this trigger is used by a graph workflow */
   graph?: true
 }
 
-/**
- * Represents a trigger instance with teardown capability
- */
 export interface TriggerInstance {
   name: string
   teardown: () => void | Promise<void>
 }
 
-/**
- * A trigger source that provides the subscription function.
- * Only imported in the trigger worker process.
- *
- * @template TInput - Input type passed to the trigger function
- * @template TOutput - Output type produced when trigger fires
- */
 export type CoreTriggerSource<TInput = unknown, TOutput = unknown> = {
-  /** Must match a wireTrigger name */
+  /** Must match the name of a `wireTrigger` registration. */
   name: string
-  /** The trigger function config that sets up the subscription */
   func: CorePikkuTriggerFunctionConfig<
     TInput,
     TOutput,

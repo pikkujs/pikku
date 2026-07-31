@@ -14,11 +14,6 @@ function inlineService() {
   return new InMemoryWorkflowService()
 }
 
-/**
- * Every per-step read the service issues. In a real backend each one is its own
- * round-trip, so a replay that walks N completed steps costs N of them — and
- * over the life of a run that is O(N^2).
- */
 function countStepReads(ws: any) {
   const counter = { reads: 0 }
   const original = ws.getStepState.bind(ws)

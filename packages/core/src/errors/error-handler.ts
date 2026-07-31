@@ -1,14 +1,6 @@
 import { pikkuState } from '../pikku-state.js'
 
-/**
- * Base class for custom errors.
- * @extends {Error}
- */
 export class PikkuError extends Error {
-  /**
-   * Creates an instance of PikkuError.
-   * @param message - The error message.
-   */
   constructor(message: string = 'An error occurred') {
     super(message)
     Object.setPrototypeOf(this, new.target.prototype)
@@ -17,29 +9,22 @@ export class PikkuError extends Error {
 }
 
 /**
- * Whether an error is a deliberate, expected failure rather than an uncaught
- * bug. A `PikkuError` always counts; so does any error carrying `expected:
- * true` — used to keep the marker alive when an error is serialized across a
- * workflow step boundary and rehydrated as a plain `Error`. Callers log the
- * message alone for expected errors and the full stack for everything else.
+ * A `PikkuError`, or any error carrying `expected: true` — the marker that
+ * survives serialization across a workflow step boundary and rehydration as a
+ * plain `Error`. Callers log the message alone for these, the full stack for
+ * everything else.
  */
 export const isExpectedError = (error: unknown): boolean =>
   error instanceof PikkuError || (error as any)?.expected === true
 
-/**
- * Interface for error details.
- */
 export interface ErrorDetails {
   status: number
   message: string
   mcpCode?: number
 }
 
-/**
- * Adds an error to the API errors map.
- * @param error - The error to add.
- * @param details - The details of the error.
- */
+export type PikkuErrorConstructor = new (...args: any[]) => Error
+
 export const addError = (
   error: any,
   { status, message, mcpCode }: ErrorDetails
@@ -50,10 +35,6 @@ export const addError = (
   )
 }
 
-/**
- * Adds multiple errors to the API errors map.
- * @param errors - An array of errors and their details.
- */
 export const addErrors = (
   errors: Array<[error: any, details: ErrorDetails]>
 ) => {
@@ -62,18 +43,22 @@ export const addErrors = (
   })
 }
 
-/**
- * Retrieves the error response for a given error.
- * @param error - The error to get the response for.
- * @returns An object containing the status and message, or undefined if the error is not found.
- */
 export const getErrorResponse = (
   error: Error
 ): { status: number; message: string; mcpCode?: number } | undefined => {
-  const errors = Array.from(pikkuState(null, 'misc', 'errors').entries())
-  const foundError = errors.find(([e]) => e.name === error.constructor.name)
-  if (foundError) {
-    return foundError[1]
+  const errors = pikkuState(null, 'misc', 'errors')
+
+  let ctor: unknown = (error as any)?.constructor
+  while (typeof ctor === 'function' && ctor !== Object) {
+    const details = errors.get(ctor as PikkuErrorConstructor)
+    if (details) {
+      return details
+    }
+    ctor = Object.getPrototypeOf(ctor)
   }
-  return pikkuState(null, 'misc', 'errors').get(error)
+
+  const name = (error as any)?.constructor?.name
+  return name
+    ? Array.from(errors.entries()).find(([e]) => e.name === name)?.[1]
+    : undefined
 }

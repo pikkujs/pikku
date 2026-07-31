@@ -8,8 +8,6 @@ const UUID_RE =
 
 describe('uuidv5', () => {
   test('matches the canonical RFC 4122 v5 vector', () => {
-    // www.example.com in the DNS namespace → known fixed UUID. Proves the
-    // SHA-1 + version/variant bit-twiddling is a correct v5 implementation.
     const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
     assert.equal(
       uuidv5('www.example.com', DNS),

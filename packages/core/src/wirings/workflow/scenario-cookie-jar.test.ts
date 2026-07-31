@@ -4,7 +4,6 @@ import { createServer, type Server } from 'node:http'
 
 import { createCookieJar } from './scenario-cookie-jar.js'
 
-// Minimal target: hands out cookies, and reports back what it was sent.
 const startTarget = async () => {
   let issued = 0
   const server: Server = createServer((req, res) => {

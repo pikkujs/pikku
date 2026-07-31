@@ -2,11 +2,9 @@ import type {
   SecretDefinitions,
   SecretDefinitionsMeta,
 } from './secret.types.js'
+import type { SchemaRefLike } from '../../types/core.types.js'
 
-export interface SchemaRefLike {
-  variableName: string
-  sourceFile: string
-}
+export type { SchemaRefLike }
 
 export function validateAndBuildSecretDefinitionsMeta(
   definitions: SecretDefinitions,

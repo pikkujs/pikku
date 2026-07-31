@@ -8,10 +8,6 @@ export interface PikkuWorkflowGraphConfig<
   tags?: string[]
   nodes: FuncMap
   config?: T
-  /**
-   * Graph-level free-text notes (e.g. imported sticky notes). Non-semantic:
-   * excluded from the graph topology hash.
-   */
   notes?: string[]
 }
 

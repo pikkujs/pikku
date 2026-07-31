@@ -327,8 +327,6 @@ describe('Command Parser', () => {
         testMeta
       )
 
-      // Unknown options are allowed (for forward compatibility)
-      // They just won't have defaults or validation
       assert.strictEqual(result.options.unknown, true)
       assert.strictEqual(result.errors.length, 0)
     })
@@ -624,9 +622,7 @@ describe('Command Parser', () => {
         result.warnings[0].startsWith('Unknown option: --sektion (ignored)'),
         `unexpected warning: ${result.warnings[0]}`
       )
-      // Forward compatibility: the value is still parsed through
       assert.strictEqual(result.options.sektion, 'functions')
-      // ...and the real option keeps its default
       assert.strictEqual(result.options.section, 'all')
     })
 

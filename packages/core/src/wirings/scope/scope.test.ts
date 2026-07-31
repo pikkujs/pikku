@@ -63,8 +63,7 @@ describe('flattenScopeDefinitions', () => {
     )
   })
 
-  // An addon and its host app may both contribute the same root. Codegen writes
-  // these ids into an object literal, where a repeat is a TypeScript error.
+  // knowledge: decisions/design/scope-roots-may-be-co-declared-by-an-addon-and-its-host-app.md
   test('a root declared twice is flattened once', () => {
     const tree = { users: { scopes: { ban: {} } } }
     const definitions: ScopeDefinitions = [

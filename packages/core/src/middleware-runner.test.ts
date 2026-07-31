@@ -114,7 +114,6 @@ describe('combineMiddleware', () => {
   })
 
   test('should execute middleware in correct order: wireInheritedMiddleware (tags) → wireMiddleware → funcInheritedMiddleware (tags) → funcMiddleware', () => {
-    // Setup tagged middleware
     const wiringTagMiddleware: CorePikkuMiddleware = async (
       services,
       wire,
@@ -441,7 +440,6 @@ describe('runMiddleware', () => {
       }
     )
 
-    // Should only execute each middleware once
     assert.deepEqual(executionOrder, ['middleware1', 'middleware2', 'main'])
   })
 

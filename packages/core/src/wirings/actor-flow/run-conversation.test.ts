@@ -18,7 +18,6 @@ const stepResult = (object: unknown): AIAgentStepResult => ({
   finishReason: 'stop',
 })
 
-/** A persona LLM scripted by the outputSchema it's asked for. */
 const scriptedLLM = (script: {
   turns: Array<{ message: string; done: boolean }>
   decisions: Array<{ toolCallId: string; approved: boolean }>
@@ -31,7 +30,6 @@ const scriptedLLM = (script: {
       (params.outputSchema as { properties?: Record<string, unknown> })
         ?.properties ?? {}
     if ('message' in props) {
-      // Providers reject an empty prompt — every persona turn must carry messages.
       assert.ok(
         params.messages.length > 0,
         'persona turn requested with empty messages'
@@ -54,7 +52,6 @@ const scriptedLLM = (script: {
   return { llm, calls }
 }
 
-/** A target that suspends once for approval, then completes. */
 const suspendingTarget = (): {
   target: TargetAgentDriver
   approvedWith: Array<{ toolCallId: string; approved: boolean }[]>
@@ -84,7 +81,6 @@ const suspendingTarget = (): {
   return { target, approvedWith }
 }
 
-/** A target that never completes — always re-suspends for the same approval. */
 const alwaysSuspendingTarget = (): {
   target: TargetAgentDriver
   approveCalls: () => number

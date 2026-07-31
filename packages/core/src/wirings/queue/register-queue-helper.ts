@@ -4,23 +4,11 @@ import type { QueueConfigMapping } from './validate-worker-config.js'
 import { validateWorkerConfig } from './validate-worker-config.js'
 import type { Logger } from '../../services/logger.js'
 
-/**
- * Queue processor registration callback
- */
 export type QueueRegistrationCallback<T = any> = (
   queueName: string,
   processor: CoreQueueWorker
 ) => Promise<T>
 
-/**
- * Helper function to register queue processors with validation
- * This centralizes the common logic for looping over processors and validating configs
- *
- * @param configMappings - Configuration mapping for the queue implementation
- * @param registerCallback - Callback to register each individual queue processor
- * @param logger - Optional logger for info/error messages
- * @returns Record of validation results by queue name
- */
 export async function registerQueueWorkers<T = any>(
   configMappings: QueueConfigMapping,
   logger: Logger,
@@ -31,13 +19,11 @@ export async function registerQueueWorkers<T = any>(
 
   for (const [queueName, processor] of queueWorkers) {
     logger?.info(`Registering queue processor: ${queueName}`)
-    // Validate the processor configuration
     const validationResult = validateWorkerConfig(
       configMappings,
       processor.config
     )
 
-    // Store validation results
     configValidation[queueName] = configValidation[queueName] || []
     configValidation[queueName].push(validationResult)
 

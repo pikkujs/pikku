@@ -19,7 +19,6 @@ beforeEach(() => {
   resetPikkuState()
 })
 
-// Helper function to add function with metadata for tests
 const addTestFunction = (funcName: string, funcConfig: any) => {
   addFunction(funcName, funcConfig)
   // Convert tags to middleware metadata (tags are organizational only; they no
@@ -62,7 +61,6 @@ describe('runPikkuFunc - Integration Tests', () => {
     addTagMiddleware('wiringTag', [createMiddleware('wiringTag')])
     addTagMiddleware('funcTag', [createMiddleware('funcTag')])
 
-    // Register function with middleware and tags
     addTestFunction('testFunc', {
       func: async () => {
         executionOrder.push('main')
@@ -235,7 +233,6 @@ describe('runPikkuFunc - Integration Tests', () => {
       await next()
     }
 
-    // Add same middleware to tag and directly
     addTagMiddleware('testTag', [duplicatedMiddleware])
 
     addTestFunction('testFunc', {
@@ -252,7 +249,6 @@ describe('runPikkuFunc - Integration Tests', () => {
       wire: {},
     })
 
-    // Should only execute once due to deduplication
     assert.equal(executionCount, 1)
   })
 
@@ -402,7 +398,6 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'success')
-    // Permissions run after middleware (middleware can set/modify session)
     assert.deepEqual(executionOrder, [
       'funcMiddleware',
       'funcPermission',
@@ -435,7 +430,6 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     assert.deepEqual(receivedServices, mockServices)
     assert.equal(receivedData, testData)
-    // Check that wire has rpc service and session
     assert.ok(receivedWire.rpc)
     assert.equal(receivedWire.session, undefined)
   })
@@ -452,7 +446,6 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const asyncCreateWireServices = async () => {
-      // Simulate async service creation
       await new Promise((resolve) => setTimeout(resolve, 1))
       return wireServices
     }

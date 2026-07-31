@@ -1,10 +1,9 @@
 import type { CoreScopes } from './scope.types.js'
 
 /**
- * No-op function for declaring scopes.
- * This exists purely for TypeScript type checking and will be tree-shaken.
- * The CLI extracts metadata via AST parsing and generates a `ScopeId` union,
- * so a function referencing an undeclared scope fails the build.
+ * Declares scopes. The body is a no-op that tree-shakes away — the CLI reads
+ * the call by AST and generates a `ScopeId` union, so a function referencing an
+ * undeclared scope fails the build.
  *
  * Scopes are keyed by segment at every level: a scope is named by its key, and
  * its value describes it. Every node is grantable — the declaration below

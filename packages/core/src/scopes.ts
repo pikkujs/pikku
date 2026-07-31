@@ -5,13 +5,9 @@ const SEPARATOR = ':'
 const WILDCARD = '*'
 
 /**
- * Builds every grant that would satisfy `scope`: the scope itself, a wildcard
+ * Every grant that would satisfy `scope`: the scope itself, a wildcard
  * directly beneath it, a wildcard at each ancestor level, and each plain
- * ancestor id — holding a parent scope grants everything nested beneath it.
- *
- * For `admin:invoices:create` that is:
- *   admin:invoices:create, admin:invoices:create:*, *, admin:*, admin:invoices:*,
- *   admin, admin:invoices
+ * ancestor id.
  */
 const satisfyingGrants = (scope: string): string[] => {
   const segments = scope.split(SEPARATOR)
@@ -25,28 +21,10 @@ const satisfyingGrants = (scope: string): string[] => {
   return grants
 }
 
-/**
- * Checks whether `held` satisfies a single required scope.
- *
- * A grant satisfies a requirement when it is the scope itself, a plain ancestor
- * (`admin` covers `admin:invoices:create`), a wildcard at or above it (`admin:*`
- * covers `admin` and `admin:invoices:create`), or the bare `*`. A narrower grant
- * never satisfies a broader requirement — `admin:invoices` does not grant
- * `admin`.
- */
 const holds = (held: ReadonlySet<string>, scope: string): boolean =>
   satisfyingGrants(scope).some((grant) => held.has(grant))
 
-/**
- * The first required scope a set of held grants does not satisfy, or `null`
- * when every one is satisfied.
- *
- * Scopes are an AND gate: every entry in `required` must be satisfied. This is
- * deliberately distinct from `permissions`, which OR together — a scope can
- * only ever narrow access, so adding one to a function can never widen it.
- *
- * Fails closed: an absent `held` satisfies nothing.
- */
+/** The first required scope `held` does not satisfy, or `null`. Fails closed. */
 const firstUnsatisfied = (
   required: readonly string[] | undefined,
   held: Iterable<string> | undefined
@@ -65,17 +43,8 @@ const firstUnsatisfied = (
 }
 
 /**
- * Whether a set of held grants satisfies every required scope.
- *
  * The non-throwing counterpart to {@link verifyScopes}, for deciding rather
- * than enforcing — an authorization gate that falls back to another check when
- * it is not satisfied, rather than rejecting the request outright.
- *
- * Fails closed: an absent or empty `held` satisfies nothing. An empty
- * `required` is satisfied by anything.
- *
- * @param required - Scopes to check for. Empty means no gate.
- * @param held - The grants held, e.g. `session.scopes`. May be undefined.
+ * than enforcing. Fails closed; an empty `required` is satisfied by anything.
  */
 export const hasScopes = (
   required: readonly string[] | undefined,
@@ -83,19 +52,9 @@ export const hasScopes = (
 ): boolean => firstUnsatisfied(required, held) === null
 
 /**
- * Verifies that a session holds every required scope, throwing on the first
- * one it does not.
- *
- * Scopes are an AND gate: every entry in `required` must be satisfied. This is
- * deliberately distinct from `permissions`, which OR together — a scope can
- * only ever narrow access, so adding one to a function can never widen it.
- *
- * Fails closed: a session without a `scopes` field, or no session at all,
- * satisfies nothing.
- *
- * @param required - Scopes the function declares. Empty means no gate.
- * @param session - The session to check. May be undefined.
- * @throws {MissingScopeError} Naming the first unsatisfied scope.
+ * Throws {@link MissingScopeError} naming the first scope the session does not
+ * hold. Fails closed: no session, or a session without `scopes`, satisfies
+ * nothing.
  */
 export const verifyScopes = (
   required: readonly string[] | undefined,

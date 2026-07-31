@@ -36,18 +36,6 @@ export const clearChannelMiddlewareCache = () => {
   }
 }
 
-/**
- * Combine the inherited (tag/named) channel middleware with any per-run
- * middleware for a wiring.
- *
- * Only the statically-resolved inherited middleware is deterministic per `uid`
- * and safe to cache. `wireChannelMiddleware` is a per-run set of closures (e.g.
- * an AI agent's per-invocation stream middleware holding that run's
- * thread/session state) and MUST NOT be cached — caching it lets a later run of
- * the same `uid` reuse an earlier run's closures, leaking that run's state (and
- * growing memory) across invocations. It is therefore appended fresh on every
- * call after the cached inherited slice.
- */
 export const combineChannelMiddleware = (
   wireType: string,
   uid: string,

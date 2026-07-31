@@ -10,12 +10,6 @@ import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
-/**
- * Members that only a scenario run reaches. None of them may live on the class
- * a production app instantiates: a bundler removes unused *modules*, never
- * unused class members, so anything declared here ships in every server built
- * on Pikku whether or not the app has a single scenario.
- */
 const SCENARIO_MEMBERS = [
   'scenarioStep',
   'runScenarioHook',
@@ -26,7 +20,6 @@ const SCENARIO_MEMBERS = [
   'getScenarioEnvironment',
 ]
 
-/** Wire members declared by `PikkuScenarioWire` and absent from `PikkuWorkflowWire`. */
 const SCENARIO_WIRE_MEMBERS = [
   'step',
   'given',

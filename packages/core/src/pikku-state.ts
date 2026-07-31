@@ -14,7 +14,7 @@ import type { GatewaysMeta } from './wirings/gateway/gateway.types.js'
 import type { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 import type { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
-const PIKKU_STATE_KEY = Symbol('@pikku/core/state')
+const PIKKU_STATE_KEY = Symbol.for('@pikku/core/state')
 
 export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
   if (!(globalThis as any)[PIKKU_STATE_KEY]) {
@@ -23,22 +23,6 @@ export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
   return (globalThis as any)[PIKKU_STATE_KEY] as Map<string, PikkuPackageState>
 }
 
-/**
- * Get or set package-scoped pikku state
- *
- * @param packageName - Package name (null for main package, '@scope/package' for addon packages)
- * @param type - State category (function, rpc, http, etc.)
- * @param content - Content key within the category
- * @param value - Optional value to set
- * @returns The current value of the state
- *
- * @example
- * // Main package
- * pikkuState(null, 'function', 'functions').get(funcName)
- *
- * // Addon package
- * pikkuState('@acme/stripe-functions', 'rpc', 'meta')
- */
 export const pikkuState = <
   Type extends keyof PikkuPackageState,
   Content extends keyof PikkuPackageState[Type],
@@ -50,7 +34,6 @@ export const pikkuState = <
 ): PikkuPackageState[Type][Content] => {
   const resolvedPackageName = packageName ?? '__main__'
 
-  // Initialize package state if it doesn't exist
   if (!getAllPackageStates().has(resolvedPackageName)) {
     initializePikkuState(resolvedPackageName)
   }
@@ -160,9 +143,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   },
 })
 
-/**
- * Initialize state for a new package
- */
 export const initializePikkuState = (packageName: string): void => {
   if (!getAllPackageStates().has(packageName)) {
     getAllPackageStates().set(packageName, createEmptyPackageState())
@@ -170,13 +150,12 @@ export const initializePikkuState = (packageName: string): void => {
 }
 
 export const resetPikkuState = () => {
-  // Preserve the errors map before resetting
+  // Error definitions come from module-import side effects that never re-run.
   const existingErrors = getAllPackageStates().get('__main__')?.misc.errors
 
   ;(globalThis as any)[PIKKU_STATE_KEY] = new Map<string, PikkuPackageState>()
   initializePikkuState('__main__')
 
-  // Restore the errors map if it existed
   if (existingErrors) {
     const mainState = getAllPackageStates().get('__main__')!
     mainState.misc.errors = existingErrors
@@ -201,13 +180,6 @@ export const getCreateWireServices = (): CreateWireServices | undefined => {
   return pikkuState(null, 'package', 'factories')?.createWireServices
 }
 
-/**
- * Register service factories for an addon package.
- * These factories are used to create services when the package's functions are invoked.
- *
- * @param packageName - The package name (e.g., '@pikku/templates-function-addon')
- * @param factories - The service factory functions
- */
 export const addPackageServiceFactories = (
   packageName: string,
   factories: NonNullable<PikkuPackageState['package']['factories']>

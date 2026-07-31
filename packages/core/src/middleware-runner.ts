@@ -31,23 +31,6 @@ const sortByPriority = (
   )
 }
 
-/**
- * Runs a chain of middleware functions in sequence before executing the main function.
- *
- * @param services - An object containing services (e.g., singletonServices, userSession, etc.)
- * @param wire - The wire context, e.g., { http }.
- * @param middlewares - An array of middleware functions to run.
- * @param main - The main function to execute after all middleware have run.
- * @returns A promise resolving to the result of the main function.
- *
- * @example
- * runMiddleware(
- *   { ...services, userSession },
- *   { http },
- *   [middleware1, middleware2, middleware3],
- *   async () => { return await runMain(); }
- * );
- */
 export const runMiddleware = async <
   Middleware extends CorePikkuMiddleware<any, any>,
 >(
@@ -56,7 +39,6 @@ export const runMiddleware = async <
   middlewares: readonly Middleware[],
   main?: () => Promise<unknown>
 ): Promise<unknown> => {
-  // Sort by priority if not already sorted (cached middleware is pre-sorted)
   const sorted = isSortedByPriority(middlewares)
     ? middlewares
     : ([...middlewares].sort(
@@ -91,14 +73,8 @@ const isSortedByPriority = (
 }
 
 /**
- * Registers tag-scoped middleware. Applies to any wiring (HTTP, Channel,
- * Queue, Scheduler, MCP, CLI, Workflow, Agent) that carries the matching tag.
- *
- * For tree-shaking, wrap in a factory:
- * `export const x = () => addTagMiddleware('tag', [...])`
- *
- * @example
- * export const adminMiddleware = () => addTagMiddleware('admin', [authMiddleware])
+ * Registers tag-scoped middleware for any wiring carrying the tag. Wrap in a
+ * factory (`export const x = () => addTagMiddleware(...)`) for tree-shaking.
  */
 export const addTagMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   tag: string,
@@ -114,14 +90,8 @@ export const addTagMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
 }
 
 /**
- * Registers wire-agnostic global middleware. Runs at the top of every
- * wiring's middleware chain — before wire-, tag-, and function-level
- * entries — across HTTP, Channel, Queue, Scheduler, MCP, CLI, Workflow, Agent.
- *
- * Resolution order: global → wire → tag → function.
- *
- * @example
- * addGlobalMiddleware([telemetryMiddleware])
+ * Registers wire-agnostic global middleware, which runs at the top of every
+ * wiring's chain — before wire-, tag- and function-level entries.
  */
 export const addGlobalMiddleware = <
   PikkuMiddleware extends CorePikkuMiddleware,
@@ -140,17 +110,6 @@ export const addGlobalMiddleware = <
   return middleware
 }
 
-/**
- * Retrieves a registered middleware function by its name.
- *
- * This function looks up middleware that was registered with registerMiddleware.
- * It's used internally by the framework to resolve middleware references in metadata.
- *
- * @param {string} name - The unique name (pikkuFuncId) of the middleware function.
- * @returns {CorePikkuMiddleware | undefined} The middleware function, or undefined if not found.
- *
- * @internal
- */
 const getMiddlewareByName = (name: string): CorePikkuMiddleware | undefined => {
   const middlewareStore = pikkuState(null, 'misc', 'middleware')
   const middleware = middlewareStore[name]
@@ -180,28 +139,6 @@ export const clearMiddlewareCache = () => {
   }
 }
 
-/**
- * Combines wiring-specific middleware with function-level middleware.
- *
- * This function resolves middleware metadata into actual middleware functions and combines them.
- * It filters out wire middleware without tags from inheritedMiddleware to avoid duplication
- * (those are passed separately as wireMiddleware).
- *
- * @param {object} options - Configuration object for combining middleware.
- * @param {MiddlewareMetadata[] | undefined} options.inheritedMiddleware - Metadata from wiring (HTTP + tags + wire with tags).
- * @param {CorePikkuMiddleware[] | undefined} options.wireMiddleware - Inline wire middleware.
- * @param {MiddlewareMetadata[] | undefined} options.funcMiddleware - Function middleware metadata.
- * @returns {CorePikkuMiddleware[]} Combined array of resolved middleware.
- *
- * @example
- * ```typescript
- * const combined = combineMiddleware(wireType, wireId, {
- *   inheritedMiddleware: meta.middleware,
- *   wireMiddleware: [inlineMiddleware],
- *   funcMiddleware: funcMeta.middleware
- * })
- * ```
- */
 export const combineMiddleware = (
   wireType: PikkuWiringTypes,
   uid: string,
@@ -237,7 +174,6 @@ export const combineMiddleware = (
   if (wireInheritedMiddleware) {
     for (const meta of wireInheritedMiddleware) {
       if (meta.type === 'http') {
-        // Look up HTTP middleware group from pikkuState
         const group = pikkuState(packageName, 'middleware', 'httpGroup')[
           meta.route
         ]
@@ -254,7 +190,6 @@ export const combineMiddleware = (
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       } else if (meta.type === 'wire') {
-        // Individual wire middleware (exported, not inline)
         const middleware = getMiddlewareByName(meta.name)
         if (middleware) {
           resolved.push(middleware)
@@ -263,12 +198,11 @@ export const combineMiddleware = (
     }
   }
 
-  // 2. Add inline wire middleware
   if (wireMiddleware) {
     resolved.push(...wireMiddleware)
   }
 
-  // 3. Resolve function inherited middleware (only tags, wire middleware already handled)
+  // Only tags here; wire middleware is resolved via wireInheritedMiddleware.
   if (funcInheritedMiddleware) {
     for (const meta of funcInheritedMiddleware) {
       if (meta.type === 'tag') {
@@ -280,16 +214,13 @@ export const combineMiddleware = (
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       }
-      // Note: wire middleware is already handled in wireInheritedMiddleware
     }
   }
 
-  // 4. Add inline function middleware
   if (funcMiddleware) {
     resolved.push(...funcMiddleware)
   }
 
-  // Sort by priority, deduplicate, and freeze
   sortByPriority(resolved)
   middlewareCache[wireType][uid] = freezeDedupe(
     resolved

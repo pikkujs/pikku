@@ -13,13 +13,8 @@ import type {
   ReconstructedRunState,
 } from '../wirings/workflow/run-timeline.js'
 
-/**
- * Interface for workflow orchestration
- * Handles workflow execution, replay, orchestration logic, and run-level state
- */
 export interface WorkflowService {
   wireQueueWorkers?(): void
-  // Run-level state operations
   createRun(
     workflowName: string,
     input: any,
@@ -48,13 +43,10 @@ export interface WorkflowService {
   withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
   close(): Promise<void>
 
-  // Orchestration operations
   resumeWorkflow(runId: string): Promise<void>
   /**
-   * Record a human decision against a `workflow.approval()` gate and wake the
-   * run. The payload is stored as given and validated on replay, inside the
-   * workflow body — so an invalid one re-closes the gate rather than failing the
-   * run. `reason` addresses the gate's first reach.
+   * The payload is stored as given and validated on replay inside the workflow
+   * body, so an invalid one re-closes the gate rather than failing the run.
    */
   approveStep(runId: string, reason: string, decision: unknown): Promise<void>
   startWorkflow<I>(
@@ -64,13 +56,7 @@ export interface WorkflowService {
     rpcService: any,
     options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }>
-  /**
-   * Start a run and wait for it to end.
-   *
-   * `pollIntervalMs` is the ceiling on the wait between reads of the run, not a
-   * fixed cadence: polling starts far shorter than this and widens towards it,
-   * so a run that finishes quickly is not held for a whole interval.
-   */
+  /** `pollIntervalMs` is a CEILING on the wait between reads, not a cadence. */
   runToCompletion<I>(
     name: string,
     input: I,
@@ -81,7 +67,6 @@ export interface WorkflowService {
   orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
   executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>
 
-  // Step-level state operations
   insertStepState(
     runId: string,
     stepName: string,
@@ -100,7 +85,6 @@ export interface WorkflowService {
     status: 'pending' | 'running'
   ): Promise<StepState>
 
-  // Step execution
   executeWorkflowStep(
     runId: string,
     stepName: string,
@@ -109,7 +93,6 @@ export interface WorkflowService {
     rpcService: any
   ): Promise<void>
 
-  // Version operations
   upsertWorkflowVersion(
     name: string,
     graphHash: string,

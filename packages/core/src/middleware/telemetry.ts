@@ -1,21 +1,6 @@
 import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
-/**
- * Outer telemetry middleware that captures total request duration and outcome.
- * Runs at `highest` priority (outermost in the middleware chain).
- *
- * Emits a structured JSON log entry with `__pikku_telemetry: 'end'` containing:
- * - Total duration (including all middleware)
- * - Outcome (ok/error)
- * - Wire metadata (wireType, wireId, traceId)
- * - HTTP details (method, path, status) if applicable
- *
- * @example
- * ```typescript
- * import { telemetryOuter } from '@pikku/core/middleware'
- * addTagMiddleware('myTag', [telemetryOuter()])
- * ```
- */
+/** Outermost telemetry: total duration, including every middleware. */
 export const telemetryOuter = pikkuMiddlewareFactory<{
   environmentId?: string
   orgId?: string
@@ -58,21 +43,7 @@ export const telemetryOuter = pikkuMiddlewareFactory<{
   })
 })
 
-/**
- * Inner telemetry middleware that captures function execution duration and user context.
- * Runs at `lowest` priority (innermost, closest to the function).
- *
- * Emits a structured JSON log entry with `__pikku_telemetry: 'end'` containing:
- * - Function-only duration (excluding outer middleware like auth)
- * - User identity (pikkuUserId) if authenticated
- * - Wire metadata (wireType, wireId, traceId)
- *
- * @example
- * ```typescript
- * import { telemetryInner } from '@pikku/core/middleware'
- * addTagMiddleware('myTag', [telemetryInner()])
- * ```
- */
+/** Innermost telemetry: function-only duration, excluding outer middleware. */
 export const telemetryInner = pikkuMiddlewareFactory<{
   environmentId?: string
   orgId?: string

@@ -14,11 +14,6 @@ import type { SerializeOptions } from 'cookie'
 import { httpRouter } from '../../http/routers/http-router.js'
 import { pikkuMiddleware } from '../../../types/core.types.js'
 
-/**
- * Minimal stubs for dependencies that runChannel expects.
- * In a real test setup, you may provide more comprehensive mocks
- * or refactor your code to allow dependency injection.
- */
 const mockLogger = {
   info: () => {},
   error: () => {},
@@ -30,7 +25,6 @@ const mockSingletonServices = {
   logger: mockLogger,
 } as any
 
-// Mock request and response objects
 export class PikkuMockRequest implements PikkuHTTPRequest {
   private _params: Record<string, string | string[] | undefined> = {}
 
@@ -93,7 +87,6 @@ export class PikkuMockResponse implements PikkuHTTPResponse {
     throw new Error('Method not implemented.')
   }
   json(data: unknown): this {
-    // We don't need to implement this for our test
     return this
   }
   redirect(location: string, status?: number): this {
@@ -134,7 +127,6 @@ test('runChannel should return undefined and 404 if no matching channel is found
     'Should return undefined if no channel matches'
   )
   assert.equal(mockResponse._status, 404, 'Should set response status to 404')
-  // assert.equal(mockResponse._ended, true, 'Should end the response')
 })
 
 test('runChannel should return a channel handler if channel matches and no auth required', async () => {
@@ -156,7 +148,6 @@ test('runChannel should return a channel handler if channel matches and no auth 
     auth: false,
   })
 
-  // Initialize router after adding channel (for tests)
   httpRouter.initialize()
 
   const result = await runLocalChannel({
@@ -168,7 +159,6 @@ test('runChannel should return a channel handler if channel matches and no auth 
 
   assert.ok(result, 'Should return a PikkuChannelHandler instance')
 
-  // Simulate opening the channel
   result.open()
 })
 

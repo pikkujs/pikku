@@ -41,23 +41,6 @@ export type RunAIAgentParams = {
   getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
 }
 
-/**
- * The ownership key for a thread/run: the trusted principal (the authenticated
- * `session.userId` for `'user'` scope, or `session.orgId` for `'org'` scope)
- * composed with the client-supplied `resourceId` as a sub-partition —
- * `principal:resourceId`. Because the principal is always the prefix, a client
- * `resourceId` can sub-divide within the caller's own boundary but can never
- * widen access to another user's or org's threads.
- *
- * Idempotent: a value that is already within the caller's namespace (top-level
- * re-entry, sub-agent recursion, or resume, which all pass an already-composite
- * `resourceId`) is returned unchanged rather than double-composed.
- *
- * `'org'` scope with no session org throws {@link ForbiddenError} — falling back
- * to a bare/shared key would leak across organizations. Sessionless `'user'`
- * wirings have no trusted principal and fall back to the requested `resourceId`
- * as a best-effort partition key.
- */
 export function resolveOwnerResourceId(
   params: RunAIAgentParams,
   sessionScope: SessionScope | undefined,
@@ -86,16 +69,10 @@ export function resolveOwnerResourceId(
   return `${principal}:${requestedResourceId}`
 }
 
-/** The declared {@link SessionScope} for an agent, defaulting to `'user'`. */
 export function agentSessionScope(agentName: string): SessionScope {
   return resolveAgent(agentName).agent.sessionScope ?? 'user'
 }
 
-/**
- * Enforce that a stored thread/run belongs to the caller's owner resource,
- * throwing {@link ForbiddenError} (without echoing the id, to avoid an
- * existence oracle) on a mismatch.
- */
 export function assertResourceOwner(
   ownerResourceId: string,
   storedResourceId: string,
@@ -106,7 +83,6 @@ export function assertResourceOwner(
   }
 }
 
-/** A session's trusted principals, in the order they may be read as. */
 export function sessionPrincipals(
   session: { userId?: string; orgId?: string } | undefined
 ): string[] {
@@ -115,12 +91,6 @@ export function sessionPrincipals(
   )
 }
 
-/**
- * Whether `storedResourceId` belongs to `principal` under the composition
- * {@link resolveOwnerResourceId} performs — either the bare principal or one of
- * its `principal:` sub-partitions. The `:` is required so that `alice` does not
- * match a `alice-evil:…` lookalike.
- */
 export function isOwnedByPrincipal(
   storedResourceId: string,
   principal: string
@@ -131,14 +101,6 @@ export function isOwnedByPrincipal(
   )
 }
 
-/**
- * The `owners` constraint to pass to `AgentRunService.listThreads` for a caller.
- *
- * Returns `undefined` — not `[]` — for a session with no principal, because an
- * empty list means "match nothing" whereas a sessionless deployment (agent
- * `no-auth`) has no ownership model to constrain by. Keeping that carve-out here
- * rather than at each call site stops it from being re-derived inconsistently.
- */
 export function threadOwnerConstraint(
   session: { userId?: string; orgId?: string } | undefined
 ): string[] | undefined {
@@ -146,21 +108,6 @@ export function threadOwnerConstraint(
   return principals.length > 0 ? principals : undefined
 }
 
-/**
- * Whether a stored thread/run may be read by the caller. Shaped as a predicate
- * so it can back a `pikkuPermission` — authorization belongs in a function's
- * `permissions` field, never in its body.
- *
- * Unlike {@link assertResourceOwner}, which compares against a single composed
- * owner key on the run path, this guards the thread-management reads where the
- * caller supplies only a `threadId` — so ownership has to be derived from the
- * session rather than from the request.
- *
- * A session with no principal means the deployment opted out of authorization
- * (agent `no-auth`), so there is no ownership model to enforce and access is not
- * gated — mirroring {@link resolveOwnerResourceId}'s sessionless fallback to a
- * bare resourceId.
- */
 export function canAccessThread(
   storedResourceId: string,
   session: { userId?: string; orgId?: string } | undefined
@@ -174,22 +121,20 @@ export function canAccessThread(
 
 export type StreamAIAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
-  /**
-   * Invoked as soon as the run's AIRunStateService id exists, so transport
-   * wrappers (e.g. the AG-UI bridge) can stamp the real runId on RUN_STARTED.
-   */
   onRunCreated?: (runId: string) => void
 }
 
-/**
- * Non-forgeable brand for the sub-agent approval marker. Only framework code
- * (the delegating sub-agent tools below) sets this Symbol on a tool result; a
- * sub-agent's LLM-shaped `result.object` — plain JSON — cannot carry a Symbol,
- * so `checkForApprovals` trusts the brand rather than the `__approvalRequired`
- * string key to decide an approval must be surfaced.
- */
 export const APPROVAL_REQUIRED: unique symbol = Symbol(
   'pikku.ai.approvalRequired'
+)
+
+/**
+ * In-process brand proving a credential request was produced by pikku itself and
+ * not by tool output an attacker can influence. Never serialized — a value that
+ * has crossed a JSON boundary has lost the brand and is treated as untrusted.
+ */
+export const CREDENTIAL_REQUIRED: unique symbol = Symbol(
+  'pikku.ai.credentialRequired'
 )
 
 export class ToolApprovalRequired extends PikkuError {
@@ -255,10 +200,6 @@ export interface AddonCredentialRequirement {
   oauth2: boolean
 }
 
-/**
- * Given a list of tool names (e.g. ["oauth-api:getProfile"]),
- * returns the wire OAuth credentials required by their addons.
- */
 export function getAddonCredentialRequirements(
   toolNames: string[]
 ): AddonCredentialRequirement[] {
@@ -334,26 +275,6 @@ export const resolveAgent = (
   throw new Error(`AI agent not found: ${agentName}`)
 }
 
-/**
- * Enforces an agent's own authorization before it runs: session presence
- * (`auth`), then `scopes`, then `permissions`.
- *
- * The ordering mirrors the function runner — scopes are an AND gate checked
- * first, so they can only ever narrow access, and a missing scope short-circuits
- * before any permission function does I/O.
- *
- * `auth` follows `pikkuSessionlessFunc` rather than `pikkuFunc`: a session is
- * required only when `auth: true` is set explicitly. An agent is normally
- * reached from a function that has already enforced its own auth, and agents are
- * also run from genuinely sessionless contexts (crons, queue workers), so
- * requiring a session by default would reject those without adding a meaningful
- * gate. `scopes` and `permissions` are always enforced when declared.
- *
- * Globals are evaluated here too (via {@link runPermissions}) rather than being
- * assumed to have already run: an agent is reachable from entry points that do
- * not go through the function runner, and re-evaluating an AND gate of
- * side-effect-free predicates is idempotent.
- */
 export async function assertAgentAuthorized(
   agent: CoreAIAgent,
   params: RunAIAgentParams,
@@ -477,17 +398,6 @@ export function createScopedChannel(
   }
 }
 
-/**
- * Build the run input for a delegated sub-agent.
- *
- * `context` is the PARENT run's identifier block (the "Current context" text
- * with organizationId, project/stage ids). A sub-agent's tool-call schema only
- * carries { message, session }, so unless the sub-agent inherits the parent's
- * context it never sees the authoritative ids — it depends on the model
- * re-typing them into `message`, which weak models botch, causing
- * schema/permission rejections and retry loops. Forwarding it here is the
- * regression this seam guards.
- */
 export function buildSubAgentRunInput(
   message: string,
   threadId: string,
@@ -506,13 +416,6 @@ export async function buildToolDefs(
   streamContext?: StreamContext,
   aiMiddlewares?: PikkuAIMiddlewareHooks[],
   agentMode?: 'delegate' | 'supervise',
-  // The parent run's `context` (the "Current context" identifier block). A
-  // delegated sub-agent's tool-call input schema only carries { message,
-  // session }, so without inheriting this the sub-agent never sees the
-  // authoritative ids (organizationId, project/stage ids) — it depends on the
-  // model re-typing them into `message`, which weak models botch, causing
-  // schema/permission rejections and retry loops. Forward it so the sub-agent
-  // gets the same context block in its instructions.
   parentContext?: string
 ): Promise<{ tools: AIAgentToolDef[]; missingRpcs: string[] }> {
   const singletonServices = getSingletonServices()
@@ -541,7 +444,6 @@ export async function buildToolDefs(
     ?.getFunctionsMeta()
     .catch(() => undefined)
 
-  // Get session for permission filtering
   const session = params.sessionService
     ? await params.sessionService.get()
     : null
@@ -582,10 +484,6 @@ export async function buildToolDefs(
         continue
       }
 
-      // Filter out tools the user doesn't have auth for. The `pikkuAuth` brand
-      // only survives on the live permission objects in the function config, so
-      // the check reads those rather than the metadata (whose by-name registry
-      // is never populated, which would let every gated tool through).
       if (fnMeta.permissions?.length) {
         if (!session) continue
         const funcConfig = pikkuFuncId
@@ -617,7 +515,6 @@ export async function buildToolDefs(
         approvalPolicy === 'all' ||
         (approvalPolicy === 'explicit' && fnMeta?.approvalRequired)
 
-      // Build approvalDescriptionFn if the function has an approvalDescription configured
       let approvalDescriptionFn:
         | ((input: unknown) => Promise<string>)
         | undefined
@@ -692,8 +589,6 @@ export async function buildToolDefs(
         continue
       }
 
-      // Filter out sub-agents the user doesn't have auth for, reading the live
-      // agent config for the same reason the tool path does.
       if (subMeta.permissions?.length) {
         if (!session) continue
         const subAgent = pikkuState(null, 'agent', 'agents').get(subAgentName)
@@ -749,8 +644,6 @@ export async function buildToolDefs(
               subAgentName,
               session
             )
-            // In supervise mode, suppress sub-agent text from reaching the client.
-            // Approvals still flow through normally.
             const effectiveChannel = isDelegate
               ? subChannel
               : {
@@ -796,7 +689,6 @@ export async function buildToolDefs(
             return resultText
           }
 
-          // No stream context: sub-agent runs non-streaming
           const result = await runAIAgent(
             subAgentName,
             buildSubAgentRunInput(message, threadId, resourceId, parentContext),
@@ -886,17 +778,19 @@ export async function buildToolDefs(
     }
   }
 
-  // A tool's execute() can throw (bad input, RPC failure, DB error, ...). The AI
-  // SDK catches that at the tool-call boundary and turns it into a conversational
-  // "tool error" reply — without this, the exception never reaches pikku's own
-  // logger, so a failing tool is undiagnosable server-side. Log unconditionally,
-  // even when no aiMiddleware afterToolCall hook is registered to see it.
   for (const tool of tools) {
     const originalExecute = tool.execute
     tool.execute = async (toolInput: unknown) => {
       try {
         return await originalExecute(toolInput)
-      } catch (err) {
+      } catch (err: any) {
+        if (err?.payload?.error === 'missing_credential') {
+          return {
+            [CREDENTIAL_REQUIRED]: true,
+            __credentialRequired: true,
+            ...err.payload,
+          }
+        }
         singletonServices.logger.error(
           `AI agent tool '${tool.name}' threw during execute()`,
           err
@@ -1088,7 +982,6 @@ export async function prepareAgentRun(
 
   const resolved = resolveModelConfig(resolvedName, agent)
 
-  // Per-request overrides
   if (input.model) {
     resolved.model = resolveModelConfig(resolvedName, {
       ...agent,

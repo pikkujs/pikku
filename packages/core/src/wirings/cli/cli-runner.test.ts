@@ -96,7 +96,6 @@ describe('CLI Runner', () => {
         return { success: true }
       }
 
-      // Setup metadata
       pikkuState(null, 'cli', 'meta', {
         programs: {
           'test-cli': {

@@ -132,7 +132,6 @@ describe('MCPEndpointRegistry', () => {
     })
 
     test('should handle empty object gracefully', async () => {
-      // Test with empty object
       await registry.loadFromMCPJson({})
       assert.deepStrictEqual(registry.getTools(), [])
       assert.deepStrictEqual(registry.getResources(), [])

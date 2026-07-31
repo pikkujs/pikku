@@ -13,7 +13,6 @@ import type {
 } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { isProduction } from '../../env.js'
-import { closeWireServices } from '../../utils.js'
 import {
   pikkuState,
   getSingletonServices,
@@ -36,10 +35,7 @@ export class MCPError extends Error {
 
 export type RunMCPEndpointParams<Tools extends string = any> = {
   mcp?: PikkuMCP<Tools>
-  /**
-   * Surface the error message + stack on unexpected internal errors.
-   * Defaults to enabled outside of production.
-   */
+  /** Defaults to enabled outside production. */
   exposeErrors?: boolean
 }
 
@@ -112,13 +108,11 @@ export async function runMCPResource(
     pikkuFuncId = metas[uri]?.pikkuFuncId
   } else {
     for (const [uriTemplate, value] of endpoints.entries()) {
-      // Extract parameter names from the template
       const paramNames = Array.from(
         uriTemplate.matchAll(/\{([^}]+)\}/g),
         (m) => m[1]
       )
 
-      // Create regex pattern to match and capture parameter values
       const regexPattern = uriTemplate.replace(/\{[^}]+\}/g, '([^/]+)')
       const regex = new RegExp(`^${regexPattern}$`)
       const match = uri.match(regex)
@@ -127,7 +121,6 @@ export async function runMCPResource(
         endpoint = value
         pikkuFuncId = metas[uriTemplate]?.pikkuFuncId
 
-        // Extract parameter values and create params object
         for (let i = 0; i < paramNames.length; i++) {
           extractedParams[paramNames[i]!] = match[i + 1]! // match[0] is the full match
         }
@@ -184,9 +177,6 @@ export async function runMCPPrompt(
   )
 }
 
-/**
- * JSON-RPC 2.0 compatible MCP endpoint runner
- */
 async function runMCPPikkuFunc(
   request: JsonRpcRequest,
   type: 'resource' | 'tool' | 'prompt',
@@ -197,7 +187,6 @@ async function runMCPPikkuFunc(
 ): Promise<JsonRpcResponse> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  let wireServices: any
 
   try {
     if (request.jsonrpc !== '2.0') {
@@ -237,7 +226,6 @@ async function runMCPPikkuFunc(
       meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
     }
 
-    // Resolve namespaced function IDs (e.g., 'swaggerPetstore:findPetsByStatus')
     let resolvedFuncName = pikkuFuncId
     let resolvedPackageName: string | null = meta?.packageName ?? null
     if (pikkuFuncId.includes(':')) {
@@ -295,15 +283,12 @@ async function runMCPPikkuFunc(
         id: request.id,
         code: -32603,
         message: 'Internal error',
+        // knowledge: decisions/security/mcp-internal-error-details-are-double-gated-on-production.md
         data:
           exposeErrors && !isProduction() && e instanceof Error
             ? { message: e.message, stack: e.stack }
             : undefined,
       })
-    }
-  } finally {
-    if (wireServices) {
-      await closeWireServices(singletonServices.logger, wireServices)
     }
   }
 }

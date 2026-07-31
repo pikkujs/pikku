@@ -109,23 +109,19 @@ export function defineServiceTests(config: ServiceTestConfig): void {
           channelName: 'test-channel',
         })
 
-        // initially undefined
         const empty = await store.getState('ch-state')
         assert.equal(empty, undefined)
 
-        // set + get
         const payload = { userId: 'u-7', meta: { foo: 1 } }
         await store.setState('ch-state', payload)
         const got = await store.getState('ch-state')
         assert.deepEqual(got, payload)
 
-        // overwrite
         const next = { userId: 'u-8' }
         await store.setState('ch-state', next)
         const got2 = await store.getState('ch-state')
         assert.deepEqual(got2, next)
 
-        // clear
         await store.clearState('ch-state')
         const after = await store.getState('ch-state')
         assert.equal(after, undefined)
@@ -383,28 +379,6 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         assert.ok(flaky, 'retried step collapses to a single status entry')
         assert.equal(flaky.status, 'succeeded', 'latest attempt wins')
         assert.equal(flaky.attempts, 2, 'attempt count surfaces in status')
-      })
-
-      test('getNodesWithoutSteps', async () => {
-        const runId = await service.createRun(
-          'graph-workflow',
-          {},
-          false,
-          'hash-7',
-          wire
-        )
-        await service.insertStepState(runId, 'existing-node', 'rpc', {})
-
-        const missing = await service.getNodesWithoutSteps(runId, [
-          'existing-node',
-          'missing-node',
-        ])
-        assert.deepEqual(missing, ['missing-node'])
-      })
-
-      test('getNodesWithoutSteps with empty array', async () => {
-        const result = await service.getNodesWithoutSteps('any-id', [])
-        assert.deepEqual(result, [])
       })
 
       test('getNodeResults', async () => {

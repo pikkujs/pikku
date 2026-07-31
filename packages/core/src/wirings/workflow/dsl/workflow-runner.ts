@@ -1,10 +1,6 @@
 import { pikkuState } from '../../../pikku-state.js'
 import { addFunction } from '../../../function/function-runner.js'
 
-/**
- * Add a workflow to the system
- * This is called by the generated workflow wirings
- */
 export const addWorkflow = (
   workflowName: string,
   workflowFunc: any,

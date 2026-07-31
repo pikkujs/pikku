@@ -3,10 +3,9 @@ export type StubCall = { service: string; method: string; args: unknown[] }
 type Call = { method: string; args: unknown[]; verified: boolean }
 
 /**
- * Tracks calls made to stubbed services and enforces strict mode:
- * once a scenario asserts any call on a service, every recorded call on that
- * service must be verified by end of scenario — otherwise the After hook fails.
- * Services never touched by an assertion stay lenient.
+ * Strict per service: once a scenario asserts any call on a service, every
+ * recorded call on it must be verified by the end of the scenario or the After
+ * hook fails. A service no assertion ever touched stays lenient.
  */
 export class StubTracker {
   private readonly calls = new Map<string, Call[]>()
@@ -123,16 +122,11 @@ export class StubTracker {
   }
 }
 
-/**
- * Creates a Proxy suitable for passing as `existingServices` to
- * `createSingletonServices`. Every property returns `tracker.stub(prop)`
- * EXCEPT `schema`, which returns `undefined` so the service factory creates
- * a real schema service. Stubbing the schema makes validation a no-op —
- * required fields pass silently and tests validate nothing.
- */
+/** Pass as `existingServices` to `createSingletonServices`. */
 export function createStubProxy(tracker: StubTracker): Record<string, unknown> {
   return new Proxy({} as Record<string, unknown>, {
     get(_, prop: string) {
+      // knowledge: decisions/design/the-schema-service-is-never-stubbed.md
       if (prop === 'schema') return undefined
       return tracker.stub(prop)
     },
@@ -141,19 +135,15 @@ export function createStubProxy(tracker: StubTracker): Record<string, unknown> {
 
 const defaultStubTracker = new StubTracker()
 
-/** The process-wide tracker that `stub()`/`spy()` record into — read by the console's getStubCalls/resetStubs RPCs */
+/** The process-wide tracker `stub()`/`spy()` record into; read by the console's getStubCalls/resetStubs RPCs. */
 export const getStubTracker = (): StubTracker => defaultStubTracker
 
-/** True when the server was started by `pikku dev --test` (sets PIKKU_TEST_RUN) */
+/** True when the server was started by `pikku dev --test`, which sets PIKKU_TEST_RUN. */
 export const isTestRun = (): boolean =>
   (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process?.env?.PIKKU_TEST_RUN === 'true'
 
-/**
- * Creates a recording fake for a service. Methods present on `impl` run and
- * their result is returned; missing methods resolve `undefined`. Every call
- * is recorded so scenarios can assert via workflow.expectService().
- */
+/** Methods on `impl` run and return; every other method resolves `undefined`. */
 export function stub<T = any>(service: string, impl?: Partial<T>): T {
   return new Proxy((impl ?? {}) as object, {
     get(target: any, method: string | symbol) {

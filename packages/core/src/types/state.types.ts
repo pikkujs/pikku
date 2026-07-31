@@ -1,4 +1,7 @@
-import type { PikkuError, ErrorDetails } from '../errors/error-handler.js'
+import type {
+  PikkuErrorConstructor,
+  ErrorDetails,
+} from '../errors/error-handler.js'
 import type {
   CorePikkuFunctionConfig,
   CorePermissionGroup,
@@ -63,9 +66,6 @@ import type {
 } from './core.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 
-/**
- * State structure for an individual package
- */
 export interface PikkuPackageState {
   function: {
     meta: FunctionsMeta
@@ -172,14 +172,13 @@ export interface PikkuPackageState {
     global: (CorePermissionGroup | CorePikkuPermission)[]
   }
   misc: {
-    errors: Map<PikkuError, ErrorDetails>
+    errors: Map<PikkuErrorConstructor, ErrorDetails>
     schemas: Map<string, any>
     middleware: Record<string, CorePikkuMiddleware[]>
     channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
   package: {
-    /** Service factory functions for addon packages */
     factories: {
       createConfig?: CreateConfig<CoreConfig>
       createSingletonServices?: CreateSingletonServices<
@@ -192,19 +191,16 @@ export interface PikkuPackageState {
         CoreUserSession
       >
     } | null
-    /** Cached singleton services for this package */
     singletonServices: CoreSingletonServices | null
     /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.
      *  pikkuServices reads it to build and inject the `auth` singleton. */
     authFactory:
       | ((services: CoreSingletonServices) => unknown | Promise<unknown>)
       | null
-    /** Credential metadata for this addon package */
     credentialsMeta: Record<
       string,
       { name: string; displayName: string; type: string; oauth2?: boolean }
     > | null
-    /** Services this addon needs from the parent project */
     requiredParentServices: string[] | null
   }
 }

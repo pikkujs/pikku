@@ -418,8 +418,6 @@ export function createWorkingMemoryMiddleware(options: {
           }
         }
 
-        // Only persist when the merged value passes schema validation —
-        // saving invalid data would poison subsequent getWorkingMemory reads.
         if (valid) {
           await options.storage.saveWorkingMemory(
             options.threadId,

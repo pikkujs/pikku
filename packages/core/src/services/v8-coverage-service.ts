@@ -1,6 +1,3 @@
-// node:inspector is imported lazily inside start() so this module stays
-// loadable on runtimes without it (e.g. Cloudflare Workers).
-
 export interface CoverageRange {
   startOffset: number
   endOffset: number
@@ -71,9 +68,8 @@ export interface CoverageFunctionMeta {
 export interface CoverageService {
   start(): Promise<void>
   takeCoverage(): Promise<CoverageSnapshot>
-  /** Maps the current snapshot onto function body spans. Provided by the
-   *  process that booted the coverage backend (the pikku CLI) — absent when
-   *  the runtime only exposes raw snapshots. */
+  /** Provided by the process that booted the backend (the pikku CLI); absent
+   *  when the runtime only exposes raw snapshots. */
   takeReport?(
     functionsMeta: Record<string, CoverageFunctionMeta>
   ): Promise<FunctionCoverageReport>
@@ -113,6 +109,7 @@ export class V8CoverageService implements CoverageService {
   }
 
   private async doStart(): Promise<void> {
+    // knowledge: decisions/design/node-only-builtins-are-imported-dynamically.md
     const inspector = await import('node:inspector')
     this.session = new inspector.Session() as unknown as InspectorSession
     this.session.connect()

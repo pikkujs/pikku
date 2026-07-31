@@ -1,10 +1,6 @@
 import type { PikkuHTTPRequest } from './http.types.js'
 import type { PikkuHTTPResponse } from './http.types.js'
 
-/**
- * Converts a PikkuHTTPRequest into a Web API Request.
- * Useful for bridging Pikku routes to libraries that expect standard Web Request objects.
- */
 export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
   const proto = req.header('x-forwarded-proto') ?? 'http'
   const host =
@@ -30,11 +26,6 @@ export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
   return new Request(url, {
     method,
     headers,
-    // `pull` (lazy) rather than `start` (eager): the body is only read from the
-    // underlying request when this stream is actually consumed. A consumer that
-    // builds a web Request just to read its headers (e.g. a session middleware
-    // calling getSession({ headers })) never touches the body, so it does zero
-    // body I/O and cannot race the route handler's read of the same request.
     body: new ReadableStream({
       async pull(controller) {
         try {
@@ -42,7 +33,6 @@ export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
           if (buffer.byteLength > 0) {
             controller.enqueue(new Uint8Array(buffer))
           } else {
-            // arrayBuffer may be empty if body was pre-parsed (e.g., Express middleware)
             const contentType = (
               headers.get('content-type') || ''
             ).toLowerCase()
@@ -63,9 +53,7 @@ export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
               controller.enqueue(new TextEncoder().encode(reconstructed))
             }
           }
-        } catch {
-          // Empty body
-        }
+        } catch {}
         controller.close()
       },
     }),
@@ -136,10 +124,6 @@ async function readBody(
   return bytes.byteLength === 0 ? null : bytes
 }
 
-/**
- * Applies a Web API Response to a PikkuHTTPResponse.
- * Copies status, headers (including Set-Cookie), redirects, and body.
- */
 export async function applyWebResponse(
   res: PikkuHTTPResponse,
   webResponse: Response

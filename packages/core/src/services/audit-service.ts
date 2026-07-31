@@ -76,8 +76,7 @@ class DisabledInvocationAudit implements AuditLog {
   async write(_event: AuditLogWriteInput): Promise<void> {
     if (!this.warned) {
       this.warned = true
-      // Fall back to the singleton logger — wires rarely carry their own, and
-      // a dropped audit write must never be invisible.
+      // knowledge: decisions/security/a-dropped-audit-write-is-always-logged.md
       const logger = (this.wire as any).logger ?? this.logger
       logger?.warn?.(
         `audit.write() dropped for '${this.wire.functionId ?? 'unknown function'}' — the function has no audit config (set audit: true on it)`

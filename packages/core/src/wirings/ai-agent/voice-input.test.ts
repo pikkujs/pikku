@@ -8,12 +8,6 @@ import {
 } from './voice-input.js'
 import type { AIContentPart, AIMessage } from './ai-agent.types.js'
 
-/**
- * A runner whose `transcribe` reads instance state through `this`, mirroring the
- * real `VercelAIAgentRunner` where `transcribe` calls `this.getModel(...)`. If
- * the middleware grabs the method as a bare reference the receiver is lost and
- * `this` is undefined — which is exactly the regression this guards.
- */
 class ThisDependentRunner {
   private readonly transcript = 'the transcribed spoken words'
 

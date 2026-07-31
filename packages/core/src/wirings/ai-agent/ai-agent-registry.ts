@@ -1,6 +1,14 @@
 import type { CoreAIAgent, AgentRunState } from './ai-agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
+import {
+  agentSessionScope,
+  assertAgentAuthorized,
+  assertResourceOwner,
+  resolveAgent,
+  resolveOwnerResourceId,
+  type RunAIAgentParams,
+} from './ai-agent-prepare.js'
 
 export const addAIAgent = (
   agentName: string,
@@ -26,7 +34,8 @@ export async function approveAIAgent(
   aiRunState: AIRunStateService,
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],
-  expectedAgentName?: string
+  expectedAgentName?: string,
+  params: RunAIAgentParams = {}
 ): Promise<{
   status: 'resumed' | 'suspended'
   runId: string
@@ -38,6 +47,15 @@ export async function approveAIAgent(
 
   const run = await aiRunState.getRun(runId)
   if (!run) throw new Error('Run not found: ' + runId)
+  assertResourceOwner(
+    resolveOwnerResourceId(
+      params,
+      agentSessionScope(run.agentName),
+      run.resourceId
+    ),
+    run.resourceId,
+    'run'
+  )
   if (expectedAgentName && run.agentName !== expectedAgentName) {
     throw new Error(
       `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
@@ -45,6 +63,9 @@ export async function approveAIAgent(
   }
   if (run.status !== 'suspended')
     throw new Error('Run is not suspended: ' + run.status)
+
+  const { agent, packageName } = resolveAgent(run.agentName)
+  await assertAgentAuthorized(agent, params, packageName)
 
   const approvedIds = new Set(
     approvals.filter((a) => a.approved).map((a) => a.toolCallId)

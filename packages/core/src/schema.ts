@@ -9,13 +9,6 @@ import { pikkuState, getAllPackageStates } from './pikku-state.js'
 const schemaKey = (name: string, packageName: string | null): string =>
   packageName ? `${packageName}:${name}` : name
 
-/**
- * Adds a schema to the schemas map for a specific package.
- * @param name - The name of the schema.
- * @param value - The schema value.
- * @param packageName - The package name (null for main package, '@scope/package' for addon packages).
- * @ignore
- */
 export const addSchema = (
   name: string,
   value: any,
@@ -25,13 +18,6 @@ export const addSchema = (
   pikkuState(packageName, 'misc', 'schemas').set(name, schema)
 }
 
-/**
- * Retrieves a schema from the schemas map for a specific package.
- * @param name - The name of the schema.
- * @param packageName - The package name (null for main package, '@scope/package' for addon packages).
- * @returns The schema value or undefined if not found.
- * @ignore
- */
 export const getSchema = (
   name: string,
   packageName: string | null = null
@@ -39,10 +25,6 @@ export const getSchema = (
   return pikkuState(packageName, 'misc', 'schemas').get(name)
 }
 
-/**
- * Loads a schema and compiles it into a validator.
- * @param logger - A logger for logging information.
- */
 export const compileAllSchemas = (
   logger: Logger,
   schemaService?: SchemaService
@@ -95,27 +77,11 @@ const validateAllSchemasLoaded = (
 }
 
 /**
- * Fill in absent top-level properties from their schema `default`.
- *
- * A `default` reaches the generated JSON Schema and keeps the property out of
- * `required`, so omitting it validates — but nothing was ever filling it in.
- * JSON Schema validators are pure by specification and none of the ones Pikku
- * ships with (`@cfworker/json-schema`, and Ajv unless `useDefaults` is set)
- * annotate the instance, so the function received `undefined` for a property
- * its generated type declares as present. That is the worst shape a mismatch
- * can take: validation permits the omission, the type says the value is there,
- * and the body reads `undefined`.
- *
- * Applied unconditionally rather than alongside `coerceTopLevelDataFromSchema`,
- * whose `coerceDataFromSchema` flag is about decoding transport-encoded values
- * (a query string's `"1,2"` into an array). Defaults are a property of the
- * schema, not of how the call arrived, so gating them on that flag would apply
- * them over HTTP and skip them on a direct RPC invocation.
- *
- * Returns the data to use, which is a new object only when defaults had to be
- * added to a nullish input — a call made with no arguments at all still gets
- * them. Values are cloned so an object or array default (`[]`, `{}`) is never
- * shared as one mutable instance across every request.
+ * Fills in absent top-level properties from their schema `default`. Applied
+ * unconditionally: a default belongs to the schema, not to the transport the
+ * call arrived on, and runs before coercion so a defaulted and a supplied
+ * value are treated identically from here on. Values are cloned so an object
+ * or array default is never shared as one mutable instance across requests.
  */
 export const applyDefaultsFromSchema = (
   schemaName: string,

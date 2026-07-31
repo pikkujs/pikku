@@ -1,9 +1,9 @@
 import type { CoreCredential } from './credential.types.js'
 
 /**
- * No-op function for declaring credentials.
- * This exists purely for TypeScript type checking and will be tree-shaken.
- * The CLI extracts metadata via AST parsing.
+ * Declares a credential. The body is a no-op that tree-shakes away — the CLI
+ * reads the call by AST, so the declaration must be a top-level literal.
+ * `type: 'wire'` is per-user, `type: 'singleton'` is platform-wide.
  *
  * @example
  * ```typescript

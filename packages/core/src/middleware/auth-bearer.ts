@@ -12,46 +12,9 @@ const constantTimeEqual = (a: string, b: string): boolean => {
 }
 
 /**
- * Bearer token middleware that extracts and validates tokens from the Authorization header.
- *
- * Supports three modes:
- * - JWT decoding (default): Decodes bearer tokens using the JWT service
- * - Static token: Provide a `token` object with a value and userSession for simple token validation
- * - Secret-resolved token: Provide a `token` object with a secretId — the expected
- *   value is resolved through the secrets service per request, so it works with any
- *   secret backend and the middleware is a no-op while the secret is unset
- *
- * @param options.token - Optional token configuration: { value, userSession } or { secretId, userSession }
- *
- * @example
- * ```typescript
- * import { authBearer } from '@pikku/core/middleware'
- *
- * // JWT mode (default)
- * addHTTPMiddleware('*', [
- *   authBearer()
- * ])
- *
- * // Static token mode
- * addHTTPMiddleware('*', [
- *   authBearer({
- *     token: {
- *       value: process.env.API_TOKEN,
- *       userSession: { userId: 'system', role: 'admin' }
- *     }
- *   })
- * ])
- *
- * // Secret-resolved token mode
- * addHTTPMiddleware('*', [
- *   authBearer({
- *     token: {
- *       secretId: 'PIKKU_CONSOLE_TOKEN',
- *       userSession: { userId: 'pikku-console-token' }
- *     }
- *   })
- * ])
- * ```
+ * Validates a bearer token: JWT-decoded by default, or compared in constant
+ * time against a static `value` or a `secretId` resolved through the secrets
+ * service per request.
  */
 export const authBearer = pikkuMiddlewareFactory<{
   token?:

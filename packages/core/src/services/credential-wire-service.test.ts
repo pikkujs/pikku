@@ -29,9 +29,7 @@ describe('PikkuCredentialWireService', () => {
   test('should return sync after first load (no credential service)', async () => {
     const service = new PikkuCredentialWireService()
     service.set('foo', 'bar')
-    // First call triggers lazy load (no-op without credentialService)
     await service.getAll()
-    // Second call should be sync
     const result = service.getAll()
     assert.ok(!(result instanceof Promise), 'expected sync return')
     assert.deepStrictEqual(result, { foo: 'bar' })

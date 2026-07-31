@@ -27,7 +27,6 @@ describe('ConsoleLogger', () => {
     console.log = (...args: any[]) => captured.push({ method: 'log', args })
   })
 
-  // Restore console after each test
   test('should log info at default level', () => {
     logger.info('test message')
     assert.strictEqual(captured.length, 1)

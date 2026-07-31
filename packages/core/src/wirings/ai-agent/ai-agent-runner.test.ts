@@ -1135,8 +1135,6 @@ describe('C2 resume run ownership', () => {
   test('allows the owning user past the ownership gate', async () => {
     addTestAgent('resume-owner-agent')
     pikkuState(null, 'package', 'singletonServices', {
-      // No aiAgentRunner, so a passing ownership gate surfaces the provider
-      // error instead of ForbiddenError — proving the gate did not block.
       aiRunState: { getRun: async () => suspendedRun('user-a') },
     } as any)
 

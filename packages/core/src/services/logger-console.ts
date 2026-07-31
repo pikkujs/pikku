@@ -1,10 +1,7 @@
 import type { Logger } from './logger.js'
 import { LogLevel } from './logger.js'
 
-/**
- * Text-mode console logger.
- * Output: `INFO: message` or `[traceId] INFO: message`
- */
+/** Emits `INFO: message`, or `[traceId] INFO: message` when scoped. */
 export class ConsoleLogger implements Logger {
   private level: LogLevel = LogLevel.info
   private prefix: string
@@ -85,9 +82,8 @@ export class ConsoleLogger implements Logger {
 }
 
 /**
- * JSON-mode console logger.
- * Output: `{"level":"info","message":"...","traceId":"..."}`
- * CF Workers Logs auto-indexes JSON keys for filtering.
+ * Emits `{"level":"info","message":"...","traceId":"..."}` — one JSON object per
+ * line, because Cloudflare Workers Logs auto-indexes JSON keys for filtering.
  */
 export class JsonConsoleLogger implements Logger {
   private level: LogLevel = LogLevel.info

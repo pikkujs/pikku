@@ -19,7 +19,6 @@ import type {
 export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
-  /** Pre-resolved trace ID */
   traceId?: string
 }
 
@@ -96,7 +95,6 @@ export async function runScheduledTask({
     )
   }
 
-  // Create the scheduled task wire object
   const wire: PikkuRawWire = {
     traceId: resolvedTraceId,
     scheduledTask: {

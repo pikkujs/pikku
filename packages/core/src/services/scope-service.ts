@@ -1,7 +1,6 @@
 import type { FlatScope } from '../wirings/scope/scope.types.js'
 import type { SystemRole } from '../wirings/role/role.types.js'
 
-/** A role: a named bag of scopes. */
 export interface Role {
   name: string
   description?: string
@@ -20,38 +19,17 @@ export interface Role {
   declared?: boolean
 }
 
-/**
- * Resolves and administers the scopes granted to a user.
- *
- * Implementations are called at the **session boundary** — e.g. better-auth's
- * `mapSession` — never by the function runner. The runner reads
- * `session.scopes` and never performs I/O, which keeps it viable on Workers
- * and Lambda. Because the session is rebuilt per request, a scope change takes
- * effect on the next call with nothing cached and nothing to invalidate.
- *
- * `syncScopes` is deliberately additive: scopes are declared in code, so a
- * removed declaration leaves an inert row rather than silently revoking a
- * grant mid-deploy. Removal is an explicit operation (`pikku scopes prune`).
- */
+// knowledge: decisions/security/scope-resolution-happens-at-the-session-boundary-and-sync-never-deletes.md
 export interface ScopeService {
-  /**
-   * Registers the declared scope set. Additive — never deletes.
-   * Called once during startup with the generated scope list.
-   */
   syncScopes(scopes: FlatScope[]): Promise<void>
 
-  /**
-   * Every scope a user holds: the union of their role-derived scopes and any
-   * scopes granted to them directly.
-   */
+  /** The union of role-derived scopes and scopes granted directly. */
   resolveScopes(userId: string): Promise<string[]>
 
   /**
-   * The scope vocabulary in the store: everything a role can be composed from.
-   *
-   * `declared: false` marks a scope that is still present but no longer
-   * declared in code — inert (no function can require it) and awaiting
-   * `pikku scopes prune`.
+   * The whole vocabulary a role can be composed from. `declared: false` marks a
+   * scope still in the store but no longer declared in code: inert, since no
+   * function can require it, and awaiting `pikku scopes prune`.
    */
   listScopes(): Promise<Array<FlatScope & { declared: boolean }>>
 
@@ -86,10 +64,7 @@ export interface ScopeService {
   removeUserFromRole(userId: string, role: string): Promise<void>
   listUserRoles(userId: string): Promise<string[]>
 
-  /**
-   * Grants a scope directly to a user, outside of any role. Additive: the
-   * resolved set is the union of role-derived and directly-granted scopes.
-   */
+  /** Grants outside of any role; additive with the user's role-derived scopes. */
   addScopeToUser(
     userId: string,
     scope: string,
@@ -99,10 +74,7 @@ export interface ScopeService {
   /** Only the scopes granted directly, not those inherited from roles. */
   listUserScopes(userId: string): Promise<string[]>
 
-  /**
-   * Scopes present in the store that are no longer declared in code, with the
-   * roles that would lose them. Powers `pikku scopes audit`.
-   */
+  /** Undeclared scopes with the roles that would lose them; powers `pikku scopes audit`. */
   findStaleScopes(): Promise<Array<{ scope: string; roles: string[] }>>
 
   /** Removes undeclared scopes, cascading them out of roles. */
