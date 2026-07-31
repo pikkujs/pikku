@@ -225,6 +225,81 @@ export const decryptWithKeyMaterial = async <T>(
   return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
 }
 
+export const encodeBase64UrlText = (value: string): string =>
+  toBase64Url(encoder.encode(value))
+
+export const decodeBase64UrlText = (value: string): string =>
+  decoder.decode(fromBase64Url(value))
+
+const expandSigningKeyMaterial = async (
+  keyMaterial: string,
+  info: string
+): Promise<CryptoKey> => {
+  const subtle = getSubtle()
+  const material = await subtle.importKey(
+    'raw',
+    encoder.encode(keyMaterial),
+    'HKDF',
+    false,
+    ['deriveKey']
+  )
+  return subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(0) as BufferSource,
+      info: encoder.encode(info) as BufferSource,
+    },
+    material,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  )
+}
+
+/**
+ * HMAC-SHA256 over `payload` under a key expanded from high-entropy key
+ * material, base64url-encoded. The salt is empty by design so the verifier can
+ * re-derive the key from `keyMaterial` and `info` alone.
+ */
+export const signWithKeyMaterial = async (
+  name: string,
+  keyMaterial: string,
+  info: string,
+  payload: string
+): Promise<string> => {
+  assertStrongKeyMaterial(name, keyMaterial)
+  const key = await expandSigningKeyMaterial(keyMaterial, info)
+  const signature = await getSubtle().sign(
+    'HMAC',
+    key,
+    encoder.encode(payload) as BufferSource
+  )
+  return toBase64Url(new Uint8Array(signature))
+}
+
+/** False — never throws — for a malformed, truncated or mismatched signature. */
+export const verifyWithKeyMaterial = async (
+  name: string,
+  keyMaterial: string,
+  info: string,
+  payload: string,
+  signature: string
+): Promise<boolean> => {
+  assertStrongKeyMaterial(name, keyMaterial)
+  const key = await expandSigningKeyMaterial(keyMaterial, info)
+  try {
+    return await getSubtle().verify(
+      'HMAC',
+      key,
+      fromBase64Url(signature) as BufferSource,
+      encoder.encode(payload) as BufferSource
+    )
+  } catch {
+    return false
+  }
+}
+
 const importRawKey = async (rawBytes: Uint8Array): Promise<CryptoKey> => {
   const subtle = getSubtle()
   return subtle.importKey(

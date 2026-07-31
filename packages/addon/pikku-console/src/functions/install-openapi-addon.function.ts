@@ -18,7 +18,8 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
   description:
     'Generates an addon from an OpenAPI spec, installs it into the workspace, and wires it up.',
   expose: true,
-  auth: false,
+  auth: true,
+  scopes: ['admin'],
   func: async ({ metaService }, { name, swaggerUrl, credential }) => {
     const { readFile } = await import('node:fs/promises')
     const { join, dirname } = await import('node:path')

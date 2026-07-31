@@ -282,10 +282,11 @@ const WORKFLOW_POLL_FACTOR = 1.6
 const WORKFLOW_CHILD_POLL_MAX_MS = 500
 
 type RunContext = {
-  inline: boolean
+  activeExecutions: number
+  inline?: boolean
+  ordinals: Map<string, number>
+  lastStep?: string
   replay?: {
-    ordinals: Map<string, number>
-    lastStep?: string
     steps?: Map<string, StepState>
     run?: WorkflowRun
   }
@@ -299,7 +300,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   private contextFor(runId: string): RunContext {
     let context = this.runContexts.get(runId)
     if (!context) {
-      context = { inline: false }
+      context = { activeExecutions: 0, ordinals: new Map() }
       this.runContexts.set(runId, context)
     }
     return context
@@ -308,8 +309,28 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   private releaseContext(runId: string): void {
     const context = this.runContexts.get(runId)
     if (!context) return
-    if (context.inline || context.replay) return
+    if (context.activeExecutions > 0) return
     this.runContexts.delete(runId)
+  }
+
+  private enterExecution(runId: string): RunContext {
+    const context = this.contextFor(runId)
+    context.activeExecutions++
+    return context
+  }
+
+  private exitExecution(runId: string): void {
+    const context = this.runContexts.get(runId)
+    if (!context) return
+    if (context.activeExecutions > 0) {
+      context.activeExecutions--
+    }
+    if (context.activeExecutions === 0) {
+      context.replay = undefined
+      context.ordinals = new Map()
+      context.lastStep = undefined
+    }
+    this.releaseContext(runId)
   }
 
   protected get logger() {
@@ -468,8 +489,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  protected isInline(runId: string): boolean {
-    return this.runContexts.get(runId)?.inline === true
+  protected async isInline(runId: string): Promise<boolean> {
+    const context = this.runContexts.get(runId)
+    if (context?.inline !== undefined) {
+      return context.inline
+    }
+    const inline = (await this.getRunIdentity(runId))?.inline === true
+    if (context) {
+      context.inline = inline
+    }
+    return inline
   }
 
   public registerInlineRun(runId: string): void {
@@ -479,7 +508,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public unregisterInlineRun(runId: string): void {
     const context = this.runContexts.get(runId)
     if (!context) return
-    context.inline = false
+    context.inline = undefined
     this.releaseContext(runId)
   }
 
@@ -983,7 +1012,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepId: string,
     duration: number | string
   ): Promise<boolean> {
-    if (this.isInline(runId) || !getSingletonServices()?.schedulerService) {
+    if (
+      (await this.isInline(runId)) ||
+      !getSingletonServices()?.schedulerService
+    ) {
       return false
     }
     await getSingletonServices()!.schedulerService!.scheduleRPC(
@@ -1165,8 +1197,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private async beginReplay(runId: string): Promise<void> {
-    const context = this.contextFor(runId)
-    context.replay = { ordinals: new Map() }
+    const context = this.enterExecution(runId)
+    context.ordinals = new Map()
+    context.lastStep = undefined
+    context.replay = {}
     const steps = await this.listStepStates(runId)
     if (steps) {
       context.replay.steps = new Map(steps.map((step) => [step.stepName, step]))
@@ -1174,10 +1208,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private endReplay(runId: string): void {
-    const context = this.runContexts.get(runId)
-    if (!context) return
-    context.replay = undefined
-    this.releaseContext(runId)
+    this.exitExecution(runId)
   }
 
   private async loadOrCreateStep(
@@ -1226,19 +1257,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private lastStepName(runId: string): string | undefined {
-    return this.runContexts.get(runId)?.replay?.lastStep
+    return this.runContexts.get(runId)?.lastStep
   }
 
   private nextStepKey(runId: string, logicalStepName: string): string {
     const context = this.contextFor(runId)
-    const replay: NonNullable<RunContext['replay']> = (context.replay ??= {
-      ordinals: new Map(),
-    })
-    const ordinal = replay.ordinals.get(logicalStepName) ?? 0
-    replay.ordinals.set(logicalStepName, ordinal + 1)
+    const ordinal = context.ordinals.get(logicalStepName) ?? 0
+    context.ordinals.set(logicalStepName, ordinal + 1)
     const stepName =
       ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
-    replay.lastStep = stepName
+    context.lastStep = stepName
     return stepName
   }
 
@@ -1450,6 +1478,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   public async executeWorkflowStep(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    rpcService: any
+  ): Promise<void> {
+    this.enterExecution(runId)
+    try {
+      await this.executeWorkflowStepInner(
+        runId,
+        stepName,
+        rpcName,
+        data,
+        rpcService
+      )
+    } finally {
+      this.exitExecution(runId)
+    }
+  }
+
+  private async executeWorkflowStepInner(
     runId: string,
     stepName: string,
     rpcName: string,
@@ -1867,7 +1916,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const retries = stepOptions?.retries ?? this.getConfig().retries
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
 
-    if (this.isInline(runId)) {
+    if (await this.isInline(runId)) {
       return this.runInlineRetryLoop(stepState, retries, retryDelay, () => fn())
     } else {
       let currentStepState = stepState

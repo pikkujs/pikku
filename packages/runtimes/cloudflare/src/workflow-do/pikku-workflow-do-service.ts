@@ -477,7 +477,7 @@ export class PikkuWorkflowDoService<
     data: unknown,
     stepOptions?: WorkflowStepOptions
   ): Promise<boolean> {
-    if (this.isInline(runId)) return false
+    if (await this.isInline(runId)) return false
     const stub = await this.getStepStub(rpcName)
     if (!stub) return false
 
@@ -515,7 +515,7 @@ export class PikkuWorkflowDoService<
     stepId: string,
     duration: number | string
   ): Promise<boolean> {
-    if (this.isInline(runId)) return false
+    if (await this.isInline(runId)) return false
     const ms =
       typeof duration === 'number' ? duration : parseDurationMs(duration)
     await this.storage.put<DoPendingAlarm>(KEY_ALARM_NEXT, {

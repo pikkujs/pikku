@@ -25,9 +25,10 @@ export const installAddon = pikkuSessionlessFunc<
 >({
   title: 'Install Addon',
   description:
-    'Installs a community addon package and creates the wiring file.',
+    'Installs a community addon package and creates the wiring file. Requires an admin session.',
   expose: true,
-  auth: false,
+  auth: true,
+  scopes: ['admin'],
   func: async ({ metaService }, { packageName, namespace, version }) => {
     const { readFile, writeFile, mkdir, readdir } =
       await import('node:fs/promises')

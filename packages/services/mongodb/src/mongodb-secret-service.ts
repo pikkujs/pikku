@@ -186,8 +186,12 @@ export class MongoDBSecretService implements SecretService {
           row.ciphertext,
           row.wrappedDek
         )
-      } catch {
-        // skip secrets that fail to decrypt
+      } catch (cause) {
+        throw new Error(
+          `Failed to decrypt secret "${row._id}" (key_version ${row.keyVersion}): ` +
+            `the configured KEK does not match the key it was wrapped under`,
+          { cause }
+        )
       }
     }
     return out as T

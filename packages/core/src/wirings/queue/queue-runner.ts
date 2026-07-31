@@ -12,6 +12,7 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { resolveQueueJobIdentity } from './queue-identity.js'
 
 class QueueWorkerNotFoundError extends PikkuError {
   constructor(name: string) {
@@ -110,10 +111,18 @@ export async function runQueueJob({
     throw new Error(`Queue worker registration not found for: ${job.queueName}`)
   }
 
+  // knowledge: decisions/security/queue-job-identities-are-signed-at-enqueue.md
+  const pikkuUserId = await resolveQueueJobIdentity({
+    claimedIdentity: job.pikkuUserId,
+    binding: { queueName: job.queueName, jobId: job.id, data: job.data },
+    secrets: singletonServices.secrets,
+    logger,
+  })
+
   const queue: PikkuQueue = {
     queueName: job.queueName,
     jobId: job.id,
-    pikkuUserId: job.pikkuUserId,
+    pikkuUserId,
     updateProgress:
       updateProgress ||
       (async (progress: number | string | object) => {
