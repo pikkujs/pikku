@@ -309,6 +309,8 @@ export type { AuditLogPanelProps } from './components/audit/AuditLogPanel'
 // than two halves of one segmented control.
 export { ScenarioFlowsPanel } from './components/flows/ScenarioFlowsPanel'
 export type { ScenarioFlowsPanelProps } from './components/flows/ScenarioFlowsPanel'
+export { PersonaDetail } from './components/personas/PersonaDetail'
+export type { PersonaDetailProps } from './components/personas/PersonaDetail'
 export { ScenarioPersonasPanel } from './components/personas/ScenarioPersonasPanel'
 export type { ScenarioPersonasPanelProps } from './components/personas/ScenarioPersonasPanel'
 

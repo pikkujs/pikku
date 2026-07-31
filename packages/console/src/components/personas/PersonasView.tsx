@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Stack, Skeleton } from '@pikku/mantine/core'
 import { UserRound } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { PersonaCard } from './PersonaCard'
-import { PersonaDrawer } from './PersonaDrawer'
+import { usePanelContext } from '../../context/PanelContext'
 import type { PersonaEntry } from './persona-types'
 
 type PersonasViewProps = {
@@ -20,8 +20,7 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
   onOpenScenario,
 }) => {
   useLocale()
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const selected = personas.find((p) => p.key === selectedKey) ?? null
+  const { openPersona } = usePanelContext()
 
   if (loading) {
     return (
@@ -44,18 +43,19 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
   }
 
   return (
-    <>
-      <Stack gap={12}>
-        {personas.map((p) => (
-          <PersonaCard key={p.key} persona={p} onOpen={setSelectedKey} />
-        ))}
-      </Stack>
-      <PersonaDrawer
-        persona={selected}
-        opened={selected !== null}
-        onClose={() => setSelectedKey(null)}
-        onOpenScenario={onOpenScenario}
-      />
-    </>
+    <Stack gap={12}>
+      {personas.map((p) => (
+        <PersonaCard
+          key={p.key}
+          persona={p}
+          onOpen={(key) => {
+            const persona = personas.find((entry) => entry.key === key)
+            if (persona) {
+              openPersona(key, persona.name, { persona, onOpenScenario })
+            }
+          }}
+        />
+      ))}
+    </Stack>
   )
 }

@@ -16,6 +16,7 @@ import {
 import { WorkflowPanelFlow } from './WorkflowPanelFlow'
 import { useWorkflowInputSchema } from '../../hooks/useWorkflowInputSchema'
 import { FunctionTabbedPanel } from '../project/panels/FunctionDetailsForm'
+import { PersonaDetail } from '../personas/PersonaDetail'
 import {
   WorkflowStepConfiguration,
   WorkflowStepInput,
@@ -580,6 +581,24 @@ export const createPanelChildren = (
           ),
         },
       ]
+
+    case 'persona':
+      return panelData.metadata?.persona
+        ? [
+            {
+              id: 'persona',
+              title: 'Persona',
+              content: (
+                <Box px="md">
+                  <PersonaDetail
+                    persona={panelData.metadata.persona}
+                    onOpenScenario={panelData.metadata.onOpenScenario}
+                  />
+                </Box>
+              ),
+            },
+          ]
+        : []
 
     default:
       return []

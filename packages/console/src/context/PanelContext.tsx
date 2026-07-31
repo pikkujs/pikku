@@ -24,6 +24,7 @@ export type PanelType =
   | 'authProvider'
   | 'dbColumn'
   | 'email'
+  | 'persona'
 
 export interface PanelData {
   type: PanelType
@@ -69,6 +70,9 @@ interface PanelContextType {
   openAuthProvider: (providerId: string, metadata?: any) => void
   openDbColumn: (tableName: string, columnName: string, metadata?: any) => void
   openEmail: (templateName: string, metadata?: any) => void
+  /** Metadata carries the persona itself and, where there is somewhere to
+   *  follow one to, the scenario reveal handler. */
+  openPersona: (personaKey: string, title: string, metadata?: any) => void
   navigateInPanel: (
     type: PanelType,
     id: string,
@@ -191,7 +195,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
 
   const openGateway = useCallback(
     (gatewayId: string, metadata?: any) => {
-      openPanelGeneric('gateway', gatewayId, metadata?.name || gatewayId, metadata)
+      openPanelGeneric(
+        'gateway',
+        gatewayId,
+        metadata?.name || gatewayId,
+        metadata
+      )
     },
     [openPanelGeneric]
   )
@@ -283,7 +292,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
 
   const openDbColumn = useCallback(
     (tableName: string, columnName: string, metadata?: any) => {
-      openPanelGeneric('dbColumn', `${tableName}.${columnName}`, columnName, { ...metadata, tableName, columnName })
+      openPanelGeneric('dbColumn', `${tableName}.${columnName}`, columnName, {
+        ...metadata,
+        tableName,
+        columnName,
+      })
     },
     [openPanelGeneric]
   )
@@ -291,6 +304,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
   const openEmail = useCallback(
     (templateName: string, metadata?: any) => {
       openPanelGeneric('email', templateName, templateName, metadata)
+    },
+    [openPanelGeneric]
+  )
+
+  const openPersona = useCallback(
+    (personaKey: string, title: string, metadata?: any) => {
+      openPanelGeneric('persona', personaKey, title, metadata)
     },
     [openPanelGeneric]
   )
@@ -423,6 +443,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         openAuthProvider,
         openDbColumn,
         openEmail,
+        openPersona,
         navigateInPanel,
         goBack,
         goBackTo,
