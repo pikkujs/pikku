@@ -29,6 +29,15 @@ export const secretSchema: PikkuSchema = {
 
     (db) =>
       db.schema
+        .createTable('secretKekSalts')
+        .addColumn('keyVersion', 'integer', (col) => col.primaryKey())
+        .addColumn('salt', 'varchar(64)', (col) => col.notNull())
+        .addColumn('createdAt', 'timestamp', (col) =>
+          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
+        ),
+
+    (db) =>
+      db.schema
         .createTable('secretsAudit')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
         .addColumn('secretKey', 'varchar(255)', (col) => col.notNull())

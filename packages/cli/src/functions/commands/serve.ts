@@ -33,6 +33,7 @@ import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
+import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; console?: boolean },
@@ -101,9 +102,13 @@ export const serve = pikkuSessionlessFunc<
             sizeLimit: userConfig.content.sizeLimit,
           }
         : undefined
-    const localContent = localContentConfig
-      ? new LocalContent(localContentConfig, logger)
+    const contentSigningJWT = localContentConfig
+      ? createEphemeralContentSigningJWT()
       : undefined
+    const localContent =
+      localContentConfig && contentSigningJWT
+        ? new LocalContent(localContentConfig, logger, contentSigningJWT)
+        : undefined
 
     const schedulerService = new InMemorySchedulerService()
     const aiStorage = kysely
@@ -184,7 +189,8 @@ export const serve = pikkuSessionlessFunc<
         content: localContentConfig,
         ...(consoleMount ? { staticMounts: [consoleMount] } : {}),
       },
-      logger
+      logger,
+      { contentSigningJWT }
     )
 
     const lifecycle = await loadLifecycle()

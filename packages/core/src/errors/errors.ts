@@ -292,6 +292,18 @@ addError(MissingSchemaError, {
     'A required schema was not found. Ensure schema generation has been run.',
 })
 
+export class WeakKeyMaterialError extends PikkuError {
+  constructor(name: string, minimumLength: number, actualLength: number) {
+    super(
+      `${name} must be at least ${minimumLength} characters of high-entropy key material, got ${actualLength}. Generate one with \`openssl rand -base64 32\` and redeploy every service that shares it.`
+    )
+  }
+}
+addError(WeakKeyMaterialError, {
+  status: 500,
+  message: 'A configured secret does not carry enough entropy to be used.',
+})
+
 export class AIProviderNotConfiguredError extends PikkuError {
   constructor() {
     super(

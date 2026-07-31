@@ -110,6 +110,10 @@ describe('addAIAgent', () => {
 })
 
 describe('approveAIAgent', () => {
+  const ownerParams = {
+    sessionService: sessionService({ userId: 'resource-1' } as CoreUserSession),
+  } as any
+
   test('throws when run state service is missing, run is missing, or run is not suspended', async () => {
     registerAgent('agent')
 
@@ -125,7 +129,9 @@ describe('approveAIAgent', () => {
             updateRun: async () => {},
           } as any,
           'run-1',
-          []
+          [],
+          undefined,
+          ownerParams
         ),
       {
         message: 'Run not found: run-1',
@@ -153,7 +159,9 @@ describe('approveAIAgent', () => {
             updateRun: async () => {},
           } as any,
           'run-1',
-          []
+          [],
+          undefined,
+          ownerParams
         ),
       {
         message: 'Run is not suspended: completed',
@@ -184,7 +192,8 @@ describe('approveAIAgent', () => {
           aiRunState,
           'run-1',
           [{ toolCallId: 'call-1', approved: true }],
-          'public-agent'
+          'public-agent',
+          ownerParams
         ),
       {
         message:
@@ -230,7 +239,9 @@ describe('approveAIAgent', () => {
       [
         { toolCallId: 'call-1', approved: true },
         { toolCallId: 'call-3', approved: false },
-      ]
+      ],
+      undefined,
+      ownerParams
     )
 
     assert.deepEqual(updates, [
@@ -278,7 +289,9 @@ describe('approveAIAgent', () => {
         },
       } as any,
       'run-3',
-      [{ toolCallId: 'call-1', approved: false }]
+      [{ toolCallId: 'call-1', approved: false }],
+      undefined,
+      ownerParams
     )
 
     assert.deepEqual(updates, [

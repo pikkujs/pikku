@@ -12,7 +12,10 @@ import { randomUUID, timingSafeEqual } from 'node:crypto'
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
-import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import {
+  signedContentPath,
+  type LocalContentConfig,
+} from '@pikku/core/services/local-content'
 import type { JWTService, Logger } from '@pikku/core/services'
 import {
   fetchData,
@@ -111,6 +114,15 @@ export type PikkuNodeHTTPServerOptions = {
    * warning is logged at startup.
    */
   dispatchSecret?: string
+  /**
+   * The JWTService that signed the content service's URLs. Signed asset reads
+   * are verified with it, so it must be the very same service `LocalContent`
+   * was constructed with. When unset, `singletonServices.jwt` is used — the
+   * usual case, where an app hands one JWTService to both. When neither is
+   * available, signed asset reads are rejected: an unverifiable signature is
+   * never trusted.
+   */
+  contentSigningJWT?: JWTService
 } & RunHTTPWiringOptions
 
 const STATIC_MIME_TYPES: Record<string, string> = {
@@ -154,6 +166,7 @@ const HARDENING_DEFAULTS = {
 export class PikkuNodeHTTPServer {
   public server: Server
   private listening = false
+  private loggedMissingContentSigningJWT = false
   private shutdownGracePeriodMs: number
   private mcpPath: string
   private mcpHandler?: (
@@ -664,9 +677,21 @@ export class PikkuNodeHTTPServer {
       }
     }
 
-    const jwt = this.getJWTService()
+    const jwt = this.getContentSigningJWTService()
     if (!jwt) {
-      return { ok: true }
+      // Logged once: an unverifiable request is attacker-triggerable, and the
+      // condition it reports is a startup misconfiguration, not per-request news.
+      if (!this.loggedMissingContentSigningJWT) {
+        this.loggedMissingContentSigningJWT = true
+        this.logger.error(
+          'pikku-node-http-server: refusing signed asset reads — no JWTService is available to verify them. Pass `contentSigningJWT` (the same service LocalContent signs with) or expose it as `singletonServices.jwt`.'
+        )
+      }
+      return {
+        ok: false,
+        status: 403,
+        body: 'Invalid signed URL',
+      }
     }
 
     if (!signature) {
@@ -682,12 +707,14 @@ export class PikkuNodeHTTPServer {
         signedAt?: number
         expiresAt?: number
         notBefore?: number
+        path?: string
       }>(signature)
 
       if (
         payload.signedAt !== signedAt ||
         payload.expiresAt !== expiresAt ||
-        payload.notBefore !== notBefore
+        payload.notBefore !== notBefore ||
+        payload.path !== signedContentPath(requestUrl.pathname)
       ) {
         return {
           ok: false,
@@ -706,8 +733,11 @@ export class PikkuNodeHTTPServer {
     return { ok: true }
   }
 
-  private getJWTService(): JWTService | undefined {
-    return pikkuState(null, 'package', 'singletonServices')?.jwt
+  private getContentSigningJWTService(): JWTService | undefined {
+    return (
+      this.options.contentSigningJWT ??
+      pikkuState(null, 'package', 'singletonServices')?.jwt
+    )
   }
 
   private async readRequestBody(

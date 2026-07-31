@@ -1,15 +1,57 @@
 import { parse as parseCookie } from 'cookie'
 import type { FastifyRequest } from 'fastify'
 import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
-import { UnprocessableContentError } from '@pikku/core/errors'
+import { DEFAULT_MAX_BODY_SIZE } from '@pikku/core/http'
+import {
+  PayloadTooLargeError,
+  UnprocessableContentError,
+} from '@pikku/core/errors'
+
+export type FastifyPikkuHTTPRequestOptions = Partial<{
+  /** Maximum request body size in bytes. Defaults to `DEFAULT_MAX_BODY_SIZE`. */
+  maxBodySize: number
+}>
 
 export class FastifyPikkuHTTPRequest<
   In = unknown,
 > implements PikkuHTTPRequest<In> {
   #cookies: Partial<Record<string, string>> | undefined
   #params: Partial<Record<string, string | string[]>> = {}
+  #maxBodySize: number
 
-  constructor(private req: FastifyRequest) {}
+  constructor(
+    private req: FastifyRequest,
+    { maxBodySize = DEFAULT_MAX_BODY_SIZE }: FastifyPikkuHTTPRequestOptions = {}
+  ) {
+    this.#maxBodySize = maxBodySize
+  }
+
+  /**
+   * Fastify's own `bodyLimit` stops an oversized request before it is buffered;
+   * this is the backstop for instances whose content-type parser bypasses it,
+   * and it keeps the rejection identical to every other Pikku runtime.
+   */
+  #assertBodyWithinLimit(): void {
+    const declared = Number(this.header('content-length'))
+    if (Number.isFinite(declared) && declared > this.#maxBodySize) {
+      throw this.#payloadTooLarge()
+    }
+    const body = this.req.body
+    const size = Buffer.isBuffer(body)
+      ? body.byteLength
+      : typeof body === 'string'
+        ? Buffer.byteLength(body)
+        : 0
+    if (size > this.#maxBodySize) {
+      throw this.#payloadTooLarge()
+    }
+  }
+
+  #payloadTooLarge(): PayloadTooLargeError {
+    return new PayloadTooLargeError(
+      `Request body exceeds the maximum size of ${this.#maxBodySize} bytes`
+    )
+  }
 
   public method(): HTTPMethod {
     return this.req.method.toLowerCase() as HTTPMethod
@@ -22,10 +64,12 @@ export class FastifyPikkuHTTPRequest<
   }
 
   public async json(): Promise<unknown> {
+    this.#assertBodyWithinLimit()
     return this.req.body ?? {}
   }
 
   public async arrayBuffer(): Promise<ArrayBuffer> {
+    this.#assertBodyWithinLimit()
     const body = this.req.body
     if (Buffer.isBuffer(body)) {
       return new Uint8Array(body).buffer as ArrayBuffer
@@ -92,6 +136,8 @@ export class FastifyPikkuHTTPRequest<
     const method = this.req.method.toLowerCase() as HTTPMethod
     const noBodyMethods: HTTPMethod[] = ['get', 'head', 'options', 'delete']
     if (noBodyMethods.includes(method)) return {}
+
+    this.#assertBodyWithinLimit()
 
     const body = this.req.body
     if (body == null) return {}

@@ -1,15 +1,58 @@
 import { parse as parseCookie } from 'cookie'
 import type { Request as ExpressRequest } from 'express'
 import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
-import { UnprocessableContentError } from '@pikku/core/errors'
+import { DEFAULT_MAX_BODY_SIZE } from '@pikku/core/http'
+import {
+  PayloadTooLargeError,
+  UnprocessableContentError,
+} from '@pikku/core/errors'
+
+export type ExpressPikkuHTTPRequestOptions = Partial<{
+  /** Maximum request body size in bytes. Defaults to `DEFAULT_MAX_BODY_SIZE`. */
+  maxBodySize: number
+}>
 
 export class ExpressPikkuHTTPRequest<
   In = unknown,
 > implements PikkuHTTPRequest<In> {
   #cookies: Partial<Record<string, string>> | undefined
   #params: Partial<Record<string, string | string[]>> = {}
+  #maxBodySize: number
 
-  constructor(private req: ExpressRequest) {}
+  constructor(
+    private req: ExpressRequest,
+    { maxBodySize = DEFAULT_MAX_BODY_SIZE }: ExpressPikkuHTTPRequestOptions = {}
+  ) {
+    this.#maxBodySize = maxBodySize
+  }
+
+  /**
+   * Express hands Pikku a body its own parser already buffered, so the declared
+   * content-length is the only measure of what came off the wire for a parsed
+   * object. Prevention lives in the parser limit (`express.json({ limit })`);
+   * this is the backstop that keeps the rejection identical across runtimes.
+   */
+  #assertBodyWithinLimit(): void {
+    const declared = Number(this.header('content-length'))
+    if (Number.isFinite(declared) && declared > this.#maxBodySize) {
+      throw this.#payloadTooLarge()
+    }
+    const body = this.req.body
+    const size = Buffer.isBuffer(body)
+      ? body.byteLength
+      : typeof body === 'string'
+        ? Buffer.byteLength(body)
+        : 0
+    if (size > this.#maxBodySize) {
+      throw this.#payloadTooLarge()
+    }
+  }
+
+  #payloadTooLarge(): PayloadTooLargeError {
+    return new PayloadTooLargeError(
+      `Request body exceeds the maximum size of ${this.#maxBodySize} bytes`
+    )
+  }
 
   public method(): HTTPMethod {
     return this.req.method.toLowerCase() as HTTPMethod
@@ -20,10 +63,12 @@ export class ExpressPikkuHTTPRequest<
   }
 
   public async json(): Promise<unknown> {
+    this.#assertBodyWithinLimit()
     return this.req.body ?? {}
   }
 
   public async arrayBuffer(): Promise<ArrayBuffer> {
+    this.#assertBodyWithinLimit()
     if (Buffer.isBuffer(this.req.body)) {
       return new Uint8Array(this.req.body).buffer as ArrayBuffer
     }
@@ -89,6 +134,8 @@ export class ExpressPikkuHTTPRequest<
     const method = this.req.method.toLowerCase() as HTTPMethod
     const noBodyMethods: HTTPMethod[] = ['get', 'head', 'options', 'delete']
     if (noBodyMethods.includes(method)) return {}
+
+    this.#assertBodyWithinLimit()
 
     const body = this.req.body
     if (body == null) return {}

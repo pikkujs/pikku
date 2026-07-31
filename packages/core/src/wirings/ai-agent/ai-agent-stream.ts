@@ -37,6 +37,7 @@ import {
   resolveOwnerResourceId,
   agentSessionScope,
   assertResourceOwner,
+  assertResourcePrincipalOwner,
   assertAgentAuthorized,
   ToolApprovalRequired,
   ToolCredentialRequired,
@@ -990,12 +991,9 @@ export async function resumeAIAgent(
   if (!run) {
     throw new Error(`No run found for runId ${input.runId}`)
   }
-  assertResourceOwner(
-    resolveOwnerResourceId(
-      params,
-      agentSessionScope(run.agentName),
-      run.resourceId
-    ),
+  assertResourcePrincipalOwner(
+    params,
+    agentSessionScope(run.agentName),
     run.resourceId,
     'run'
   )

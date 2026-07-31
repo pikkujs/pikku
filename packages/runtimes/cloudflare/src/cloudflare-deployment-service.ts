@@ -12,7 +12,7 @@
 import type { DeploymentService, DeploymentConfig } from '@pikku/core/services'
 import type { JWTService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
-import { encryptJSON } from '@pikku/core/crypto-utils'
+import { buildRemoteHeaders } from '@pikku/core/remote'
 
 export type CloudflareEnv = Record<string, unknown>
 
@@ -57,31 +57,13 @@ export class CloudflareDeploymentService implements DeploymentService {
       )
     }
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(traceId && { 'x-request-id': traceId }),
-    }
-
-    // Sign session as JWT for pikkuRemoteAuthMiddleware
-    let secret: string | undefined
-    try {
-      secret = await this.secrets.getSecret('PIKKU_REMOTE_SECRET')
-    } catch {}
-
-    if (secret && this.jwt) {
-      const sessionEnc = session
-        ? await encryptJSON(secret, { session })
-        : undefined
-      const token = await this.jwt.encode(
-        { value: 5, unit: 'minute' },
-        {
-          aud: 'pikku-remote',
-          fn: funcName,
-          session: sessionEnc,
-        }
-      )
-      headers.Authorization = `Bearer ${token}`
-    }
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
 
     const request = new Request(
       `http://internal/remote/rpc/${encodeURIComponent(funcName)}`,

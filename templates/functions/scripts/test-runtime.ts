@@ -52,7 +52,7 @@ const managedProcesses: ManagedProcess[] = []
 const managedClosers: Array<() => Promise<void>> = []
 const sharedRuntimeEnv = {
   BETTER_AUTH_SECRET: 'pikku-test-better-auth-secret-32chars!',
-  PIKKU_REMOTE_SECRET: 'pikku-test-remote-secret',
+  PIKKU_REMOTE_SECRET: 'pikku-test-remote-secret-32chars-min!',
   GITHUB_OAUTH: JSON.stringify({
     clientId: 'pikku-test-github-client-id',
     clientSecret: 'pikku-test-github-client-secret',

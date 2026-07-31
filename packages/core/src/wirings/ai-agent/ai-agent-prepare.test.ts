@@ -6,6 +6,7 @@ import {
   CREDENTIAL_REQUIRED,
   agentSessionScope,
   assertResourceOwner,
+  assertResourcePrincipalOwner,
   canAccessThread,
   buildInstructions,
   buildSubAgentRunInput,
@@ -18,10 +19,7 @@ import {
   sessionPrincipals,
   threadOwnerConstraint,
 } from './ai-agent-prepare.js'
-import {
-  ForbiddenError,
-  MissingCredentialError,
-} from '../../errors/errors.js'
+import { ForbiddenError, MissingCredentialError } from '../../errors/errors.js'
 import { pikkuAuth } from '../../function/functions.types.js'
 import type {
   AIStreamChannel,
@@ -670,11 +668,72 @@ describe('C2 thread/run ownership + sessionScope', () => {
     )
   })
 
-  test('user scope falls back to the bare requested resourceId when sessionless', () => {
-    assert.equal(resolveOwnerResourceId({}, 'user', 'resource-1'), 'resource-1')
-    assert.equal(
+  test('a sessionless caller never owns the resourceId it asked for', () => {
+    assert.notEqual(
+      resolveOwnerResourceId({}, 'user', 'resource-1'),
+      'resource-1'
+    )
+    assert.notEqual(
       resolveOwnerResourceId(params(undefined), 'user', 'resource-1'),
       'resource-1'
+    )
+  })
+
+  test('a sessionless owner id is stable within a request and unique across requests', () => {
+    const request = params(undefined)
+    assert.equal(
+      resolveOwnerResourceId(request, 'user', 'a'),
+      resolveOwnerResourceId(request, 'user', 'b')
+    )
+    assert.notEqual(
+      resolveOwnerResourceId(params(undefined), 'user', 'a'),
+      resolveOwnerResourceId(params(undefined), 'user', 'a')
+    )
+  })
+
+  test('a sessionless caller cannot claim an existing resource by replaying its owner id', () => {
+    const owner = resolveOwnerResourceId(params(undefined), 'user', 'default')
+    assert.notEqual(
+      resolveOwnerResourceId(params(undefined), 'user', owner),
+      owner
+    )
+  })
+
+  test('assertResourcePrincipalOwner refuses every resource when there is no principal', () => {
+    assert.throws(
+      () =>
+        assertResourcePrincipalOwner(
+          params(undefined),
+          'user',
+          'resource-1',
+          'run'
+        ),
+      (e: unknown) => e instanceof ForbiddenError
+    )
+    assert.throws(
+      () => assertResourcePrincipalOwner({}, 'user', 'anon-abc', 'thread'),
+      (e: unknown) => e instanceof ForbiddenError
+    )
+  })
+
+  test('assertResourcePrincipalOwner admits the owning principal and refuses others', () => {
+    assert.doesNotThrow(() =>
+      assertResourcePrincipalOwner(
+        params({ userId: 'alice' }),
+        'user',
+        'alice:default',
+        'run'
+      )
+    )
+    assert.throws(
+      () =>
+        assertResourcePrincipalOwner(
+          params({ userId: 'bob' }),
+          'user',
+          'alice:default',
+          'run'
+        ),
+      (e: unknown) => e instanceof ForbiddenError
     )
   })
 
@@ -753,9 +812,10 @@ describe('thread-read ownership (session principals)', () => {
     )
   })
 
-  test('a sessionless deployment has no ownership model and is not gated', () => {
-    assert.equal(canAccessThread('anything', undefined), true)
-    assert.equal(canAccessThread('anything', {}), true)
+  test('a sessionless caller can read no thread at all', () => {
+    assert.equal(canAccessThread('anything', undefined), false)
+    assert.equal(canAccessThread('anything', {}), false)
+    assert.equal(canAccessThread('anon-abc', undefined), false)
   })
 
   test('sessionPrincipals lists the userId and orgId a caller can read as', () => {
@@ -774,9 +834,9 @@ describe('thread-read ownership (session principals)', () => {
     )
   })
 
-  test('threadOwnerConstraint is undefined for a sessionless caller', () => {
-    assert.equal(threadOwnerConstraint(undefined), undefined)
-    assert.equal(threadOwnerConstraint({}), undefined)
+  test('threadOwnerConstraint matches nothing for a sessionless caller', () => {
+    assert.deepEqual(threadOwnerConstraint(undefined), [])
+    assert.deepEqual(threadOwnerConstraint({}), [])
   })
 })
 

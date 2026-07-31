@@ -1,6 +1,8 @@
 import type { SecretService } from '@pikku/core/services'
 import type { Db, Collection } from 'mongodb'
 import {
+  deriveKEK,
+  generateKEKSalt,
   envelopeEncrypt,
   envelopeDecrypt,
   envelopeRewrap,
@@ -23,6 +25,12 @@ interface SecretDoc {
   updatedAt: Date
 }
 
+interface KekSaltDoc {
+  _id: number
+  salt: string
+  createdAt: Date
+}
+
 interface SecretAuditDoc {
   _id: string
   secretKey: string
@@ -39,6 +47,9 @@ export class MongoDBSecretService implements SecretService {
   private auditReads: boolean
   private secrets!: Collection<SecretDoc>
   private secretsAudit!: Collection<SecretAuditDoc>
+  private kekSaltDocs!: Collection<KekSaltDoc>
+  private kekSalts = new Map<number, string>()
+  private keks = new Map<number, CryptoKey>()
 
   constructor(
     private db: Db,
@@ -56,6 +67,7 @@ export class MongoDBSecretService implements SecretService {
 
     this.secrets = this.db.collection<SecretDoc>('secrets')
     this.secretsAudit = this.db.collection<SecretAuditDoc>('secrets_audit')
+    this.kekSaltDocs = this.db.collection<KekSaltDoc>('secret_kek_salts')
 
     await this.secrets.createIndex({ _id: 1 })
 
@@ -81,17 +93,42 @@ export class MongoDBSecretService implements SecretService {
     })
   }
 
-  private getKEK(version: number): string {
-    if (version === this.keyVersion) return this.key
-    if (this.previousKey) return this.previousKey
-    throw new Error(`No KEK available for key_version ${version}`)
+  private async getKEKSalt(version: number): Promise<string> {
+    const cached = this.kekSalts.get(version)
+    if (cached) return cached
+
+    const doc = await this.kekSaltDocs.findOneAndUpdate(
+      { _id: version },
+      { $setOnInsert: { salt: generateKEKSalt(), createdAt: new Date() } },
+      { upsert: true, returnDocument: 'after' }
+    )
+    if (!doc?.salt) {
+      throw new Error(`Failed to persist a KEK salt for key_version ${version}`)
+    }
+
+    this.kekSalts.set(version, doc.salt)
+    return doc.salt
+  }
+
+  private async getKEK(version: number): Promise<CryptoKey> {
+    const cached = this.keks.get(version)
+    if (cached) return cached
+
+    const passphrase = version === this.keyVersion ? this.key : this.previousKey
+    if (!passphrase) {
+      throw new Error(`No KEK available for key_version ${version}`)
+    }
+
+    const kek = await deriveKEK(passphrase, await this.getKEKSalt(version))
+    this.keks.set(version, kek)
+    return kek
   }
 
   async getSecret<T = string>(key: string): Promise<T> {
     const row = await this.secrets.findOne({ _id: key })
     if (!row) throw new Error('Requested secret not found')
 
-    const kek = this.getKEK(row.keyVersion)
+    const kek = await this.getKEK(row.keyVersion)
     const result = await envelopeDecrypt<T>(kek, row.ciphertext, row.wrappedDek)
     await this.logAudit(key, 'read')
     return result
@@ -103,7 +140,10 @@ export class MongoDBSecretService implements SecretService {
   }
 
   async setSecret(key: string, value: unknown): Promise<void> {
-    const { ciphertext, wrappedDEK } = await envelopeEncrypt(this.key, value)
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(
+      await this.getKEK(this.keyVersion),
+      value
+    )
     const now = new Date()
 
     await this.secrets.updateOne(
@@ -131,16 +171,16 @@ export class MongoDBSecretService implements SecretService {
     await this.logAudit(key, 'delete')
   }
 
-  async getSecrets<
-    T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<T> {
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<T> {
     const rows = await this.secrets
       .find({ _id: { $in: keys } } as any)
       .toArray()
     const out: Record<string, unknown> = {}
     for (const row of rows) {
       try {
-        const kek = this.getKEK(row.keyVersion)
+        const kek = await this.getKEK(row.keyVersion)
         out[row._id] = await envelopeDecrypt(
           kek,
           row.ciphertext,
@@ -163,12 +203,11 @@ export class MongoDBSecretService implements SecretService {
       .project({ _id: 1, wrappedDek: 1 })
       .toArray()
 
+    const oldKEK = await this.getKEK(this.keyVersion - 1)
+    const newKEK = await this.getKEK(this.keyVersion)
+
     for (const row of rows) {
-      const newWrappedDEK = await envelopeRewrap(
-        this.previousKey,
-        this.key,
-        row.wrappedDek
-      )
+      const newWrappedDEK = await envelopeRewrap(oldKEK, newKEK, row.wrappedDek)
       await this.secrets.updateOne(
         { _id: row._id },
         {

@@ -15,6 +15,7 @@ import type {
   DevServerRunner,
   DevServerInstance,
   DevServerConfig,
+  DevServerOptions,
 } from './dev-server-runner.interface.js'
 
 export class NodeServerRunner implements DevServerRunner {
@@ -22,12 +23,17 @@ export class NodeServerRunner implements DevServerRunner {
     return new LocalEventHubService()
   }
 
-  createServer(config: DevServerConfig, logger: Logger): DevServerInstance {
+  createServer(
+    config: DevServerConfig,
+    logger: Logger,
+    options: DevServerOptions = {}
+  ): DevServerInstance {
     const wss = new WebSocketServer({ noServer: true })
     const server = new PikkuNodeHTTPServer(config, logger, {
       configureServer: (httpServer) => {
         pikkuWebsocketHandler({ server: httpServer, wss, logger })
       },
+      contentSigningJWT: options.contentSigningJWT,
     })
     return {
       init: () => server.init(),

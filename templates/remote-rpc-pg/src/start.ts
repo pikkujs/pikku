@@ -7,7 +7,7 @@ const serverScript = resolve(__dirname, 'server.ts')
 const PORTS = [3001, 3002]
 
 if (!process.env.PIKKU_REMOTE_SECRET) {
-  process.env.PIKKU_REMOTE_SECRET = 'dev-remote-secret'
+  process.env.PIKKU_REMOTE_SECRET = 'dev-remote-secret-not-for-production-use'
 }
 
 function spawnServer(port: number): ChildProcess {

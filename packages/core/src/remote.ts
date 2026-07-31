@@ -1,6 +1,10 @@
 import type { JWTService } from './services/jwt-service.js'
 import type { SecretService } from './services/secret-service.js'
-import { encryptJSON } from './crypto-utils.js'
+import {
+  assertStrongKeyMaterial,
+  encryptWithKeyMaterial,
+  REMOTE_SESSION_INFO,
+} from './crypto-utils.js'
 
 /**
  * Authorization headers carrying a JWT-signed session and traceId for
@@ -25,8 +29,16 @@ export async function buildRemoteHeaders(
   } catch {}
 
   if (secret && jwt) {
+    assertStrongKeyMaterial('PIKKU_REMOTE_SECRET', secret)
     const sessionEnc = session
-      ? await encryptJSON(secret, { session })
+      ? await encryptWithKeyMaterial(
+          'PIKKU_REMOTE_SECRET',
+          secret,
+          REMOTE_SESSION_INFO,
+          {
+            session,
+          }
+        )
       : undefined
     const token = await jwt.encode(
       { value: 5, unit: 'minute' },

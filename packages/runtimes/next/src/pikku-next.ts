@@ -5,7 +5,7 @@ import type {
   CoreSingletonServices,
   CreateConfig,
 } from '@pikku/core'
-import type { HTTPMethod } from '@pikku/core/http'
+import type { HTTPMethod, RunHTTPWiringOptions } from '@pikku/core/http'
 import { fetchData, fetch } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
@@ -98,11 +98,16 @@ export class PikkuNextJS<
    * Handles an API request from Next.js App Router route handler.
    *
    * @param req - The request object (NextRequest or any Request-compatible object).
+   * @param options - Wiring options, including `maxBodySize` — the request body
+   * is read through Pikku here, so the limit is enforced before buffering.
    * @returns A promise that resolves to a Response object.
    */
-  public async apiRequest(req: Request): Promise<Response> {
+  public async apiRequest(
+    req: Request,
+    options: RunHTTPWiringOptions = {}
+  ): Promise<Response> {
     await this.getSingletonServices()
-    return fetch(req)
+    return fetch(req, options)
   }
 
   /**

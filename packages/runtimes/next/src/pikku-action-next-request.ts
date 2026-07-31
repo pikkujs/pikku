@@ -15,6 +15,12 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
   /**
    * Constructs a new instance of the `PikkuActionNextRequest` class.
    *
+   * Pikku cannot bound the body here: Next has already decoded the server
+   * action payload into a live JS value before this constructor runs, so the
+   * memory is spent by the time we see it. The limit for this path is Next's
+   * own `experimental.serverActions.bodySizeLimit` in `next.config`; route
+   * handlers going through `apiRequest` are bounded by Pikku's `maxBodySize`.
+   *
    * @param body - The request body to be wrapped and converted to a plain object.
    */
   constructor(

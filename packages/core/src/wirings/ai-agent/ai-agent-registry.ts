@@ -4,9 +4,8 @@ import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 import {
   agentSessionScope,
   assertAgentAuthorized,
-  assertResourceOwner,
+  assertResourcePrincipalOwner,
   resolveAgent,
-  resolveOwnerResourceId,
   type RunAIAgentParams,
 } from './ai-agent-prepare.js'
 
@@ -47,12 +46,9 @@ export async function approveAIAgent(
 
   const run = await aiRunState.getRun(runId)
   if (!run) throw new Error('Run not found: ' + runId)
-  assertResourceOwner(
-    resolveOwnerResourceId(
-      params,
-      agentSessionScope(run.agentName),
-      run.resourceId
-    ),
+  assertResourcePrincipalOwner(
+    params,
+    agentSessionScope(run.agentName),
     run.resourceId,
     'run'
   )

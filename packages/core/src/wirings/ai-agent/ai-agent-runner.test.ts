@@ -46,6 +46,10 @@ const makeStepResult = (
   ...overrides,
 })
 
+const asOwner = (resourceId: string) => ({
+  sessionService: { get: () => ({ userId: resourceId }) } as never,
+})
+
 describe('runAIAgent', () => {
   test('throws when aiRunState service is missing', async () => {
     addTestAgent('missing-run-state-agent')
@@ -416,7 +420,7 @@ describe('runAIAgent', () => {
     const result = await runAIAgent(
       'missing-rpc-agent',
       { message: 'deploy', threadId: 'thread-1', resourceId: 'resource-1' },
-      {}
+      asOwner('resource-1')
     )
 
     assert.equal(result.runId, 'run-missing-rpc')
@@ -686,7 +690,7 @@ describe('resumeAIAgentSync', () => {
         }),
       },
     } as any)
-    await assert.rejects(() => resumeAIAgentSync('run-y', [], {}), {
+    await assert.rejects(() => resumeAIAgentSync('run-y', [], asOwner('r')), {
       message: 'Run run-y is not suspended (status: completed)',
     })
 
@@ -708,7 +712,7 @@ describe('resumeAIAgentSync', () => {
       },
     } as any)
     await assert.rejects(
-      () => resumeAIAgentSync('run-z', [], {}),
+      () => resumeAIAgentSync('run-z', [], asOwner('r')),
       (error: unknown) => error instanceof AIProviderNotConfiguredError
     )
   })
@@ -795,7 +799,7 @@ describe('resumeAIAgentSync', () => {
     const result = await resumeAIAgentSync(
       'run-resume',
       [{ toolCallId: 'tc-1', approved: true }],
-      {}
+      asOwner('resource-resume')
     )
 
     assert.deepEqual(resolveCalls, [{ toolCallId: 'tc-1', status: 'approved' }])
@@ -872,7 +876,7 @@ describe('resumeAIAgentSync', () => {
     const denied = await resumeAIAgentSync(
       'run-deny',
       [{ toolCallId: 'tc-2', approved: false }],
-      {}
+      asOwner('resource-deny')
     )
 
     assert.deepEqual(resolveCalls, [{ toolCallId: 'tc-2', status: 'denied' }])
@@ -887,7 +891,7 @@ describe('resumeAIAgentSync', () => {
         resumeAIAgentSync(
           'run-deny',
           [{ toolCallId: 'tc-2', approved: false }],
-          {},
+          asOwner('resource-deny'),
           'other-agent'
         ),
       {
@@ -969,7 +973,7 @@ describe('resumeAIAgentSync', () => {
     const result = await resumeAIAgentSync(
       'run-error',
       [{ toolCallId: 'tc-error', approved: true }],
-      {}
+      asOwner('resource-error')
     )
 
     assert.match(savedMessages[0][0].toolResults[0].result, /tool exploded/)

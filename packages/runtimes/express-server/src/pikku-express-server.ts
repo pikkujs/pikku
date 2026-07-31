@@ -97,21 +97,26 @@ export class PikkuExpressServer {
   }
 
   public async init(httpOptions: RunHTTPWiringOptions = {}) {
+    // Express buffers the body before Pikku ever sees it, so the parser limit
+    // is the only place an oversized request can be stopped. Pikku's
+    // `maxBodySize` therefore feeds express's own limit, with an explicit
+    // per-parser `limits` entry still winning.
+    const { maxBodySize } = httpOptions
     this.app.use(
       express.json({
-        limit: this.config.limits?.json || '1mb',
+        limit: this.config.limits?.json || maxBodySize || '1mb',
       })
     )
     this.app.use(
       express.text({
-        limit: this.config.limits?.xml || '1mb',
+        limit: this.config.limits?.xml || maxBodySize || '1mb',
         type: 'text/xml',
       })
     )
     this.app.use(
       express.urlencoded({
         extended: true,
-        limit: this.config.limits?.urlencoded || '1mb',
+        limit: this.config.limits?.urlencoded || maxBodySize || '1mb',
       })
     )
     this.app.use(cookieParser())

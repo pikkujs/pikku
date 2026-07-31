@@ -3,13 +3,13 @@ import assert from 'node:assert'
 import { pikkuRemoteAuthMiddleware } from './remote-auth.js'
 import { UnauthorizedError } from '../errors/errors.js'
 import { resetPikkuState } from '../pikku-state.js'
-import { encryptJSON } from '../crypto-utils.js'
+import { encryptWithKeyMaterial, REMOTE_SESSION_INFO } from '../crypto-utils.js'
 
 beforeEach(() => {
   resetPikkuState()
 })
 
-const TEST_SECRET = 'test-remote-secret-key'
+const TEST_SECRET = 'test-remote-secret-key-with-enough-entropy'
 
 const createMockSecrets = (secret?: string) => ({
   getSecret: async (key: string) => {
@@ -354,9 +354,14 @@ describe('pikkuRemoteAuthMiddleware', () => {
   describe('session decryption', () => {
     test('should decrypt and set session when payload.session exists', async () => {
       const sessionData = { userId: 'user-1', role: 'admin' }
-      const encryptedSession = await encryptJSON(TEST_SECRET, {
-        session: sessionData,
-      })
+      const encryptedSession = await encryptWithKeyMaterial(
+        'PIKKU_REMOTE_SECRET',
+        TEST_SECRET,
+        REMOTE_SESSION_INFO,
+        {
+          session: sessionData,
+        }
+      )
       let receivedSession: any
 
       await pikkuRemoteAuthMiddleware(
@@ -407,9 +412,14 @@ describe('pikkuRemoteAuthMiddleware', () => {
     })
 
     test('should skip setSession when setSession is not available', async () => {
-      const encryptedSession = await encryptJSON(TEST_SECRET, {
-        session: { userId: 'u1' },
-      })
+      const encryptedSession = await encryptWithKeyMaterial(
+        'PIKKU_REMOTE_SECRET',
+        TEST_SECRET,
+        REMOTE_SESSION_INFO,
+        {
+          session: { userId: 'u1' },
+        }
+      )
       let nextCalled = false
 
       await pikkuRemoteAuthMiddleware(
@@ -434,7 +444,12 @@ describe('pikkuRemoteAuthMiddleware', () => {
     })
 
     test('should skip setSession when decrypted.session is falsy', async () => {
-      const encryptedSession = await encryptJSON(TEST_SECRET, { session: null })
+      const encryptedSession = await encryptWithKeyMaterial(
+        'PIKKU_REMOTE_SECRET',
+        TEST_SECRET,
+        REMOTE_SESSION_INFO,
+        { session: null }
+      )
       let setSessionCalled = false
 
       await pikkuRemoteAuthMiddleware(

@@ -2,7 +2,12 @@ import type * as uWS from 'uWebSockets.js'
 
 import type { Logger } from '@pikku/core/services'
 import type { HTTPMethod, RunHTTPWiringOptions } from '@pikku/core/http'
-import { fetchData, logRoutes as logRegisterRoutes } from '@pikku/core/http'
+import {
+  DEFAULT_MAX_BODY_SIZE,
+  fetchData,
+  logRoutes as logRegisterRoutes,
+} from '@pikku/core/http'
+import { PayloadTooLargeError } from '@pikku/core/errors'
 import { compileAllSchemas } from '@pikku/core/schema'
 
 import { UWSPikkuHTTPRequest } from './uws-pikku-http-request.js'
@@ -35,6 +40,8 @@ export const pikkuHTTPHandler = ({
   if (loadSchemas) {
     compileAllSchemas(logger)
   }
+
+  const maxBodySize = runOptions.maxBodySize ?? DEFAULT_MAX_BODY_SIZE
 
   return (res: uWS.HttpResponse, req: uWS.HttpRequest): void => {
     let aborted = false
@@ -75,12 +82,41 @@ export const pikkuHTTPHandler = ({
         .catch(handleError)
     } else {
       let buffer: Buffer | undefined
+      let received = 0
+
+      // uWS hands over raw chunks with no limit of its own, so the bound has to
+      // be counted here — and once it is breached the chunks are dropped rather
+      // than concatenated, so an oversized request never sits in memory.
+      const declared = Number(headers['content-length'])
+      let oversized = Number.isFinite(declared) && declared > maxBodySize
+
+      const rejectOversized = () => {
+        const response = new UWSPikkuHTTPResponse(res, isAborted)
+        const error = new PayloadTooLargeError(
+          `Request body exceeds the maximum size of ${maxBodySize} bytes`
+        )
+        response.status(413).json({ name: error.name, message: error.message })
+        response.flush()
+      }
 
       res.onData((ab, isLast) => {
-        const chunk = Buffer.from(ab)
-        buffer = buffer ? Buffer.concat([buffer, chunk]) : Buffer.from(chunk)
+        if (!oversized) {
+          const chunk = Buffer.from(ab)
+          received += chunk.byteLength
+          if (received > maxBodySize) {
+            oversized = true
+            buffer = undefined
+          } else {
+            buffer = buffer ? Buffer.concat([buffer, chunk]) : Buffer.from(chunk)
+          }
+        }
 
         if (isLast) {
+          if (oversized) {
+            rejectOversized()
+            return
+          }
+
           const request = new UWSPikkuHTTPRequest(
             method,
             path,
