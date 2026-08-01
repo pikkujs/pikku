@@ -120,6 +120,14 @@ describe('cross-site cookies', () => {
     )
   })
 
+  test('an echoed response is never cacheable', async () => {
+    withFlag('true')
+    const { response } = await runHandler()
+    // A cache that knows to be careful with Set-Cookie knows nothing about the
+    // echo header, and would serve one user's session to the next.
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+  })
+
   test('the handler echoes the rewritten cookies for the client to relay', async () => {
     withFlag('true')
     const { response } = await runHandler()

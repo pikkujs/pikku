@@ -1,5 +1,5 @@
 ---
-'@pikku/better-auth': minor
+'@pikku/better-auth': patch
 ---
 
 Keep a cross-site-embedded app signed in on browsers that refuse third-party cookies.
@@ -20,7 +20,9 @@ before reading the session. A real cookie always wins over a relayed one of the 
 name, so a browser that did store it stays authoritative.
 
 Both header names, `crossSiteCookies()` and `mergeRelayedCookies()` are exported for
-clients that implement the browser half.
+clients that implement the browser half. A response carrying the echo header is marked
+`Cache-Control: no-store`: caches along the path know to be careful with `Set-Cookie`
+and nothing about this one, and a stored copy would hand one user's session to the next.
 
 Unchanged for everyone else: the relay is honoured only when `AUTH_COOKIE_CROSS_SITE`
 is set, which only a runtime that embeds its apps cross-site sets. A deployed app keeps
