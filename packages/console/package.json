@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.49",
+  "version": "0.12.50",
   "description": "Pikku Console — the web UI for inspecting and running Pikku projects",
   "type": "module",
   "main": "./src/index.ts",
