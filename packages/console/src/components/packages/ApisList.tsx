@@ -3,12 +3,7 @@ import { Box, Center, Loader } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Globe } from 'lucide-react'
-import {
-  useQuery,
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
 import { useOpenapiCategories } from '../../hooks/useOpenapiCategories'
@@ -33,7 +28,7 @@ interface OpenApiEntry {
   totalOperations?: number
 }
 
-// APIs render through the exact same gallery/card/drawer as addons — the only
+// APIs render through the exact same gallery/card/panel as addons — the only
 // difference is the action verb (Import vs Add), handled via `kind` props.
 // Mapping into PackageMeta is what makes that reuse possible.
 const apiToPackageMeta = (item: OpenApiEntry): PackageMeta => ({
@@ -61,7 +56,6 @@ export const ApisList: React.FC<{
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
-  const queryClient = useQueryClient()
 
   const [ownCategory, setOwnCategory] = useState('all')
   const category = controlledCategory ?? ownCategory
@@ -104,22 +98,6 @@ export const ApisList: React.FC<{
       return (result ?? []) as InstalledAddonRow[]
     },
     staleTime: 60 * 1000,
-  })
-
-  // installOpenapiAddon generates a local addon named @pikku/addon-<slug> and
-  // wires it up — it shows up in getInstalledAddons like any other addon.
-  const importMutation = useMutation({
-    mutationFn: async (api: PackageMeta) =>
-      rpc.invoke('console:installOpenapiAddon', {
-        name: deriveNamespace(api.name),
-        // apiToPackageMeta always sets swaggerUrl — this mutation only ever
-        // receives API-kind PackageMeta objects from ApisList's onInstall.
-        swaggerUrl: api.swaggerUrl!,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-    },
   })
 
   // installOpenapiAddon registers the generated addon under a DERIVED slug
@@ -192,23 +170,6 @@ export const ApisList: React.FC<{
       installedNames={installedNames}
       editable={editable}
       kind="api"
-      installingName={
-        importMutation.isPending
-          ? (importMutation.variables?.name ?? null)
-          : null
-      }
-      actionError={
-        importMutation.isError
-          ? {
-              name: importMutation.variables?.name ?? '',
-              message:
-                importMutation.error instanceof Error
-                  ? importMutation.error.message
-                  : String(importMutation.error),
-            }
-          : null
-      }
-      onInstall={(api) => importMutation.mutate(api)}
     />
   )
 }

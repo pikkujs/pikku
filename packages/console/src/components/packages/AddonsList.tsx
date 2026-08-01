@@ -3,19 +3,13 @@ import { Box, Center, Loader } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package } from 'lucide-react'
-import {
-  useQuery,
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
 import { useAddonCategories } from '../../hooks/useAddonCategories'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { CommunityGallery } from './CommunityGallery'
 import type { SortKey } from './CommunityGallery'
-import { deriveNamespace } from './deriveNamespace'
 import type {
   AddonFilter,
   CataloguePage,
@@ -58,7 +52,6 @@ export const AddonsList: React.FC<{
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
-  const queryClient = useQueryClient()
   const [ownCategory, setOwnCategory] = useState('all')
   const category = controlledCategory ?? ownCategory
   const setCategory = onCategoryChange ?? setOwnCategory
@@ -87,16 +80,6 @@ export const AddonsList: React.FC<{
     () => new Set((installedAddons ?? []).map((a) => a.packageName)),
     [installedAddons]
   )
-
-  // packageName → the wireAddon names it's installed under, so the drawer can
-  // show existing instances (the same package can be wired several times).
-  const installedNamespaces = useMemo(() => {
-    const map: Record<string, string[]> = {}
-    for (const a of installedAddons ?? []) {
-      ;(map[a.packageName] ??= []).push(a.namespace)
-    }
-    return map
-  }, [installedAddons])
 
   const search = searchQuery.trim()
 
@@ -164,28 +147,6 @@ export const AddonsList: React.FC<{
     return rows
   }, [isInstalledView, catalogue, installedAddons, search, category])
 
-  const installMutation = useMutation({
-    mutationFn: async ({
-      addon,
-      namespace,
-    }: {
-      addon: PackageMeta
-      namespace?: string
-    }) =>
-      rpc.invoke('console:installAddon', {
-        packageName: addon.name,
-        namespace: namespace?.trim() || deriveNamespace(addon.name),
-        version: addon.version,
-      }),
-    onSuccess: (_result, { addon }) => {
-      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-      // Land the user on the freshly installed addon's setup surface so they
-      // can immediately connect its integrations / set its secrets.
-      onSelect(addon.name, 'installed')
-    },
-  })
-
   if (isPending) {
     return (
       <Box style={{ flex: 1, minHeight: 0 }}>
@@ -225,27 +186,7 @@ export const AddonsList: React.FC<{
       loadingMore={isFetchingNextPage}
       onLoadMore={fetchNextPage}
       installedNames={installedNames}
-      installedNamespaces={installedNamespaces}
       editable={editable}
-      installingName={
-        installMutation.isPending
-          ? (installMutation.variables?.addon.name ?? null)
-          : null
-      }
-      actionError={
-        installMutation.isError
-          ? {
-              name: installMutation.variables?.addon.name ?? '',
-              message:
-                installMutation.error instanceof Error
-                  ? installMutation.error.message
-                  : String(installMutation.error),
-            }
-          : null
-      }
-      onInstall={(addon, namespace) =>
-        installMutation.mutate({ addon, namespace })
-      }
       onOpenInstalled={(addon) => onSelect(addon.name, 'installed')}
     />
   )

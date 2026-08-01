@@ -314,6 +314,11 @@ export type { PersonaDetailProps } from './components/personas/PersonaDetail'
 export { ScenarioPersonasPanel } from './components/personas/ScenarioPersonasPanel'
 export type { ScenarioPersonasPanelProps } from './components/personas/ScenarioPersonasPanel'
 
+// What an addon/API contains, as panel content — opened from the catalogue,
+// and mountable directly by a host that wants it in its own panel.
+export { AddonDetail } from './components/packages/AddonDetail'
+export type { AddonDetailProps } from './components/packages/AddonDetail'
+
 // The scenario document: features as pages, scenarios as sections, steps as
 // prose. Exported piecewise so a host app can compose its own chrome around
 // them — Fabric mounts the document beside its own Personas section.

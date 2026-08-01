@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import {
   Box,
   Group,
@@ -19,8 +19,8 @@ import type { PackageMeta } from './packageMeta'
 import { CategoryRail } from './CategoryRail'
 import { AddonCard } from './AddonCard'
 import { PublishCta } from './PublishCta'
-import { AddonDetailDrawer } from './AddonDetailDrawer'
 import type { CategoryBucket } from './addonCategoryMeta'
+import { usePanelContext } from '../../context/PanelContext'
 
 export type SortKey = 'name' | 'functions' | 'agents'
 
@@ -29,13 +29,8 @@ interface CommunityGalleryProps {
   addons: PackageMeta[]
   searchQuery: string
   installedNames: Set<string>
-  /** packageName → the wireAddon names it's installed under (for the drawer). */
-  installedNamespaces?: Record<string, string[]>
   editable: boolean
-  installingName: string | null
-  /** The most recent install/import failure, if any — shown inline in the drawer for that addon. */
-  actionError?: { name: string; message: string } | null
-  /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
+  /** 'api' swaps card/panel wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
   /**
    * Catalogue-wide category buckets, from the registry. Derived counts would
@@ -68,13 +63,11 @@ interface CommunityGalleryProps {
   hasMore: boolean
   loadingMore: boolean
   onLoadMore: () => void
-  /** `namespace` is the user-chosen wireAddon name (addons only); APIs ignore it. */
-  onInstall: (addon: PackageMeta, namespace?: string) => void
   /**
    * Opening an *installed* addon: routes to its full detail page (which carries
    * the Setup/OAuth + secrets requirements and richer surfaces) instead of the
-   * lightweight browse drawer. Omitted for the API gallery, which has no such
-   * page, so those cards always open the drawer.
+   * lightweight browse panel. Omitted for the API gallery, which has no such
+   * page, so those cards always open the panel.
    */
   onOpenInstalled?: (addon: PackageMeta) => void
 }
@@ -83,10 +76,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   addons,
   searchQuery,
   installedNames,
-  installedNamespaces,
   editable,
-  installingName,
-  actionError,
   kind = 'addon',
   categories,
   catalogueTotal,
@@ -99,20 +89,26 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   hasMore,
   loadingMore,
   onLoadMore,
-  onInstall,
   onOpenInstalled,
 }) => {
   useLocale()
-  const [selected, setSelected] = useState<PackageMeta | null>(null)
+  const { openPanel } = usePanelContext()
 
   // An installed addon opens its full detail page (Setup/OAuth lives there); a
-  // not-yet-installed one opens the browse drawer to preview before installing.
+  // not-yet-installed one opens the browse panel to preview before installing.
   const openAddon = (addon: PackageMeta) => {
     if (onOpenInstalled && installedNames.has(addon.name)) {
       onOpenInstalled(addon)
-    } else {
-      setSelected(addon)
+      return
     }
+    // Only identity and a stable callback: panel metadata is captured on open
+    // and never refreshed, so install progress lives inside AddonDetail.
+    openPanel('addon', addon.id, addon.displayName || addon.name, {
+      addon,
+      kind,
+      editable,
+      onInstalled: onOpenInstalled ? () => onOpenInstalled(addon) : undefined,
+    })
   }
 
   const sortData = useMemo(
@@ -261,24 +257,6 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
       ) : (
         grid
       )}
-
-      <AddonDetailDrawer
-        addon={selected}
-        installed={selected ? installedNames.has(selected.name) : false}
-        installing={!!selected && installingName === selected.name}
-        installedNamespaces={
-          selected ? (installedNamespaces?.[selected.name] ?? []) : []
-        }
-        error={
-          selected && actionError?.name === selected.name
-            ? actionError.message
-            : null
-        }
-        editable={editable}
-        kind={kind}
-        onClose={() => setSelected(null)}
-        onInstall={onInstall}
-      />
     </Stack>
   )
 }

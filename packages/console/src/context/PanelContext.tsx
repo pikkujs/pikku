@@ -25,6 +25,8 @@ export type PanelType =
   | 'dbColumn'
   | 'email'
   | 'persona'
+  | 'addon'
+  | 'workflowCanvas'
 
 export interface PanelData {
   type: PanelType
@@ -73,6 +75,23 @@ interface PanelContextType {
   /** Metadata carries the persona itself and, where there is somewhere to
    *  follow one to, the scenario reveal handler. */
   openPersona: (personaKey: string, title: string, metadata?: any) => void
+  /**
+   * Open any panel, titled by the caller.
+   *
+   * The named openers above each encode a title convention for their type. Where
+   * there is no convention to encode — a surface whose title is just the thing's
+   * own name — use this rather than adding another identical wrapper.
+   *
+   * `metadata` is captured when the panel opens and never refreshed, so it holds
+   * identity and stable callbacks only. Anything that changes while the panel is
+   * open belongs inside the panel's own component.
+   */
+  openPanel: (
+    type: PanelType,
+    id: string,
+    title: string,
+    metadata?: any
+  ) => void
   navigateInPanel: (
     type: PanelType,
     id: string,
@@ -444,6 +463,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         openDbColumn,
         openEmail,
         openPersona,
+        openPanel: openPanelGeneric,
         navigateInPanel,
         goBack,
         goBackTo,

@@ -17,6 +17,8 @@ import { WorkflowPanelFlow } from './WorkflowPanelFlow'
 import { useWorkflowInputSchema } from '../../hooks/useWorkflowInputSchema'
 import { FunctionTabbedPanel } from '../project/panels/FunctionDetailsForm'
 import { PersonaDetail } from '../personas/PersonaDetail'
+import { AddonDetail } from '../packages/AddonDetail'
+import { createCanvasDrawerContent } from '../canvas-drawer/CanvasDrawerFactory'
 import {
   WorkflowStepConfiguration,
   WorkflowStepInput,
@@ -596,6 +598,38 @@ export const createPanelChildren = (
                   />
                 </Box>
               ),
+            },
+          ]
+        : []
+
+    case 'addon':
+      return panelData.metadata?.addon
+        ? [
+            {
+              id: 'addon',
+              title: panelData.metadata.kind === 'api' ? 'API' : 'Addon',
+              content: (
+                <AddonDetail
+                  addon={panelData.metadata.addon}
+                  kind={panelData.metadata.kind}
+                  editable={!!panelData.metadata.editable}
+                  onInstalled={panelData.metadata.onInstalled}
+                />
+              ),
+            },
+          ]
+        : []
+
+    case 'workflowCanvas':
+      return panelData.metadata?.data
+        ? [
+            {
+              id: 'workflowCanvas',
+              title: 'Add',
+              // The catalogue brings its own rows and dividers edge to edge —
+              // see WorkflowCanvasDrawer, whose standalone Drawer also gives it
+              // an unpadded body.
+              content: createCanvasDrawerContent(panelData.metadata.data),
             },
           ]
         : []
