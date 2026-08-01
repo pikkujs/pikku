@@ -136,6 +136,17 @@ describe('ChannelRPCRegistry', () => {
 })
 
 describe('ChannelDeploymentService', () => {
+  test('init and start are no-ops — the socket is already open', async () => {
+    const { service } = connect({})
+
+    // Both exist only to satisfy `DeploymentService`. A deployed unit has to
+    // be brought up; a connection that is already carrying the command has
+    // nothing to bring up, and anything that calls these generically must not
+    // fail against it.
+    await service.init()
+    await service.start()
+  })
+
   test('round-trips a call to a peer capability', async () => {
     const { service, serverSent } = connect({
       gitHead: async () => ({ sha: 'abc123' }),
