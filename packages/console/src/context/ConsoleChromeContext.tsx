@@ -40,15 +40,17 @@ export function useListSurfaceClass(): string {
 /**
  * Declares that the host owns the card and the detail panel.
  *
- * The data attribute is not read by the console itself — it is a hook for the
- * host's own stylesheet, which may need to reach inside the embedded screen.
+ * `chromeHost` retunes `--console-body-gutter` for everything inside — see
+ * console.module.css. The data attribute is not read by the console itself — it
+ * is a hook for the host's own stylesheet, which may need to reach inside the
+ * embedded screen.
  */
 export function HostConsoleChrome({ children }: { children: ReactNode }) {
   return (
     <ConsoleChromeContext.Provider value="host">
       <div
         data-console-chrome="host"
-        className={classes.flexColumn}
+        className={`${classes.flexColumn} ${classes.chromeHost}`}
         style={{ flex: 1, minWidth: 0, minHeight: 0 }}
       >
         {children}

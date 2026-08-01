@@ -1,3 +1,24 @@
+/* ── Chrome-scoped tokens ── */
+
+/* The gutter between a screen's outer surface and its content.
+ *
+ * One declaration per chrome mode, read by every layout, because the layouts
+ * used to each answer this for themselves and disagreed — one padded `xl`, one
+ * `md`, one not at all, so "does the content touch the card edge?" depended on
+ * which layout a screen happened to use. See ConsoleChromeContext: this is the
+ * same host/self question `useListSurfaceClass` answers for the border.
+ *
+ * Standalone the screen sits directly on the app background and carries the
+ * page's own gutter. Embedded, the host's page card is already inset from that
+ * edge, so the same `xl` again would read as a wide empty margin. */
+:global(:root) {
+  --console-body-gutter: var(--mantine-spacing-xl);
+}
+
+.chromeHost {
+  --console-body-gutter: var(--mantine-spacing-md);
+}
+
 /* ── Layout primitives ── */
 
 .flexColumn {

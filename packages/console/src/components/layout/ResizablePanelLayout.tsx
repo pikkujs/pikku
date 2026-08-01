@@ -26,9 +26,8 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   hidePanel = false,
 }) => {
   const { panels } = usePanelContext()
-  // An embedded host renders the detail panel as its own card beside the page
-  // and supplies the page's padding, so the inner column here would be a second
-  // panel for the same selection inside a card that already has a gutter.
+  // An embedded host renders the detail panel as its own card beside the page,
+  // so the inner column here would be a second panel for the same selection.
   const ownsChrome = useConsoleChrome() === 'self'
   const rightOpen = ownsChrome && !hidePanel && panels.size > 0
 
@@ -38,9 +37,16 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
       {header}
       <Box
         className={classes.flexColumn}
-        px={ownsChrome ? 'xl' : 0}
-        py={ownsChrome ? 'md' : 0}
-        style={{ flex: 1, minHeight: 0, gap: 'var(--mantine-spacing-md)' }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          gap: 'var(--mantine-spacing-md)',
+          // The body is padded in both chrome modes — an embedding host's page
+          // card is a bare card whose content supplies its own gutter (it cannot
+          // pad the card itself without insetting the full-bleed header band
+          // above). How much is the chrome's call, not this layout's.
+          padding: 'var(--console-body-gutter)',
+        }}
       >
         <Box style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {leftDrawer && (

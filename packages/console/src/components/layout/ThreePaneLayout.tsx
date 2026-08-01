@@ -96,7 +96,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           flex: 1,
           minHeight: 0,
           gap: 'var(--mantine-spacing-md)',
-          padding: 'var(--mantine-spacing-md)',
+          padding: 'var(--console-body-gutter)',
         }}
       >
         {hasLeft && (
