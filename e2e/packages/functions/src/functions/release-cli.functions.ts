@@ -1,4 +1,5 @@
 import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
+import { callClientCapability } from '@pikku/core/channel'
 
 /**
  * The commands behind the `release` CLI, which is served over a websocket
@@ -39,14 +40,22 @@ export const releasePublish = pikkuFunc<
     // A client capability is not one of this app's functions, so it is absent
     // from the generated RPC map by design — the name is resolved against the
     // allowlist the connected client passed in, not against anything here.
-    const callClient = rpc!.remote as (
-      name: string,
-      data: unknown
-    ) => Promise<unknown>
-    const { sha, branch } = (await callClient('localCheckout', {})) as {
-      sha: string
-      branch: string
-    }
+    // Which is also why the answer is parsed rather than cast: it is a payload
+    // from someone else's machine, and nothing upstream has checked it.
+    const { sha, branch } = await callClientCapability({
+      rpc: rpc!,
+      name: 'localCheckout',
+      parse: (result) => {
+        const checkout = result as { sha?: unknown; branch?: unknown }
+        if (
+          typeof checkout?.sha !== 'string' ||
+          typeof checkout?.branch !== 'string'
+        ) {
+          throw new Error('expected { sha: string, branch: string }')
+        }
+        return { sha: checkout.sha, branch: checkout.branch }
+      },
+    })
 
     await cli!.channel!.send({ step: `publishing ${sha.slice(0, 7)}` })
 

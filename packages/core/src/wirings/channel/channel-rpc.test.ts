@@ -2,11 +2,14 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert/strict'
 
 import {
+  CHANNEL_RPC_REQUEST,
   CHANNEL_RPC_RESPONSE,
   ChannelDeploymentService,
   ChannelRPCRegistry,
+  callClientCapability,
   createChannelRPCResponder,
   isChannelRPCRequest,
+  isChannelRPCResponse,
   type ChannelRPCError,
   type ChannelRPCRequest,
 } from './channel-rpc.js'
@@ -165,8 +168,15 @@ describe('ChannelDeploymentService', () => {
     assert.ok(isChannelRPCRequest(request))
     assert.equal(request.funcName, 'gitHead')
     assert.deepEqual(request.data, { cwd: '.' })
-    assert.deepEqual(request.session, { userId: 'u1' }, 'session propagates')
     assert.equal(request.traceId, 'trace-1', 'traceId propagates')
+    // The peer runs the capability as itself, on its own machine, under its
+    // own identity. Sending the caller's session would hand it credentials it
+    // has no use for and that authorise nothing on its side.
+    assert.equal(
+      'session' in (request as Record<string, unknown>),
+      false,
+      'the caller session is not put on the wire'
+    )
   })
 
   test('keeps concurrent calls distinct', async () => {
@@ -237,5 +247,155 @@ describe('createChannelRPCResponder', () => {
     )
     assert.equal(await respond('some rendered line'), false)
     assert.equal(sent.length, 0, 'non-RPC frames are left for the renderer')
+  })
+})
+
+describe('envelope validation', () => {
+  test('a request is only accepted with a usable id and funcName', () => {
+    const valid = {
+      action: CHANNEL_RPC_REQUEST,
+      id: '1',
+      funcName: 'gitHead',
+      data: {},
+    }
+    assert.equal(isChannelRPCRequest(valid), true)
+    assert.equal(isChannelRPCRequest({ ...valid, traceId: 'trace-1' }), true)
+
+    // Every one of these is tagged as an RPC request and would previously have
+    // passed, reaching a capability lookup with a name of the wrong type.
+    for (const frame of [
+      { ...valid, id: 1 },
+      { ...valid, id: '' },
+      { ...valid, id: undefined },
+      { ...valid, funcName: {} },
+      { ...valid, funcName: '' },
+      { ...valid, funcName: undefined },
+      { ...valid, traceId: 42 },
+      { action: CHANNEL_RPC_REQUEST },
+    ]) {
+      assert.equal(
+        isChannelRPCRequest(frame),
+        false,
+        `expected rejection of ${JSON.stringify(frame)}`
+      )
+    }
+  })
+
+  test('a response is only accepted with a usable id and ok flag', () => {
+    const valid = { action: CHANNEL_RPC_RESPONSE, id: '1', ok: true }
+    assert.equal(isChannelRPCResponse(valid), true)
+
+    for (const frame of [
+      { ...valid, id: 7 },
+      { ...valid, id: '' },
+      { ...valid, ok: 'yes' },
+      { ...valid, ok: undefined },
+      { action: CHANNEL_RPC_RESPONSE },
+      null,
+      'a rendered line',
+    ]) {
+      assert.equal(
+        isChannelRPCResponse(frame),
+        false,
+        `expected rejection of ${JSON.stringify(frame)}`
+      )
+    }
+  })
+
+  test('a malformed failure payload does not reach the caller as-is', async () => {
+    const registry = new ChannelRPCRegistry()
+    const { id, promise } = registry.register()
+
+    // A peer is free to answer with anything. Without the fallback, `name`
+    // lands on an Error as a non-string and `message` stringifies as
+    // "[object Object]" in whatever logs it.
+    registry.settle({
+      action: CHANNEL_RPC_RESPONSE,
+      id,
+      ok: false,
+      error: { name: 42, message: { nested: true } } as any,
+    })
+
+    await assert.rejects(promise, (e: ChannelRPCError) => {
+      assert.equal(e.name, 'ChannelRPCError')
+      assert.equal(e.message, 'Remote channel RPC failed')
+      assert.equal(e.reason, 'remote')
+      return true
+    })
+  })
+})
+
+describe('callClientCapability', () => {
+  test('returns the parsed result', async () => {
+    const { service } = connect({
+      localCheckout: () => ({ sha: 'deadbeef', branch: 'main' }),
+    })
+
+    const checkout = await callClientCapability({
+      rpc: {
+        remote: (name: string, data: unknown) => service.invoke(name, data),
+      },
+      name: 'localCheckout',
+      parse: (result) => result as { sha: string; branch: string },
+    })
+
+    assert.deepEqual(checkout, { sha: 'deadbeef', branch: 'main' })
+  })
+
+  test('a result that does not match fails the call', async () => {
+    const { service } = connect({
+      // What a client of the wrong version, or a hostile one, answers with.
+      localCheckout: () => ({ sha: null }),
+    })
+
+    await assert.rejects(
+      callClientCapability({
+        rpc: {
+          remote: (name: string, data: unknown) => service.invoke(name, data),
+        },
+        name: 'localCheckout',
+        parse: (result) => {
+          if (typeof (result as any)?.sha !== 'string') {
+            throw new Error('expected { sha: string }')
+          }
+          return result as { sha: string }
+        },
+      }),
+      (e: ChannelRPCError) => {
+        assert.equal(e.reason, 'invalid')
+        // The capability is named because the failure is about the peer's
+        // answer, not about the command that asked for it.
+        assert.match(
+          e.message,
+          /Invalid result from client capability "localCheckout": expected \{ sha: string \}/
+        )
+        return true
+      }
+    )
+  })
+
+  test('a failure inside the capability is not reported as invalid', async () => {
+    const { service } = connect({
+      localCheckout: () => {
+        throw new Error('not a git repository')
+      },
+    })
+
+    // The peer answered properly — it answered that it failed. Reporting that
+    // as a validation problem would point at the wrong end of the connection.
+    await assert.rejects(
+      callClientCapability({
+        rpc: {
+          remote: (name: string, data: unknown) => service.invoke(name, data),
+        },
+        name: 'localCheckout',
+        parse: (result) => result,
+      }),
+      (e: ChannelRPCError) => {
+        assert.equal(e.reason, 'remote')
+        assert.equal(e.message, 'not a git repository')
+        return true
+      }
+    )
   })
 })

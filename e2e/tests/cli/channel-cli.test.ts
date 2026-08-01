@@ -154,6 +154,25 @@ describe('CLI over a channel', () => {
     })
   })
 
+  test('a capability answering with the wrong shape fails the command', async () => {
+    // The client is the untrusted end here: it runs on someone else's machine
+    // and answers with whatever it likes. Version drift produces this as
+    // readily as a hostile client does, and either way the command must not
+    // carry on with a value it only assumed was a string.
+    const { exitCode, output } = await runCommand(['publish'], {
+      capabilities: {
+        localCheckout: () => ({ sha: null, branch: ['main'] }),
+      },
+    })
+
+    assert.notEqual(exitCode, 0)
+    assert.deepEqual(
+      output.filter((frame: any) => frame?.publishedSha),
+      [],
+      'the command must not produce a result from an unchecked answer'
+    )
+  })
+
   test('a capability the client did not expose is refused, and the command fails', async () => {
     const { exitCode } = await runCommand(['publish'], { capabilities: {} })
 
