@@ -15,6 +15,7 @@ import {
 } from '../assert-combined.js'
 import { randomUUID } from 'crypto'
 import { pikkuState } from '@pikku/core/internal'
+import { unsupportedChannelRemote } from '@pikku/core/channel'
 
 class MockAIAgentRunner implements AIAgentRunnerService {
   async stream(
@@ -140,6 +141,7 @@ export async function testAgentStreamWiring(
     clearState: () => {
       agentChannelState = undefined
     },
+    remote: unsupportedChannelRemote,
   }
 
   pikkuState(null, 'package', 'singletonServices', services)
