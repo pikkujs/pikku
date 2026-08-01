@@ -22,3 +22,14 @@ export type {
   PikkuChannelHandlerFactory,
 } from './channel.types.js'
 export { defineChannelRoutes } from './define-channel-routes.js'
+export {
+  CHANNEL_RPC_REQUEST,
+  CHANNEL_RPC_RESPONSE,
+  ChannelDeploymentService,
+  ChannelRPCError,
+  ChannelRPCRegistry,
+  createChannelRPCResponder,
+  isChannelRPCRequest,
+  isChannelRPCResponse,
+} from './channel-rpc.js'
+export type { ChannelRPCRequest, ChannelRPCResponse } from './channel-rpc.js'
