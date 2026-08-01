@@ -215,7 +215,7 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
       await scenario.then(
         'sees the shopper’s identity',
         'seesTestId',
-        { testId: 'persona-drawer-shopper' },
+        { testId: 'persona-detail-shopper' },
         { actor: actors.admin }
       )
       await scenario.then(
@@ -224,7 +224,7 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
         {
           testId: 'persona-field-email',
           value: 'shopper@actors.local',
-          within: { testId: 'persona-drawer-shopper' },
+          within: { testId: 'persona-detail-shopper' },
         },
         { actor: actors.admin }
       )
