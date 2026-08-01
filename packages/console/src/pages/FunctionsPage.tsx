@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { Group, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
@@ -27,7 +28,14 @@ export const FunctionsPage: React.FC<{
   emptyHero?: React.ReactNode
 }> = ({ extraColumns, headerRight, testsByFunction, emptyHero }) => {
   useLocale()
-  const [searchQuery, setSearchQuery] = useState('')
+  // `?search=` makes a function linkable from elsewhere in the console — the
+  // virtual users screen sends you here from an endpoint it counted. Only the
+  // initial value: from then on the box is yours, and rewriting the URL as you
+  // type would put every keystroke in the back button.
+  const [searchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(
+    () => searchParams.get('search') ?? ''
+  )
   const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
 
   const { data: rawFunctions, isLoading } = useFunctionsMeta()

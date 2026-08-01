@@ -52,11 +52,35 @@ export interface VirtualUserReach {
   /** How many of the read/write decisions rest on a name, not an annotation. */
   inferred: number
   /**
+   * The endpoints behind each figure, so a count can be opened rather than
+   * taken on trust — and so "guessed from the name" names the functions that
+   * want a `readonly` annotation instead of only counting them.
+   */
+  offeredNames: string[]
+  mutationNames: string[]
+  inferredNames: string[]
+  /**
    * True when the whole surface is offered on purpose. An adversarial user is
    * shown what it is not entitled to precisely so a 2xx can be the finding —
    * which only holds as an oracle when it also declares its grants.
    */
   showsEverything: boolean
+}
+
+/**
+ * What this user wants, counted.
+ *
+ * An app of any size gives an actor dozens of intents, and a page that prints
+ * every sentence of every one is a page nobody reads to the end. The shape of
+ * the wanting — how many, spread over which features — is the part worth
+ * seeing at a glance; the prose is still there, one intent at a time.
+ */
+export interface VirtualUserWants {
+  intents: number
+  features: number
+  steps: number
+  /** Intents per feature, commonest first. Unclaimed intents are not counted. */
+  byFeature: { name: string; count: number }[]
 }
 
 export interface VirtualUserDoc {
@@ -76,6 +100,8 @@ export interface VirtualUserDoc {
   intents: IntentSource[]
   /** The feature each intent belongs to, where one claims it. */
   featureByIntent: Record<string, string>
+  /** The same intents, counted — what the summary above them reads off. */
+  wants: VirtualUserWants
   tags: string[]
   budget?: VirtualUserBudget
   grants?: string[]
@@ -129,9 +155,15 @@ export const toVirtualUserDocs = ({
 
       const intents = intentsForActor(allIntents, user.actor)
       const featureByIntent: Record<string, string> = {}
+      const perFeature = new Map<string, number>()
+      let stepCount = 0
       for (const intent of intents) {
         const feature = featureByScenario[intent.id]
-        if (feature) featureByIntent[intent.id] = feature
+        if (feature) {
+          featureByIntent[intent.id] = feature
+          perFeature.set(feature, (perFeature.get(feature) ?? 0) + 1)
+        }
+        stepCount += intent.steps?.length ?? 0
       }
 
       return {
@@ -150,6 +182,14 @@ export const toVirtualUserDocs = ({
         goals: user.goals ?? [],
         intents,
         featureByIntent,
+        wants: {
+          intents: intents.length,
+          features: perFeature.size,
+          steps: stepCount,
+          byFeature: [...perFeature]
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+        },
         tags: user.tags ?? [],
         budget: user.budget,
         grants: user.grants,
@@ -159,6 +199,13 @@ export const toVirtualUserDocs = ({
           total,
           offered: offered.length,
           mutations: offered.filter((entry) => !isReadOnly(entry)).length,
+          offeredNames: offered.map((entry) => entry.name),
+          mutationNames: offered
+            .filter((entry) => !isReadOnly(entry))
+            .map((entry) => entry.name),
+          inferredNames: catalogue
+            .filter((entry) => typeof entry.readonly !== 'boolean')
+            .map((entry) => entry.name),
           withheldByApproval: user.allowApprovalRequired
             ? 0
             : catalogue.filter((entry) => entry.approvalRequired).length,

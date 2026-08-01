@@ -13,7 +13,11 @@ const functions = {
     approvalRequired: true,
   },
   archiveOrder: { name: 'archiveOrder', readonly: false },
-  buysAnApple: { name: 'buysAnApple', scenarioStep: true },
+  buysAnApple: {
+    name: 'buysAnApple',
+    scenarioStep: true,
+    scenarioStepTemplate: 'buys an apple',
+  },
 } as any
 
 const workflows = {
@@ -136,6 +140,53 @@ describe('the virtual user reading model', () => {
     const [doc] = build(user())
     // Only archiveOrder annotates `readonly`; the rest rest on the heuristic.
     assert.equal(doc!.reach.inferred, 3)
+  })
+
+  // A count you cannot open is a count you have to take on trust, and the
+  // three figures are the entry point to the endpoints they stand for.
+  test('every reach figure names the endpoints it counts', () => {
+    const [doc] = build(user())
+    // payOutSupplier is approval-gated, so it is counted by the catalogue and
+    // named by nothing this user is offered.
+    assert.deepEqual(doc!.reach.offeredNames.sort(), [
+      'archiveOrder',
+      'listOrders',
+      'refundOrder',
+    ])
+    assert.ok(!doc!.reach.mutationNames.includes('listOrders'))
+    assert.equal(doc!.reach.mutationNames.length, doc!.reach.mutations)
+    assert.ok(!doc!.reach.inferredNames.includes('archiveOrder'))
+    assert.equal(doc!.reach.inferredNames.length, doc!.reach.inferred)
+  })
+
+  test('the names track what was withheld, not the whole catalogue', () => {
+    const [doc] = build(user({ disposition: 'auditor' }))
+    assert.deepEqual(doc!.reach.mutationNames, [])
+    assert.ok(!doc!.reach.offeredNames.includes('archiveOrder'))
+  })
+
+  test('wanting is counted as well as listed, so a long list still reads', () => {
+    const [doc] = build(user())
+    assert.deepEqual(doc!.wants, {
+      intents: 1,
+      features: 1,
+      steps: 1,
+      byFeature: [{ name: 'Refunds', count: 1 }],
+    })
+  })
+
+  test('an intent no feature claims is still an intent, just not in the spread', () => {
+    const [doc] = build(user())
+    const unclaimed = toVirtualUserDocs({
+      virtualUsers: user() as any,
+      functions,
+      workflows,
+      scenarioActors,
+      features: {} as any,
+    })[0]!
+    assert.equal(unclaimed.wants.intents, doc!.wants.intents)
+    assert.equal(unclaimed.wants.features, 0)
+    assert.deepEqual(unclaimed.wants.byFeature, [])
   })
 
   test('users are listed by name, so the rail reads alphabetically', () => {
