@@ -7,12 +7,21 @@ import React, {
   useMemo,
 } from 'react'
 import { usePikkuRPC } from './PikkuRpcProvider'
+import type { VirtualUsersMeta } from '@pikku/core/virtual-user'
 import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
 type MetaCounts = AllMeta['counts']
 type FunctionUsedBy = AllMeta['functionUsedBy'][string]
-type PikkuMetaState = Omit<AllMeta, 'counts' | 'functionUsedBy'>
+/**
+ * The addon serves `virtualUsers`, but this map is generated against whatever
+ * the console was last built with, so the field is only in `AllMeta` once that
+ * codegen has re-run. Naming it here rather than asserting at each reader keeps
+ * the optionality in one place, and the declaration stays correct either way.
+ */
+type PikkuMetaState = Omit<AllMeta, 'counts' | 'functionUsedBy'> & {
+  virtualUsers: VirtualUsersMeta
+}
 
 interface PikkuMetaContextType {
   meta: PikkuMetaState
@@ -49,6 +58,7 @@ const EMPTY_META: PikkuMetaState = {
   workflows: {},
   scenarioActors: {},
   features: {},
+  virtualUsers: {},
   triggerMeta: {},
   triggerSourceMeta: {},
   middlewareGroupsMeta: {
@@ -116,6 +126,8 @@ export const PikkuMetaProvider: React.FC<{
         workflows: allMeta.workflows,
         scenarioActors: allMeta.scenarioActors ?? {},
         features: allMeta.features ?? {},
+        virtualUsers:
+          (allMeta as { virtualUsers?: VirtualUsersMeta }).virtualUsers ?? {},
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,
         middlewareGroupsMeta: allMeta.middlewareGroupsMeta,

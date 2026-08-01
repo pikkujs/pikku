@@ -1,5 +1,6 @@
 import type { FunctionsMeta } from '../../types/core.types.js'
 import type { WorkflowsMeta } from '../workflow/workflow.types.js'
+import type { ScenarioStepPhase } from '../workflow/scenario-step.types.js'
 import { composeStepProse } from '../workflow/scenario-prose.js'
 import type { ApiCatalogueEntry, IntentSource } from './virtual-user.types.js'
 
@@ -61,6 +62,51 @@ export const deriveCatalogue = (
   return entries
 }
 
+/** A scenario step reduced to what prose needs, whichever shape it arrived in. */
+type IntentStep = {
+  stepFunc: string
+  phase: ScenarioStepPhase
+  actor?: string
+}
+
+/**
+ * The same scenario, spelled either way.
+ *
+ * One scenario has two meta shapes and both reach this function: the runner
+ * hands over the inspector's DSL meta, where steps are a `steps[]` of
+ * `scenarioStep`s, while the console reads what was written to disk through
+ * `getWorkflowMeta()`, where the same steps are the graph's `nodes` and the
+ * scenario declares itself with `source` rather than `scenario`. Reading only
+ * the first shape is not a narrower reading — it is an empty one, and a screen
+ * built on it shows every user wanting nothing at all.
+ */
+const scenarioSteps = (meta: {
+  steps?: WorkflowsMeta[string]['steps']
+  nodes?: Record<string, unknown>
+}): IntentStep[] => {
+  if (meta.steps?.length) {
+    return meta.steps.flatMap((step) =>
+      step.type === 'scenarioStep'
+        ? [{ stepFunc: step.stepFunc, phase: step.phase, actor: step.actor }]
+        : []
+    )
+  }
+
+  // Insertion order is the order the CLI wrote the nodes in, which is the order
+  // the scenario declares them. Following `next` instead would buy an ordering
+  // that is already true and cost a traversal that has to decide what a branch
+  // means to a reader who will never take one.
+  return Object.values(meta.nodes ?? {}).flatMap((node) => {
+    const { rpcName, scenarioStepPhase, actor } = (node ?? {}) as {
+      rpcName?: string
+      scenarioStepPhase?: ScenarioStepPhase
+      actor?: string
+    }
+    if (!rpcName || !scenarioStepPhase) return []
+    return [{ stepFunc: rpcName, phase: scenarioStepPhase, actor }]
+  })
+}
+
 /**
  * The things a virtual user might want, read off the scenarios a project
  * already declares.
@@ -77,14 +123,14 @@ export const deriveIntents = (
 ): IntentSource[] => {
   const intents: IntentSource[] = []
   for (const [name, meta] of Object.entries(workflows ?? {})) {
-    if (!meta.scenario) continue
+    if (!meta.scenario && (meta as { source?: string }).source !== 'scenario')
+      continue
     // A quarantined scenario is one someone decided not to run. Driving real
     // traffic with it would be a louder version of the same mistake.
     if (meta.skip) continue
 
     const steps: string[] = []
-    for (const step of meta.steps ?? []) {
-      if (step.type !== 'scenarioStep') continue
+    for (const step of scenarioSteps(meta)) {
       const stepMeta = functions[step.stepFunc]
       const template = stepMeta?.scenarioStepTemplate
       const description = stepMeta?.description ?? stepMeta?.summary
