@@ -1,3 +1,66 @@
+## 0.12.50
+
+### Patch Changes
+
+- aa5f623: Open an addon or API in the panel instead of a drawer.
+
+  Picking a package from the catalogue slid a 620px right-hand `Drawer` over the
+  screen — across an embedding host's own end-edge panel, and across the very
+  catalogue it was describing.
+
+  It is now a panel type: `openPanel('addon', id, title, { addon, kind, editable,
+onInstalled })` from `usePanelContext`, rendered by `PanelContainer` as the new
+  exported `AddonDetail`. `AddonDetailDrawer` is gone.
+
+  `AddonDetail` is self-sufficient rather than prop-driven, because a panel's
+  content is built from the metadata captured when it opened and that metadata is
+  never refreshed. It owns the install mutation (`console:installAddon`, or
+  `console:installOpenapiAddon` for `kind: 'api'`) and re-reads the shared
+  `['installed-addons']` query, so installing from the panel updates both the
+  panel's CTA and the catalogue behind it from one invalidation. The now-dead
+  `installingName` / `actionError` / `onInstall` / `installedNamespaces` plumbing
+  is dropped from `CommunityGallery`, `AddonsList` and `ApisList`.
+
+  `editable` is passed in rather than read from `useConsoleEditable()`: panel
+  content renders outside the page's provider tree, where that context would
+  silently fall back to its `true` default and offer Install on a read-only
+  deployed stage.
+
+- aa5f623: Let a host render the canvas add-step surface as its own panel.
+
+  `WorkflowCanvasDrawer` is an overlay pinned to the viewport, which is right when
+  the console owns the window and wrong when it is one card inside a host's page:
+  there it floated over the host's own chrome and ignored the end-edge panel the
+  host already has.
+
+  Under `HostConsoleChrome` it now renders nothing itself and mirrors the canvas
+  state into the panel context as `openPanel('workflowCanvas', …)`, so the host
+  draws it wherever it puts panels; closing that panel clears the canvas state, so
+  the affordance that opened it still works on the next click. Standalone is
+  unchanged — same overlay, same content.
+
+  The content moves safely because it is a pure catalogue: local view state and
+  app-level RPC metadata only, nothing provided inside the page it is leaving.
+
+- 9bcb570: Give the screen body one gutter, set by the chrome rather than by each layout.
+
+  Embedded in a host, `ResizablePanelLayout` zeroed its body padding on the
+  assumption that the host's page card supplied the gutter. A host card cannot: it
+  is a bare card, and padding it would inset the full-bleed header band at its top.
+  So every screen using that layout ran flush to the card's edge — the emails
+  screen most visibly.
+
+  The layouts were also disagreeing among themselves, one padding `xl`, another
+  `md`, so whether content touched the edge depended on which layout a screen
+  happened to use.
+
+  There is now a single `--console-body-gutter`, declared once per chrome mode
+  (`:root` for standalone, `.chromeHost` applied by `HostConsoleChrome` for
+  embedded) and read by `ResizablePanelLayout`, `ThreePaneLayout` and
+  `PageContainer`. Same host/self question `useListSurfaceClass` already answers
+  for the border, answered in the same place. Embedded is the tighter value: the
+  host's card is already inset from the app edge.
+
 ## 0.12.49
 
 ### Patch Changes
@@ -479,8 +542,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                      "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                      "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                        "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                        "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
