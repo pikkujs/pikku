@@ -53,7 +53,6 @@ export const PackagesListPanel: React.FC<PackagesListPanelProps> = ({
 
   return (
     <ResizablePanelLayout
-      hidePanel
       header={
         <ListPageHeader
           title={m.packages_title()}
