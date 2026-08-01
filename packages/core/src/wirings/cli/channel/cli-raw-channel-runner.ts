@@ -4,6 +4,7 @@ import { parseCLIArguments, generateCommandHelp } from '../command-parser.js'
 import { runCLICommand } from '../cli-runner.js'
 import type {
   CoreSingletonServices,
+  CoreUserSession,
   CreateWireServices,
 } from '../../../types/core.types.js'
 
@@ -13,8 +14,10 @@ import type {
  * so the client process can exit non-zero on failure.
  */
 export type RawCLIFrame =
-  | { action: 'cli-output'; commandId: string; data: unknown }
-  | { action: 'cli-stderr'; message: string }
+  | { action: 'cli-output'; commandId?: string; data: unknown }
+  | { action: 'cli-result'; commandId?: string; result: unknown }
+  | { action: 'cli-help'; help: string }
+  | { action: 'cli-error'; error: string }
   | { action: 'cli-control'; event: 'complete'; exitCode: number }
 
 export interface RawCLIResult {
@@ -38,16 +41,37 @@ export interface RawCLIResult {
 export async function handleRawCLI({
   programName,
   args,
-  singletonServices,
+  singletonServices: baseSingletonServices,
   createWireServices,
   onOutput,
+  hostRPC,
+  session,
 }: {
   programName: string
   args: string[]
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
+  /**
+   * The session the connection authenticated as during its upgrade. Commands
+   * run as that user, which is what makes an authenticated command reachable
+   * from a client that owns no commands of its own.
+   */
+  session?: CoreUserSession
   onOutput?: (data: unknown, commandId: string) => Promise<void> | void
+  /**
+   * Reverse-RPC transport for the connection this command arrived on. Supplied
+   * as the command's `deploymentService`, so `rpc.remote(...)` inside it
+   * reaches the calling client rather than a deployed unit.
+   */
+  hostRPC?: CoreSingletonServices['deploymentService']
 }): Promise<RawCLIResult> {
+  // Scoped to this invocation rather than mutated onto the shared singletons:
+  // the transport belongs to one connection, and concurrent commands on other
+  // connections must not inherit it.
+  const singletonServices = hostRPC
+    ? { ...baseSingletonServices, deploymentService: hostRPC }
+    : baseSingletonServices
+
   const allCLIMeta = pikkuState(null, 'cli', 'meta') as CLIMeta | undefined
   if (!allCLIMeta) {
     return { error: 'CLI metadata not found', exitCode: 1 }
@@ -114,6 +138,7 @@ export async function handleRawCLI({
       data,
       singletonServices,
       createWireServices,
+      session,
       // The caller can't know the resolved command until parsing finishes
       // here, so it's supplied per-frame rather than up front.
       onOutput: onOutput && ((data) => onOutput(data, commandId)),

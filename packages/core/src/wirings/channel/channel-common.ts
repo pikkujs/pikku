@@ -9,6 +9,10 @@ import type { CoreChannel, ChannelMessageMeta } from './channel.types.js'
 import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import {
+  type PikkuSessionService,
+  createMiddlewareSessionWireProps,
+} from '../../services/user-session-service.js'
+import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
 } from './channel-middleware-runner.js'
@@ -41,6 +45,7 @@ export const runChannelLifecycleWithMiddleware = async ({
   channel,
   data,
   channelMiddlewareMeta,
+  userSession,
 }: {
   channelConfig: CoreChannel<unknown, any>
   meta: ChannelMessageMeta
@@ -50,6 +55,13 @@ export const runChannelLifecycleWithMiddleware = async ({
   channel: any
   data?: unknown
   channelMiddlewareMeta?: MiddlewareMetadata[]
+  /**
+   * The connection's session, established while the socket was upgrading.
+   * Lifecycle functions see the same session the message routes do — without
+   * it `onConnect` cannot tell who just connected, which is the one thing it
+   * usually needs to know.
+   */
+  userSession?: PikkuSessionService<any>
 }): Promise<unknown> => {
   const lifecycleMiddleware =
     typeof lifecycleConfig === 'object' && 'middleware' in lifecycleConfig
@@ -74,7 +86,10 @@ export const runChannelLifecycleWithMiddleware = async ({
     }
   )
 
-  let wire: PikkuRawWire = { channel }
+  let wire: PikkuRawWire = {
+    channel,
+    ...(userSession ? createMiddlewareSessionWireProps(userSession) : {}),
+  }
   if (allChannelMiddleware.length > 0) {
     wire = wrapChannelWithMiddleware(wire, services, allChannelMiddleware)
   }
@@ -84,6 +99,7 @@ export const runChannelLifecycleWithMiddleware = async ({
       singletonServices: services,
       data: () => data as any,
       wire,
+      sessionService: userSession,
       tags: meta.tags ?? [],
       packageName: meta.packageName ?? null,
     })

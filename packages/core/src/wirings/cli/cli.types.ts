@@ -90,6 +90,12 @@ export type CLIProgramMeta = {
   commands: Record<string, CLICommandMeta>
   options: Record<string, CLIOption>
   defaultRenderName?: string
+  /**
+   * Whether the channel serving this program over a websocket requires a
+   * session. Only meaningful for the generated channel backend — a locally
+   * executed CLI has no connection to authenticate.
+   */
+  auth?: boolean
 }
 
 /**
@@ -329,6 +335,11 @@ export interface CoreCLI<
   summary?: string
   errors?: string[]
   tags?: string[]
+  /**
+   * Requires a session on the websocket serving this program remotely. Has no
+   * effect on local execution, where there is no connection to authenticate.
+   */
+  auth?: boolean
 }
 
 /**

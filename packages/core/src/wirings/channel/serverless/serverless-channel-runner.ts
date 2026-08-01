@@ -144,6 +144,7 @@ export const runChannelConnect = async ({
         channel,
         data: openingData,
         channelMiddlewareMeta: meta.channelMiddleware,
+        userSession,
       })
     }
 
@@ -240,6 +241,7 @@ export const runChannelDisconnect = async ({
         services,
         channel,
         channelMiddlewareMeta: meta.channelMiddleware,
+        userSession,
       })
     } catch (e: any) {
       singletonServices.logger.error(

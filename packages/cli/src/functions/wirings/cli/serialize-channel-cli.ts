@@ -109,7 +109,12 @@ export function serializeChannelCLI(
 import { wireChannel } from '${channelTypesPath}'
 import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
-import { handleRawCLI } from '@pikku/core/cli/channel'
+import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
+import {
+  getChannelHostRPC,
+  handleChannelRPCResponse,
+  releaseChannelHostRPC,
+} from '@pikku/core/channel'
 import { pikkuState } from '@pikku/core/internal'
 ${imports}
 
@@ -155,38 +160,99 @@ export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string 
  * and the terminating control frame carries the exit code so the client
  * process can exit non-zero.
  */
-export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, void>({
+export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
   auth: false,
-  func: async (services, data: { args: string[] }, { channel }) => {
+  func: async (services, data: { args: string[] }, { channel, session }) => {
     const { help, result, error, exitCode, commandId } = await handleRawCLI({
       programName: '${programName}',
       args: data.args,
       singletonServices: services as any,
       createWireServices: pikkuState(null, 'package', 'factories')?.createWireServices,
-      onOutput: (output, commandId) => channel?.send({ command: '__raw', commandId, data: output }),
+      // The connection authenticated during its upgrade — commands run as it.
+      session,
+      hostRPC: channel ? getChannelHostRPC(channel) : undefined,
+      onOutput: (output, commandId) =>
+        channel?.send({ action: 'cli-output', commandId, data: output }),
     })
 
     if (help !== undefined) {
-      await channel?.send({ command: '__raw', help })
+      await channel?.send({ action: 'cli-help', help })
     } else if (error !== undefined) {
-      await channel?.send({ command: '__raw', error })
+      await channel?.send({ action: 'cli-error', error })
     } else if (result !== undefined) {
-      await channel?.send({ command: '__raw', commandId, result })
+      await channel?.send({ action: 'cli-result', commandId, result })
     }
 
-    await channel?.send({ action: 'cli-control', event: 'complete', exitCode })
+    // Returned rather than sent so the runtime tags it with the routing key,
+    // and so the terminal frame cannot be emitted before the ones above it.
+    return { action: 'cli-control', event: 'complete', exitCode }
+  },
+})
+
+/**
+ * Receives the client's answers to reverse RPC calls. They arrive as ordinary
+ * channel messages — a separate route, correlated back to the waiting caller
+ * by the id in the frame, not by the message that triggered them.
+ */
+export const cliRPCResponse = pikkuSessionlessFunc<Record<string, unknown>, void>({
+  auth: false,
+  func: async (_services, data, { channel }) => {
+    if (channel) {
+      handleChannelRPCResponse(channel.channelId, data)
+    }
+  },
+})
+
+${
+  programMeta.auth === true
+    ? `/**
+ * Refuses a connection that arrives without a session.
+ *
+ * A CLI authenticates once, when it connects — there is no later message that
+ * would establish a session, so a connection that starts anonymous can never
+ * run anything. Saying so immediately and hanging up gives the caller a
+ * non-zero exit instead of a socket that silently refuses every command.
+ */
+export const cliRequireSession = pikkuSessionlessFunc<void, RawCLIFrame | void>({
+  auth: false,
+  func: async (_services, _data, { channel, session }) => {
+    if (session) {
+      return
+    }
+    await channel?.send({ action: 'cli-error', error: 'Authentication required' })
+    await channel?.send({ action: 'cli-control', event: 'complete', exitCode: 1 })
+    await channel?.close()
+  },
+})
+`
+    : ''
+}
+/**
+ * Fails anything the disconnecting client still owed an answer to. Without
+ * this a command waits out the full timeout on a socket that is already gone.
+ */
+export const cliDisconnect = pikkuSessionlessFunc<void, void>({
+  auth: false,
+  func: async (_services, _data, { channel }) => {
+    if (channel) {
+      await releaseChannelHostRPC(channel.channelId)
+    }
   },
 })
 
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
-  auth: false,
+  auth: ${programMeta.auth === true},
+${programMeta.auth === true ? '  onConnect: cliRequireSession,\n' : ''}  onDisconnect: cliDisconnect,
   onMessageWiring: {
     command: {
       '__help': {
         func: cliHelp,
         middleware: [cliCloseOnComplete],
+      },
+      '__rpcResponse': {
+        func: cliRPCResponse,
       },
       '__raw': {
         func: cliRaw,

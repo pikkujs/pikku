@@ -24,6 +24,19 @@
   "schema": {
     "supportsImportAttributes": true
   },
+  "cli": {
+    "entrypoints": {
+      "release": [
+        {
+          "type": "channel",
+          "wirePath": "packages/functions/src/wirings/release-cli-channel.gen.ts",
+          "path": ".pikku/cli/release-cli-client.gen.ts",
+          "name": "release-cli",
+          "route": "/cli/release"
+        }
+      ]
+    }
+  },
   "scaffold": {
     "pikkuDir": "packages/functions/src/pikku",
     "addonDir": "packages",
@@ -55,30 +68,22 @@
         "name": "Admin",
         "jobTitle": "Console administrator",
         "personality": "Careful operator who edits code through the console and always restores it",
-        "scopes": [
-          "admin"
-        ],
-        "roles": [
-          "console-admin"
-        ]
+        "scopes": ["admin"],
+        "roles": ["console-admin"]
       },
       "staff": {
         "email": "staff@actors.local",
         "name": "Staff",
         "jobTitle": "Console admin without a scope role",
         "personality": "Support staff who can open the console but cannot administer scopes",
-        "scopes": [
-          "admin"
-        ]
+        "scopes": ["admin"]
       },
       "guest": {
         "email": "guest@actors.local",
         "name": "Guest",
         "jobTitle": "Report reader",
         "personality": "Read-only user who can see reports and nothing else",
-        "roles": [
-          "report-viewer"
-        ]
+        "roles": ["report-viewer"]
       },
       "target": {
         "email": "target@actors.local",

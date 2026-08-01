@@ -33,3 +33,8 @@ export {
   isChannelRPCResponse,
 } from './channel-rpc.js'
 export type { ChannelRPCRequest, ChannelRPCResponse } from './channel-rpc.js'
+export {
+  getChannelHostRPC,
+  handleChannelRPCResponse,
+  releaseChannelHostRPC,
+} from './channel-host-rpc.js'

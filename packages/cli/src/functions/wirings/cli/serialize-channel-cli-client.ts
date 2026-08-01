@@ -87,28 +87,25 @@ function buildRenderersMap(
 }
 
 /**
- * Serializes a CLI-over-Channel client bootstrap file
- * Similar to local CLI bootstrap but uses WebSocket connection
+ * Serializes a CLI-over-Channel client bootstrap file.
+ *
+ * The client deliberately does NOT import the CLI bootstrap: loading the
+ * command tree here would bind the client's version to the server's, which is
+ * the coupling running commands remotely exists to remove. Renderers are the
+ * only local artefact, and they are optional.
  */
 export function serializeChannelCLIClient(
   programName: string,
   programMeta: CLIProgramMeta,
   clientFile: string,
   config: Config,
-  cliBootstrapPath: string,
+  _cliBootstrapPath: string,
   channelRoute?: string,
   renderersMeta?: Record<string, any>
 ): string {
   const capitalizedName =
     programName.charAt(0).toUpperCase() + programName.slice(1).replace(/-/g, '')
   const finalChannelRoute = channelRoute || `/cli/${programName}`
-
-  // Get relative import path to CLI bootstrap (for metadata)
-  const bootstrapImportPath = getFileImportRelativePath(
-    clientFile,
-    cliBootstrapPath,
-    config.packageMappings
-  )
 
   // Collect all unique renderer names from CLI metadata (populated by inspector)
   const rendererNames = collectRendererNames(programMeta)

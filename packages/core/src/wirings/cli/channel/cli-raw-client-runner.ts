@@ -47,14 +47,16 @@ export async function executeRawCLIViaChannel({
     renderer(null as any, data, undefined)
   }
 
-  const respond = createChannelRPCResponder({
-    capabilities,
-    send: (data) => pikkuWS.send(data),
-  })
-
-  return new Promise<number>((resolve, reject) => {
+  return new Promise<number>((resolve) => {
     const commandRoute = pikkuWS.getRoute('command')
-    let exitCode = 0
+
+    // Answers go back on their own route so the server can correlate them
+    // without them being mistaken for a new command.
+    const respond = createChannelRPCResponder({
+      capabilities,
+      send: (data) => commandRoute.send('__rpcResponse', data),
+    })
+
     let settled = false
 
     const finish = (code: number) => {
@@ -83,39 +85,45 @@ export async function executeRawCLIViaChannel({
         return
       }
 
-      if (message?.action === 'cli-control' && message?.event === 'complete') {
-        finish(message.exitCode ?? exitCode)
-        return
+      // Only the declared frame shapes are acted on. The channel also carries
+      // the runtime's own routing echo and anything else sharing the socket;
+      // rendering those would print noise between a command's real output.
+      switch (message?.action) {
+        case 'cli-output':
+          render(message.commandId, message.data)
+          break
+        case 'cli-result':
+          render(message.commandId, message.result)
+          break
+        case 'cli-help':
+          console.log(message.help)
+          break
+        case 'cli-error':
+          console.error(message.error)
+          break
+        case 'cli-control':
+          if (message.event === 'complete') {
+            finish(message.exitCode ?? 0)
+          }
+          break
       }
-
-      if (message?.help) {
-        console.log(message.help)
-        exitCode = message.exitCode ?? 0
-        return
-      }
-
-      if (message?.error) {
-        console.error(message.error)
-        exitCode = message.exitCode ?? 1
-        return
-      }
-
-      if (message?.result !== undefined) {
-        render(message.commandId, message.result)
-        exitCode = message.exitCode ?? 0
-        return
-      }
-
-      render(message?.commandId, message)
     }
 
     pikkuWS.subscribe(handler)
 
-    pikkuWS.ws.addEventListener('close', () => finish(exitCode))
+    // Only the server's `complete` frame reports success. A socket that closes
+    // before one — rejected upgrade, connection dropped mid-command — means
+    // the command did not finish, and reporting 0 there would let a caller
+    // treat a connection failure as a successful run.
+    pikkuWS.ws.addEventListener('close', () => finish(1))
+    // A transport failure is reported the same way a failed command is: on
+    // stderr, with a non-zero exit code. Rejecting instead would make every
+    // caller handle "the connection broke" separately from "the command
+    // failed", when to a CLI user both are simply a run that did not work.
     pikkuWS.ws.addEventListener('error', (error: any) => {
       if (!settled) {
-        settled = true
-        reject(error)
+        console.error(error?.message ?? String(error))
+        finish(1)
       }
     })
 

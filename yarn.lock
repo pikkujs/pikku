@@ -6050,9 +6050,11 @@ __metadata:
     "@pikku/playwright": "workspace:*"
     "@pikku/redis": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
+    "@pikku/websocket": "workspace:*"
     "@playwright/test": "npm:^1.50.0"
     "@types/better-sqlite3": "npm:^7.0.0"
     "@types/node": "npm:^22"
+    "@types/ws": "npm:^8.5.0"
     ai: "npm:^6.0.105"
     better-auth: "npm:^1.6.19"
     better-sqlite3: "npm:^12.10.0"
@@ -6065,6 +6067,7 @@ __metadata:
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.3"
+    ws: "npm:^8.18.0"
     zod: "npm:^4.3.6"
   languageName: unknown
   linkType: soft
@@ -12278,7 +12281,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/ws@npm:^8":
+"@types/ws@npm:^8, @types/ws@npm:^8.5.0":
   version: 8.18.1
   resolution: "@types/ws@npm:8.18.1"
   dependencies:

@@ -64,7 +64,9 @@ export class PikkuLocalChannelHandler<
       return
     }
     super.close()
-    const results = await Promise.allSettled(this.closeCallbacks.map((cb) => cb()))
+    const results = await Promise.allSettled(
+      this.closeCallbacks.map((cb) => cb())
+    )
     for (const result of results) {
       if (result.status === 'rejected') {
         this.logger?.error('Error in channel close callback:', result.reason)

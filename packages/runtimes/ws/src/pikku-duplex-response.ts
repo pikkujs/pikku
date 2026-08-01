@@ -1,11 +1,27 @@
+import { STATUS_CODES } from 'http'
 import type { Duplex } from 'stream' // Assuming `Duplex` is from Node.js' 'stream' module
 import type { JSONValue } from '@pikku/core'
 import type { PikkuHTTPResponse } from '@pikku/core/http'
 import type { SerializeOptions } from 'cookie'
 
+/**
+ * The response half of a websocket upgrade, writing straight onto the raw
+ * socket.
+ *
+ * Nothing is written until the response is actually needed. An upgrade runs
+ * the HTTP middleware chain first, and middleware sets headers (CORS, most
+ * commonly) on every request — including the ones that go on to succeed. A
+ * successful upgrade's first bytes must be `ws`'s `101` status line, so any
+ * header written eagerly corrupts the handshake and the client fails to parse
+ * the response. Buffering means those headers are simply discarded when the
+ * upgrade proceeds, and are flushed behind a status line only when this class
+ * is the one answering — i.e. when the upgrade was rejected.
+ */
 export class PikkuDuplexResponse implements PikkuHTTPResponse {
   private aborted = false
+  private flushed = false
   #statusCode: number = 200
+  #headers: string[] = []
 
   constructor(private duplex: Duplex) {
     this.duplex.on('close', () => {
@@ -21,12 +37,8 @@ export class PikkuDuplexResponse implements PikkuHTTPResponse {
     throw new Error('Method not implemented.')
   }
 
-  // Set the status code for the response
   public status(status: number): this {
     this.#statusCode = status
-    if (!this.aborted) {
-      this.duplex.write(`HTTP/1.1 ${status} OK\r\n`)
-    }
     return this
   }
 
@@ -37,9 +49,7 @@ export class PikkuDuplexResponse implements PikkuHTTPResponse {
   }
 
   public arrayBuffer(body: string): this {
-    if (!this.aborted) {
-      this.writeBody(body)
-    }
+    this.writeBody(body)
     return this
   }
 
@@ -47,30 +57,40 @@ export class PikkuDuplexResponse implements PikkuHTTPResponse {
     throw new Error(`We don't cookies from a websocket response`)
   }
 
-  // Helper function to write the body
-  private writeBody(body: string | Buffer): void {
-    if (!this.aborted) {
-      // Write the headers
-      this.duplex.write('\r\n') // Empty line to separate headers from body
-      // Write the actual body content
-      this.duplex.write(body)
-    }
-  }
-
-  // Set headers (for content-type, cookies, etc.)
   public header(name: string, value: string): this {
-    if (!this.aborted) {
-      const sanitized = (s: string) => s.replace(/[\r\n]/g, '')
-      // Write the header to the response (e.g., Content-Type)
-      this.duplex.write(`${sanitized(name)}: ${sanitized(value)}\r\n`)
-    }
+    const sanitized = (s: string) => s.replace(/[\r\n]/g, '')
+    this.#headers.push(`${sanitized(name)}: ${sanitized(value)}\r\n`)
     return this
   }
 
-  // End the response
   public end(): void {
-    if (!this.aborted) {
-      this.duplex.end() // Close the Duplex stream
+    if (this.aborted) {
+      return
     }
+    this.flushHead()
+    this.duplex.end()
+  }
+
+  /** Writes the status line and every buffered header, once. */
+  private flushHead(): void {
+    if (this.flushed || this.aborted) {
+      return
+    }
+    this.flushed = true
+    const reason = STATUS_CODES[this.#statusCode] ?? 'Unknown'
+    this.duplex.write(`HTTP/1.1 ${this.#statusCode} ${reason}\r\n`)
+    for (const header of this.#headers) {
+      this.duplex.write(header)
+    }
+    // Empty line to separate headers from body
+    this.duplex.write('\r\n')
+  }
+
+  private writeBody(body: string | Buffer): void {
+    if (this.aborted) {
+      return
+    }
+    this.flushHead()
+    this.duplex.write(body)
   }
 }
