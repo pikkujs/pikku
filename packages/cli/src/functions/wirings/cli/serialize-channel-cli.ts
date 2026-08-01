@@ -146,14 +146,35 @@ export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string 
   },
 })
 
-export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, { help?: string; result?: unknown; error?: string }>({
+/**
+ * Raw entry point: the client forwards argv untouched and this side owns
+ * parsing, so a client binary never carries the command tree and its version
+ * is free to drift from the server's.
+ *
+ * Progressive output is streamed on the same channel rather than returned,
+ * and the terminating control frame carries the exit code so the client
+ * process can exit non-zero.
+ */
+export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, void>({
   auth: false,
-  func: async (services, data: { args: string[] }) => {
-    return handleRawCLI({
+  func: async (services, data: { args: string[] }, { channel }) => {
+    const { help, result, error, exitCode, commandId } = await handleRawCLI({
       programName: '${programName}',
       args: data.args,
       singletonServices: services as any,
+      createWireServices: pikkuState(null, 'package', 'factories')?.createWireServices,
+      onOutput: (output, commandId) => channel?.send({ command: '__raw', commandId, data: output }),
     })
+
+    if (help !== undefined) {
+      await channel?.send({ command: '__raw', help })
+    } else if (error !== undefined) {
+      await channel?.send({ command: '__raw', error })
+    } else if (result !== undefined) {
+      await channel?.send({ command: '__raw', commandId, result })
+    }
+
+    await channel?.send({ action: 'cli-control', event: 'complete', exitCode })
   },
 })
 

@@ -155,29 +155,37 @@ export function serializeChannelCLIClient(
     : ''
 
   return `
-import { executeCLIViaChannel } from '@pikku/core/cli/channel'
+import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
 import { CorePikkuWebsocket } from '@pikku/websocket'
-import '${bootstrapImportPath}'
 ${rendererImports}
 /**
  * ${capitalizedName} CLI Client (via WebSocket Channel)
- * Executes CLI commands over a WebSocket connection
+ *
+ * Forwards argv to the server untouched — the command tree is never parsed
+ * here, so this client stays valid as the server's commands change. Renderers
+ * are matched by the command id the server reports; anything it doesn't
+ * recognise falls back to JSON.
+ *
+ * \`capabilities\` are the functions this client agrees to run on the server's
+ * behalf (a git sha, a local path). It is an allowlist, not a convenience —
+ * nothing outside it is reachable from the server.
  */
 export async function ${capitalizedName}CLIClient(
   ws: WebSocket,
-  args?: string[]
-): Promise<void> {
+  args?: string[],
+  capabilities: Record<string, (data: any) => Promise<unknown> | unknown> = {}
+): Promise<number> {
   // Create Pikku WebSocket wrapper
   const pikkuWS = new CorePikkuWebsocket(ws)
 
   // Register renderers for CLI commands
   const renderers = ${renderersMap}
 
-  await executeCLIViaChannel({
-    programName: '${programName}',
+  return executeRawCLIViaChannel({
     pikkuWS,
     args,
-    renderers${defaultRendererCode},
+    renderers,
+    capabilities${defaultRendererCode},
   })
 }
 
@@ -230,11 +238,12 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
     ws = new WebSocket(url)
   }
 
-  ${capitalizedName}CLIClient(ws, process.argv.slice(2)).catch(error => {
-    console.error('Fatal channel CLI error:', error)
-    // TODO: We get an error code even when it exists cleanly, investigate
-    // process.exit(1)
-  })
+  ${capitalizedName}CLIClient(ws, process.argv.slice(2))
+    .then((exitCode) => process.exit(exitCode))
+    .catch(error => {
+      console.error('Fatal channel CLI error:', error)
+      process.exit(1)
+    })
 }
 `
 }

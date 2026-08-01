@@ -260,12 +260,20 @@ export async function runCLICommand({
   data,
   singletonServices,
   createWireServices,
+  onOutput,
 }: {
   program: string
   commandPath: string[]
   data: Record<string, any>
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
+  /**
+   * Diverts everything the command emits — progressive `channel.send` writes
+   * and the final result — to a sink instead of the local renderer. Set when
+   * the command runs on a server on behalf of a remote CLI: rendering there
+   * would print to the *server's* stdout and the caller would see nothing.
+   */
+  onOutput?: (data: unknown) => Promise<void> | void
 }): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState(null, 'cli', 'meta')
@@ -330,7 +338,9 @@ export async function runCLICommand({
     channelId: `cli:${program}:${commandId}`,
     openingData: pluckedData,
     send: async (data: any) => {
-      if (renderer) {
+      if (onOutput) {
+        await onOutput(data)
+      } else if (renderer) {
         await Promise.resolve(renderer(singletonServices, data, undefined))
       }
     },
@@ -386,7 +396,9 @@ export async function runCLICommand({
     // result-rendering by declaring a `render` — inline-printing commands (no
     // per-command renderer) keep emitting their own output untouched.
     // Skip if result is undefined (void functions handle their own output).
-    if (result !== undefined) {
+    if (result !== undefined && onOutput) {
+      await onOutput(result)
+    } else if (result !== undefined) {
       const commandRenderer = programData?.renderers[commandId]
       const jsonMode =
         (data as any).json === true || (data as any).output === 'json'

@@ -8,28 +8,54 @@ import type {
 } from '../../../types/core.types.js'
 
 /**
+ * A frame sent from the server to a raw CLI client. `output` carries command
+ * data to render; `complete` terminates the command and carries the exit code
+ * so the client process can exit non-zero on failure.
+ */
+export type RawCLIFrame =
+  | { action: 'cli-output'; commandId: string; data: unknown }
+  | { action: 'cli-stderr'; message: string }
+  | { action: 'cli-control'; event: 'complete'; exitCode: number }
+
+export interface RawCLIResult {
+  help?: string
+  result?: unknown
+  error?: string
+  /** 0 on success, 1 on any parse or execution failure. */
+  exitCode: number
+  /** The command the server resolved, so a client can pick a renderer. */
+  commandId?: string
+}
+
+/**
  * Handles raw CLI input from a WebSocket channel.
- * Parses the args, resolves the command, and either returns help or executes it.
+ *
+ * The client sends argv untouched and this side owns parsing, so the command
+ * tree lives with the server and a client binary never needs to know it. Pass
+ * `onOutput` to stream progressive output back rather than rendering it into
+ * the server's own stdout.
  */
 export async function handleRawCLI({
   programName,
   args,
   singletonServices,
   createWireServices,
+  onOutput,
 }: {
   programName: string
   args: string[]
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
-}): Promise<{ help?: string; result?: unknown; error?: string }> {
+  onOutput?: (data: unknown, commandId: string) => Promise<void> | void
+}): Promise<RawCLIResult> {
   const allCLIMeta = pikkuState(null, 'cli', 'meta') as CLIMeta | undefined
   if (!allCLIMeta) {
-    return { error: 'CLI metadata not found' }
+    return { error: 'CLI metadata not found', exitCode: 1 }
   }
 
   const programMeta = allCLIMeta.programs[programName]
   if (!programMeta) {
-    return { error: `Program "${programName}" not found` }
+    return { error: `Program "${programName}" not found`, exitCode: 1 }
   }
 
   // Handle empty input or explicit help
@@ -43,20 +69,21 @@ export async function handleRawCLI({
       (a) => a !== 'help' && a !== '--help' && a !== '-h'
     )
     const helpText = generateCommandHelp(programName, allCLIMeta, helpArgs)
-    return { help: helpText }
+    return { help: helpText, exitCode: 0 }
   }
 
   // Parse the args
   const parsed = parseCLIArguments(args, programName, allCLIMeta)
 
-  // If there are errors or the command resolves to a group (no function), show help
+  // If there are errors or the command resolves to a group (no function), show
+  // help — but an unparseable invocation is still a failure, so it exits 1.
   if (parsed.errors.length > 0 || parsed.commandPath.length === 0) {
     const helpText = generateCommandHelp(
       programName,
       allCLIMeta,
       parsed.commandPath
     )
-    return { help: helpText }
+    return { help: helpText, exitCode: 1 }
   }
 
   // Check if the resolved command has a pikkuFuncId (is executable)
@@ -73,11 +100,12 @@ export async function handleRawCLI({
       allCLIMeta,
       parsed.commandPath
     )
-    return { help: helpText }
+    return { help: helpText, exitCode: 0 }
   }
 
   // Execute the command
   const data = { ...parsed.positionals, ...parsed.options }
+  const commandId = parsed.commandPath.join('.')
 
   try {
     const result = await runCLICommand({
@@ -86,9 +114,12 @@ export async function handleRawCLI({
       data,
       singletonServices,
       createWireServices,
+      // The caller can't know the resolved command until parsing finishes
+      // here, so it's supplied per-frame rather than up front.
+      onOutput: onOutput && ((data) => onOutput(data, commandId)),
     })
-    return { result }
+    return { result, exitCode: 0, commandId }
   } catch (e: unknown) {
-    return { error: (e as Error).message }
+    return { error: (e as Error).message, exitCode: 1, commandId }
   }
 }
