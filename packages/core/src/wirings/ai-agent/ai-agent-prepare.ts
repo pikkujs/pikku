@@ -472,6 +472,7 @@ export function createScopedChannel(
     setState: (s) => parent.setState(s),
     getState: () => parent.getState(),
     clearState: () => parent.clearState(),
+    remote: (funcName: string, data?: unknown) => parent.remote(funcName, data),
   }
 }
 

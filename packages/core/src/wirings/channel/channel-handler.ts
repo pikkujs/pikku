@@ -11,6 +11,8 @@ import type {
 } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
+import { isChannelRPCResponse } from './channel-rpc.js'
+import { handleChannelRPCResponse } from './channel-host-rpc.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 const getChannelMeta = (channelName: string) => {
@@ -159,14 +161,28 @@ export const processMessageHandlers = (
     let result: unknown
     let processed = false
 
-    // Route-specific handling
-    if (typeof rawData === 'string' && channelConfig.onMessageWiring) {
-      let messageData: any
+    let frame: any
+    if (typeof rawData === 'string') {
       try {
-        messageData = JSON.parse(rawData)
+        frame = JSON.parse(rawData)
       } catch {
         // Most likely a json error.. ignore
       }
+    }
+
+    // An answer to a `channel.remote(...)` call is not a message for the app:
+    // it belongs to whichever caller is still awaiting it, anywhere in a
+    // function that is mid-run. Taken ahead of routing so that every channel
+    // gets reverse RPC without declaring a route for the replies, and so an
+    // answer can never be mistaken for a new message.
+    if (isChannelRPCResponse(frame)) {
+      handleChannelRPCResponse(channelHandler.getChannel().channelId, frame)
+      return
+    }
+
+    // Route-specific handling
+    if (typeof rawData === 'string' && channelConfig.onMessageWiring) {
+      const messageData: any = frame
 
       if (messageData) {
         const entries = Object.entries(channelConfig.onMessageWiring)

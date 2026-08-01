@@ -422,12 +422,15 @@ export type PikkuWire<
   addonNamespace: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
+  // `channel.remote` is typed off the same generated map as `rpc.remote`, so
+  // calling back into the connected peer is checked against the app's own
+  // function contracts rather than being a string and an `any`.
   channel: [IsChannel] extends [null]
-    ? PikkuChannel<unknown, Out>
-    : PikkuChannel<unknown, Out> | undefined
+    ? PikkuChannel<unknown, Out, TypedRPC['remote']>
+    : PikkuChannel<unknown, Out, TypedRPC['remote']> | undefined
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
-  cli: PikkuCLI
+  cli: PikkuCLI<TypedRPC['remote']>
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: TypedActors

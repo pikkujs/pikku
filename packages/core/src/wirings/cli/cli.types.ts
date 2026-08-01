@@ -11,7 +11,7 @@ import type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
-import type { PikkuChannel } from '../channel/channel.types.js'
+import type { ChannelRemote, PikkuChannel } from '../channel/channel.types.js'
 
 /**
  * CLI option definition
@@ -44,11 +44,11 @@ export interface CLIPositional {
 /**
  * CLI wire context
  */
-export type PikkuCLI = {
+export type PikkuCLI<Remote extends (...args: any[]) => any = ChannelRemote> = {
   program: string
   command: string[]
   data: Record<string, any> // All positionals and options merged
-  channel: PikkuChannel<unknown, unknown>
+  channel: PikkuChannel<unknown, unknown, Remote>
 }
 
 /**

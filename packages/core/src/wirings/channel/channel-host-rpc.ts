@@ -1,6 +1,10 @@
-import { ChannelDeploymentService } from './channel-rpc.js'
+import {
+  ChannelDeploymentService,
+  createChannelRPCResultValidator,
+} from './channel-rpc.js'
 import type { ChannelRPCResultValidator } from './channel-rpc.js'
 import type { PikkuChannel } from './channel.types.js'
+import { getSingletonServices } from '../../pikku-state.js'
 
 /**
  * Reverse-RPC transports, one per open connection.
@@ -40,6 +44,24 @@ export const getChannelHostRPC = (
   }
   return service
 }
+
+/**
+ * The implementation behind `channel.remote(...)`.
+ *
+ * Kept out of the channel handler so the transport is created on first use
+ * rather than on every connection: a channel nobody calls back on should not
+ * pay for a registry, and a handler has no services to build a validator with.
+ */
+export const channelRemote = async (
+  channel: PikkuChannel<unknown, any, any>,
+  funcName: string,
+  data?: unknown
+): Promise<unknown> =>
+  getChannelHostRPC(channel, {
+    // The transport is the only place that sees every reverse call, so no
+    // caller has to ask for its answer to be checked.
+    validateResult: createChannelRPCResultValidator(getSingletonServices()),
+  }).invoke(funcName, data)
 
 /**
  * Routes a response frame back to the call it belongs to. Returns false when

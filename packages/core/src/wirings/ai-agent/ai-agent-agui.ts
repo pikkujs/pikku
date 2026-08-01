@@ -177,6 +177,9 @@ export function wrapChannelWithAGUI(
     setState: (s) => inner.setState(s),
     getState: () => inner.getState(),
     clearState: () => inner.clearState(),
+    // Delegated: the wrapper is a view over the same connection, so a peer
+    // reachable from the channel underneath is reachable from here too.
+    remote: (funcName: string, data?: unknown) => inner.remote(funcName, data),
     sendBinary: (data) => inner.sendBinary(data),
     close: () => inner.close(),
 

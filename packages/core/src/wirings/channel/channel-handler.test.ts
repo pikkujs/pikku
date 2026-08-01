@@ -4,6 +4,8 @@ import assert from 'node:assert/strict'
 import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { processMessageHandlers } from './channel-handler.js'
+import { getChannelHostRPC, releaseChannelHostRPC } from './channel-host-rpc.js'
+import { CHANNEL_RPC_RESPONSE } from './channel-rpc.js'
 
 const createLogger = () => {
   const errors: string[] = []
@@ -238,6 +240,54 @@ describe('processMessageHandlers', () => {
       /No handler found for message in channel chat/
     )
     assert.match(errors[1] || '', /Channel config name: chat/)
+  })
+
+  test('takes a reverse-RPC answer off the socket before routing', async () => {
+    const { errors, logger } = createLogger()
+    const { sent, handler } = createChannelHandler()
+
+    pikkuState(null, 'channel', 'meta').chat = {
+      name: 'chat',
+      route: '/chat',
+      input: null,
+      connect: null,
+      disconnect: null,
+      message: { pikkuFuncId: 'defaultFunc', packageName: null },
+      messageWirings: {},
+    } as never
+    registerFunction('defaultFunc', async () => ({ ok: true }))
+
+    const { onMessage } = processMessageHandlers(
+      { logger } as never,
+      {
+        name: 'chat',
+        route: '/chat',
+        auth: false,
+        onMessage: { func: async () => ({ ok: true }) } as never,
+      } as never,
+      handler as never
+    )
+
+    const transport = getChannelHostRPC(handler.getChannel() as never)
+    const call = transport.invoke('localCheckout', {})
+    const request = sent[0] as { id: string }
+
+    const result = await onMessage(
+      JSON.stringify({
+        action: CHANNEL_RPC_RESPONSE,
+        id: request.id,
+        ok: true,
+        result: { sha: 'deadbeef' },
+      })
+    )
+
+    assert.deepEqual(await call, { sha: 'deadbeef' })
+    // The channel declares no route for replies and its default handler is
+    // never reached — the answer belongs to the waiting caller, not the app.
+    assert.equal(result, undefined)
+    assert.deepEqual(errors, [])
+
+    await releaseChannelHostRPC(handler.getChannel().channelId)
   })
 
   test('blocks binary messages when a session is required and missing', async () => {

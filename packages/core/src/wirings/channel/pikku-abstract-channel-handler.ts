@@ -3,6 +3,7 @@ import type {
   PikkuChannel,
   PikkuChannelHandler,
 } from './channel.types.js'
+import { channelRemote, releaseChannelHostRPC } from './channel-host-rpc.js'
 
 export abstract class PikkuAbstractChannelHandler<
   OpeningData = unknown,
@@ -37,6 +38,8 @@ export abstract class PikkuAbstractChannelHandler<
         clearState: () => {
           channelState = undefined
         },
+        remote: (funcName: string, data?: unknown) =>
+          channelRemote(this.getChannel(), funcName, data),
       }
     }
     return this.channel
@@ -48,5 +51,11 @@ export abstract class PikkuAbstractChannelHandler<
 
   public close(): Promise<void> | void {
     this.getChannel().state = 'closed'
+    // Fails anything the departing peer still owed an answer to. Without it a
+    // caller waits out the full timeout on a socket that is already gone, and
+    // the transport registry grows for the life of the process. Not awaited:
+    // `close` is on the synchronous path of every runtime, and nothing here
+    // can fail in a way a closing channel could act on.
+    void releaseChannelHostRPC(this.channelId)
   }
 }

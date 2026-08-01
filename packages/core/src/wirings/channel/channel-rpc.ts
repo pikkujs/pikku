@@ -68,11 +68,31 @@ export const isChannelRPCResponse = (
 export class ChannelRPCError extends Error {
   constructor(
     message: string,
-    public readonly reason: 'timeout' | 'closed' | 'remote' | 'invalid'
+    public readonly reason:
+      | 'timeout'
+      | 'closed'
+      | 'remote'
+      | 'invalid'
+      | 'unsupported'
   ) {
     super(message)
     this.name = 'ChannelRPCError'
   }
+}
+
+/**
+ * `remote` for channels that only ever flow one way — a server-sent stream, an
+ * agent's output, a local CLI writing to stdout. Nothing is listening for a
+ * request on them, so the call is refused at once rather than waiting out a
+ * timeout for an answer that was never going to come.
+ */
+export const unsupportedChannelRemote = async (
+  funcName: string
+): Promise<never> => {
+  throw new ChannelRPCError(
+    `Cannot call "${funcName}" remotely: this channel has no peer that answers`,
+    'unsupported'
+  )
 }
 
 /**

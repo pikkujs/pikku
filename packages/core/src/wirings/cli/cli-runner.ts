@@ -24,6 +24,7 @@ import type {
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
+import { unsupportedChannelRemote } from '../channel/channel-rpc.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
@@ -262,6 +263,7 @@ export async function runCLICommand({
   createWireServices,
   onOutput,
   session,
+  transport,
 }: {
   program: string
   commandPath: string[]
@@ -282,6 +284,13 @@ export async function runCLICommand({
    * would print to the *server's* stdout and the caller would see nothing.
    */
   onOutput?: (data: unknown) => Promise<void> | void
+  /**
+   * The connection the command arrived on, when it arrived on one. The CLI
+   * wire's channel is synthetic — it exists so a command can stream progress
+   * without knowing where that goes — so reaching the caller has to be
+   * delegated to the real channel underneath it.
+   */
+  transport?: PikkuChannel<unknown, any, any>
 }): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState(null, 'cli', 'meta')
@@ -368,6 +377,12 @@ export async function runCLICommand({
     clearState: () => {
       cliState = undefined
     },
+    // A locally-run command is already on the machine it would be calling
+    // back to, so there is no peer here to answer. Over a channel, the call
+    // goes out on the connection the command arrived on.
+    remote: transport
+      ? (funcName: string, data?: unknown) => transport.remote(funcName, data)
+      : unsupportedChannelRemote,
   }
 
   const userSession = new PikkuSessionService<CoreUserSession>(
