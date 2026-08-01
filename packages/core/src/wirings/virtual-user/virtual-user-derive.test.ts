@@ -217,6 +217,56 @@ describe('deriving intents from scenarios', () => {
     assert.equal(intents[0]!.title, 'bare')
     assert.equal(intents[0]!.steps, undefined)
   })
+
+  // What `getWorkflowMeta()` returns is the graph the CLI wrote, not the
+  // inspector state the runner holds: same scenario, `nodes` instead of
+  // `steps` and `source` instead of `scenario`. The console derives its screen
+  // from this shape, so reading only the runner's would show every user with
+  // nothing it wants.
+  test('a scenario read back off disk yields the same intent as the runner sees', () => {
+    const intents = deriveIntents(
+      {
+        inviteFlow: {
+          name: 'inviteFlow',
+          source: 'scenario',
+          title: 'Invite a teammate',
+          actors: ['orgAdmin'],
+          nodes: {
+            step_0: { nodeId: 'step_0', flow: 'branch', branches: [] },
+            a: {
+              nodeId: 'a',
+              rpcName: 'aSignedInAdmin',
+              scenarioStepPhase: 'given',
+              actor: 'orgAdmin',
+            },
+            b: {
+              nodeId: 'b',
+              rpcName: 'invitesATeammate',
+              scenarioStepPhase: 'when',
+              actor: 'orgAdmin',
+            },
+          },
+        },
+      } as unknown as WorkflowsMeta,
+      functions
+    )
+
+    assert.deepEqual(intents[0]!.steps, [
+      'Given the orgAdmin is signed in',
+      'When the orgAdmin invites {email}',
+    ])
+    assert.deepEqual(intents[0]!.actors, ['orgAdmin'])
+  })
+
+  test('an ordinary workflow read off disk is still not a scenario', () => {
+    const intents = deriveIntents(
+      {
+        nightly: { name: 'nightly', source: 'workflow', nodes: {} },
+      } as unknown as WorkflowsMeta,
+      functions
+    )
+    assert.deepEqual(intents, [])
+  })
 })
 
 describe('driving a virtual user through a signed-in actor', () => {

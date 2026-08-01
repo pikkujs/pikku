@@ -79,8 +79,17 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
     profile.moves.abandon
   const hasSomethingToWant = user.goals.length > 0 || user.intents.length > 0
 
+  // Picking a different user should start you at the top of their dossier. The
+  // panel scrolls rather than the page, so without this you land partway down
+  // someone else's intents, at whatever offset you left the last one at.
+  const top = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    top.current?.scrollIntoView({ block: 'start' })
+  }, [user.id])
+
   return (
     <Box
+      ref={top}
       data-testid={`virtual-user-document-${user.id}`}
       style={{ maxWidth: 860, padding: '28px 32px 64px' }}
     >
