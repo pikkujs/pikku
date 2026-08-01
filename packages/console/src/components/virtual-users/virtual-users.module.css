@@ -37,6 +37,85 @@
   padding-left: 12px;
 }
 
+/* A figure you can open reads as a number first and a control second. */
+.figureButton {
+  border-radius: 6px;
+  margin: -6px -8px;
+  padding: 6px 8px;
+}
+
+.figureButton:hover,
+.figureButton[data-open] {
+  background: var(--mantine-color-default-hover);
+}
+
+/*
+ * Names are scannable as a block and unreadable as a column, so they wrap. The
+ * cap keeps a 400-endpoint project from pushing the rest of the dossier off
+ * screen when one is opened.
+ */
+.nameList {
+  border-left: 2px solid var(--mantine-color-default-border);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 0 4px 12px;
+}
+
+.intentRow {
+  border-radius: 6px;
+  display: block;
+  padding: 6px 8px 6px 4px;
+  width: 100%;
+}
+
+.intentRow:hover,
+.intentRow[data-open] {
+  background: var(--mantine-color-default-hover);
+}
+
+.intentChevron {
+  color: var(--mantine-color-dimmed);
+  flex-shrink: 0;
+  transition: transform 120ms ease;
+}
+
+.intentChevron[data-open] {
+  transform: rotate(90deg);
+}
+
+/*
+ * The feature a scenario belongs to is often a whole sentence. Truncating it
+ * on the row keeps the three columns aligned; the full name is the tooltip.
+ */
+.intentFeature {
+  flex-shrink: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The spread of intents over features, as one bar rather than a chart. */
+.spreadBar {
+  border-radius: 4px;
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.spreadSegment {
+  /* Same accent the rest of the console picks up, falling back to the theme. */
+  background: var(--app-accent, var(--mantine-primary-color-filled));
+  border-radius: 2px;
+}
+
+.spreadRest {
+  background: var(--mantine-color-default-border);
+  border-radius: 2px;
+}
+
 .command {
   background: var(--mantine-color-default);
   border: 1px solid var(--mantine-color-default-border);
