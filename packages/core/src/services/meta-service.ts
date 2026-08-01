@@ -17,6 +17,7 @@ import type {
   FeaturesMeta,
   WorkflowsMeta,
 } from '../wirings/workflow/workflow.types.js'
+import type { VirtualUsersMeta } from '../wirings/virtual-user/virtual-user.types.js'
 import type { ScenarioActorConfig } from './scenario-actors-service.js'
 import type {
   TriggerMeta,
@@ -190,6 +191,7 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getScenarioActorsMeta(): Promise<Record<string, ScenarioActorConfig>>
   getFeaturesMeta(): Promise<FeaturesMeta>
+  getVirtualUsersMeta(): Promise<VirtualUsersMeta>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>
   getFunctionsMeta(): Promise<FunctionsMeta>
@@ -231,6 +233,7 @@ export class LocalMetaService implements MetaService {
   private scenarioActorsMetaCache: Record<string, ScenarioActorConfig> | null =
     null
   private featuresMetaCache: FeaturesMeta | null = null
+  private virtualUsersMetaCache: VirtualUsersMeta | null = null
   private triggerMetaCache: TriggerMeta | null = null
   private triggerSourceMetaCache: TriggerSourceMeta | null = null
   private functionsMetaCache: FunctionsMeta | null = null
@@ -334,6 +337,7 @@ export class LocalMetaService implements MetaService {
     this.workflowMetaCache = null
     this.scenarioActorsMetaCache = null
     this.featuresMetaCache = null
+    this.virtualUsersMetaCache = null
     this.triggerMetaCache = null
     this.triggerSourceMetaCache = null
     this.functionsMetaCache = null
@@ -527,6 +531,14 @@ export class LocalMetaService implements MetaService {
     const content = await this.readFile('scenarios/features.gen.json')
     this.featuresMetaCache = content ? JSON.parse(content) : {}
     return this.featuresMetaCache!
+  }
+
+  async getVirtualUsersMeta(): Promise<VirtualUsersMeta> {
+    if (this.virtualUsersMetaCache) return this.virtualUsersMetaCache
+
+    const content = await this.readFile('scenarios/virtual-users.gen.json')
+    this.virtualUsersMetaCache = content ? JSON.parse(content) : {}
+    return this.virtualUsersMetaCache!
   }
 
   async getTriggerMeta(): Promise<TriggerMeta> {

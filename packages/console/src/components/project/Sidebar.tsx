@@ -33,6 +33,7 @@ import {
   GitCompare,
   Mail,
   Route,
+  UserSearch,
   BookOpen,
   Database,
   Users,
@@ -101,6 +102,12 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/scenarios',
           icon: Route,
           matchPrefix: '/scenarios',
+        },
+        {
+          label: m.nav_virtual_users(),
+          href: '/virtual-users',
+          icon: UserSearch,
+          matchPrefix: '/virtual-users',
         },
         {
           label: m.nav_knowledge(),

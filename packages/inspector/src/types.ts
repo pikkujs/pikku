@@ -465,6 +465,26 @@ export interface InspectorFeature {
   hasAfter: boolean
 }
 
+/**
+ * A `pikkuVirtualUser` export. Fully literal by construction — there is no code
+ * body to resolve at runtime, so what is read here is the entire declaration.
+ */
+export interface InspectorVirtualUser {
+  path: string
+  exportedName: string
+  /** The scenario actor it signs in as. Required; there is no default identity. */
+  actor: string
+  name?: string
+  description?: string
+  disposition?: string
+  goals?: string[]
+  tags?: string[]
+  grants?: string[]
+  fixtures?: string[]
+  allowApprovalRequired?: boolean
+  budget?: { steps?: number; mutations?: number; duration?: number | string }
+}
+
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -517,6 +537,12 @@ export interface InspectorState {
      * `unresolvedEntries` and resolved at runtime by object identity instead.
      */
     featureFiles: Map<string, InspectorFeature>
+    /**
+     * `pikkuVirtualUser` exports, keyed by export identifier. Lives beside the
+     * features because a virtual user is fed by the same scenario prose — it is
+     * the same body of intent, worked without the script.
+     */
+    virtualUserFiles: Map<string, InspectorVirtualUser>
     invokedWorkflows: Set<string>
   }
   rpc: {

@@ -22,7 +22,8 @@ import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
-import type { TypedScenarioActors } from '${scenarioActorsImportPath}'
+import type { TypedScenarioActors, ScenarioActorName } from '${scenarioActorsImportPath}'
+import type { VirtualUserBudget, VirtualUserDisposition } from '@pikku/core/virtual-user'
 
 export type { TypedScenarioActors }
 
@@ -313,6 +314,69 @@ export type PikkuFeatureConfig<Scenarios extends readonly unknown[]> = {
 export function pikkuFeature<const Scenarios extends readonly unknown[]>(
   config: PikkuFeatureConfig<Scenarios>
 ): PikkuFeatureConfig<Scenarios> {
+  return config
+}
+
+export type PikkuVirtualUserConfig = {
+  /** Which scenario actor this user signs in as — a real sign-in, over real auth. */
+  actor: ScenarioActorName
+  /** Human-readable name. The export identifier is the id. */
+  name?: string
+  description?: string
+  /**
+   * How it behaves, mechanically — not how it talks. \`realistic\` by default;
+   * \`adversarial\` probes authorization and treats an unexpected 2xx as the
+   * finding.
+   */
+  disposition?: VirtualUserDisposition
+  /**
+   * What it wants, in a person's words. Scenarios naming this actor are already
+   * intents on their own; these are the wants nobody wrote a scenario for.
+   */
+  goals?: string[]
+  tags?: string[]
+  /** Caps the engine counts itself. Anything it cannot count belongs to \`stop\`. */
+  budget?: VirtualUserBudget
+  /**
+   * Permission-function names this actor genuinely holds. Ordinary dispositions
+   * are only offered what these reach; an \`adversarial\` one is shown the whole
+   * surface and this becomes the oracle — a 2xx from outside it is a finding.
+   */
+  grants?: string[]
+  /**
+   * Whether approval-gated endpoints are on the table. Off by default: a
+   * virtual user runs against a real stage, and those are the calls that spend
+   * money and move real traffic.
+   */
+  allowApprovalRequired?: boolean
+  /** Files it may upload, relative to the project root. */
+  fixtures?: string[]
+}
+
+/**
+ * A virtual user: someone who signs into a running stage and works the API in
+ * character, non-deterministically, to find what a written scenario cannot.
+ *
+ * It is not a test. Nothing here asserts an expected outcome — the run produces
+ * findings, and a clean one only ever means "not this time, not with this seed".
+ *
+ * Everything it needs is already generated: the RPC meta is its catalogue, the
+ * scenarios naming its actor are its intents (as prose — never their steps), and
+ * the actor is its identity. The declaration is only who to be and what to want.
+ *
+ * \`\`\`ts
+ * export const impatientShopper = pikkuVirtualUser({
+ *   name: 'Impatient shopper',
+ *   actor: 'shopper',
+ *   disposition: 'careless',
+ *   goals: ['buy something', 'change their mind about it'],
+ *   budget: { steps: 40, mutations: 10 },
+ * })
+ * \`\`\`
+ */
+export function pikkuVirtualUser(
+  config: PikkuVirtualUserConfig
+): PikkuVirtualUserConfig {
   return config
 }
 

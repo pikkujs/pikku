@@ -429,13 +429,14 @@ export type PikkuCLIInput = {
      */
     browserDriver?: string
     /**
-     * The model an actor thinks with in `actor.converse(...)` — its own turns,
-     * its approval decisions and its closing verdict. Not the model under test:
-     * that one belongs to the agent being conversed with, and the whole point
-     * of the exercise is that the two are different. A step can override it per
-     * conversation; with neither set, `converse` refuses rather than guessing.
+     * The model a persona thinks with — for `actor.converse(...)` and for
+     * `pikku virtual-user run`. Its own turns, its approval decisions and its
+     * closing verdict. Not the model under test: that one belongs to the agent
+     * being conversed with, and the whole point of the exercise is that the two
+     * are different. A step can override it per conversation; with neither set,
+     * `converse` refuses rather than guessing.
      */
-    actorModel?: string
+    model?: string
   }
 
   scaffold?: {
