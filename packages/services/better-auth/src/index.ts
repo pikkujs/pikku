@@ -3,6 +3,7 @@ export {
   CROSS_SITE_COOKIE_HEADER,
   CROSS_SITE_SET_COOKIE_HEADER,
   crossSiteCookies,
+  decodeSetCookies,
   mergeRelayedCookies,
 } from './cross-site-cookies.js'
 export {

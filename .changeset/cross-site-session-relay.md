@@ -19,8 +19,10 @@ sends them back in `x-pikku-cross-site-cookie`, and `createAuthHandler`,
 before reading the session. A real cookie always wins over a relayed one of the same
 name, so a browser that did store it stays authoritative.
 
-Both header names, `crossSiteCookies()` and `mergeRelayedCookies()` are exported for
-clients that implement the browser half. A response carrying the echo header is marked
+Both header names, `crossSiteCookies()`, `decodeSetCookies()` and
+`mergeRelayedCookies()` are exported for clients that implement the browser half — the
+echo header carries a percent-encoded JSON array, so the client needs the decoder to
+read it at all. A response carrying the echo header is marked
 `Cache-Control: no-store`: caches along the path know to be careful with `Set-Cookie`
 and nothing about this one, and a stored copy would hand one user's session to the next.
 
