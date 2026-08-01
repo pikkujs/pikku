@@ -1,4 +1,7 @@
 import type { DeploymentService } from '../../services/deployment-service.js'
+import type { CoreSingletonServices } from '../../types/core.types.js'
+import { pikkuState } from '../../pikku-state.js'
+import { validateSchema } from '../../schema.js'
 
 /**
  * Envelope actions for request/response RPC carried over an already-open
@@ -71,6 +74,15 @@ export class ChannelRPCError extends Error {
     this.name = 'ChannelRPCError'
   }
 }
+
+/**
+ * Checks what a peer returned for one capability, throwing to reject the call.
+ * Async because schema validation is.
+ */
+export type ChannelRPCResultValidator = (
+  funcName: string,
+  result: unknown
+) => Promise<void> | void
 
 interface PendingCall {
   resolve: (value: unknown) => void
@@ -182,12 +194,17 @@ export class ChannelRPCRegistry {
  */
 export class ChannelDeploymentService implements DeploymentService {
   public readonly registry: ChannelRPCRegistry
+  private readonly validateResult?: ChannelRPCResultValidator
 
   constructor(
     private readonly send: (data: unknown) => Promise<void> | void,
-    timeoutMs?: number
+    options: {
+      timeoutMs?: number
+      validateResult?: ChannelRPCResultValidator
+    } = {}
   ) {
-    this.registry = new ChannelRPCRegistry(timeoutMs)
+    this.registry = new ChannelRPCRegistry(options.timeoutMs)
+    this.validateResult = options.validateResult
   }
 
   public async init(): Promise<void> {}
@@ -228,55 +245,67 @@ export class ChannelDeploymentService implements DeploymentService {
       traceId,
     }
     await this.send(request)
-    return promise
+
+    const result = await promise
+    if (!this.validateResult) {
+      return result
+    }
+
+    // A capability runs on the peer's machine and answers with whatever it
+    // likes, so this is the point where a value that has been through nothing
+    // enters a server-side command. Checking it here means a client on an
+    // older build fails the call it answered, rather than the command failing
+    // later somewhere that had no reason to expect a bad shape.
+    try {
+      await this.validateResult(funcName, result)
+    } catch (e: unknown) {
+      throw new ChannelRPCError(
+        `Invalid result from "${funcName}": ${(e as Error)?.message ?? String(e)}`,
+        'invalid'
+      )
+    }
+    return result
   }
 }
 
 /**
- * Calls a capability on the connected client and checks what comes back.
+ * Checks a capability's answer against the schema generated for its declared
+ * return type.
  *
- * Two problems are solved together, because they have the same cause. A client
- * capability is not one of this server's functions, so it is absent from the
- * generated RPC map and `rpc.remote` cannot type it — every caller would
- * otherwise cast, and a cast is exactly the thing that makes a peer's answer
- * look like a checked value. `parse` is that check: it runs on a payload that
- * arrived from someone else's machine, and a call whose answer does not match
- * fails as a call rather than as a `TypeError` several lines later, in code
- * that had no reason to expect one.
+ * A capability is declared as a function like any other, so codegen has
+ * already produced a schema for what it returns — the same one an agent tool
+ * or an HTTP response is checked against. Nothing about the value arriving
+ * from a peer's machine rather than from local code changes what it is
+ * supposed to look like, and a caller should not have to restate the shape it
+ * already declared.
  *
- * @example
- * const { sha } = await callClientCapability({
- *   rpc,
- *   name: 'localCheckout',
- *   parse: (result) => {
- *     if (typeof (result as any)?.sha !== 'string') {
- *       throw new Error('expected { sha: string }')
- *     }
- *     return result as { sha: string }
- *   },
- * })
+ * A name with no function metadata is left alone: it is a capability this app
+ * never declared a contract for, and inventing a failure for it would break
+ * callers who deliberately treat the answer as opaque.
  */
-export const callClientCapability = async <T>({
-  rpc,
-  name,
-  data,
-  parse,
-}: {
-  rpc: { remote: (...args: any[]) => Promise<any> }
-  name: string
-  data?: unknown
-  parse: (result: unknown) => T
-}): Promise<T> => {
-  const result = await rpc.remote(name as never, data as never)
-  try {
-    return parse(result)
-  } catch (e: unknown) {
-    throw new ChannelRPCError(
-      `Invalid result from client capability "${name}": ${(e as Error)?.message ?? String(e)}`,
-      'invalid'
+export const createChannelRPCResultValidator =
+  (
+    singletonServices: Pick<CoreSingletonServices, 'logger' | 'schema'>,
+    packageName: string | null = null
+  ) =>
+  async (funcName: string, result: unknown): Promise<void> => {
+    const pikkuFuncId = pikkuState(packageName, 'rpc', 'meta')[funcName]
+    if (!pikkuFuncId) {
+      return
+    }
+    const schemaName = pikkuState(packageName, 'function', 'meta')[pikkuFuncId]
+      ?.outputSchemaName
+    if (!schemaName) {
+      return
+    }
+    await validateSchema(
+      singletonServices.logger,
+      singletonServices.schema,
+      schemaName,
+      result,
+      packageName
     )
   }
-}
 
 /**
  * Answers reverse RPC requests arriving on a channel.

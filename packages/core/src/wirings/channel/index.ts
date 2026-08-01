@@ -28,12 +28,16 @@ export {
   ChannelDeploymentService,
   ChannelRPCError,
   ChannelRPCRegistry,
-  callClientCapability,
   createChannelRPCResponder,
+  createChannelRPCResultValidator,
   isChannelRPCRequest,
   isChannelRPCResponse,
 } from './channel-rpc.js'
-export type { ChannelRPCRequest, ChannelRPCResponse } from './channel-rpc.js'
+export type {
+  ChannelRPCRequest,
+  ChannelRPCResponse,
+  ChannelRPCResultValidator,
+} from './channel-rpc.js'
 export {
   getChannelHostRPC,
   handleChannelRPCResponse,

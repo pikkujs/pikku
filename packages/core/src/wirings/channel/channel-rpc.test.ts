@@ -1,17 +1,20 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert/strict'
 
+import { pikkuState } from '../../pikku-state.js'
+
 import {
   CHANNEL_RPC_REQUEST,
   CHANNEL_RPC_RESPONSE,
   ChannelDeploymentService,
   ChannelRPCRegistry,
-  callClientCapability,
   createChannelRPCResponder,
   isChannelRPCRequest,
   isChannelRPCResponse,
+  createChannelRPCResultValidator,
   type ChannelRPCError,
   type ChannelRPCRequest,
+  type ChannelRPCResultValidator,
 } from './channel-rpc.js'
 
 /**
@@ -20,7 +23,8 @@ import {
  */
 const connect = (
   capabilities: Record<string, (data: any) => any>,
-  timeoutMs?: number
+  timeoutMs?: number,
+  validateResult?: ChannelRPCResultValidator
 ) => {
   const clientSent: unknown[] = []
   const serverSent: unknown[] = []
@@ -33,10 +37,13 @@ const connect = (
     },
   })
 
-  const service = new ChannelDeploymentService(async (data) => {
-    serverSent.push(data)
-    await respond(data)
-  }, timeoutMs)
+  const service = new ChannelDeploymentService(
+    async (data) => {
+      serverSent.push(data)
+      await respond(data)
+    },
+    { timeoutMs, validateResult }
+  )
 
   return { service, clientSent, serverSent }
 }
@@ -325,77 +332,135 @@ describe('envelope validation', () => {
   })
 })
 
-describe('callClientCapability', () => {
-  test('returns the parsed result', async () => {
-    const { service } = connect({
-      localCheckout: () => ({ sha: 'deadbeef', branch: 'main' }),
-    })
+describe('result validation', () => {
+  /**
+   * Registers a capability the way codegen would: a name in the RPC map, the
+   * function it resolves to, and the schema generated from its return type.
+   */
+  const declareCapability = (name: string, schema: unknown) => {
+    pikkuState(null, 'rpc', 'meta')[name] = name as any
+    pikkuState(null, 'function', 'meta')[name] = {
+      pikkuFuncId: name,
+      outputSchemaName: `${name}Output`,
+    } as any
+    pikkuState(null, 'misc', 'schemas').set(`${name}Output`, schema as any)
+    return () => {
+      delete pikkuState(null, 'rpc', 'meta')[name]
+      delete pikkuState(null, 'function', 'meta')[name]
+      pikkuState(null, 'misc', 'schemas').delete(`${name}Output`)
+    }
+  }
 
-    const checkout = await callClientCapability({
-      rpc: {
-        remote: (name: string, data: unknown) => service.invoke(name, data),
+  const checkoutSchema = {
+    type: 'object',
+    properties: { sha: { type: 'string' }, branch: { type: 'string' } },
+    required: ['sha', 'branch'],
+  }
+
+  /** Stands in for the schema service, which is an ajv wrapper in production. */
+  const schemaServices = () => ({
+    logger: {
+      error: () => {},
+      warn: () => {},
+      info: () => {},
+      debug: () => {},
+    },
+    schema: {
+      compileSchema: () => {},
+      validateSchema: (name: string, data: any) => {
+        const schema = pikkuState(null, 'misc', 'schemas').get(name) as any
+        for (const key of schema?.required ?? []) {
+          if (typeof data?.[key] !== schema.properties[key].type) {
+            throw new Error(`Property "${key}" does not match schema.`)
+          }
+        }
       },
-      name: 'localCheckout',
-      parse: (result) => result as { sha: string; branch: string },
-    })
-
-    assert.deepEqual(checkout, { sha: 'deadbeef', branch: 'main' })
+    },
   })
 
-  test('a result that does not match fails the call', async () => {
-    const { service } = connect({
-      // What a client of the wrong version, or a hostile one, answers with.
-      localCheckout: () => ({ sha: null }),
-    })
+  test('accepts an answer matching the declared return type', async () => {
+    const release = declareCapability('localCheckout', checkoutSchema)
+    try {
+      const { service } = connect(
+        { localCheckout: () => ({ sha: 'deadbeef', branch: 'main' }) },
+        undefined,
+        createChannelRPCResultValidator(schemaServices() as any)
+      )
 
-    await assert.rejects(
-      callClientCapability({
-        rpc: {
-          remote: (name: string, data: unknown) => service.invoke(name, data),
-        },
-        name: 'localCheckout',
-        parse: (result) => {
-          if (typeof (result as any)?.sha !== 'string') {
-            throw new Error('expected { sha: string }')
-          }
-          return result as { sha: string }
-        },
-      }),
-      (e: ChannelRPCError) => {
-        assert.equal(e.reason, 'invalid')
-        // The capability is named because the failure is about the peer's
-        // answer, not about the command that asked for it.
-        assert.match(
-          e.message,
-          /Invalid result from client capability "localCheckout": expected \{ sha: string \}/
-        )
-        return true
-      }
+      assert.deepEqual(await service.invoke('localCheckout', {}), {
+        sha: 'deadbeef',
+        branch: 'main',
+      })
+    } finally {
+      release()
+    }
+  })
+
+  test('rejects an answer that does not match, naming the capability', async () => {
+    const release = declareCapability('localCheckout', checkoutSchema)
+    try {
+      // A client on an older build, or one that simply lies. Either way the
+      // command must not carry on with a `sha` that is not a string.
+      const { service } = connect(
+        { localCheckout: () => ({ sha: null, branch: 'main' }) },
+        undefined,
+        createChannelRPCResultValidator(schemaServices() as any)
+      )
+
+      await assert.rejects(
+        service.invoke('localCheckout', {}),
+        (e: ChannelRPCError) => {
+          assert.equal(e.reason, 'invalid')
+          assert.match(
+            e.message,
+            /Invalid result from "localCheckout": Property "sha" does not match schema\./
+          )
+          return true
+        }
+      )
+    } finally {
+      release()
+    }
+  })
+
+  test('leaves a capability with no declared contract alone', async () => {
+    // Nothing was declared for this name, so there is no shape to check
+    // against — inventing a failure would break a caller that deliberately
+    // treats the answer as opaque.
+    const { service } = connect(
+      { whoAmI: () => 'anything at all' },
+      undefined,
+      createChannelRPCResultValidator(schemaServices() as any)
     )
+
+    assert.equal(await service.invoke('whoAmI', {}), 'anything at all')
   })
 
   test('a failure inside the capability is not reported as invalid', async () => {
-    const { service } = connect({
-      localCheckout: () => {
-        throw new Error('not a git repository')
-      },
-    })
-
-    // The peer answered properly — it answered that it failed. Reporting that
-    // as a validation problem would point at the wrong end of the connection.
-    await assert.rejects(
-      callClientCapability({
-        rpc: {
-          remote: (name: string, data: unknown) => service.invoke(name, data),
+    const release = declareCapability('localCheckout', checkoutSchema)
+    try {
+      const { service } = connect(
+        {
+          localCheckout: () => {
+            throw new Error('not a git repository')
+          },
         },
-        name: 'localCheckout',
-        parse: (result) => result,
-      }),
-      (e: ChannelRPCError) => {
-        assert.equal(e.reason, 'remote')
-        assert.equal(e.message, 'not a git repository')
-        return true
-      }
-    )
+        undefined,
+        createChannelRPCResultValidator(schemaServices() as any)
+      )
+
+      // The peer answered properly — it answered that it failed. Calling that
+      // a validation problem would point at the wrong end of the connection.
+      await assert.rejects(
+        service.invoke('localCheckout', {}),
+        (e: ChannelRPCError) => {
+          assert.equal(e.reason, 'remote')
+          assert.equal(e.message, 'not a git repository')
+          return true
+        }
+      )
+    } finally {
+      release()
+    }
   })
 })

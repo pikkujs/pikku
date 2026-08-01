@@ -29,12 +29,14 @@ its own. This is a new `ChannelDeploymentService` filling the existing
 correlated by id, time out, and fail fast when the socket closes rather than
 waiting out the timeout.
 
-What a capability answers with is the client's word, so `callClientCapability`
-takes a `parse` alongside the name and rejects the call when the answer does
-not match — a client running an older build, or one that simply lies, fails the
-command instead of feeding an unchecked value into it. It also removes the cast
-a caller would otherwise write, since a client capability is deliberately
-absent from the generated RPC map. Both frame guards now validate the whole
+What a capability answers with is the client's word, so it is checked before a
+command sees it — against the schema codegen already generated from the
+capability's declared return type, the same one an agent tool or an HTTP
+response is checked against. A capability is declared as a function like any
+other, which also means `rpc.remote` types it and no caller has to cast. A
+client on an older build fails the call it answered rather than the command
+failing later somewhere with no reason to expect a bad shape; a name with no
+declared contract is left alone. Both frame guards now validate the whole
 envelope rather than the action tag alone, and a failure payload with a
 non-string name or message falls back rather than being attached to an `Error`.
 
