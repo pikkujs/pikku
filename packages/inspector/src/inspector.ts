@@ -125,6 +125,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       graphMeta: {},
       graphFiles: new Map(),
       featureFiles: new Map(),
+      virtualUserFiles: new Map(),
       invokedWorkflows: new Set(),
     },
     rpc: {

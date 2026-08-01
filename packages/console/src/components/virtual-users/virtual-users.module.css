@@ -1,0 +1,47 @@
+.navItem {
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+}
+
+.navItem:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+.navItem[data-selected] {
+  background: var(--mantine-color-default-hover);
+}
+
+/*
+ * A section reads as a heading with a rule under it rather than a card: this
+ * page is a dossier to be read top to bottom, and boxing each part would make
+ * five things to look at instead of one thing to read.
+ */
+.sectionTitle {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding-bottom: 6px;
+}
+
+/* Numbers are the point of the reach section, so they get the size. */
+.figure {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/*
+ * Intent prose is quoted, not restated — the vertical rule marks it as the
+ * scenario's own words, which is exactly what the virtual user is handed.
+ */
+.intentSteps {
+  border-left: 2px solid var(--mantine-color-default-border);
+  padding-left: 12px;
+}
+
+.command {
+  background: var(--mantine-color-default);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 6px;
+  overflow-x: auto;
+  padding: 10px 12px;
+  white-space: pre;
+}

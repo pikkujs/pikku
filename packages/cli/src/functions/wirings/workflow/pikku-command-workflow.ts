@@ -13,6 +13,7 @@ import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { partitionScenarioWorkflows } from '../scenarios/scenario-partition.js'
 import { serializeScenarioRegistration } from '../scenarios/serialize-scenario-registration.js'
 import { buildFeaturesMeta } from '../scenarios/serialize-feature-meta.js'
+import { buildVirtualUsersMeta } from '../scenarios/serialize-virtual-user-meta.js'
 import { serializeScenarioWorkflowMeta } from '../scenarios/serialize-scenario-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
@@ -302,6 +303,15 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       logger,
       join(config.outDir, 'scenarios', 'features.gen.json'),
       JSON.stringify(buildFeaturesMeta(workflows.featureFiles), null, 2)
+    )
+
+    // Fixed path getVirtualUsersMeta() reads. A virtual user is pure
+    // declaration, so this file is the entire primitive — nothing registers one
+    // at runtime the way a feature's scenarios have to.
+    await writeFileInDir(
+      logger,
+      join(config.outDir, 'scenarios', 'virtual-users.gen.json'),
+      JSON.stringify(buildVirtualUsersMeta(workflows.virtualUserFiles), null, 2)
     )
 
     await writeFileInDir(

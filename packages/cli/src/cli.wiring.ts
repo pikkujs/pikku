@@ -41,6 +41,10 @@ import {
   renderKnowledgeIndex,
 } from './functions/commands/knowledge-index.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
+import {
+  virtualUserList,
+  virtualUserRun,
+} from './functions/commands/virtual-user.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
@@ -572,6 +576,68 @@ wireCLI({
         list: pikkuCLICommand({
           func: scenarioList,
           description: 'List scenarios with names and descriptions',
+        }),
+      },
+    },
+    'virtual-user': {
+      description:
+        'Run LLM-driven users against a real stage (pikkuVirtualUser)',
+      subcommands: {
+        run: pikkuCLICommand({
+          func: virtualUserRun,
+          description:
+            'Sign in as a scenario actor and work the API in character against a configured environment. Name a declared pikkuVirtualUser, or describe one with --actor. Not a test runner: it asserts nothing and reports what came back that should not have. Actor secret comes from SCENARIO_ACTOR_SECRET.',
+          parameters: '<environment> [name]',
+          options: {
+            actor: {
+              description:
+                'Which actor to be (scenarios.actors in pikku.config.json). Overrides the named virtual user',
+              short: 'a',
+            },
+            disposition: {
+              description:
+                'How it behaves: realistic (default), careless, newcomer, stale, auditor, adversarial',
+              short: 'd',
+            },
+            goals: {
+              description:
+                'Comma-separated goals in your own words, run alongside the ones derived from scenarios',
+            },
+            steps: {
+              description: 'Model turns before it stops (default 40)',
+            },
+            mutations: {
+              description: 'Non-read calls before it stops',
+            },
+            duration: {
+              description: "Wall clock before it stops, e.g. '30m'",
+            },
+            seed: {
+              description:
+                'Replay a previous run — the same seed schedules the same run',
+            },
+            model: {
+              description:
+                'Model it thinks with. Defaults to scenarios.model in pikku.config.json',
+            },
+            allowApproval: {
+              description:
+                'Offer the endpoints the app marked as needing a human’s approval. Off by default: those are the ones that spend money',
+            },
+            apiUrl: {
+              description:
+                "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",
+            },
+            out: {
+              description:
+                'Write the whole run — every step, response and finding — as JSON to this path',
+            },
+          },
+        }),
+        list: pikkuCLICommand({
+          func: virtualUserList,
+          description:
+            'List the declared virtual users — who each one is, and what it is trying to get done',
         }),
       },
     },

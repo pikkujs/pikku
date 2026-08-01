@@ -26,9 +26,11 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.20",
     "@electric-sql/pglite": "^0.5.1",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
+    "@pikku/ai-vercel": "^0.12.8",
     "@pikku/better-auth": "^0.12.19",
     "@pikku/bun-server": "^0.12.4",
     "@pikku/deploy-cloudflare": "^0.12.9",
@@ -45,6 +47,7 @@
     "@pikku/ws": "^0.12.4",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
+    "ai": "^6.0.105",
     "chalk": "^5.6.2",
     "chokidar": "^4.0.3",
     "esbuild": "~0.27.0",

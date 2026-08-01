@@ -3,6 +3,7 @@ import type {
   InspectorDiagnostic,
   InspectorFeature,
   InspectorState,
+  InspectorVirtualUser,
 } from '../types.js'
 import { TypesMap } from '../types-map.js'
 
@@ -144,6 +145,7 @@ export interface SerializableInspectorState {
     graphMeta: InspectorState['workflows']['graphMeta']
     graphFiles: Array<[string, { path: string; exportedName: string }]>
     featureFiles: Array<[string, InspectorFeature]>
+    virtualUserFiles: Array<[string, InspectorVirtualUser]>
     invokedWorkflows: string[]
   }
   rpc: {
@@ -368,6 +370,7 @@ export function serializeInspectorState(
       graphMeta: state.workflows.graphMeta,
       graphFiles: Array.from(state.workflows.graphFiles.entries()),
       featureFiles: Array.from(state.workflows.featureFiles.entries()),
+      virtualUserFiles: Array.from(state.workflows.virtualUserFiles.entries()),
       invokedWorkflows: Array.from(state.workflows.invokedWorkflows),
     },
     rpc: {
@@ -565,6 +568,7 @@ export function deserializeInspectorState(
       graphMeta: data.workflows.graphMeta || {},
       graphFiles: new Map(data.workflows.graphFiles || []),
       featureFiles: new Map(data.workflows.featureFiles || []),
+      virtualUserFiles: new Map(data.workflows.virtualUserFiles || []),
       invokedWorkflows: new Set(data.workflows.invokedWorkflows || []),
     },
     rpc: {

@@ -12,9 +12,13 @@ import type { AIAgentRunnerService } from '@pikku/core/services'
  * construct one here. When an OpenAI-compatible base URL + key are present
  * (fabric injects LITELLM_PROXY_URL/LITELLM_API_KEY; the standard OPENAI_*
  * vars are also honored) we point one provider at it and register it under
- * `'*'`, so every provider prefix resolves to it. Returns undefined when no AI
- * env is configured (agents stay disabled, with the clear downstream error) or
- * when the AI SDK packages aren't installed in the project.
+ * `'*'`, so every provider prefix resolves to it. The CLI ships the SDK rather
+ * than asking the project for it — behind a proxy one openai-compatible
+ * provider answers for `openai/…`, `anthropic/…` and `google/…` alike, so there
+ * was never a per-vendor package worth making somebody install. The project's
+ * own copies still win when it has them. Returns undefined when no AI env is
+ * configured (agents stay disabled, with the clear downstream error) or when
+ * the SDK packages cannot be loaded from either place.
  *
  * Audio does not work here: `@ai-sdk/openai-compatible` exposes only
  * language/embedding/image models, so a voice agent under `pikku dev` throws
@@ -55,23 +59,45 @@ export async function createDevAIAgentRunner({
     return undefined
   }
 
-  // Resolve from the project's node_modules — the AI SDK packages are the
-  // project's deps, not the CLI's, so they share the project's `ai` version.
-  const require = createRequire(
+  // The project's own copies win, so an app that pins an `ai` version gets a
+  // runner built from that one rather than a second copy alongside it. The
+  // CLI's are the fallback: this function exists for projects that have not
+  // installed an AI SDK at all, and behind a proxy a single openai-compatible
+  // provider reaches every model, so making someone add three packages before
+  // agents work in dev buys nothing.
+  const fromProject = createRequire(
     pathToFileURL(join(projectRoot, 'package.json')).href
   )
+  //
+  // Both come from the same place or neither does. A provider built against one
+  // copy of `@ai-sdk/provider` handed to a runner built against another is the
+  // one combination that fails at call time rather than at load time, with an
+  // error about the model spec that names neither package.
+  const loadPair = async () => {
+    const project = ['@pikku/ai-vercel', '@ai-sdk/openai-compatible'].map(
+      (name) => {
+        try {
+          return pathToFileURL(fromProject.resolve(name)).href
+        } catch {
+          return undefined
+        }
+      }
+    )
+    const [runner, provider] = project.every(Boolean)
+      ? (project as string[])
+      : ['@pikku/ai-vercel', '@ai-sdk/openai-compatible']
+    return Promise.all([import(runner!), import(provider!)])
+  }
+
   let VercelAIAgentRunner: any
   let createOpenAICompatible: any
   try {
-    ;({ VercelAIAgentRunner } = await import(
-      pathToFileURL(require.resolve('@pikku/ai-vercel')).href
-    ))
-    ;({ createOpenAICompatible } = await import(
-      pathToFileURL(require.resolve('@ai-sdk/openai-compatible')).href
-    ))
+    const [runnerModule, providerModule] = await loadPair()
+    ;({ VercelAIAgentRunner } = runnerModule)
+    ;({ createOpenAICompatible } = providerModule)
   } catch (error) {
     logger.warn(
-      `pikku dev: AI provider env is set but the AI SDK packages could not be loaded (install @pikku/ai-vercel, @ai-sdk/openai-compatible, and ai) — AI agents disabled: ${
+      `pikku dev: AI provider env is set but the AI SDK packages could not be loaded — AI agents disabled: ${
         error instanceof Error ? error.message : String(error)
       }`
     )
