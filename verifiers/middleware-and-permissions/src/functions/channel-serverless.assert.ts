@@ -3,7 +3,11 @@ import {
   runChannelMessage,
   runChannelDisconnect,
 } from '@pikku/core/channel/serverless'
-import { ChannelStore, type Channel } from '@pikku/core/channel'
+import {
+  ChannelStore,
+  unsupportedChannelRemote,
+  type Channel,
+} from '@pikku/core/channel'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
@@ -109,6 +113,7 @@ export async function testChannelWiringServerless(
           clearState: () => {
             testState = undefined
           },
+          remote: unsupportedChannelRemote,
         }
 
         return {
