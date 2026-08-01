@@ -28,6 +28,7 @@ export {
   ChannelDeploymentService,
   ChannelRPCError,
   ChannelRPCRegistry,
+  callClientCapability,
   createChannelRPCResponder,
   isChannelRPCRequest,
   isChannelRPCResponse,

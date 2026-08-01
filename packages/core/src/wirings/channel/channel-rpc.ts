@@ -14,7 +14,6 @@ export interface ChannelRPCRequest {
   id: string
   funcName: string
   data: unknown
-  session?: unknown
   traceId?: string
 }
 
@@ -26,19 +25,37 @@ export interface ChannelRPCResponse {
   error?: { name: string; message: string }
 }
 
+const isRecord = (message: unknown): message is Record<string, unknown> =>
+  typeof message === 'object' && message !== null
+
+/**
+ * Both guards check the whole envelope, not just the action tag.
+ *
+ * Every frame arrives from the other end of a socket, so the fields the
+ * correlation depends on — the id above all — are peer input. A frame tagged
+ * as RPC but carrying an id of the wrong type would otherwise reach `settle`
+ * and be looked up in the pending map, which is not somewhere untyped peer
+ * data belongs.
+ */
 export const isChannelRPCRequest = (
   message: unknown
 ): message is ChannelRPCRequest =>
-  typeof message === 'object' &&
-  message !== null &&
-  (message as any).action === CHANNEL_RPC_REQUEST
+  isRecord(message) &&
+  message.action === CHANNEL_RPC_REQUEST &&
+  typeof message.id === 'string' &&
+  message.id.length > 0 &&
+  typeof message.funcName === 'string' &&
+  message.funcName.length > 0 &&
+  (message.traceId === undefined || typeof message.traceId === 'string')
 
 export const isChannelRPCResponse = (
   message: unknown
 ): message is ChannelRPCResponse =>
-  typeof message === 'object' &&
-  message !== null &&
-  (message as any).action === CHANNEL_RPC_RESPONSE
+  isRecord(message) &&
+  message.action === CHANNEL_RPC_RESPONSE &&
+  typeof message.id === 'string' &&
+  message.id.length > 0 &&
+  typeof message.ok === 'boolean'
 
 /**
  * The error a caller sees when the peer is gone or never answered. Callers
@@ -48,7 +65,7 @@ export const isChannelRPCResponse = (
 export class ChannelRPCError extends Error {
   constructor(
     message: string,
-    public readonly reason: 'timeout' | 'closed' | 'remote'
+    public readonly reason: 'timeout' | 'closed' | 'remote' | 'invalid'
   ) {
     super(message)
     this.name = 'ChannelRPCError'
@@ -124,11 +141,18 @@ export class ChannelRPCRegistry {
     if (response.ok) {
       call.resolve(response.result)
     } else {
+      // The failure payload is peer input and is only read, never trusted: a
+      // non-string name or message falls back rather than being attached to an
+      // Error, where it would surface as `[object Object]` in a log or as
+      // something other than a string to a caller matching on `error.name`.
+      const { name, message } = response.error ?? {}
       const error = new ChannelRPCError(
-        response.error?.message ?? 'Remote channel RPC failed',
+        typeof message === 'string' ? message : 'Remote channel RPC failed',
         'remote'
       )
-      error.name = response.error?.name ?? error.name
+      if (typeof name === 'string' && name.length > 0) {
+        error.name = name
+      }
       call.reject(error)
     }
     return true
@@ -182,10 +206,17 @@ export class ChannelDeploymentService implements DeploymentService {
     return isChannelRPCResponse(message) ? this.registry.settle(message) : false
   }
 
+  /**
+   * `session` is accepted to satisfy `DeploymentService` and deliberately not
+   * sent. A deployed unit runs the call as the caller's user; the peer here is
+   * a client executing a capability as itself, on its own machine, under its
+   * own identity — a session on the wire would carry the caller's credentials
+   * to it while authorising nothing.
+   */
   public async invoke(
     funcName: string,
     data: unknown,
-    session?: unknown,
+    _session?: unknown,
     traceId?: string
   ): Promise<unknown> {
     const { id, promise } = this.registry.register()
@@ -194,11 +225,56 @@ export class ChannelDeploymentService implements DeploymentService {
       id,
       funcName,
       data,
-      session,
       traceId,
     }
     await this.send(request)
     return promise
+  }
+}
+
+/**
+ * Calls a capability on the connected client and checks what comes back.
+ *
+ * Two problems are solved together, because they have the same cause. A client
+ * capability is not one of this server's functions, so it is absent from the
+ * generated RPC map and `rpc.remote` cannot type it — every caller would
+ * otherwise cast, and a cast is exactly the thing that makes a peer's answer
+ * look like a checked value. `parse` is that check: it runs on a payload that
+ * arrived from someone else's machine, and a call whose answer does not match
+ * fails as a call rather than as a `TypeError` several lines later, in code
+ * that had no reason to expect one.
+ *
+ * @example
+ * const { sha } = await callClientCapability({
+ *   rpc,
+ *   name: 'localCheckout',
+ *   parse: (result) => {
+ *     if (typeof (result as any)?.sha !== 'string') {
+ *       throw new Error('expected { sha: string }')
+ *     }
+ *     return result as { sha: string }
+ *   },
+ * })
+ */
+export const callClientCapability = async <T>({
+  rpc,
+  name,
+  data,
+  parse,
+}: {
+  rpc: { remote: (...args: any[]) => Promise<any> }
+  name: string
+  data?: unknown
+  parse: (result: unknown) => T
+}): Promise<T> => {
+  const result = await rpc.remote(name as never, data as never)
+  try {
+    return parse(result)
+  } catch (e: unknown) {
+    throw new ChannelRPCError(
+      `Invalid result from client capability "${name}": ${(e as Error)?.message ?? String(e)}`,
+      'invalid'
+    )
   }
 }
 

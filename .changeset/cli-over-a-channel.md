@@ -29,6 +29,15 @@ its own. This is a new `ChannelDeploymentService` filling the existing
 correlated by id, time out, and fail fast when the socket closes rather than
 waiting out the timeout.
 
+What a capability answers with is the client's word, so `callClientCapability`
+takes a `parse` alongside the name and rejects the call when the answer does
+not match — a client running an older build, or one that simply lies, fails the
+command instead of feeding an unchecked value into it. It also removes the cast
+a caller would otherwise write, since a client capability is deliberately
+absent from the generated RPC map. Both frame guards now validate the whole
+envelope rather than the action tag alone, and a failure payload with a
+non-string name or message falls back rather than being attached to an `Error`.
+
 Fixes found on the way, each of which broke this path:
 
 - A websocket upgrade wrote middleware headers (CORS, on every request)
