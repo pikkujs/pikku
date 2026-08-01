@@ -26,9 +26,9 @@ export const releaseStatus = pikkuFunc<
 
 /**
  * The contract for a capability that runs on the client, declared here as a
- * function so it is typed and schema'd like any other — `rpc.remote` resolves
- * the name against this, and what the client answers is checked against the
- * schema generated from the return type below.
+ * function so it is typed and schema'd like any other — `channel.remote`
+ * resolves the name against this, and what the client answers is checked
+ * against the schema generated from the return type below.
  *
  * The body is what happens if it is ever called locally, which would mean a
  * command asked the server for something only the client can know.
@@ -45,20 +45,20 @@ export const localCheckout = pikkuSessionlessFunc<
 
 /**
  * Streams progress, then asks the client for something only it knows before
- * finishing. `rpc.remote` resolves over the connection the command arrived on,
- * so it reaches a caller that has no address of its own.
+ * finishing. The call goes back out over the connection the command arrived
+ * on, so it reaches a caller that has no address of its own.
  */
 export const releasePublish = pikkuFunc<
   { tag?: string },
   { publishedSha: string; branch: string; tag: string }
 >({
-  func: async (_services, data, { cli, rpc }) => {
+  func: async (_services, data, { cli }) => {
     await cli!.channel!.send({ step: 'checking working tree' })
 
     // Typed against the declared contract, and the answer is checked against
     // that contract's schema before it gets here — the client is the untrusted
     // end, so a client on an older build fails the call rather than this.
-    const { sha, branch } = await rpc!.remote('localCheckout')
+    const { sha, branch } = await cli!.channel!.remote('localCheckout')
 
     await cli!.channel!.send({ step: `publishing ${sha.slice(0, 7)}` })
 

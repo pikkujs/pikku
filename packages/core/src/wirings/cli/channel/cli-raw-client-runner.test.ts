@@ -14,6 +14,7 @@ import {
  */
 const fakeWS = ({ readyState = 1 }: { readyState?: number } = {}) => {
   const sent: Array<{ method: string; data: unknown }> = []
+  const rawSent: unknown[] = []
   const subscribers = new Set<(message: any) => void>()
   const listeners = new Map<string, Array<(event: any) => void>>()
   let closed = false
@@ -29,6 +30,11 @@ const fakeWS = ({ readyState = 1 }: { readyState?: number } = {}) => {
       subscribers.delete(handler),
     ws: {
       readyState,
+      // Reverse-RPC answers go straight out on the socket rather than on a
+      // command route — the server takes them off before routing.
+      send: (data: string) => {
+        rawSent.push(JSON.parse(data))
+      },
       close: () => {
         closed = true
       },
@@ -43,6 +49,7 @@ const fakeWS = ({ readyState = 1 }: { readyState?: number } = {}) => {
   return {
     pikkuWS,
     sent,
+    rawSent,
     isClosed: () => closed,
     /** Delivers a frame the way the runtime's message dispatch would. */
     receive: (message: unknown) => {
@@ -213,15 +220,17 @@ describe('executeRawCLIViaChannel', () => {
     // Answering is async, so let the responder settle before asserting.
     await new Promise((resolve) => setImmediate(resolve))
 
-    assert.deepEqual(ws.sent[1], {
-      method: '__rpcResponse',
-      data: {
-        action: CHANNEL_RPC_RESPONSE,
-        id: '1',
-        ok: true,
-        result: { sha: 'deadbeef', branch: 'main' },
-      },
+    assert.deepEqual(ws.rawSent[0], {
+      action: CHANNEL_RPC_RESPONSE,
+      id: '1',
+      ok: true,
+      result: { sha: 'deadbeef', branch: 'main' },
     })
+    assert.equal(
+      ws.sent.length,
+      1,
+      'the answer does not go out on a command route'
+    )
     assert.deepEqual(rendered, [], 'an RPC request is not command output')
 
     ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
@@ -246,7 +255,7 @@ describe('executeRawCLIViaChannel', () => {
     })
     await new Promise((resolve) => setImmediate(resolve))
 
-    const response = ws.sent[1]!.data as {
+    const response = ws.rawSent[0] as {
       ok: boolean
       error: { name: string }
     }

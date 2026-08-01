@@ -50,11 +50,12 @@ export async function executeRawCLIViaChannel({
   return new Promise<number>((resolve) => {
     const commandRoute = pikkuWS.getRoute('command')
 
-    // Answers go back on their own route so the server can correlate them
-    // without them being mistaken for a new command.
+    // Answers go back as plain frames rather than on a command route: the
+    // server takes them off the socket before routing, so replying does not
+    // depend on the channel having declared a route for them.
     const respond = createChannelRPCResponder({
       capabilities,
-      send: (data) => commandRoute.send('__rpcResponse', data),
+      send: (data) => pikkuWS.ws.send(JSON.stringify(data)),
     })
 
     let settled = false

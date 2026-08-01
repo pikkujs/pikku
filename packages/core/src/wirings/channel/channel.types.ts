@@ -138,7 +138,17 @@ export type CoreChannel<
   tags?: string[]
 }
 
-export interface PikkuChannel<OpeningData, out Out> {
+/**
+ * The shape of `channel.remote` before generated types narrow it to the app's
+ * own functions. Loose on purpose: core cannot know the names.
+ */
+export type ChannelRemote = (funcName: string, data?: any) => Promise<any>
+
+export interface PikkuChannel<
+  OpeningData,
+  out Out,
+  Remote extends (...args: any[]) => any = ChannelRemote,
+> {
   // The channel identifier
   channelId: string
   // The data the channel was created with. This could be query parameters
@@ -155,6 +165,16 @@ export interface PikkuChannel<OpeningData, out Out> {
   setState<T>(state: T): Promise<void> | void
   getState<T>(): Promise<T | undefined> | T | undefined
   clearState(): Promise<void> | void
+  /**
+   * Calls a function on the peer at the other end of this connection and waits
+   * for its answer.
+   *
+   * A channel is otherwise fire-and-forget in both directions, so this is the
+   * only way to reach a peer that has no address of its own — a CLI on a
+   * laptop, a browser tab, a sandbox behind NAT. The peer decides what it will
+   * answer to; a name it has not registered is refused.
+   */
+  remote: Remote
 }
 
 export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {

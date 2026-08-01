@@ -110,12 +110,6 @@ import { wireChannel } from '${channelTypesPath}'
 import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
-import {
-  createChannelRPCResultValidator,
-  getChannelHostRPC,
-  handleChannelRPCResponse,
-  releaseChannelHostRPC,
-} from '@pikku/core/channel'
 import { pikkuState } from '@pikku/core/internal'
 ${imports}
 
@@ -171,14 +165,9 @@ export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
       createWireServices: pikkuState(null, 'package', 'factories')?.createWireServices,
       // The connection authenticated during its upgrade — commands run as it.
       session,
-      // A capability's answer is checked against the schema generated for its
-      // declared return type — the transport is the only place that sees every
-      // reverse call, so no command has to ask for it.
-      hostRPC: channel
-        ? getChannelHostRPC(channel, {
-            validateResult: createChannelRPCResultValidator(services as any),
-          })
-        : undefined,
+      // The socket the command arrived on, so \`channel.remote(...)\` inside a
+      // command reaches the client that invoked it.
+      transport: channel,
       onOutput: (output, commandId) =>
         channel?.send({ action: 'cli-output', commandId, data: output }),
     })
@@ -194,20 +183,6 @@ export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
     // Returned rather than sent so the runtime tags it with the routing key,
     // and so the terminal frame cannot be emitted before the ones above it.
     return { action: 'cli-control', event: 'complete', exitCode }
-  },
-})
-
-/**
- * Receives the client's answers to reverse RPC calls. They arrive as ordinary
- * channel messages — a separate route, correlated back to the waiting caller
- * by the id in the frame, not by the message that triggered them.
- */
-export const cliRPCResponse = pikkuSessionlessFunc<Record<string, unknown>, void>({
-  auth: false,
-  func: async (_services, data, { channel }) => {
-    if (channel) {
-      handleChannelRPCResponse(channel.channelId, data)
-    }
   },
 })
 
@@ -235,32 +210,15 @@ export const cliRequireSession = pikkuSessionlessFunc<void, RawCLIFrame | void>(
 `
     : ''
 }
-/**
- * Fails anything the disconnecting client still owed an answer to. Without
- * this a command waits out the full timeout on a socket that is already gone.
- */
-export const cliDisconnect = pikkuSessionlessFunc<void, void>({
-  auth: false,
-  func: async (_services, _data, { channel }) => {
-    if (channel) {
-      await releaseChannelHostRPC(channel.channelId)
-    }
-  },
-})
-
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
   auth: ${programMeta.auth === true},
-${programMeta.auth === true ? '  onConnect: cliRequireSession,\n' : ''}  onDisconnect: cliDisconnect,
-  onMessageWiring: {
+${programMeta.auth === true ? '  onConnect: cliRequireSession,\n' : ''}  onMessageWiring: {
     command: {
       '__help': {
         func: cliHelp,
         middleware: [cliCloseOnComplete],
-      },
-      '__rpcResponse': {
-        func: cliRPCResponse,
       },
       '__raw': {
         func: cliRaw,

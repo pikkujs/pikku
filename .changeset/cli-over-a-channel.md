@@ -20,25 +20,42 @@ non-zero locally. Renderers stay on the client and are matched by the command
 id the server reports; an unrecognised command falls back to JSON rather than
 failing.
 
-Commands can also call _back_ into the client mid-run. `rpc.remote(...)` inside
-a channel-driven command resolves over the same open socket, against an
-allowlist the client passes in — the machine-local facts a server cannot see (a
-git sha, a working tree, a local file) without the client needing an address of
-its own. This is a new `ChannelDeploymentService` filling the existing
-`deploymentService` seam, so the RPC runner itself is unchanged; requests are
-correlated by id, time out, and fail fast when the socket closes rather than
-waiting out the timeout.
+Every channel gains `channel.remote(...)`: calling a function on the peer at
+the other end of the connection and waiting for its answer. A channel is
+otherwise fire-and-forget in both directions, so this is what reaches a peer
+that has no address of its own — a CLI on a laptop, a browser tab, a sandbox
+behind NAT. It is on `channel` rather than `rpc` because it is bound to one
+connection: which peer answers is the socket the call goes out on, not
+something the RPC map could resolve. Any `wireChannel` gets it — a client
+registers what it is willing to answer to, and a name outside that list is
+refused.
 
-What a capability answers with is the client's word, so it is checked before a
-command sees it — against the schema codegen already generated from the
-capability's declared return type, the same one an agent tool or an HTTP
-response is checked against. A capability is declared as a function like any
-other, which also means `rpc.remote` types it and no caller has to cast. A
-client on an older build fails the call it answered rather than the command
-failing later somewhere with no reason to expect a bad shape; a name with no
-declared contract is left alone. Both frame guards now validate the whole
-envelope rather than the action tag alone, and a failure payload with a
-non-string name or message falls back rather than being attached to an `Error`.
+Requests are correlated by id, time out, and fail fast when the socket closes
+rather than waiting out the timeout. Replies are taken off the socket ahead of
+routing, so a channel needs no route for them and an answer can never be
+mistaken for a new message; the transport is created on first use and released
+when the channel closes, which is also what fails anything the departing peer
+still owed an answer to. Channels that only flow one way — SSE, an agent's
+output stream, a locally-run CLI — refuse the call outright instead of waiting
+for an answer that was never going to come.
+
+What a peer answers with is its word, so it is checked before a caller sees it
+— against the schema codegen already generated from the function's declared
+return type, the same one an agent tool or an HTTP response is checked against.
+A capability is declared as a function like any other, which also means
+`channel.remote` is typed off the same generated map as `rpc.remote` and no
+caller has to cast. A client on an older build fails the call it answered
+rather than the caller failing later somewhere with no reason to expect a bad
+shape; a name with no declared contract is left alone. Both frame guards
+validate the whole envelope rather than the action tag alone, and a failure
+payload with a non-string name or message falls back rather than being attached
+to an `Error`.
+
+A channel-driven CLI command uses this to ask its caller for machine-local
+facts mid-run — a git sha, a working tree, a local file. The CLI wire's own
+channel is synthetic (it exists so a command can stream progress without
+knowing where that goes), so it delegates `remote` to the connection the
+command actually arrived on.
 
 Fixes found on the way, each of which broke this path:
 

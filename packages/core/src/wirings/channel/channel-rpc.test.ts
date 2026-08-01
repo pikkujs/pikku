@@ -12,6 +12,7 @@ import {
   isChannelRPCRequest,
   isChannelRPCResponse,
   createChannelRPCResultValidator,
+  unsupportedChannelRemote,
   type ChannelRPCError,
   type ChannelRPCRequest,
   type ChannelRPCResultValidator,
@@ -237,6 +238,19 @@ describe('ChannelDeploymentService', () => {
       assert.equal(e.reason, 'closed')
       return true
     })
+  })
+})
+
+describe('unsupportedChannelRemote', () => {
+  test('refuses immediately rather than waiting for an answer that cannot come', async () => {
+    await assert.rejects(
+      unsupportedChannelRemote('localCheckout'),
+      (e: ChannelRPCError) => {
+        assert.equal(e.reason, 'unsupported')
+        assert.match(e.message, /localCheckout/)
+        return true
+      }
+    )
   })
 })
 

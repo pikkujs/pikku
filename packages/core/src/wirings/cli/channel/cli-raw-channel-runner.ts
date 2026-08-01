@@ -7,6 +7,7 @@ import type {
   CoreUserSession,
   CreateWireServices,
 } from '../../../types/core.types.js'
+import type { PikkuChannel } from '../../channel/channel.types.js'
 
 /**
  * A frame sent from the server to a raw CLI client. `output` carries command
@@ -41,11 +42,11 @@ export interface RawCLIResult {
 export async function handleRawCLI({
   programName,
   args,
-  singletonServices: baseSingletonServices,
+  singletonServices,
   createWireServices,
   onOutput,
-  hostRPC,
   session,
+  transport,
 }: {
   programName: string
   args: string[]
@@ -59,19 +60,12 @@ export async function handleRawCLI({
   session?: CoreUserSession
   onOutput?: (data: unknown, commandId: string) => Promise<void> | void
   /**
-   * Reverse-RPC transport for the connection this command arrived on. Supplied
-   * as the command's `deploymentService`, so `rpc.remote(...)` inside it
-   * reaches the calling client rather than a deployed unit.
+   * The channel the command arrived on. Passed through so `channel.remote(...)`
+   * inside a command reaches the calling client rather than being refused as a
+   * one-way stream.
    */
-  hostRPC?: CoreSingletonServices['deploymentService']
+  transport?: PikkuChannel<unknown, any, any>
 }): Promise<RawCLIResult> {
-  // Scoped to this invocation rather than mutated onto the shared singletons:
-  // the transport belongs to one connection, and concurrent commands on other
-  // connections must not inherit it.
-  const singletonServices = hostRPC
-    ? { ...baseSingletonServices, deploymentService: hostRPC }
-    : baseSingletonServices
-
   const allCLIMeta = pikkuState(null, 'cli', 'meta') as CLIMeta | undefined
   if (!allCLIMeta) {
     return { error: 'CLI metadata not found', exitCode: 1 }
@@ -142,6 +136,7 @@ export async function handleRawCLI({
       // The caller can't know the resolved command until parsing finishes
       // here, so it's supplied per-frame rather than up front.
       onOutput: onOutput && ((data) => onOutput(data, commandId)),
+      transport,
     })
     return { result, exitCode: 0, commandId }
   } catch (e: unknown) {

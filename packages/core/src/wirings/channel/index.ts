@@ -18,6 +18,7 @@ export type {
   CorePikkuChannelMiddlewareFactory,
   ChannelMessageMeta,
   ChannelMeta,
+  ChannelRemote,
   PikkuChannel,
   PikkuChannelHandlerFactory,
 } from './channel.types.js'
@@ -32,6 +33,7 @@ export {
   createChannelRPCResultValidator,
   isChannelRPCRequest,
   isChannelRPCResponse,
+  unsupportedChannelRemote,
 } from './channel-rpc.js'
 export type {
   ChannelRPCRequest,
@@ -39,6 +41,7 @@ export type {
   ChannelRPCResultValidator,
 } from './channel-rpc.js'
 export {
+  channelRemote,
   getChannelHostRPC,
   handleChannelRPCResponse,
   releaseChannelHostRPC,

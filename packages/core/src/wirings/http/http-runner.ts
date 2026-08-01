@@ -39,6 +39,7 @@ import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
+import { unsupportedChannelRemote } from '../channel/channel-rpc.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { applyWebResponse } from './web-request.js'
 import { httpRouter } from './routers/http-router.js'
@@ -365,6 +366,9 @@ const executeRoute = async (
       clearState: () => {
         sseState = undefined
       },
+      // SSE only flows server to client — the client has no way to answer on
+      // this channel, so a remote call could never be replied to.
+      remote: unsupportedChannelRemote,
     }
 
     // Register the SSE channel with the eventHub (if present) so that
