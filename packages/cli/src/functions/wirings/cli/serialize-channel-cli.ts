@@ -111,6 +111,7 @@ import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } 
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
 import {
+  createChannelRPCResultValidator,
   getChannelHostRPC,
   handleChannelRPCResponse,
   releaseChannelHostRPC,
@@ -170,7 +171,14 @@ export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
       createWireServices: pikkuState(null, 'package', 'factories')?.createWireServices,
       // The connection authenticated during its upgrade — commands run as it.
       session,
-      hostRPC: channel ? getChannelHostRPC(channel) : undefined,
+      // A capability's answer is checked against the schema generated for its
+      // declared return type — the transport is the only place that sees every
+      // reverse call, so no command has to ask for it.
+      hostRPC: channel
+        ? getChannelHostRPC(channel, {
+            validateResult: createChannelRPCResultValidator(services as any),
+          })
+        : undefined,
       onOutput: (output, commandId) =>
         channel?.send({ action: 'cli-output', commandId, data: output }),
     })

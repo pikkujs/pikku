@@ -1,4 +1,5 @@
 import { ChannelDeploymentService } from './channel-rpc.js'
+import type { ChannelRPCResultValidator } from './channel-rpc.js'
 import type { PikkuChannel } from './channel.types.js'
 
 /**
@@ -17,16 +18,23 @@ const hostRPCByChannel = new Map<string, ChannelDeploymentService>()
  * Handing this to a function as its `deploymentService` is what lets
  * `rpc.remote(...)` reach a peer that has no address of its own — the open
  * socket is the route.
+ *
+ * `options` apply only to the call that creates the transport: one connection
+ * has one transport shared by every command on it, so the first caller's
+ * timeout and validator are the connection's.
  */
 export const getChannelHostRPC = (
   channel: PikkuChannel<unknown, any>,
-  timeoutMs?: number
+  options: {
+    timeoutMs?: number
+    validateResult?: ChannelRPCResultValidator
+  } = {}
 ): ChannelDeploymentService => {
   let service = hostRPCByChannel.get(channel.channelId)
   if (!service) {
     service = new ChannelDeploymentService(
       (data) => channel.send(data),
-      timeoutMs
+      options
     )
     hostRPCByChannel.set(channel.channelId, service)
   }
