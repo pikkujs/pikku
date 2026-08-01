@@ -153,6 +153,14 @@ function processCLIConfig(
         // Already handled in first pass
         break
 
+      case 'auth': {
+        const value = getPropertyValue(node, 'auth')
+        if (typeof value === 'boolean') {
+          programMeta.auth = value
+        }
+        break
+      }
+
       case 'commands':
         if (ts.isObjectLiteralExpression(prop.initializer)) {
           programMeta.commands = processCommands(

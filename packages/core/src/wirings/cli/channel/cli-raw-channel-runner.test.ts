@@ -55,7 +55,12 @@ describe('handleRawCLI', () => {
   beforeEach(() => {
     resetPikkuState()
     singletonServices = {
-      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
     }
   })
 
@@ -77,11 +82,8 @@ describe('handleRawCLI', () => {
       onOutput: (data) => void streamed.push(data),
     })
 
-    assert.deepEqual(streamed, [
-      { phase: 'building' },
-      { phase: 'deploying' },
-      { url: 'https://example.com' },
-    ])
+    assert.deepEqual(streamed, [{ phase: 'building' }, { phase: 'deploying' }])
+    assert.deepEqual(result.result, { url: 'https://example.com' })
     assert.equal(result.exitCode, 0)
     assert.equal(result.commandId, 'deploy')
   })
@@ -153,9 +155,10 @@ describe('handleRawCLI', () => {
     })
 
     assert.equal(result.exitCode, 0, result.error)
-    assert.deepEqual(streamed, [
-      { phase: 'resolved deadbeef' },
-      { deployed: 'deadbeef' },
-    ])
+    // `onOutput` carries progressive output only. The result is returned to
+    // the caller, which owns how it is delivered — emitting it here too would
+    // send it to the client twice.
+    assert.deepEqual(streamed, [{ phase: 'resolved deadbeef' }])
+    assert.deepEqual(result.result, { deployed: 'deadbeef' })
   })
 })

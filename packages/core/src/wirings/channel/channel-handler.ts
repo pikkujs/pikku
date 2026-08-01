@@ -176,14 +176,22 @@ export const processMessageHandlers = (
             const { [routingProperty]: _, ...data } = messageData
 
             processed = true
+            const routeResult = await processMessage(
+              data as any,
+              routes[routerValue],
+              routingProperty,
+              routerValue
+            )
+            // The routing key is echoed so the client can match the reply to
+            // the message it sent. It can only be attached to an object — on a
+            // primitive the assignment throws under ESM's strict mode — so a
+            // primitive result is wrapped rather than mutated.
             result =
-              (await processMessage(
-                data as any,
-                routes[routerValue],
-                routingProperty,
-                routerValue
-              )) || {}
-            ;(result as any)[routingProperty] = routerValue
+              routeResult !== null && typeof routeResult === 'object'
+                ? Object.assign(routeResult, { [routingProperty]: routerValue })
+                : routeResult === undefined
+                  ? { [routingProperty]: routerValue }
+                  : { [routingProperty]: routerValue, result: routeResult }
             break
           }
         }

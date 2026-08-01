@@ -4,10 +4,10 @@ import * as assert from 'node:assert/strict'
 import {
   CHANNEL_RPC_RESPONSE,
   ChannelDeploymentService,
-  ChannelRPCError,
   ChannelRPCRegistry,
   createChannelRPCResponder,
   isChannelRPCRequest,
+  type ChannelRPCError,
   type ChannelRPCRequest,
 } from './channel-rpc.js'
 
@@ -141,7 +141,12 @@ describe('ChannelDeploymentService', () => {
       gitHead: async () => ({ sha: 'abc123' }),
     })
 
-    const result = await service.invoke('gitHead', { cwd: '.' }, { userId: 'u1' }, 'trace-1')
+    const result = await service.invoke(
+      'gitHead',
+      { cwd: '.' },
+      { userId: 'u1' },
+      'trace-1'
+    )
 
     assert.deepEqual(result, { sha: 'abc123' })
 
@@ -186,11 +191,14 @@ describe('ChannelDeploymentService', () => {
   test('refuses a capability the peer did not expose', async () => {
     const { service } = connect({ gitHead: () => 'ok' })
 
-    await assert.rejects(service.invoke('readFile', { path: '/etc/passwd' }), (e: Error) => {
-      assert.equal(e.name, 'RPCNotFoundError')
-      assert.match(e.message, /Capability not exposed: readFile/)
-      return true
-    })
+    await assert.rejects(
+      service.invoke('readFile', { path: '/etc/passwd' }),
+      (e: Error) => {
+        assert.equal(e.name, 'RPCNotFoundError')
+        assert.match(e.message, /Capability not exposed: readFile/)
+        return true
+      }
+    )
   })
 
   test('stop() fails in-flight calls', async () => {
@@ -212,7 +220,10 @@ describe('createChannelRPCResponder', () => {
       send: (d) => void sent.push(d),
     })
 
-    assert.equal(await respond({ action: 'cli-control', event: 'complete' }), false)
+    assert.equal(
+      await respond({ action: 'cli-control', event: 'complete' }),
+      false
+    )
     assert.equal(await respond('some rendered line'), false)
     assert.equal(sent.length, 0, 'non-RPC frames are left for the renderer')
   })

@@ -261,12 +261,20 @@ export async function runCLICommand({
   singletonServices,
   createWireServices,
   onOutput,
+  session,
 }: {
   program: string
   commandPath: string[]
   data: Record<string, any>
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
+  /**
+   * The session the command runs as. A locally run CLI has none — the process
+   * is the user. A command driven over a channel does: the connection
+   * authenticated during its upgrade, and the command has to inherit that or
+   * every authenticated command is unreachable remotely.
+   */
+  session?: CoreUserSession
   /**
    * Diverts everything the command emits — progressive `channel.send` writes
    * and the final result — to a sink instead of the local renderer. Set when
@@ -365,6 +373,9 @@ export async function runCLICommand({
   const userSession = new PikkuSessionService<CoreUserSession>(
     singletonServices.sessionStore
   )
+  if (session) {
+    userSession.setInitial(session)
+  }
 
   const wire: PikkuRawWire = {
     cli: {
@@ -396,9 +407,11 @@ export async function runCLICommand({
     // result-rendering by declaring a `render` — inline-printing commands (no
     // per-command renderer) keep emitting their own output untouched.
     // Skip if result is undefined (void functions handle their own output).
-    if (result !== undefined && onOutput) {
-      await onOutput(result)
-    } else if (result !== undefined) {
+    //
+    // `onOutput` covers progressive output only: the result is returned to the
+    // caller, which is what decides how to deliver it (as its own frame, over
+    // a channel), and emitting it here as well would deliver it twice.
+    if (result !== undefined && !onOutput) {
       const commandRenderer = programData?.renderers[commandId]
       const jsonMode =
         (data as any).json === true || (data as any).output === 'json'
