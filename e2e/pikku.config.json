@@ -98,6 +98,7 @@
         "appUrl": "http://localhost:4077",
         "signInPath": "/api/auth/sign-in/actor"
       }
-    }
+    },
+    "actorModel": "openai/gpt-4.1-mini"
   }
 }
