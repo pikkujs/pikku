@@ -8,8 +8,8 @@ export class SecretHostNotAllowedError extends Error {
   ) {
     super(
       allowedHosts?.length
-        ? `Secret '${secretId}' may not be sent to '${host}' — it is declared for ${allowedHosts.map((h) => `'${h}'`).join(', ')}. Add the host to allowedHosts on its wireSecret if this is intended.`
-        : `Secret '${secretId}' has no allowedHosts and this project requires one. Declare the hosts it may be sent to on its wireSecret.`
+        ? `Secret '${secretId}' may not be sent to '${host}' — it is declared for ${allowedHosts.map((h) => `'${h}'`).join(', ')}. Add the host to allowedHosts on its defineSecret if this is intended.`
+        : `Secret '${secretId}' has no allowedHosts and this project requires one. Declare the hosts it may be sent to on its defineSecret.`
     )
     this.name = 'SecretHostNotAllowedError'
   }

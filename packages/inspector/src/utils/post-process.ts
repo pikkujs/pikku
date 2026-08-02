@@ -982,7 +982,7 @@ export function validateNoSecretAliasServices(
 /**
  * Reports secret reads the catalogue does not account for.
  *
- * `getSecret('X')` with no matching `wireSecret` is a value that will be missing
+ * `getSecret('X')` with no matching `defineSecret` is a value that will be missing
  * at first request rather than at deploy; a non-literal key is a read the
  * manifest cannot cover, so a per-unit scope cannot be narrowed around it.
  */
@@ -1004,7 +1004,7 @@ export function validateSecretUsage(
       logger.diagnostic({
         severity: 'warn',
         code: ErrorCode.SECRET_NOT_DECLARED,
-        message: `${relativeFile} reads ${undeclared.map((k) => `'${k}'`).join(', ')}, which no wireSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it.`,
+        message: `${relativeFile} reads ${undeclared.map((k) => `'${k}'`).join(', ')}, which no defineSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it.`,
       })
     }
     if (usage.dynamic.length > 0) {
