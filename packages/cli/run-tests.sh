@@ -38,7 +38,19 @@ if [ ${#files[@]} -eq 0 ]; then
 fi
 
 # Construct the node command
-node_cmd=(node --import tsx --test)
+#
+# --no-memory-protection-keys disables V8's PKU-based ThreadIsolation, which
+# guards JIT pages on Linux x64. Its bookkeeping rarely loses track of a WASM
+# code allocation and aborts the whole process mid-run:
+#
+#   Check failed: jit_page_->allocations_.erase(addr) == 1.
+#
+# db/local-db.test.ts opens a dozen PGlite instances, each compiling and freeing
+# several MB of WASM, and is the file that trips it. The abort kills the test
+# process outright, so it surfaces as a file that "failed" with every assertion
+# in it green. Nothing here needs the hardening, and it is a V8 flag, so it has
+# to be passed on the command line — NODE_OPTIONS rejects it.
+node_cmd=(node --no-memory-protection-keys --import tsx --test)
 
 # Append options based on flags
 if [ "$watch_mode" = true ]; then

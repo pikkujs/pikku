@@ -217,14 +217,62 @@ async function createPostgresClient(
   return pgliteAsClient(db)
 }
 
+interface EmbeddedPostgresWasm {
+  pgliteWasmModule: WebAssembly.Module
+  initdbWasmModule: WebAssembly.Module
+}
+
+let embeddedPostgresWasm: Promise<EmbeddedPostgresWasm | undefined> | undefined
+
+/**
+ * Compile PGlite's two WASM modules once and hand them to every instance.
+ *
+ * PGlite already caches them across instances internally, so this saves one
+ * 10.5MB compile per process rather than one per instance — measured at ~5% off
+ * a four-instance run. It is worth the few lines because a `WebAssembly.Module`
+ * is stateless compiled code, safe to instantiate any number of times.
+ *
+ * Note what this does *not* fix: each instance still compiles ~4MB of its own
+ * WASM (~3.3MB of it the pgcrypto side module, which PGlite offers no way to
+ * share) across ~15 module constructions, and frees it on close. That per
+ * instance churn is the suspected trigger for the rare V8 abort seen in CI on
+ * Linux x64, where PKU-based ThreadIsolation loses track of a code allocation:
+ *
+ *   Check failed: jit_page_->allocations_.erase(addr) == 1.
+ *
+ * Resolution mirrors PGlite's own `new URL('./pglite.wasm', import.meta.url)`.
+ * If the files are not where the package puts them (a bundled CLI, say), we
+ * hand back nothing and PGlite loads them itself as before.
+ */
+async function loadEmbeddedPostgresWasm(): Promise<
+  EmbeddedPostgresWasm | undefined
+> {
+  try {
+    const dist = dirname(
+      createRequire(import.meta.url).resolve('@electric-sql/pglite')
+    )
+    const [pgliteWasmModule, initdbWasmModule] = await Promise.all([
+      WebAssembly.compile(readFileSync(join(dist, 'pglite.wasm'))),
+      WebAssembly.compile(readFileSync(join(dist, 'initdb.wasm'))),
+    ])
+    return { pgliteWasmModule, initdbWasmModule }
+  } catch {
+    return undefined
+  }
+}
+
 async function createEmbeddedPostgres(dataDir?: string): Promise<PGlite> {
-  const [{ PGlite }, { pgcrypto }] = await Promise.all([
+  embeddedPostgresWasm ??= loadEmbeddedPostgresWasm()
+
+  const [{ PGlite }, { pgcrypto }, wasm] = await Promise.all([
     import('@electric-sql/pglite'),
     import('@electric-sql/pglite/contrib/pgcrypto'),
+    embeddedPostgresWasm,
   ])
 
   return new PGlite({
     ...(dataDir ? { dataDir } : {}),
+    ...wasm,
     extensions: {
       pgcrypto,
     },
