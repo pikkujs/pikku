@@ -12,12 +12,13 @@ import {
   createChannelRPCResponder,
   isChannelRPCRequest,
   isChannelRPCResponse,
+  createChannelRPCInputValidator,
   createChannelRPCResultValidator,
   unsupportedChannelRemote,
   type ChannelRPCError,
   type ChannelRPCRequest,
   type ChannelRPCResponse,
-  type ChannelRPCResultValidator,
+  type ChannelRPCValidator,
 } from './channel-rpc.js'
 
 /**
@@ -27,7 +28,8 @@ import {
 const connect = (
   capabilities: Record<string, (data: any) => any>,
   timeoutMs?: number,
-  validateResult?: ChannelRPCResultValidator
+  validateResult?: ChannelRPCValidator,
+  validateInput?: ChannelRPCValidator
 ) => {
   const clientSent: unknown[] = []
   const serverSent: unknown[] = []
@@ -55,7 +57,7 @@ const connect = (
       serverSent.push(data)
       await respond(data)
     },
-    { timeoutMs, validateResult }
+    { timeoutMs, validateResult, validateInput }
   )
 
   return { service, clientSent, serverSent }
@@ -596,6 +598,115 @@ describe('envelope validation', () => {
   })
 })
 
+/** Stands in for the schema service, which is an ajv wrapper in production. */
+const schemaServices = () => ({
+  logger: {
+    error: () => {},
+    warn: () => {},
+    info: () => {},
+    debug: () => {},
+  },
+  schema: {
+    compileSchema: () => {},
+    validateSchema: (name: string, data: any) => {
+      const schema = pikkuState(null, 'misc', 'schemas').get(name) as any
+      for (const key of schema?.required ?? []) {
+        if (typeof data?.[key] !== schema.properties[key].type) {
+          throw new Error(`Property "${key}" does not match schema.`)
+        }
+      }
+    },
+  },
+})
+
+describe('input validation', () => {
+  /** As codegen would declare it: a name, its function, its argument schema. */
+  const declareInput = (name: string, schema: unknown) => {
+    pikkuState(null, 'rpc', 'meta')[name] = name as any
+    pikkuState(null, 'function', 'meta')[name] = {
+      pikkuFuncId: name,
+      inputSchemaName: `${name}Input`,
+    } as any
+    pikkuState(null, 'misc', 'schemas').set(`${name}Input`, schema as any)
+    return () => {
+      delete pikkuState(null, 'rpc', 'meta')[name]
+      delete pikkuState(null, 'function', 'meta')[name]
+      pikkuState(null, 'misc', 'schemas').delete(`${name}Input`)
+    }
+  }
+
+  const pathSchema = {
+    type: 'object',
+    properties: { path: { type: 'string' } },
+    required: ['path'],
+  }
+
+  const validator = (): ChannelRPCValidator =>
+    createChannelRPCInputValidator(schemaServices() as any)
+
+  test('arguments that do not match the declared input fail before the send', async () => {
+    const release = declareInput('readLocalFile', pathSchema)
+    try {
+      const { service, serverSent } = connect(
+        { readLocalFile: () => 'contents' },
+        undefined,
+        undefined,
+        validator()
+      )
+
+      await assert.rejects(
+        service.invoke('readLocalFile', { path: 42 }),
+        (e: ChannelRPCError) => {
+          assert.equal(e.reason, 'invalid')
+          assert.match(
+            e.message,
+            /Invalid arguments for "readLocalFile": Property "path" does not match schema\./
+          )
+          return true
+        }
+      )
+
+      // Nothing went out. This is version drift, not an attack — the peer must
+      // still check what it is handed — but failing here names the end that
+      // got it wrong instead of surfacing inside someone else's process.
+      assert.deepEqual(serverSent, [])
+      assert.equal(service.registry.inFlight, 0, 'no call is left registered')
+    } finally {
+      release()
+    }
+  })
+
+  test('matching arguments go out untouched', async () => {
+    const release = declareInput('readLocalFile', pathSchema)
+    try {
+      const { service } = connect(
+        { readLocalFile: ({ path }: any) => `contents of ${path}` },
+        undefined,
+        undefined,
+        validator()
+      )
+
+      assert.equal(
+        await service.invoke('readLocalFile', { path: '/etc/hosts' }),
+        'contents of /etc/hosts'
+      )
+    } finally {
+      release()
+    }
+  })
+
+  test('a capability with no declared input is left alone', async () => {
+    const { service } = connect(
+      { whoAmI: () => 'me' },
+      undefined,
+      undefined,
+      validator()
+    )
+
+    assert.equal(await service.invoke('whoAmI', { anything: true }), 'me')
+  })
+})
+
 describe('result validation', () => {
   /**
    * Registers a capability the way codegen would: a name in the RPC map, the
@@ -620,27 +731,6 @@ describe('result validation', () => {
     properties: { sha: { type: 'string' }, branch: { type: 'string' } },
     required: ['sha', 'branch'],
   }
-
-  /** Stands in for the schema service, which is an ajv wrapper in production. */
-  const schemaServices = () => ({
-    logger: {
-      error: () => {},
-      warn: () => {},
-      info: () => {},
-      debug: () => {},
-    },
-    schema: {
-      compileSchema: () => {},
-      validateSchema: (name: string, data: any) => {
-        const schema = pikkuState(null, 'misc', 'schemas').get(name) as any
-        for (const key of schema?.required ?? []) {
-          if (typeof data?.[key] !== schema.properties[key].type) {
-            throw new Error(`Property "${key}" does not match schema.`)
-          }
-        }
-      },
-    },
-  })
 
   test('accepts an answer matching the declared return type', async () => {
     const release = declareCapability('localCheckout', checkoutSchema)

@@ -51,6 +51,13 @@ validate the whole envelope rather than the action tag alone, and a failure
 payload with a non-string name or message falls back rather than being attached
 to an `Error`.
 
+The arguments going the other way are checked too, against the schema for the
+capability's declared input, before anything is registered or sent. That is not
+a boundary — the peer runs the code and has to check what it was handed, and a
+caller that meant harm would send arguments that pass. It catches drift, where a
+server built against a newer capability signature calls a client that predates
+it, and fails it here rather than inside someone else's process.
+
 A channel-driven CLI command uses this to ask its caller for machine-local
 facts mid-run — a git sha, a working tree, a local file. The CLI wire's own
 channel is synthetic (it exists so a command can stream progress without

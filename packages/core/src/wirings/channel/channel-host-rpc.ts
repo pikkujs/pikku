@@ -1,8 +1,9 @@
 import {
   ChannelDeploymentService,
+  createChannelRPCInputValidator,
   createChannelRPCResultValidator,
 } from './channel-rpc.js'
-import type { ChannelRPCResultValidator } from './channel-rpc.js'
+import type { ChannelRPCValidator } from './channel-rpc.js'
 import type { PikkuChannel } from './channel.types.js'
 import { getSingletonServices } from '../../pikku-state.js'
 
@@ -31,7 +32,8 @@ export const getChannelHostRPC = (
   channel: PikkuChannel<unknown, any>,
   options: {
     timeoutMs?: number
-    validateResult?: ChannelRPCResultValidator
+    validateInput?: ChannelRPCValidator
+    validateResult?: ChannelRPCValidator
   } = {}
 ): ChannelDeploymentService => {
   let service = hostRPCByChannel.get(channel.channelId)
@@ -59,7 +61,8 @@ export const channelRemote = async (
 ): Promise<unknown> =>
   getChannelHostRPC(channel, {
     // The transport is the only place that sees every reverse call, so no
-    // caller has to ask for its answer to be checked.
+    // caller has to ask for either end of it to be checked.
+    validateInput: createChannelRPCInputValidator(getSingletonServices()),
     validateResult: createChannelRPCResultValidator(getSingletonServices()),
   }).invoke(funcName, data)
 

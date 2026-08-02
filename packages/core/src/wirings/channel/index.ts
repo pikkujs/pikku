@@ -31,6 +31,7 @@ export {
   ChannelRPCError,
   ChannelRPCRegistry,
   createChannelRPCResponder,
+  createChannelRPCInputValidator,
   createChannelRPCResultValidator,
   isChannelRPCPending,
   isChannelRPCRequest,
@@ -48,7 +49,7 @@ export type {
   ChannelRPCPending,
   ChannelRPCRequest,
   ChannelRPCResponse,
-  ChannelRPCResultValidator,
+  ChannelRPCValidator,
 } from './channel-rpc.js'
 export {
   channelRemote,

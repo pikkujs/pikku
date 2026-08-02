@@ -153,6 +153,7 @@ export function serializeChannelCLIClient(
 
   return `
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
+import type { Capabilities } from '@pikku/core/channel'
 import { CorePikkuWebsocket } from '@pikku/websocket'
 ${rendererImports}
 /**
@@ -165,12 +166,14 @@ ${rendererImports}
  *
  * \`capabilities\` are the functions this client agrees to run on the server's
  * behalf (a git sha, a local path). It is an allowlist, not a convenience —
- * nothing outside it is reachable from the server.
+ * nothing outside it is reachable from the server. A bare function is
+ * unclassified and so needs approval before every call; write
+ * \`{ execute, needsApproval: false }\` for one that may run unattended.
  */
 export async function ${capitalizedName}CLIClient(
   ws: WebSocket,
   args?: string[],
-  capabilities: Record<string, (data: any) => Promise<unknown> | unknown> = {}
+  capabilities: Capabilities = {}
 ): Promise<number> {
   // Create Pikku WebSocket wrapper
   const pikkuWS = new CorePikkuWebsocket(ws)
