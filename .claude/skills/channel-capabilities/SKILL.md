@@ -1,6 +1,8 @@
 ---
 name: channel-capabilities
-description: Use when a server-side function needs something only the connected client knows or can do — a git sha, a working tree, a local file, a push — or when reviewing/writing `channel.remote`, capability maps, or approval policy. Covers reverse RPC over a channel and the consent model around it.
+description: "Use when a server-side function needs something only the connected client knows or can do — a git sha, a working tree, a local file, a push — or when writing or reviewing `channel.remote`, capability maps, or approval policy. Covers reverse RPC over a channel, which end is untrusted, why an unclassified capability needs approval, and the pending-frame/timeout interaction. Triggered by: 'the command needs the client's git sha', 'expose a capability to the server', 'why is it asking me to approve this', 'add channel.remote to X'. Not for ordinary `rpc.remote` between deployed units, which needs no capability map."
+metadata:
+  version: 1.0.0
 ---
 
 # Reverse RPC over a channel

@@ -271,24 +271,20 @@ export async function runCLICommand({
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
   /**
-   * The session the command runs as. A locally run CLI has none — the process
-   * is the user. A command driven over a channel does: the connection
-   * authenticated during its upgrade, and the command has to inherit that or
-   * every authenticated command is unreachable remotely.
+   * A locally run CLI has none — the process is the user. Over a channel the
+   * command inherits what the connection authenticated as, or no authenticated
+   * command is reachable remotely.
    */
   session?: CoreUserSession
   /**
-   * Diverts everything the command emits — progressive `channel.send` writes
-   * and the final result — to a sink instead of the local renderer. Set when
-   * the command runs on a server on behalf of a remote CLI: rendering there
-   * would print to the *server's* stdout and the caller would see nothing.
+   * Diverts everything the command emits to a sink instead of the local
+   * renderer: when running on behalf of a remote CLI, rendering here would
+   * print to the *server's* stdout.
    */
   onOutput?: (data: unknown) => Promise<void> | void
   /**
-   * The connection the command arrived on, when it arrived on one. The CLI
-   * wire's channel is synthetic — it exists so a command can stream progress
-   * without knowing where that goes — so reaching the caller has to be
-   * delegated to the real channel underneath it.
+   * The connection the command arrived on. The CLI wire's own channel is
+   * synthetic, so reaching the caller is delegated to the real one underneath.
    */
   transport?: PikkuChannel<unknown, any, any>
 }): Promise<any> {
@@ -377,9 +373,8 @@ export async function runCLICommand({
     clearState: () => {
       cliState = undefined
     },
-    // A locally-run command is already on the machine it would be calling
-    // back to, so there is no peer here to answer. Over a channel, the call
-    // goes out on the connection the command arrived on.
+    // A locally-run command is already on the machine it would call back to,
+    // so there is no peer to answer.
     remote: transport
       ? (funcName: string, data?: unknown) => transport.remote(funcName, data)
       : unsupportedChannelRemote,
@@ -423,9 +418,8 @@ export async function runCLICommand({
     // per-command renderer) keep emitting their own output untouched.
     // Skip if result is undefined (void functions handle their own output).
     //
-    // `onOutput` covers progressive output only: the result is returned to the
-    // caller, which is what decides how to deliver it (as its own frame, over
-    // a channel), and emitting it here as well would deliver it twice.
+    // `onOutput` is progressive output only — the result goes back to the
+    // caller, and emitting it here too would deliver it twice.
     if (result !== undefined && !onOutput) {
       const commandRenderer = programData?.renderers[commandId]
       const jsonMode =

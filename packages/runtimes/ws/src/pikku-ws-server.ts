@@ -133,10 +133,9 @@ export const pikkuWebsocketHandler = ({
   )
 
   server.on('upgrade', async (req, socket, head) => {
-    // Opening the channel is async, so a client can reset the connection
-    // before the handshake completes. Until `ws` takes the socket over nothing
-    // is listening for its errors, and an unhandled 'error' on a raw socket
-    // takes the whole process down — so claim it up front.
+    // Opening the channel is async, so a client can reset before the handshake
+    // completes. Until `ws` takes the socket over nothing listens for its
+    // errors, and an unhandled 'error' on a raw socket kills the process.
     socket.on('error', (error) => {
       logger.debug(`Websocket upgrade socket error: ${error.message}`)
     })

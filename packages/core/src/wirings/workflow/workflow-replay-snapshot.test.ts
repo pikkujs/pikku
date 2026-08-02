@@ -49,7 +49,9 @@ describe('replay reads the run steps once, not once per step', () => {
     await ws.beginReplay(runId)
     for (let i = 0; i < 8; i++) {
       await ws.inlineStep(runId, `step-${i}`, async () => {
-        throw new Error(`step-${i} re-ran instead of replaying its cached result`)
+        throw new Error(
+          `step-${i} re-ran instead of replaying its cached result`
+        )
       })
     }
     ws.endReplay(runId)
@@ -105,7 +107,11 @@ describe('replay reads the run steps once, not once per step', () => {
     const late = await ws.inlineStep(runId, 'late', async () => 'must not run')
     ws.endReplay(runId)
 
-    assert.equal(late, 'first', 'the second replay re-ran a step the first one completed')
+    assert.equal(
+      late,
+      'first',
+      'the second replay re-ran a step the first one completed'
+    )
   })
 
   test('outside a replay, steps are still read one at a time', async () => {

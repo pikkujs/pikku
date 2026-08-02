@@ -274,9 +274,15 @@ describe('graph-runner bugs', () => {
       },
     }
 
-    const runId = await ws.createRun('testCyclicGraph', {}, false, 'cyclic-hash', {
-      type: 'test',
-    })
+    const runId = await ws.createRun(
+      'testCyclicGraph',
+      {},
+      false,
+      'cyclic-hash',
+      {
+        type: 'test',
+      }
+    )
 
     // Succeed a queued step (taking an optional branch), then advance the graph.
     const advance = async (stepName: string, branch?: string) => {
@@ -483,7 +489,13 @@ describe('graph-runner bugs', () => {
       path.unshift(cursor)
       cursor = from.get(cursor) ?? undefined
     }
-    assert.deepEqual(path, ['begin', 'attempt', 'attempt#1', 'attempt#2', 'finish'])
+    assert.deepEqual(path, [
+      'begin',
+      'attempt',
+      'attempt#1',
+      'attempt#2',
+      'finish',
+    ])
 
     delete metaState['testInlineCyclic']
   })

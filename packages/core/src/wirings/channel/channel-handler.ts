@@ -170,13 +170,9 @@ export const processMessageHandlers = (
       }
     }
 
-    // An answer to a `channel.remote(...)` call is not a message for the app:
-    // it belongs to whichever caller is still awaiting it, anywhere in a
-    // function that is mid-run. Taken ahead of routing so that every channel
-    // gets reverse RPC without declaring a route for the replies, and so an
-    // answer can never be mistaken for a new message. A pending frame — the
-    // peer saying it is asking a human — rides the same path for the same
-    // reason.
+    // Taken ahead of routing so every channel gets reverse RPC without
+    // declaring a route for replies, and so an answer to a call someone is
+    // still awaiting can never be mistaken for a new message.
     if (isChannelRPCResponse(frame) || isChannelRPCPending(frame)) {
       handleChannelRPCResponse(channelHandler.getChannel().channelId, frame)
       return
@@ -200,9 +196,8 @@ export const processMessageHandlers = (
               routingProperty,
               routerValue
             )
-            // The routing key is echoed so the client can match the reply to
-            // the message it sent. It can only be attached to an object — on a
-            // primitive the assignment throws under ESM's strict mode — so a
+            // The routing key is echoed so the client can match the reply.
+            // Assigning it to a primitive throws under ESM strict mode, so a
             // primitive result is wrapped rather than mutated.
             result =
               routeResult !== null && typeof routeResult === 'object'

@@ -1,14 +1,7 @@
 import type { ApprovalRequester } from '../../channel/channel-rpc.js'
 
 /**
- * How much a client will let a server do without asking.
- *
- * The tiers are meaningful here in a way they would not be for an agent: the
- * caller is a deterministic program whose source can be read, so "these calls
- * are always fine" is a statement someone can actually justify. A model gets no
- * equivalent, which is why agent tools have no auto tier.
- *
- * - `prompt`   — ask a person about anything not classified `needsApproval: false`.
+ * - `prompt`   — ask about anything not classified `needsApproval: false`.
  * - `auto`     — run the classified-safe set, refuse the rest without asking.
  * - `dangerous`— run everything.
  */
@@ -20,13 +13,8 @@ export const APPROVAL_FLAGS = {
 } as const
 
 /**
- * Reads the approval flags out of argv, returning the mode and argv without
- * them.
- *
- * They are stripped because the server owns the command tree and would
- * otherwise be handed two arguments it has never heard of. The decision is the
- * client's alone — a flag that reached the server could be honoured by the
- * server, which is the party being protected against.
+ * Stripped from argv, not just read: the server owns the command tree and has
+ * never heard of these, and a flag the server can see is one it could act on.
  */
 export const takeApprovalFlags = (
   args: string[],
@@ -49,14 +37,10 @@ export const takeApprovalFlags = (
 }
 
 /**
- * Asks on the terminal, once per call, with `a` remembering the answer for the
- * rest of this run.
- *
- * `a` is scoped to the one capability rather than to the session: "stop asking
- * me about this" is a judgement about a particular thing the user just read,
- * and widening it to everything would quietly turn an interactive run into
- * `--dangerously-auto-approve`. Nothing is written to disk — a decision that
- * outlives the process is one nobody remembers making.
+ * `a` is scoped to the one capability and to this run: widening it to every
+ * capability would quietly turn an interactive run into
+ * `--dangerously-auto-approve`, and persisting it would outlive anyone's memory
+ * of agreeing.
  */
 export const createTerminalApprover = ({
   input = process.stdin,
@@ -70,14 +54,13 @@ export const createTerminalApprover = ({
 } = {}): ApprovalRequester => {
   const allowed = new Set<string>()
 
-  return async ({ funcName, description }) => {
+  const ask: ApprovalRequester = async ({ funcName, description }) => {
     if (allowed.has(funcName) || signal?.aborted) {
       return allowed.has(funcName)
     }
 
-    // The prompt goes to stderr so a command whose stdout is being piped or
-    // parsed still shows it, rather than corrupting the stream it is asking
-    // about.
+    // stderr, so a command whose stdout is piped still shows the prompt rather
+    // than corrupting the stream it is asking about.
     output.write(
       `\nThe server is asking to run "${funcName}" on this machine.\n` +
         (description ? `  ${description}\n` : '') +
@@ -88,15 +71,13 @@ export const createTerminalApprover = ({
       const done = (value: string) => {
         input.off('data', onData)
         signal?.removeEventListener('abort', onAbort)
-        // Reading resumes stdin, which holds the event loop open. A run that
-        // ends with a prompt still on screen would otherwise never exit.
+        // Reading resumed stdin, which holds the event loop open.
         input.pause?.()
         resolve(value)
       }
       const onData = (chunk: Buffer | string) =>
         done(String(chunk).trim().toLowerCase())
-      // An aborted prompt is a refusal: the command it was asked on behalf of
-      // is already over, and there is nothing left to permit.
+      // An aborted prompt is a refusal: its command is already over.
       const onAbort = () => done('n')
 
       input.on('data', onData)
@@ -109,16 +90,22 @@ export const createTerminalApprover = ({
     }
     return answer === 'y' || answer === 'yes'
   }
+
+  // Requests are dispatched without awaiting, so two can be in flight at once.
+  // Unserialized, both prompts print interleaved and the first keystroke
+  // answers both — approving something the user never read.
+  let queue: Promise<unknown> = Promise.resolve()
+  return (request) => {
+    const answered = queue.then(() => ask(request))
+    queue = answered.catch(() => {})
+    return answered
+  }
 }
 
 /**
- * The approver for a mode, or undefined when nothing may be approved.
- *
- * Undefined is what the responder reads as "there is nobody to ask", so a
- * capability needing approval is refused rather than run. That is deliberately
- * what a non-interactive run gets by default: CI is exactly where an unattended
- * push would otherwise happen, and defaulting it to yes would make the whole
- * mechanism a formality.
+ * Undefined reads as "nobody to ask", which refuses rather than runs. That is
+ * what a non-interactive run gets: CI is exactly where an unattended push would
+ * otherwise happen.
  */
 export const approverForMode = (
   mode: ApprovalMode,
@@ -133,8 +120,7 @@ export const approverForMode = (
   } = {}
 ): ApprovalRequester | undefined => {
   if (mode === 'dangerous') {
-    // Said once, on stderr, so the log of a run that went wrong records that
-    // every capability on it was permitted without anyone being asked.
+    // Once, on stderr, so the log of a run that went wrong records it.
     warn(
       `${APPROVAL_FLAGS.dangerous}: every capability this client exposes will run without asking.`
     )

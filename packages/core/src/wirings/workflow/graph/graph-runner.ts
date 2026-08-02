@@ -140,7 +140,12 @@ function planGraphTransitions(
       node.next,
       branchByStep[inst.stepName]
     )) {
-      edges.push({ from: inst.stepName, fromKey: inst.stepName, fromLogical, target })
+      edges.push({
+        from: inst.stepName,
+        fromKey: inst.stepName,
+        fromLogical,
+        target,
+      })
     }
   }
 

@@ -1,11 +1,9 @@
 /**
  * A CLI whose commands live on the server, driven over a websocket.
  *
- * The construct under test is not any particular command — it is the shape:
- * sign in, open one socket, send argv the client never parses, and let the
- * server call back down that same socket for things only the client knows.
- * Every assertion here is about that round trip, which is why it runs as a
- * node:test against a real server rather than as a scenario.
+ * What is under test is the shape, not any one command: sign in, open a socket,
+ * send argv the client never parses, and let the server call back down it. That
+ * round trip needs a real server, which is why this is not a scenario.
  */
 import { after, before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -23,9 +21,8 @@ let apiUrl: string
 let token: string
 
 /**
- * Signs in as a seeded actor and keeps the bearer token. This is the `login`
- * half of the construct: the client owns no commands, but it still has to
- * prove who it is before the server will run any.
+ * The client owns no commands, but still has to prove who it is before the
+ * server will run any.
  */
 const signIn = async (email: string, name: string): Promise<string> => {
   const res = await fetch(`${apiUrl}/api/auth/sign-in/actor`, {
@@ -51,12 +48,9 @@ interface RunResult {
 }
 
 /**
- * Runs one command over its own connection.
- *
- * `capabilities` is what this "machine" agrees to answer — the allowlist the
- * server's reverse calls resolve against. `approve` stands in for the person at
- * the terminal; without one there is nobody to ask, which is what a
- * non-interactive run gets.
+ * Runs one command over its own connection. `capabilities` is what this
+ * "machine" agrees to answer; `approve` stands in for the person at the
+ * terminal, and omitting it is what a non-interactive run gets.
  */
 const runCommand = async (
   args: string[],
@@ -140,8 +134,7 @@ describe('CLI over a channel', () => {
       ['publish', '--tag', 'beta'],
       {
         capabilities: {
-          // Reading the checkout takes no server-chosen argument and changes
-          // nothing, so it is classified safe and runs without asking.
+          // No server-chosen argument and no effect, so: classified safe.
           localCheckout: {
             execute: (data) => {
               asked.push(data)
@@ -168,10 +161,9 @@ describe('CLI over a channel', () => {
   })
 
   test('a capability answering with the wrong shape fails the command', async () => {
-    // The client is the untrusted end here: it runs on someone else's machine
-    // and answers with whatever it likes. Version drift produces this as
-    // readily as a hostile client does, and either way the command must not
-    // carry on with a value it only assumed was a string.
+    // The client is the untrusted end. Version drift produces this as readily
+    // as a hostile client does, and either way the command must not carry on
+    // with a value it only assumed was a string.
     const { exitCode, output } = await runCommand(['publish'], {
       capabilities: {
         localCheckout: {
@@ -192,10 +184,8 @@ describe('CLI over a channel', () => {
   test('an unclassified capability is put to the user before it runs', async () => {
     const asked: Array<{ funcName: string; description?: string }> = []
 
-    // A bare function, the way anyone writes one first: no policy attached.
-    // The map says `localCheckout` *can* run; approval is what decides whether
-    // this call *should*, and the default for something nobody classified is
-    // to ask.
+    // A bare function, the way anyone writes one first. The map says it *can*
+    // run; approval decides whether this call *should*.
     const { exitCode, output } = await runCommand(
       ['publish', '--tag', 'beta'],
       {
@@ -223,29 +213,40 @@ describe('CLI over a channel', () => {
   })
 
   test('a refused capability fails the command rather than hanging', async () => {
+    let executed = false
     const { exitCode } = await runCommand(['publish'], {
       capabilities: {
-        localCheckout: () => ({ sha: 'c0ffee1234567890', branch: 'main' }),
+        localCheckout: () => {
+          executed = true
+          return { sha: 'c0ffee1234567890', branch: 'main' }
+        },
       },
       approve: () => false,
     })
 
-    // A refusal is an answer. The server learns the call was denied and the
-    // command fails on it — it does not sit on the socket waiting out a
-    // timeout for a decision that has already been made.
+    // The exit code alone would pass even if the capability had already run and
+    // the refusal only failed the command afterwards.
+    assert.equal(executed, false, 'a refused capability must not have run')
+
+    // A refusal is an answer: the command fails on it rather than waiting out
+    // a timeout for a decision already made.
     assert.notEqual(exitCode, 0)
   })
 
   test('with nobody to ask, an unclassified capability is refused', async () => {
-    // No approver: a non-interactive run. This is the CI case, and it must
-    // fail rather than quietly proceeding as though someone had said yes.
+    // The CI case: it must fail rather than proceed as though someone said yes.
+    let executed = false
     const { exitCode } = await runCommand(['publish'], {
       capabilities: {
-        localCheckout: () => ({ sha: 'c0ffee1234567890', branch: 'main' }),
+        localCheckout: () => {
+          executed = true
+          return { sha: 'c0ffee1234567890', branch: 'main' }
+        },
       },
     })
 
     assert.notEqual(exitCode, 0)
+    assert.equal(executed, false, 'nobody to ask means it does not run')
   })
 
   test('a capability the client did not expose is refused, and the command fails', async () => {

@@ -56,10 +56,8 @@ export const runChannelLifecycleWithMiddleware = async ({
   data?: unknown
   channelMiddlewareMeta?: MiddlewareMetadata[]
   /**
-   * The connection's session, established while the socket was upgrading.
-   * Lifecycle functions see the same session the message routes do — without
-   * it `onConnect` cannot tell who just connected, which is the one thing it
-   * usually needs to know.
+   * Established while the socket was upgrading, so `onConnect` can tell who
+   * just connected.
    */
   userSession?: PikkuSessionService<any>
 }): Promise<unknown> => {
