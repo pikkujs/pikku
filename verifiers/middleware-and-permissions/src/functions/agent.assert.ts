@@ -73,24 +73,39 @@ class MockAIRunState implements AIRunStateService {
 }
 
 class MockAIStorage implements AIStorageService {
+  /**
+   * Threads this double has actually been asked to create.
+   *
+   * getThread used to answer with a hardcoded `resourceId` regardless of what
+   * was stored, which was invisible while thread ownership went unchecked and
+   * forges an owner mismatch now that it is enforced. A double that reports an
+   * owner nobody set cannot exercise an ownership rule.
+   */
+  private readonly threads = new Map<string, AIThread>()
+
   async createThread(
-    _resourceId: string,
+    resourceId: string,
     options?: { threadId?: string }
   ): Promise<AIThread> {
-    return {
+    const thread: AIThread = {
       id: options?.threadId ?? randomUUID(),
-      resourceId: _resourceId,
+      resourceId,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
+    this.threads.set(thread.id, thread)
+    return thread
   }
   async getThread(threadId: string): Promise<AIThread> {
-    return {
-      id: threadId,
-      resourceId: 'test-resource',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    const stored = this.threads.get(threadId)
+    if (!stored) {
+      // How a real store signals "no such thread": the interface is not
+      // nullable, and the caller in ai-agent-prepare wraps this in a try/catch
+      // and creates the thread instead. Answering with an invented thread made
+      // every first turn look like someone else's.
+      throw new Error(`No thread found for ${threadId}`)
     }
+    return stored
   }
   async getThreads(_resourceId: string): Promise<AIThread[]> {
     return []
