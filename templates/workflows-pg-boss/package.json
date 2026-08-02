@@ -14,8 +14,8 @@
     "test": "bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.73",
-    "@pikku/express": "^0.12.7",
+    "@pikku/core": "^0.12.74",
+    "@pikku/express": "^0.12.8",
     "@pikku/kysely-postgres": "^0.12.15",
     "@pikku/queue-pg-boss": "^0.12.8",
     "kysely": "^0.29.0",
@@ -26,8 +26,8 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.94",
-    "@pikku/inspector": "^0.12.51",
+    "@pikku/cli": "^0.12.95",
+    "@pikku/inspector": "^0.12.52",
     "@types/node": "^24"
   },
   "exports": {
