@@ -32,11 +32,14 @@ defineScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
 ```
 
 **Breaking:** no alias is kept. Rename the four call sites; the module subpaths
-(`@pikku/core/scope`, `/secret`, `/variable`) are unchanged.
+(`@pikku/core/scope`, `/secret`, `/variable`, `/credential`) are unchanged.
 
-The inspector matches these by identifier text, so a stale `wire*` call is not a
-type error — it is silently not extracted, and the generated union comes back
-empty. That fails as "this scope isn't declared" on code that was fine a moment
+A stale import fails to typecheck — the old exports are gone, so
+`import { wireSecret } from '@pikku/core/secret'` is a compile error. What the
+compiler will not catch is a stale *call* that still resolves: an addon that
+re-exports the old name, or a local alias. The inspector matches by identifier
+text, so those are silently not extracted and the generated union comes back
+empty — surfacing as "this scope isn't declared" on code that was fine a moment
 ago, nowhere near the declaration. Grep for the old names rather than trusting a
 clean build.
 

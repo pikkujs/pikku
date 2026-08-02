@@ -311,7 +311,7 @@ Fix every `error` and `warn` in the output before continuing. Then:
 1. **Replace the database layer**: swap PostgreSQL/MySQL queries for Kysely + libSQL. Convert schema to SQLite-compatible SQL migrations in `db/sqlite/`.
 2. **Replace route handlers with pikkuFuncs**: extract business logic into `pikkuFunc`/`pikkuSessionlessFunc`, add `wireHTTP` or `expose: true` for transport.
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
-4. **Replace `process.env` calls** with `defineVariable`/`defineSecret` + `variables.get()`.
+4. **Replace `process.env` calls**: plain config becomes `defineVariable` + `variables.get()`, anything sensitive becomes `defineSecret` + `secrets.getSecret()`.
 5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles`.
 6. **Add `fabric.config.json`** at project root with `projectId`, `production.branch`, and `frontends`.
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.

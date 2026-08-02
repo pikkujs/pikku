@@ -60,8 +60,14 @@ node --import tsx src/benchmark.ts <target-dir> <iterations>
 | `wireMCPPrompt`        | `addMCPPrompt`        |
 | `wireWorkflowGraph`    | `addWorkflowGraph`    |
 | `defineSecret`         | `addSecret`           |
-| `wireOAuth2Credential` | `addOAuth2Credential` |
+| `defineCredential`     | `addCredential`       |
+| `defineScope`          | `addScope`            |
 | `defineVariable`       | `addVariable`         |
+
+`addAuth` stays outside the map: it matches several identifiers
+(`betterAuthStatelessSession`, `betterAuthSession`) and gates them on
+surrounding context rather than on the identifier alone, so it keeps running on
+every CallExpression.
 
 Fallback for unmatched identifiers: check `/pikku.*func/i` regex -> `addFunctions`.
 
