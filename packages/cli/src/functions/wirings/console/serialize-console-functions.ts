@@ -50,6 +50,7 @@ import {
 } from './console.schemas.gen.js'
 
 export const pikkuConsoleSetSecret = pikkuFunc({
+  secretBroker: true,
   tags: ['pikku'],
   description: 'Set the value of a secret',
   expose: true,
@@ -99,6 +100,7 @@ export const pikkuConsoleSetVariable = pikkuFunc({
 })
 
 export const pikkuConsoleHasSecret = pikkuFunc({
+  secretBroker: true,
   tags: ['pikku'],
   description: 'Check if a secret exists without reading its value',
   expose: true,
@@ -111,6 +113,7 @@ export const pikkuConsoleHasSecret = pikkuFunc({
 })
 
 export const pikkuConsoleGetSecret = pikkuFunc({
+  secretBroker: true,
   tags: ['pikku'],
   description: 'Get the current value of a secret',
   expose: true,
