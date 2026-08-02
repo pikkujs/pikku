@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
-import { ErrorCode } from '../error-codes.js'
+import type { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
@@ -164,7 +164,11 @@ describe('validateSystemRoleScopes', () => {
 
   test('accepts a subtree wildcard whose node exists', async () => {
     const { criticals } = await inspectSource(
-      withScopes('defineSystemRole({', "  admin: { scopes: ['admin:*'] },", '})')
+      withScopes(
+        'defineSystemRole({',
+        "  admin: { scopes: ['admin:*'] },",
+        '})'
+      )
     )
 
     assert.deepEqual(criticals, [])

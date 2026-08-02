@@ -16,7 +16,9 @@ import type {
  * unexposed, and the far commoner un-annotated — are spelled out where they
  * are tested.
  */
-const fn = (extra: Partial<FunctionsMeta[string]> = {}): FunctionsMeta[string] =>
+const fn = (
+  extra: Partial<FunctionsMeta[string]> = {}
+): FunctionsMeta[string] =>
   ({
     pikkuFuncId: 'f',
     inputSchemaName: null,
@@ -209,7 +211,10 @@ describe('deriving intents from scenarios', () => {
     const [intent] = deriveIntents(workflows, functions)
     assert.equal(intent!.id, 'inviteFlow')
     assert.equal(intent!.title, 'Invite a teammate')
-    assert.equal(intent!.description, 'An admin brings someone new into the org')
+    assert.equal(
+      intent!.description,
+      'An admin brings someone new into the org'
+    )
     assert.deepEqual(intent!.personas, ['orgAdmin'])
     assert.deepEqual(intent!.tags, ['org'])
   })
@@ -232,7 +237,7 @@ describe('deriving intents from scenarios', () => {
   test('the rpcs a scenario calls are never passed on — finding them is the test', () => {
     const [intent] = deriveIntents(workflows, functions)
     assert.ok(
-      JSON.stringify(intent).indexOf('createProject') === -1,
+      !JSON.stringify(intent).includes('createProject'),
       'a scenario’s own rpc leaked into the intent'
     )
   })

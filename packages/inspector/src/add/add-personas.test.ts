@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
-import { ErrorCode } from '../error-codes.js'
+import type { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
@@ -78,7 +78,9 @@ describe('addPersonas inspector', () => {
     assert.equal(susan.jobTitle, 'Buys for a small café')
     assert.deepEqual(susan.roles, ['buyer'])
     assert.equal(susan.personality, 'Hunts cheap deals.')
-    assert.deepEqual(susan.goals, ['Get the weekly order in under five minutes'])
+    assert.deepEqual(susan.goals, [
+      'Get the weekly order in under five minutes',
+    ])
     assert.deepEqual(susan.tags, ['commerce'])
     assert.equal(susan.disposition, 'careless')
     assert.deepEqual(susan.tuning, { repeatRate: 0.3 })
@@ -147,7 +149,9 @@ describe('addPersonas inspector', () => {
       )
     )
     assert.equal(state.personas.definitions.length, 0)
-    assert.ok(criticals.some((c) => /unknown disposition 'grumpy'/.test(c.message)))
+    assert.ok(
+      criticals.some((c) => /unknown disposition 'grumpy'/.test(c.message))
+    )
   })
 
   // `repeatRate: 18` meaning 18% would silently double every call, and the run
@@ -161,7 +165,11 @@ describe('addPersonas inspector', () => {
       )
     )
     assert.equal(state.personas.definitions.length, 0)
-    assert.ok(criticals.some((c) => /repeatRate must be between 0 and 1/.test(c.message)))
+    assert.ok(
+      criticals.some((c) =>
+        /repeatRate must be between 0 and 1/.test(c.message)
+      )
+    )
   })
 
   test('a linked account is extracted alongside the primary one', async () => {
