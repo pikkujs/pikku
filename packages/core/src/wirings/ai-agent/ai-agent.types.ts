@@ -237,8 +237,19 @@ export type CoreAIAgent<
   description: string
   summary?: string
   errors?: string[]
+  /**
+   * The three fields below are the system prompt. `buildInstructions` joins
+   * whichever are set with a blank line, always in this order — role, then
+   * personality, then goal — and appends the tool-usage rules if the agent has
+   * tools. Nothing checks them against each other: the split is there to keep a
+   * prompt legible, and text put in the wrong one still reaches the model.
+   *
+   * Who the agent is. 'You are a support engineer triaging inbound bugs.'
+   */
   role?: string
+  /** How it should sound: tone, vocabulary, how much it says at a time. */
   personality?: string
+  /** What it is for — the only one of the three that is required. */
   goal: string
   model: string
   temperature?: number
