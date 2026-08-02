@@ -13,6 +13,9 @@ const serializeGroupMap = (
       count: meta.count,
       instanceIds: meta.instanceIds,
       isFactory: meta.isFactory,
+      ...(meta.additionalRegistrations && {
+        additionalRegistrations: meta.additionalRegistrations,
+      }),
     }
   }
   return result
