@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cucumber",
-  "version": "0.12.17",
+  "version": "0.12.18",
   "description": "Deleted — Pikku end-to-end tests are written with pikkuScenario",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
