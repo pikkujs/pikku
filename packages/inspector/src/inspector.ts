@@ -22,6 +22,7 @@ import {
   validateRemoteAddonDependencies,
   validateRemoteAddonAuth,
   validateScopeReferences,
+  validateSystemRoleScopes,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
@@ -177,6 +178,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     scopes: {
+      definitions: [],
+      files: new Set(),
+    },
+    systemRoles: {
       definitions: [],
       files: new Set(),
     },
@@ -478,6 +483,7 @@ export const inspect = async (
     validateRemoteAddonDependencies(logger, state)
     validateRemoteAddonAuth(logger, state)
     validateScopeReferences(logger, state)
+    validateSystemRoleScopes(logger, state)
   }
 
   state.program = program

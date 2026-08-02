@@ -851,6 +851,15 @@ const _getPikkuCLIConfig = async (
       result.scopesMetaJsonFile = join(scopesDir, 'pikku-scopes-meta.gen.json')
     }
 
+    // System roles (SystemRoleName union + declared role set). Kept beside the
+    // scopes they are composed from — a role is unreadable without them.
+    if (!result.rolesFile) {
+      result.rolesFile = join(scopesDir, 'pikku-roles.gen.ts')
+    }
+    if (!result.rolesMetaJsonFile) {
+      result.rolesMetaJsonFile = join(scopesDir, 'pikku-roles-meta.gen.json')
+    }
+
     // Variables (typed wrapper for VariablesService)
     const variablesDir = join(result.outDir, 'variables')
     if (!result.variableTypesFile) {

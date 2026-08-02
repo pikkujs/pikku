@@ -198,6 +198,12 @@ export interface PikkuCLICoreOutputFiles {
   // Scopes metadata JSON
   scopesMetaJsonFile: string
 
+  // System roles (SystemRoleName union + declared role set)
+  rolesFile: string
+
+  // System roles metadata JSON
+  rolesMetaJsonFile: string
+
   // Variables
   variableTypesFile: string
 

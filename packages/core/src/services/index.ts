@@ -138,6 +138,12 @@ export type { MetaService } from './meta-service.js'
 export type { SessionStore } from './session-store.js'
 export type { ScopeService, Role } from './scope-service.js'
 export {
+  assertRoleIsMutable,
+  assertRoleNameAvailable,
+  roleLockReason,
+} from './system-role-guard.js'
+export type { IsSystemRole } from './system-role-guard.js'
+export {
   NoopAuditService,
   createInvocationAudit,
   resolveAuditActorFromWire,

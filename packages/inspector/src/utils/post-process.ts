@@ -1116,3 +1116,49 @@ export function validateAgentToolReferences(
     }
   }
 }
+
+/**
+ * Validates that every scope granted by a system role is declared via
+ * `defineScope`. Runs after all visitors, so declaration order does not matter.
+ *
+ * The same rule functions get, for a sharper reason: a role granting an
+ * undeclared scope is not merely useless, it is *invisibly* useless. No
+ * function checks the scope, so the role appears to work — every call a
+ * persona holding it makes succeeds or fails for unrelated reasons, and the
+ * authorization boundary it was written to describe is never exercised.
+ *
+ * A `*` suffix grants a subtree; the node it hangs off must exist.
+ */
+export function validateSystemRoleScopes(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  if (!state.systemRoles.definitions.length) {
+    return
+  }
+
+  const declared = new Set(
+    flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id)
+  )
+
+  for (const role of state.systemRoles.definitions) {
+    for (const scope of role.scopes) {
+      if (scope === '*') {
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `System role '${role.name}' grants the bare wildcard scope '*'. Grant the roots it should cover instead — '*' hides what the role actually confers.`
+        )
+        continue
+      }
+
+      const declaredForm = scope.endsWith(':*') ? scope.slice(0, -2) : scope
+      if (!declared.has(declaredForm)) {
+        const available = Array.from(declared)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `System role '${role.name}' grants scope '${scope}' which is not declared. Declare it with defineScope. Available scopes: ${available.join(', ') || 'none'}`
+        )
+      }
+    }
+  }
+}

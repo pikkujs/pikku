@@ -82,6 +82,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         null
       )
       await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
+      await workflow.do('Bootstrap roles', 'pikkuRoles', { bootstrap: true })
       await workflow.do(
         'Bootstrap function types split',
         'pikkuFunctionTypesSplit',
@@ -225,6 +226,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Credentials', 'pikkuCredentials', null),
       workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
       workflow.do('Scopes', 'pikkuScopes', {}),
+      workflow.do('Roles', 'pikkuRoles', {}),
       workflow.do(
         'Variable definition types',
         'pikkuVariableDefinitionTypes',

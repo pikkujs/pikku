@@ -7,6 +7,8 @@ export type { CoreSecret, SecretDefinitionMeta, SecretDefinitionsMeta } from '@p
 export const serializeScopeDefinitionTypes = () => {
   return `export { defineScope } from '@pikku/core/scope'
 export type { CoreScopes, CoreScopeNode, FlatScope, ScopeDefinitionMeta, ScopeDefinitionsMeta } from '@pikku/core/scope'
+export { defineSystemRole } from '@pikku/core/role'
+export type { CoreSystemRole, CoreSystemRoles, SystemRole, SystemRoleDefinitionMeta, SystemRoleDefinitionsMeta } from '@pikku/core/role'
 `
 }
 
