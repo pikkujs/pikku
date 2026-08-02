@@ -11,17 +11,31 @@
 // field at all, one said UNLICENSED by accident, and no package carried a
 // LICENSE file — the grant lived only in the repo root, which npm tarballs
 // never include.
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+//
+// Run with --fix to materialise the missing or drifted MIT LICENSE files from
+// scripts/licenses/MIT. BUSL packages are never written for you: their
+// Licensed Work clause names the package and is a legal decision, not a copy.
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+} from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const FIX = process.argv.includes('--fix')
 
 /** Distinctive text that must appear in a LICENSE file for each identifier. */
 const FINGERPRINTS = {
   MIT: 'Permission is hereby granted, free of charge',
   'BUSL-1.1': 'Business Source License 1.1',
 }
+
+/** The one MIT text every MIT package ships, so drift is visible as drift. */
+const MIT_TEXT = readFileSync(join(ROOT, 'scripts', 'licenses', 'MIT'), 'utf8')
 
 function findPackageJsons(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -38,6 +52,7 @@ function findPackageJsons(dir, out = []) {
 }
 
 const problems = []
+const fixed = []
 let checked = 0
 
 // The root manifest is private, but a single SPDX id there would misdescribe a
@@ -74,16 +89,31 @@ for (const file of findPackageJsons(join(ROOT, 'packages'))) {
   }
 
   if (!existsSync(licensePath)) {
-    problems.push(
-      `${where}: no LICENSE file beside it — npm always ships LICENSE, and ` +
-        `the root one is not in the tarball`
-    )
-    continue
+    if (FIX && pkg.license === 'MIT') {
+      writeFileSync(licensePath, MIT_TEXT)
+      fixed.push(relative(ROOT, licensePath))
+    } else {
+      problems.push(
+        `${where}: no LICENSE file beside it — npm always ships LICENSE, and ` +
+          `the root one is not in the tarball`
+      )
+      continue
+    }
   }
 
   const text = readFileSync(licensePath, 'utf8')
   const fingerprint = FINGERPRINTS[pkg.license]
-  if (fingerprint && !text.includes(fingerprint)) {
+  if (pkg.license === 'MIT' && text !== MIT_TEXT) {
+    if (FIX) {
+      writeFileSync(licensePath, MIT_TEXT)
+      fixed.push(relative(ROOT, licensePath))
+    } else {
+      problems.push(
+        `${relative(ROOT, licensePath)}: differs from scripts/licenses/MIT — ` +
+          `every MIT package ships the same text`
+      )
+    }
+  } else if (fingerprint && !text.includes(fingerprint)) {
     problems.push(
       `${where}: declares "${pkg.license}" but its LICENSE file does not read as ${pkg.license}`
     )
@@ -95,9 +125,14 @@ for (const file of findPackageJsons(join(ROOT, 'packages'))) {
   }
 }
 
+if (fixed.length > 0) {
+  console.log(`Wrote MIT LICENSE for:\n  ${fixed.join('\n  ')}`)
+}
 if (problems.length > 0) {
   console.error(
-    `License metadata does not match the LICENSE files:\n  ${problems.join('\n  ')}`
+    `License metadata does not match the LICENSE files:\n  ${problems.join('\n  ')}\n` +
+      `Run \`yarn check:licenses --fix\` to write the MIT ones; BUSL packages ` +
+      `need their LICENSE authored by hand.`
   )
   process.exit(1)
 }
