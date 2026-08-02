@@ -14,7 +14,7 @@
     "mcpJsonFile": ".pikku/mcp/mcp.gen.json"
   },
   "scaffold": {
-    "workflow": "auth"
+    "workflow": true
   },
   "scenarios": {
     "emailDomain": "actors.local"
