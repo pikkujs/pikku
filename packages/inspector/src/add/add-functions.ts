@@ -408,6 +408,23 @@ const addRemoteChannelFunc = ({
     return
   }
 
+  // Two files declaring the same capability is the collision that matters:
+  // both ids are the bare name, so the id-compatibility check below reads them
+  // as the same function and lets the second overwrite the first.
+  const existingFunction = state.functions.meta[pikkuFuncId]
+  if (
+    existingFunction &&
+    existingFunction.sourceFile &&
+    existingFunction.sourceFile !== sourceFile
+  ) {
+    logger.critical(
+      ErrorCode.DUPLICATE_FUNCTION_NAME,
+      `Function name '${name}' is not unique. ` +
+        `'${pikkuFuncId}' is already defined in '${existingFunction.sourceFile}' and cannot be redefined in '${sourceFile}'.`
+    )
+    return
+  }
+
   const existing = state.rpc.internalMeta[name]
   if (existing && !areCompatibleFunctionIds(existing, pikkuFuncId)) {
     logger.critical(
