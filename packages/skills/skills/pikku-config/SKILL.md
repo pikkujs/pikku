@@ -2,8 +2,8 @@
 name: pikku-config
 description: >-
   Use when managing secrets, environment variables, config, or OAuth2 credentials in a Pikku app.
-  Covers defineSecret, defineVariable, wireOAuth2Credential, and typed config access. TRIGGER when:
-  code uses defineSecret/defineVariable/wireOAuth2Credential, user asks about env vars, secrets,
+  Covers defineSecret, defineVariable, defineCredential, and typed config access. TRIGGER when:
+  code uses defineSecret/defineVariable/defineCredential, user asks about env vars, secrets,
   config, OAuth2, or "how do I access environment variables". DO NOT TRIGGER when: user asks about
   API versioning/breaking changes (use pikku-versioning), service factories (use pikku-services),
   or auth middleware (use pikku-security).
@@ -113,33 +113,50 @@ const flags = await variables.getVariableJSON('FEATURE_FLAGS')
 // flags.maxUploadMB → number
 ```
 
-## OAuth2 Credentials
+## Credentials
 
-### `wireOAuth2Credential(config)`
+### `defineCredential(config)`
 
 ```typescript
-wireOAuth2Credential({
-  name: string,              // Credential identifier
-  displayName: string,       // Human-readable name
-  secretId: string,          // Secret holding { clientId, clientSecret }
-  tokenSecretId: string,     // Secret for token storage (auto-refreshed)
-  authorizationUrl: string,  // OAuth2 authorization endpoint
-  tokenUrl: string,          // OAuth2 token endpoint
-  scopes: string[],          // Required OAuth2 scopes
+defineCredential({
+  name: string,                  // Credential identifier
+  displayName: string,           // Human-readable name
+  type: 'wire' | 'singleton',    // Per-user ('wire') or platform-level ('singleton')
+  schema: ZodSchema,             // Shape of the stored credential
+  oauth2?: {                     // Omit entirely for a plain API key
+    appCredentialSecretId: string, // Secret holding { clientId, clientSecret }
+    tokenSecretId: string,         // Secret for token storage (auto-refreshed)
+    authorizationUrl: string,      // OAuth2 authorization endpoint
+    tokenUrl: string,              // OAuth2 token endpoint
+    scopes: string[],              // Required OAuth2 scopes
+  },
 })
 ```
 
 ### Usage
 
 ```typescript
-wireOAuth2Credential({
-  name: 'slackOAuth',
-  displayName: 'Slack OAuth',
-  secretId: 'SLACK_OAUTH_APP',
-  tokenSecretId: 'SLACK_OAUTH_TOKENS',
-  authorizationUrl: 'https://slack.com/oauth/v2/authorize',
-  tokenUrl: 'https://slack.com/api/oauth.v2.access',
-  scopes: ['chat:write', 'channels:read'],
+// Per-user API key — no oauth2 block
+defineCredential({
+  name: 'stripe',
+  displayName: 'Stripe API Key',
+  type: 'wire',
+  schema: z.object({ apiKey: z.string() }),
+})
+
+// Platform-level OAuth (singleton)
+defineCredential({
+  name: 'slack',
+  displayName: 'Slack',
+  type: 'singleton',
+  schema: z.object({ accessToken: z.string(), refreshToken: z.string() }),
+  oauth2: {
+    appCredentialSecretId: 'SLACK_OAUTH_APP',
+    tokenSecretId: 'SLACK_OAUTH_TOKENS',
+    authorizationUrl: 'https://slack.com/oauth/v2/authorize',
+    tokenUrl: 'https://slack.com/api/oauth.v2.access',
+    scopes: ['chat:write', 'channels:read'],
+  },
 })
 
 // In your function — tokens refresh automatically
@@ -188,14 +205,18 @@ defineVariable({
   }),
 })
 
-wireOAuth2Credential({
+defineCredential({
   name: 'githubOAuth',
   displayName: 'GitHub OAuth',
-  secretId: 'GITHUB_OAUTH_APP',
-  tokenSecretId: 'GITHUB_OAUTH_TOKENS',
-  authorizationUrl: 'https://github.com/login/oauth/authorize',
-  tokenUrl: 'https://github.com/login/oauth/access_token',
-  scopes: ['read:user', 'repo'],
+  type: 'wire',
+  schema: z.object({ accessToken: z.string(), refreshToken: z.string() }),
+  oauth2: {
+    appCredentialSecretId: 'GITHUB_OAUTH_APP',
+    tokenSecretId: 'GITHUB_OAUTH_TOKENS',
+    authorizationUrl: 'https://github.com/login/oauth/authorize',
+    tokenUrl: 'https://github.com/login/oauth/access_token',
+    scopes: ['read:user', 'repo'],
+  },
 })
 
 // functions/admin.functions.ts
