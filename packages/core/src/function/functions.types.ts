@@ -10,6 +10,7 @@ import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
+import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
 
 /**
  * @deprecated Use StandardSchemaV1 from @standard-schema/spec instead.
@@ -293,8 +294,12 @@ export type CorePikkuFunctionConfig<
   workflowRetries?: number
   /** Timeout for this function when used as a workflow step (e.g. '30s', '5m'). */
   workflowTimeout?: string
-  /** Scenario steps only: this step drives a browser, so the runner must provision one before calling it. */
-  browser?: boolean
+  /**
+   * Scenario steps only: which surfaces this step declares a binding for. The
+   * runner uses it to pick a binding, decide whether to provision a browser,
+   * and report how much of the flow each surface actually covers.
+   */
+  surfaces?: ScenarioSurface[]
   audit?:
     | boolean
     | {

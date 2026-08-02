@@ -26,7 +26,7 @@ export const attemptsSignIn = pikkuScenarioStep<
   name: 'attemptsSignIn',
   description: 'attempts an email sign-in and reports whether it was accepted',
   template: 'signs in as {email}',
-  func: async (_services, { email, password }, { scenarioStep }) => {
+  default: async (_services, { email, password }, { scenarioStep }) => {
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     return postScenarioJson(`${apiUrl}/api/auth/sign-in/email`, {
       body: { email, password },
@@ -42,7 +42,7 @@ export const expectsSignIn = pikkuScenarioStep<
   name: 'expectsSignIn',
   description: 'expects a sign-in attempt to have been accepted or refused',
   template: 'expects the sign-in to be accepted: {accepted}',
-  func: async (_services, { attempt, accepted }) => {
+  default: async (_services, { attempt, accepted }) => {
     if (attempt.ok !== accepted) {
       throw new Error(
         accepted

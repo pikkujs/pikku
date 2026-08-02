@@ -7,6 +7,7 @@ import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import type { ScenarioActor } from '../../services/scenario-actors-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
+import type { ScenarioSurface } from './scenario-step.types.js'
 import { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
@@ -146,7 +147,7 @@ const registerStep = (
   name: string,
   config: {
     description?: string
-    browser?: boolean
+    surfaces?: ScenarioSurface[]
     func: (services: any, data: any, wire: PikkuWire) => Promise<unknown>
   }
 ) => {
@@ -306,9 +307,10 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
 
   test('a browser step fails loudly when no provider is registered', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
     const shopper = fakeActor('shopper', async () => ({}))
     registerStep('visitsCheckout', {
-      browser: true,
+      surfaces: ['browser'],
       func: async () => null,
     })
 
@@ -325,6 +327,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
 
   test('a registered provider hands the step a session keyed by the actor', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
     const shopper = fakeActor('shopper', async () => ({}))
     const requested: string[] = []
     const session = { actor: 'shopper' } as any
@@ -337,7 +340,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
 
     let handed: unknown
     registerStep('visitsCheckout', {
-      browser: true,
+      surfaces: ['browser'],
       func: async (_services, _data, wire) => {
         handed = wire.browser
         return null
@@ -352,6 +355,157 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
 
     assert.deepEqual(requested, ['shopper'])
     assert.equal(handed, session)
+  })
+
+  test('an action step falls back to its default binding rather than failing', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const ran: ScenarioSurface[] = []
+    registerStep('seedsAnAccount', {
+      surfaces: ['default'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('an account exists', 'seedsAnAccount')
+
+    assert.deepEqual(ran, ['default'], 'setup does not need a UI to be honest')
+  })
+
+  test('an action step with no runnable binding fails rather than silently skipping', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('cli')
+    registerStep('clicksBuy', {
+      surfaces: ['browser'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.when('shopper buys it', 'clicksBuy'),
+      /declares no binding for 'cli'/
+    )
+  })
+
+  test('a then step runs every witness, surface first', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    scenarioService.setScenarioBrowserProvider({
+      sessionFor: async () => ({ actor: 'shopper' }) as any,
+    } as any)
+    const shopper = fakeActor('shopper', async () => ({}))
+    const ran: ScenarioSurface[] = []
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['browser', 'default'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return { status: 'paid' }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.then(
+      'shopper sees the order confirmed',
+      'seesTheOrderConfirmed',
+      undefined,
+      { actor: shopper }
+    )
+
+    assert.deepEqual(ran, ['browser', 'default'])
+  })
+
+  test('the page saying something else than the database is a failure', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    scenarioService.setScenarioBrowserProvider({
+      sessionFor: async () => ({ actor: 'shopper' }) as any,
+    } as any)
+    const shopper = fakeActor('shopper', async () => ({}))
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['browser', 'default'],
+      func: async (_services, _data, wire) =>
+        wire.scenarioStep!.surface === 'browser'
+          ? { status: 'pending' }
+          : { status: 'paid' },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.then(
+        'shopper sees the order confirmed',
+        'seesTheOrderConfirmed',
+        undefined,
+        { actor: shopper }
+      ),
+      /observed different things on different surfaces/
+    )
+  })
+
+  test('a default run pays for only one witness', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    const ran: ScenarioSurface[] = []
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['browser', 'default'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return { status: 'paid' }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.then('shopper sees the order confirmed', 'seesTheOrderConfirmed')
+
+    assert.deepEqual(ran, ['default'])
+  })
+
+  test('an assertion with no witness for the run fails instead of passing having checked nothing', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('cli')
+    let ran = 0
+    registerStep('seesTheBanner', {
+      surfaces: ['browser'],
+      func: async () => {
+        ran++
+        return { visible: true }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.then('shopper sees the banner', 'seesTheBanner'),
+      /has no witness to run on 'cli'/
+    )
+    assert.equal(ran, 0, 'nothing ran — which is exactly why it must not pass')
+  })
+
+  test('a browser-only assertion is not silently skipped by the fast suite', async () => {
+    // The fast path is where this is most dangerous: `--run default` prints no
+    // coverage line, so a skipped assertion would leave no trace at all.
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    registerStep('seesTheBanner', {
+      surfaces: ['browser'],
+      func: async () => ({ visible: true }),
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.then('shopper sees the banner', 'seesTheBanner'),
+      /has no witness to run on 'default'/
+    )
   })
 
   test('a non-string step target is rejected instead of silently dispatching', async () => {

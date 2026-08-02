@@ -316,16 +316,26 @@ export function pikkuFeature<const Scenarios extends readonly unknown[]>(
   return config
 }
 
+/**
+ * One surface's implementation of a step.
+ *
+ * Each binding is typed independently, so a browser binding gets a non-optional
+ * \`wire.browser\` and a cli binding a non-optional \`wire.cli\` without either
+ * leaking into the other.
+ */
 export type PikkuFunctionScenarioStep<
   In = unknown,
   Out = never,
-  B extends boolean = false
-> = PikkuFunctionSessionless<In, Out, B extends true ? 'scenarioStep' | 'browser' : 'scenarioStep'>
+  Surface extends 'browser' | 'cli' | 'default' = 'default'
+> = PikkuFunctionSessionless<
+  In,
+  Out,
+  Surface extends 'default' ? 'scenarioStep' : 'scenarioStep' | Surface
+>
 
 export type PikkuScenarioStepConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
-  OutputSchema extends StandardSchemaV1 | undefined = undefined,
-  B extends boolean = false
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
   /** Registered name — this is the string \`scenario.step()\` references. */
   name: string
@@ -344,49 +354,94 @@ export type PikkuScenarioStepConfigWithSchema<
    * sentence per call site.
    */
   template?: string
-  /**
-   * This step drives a browser. The runner provisions one for the step's actor
-   * before calling it — which also makes an actor mandatory — and \`wire.browser\`
-   * is non-optional inside \`func\`.
-   */
-  browser?: B
   title?: string
   tags?: string[]
   input?: InputSchema
   output?: OutputSchema
   errors?: Array<typeof PikkuError>
-  func: PikkuFunctionScenarioStep<
+  /**
+   * Drive this step through a real browser, as a human would. The runner
+   * provisions a window for the step's actor first — which makes an actor
+   * mandatory — and \`wire.browser\` is non-optional inside it.
+   *
+   * Compose shared utilities here rather than writing raw clicks: the step says
+   * what the actor is doing, the utilities say how.
+   */
+  browser?: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
-    B
+    'browser'
+  >
+  /** Drive this step remotely, over the websocket. */
+  cli?: PikkuFunctionScenarioStep<
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
+    'cli'
+  >
+  /**
+   * The server-side path — the fast suite, and the floor every other surface
+   * falls back to.
+   *
+   * On a \`then\`, this is not an alternative to the other bindings but a second
+   * **witness**: the run executes every binding it has and fails if they
+   * disagree, because "the row says paid" and "the page says paid" are different
+   * claims and the gap between them is the bug nobody catches.
+   */
+  default?: PikkuFunctionScenarioStep<
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
+    'default'
   >
 }
 
-export type PikkuScenarioStepConfig<In, Out, B extends boolean = false> =
-  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined, B>, 'func' | 'input' | 'output'> & {
-    func: PikkuFunctionScenarioStep<In, Out, B>
+export type PikkuScenarioStepConfig<In, Out> =
+  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined>, 'browser' | 'cli' | 'default' | 'input' | 'output'> & {
+    browser?: PikkuFunctionScenarioStep<In, Out, 'browser'>
+    cli?: PikkuFunctionScenarioStep<In, Out, 'cli'>
+    default?: PikkuFunctionScenarioStep<In, Out, 'default'>
   }
 
 /**
- * A named, reusable scenario step. Unlike \`scenario.do\`, which can only name an
- * RPC, a step's body is an ordinary pikku function — so it may drive a browser,
- * invoke RPCs as its actor, or run a workflow.
+ * A named, reusable scenario step, declaring one implementation per surface an
+ * actor can drive it through.
+ *
+ * The step's identity is what the actor is trying to do; which surface carries
+ * it out is a binding. That is what lets one ladder run through a real browser,
+ * over the websocket, or entirely server-side — and what makes "how much of this
+ * flow can a human actually reach" a number rather than a guess.
  *
  * Steps are deliberately NOT registered as RPCs: a browser-driving step must
  * never be network-callable.
  */
 export function pikkuScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
-  OutputSchema extends StandardSchemaV1 | undefined = undefined,
-  B extends boolean = false
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
-  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema, B>
-): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, B extends true ? 'scenarioStep' | 'browser' : 'scenarioStep', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, B>, InputSchema, OutputSchema>
-export function pikkuScenarioStep<In, Out = unknown, B extends boolean = false>(
-  config: PikkuScenarioStepConfig<In, Out, B>
-): PikkuFunctionConfig<In, Out, B extends true ? 'scenarioStep' | 'browser' : 'scenarioStep'>
+  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenarioStep' | 'browser' | 'cli', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'browser' | 'cli' | 'default'>, InputSchema, OutputSchema>
+export function pikkuScenarioStep<In, Out = unknown>(
+  config: PikkuScenarioStepConfig<In, Out>
+): PikkuFunctionConfig<In, Out, 'scenarioStep' | 'browser' | 'cli'>
 export function pikkuScenarioStep(config: any) {
-  return config
+  const surfaces = (['browser', 'cli', 'default'] as const).filter(
+    (surface) => typeof config[surface] === 'function'
+  )
+  if (surfaces.length === 0) {
+    throw new Error(
+      \`[scenario] step '\${config.name}' declares no surface bindings. Add at least a \\\`default\\\` (server-side) implementation.\`
+    )
+  }
+  return {
+    ...config,
+    surfaces,
+    // The runner sets the surface on the wire and calls this once per binding it
+    // resolved — every witness of a \`then\`, exactly one for an action step.
+    func: (services: any, data: any, wire: any) => {
+      const surface = wire?.scenarioStep?.surface ?? 'default'
+      const binding = config[surface] ?? config.default
+      return binding(services, data, wire)
+    },
+  }
 }
 
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }

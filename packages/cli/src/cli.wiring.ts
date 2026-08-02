@@ -526,8 +526,18 @@ wireCLI({
             },
             browser: {
               description:
-                'Run scenarios with browser steps. --no-browser skips them (they are reported as skipped, not failed)',
+                'Shorthand for --run default when false: takes the server-side path instead of driving a browser',
               default: true,
+            },
+            run: {
+              description:
+                "Which surface every actor drives the system through: 'browser' (as a human), 'cli' (over the websocket), or 'default' (server-side, the fast path)",
+              default: 'default',
+            },
+            strict: {
+              description:
+                'Fail rather than pass a `then` that has no witness for --run, i.e. an assertion nobody checked on the surface its prose claims',
+              default: false,
             },
             spawn: {
               description:

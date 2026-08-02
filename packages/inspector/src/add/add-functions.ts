@@ -9,7 +9,15 @@ import {
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
 import type { FunctionServicesMeta } from '@pikku/core'
+import type { ScenarioSurface } from '@pikku/core/workflow'
 import { formatVersionedId, parseVersionedId } from '@pikku/core'
+
+/** Binding keys a `pikkuScenarioStep` may declare, in report order. */
+const SCENARIO_SURFACE_KEYS: readonly ScenarioSurface[] = [
+  'browser',
+  'cli',
+  'default',
+]
 import {
   getPropertyValue,
   getArrayPropertyValue,
@@ -451,7 +459,7 @@ export const addFunctions: AddWiring = (
   let workflowQueued: boolean | undefined
   let workflowRetries: number | undefined
   let workflowTimeout: string | undefined
-  let scenarioStepBrowser: boolean | undefined
+  let scenarioStepSurfaces: ScenarioSurface[] | undefined
   let scenarioStepTemplate: string | undefined
   let scopes: string[] | undefined
   let version: number | undefined
@@ -558,9 +566,22 @@ export const addFunctions: AddWiring = (
     workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as
       | string
       | undefined
-    scenarioStepBrowser = getPropertyValue(firstArg, 'browser') as
-      | boolean
-      | undefined
+    // A step declares one implementation per surface it supports; the binding
+    // keys that are present ARE the declaration, so there is nothing to read a
+    // value from — only names to collect.
+    const declaredSurfaces = SCENARIO_SURFACE_KEYS.filter((surface) =>
+      firstArg.properties.some(
+        (prop) =>
+          (ts.isPropertyAssignment(prop) ||
+            ts.isMethodDeclaration(prop) ||
+            ts.isShorthandPropertyAssignment(prop)) &&
+          ts.isIdentifier(prop.name) &&
+          prop.name.text === surface
+      )
+    )
+    scenarioStepSurfaces = declaredSurfaces.length
+      ? declaredSurfaces
+      : undefined
     scenarioStepTemplate = getPropertyValue(firstArg, 'template') as
       | string
       | undefined
@@ -1120,7 +1141,7 @@ export const addFunctions: AddWiring = (
     workflowQueued: workflowQueued === true ? true : undefined,
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
-    scenarioStepBrowser: scenarioStepBrowser === true ? true : undefined,
+    scenarioStepSurfaces,
     scenarioStepTemplate: scenarioStepTemplate || undefined,
     scopes: scopes ?? undefined,
     implementationHash,

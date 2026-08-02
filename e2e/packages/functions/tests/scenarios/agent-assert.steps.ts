@@ -26,7 +26,7 @@ export const expectsRunOutcome = pikkuScenarioStep<
   name: 'expectsRunOutcome',
   description: 'expects the run to be refused or to succeed',
   template: 'expects refused={refused}',
-  func: async (_services, { run, refused }) => {
+  default: async (_services, { run, refused }) => {
     const wasRefused = run.status >= 400 || Boolean(run.error)
     if (wasRefused !== refused) {
       throw new Error(
@@ -45,7 +45,7 @@ export const expectsRunResult = pikkuScenarioStep<
 >({
   name: 'expectsRunResult',
   description: 'expects the run result',
-  func: async (_services, { run, equals }) => {
+  default: async (_services, { run, equals }) => {
     if (JSON.stringify(run.result) !== JSON.stringify(equals)) {
       throw new Error(
         `Expected run result ${describeValue(equals)}, got ${describeValue(run.result)}`
@@ -62,7 +62,7 @@ export const expectsModelCallCount = pikkuScenarioStep<
   name: 'expectsModelCallCount',
   description: 'expects a number of model calls',
   template: 'expects {count} model call(s)',
-  func: async (_services, { calls, count }) => {
+  default: async (_services, { calls, count }) => {
     if (calls.length !== count) {
       throw new Error(
         `Expected ${count} model call(s), got ${calls.length}: ${calls
@@ -97,7 +97,7 @@ export const expectsOfferedTools = pikkuScenarioStep<
   name: 'expectsOfferedTools',
   description: 'expects which tools a model call was offered',
   template: 'expects call {index} tools',
-  func: async (
+  default: async (
     _services,
     { calls, index, offered, notOffered, none, allHaveSchemas }
   ) => {
@@ -166,7 +166,7 @@ export const expectsModelCall = pikkuScenarioStep<
   name: 'expectsModelCall',
   description: 'expects what one model call carried',
   template: 'expects call {index}',
-  func: async (
+  default: async (
     _services,
     {
       calls,
@@ -264,7 +264,7 @@ export const expectsStepIndexes = pikkuScenarioStep<
 >({
   name: 'expectsStepIndexes',
   description: 'expects the step index of each model call',
-  func: async (_services, { calls, indexes }) => {
+  default: async (_services, { calls, indexes }) => {
     const actual = calls.map((call) => call.stepIndex)
     if (JSON.stringify(actual) !== JSON.stringify(indexes)) {
       throw new Error(
@@ -298,7 +298,7 @@ export const expectsToolResults = pikkuScenarioStep<
 >({
   name: 'expectsToolResults',
   description: 'expects what the tools reported back to the model',
-  func: async (_services, { calls, failed, contains, doesNotContain }) => {
+  default: async (_services, { calls, failed, contains, doesNotContain }) => {
     const followUp = calls[1]
     const results = (followUp?.messages ?? [])
       .filter((m: any) => m.role === 'tool')
@@ -351,7 +351,7 @@ export const expectsRpcOutcome = pikkuScenarioStep<
   name: 'expectsRpcOutcome',
   description: 'expects an RPC call to be refused or to succeed',
   template: 'expects refused={refused}',
-  func: async (_services, { call, refused, doesNotEcho }) => {
+  default: async (_services, { call, refused, doesNotEcho }) => {
     const body = JSON.parse(call.serialized)
     const wasRefused =
       call.status >= 400 || Boolean(body?.message ?? body?.errorId)
@@ -378,7 +378,7 @@ export const expectsListedIds = pikkuScenarioStep<
 >({
   name: 'expectsListedIds',
   description: 'expects which records a listing returned',
-  func: async (_services, { call, includes, excludes }) => {
+  default: async (_services, { call, includes, excludes }) => {
     const body = JSON.parse(call.serialized)
     const ids: string[] = (Array.isArray(body) ? body : []).map(
       (record: any) => record?.id
@@ -420,7 +420,7 @@ export const expectsApprovalState = pikkuScenarioStep<
   name: 'expectsApprovalState',
   description: 'expects the run to be suspended for approval, or resumed',
   template: 'expects suspended={suspended}',
-  func: async (_services, { run, suspended, count, reasonContains }) => {
+  default: async (_services, { run, suspended, count, reasonContains }) => {
     const isSuspended = run.runStatus === 'suspended'
     if (isSuspended !== suspended) {
       throw new Error(
@@ -470,7 +470,7 @@ export const expectsThreadRecords = pikkuScenarioStep<
 >({
   name: 'expectsThreadRecords',
   description: 'expects what the thread persisted',
-  func: async (
+  default: async (
     _services,
     { call, contains, hasRole, count, toolExecutions }
   ) => {
@@ -515,7 +515,7 @@ export const expectsTodos = pikkuScenarioStep<
 >({
   name: 'expectsTodos',
   description: 'expects which todos the store holds',
-  func: async (_services, { call, includes, excludes }) => {
+  default: async (_services, { call, includes, excludes }) => {
     const todos = (call.body as { todos?: { title: string }[] })?.todos ?? []
     const titles = todos.map((todo) => todo.title)
     const holds = (needle: string) =>
@@ -548,7 +548,7 @@ export const expectsModelCallMatching = pikkuScenarioStep<
   name: 'expectsModelCallMatching',
   description: 'expects a model call by model and message',
   template: 'expects {modelId} called with {userMessage}',
-  func: async (_services, { calls, modelId, userMessage }) => {
+  default: async (_services, { calls, modelId, userMessage }) => {
     const match = calls.find(
       (call) => call.modelId === modelId && call.userMessage === userMessage
     )
@@ -581,7 +581,7 @@ export const expectsCallLog = pikkuScenarioStep<
 >({
   name: 'expectsCallLog',
   description: 'expects what the run’s model calls did and did not carry',
-  func: async (_services, { calls, includes, excludes }) => {
+  default: async (_services, { calls, includes, excludes }) => {
     const serialized = JSON.stringify(calls)
     if (includes !== undefined && !serialized.includes(includes)) {
       throw new Error(
@@ -610,7 +610,7 @@ export const expectsResultObject = pikkuScenarioStep<
 >({
   name: 'expectsResultObject',
   description: 'expects a structured run result',
-  func: async (_services, { run, fields }) => {
+  default: async (_services, { run, fields }) => {
     if (run.result === null || typeof run.result !== 'object') {
       throw new Error(
         `Expected a structured object, got ${describeValue(run.result)}`

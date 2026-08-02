@@ -140,7 +140,16 @@ export type {
   ScenarioStepOptions,
   PikkuScenarioStepWire,
   ScenarioEnvironment,
+  ScenarioSurface,
+  ScenarioSurfaceResolution,
 } from './scenario-step.types.js'
+export { SCENARIO_SURFACES } from './scenario-step.types.js'
+
+// Which of a step's bindings run: one for an action, every witness for a `then`
+export {
+  resolveScenarioSurfaces,
+  witnessesAgree,
+} from './scenario-surface.js'
 
 // Narrows the optional halves of the step wire, with a message that says what to do
 export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'

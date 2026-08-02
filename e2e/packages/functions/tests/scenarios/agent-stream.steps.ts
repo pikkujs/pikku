@@ -45,7 +45,7 @@ export const streamsAgent = pikkuScenarioStep<
   name: 'streamsAgent',
   description: 'streams an agent',
   template: 'streams {agent} with {script}',
-  func: async (
+  default: async (
     _services,
     { agent, script, message, threadId, resourceId, identity },
     { scenarioStep }
@@ -93,7 +93,7 @@ export const expectsStreamEnvelope = pikkuScenarioStep<
   name: 'expectsStreamEnvelope',
   description: 'expects the stream to open and close with the run envelope',
   template: 'expects {startsWith} … {endsWith}',
-  func: async (_services, { types, startsWith, endsWith }) => {
+  default: async (_services, { types, startsWith, endsWith }) => {
     if (types[0] !== startsWith) {
       throw new Error(
         `Expected the stream to start with ${startsWith}, got ${types[0] ?? '(empty)'}`
@@ -119,7 +119,7 @@ export const expectsStreamEvents = pikkuScenarioStep<
 >({
   name: 'expectsStreamEvents',
   description: 'expects which events the stream carried',
-  func: async (_services, { types, contains, counts }) => {
+  default: async (_services, { types, contains, counts }) => {
     for (const type of contains ?? []) {
       if (!types.includes(type)) {
         throw new Error(
@@ -144,7 +144,7 @@ export const expectsStreamOrder = pikkuScenarioStep<
   name: 'expectsStreamOrder',
   description: 'expects one event to precede another',
   template: 'expects {before} before {after}',
-  func: async (_services, { types, before, after }) => {
+  default: async (_services, { types, before, after }) => {
     const beforeIndex = types.indexOf(before)
     const afterIndex = types.indexOf(after)
     if (beforeIndex < 0) {
@@ -180,7 +180,7 @@ export const expectsStreamText = pikkuScenarioStep<
 >({
   name: 'expectsStreamText',
   description: 'expects the streamed text',
-  func: async (_services, { text, equals, contains, doesNotContain }) => {
+  default: async (_services, { text, equals, contains, doesNotContain }) => {
     if (equals !== undefined && text !== equals) {
       throw new Error(
         `Expected the streamed text to be ${JSON.stringify(equals)}, got ${JSON.stringify(text)}`
@@ -212,7 +212,7 @@ export const expectsToolCallCorrelation = pikkuScenarioStep<
 >({
   name: 'expectsToolCallCorrelation',
   description: 'expects a tool call and its result to share an id',
-  func: async (_services, { toolCallId, toolResultId }) => {
+  default: async (_services, { toolCallId, toolResultId }) => {
     if (!toolCallId) {
       throw new Error('The stream carried no tool call id')
     }
@@ -231,7 +231,7 @@ export const expectsTokenUsage = pikkuScenarioStep<
 >({
   name: 'expectsTokenUsage',
   description: 'expects the finished run to report token usage',
-  func: async (_services, { totalTokens }) => {
+  default: async (_services, { totalTokens }) => {
     if (totalTokens <= 0) {
       throw new Error(`Expected non-zero token usage, got ${totalTokens}`)
     }

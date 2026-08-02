@@ -13,14 +13,12 @@ import { expect } from '@pikku/playwright'
 
 export const searchesAddons = pikkuScenarioStep<
   { query: string },
-  { query: string },
-  true
+  { query: string }
 >({
   name: 'searchesAddons',
   description: 'searches the addon gallery',
   template: 'searches for {query}',
-  browser: true,
-  func: async (_services, { query }, { browser }) => {
+  browser: async (_services, { query }, { browser }) => {
     await browser
       .locate({ testId: 'packages-search' })
       .first()
@@ -31,14 +29,12 @@ export const searchesAddons = pikkuScenarioStep<
 
 export const seesAddonCard = pikkuScenarioStep<
   { packageName: string; state?: 'installed' | 'available' },
-  { visible: true },
-  true
+  { visible: true }
 >({
   name: 'seesAddonCard',
   description: 'sees an addon in the gallery',
   template: 'sees {state} addon {packageName}',
-  browser: true,
-  func: async (_services, { packageName, state }, { browser }) => {
+  browser: async (_services, { packageName, state }, { browser }) => {
     const card = browser.locate({
       testId: 'addon-card',
       where: { 'data-addon-package': packageName },
@@ -66,14 +62,12 @@ export const seesAddonCard = pikkuScenarioStep<
  */
 export const countsAddonCards = pikkuScenarioStep<
   { count: number },
-  { count: number },
-  true
+  { count: number }
 >({
   name: 'countsAddonCards',
   description: 'counts the addons on show',
   template: 'sees exactly {count} addons on offer',
-  browser: true,
-  func: async (_services, { count }, { browser }) => {
+  browser: async (_services, { count }, { browser }) => {
     const cards = browser.locate({ testId: 'addon-card' })
     await expect(cards).toHaveCount(count, { timeout: 15_000 })
     return { count }
@@ -91,14 +85,12 @@ export const countsAddonCards = pikkuScenarioStep<
  */
 export const opensAddonDrawer = pikkuScenarioStep<
   { packageName: string },
-  { opened: string },
-  true
+  { opened: string }
 >({
   name: 'opensAddonDrawer',
   description: 'opens an addon drawer from the gallery',
   template: 'opens the drawer for {packageName}',
-  browser: true,
-  func: async (_services, { packageName }, { browser }) => {
+  browser: async (_services, { packageName }, { browser }) => {
     const card = browser
       .locate({
         testId: 'addon-card',
@@ -126,14 +118,12 @@ export const opensAddonDrawer = pikkuScenarioStep<
  */
 export const landsOnAddonSetup = pikkuScenarioStep<
   { packageName: string },
-  { url: string },
-  true
+  { url: string }
 >({
   name: 'landsOnAddonSetup',
   description: 'lands on the setup of a freshly installed addon',
   template: 'lands on the setup for {packageName}',
-  browser: true,
-  func: async (_services, { packageName }, { browser }) => {
+  browser: async (_services, { packageName }, { browser }) => {
     await browser.page.waitForURL(
       (url) => url.href.includes(encodeURIComponent(packageName)),
       { timeout: 30_000 }

@@ -36,14 +36,12 @@ export type { TestIdSelector }
 
 export const seesText = pikkuScenarioStep<
   { text: string },
-  { visible: true },
-  true
+  { visible: true }
 >({
   name: 'seesText',
   description: 'sees a piece of text on the page',
   template: 'sees {text}',
-  browser: true,
-  func: async (_services, { text }, { browser }) => {
+  browser: async (_services, { text }, { browser }) => {
     await browser.page
       .getByText(text, { exact: false })
       .first()
@@ -61,14 +59,12 @@ export const seesText = pikkuScenarioStep<
  */
 export const doesNotSeeText = pikkuScenarioStep<
   { text: string },
-  { absent: true },
-  true
+  { absent: true }
 >({
   name: 'doesNotSeeText',
   description: 'expects a piece of text to be absent',
   template: 'does not see {text}',
-  browser: true,
-  func: async (_services, { text }, { browser }) => {
+  browser: async (_services, { text }, { browser }) => {
     await browser.page
       .getByText(text, { exact: false })
       .first()
@@ -79,14 +75,12 @@ export const doesNotSeeText = pikkuScenarioStep<
 
 export const clicksButton = pikkuScenarioStep<
   { name: string },
-  { clicked: string },
-  true
+  { clicked: string }
 >({
   name: 'clicksButton',
   description: 'clicks a button by its accessible name',
   template: 'clicks the {name} button',
-  browser: true,
-  func: async (_services, { name }, { browser }) => {
+  browser: async (_services, { name }, { browser }) => {
     await browser.page
       .getByRole('button', { name })
       .filter({ visible: true })
@@ -98,14 +92,12 @@ export const clicksButton = pikkuScenarioStep<
 
 export const clicksLink = pikkuScenarioStep<
   { name: string },
-  { clicked: string },
-  true
+  { clicked: string }
 >({
   name: 'clicksLink',
   description: 'clicks a link by its accessible name',
   template: 'clicks the {name} link',
-  browser: true,
-  func: async (_services, { name }, { browser }) => {
+  browser: async (_services, { name }, { browser }) => {
     await browser.page.getByRole('link', { name }).first().click()
     return { clicked: name }
   },
@@ -113,14 +105,12 @@ export const clicksLink = pikkuScenarioStep<
 
 export const clicksTestId = pikkuScenarioStep<
   TestIdSelector,
-  { clicked: string },
-  true
+  { clicked: string }
 >({
   name: 'clicksTestId',
   description: 'clicks an element by its test id',
   template: 'clicks {testId}',
-  browser: true,
-  func: async (_services, selector, { browser }) => {
+  browser: async (_services, selector, { browser }) => {
     await browser.locate(selector).first().click()
     const { testId, containing } = selector
     return { clicked: containing ? `${testId}:${containing}` : testId }
@@ -134,14 +124,12 @@ export const seesTestId = pikkuScenarioStep<
     /** Overrides the default wait, for a state that arrives via a redirect. */
     timeoutMs?: number
   },
-  { count: number },
-  true
+  { count: number }
 >({
   name: 'seesTestId',
   description: 'sees an element with a given test id',
   template: 'sees {testId}',
-  browser: true,
-  func: async (
+  browser: async (
     _services,
     { count, atLeast, timeoutMs, ...selector },
     { browser }
@@ -165,14 +153,12 @@ export const seesTestId = pikkuScenarioStep<
 
 export const doesNotSeeTestId = pikkuScenarioStep<
   TestIdSelector,
-  { absent: true },
-  true
+  { absent: true }
 >({
   name: 'doesNotSeeTestId',
   description: 'expects an element with a given test id to be absent',
   template: 'does not see {testId}',
-  browser: true,
-  func: async (_services, selector, { browser }) => {
+  browser: async (_services, selector, { browser }) => {
     await browser
       .locate(selector, { visible: false })
       .first()
@@ -191,14 +177,12 @@ export const doesNotSeeTestId = pikkuScenarioStep<
  */
 export const selectsSegment = pikkuScenarioStep<
   { value: string },
-  { selected: string },
-  true
+  { selected: string }
 >({
   name: 'selectsSegment',
   description: 'picks an option on a segmented control',
   template: 'switches to {value}',
-  browser: true,
-  func: async (_services, { value }, { browser }) => {
+  browser: async (_services, { value }, { browser }) => {
     await browser.page
       .locator(`label[for$="-${value}"]:visible`)
       .first()
@@ -217,14 +201,12 @@ export const selectsSegment = pikkuScenarioStep<
  */
 export const selectsTab = pikkuScenarioStep<
   { value: string },
-  { selected: string },
-  true
+  { selected: string }
 >({
   name: 'selectsTab',
   description: 'picks a view on the page header switch',
   template: 'switches to the {value} view',
-  browser: true,
-  func: async (_services, { value }, { browser }) => {
+  browser: async (_services, { value }, { browser }) => {
     await browser
       .locate({ testId: 'switch-tab', where: { 'data-value': value } })
       .first()
@@ -235,14 +217,12 @@ export const selectsTab = pikkuScenarioStep<
 
 export const readsTestIdText = pikkuScenarioStep<
   TestIdSelector,
-  { text: string },
-  true
+  { text: string }
 >({
   name: 'readsTestIdText',
   description: 'reads the text of an element by its test id',
   template: 'reads {testId}',
-  browser: true,
-  func: async (_services, selector, { browser }) => {
+  browser: async (_services, selector, { browser }) => {
     const target = browser.locate(selector).first()
     await target.waitFor({ state: 'visible' })
     return { text: (await target.textContent()) ?? '' }
@@ -258,14 +238,12 @@ export const readsTestIdText = pikkuScenarioStep<
  */
 export const seesTableRow = pikkuScenarioStep<
   { containing: string; andContaining?: string },
-  { found: true },
-  true
+  { found: true }
 >({
   name: 'seesTableRow',
   description: 'sees a table row holding the given text',
   template: 'sees the {containing} row',
-  browser: true,
-  func: async (_services, { containing, andContaining }, { browser }) => {
+  browser: async (_services, { containing, andContaining }, { browser }) => {
     const row = browser.page
       .locator('table tbody tr')
       .filter({ hasText: containing })
@@ -285,14 +263,12 @@ export const seesTableRow = pikkuScenarioStep<
 
 export const doesNotSeeTableRow = pikkuScenarioStep<
   { containing: string },
-  { absent: true },
-  true
+  { absent: true }
 >({
   name: 'doesNotSeeTableRow',
   description: 'expects no table row to hold the given text',
   template: 'sees no {containing} row',
-  browser: true,
-  func: async (_services, { containing }, { browser }) => {
+  browser: async (_services, { containing }, { browser }) => {
     await browser.page
       .locator('table tbody tr')
       .first()
@@ -318,14 +294,12 @@ export const doesNotSeeTableRow = pikkuScenarioStep<
  */
 export const readsFlowCast = pikkuScenarioStep<
   { flow: string },
-  { cast: string[] },
-  true
+  { cast: string[] }
 >({
   name: 'readsFlowCast',
   description: 'reads the personas cast in a scenario',
   template: 'reads the cast of {flow}',
-  browser: true,
-  func: async (_services, { flow }, { browser }) => {
+  browser: async (_services, { flow }, { browser }) => {
     const card = browser.page.locator(
       `[data-testid="scenario-section-${flow}"]`
     )
@@ -348,7 +322,7 @@ export const expectsFlowCast = pikkuScenarioStep<
   name: 'expectsFlowCast',
   description: 'expects a scenario to be cast with the given personas',
   template: 'expects the cast to be {personas}',
-  func: async (_services, { read, personas }) => {
+  default: async (_services, { read, personas }) => {
     for (const persona of personas) {
       if (!read.cast.includes(persona)) {
         throw new Error(
@@ -362,14 +336,12 @@ export const expectsFlowCast = pikkuScenarioStep<
 
 export const fillsField = pikkuScenarioStep<
   { label: string; value: string },
-  { filled: string },
-  true
+  { filled: string }
 >({
   name: 'fillsField',
   description: 'fills a form field by its label',
   template: 'fills {label}',
-  browser: true,
-  func: async (_services, { label, value }, { browser }) => {
+  browser: async (_services, { label, value }, { browser }) => {
     await browser.page.getByLabel(label).first().fill(value)
     return { filled: label }
   },
@@ -377,14 +349,12 @@ export const fillsField = pikkuScenarioStep<
 
 export const fillsTestId = pikkuScenarioStep<
   TestIdSelector & { value: string },
-  { filled: string },
-  true
+  { filled: string }
 >({
   name: 'fillsTestId',
   description: 'fills a form field by its test id',
   template: 'fills {testId}',
-  browser: true,
-  func: async (_services, { value, ...selector }, { browser }) => {
+  browser: async (_services, { value, ...selector }, { browser }) => {
     await browser.locate(selector).first().fill(value)
     return { filled: selector.testId }
   },
@@ -400,14 +370,12 @@ export const fillsTestId = pikkuScenarioStep<
  */
 export const expectsControl = pikkuScenarioStep<
   TestIdSelector & { enabled?: boolean; checked?: boolean },
-  { enabled: boolean; checked: boolean },
-  true
+  { enabled: boolean; checked: boolean }
 >({
   name: 'expectsControl',
   description: 'expects a control to be in a given enabled/checked state',
   template: 'expects {testId} to be in the expected state',
-  browser: true,
-  func: async (_services, { enabled, checked, ...selector }, { browser }) => {
+  browser: async (_services, { enabled, checked, ...selector }, { browser }) => {
     const target = browser.locate(selector).first()
     if (enabled === true) {
       await expect(target).toBeEnabled()
@@ -439,14 +407,12 @@ export const expectsControl = pikkuScenarioStep<
  */
 export const selectsOption = pikkuScenarioStep<
   TestIdSelector & { value: string },
-  { selected: string },
-  true
+  { selected: string }
 >({
   name: 'selectsOption',
   description: 'picks an option on a select',
   template: 'picks {value}',
-  browser: true,
-  func: async (_services, { value, ...selector }, { browser }) => {
+  browser: async (_services, { value, ...selector }, { browser }) => {
     await browser.locate(selector).first().click()
     await browser.page
       .getByRole('option', { name: value, exact: true })
@@ -458,14 +424,12 @@ export const selectsOption = pikkuScenarioStep<
 
 export const expectsUrl = pikkuScenarioStep<
   { contains: string },
-  { url: string },
-  true
+  { url: string }
 >({
   name: 'expectsUrl',
   description: 'expects the browser to be on a given page',
   template: 'expects the url to contain {contains}',
-  browser: true,
-  func: async (_services, { contains }, { browser }) => {
+  browser: async (_services, { contains }, { browser }) => {
     await browser.page.waitForURL((url) => url.href.includes(contains), {})
     return { url: browser.page.url() }
   },
@@ -478,14 +442,12 @@ export const expectsUrl = pikkuScenarioStep<
  */
 export const opensTestIdWithKeyboard = pikkuScenarioStep<
   TestIdSelector,
-  { opened: string },
-  true
+  { opened: string }
 >({
   name: 'opensTestIdWithKeyboard',
   description: 'focuses an element and opens it with the keyboard',
   template: 'opens {testId} with the keyboard',
-  browser: true,
-  func: async (_services, selector, { browser }) => {
+  browser: async (_services, selector, { browser }) => {
     const target = browser.locate(selector).first()
     await target.waitFor({ state: 'visible' })
     await target.focus()
@@ -496,14 +458,12 @@ export const opensTestIdWithKeyboard = pikkuScenarioStep<
 
 export const expectsTestIdValue = pikkuScenarioStep<
   TestIdSelector & { value: string },
-  { value: string },
-  true
+  { value: string }
 >({
   name: 'expectsTestIdValue',
   description: 'expects a form field to hold a given value',
   template: 'expects {testId} to hold {value}',
-  browser: true,
-  func: async (_services, { value, ...selector }, { browser }) => {
+  browser: async (_services, { value, ...selector }, { browser }) => {
     const target = browser.locate(selector).first()
     await target.waitFor({ state: 'visible' })
     const actual = await target.inputValue()
@@ -531,14 +491,12 @@ export const expectsTestIdValue = pikkuScenarioStep<
  */
 export const navigatesInConsole = pikkuScenarioStep<
   { href: string; section?: string },
-  { href: string },
-  true
+  { href: string }
 >({
   name: 'navigatesInConsole',
   description: 'navigates through the console sidebar without reloading',
   template: 'navigates to {href}',
-  browser: true,
-  func: async (_services, { href, section }, { browser }) => {
+  browser: async (_services, { href, section }, { browser }) => {
     const link = browser.locate(
       { testId: 'nav-link', where: { 'data-href': href } },
       { visible: false }

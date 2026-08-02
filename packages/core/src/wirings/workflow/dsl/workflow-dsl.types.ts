@@ -10,6 +10,7 @@ import type { ScenarioActor } from '../../../services/scenario-actors-service.js
 import type {
   ScenarioStepOptions,
   ScenarioStepPhase,
+  ScenarioSurface,
 } from '../scenario-step.types.js'
 
 /**
@@ -221,8 +222,8 @@ export interface ScenarioStepMeta {
   options?: WorkflowStepOptions
   /** Scenario actor name this step runs as ({ actor: actors.x }) */
   actor?: string
-  /** Mirrors the step function's `browser: true` declaration */
-  browser?: boolean
+  /** Mirrors the surfaces the step function declares a binding for */
+  surfaces?: ScenarioSurface[]
 }
 
 /**

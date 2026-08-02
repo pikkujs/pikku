@@ -33,7 +33,7 @@ export const resetsSecurityAudit = pikkuScenarioStep<void, { reset: true }>({
   name: 'resetsSecurityAudit',
   description: 'removes any previous security audit report',
   template: 'resets the security audit',
-  func: async () => {
+  default: async () => {
     rmSync(resolve(E2E_ROOT, '.pikku', 'audit.json'), { force: true })
     return { reset: true }
   },
@@ -41,14 +41,12 @@ export const resetsSecurityAudit = pikkuScenarioStep<void, { reset: true }>({
 
 export const opensChangesPage = pikkuScenarioStep<
   { ours: string; base: string },
-  { url: string },
-  true
+  { url: string }
 >({
   name: 'opensChangesPage',
   description: 'opens the changes page comparing two fixture states',
   template: 'compares {ours} against {base}',
-  browser: true,
-  func: async (_services, { ours, base }, { browser }) => {
+  browser: async (_services, { ours, base }, { browser }) => {
     const params = new URLSearchParams({
       base: resolve(FIXTURES_ROOT, base),
       ours: resolve(FIXTURES_ROOT, ours),
@@ -64,14 +62,12 @@ export const opensChangesPage = pikkuScenarioStep<
 
 export const clicksTab = pikkuScenarioStep<
   { name: string },
-  { clicked: string },
-  true
+  { clicked: string }
 >({
   name: 'clicksTab',
   description: 'switches to a tab',
   template: 'switches to the {name} tab',
-  browser: true,
-  func: async (_services, { name }, { browser }) => {
+  browser: async (_services, { name }, { browser }) => {
     await browser.page
       .getByRole('tab', { name: new RegExp(name, 'i') })
       .first()
@@ -89,14 +85,12 @@ export const clicksTab = pikkuScenarioStep<
  */
 export const expectsTabCounts = pikkuScenarioStep<
   { tab: string; added?: number; modified?: number },
-  { tab: string },
-  true
+  { tab: string }
 >({
   name: 'expectsTabCounts',
   description: 'expects a diff tab to report the given change counts',
   template: 'expects the {tab} tab counts',
-  browser: true,
-  func: async (_services, { tab, added, modified }, { browser }) => {
+  browser: async (_services, { tab, added, modified }, { browser }) => {
     const target = browser.page
       .getByRole('tab', { name: new RegExp(tab, 'i') })
       .first()
@@ -131,7 +125,7 @@ export const triggersWebhookDelivery = pikkuScenarioStep<
   name: 'triggersWebhookDelivery',
   description: 'delivers a webhook to the app’s own sink',
   template: 'triggers a webhook delivery',
-  func: async (_services, { timeoutMs }, { scenarioStep }) => {
+  default: async (_services, { timeoutMs }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const sinkUrl = `${requireScenarioEnv(scenarioStep).apiUrl}/api/webhook/sink`
     await actor.invoke('triggerWebhook' as never, { url: sinkUrl } as never)
@@ -159,14 +153,12 @@ export const triggersWebhookDelivery = pikkuScenarioStep<
 
 export const opensWebhookDelivery = pikkuScenarioStep<
   { sinkUrl: string; status: string },
-  { opened: true },
-  true
+  { opened: true }
 >({
   name: 'opensWebhookDelivery',
   description: 'opens a delivery’s attempt history',
   template: 'opens the delivery',
-  browser: true,
-  func: async (_services, { sinkUrl, status }, { browser }) => {
+  browser: async (_services, { sinkUrl, status }, { browser }) => {
     const row = browser.page
       .locator('table tbody tr')
       .filter({ hasText: sinkUrl })
@@ -186,14 +178,12 @@ export const opensWebhookDelivery = pikkuScenarioStep<
 
 export const expectsDeliveryAttempt = pikkuScenarioStep<
   { attempt: string; status: number },
-  { attempt: string },
-  true
+  { attempt: string }
 >({
   name: 'expectsDeliveryAttempt',
   description: 'expects an attempt with a given response status',
   template: 'expects attempt {attempt} to have answered {status}',
-  browser: true,
-  func: async (_services, { attempt, status }, { browser }) => {
+  browser: async (_services, { attempt, status }, { browser }) => {
     const drawer = browser.page.getByRole('dialog')
     for (const text of [attempt, String(status)]) {
       await drawer

@@ -9,7 +9,7 @@
  * is called.
  */
 import { composeStepProse } from '@pikku/core/workflow'
-import type { ScenarioStepPhase } from '@pikku/core/workflow'
+import type { ScenarioStepPhase, ScenarioSurface } from '@pikku/core/workflow'
 import type { WorkflowStepMeta } from '@pikku/core/workflow/types'
 import type { FunctionsMeta } from '@pikku/core'
 import { KEYWORD_WIDTH } from './scenario-formatter.js'
@@ -135,18 +135,102 @@ const sameProse = (a: ScenarioStepProse, b: ScenarioStepProse) =>
   a.template === b.template &&
   a.actor === b.actor
 
-/** The step functions in this scenario that declare `browser: true`. */
+/** The step functions in this scenario that declare a `browser` binding. */
 export const scenarioBrowserSteps = (
   workflowMeta: { steps?: WorkflowStepMeta[] } | undefined,
   functionsMeta: FunctionsMeta
 ): string[] => {
   const names = new Set<string>()
   for (const step of walkScenarioSteps(workflowMeta?.steps)) {
-    if (functionsMeta[step.stepFunc]?.scenarioStepBrowser === true) {
+    if (
+      functionsMeta[step.stepFunc]?.scenarioStepSurfaces?.includes('browser')
+    ) {
       names.add(step.stepFunc)
     }
   }
   return [...names]
+}
+
+/**
+ * Steps this scenario cannot run on `surface` at all — they declare neither a
+ * binding for it nor a `default` to fall back to.
+ *
+ * Every phase counts. An action with nothing to run is a broken ladder; an
+ * assertion with nothing to run would report a pass having checked nothing,
+ * which the engine now refuses outright. Both are better caught here, so the
+ * flow is held back with a reason than failed halfway through.
+ *
+ * A step that *can* run, just not on the run surface, is the different case — a
+ * coverage gap, counted by {@link scenarioSurfaceCoverage} rather than a reason
+ * to skip.
+ */
+export const scenarioStepsWithoutBinding = (
+  workflowMeta: { steps?: WorkflowStepMeta[] } | undefined,
+  functionsMeta: FunctionsMeta,
+  surface: ScenarioSurface
+): string[] => {
+  const names = new Set<string>()
+  for (const step of walkScenarioSteps(workflowMeta?.steps)) {
+    const surfaces = functionsMeta[step.stepFunc]?.scenarioStepSurfaces ?? [
+      'default',
+    ]
+    if (!surfaces.includes(surface) && !surfaces.includes('default')) {
+      names.add(step.stepFunc)
+    }
+  }
+  return [...names]
+}
+
+/**
+ * How much of this scenario actually ran on the surface the run targeted.
+ *
+ * Every step counts, not just the assertions. A ladder of
+ * `browser/browser/default/browser` is 3/4 — the step that fell back to the
+ * server shows up by lowering the ratio, which is a truer signal than a green
+ * assertion count with a footnote. It also makes surfaces comparable: the same
+ * scenario is 4/4 on a default run and 3/4 on a browser one, over one
+ * denominator.
+ *
+ * Assertions still get named separately. A `given` or `when` driven server-side
+ * took a shortcut; a `then` driven server-side is a sentence claiming the actor
+ * saw something nobody looked at. Same effect on the ratio, different kind of
+ * problem, so `--strict` gates on the latter only.
+ */
+export interface ScenarioSurfaceCoverage {
+  /** Steps that ran on the run surface. */
+  onSurface: number
+  /** Steps that ran at all. */
+  total: number
+  /** The `then` steps that ran, but somewhere other than the run surface. */
+  unwitnessed: string[]
+}
+
+export const scenarioSurfaceCoverage = (
+  workflowMeta: { steps?: WorkflowStepMeta[] } | undefined,
+  functionsMeta: FunctionsMeta,
+  runSurface: ScenarioSurface
+): ScenarioSurfaceCoverage => {
+  let onSurface = 0
+  let total = 0
+  const unwitnessed = new Set<string>()
+  for (const step of walkScenarioSteps(workflowMeta?.steps)) {
+    const surfaces = functionsMeta[step.stepFunc]?.scenarioStepSurfaces ?? [
+      'default',
+    ]
+    // A step with no binding this run can execute never runs, so it is not a
+    // statistic about this run — `scenarioStepsWithoutBinding` holds the flow
+    // back for it. Counting it here would score a run on work it refuses to do.
+    if (!surfaces.includes(runSurface) && !surfaces.includes('default')) {
+      continue
+    }
+    total += 1
+    if (runSurface === 'default' || surfaces.includes(runSurface)) {
+      onSurface += 1
+    } else if (step.phase === 'then') {
+      unwitnessed.add(step.stepFunc)
+    }
+  }
+  return { onSurface, total, unwitnessed: [...unwitnessed] }
 }
 
 /**

@@ -8,14 +8,12 @@ import type {} from '@pikku/playwright'
 
 export const opensUserRolesDrawer = pikkuScenarioStep<
   { email: string },
-  { opened: string },
-  true
+  { opened: string }
 >({
   name: 'opensUserRolesDrawer',
   description: 'opens the roles drawer for one user from the users directory',
   template: 'opens the roles drawer for {email}',
-  browser: true,
-  func: async (_services, { email }, { browser }) => {
+  browser: async (_services, { email }, { browser }) => {
     await browser.goto('/console/users')
     await browser
       .locate({ testId: 'user-row' })

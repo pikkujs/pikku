@@ -29,7 +29,7 @@ export const invokesRpcRaw = pikkuScenarioStep<
   name: 'invokesRpcRaw',
   description: 'invokes an RPC and reports what the transport answered',
   template: 'invokes {rpcName}',
-  func: async (_services, { rpcName, data, headers }, { scenarioStep }) => {
+  default: async (_services, { rpcName, data, headers }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const response = await actor.invokeRaw(
       rpcName as never,
@@ -59,7 +59,7 @@ export const expectsRpcResponse = pikkuScenarioStep<
   name: 'expectsRpcResponse',
   description: 'expects the status and body of a raw RPC call',
   template: 'expects status {status}',
-  func: async (_services, { call, status, contains, doesNotContain }) => {
+  default: async (_services, { call, status, contains, doesNotContain }) => {
     if (status !== undefined && call.status !== status) {
       throw new Error(
         `Expected status ${status}, got ${call.status}: ${call.serialized}`
@@ -98,7 +98,7 @@ export const readsUserIdByEmail = pikkuScenarioStep<
   name: 'readsUserIdByEmail',
   description: 'resolves a seeded user id from an email via the directory',
   template: 'resolves {email}',
-  func: async (_services, { email }, { scenarioStep }) => {
+  default: async (_services, { email }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const directory = (await actor.invoke(
       'pikkuAdminListUsers' as never,
@@ -132,7 +132,7 @@ export const readsActorUserId = pikkuScenarioStep<void, { userId: string }>({
   name: 'readsActorUserId',
   description: 'reads the user id of the acting actor from its own session',
   template: 'reads its own user id',
-  func: async (_services, _data, { scenarioStep }) => {
+  default: async (_services, _data, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const session = (await actor.invoke('whoAmI' as never, null as never)) as {
       userId?: string
@@ -160,7 +160,7 @@ export const expectsRpcAllowed = pikkuScenarioStep<
   name: 'expectsRpcAllowed',
   description: 'expects a call to have cleared the authorization gate',
   template: 'expects the call to be allowed',
-  func: async (_services, { call }) => {
+  default: async (_services, { call }) => {
     if (call.status === 403) {
       throw new Error(`Expected the call to be allowed, got ${call.serialized}`)
     }
@@ -187,7 +187,7 @@ export const expectsRpcCollection = pikkuScenarioStep<
   name: 'expectsRpcCollection',
   description: 'expects the response body to be an array',
   template: 'expects a collection',
-  func: async (_services, { call, minLength }) => {
+  default: async (_services, { call, minLength }) => {
     if (!Array.isArray(call.body)) {
       throw new Error(`Expected an array, got ${call.serialized}`)
     }
@@ -214,7 +214,7 @@ export const expectsRpcRecord = pikkuScenarioStep<
   name: 'expectsRpcRecord',
   description: 'expects the response body to be a record',
   template: 'expects a record',
-  func: async (_services, { call, anyOf }) => {
+  default: async (_services, { call, anyOf }) => {
     if (
       call.body === null ||
       typeof call.body !== 'object' ||

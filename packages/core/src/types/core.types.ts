@@ -25,6 +25,7 @@ import type {
 import type {
   PikkuBrowserWire,
   PikkuScenarioStepWire,
+  ScenarioSurface,
 } from '../wirings/workflow/scenario-step.types.js'
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
 import type { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
@@ -156,8 +157,14 @@ export type FunctionRuntimeMeta = {
   workflowRetries?: number
   /** Timeout when this function is used as a workflow step (e.g. '30s', '5m'). */
   workflowTimeout?: string
-  /** Scenario steps only: this step drives a browser, so the runner must provision one and an actor is mandatory. */
-  scenarioStepBrowser?: boolean
+  /**
+   * Scenario steps only: which surfaces this step declares a binding for.
+   *
+   * The reporter derives coverage from this — a `then` with no binding for the
+   * surface the run targeted was never actually witnessed there, which is a gap
+   * worth counting rather than excusing.
+   */
+  scenarioStepSurfaces?: ScenarioSurface[]
   /** Scenario steps only: the prose a reporter renders, with `{placeholders}` filled from the step's recorded input. */
   scenarioStepTemplate?: string
   version?: number

@@ -92,7 +92,7 @@ export interface AgentRunResult {
 export const startsAgentThread = pikkuScenarioStep<void, { threadId: string }>({
   name: 'startsAgentThread',
   description: 'opens a fresh agent thread',
-  func: async (_services, _data) => ({ threadId: randomUUID() }),
+  default: async (_services, _data) => ({ threadId: randomUUID() }),
 })
 
 /**
@@ -122,7 +122,7 @@ export const runsAgent = pikkuScenarioStep<
   name: 'runsAgent',
   description: 'runs an agent',
   template: 'runs {agent} with {script}',
-  func: async (
+  default: async (
     _services,
     {
       agent,
@@ -182,7 +182,7 @@ export const callsRpcAs = pikkuScenarioStep<
   name: 'callsRpcAs',
   description: 'calls an RPC as a principal',
   template: 'calls {rpcName}',
-  func: async (_services, { rpcName, data, identity }, { scenarioStep }) => {
+  default: async (_services, { rpcName, data, identity }, { scenarioStep }) => {
     const outcome = await postRpc(
       requireScenarioEnv(scenarioStep).apiUrl,
       rpcName,
@@ -225,7 +225,7 @@ export const resolvesApprovals = pikkuScenarioStep<
   name: 'resolvesApprovals',
   description: 'approves or denies every pending tool call',
   template: 'resolves approvals approved={approved}',
-  func: async (
+  default: async (
     _services,
     { agent, runId, pendingApprovals, approved, identity },
     { scenarioStep }
@@ -261,7 +261,7 @@ export const resolvesApprovals = pikkuScenarioStep<
 export const resetsTodos = pikkuScenarioStep<void, { reset: true }>({
   name: 'resetsTodos',
   description: 'resets the todo list',
-  func: async (_services, _data, { scenarioStep }) => {
+  default: async (_services, _data, { scenarioStep }) => {
     await postRpc(
       requireScenarioEnv(scenarioStep).apiUrl,
       'todos:resetTodos',

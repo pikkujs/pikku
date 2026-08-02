@@ -71,7 +71,7 @@ export const runsWorkflow = pikkuScenarioStep<
   name: 'runsWorkflow',
   description: 'runs a workflow to completion over HTTP and reports the run',
   template: 'runs {workflowName}',
-  func: async (_services, { workflowName, input, userId }, { scenarioStep }) =>
+  default: async (_services, { workflowName, input, userId }, { scenarioStep }) =>
     postWorkflow(
       requireScenarioEnv(scenarioStep).apiUrl,
       workflowName,
@@ -88,7 +88,7 @@ export const startsWorkflow = pikkuScenarioStep<
   name: 'startsWorkflow',
   description: 'starts a workflow over HTTP without waiting for it',
   template: 'starts {workflowName}',
-  func: async (_services, { workflowName, input }, { scenarioStep }) =>
+  default: async (_services, { workflowName, input }, { scenarioStep }) =>
     postWorkflow(
       requireScenarioEnv(scenarioStep).apiUrl,
       workflowName,
@@ -112,7 +112,7 @@ export const awaitsWorkflowRun = pikkuScenarioStep<
   name: 'awaitsWorkflowRun',
   description: 'waits for a started workflow run to reach a terminal status',
   template: 'waits for the run to finish',
-  func: async (_services, { run, timeoutMs }, { scenarioStep }) => {
+  default: async (_services, { run, timeoutMs }, { scenarioStep }) => {
     if (!run.runId) {
       throw new Error(`The run was never started: ${run.serialized}`)
     }
@@ -156,7 +156,7 @@ export const expectsWorkflowOutcome = pikkuScenarioStep<
   name: 'expectsWorkflowOutcome',
   description: 'expects a workflow run to have reached a given outcome',
   template: 'expects the run to be {outcome}',
-  func: async (_services, { run, outcome, hasRunId }) => {
+  default: async (_services, { run, outcome, hasRunId }) => {
     if (run.outcome !== outcome) {
       throw new Error(
         `Expected the run to be ${outcome}, got ${run.outcome}: ${run.serialized}`
@@ -176,7 +176,7 @@ export const expectsWorkflowOutput = pikkuScenarioStep<
   name: 'expectsWorkflowOutput',
   description: 'expects a workflow run to have produced the given output',
   template: 'expects the output to match',
-  func: async (_services, { run, values }) => {
+  default: async (_services, { run, values }) => {
     const output = (run.body ?? {}) as Record<string, unknown>
     for (const [key, want] of Object.entries(values)) {
       const got = output[key]
@@ -210,7 +210,7 @@ export const drainsWorkflowStatusStream = pikkuScenarioStep<
   name: 'drainsWorkflowStatusStream',
   description: 'reads the workflow status stream until it closes',
   template: 'streams the run status',
-  func: async (_services, { run }, { scenarioStep }) => {
+  default: async (_services, { run }, { scenarioStep }) => {
     if (!run.runId) {
       throw new Error(`The run was never started: ${run.serialized}`)
     }
@@ -237,7 +237,7 @@ export const expectsWorkflowStream = pikkuScenarioStep<
   name: 'expectsWorkflowStream',
   description: 'expects the status stream to have carried the run to an end',
   template: 'expects the stream to end {lastStatus}',
-  func: async (_services, { stream, minEvents, lastStatus }) => {
+  default: async (_services, { stream, minEvents, lastStatus }) => {
     if (minEvents !== undefined && stream.count < minEvents) {
       throw new Error(
         `Expected at least ${minEvents} stream event(s), got ${stream.count}`
@@ -259,7 +259,7 @@ export const expectsRunId = pikkuScenarioStep<
   name: 'expectsRunId',
   description: 'expects a started workflow to have answered with a run id',
   template: 'expects a run id',
-  func: async (_services, { run }) => {
+  default: async (_services, { run }) => {
     if (!run.ok) {
       throw new Error(`The workflow was refused with ${run.status}`)
     }

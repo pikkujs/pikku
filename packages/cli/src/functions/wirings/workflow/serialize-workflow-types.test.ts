@@ -40,13 +40,27 @@ describe('serializeWorkflowTypes', () => {
       assert.match(result, /export function pikkuScenarioStep/)
     })
 
-    test('a browser step gets a non-optional browser wire', () => {
+    test('each surface binding is typed independently', () => {
       const result = emit()
       assert.match(result, /export type PikkuFunctionScenarioStep</)
+      // A binding gets its own surface on the wire and nobody else's, so a
+      // browser binding sees `wire.browser` and a cli binding does not.
       assert.match(
         result,
-        /B extends true \? 'scenarioStep' \| 'browser' : 'scenarioStep'/
+        /Surface extends 'default' \? 'scenarioStep' : 'scenarioStep' \| Surface/
       )
+      for (const surface of ['browser', 'cli', 'default']) {
+        assert.match(
+          result,
+          new RegExp(`${surface}\\?: PikkuFunctionScenarioStep<`),
+          `expected a '${surface}' binding on the step config`
+        )
+      }
+    })
+
+    test('a step declaring no binding is rejected at registration', () => {
+      const result = emit()
+      assert.match(result, /declares no surface bindings/)
     })
 
     test('TypedScenario narrows step/given/when/then over the step map', () => {

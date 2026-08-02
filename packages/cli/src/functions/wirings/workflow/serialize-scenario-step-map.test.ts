@@ -30,7 +30,7 @@ const functionsMeta = (): FunctionsMeta =>
       name: 'buysAnApple',
       inputs: ['BuysAnAppleInput'],
       outputs: ['BuysAnAppleOutput'],
-      scenarioStepBrowser: true,
+      scenarioStepSurfaces: ['browser', 'default'],
     },
     seesAReceipt: {
       pikkuFuncId: 'seesAReceipt',

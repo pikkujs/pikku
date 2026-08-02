@@ -58,14 +58,12 @@ const recording = async <T>(
 
 export const impersonatesUser = pikkuScenarioStep<
   { email: string },
-  { impersonating: string },
-  true
+  { impersonating: string }
 >({
   name: 'impersonatesUser',
   description: 'starts impersonating a user from the console sidebar',
   template: 'impersonates {email}',
-  browser: true,
-  func: async (_services, { email }, { browser }) => {
+  browser: async (_services, { email }, { browser }) => {
     await browser.locate({ testId: 'impersonate-open' }).click()
     await browser.locate({ testId: 'impersonate-search' }).fill(email)
     await browser
@@ -77,14 +75,12 @@ export const impersonatesUser = pikkuScenarioStep<
 
 export const stopsImpersonating = pikkuScenarioStep<
   void,
-  { stopped: true },
-  true
+  { stopped: true }
 >({
   name: 'stopsImpersonating',
   description: 'ends the impersonation session from the banner',
   template: 'stops impersonating',
-  browser: true,
-  func: async (_services, _data, { browser }) => {
+  browser: async (_services, _data, { browser }) => {
     await browser.locate({ testId: 'impersonation-stop' }).click()
     return { stopped: true }
   },
@@ -101,14 +97,12 @@ export const stopsImpersonating = pikkuScenarioStep<
  */
 export const searchesUsers = pikkuScenarioStep<
   { query: string },
-  { requests: RecordedRequest[] },
-  true
+  { requests: RecordedRequest[] }
 >({
   name: 'searchesUsers',
   description: 'searches the console users directory',
   template: 'searches the users list for {query}',
-  browser: true,
-  func: async (_services, { query }, { browser }) => {
+  browser: async (_services, { query }, { browser }) => {
     const requests = await recording(browser, async () => {
       await browser.locate({ testId: 'page-search' }).fill(query)
       await expect(browser.locate({ testId: 'user-row' })).toHaveCount(1, {})
@@ -132,14 +126,12 @@ export const searchesUsers = pikkuScenarioStep<
  */
 export const startsWorkflowRunFromConsole = pikkuScenarioStep<
   { input: Record<string, string> },
-  { requests: RecordedRequest[] },
-  true
+  { requests: RecordedRequest[] }
 >({
   name: 'startsWorkflowRunFromConsole',
   description: 'starts a run from the workflow already open in the console',
   template: 'starts a run from the console',
-  browser: true,
-  func: async (_services, { input }, { browser }) => {
+  browser: async (_services, { input }, { browser }) => {
     await browser.locate({ testId: 'runs-panel-new' }).click()
     await browser.locate({ testId: 'schema-form' }).waitFor()
 
@@ -172,7 +164,7 @@ export const expectsImpersonationHeader = pikkuScenarioStep<
   description:
     'asserts whether recorded requests carried the impersonation header',
   template: 'expects the impersonation header on {urlContains} to be {present}',
-  func: async (_services, { requests, urlContains, present }) => {
+  default: async (_services, { requests, urlContains, present }) => {
     const matching = requests.filter((r) => r.url.includes(urlContains))
     if (matching.length === 0) {
       throw new Error(
