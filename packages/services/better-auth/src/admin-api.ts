@@ -49,9 +49,7 @@ export const callAdminApi = async <T>(
     )
   }
 
-  // These endpoints authorize off the session cookie, so they need the same
-  // relayed cookies the session middleware already accepted — otherwise a
-  // caller whose browser refused to store the cookie resolves fine one layer up
-  // and is then rejected here as anonymous (see cross-site-cookies.ts).
+  // Relay too, or a caller resolves fine in the session middleware and is then
+  // rejected here as anonymous — these endpoints re-read the session cookie.
   return call(api, mergeRelayedCookies(new Headers(request.headers())))
 }

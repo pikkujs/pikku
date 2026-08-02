@@ -92,8 +92,8 @@ export async function getAuthSession<
     createSingletonServices
   )()
 
-  // Always copy before merging the relayed cookies — the caller's Headers is
-  // theirs, and mergeRelayedCookies mutates what it is given.
+  // Copy even when handed a Headers: mergeRelayedCookies mutates its argument,
+  // and that one belongs to the caller.
   const headers = mergeRelayedCookies(
     new Headers(request instanceof Headers ? request : request.headers)
   )
