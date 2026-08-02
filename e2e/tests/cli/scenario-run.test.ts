@@ -137,9 +137,12 @@ describe('pikku scenario run', () => {
       0,
       `skipping a browser scenario must not fail the run:\n${output}`
     )
+    // `--no-browser` is the blunt form of `--run default`, so the reason names
+    // the surface that has no binding rather than the flag: these steps are
+    // browser-only, and there is nothing to fall back to.
     assert.match(
       output,
-      /^SKIP codeEditorConsoleScenario \(browser steps, --no-browser\)/m,
+      /^SKIP codeEditorConsoleScenario \(no default or default binding: /m,
       `expected the scenario to be reported as skipped:\n${output}`
     )
     assert.match(

@@ -14,7 +14,7 @@ import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
 import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
-import { scenarioActorConfigs } from '../../.pikku/workflow/pikku-scenario-actors.gen.js'
+import { personaConfigs } from '../../.pikku/workflow/pikku-personas.gen.js'
 
 let server: Awaited<ReturnType<typeof startBackend>>
 let apiUrl: string
@@ -92,10 +92,7 @@ describe('CLI over a channel', () => {
     server = await startBackend()
     await server.waitUntilReady()
     apiUrl = server.apiUrl
-    token = await signIn(
-      scenarioActorConfigs.admin.email,
-      scenarioActorConfigs.admin.name
-    )
+    token = await signIn(personaConfigs.admin.email, personaConfigs.admin.name)
   })
 
   after(async () => {
