@@ -6,7 +6,7 @@ import {
   resolveGatewayAdapter,
 } from '../wirings/gateway/gateway-runner.js'
 
-// knowledge: decisions/design/local-trigger-and-gateway-services-assume-a-single-process.md
+// knowledge: decisions/internals/local-trigger-and-gateway-services-assume-a-single-process.md
 export class LocalGatewayService implements GatewayService {
   private activeAdapters = new Map<string, GatewayAdapter>()
 

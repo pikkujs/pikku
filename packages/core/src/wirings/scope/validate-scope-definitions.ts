@@ -49,7 +49,7 @@ const flattenNodes = (
 }
 
 /** Every node is emitted, intermediate ones included, depth-first. Ids are unique. */
-// knowledge: decisions/design/scope-roots-may-be-co-declared-by-an-addon-and-its-host-app.md
+// knowledge: decisions/internals/scope-roots-may-be-co-declared-by-an-addon-and-its-host-app.md
 export const flattenScopeDefinitions = (
   definitions: ScopeDefinitions
 ): FlatScope[] => {

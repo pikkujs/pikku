@@ -1,10 +1,10 @@
 ---
 type: overview
-title: Design decisions
+title: Internals
 description: How core behaves — runtime constraints, execution semantics, and the shapes the API commits to
 ---
 
-# Design decisions
+# Internals
 
 A rule about how core behaves: what runs where, in what order, and what a
 caller is entitled to assume.

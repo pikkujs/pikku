@@ -104,7 +104,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
     auth: false,
   } as any)
 
-  // knowledge: decisions/design/gateway-adapters-resolve-lazily-and-are-promise-cached.md
+  // knowledge: decisions/internals/gateway-adapters-resolve-lazily-and-are-promise-cached.md
   if (typeof adapter === 'function' || adapter.verifyWebhook) {
     const verifyFuncId = `gateway__${name}__verify`
 
@@ -123,7 +123,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
       route,
       func: verifyHandler,
       auth: false,
-      // knowledge: decisions/design/gateway-webhook-challenges-echo-bytes-not-json.md
+      // knowledge: decisions/internals/gateway-webhook-challenges-echo-bytes-not-json.md
       returnsJSON: false,
     } as any)
   }
@@ -205,7 +205,7 @@ const createWebhookVerifyHandler = (config: CoreGateway) => {
     if (!result.verified) {
       throw new UnauthorizedError('Webhook verification failed')
     }
-    // knowledge: decisions/design/gateway-webhook-challenges-echo-bytes-not-json.md
+    // knowledge: decisions/internals/gateway-webhook-challenges-echo-bytes-not-json.md
     const response = result.response
     if (typeof response === 'string' || typeof response === 'number') {
       return String(response)
@@ -309,7 +309,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
     },
   } as any)
 
-  // knowledge: decisions/design/gateway-wiring-is-a-meta-wiring-over-http-and-channels.md
+  // knowledge: decisions/internals/gateway-wiring-is-a-meta-wiring-over-http-and-channels.md
   channels.set(name, {
     name,
     route,

@@ -56,7 +56,7 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'function/pikku-functions-meta.gen.json')
   )
-  // knowledge: decisions/design/core-hot-reload-merges-generated-meta-never-replaces-it.md
+  // knowledge: decisions/internals/core-hot-reload-merges-generated-meta-never-replaces-it.md
   if (functionsMeta) {
     const existing = pikkuState(null, 'function', 'meta') ?? {}
     pikkuState(null, 'function', 'meta', { ...existing, ...functionsMeta })

@@ -211,13 +211,7 @@ export class HttpPersona implements ScenarioPersona {
     return normalizeAgentReply(raw)
   }
 
-  /**
-   * POST an agent HTTP route (raw body, not RPC-wrapped). Signs in lazily: the
-   * first call goes out with whatever cookie we hold (none, for a no-auth
-   * agent), and only a 401 triggers `login()` + one retry. This lets a persona
-   * converse with a no-auth agent without any sign-in wiring, while still
-   * authenticating against agents that require a session.
-   */
+  // knowledge: decisions/internals/scenario-agent-calls-sign-in-on-401-only.md
   private async postAgent(subPath: string, body: unknown): Promise<unknown> {
     const rpcPath = this.config.rpcPath ?? '/rpc'
     const url = `${this.config.apiUrl}${rpcPath}/${subPath}`

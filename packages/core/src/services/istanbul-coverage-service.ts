@@ -35,7 +35,7 @@ export class IstanbulCoverageService implements CoverageService {
         hits = new Map()
         lineHits.set(file.path, hits)
       }
-      // knowledge: decisions/design/istanbul-statement-counts-attach-to-the-start-line-only.md
+      // knowledge: decisions/internals/istanbul-statement-counts-attach-to-the-start-line-only.md
       for (const [id, location] of Object.entries(file.statementMap)) {
         const count = file.s[id] ?? 0
         const line = location.start.line

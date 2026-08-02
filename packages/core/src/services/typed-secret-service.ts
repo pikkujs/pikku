@@ -17,7 +17,7 @@ export type CredentialMeta = {
 export class TypedSecretService<
   TMap = Record<string, unknown>,
 > implements SecretService {
-  // knowledge: decisions/design/typed-secret-service-caches-for-the-process-lifetime.md
+  // knowledge: decisions/internals/typed-secret-service-caches-for-the-process-lifetime.md
   private cache = new Map<string, unknown>()
 
   constructor(

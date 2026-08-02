@@ -1,4 +1,4 @@
-// knowledge: decisions/design/ai-agent-model-config-stays-a-single-resolution-seam.md
+// knowledge: decisions/internals/ai-agent-model-config-stays-a-single-resolution-seam.md
 export function resolveModelConfig(
   _agentName: string,
   agent: { model: string; temperature?: number; maxSteps?: number }
