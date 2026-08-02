@@ -4,6 +4,7 @@ export const doubleValue = pikkuSessionlessFunc<
   { value: number },
   { result: number }
 >({
+  description: 'Double a number and return the result',
   expose: true,
   func: async (_services, { value }) => ({
     result: value * 2,

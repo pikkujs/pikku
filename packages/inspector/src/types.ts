@@ -272,6 +272,12 @@ export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
   isAddon: boolean
+  /**
+   * Fail the build on metadata that only an agent needs — currently an agent
+   * tool with no description. Off by default: the runtime falls back to the
+   * tool's own name, so this is a quality gate rather than a correctness one.
+   */
+  strictMeta: boolean
   sourceFile: ts.SourceFile
   /**
    * The project's tsconfig, read for its path mappings only. The inspector's

@@ -92,6 +92,7 @@ export const isThreadOwner = pikkuPermission<{ threadId: string }>(
 )
 
 export const agentCaller = pikkuSessionlessFunc({
+  description: 'Run a named AI agent with a message and return its reply',
   tags: ['pikku'],
   auth: ${authFlag},
   input: AgentCall,

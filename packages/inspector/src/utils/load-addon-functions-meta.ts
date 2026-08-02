@@ -119,6 +119,29 @@ const applyPackageToChannelContracts = (
 }
 
 /**
+ * Resolves an addon's generated metadata, preferring the verbose copy.
+ *
+ * An addon publishes both: the minimal one its own bootstrap imports, and the
+ * verbose one for anything that needs the fields stripped out of it. A consumer
+ * is squarely in the second category — it is reading the addon to describe it,
+ * not to run it.
+ */
+const resolveAddonMeta = (
+  require: NodeRequire,
+  packageName: string,
+  baseName: string
+): string | null => {
+  for (const suffix of ['-verbose.gen.json', '.gen.json']) {
+    try {
+      return require.resolve(`${packageName}/.pikku/${baseName}${suffix}`)
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+/**
  * After the setup sweep discovers wireAddon() declarations, load each addon
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
@@ -138,9 +161,16 @@ export async function loadAddonFunctionsMeta(
     // HOST that runs them — never load or require any of that here.
     if (decl.remote) continue
     try {
-      const metaPath = require.resolve(
-        `${decl.package}/.pikku/function/pikku-functions-meta.gen.json`
+      // Verbose first. `description` is one of the fields stripped from the
+      // minimal copy, and it is what an addon's function is offered to a model
+      // under — both as an MCP tool below and as an agent tool. Read the minimal
+      // one and every addon function looks undescribed.
+      const metaPath = resolveAddonMeta(
+        require,
+        decl.package,
+        'function/pikku-functions-meta'
       )
+      if (!metaPath) throw new Error('no function metadata')
       const raw = await readFile(metaPath, 'utf-8')
       const meta = JSON.parse(raw)
       state.addonFunctions[namespace] = meta

@@ -1029,3 +1029,90 @@ export function validateScopeReferences(
     }
   }
 }
+
+/**
+ * Resolves every `tools:` entry on every agent and reports the ones that do not
+ * land on a real function, or that land on one with nothing to tell the model.
+ *
+ * `ref('todos:listTodos')` is a bare string to the inspector — `ref` is not
+ * resolved, only unwrapped — so until now a reference to a function that never
+ * existed generated cleanly and failed at agent-run time. Addon namespaces come
+ * from `wireAddon`, and each addon's generated metadata is read off disk, which
+ * is the only view of it this project has.
+ *
+ * The description check is separate and opt-in (`--strict-meta`), because the
+ * description is what the model is told the tool does: without one, the tool is
+ * offered to it under its own name (`ai-agent-prepare.ts`), which is a silent
+ * quality loss rather than a failure. A title deliberately does not satisfy it —
+ * a title labels a tool in a UI, it does not tell a model when to reach for it.
+ */
+export function validateAgentToolReferences(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  options: InspectorOptions = {}
+): void {
+  const agents = Object.entries(state.agents.agentsMeta)
+  if (agents.length === 0) return
+
+  const { wireAddonDeclarations } = state.rpc
+
+  for (const [agentKey, agent] of agents) {
+    const where = agent.sourceFile ? ` (${agent.sourceFile})` : ''
+
+    for (const tool of agent.tools ?? []) {
+      // A workflow reference is resolved against the workflow map, not here.
+      if (tool.startsWith('workflow:')) continue
+
+      const separator = tool.indexOf(':')
+      let meta: { description?: string; title?: string } | undefined
+
+      if (separator === -1) {
+        const funcId = state.rpc.internalMeta[tool] ?? tool
+        meta = state.functions.meta[funcId]
+        if (!meta) {
+          logger.critical(
+            ErrorCode.AGENT_TOOL_NOT_FOUND,
+            `AI agent '${agentKey}'${where} references tool '${tool}', which is not a function in this project.`
+          )
+          continue
+        }
+      } else {
+        const namespace = tool.slice(0, separator)
+        const funcName = tool.slice(separator + 1)
+        const addon = wireAddonDeclarations?.get(namespace)
+        if (!addon) {
+          const known = Array.from(wireAddonDeclarations?.keys() ?? [])
+          logger.critical(
+            ErrorCode.AGENT_TOOL_UNKNOWN_NAMESPACE,
+            `AI agent '${agentKey}'${where} references tool '${tool}', but no addon is wired under the namespace '${namespace}'. ` +
+              `Wired namespaces: ${known.join(', ') || 'none'}.`
+          )
+          continue
+        }
+
+        // An addon that has not been built yet contributed no metadata, which
+        // is not the same as one whose function is missing.
+        const addonMeta = state.addonFunctions[namespace]
+        if (!addonMeta) continue
+
+        meta = addonMeta[funcName]
+        if (!meta) {
+          logger.critical(
+            ErrorCode.AGENT_TOOL_NOT_FOUND,
+            `AI agent '${agentKey}'${where} references tool '${tool}', but addon '${namespace}' ('${addon.package}') exposes no function '${funcName}'.`
+          )
+          continue
+        }
+      }
+
+      if (options.strictMeta && !meta.description) {
+        logger.critical(
+          ErrorCode.AGENT_TOOL_MISSING_DESCRIPTION,
+          `AI agent '${agentKey}'${where} uses tool '${tool}', which has no description. ` +
+            `An agent tool's description is what the model is told it does; without one it is offered the tool under its own name. ` +
+            `Add a 'description' to '${tool}'${meta.title ? " (a 'title' does not count — it labels the tool, it does not explain it)" : ''}.`
+        )
+      }
+    }
+  }
+}

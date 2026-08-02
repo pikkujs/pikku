@@ -71,6 +71,11 @@ export enum ErrorCode {
   MISSING_MODEL = 'PKU145',
   INVALID_MODEL = 'PKU146',
 
+  // Agent tool reference errors
+  AGENT_TOOL_UNKNOWN_NAMESPACE = 'PKU152',
+  AGENT_TOOL_NOT_FOUND = 'PKU153',
+  AGENT_TOOL_MISSING_DESCRIPTION = 'PKU154',
+
   // File structure errors
   SCHEMA_AND_WIRING_COLOCATED = 'PKU490',
 

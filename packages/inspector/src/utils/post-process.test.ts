@@ -10,6 +10,7 @@ import {
   validateVariableOverrides,
   validateRemoteAddonDependencies,
   validateRemoteAddonAuth,
+  validateAgentToolReferences,
 } from './post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorState, InspectorLogger } from '../types.js'
@@ -578,5 +579,137 @@ describe('validateRemoteAddonAuth (bound credential/secret must exist)', () => {
     )
     assert.equal(criticals.length, 1)
     assert.equal(criticals[0]!.code, ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED)
+  })
+})
+
+const makeAgentState = (
+  tools: string[],
+  {
+    functions = {},
+    addonFunctions = {},
+    addons = [],
+    internalMeta = {},
+  }: {
+    functions?: Record<string, any>
+    addonFunctions?: Record<string, Record<string, any>>
+    addons?: string[]
+    internalMeta?: Record<string, string>
+  } = {}
+): Omit<InspectorState, 'typesLookup'> =>
+  ({
+    agents: {
+      agentsMeta: {
+        triage: { tools, sourceFile: 'src/triage.agent.ts' },
+      },
+    },
+    rpc: {
+      internalMeta,
+      wireAddonDeclarations: new Map(
+        addons.map((name) => [name, { package: `@addon/${name}` }])
+      ),
+    },
+    functions: { meta: functions },
+    addonFunctions,
+  }) as unknown as Omit<InspectorState, 'typesLookup'>
+
+describe('validateAgentToolReferences (ref() resolved at build time)', () => {
+  test('a local tool that does not exist is an error', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['doesNotExist'], {
+        functions: { realTool: { description: 'A real one' } },
+      })
+    )
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.AGENT_TOOL_NOT_FOUND)
+  })
+
+  test('an addon namespace that is not wired is an error, and lists the ones that are', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['nope:thing'], { addons: ['todos'] })
+    )
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.AGENT_TOOL_UNKNOWN_NAMESPACE)
+    assert.match(criticals[0]!.message, /Wired namespaces: todos/)
+  })
+
+  test('a wired addon that does not export the function is an error', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['todos:noSuchFn'], {
+        addons: ['todos'],
+        addonFunctions: { todos: { addTodo: { description: 'Adds a todo' } } },
+      })
+    )
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.AGENT_TOOL_NOT_FOUND)
+  })
+
+  test('an addon that has not been built yet is not treated as a missing function', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['todos:addTodo'], { addons: ['todos'] })
+    )
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a workflow reference is resolved elsewhere and left alone', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['workflow:onboarding']),
+      { strictMeta: true }
+    )
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a missing description is only an error under strictMeta', () => {
+    const state = makeAgentState(['bareTool'], {
+      functions: { bareTool: {} },
+    })
+
+    const lenient = makeCriticalLogger()
+    validateAgentToolReferences(lenient.logger, state)
+    assert.deepEqual(lenient.criticals, [])
+
+    const strict = makeCriticalLogger()
+    validateAgentToolReferences(strict.logger, state, { strictMeta: true })
+    assert.equal(strict.criticals.length, 1)
+    assert.equal(
+      strict.criticals[0]!.code,
+      ErrorCode.AGENT_TOOL_MISSING_DESCRIPTION
+    )
+  })
+
+  test('a title does not satisfy strictMeta, and the message says so', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['titledTool'], {
+        functions: { titledTool: { title: 'Titled Tool' } },
+      }),
+      { strictMeta: true }
+    )
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.AGENT_TOOL_MISSING_DESCRIPTION)
+    assert.match(criticals[0]!.message, /a 'title' does not count/)
+  })
+
+  test('an addon function is checked against the addon’s own meta', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentToolReferences(
+      logger,
+      makeAgentState(['todos:addTodo'], {
+        addons: ['todos'],
+        addonFunctions: { todos: { addTodo: { description: 'Adds a todo' } } },
+      }),
+      { strictMeta: true }
+    )
+    assert.deepEqual(criticals, [])
   })
 })

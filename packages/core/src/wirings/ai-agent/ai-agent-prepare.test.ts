@@ -804,3 +804,84 @@ describe('buildSubAgentRunInput (parent context forwarding)', () => {
     assert.equal(input.context, undefined)
   })
 })
+
+test('a tool description survives being stripped from the meta registered at boot', async () => {
+  addAgent('described-agent')
+  pikkuState(null, 'agent', 'agentsMeta')['described-agent'] = {
+    ...pikkuState(null, 'agent', 'agentsMeta')['described-agent'],
+    tools: ['archiveRecord'],
+  } as any
+  pikkuState(null, 'rpc', 'meta').archiveRecord = 'archiveRecord'
+
+  // What the bundled copy actually looks like: `stripVerboseFields` removes
+  // `description` and `title`, so the boot-time meta carries neither.
+  pikkuState(null, 'function', 'meta').archiveRecord = {
+    inputSchemaName: 'ArchiveInput',
+    sessionless: true,
+  }
+  pikkuState(null, 'misc', 'schemas').set('ArchiveInput', { type: 'object' })
+  pikkuState(null, 'function', 'functions').set('archiveRecord', {
+    func: async () => 'ok',
+  })
+
+  pikkuState(null, 'package', 'singletonServices', {
+    logger: { warn: () => {} },
+    metaService: {
+      getFunctionsMeta: async () => ({
+        archiveRecord: {
+          description: 'Archive a record so it stops appearing in searches',
+        },
+      }),
+    },
+  } as any)
+
+  const { tools } = await buildToolDefs(
+    {},
+    new Map<string, string>(),
+    'resource-described',
+    'described-agent',
+    null
+  )
+
+  assert.equal(tools.length, 1)
+  assert.equal(
+    tools[0].description,
+    'Archive a record so it stops appearing in searches'
+  )
+})
+
+test('a tool with no description anywhere is still offered, under its own name', async () => {
+  addAgent('undescribed-agent')
+  pikkuState(null, 'agent', 'agentsMeta')['undescribed-agent'] = {
+    ...pikkuState(null, 'agent', 'agentsMeta')['undescribed-agent'],
+    tools: ['bareTool'],
+  } as any
+  pikkuState(null, 'rpc', 'meta').bareTool = 'bareTool'
+  // A title is deliberately not a description: it labels the tool in a UI, it
+  // does not tell a model when to reach for it.
+  pikkuState(null, 'function', 'meta').bareTool = {
+    title: 'Bare Tool',
+    inputSchemaName: 'BareInput',
+    sessionless: true,
+  }
+  pikkuState(null, 'misc', 'schemas').set('BareInput', { type: 'object' })
+  pikkuState(null, 'function', 'functions').set('bareTool', {
+    func: async () => 'ok',
+  })
+
+  // No metaService at all — a bundle with no readable .pikku directory.
+  pikkuState(null, 'package', 'singletonServices', {
+    logger: { warn: () => {} },
+  } as any)
+
+  const { tools } = await buildToolDefs(
+    {},
+    new Map<string, string>(),
+    'resource-undescribed',
+    'undescribed-agent',
+    null
+  )
+
+  assert.equal(tools.length, 1)
+  assert.equal(tools[0].description, 'bareTool')
+})

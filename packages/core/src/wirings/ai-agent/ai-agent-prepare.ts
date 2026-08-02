@@ -523,6 +523,23 @@ export async function buildToolDefs(
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
   if (!meta) return { tools, missingRpcs }
 
+  /**
+   * A tool's description is what the model is told it does, and the main thing
+   * it chooses between tools on. It does not survive into the meta registered at
+   * boot: `description` is classed as a verbose field, so the bundled copy has
+   * it stripped and `fnMeta.description` is always undefined — every tool was
+   * being offered under its own bare name regardless of what its author wrote.
+   *
+   * `getFunctionsMeta` reads the verbose file and falls back to the minimal one,
+   * recovering the authored description wherever the generated `.pikku`
+   * directory is readable. Where it is not — no `metaService`, or a deployment
+   * shipping only the stripped copy — tools fall back to their name, which is
+   * what they did before this lookup existed.
+   */
+  const describedFunctions = await singletonServices.metaService
+    ?.getFunctionsMeta()
+    .catch(() => undefined)
+
   // Get session for permission filtering
   const session = params.sessionService
     ? await params.sessionService.get()
@@ -639,7 +656,10 @@ export async function buildToolDefs(
 
       tools.push({
         name: toolName.replaceAll('@', '_').replaceAll(':', '__'),
-        description: fnMeta?.description || fnMeta?.title || toolName,
+        description:
+          describedFunctions?.[pikkuFuncId]?.description ||
+          fnMeta?.description ||
+          toolName,
         inputSchema,
         needsApproval: needsApproval || undefined,
         approvalDescriptionFn,

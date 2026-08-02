@@ -15,6 +15,7 @@ import {
   aggregateRequiredServices,
   stampAuthHandlerServices,
   validateAgentModels,
+  validateAgentToolReferences,
   validateSecretOverrides,
   validateVariableOverrides,
   validateCredentialOverrides,
@@ -469,6 +470,7 @@ export const inspect = async (
     }
 
     validateAgentModels(logger, state)
+    validateAgentToolReferences(logger, state, options)
     validateSecretOverrides(logger, state)
     validateVariableOverrides(logger, state)
     validateCredentialOverrides(logger, state)

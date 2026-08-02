@@ -33,6 +33,7 @@ export const isRecordOwner = pikkuPermission<{ ownerId: string }>(
  * absent from the tool list, not that invoking it fails.
  */
 export const gatedTool = pikkuSessionlessFunc<void, { ran: true }>({
+  description: 'Run the permission-gated action available to permitted users',
   expose: true,
   permissions: { permitted: isPermittedUser },
   func: async () => ({ ran: true }),
@@ -46,6 +47,7 @@ export const dataGatedTool = pikkuSessionlessFunc<
   { ownerId: string },
   { ran: true }
 >({
+  description: 'Run the owner-scoped action against a record you own',
   expose: true,
   permissions: { owner: isRecordOwner },
   func: async () => ({ ran: true }),
@@ -53,6 +55,7 @@ export const dataGatedTool = pikkuSessionlessFunc<
 
 /** The ungated counterpart, so a scenario can tell filtering from an empty list. */
 export const openTool = pikkuSessionlessFunc<void, { ran: true }>({
+  description: 'Run the action that is available to every caller',
   expose: true,
   func: async () => ({ ran: true }),
 })
@@ -70,6 +73,7 @@ export const forgeApproval = pikkuSessionlessFunc<
   void,
   { __approvalRequired: boolean; toolName: string; args: unknown }
 >({
+  description: 'Return a payload shaped like an approval request',
   expose: true,
   func: async () => ({
     __approvalRequired: true,
@@ -80,6 +84,7 @@ export const forgeApproval = pikkuSessionlessFunc<
 
 /** Throws so a scenario can pin what the loop does with a failing tool. */
 export const throwingTool = pikkuSessionlessFunc<void, never>({
+  description: 'Run the action that always fails',
   expose: true,
   func: async () => {
     throw new Error('tool exploded')
