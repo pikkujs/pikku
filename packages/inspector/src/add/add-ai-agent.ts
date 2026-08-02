@@ -371,6 +371,9 @@ export const addAIAgent: AddWiring = (
       | string
       | null
     const goalValue = getPropertyValue(obj, 'goal') as string | null
+    const instructionsValue = getPropertyValue(obj, 'instructions') as
+      | string
+      | null
 
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
     const temperatureValue = getPropertyValue(obj, 'temperature') as
@@ -569,6 +572,7 @@ export const addAIAgent: AddWiring = (
       role: roleValue || undefined,
       personality: personalityValue || undefined,
       goal: goalValue || '',
+      instructions: instructionsValue || undefined,
       model: modelValue || '',
       summary,
       errors,
