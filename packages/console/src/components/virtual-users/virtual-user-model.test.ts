@@ -2,19 +2,26 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { toVirtualUserDocs } from './virtual-user-model.js'
 
+// `expose: true` is what puts a function on the rpc transport, and only those
+// reach the catalogue. It is set on the step too, so that step's absence from
+// the surface is attributable to `scenarioStep` rather than to it merely being
+// unexposed.
 const functions = {
-  listOrders: { name: 'listOrders' },
+  listOrders: { name: 'listOrders', expose: true },
   refundOrder: {
     name: 'refundOrder',
+    expose: true,
     permissions: [{ name: 'isFinance' }],
   },
   payOutSupplier: {
     name: 'payOutSupplier',
+    expose: true,
     approvalRequired: true,
   },
-  archiveOrder: { name: 'archiveOrder', readonly: false },
+  archiveOrder: { name: 'archiveOrder', expose: true, readonly: false },
   buysAnApple: {
     name: 'buysAnApple',
+    expose: true,
     scenarioStep: true,
     scenarioStepTemplate: 'buys an apple',
   },
