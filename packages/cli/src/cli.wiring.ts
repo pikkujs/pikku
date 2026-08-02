@@ -144,6 +144,11 @@ wireCLI({
         'Fail the build on critical diagnostics. Always on; accepted for symmetry with --fail-on-error/--fail-on-warn.',
       default: true,
     },
+    strictMeta: {
+      description:
+        "Fail the build when an AI agent's tool has no description. Without one the model is offered the tool under its own name, so this is a quality gate rather than a correctness one — hence off by default. A 'title' does not satisfy it.",
+      default: false,
+    },
     tsc: {
       description:
         "After codegen, run a real tsc --noEmit over the project's tsconfig and fail on type errors. Prints full diagnostics with code frames. Off by default.",

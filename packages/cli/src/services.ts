@@ -346,6 +346,7 @@ export const createSingletonServices: CreateSingletonServices<
         // data-classification leaks. Off by default — it's the dominant codegen
         // cost. Never runs during a plain `pikku all`.
         classificationCheck: !setupOnly && !!config.security,
+        strictMeta: !!(config as any).strictMeta,
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,
