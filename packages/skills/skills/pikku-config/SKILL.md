@@ -57,12 +57,31 @@ wireVariable({
 })
 ```
 
-### Accessing in Functions
+### Accessing Secrets
+
+`secrets` is **not available inside functions, AI agents, workflows, permissions
+or any wire** — it is removed from their services type and throws at runtime if
+reached through a cast. Read it where you wire the app and hand the value to a
+service:
 
 ```typescript
-// Secrets — encrypted, sensitive values
-const config = await services.secrets.getSecret('SECRET_NAME')
+// services.ts — allowed
+const createSingletonServices = pikkuServices(async (config, { secrets }) => ({
+  stripe: new StripeService(await secrets.getSecret('STRIPE_CONFIG')),
+}))
 
+// functions/*.ts — ask the service, never the secret store
+export const charge = pikkuFunc({
+  func: async ({ stripe }, data) => stripe.charge(data.amount),
+})
+```
+
+Allowed: `pikkuServices`, `pikkuWireServices`, addon service factories,
+middleware. Everywhere else, the service you constructed is the interface.
+
+### Accessing Variables in Functions
+
+```typescript
 // Variables — plain-text configuration
 const flags = await services.variables.getVariableJSON('VARIABLE_NAME')
 
@@ -93,7 +112,7 @@ wireSecret({
   }),
 })
 
-// In your function — fully typed
+// In your services factory — fully typed
 const config = await secrets.getSecret('STRIPE_CONFIG')
 // config.apiKey       → string (autocompleted)
 // config.webhookSecret → string (autocompleted)
@@ -201,7 +220,7 @@ wireOAuth2Credential({
 // functions/admin.functions.ts
 export const getAppStatus = pikkuSessionlessFunc({
   title: 'Get App Status',
-  func: async ({ variables, secrets }) => {
+  func: async ({ variables }) => {
     const appConfig = await variables.getVariableJSON('APP_CONFIG')
     return {
       appName: appConfig.appName,

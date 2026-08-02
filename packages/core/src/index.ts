@@ -10,8 +10,10 @@ export type {
   CorePikkuMiddlewareFactory,
   CorePikkuMiddlewareGroup,
   CoreServices,
+  CoreSecretlessSingletonServices,
   CoreSingletonServices,
   CoreUserSession,
+  SecretlessServices,
   CreateConfig,
   ServerLifecycle,
   FunctionMeta,
@@ -118,6 +120,14 @@ export type {
   SendTextEmailInput,
 } from './services/email-service.js'
 export type { SecretService } from './services/secret-service.js'
+export {
+  SecretAccessDeniedError,
+  withoutSecrets,
+} from './services/secretless.js'
+export {
+  SecretHostNotAllowedError,
+  assertSecretAllowedForHost,
+} from './services/secret-host-binding.js'
 export type { VariablesService } from './services/variables-service.js'
 export type {
   ContentService,

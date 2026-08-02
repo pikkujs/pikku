@@ -1,10 +1,11 @@
 import type {
   CoreServices,
-  CoreSingletonServices,
+  CoreSecretlessSingletonServices,
   CoreUserSession,
   CorePikkuMiddleware,
   PikkuWire,
   PickRequired,
+  SecretlessServices,
 } from '../types/core.types.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -29,7 +30,8 @@ export type ZodLike<T = any> = StandardSchemaV1<T, T>
 export type CorePikkuFunction<
   In,
   Out,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Session extends CoreUserSession = CoreUserSession,
   Wire extends PikkuWire<In, Out, true, Session, PikkuRPC, null, string> =
     PikkuWire<In, Out, true, Session>,
@@ -50,7 +52,8 @@ export type CorePikkuFunction<
 export type CorePikkuFunctionSessionless<
   In,
   Out,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Session extends CoreUserSession = CoreUserSession,
   Wire extends PikkuWire<In, Out, false, Session, PikkuRPC, null, string> =
     PikkuWire<In, Out, false, Session>,
@@ -69,7 +72,8 @@ export type CorePikkuFunctionSessionless<
  */
 export type CorePikkuPermission<
   In = any,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
@@ -83,7 +87,8 @@ export type CorePikkuPermission<
  */
 export type CorePikkuPermissionConfig<
   In = any,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = {
@@ -122,7 +127,8 @@ export type CorePikkuPermissionConfig<
  */
 export const pikkuPermission = <
   In = any,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Wire extends PickRequired<
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
     'session'
@@ -148,7 +154,8 @@ export const pikkuPermission = <
  */
 export type CorePikkuPermissionFactory<
   In = any,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (input: In) => CorePikkuPermission<any, Services, Wire>
@@ -188,7 +195,8 @@ export const pikkuPermissionFactory = <In = any>(
  */
 export type CorePikkuApprovalDescription<
   In = any,
-  Services extends CoreSingletonServices = CoreSingletonServices,
+  Services extends CoreSecretlessSingletonServices =
+    CoreSecretlessSingletonServices,
 > = (services: Services, data: In) => Promise<string>
 
 /**
@@ -206,7 +214,8 @@ export type CorePikkuApprovalDescription<
  */
 export const pikkuApprovalDescription = <
   In = any,
-  Services extends CoreSingletonServices = CoreSingletonServices,
+  Services extends CoreSecretlessSingletonServices =
+    CoreSecretlessSingletonServices,
 >(
   fn: CorePikkuApprovalDescription<In, Services>
 ): CorePikkuApprovalDescription<In, Services> => {
@@ -214,12 +223,14 @@ export const pikkuApprovalDescription = <
 }
 
 export type CorePikkuAuth<
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, session: Session) => Promise<boolean> | boolean
 
 export type CorePikkuAuthConfig<
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Session extends CoreUserSession = CoreUserSession,
 > = {
   func: CorePikkuAuth<Services, Session>
@@ -228,7 +239,8 @@ export type CorePikkuAuthConfig<
 }
 
 export const pikkuAuth = <
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
   Session extends CoreUserSession = CoreUserSession,
 >(
   auth:

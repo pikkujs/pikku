@@ -127,11 +127,11 @@ in-app features don't.
   (typically `sql/`). Use a numbered prefix matching existing files.
 - **Secrets and env-vars: NEVER `process.env`.** Declare them with
   `wireSecret` (sensitive) or `wireVariable` (non-sensitive) — both with a
-  zod schema for type-safe access. Read with
-  `services.secrets.getSecret('NAME')` or `services.variables.get('NAME')`.
-  See the **pikku-config** skill for the full pattern (including
-  OAuth2 credentials). This applies even in `config.ts` and singleton
-  service factories.
+  zod schema for type-safe access. Read variables with
+  `services.variables.get('NAME')`. Secrets are **not available in functions** —
+  read them in `services.ts` with `secrets.getSecret('NAME')` and pass the value
+  into the service the function uses. See the **pikku-config** skill for the full
+  pattern (including OAuth2 credentials). This applies even in `config.ts`.
 
 ### Conventions to copy from neighbours
 

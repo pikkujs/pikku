@@ -1,3 +1,4 @@
+import type { SecretUsage } from './extract-secret-usage.js'
 import type { JSONValue } from '@pikku/core'
 import type {
   InspectorDiagnostic,
@@ -201,6 +202,7 @@ export interface SerializableInspectorState {
   secrets: {
     definitions: InspectorState['secrets']['definitions']
     files: string[]
+    usage: Record<string, SecretUsage>
   }
   credentials: {
     definitions: InspectorState['credentials']['definitions']
@@ -416,6 +418,7 @@ export function serializeInspectorState(
     secrets: {
       definitions: state.secrets.definitions,
       files: Array.from(state.secrets.files),
+      usage: Object.fromEntries(state.secrets.usage),
     },
     credentials: {
       definitions: state.credentials.definitions,
@@ -611,6 +614,7 @@ export function deserializeInspectorState(
     secrets: {
       definitions: data.secrets?.definitions || [],
       files: new Set(data.secrets?.files || []),
+      usage: new Map(Object.entries(data.secrets?.usage || {})),
     },
     credentials: {
       definitions: data.credentials?.definitions || [],

@@ -221,6 +221,13 @@ const apiKey = services.variables.get('API_KEY')
 
 `process.env` belongs in server bootstrap code (`start.ts`) only.
 
+## Secrets
+
+`secrets` is not part of a function's services. It is available only in
+`pikkuServices`, `pikkuWireServices`, addon service factories and middleware —
+read it there, give the value to a service, and have the function ask that
+service. Reaching for it through a cast throws at runtime.
+
 ## Testing
 
 Functions are easily testable because they're pure:

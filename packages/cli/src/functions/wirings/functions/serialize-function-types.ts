@@ -31,7 +31,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired } from '@pikku/core'
+import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired, SecretlessServices } from '@pikku/core'
 import type { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import {
@@ -67,7 +67,10 @@ ${configTypeImport.includes('Config type not found') ? 'export type Config = any
  * why an \`if (!service)\` guard inside a function body is always dead code.
  */
 export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
-export type WiredServices = RequiredSingletonServices & Services
+export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
+
+/** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */
+export type WiredAuthServices = SecretlessServices<WiredSingletonServices>
 
 /**
  * Inline node configuration for function definitions.
@@ -86,7 +89,7 @@ export type NodeConfig = {
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type PikkuPermission<In = unknown, RequiredServices extends Services = WiredServices> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
+export type PikkuPermission<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
@@ -99,7 +102,7 @@ export type PikkuMiddleware<RequiredServices extends SingletonServices = WiredSi
 /**
  * Configuration object for creating a permission with metadata
  */
-export type PikkuPermissionConfig<In = unknown, RequiredServices extends Services = WiredServices> = {
+export type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = {
   /** The permission function */
   func: PikkuPermission<In, RequiredServices>
   /** Optional human-readable name for the permission */
@@ -144,12 +147,12 @@ export const pikkuPermission = <In>(
  *
  * @template RequiredServices - The services required for this auth check
  */
-export type PikkuAuth<RequiredServices extends SingletonServices = WiredSingletonServices> = CorePikkuAuth<RequiredServices, Session>
+export type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuth<RequiredServices, Session>
 
 /**
  * Configuration object for creating an auth permission with metadata
  */
-export type PikkuAuthConfig<RequiredServices extends SingletonServices = WiredSingletonServices> = CorePikkuAuthConfig<RequiredServices, Session>
+export type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuthConfig<RequiredServices, Session>
 
 /**
  * Factory function for creating auth-only permissions with tree-shaking support.
@@ -171,7 +174,7 @@ export type PikkuAuthConfig<RequiredServices extends SingletonServices = WiredSi
  * })
  * \\\`\\\`\\\`
  */
-export const pikkuAuth = <RequiredServices extends SingletonServices = WiredSingletonServices>(
+export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices>(
   auth: PikkuAuth<RequiredServices> | PikkuAuthConfig<RequiredServices>
 ): PikkuPermission<any, any> => {
   return pikkuAuthCore(auth as any) as any
@@ -273,7 +276,7 @@ export const pikkuPermissionFactory = <In = any>(
  * @template In - The input type (same as the function it describes)
  * @template RequiredServices - The services required for this description function
  */
-export type PikkuApprovalDescription<In = unknown, RequiredServices extends Services = WiredServices> = (
+export type PikkuApprovalDescription<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = (
   services: RequiredServices,
   data: In
 ) => Promise<string>
@@ -291,7 +294,7 @@ export type PikkuApprovalDescription<In = unknown, RequiredServices extends Serv
  * )
  * \`\`\`
  */
-export const pikkuApprovalDescription = <In = unknown, RequiredServices extends Services = WiredServices>(
+export const pikkuApprovalDescription = <In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices>(
   fn: PikkuApprovalDescription<In, RequiredServices>
 ): PikkuApprovalDescription<In, RequiredServices> => {
   return fn
@@ -309,7 +312,7 @@ export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
   RequiredWires extends keyof PikkuWire = never,
-  RequiredServices extends Services = WiredServices
+  RequiredServices extends SecretlessServices<Services> = WiredServices
 > = CorePikkuFunctionSessionless<
     In,
     Out,
@@ -330,7 +333,7 @@ export type PikkuFunction<
   In = unknown,
   Out = never,
   RequiredWires extends keyof PikkuWire = 'session',
-  RequiredServices extends Services = WiredServices
+  RequiredServices extends SecretlessServices<Services> = WiredServices
 > = CorePikkuFunction<
     In,
     Out,

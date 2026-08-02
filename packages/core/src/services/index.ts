@@ -200,3 +200,7 @@ export {
   spy,
   type StubCall,
 } from './stub-tracker.js'
+export {
+  SecretHostNotAllowedError,
+  assertSecretAllowedForHost,
+} from './secret-host-binding.js'

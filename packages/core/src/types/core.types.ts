@@ -167,6 +167,8 @@ export type FunctionRuntimeMeta = {
   scenarioStepSurfaces?: ScenarioSurface[]
   /** Scenario steps only: the prose a reporter renders, with `{placeholders}` filled from the step's recorded input. */
   scenarioStepTemplate?: string
+  /** Keeps the full `SecretService`. Set by the inspector, read by the runner. */
+  secretBroker?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
@@ -279,7 +281,10 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   /** The log level for the application. */
   logLevel?: LogLevel
   /** Secrets used by the application (optional). */
-  secrets?: {}
+  secrets?: {
+    /** Refuse a secret that declares no `allowedHosts` rather than treating it as unrestricted. */
+    requireAllowedHosts?: boolean
+  }
 
   workflow?: WorkflowServiceConfig
   /** Default retry and signing settings for outgoing webhooks. */
@@ -649,6 +654,14 @@ export const pikkuAIMiddleware = <
  */
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
+
+/** Strips `secrets` from a services type. */
+export type SecretlessServices<Services> = Omit<Services, 'secrets'>
+
+/** The constraint every function-, permission- and auth-facing type is bounded by. */
+export type CoreSecretlessSingletonServices<
+  Config extends CoreConfig = CoreConfig,
+> = SecretlessServices<CoreSingletonServices<Config>>
 
 export type WireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,

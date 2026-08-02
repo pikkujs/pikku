@@ -4,6 +4,7 @@ import {
   wrapChannelWithMiddleware,
 } from '../wirings/channel/channel-middleware-runner.js'
 import { runPermissions } from '../permissions.js'
+import { withoutSecrets } from '../services/secretless.js'
 import { pikkuState } from '../pikku-state.js'
 import {
   applyDefaultsFromSchema,
@@ -170,6 +171,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const resolvedFunctionId = funcMeta.pikkuFuncId ?? funcName
 
+  const keepsSecrets = funcMeta.secretBroker === true
+
   // For addon packages, get or create their singleton services
   const resolvedSingletonServices = packageName
     ? await getOrCreatePackageSingletonServices(
@@ -327,7 +330,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     await runPermissions({
       funcPermissions: funcConfig.permissions,
-      services: resolvedSingletonServices,
+      services: keepsSecrets
+        ? resolvedSingletonServices
+        : (withoutSecrets(
+            resolvedSingletonServices,
+            'a permission'
+          ) as CoreSingletonServices),
       wire: invocationWire as any,
       data: actualData,
       packageName,
@@ -383,7 +391,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
         configurable: true,
         enumerable: true,
       })
-      return await funcConfig.func(services, actualData, invocationWire)
+      return await funcConfig.func(
+        keepsSecrets ? services : withoutSecrets(services, 'a pikku function'),
+        actualData,
+        invocationWire
+      )
     } finally {
       // Flush the runner-installed audit buffer before wire services close.
       await invocationAuditLog?.close()

@@ -17,6 +17,12 @@ export type CoreSecret<T = unknown> = {
    * secret was last updated and whether it is due for rotation.
    */
   rotationPeriod?: string
+  /**
+   * Hosts this secret may be sent to, e.g. `['api.notion.com']` or
+   * `'*.notion.com'`. Omitted means unrestricted unless
+   * `config.secrets.requireAllowedHosts` is set.
+   */
+  allowedHosts?: string[]
 }
 
 export type OAuth2CredentialConfig = {
@@ -43,6 +49,12 @@ export type SecretDefinitionMeta = {
   docsUrl?: string
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string
+  /**
+   * Hosts this secret may be sent to, e.g. `['api.notion.com']` or
+   * `'*.notion.com'`. Omitted means unrestricted unless
+   * `config.secrets.requireAllowedHosts` is set.
+   */
+  allowedHosts?: string[]
   sourceFile?: string
 }
 
