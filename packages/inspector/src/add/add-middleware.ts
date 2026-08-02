@@ -1,5 +1,9 @@
 import * as ts from 'typescript'
-import type { AddWiring, InspectorState } from '../types.js'
+import type {
+  AddWiring,
+  InspectorState,
+  MiddlewareGroupMeta,
+} from '../types.js'
 import {
   extractFunctionName,
   isNamedExport,
@@ -12,6 +16,62 @@ import {
 import { extractMiddlewareRefs } from '../utils/middleware.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+
+/**
+ * Record a middleware group, keeping any registration already stored under the
+ * same pattern or tag.
+ *
+ * Several files may add middleware for one pattern — an app's own `'*'` group
+ * alongside the generated better-auth session bridge, say — and the runtime
+ * composes them. A plain `set` kept only the last, and codegen emits imports
+ * from what is stored, so the other file was never imported and its middleware
+ * silently stopped running. Merging is the only shape that cannot lose a gate;
+ * the first registration stays primary so single-registration groups serialize
+ * exactly as before.
+ */
+function recordMiddlewareGroup(
+  groups: Map<string, MiddlewareGroupMeta>,
+  key: string,
+  group: MiddlewareGroupMeta
+): void {
+  const existing = groups.get(key)
+  if (!existing) {
+    groups.set(key, group)
+    return
+  }
+
+  // The same call seen twice — the inspector may revisit a file — is not a
+  // second registration, and appending it would emit a duplicate import.
+  const alreadyRecorded = [
+    existing,
+    ...(existing.additionalRegistrations ?? []),
+  ]
+  if (
+    alreadyRecorded.some(
+      (r) => r.sourceFile === group.sourceFile && r.position === group.position
+    )
+  ) {
+    return
+  }
+
+  existing.additionalRegistrations = [
+    ...(existing.additionalRegistrations ?? []),
+    {
+      exportName: group.exportName,
+      sourceFile: group.sourceFile,
+      position: group.position,
+      isFactory: group.isFactory,
+    },
+  ]
+  existing.count += group.count
+  existing.instanceIds = [...existing.instanceIds, ...group.instanceIds]
+  existing.services = {
+    optimized: false,
+    services: Array.from(
+      new Set([...existing.services.services, ...group.services.services])
+    ),
+  }
+}
 
 function renameTempDefinitions(
   state: InspectorState,
@@ -333,7 +393,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       )
     }
 
-    state.middleware.tagMiddleware.set(tag, {
+    recordMiddlewareGroup(state.middleware.tagMiddleware, tag, {
       exportName: exportedName,
       sourceFile,
       position: node.getStart(),
@@ -477,7 +537,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       )
     }
 
-    state.http.routeMiddleware.set(pattern, {
+    recordMiddlewareGroup(state.http.routeMiddleware, pattern, {
       exportName: exportedName,
       sourceFile,
       position: node.getStart(),
@@ -796,7 +856,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       )
     }
 
-    state.channelMiddleware.tagMiddleware.set(tag, {
+    recordMiddlewareGroup(state.channelMiddleware.tagMiddleware, tag, {
       exportName: exportedName,
       sourceFile,
       position: node.getStart(),

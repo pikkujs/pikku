@@ -50,14 +50,31 @@ export type MetaInputTypes = Map<
   }
 >
 
-export interface MiddlewareGroupMeta {
+/** One `addHTTPMiddleware`/`addTagMiddleware`/`addChannelMiddleware` call. */
+export interface MiddlewareRegistration {
   exportName: string | null // null if not exported
   sourceFile: string
   position: number
+  isFactory: boolean // true if wrapped in () => add...()
+}
+
+export interface MiddlewareGroupMeta extends MiddlewareRegistration {
   services: FunctionServicesMeta
   count: number
   instanceIds: string[]
-  isFactory: boolean // true if wrapped in () => add...()
+  /**
+   * The registrations after the first, when several files add middleware for
+   * the same pattern or tag.
+   *
+   * A group is keyed by its pattern/tag, so without this a second file's call
+   * overwrote the first's and only the survivor got an import emitted into
+   * pikku-middleware.gen.ts — the losing file was never imported, so its
+   * registration never ran. The runtime composes repeated registrations for a
+   * pattern happily; only codegen dropped one, which is how an app could lose
+   * its session-bridge middleware to an unrelated `'*'` group and see nothing
+   * go wrong until a request arrived without a session.
+   */
+  additionalRegistrations?: MiddlewareRegistration[]
 }
 
 export interface InspectorHTTPState {

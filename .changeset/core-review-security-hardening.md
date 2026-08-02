@@ -16,7 +16,7 @@
 '@pikku/next': patch
 ---
 
-Close ten security weaknesses found in a review of `@pikku/core`. Most are
+Close eleven security weaknesses found in a review of `@pikku/core`. Most are
 breaking, and two invalidate data or credentials already in the wild — read the
 migration notes before upgrading.
 
@@ -275,3 +275,14 @@ key_version N" configuration error. Both now throw, naming the key and its key
 version, matching the kysely behaviour. This matters most alongside the KEK
 change above: without it, an upgrade surfaces as a partial secrets map and an
 opaque downstream failure instead of an error naming the secret to re-enter.
+
+**A second middleware registration for a pattern no longer erases the first.**
+`addHTTPMiddleware`, `addTagMiddleware` and `addChannelMiddleware` groups are
+keyed by pattern or tag and held one source file each, so a second file's call
+overwrote the first's. Codegen emits its imports from what is stored, so the
+losing file was never imported and its middleware never registered — the
+runtime composes repeated registrations for a pattern happily, and only codegen
+dropped one. Adding an unrelated `addHTTPMiddleware('*', …)` to an app was
+enough to silently unregister the generated better-auth session bridge, which
+fails open and gives no sign until a request arrives without a session. A group
+now carries every registration made for it, and all of them are imported.
