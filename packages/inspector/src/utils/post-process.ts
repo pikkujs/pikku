@@ -10,10 +10,14 @@ import type {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '@pikku/core'
+import type ts from 'typescript'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
+import { isSecretBrokerFunction } from './secret-brokers.js'
+import { findSecretAliasServices } from './secret-alias-services.js'
+import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
@@ -914,6 +918,101 @@ export function validateSchemaWiringSeparation(
           `These must be in separate files because the CLI imports schema files at runtime, which triggers wiring side-effects that crash without server context. ` +
           `Move the route/wiring definitions to a dedicated wiring file.`
       )
+    }
+  }
+}
+
+/** Marks the functions that keep the full `SecretService`. */
+export function computeSecretBrokers(state: InspectorState): void {
+  for (const [id, meta] of Object.entries(state.functions.meta)) {
+    if (isSecretBrokerFunction(meta.pikkuFuncId ?? id)) {
+      meta.secretBroker = true
+    }
+  }
+}
+
+/**
+ * Refuses a singleton service that is a `SecretService` under another name.
+ *
+ * `secrets` is omitted from every function-facing services type, but
+ * `pikkuServices(async ({ secrets }) => ({ cfg: secrets }))` re-exposes it under
+ * a name the omit does not cover. A name-based rule misses this; the type does
+ * not.
+ */
+export function validateNoSecretAliasServices(
+  logger: InspectorLogger,
+  checker: ts.TypeChecker,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  if (!('typesLookup' in state)) {
+    return
+  }
+  const singletonServicesTypes = state.typesLookup.get('SingletonServices')
+  if (!singletonServicesTypes?.length) {
+    return
+  }
+  const aliases = findSecretAliasServices(singletonServicesTypes[0]!, checker)
+  if (aliases.length === 0) {
+    return
+  }
+
+  const report = (kind: string, id: string, services: string[]) => {
+    const used = services.filter((service) => aliases.includes(service))
+    if (used.length === 0) {
+      return
+    }
+    logger.critical(
+      ErrorCode.SECRET_SERVICE_ALIASED,
+      `${kind} '${id}' receives ${used.map((s) => `'${s}'`).join(', ')}, which ${used.length === 1 ? 'is' : 'are'} a SecretService under another name. ` +
+        `SecretService is confined to pikkuServices, pikkuWireServices, addon service factories and middleware — give a service the secret value when you construct it and expose only what the function needs.`
+    )
+  }
+
+  for (const [id, meta] of Object.entries(state.functions.meta)) {
+    if (meta.secretBroker) {
+      continue
+    }
+    report('Function', id, meta.services?.services ?? [])
+  }
+  for (const [id, def] of Object.entries(state.permissions.definitions)) {
+    report('Permission', id, def.services?.services ?? [])
+  }
+}
+
+/**
+ * Reports secret reads the catalogue does not account for.
+ *
+ * `getSecret('X')` with no matching `wireSecret` is a value that will be missing
+ * at first request rather than at deploy; a non-literal key is a read the
+ * manifest cannot cover, so a per-unit scope cannot be narrowed around it.
+ */
+export function validateSecretUsage(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const declared = new Set(state.secrets.definitions.map((d) => d.secretId))
+  for (const definition of state.secrets.definitions) {
+    if (definition.oauth2?.tokenSecretId) {
+      declared.add(definition.oauth2.tokenSecretId)
+    }
+  }
+
+  for (const [file, usage] of state.secrets.usage) {
+    const relativeFile = relative(state.rootDir, file)
+    const undeclared = usage.keys.filter((key) => !declared.has(key))
+    if (undeclared.length > 0) {
+      logger.diagnostic({
+        severity: 'warn',
+        code: ErrorCode.SECRET_NOT_DECLARED,
+        message: `${relativeFile} reads ${undeclared.map((k) => `'${k}'`).join(', ')}, which no wireSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it.`,
+      })
+    }
+    if (usage.dynamic.length > 0) {
+      logger.diagnostic({
+        severity: 'warn',
+        code: ErrorCode.SECRET_KEY_NOT_STATIC,
+        message: `${relativeFile} reads a secret with a non-literal key (${usage.dynamic.join(', ')}). The deployment cannot narrow its secret scope around a key it cannot see.`,
+      })
     }
   }
 }

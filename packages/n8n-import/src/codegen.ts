@@ -863,55 +863,34 @@ function emitIntegrationStub(node: ParsedNode): string {
 /**
  * Emit a real Pikku function for a static `toolHttpRequest` agent tool — the
  * agent-tool sibling of the main-flow `graph:httpRequest` mapping. The URL,
- * method, headers and query are baked in as literals; auth is resolved from a
- * secret at call time (mirroring `graph:httpRequest`'s injection), so no
- * credential value is ever emitted. The agent references it unchanged via
- * `tools: [ref(<rpcName>)]`.
+ * method, headers and query are baked in as literals; auth is handed to the
+ * `httpRequester` service as a credential *reference*, so no credential value
+ * is ever emitted and the function never holds one. The agent references it
+ * unchanged via `tools: [ref(<rpcName>)]`.
  */
 function emitHttpToolFunction(node: ParsedNode, spec: HttpToolSpec): string {
   const Pascal = toPascalCase(node.rpcName)
   const inputName = `${Pascal}Input`
   const outputName = `${Pascal}Output`
-  const svc = spec.auth ? '{ secrets }' : ''
 
   const body: string[] = [`    const url = new URL(${q(spec.url)})`]
   for (const [key, value] of Object.entries(spec.query))
     body.push(`    url.searchParams.set(${q(key)}, ${q(value)})`)
   body.push(`    const headers: Record<string, string> = ${q(spec.headers)}`)
 
-  if (spec.auth) {
-    const auth = spec.auth
-    body.push(
-      `    const secret = await secrets.getSecret(${q(auth.credential)})`
-    )
-    for (const [key, value] of Object.entries(auth.extraHeaders ?? {}))
-      body.push(
-        `    if (!(${q(key)} in headers)) headers[${q(key)}] = ${q(value)}`
-      )
-    switch (auth.mode) {
-      case 'bearer':
-        body.push(`    headers['Authorization'] = \`Bearer \${secret}\``)
-        break
-      case 'apiKeyHeader':
-        body.push(
-          `    headers[${q(auth.headerName ?? 'Authorization')}] = secret`
-        )
-        break
-      case 'apiKeyQuery':
-        body.push(
-          `    url.searchParams.set(${q(auth.queryName ?? 'api_key')}, secret)`
-        )
-        break
-      case 'basic':
-        body.push(
-          `    headers['Authorization'] = \`Basic \${Buffer.from(secret).toString('base64')}\``
-        )
-        break
-    }
-  }
+  const auth = spec.auth
+  const authArgument = auth
+    ? `, auth: ${q({
+        mode: auth.mode,
+        credential: auth.credential,
+        ...(auth.headerName ? { headerName: auth.headerName } : {}),
+        ...(auth.queryName ? { queryName: auth.queryName } : {}),
+        ...(auth.extraHeaders ? { extraHeaders: auth.extraHeaders } : {}),
+      })}`
+    : ''
 
   body.push(
-    `    const response = await fetch(url, { method: ${q(spec.method)}, headers })`,
+    `    const response = await httpRequester.request({ url, method: ${q(spec.method)}, headers${authArgument} })`,
     `    const text = await response.text()`,
     `    try {`,
     `      const parsed = JSON.parse(text)`,
@@ -932,7 +911,7 @@ function emitHttpToolFunction(node: ParsedNode, spec: HttpToolSpec): string {
     `  description: ${q(spec.description)},`,
     `  input: ${inputName},`,
     `  output: ${outputName},`,
-    `  func: async (${svc}) => {`,
+    `  func: async ({ httpRequester }) => {`,
     ...body,
     `  },`,
     `})`,

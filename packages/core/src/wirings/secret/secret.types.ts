@@ -13,6 +13,12 @@ export type CoreSecret<T = unknown> = {
   docsUrl?: string
   /** Rotation cadence as a duration string, e.g. `'1d'`, `'30day'`, `'1w'`. */
   rotationPeriod?: string
+  /**
+   * Hosts this secret may be sent to, e.g. `['api.notion.com']` or
+   * `'*.notion.com'`. Omitted means unrestricted unless
+   * `config.secrets.requireAllowedHosts` is set.
+   */
+  allowedHosts?: string[]
 }
 
 export type OAuth2CredentialConfig = {
@@ -35,6 +41,12 @@ export type SecretDefinitionMeta = {
   docsUrl?: string
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string
+  /**
+   * Hosts this secret may be sent to, e.g. `['api.notion.com']` or
+   * `'*.notion.com'`. Omitted means unrestricted unless
+   * `config.secrets.requireAllowedHosts` is set.
+   */
+  allowedHosts?: string[]
   sourceFile?: string
 }
 

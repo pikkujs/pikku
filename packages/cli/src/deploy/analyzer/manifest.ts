@@ -123,7 +123,14 @@ export interface SecretDeclaration {
   secretId: string
   displayName: string
   description?: string
+  /** Hosts this secret may be sent to. Absent means unrestricted. */
+  allowedHosts?: string[]
+  /** True when some code reads this secret with a statically resolvable key. */
+  read?: boolean
 }
+
+/** Secret reads whose key the inspector could not resolve, as `file:line:source`. */
+export type UnresolvedSecretRead = string
 
 export interface VariableDeclaration {
   variableId: string
@@ -142,5 +149,10 @@ export interface DeploymentManifest {
   mcpEndpoints: MCPEndpointDefinition[]
   workflows: WorkflowDefinition[]
   secrets: SecretDeclaration[]
+  /**
+   * Reads with a non-literal key. A deployment can only narrow a unit's secret
+   * scope to the declared set when this is empty.
+   */
+  unresolvedSecretReads: UnresolvedSecretRead[]
   variables: VariableDeclaration[]
 }

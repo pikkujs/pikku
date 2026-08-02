@@ -13,5 +13,10 @@ echo ""
 echo "=== Testing TypedCredentialService ==="
 npx tsx src/test-credentials.ts
 
+# Test 3: the secretless boundary
+echo ""
+echo "=== Testing the secretless boundary ==="
+npx tsx src/test-secretless.ts
+
 echo ""
 echo "=== All tests passed ==="

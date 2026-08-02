@@ -61,31 +61,12 @@ export const HttpRequestOutput = z
   .record(z.string(), z.unknown())
   .describe('Parsed JSON response body')
 
-/**
- * Resolve a secret value, wrapping a missing-secret failure with a message that
- * names the credential — turning "empty value" into an actionable "provision
- * secret X" for an imported workflow.
- */
-async function resolveSecret(
-  secrets: { getSecret: (key: string) => Promise<string> },
-  credential: string
-): Promise<string> {
-  try {
-    return await secrets.getSecret(credential)
-  } catch (cause) {
-    const reason = cause instanceof Error ? cause.message : String(cause)
-    throw new Error(
-      `httpRequest auth: could not resolve secret "${credential}" — provision it before running this workflow (${reason})`
-    )
-  }
-}
-
 export const httpRequest = pikkuSessionlessFunc({
   description: 'Perform an HTTP request and return the response body',
   node: { displayName: 'HTTP Request', category: 'Data', type: 'action' },
   input: HttpRequestInput,
   output: HttpRequestOutput,
-  func: async ({ secrets }, data) => {
+  func: async ({ httpRequester }, data, { session }) => {
     const url = new URL(data.url)
     for (const [key, value] of Object.entries(data.query ?? {})) {
       url.searchParams.set(key, String(value))
@@ -103,36 +84,8 @@ export const httpRequest = pikkuSessionlessFunc({
       headers['content-type'] = 'application/json'
     }
 
-    const auth = data.auth
-    if (auth) {
-      if (auth.mode === 'oauth2') {
-        throw new Error(
-          'httpRequest auth: OAuth2 is not yet supported (needs provider config + token flow)'
-        )
-      }
-      // Static, non-secret headers first — an explicit request header wins.
-      for (const [key, value] of Object.entries(auth.extraHeaders ?? {})) {
-        if (!(key in headers)) headers[key] = value
-      }
-      const secret = await resolveSecret(secrets, auth.credential)
-      switch (auth.mode) {
-        case 'bearer':
-          headers['Authorization'] = `Bearer ${secret}`
-          break
-        case 'apiKeyHeader':
-          headers[auth.headerName ?? 'Authorization'] = secret
-          break
-        case 'apiKeyQuery':
-          url.searchParams.set(auth.queryName ?? 'api_key', secret)
-          break
-        case 'basic':
-          headers['Authorization'] =
-            `Basic ${Buffer.from(secret).toString('base64')}`
-          break
-      }
-    }
-
-    const response = await fetch(url, {
+    const response = await httpRequester.request({
+      url,
       method: data.method,
       headers,
       body: sendsBody
@@ -140,6 +93,8 @@ export const httpRequest = pikkuSessionlessFunc({
           ? (data.body as string)
           : JSON.stringify(data.body)
         : undefined,
+      auth: data.auth,
+      userId: session?.userId,
     })
 
     const text = await response.text()

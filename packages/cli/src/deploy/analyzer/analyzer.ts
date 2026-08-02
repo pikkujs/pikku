@@ -12,6 +12,7 @@ import {
   type InspectorState,
   type SerializedWorkflowGraph,
 } from '@pikku/inspector'
+import { relative } from 'node:path'
 import type { FunctionMeta } from '@pikku/core'
 import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -484,10 +485,23 @@ export function analyzeDeployment(
   }
 
   // ── Secrets & Variables ────────────────────────────────────────────
+  const readSecretIds = new Set<string>()
+  const unresolvedSecretReads: string[] = []
+  for (const [file, usage] of state.secrets.usage ?? []) {
+    for (const key of usage.keys) {
+      readSecretIds.add(key)
+    }
+    for (const read of usage.dynamic) {
+      unresolvedSecretReads.push(`${relative(state.rootDir, file)}:${read}`)
+    }
+  }
+
   const secrets: SecretDeclaration[] = state.secrets.definitions.map((s) => ({
     secretId: s.secretId,
     displayName: s.displayName,
     description: s.description,
+    allowedHosts: s.allowedHosts,
+    read: readSecretIds.has(s.secretId),
   }))
 
   const variables: VariableDeclaration[] = state.variables.definitions.map(
@@ -509,6 +523,7 @@ export function analyzeDeployment(
     mcpEndpoints,
     workflows,
     secrets,
+    unresolvedSecretReads: unresolvedSecretReads.sort(),
     variables,
   }
 }
