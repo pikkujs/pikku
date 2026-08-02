@@ -249,9 +249,9 @@ concept, an existing one noticed.
 **Recommended: separate declarations rather than a `type` field.**
 
 ```ts
-pikkuScenarioStep({ ... })            // a persona acts
-pikkuPlatformScenarioStep({ ... })    // the app acts on itself: a schedule, a cleanup
-pikkuAddonScenarioStep({ ... })       // a third-party system acts
+pikkuScenarioStep({ browser, cli, default })   // a persona acts — many surfaces
+pikkuPlatformScenarioStep({ func })            // the app acts on itself
+pikkuAddonScenarioStep({ addon, func })        // a third-party system acts
 ```
 
 Separate functions beat `type: 'persona' | 'addon' | 'platform'` because:
@@ -260,6 +260,27 @@ Separate functions beat `type: 'persona' | 'addon' | 'platform'` because:
 - the signatures genuinely differ — an addon step must name its addon, a platform step
   must not;
 - an addon package can only export addon steps, which is checkable.
+
+### Platform and addon steps take one `func`, not bindings
+
+`pikkuScenarioStep` declares one implementation **per surface** — the way an actor drives
+the system. `browser` drives a real browser as a human; `cli` goes over the websocket;
+`default` runs server-side.
+
+Neither of the new kinds has surfaces. Nobody clicks *"Stripe's webhook arrives"*; there
+is no human behind *"the platform has expired the trial"*. So both take a single `func`.
+
+`func` rather than `default:` is deliberate. `default` means *the fallback when no other
+surface applies*, which implies other surfaces could exist. `func` says structurally that
+there is one way this happens. That gives the inspector something crisp to enforce: a
+`browser:` or `cli:` key on a platform or addon step is a coded error rather than a
+convention nobody reads.
+
+It also keeps the phase rule coherent. An assertion runs **every** witness it has and
+fails if they disagree — `default` says the system of record is right, `browser` says the
+truth reached the human. A platform or addon step has exactly one witness by
+construction, so there is nothing to disagree with, and no way to write a step that looks
+like it has multiple witnesses but does not.
 
 ### Addon steps are the stub
 
