@@ -15,6 +15,12 @@ async function testStreamAgent() {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
+      // The thread this stream writes to is owned by the session principal, and
+      // the retry loop below comes back to the same thread id. `run-tests.sh`
+      // exports the token; `agent-auth.wiring.ts` trades it for a session.
+      ...(process.env.AGENT_DEMO_TOKEN && {
+        Authorization: `Bearer ${process.env.AGENT_DEMO_TOKEN}`,
+      }),
     },
     body: JSON.stringify({
       message: 'Plan my afternoon — I have 3 hours free',

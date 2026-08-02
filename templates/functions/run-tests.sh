@@ -128,6 +128,16 @@ export HELLO_WORLD_URL_PREFIX
 export TODO_APP_URL="$HELLO_WORLD_URL_PREFIX"
 export WS_PATH
 
+# Agent threads belong to the session principal, and a request with no session
+# gets an owner minted fresh each time — so the agent clients need a session to
+# reach a thread they created on an earlier turn. Minting the token here rather
+# than committing one keeps the templates free of a working credential, and
+# exporting it before the server starts is what puts it in both processes.
+# The `demo-` prefix is load-bearing: LocalSecretService JSON-parses a secret
+# before returning it, so an all-digit token would come back as a number and
+# never match the string in the header.
+export AGENT_DEMO_TOKEN="${AGENT_DEMO_TOKEN:-demo-$(openssl rand -hex 16 2>/dev/null || date +%s)}"
+
 # Recursively terminate a process and all of its descendants. `kill $PID`
 # alone only signals the direct child: yarn forwards SIGTERM to its spawned
 # `tsx` server, but `bun run` does not, leaving the real server orphaned. An

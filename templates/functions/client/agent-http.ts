@@ -2,6 +2,13 @@ import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
 
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
 pikkuRPC.setServerUrl(url)
+
+// Turn 2 only remembers turn 1 because both arrive with the same session: an
+// agent thread belongs to its session principal, and a request without one gets
+// an owner minted for that request alone. `agent-auth.wiring.ts` trades this
+// token for a session, and `run-tests.sh` exports it to the server and to us.
+pikkuRPC.setAuthorizationJWT(process.env.AGENT_DEMO_TOKEN ?? null)
+
 console.log('Starting agent HTTP test with url:', url)
 
 const TIMEOUT = 60000
