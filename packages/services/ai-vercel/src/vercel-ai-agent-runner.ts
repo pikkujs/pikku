@@ -6,12 +6,14 @@ import {
   generateImage,
   generateText,
   jsonSchema,
+  NoTranscriptGeneratedError,
   Output,
   rerank,
   stepCountIs,
   streamText,
   tool as aiTool,
 } from 'ai'
+import type { SharedV3ProviderOptions } from '@ai-sdk/provider'
 import { safeDownload } from './safe-download.js'
 import type {
   AIAgentRunnerParams,
@@ -299,8 +301,19 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     }
   }
 
+  /**
+   * Resolves a provider name to the object that builds models for it.
+   *
+   * A `'*'` entry catches anything with no exact match. That only makes sense
+   * when whatever sits behind it accepts arbitrary model names — a scripted
+   * provider, or a gateway — so pointing it at a single real vendor is a
+   * mistake: `anthropic/...` reaching OpenAI is not a fallback, it is a bug.
+   *
+   * Exact entries win, which is what makes "everything through the gateway
+   * except this one" expressible as `{ deepinfra: direct, '*': gateway }`.
+   */
   private getProvider(providerName: string) {
-    const provider = this.providers[providerName]
+    const provider = this.providers[providerName] ?? this.providers['*']
     if (!provider) {
       const available = Object.keys(this.providers).join(', ')
       throw new Error(
@@ -371,12 +384,31 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     )
   }
 
-  private buildProviderOptions(params: AIAgentRunnerParams) {
-    if (!params.agentId) return undefined
+  private buildProviderOptions(
+    params: AIAgentRunnerParams
+  ): SharedV3ProviderOptions | undefined {
+    const caller = params.providerOptions as SharedV3ProviderOptions | undefined
+    if (!params.agentId) return caller
     const meta = { agent_id: params.agentId }
     // Spread into the request body for every provider so LiteLLM picks up
     // agent_id and includes it in the spend-log / generic_api callback.
-    return { openai: { metadata: meta }, anthropic: { metadata: meta } }
+    const merged: Record<string, Record<string, unknown>> = {
+      openai: { metadata: meta },
+      anthropic: { metadata: meta },
+    }
+    // Merged one provider at a time rather than by top-level key: replacing the
+    // whole `openai` entry with the caller's would drop `metadata` and quietly
+    // end the per-agent billing breakdown, which nothing downstream would
+    // notice. Within a provider the caller still wins on every key it sets.
+    for (const [provider, options] of Object.entries(caller ?? {})) {
+      merged[provider] = { ...merged[provider], ...options }
+    }
+    // Cast because core types these values as `unknown` and the SDK wants
+    // `JSONValue`. Core cannot narrow them without taking a type dependency on
+    // the SDK, and the constraint holds anyway: whatever goes in here ends up
+    // serialized into a request body, so a non-JSON value was never going to
+    // survive the trip regardless of what the type said.
+    return merged as SharedV3ProviderOptions
   }
 
   async stream(
@@ -406,6 +438,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       stopWhen: stepCountIs(1),
       experimental_download: safeDownload(this.allowedAttachmentHosts),
       toolChoice: params.toolChoice,
+      abortSignal: params.abortSignal,
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
       }),
@@ -563,6 +596,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       stopWhen: stepCountIs(1),
       experimental_download: safeDownload(this.allowedAttachmentHosts),
       toolChoice: params.toolChoice,
+      abortSignal: params.abortSignal,
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
       }),
@@ -624,17 +658,44 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     }
   }
 
+  /**
+   * Silence is an outcome, not a failure.
+   *
+   * The AI SDK throws `AI_NoTranscriptGeneratedError` whenever a model returns
+   * empty text, which is reasonable for a one-shot transcription job and wrong
+   * for a conversation: a turn where the user said nothing is the single most
+   * ordinary thing that can happen at a microphone, and it arrives here every
+   * time a silence detector fires on a pause. Callers get `text: ''` and decide
+   * — which is what they already do for a transcript that comes back blank by
+   * any other route.
+   *
+   * Only that one error is caught. A missing key, a refused request or an
+   * unreachable provider still throw.
+   */
   async transcribe(
     params: AITranscriptionParams
   ): Promise<AITranscriptionResult> {
-    const result = await transcribe({
-      model: this.getModel(params.model, 'transcription'),
-      audio: params.audio,
-      providerOptions: params.providerOptions as any,
-      maxRetries: params.maxRetries,
-      abortSignal: params.abortSignal,
-      headers: params.headers,
-    })
+    let result: Awaited<ReturnType<typeof transcribe>>
+    try {
+      result = await transcribe({
+        model: this.getModel(params.model, 'transcription'),
+        audio: params.audio,
+        providerOptions: params.providerOptions as any,
+        maxRetries: params.maxRetries,
+        abortSignal: params.abortSignal,
+        headers: params.headers,
+      })
+    } catch (error) {
+      if (NoTranscriptGeneratedError.isInstance(error)) {
+        return {
+          text: '',
+          segments: [],
+          warnings: [],
+          responses: error.responses,
+        }
+      }
+      throw error
+    }
 
     return {
       text: result.text,

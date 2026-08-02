@@ -1,0 +1,33 @@
+{
+  "name": "@pikku/ai-deepinfra",
+  "version": "0.12.0",
+  "description": "DeepInfra transcription and speech models for the Vercel AI SDK",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b",
+    "test": "bash run-tests.sh",
+    "test:coverage": "bash run-tests.sh --coverage",
+    "release": "npm run build && npm test",
+    "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "peerDependencies": {
+    "@ai-sdk/provider": "^3.0.0"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "^3.0.14",
+    "typescript": "^6.0.3"
+  }
+}
