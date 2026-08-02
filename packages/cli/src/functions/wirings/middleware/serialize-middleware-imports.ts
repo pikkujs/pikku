@@ -4,6 +4,7 @@ import type {
   InspectorHTTPState,
   InspectorState,
   MiddlewareGroupMeta,
+  MiddlewareRegistration,
 } from '@pikku/inspector'
 
 const collectFactories = (
@@ -13,20 +14,37 @@ const collectFactories = (
 ): Map<string, { exportName: string; filePath: string }> => {
   const factories = new Map<string, { exportName: string; filePath: string }>()
   for (const [, groupMeta] of groupMap.entries()) {
-    if (groupMeta.exportName && groupMeta.isFactory) {
-      const filePath = getFileImportRelativePath(
-        outputPath,
-        groupMeta.sourceFile,
-        packageMappings
-      )
-      factories.set(groupMeta.exportName, {
-        exportName: groupMeta.exportName,
-        filePath,
-      })
+    for (const registration of registrationsOf(groupMeta)) {
+      if (registration.exportName && registration.isFactory) {
+        const filePath = getFileImportRelativePath(
+          outputPath,
+          registration.sourceFile,
+          packageMappings
+        )
+        factories.set(registration.exportName, {
+          exportName: registration.exportName,
+          filePath,
+        })
+      }
     }
   }
   return factories
 }
+
+/**
+ * Every `add*Middleware` call recorded under one pattern or tag.
+ *
+ * A group is keyed by its pattern, and more than one file may register for the
+ * same one. Emitting only the primary registration meant the other file was
+ * never imported, so its middleware never registered — which for a session
+ * bridge or an auth gate fails open and fails silently.
+ */
+const registrationsOf = (
+  groupMeta: MiddlewareGroupMeta
+): MiddlewareRegistration[] => [
+  groupMeta,
+  ...(groupMeta.additionalRegistrations ?? []),
+]
 
 export const serializeMiddlewareImports = (
   outputPath: string,
@@ -61,13 +79,15 @@ export const serializeMiddlewareImports = (
   const directImports = new Set<string>()
   const collectDirectImports = (groupMap: Map<string, MiddlewareGroupMeta>) => {
     for (const [, groupMeta] of groupMap.entries()) {
-      if (!groupMeta.isFactory) {
-        const filePath = getFileImportRelativePath(
-          outputPath,
-          groupMeta.sourceFile,
-          packageMappings
-        )
-        directImports.add(filePath)
+      for (const registration of registrationsOf(groupMeta)) {
+        if (!registration.isFactory) {
+          const filePath = getFileImportRelativePath(
+            outputPath,
+            registration.sourceFile,
+            packageMappings
+          )
+          directImports.add(filePath)
+        }
       }
     }
   }

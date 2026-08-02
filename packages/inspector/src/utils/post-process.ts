@@ -611,6 +611,9 @@ const serializeGroupMap = (
       count: meta.count,
       instanceIds: meta.instanceIds,
       isFactory: meta.isFactory,
+      ...(meta.additionalRegistrations && {
+        additionalRegistrations: meta.additionalRegistrations,
+      }),
     }
   }
   return result
@@ -885,13 +888,18 @@ export function validateSchemaWiringSeparation(
     wiringFiles.add(file)
   }
 
-  // Middleware wirings (addHTTPMiddleware calls)
-  for (const meta of state.http.routeMiddleware.values()) {
-    wiringFiles.add(meta.sourceFile)
+  // Middleware wirings (addHTTPMiddleware calls). A group can be registered
+  // from more than one file, and every one of them is a wiring file.
+  const addGroupFiles = (groups: Map<string, MiddlewareGroupMeta>) => {
+    for (const meta of groups.values()) {
+      wiringFiles.add(meta.sourceFile)
+      for (const registration of meta.additionalRegistrations ?? []) {
+        wiringFiles.add(registration.sourceFile)
+      }
+    }
   }
-  for (const meta of state.middleware.tagMiddleware.values()) {
-    wiringFiles.add(meta.sourceFile)
-  }
+  addGroupFiles(state.http.routeMiddleware)
+  addGroupFiles(state.middleware.tagMiddleware)
 
   // Check for overlap
   for (const file of schemaFiles) {
