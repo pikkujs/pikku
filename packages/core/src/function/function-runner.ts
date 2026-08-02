@@ -40,7 +40,11 @@ import {
 } from '../services/audit-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { getOrCreatePackageSingletonServices } from '../wirings/rpc/addon-runner.js'
-import { resolveAddonScopes } from '../wirings/rpc/wire-addon.js'
+import {
+  resolveAddonAuth,
+  resolveAddonScopes,
+  resolveAddonTagMiddleware,
+} from '../wirings/rpc/wire-addon.js'
 import type { AddonInstance } from '../wirings/rpc/addon-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -267,7 +271,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
     const session = invocationWire.session
 
     if (funcMeta.sessionless) {
-      if (wiringAuth === true || funcConfig.auth === true) {
+      if (
+        wiringAuth === true ||
+        funcConfig.auth === true ||
+        resolveAddonAuth(packageName, addonInstance?.namespace)
+      ) {
         if (!session) {
           throw new ForbiddenError('Authentication required')
         }
@@ -390,9 +398,17 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
   }
 
+  const addonTagMiddleware = resolveAddonTagMiddleware(
+    packageName,
+    addonInstance?.namespace
+  )
+
   const allMiddleware = combineMiddleware(wireType, wireId, {
     wireInheritedMiddleware: inheritedMiddleware,
-    wireMiddleware,
+    wireMiddleware:
+      addonTagMiddleware.length > 0
+        ? [...addonTagMiddleware, ...(wireMiddleware ?? [])]
+        : wireMiddleware,
     funcInheritedMiddleware: funcMeta.middleware,
     funcMiddleware: funcConfig.middleware,
     packageName,

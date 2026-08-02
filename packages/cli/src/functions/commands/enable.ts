@@ -18,15 +18,12 @@ type BooleanFeature = 'webhook'
 
 type Feature = AuthFeature | BooleanFeature
 
-const FEATURE_DEFAULTS: Record<AuthFeature, 'auth' | 'no-auth'> = {
-  rpc: 'auth',
-  agent: 'auth',
-  console: 'auth',
-  scenarios: 'auth',
-  workflow: 'auth',
-  events: 'auth',
-  remoteRpc: 'no-auth',
-}
+/**
+ * Remote RPC workers carry no auth dimension — `serialize-remote-rpc.ts`
+ * hardcodes `auth: false` on what it generates — so enabling it writes a bare
+ * `true` and there is nothing to opt out of.
+ */
+const NO_AUTH_DIMENSION: ReadonlySet<AuthFeature> = new Set(['remoteRpc'])
 
 async function enableFeature(
   feature: Feature,
@@ -47,20 +44,24 @@ async function enableFeature(
     json.scaffold.pikkuDir = 'pikku'
   }
 
-  // The console is an admin surface — every RPC requires a session, so it can
-  // never be scaffolded no-auth (the --no-auth flag is ignored for it).
-  const value: PikkuScaffoldFeature | true =
-    feature === 'webhook'
-      ? true
-      : feature === 'console'
-        ? 'auth'
-        : noAuth
-          ? 'no-auth'
-          : FEATURE_DEFAULTS[feature]
+  // `true` is enabled AND authenticated. Only an explicit --no-auth writes the
+  // object form, so a feature can never be turned on public by accident.
+  //
+  // The console is an admin surface — every RPC requires a session, so
+  // --no-auth is ignored for it.
+  const wantsPublic =
+    noAuth && feature !== 'console' && !NO_AUTH_DIMENSION.has(feature as AuthFeature)
+
+  const value: PikkuScaffoldFeature =
+    feature === 'webhook' ? true : wantsPublic ? { auth: false } : true
+
   json.scaffold[feature] = value
 
   await writeFile(configPath, JSON.stringify(json, null, 2) + '\n', 'utf-8')
-  logger.info(`Enabled scaffold.${feature} = '${value}' in ${configPath}`)
+  logger.info(
+    `Enabled scaffold.${feature} = ${JSON.stringify(value)} in ${configPath}` +
+      (wantsPublic ? ' (public — no session required)' : '')
+  )
 }
 
 export const enableRpc = pikkuVoidFunc({

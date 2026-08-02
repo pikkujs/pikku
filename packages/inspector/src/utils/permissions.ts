@@ -51,6 +51,13 @@ export function extractPermissionPikkuNames(
     for (const prop of node.properties) {
       if (ts.isPropertyAssignment(prop)) {
         extractFromElement(prop.initializer)
+      } else if (ts.isShorthandPropertyAssignment(prop)) {
+        // `permissions: { canAdminOrg }`. The runtime resolves this exactly
+        // like the longhand form — `verifyPermissions` has a non-array branch —
+        // so dropping it here reported a guarded function as having no
+        // permissions at all, which is the most dangerous direction to be wrong
+        // in: an audit reading meta sees an open door where one is shut.
+        extractFromElement(prop.name)
       }
     }
   }

@@ -25,10 +25,10 @@ async function makeValidProject(root: string) {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
     scaffold: {
-      console: 'no-auth',
+      console: true,
       rpc: true,
-      agent: 'no-auth',
-      workflow: 'no-auth',
+      agent: true,
+      workflow: true,
       events: true,
     },
     clientFiles: {
@@ -349,10 +349,10 @@ describe('pikku fabric validate', () => {
           srcDirectories: ['packages/functions/src'],
           outDir: 'packages/functions/.pikku',
           scaffold: {
-            console: 'no-auth',
+            console: true,
             rpc: true,
-            agent: 'no-auth',
-            workflow: 'no-auth',
+            agent: true,
+            workflow: true,
             events: true,
           },
         })

@@ -4,6 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeWorkflowRoutes } from './serialize-workflow-routes.js'
+import { resolveScaffoldFeature } from '../../../utils/resolve-scaffold-feature.js'
 
 export const pikkuWorkflowRoutes = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
@@ -19,7 +20,7 @@ export const pikkuWorkflowRoutes = pikkuSessionlessFunc<void, boolean>({
       )
       const { schemas, functions } = serializeWorkflowRoutes(
         pathToPikkuTypes,
-        config.scaffold?.workflow === 'auth'
+        resolveScaffoldFeature('workflow', config.scaffold?.workflow).auth
       )
       await writeFileInDir(logger, config.workflowRoutesSchemasFile, schemas)
       await writeFileInDir(logger, config.workflowRoutesFile, functions)

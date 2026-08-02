@@ -186,6 +186,17 @@ export type HTTPFunctionMetaInputTypes = {
 export type HTTPWiringMeta = CommonWireMeta & {
   route: string
   method: HTTPMethod
+  /** The route's own `auth`, or the group's if the route did not set one. */
+  auth?: boolean
+  /**
+   * Whether reaching this route requires a session, resolved at codegen time
+   * across every layer that can demand one: the function's `sessionless`, its
+   * own `auth`, this route's `auth`, and the auth flag of the addon the
+   * function belongs to. Answering "which routes are open?" used to mean
+   * joining four separate places and knowing which of them wins; getting that
+   * join wrong reads an open route as a closed one.
+   */
+  requiresSession?: boolean
   refTarget?: string
   params?: string[]
   query?: string[]

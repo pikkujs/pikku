@@ -89,6 +89,28 @@ export const addTagPermission = (
   )
 }
 
+const bucket = (
+  packageName: string | null
+): (CorePermissionGroup | CorePikkuPermission)[] =>
+  (pikkuState(packageName, 'permissions', 'global') as unknown as (
+    | CorePermissionGroup
+    | CorePikkuPermission
+  )[]) ?? []
+
+/**
+ * Global permissions in effect for a function, root ones first.
+ *
+ * A function that belongs to a package reads *both* buckets, not just its own.
+ * The generated `addGlobalPermission` wrapper always registers under the root
+ * (`null`) package — it takes no package argument — so resolving the package
+ * bucket alone meant an application's "every request needs a signed-in user"
+ * rule silently stopped at the addon boundary, and the bucket the addon's
+ * functions did read was one no host could write to. Both directions of that
+ * are wrong, and the safe union is to apply everything: globals are an AND
+ * gate, so adding the root ones can only ever tighten.
+ *
+ * knowledge: decisions/security/global-permissions-and-function-permissions-are-independent-gates.md
+ */
 const resolveGlobalPermissions = (
   packageName: string | null
 ): readonly (CorePermissionGroup | CorePikkuPermission)[] => {
@@ -97,12 +119,9 @@ const resolveGlobalPermissions = (
   if (cached) {
     return cached
   }
-  const globals = pikkuState(
-    packageName,
-    'permissions',
-    'global'
-  ) as unknown as (CorePermissionGroup | CorePikkuPermission)[]
-  const resolved = globals && globals.length > 0 ? [...globals] : []
+  const resolved = packageName
+    ? [...bucket(null), ...bucket(packageName)]
+    : [...bucket(null)]
   globalPermissionsCache[key] = resolved
   return resolved
 }

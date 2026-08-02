@@ -1,6 +1,10 @@
 import { join, dirname, resolve, isAbsolute, parse as parsePath } from 'path'
 import { readdir, readFile } from 'fs/promises'
-import type { PikkuCLIConfig } from '../../types/config.js'
+import type {
+  PikkuCLIConfig,
+  PikkuScaffoldFeature,
+} from '../../types/config.js'
+import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 
 const CLIENT_FILE_KEYS = [
@@ -341,6 +345,38 @@ const _getPikkuCLIConfig = async (
     const resolvedScaffoldDir = isAbsolute(scaffoldDir)
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)
+
+    // Read every scaffold feature once, here, so a legacy 'auth'/'no-auth'
+    // fails at load with the migration named, rather than downstream where the
+    // value has already been coerced into something plausible.
+    //
+    // An explicit `path` is written onto the feature's output field before the
+    // derivations below run. Each of those is guarded by `!result.<field>`, so
+    // setting it here wins and the pikkuDir-derived default is skipped.
+    const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
+      rpc: 'publicRpcFile',
+      agent: 'publicAgentFile',
+      console: 'consoleFunctionsFile',
+      scenarios: 'scenariosFunctionsFile',
+      userAdmin: 'userAdminFunctionsFile',
+      workflow: 'workflowRoutesFile',
+      events: 'eventsChannelFile',
+      remoteRpc: 'remoteRpcWorkersFile',
+    }
+    const scaffoldBlock = result.scaffold as
+      | Record<string, PikkuScaffoldFeature>
+      | undefined
+    for (const [feature, outputField] of Object.entries(
+      SCAFFOLD_OUTPUT_FIELDS
+    )) {
+      const resolved = resolveScaffoldFeature(feature, scaffoldBlock?.[feature])
+      if (!resolved.enabled || !resolved.path) continue
+      ;(result as unknown as Record<string, unknown>)[outputField] = isAbsolute(
+        resolved.path
+      )
+        ? resolved.path
+        : join(result.rootDir, resolved.path)
+    }
 
     if (result.scaffold?.remoteRpc && !result.remoteRpcWorkersFile) {
       result.remoteRpcWorkersFile = join(

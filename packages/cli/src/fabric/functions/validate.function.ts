@@ -376,7 +376,7 @@ export async function runValidate(
         severity: 'error',
         surface:
           'app introspection (console:getFunctionsMeta and friends) — the sandbox builder shows no functions',
-        value: '"auth"',
+        value: 'true',
       },
       {
         key: 'rpc',
@@ -389,14 +389,14 @@ export async function runValidate(
         severity: 'error',
         surface:
           'the agent endpoints (/rpc/agent/:agentName) — the agent playground 404s',
-        value: '"no-auth"',
+        value: 'true',
       },
       {
         key: 'workflow',
         severity: 'error',
         surface:
           'the workflow endpoints (/workflow/:workflowName/start) — triggering a workflow 404s',
-        value: '"no-auth"',
+        value: 'true',
       },
       {
         key: 'events',

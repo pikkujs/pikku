@@ -4,6 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeEventsScaffold } from './serialize-events-scaffold.js'
+import { resolveScaffoldFeature } from '../../../utils/resolve-scaffold-feature.js'
 
 export const pikkuEventsScaffold = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
@@ -19,7 +20,7 @@ export const pikkuEventsScaffold = pikkuSessionlessFunc<void, boolean>({
       })
       return false
     }
-    const authRequired = config.scaffold.events === 'auth'
+    const authRequired = resolveScaffoldFeature('events', config.scaffold.events).auth
     const pikkuTypesImportPath = getFileImportRelativePath(
       config.eventsChannelFile,
       config.typesDeclarationFile,

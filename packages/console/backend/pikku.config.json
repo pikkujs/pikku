@@ -1,7 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
+  "srcDirectories": [
+    "src"
+  ],
   "outDir": ".pikku",
   "rpcMapDeclarationFile": "../src/pikku/rpc-map.gen.d.ts",
   "httpMapDeclarationFile": "../src/pikku/http-map.gen.d.ts",
@@ -11,7 +13,11 @@
   },
   "scaffold": {
     "pikkuDir": "src",
-    "rpc": "no-auth",
-    "workflow": "no-auth"
+    "rpc": {
+      "auth": false
+    },
+    "workflow": {
+      "auth": false
+    }
   }
 }

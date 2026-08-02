@@ -103,9 +103,9 @@ const instrumentation: Record<
  * scenario runner can reach it over `/rpc/<name>` exactly as before.
  *
  * They are registered sessionless: `auth` decides whether a session is
- * *required*, and a sessioned function would demand one regardless of the flag —
- * which is what made `scaffold.scenarios: true` (as opposed to `'auth'`) refuse
- * every call and log a warning about it.
+ * *required*, and a sessioned function would demand one regardless of the flag.
+ * `scaffold.scenarios: true` therefore requires a session; `{ auth: false }` is
+ * what opens them.
  */
 export const registerScenarioInstrumentation = (requireAuth: boolean) => {
   const meta = pikkuState(null, 'function', 'meta') as FunctionsMeta

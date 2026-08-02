@@ -1,4 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
+import { getTagGroups } from '../../utils.js'
+import type { CorePikkuMiddleware } from '../../types/core.types.js'
 
 export type WireAddonConfig = {
   name: string
@@ -34,12 +36,15 @@ export const wireAddon = (config: WireAddonConfig): void => {
 }
 
 /**
+ * The addon configs a running function is governed by: the named instance when
+ * the caller resolved one, every instance of the package otherwise.
+ *
  * knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md
  */
-export const resolveAddonScopes = (
+const governingAddonConfigs = (
   packageName: string | null,
   namespace?: string
-): string[] => {
+) => {
   if (!packageName) {
     return []
   }
@@ -52,18 +57,74 @@ export const resolveAddonScopes = (
   if (namespace) {
     const config = addons.get(namespace)
     if (config?.package === packageName) {
-      return config.scopes ?? []
+      return [config]
     }
   }
 
-  const scopes = new Set<string>()
-  for (const config of addons.values()) {
-    if (config?.package !== packageName) {
-      continue
-    }
-    for (const scope of config.scopes ?? []) {
-      scopes.add(scope)
+  return [...addons.values()].filter((config) => config?.package === packageName)
+}
+
+const unionOf = (
+  packageName: string | null,
+  namespace: string | undefined,
+  field: 'scopes' | 'tags'
+): string[] => {
+  const values = new Set<string>()
+  for (const config of governingAddonConfigs(packageName, namespace)) {
+    for (const value of config[field] ?? []) {
+      values.add(value)
     }
   }
-  return [...scopes]
+  return [...values]
+}
+
+/**
+ * knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md
+ */
+export const resolveAddonScopes = (
+  packageName: string | null,
+  namespace?: string
+): string[] => unionOf(packageName, namespace, 'scopes')
+
+/**
+ * knowledge: decisions/security/addon-auth-and-tags-only-tighten.md
+ */
+export const resolveAddonTags = (
+  packageName: string | null,
+  namespace?: string
+): string[] => unionOf(packageName, namespace, 'tags')
+
+/**
+ * True when any governing instance requires a session. `auth: false` is not
+ * honoured here — on a direct wiring it would weaken the wiring's own gate.
+ *
+ * knowledge: decisions/security/addon-auth-and-tags-only-tighten.md
+ */
+export const resolveAddonAuth = (
+  packageName: string | null,
+  namespace?: string
+): boolean =>
+  governingAddonConfigs(packageName, namespace).some(
+    (config) => config.auth === true
+  )
+
+/**
+ * Addon tags name middleware the *consuming app* registered, so they resolve
+ * against the root tag groups rather than the addon package's own.
+ *
+ * knowledge: decisions/security/addon-auth-and-tags-only-tighten.md
+ */
+export const resolveAddonTagMiddleware = (
+  packageName: string | null,
+  namespace?: string
+): CorePikkuMiddleware[] => {
+  const tags = resolveAddonTags(packageName, namespace)
+  if (tags.length === 0) {
+    return []
+  }
+
+  const tagGroups = pikkuState(null, 'middleware', 'tagGroup')
+  return tags.flatMap(
+    (tag) => getTagGroups(tagGroups, tag).flat() as CorePikkuMiddleware[]
+  )
 }
