@@ -14,6 +14,7 @@ export const GetTodoOutput = z.object({
 
 export const getTodo = pikkuSessionlessFunc({
   description: 'Returns a single todo by ID',
+  readonly: true,
   input: GetTodoInput,
   output: GetTodoOutput,
   func: async ({ todoStore }, { id }) => {

@@ -414,13 +414,23 @@ export const expectsApprovalState = pikkuScenarioStep<
     suspended: boolean
     count?: number
     reasonContains?: string
+    /**
+     * The whole reason, character for character. Worth asserting rather than
+     * `reasonContains` when the wording is what is being consented to — a voice
+     * client reads this string out and the user answers it, so a stray prefix
+     * is a different question than the one the function sanctioned.
+     */
+    reasonEquals?: string
   },
   { pending: number }
 >({
   name: 'expectsApprovalState',
   description: 'expects the run to be suspended for approval, or resumed',
   template: 'expects suspended={suspended}',
-  default: async (_services, { run, suspended, count, reasonContains }) => {
+  default: async (
+    _services,
+    { run, suspended, count, reasonContains, reasonEquals }
+  ) => {
     const isSuspended = run.runStatus === 'suspended'
     if (isSuspended !== suspended) {
       throw new Error(
@@ -442,6 +452,14 @@ export const expectsApprovalState = pikkuScenarioStep<
       if (!reasons.some((reason) => reason.includes(reasonContains))) {
         throw new Error(
           `No pending approval reason contains ${describeValue(reasonContains)}, got ${describeValue(reasons)}`
+        )
+      }
+    }
+    if (reasonEquals !== undefined) {
+      const reasons = run.pendingApprovals.map((approval) => approval.reason)
+      if (!reasons.some((reason) => reason === reasonEquals)) {
+        throw new Error(
+          `No pending approval reason is exactly ${describeValue(reasonEquals)}, got ${describeValue(reasons)}`
         )
       }
     }

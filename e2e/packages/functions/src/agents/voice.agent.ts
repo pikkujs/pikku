@@ -6,7 +6,11 @@ export const voiceInputAgent = pikkuAIAgent({
   description: 'Transcribes spoken audio attachments before answering',
   goal: 'You answer questions the user speaks aloud.',
   model: 'openai/gpt-5-mini',
-  aiMiddleware: [voiceInput({ model: 'mock/whisper' })],
+  aiMiddleware: [
+    voiceInput({
+      model: 'deepinfra/nvidia/Nemotron-3.5-ASR-Streaming-Multilingual-0.6b',
+    }),
+  ],
   maxSteps: 3,
   toolChoice: 'auto',
 })

@@ -14,6 +14,7 @@ import { BetterAuthCredentialService } from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { createDeepInfra } from '@pikku/ai-deepinfra'
 import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
@@ -49,13 +50,23 @@ export const createSingletonServices = pikkuServices(
     const mockLlm = process.env.PIKKU_MOCK_LLM === '1'
     const aiAgentRunner = new VercelAIAgentRunner(
       mockLlm
-        ? await (async () => {
-            const { createMockLlmProvider } =
+        ? {
+            // '*' seals the runner: every provider name resolves to the
+            // scripted provider, so no model string can reach a real endpoint
+            // — including ones added long after this line was written. Naming
+            // the providers instead is how the suite used to break whenever an
+            // agent started using one nobody had listed here.
+            '*': (
               await import('../packages/functions/src/mock-llm/provider.js')
-            const provider = createMockLlmProvider()
-            return { mock: provider, openai: provider }
-          })()
-        : { openai: createOpenAI() }
+            ).createMockLlmProvider(),
+          }
+        : {
+            openai: createOpenAI(),
+            // DeepInfra serves the audio models. `@ai-sdk/deepinfra` covers its
+            // language models but not transcription or speech, and its audio
+            // API is not OpenAI-shaped, so this provider is the only way in.
+            deepinfra: createDeepInfra(),
+          }
     )
 
     const backend = process.env.DB_BACKEND ?? 'sqlite'

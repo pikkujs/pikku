@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^3.0.0",
     "@pikku/better-auth": "workspace:*",
+    "@pikku/voice-agents": "workspace:*",
     "ai": "^6.0.105",
     "better-auth": "^1.6.19",
     "zod": "*"

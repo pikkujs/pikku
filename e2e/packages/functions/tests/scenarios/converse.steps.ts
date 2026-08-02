@@ -101,3 +101,65 @@ export const expectsTodoTitled = pikkuScenarioStep<
     return { titles }
   },
 })
+
+/**
+ * The same check one state further on: the todo is there *and* it is done.
+ *
+ * Worth its own step rather than a flag on {@link expectsTodoTitled}, because
+ * the two ways it fails are different bugs and reading them apart is the whole
+ * value. A todo that is present but not completed is an agent that said "done"
+ * without calling anything. A todo that is gone is an agent that had no
+ * `completeTodo` and reached for `deleteTodo` instead. Both answer the user
+ * with a sentence that sounds identical, and only the store tells them apart —
+ * which is why this asserts on the store and not on which tools ran. What
+ * matters is that the world changed the way the user was told it did; the call
+ * that got it there is an implementation detail.
+ */
+export const expectsTodoCompleted = pikkuScenarioStep<
+  { title: string },
+  { completed: boolean }
+>({
+  name: 'expectsTodoCompleted',
+  description: 'expects the todo store to hold a completed todo with a title',
+  template: 'expects the store to hold a completed todo titled {title}',
+  default: async (_services, { title }, { scenarioStep }) => {
+    const actor = requireActor(scenarioStep)
+    const { todos } = (await actor.invoke(
+      'todos:listTodos' as never,
+      {} as never
+    )) as { todos: Array<{ title: string; completed: boolean }> }
+    const needle = title.toLowerCase()
+    const matches = todos.filter((todo) =>
+      todo.title.toLowerCase().includes(needle)
+    )
+    if (matches.length === 0) {
+      throw new Error(
+        `No todo titled "${title}" in the store — it was never added, or it was deleted instead of completed. Got: ${JSON.stringify(
+          todos
+        )}`
+      )
+    }
+    // Uniqueness is part of the assertion, not pedantry about it. Asked to
+    // complete a todo, the agent has been observed adding a second one with the
+    // same title and completing *that*, leaving the original open. Every
+    // looser reading passes that: "some todo with this title is done" is true,
+    // and so is the actor's verdict, because the agent truthfully said it
+    // marked one done. Only counting catches it.
+    if (matches.length > 1) {
+      const open = matches.filter((todo) => !todo.completed).length
+      throw new Error(
+        `Expected one todo titled "${title}", found ${matches.length} (${open} still open) — the agent added a duplicate instead of completing the one already there. Got: ${JSON.stringify(
+          todos
+        )}`
+      )
+    }
+    if (!matches[0]!.completed) {
+      throw new Error(
+        `Todo "${matches[0]!.title}" is still open, so nothing marked it done. Got: ${JSON.stringify(
+          todos
+        )}`
+      )
+    }
+    return { completed: true }
+  },
+})
