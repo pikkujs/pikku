@@ -23,6 +23,7 @@ import {
   validateRemoteAddonAuth,
   validateScopeReferences,
   validateSystemRoleScopes,
+  validatePersonaRoles,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
@@ -126,7 +127,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       graphMeta: {},
       graphFiles: new Map(),
       featureFiles: new Map(),
-      virtualUserFiles: new Map(),
       invokedWorkflows: new Set(),
     },
     rpc: {
@@ -182,6 +182,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     systemRoles: {
+      definitions: [],
+      files: new Set(),
+    },
+    personas: {
       definitions: [],
       files: new Set(),
     },
@@ -484,6 +488,7 @@ export const inspect = async (
     validateRemoteAddonAuth(logger, state)
     validateScopeReferences(logger, state)
     validateSystemRoleScopes(logger, state)
+    validatePersonaRoles(logger, state)
   }
 
   state.program = program

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
 import { createScenarioRunner } from '@pikku/core/scenario'
-import type { ScenarioActor } from '@pikku/core/services'
+import type { ScenarioPersona } from '@pikku/core/services'
 import type { ScenarioSurface } from '@pikku/core/workflow'
 import { rpcService } from '@pikku/core/rpc'
 
@@ -45,7 +45,7 @@ async function loadMeta(name: string) {
 
 const fakeActor = (
   name: string
-): ScenarioActor & { calls: Array<{ rpcName: string; data: any }> } => {
+): ScenarioPersona & { calls: Array<{ rpcName: string; data: any }> } => {
   const calls: Array<{ rpcName: string; data: any }> = []
   const invokeRaw = async (rpcName: string, data: any) => {
     calls.push({ rpcName, data })
@@ -97,16 +97,20 @@ describe('pikkuScenario verification', () => {
     )
   })
 
-  test('codegen: pikku.config.json scenarios.actors generates the typed registry', async () => {
+  test('codegen: definePersonas generates the typed registry, addresses and all', async () => {
     const gen =
-      await import('../../.pikku/workflow/pikku-scenario-actors.gen.js')
-    assert.deepEqual(Object.keys(gen.scenarioActorConfigs).sort(), [
+      await import('../../.pikku/workflow/pikku-personas.gen.js')
+    assert.deepEqual(Object.keys(gen.personaConfigs).sort(), [
       'customer',
       'ops',
     ])
-    assert.equal(gen.scenarioActorConfigs.customer.jobTitle, 'Customer')
+    assert.equal(gen.personaConfigs.customer.jobTitle, 'Customer')
+    // Nobody wrote this down: it is the persona id against
+    // `scenarios.emailDomain`, computed once so the seed, a scenario run and a
+    // virtual-user run cannot disagree about who they are signing in as.
+    assert.equal(gen.personaConfigs.customer.email, 'customer@actors.local')
 
-    const actors = gen.createScenarioActors({
+    const actors = gen.createPersonas({
       apiUrl: 'http://localhost:9999/api',
       secret: 'unused',
     })

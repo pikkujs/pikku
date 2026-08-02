@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { resolveScenarioEnvironment } from './scenario-environment.js'
+import { resolveEnvironment } from './environment.js'
 
 const environments = {
   local: {
@@ -12,31 +12,31 @@ const environments = {
   },
 }
 
-describe('resolveScenarioEnvironment', () => {
+describe('resolveEnvironment', () => {
   test('an unknown environment names the ones that are configured', () => {
     assert.throws(
-      () => resolveScenarioEnvironment({ environment: 'staging', environments }),
-      /Unknown scenario environment 'staging'[\s\S]*Configured environments: local/
+      () => resolveEnvironment({ environment: 'staging', environments }),
+      /Unknown environment 'staging'[\s\S]*Configured environments: local/
     )
   })
 
   test('an unknown environment with nothing configured shows what to add', () => {
     assert.throws(
       () =>
-        resolveScenarioEnvironment({ environment: 'staging', environments: {} }),
-      /Add scenarios.environments to pikku.config.json/
+        resolveEnvironment({ environment: 'staging', environments: {} }),
+      /Add environments to pikku.config.json/
     )
   })
 
   test('without overrides the configured environment is used verbatim', () => {
     assert.deepEqual(
-      resolveScenarioEnvironment({ environment: 'local', environments }),
+      resolveEnvironment({ environment: 'local', environments }),
       environments.local
     )
   })
 
   test('overrides replace the urls a run targets and leave the rest of the environment alone', () => {
-    const env = resolveScenarioEnvironment({
+    const env = resolveEnvironment({
       environment: 'local',
       environments,
       apiUrl: 'https://sandbox-a1b2.example.com/api',
@@ -54,17 +54,17 @@ describe('resolveScenarioEnvironment', () => {
   test('the environment must still exist — the flags override it, they do not invent one', () => {
     assert.throws(
       () =>
-        resolveScenarioEnvironment({
+        resolveEnvironment({
           environment: 'sandbox',
           environments,
           apiUrl: 'https://sandbox-a1b2.example.com/api',
         }),
-      /Unknown scenario environment 'sandbox'/
+      /Unknown environment 'sandbox'/
     )
   })
 
   test('an appUrl override alone leaves the configured apiUrl in place', () => {
-    const env = resolveScenarioEnvironment({
+    const env = resolveEnvironment({
       environment: 'local',
       environments,
       appUrl: 'https://sandbox-a1b2.example.com',
@@ -77,7 +77,7 @@ describe('resolveScenarioEnvironment', () => {
   test('a relative --api-url is rejected where it was typed, not deep in the run', () => {
     assert.throws(
       () =>
-        resolveScenarioEnvironment({
+        resolveEnvironment({
           environment: 'local',
           environments,
           apiUrl: '/api',
@@ -89,7 +89,7 @@ describe('resolveScenarioEnvironment', () => {
   test('a non-http --app-url is rejected', () => {
     assert.throws(
       () =>
-        resolveScenarioEnvironment({
+        resolveEnvironment({
           environment: 'local',
           environments,
           appUrl: 'ftp://example.com',
@@ -101,7 +101,7 @@ describe('resolveScenarioEnvironment', () => {
   test('--spawn against a remote --api-url is refused rather than binding a server nobody reaches', () => {
     assert.throws(
       () =>
-        resolveScenarioEnvironment({
+        resolveEnvironment({
           environment: 'local',
           environments,
           apiUrl: 'https://sandbox-a1b2.example.com/api',
@@ -112,7 +112,7 @@ describe('resolveScenarioEnvironment', () => {
   })
 
   test('--spawn with a local --api-url is a port override, and stands', () => {
-    const env = resolveScenarioEnvironment({
+    const env = resolveEnvironment({
       environment: 'local',
       environments,
       apiUrl: 'http://localhost:5555',
@@ -123,7 +123,7 @@ describe('resolveScenarioEnvironment', () => {
   })
 
   test('--spawn does not object to an --app-url elsewhere: the frontend need not be the spawned server', () => {
-    const env = resolveScenarioEnvironment({
+    const env = resolveEnvironment({
       environment: 'local',
       environments,
       appUrl: 'https://preview-a1b2.example.com',

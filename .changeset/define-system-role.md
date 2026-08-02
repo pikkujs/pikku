@@ -1,7 +1,7 @@
 ---
-'@pikku/inspector': minor
-'@pikku/core': minor
-'@pikku/cli': minor
+'@pikku/inspector': patch
+'@pikku/core': patch
+'@pikku/cli': patch
 ---
 
 Add `defineSystemRole()`: roles that ship with the product, declared in code.

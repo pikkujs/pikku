@@ -1,3 +1,4 @@
+import { hasScopes } from '../../scopes.js'
 import type { ApiCatalogueEntry } from './virtual-user.types.js'
 
 /**
@@ -92,24 +93,45 @@ export const reachableCatalogue = (
   {
     readOnly = false,
     allowApprovalRequired = false,
-    grants,
+    scopes,
   }: {
     readOnly?: boolean
     allowApprovalRequired?: boolean
-    /** Permission names this actor satisfies. Omit to keep every entry. */
-    grants?: readonly string[]
+    /**
+     * The scopes this persona holds, resolved from its roles. Omit to keep
+     * every entry.
+     *
+     * Scopes rather than permission-function names: a function's `scopes` are
+     * declared and checkable, whereas a permission is arbitrary code whose
+     * verdict nobody can predict without running it. Narrowing by something
+     * unpredictable produced a catalogue that was wrong in both directions.
+     */
+    scopes?: readonly string[]
   } = {}
 ): ApiCatalogueEntry[] =>
   entries.filter((entry) => {
     if (entry.approvalRequired && !allowApprovalRequired) return false
     if (readOnly && !isReadOnly(entry)) return false
-    if (grants && entry.permissions?.length) {
-      return entry.permissions.every((permission) =>
-        grants.includes(permission)
-      )
+    if (scopes && entry.scopes?.length) {
+      return hasScopes(entry.scopes, scopes)
     }
     return true
   })
+
+/**
+ * Endpoints this persona is *not* entitled to reach.
+ *
+ * The adversarial oracle. Withheld from the catalogue, so reaching one takes
+ * initiative — and a 2xx from one is the finding, because the server is the
+ * only thing that decides who may call what.
+ */
+export const unreachableCatalogue = (
+  entries: readonly ApiCatalogueEntry[],
+  scopes: readonly string[]
+): ApiCatalogueEntry[] =>
+  entries.filter(
+    (entry) => !!entry.scopes?.length && !hasScopes(entry.scopes, scopes)
+  )
 
 /** Index a catalogue by name for the engine's lookups. */
 export const catalogueIndex = (

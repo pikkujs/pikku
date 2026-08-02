@@ -4,7 +4,7 @@ import type {
   TargetAgentDriver,
   TargetPendingApproval,
 } from './actor-flow.types.js'
-import type { ScenarioActorConfig } from '../../services/scenario-actors-service.js'
+import type { ResolvedPersona } from '../../services/personas-service.js'
 import type { AIMessage } from '../ai-agent/ai-agent.types.js'
 import type {
   AIAgentRunnerParams,
@@ -61,10 +61,10 @@ export type ActorLLM = (
 ) => Promise<AIAgentStepResult>
 
 export interface RunConversationParams {
-  /** The actor's own config (personality/jobTitle/name), which shapes how it talks. */
-  actor: ScenarioActorConfig
-  /** Stable actor name (for transcript labelling). */
-  actorName: string
+  /** The person being played — name, job title, personality. */
+  persona: ResolvedPersona
+  /** The id they were declared under (for transcript labelling). */
+  personaId: string
   /** What the actor is trying to get the target agent to accomplish. */
   task: string
   /** Natural-language success criterion the actor evaluates at the end. */
@@ -109,13 +109,13 @@ function readObject<T>(result: { object?: unknown; text?: string }): T | null {
   return null
 }
 
-function actorInstructions(actor: ScenarioActorConfig, task: string): string {
+function actorInstructions(persona: ResolvedPersona, task: string): string {
   return [
     `You are role-playing a real user interacting with an AI assistant. Stay in character at all times — you are the user, not the assistant.`,
-    actor.name ? `Your name is ${actor.name}.` : '',
-    actor.jobTitle ? `Your role: ${actor.jobTitle}.` : '',
-    actor.personality
-      ? `Your personality and communication style: ${actor.personality}. Match this tone, vocabulary, and level of detail exactly.`
+    `Your name is ${persona.name}.`,
+    persona.jobTitle ? `Your role: ${persona.jobTitle}.` : '',
+    persona.personality
+      ? `Your personality and communication style: ${persona.personality}. Match this tone, vocabulary, and level of detail exactly.`
       : '',
     `Your goal in this conversation: ${task}.`,
     `Send one message at a time. Set "done" to true only once your goal is clearly accomplished, or clearly impossible.`,
@@ -222,7 +222,7 @@ export async function runConversation(
   params: RunConversationParams
 ): Promise<ActorFlowVerdict> {
   const maxTurns = params.maxTurns ?? DEFAULT_MAX_TURNS
-  const instructions = actorInstructions(params.actor, params.task)
+  const instructions = actorInstructions(params.persona, params.task)
   // Seed a kickoff so the very first actor turn has a non-empty message list
   // (providers reject an empty prompt). It's an instruction TO the actor, so
   // it never appears in the transcript.
@@ -252,7 +252,7 @@ export async function runConversation(
     }
 
     actorMessages.push(msg('assistant', actorMessage))
-    transcript.push(`${params.actorName}: ${actorMessage}`)
+    transcript.push(`${params.persona.name}: ${actorMessage}`)
 
     const reply = await converseWithTarget(params, instructions, actorMessage)
     actorMessages.push(msg('user', reply.text ?? ''))

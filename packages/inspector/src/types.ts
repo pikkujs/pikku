@@ -19,6 +19,7 @@ import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { SystemRoleDefinitions } from '@pikku/core/role'
+import type { PersonaDefinitions } from '@pikku/core/persona'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
 import type {
@@ -466,42 +467,6 @@ export interface InspectorFeature {
   hasAfter: boolean
 }
 
-/**
- * A `pikkuVirtualUser` export. Fully literal by construction — there is no code
- * body to resolve at runtime, so what is read here is the entire declaration.
- */
-export interface InspectorVirtualUser {
-  path: string
-  exportedName: string
-  /** The scenario actor it signs in as. Required; there is no default identity. */
-  actor: string
-  name?: string
-  description?: string
-  disposition?: string
-  /** Overrides for that disposition's dials, exactly as declared. */
-  tuning?: {
-    moves?: {
-      continue?: number
-      suspend?: number
-      resume?: number
-      abandon?: number
-    }
-    temperature?: number
-    repeatRate?: number
-    reReadRate?: number
-    emptyMemory?: boolean
-    readOnly?: boolean
-    invertedOracle?: boolean
-    instructions?: string
-  }
-  goals?: string[]
-  tags?: string[]
-  grants?: string[]
-  fixtures?: string[]
-  allowApprovalRequired?: boolean
-  budget?: { steps?: number; mutations?: number; duration?: number | string }
-}
-
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -554,12 +519,6 @@ export interface InspectorState {
      * `unresolvedEntries` and resolved at runtime by object identity instead.
      */
     featureFiles: Map<string, InspectorFeature>
-    /**
-     * `pikkuVirtualUser` exports, keyed by export identifier. Lives beside the
-     * features because a virtual user is fed by the same scenario prose — it is
-     * the same body of intent, worked without the script.
-     */
-    virtualUserFiles: Map<string, InspectorVirtualUser>
     invokedWorkflows: Set<string>
   }
   rpc: {
@@ -646,6 +605,10 @@ export interface InspectorState {
   }
   systemRoles: {
     definitions: SystemRoleDefinitions
+    files: Set<string>
+  }
+  personas: {
+    definitions: PersonaDefinitions
     files: Set<string>
   }
   variables: {

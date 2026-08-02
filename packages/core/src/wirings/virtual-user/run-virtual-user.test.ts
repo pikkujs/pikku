@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { rememberIds, runVirtualUser } from './run-virtual-user.js'
 import type { ActorLLM } from '../actor-flow/run-conversation.js'
 import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
-import type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
+import type { ScenarioHttpResponse } from '../../services/personas-service.js'
 import type {
   ApiCatalogueEntry,
   IntentSource,
@@ -35,7 +35,7 @@ const CATALOGUE: ApiCatalogueEntry[] = [
   },
   {
     name: 'listAllOrgs',
-    permissions: ['requiresPlatformAdmin'],
+    scopes: ['org:admin'],
     outputKeys: ['orgs'],
   },
 ]
@@ -44,7 +44,16 @@ const INTENTS: IntentSource[] = [
   { id: 'onboard', title: 'set up your first project', steps: ['sign in', 'make a project'] },
 ]
 
-const ACTOR = { email: 'ada@example.com', name: 'Ada', jobTitle: 'Engineer' }
+const PERSONA = {
+  id: 'member',
+  email: 'ada@personas.invalid',
+  name: 'Ada',
+  jobTitle: 'Engineer',
+  roles: [],
+  goals: [],
+  tags: [],
+  runnable: true,
+}
 
 /**
  * An LLM that plays a fixed script, then pokes harmlessly at the catalogue —
@@ -100,8 +109,8 @@ const recordingTarget = (
 }
 
 const base = {
-  actor: ACTOR,
-  actorName: 'member',
+  persona: PERSONA,
+  personaId: 'member',
   catalogue: CATALOGUE,
   intents: INTENTS,
   model: 'test-model',
@@ -312,7 +321,7 @@ describe('what a virtual user reports', () => {
     assert.match(result.findings[0]!.detail, /missing required property/)
   })
 
-  test('succeeding at something this actor cannot satisfy is authorization drift', async () => {
+  test('succeeding at something this persona cannot satisfy is authorization drift', async () => {
     const target = recordingTarget(() => respond(200, { orgs: [] }))
     const { llm } = scripted(walkTo('listAllOrgs'))
 
@@ -321,12 +330,12 @@ describe('what a virtual user reports', () => {
       disposition: 'adversarial',
       target,
       llm,
-      grants: ['canAccessOrgById'],
+      scopes: ['org:read'],
       budget: { steps: 3 },
     })
 
     assert.equal(result.findings[0]!.kind, 'unexpected-success')
-    assert.match(result.findings[0]!.detail, /requiresPlatformAdmin/)
+    assert.match(result.findings[0]!.detail, /org:admin/)
   })
 
   test('the same call refused is exactly what should happen', async () => {
@@ -338,7 +347,7 @@ describe('what a virtual user reports', () => {
       disposition: 'adversarial',
       target,
       llm,
-      grants: ['canAccessOrgById'],
+      scopes: ['org:read'],
       budget: { steps: 3 },
     })
 
@@ -440,12 +449,12 @@ describe('what a virtual user is allowed to touch', () => {
       disposition: 'adversarial',
       target,
       llm,
-      grants: ['canAccessOrgById'],
+      scopes: ['org:read'],
       budget: { steps: 1 },
     })
 
     // Withholding what it cannot reach would hide exactly the finding worth
-    // having — the grant stays live as the oracle instead.
+    // having — the scopes stay live as the oracle instead.
     assert.ok(instructions.includes('listAllOrgs'))
   })
 })
@@ -613,7 +622,7 @@ describe('goals and persona', () => {
 
     await runVirtualUser({
       ...base,
-      actor: { ...ACTOR, personality: 'blunt and in a hurry' },
+      persona: { ...PERSONA, personality: 'blunt and in a hurry' },
       target,
       llm,
       budget: { steps: 1 },

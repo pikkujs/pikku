@@ -39,6 +39,25 @@ const functionsMeta = (): FunctionsMeta =>
       inputs: null,
       outputs: ['ReceiptOutput'],
     },
+    trialHasExpired: {
+      pikkuFuncId: 'trialHasExpired',
+      funcWrapper: 'pikkuPlatformScenarioStep',
+      name: 'trialHasExpired',
+      inputs: ['TrialInput'],
+      outputs: null,
+      scenarioStepKind: 'platform',
+      scenarioStepSurfaces: ['default'],
+    },
+    stripeWebhookArrives: {
+      pikkuFuncId: 'stripeWebhookArrives',
+      funcWrapper: 'pikkuAddonScenarioStep',
+      name: 'stripeWebhookArrives',
+      inputs: ['WebhookInput'],
+      outputs: null,
+      scenarioStepKind: 'addon',
+      scenarioStepAddon: 'stripe',
+      scenarioStepSurfaces: ['default'],
+    },
     createTodo: {
       pikkuFuncId: 'createTodo',
       funcWrapper: 'pikkuSessionlessFunc',
@@ -56,6 +75,15 @@ describe('serializeScenarioStepMap', () => {
     const result = emit()
     assert.match(result, /readonly 'buysAnApple': ScenarioStepHandler</)
     assert.match(result, /readonly 'seesAReceipt': ScenarioStepHandler</)
+  })
+
+  // Who acts changes what a step may do, not how a scenario references it — a
+  // scenario calls "Stripe's webhook arrives" by name exactly as it calls
+  // "buys an apple".
+  test('a platform or addon step is a name a scenario can call too', () => {
+    const result = emit()
+    assert.match(result, /readonly 'trialHasExpired': ScenarioStepHandler</)
+    assert.match(result, /readonly 'stripeWebhookArrives': ScenarioStepHandler</)
   })
 
   test('ordinary functions are not steps', () => {

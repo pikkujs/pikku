@@ -49,56 +49,15 @@
     "userAdmin": "auth"
   },
   "emailTemplatesDir": "emails",
+  "environments": {
+    "local": {
+      "apiUrl": "http://localhost:4077",
+      "appUrl": "http://localhost:4077",
+      "signInPath": "/api/auth/sign-in/actor"
+    }
+  },
   "scenarios": {
-    "actors": {
-      "shopper": {
-        "email": "shopper@actors.local",
-        "name": "Shopper",
-        "jobTitle": "First-time buyer",
-        "personality": "Impatient shopper who abandons slow checkouts"
-      },
-      "support": {
-        "email": "support@actors.local",
-        "name": "Support",
-        "jobTitle": "Support agent",
-        "personality": "Methodical agent who double-checks every order"
-      },
-      "admin": {
-        "email": "admin@actors.local",
-        "name": "Admin",
-        "jobTitle": "Console administrator",
-        "personality": "Careful operator who edits code through the console and always restores it",
-        "scopes": ["admin"],
-        "roles": ["console-admin"]
-      },
-      "staff": {
-        "email": "staff@actors.local",
-        "name": "Staff",
-        "jobTitle": "Console admin without a scope role",
-        "personality": "Support staff who can open the console but cannot administer scopes",
-        "scopes": ["admin"]
-      },
-      "guest": {
-        "email": "guest@actors.local",
-        "name": "Guest",
-        "jobTitle": "Report reader",
-        "personality": "Read-only user who can see reports and nothing else",
-        "roles": ["report-viewer"]
-      },
-      "target": {
-        "email": "target@actors.local",
-        "name": "Target",
-        "jobTitle": "Subject of user administration",
-        "personality": "Ordinary user who gets banned, unbanned and reset by other people"
-      }
-    },
-    "environments": {
-      "local": {
-        "apiUrl": "http://localhost:4077",
-        "appUrl": "http://localhost:4077",
-        "signInPath": "/api/auth/sign-in/actor"
-      }
-    },
-    "actorModel": "openai/gpt-4.1-mini"
+    "emailDomain": "actors.local",
+    "model": "openai/gpt-4.1-mini"
   }
 }

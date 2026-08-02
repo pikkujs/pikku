@@ -4,14 +4,14 @@ import assert from 'node:assert/strict'
 import { createScenarioRunner } from './pikku-scenario-service.js'
 import type { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
-import type { ScenarioActor } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersona } from '../../services/personas-service.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
 const fakeActor = (
   name: string,
   handler: (rpcName: string, data: unknown) => Promise<unknown>
-): ScenarioActor => ({
+): ScenarioPersona => ({
   name,
   email: `${name}@actors.local`,
   invoke: async (rpcName: string, data: unknown) => handler(rpcName, data),

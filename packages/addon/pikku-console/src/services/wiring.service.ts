@@ -1,7 +1,8 @@
 import type { MetaService } from '@pikku/core/services'
 import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { FeaturesMeta, WorkflowsMeta } from '@pikku/core/workflow'
-import type { VirtualUsersMeta } from '@pikku/core/virtual-user'
+import type { ResolvedPersona } from '@pikku/core/services'
+import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -253,12 +254,16 @@ export interface PikkuMetaState {
   mcpMeta: McpItemMeta[]
   gatewayMeta: GatewayItemMeta[]
   workflows: WorkflowsMeta
-  scenarioActors: Record<
-    string,
-    { email: string; name?: string; jobTitle?: string; personality?: string }
-  >
+  personas: Record<string, ResolvedPersona>
+  /**
+   * The roles declared with `defineSystemRole`, keyed by name.
+   *
+   * Shipped alongside the personas because a persona only ever names roles, and
+   * nothing about what they can reach is readable without the scopes each one
+   * confers.
+   */
+  systemRoles: SystemRoleDefinitionsMeta
   features: FeaturesMeta
-  virtualUsers: VirtualUsersMeta
   triggerMeta: Record<string, TriggerMeta>
   triggerSourceMeta: Record<string, TriggerSourceMeta>
   middlewareGroupsMeta: MiddlewareGroupsMeta
@@ -297,9 +302,9 @@ export class WiringService {
       mcpMetaRaw,
       gatewayMetaRaw,
       workflows,
-      scenarioActors,
+      personas,
+      systemRoles,
       features,
-      virtualUsers,
       triggerMeta,
       triggerSourceMeta,
       middlewareGroupsMeta,
@@ -320,9 +325,9 @@ export class WiringService {
       this.metaService.getMcpMeta(),
       this.metaService.getGatewayMeta(),
       this.metaService.getWorkflowMeta(),
-      this.metaService.getScenarioActorsMeta(),
+      this.metaService.getPersonasMeta(),
+      this.metaService.getSystemRolesMeta(),
       this.metaService.getFeaturesMeta(),
-      this.metaService.getVirtualUsersMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
       this.metaService.getMiddlewareGroupsMeta(),
@@ -587,9 +592,9 @@ export class WiringService {
       mcpMeta,
       gatewayMeta,
       workflows,
-      scenarioActors,
+      personas,
+      systemRoles,
       features,
-      virtualUsers,
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:
         triggerSourceMeta as unknown as AllMeta['triggerSourceMeta'],

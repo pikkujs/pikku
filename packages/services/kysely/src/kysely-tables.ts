@@ -222,10 +222,14 @@ export interface PikkuScopesTable {
   declared: Generated<boolean>
 }
 
-/** A role: an admin-composed bag of scopes. */
+/** A role: a bag of scopes, composed by an admin or declared in code. */
 export interface PikkuRolesTable {
   name: string
   description: string | null
+  /** Declared with `defineSystemRole`, and therefore not editable here. */
+  system: Generated<boolean>
+  /** False for a system role whose declaration has gone: held, but inert. */
+  declared: Generated<boolean>
   createdAt: Generated<Date>
 }
 

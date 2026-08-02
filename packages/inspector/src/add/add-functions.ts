@@ -9,7 +9,7 @@ import {
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
 import type { FunctionServicesMeta } from '@pikku/core'
-import type { ScenarioSurface } from '@pikku/core/workflow'
+import type { ScenarioStepKind, ScenarioSurface } from '@pikku/core/workflow'
 import { formatVersionedId, parseVersionedId } from '@pikku/core'
 
 /** Binding keys a `pikkuScenarioStep` may declare, in report order. */
@@ -18,6 +18,19 @@ const SCENARIO_SURFACE_KEYS: readonly ScenarioSurface[] = [
   'cli',
   'default',
 ]
+
+/**
+ * The step wrappers, and who acts in each.
+ *
+ * Which function was called *is* the kind. That is the whole reason these are
+ * three declarations rather than a `kind:` field on one: a string literal can be
+ * copied into an addon package by a consumer, a called identifier cannot.
+ */
+const SCENARIO_STEP_KINDS = new Map<string, ScenarioStepKind>([
+  ['pikkuScenarioStep', 'persona'],
+  ['pikkuPlatformScenarioStep', 'platform'],
+  ['pikkuAddonScenarioStep', 'addon'],
+])
 import {
   getPropertyValue,
   getArrayPropertyValue,
@@ -501,13 +514,13 @@ export const addFunctions: AddWiring = (
   }
 
   // Match identifiers that contain both "pikku" and "func" (case insensitive),
-  // plus pikkuScenario and pikkuScenarioStep (workflow wrappers without "func"
-  // in their names)
+  // plus pikkuScenario and the three scenario step wrappers (workflow wrappers
+  // without "func" in their names)
   const pikkuFuncPattern = /pikku.*func/i
   if (
     !pikkuFuncPattern.test(expression.text) &&
     expression.text !== 'pikkuScenario' &&
-    expression.text !== 'pikkuScenarioStep'
+    !SCENARIO_STEP_KINDS.has(expression.text)
   ) {
     return
   }
@@ -515,7 +528,8 @@ export const addFunctions: AddWiring = (
   // A scenario step is bundled like any invoked function, but is deliberately
   // never RPC-registered: a step may drive a browser, so exposing it over the
   // network would put a test harness on the public API surface.
-  const isScenarioStep = expression.text === 'pikkuScenarioStep'
+  const scenarioStepKind = SCENARIO_STEP_KINDS.get(expression.text)
+  const isScenarioStep = scenarioStepKind !== undefined
 
   // A scenario's own body. Marked so the codegen partitions and the deploy
   // analyzer can tell it apart from an application workflow without having to
@@ -566,6 +580,7 @@ export const addFunctions: AddWiring = (
   let workflowRetries: number | undefined
   let workflowTimeout: string | undefined
   let scenarioStepSurfaces: ScenarioSurface[] | undefined
+  let scenarioStepAddon: string | undefined
   let scenarioStepTemplate: string | undefined
   let scopes: string[] | undefined
   let version: number | undefined
@@ -685,9 +700,37 @@ export const addFunctions: AddWiring = (
           prop.name.text === surface
       )
     )
-    scenarioStepSurfaces = declaredSurfaces.length
-      ? declaredSurfaces
-      : undefined
+    if (scenarioStepKind === 'platform' || scenarioStepKind === 'addon') {
+      // Neither kind has surfaces. Nobody clicks "Stripe's webhook arrives", and
+      // there is no human behind "the platform has expired the trial" — so both
+      // take a single `func`, and a binding key here is a coded error rather
+      // than a convention nobody reads.
+      if (declaredSurfaces.length > 0) {
+        logger.error(
+          `• ${expression.text}('${name}') declares ${declaredSurfaces.join('/')} — a ${scenarioStepKind} step has one implementation, declared as \`func\`. Surfaces are how a person drives the system, and nobody drives this one.`
+        )
+        return
+      }
+      // The phase rule depends on it: an assertion runs every witness it has and
+      // fails if they disagree, so a step with exactly one witness by
+      // construction has to be unable to look like it has several.
+      scenarioStepSurfaces = ['default']
+      if (scenarioStepKind === 'addon') {
+        scenarioStepAddon = getPropertyValue(firstArg, 'addon') as
+          | string
+          | undefined
+        if (!scenarioStepAddon) {
+          logger.error(
+            `• pikkuAddonScenarioStep('${name}') needs a string literal \`addon\` naming the addon whose system acts — the same name its wireAddon declares.`
+          )
+          return
+        }
+      }
+    } else {
+      scenarioStepSurfaces = declaredSurfaces.length
+        ? declaredSurfaces
+        : undefined
+    }
     scenarioStepTemplate = getPropertyValue(firstArg, 'template') as
       | string
       | undefined
@@ -1266,6 +1309,13 @@ export const addFunctions: AddWiring = (
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
     scenarioStepSurfaces,
+    // `persona` is the default reading of an unmarked step, so it is left off
+    // rather than written into every step meta a project already has.
+    scenarioStepKind:
+      scenarioStepKind && scenarioStepKind !== 'persona'
+        ? scenarioStepKind
+        : undefined,
+    scenarioStepAddon,
     scenarioStepTemplate: scenarioStepTemplate || undefined,
     scopes: scopes ?? undefined,
     implementationHash,

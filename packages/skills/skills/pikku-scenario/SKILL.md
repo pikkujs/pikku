@@ -489,7 +489,7 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local --features credentialFeature
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --tags smoke,scenario
 ```
 
-`run` takes the environment as a **required positional** — the key from `scenarios.environments`. `--flows`/`-f` filters by scenario name, `--features` by feature id, `--tags`/`-t` by tag (match-any). Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
+`run` takes the environment as a **required positional** — the key from `environments`. `--flows`/`-f` filters by scenario name, `--features` by feature id, `--tags`/`-t` by tag (match-any). Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`. A scenario inside a feature is named `<Feature> › <scenario> <data>`.
 

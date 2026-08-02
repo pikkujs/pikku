@@ -2,7 +2,7 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpScenarioActors } from './http-scenario-actors.js'
+import { createHttpPersonas } from './http-personas.js'
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import type { AIAgentStepResult } from './ai-agent-runner-service.js'
 
@@ -139,7 +139,7 @@ const wireRunner = () => {
   } as any)
 }
 
-describe('HttpScenarioActor.converse', async () => {
+describe('HttpPersona.converse', async () => {
   const target = await startAgentTarget()
   after(() => {
     target.server.close()
@@ -150,12 +150,21 @@ describe('HttpScenarioActor.converse', async () => {
     wireRunner()
     target.reset()
 
-    const actors = createHttpScenarioActors({
+    const actors = createHttpPersonas({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret',
       model: 'test/test-model',
-      actors: {
-        pm: { email: 'pm@actors.local', name: 'Priya', personality: 'concise' },
+      personas: {
+        pm: {
+          id: 'pm',
+          name: 'Priya',
+          email: 'pm@personas.invalid',
+          personality: 'concise',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
       },
     })
 
@@ -179,11 +188,21 @@ describe('HttpScenarioActor.converse', async () => {
     wireRunner()
     target.reset({ authRequired: true })
 
-    const actors = createHttpScenarioActors({
+    const actors = createHttpPersonas({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret',
       model: 'test/test-model',
-      actors: { pm: { email: 'pm@actors.local' } },
+      personas: {
+        pm: {
+          id: 'pm',
+          name: 'Priya',
+          email: 'pm@personas.invalid',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
     })
 
     const verdict = await actors.pm!.converse({
@@ -208,11 +227,21 @@ describe('HttpScenarioActor.converse', async () => {
       },
     } as any)
 
-    const actors = createHttpScenarioActors({
+    const actors = createHttpPersonas({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret',
       model: 'test/test-model',
-      actors: { pm: { email: 'pm@actors.local' } },
+      personas: {
+        pm: {
+          id: 'pm',
+          name: 'Priya',
+          email: 'pm@personas.invalid',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
     })
 
     await assert.rejects(

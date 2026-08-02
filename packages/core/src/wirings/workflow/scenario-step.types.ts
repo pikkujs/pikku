@@ -1,4 +1,4 @@
-import type { ScenarioActor } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersona } from '../../services/personas-service.js'
 
 /**
  * Scenario steps: named, typed units of scenario behaviour.
@@ -13,6 +13,22 @@ import type { ScenarioActor } from '../../services/scenario-actors-service.js'
  * renders no prefix at all.
  */
 export type ScenarioStepPhase = 'step' | 'given' | 'when' | 'then'
+
+/**
+ * Who acts in a step.
+ *
+ * `persona` is a person driving the system through one of its surfaces — the
+ * ordinary `pikkuScenarioStep`. `platform` is the app acting on itself ("the
+ * platform has expired the trial"), and `addon` is a third-party system acting
+ * on it ("Stripe's webhook arrives"), contributed by the addon that wraps that
+ * service.
+ *
+ * The three are separate declarations rather than a field on one, so the
+ * inspector verifies a step's kind by which function was called rather than by
+ * trusting a string literal — and so an addon package exports only addon steps,
+ * which is checkable.
+ */
+export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
 
 /**
  * How an actor drives the system for one step.
@@ -88,7 +104,7 @@ export interface ScenarioStepOptions {
 
 /**
  * The environment a scenario run targets, as declared in pikku.config.json
- * under `scenarios.environments`.
+ * under `environments`.
  */
 export interface ScenarioEnvironment {
   /** Base API URL of the target app, INCLUDING the HTTP prefix. */
@@ -101,10 +117,10 @@ export interface ScenarioEnvironment {
  * The `scenarioStep` wire, present on every scenario step invocation.
  *
  * `TActor` is the project's own actor type, so a step reaches only the RPCs its
- * actors can actually call. It defaults to the open `ScenarioActor` for a
+ * actors can actually call. It defaults to the open `ScenarioPersona` for a
  * project that declares no registry.
  */
-export interface PikkuScenarioStepWire<TActor = ScenarioActor> {
+export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
   /** Registered step name (also its pikkuFuncId) */
   name: string
   /** Durable key within the run; may carry an `#ordinal` suffix when repeated */

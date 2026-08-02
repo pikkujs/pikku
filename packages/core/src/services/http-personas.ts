@@ -1,11 +1,11 @@
 import type {
-  ScenarioActor,
-  ScenarioActorConfig,
-  ScenarioActors,
+  ScenarioPersona,
+  ResolvedPersona,
+  ScenarioPersonas,
   ScenarioInvokeOptions,
   ScenarioHttpResponse,
-} from './scenario-actors-service.js'
-import { readScenarioHttpResponse } from './scenario-actors-service.js'
+} from './personas-service.js'
+import { readScenarioHttpResponse } from './personas-service.js'
 import type {
   ConverseOptions,
   ActorFlowVerdict,
@@ -19,42 +19,44 @@ import {
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
-export interface HttpScenarioActorsConfig {
+export interface HttpPersonasConfig {
   /**
    * Base API URL of the target app, INCLUDING the HTTP prefix — e.g.
-   * `https://app.example.com/api` or `http://localhost:4000/api`. Actor
-   * sign-in is reached at `${apiUrl}${signInPath}` and exposed RPCs at
+   * `https://app.example.com/api` or `http://localhost:4000/api`. Sign-in is
+   * reached at `${apiUrl}${signInPath}` and exposed RPCs at
    * `${apiUrl}${rpcPath}/:rpcName`.
    */
   apiUrl: string
   /**
-   * The actor impersonation secret. Sign-in only ever works for user rows
-   * flagged `actor: true` — knowing the secret never impersonates real users.
+   * The impersonation secret. Sign-in only ever works for user rows flagged
+   * `actor: true` — knowing the secret never impersonates real users.
    */
   secret: string
-  /** Actor name → config (usually from pikku.config.json's actor registry). */
-  actors: Record<string, ScenarioActorConfig>
+  /** Persona id → the declaration with its address filled in. */
+  personas: Record<string, ResolvedPersona>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
   signInPath?: string
+  /** Where the session (and its roles) is read back. Default `/auth/get-session`. */
+  sessionPath?: string
   /** Exposed-RPC path prefix under apiUrl. Default `/rpc`. */
   rpcPath?: string
   /**
-   * Default model the persona uses when `actor.converse(...)` is called without
-   * an explicit `model`. The persona's own turns/approvals/evaluation run
-   * in-process via the configured `aiAgentRunner`.
+   * Default model a persona thinks with when `converse(...)` is called without
+   * an explicit `model`. Its own turns/approvals/evaluation run in-process via
+   * the configured `aiAgentRunner`.
    */
   model?: string
 }
 
 /**
- * Default HTTP-backed actor. Signs in lazily on first invoke via the Better
+ * Default HTTP-backed persona. Signs in lazily on first invoke via the Better
  * Auth actor plugin (`POST /auth/sign-in/actor` with `{ email, secret }` —
  * the plugin upserts the actor-flagged user row and mints a session whose
  * `actor` flag flows into audits/analytics). Holds the session cookies for
  * its lifetime; a 401 mid-run re-logs-in once (long health-check runs can
  * outlive a session).
  */
-export class HttpScenarioActor implements ScenarioActor {
+export class HttpPersona implements ScenarioPersona {
   private jar: ScenarioCookieJar
   /**
    * Whether `login()` has succeeded since the last time the session was
@@ -66,14 +68,14 @@ export class HttpScenarioActor implements ScenarioActor {
 
   constructor(
     readonly name: string,
-    private actorConfig: ScenarioActorConfig,
-    private config: HttpScenarioActorsConfig
+    private persona: ResolvedPersona,
+    private config: HttpPersonasConfig
   ) {
     this.jar = createCookieJar(config.apiUrl)
   }
 
   get email(): string {
-    return this.actorConfig.email
+    return this.persona.email
   }
 
   async invoke(rpcName: string, data: unknown): Promise<unknown> {
@@ -112,15 +114,15 @@ export class HttpScenarioActor implements ScenarioActor {
     const model = options.model ?? this.config.model
     if (!model) {
       throw new Error(
-        `[scenario] actor '${this.name}' converse needs a model — pass options.model or set 'model' on the actors service`
+        `[scenario] persona '${this.name}' converse needs a model — pass options.model or set 'model' on the personas service`
       )
     }
     const threadId = globalThis.crypto.randomUUID()
-    const resourceId = `actor:${this.name}`
+    const resourceId = `persona:${this.name}`
 
     return runConversation({
-      actor: this.actorConfig,
-      actorName: this.actorConfig.name ?? this.name,
+      persona: this.persona,
+      personaId: this.name,
       agentName: options.agent,
       task: options.task,
       evaluate: options.evaluate,
@@ -137,7 +139,51 @@ export class HttpScenarioActor implements ScenarioActor {
     })
   }
 
-  /** Start/continue the target agent's run over HTTP as this actor. */
+  /**
+   * The roles the stage says this session holds.
+   *
+   * Read from better-auth's `get-session`, which is what most pikku apps are
+   * running and where its admin plugin puts `role` — on the user, as a
+   * comma-separated list. A target that answers something else returns `null`
+   * rather than an empty list, because "this stage does not report roles" and
+   * "this person has none" call for opposite responses from the caller.
+   */
+  async sessionRoles(): Promise<string[] | null> {
+    if (!this.signedIn) {
+      await this.login()
+    }
+    const sessionPath = this.config.sessionPath ?? '/auth/get-session'
+    const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`)
+    if (!res.ok) {
+      return null
+    }
+    const text = await res.text().catch(() => '')
+    if (!text) {
+      return null
+    }
+    let payload: unknown
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      return null
+    }
+    const user = (payload as { user?: { role?: unknown } } | null)?.user
+    const role = user?.role
+    if (typeof role === 'string') {
+      return role
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+    }
+    if (Array.isArray(role)) {
+      return role.filter((name): name is string => typeof name === 'string')
+    }
+    // The session came back and carried a user, but no role field — that is a
+    // stage reporting "none", not a stage that cannot report.
+    return user ? [] : null
+  }
+
+  /** Start/continue the target agent's run over HTTP as this persona. */
   private async agentRun(
     agentName: string,
     message: string,
@@ -168,7 +214,7 @@ export class HttpScenarioActor implements ScenarioActor {
   /**
    * POST an agent HTTP route (raw body, not RPC-wrapped). Signs in lazily: the
    * first call goes out with whatever cookie we hold (none, for a no-auth
-   * agent), and only a 401 triggers `login()` + one retry. This lets an actor
+   * agent), and only a 401 triggers `login()` + one retry. This lets a persona
    * converse with a no-auth agent without any sign-in wiring, while still
    * authenticating against agents that require a session.
    */
@@ -224,22 +270,22 @@ export class HttpScenarioActor implements ScenarioActor {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        email: this.actorConfig.email,
-        name: this.actorConfig.name ?? this.name,
+        email: this.persona.email,
+        name: this.persona.name,
         secret: this.config.secret,
       }),
     })
     if (!res.ok) {
       const body = (await res.text().catch(() => '')).slice(0, 300)
       throw new Error(
-        `[scenario] actor sign-in failed for '${this.name}' (${res.status}): ${body}`
+        `[scenario] persona sign-in failed for '${this.name}' (${res.status}): ${body}`
       )
     }
     // What proves a session was established is this response setting a cookie,
     // not the jar being non-empty — the target may have set one earlier.
     if (res.headers.getSetCookie().length === 0) {
       throw new Error(
-        `[scenario] actor sign-in for '${this.name}' returned no session cookie`
+        `[scenario] persona sign-in for '${this.name}' returned no session cookie`
       )
     }
     this.signedIn = true
@@ -269,15 +315,15 @@ function normalizeAgentReply(raw: unknown): TargetAgentReply {
 }
 
 /**
- * Build the injected `actors` service from the config registry: actor name →
- * lazy HTTP actor. Wire the result as the `actors` singleton service.
+ * Build the injected `personas` service from the declared personas: id → lazy
+ * HTTP persona. Wire the result as the `personas` singleton service.
  */
-export function createHttpScenarioActors(
-  config: HttpScenarioActorsConfig
-): ScenarioActors {
-  const actors: ScenarioActors = {}
-  for (const [name, actorConfig] of Object.entries(config.actors)) {
-    actors[name] = new HttpScenarioActor(name, actorConfig, config)
+export function createHttpPersonas(
+  config: HttpPersonasConfig
+): ScenarioPersonas {
+  const personas: ScenarioPersonas = {}
+  for (const [id, persona] of Object.entries(config.personas)) {
+    personas[id] = new HttpPersona(id, persona, config)
   }
-  return actors
+  return personas
 }

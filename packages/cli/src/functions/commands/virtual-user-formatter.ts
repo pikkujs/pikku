@@ -16,7 +16,7 @@ import type {
 } from '@pikku/core/virtual-user'
 
 export interface VirtualUserReportContext {
-  actor: string
+  persona: string
   disposition: string
   environment: string
   apiUrl: string
@@ -39,7 +39,7 @@ const STATUS_MARK: Record<string, string> = {
 
 /** Why a run ended, in words rather than an enum. */
 const STOPPED_BY: Record<VirtualUserRunResult['stoppedBy'], string> = {
-  'no-intents': 'this actor had nothing to want — no scenario names it',
+  'no-intents': 'this persona had nothing to want — no scenario names them',
   'budget-steps': 'ran out of steps',
   'budget-mutations': 'ran out of mutations',
   'budget-duration': 'ran out of time',
@@ -63,7 +63,7 @@ export const formatVirtualUserReport = (
   const warn = (text: string) => lines.push({ level: 'warn', text })
 
   info(
-    `Virtual user '${context.actor}' (${context.disposition}) against '${context.environment}' — ${context.apiUrl}`
+    `Virtual user '${context.persona}' (${context.disposition}) against '${context.environment}' — ${context.apiUrl}`
   )
   info(
     `  seed ${result.seed} · ${plural(context.catalogue.total, 'endpoint')} offered` +
@@ -108,7 +108,7 @@ export const formatVirtualUserReport = (
 
   if (result.stoppedBy === 'no-intents') {
     warn(
-      `Give it something to want: declare a scenario naming '${context.actor}', or pass --goals.`
+      `Give it something to want: declare a scenario naming '${context.persona}', or pass --goals.`
     )
   }
   // A seed is only worth printing when there is something to reproduce.

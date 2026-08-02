@@ -35,7 +35,6 @@ export type {
 export type {
   InspectorFeature,
   InspectorFeatureEntry,
-  InspectorVirtualUser,
 } from './types.js'
 export { serializeMCPJson } from './utils/serialize-mcp-json.js'
 export type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'

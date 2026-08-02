@@ -63,7 +63,7 @@ export const KNOWLEDGE_SECTIONS: Record<string, string> = {
  * always a copy that will drift. The value is where the truth actually lives.
  */
 const FORBIDDEN_SECTIONS: Record<string, string> = {
-  personas: '`scenarios.personas` in pikku.config.json',
+  personas: '`definePersonas()` in the project\'s own code',
   scenarios: 'the gherkin block inside the slice the scenario belongs to',
   permissions: 'a decision note under decisions/security/',
   schemas: '`pikku meta` — the generated schema is the schema',

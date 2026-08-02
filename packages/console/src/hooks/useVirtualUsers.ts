@@ -18,12 +18,12 @@ export function useVirtualUsers(): VirtualUsersBrowse {
 
   const users = useMemo(() => {
     return toVirtualUserDocs({
-      virtualUsers: meta.virtualUsers ?? {},
+      personas: meta.personas ?? {},
+      systemRoles: (meta.systemRoles ?? {}) as any,
       functions: Object.fromEntries(
         (meta.functions ?? []).map((fn: any) => [fn.name, fn])
       ) as any,
       workflows: (meta.workflows ?? {}) as any,
-      scenarioActors: (meta.scenarioActors ?? {}) as any,
       features: (meta.features ?? {}) as any,
     })
   }, [meta])

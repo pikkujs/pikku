@@ -136,7 +136,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
     await assert.rejects(
       provider.sessionFor('ghost'),
-      /actor 'ghost' is not configured/
+      /browser actor 'ghost' has no persona/
     )
   })
 

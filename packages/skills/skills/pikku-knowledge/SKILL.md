@@ -161,8 +161,8 @@ And writing again replaces it rather than adding a second
 | `channel:`  | a channel name                                     | generated channel meta                                                            |
 | `table:`    | a table name                                       | the generated db schema                                                           |
 | `addon:`    | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                         |
-| `scope:`    | a scope name                                       | the `scopes:` a function gates itself with, plus the grants in `scenarios.actors` |
-| `persona:`  | a persona name                                     | `scenarios.personas` in `pikku.config.json`                                       |
+| `scope:`    | a scope name                                       | the `scopes:` a function gates itself with, plus the scopes a `defineSystemRole()` confers |
+| `persona:`  | a persona name                                     | `definePersonas()`                                                                |
 
 Ids are case-sensitive: `createEntry` is not `createentry`.
 
@@ -176,7 +176,7 @@ These are all things that exist somewhere better, so a note is always the copy t
 
 | Do not write                        | Because it lives in                                        |
 | ----------------------------------- | ---------------------------------------------------------- |
-| a `personas/` section               | `scenarios.personas` in `pikku.config.json`                |
+| a `personas/` section               | `definePersonas()` in the project's own code               |
 | a `scenarios/` section              | the gherkin block inside the slice it belongs to           |
 | a `permissions/` section            | a decision note under `decisions/security/`                |
 | a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema        |

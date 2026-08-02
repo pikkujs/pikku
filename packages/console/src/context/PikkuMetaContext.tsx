@@ -7,20 +7,30 @@ import React, {
   useMemo,
 } from 'react'
 import { usePikkuRPC } from './PikkuRpcProvider'
-import type { VirtualUsersMeta } from '@pikku/core/virtual-user'
+import type { ResolvedPersona } from '@pikku/core/services'
+import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
 import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
 type MetaCounts = AllMeta['counts']
 type FunctionUsedBy = AllMeta['functionUsedBy'][string]
 /**
- * The addon serves `virtualUsers`, but this map is generated against whatever
- * the console was last built with, so the field is only in `AllMeta` once that
- * codegen has re-run. Naming it here rather than asserting at each reader keeps
- * the optionality in one place, and the declaration stays correct either way.
+ * The addon serves `personas` and `systemRoles`, but this map is generated
+ * against whatever the console was last built with, so those fields are only in
+ * `AllMeta` once that codegen has re-run. Naming them here rather than asserting
+ * at each reader keeps the optionality in one place, and the declaration stays
+ * correct either way.
+ *
+ * `scenarioActors` is omitted rather than carried: a persona and a virtual user
+ * are one declaration now, and a second registry keyed the same way would only
+ * ever be the stale one.
  */
-type PikkuMetaState = Omit<AllMeta, 'counts' | 'functionUsedBy'> & {
-  virtualUsers: VirtualUsersMeta
+type PikkuMetaState = Omit<
+  AllMeta,
+  'counts' | 'functionUsedBy' | 'scenarioActors'
+> & {
+  personas: Record<string, ResolvedPersona>
+  systemRoles: SystemRoleDefinitionsMeta
 }
 
 interface PikkuMetaContextType {
@@ -56,9 +66,9 @@ const EMPTY_META: PikkuMetaState = {
   mcpMeta: [],
   gatewayMeta: [],
   workflows: {},
-  scenarioActors: {},
+  personas: {},
+  systemRoles: {},
   features: {},
-  virtualUsers: {},
   triggerMeta: {},
   triggerSourceMeta: {},
   middlewareGroupsMeta: {
@@ -124,10 +134,13 @@ export const PikkuMetaProvider: React.FC<{
         mcpMeta: allMeta.mcpMeta,
         gatewayMeta,
         workflows: allMeta.workflows,
-        scenarioActors: allMeta.scenarioActors ?? {},
+        personas:
+          (allMeta as { personas?: Record<string, ResolvedPersona> })
+            .personas ?? {},
+        systemRoles:
+          (allMeta as { systemRoles?: SystemRoleDefinitionsMeta })
+            .systemRoles ?? {},
         features: allMeta.features ?? {},
-        virtualUsers:
-          (allMeta as { virtualUsers?: VirtualUsersMeta }).virtualUsers ?? {},
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,
         middlewareGroupsMeta: allMeta.middlewareGroupsMeta,

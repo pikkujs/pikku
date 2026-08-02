@@ -109,8 +109,17 @@ const alwaysSuspendingTarget = (): {
 }
 
 const base = {
-  actor: { email: 'pm@example.com', name: 'Priya', personality: 'concise' },
-  actorName: 'Priya',
+  persona: {
+    id: 'priya',
+    email: 'priya@personas.local',
+    name: 'Priya',
+    personality: 'concise',
+    roles: [],
+    goals: [],
+    tags: [],
+    runnable: true,
+  },
+  personaId: 'priya',
   agentName: 'todoBot',
   task: 'Get a todo created',
   evaluate: 'A todo now exists',

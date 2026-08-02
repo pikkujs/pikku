@@ -36,7 +36,7 @@ export const requireScenarioEnv = (
   if (!env) {
     throw new Error(
       `[scenario] step '${scenarioStep?.name ?? 'unknown'}' needs the target environment, but this run carries none. ` +
-        `Run it through 'pikku scenario run <environment>' with scenarios.environments.<environment> declared in pikku.config.json.`
+        `Run it through 'pikku scenario run <environment>' with environments.<environment> declared in pikku.config.json.`
     )
   }
   return env

@@ -11,7 +11,7 @@ const functions = {
   refundOrder: {
     name: 'refundOrder',
     expose: true,
-    permissions: [{ name: 'isFinance' }],
+    scopes: ['finance:refund'],
   },
   payOutSupplier: {
     name: 'payOutSupplier',
@@ -34,7 +34,12 @@ const workflows = {
     title: 'A shopper is refunded',
     actors: ['shopper'],
     steps: [
-      { type: 'scenarioStep', stepFunc: 'buysAnApple', phase: 'given', actor: 'shopper' },
+      {
+        type: 'scenarioStep',
+        stepFunc: 'buysAnApple',
+        phase: 'given',
+        actor: 'shopper',
+      },
     ],
   },
   adminFlow: {
@@ -45,49 +50,74 @@ const workflows = {
   },
 } as any
 
-const scenarioActors = {
-  shopper: { name: 'Sam Shopper', email: 'sam@example.com', jobTitle: 'Shopper' },
-}
+const systemRoles = {
+  refunder: { name: 'refunder', scopes: ['finance:refund'] },
+} as any
 
 const features = {
   refunds: { name: 'Refunds', entries: [{ scenario: 'refundFlow' }] },
 }
 
-const build = (virtualUsers: any) =>
+const build = (personas: any) =>
   toVirtualUserDocs({
-    virtualUsers,
+    personas,
+    systemRoles,
     functions,
     workflows,
-    scenarioActors,
     features: features as any,
   })
 
-const user = (overrides: Record<string, unknown> = {}) => ({
+const persona = (overrides: Record<string, unknown> = {}) => ({
   shopper: {
     id: 'shopper',
-    name: 'Impatient shopper',
-    actor: 'shopper',
+    name: 'Sam Shopper',
+    email: 'sam@example.com',
+    jobTitle: 'Shopper',
     disposition: 'realistic',
+    roles: [],
     goals: [],
     tags: [],
+    runnable: true,
     ...overrides,
   },
 })
 
 describe('the virtual user reading model', () => {
-  test('shows who the actor actually is, not just their key', () => {
-    const [doc] = build(user())
+  test('the persona is the identity — no second registry to look them up in', () => {
+    const [doc] = build(persona())
+    assert.equal(doc!.persona.key, 'shopper')
     assert.equal(doc!.persona.name, 'Sam Shopper')
     assert.equal(doc!.persona.email, 'sam@example.com')
   })
 
-  test('an unknown actor still reads, under its own key', () => {
-    const [doc] = build(user({ actor: 'ghost' }))
-    assert.equal(doc!.persona.name, 'ghost')
+  // Someone declared `runnable: false` exists to be banned, shared with or
+  // reset. Showing what a run of them would look like would describe a run that
+  // cannot happen.
+  test('a persona who is only ever acted upon is not shown as a virtual user', () => {
+    const docs = build({
+      ...persona(),
+      target: {
+        id: 'target',
+        name: 'Terry Target',
+        roles: [],
+        goals: [],
+        tags: [],
+        runnable: false,
+      },
+    })
+    assert.deepEqual(
+      docs.map((doc) => doc.id),
+      ['shopper']
+    )
   })
 
-  test('only the scenarios that name this actor become intents', () => {
-    const [doc] = build(user())
+  test('a persona who declares no disposition is realistic', () => {
+    const [doc] = build(persona({ disposition: undefined }))
+    assert.equal(doc!.disposition, 'realistic')
+  })
+
+  test('only the scenarios that cast this persona become intents', () => {
+    const [doc] = build(persona())
     assert.deepEqual(
       doc!.intents.map((intent) => intent.id),
       ['refundFlow']
@@ -96,55 +126,59 @@ describe('the virtual user reading model', () => {
   })
 
   test('an intent carries prose, never the rpc names behind it', () => {
-    const [doc] = build(user())
+    const [doc] = build(persona())
     const rendered = JSON.stringify(doc!.intents)
     assert.ok(!rendered.includes('buysAnApple'))
   })
 
-  test('a user with no scenarios and no goals is reported as having nothing to want', () => {
-    const [doc] = build(user({ actor: 'ghost' }))
+  test('a persona in no scenarios with no goals is reported as having nothing to want', () => {
+    const [doc] = build(persona({ id: 'ghost' }))
     assert.equal(doc!.intents.length, 0)
     assert.equal(doc!.goals.length, 0)
   })
 
   test('scenario steps are not endpoints, so they are not part of the surface', () => {
-    const [doc] = build(user())
+    const [doc] = build(persona())
     assert.equal(doc!.reach.total, 4)
   })
 
-  test('approval-gated calls are held back unless the declaration opts in', () => {
-    const [held] = build(user())
-    assert.equal(held!.reach.withheldByApproval, 1)
-    assert.equal(held!.reach.offered, 3)
-
-    const [allowed] = build(user({ allowApprovalRequired: true }))
-    assert.equal(allowed!.reach.withheldByApproval, 0)
-    assert.equal(allowed!.reach.offered, 4)
+  // Approval-gated calls spend money and move real traffic, so opting in is a
+  // decision made at the moment of running. The declaration view can only ever
+  // show the default, which is that they are withheld.
+  test('approval-gated calls are held back', () => {
+    const [doc] = build(persona())
+    assert.equal(doc!.reach.withheldByApproval, 1)
+    assert.ok(!doc!.reach.offeredNames.includes('payOutSupplier'))
   })
 
-  test('grants narrow what an ordinary user is offered', () => {
-    const [doc] = build(user({ grants: ['isShopper'] }))
-    assert.equal(doc!.reach.withheldByGrants, 1)
-    assert.ok(!doc!.reach.showsEverything)
+  test('a scope-gated call is out of reach until a role confers it', () => {
+    const [without] = build(persona())
+    assert.equal(without!.reach.withheldByScopes, 1)
+    assert.ok(!without!.reach.offeredNames.includes('refundOrder'))
+    assert.deepEqual(without!.scopes, [])
+
+    const [with_] = build(persona({ roles: ['refunder'] }))
+    assert.equal(with_!.reach.withheldByScopes, 0)
+    assert.ok(with_!.reach.offeredNames.includes('refundOrder'))
+    assert.deepEqual(with_!.scopes, ['finance:refund'])
+    assert.ok(!with_!.reach.showsEverything)
   })
 
-  test('an adversarial user is shown everything its grants do not cover, on purpose', () => {
-    const [doc] = build(
-      user({ disposition: 'adversarial', grants: ['isShopper'] })
-    )
-    assert.equal(doc!.reach.withheldByGrants, 0)
+  test('an adversarial persona is shown what its roles do not cover, on purpose', () => {
+    const [doc] = build(persona({ disposition: 'adversarial' }))
+    assert.equal(doc!.reach.withheldByScopes, 0)
     assert.ok(doc!.reach.showsEverything)
-    assert.ok(doc!.reach.offered >= 3)
+    assert.ok(doc!.reach.offeredNames.includes('refundOrder'))
   })
 
   test('an auditor is never offered a mutation', () => {
-    const [doc] = build(user({ disposition: 'auditor' }))
+    const [doc] = build(persona({ disposition: 'auditor' }))
     assert.equal(doc!.reach.mutations, 0)
     assert.ok(doc!.reach.withheldByReadOnly > 0)
   })
 
   test('read or write guessed from a name is counted, so the gap is visible', () => {
-    const [doc] = build(user())
+    const [doc] = build(persona())
     // Only archiveOrder annotates `readonly`; the rest rest on the heuristic.
     assert.equal(doc!.reach.inferred, 3)
   })
@@ -152,9 +186,9 @@ describe('the virtual user reading model', () => {
   // A count you cannot open is a count you have to take on trust, and the
   // three figures are the entry point to the endpoints they stand for.
   test('every reach figure names the endpoints it counts', () => {
-    const [doc] = build(user())
+    const [doc] = build(persona({ roles: ['refunder'] }))
     // payOutSupplier is approval-gated, so it is counted by the catalogue and
-    // named by nothing this user is offered.
+    // named by nothing this persona is offered.
     assert.deepEqual(doc!.reach.offeredNames.sort(), [
       'archiveOrder',
       'listOrders',
@@ -167,13 +201,13 @@ describe('the virtual user reading model', () => {
   })
 
   test('the names track what was withheld, not the whole catalogue', () => {
-    const [doc] = build(user({ disposition: 'auditor' }))
+    const [doc] = build(persona({ disposition: 'auditor' }))
     assert.deepEqual(doc!.reach.mutationNames, [])
     assert.ok(!doc!.reach.offeredNames.includes('archiveOrder'))
   })
 
   test('wanting is counted as well as listed, so a long list still reads', () => {
-    const [doc] = build(user())
+    const [doc] = build(persona())
     assert.deepEqual(doc!.wants, {
       intents: 1,
       features: 1,
@@ -183,12 +217,12 @@ describe('the virtual user reading model', () => {
   })
 
   test('an intent no feature claims is still an intent, just not in the spread', () => {
-    const [doc] = build(user())
+    const [doc] = build(persona())
     const unclaimed = toVirtualUserDocs({
-      virtualUsers: user() as any,
+      personas: persona() as any,
+      systemRoles,
       functions,
       workflows,
-      scenarioActors,
       features: {} as any,
     })[0]!
     assert.equal(unclaimed.wants.intents, doc!.wants.intents)
@@ -196,12 +230,12 @@ describe('the virtual user reading model', () => {
     assert.deepEqual(unclaimed.wants.byFeature, [])
   })
 
-  // The screen shows the merged profile, so a tuned user has to say so — a
-  // `careless` user whose numbers quietly disagree with the careless blurb is
+  // The screen shows the merged profile, so a tuned persona has to say so — a
+  // `careless` one whose numbers quietly disagree with the careless blurb is
   // worse than no numbers at all.
   test('tuning is merged into the profile and named as an override', () => {
     const [doc] = build(
-      user({ tuning: { repeatRate: 0.4, moves: { suspend: 30 } } })
+      persona({ tuning: { repeatRate: 0.4, moves: { suspend: 30 } } })
     )
     assert.equal(doc!.profile.repeatRate, 0.4)
     assert.equal(doc!.profile.moves.suspend, 30)
@@ -210,30 +244,42 @@ describe('the virtual user reading model', () => {
     assert.deepEqual(doc!.tunedDials, ['repeatRate', 'moves'])
   })
 
-  test('an untuned user names no overrides', () => {
-    const [doc] = build(user())
+  test('an untuned persona names no overrides', () => {
+    const [doc] = build(persona())
     assert.deepEqual(doc!.tunedDials, [])
   })
 
   test('tuning readOnly off changes what the reach section reports', () => {
-    const [stock] = build(user({ disposition: 'auditor' }))
+    const [stock] = build(persona({ disposition: 'auditor' }))
     const [writing] = build(
-      user({ disposition: 'auditor', tuning: { readOnly: false } })
+      persona({ disposition: 'auditor', tuning: { readOnly: false } })
     )
     assert.equal(stock!.reach.mutations, 0)
     assert.ok(writing!.reach.mutations > 0)
   })
 
-  test('users are listed by name, so the rail reads alphabetically', () => {
+  // The screen has the declaration, not the project's config, so it cannot
+  // enumerate what "everywhere but production" comes to — and resolving it here
+  // against a guess would be worse than saying the rule.
+  test('a declared environment list is carried, and an absent one stays absent', () => {
+    const [named] = build(
+      persona({ disposition: 'accountable', environments: ['prod'] })
+    )
+    assert.deepEqual(named!.environments, ['prod'])
+    assert.equal(build(persona())[0]!.environments, undefined)
+  })
+
+  test('personas are listed by name, so the rail reads alphabetically', () => {
     const docs = build({
-      ...user({ name: 'Zoe' }),
+      ...persona({ name: 'Zoe' }),
       admin: {
         id: 'admin',
         name: 'Ada',
-        actor: 'admin',
         disposition: 'auditor',
+        roles: [],
         goals: [],
         tags: [],
+        runnable: true,
       },
     })
     assert.deepEqual(

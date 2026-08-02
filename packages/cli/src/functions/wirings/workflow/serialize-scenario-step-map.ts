@@ -12,7 +12,16 @@ import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
 import type { FunctionsMeta } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
-const SCENARIO_STEP_WRAPPER = 'pikkuScenarioStep'
+/**
+ * All three step wrappers. A scenario calls a platform or addon step by name
+ * exactly as it calls a persona one — who acts changes what the step may do, not
+ * how it is referenced — so all three belong in the map.
+ */
+const SCENARIO_STEP_WRAPPERS = new Set([
+  'pikkuScenarioStep',
+  'pikkuPlatformScenarioStep',
+  'pikkuAddonScenarioStep',
+])
 
 export const serializeScenarioStepMap = (
   logger: Logger,
@@ -24,7 +33,7 @@ export const serializeScenarioStepMap = (
   const requiredTypes = new Set<string>()
 
   const steps = Object.entries(functionsMeta).filter(
-    ([, meta]) => meta.funcWrapper === SCENARIO_STEP_WRAPPER
+    ([, meta]) => !!meta.funcWrapper && SCENARIO_STEP_WRAPPERS.has(meta.funcWrapper)
   )
 
   const resolveType = (name: string | undefined) => {

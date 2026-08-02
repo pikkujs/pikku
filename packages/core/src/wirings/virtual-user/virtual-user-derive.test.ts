@@ -2,13 +2,13 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { deriveCatalogue, deriveIntents } from './virtual-user-derive.js'
-import { actorVirtualUserTarget } from './virtual-user-target.js'
+import { personaVirtualUserTarget } from './virtual-user-target.js'
 import type { FunctionsMeta } from '../../types/core.types.js'
 import type { WorkflowsMeta } from '../workflow/workflow.types.js'
 import type {
-  ScenarioActor,
+  ScenarioPersona,
   ScenarioHttpResponse,
-} from '../../services/scenario-actors-service.js'
+} from '../../services/personas-service.js'
 
 /**
  * `expose: true` by default, because these fixtures stand for functions a
@@ -31,10 +31,7 @@ describe('deriving the catalogue from generated meta', () => {
       description: 'Create a project',
       inputSchemaName: 'CreateProjectInput',
       outputSchemaName: 'CreateProjectOutput',
-      permissions: [
-        { type: 'wire', name: 'canAdminOrg' },
-        { type: 'wire', name: 'canAdminOrg' },
-      ],
+      scopes: ['org:admin', 'org:admin'],
       tags: ['projects'],
     }),
     getProject: fn({ readonly: true, summary: 'Read a project' }),
@@ -45,6 +42,15 @@ describe('deriving the catalogue from generated meta', () => {
     agentCaller: fn({ expose: undefined }),
     userSeesTheDashboard: fn({ scenarioStep: true }),
     onboardingScenario: fn({ scenario: true }),
+    // The two subjects nobody signs in as. Both spelled with `expose: true` on
+    // purpose: the point is that being marked as a step kind is what withholds
+    // them, so the exclusion survives someone exposing one by mistake.
+    trialHasExpired: fn({ scenarioStep: true, scenarioStepKind: 'platform' }),
+    stripeWebhookArrives: fn({
+      scenarioStep: true,
+      scenarioStepKind: 'addon',
+      scenarioStepAddon: 'stripe',
+    }),
   }
 
   const schemas = {
@@ -59,14 +65,14 @@ describe('deriving the catalogue from generated meta', () => {
     },
   }
 
-  test('an rpc arrives with its schema, permissions and gates attached', () => {
+  test('an rpc arrives with its schema, scopes and gates attached', () => {
     const [entry] = deriveCatalogue(functions, schemas)
     assert.deepEqual(entry, {
       name: 'createProject',
       description: 'Create a project',
       readonly: undefined,
       approvalRequired: undefined,
-      permissions: ['canAdminOrg'],
+      scopes: ['org:admin'],
       tags: ['projects'],
       inputKeys: ['name', 'orgId'],
       outputKeys: ['projectId'],
@@ -91,6 +97,24 @@ describe('deriving the catalogue from generated meta', () => {
   test('a function that was never exposed is not offered either', () => {
     const names = deriveCatalogue(functions, schemas).map((e) => e.name)
     assert.ok(!names.includes('agentCaller'))
+  })
+
+  // Oracle integrity, not tidiness. A virtual user that can invoke "Stripe's
+  // webhook arrives" forges its own payment success, and every finding
+  // downstream of that is worthless — so this is enforced at derivation rather
+  // than left to whoever remembers not to expose a step.
+  test('the platform and an addon are not things a virtual user can be', () => {
+    const names = deriveCatalogue(functions, schemas).map((e) => e.name)
+    assert.ok(!names.includes('trialHasExpired'))
+    assert.ok(!names.includes('stripeWebhookArrives'))
+  })
+
+  test('a step kind is withheld even if nothing else marked it a step', () => {
+    const names = deriveCatalogue(
+      { stripeWebhookArrives: fn({ scenarioStepKind: 'addon' }) },
+      {}
+    ).map((e) => e.name)
+    assert.deepEqual(names, [])
   })
 
   test('an approval gate and a readonly flag survive the trip', () => {
@@ -186,7 +210,7 @@ describe('deriving intents from scenarios', () => {
     assert.equal(intent!.id, 'inviteFlow')
     assert.equal(intent!.title, 'Invite a teammate')
     assert.equal(intent!.description, 'An admin brings someone new into the org')
-    assert.deepEqual(intent!.actors, ['orgAdmin'])
+    assert.deepEqual(intent!.personas, ['orgAdmin'])
     assert.deepEqual(intent!.tags, ['org'])
   })
 
@@ -272,7 +296,7 @@ describe('deriving intents from scenarios', () => {
       'Given the orgAdmin is signed in',
       'When the orgAdmin invites {email}',
     ])
-    assert.deepEqual(intents[0]!.actors, ['orgAdmin'])
+    assert.deepEqual(intents[0]!.personas, ['orgAdmin'])
   })
 
   test('an ordinary workflow read off disk is still not a scenario', () => {
@@ -294,20 +318,23 @@ describe('driving a virtual user through a signed-in actor', () => {
     serialized: '{}',
   }
 
-  const stubActor = (overrides: Partial<ScenarioActor> = {}): ScenarioActor =>
+  const stubPersona = (
+    overrides: Partial<ScenarioPersona> = {}
+  ): ScenarioPersona =>
     ({
       name: 'orgAdmin',
-      email: 'admin@example.com',
+      email: 'admin@personas.invalid',
       invoke: async () => ({}),
       invokeRaw: async () => response,
       converse: async () => ({ passed: true, reasoning: 'ok', transcript: [] }),
+      sessionRoles: async () => [],
       ...overrides,
-    }) as ScenarioActor
+    }) as ScenarioPersona
 
-  test('a call goes out as the actor, and a refusal comes back as data', async () => {
+  test('a call goes out as the persona, and a refusal comes back as data', async () => {
     const seen: unknown[] = []
-    const target = actorVirtualUserTarget(
-      stubActor({
+    const target = personaVirtualUserTarget(
+      stubPersona({
         invokeRaw: async (rpcName: string, data: unknown) => {
           seen.push([rpcName, data])
           return { status: 403, ok: false, body: {}, serialized: '{}' }
@@ -321,13 +348,13 @@ describe('driving a virtual user through a signed-in actor', () => {
   })
 
   test('an app with no agents gives its users nobody to talk to', () => {
-    assert.equal(actorVirtualUserTarget(stubActor()).talkTo, undefined)
+    assert.equal(personaVirtualUserTarget(stubPersona()).talkTo, undefined)
   })
 
   test('an agent it was told about is reached in persona', async () => {
     let asked: unknown = null
-    const target = actorVirtualUserTarget(
-      stubActor({
+    const target = personaVirtualUserTarget(
+      stubPersona({
         converse: async (options: unknown) => {
           asked = options
           return { passed: true, reasoning: 'sorted', transcript: [] }
@@ -348,8 +375,8 @@ describe('driving a virtual user through a signed-in actor', () => {
 
   test('an agent it invented is answered, not dialled', async () => {
     let called = false
-    const target = actorVirtualUserTarget(
-      stubActor({
+    const target = personaVirtualUserTarget(
+      stubPersona({
         converse: async () => {
           called = true
           return { passed: true, reasoning: '', transcript: [] }

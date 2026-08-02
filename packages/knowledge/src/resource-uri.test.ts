@@ -91,7 +91,7 @@ describe('collectKnownResources', () => {
       '.pikku/channel/pikku-channels-meta.gen.json': { ch: {} },
       '.pikku/db/pikku-db-schema.gen.json': { tables: [{ name: 't' }] },
       'package.json': { dependencies: { '@pikku/addon-stripe': '1' } },
-      'pikku.config.json': { scenarios: { personas: { owner: {} } } },
+      '.pikku/scopes/pikku-personas-meta.gen.json': { owner: { id: 'owner' } },
     })
     assert.deepEqual(
       [...(await known(root)).keys()].sort(),
@@ -220,16 +220,17 @@ describe('collectKnownResources', () => {
     ])
   })
 
-  test('takes scopes granted to an actor too, which no function declares', async (t) => {
-    // An umbrella scope like `admin` is granted in the config and checked by the
+  test('takes scopes a role confers too, which no function declares', async (t) => {
+    // An umbrella scope like `admin` is conferred by a role and checked by the
     // app's own permission, so it appears in no function meta. A note about it is
     // about something the project declared, not drift.
     const root = await project(t, {
       '.pikku/function/pikku-functions-meta.gen.json': {
         getReport: { scopes: ['reports:read'] },
       },
-      'pikku.config.json': {
-        scenarios: { actors: { admin: { scopes: ['admin'] }, guest: {} } },
+      '.pikku/scopes/pikku-roles-meta.gen.json': {
+        'platform-admin': { name: 'platform-admin', scopes: ['admin'] },
+        empty: { name: 'empty', scopes: [] },
       },
     })
     const scopes = (await known(root)).get('scope')!
@@ -237,10 +238,11 @@ describe('collectKnownResources', () => {
     assert.ok(scopes.has('admin'))
   })
 
-  test('takes personas from the config, the one prefix with no codegen behind it', async (t) => {
+  test('takes personas from the generated meta, not from the config', async (t) => {
     const root = await project(t, {
-      'pikku.config.json': {
-        scenarios: { personas: { owner: {}, guest: {} } },
+      '.pikku/scopes/pikku-personas-meta.gen.json': {
+        owner: { id: 'owner', name: 'Owner' },
+        guest: { id: 'guest', name: 'Guest' },
       },
     })
     assert.deepEqual(

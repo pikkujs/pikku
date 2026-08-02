@@ -6,7 +6,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import type { WorkflowRun } from '../workflow.types.js'
-import type { ScenarioActor } from '../../../services/scenario-actors-service.js'
+import type { ScenarioPersona } from '../../../services/personas-service.js'
 import type {
   ScenarioStepOptions,
   ScenarioStepPhase,
@@ -36,7 +36,7 @@ export interface WorkflowStepOptions {
    * internally — so auth middleware and permissions are exercised end-to-end.
    * The step is recorded durably like any RPC step.
    */
-  actor?: ScenarioActor
+  actor?: ScenarioPersona
   // Future: timeout, failFast, priority
 }
 

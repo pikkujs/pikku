@@ -6,7 +6,7 @@ import {
   TARGET_USER,
   type SeedUser,
 } from './auth-fixtures.js'
-import { scenarioActorConfigs } from '#pikku/workflow/pikku-scenario-actors.gen.js'
+import { personaConfigs } from '#pikku/workflow/pikku-personas.gen.js'
 
 const signUp = async (baseUrl: string, user: SeedUser) => {
   const res = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
@@ -49,7 +49,7 @@ export const seedScenarioActors = async (
     )
     return
   }
-  for (const [name, actor] of Object.entries(scenarioActorConfigs)) {
+  for (const [name, actor] of Object.entries(personaConfigs)) {
     const res = await fetch(`${baseUrl}/api/auth/sign-in/actor`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: baseUrl },
@@ -62,7 +62,7 @@ export const seedScenarioActors = async (
     }
   }
   services.logger.info(
-    `seeded scenario actors: ${Object.values(scenarioActorConfigs)
+    `seeded scenario actors: ${Object.values(personaConfigs)
       .map((a) => a.email)
       .join(', ')}`
   )

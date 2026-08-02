@@ -16,7 +16,7 @@ import {
   type WorkflowRunExtension,
 } from './pikku-workflow-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
-import type { ScenarioActors } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersonas } from '../../services/personas-service.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type {
   ScenarioBrowserProvider,
@@ -244,7 +244,7 @@ addError(ScenarioNoWitness, {
 export class PikkuScenarioService implements WorkflowRunExtension {
   // Scenario actors per run: live authenticated clients (cookie jars) are
   // process-local by nature, so they ride this map, never the persisted wire.
-  private runActors = new Map<string, ScenarioActors>()
+  private runActors = new Map<string, ScenarioPersonas>()
   private scenarioBrowserProvider?: ScenarioBrowserProvider
   private scenarioEnvironment?: ScenarioEnvironment
   private runSurface: ScenarioSurface = 'default'
@@ -294,12 +294,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public async attachRunContext(
     runId: string,
     workflowMeta: any,
-    options?: { actors?: ScenarioActors }
+    options?: { actors?: ScenarioPersonas }
   ): Promise<void> {
     const actors =
       options?.actors ??
       (workflowMeta.source === 'scenario'
-        ? await this.resolveScenarioActors()
+        ? await this.resolvePersonas()
         : undefined)
     if (actors) {
       this.runActors.set(runId, actors)
@@ -450,7 +450,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
    * for the AI persona conversation loop it pulls in when a scenario actually
    * signs an actor in.
    */
-  public async resolveScenarioActors(): Promise<ScenarioActors | undefined> {
+  public async resolvePersonas(): Promise<ScenarioPersonas | undefined> {
     const services = getSingletonServices()
     const variables = services?.variables
     const metaService = services?.metaService
@@ -461,12 +461,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     const apiUrl = await variables.get('API_URL')
     if (!secret || !apiUrl) {
       services?.logger?.warn(
-        'A scenario was started without actors but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without actors.'
+        'A scenario was started without personas but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without them.'
       )
       return undefined
     }
-    const actorsConfig = await metaService.getScenarioActorsMeta()
-    if (!actorsConfig || Object.keys(actorsConfig).length === 0) {
+    const personas = await metaService.getPersonasMeta()
+    if (!personas || Object.keys(personas).length === 0) {
       return undefined
     }
     const signInPath =
@@ -478,12 +478,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       apiUrl,
       appUrl: (await variables.get('APP_URL')) ?? undefined,
     }
-    const { createHttpScenarioActors } =
-      await import('../../services/http-scenario-actors.js')
-    return createHttpScenarioActors({
+    const { createHttpPersonas } =
+      await import('../../services/http-personas.js')
+    return createHttpPersonas({
       apiUrl,
       secret,
-      actors: actorsConfig,
+      personas,
       signInPath,
       rpcPath,
     })
@@ -722,7 +722,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         ? `${addonNamespace}:${stepFunc}`
         : stepFunc
 
-    const actor = options?.actor as ScenarioActors[string] | undefined
+    const actor = options?.actor as ScenarioPersonas[string] | undefined
     const description =
       options?.description ??
       this.scenarioStepDescription(packageName, resolvedStepFunc) ??

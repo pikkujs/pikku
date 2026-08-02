@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext } from '@playwright/test'
-import type { ScenarioActorConfig } from '@pikku/core/services'
+import type { ResolvedPersona } from '@pikku/core/services'
 import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
@@ -38,8 +38,8 @@ export interface PlaywrightScenarioBrowserProviderOptions {
   config?: BrowserConfig
   /** The actor impersonation secret — the same SCENARIO_ACTOR_SECRET the HTTP actors use. */
   secret: string
-  /** Actor name → config, from pikku.config.json's `scenarios.actors`. */
-  actors: Record<string, ScenarioActorConfig>
+  /** Actor name → the persona filling it, resolved from `definePersonas()`. */
+  actors: Record<string, ResolvedPersona>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
   signInPath?: string
   /** Where `captureFailure` writes screenshots. Without it, none are taken. */
@@ -75,7 +75,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     const actorConfig = this.options.actors[actorName]
     if (!actorConfig) {
       throw new Error(
-        `[scenario] browser actor '${actorName}' is not configured — declare it as a persona in scenarios.personas, or as a body in scenarios.actors, in pikku.config.json`
+        `[scenario] browser actor '${actorName}' has no persona — add it to a definePersonas({ ... }) call`
       )
     }
     // Cache the promise, not the resolved session, so two steps racing for the
@@ -146,7 +146,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
 
   private async openSession(
     actorName: string,
-    actorConfig: ScenarioActorConfig
+    actorConfig: ResolvedPersona
   ): Promise<ActorSession> {
     const { browser } = await this.browser()
     const session = new ActorSession(actorName, this.config)

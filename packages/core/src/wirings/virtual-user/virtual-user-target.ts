@@ -1,7 +1,7 @@
-import type { ScenarioActor } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersona } from '../../services/personas-service.js'
 import type { VirtualUserTarget } from './virtual-user.types.js'
 
-export interface ActorTargetOptions {
+export interface PersonaTargetOptions {
   /** Model the persona uses for its side of a conversation with an agent. */
   model?: string
   /** Agents this user may talk to. Omit to leave `talkTo` unavailable. */
@@ -9,9 +9,9 @@ export interface ActorTargetOptions {
 }
 
 /**
- * Drive a virtual user through a signed-in actor.
+ * Drive a virtual user through a signed-in persona.
  *
- * This is the only place the engine meets the network. An actor already signs
+ * This is the only place the engine meets the network. A persona already signs
  * in as a real user over the app's own auth, keeps its cookies, re-logs-in when
  * a session expires mid-run and reports a status as data rather than throwing —
  * everything a user imitating a user needs, and none of it worth building twice.
@@ -20,11 +20,11 @@ export interface ActorTargetOptions {
  * error, it is the system saying no, which is information it should be allowed
  * to act on.
  */
-export const actorVirtualUserTarget = (
-  actor: ScenarioActor,
-  { model, agents }: ActorTargetOptions = {}
+export const personaVirtualUserTarget = (
+  persona: ScenarioPersona,
+  { model, agents }: PersonaTargetOptions = {}
 ): VirtualUserTarget => ({
-  call: (rpcName, args) => actor.invokeRaw(rpcName, args),
+  call: (rpcName, args) => persona.invokeRaw(rpcName, args),
   talkTo: agents?.length
     ? async (agent, task) => {
         if (!agents.includes(agent)) {
@@ -34,7 +34,7 @@ export const actorVirtualUserTarget = (
             transcript: [],
           }
         }
-        return actor.converse({
+        return persona.converse({
           agent,
           task,
           // A user asking for something judges the answer by whether they got

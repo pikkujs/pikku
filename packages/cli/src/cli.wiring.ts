@@ -27,6 +27,8 @@ import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
 import { scopesAudit } from './functions/commands/scopes-audit.js'
 import { scopesPrune } from './functions/commands/scopes-prune.js'
+import { rolesAudit } from './functions/commands/roles-audit.js'
+import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
 import {
   workspaceValidate,
@@ -42,9 +44,10 @@ import {
 } from './functions/commands/knowledge-index.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
 import {
-  virtualUserList,
-  virtualUserRun,
-} from './functions/commands/virtual-user.js'
+  personaList,
+  personaRun,
+} from './functions/commands/persona.js'
+import { personaSync } from './functions/commands/persona-sync.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
@@ -467,6 +470,29 @@ wireCLI({
         }),
       },
     },
+    roles: {
+      description: 'Inspect and maintain the roles declared with defineSystemRole',
+      subcommands: {
+        audit: pikkuCLICommand({
+          func: rolesAudit,
+          description:
+            'Report system roles in the database that are no longer declared in code, and how many people hold them',
+        }),
+        prune: pikkuCLICommand({
+          func: rolesPrune,
+          description:
+            'Remove system roles that are no longer declared in code, cascading them out of every user grant',
+          options: {
+            yes: {
+              description:
+                'Actually delete. Without it, prune only reports the blast radius',
+              short: 'y',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
     knowledge: {
       description:
         'Inspect and maintain the knowledge base — what this app is, in the language its users use',
@@ -509,7 +535,7 @@ wireCLI({
         run: pikkuCLICommand({
           func: scenarioRun,
           description:
-            'Run scenarios against a configured environment (scenarios.environments in pikku.config.json). Actor secret comes from SCENARIO_ACTOR_SECRET.',
+            'Run scenarios against a configured environment (environments in pikku.config.json). Actor secret comes from SCENARIO_ACTOR_SECRET.',
           parameters: '<environment>',
           options: {
             flows: {
@@ -579,29 +605,24 @@ wireCLI({
         }),
       },
     },
-    'virtual-user': {
+    persona: {
       description:
-        'Run LLM-driven users against a real stage (pikkuVirtualUser)',
+        'The people this app is for, and running one against a real stage',
       subcommands: {
         run: pikkuCLICommand({
-          func: virtualUserRun,
+          func: personaRun,
           description:
-            'Sign in as a scenario actor and work the API in character against a configured environment. Name a declared pikkuVirtualUser, or describe one with --actor. Not a test runner: it asserts nothing and reports what came back that should not have. Actor secret comes from SCENARIO_ACTOR_SECRET.',
-          parameters: '<environment> [name]',
+            'Sign in as a declared persona and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. The sign-in secret comes from SCENARIO_ACTOR_SECRET.',
+          parameters: '<environment> <persona>',
           options: {
-            actor: {
-              description:
-                'Which actor to be (scenarios.actors in pikku.config.json). Overrides the named virtual user',
-              short: 'a',
-            },
             disposition: {
               description:
-                'How it behaves: realistic (default), careless, newcomer, stale, auditor, adversarial',
+                'How they behave: realistic (default), careless, newcomer, stale, auditor, adversarial',
               short: 'd',
             },
             goals: {
               description:
-                'Comma-separated goals in your own words, run alongside the ones derived from scenarios',
+                "Comma-separated goals in your own words, run alongside the persona's own and the ones derived from scenarios",
             },
             steps: {
               description: 'Model turns before it stops (default 40)',
@@ -618,11 +639,15 @@ wireCLI({
             },
             model: {
               description:
-                'Model it thinks with. Defaults to scenarios.model in pikku.config.json',
+                'Model they think with. Defaults to scenarios.model in pikku.config.json',
             },
             allowApproval: {
               description:
-                'Offer the endpoints the app marked as needing a human’s approval. Off by default: those are the ones that spend money',
+                'Offer the endpoints the app marked as needing a human\u2019s approval. Off by default: those are the ones that spend money',
+            },
+            skipRoleCheck: {
+              description:
+                'Start without verifying the declared roles against the stage. For a target whose auth reports roles somewhere pikku cannot read — findings from an unverified run may be seed drift rather than product bugs',
             },
             apiUrl: {
               description:
@@ -634,10 +659,26 @@ wireCLI({
             },
           },
         }),
-        list: pikkuCLICommand({
-          func: virtualUserList,
+        sync: pikkuCLICommand({
+          func: personaSync,
           description:
-            'List the declared virtual users — who each one is, and what it is trying to get done',
+            "Provision the declared personas into an environment: create each account and apply the roles it declares. Additive — it never revokes. Needs both the environment's API (to sign in) and its database (to write the grants), and the sign-in secret from SCENARIO_ACTOR_SECRET.",
+          parameters: '<environment>',
+          options: {
+            dryRun: {
+              description:
+                'Report who would be provisioned, with which roles, and why anyone was skipped — without touching anything',
+            },
+            apiUrl: {
+              description:
+                "Override the environment's apiUrl — for a target that only exists at run time, such as a freshly deployed sandbox",
+            },
+          },
+        }),
+        list: pikkuCLICommand({
+          func: personaList,
+          description:
+            'List the declared personas — who each one is, what they may do, and what they are trying to get done',
         }),
       },
     },

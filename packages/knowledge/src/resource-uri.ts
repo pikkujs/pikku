@@ -21,13 +21,11 @@ export const RESOURCE_PREFIXES = [
   'table',
   'addon',
   // A scope is declared twice over: by the functions that gate themselves with
-  // it, which codegen writes into the function meta, and by the actors granted
-  // it in `pikku.config.json`. Both are declarations, so both resolve.
+  // it, which codegen writes into the function meta, and by the roles that
+  // confer it in `defineSystemRole()`. Both are declarations, so both resolve.
   'scope',
-  // The only prefix that does not resolve to generated code: a persona is
-  // declared in `pikku.config.json` (`scenarios.personas`). It still resolves,
-  // which is the bar — a note naming a persona nobody declared is exactly the
-  // drift this check exists to catch.
+  // A persona from `definePersonas()`. A note naming a persona nobody declared
+  // is exactly the drift this check exists to catch.
   'persona',
 ] as const
 
@@ -183,36 +181,17 @@ const addonIds = async (root: string): Promise<string[]> => {
   return ids
 }
 
-type PikkuConfig = {
-  scenarios?: {
-    personas?: Record<string, unknown>
-    actors?: Record<string, { scopes?: unknown } | undefined>
-  }
-}
-
-const readConfig = async (root: string): Promise<PikkuConfig | null> =>
-  (await readJson(join(root, 'pikku.config.json'))) as PikkuConfig | null
-
-/**
- * Persona names, which is `scenarios.personas` and NOT `scenarios.actors`. A
- * persona is the KIND of person; an actor is one body that signs in as one. A
- * note is about the kind, and the two sets differ the moment a scenario needs two
- * bodies of the same kind.
- */
-const personaIds = (config: PikkuConfig | null): string[] =>
-  Object.keys(config?.scenarios?.personas ?? {})
-
 /**
  * Every scope the project declares: the ones functions gate themselves with, and
- * the ones actors are granted.
+ * the ones a system role confers.
  *
  * Both sides are needed. A gate is only declared where the function is —
  * `scopes: ['reports:read']` ends up in the function meta — while an umbrella
- * scope like `admin` is often granted to an actor and checked by an app's own
- * permission, so it appears nowhere in the meta. A note about either is about
- * something the project actually declared, which is the bar.
+ * scope like `admin` is often only ever granted through a role and checked by an
+ * app's own permission, so it appears nowhere in the function meta. A note about
+ * either is about something the project actually declared, which is the bar.
  */
-const scopeIds = (functions: unknown, config: PikkuConfig | null): string[] => {
+const scopeIds = (functions: unknown, roles: unknown): string[] => {
   const ids: string[] = []
   if (functions && typeof functions === 'object') {
     for (const entry of Object.values(functions as Record<string, unknown>)) {
@@ -223,11 +202,13 @@ const scopeIds = (functions: unknown, config: PikkuConfig | null): string[] => {
       }
     }
   }
-  for (const actor of Object.values(config?.scenarios?.actors ?? {})) {
-    const scopes = actor?.scopes
-    if (!Array.isArray(scopes)) continue
-    for (const scope of scopes) {
-      if (typeof scope === 'string') ids.push(scope)
+  if (roles && typeof roles === 'object') {
+    for (const role of Object.values(roles as Record<string, unknown>)) {
+      const scopes = (role as { scopes?: unknown })?.scopes
+      if (!Array.isArray(scopes)) continue
+      for (const scope of scopes) {
+        if (typeof scope === 'string') ids.push(scope)
+      }
     }
   }
   return ids
@@ -286,9 +267,20 @@ export const collectKnownResources = async (
   put('table', await tableIds(outDir))
   put('addon', await addonIds(root))
 
-  const config = await readConfig(root)
-  put('scope', scopeIds(functions, config))
-  put('persona', personaIds(config))
+  // Both come out of codegen rather than pikku.config.json: personas and roles
+  // are declared in code, and the meta sidecars are what every other consumer
+  // reads them from.
+  const roles = await readJson(
+    join(outDir, 'scopes', 'pikku-roles-meta.gen.json')
+  )
+  const personas = await readJson(
+    join(outDir, 'scopes', 'pikku-personas-meta.gen.json')
+  )
+  put('scope', scopeIds(functions, roles))
+  put(
+    'persona',
+    personas && typeof personas === 'object' ? Object.keys(personas) : []
+  )
 
   return known
 }

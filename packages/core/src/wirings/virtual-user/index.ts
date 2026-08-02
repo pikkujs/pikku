@@ -9,11 +9,11 @@
  *
  * Everything it needs is derived from what a pikku project already generates —
  * the function meta becomes the catalogue, the scenario meta becomes the
- * intents, the actors become the identities — so adopting it is configuration
- * rather than authoring.
+ * intents, the declared personas become the identities — so adopting it is
+ * configuration rather than authoring.
  *
  * The engine is transport-agnostic: the virtual user drives an
- * {@link VirtualUserTarget}, which in production is an `HttpScenarioActor`
+ * {@link VirtualUserTarget}, which in production is an `HttpPersona`
  * signed in as a real user against staging or production.
  */
 export type {
@@ -27,8 +27,6 @@ export type {
   VirtualUserDisposition,
   VirtualUserFinding,
   VirtualUserFindingKind,
-  VirtualUserMeta,
-  VirtualUsersMeta,
   VirtualUserRunResult,
   VirtualUserTally,
   VirtualUserTarget,
@@ -53,10 +51,16 @@ export {
   isReadOnly,
   reachableCatalogue,
   renderCatalogue,
+  unreachableCatalogue,
 } from './virtual-user-catalogue.js'
 export {
+  reachableAgents,
+  type AgentReachability,
+  type ReachableAgent,
+} from './virtual-user-agents.js'
+export {
   IntentStack,
-  intentsForActor,
+  intentsForPersona,
   type IntentMove,
   type ScheduledTick,
 } from './virtual-user-intents.js'
@@ -67,6 +71,6 @@ export {
   type SchemaMap,
 } from './virtual-user-derive.js'
 export {
-  actorVirtualUserTarget,
-  type ActorTargetOptions,
+  personaVirtualUserTarget,
+  type PersonaTargetOptions,
 } from './virtual-user-target.js'

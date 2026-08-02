@@ -8,6 +8,7 @@ import {
   describeEntry,
   isReadOnly,
   reachableCatalogue,
+  unreachableCatalogue,
   renderCatalogue,
 } from './virtual-user-catalogue.js'
 import type { ApiCatalogueEntry } from './virtual-user.types.js'
@@ -101,8 +102,8 @@ describe('what a given user is offered', () => {
     entry('getProject'),
     entry('createProject'),
     entry('deployStage', { approvalRequired: true }),
-    entry('listOrgs', { permissions: ['requiresPlatformAdmin'] }),
-    entry('getOrgMembers', { permissions: ['canAccessOrgById'] }),
+    entry('listOrgs', { scopes: ['platform:admin'] }),
+    entry('getOrgMembers', { scopes: ['org:read'] }),
   ]
 
   test('approval-gated calls are withheld by default', () => {
@@ -124,14 +125,31 @@ describe('what a given user is offered', () => {
     assert.deepEqual(names, ['getProject', 'listOrgs', 'getOrgMembers'])
   })
 
-  test('a tier the actor cannot satisfy is left out', () => {
+  test('a scope the persona does not hold is left out', () => {
     const names = reachableCatalogue(entries, {
-      grants: ['canAccessOrgById'],
+      scopes: ['org:read'],
     }).map((e) => e.name)
     assert.deepEqual(names, ['getProject', 'createProject', 'getOrgMembers'])
   })
 
-  test('omitting grants keeps everything — narrowing is opt-in', () => {
+  // The adversarial oracle: what it is NOT entitled to reach, so a 2xx from one
+  // of these is the finding rather than a pass.
+  test('the same split, the other way round', () => {
+    const names = unreachableCatalogue(entries, ['org:read']).map((e) => e.name)
+    assert.deepEqual(names, ['listOrgs'])
+  })
+
+  // Every scope a persona holds means the whole surface is entitled, which is
+  // what an unscoped project looks like — and an empty oracle is the honest
+  // answer there, not a catalogue of everything.
+  test('an unscoped catalogue has nothing to withhold', () => {
+    assert.deepEqual(
+      unreachableCatalogue([entry('getProject')], ['anything']),
+      []
+    )
+  })
+
+  test('omitting scopes keeps everything — narrowing is opt-in', () => {
     assert.equal(
       reachableCatalogue(entries, { allowApprovalRequired: true }).length,
       5

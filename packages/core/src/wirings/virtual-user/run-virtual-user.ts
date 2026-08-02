@@ -1,4 +1,4 @@
-import type { ScenarioActorConfig } from '../../services/scenario-actors-service.js'
+import type { ResolvedPersona } from '../../services/personas-service.js'
 import type { AIMessage } from '../ai-agent/ai-agent.types.js'
 import type { ActorLLM } from '../actor-flow/run-conversation.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
@@ -15,7 +15,7 @@ import {
   type DispositionProfile,
   type VirtualUserTuning,
 } from './virtual-user-dispositions.js'
-import { IntentStack, intentsForActor } from './virtual-user-intents.js'
+import { IntentStack, intentsForPersona } from './virtual-user-intents.js'
 import { createRng } from './virtual-user-rng.js'
 import type {
   ApiCatalogueEntry,
@@ -75,10 +75,10 @@ export interface VirtualUserCallContext {
 }
 
 export interface RunVirtualUserParams {
-  /** The persona this user wears — name, job title, personality. */
-  actor: ScenarioActorConfig
-  /** Stable actor name, as the intent sources refer to it. */
-  actorName: string
+  /** The person being run — name, job title, personality, goals. */
+  persona: ResolvedPersona
+  /** The id they were declared under, as the intent sources refer to them. */
+  personaId: string
   /** How it behaves. Default `realistic`. */
   disposition?: VirtualUserDisposition
   /** Per-user overrides for that disposition's dials. */
@@ -120,11 +120,13 @@ export interface RunVirtualUserParams {
   /** Ids and slugs remembered from an earlier run, for a `stale` user. */
   memory?: Record<string, string>
   /**
-   * Permission names this actor genuinely satisfies. Used two ways: to narrow a
-   * large catalogue, and as an oracle — a call the actor should not satisfy that
-   * nonetheless succeeds is authorization drift.
+   * The scopes this persona actually holds, resolved from its roles at sign-in.
+   *
+   * Used two ways: to narrow a large catalogue to what it is entitled to reach,
+   * and as an oracle — a call whose scopes it does not hold that nonetheless
+   * succeeds is authorization drift.
    */
-  grants?: readonly string[]
+  scopes?: readonly string[]
   /**
    * Offer the endpoints the app marked as needing a human's approval. Off by
    * default: those are the ones that spend money and move real traffic.
@@ -209,8 +211,7 @@ export const rememberIds = (
 }
 
 const personaInstructions = (
-  actor: ScenarioActorConfig,
-  actorName: string,
+  persona: ResolvedPersona,
   profile: DispositionProfile,
   catalogue: string,
   agents: readonly { name: string; description?: string }[],
@@ -218,9 +219,9 @@ const personaInstructions = (
 ): string =>
   [
     `You are a real person using a product through its API. Stay in character; you are the user, not the system.`,
-    actor.name ? `Your name is ${actor.name}.` : `You are '${actorName}'.`,
-    actor.jobTitle ? `Your role: ${actor.jobTitle}.` : '',
-    actor.personality ? `Your manner: ${actor.personality}.` : '',
+    `Your name is ${persona.name}.`,
+    persona.jobTitle ? `Your role: ${persona.jobTitle}.` : '',
+    persona.personality ? `Your manner: ${persona.personality}.` : '',
     '',
     profile.instructions,
     '',
@@ -258,8 +259,8 @@ export const runVirtualUser = async (
   params: RunVirtualUserParams
 ): Promise<VirtualUserRunResult> => {
   const {
-    actor,
-    actorName,
+    persona,
+    personaId,
     disposition = 'realistic',
     tuning,
     target,
@@ -271,7 +272,7 @@ export const runVirtualUser = async (
     classify,
     fixtures = [],
     agents = [],
-    grants,
+    scopes,
     allowApprovalRequired = false,
     maxStepsPerIntent = DEFAULT_MAX_STEPS_PER_INTENT,
   } = params
@@ -282,17 +283,17 @@ export const runVirtualUser = async (
   const startedAt = Date.now()
 
   // An adversarial user is offered the whole surface on purpose — probing what
-  // it should not reach is the behaviour under test — while `grants` stays live
+  // it should not reach is the behaviour under test — while `scopes` stays live
   // below as the oracle that says a success there was a finding.
   const reachable = reachableCatalogue(params.catalogue, {
     readOnly: profile.readOnly,
     allowApprovalRequired,
-    grants: profile.invertedOracle ? undefined : grants,
+    scopes: profile.invertedOracle ? undefined : scopes,
   })
   const index = catalogueIndex(reachable)
 
   const sources: IntentSource[] = [
-    ...intentsForActor(params.intents, actorName),
+    ...intentsForPersona(params.intents, personaId),
     ...(params.goals ?? []).map((goal, i) => ({
       id: `goal_${i + 1}`,
       title: goal,
@@ -328,8 +329,7 @@ export const runVirtualUser = async (
         : getDurationInMilliseconds(budget.duration)
 
   const instructions = personaInstructions(
-    actor,
-    actorName,
+    persona,
     profile,
     renderCatalogue(reachable),
     agents,
@@ -611,18 +611,18 @@ export const runVirtualUser = async (
           })
         }
       }
-      // The actor does not satisfy this endpoint's gate, and the server served
-      // it anyway — the permission meta and the implementation disagree.
+      // This persona does not hold the scopes this endpoint declares, and the
+      // server served it anyway — the declaration and the enforcement disagree.
       if (
         response.ok &&
-        grants &&
-        entry.permissions?.some((permission) => !grants.includes(permission))
+        scopes &&
+        entry.scopes?.some((scope) => !scopes.includes(scope))
       ) {
         kinds.push('unexpected-success')
         addFinding({
           kind: 'unexpected-success',
-          detail: `${entry.name} succeeded for '${actorName}', who does not satisfy ${entry.permissions
-            .filter((permission) => !grants.includes(permission))
+          detail: `${entry.name} succeeded for '${personaId}', who does not hold ${entry.scopes
+            .filter((scope) => !scopes.includes(scope))
             .join(', ')}`,
           rpcName: entry.name,
           status: response.status,

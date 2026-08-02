@@ -9,7 +9,7 @@ import { VirtualUserDocument } from './VirtualUserDocument'
 import { useVirtualUsers } from '../../hooks/useVirtualUsers'
 
 const EXAMPLE =
-  "export const impatientShopper = pikkuVirtualUser({ actor: 'shopper', disposition: 'careless' })"
+  "definePersonas({ shopper: { name: 'Shopper', disposition: 'careless', goals: [...] } })"
 
 /**
  * The virtual users reading surface: who is declared, and what each one would

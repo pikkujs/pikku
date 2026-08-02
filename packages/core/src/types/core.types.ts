@@ -25,6 +25,7 @@ import type {
 import type {
   PikkuBrowserWire,
   PikkuScenarioStepWire,
+  ScenarioStepKind,
   ScenarioSurface,
 } from '../wirings/workflow/scenario-step.types.js'
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
@@ -36,9 +37,9 @@ import type { AIStorageService } from '../services/ai-storage-service.js'
 
 import type { ContentService } from '../services/content-service.js'
 import type {
-  ScenarioActorOf,
-  ScenarioActors,
-} from '../services/scenario-actors-service.js'
+  ScenarioPersonaOf,
+  ScenarioPersonas,
+} from '../services/personas-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
@@ -165,6 +166,18 @@ export type FunctionRuntimeMeta = {
    * worth counting rather than excusing.
    */
   scenarioStepSurfaces?: ScenarioSurface[]
+  /**
+   * Scenario steps only: who acts. Absent means `persona` — the ordinary step,
+   * and the only kind that existed before the other two.
+   *
+   * A `platform` or `addon` step is the app or a third-party system acting, and
+   * it must never reach a virtual user's catalogue. That is not tidiness: a
+   * virtual user that can invoke "Stripe's webhook arrives" can forge its own
+   * payment success, and every finding downstream of that is worthless.
+   */
+  scenarioStepKind?: ScenarioStepKind
+  /** Addon steps only: the addon whose system acts — `wireAddon`'s `name`. */
+  scenarioStepAddon?: string
   /** Scenario steps only: the prose a reporter renders, with `{placeholders}` filled from the step's recorded input. */
   scenarioStepTemplate?: string
   version?: number
@@ -415,7 +428,7 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire | never = PikkuScenarioWire,
-  TypedActors extends ScenarioActors = ScenarioActors,
+  TypedActors extends ScenarioPersonas = ScenarioPersonas,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
   rpc: TypedRPC
@@ -443,7 +456,7 @@ export type PikkuWire<
   scenario: TypedScenario
   actors: TypedActors
   /** Present on every scenario step invocation */
-  scenarioStep: PikkuScenarioStepWire<ScenarioActorOf<TypedActors>>
+  scenarioStep: PikkuScenarioStepWire<ScenarioPersonaOf<TypedActors>>
   /** Present only when the runner provisioned a browser for this step */
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
