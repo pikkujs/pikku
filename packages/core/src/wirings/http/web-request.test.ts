@@ -34,7 +34,7 @@ const createMockResponse = () => {
   const state = {
     statusCode: 0,
     headers: {} as Record<string, string | string[]>,
-    body: null as string | null,
+    body: null as string | Uint8Array | null,
     redirectUrl: null as string | null,
     redirectStatus: null as number | null,
   }
@@ -55,7 +55,9 @@ const createMockResponse = () => {
       return res
     },
     arrayBuffer(data: any) {
-      state.body = typeof data === 'string' ? data : null
+      // Recorded as given. Coercing a non-string to null here would have hidden
+      // a body that arrived as bytes, which is the case worth testing.
+      state.body = data ?? null
       return res
     },
     redirect(location: string, status?: number) {
@@ -347,5 +349,34 @@ describe('applyWebResponse', () => {
     assert.equal(state.headers['x-custom'], 'ok')
     assert.equal(state.headers['content-length'], undefined)
     assert.equal(state.headers['transfer-encoding'], undefined)
+  })
+
+  test('passes a binary body through byte for byte', async () => {
+    // Reading a body as text is lossy for anything that is not valid UTF-8:
+    // 0x8e is not, and decoding it produces U+FFFD, which re-encodes to three
+    // bytes. A WASM module or a model file goes over the wire bigger than it
+    // started and no longer parses, with a 200 and nothing logged either side.
+    const { res, state } = createMockResponse()
+    const bytes = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x8e, 0xff])
+    const webRes = new Response(bytes, {
+      status: 200,
+      headers: { 'content-type': 'application/wasm' },
+    })
+
+    await applyWebResponse(res, webRes)
+
+    assert.deepEqual(new Uint8Array(state.body as Uint8Array), bytes)
+  })
+
+  test('still writes a JSON body as text', async () => {
+    const { res, state } = createMockResponse()
+    const webRes = new Response('{"ok":true}', {
+      status: 200,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    })
+
+    await applyWebResponse(res, webRes)
+
+    assert.equal(state.body, '{"ok":true}')
   })
 })

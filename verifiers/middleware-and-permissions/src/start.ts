@@ -405,6 +405,15 @@ async function main(): Promise<void> {
     // modifyInput runs left→right, then per stream event: wire channel middleware
     // runs before modifyOutputStream (converted to channel middleware),
     // modifyOutput runs right→left after stream completes
+    //
+    // The trailing pair is the `done` event. It goes through the middleware
+    // like any other stream event rather than straight at the channel, because
+    // it is the only signal a stream hook gets that the reply is over, and the
+    // ones that buffer need it — `voiceOutput` speaks a trailing fragment that
+    // never reached a full stop, and waits on audio it has already paid to
+    // synthesize. Sent raw, that work is thrown away by the `close()` that
+    // follows. It lands after `modifyOutput` because `modifyOutput` is about
+    // the completed reply, and `done` is about the stream carrying it.
     const agentStreamPassed = await testAgentStreamWiring(
       [
         { name: 'modifyInput', type: 'ai-middleware', phase: 'before' },
@@ -416,6 +425,8 @@ async function main(): Promise<void> {
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
         { name: 'modifyOutput', type: 'ai-middleware', phase: 'before' },
+        { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
       ],
       singletonServices
     )

@@ -7,6 +7,7 @@ import type {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '../../types/core.types.js'
+import type { AIProviderOptions } from '../../services/ai-agent-runner-service.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
 import type { ApprovalPolicy } from '../channel/channel-rpc.js'
@@ -59,6 +60,23 @@ export interface AIMessage {
   toolCalls?: AIToolCall[]
   toolResults?: AIToolResult[]
   reasoningContent?: string
+  /**
+   * Set on an assistant message whose generation was cut short by
+   * an interrupt — the text is a mid-sentence fragment, not a reply.
+   * Carried into the next turn's context so the model can see it said only
+   * this much before being talked over, and decide for itself whether to
+   * resume, restate or move on. Storage that drops unknown fields loses the
+   * marker but keeps the fragment, which degrades to a truncated reply.
+   */
+  interrupted?: boolean
+  /**
+   * Set on a tool message whose result arrived after the run was interrupted,
+   * so the model never got to describe it. The work happened; only the reply
+   * about it was lost. It is ordinary thread context on the next turn — the
+   * model raises it unprompted ("that deploy did go through") rather than the
+   * result being silently dropped or replayed as a fresh tool call.
+   */
+  undelivered?: boolean
   createdAt: Date
 }
 
@@ -131,6 +149,13 @@ export interface AIAgentToolDef extends Partial<ApprovalPolicy> {
   inputSchema: Record<string, unknown>
   execute: (input: unknown) => Promise<unknown>
   /**
+   * Mirrors the pikku function's `readonly` flag. A read that gets interrupted
+   * is discarded rather than reported: nothing changed, and by the next turn
+   * the data may be stale anyway — re-reading is cheaper than explaining a
+   * result the user never asked to hear about.
+   */
+  readonly?: boolean
+  /**
    * Set only by the framework on sub-agent delegating tools. Such a tool may
    * legitimately return an `__approvalRequired` marker to forward a nested
    * sub-agent approval. The marker is honored ONLY from a tool with this flag —
@@ -157,6 +182,27 @@ export interface PikkuAIMiddlewareHooks<
       event: AIStreamEvent
       allEvents: readonly AIStreamEvent[]
       state: State
+      /**
+       * Push an event into the stream *after* this call has returned.
+       *
+       * Returning events blocks the stream until the hook resolves, which is
+       * right for anything derived from the event and wrong for anything slow.
+       * Speech is the motivating case: awaiting a text-to-speech call before
+       * returning the text delta stalls the reader at every full stop and
+       * serialises synthesis behind playback. Return the text immediately,
+       * start the slow work, and `emit` its result when it lands.
+       *
+       * Ordering among emitted events is the caller's problem — chain them if
+       * it matters — and a hook that emits must make sure anything still
+       * outstanding has landed before it lets `done` through.
+       */
+      emit: (event: AIStreamEvent) => Promise<void>
+      /**
+       * Aborts when the run is interrupted. Pass it to any provider call the
+       * hook makes: work started for a reply the user has already talked over
+       * is billed but never heard.
+       */
+      signal?: AbortSignal
     }
   ) =>
     | Promise<AIStreamEvent | AIStreamEvent[] | null>
@@ -262,6 +308,16 @@ export type CoreAIAgent<
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
+  /**
+   * Per-provider model settings, keyed by provider id and passed through
+   * untouched — for anything only one vendor offers, which the fields above
+   * deliberately do not try to unify.
+   *
+   * `{ openai: { reasoningEffort: 'minimal' } }` is the one that matters for
+   * voice: on gpt-5-mini it measured 0.9s to first token against 2.5s at the
+   * default, and a spoken reply is waited through rather than skimmed.
+   */
+  providerOptions?: AIProviderOptions
   input?: unknown
   output?: unknown
   tags?: string[]
@@ -384,6 +440,15 @@ export type AIStreamEvent =
       reason: 'rpc-missing'
       missingRpcs: string[]
     }
+  | {
+      type: 'interrupted'
+      runId: string
+      /** The truncated assistant text at the moment generation stopped. */
+      text: string
+      reason: 'speech' | 'user' | 'timeout'
+      agent?: string
+      session?: string
+    }
   | { type: 'done' }
 
 export interface AIStreamChannel extends PikkuChannel<unknown, AIStreamEvent> {}
@@ -418,7 +483,7 @@ export interface AgentRunState {
   agentName: string
   threadId: string
   resourceId: string
-  status: 'running' | 'suspended' | 'completed' | 'failed'
+  status: 'running' | 'suspended' | 'completed' | 'failed' | 'interrupted'
   errorMessage?: string
   suspendReason?: 'approval' | 'credential' | 'rpc-missing'
   missingRpcs?: string[]

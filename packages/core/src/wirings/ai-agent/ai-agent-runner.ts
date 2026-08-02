@@ -34,6 +34,14 @@ import {
   type RunAIAgentParams,
 } from './ai-agent-prepare.js'
 import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
+import {
+  AgentInterruptedError,
+  isAbortError,
+  persistOrphanedToolResults,
+  registerInterruptibleRun,
+  trackInterruptNote,
+  trackToolExecution,
+} from './ai-agent-interrupt.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
@@ -160,6 +168,14 @@ export async function runAIAgent(
     createdAt: new Date(),
     updatedAt: new Date(),
   })
+
+  // Registered on the same terms as `streamAIAgent`. A run created here is
+  // visible to `interruptAIAgent` through `aiRunState` either way, so skipping
+  // this would leave that call finding the run, passing the ownership check and
+  // then failing to stop it — reported as if it were running on another host.
+  const interruptHandle = registerInterruptibleRun(runId)
+  runnerParams.abortSignal = interruptHandle.signal
+  runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
 
   try {
     const accumulatedSteps: AIAgentStep[] = []
@@ -363,6 +379,21 @@ export async function runAIAgent(
       usage: totalUsage,
     }
   } catch (error) {
+    // An interrupt is not a failure, so it skips the `onError` hooks and never
+    // becomes an `errorMessage`. Unlike the streaming path there is no partial
+    // reply to hand back — nothing was delivered — so the caller gets a typed
+    // throw it can tell apart from a provider outage instead of a result.
+    const interruption = interruptHandle.interruption
+    if (interruption || isAbortError(error)) {
+      await aiRunState.updateRun(runId, { status: 'interrupted' })
+      if (storage) {
+        trackInterruptNote(
+          threadId,
+          persistOrphanedToolResults(interruptHandle, storage, threadId)
+        )
+      }
+      throw new AgentInterruptedError(runId, interruption ?? { reason: 'user' })
+    }
     for (const mw of aiMiddlewares) {
       if (mw.onError) {
         try {
@@ -381,6 +412,8 @@ export async function runAIAgent(
       errorMessage: error instanceof Error ? error.message : String(error),
     })
     throw error
+  } finally {
+    interruptHandle.release()
   }
 }
 
@@ -624,11 +657,19 @@ async function continueAfterToolResultSync(
     tools: resumeTools,
     maxSteps: 1,
     toolChoice: (agent.toolChoice ?? 'auto') as 'auto' | 'required' | 'none',
+    providerOptions: agent.providerOptions,
     outputSchema: meta?.outputSchema
       ? pikkuState(packageName, 'misc', 'schemas').get(meta.outputSchema)
       : undefined,
     agentId: run.agentName,
   }
+
+  // A resumed run keeps its original runId, so the handle registered for the
+  // first leg is long gone — an approval that kicks off more generation has to
+  // be interruptible on its own terms.
+  const interruptHandle = registerInterruptibleRun(run.runId)
+  runnerParams.abortSignal = interruptHandle.signal
+  runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
 
   try {
     const accumulatedSteps: AIAgentStep[] = []
@@ -817,6 +858,20 @@ async function continueAfterToolResultSync(
       usage: totalUsage,
     }
   } catch (error) {
+    const interruption = interruptHandle.interruption
+    if (interruption || isAbortError(error)) {
+      await aiRunState.updateRun(run.runId, { status: 'interrupted' })
+      if (storage) {
+        trackInterruptNote(
+          run.threadId,
+          persistOrphanedToolResults(interruptHandle, storage, run.threadId)
+        )
+      }
+      throw new AgentInterruptedError(
+        run.runId,
+        interruption ?? { reason: 'user' }
+      )
+    }
     for (const mw of aiMiddlewares) {
       if (mw.onError) {
         try {
@@ -835,5 +890,7 @@ async function continueAfterToolResultSync(
       errorMessage: error instanceof Error ? error.message : String(error),
     })
     throw error
+  } finally {
+    interruptHandle.release()
   }
 }

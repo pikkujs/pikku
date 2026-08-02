@@ -19,6 +19,26 @@ export type AIAgentRunnerParams = {
   /** Pikku agent function name — forwarded to the LLM proxy (LiteLLM) as
    *  request-level metadata so usage can be broken down per agent. */
   agentId?: string
+  /**
+   * Cancels the model call itself, not just delivery of its output. Set by
+   * `streamAIAgent` from the run's interrupt handle so a voice barge-in stops
+   * generation upstream rather than leaving tokens being billed into a stream
+   * nobody reads. A runner that ignores it degrades to "the caller stops
+   * listening", which is the behaviour before this field existed.
+   */
+  abortSignal?: AbortSignal
+  /**
+   * Per-provider settings passed to the model untouched — the escape hatch for
+   * anything the shared params above cannot express because only one vendor
+   * has it.
+   *
+   * The setting that motivated it is `reasoningEffort`. A voice turn is heard
+   * rather than read, so the wait before the first word is most of the
+   * experience: `{ openai: { reasoningEffort: 'minimal' } }` on gpt-5-mini
+   * measured 0.9s to first token against 2.5s at the default, and 1.6s of
+   * silence is a long time to sit through having just finished speaking.
+   */
+  providerOptions?: AIProviderOptions
 }
 
 export type AIAgentRunnerResult = {

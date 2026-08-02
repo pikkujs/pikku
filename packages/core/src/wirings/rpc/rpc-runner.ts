@@ -61,7 +61,11 @@ import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
 import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
 import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
 import { runAIAgent, resumeAIAgentSync } from '../ai-agent/ai-agent-runner.js'
-import { streamAIAgent, resumeAIAgent } from '../ai-agent/ai-agent-stream.js'
+import {
+  streamAIAgent,
+  resumeAIAgent,
+  interruptAIAgent,
+} from '../ai-agent/ai-agent-stream.js'
 import { wrapChannelWithAGUI } from '../ai-agent/ai-agent-agui.js'
 
 /**
@@ -517,6 +521,15 @@ export class ContextAwareRPCService {
             getCredential: this.wire.getCredential?.bind(this.wire),
           },
           options
+        )
+      },
+      interrupt: async (
+        runId: string,
+        reason?: 'speech' | 'user' | 'timeout'
+      ) => {
+        return interruptAIAgent(
+          { runId, ...(reason ? { reason } : {}) },
+          { sessionService: this.options.sessionService }
         )
       },
       approve: async (

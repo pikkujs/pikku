@@ -89,6 +89,13 @@ export {
   parseVersionedId,
 } from './version.js'
 export { runPikkuFunc } from './function/function-runner.js'
+export {
+  AbandonedError,
+  beginChanges,
+  getAbortScope,
+  runInAbortScope,
+  type AbortScope,
+} from './function/abort-scope.js'
 export { runCLICommand, pikkuCLIRender } from './wirings/cli/cli-runner.js'
 export { fetch } from './wirings/http/http-runner.js'
 export {

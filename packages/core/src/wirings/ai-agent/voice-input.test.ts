@@ -1,7 +1,11 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { voiceInput } from './voice-input.js'
+import {
+  voiceInput,
+  readsAsNonSpeech,
+  NoSpeechDetectedError,
+} from './voice-input.js'
 import type { AIContentPart, AIMessage } from './ai-agent.types.js'
 
 /**
@@ -86,5 +90,72 @@ describe('voiceInput', () => {
         }),
       /voiceInput requires a transcription model/
     )
+  })
+
+  test('a turn with no speech in it never reaches the model', async () => {
+    // The failure this prevents: the user says nothing, the model answers
+    // anyway, and what it answers is a guess about audio it could not hear.
+    // An ASR that returns '' on non-speech is what makes this checkable — see
+    // readsAsNonSpeech for why nothing subtler than '' survived contact.
+    const silent = {
+      async transcribe() {
+        return { text: '', segments: [], warnings: [] }
+      },
+    }
+    const mw = voiceInput({
+      model: 'deepinfra/nvidia/Nemotron-3.5-ASR-Streaming-Multilingual-0.6b',
+    })
+
+    await assert.rejects(
+      () =>
+        mw.modifyInput!({ aiAgentRunner: silent } as any, {
+          messages: [audioMessage()],
+          instructions: 'sys',
+        }),
+      NoSpeechDetectedError
+    )
+  })
+
+  test('a transcript is passed through exactly as the provider wrote it', async () => {
+    // No reassembly, no trimming, no filtering — whatever the model heard is
+    // what the agent is asked about.
+    const spaced = {
+      async transcribe() {
+        return {
+          text: '  spacing   the provider chose  ',
+          segments: [],
+          warnings: [],
+        }
+      },
+    }
+    const mw = voiceInput({ model: 'mock/asr' })
+
+    const result = await mw.modifyInput!({ aiAgentRunner: spaced } as any, {
+      messages: [audioMessage()],
+      instructions: 'sys',
+    })
+
+    const parts = result.messages.at(-1)!.content as AIContentPart[]
+    assert.equal(
+      (parts[0] as { text: string }).text,
+      '  spacing   the provider chose  '
+    )
+  })
+})
+
+describe('readsAsNonSpeech', () => {
+  test('only an empty transcript counts as nothing said', () => {
+    assert.equal(readsAsNonSpeech({ text: '' }), true)
+    assert.equal(readsAsNonSpeech({ text: '   ' }), true)
+    assert.equal(readsAsNonSpeech({}), true)
+    assert.equal(readsAsNonSpeech({ text: 'add milk to the list' }), false)
+  })
+
+  test('a short or low-confidence-looking transcript is still speech', () => {
+    // The gate that used to live here would have been tempted by these. "Yes"
+    // is the single most important word in an approval flow, and dropping it
+    // because it is brief or quiet is far worse than keeping a stray one.
+    assert.equal(readsAsNonSpeech({ text: 'yes' }), false)
+    assert.equal(readsAsNonSpeech({ text: 'Thank you.' }), false)
   })
 })
