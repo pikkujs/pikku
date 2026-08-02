@@ -1,4 +1,5 @@
 import type { BetterAuthInstance } from './define-auth.js'
+import { mergeRelayedCookies } from './cross-site-cookies.js'
 
 /** The subset of the pikku HTTP wire this helper needs. */
 export type AdminApiHttpWire = {
@@ -48,5 +49,9 @@ export const callAdminApi = async <T>(
     )
   }
 
-  return call(api, new Headers(request.headers()))
+  // These endpoints authorize off the session cookie, so they need the same
+  // relayed cookies the session middleware already accepted — otherwise a
+  // caller whose browser refused to store the cookie resolves fine one layer up
+  // and is then rejected here as anonymous (see cross-site-cookies.ts).
+  return call(api, mergeRelayedCookies(new Headers(request.headers())))
 }

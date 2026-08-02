@@ -14,10 +14,16 @@ cookie, the next request arrived anonymous and the app bounced back to `/login`.
 The same flag now also enables a cookie relay, over storage the embedded frame is
 actually allowed to use. The auth handler echoes the cookies it just set in
 `x-pikku-cross-site-set-cookie` (JS can never read `Set-Cookie` itself); the client
-sends them back in `x-pikku-cross-site-cookie`, and `createAuthHandler`,
-`betterAuthSession` and `betterAuthStatelessSession` merge that header into `Cookie`
-before reading the session. A real cookie always wins over a relayed one of the same
-name, so a browser that did store it stays authoritative.
+sends them back in `x-pikku-cross-site-cookie`, and every place this package hands
+caller headers to better-auth — `createAuthHandler`, `betterAuthSession`,
+`betterAuthStatelessSession`, `getAuthSession` and `callAdminApi` — merges that header
+into `Cookie` before reading the session. A real cookie always wins over a relayed one
+of the same name, so a browser that did store it stays authoritative.
+
+Sign-out becomes partly the client's job: deleting a cookie cannot reach the client's
+own storage, so a client implementing the relay must drop the entries the sign-out
+response expires. Under `betterAuthStatelessSession` a kept-around cache blob otherwise
+keeps verifying until it ages out.
 
 Both header names, `crossSiteCookies()`, `decodeSetCookies()` and
 `mergeRelayedCookies()` are exported for clients that implement the browser half — the
