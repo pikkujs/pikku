@@ -1,35 +1,9 @@
 {
   "name": "@pikku/cucumber",
   "version": "0.12.17",
-  "description": "Cucumber test harness for Pikku function tests",
+  "description": "Deleted — Pikku end-to-end tests are written with pikkuScenario",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "exports": {
-    ".": "./dist/index.js",
-    "./browser": "./dist/browser/index.js"
-  },
-  "scripts": {
-    "build": "tsc -b",
-    "tsc": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@pikku/fetch": "^0.12.8"
-  },
-  "peerDependencies": {
-    "@pikku/core": "^0.12.73",
-    "@playwright/test": "^1.50.0"
-  },
-  "peerDependenciesMeta": {
-    "@playwright/test": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.61.1",
-    "@types/node": "^25.6.0",
-    "typescript": "^6.0.3"
-  }
+  "files": ["README.md", "LICENSE"]
 }
