@@ -601,6 +601,43 @@ export const ref = <Name extends keyof FlattenedRPCMap>(
 }
 
 /**
+ * Declares a capability the connected client answers, reachable from any
+ * \`wireChannel\` function as \`channel.remote(name, input)\`.
+ *
+ * There is no \`func\`: this side owns the contract, the client owns the body.
+ * The \`description\` is what a person is shown when asked to approve the call,
+ * so write it for them rather than for the caller.
+ *
+ * @example
+ * \`\`\`typescript
+ * export const localCheckoutOutput = z.object({ sha: z.string(), branch: z.string() })
+ *
+ * export const localCheckout = pikkuRemoteChannelFunc({
+ *   description: 'Read the current commit and branch of your working tree',
+ *   output: localCheckoutOutput,
+ * })
+ * \`\`\`
+ */
+export function pikkuRemoteChannelFunc<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: Omit<
+    PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>,
+    'func'
+  >
+): PikkuFunctionConfig<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, 'session' | 'rpc'> {
+  return {
+    ...config,
+    func: async (_services: any, _data: any, _wire: any) => {
+      throw new Error(
+        \`\${config.title ?? 'This'} is a remote channel capability and has no local implementation — reach it with channel.remote() on the channel whose client exposes it.\`
+      )
+    },
+  } as any
+}
+
+/**
  * Creates a Pikku config factory.
  * Use this to define your application's configuration factory.
  *

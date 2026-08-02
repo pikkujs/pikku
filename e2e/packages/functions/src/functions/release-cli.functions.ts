@@ -1,4 +1,9 @@
-import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
+import { z } from 'zod'
+import {
+  pikkuFunc,
+  pikkuRemoteChannelFunc,
+  pikkuSessionlessFunc,
+} from '#pikku/pikku-types.gen.js'
 
 /**
  * The commands behind the `release` CLI, which is served over a websocket
@@ -24,23 +29,20 @@ export const releaseStatus = pikkuFunc<
   }),
 })
 
+export const localCheckoutOutput = z.object({
+  sha: z.string(),
+  branch: z.string(),
+})
+
 /**
- * The contract for a capability that runs on the client, declared here as a
- * function so it is typed and schema'd like any other — `channel.remote`
+ * The contract for a capability that runs on the client. `channel.remote`
  * resolves the name against this, and what the client answers is checked
- * against the schema generated from the return type below.
- *
- * The body is what happens if it is ever called locally, which would mean a
- * command asked the server for something only the client can know.
+ * against `localCheckoutOutput` before the command sees it.
  */
-export const localCheckout = pikkuSessionlessFunc<
-  void,
-  { sha: string; branch: string }
->({
-  auth: false,
-  func: async () => {
-    throw new Error('localCheckout runs on the connected client')
-  },
+export const localCheckout = pikkuRemoteChannelFunc({
+  title: 'localCheckout',
+  description: 'Read the current commit and branch of your working tree',
+  output: localCheckoutOutput,
 })
 
 /**
