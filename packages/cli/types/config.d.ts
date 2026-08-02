@@ -2,7 +2,27 @@ import type { InspectorFilters } from '@pikku/inspector'
 import type { OpenAPISpecInfo } from '@pikku/inspector'
 import { PikkuWiringTypes } from '@pikku/core'
 
-export type PikkuScaffoldFeature = 'auth' | 'no-auth' | false
+/**
+ * Whether a generated surface exists, where it is written, and whether it
+ * requires a session.
+ *
+ * `true` enables it **authenticated** at the path derived from `pikkuDir`.
+ * Going public is an explicit `{ auth: false }` — the gate starts closed and is
+ * opened by typing it out, never by omission.
+ *
+ * The legacy `'auth' | 'no-auth'` strings are rejected by the loader rather
+ * than reinterpreted: under a shape where a string could plausibly mean a path,
+ * silently reading `'no-auth'` as a filename would be worse than failing. See
+ * `resolveScaffoldFeature`.
+ */
+export type PikkuScaffoldFeature =
+  | boolean
+  | {
+      /** Require a session on the generated surface. Defaults to true. */
+      auth?: boolean
+      /** Write the generated file here instead of deriving it from `pikkuDir`. */
+      path?: string
+    }
 
 export interface PikkuCLICoreOutputFiles {
   // Base directory

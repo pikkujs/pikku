@@ -14,9 +14,6 @@
     ".": "@pikku/e2e",
     "packages/functions": "@pikku/e2e-functions"
   },
-  "console": {
-    "functionsPath": "packages/functions/src/wirings/console.functions.gen.ts"
-  },
   "clientFiles": {
     "fetchFile": ".pikku/pikku-fetch.gen.ts",
     "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts"
@@ -40,13 +37,19 @@
   "scaffold": {
     "pikkuDir": "packages/functions/src/pikku",
     "addonDir": "packages",
-    "rpc": "no-auth",
-    "console": "auth",
-    "scenarios": "auth",
-    "agent": "no-auth",
-    "workflow": "no-auth",
+    "rpc": {
+      "auth": false
+    },
+    "console": true,
+    "scenarios": true,
+    "agent": {
+      "auth": false
+    },
+    "workflow": {
+      "auth": false
+    },
     "webhook": true,
-    "userAdmin": "auth"
+    "userAdmin": true
   },
   "emailTemplatesDir": "emails",
   "environments": {

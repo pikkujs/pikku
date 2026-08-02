@@ -43,6 +43,7 @@ import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
+import { resolveScaffoldFeature } from '../../utils/resolve-scaffold-feature.js'
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -216,7 +217,9 @@ export const dev = pikkuSessionlessFunc<
     // project — an app bootstrap is what a deployed bundle imports, and coverage
     // endpoints have no business in one.
     if (config.scaffold?.scenarios) {
-      registerScenarioInstrumentation(config.scaffold.scenarios === 'auth')
+      registerScenarioInstrumentation(
+        resolveScaffoldFeature('scenarios', config.scaffold.scenarios).auth
+      )
     }
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)

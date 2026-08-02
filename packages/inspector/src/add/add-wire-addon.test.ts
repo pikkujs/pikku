@@ -1,0 +1,111 @@
+import assert from 'node:assert/strict'
+import { describe, test, beforeEach } from 'node:test'
+import * as ts from 'typescript'
+import { addWireAddon } from './add-wire-addon.js'
+
+let state: any
+
+const logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+} as any
+
+/** Parses a source snippet and runs addWireAddon over every call expression. */
+const inspect = (source: string) => {
+  const file = ts.createSourceFile(
+    'wiring.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true
+  )
+  const visit = (node: ts.Node) => {
+    addWireAddon(node, state, logger)
+    ts.forEachChild(node, visit)
+  }
+  visit(file)
+  return state.rpc.wireAddonDeclarations
+}
+
+beforeEach(() => {
+  state = {
+    rpc: {
+      wireAddonDeclarations: new Map(),
+      usedAddons: new Set(),
+      wireAddonFiles: new Set(),
+    },
+  }
+})
+
+describe('addWireAddon', () => {
+  test('captures the addon gates alongside its plumbing', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'console',
+        package: '@pikku/addon-console',
+        rpcEndpoint: '/rpc',
+        auth: true,
+        tags: ['admin', 'internal'],
+        scopes: ['admin'],
+      })
+    `)
+
+    assert.deepEqual(declarations.get('console'), {
+      package: '@pikku/addon-console',
+      rpcEndpoint: '/rpc',
+      mcp: undefined,
+      auth: true,
+      tags: ['admin', 'internal'],
+      scopes: ['admin'],
+      secretOverrides: undefined,
+      variableOverrides: undefined,
+      credentialOverrides: undefined,
+    })
+  })
+
+  test('leaves the gates undefined when none are declared', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'console', package: '@pikku/addon-console' })
+    `)
+
+    const declaration = declarations.get('console')
+    assert.equal(declaration.auth, undefined)
+    assert.equal(declaration.tags, undefined)
+    assert.equal(declaration.scopes, undefined)
+  })
+
+  test('records auth: false rather than dropping it', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'console', package: '@x/y', auth: false })
+    `)
+
+    assert.equal(declarations.get('console').auth, false)
+  })
+
+  test('drops a scopes array that is not statically knowable', () => {
+    // A partial list would read as the complete set of gates, so an array with
+    // any non-literal entry is reported as unknown instead.
+    const declarations = inspect(`
+      wireAddon({ name: 'console', package: '@x/y', scopes: ['admin', ...EXTRA] })
+    `)
+
+    assert.equal(declarations.get('console').scopes, undefined)
+  })
+
+  test('drops a scopes value that is a reference rather than an array', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'console', package: '@x/y', scopes: ADMIN_SCOPES })
+    `)
+
+    assert.equal(declarations.get('console').scopes, undefined)
+  })
+
+  test('keeps an explicitly empty scopes array distinct from an absent one', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'console', package: '@x/y', scopes: [] })
+    `)
+
+    assert.deepEqual(declarations.get('console').scopes, [])
+  })
+})

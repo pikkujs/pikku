@@ -49,8 +49,13 @@ const callOverRPC = (namespacedFunction: string, sessionScopes?: string[]) => {
  * inspector records the addon package on the route meta and the HTTP runner
  * hands it to `runPikkuFunc`, never passing through namespace resolution.
  */
-const callOverDirectWiring = (funcName: string, sessionScopes?: string[]) =>
-  runPikkuFunc('http', 'get:/console/thing', funcName, {
+const callOverDirectWiring = (
+  funcName: string,
+  sessionScopes?: string[],
+  wireType: string = 'http',
+  wireId: string = 'get:/console/thing'
+) =>
+  runPikkuFunc(wireType as never, wireId, funcName, {
     singletonServices: createServices(),
     data: () => ({}),
     auth: false,
@@ -168,6 +173,48 @@ describe('wireAddon scopes', () => {
     registerAddonFunction('streamWorkflowRun')
 
     assert.equal(await callOverDirectWiring('streamWorkflowRun', []), 'ok')
+  })
+
+  test('gates every wiring kind, not just http', async () => {
+    // The inspector writes the addon package onto all of these, and each
+    // runner calls runPikkuFunc without ever resolving a namespace.
+    const wireTypes = [
+      'http',
+      'channel',
+      'queue',
+      'scheduler',
+      'cli',
+      'mcp',
+      'trigger',
+      'gateway',
+    ]
+
+    wireAddon({ name: 'console', package: ADDON_PACKAGE, scopes: ['admin'] })
+    registerAddonFunction('streamWorkflowRun')
+
+    for (const wireType of wireTypes) {
+      await assert.rejects(
+        () =>
+          callOverDirectWiring(
+            'streamWorkflowRun',
+            ['billing:read'],
+            wireType,
+            `${wireType}:console`
+          ),
+        MissingScopeError,
+        `${wireType} did not gate on the addon scope`
+      )
+      assert.equal(
+        await callOverDirectWiring(
+          'streamWorkflowRun',
+          ['admin'],
+          wireType,
+          `${wireType}:console`
+        ),
+        'ok',
+        `${wireType} rejected a session holding the addon scope`
+      )
+    }
   })
 
   test('leaves a non-addon package untouched', async () => {

@@ -30,7 +30,7 @@ async function makeValidWorkspace(root: string) {
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
-    scaffold: { console: 'no-auth' },
+    scaffold: { console: true },
   })
   await writeJson(join(root, 'package.json'), {
     workspaces: ['packages/*', 'apps/*'],
