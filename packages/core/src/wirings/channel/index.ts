@@ -24,6 +24,7 @@ export type {
 } from './channel.types.js'
 export { defineChannelRoutes } from './define-channel-routes.js'
 export {
+  CHANNEL_RPC_PENDING,
   CHANNEL_RPC_REQUEST,
   CHANNEL_RPC_RESPONSE,
   ChannelDeploymentService,
@@ -31,11 +32,20 @@ export {
   ChannelRPCRegistry,
   createChannelRPCResponder,
   createChannelRPCResultValidator,
+  isChannelRPCPending,
   isChannelRPCRequest,
   isChannelRPCResponse,
+  resolveCapability,
   unsupportedChannelRemote,
 } from './channel-rpc.js'
 export type {
+  ApprovalPolicy,
+  ApprovalRequester,
+  Capabilities,
+  Capability,
+  CapabilityDef,
+  CapabilityHandler,
+  ChannelRPCPending,
   ChannelRPCRequest,
   ChannelRPCResponse,
   ChannelRPCResultValidator,

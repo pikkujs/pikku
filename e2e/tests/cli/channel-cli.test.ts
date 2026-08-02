@@ -13,6 +13,7 @@ import WebSocket from 'ws'
 
 import { CorePikkuWebsocket } from '@pikku/websocket'
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
+import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
 import { scenarioActorConfigs } from '../../.pikku/workflow/pikku-scenario-actors.gen.js'
@@ -53,16 +54,20 @@ interface RunResult {
  * Runs one command over its own connection.
  *
  * `capabilities` is what this "machine" agrees to answer — the allowlist the
- * server's reverse calls resolve against.
+ * server's reverse calls resolve against. `approve` stands in for the person at
+ * the terminal; without one there is nobody to ask, which is what a
+ * non-interactive run gets.
  */
 const runCommand = async (
   args: string[],
   {
     authToken = token,
     capabilities = {},
+    approve,
   }: {
     authToken?: string | null
-    capabilities?: Record<string, (data: any) => unknown>
+    capabilities?: Capabilities
+    approve?: ApprovalRequester
   } = {}
 ): Promise<RunResult> => {
   const wsUrl = `${apiUrl.replace(/^http/, 'ws')}/cli/release`
@@ -79,6 +84,7 @@ const runCommand = async (
     pikkuWS: new CorePikkuWebsocket(ws),
     args,
     capabilities,
+    approve,
     defaultRenderer: (_services, data) => {
       output.push(data)
     },
@@ -134,9 +140,14 @@ describe('CLI over a channel', () => {
       ['publish', '--tag', 'beta'],
       {
         capabilities: {
-          localCheckout: (data) => {
-            asked.push(data)
-            return { sha: 'c0ffee1234567890', branch: 'main' }
+          // Reading the checkout takes no server-chosen argument and changes
+          // nothing, so it is classified safe and runs without asking.
+          localCheckout: {
+            execute: (data) => {
+              asked.push(data)
+              return { sha: 'c0ffee1234567890', branch: 'main' }
+            },
+            needsApproval: false,
           },
         },
       }
@@ -163,7 +174,10 @@ describe('CLI over a channel', () => {
     // carry on with a value it only assumed was a string.
     const { exitCode, output } = await runCommand(['publish'], {
       capabilities: {
-        localCheckout: () => ({ sha: null, branch: ['main'] }),
+        localCheckout: {
+          execute: () => ({ sha: null, branch: ['main'] }),
+          needsApproval: false,
+        },
       },
     })
 
@@ -173,6 +187,65 @@ describe('CLI over a channel', () => {
       [],
       'the command must not produce a result from an unchecked answer'
     )
+  })
+
+  test('an unclassified capability is put to the user before it runs', async () => {
+    const asked: Array<{ funcName: string; description?: string }> = []
+
+    // A bare function, the way anyone writes one first: no policy attached.
+    // The map says `localCheckout` *can* run; approval is what decides whether
+    // this call *should*, and the default for something nobody classified is
+    // to ask.
+    const { exitCode, output } = await runCommand(
+      ['publish', '--tag', 'beta'],
+      {
+        capabilities: {
+          localCheckout: () => ({ sha: 'c0ffee1234567890', branch: 'main' }),
+        },
+        approve: (request) => {
+          asked.push(request)
+          return true
+        },
+      }
+    )
+
+    assert.equal(exitCode, 0)
+    assert.deepEqual(
+      asked.map(({ funcName }) => funcName),
+      ['localCheckout'],
+      'the user was asked before the capability ran'
+    )
+    assert.deepEqual(output[2], {
+      publishedSha: 'c0ffee1234567890',
+      branch: 'main',
+      tag: 'beta',
+    })
+  })
+
+  test('a refused capability fails the command rather than hanging', async () => {
+    const { exitCode } = await runCommand(['publish'], {
+      capabilities: {
+        localCheckout: () => ({ sha: 'c0ffee1234567890', branch: 'main' }),
+      },
+      approve: () => false,
+    })
+
+    // A refusal is an answer. The server learns the call was denied and the
+    // command fails on it — it does not sit on the socket waiting out a
+    // timeout for a decision that has already been made.
+    assert.notEqual(exitCode, 0)
+  })
+
+  test('with nobody to ask, an unclassified capability is refused', async () => {
+    // No approver: a non-interactive run. This is the CI case, and it must
+    // fail rather than quietly proceeding as though someone had said yes.
+    const { exitCode } = await runCommand(['publish'], {
+      capabilities: {
+        localCheckout: () => ({ sha: 'c0ffee1234567890', branch: 'main' }),
+      },
+    })
+
+    assert.notEqual(exitCode, 0)
   })
 
   test('a capability the client did not expose is refused, and the command fails', async () => {

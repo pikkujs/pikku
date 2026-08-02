@@ -9,6 +9,7 @@ import type {
 } from '../../types/core.types.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
+import type { ApprovalPolicy } from '../channel/channel-rpc.js'
 
 export interface AIThread {
   id: string
@@ -118,13 +119,24 @@ export interface AIAgentOutput {
  */
 export type SessionScope = 'user' | 'org'
 
-export interface AIAgentToolDef {
+/**
+ * `name`, `description` and `inputSchema` are model-facing — they exist so the
+ * tool can be described to something that has to be told what exists. The
+ * approval half is not model-specific, and is shared with the capabilities a
+ * CLI client exposes to a server: both are an allowlist of named callables
+ * invoked by something other than the code that wrote them.
+ *
+ * The default differs between the two, deliberately. `needsApproval` is
+ * optional here and absent means "do not ask", which is safe because a tool is
+ * written by the same people who run the server it executes on. A capability
+ * runs on someone else's machine at a remote caller's request, so absent there
+ * means the opposite and the field is required.
+ */
+export interface AIAgentToolDef extends Partial<ApprovalPolicy> {
   name: string
   description: string
   inputSchema: Record<string, unknown>
   execute: (input: unknown) => Promise<unknown>
-  needsApproval?: boolean
-  approvalDescriptionFn?: (input: unknown) => Promise<string>
   /**
    * Set only by the framework on sub-agent delegating tools. Such a tool may
    * legitimately return an `__approvalRequired` marker to forward a nested

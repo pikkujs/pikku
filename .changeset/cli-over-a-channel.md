@@ -57,6 +57,48 @@ channel is synthetic (it exists so a command can stream progress without
 knowing where that goes), so it delegates `remote` to the connection the
 command actually arrived on.
 
+Because that runs code on someone's machine at a remote caller's request, the
+capability map says what *can* run and approval says whether a particular call
+*should*. A capability may be declared `{ execute, needsApproval }`, sharing
+`ApprovalPolicy` — `needsApproval` and `approvalDescriptionFn` — with
+`AIAgentToolDef`, which has carried both since before channels could call back:
+both are an allowlist of named callables invoked by something other than the
+code that wrote them. The runtime around them is deliberately not shared, since
+an agent suspends its run and resumes it later while a reverse call is a live
+await with a person at the other end.
+
+**Breaking:** a capability written as a bare function is now unclassified, and
+unclassified means approval is required. The annotation nobody got round to
+writing is the one most likely to matter, so it fails closed; declare
+`{ execute, needsApproval: false }` to keep a capability running unattended.
+The default is the opposite of `AIAgentToolDef`'s, where absence means "do not
+ask" — a tool is written by the same people who run the server it executes on,
+and a capability is not.
+
+`executeRawCLIViaChannel` reads `--auto-approve` and
+`--dangerously-auto-approve` out of argv (or `PIKKU_AUTO_APPROVE` /
+`PIKKU_DANGEROUSLY_AUTO_APPROVE`) and strips them before argv reaches the
+server — what may run on this machine is this machine's decision, and a flag
+the server can see is one the server could act on. `--auto-approve` permits the
+classified-safe set and refuses the rest; `--dangerously-auto-approve` permits
+everything and says so once on stderr. Interactively the user is asked per
+call, with `y` / `n` / `a`, where `a` is remembered for that one capability for
+the rest of the run and never written to disk — widening it to the session
+would quietly turn an interactive run into `--dangerously-auto-approve`. A run
+with no terminal and no flag refuses rather than assuming yes, because CI is
+exactly where an unattended `git push` would otherwise happen. The tiers are
+meaningful here in a way they would not be for an agent: the caller is a
+deterministic program whose source can be read, so "these calls are always
+fine" is a claim someone can actually justify.
+
+A peer that is asking a human sends a pending frame first, which stops the
+caller's timeout. Without it any approval slower than the timeout would fail
+the call and then discard the decision when it finally arrived. The call is
+still failed the moment the socket drops — what actually happens when a peer
+dies mid-prompt — and a peer that sends the frame dishonestly can do nothing
+but keep its own call waiting. A refusal is sent as an answer, so a denied call
+fails its command immediately rather than hanging.
+
 Fixes found on the way, each of which broke this path:
 
 - A websocket upgrade wrote middleware headers (CORS, on every request)

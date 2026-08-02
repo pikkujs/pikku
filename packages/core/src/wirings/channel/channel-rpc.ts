@@ -11,6 +11,7 @@ import { validateSchema } from '../../schema.js'
  */
 export const CHANNEL_RPC_REQUEST = 'pikku-rpc-request'
 export const CHANNEL_RPC_RESPONSE = 'pikku-rpc-response'
+export const CHANNEL_RPC_PENDING = 'pikku-rpc-pending'
 
 export interface ChannelRPCRequest {
   action: typeof CHANNEL_RPC_REQUEST
@@ -26,6 +27,23 @@ export interface ChannelRPCResponse {
   ok: boolean
   result?: unknown
   error?: { name: string; message: string }
+}
+
+/**
+ * "Still working on it — a human is being asked." Sent by a peer that has
+ * suspended a call on someone's answer.
+ *
+ * Without it the caller's timeout runs while a person reads a prompt, and any
+ * approval slower than the timeout fails the call and then drops the answer
+ * when it arrives. The frame carries no result and grants nothing: it only
+ * asks the caller to keep waiting, and a peer that lies about it can at worst
+ * hold its own call open.
+ */
+export interface ChannelRPCPending {
+  action: typeof CHANNEL_RPC_PENDING
+  id: string
+  /** What the peer is waiting on, for a caller that wants to log or show it. */
+  reason?: string
 }
 
 const isRecord = (message: unknown): message is Record<string, unknown> =>
@@ -59,6 +77,15 @@ export const isChannelRPCResponse = (
   typeof message.id === 'string' &&
   message.id.length > 0 &&
   typeof message.ok === 'boolean'
+
+export const isChannelRPCPending = (
+  message: unknown
+): message is ChannelRPCPending =>
+  isRecord(message) &&
+  message.action === CHANNEL_RPC_PENDING &&
+  typeof message.id === 'string' &&
+  message.id.length > 0 &&
+  (message.reason === undefined || typeof message.reason === 'string')
 
 /**
  * The error a caller sees when the peer is gone or never answered. Callers
@@ -96,6 +123,84 @@ export const unsupportedChannelRemote = async (
 }
 
 /**
+ * Whether a callable exposed to a remote decider needs a human to agree before
+ * it runs, and how to describe the particular invocation while asking.
+ *
+ * Shared with `AIAgentToolDef`, which has carried these two fields since before
+ * channels could call back: both are an allowlist of named callables invoked by
+ * something other than the code that wrote them, and both need the same two
+ * answers. The runtime around them is deliberately not shared — an agent
+ * suspends its run and resumes it later, while a reverse RPC call is a live
+ * await on a socket with a person at the other end of it.
+ *
+ * `approvalDescriptionFn` is the field that makes a prompt readable: without it
+ * the user is asked about `localPush` and a JSON blob, with it they are asked
+ * about "push tag v2.1.0 to origin".
+ */
+export interface ApprovalPolicy {
+  needsApproval: boolean
+  approvalDescriptionFn?: (input: unknown) => Promise<string> | string
+}
+
+/**
+ * A capability with no policy attached. Still the right form for a capability
+ * that takes no arguments and reads something harmless — but see
+ * `CapabilityDef`: unclassified is treated as the dangerous tier, because the
+ * capability nobody got round to classifying is the one most likely to matter.
+ */
+export type CapabilityHandler = (data: any) => Promise<unknown> | unknown
+
+/**
+ * A capability that has been classified.
+ *
+ * `needsApproval` is required here on purpose. On `AIAgentToolDef` the same
+ * field is optional and absence means "do not ask" — safe there, because a tool
+ * is written by the same people who run the server it executes on. Here absence
+ * means the opposite, so it must not be expressible: a bare function is the
+ * unclassified form, and this one always states its policy.
+ */
+export interface CapabilityDef extends ApprovalPolicy {
+  execute: CapabilityHandler
+}
+
+export type Capability = CapabilityHandler | CapabilityDef
+
+export type Capabilities = Record<string, Capability>
+
+const isCapabilityDef = (capability: Capability): capability is CapabilityDef =>
+  typeof capability === 'object' &&
+  capability !== null &&
+  typeof (capability as CapabilityDef).execute === 'function'
+
+/**
+ * The policy a capability is subject to, and the function that runs if it
+ * passes. A bare function is unclassified, which resolves to needing approval:
+ * forgetting the annotation costs a prompt rather than costing a key.
+ *
+ * Core makes no policy decision beyond this. Whether an approval can actually
+ * be obtained is the caller's business — a terminal asks a person, a browser
+ * tab may have no one to ask — so the tiers a CLI exposes as flags are just
+ * which approver it wires up, not something core knows about.
+ */
+export const resolveCapability = (
+  capability: Capability
+): { execute: CapabilityHandler } & ApprovalPolicy =>
+  isCapabilityDef(capability)
+    ? capability
+    : { execute: capability, needsApproval: true }
+
+/**
+ * Asked to approve one invocation. Returning false refuses it, and the peer is
+ * told so — a refusal is an answer, not a hang.
+ */
+export type ApprovalRequester = (request: {
+  funcName: string
+  data: unknown
+  /** `approvalDescriptionFn`'s output when the capability provided one. */
+  description?: string
+}) => Promise<boolean> | boolean
+
+/**
  * Checks what a peer returned for one capability, throwing to reject the call.
  * Async because schema validation is.
  */
@@ -108,6 +213,8 @@ interface PendingCall {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timer?: ReturnType<typeof setTimeout>
+  /** Set once the peer says it is waiting on a human. */
+  awaitingHuman?: boolean
 }
 
 /**
@@ -156,6 +263,33 @@ export class ChannelRPCRegistry {
     })
 
     return { id, promise }
+  }
+
+  /**
+   * Stops the clock on a call whose peer has said it is asking a human.
+   *
+   * The timeout exists to bound a peer that has gone away, and a person reading
+   * a prompt is not that. Left running, every approval slower than the timeout
+   * would fail the call and then discard the answer when it finally arrived —
+   * so a consent prompt would be unusable on anything but the fastest yes.
+   *
+   * The call is not left unbounded in practice: `rejectAll` still fails it the
+   * moment the socket drops, which is what actually happens when the peer dies
+   * mid-prompt. Only the peer's own call is affected, so a peer that sends this
+   * frame dishonestly can do nothing but keep itself waiting.
+   *
+   * Returns false for an unknown id — a pending frame for a call that already
+   * timed out is stale, not an error.
+   */
+  public hold(id: string): boolean {
+    const call = this.pending.get(id)
+    if (!call || call.awaitingHuman) {
+      return false
+    }
+    clearTimeout(call.timer)
+    call.timer = undefined
+    call.awaitingHuman = true
+    return true
   }
 
   /**
@@ -236,10 +370,13 @@ export class ChannelDeploymentService implements DeploymentService {
   }
 
   /**
-   * Routes a response frame read off the channel back to its caller. The
-   * channel owner must call this — the service has no read side of its own.
+   * Routes a response or pending frame read off the channel back to its caller.
+   * The channel owner must call this — the service has no read side of its own.
    */
   public handleResponse(message: unknown): boolean {
+    if (isChannelRPCPending(message)) {
+      return this.registry.hold(message.id)
+    }
     return isChannelRPCResponse(message) ? this.registry.settle(message) : false
   }
 
@@ -365,58 +502,104 @@ export const createChannelRPCResultValidator =
 export const createChannelRPCResponder = ({
   capabilities,
   send,
+  approve,
 }: {
-  capabilities: Record<string, (data: any) => Promise<unknown> | unknown>
+  capabilities: Capabilities
   send: (data: unknown) => Promise<void> | void
+  /**
+   * Consulted before running a capability that needs approval. Omitted means
+   * there is nobody to ask, and such a call is refused rather than run — a
+   * client with no human attached is exactly where an unattended `git push`
+   * would otherwise happen.
+   */
+  approve?: ApprovalRequester
 }) => {
   return async (message: unknown): Promise<boolean> => {
     if (!isChannelRPCRequest(message)) {
       return false
     }
 
+    const refuse = (name: string, why: string): ChannelRPCResponse => ({
+      action: CHANNEL_RPC_RESPONSE,
+      id: message.id,
+      ok: false,
+      error: { name, message: why },
+    })
+
     // Own properties only. A plain object literal still inherits from
     // `Object.prototype`, so a peer asking for `toString` or `constructor`
     // would otherwise resolve a real function and this would call it — names
     // the host never listed, through the boundary that is supposed to list
-    // them. `typeof` covers a map that carries a non-function value.
-    const capability = Object.prototype.hasOwnProperty.call(
+    // them.
+    const entry = Object.prototype.hasOwnProperty.call(
       capabilities,
       message.funcName
     )
       ? capabilities[message.funcName]
       : undefined
-    let response: ChannelRPCResponse
 
-    if (typeof capability !== 'function') {
+    if (
+      entry === undefined ||
+      (typeof entry !== 'function' && !isCapabilityDef(entry))
+    ) {
+      await send(
+        refuse(
+          'RPCNotFoundError',
+          `Capability not exposed: ${message.funcName}`
+        )
+      )
+      return true
+    }
+
+    const { execute, needsApproval, approvalDescriptionFn } =
+      resolveCapability(entry)
+
+    let response: ChannelRPCResponse
+    try {
+      if (needsApproval) {
+        if (!approve) {
+          await send(
+            refuse(
+              'RPCNotApprovedError',
+              `"${message.funcName}" needs approval and there is nobody to ask`
+            )
+          )
+          return true
+        }
+
+        // The caller is waiting on a timer that knows nothing about how long a
+        // person takes to read. Telling it to hold has to happen before the
+        // asking, not after — an answer that arrives past the timeout is
+        // dropped, and the human's decision is then silently discarded.
+        const description = await approvalDescriptionFn?.(message.data)
+        await send({
+          action: CHANNEL_RPC_PENDING,
+          id: message.id,
+          reason: description ?? `approval for ${message.funcName}`,
+        } satisfies ChannelRPCPending)
+
+        const approved = await approve({
+          funcName: message.funcName,
+          data: message.data,
+          description,
+        })
+        if (!approved) {
+          await send(
+            refuse('RPCDeniedError', `"${message.funcName}" was not approved`)
+          )
+          return true
+        }
+      }
+
       response = {
         action: CHANNEL_RPC_RESPONSE,
         id: message.id,
-        ok: false,
-        error: {
-          name: 'RPCNotFoundError',
-          message: `Capability not exposed: ${message.funcName}`,
-        },
+        ok: true,
+        result: await execute(message.data),
       }
-    } else {
-      try {
-        response = {
-          action: CHANNEL_RPC_RESPONSE,
-          id: message.id,
-          ok: true,
-          result: await capability(message.data),
-        }
-      } catch (e: unknown) {
-        const error = e as Error
-        response = {
-          action: CHANNEL_RPC_RESPONSE,
-          id: message.id,
-          ok: false,
-          error: {
-            name: error?.name ?? 'Error',
-            message: error?.message ?? String(e),
-          },
-        }
-      }
+    } catch (e: unknown) {
+      const error = e as Error
+      response = refuse(error?.name ?? 'Error', error?.message ?? String(e))
     }
 
     await send(response)

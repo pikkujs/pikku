@@ -2,6 +2,11 @@ import {
   createChannelRPCResponder,
   isChannelRPCRequest,
 } from '../../channel/channel-rpc.js'
+import type {
+  ApprovalRequester,
+  Capabilities,
+} from '../../channel/channel-rpc.js'
+import { approverForMode, takeApprovalFlags } from './cli-approval.js'
 import type { CorePikkuCLIRender } from '../cli.types.js'
 
 /**
@@ -32,7 +37,13 @@ const clientServices = { logger: console } as any
  *
  * `capabilities` are the functions this client agrees to run on the server's
  * behalf (reading a git sha, listing local files). Nothing outside the map is
- * reachable.
+ * reachable, and anything in it that is not explicitly classified
+ * `needsApproval: false` is put to the user before it runs — the map says what
+ * *can* run, and approval says whether this particular call *should*.
+ *
+ * `approve` overrides that entirely; by default the mode is read from argv
+ * (`--auto-approve`, `--dangerously-auto-approve`) and whether there is a
+ * terminal to ask at.
  */
 export async function executeRawCLIViaChannel({
   pikkuWS,
@@ -40,13 +51,24 @@ export async function executeRawCLIViaChannel({
   renderers = {},
   defaultRenderer,
   capabilities = {},
+  approve,
 }: {
   pikkuWS: any // CorePikkuWebsocket instance
   args?: string[]
   renderers?: Record<string, CorePikkuCLIRender<any>>
   defaultRenderer?: CorePikkuCLIRender<any>
-  capabilities?: Record<string, (data: any) => Promise<unknown> | unknown>
+  capabilities?: Capabilities
+  approve?: ApprovalRequester
 }): Promise<number> {
+  // Stripped before argv goes to the server: the decision of what may run on
+  // this machine belongs to this machine, and a flag the server can see is a
+  // flag the server could act on.
+  const { mode, args: commandArgs } = takeApprovalFlags(args)
+  // Aborted when the run ends, so a prompt still waiting on stdin stops
+  // holding the event loop open after there is nothing left to approve.
+  const runEnded = new AbortController()
+  const approver = approve ?? approverForMode(mode, { signal: runEnded.signal })
+
   const render = (commandId: string | undefined, data: unknown) => {
     const renderer =
       (commandId ? renderers[commandId] : undefined) ||
@@ -65,6 +87,7 @@ export async function executeRawCLIViaChannel({
     // depend on the channel having declared a route for them.
     const respond = createChannelRPCResponder({
       capabilities,
+      approve: approver,
       send: (data) => {
         // A capability can still be resolving when the run settles and the
         // socket closes. `respond` is dispatched without a handler, so a throw
@@ -82,6 +105,7 @@ export async function executeRawCLIViaChannel({
         return
       }
       settled = true
+      runEnded.abort()
       pikkuWS.unsubscribe(handler)
       try {
         pikkuWS.ws.close()
@@ -145,7 +169,7 @@ export async function executeRawCLIViaChannel({
       }
     })
 
-    const sendCommand = () => commandRoute.send('__raw', { args })
+    const sendCommand = () => commandRoute.send('__raw', { args: commandArgs })
     if (pikkuWS.ws.readyState === 1) {
       sendCommand()
     } else {
