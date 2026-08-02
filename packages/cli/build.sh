@@ -139,6 +139,10 @@ done
 
 yarn tsc -b
 
+# tsc does not carry a source file's mode across, so the file `bin.pikku` points
+# at comes out non-executable and every `npx pikku` exits 126.
+chmod +x dist/bin/pikku.js
+
 # Copy schema file
 echo "Copying schema file..."
 schema_src=$(find .pikku/schemas -maxdepth 2 -name "PikkuCLIConfig.schema.json" | head -1)
