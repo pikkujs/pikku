@@ -59,7 +59,7 @@ function suggestOption(
   return best
 }
 
-// knowledge: decisions/design/cli-unknown-long-options-warn-instead-of-failing.md
+// knowledge: decisions/internals/cli-unknown-long-options-warn-instead-of-failing.md
 function warnUnknownOption(
   typed: string,
   availableOptions: Record<string, CLIOption>,
@@ -167,7 +167,7 @@ export function parseCLIArguments(
     return result
   }
 
-  // knowledge: decisions/design/cli-parse-errors-are-routed-by-message-prefix.md
+  // knowledge: decisions/internals/cli-parse-errors-are-routed-by-message-prefix.md
   if (
     !commandMeta.pikkuFuncId &&
     commandMeta.subcommands &&

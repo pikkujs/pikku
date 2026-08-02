@@ -1,4 +1,4 @@
-// knowledge: decisions/design/core-data-classification-brand-is-an-optional-property.md
+// knowledge: decisions/internals/core-data-classification-brand-is-an-optional-property.md
 export type Private<T> = T & { readonly __classification__?: 'private' }
 export type Pii<T> = T & { readonly __classification__?: 'pii' }
 export type Secret<T> = T & { readonly __classification__?: 'secret' }

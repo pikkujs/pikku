@@ -1,7 +1,7 @@
 import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js'
 import { getSingletonServices } from '../pikku-state.js'
 
-// knowledge: decisions/design/local-trigger-and-gateway-services-assume-a-single-process.md
+// knowledge: decisions/internals/local-trigger-and-gateway-services-assume-a-single-process.md
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void> {
     const singletonServices = getSingletonServices()

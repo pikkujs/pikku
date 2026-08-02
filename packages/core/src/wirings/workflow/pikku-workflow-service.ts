@@ -373,7 +373,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             `[pikku] WorkflowRunMirror write failed: ${err?.message ?? err}`
           )
         } catch {
-          // knowledge: decisions/design/workflow-run-mirror-is-never-a-source-of-truth.md
+          // knowledge: decisions/internals/workflow-run-mirror-is-never-a-source-of-truth.md
         }
       }
     }
@@ -1226,7 +1226,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       try {
         return await this.getStepState(runId, stepName)
       } catch {
-        // knowledge: decisions/design/workflow-replay-reads-its-steps-once-and-caches-only-the-immutable-half.md
+        // knowledge: decisions/internals/workflow-replay-reads-its-steps-once-and-caches-only-the-immutable-half.md
       }
     }
 

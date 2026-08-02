@@ -17,7 +17,7 @@ const MAX_CAPTURED_RESPONSE_BODY = 2_000
 
 // knowledge: decisions/security/webhook-bodies-are-signed-before-they-are-enqueued.md
 export class QueueWebhookService extends WebhookService {
-  // knowledge: decisions/design/webhook-service-collaborators-are-constructor-args-not-locator-lookups.md
+  // knowledge: decisions/internals/webhook-service-collaborators-are-constructor-args-not-locator-lookups.md
   constructor(protected queueService: QueueService) {
     super()
   }
@@ -75,7 +75,7 @@ export class QueueWebhookService extends WebhookService {
     return { jobData, options: this.resolveJobOptions(input) }
   }
 
-  // knowledge: decisions/design/queue-jobs-always-carry-an-explicit-attempts-count.md
+  // knowledge: decisions/internals/queue-jobs-always-carry-an-explicit-attempts-count.md
   private resolveJobOptions(input: SendWebhookInput): JobOptions {
     const webhookConfig = getSingletonServices().config?.webhook
     const retries =
@@ -91,7 +91,7 @@ export class QueueWebhookService extends WebhookService {
   }
 }
 
-// knowledge: decisions/design/webhook-delivery-history-records-every-attempt-best-effort.md
+// knowledge: decisions/internals/webhook-delivery-history-records-every-attempt-best-effort.md
 export async function pikkuWebhookWorkerFunc(
   services: { logger: Logger; webhookService?: WebhookService },
   { url, body, headers, deliveryId }: WebhookJobData

@@ -14,6 +14,6 @@ here first — several of these exist because the obvious simplification was tri
 and broke something.
 
 <!-- pikku:knowledge-index -->
-- [design](design/index.md) — a rule about how the app looks and behaves
+- [internals](internals/index.md) — a rule about how it works under the hood, and why
 - [security](security/index.md) — a rule about who may do what
 <!-- /pikku:knowledge-index -->

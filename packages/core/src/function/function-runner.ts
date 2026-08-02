@@ -355,7 +355,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
           : resolvedSingletonServices
-      // knowledge: decisions/design/core-function-runner-restores-the-wire-fields-it-overwrites.md
+      // knowledge: decisions/internals/core-function-runner-restores-the-wire-fields-it-overwrites.md
       if (
         resolvedAuditConfig &&
         resolvedSingletonServices.audit &&

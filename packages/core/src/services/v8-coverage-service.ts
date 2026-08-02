@@ -109,7 +109,7 @@ export class V8CoverageService implements CoverageService {
   }
 
   private async doStart(): Promise<void> {
-    // knowledge: decisions/design/node-only-builtins-are-imported-dynamically.md
+    // knowledge: decisions/internals/node-only-builtins-are-imported-dynamically.md
     const inspector = await import('node:inspector')
     this.session = new inspector.Session() as unknown as InspectorSession
     this.session.connect()
