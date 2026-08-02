@@ -108,7 +108,23 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
                 type: 'tool-result' as const,
                 toolCallId: tr.id,
                 toolName: tr.name,
-                output: { type: 'json' as const, value: parsed },
+                // Wrapped rather than passed through, because the difference
+                // matters to the model and is invisible otherwise. A result
+                // saved after its run was cut off looks exactly like one the
+                // model already used, so without this the only way to guess
+                // which is which is the fact that a turn was interrupted — and
+                // a model told to mention undelivered results guesses wrong,
+                // announcing a read that was cancelled and cost nothing.
+                output: msg.undelivered
+                  ? {
+                      type: 'json' as const,
+                      value: {
+                        undelivered: true,
+                        note: 'This finished after the reply was cut off, so it was never reported to the user.',
+                        result: parsed,
+                      },
+                    }
+                  : { type: 'json' as const, value: parsed },
               }
             })
           : [],

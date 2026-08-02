@@ -209,6 +209,34 @@ describe('convertToSDKMessages', () => {
     ])
     assert.equal((out as any).content[0].output.value, 'plain text')
   })
+
+  test('an undelivered result says so, and keeps the result inside it', async () => {
+    // Without this the model cannot tell a result saved after an interrupt
+    // from one it already used, and a model asked to mention the former
+    // announces the latter — reporting a cancelled read as though something
+    // had happened.
+    const [out] = await convertToSDKMessages([
+      msg({
+        role: 'tool',
+        undelivered: true,
+        toolResults: [{ id: 'c1', name: 'deploy', result: '{"shipped":true}' }],
+      }),
+    ])
+    const { value } = (out as any).content[0].output
+    assert.equal(value.undelivered, true)
+    assert.deepEqual(value.result, { shipped: true })
+    assert.match(value.note, /cut off/)
+  })
+
+  test('an ordinary result is not wrapped, so tools read as they were written', async () => {
+    const [out] = await convertToSDKMessages([
+      msg({
+        role: 'tool',
+        toolResults: [{ id: 'c1', name: 'lookup', result: '{"found":true}' }],
+      }),
+    ])
+    assert.deepEqual((out as any).content[0].output.value, { found: true })
+  })
 })
 
 /**
