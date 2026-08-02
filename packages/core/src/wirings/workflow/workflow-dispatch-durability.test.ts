@@ -31,7 +31,9 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
     } as any)
 
     const ws = new InMemoryWorkflowService()
-    const runId = await ws.createRun('flow', {}, false, 'hash', { type: 'test' })
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
     await ws.insertStepState(runId, 'thing', 'doThing', {})
 
     // Queue is down → dispatch throws the TRANSIENT exception (not a step failure).
@@ -52,7 +54,11 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
 
     // The run itself must stay alive (not failed) — it is the snapshot we replay.
     const runAfterFail = await ws.getRun(runId)
-    assert.notEqual(runAfterFail?.status, 'failed', 'run is not failed by a queue blip')
+    assert.notEqual(
+      runAfterFail?.status,
+      'failed',
+      'run is not failed by a queue blip'
+    )
 
     // Queue recovers → replaying the step now dispatches (pauses via async exception)
     // and the step transitions to `scheduled`. A real replay runs through
@@ -90,7 +96,9 @@ describe('orchestrateWorkflow treats a dispatch failure as non-terminal', () => 
     const ws = makeService(() => {
       throw new WorkflowDispatchException('r', 's')
     })
-    const runId = await ws.createRun('flow', {}, false, 'hash', { type: 'test' })
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
 
     await assert.rejects(
       ws.orchestrateWorkflow(runId, {}),
@@ -108,7 +116,9 @@ describe('orchestrateWorkflow treats a dispatch failure as non-terminal', () => 
     const ws = makeService(() => {
       throw new Error('business logic blew up')
     })
-    const runId = await ws.createRun('flow', {}, false, 'hash', { type: 'test' })
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
 
     await assert.rejects(ws.orchestrateWorkflow(runId, {}))
     const run = await ws.getRun(runId)

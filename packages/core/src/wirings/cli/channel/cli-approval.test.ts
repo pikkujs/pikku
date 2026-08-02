@@ -138,6 +138,29 @@ describe('createTerminalApprover', () => {
     assert.match(io.written.join(''), /localPush/)
   })
 
+  test('one keystroke cannot answer two questions', async () => {
+    const io = fakeIO()
+    const approve = createTerminalApprover(io)
+
+    // Requests are dispatched without awaiting, so both of these are in flight
+    // together. Unserialized they interleave on stderr and this single 'y'
+    // resolves both — approving a capability the user never read.
+    const first = approve({ funcName: 'gitHead', data: {} })
+    const second = approve({ funcName: 'localPush', data: {} })
+    setImmediate(() => io.input.emit('data', 'y\n'))
+
+    assert.equal(await first, true)
+    assert.match(io.written.join(''), /gitHead/)
+    assert.doesNotMatch(
+      io.written.join(''),
+      /localPush/,
+      'the second question waits its turn'
+    )
+
+    setImmediate(() => io.input.emit('data', 'n\n'))
+    assert.equal(await second, false)
+  })
+
   test('a prompt left open when the run ends stops waiting', async () => {
     const io = fakeIO()
     const ended = new AbortController()

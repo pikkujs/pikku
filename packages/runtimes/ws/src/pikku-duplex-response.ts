@@ -5,17 +5,13 @@ import type { PikkuHTTPResponse } from '@pikku/core/http'
 import type { SerializeOptions } from 'cookie'
 
 /**
- * The response half of a websocket upgrade, writing straight onto the raw
- * socket.
+ * The response half of a websocket upgrade, writing onto the raw socket.
  *
- * Nothing is written until the response is actually needed. An upgrade runs
- * the HTTP middleware chain first, and middleware sets headers (CORS, most
- * commonly) on every request — including the ones that go on to succeed. A
- * successful upgrade's first bytes must be `ws`'s `101` status line, so any
- * header written eagerly corrupts the handshake and the client fails to parse
- * the response. Buffering means those headers are simply discarded when the
- * upgrade proceeds, and are flushed behind a status line only when this class
- * is the one answering — i.e. when the upgrade was rejected.
+ * Everything is buffered because a successful upgrade's first bytes must be
+ * `ws`'s `101` status line, while the middleware chain sets headers (CORS) on
+ * every request. Written eagerly they corrupt the handshake; buffered, they are
+ * discarded when the upgrade proceeds and flushed behind a status line only
+ * when it is rejected.
  */
 export class PikkuDuplexResponse implements PikkuHTTPResponse {
   private aborted = false

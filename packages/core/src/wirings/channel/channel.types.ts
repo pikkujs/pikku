@@ -167,12 +167,8 @@ export interface PikkuChannel<
   clearState(): Promise<void> | void
   /**
    * Calls a function on the peer at the other end of this connection and waits
-   * for its answer.
-   *
-   * A channel is otherwise fire-and-forget in both directions, so this is the
-   * only way to reach a peer that has no address of its own — a CLI on a
-   * laptop, a browser tab, a sandbox behind NAT. The peer decides what it will
-   * answer to; a name it has not registered is refused.
+   * for its answer — the only way to reach a peer with no address of its own.
+   * The peer decides what it answers to; an unregistered name is refused.
    */
   remote: Remote
 }

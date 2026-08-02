@@ -32,12 +32,8 @@ export interface RawCLIResult {
 }
 
 /**
- * Handles raw CLI input from a WebSocket channel.
- *
  * The client sends argv untouched and this side owns parsing, so the command
- * tree lives with the server and a client binary never needs to know it. Pass
- * `onOutput` to stream progressive output back rather than rendering it into
- * the server's own stdout.
+ * tree lives with the server and a client binary never needs to know it.
  */
 export async function handleRawCLI({
   programName,
@@ -52,17 +48,12 @@ export async function handleRawCLI({
   args: string[]
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
-  /**
-   * The session the connection authenticated as during its upgrade. Commands
-   * run as that user, which is what makes an authenticated command reachable
-   * from a client that owns no commands of its own.
-   */
+  /** Established during the upgrade; commands run as that user. */
   session?: CoreUserSession
   onOutput?: (data: unknown, commandId: string) => Promise<void> | void
   /**
-   * The channel the command arrived on. Passed through so `channel.remote(...)`
-   * inside a command reaches the calling client rather than being refused as a
-   * one-way stream.
+   * The channel the command arrived on, so `channel.remote(...)` reaches the
+   * calling client rather than being refused as a one-way stream.
    */
   transport?: PikkuChannel<unknown, any, any>
 }): Promise<RawCLIResult> {
@@ -101,8 +92,8 @@ export async function handleRawCLI({
       allCLIMeta,
       parsed.commandPath
     )
-    // Help alone tells the user what is available, not what they got wrong.
-    // The parser knows ("Unknown command: x"), so it is carried alongside.
+    // Help says what is available, not what they got wrong — so the parser's
+    // reason rides alongside it.
     return {
       help: helpText,
       error: parsed.errors.length > 0 ? parsed.errors.join('\n') : undefined,
@@ -139,16 +130,14 @@ export async function handleRawCLI({
       singletonServices,
       createWireServices,
       session,
-      // The caller can't know the resolved command until parsing finishes
-      // here, so it's supplied per-frame rather than up front.
+      // Not known until parsing finishes here, so it is supplied per-frame.
       onOutput: onOutput && ((data) => onOutput(data, commandId)),
       transport,
     })
     return { result, exitCode: 0, commandId }
   } catch (e: unknown) {
-    // A command can throw anything. Reading `.message` off a string or an
-    // undefined gives undefined, and the client only prints an error frame it
-    // was actually sent — so the run would exit 1 saying nothing at all.
+    // A command can throw anything; `.message` off a string is undefined, and
+    // the run would then exit 1 saying nothing at all.
     const message = e instanceof Error ? e.message : String(e)
     return { error: message || 'Command failed', exitCode: 1, commandId }
   }

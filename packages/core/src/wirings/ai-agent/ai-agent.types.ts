@@ -120,17 +120,10 @@ export interface AIAgentOutput {
 export type SessionScope = 'user' | 'org'
 
 /**
- * `name`, `description` and `inputSchema` are model-facing — they exist so the
- * tool can be described to something that has to be told what exists. The
- * approval half is not model-specific, and is shared with the capabilities a
- * CLI client exposes to a server: both are an allowlist of named callables
- * invoked by something other than the code that wrote them.
- *
- * The default differs between the two, deliberately. `needsApproval` is
- * optional here and absent means "do not ask", which is safe because a tool is
- * written by the same people who run the server it executes on. A capability
- * runs on someone else's machine at a remote caller's request, so absent there
- * means the opposite and the field is required.
+ * `ApprovalPolicy` is shared with channel capabilities, but `Partial` here:
+ * absent `needsApproval` means "do not ask", which is safe because a tool is
+ * written by whoever runs the server it executes on. A capability runs on
+ * someone else's machine, so it requires the field instead.
  */
 export interface AIAgentToolDef extends Partial<ApprovalPolicy> {
   name: string
