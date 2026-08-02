@@ -1,3 +1,157 @@
+## 0.12.35
+
+### Patch Changes
+
+- a7b26c5: rename the inspected declarations to `define*`: `wireScope` → `defineScope`, `wireSecret` → `defineSecret`, `wireVariable` → `defineVariable`, `wireCredential` → `defineCredential`
+
+  `wire*` meant two unrelated things. A transport wiring attaches a function to
+  something that can invoke it — `wireHTTP`, `wireChannel`, `wireScheduler`,
+  `wireQueueWorker` and the rest — and the thing it wires runs. These four wire
+  nothing: they are no-ops that exist only so the call typechecks, they are
+  tree-shaken out of the build, and their whole job is to be found by the
+  inspector's AST pass and turned into a type union. One word for both left the
+  declaration reading like a registration with a runtime.
+
+  So the vocabulary splits: **`wire*` is a transport, `define*` is an inspected
+  declaration.**
+
+  ```ts
+  import { defineScope } from '@pikku/core/scope'
+  import { defineSecret } from '@pikku/core/secret'
+  import { defineVariable } from '@pikku/core/variable'
+  import { defineCredential } from '@pikku/core/credential'
+
+  defineScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+  ```
+
+  **Breaking:** no alias is kept. Rename the four call sites; the module subpaths
+  (`@pikku/core/scope`, `/secret`, `/variable`) are unchanged.
+
+  The inspector matches these by identifier text, so a stale `wire*` call is not a
+  type error — it is silently not extracted, and the generated union comes back
+  empty. That fails as "this scope isn't declared" on code that was fine a moment
+  ago, nowhere near the declaration. Grep for the old names rather than trusting a
+  clean build.
+
+  An addon published with `.pikku` output generated before this release re-exports
+  `wireSecret` from `@pikku/core/secret` and will not typecheck against this core
+  until it is rebuilt and republished.
+
+- 457cb25: Add `definePersonas()`: the people a project's scenarios and virtual users run
+  as, declared in code.
+
+  There used to be three names for two-and-a-bit things — an _actor_ in
+  `scenarios.actors`, a _persona_ in `scenarios.personas`, and a _virtual user_
+  declared separately against an actor. In practice almost every actor was its own
+  kind, so the second set carried no information and the third was a third place
+  for a name to drift. There is now one declaration:
+
+  ```ts
+  definePersonas({
+    shopper: {
+      name: 'Sam Shopper',
+      jobTitle: 'Shopper',
+      personality: 'Buys in a hurry and leaves tabs open',
+      roles: ['customer'],
+      disposition: 'careless',
+      goals: ['Buy something without reading anything'],
+      account: {},
+    },
+  })
+  ```
+
+  A persona is a person: what they are like, what they want, the roles they hold,
+  and **one** account they sign in with — `account: {}` plus `linkedAccounts` for
+  the rare case of more, modelled on how better-auth does linking. A persona with a
+  `disposition` is a virtual user; `runnable: false` marks someone who only ever
+  exists to be acted upon — banned, shared with, reset — and is never handed a
+  session.
+
+  **A persona names roles, never scopes.** Scopes come from `defineSystemRole()`
+  expansion, so the build fails if a persona names a role nobody declared, and
+  fails again if a role confers a scope no `defineScope` declares. Running one only
+  ever has to check that its roles are still valid.
+
+  **Addresses are computed, never declared.** `personaEmail(id, domain, runId)`
+  derives `<id>[+runId]@<domain>` from `scenarios.emailDomain`, so a seed, a
+  scenario run and a virtual-user run cannot disagree about who they are signing in
+  as. `scenarios.actors` and `scenarios.personas` are gone from
+  `pikku.config.json` — only `emailDomain` remains.
+
+  `actor` survives in exactly one place: the name of a **slot in a scenario step**,
+  which is the role a persona is cast in for that step. `pikkuVirtualUser()`,
+  `kind`, `grants` and the `actor` field are removed; the `actors` service is now
+  `personas`, and the CLI's `virtual-user` commands are now `pikku persona list` /
+  `pikku persona run`. `budget` and `allowApprovalRequired` moved to run flags —
+  how much you will spend today is not a fact about a person.
+
+  `@pikku/cucumber` drops its `Actor` class and `ActorDispatchContext`: a
+  hand-rolled cookie jar that a persona's own typed session replaces outright.
+
+- 0e0f6eb: Add virtual users: LLM-driven synthetic users that work a real stage in
+  character.
+
+  A scenario proves a path somebody thought of. A virtual user works the same
+  ground without the script — it signs in as a declared persona over the app's own
+  auth, is handed the scenarios' BDD prose and the schema of every endpoint it may
+  reach, and decides for itself what to do. It asserts nothing; a run produces
+  findings, and their absence only ever means "not this time, not with this seed".
+
+  There is nothing extra to declare. A persona with a `disposition` is a virtual
+  user, and running it is what makes it one — see the `definePersonas` changeset
+  for the declaration itself. Listing, describing or running one never loads the
+  app: the inspector reads the literal declaration, the CLI writes
+  `scopes/pikku-personas-meta.gen.json`, and `MetaService.getPersonasMeta()`
+  serves it.
+
+  **Dispositions are engine dials, not prose.** Each carries its own intent weights
+  (continue / suspend / resume / abandon), temperature, re-read and repeat rates,
+  and switches: `careless` puts things down and picks them up in the wrong order,
+  `newcomer` starts with no memory, `auditor` is never offered a mutation,
+  `adversarial` is shown the catalogue its roles do not cover — being offered a
+  call it should not be able to make is the test — while those roles stay live as
+  the oracle, so a success outside them is authorization drift rather than a pass.
+
+  **Nothing is retrieved against.** The whole reachable catalogue goes into the
+  instructions (~8k tokens on a 430-RPC project, cached for the run), because a
+  ranking function would make the user only as adventurous as the ranking and lose
+  exactly the endpoints worth stumbling into. Schema first: an endpoint must be
+  described before it may be called.
+
+  **No money in core.** The engine counts steps, calls, mutations and tokens; what
+  they cost is the app's to decide through `stop(tally)`.
+
+  CLI: `pikku persona list` and `pikku persona run <environment> [name]`, with
+  flags overriding a declaration for reproduction (`--seed`, `--steps`,
+  `--disposition`). Spending is a run flag too — `--steps`, `--mutations` and
+  `--duration` bound a run, because how much you will spend today is not a fact
+  about a person. Console: a Virtual Users screen beside Scenarios, built out of
+  core's own derivation functions so it shows a run's actual inputs rather than a
+  second implementation of them.
+
+  `dev-ai-runner` now ships its own `@pikku/ai-vercel` and
+  `@ai-sdk/openai-compatible` instead of requiring them from the project. Behind a
+  proxy one openai-compatible provider answers for every prefix, so there was never
+  a per-vendor package worth making somebody install; the project's copies still
+  win when it has them, and both load from the same place or neither does.
+
+- Updated dependencies [c984df6]
+- Updated dependencies [63ff32b]
+- Updated dependencies [ba6cc08]
+- Updated dependencies [d007191]
+- Updated dependencies [45859cf]
+- Updated dependencies [a7b26c5]
+- Updated dependencies [457cb25]
+- Updated dependencies [f7567ad]
+- Updated dependencies [ba6cc08]
+- Updated dependencies [a2e21e5]
+- Updated dependencies [457cb25]
+- Updated dependencies [86a50b9]
+- Updated dependencies [0e0f6eb]
+  - @pikku/core@0.12.73
+  - @pikku/better-auth@0.12.20
+  - @pikku/knowledge@0.12.2
+
 ## 0.12.34
 
 ### Patch Changes

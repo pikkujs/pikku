@@ -1,5 +1,136 @@
 # @pikku/skills
 
+## 0.12.3
+
+### Patch Changes
+
+- a7b26c5: rename the inspected declarations to `define*`: `wireScope` → `defineScope`, `wireSecret` → `defineSecret`, `wireVariable` → `defineVariable`, `wireCredential` → `defineCredential`
+
+  `wire*` meant two unrelated things. A transport wiring attaches a function to
+  something that can invoke it — `wireHTTP`, `wireChannel`, `wireScheduler`,
+  `wireQueueWorker` and the rest — and the thing it wires runs. These four wire
+  nothing: they are no-ops that exist only so the call typechecks, they are
+  tree-shaken out of the build, and their whole job is to be found by the
+  inspector's AST pass and turned into a type union. One word for both left the
+  declaration reading like a registration with a runtime.
+
+  So the vocabulary splits: **`wire*` is a transport, `define*` is an inspected
+  declaration.**
+
+  ```ts
+  import { defineScope } from '@pikku/core/scope'
+  import { defineSecret } from '@pikku/core/secret'
+  import { defineVariable } from '@pikku/core/variable'
+  import { defineCredential } from '@pikku/core/credential'
+
+  defineScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+  ```
+
+  **Breaking:** no alias is kept. Rename the four call sites; the module subpaths
+  (`@pikku/core/scope`, `/secret`, `/variable`) are unchanged.
+
+  The inspector matches these by identifier text, so a stale `wire*` call is not a
+  type error — it is silently not extracted, and the generated union comes back
+  empty. That fails as "this scope isn't declared" on code that was fine a moment
+  ago, nowhere near the declaration. Grep for the old names rather than trusting a
+  clean build.
+
+  An addon published with `.pikku` output generated before this release re-exports
+  `wireSecret` from `@pikku/core/secret` and will not typecheck against this core
+  until it is rebuilt and republished.
+
+- 457cb25: Add `definePersonas()`: the people a project's scenarios and virtual users run
+  as, declared in code.
+
+  There used to be three names for two-and-a-bit things — an _actor_ in
+  `scenarios.actors`, a _persona_ in `scenarios.personas`, and a _virtual user_
+  declared separately against an actor. In practice almost every actor was its own
+  kind, so the second set carried no information and the third was a third place
+  for a name to drift. There is now one declaration:
+
+  ```ts
+  definePersonas({
+    shopper: {
+      name: 'Sam Shopper',
+      jobTitle: 'Shopper',
+      personality: 'Buys in a hurry and leaves tabs open',
+      roles: ['customer'],
+      disposition: 'careless',
+      goals: ['Buy something without reading anything'],
+      account: {},
+    },
+  })
+  ```
+
+  A persona is a person: what they are like, what they want, the roles they hold,
+  and **one** account they sign in with — `account: {}` plus `linkedAccounts` for
+  the rare case of more, modelled on how better-auth does linking. A persona with a
+  `disposition` is a virtual user; `runnable: false` marks someone who only ever
+  exists to be acted upon — banned, shared with, reset — and is never handed a
+  session.
+
+  **A persona names roles, never scopes.** Scopes come from `defineSystemRole()`
+  expansion, so the build fails if a persona names a role nobody declared, and
+  fails again if a role confers a scope no `defineScope` declares. Running one only
+  ever has to check that its roles are still valid.
+
+  **Addresses are computed, never declared.** `personaEmail(id, domain, runId)`
+  derives `<id>[+runId]@<domain>` from `scenarios.emailDomain`, so a seed, a
+  scenario run and a virtual-user run cannot disagree about who they are signing in
+  as. `scenarios.actors` and `scenarios.personas` are gone from
+  `pikku.config.json` — only `emailDomain` remains.
+
+  `actor` survives in exactly one place: the name of a **slot in a scenario step**,
+  which is the role a persona is cast in for that step. `pikkuVirtualUser()`,
+  `kind`, `grants` and the `actor` field are removed; the `actors` service is now
+  `personas`, and the CLI's `virtual-user` commands are now `pikku persona list` /
+  `pikku persona run`. `budget` and `allowApprovalRequired` moved to run flags —
+  how much you will spend today is not a fact about a person.
+
+  `@pikku/cucumber` drops its `Actor` class and `ActorDispatchContext`: a
+  hand-rolled cookie jar that a persona's own typed session replaces outright.
+
+- 86a50b9: scenario: replace `browser: true` + `func` with per-surface bindings on `pikkuScenarioStep`
+
+  A step now declares one implementation per surface it can be driven through:
+
+  ```ts
+  export const buysTheItem = pikkuScenarioStep<{ sku: string }, { orderId: string }>({
+    name: 'buysTheItem',
+    description: 'buys the item',
+    browser: async (services, data, { browser }) => { ... },
+    default: async (services, data, { rpc }) => { ... },
+  })
+  ```
+
+  `pikku scenario run --run browser|cli|default` picks which surface the run drives,
+  and the two phases resolve bindings differently:
+  - **Actions** (`given` / `when` / `step`) run exactly one binding — the run
+    surface if it has one, otherwise `default`. A step with neither now fails with
+    `ScenarioNoSurfaceBinding` instead of silently running server-side.
+  - **Assertions** (`then`) are witnesses, not alternatives: every declared binding
+    runs and they must agree. Two surfaces reporting different things fails the run
+    with `ScenarioWitnessDisagreement` rather than reporting a pass. An assertion
+    with no witness the run can execute at all fails with `ScenarioNoWitness` —
+    without it the step returns `undefined` and renders as a tick, reporting a pass
+    for something nobody checked.
+
+  A scenario written as a step ladder that never calls `then` is now a **PKU680**
+  critical. It proves only that nothing threw, so an assertion-free ladder of
+  browser-bound actions would score perfect coverage while checking nothing.
+
+  The report gains a surface-coverage line — `n/m steps ran on browser`, counted
+  over every step, so an action that fell back to the server lowers the ratio
+  rather than needing a footnote. That also makes surfaces comparable over one
+  denominator: a scenario is `4/4` on a default run and `3/4` on a browser one.
+  Assertions that fell back are named separately and gate `--strict`, since a
+  sentence claiming the actor saw something nobody looked at is a different problem
+  from an action taking a shortcut.
+
+  **Breaking:** `browser: true` and the third `B extends boolean` type argument are
+  gone. Rename `func` to `default` (or to `browser` where the step drove a browser)
+  and drop the type argument.
+
 ## 0.12.2
 
 ### Patch Changes

@@ -1,5 +1,92 @@
 # @pikku/better-auth
 
+## 0.12.20
+
+### Patch Changes
+
+- 45859cf: Keep a cross-site-embedded app signed in on browsers that refuse third-party cookies.
+
+  `AUTH_COOKIE_CROSS_SITE` already rewrote every better-auth cookie to
+  `SameSite=None; Secure; Partitioned` so a session survives inside a third-party iframe
+  (the Fabric sandbox preview). That is a Chromium answer: `Partitioned` (CHIPS) is not
+  implemented in WebKit, which blocks third-party cookie writes outright — and every
+  browser on iOS is WebKit. On a phone, sign-in returned 200, the browser dropped the
+  cookie, the next request arrived anonymous and the app bounced back to `/login`.
+
+  The same flag now also enables a cookie relay, over storage the embedded frame is
+  actually allowed to use. The auth handler echoes the cookies it just set in
+  `x-pikku-cross-site-set-cookie` (JS can never read `Set-Cookie` itself); the client
+  sends them back in `x-pikku-cross-site-cookie`, and every place this package hands
+  caller headers to better-auth — `createAuthHandler`, `betterAuthSession`,
+  `betterAuthStatelessSession`, `getAuthSession` and `callAdminApi` — merges that header
+  into `Cookie` before reading the session. A real cookie always wins over a relayed one
+  of the same name, so a browser that did store it stays authoritative.
+
+  Sign-out becomes partly the client's job: deleting a cookie cannot reach the client's
+  own storage, so a client implementing the relay must drop the entries the sign-out
+  response expires. Under `betterAuthStatelessSession` a kept-around cache blob otherwise
+  keeps verifying until it ages out.
+
+  Both header names, `crossSiteCookies()`, `decodeSetCookies()` and
+  `mergeRelayedCookies()` are exported for clients that implement the browser half — the
+  echo header carries a percent-encoded JSON array, so the client needs the decoder to
+  read it at all. A response carrying the echo header is marked
+  `Cache-Control: no-store`: caches along the path know to be careful with `Set-Cookie`
+  and nothing about this one, and a stored copy would hand one user's session to the next.
+
+  Unchanged for everyone else: the relay is honoured only when `AUTH_COOKIE_CROSS_SITE`
+  is set, which only a runtime that embeds its apps cross-site sets. A deployed app keeps
+  `SameSite=Lax` cookies and ignores the header entirely.
+
+- a7b26c5: rename the inspected declarations to `define*`: `wireScope` → `defineScope`, `wireSecret` → `defineSecret`, `wireVariable` → `defineVariable`, `wireCredential` → `defineCredential`
+
+  `wire*` meant two unrelated things. A transport wiring attaches a function to
+  something that can invoke it — `wireHTTP`, `wireChannel`, `wireScheduler`,
+  `wireQueueWorker` and the rest — and the thing it wires runs. These four wire
+  nothing: they are no-ops that exist only so the call typechecks, they are
+  tree-shaken out of the build, and their whole job is to be found by the
+  inspector's AST pass and turned into a type union. One word for both left the
+  declaration reading like a registration with a runtime.
+
+  So the vocabulary splits: **`wire*` is a transport, `define*` is an inspected
+  declaration.**
+
+  ```ts
+  import { defineScope } from '@pikku/core/scope'
+  import { defineSecret } from '@pikku/core/secret'
+  import { defineVariable } from '@pikku/core/variable'
+  import { defineCredential } from '@pikku/core/credential'
+
+  defineScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+  ```
+
+  **Breaking:** no alias is kept. Rename the four call sites; the module subpaths
+  (`@pikku/core/scope`, `/secret`, `/variable`) are unchanged.
+
+  The inspector matches these by identifier text, so a stale `wire*` call is not a
+  type error — it is silently not extracted, and the generated union comes back
+  empty. That fails as "this scope isn't declared" on code that was fine a moment
+  ago, nowhere near the declaration. Grep for the old names rather than trusting a
+  clean build.
+
+  An addon published with `.pikku` output generated before this release re-exports
+  `wireSecret` from `@pikku/core/secret` and will not typecheck against this core
+  until it is rebuilt and republished.
+
+- Updated dependencies [c984df6]
+- Updated dependencies [63ff32b]
+- Updated dependencies [ba6cc08]
+- Updated dependencies [d007191]
+- Updated dependencies [a7b26c5]
+- Updated dependencies [457cb25]
+- Updated dependencies [f7567ad]
+- Updated dependencies [ba6cc08]
+- Updated dependencies [a2e21e5]
+- Updated dependencies [457cb25]
+- Updated dependencies [86a50b9]
+- Updated dependencies [0e0f6eb]
+  - @pikku/core@0.12.73
+
 ## 0.12.19
 
 ### Patch Changes
