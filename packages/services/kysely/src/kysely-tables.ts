@@ -131,7 +131,14 @@ export interface AIRunTable {
   agentName: string
   threadId: string
   resourceId: string
-  status: Generated<'running' | 'suspended' | 'completed' | 'failed'>
+  /**
+   * `interrupted` is distinct from `failed`: the run was stopped on purpose,
+   * usually because the user talked over it. Nothing went wrong, so it should
+   * not show up in error reporting.
+   */
+  status: Generated<
+    'running' | 'suspended' | 'completed' | 'failed' | 'interrupted'
+  >
   errorMessage: string | null
   suspendReason: 'approval' | 'credential' | 'rpc-missing' | null
   missingRpcs: string | null

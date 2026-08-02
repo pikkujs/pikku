@@ -1,3 +1,5 @@
+import type { AgentInterruptResult } from './ai-agent-interrupt.js'
+
 export function agent<TAgentMap extends Record<string, { output: any }>>(
   agentName: string & keyof TAgentMap
 ): { func: (services: any, data: any, wire: any) => Promise<any> } {
@@ -45,6 +47,24 @@ export function agentResume(): {
         toolCallId: data.toolCallId,
         approved: data.approved,
       })
+    },
+  }
+}
+
+export function agentInterrupt(): {
+  func: (
+    services: any,
+    data: { runId: string; reason?: 'speech' | 'user' | 'timeout' },
+    wire: any
+  ) => Promise<AgentInterruptResult>
+} {
+  return {
+    func: async (
+      _services: any,
+      data: { runId: string; reason?: 'speech' | 'user' | 'timeout' },
+      { rpc }: any
+    ) => {
+      return rpc.agent.interrupt(data.runId, data.reason)
     },
   }
 }

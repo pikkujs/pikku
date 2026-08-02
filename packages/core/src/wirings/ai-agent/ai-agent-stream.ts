@@ -48,10 +48,21 @@ import {
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 import type { AIAgentRunnerService } from '../../services/ai-agent-runner-service.js'
+import {
+  getInFlightTools,
+  isAbortError,
+  persistOrphanedToolResults,
+  registerInterruptibleRun,
+  signalRunInterrupt,
+  trackInterruptNote,
+  trackToolExecution,
+  type AgentInterruption,
+  type AgentInterruptResult,
+} from './ai-agent-interrupt.js'
 
 type PersistingChannel = AIStreamChannel & {
   fullText: string
-  flush: () => Promise<void>
+  flush: (opts?: { interrupted?: boolean }) => Promise<void>
   totalUsage: { inputTokens: number; outputTokens: number; model?: string }
 }
 
@@ -75,7 +86,7 @@ function createPersistingChannel(
     outputTokens: 0,
   }
 
-  const flushStep = async () => {
+  const flushStep = async (opts?: { interrupted?: boolean }) => {
     if (!storage) return
     const text = stepText
     const generativeUI = stepGenerativeUI
@@ -97,6 +108,7 @@ function createPersistingChannel(
               ]
             : text || undefined,
         toolCalls: calls.length > 0 ? calls : undefined,
+        ...(opts?.interrupted ? { interrupted: true } : {}),
         createdAt: new Date(),
       }
       const messages: AIMessage[] = [assistantMsg]
@@ -145,11 +157,14 @@ function createPersistingChannel(
     close: () => parent.close(),
     sendBinary: (data) => parent.sendBinary(data),
     send: (event: AIStreamEvent) => {
+      // Accumulated whether or not storage is configured: `fullText` is what
+      // the client was streamed, and an interrupted run has to be able to
+      // report the fragment it got through even with persistence turned off.
+      if (event.type === 'text-delta') fullText += event.text
       if (storage) {
         switch (event.type) {
           case 'text-delta':
             stepText += event.text
-            fullText += event.text
             break
           case 'tool-call':
             stepToolCalls.push({
@@ -711,6 +726,13 @@ export async function streamAIAgent(
   })
   options?.onRunCreated?.(runId)
 
+  // Registered before the first model call and released in `finally`, so the
+  // window in which an interrupt can land is exactly the window in which there
+  // is something to interrupt.
+  const interruptHandle = registerInterruptibleRun(runId)
+  runnerParams.abortSignal = interruptHandle.signal
+  runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
+
   if (storage) {
     await storage.saveMessages(threadId, [userMessage])
   }
@@ -726,6 +748,10 @@ export async function streamAIAgent(
           event,
           allEvents,
           state,
+          // Sends downstream directly, so a hook can hand back the fast event
+          // now and push the slow one when it is ready.
+          emit: next,
+          signal: interruptHandle.signal,
         })
         if (result == null) return
         if (Array.isArray(result)) {
@@ -772,6 +798,10 @@ export async function streamAIAgent(
   // unresulted is what lets the client resume it after connecting.
   const credentialFilteredChannel: AIStreamChannel = {
     ...wrappedChannel,
+    // Returns what the inner send returns. Middleware runs asynchronously, so
+    // swallowing the promise here makes every `await channel.send(...)` upstream
+    // a no-op — including the one that waits for a buffering hook to flush
+    // before the channel closes.
     send: (event: AIStreamEvent) => {
       if (
         event.type === 'tool-result' &&
@@ -781,7 +811,7 @@ export async function streamAIAgent(
       ) {
         return
       }
-      wrappedChannel.send(event)
+      return wrappedChannel.send(event)
     },
   }
 
@@ -803,7 +833,7 @@ export async function streamAIAgent(
             (event.type === 'text-delta' || event.type === 'reasoning-delta')
           )
             return
-          credentialFilteredChannel.send(event)
+          return credentialFilteredChannel.send(event)
         },
         delegateState,
       }
@@ -853,10 +883,41 @@ export async function streamAIAgent(
       runId
     )
 
-    channel.send({ type: 'done' })
+    // Through the middleware rather than straight at the channel, and awaited.
+    // `done` is the only signal a stream hook gets that the reply is over, and
+    // the ones that buffer need it: `voiceOutput` speaks a trailing fragment
+    // that never reached a full stop, and waits for audio it has already paid
+    // to synthesize. Sent raw, that work is discarded by the `close()` below.
+    await outputChannel.send({ type: 'done' })
     channel.close()
     return persistingChannel.fullText
   } catch (err) {
+    // An interrupt is not a failure: the truncated text is real output the user
+    // already heard part of, so it is persisted and marked rather than dropped.
+    const interruption = interruptHandle.interruption
+    if (interruption || isAbortError(err)) {
+      await persistingChannel.flush({ interrupted: true })
+      await aiRunState.updateRun(runId, { status: 'interrupted' })
+      // Deliberately not awaited. A tool still running must not hold the stream
+      // open — the whole point of barge-in is that the agent stops now — so the
+      // note lands later and the next run on this thread waits for it instead.
+      if (storage) {
+        trackInterruptNote(
+          threadId,
+          persistOrphanedToolResults(interruptHandle, storage, threadId)
+        )
+      }
+      channel.send({
+        type: 'interrupted',
+        runId,
+        text: persistingChannel.fullText,
+        reason: interruption?.reason ?? 'user',
+      })
+      channel.send({ type: 'done' })
+      channel.close()
+      return persistingChannel.fullText
+    }
+
     for (const mw of aiMiddlewares) {
       if (mw.onError) {
         try {
@@ -881,7 +942,72 @@ export async function streamAIAgent(
     channel.send({ type: 'done' })
     channel.close()
     return persistingChannel.fullText
+  } finally {
+    interruptHandle.release()
   }
+}
+
+/**
+ * Stop an in-flight run on behalf of a caller, after checking the run is theirs.
+ *
+ * Unlike {@link resumeAIAgent} this needs no channel: it does not continue the
+ * stream, it ends one. The `interrupted` event and the truncated message are
+ * emitted by the original {@link streamAIAgent} call on its own channel, so this
+ * can be reached over a plain RPC while the stream is held open elsewhere —
+ * which is exactly the shape a voice barge-in needs.
+ *
+ * Ownership is the whole gate, deliberately without {@link assertAgentAuthorized}.
+ * Resuming re-enters the agent and approves a tool call, so a revoked grant must
+ * block it; stopping is the opposite — if a caller's access to an agent was
+ * revoked mid-run, being able to stop their own run is harmless and arguably
+ * what you want.
+ *
+ * Returns `false` when there was nothing to stop. Racing a run that finishes on
+ * its own is the normal case in voice, so it is not an error.
+ */
+export async function interruptAIAgent(
+  input: { runId: string; reason?: AgentInterruption['reason'] },
+  params: RunAIAgentParams
+): Promise<AgentInterruptResult> {
+  const { aiRunState, logger } = getSingletonServices()
+  if (!aiRunState) {
+    throw new Error('AIRunStateService not available in singletonServices')
+  }
+
+  const run = await aiRunState.getRun(input.runId)
+  if (!run) {
+    throw new Error(`No run found for runId ${input.runId}`)
+  }
+  assertResourceOwner(
+    resolveOwnerResourceId(
+      params,
+      agentSessionScope(run.agentName),
+      run.resourceId
+    ),
+    run.resourceId,
+    'run'
+  )
+
+  const stopped = signalRunInterrupt(input.runId, {
+    reason: input.reason ?? 'user',
+  })
+
+  // A run still marked `running` that this process cannot abort is executing on
+  // another instance. Returning a bare `false` there is indistinguishable from
+  // "it already finished", so the one deployment shape this registry does not
+  // cover fails silently — an agent that simply refuses to shut up, with nothing
+  // in the logs. Say so instead. See `signalRunInterrupt` for the fix (fan the
+  // interrupt out over eventHub so every instance tries locally).
+  if (!stopped && run.status === 'running') {
+    logger?.warn(
+      `Could not interrupt run ${input.runId}: it is running in another process. ` +
+        'Interrupts are process-local; fan them out over eventHub to support multiple instances.'
+    )
+  }
+
+  // Reported after the abort so it names what is *still* running: aborting the
+  // model call does nothing to a tool already executing.
+  return { stopped, inFlightTools: getInFlightTools(input.runId) }
 }
 
 export async function resumeAIAgent(
@@ -1225,6 +1351,12 @@ async function continueAfterToolResult(
     }
   }
 
+  // Resuming is as interruptible as the first turn. It is the same person
+  // listening to the same voice, and after an approval it is where most of the
+  // reply actually gets spoken — an approved delete is followed by the agent
+  // talking about it, and that is a normal thing to talk over.
+  const interruptHandle = registerInterruptibleRun(run.runId)
+
   const streamMiddleware = aiMiddlewares
     .filter((mw) => mw.modifyOutputStream)
     .map((mw) => {
@@ -1236,6 +1368,10 @@ async function continueAfterToolResult(
           event,
           allEvents,
           state,
+          // Sends downstream directly, so a hook can hand back the fast event
+          // now and push the slow one when it is ready.
+          emit: next,
+          signal: interruptHandle.signal,
         })
         if (result == null) return
         if (Array.isArray(result)) {
@@ -1298,10 +1434,14 @@ async function continueAfterToolResult(
     tools: resumeTools,
     maxSteps: 1,
     toolChoice: (agent.toolChoice ?? 'auto') as 'auto' | 'required' | 'none',
+    providerOptions: agent.providerOptions,
     outputSchema: meta?.outputSchema
       ? pikkuState(packageName, 'misc', 'schemas').get(meta.outputSchema)
       : undefined,
   }
+
+  runnerParams.abortSignal = interruptHandle.signal
+  runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
 
   try {
     const loopResult = await runStreamStepLoop({
@@ -1347,9 +1487,36 @@ async function continueAfterToolResult(
       run.runId
     )
 
-    channel.send({ type: 'done' })
+    // Through the middleware, for the same reason as the first turn — and it
+    // matters more here. After an approval, most of what gets spoken is the
+    // agent talking about what it just did, so this is the half of the reply a
+    // dropped flush would silence.
+    await wrappedChannel.send({ type: 'done' })
     channel.close()
   } catch (err) {
+    // Same reasoning as the first turn: an interrupt is not a failure, and the
+    // part of the reply the user already heard is real output.
+    const interruption = interruptHandle.interruption
+    if (interruption || isAbortError(err)) {
+      await persistingChannel.flush({ interrupted: true })
+      await aiRunState.updateRun(run.runId, { status: 'interrupted' })
+      if (storage) {
+        trackInterruptNote(
+          run.threadId,
+          persistOrphanedToolResults(interruptHandle, storage, run.threadId)
+        )
+      }
+      channel.send({
+        type: 'interrupted',
+        runId: run.runId,
+        text: persistingChannel.fullText,
+        reason: interruption?.reason ?? 'user',
+      })
+      channel.send({ type: 'done' })
+      channel.close()
+      return
+    }
+
     for (const mw of aiMiddlewares) {
       if (mw.onError) {
         try {
@@ -1373,5 +1540,7 @@ async function continueAfterToolResult(
     })
     channel.send({ type: 'done' })
     channel.close()
+  } finally {
+    interruptHandle.release()
   }
 }

@@ -274,7 +274,9 @@ export interface PikkuHTTPResponse<Out = unknown> {
       | ReadableStream
   ): this
   json(data: Out): this
-  send?(data: string | ArrayBuffer | Buffer): this
+  /** `ArrayBufferView` covers `Buffer` and `Uint8Array`, which is how a body
+   *  that is not text reaches here without being decoded on the way. */
+  send?(data: string | ArrayBuffer | ArrayBufferView): this
   redirect(location: string, status?: number): this
   close?: () => void
   setMode?: (mode: 'stream') => void

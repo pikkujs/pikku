@@ -1,3 +1,5 @@
+import type { AgentInterruptResult } from '../ai-agent/ai-agent-interrupt.js'
+
 export type PikkuRPC<
   Invoke extends (...args: any[]) => any = (...args: any[]) => any,
   Remote extends (...args: any[]) => any = (...args: any[]) => any,
@@ -24,6 +26,15 @@ export type PikkuRPC<
       approvals: { toolCallId: string; approved: boolean }[],
       expectedAgentName?: string
     ) => Promise<any>
+    /** Stop an in-flight run. Needs no channel — it ends a stream rather than
+     *  continuing one — so it is reachable over a plain RPC while the stream
+     *  itself is held open elsewhere. Resolves `stopped: false` when there was
+     *  nothing left to stop, and names any tools still executing — their side
+     *  effects have already happened and are not undone by interrupting. */
+    interrupt: (
+      runId: string,
+      reason?: 'speech' | 'user' | 'timeout'
+    ) => Promise<AgentInterruptResult>
   }
 }
 

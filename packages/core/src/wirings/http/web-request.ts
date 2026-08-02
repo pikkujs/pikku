@@ -108,6 +108,35 @@ function collectSetCookieHeaders(webResponse: Response): string[] {
 }
 
 /**
+ * Content types whose bodies are text. Everything else is bytes.
+ *
+ * The distinction matters because reading a body as text is lossy for anything
+ * that is not valid UTF-8: every byte that does not decode becomes U+FFFD, and
+ * re-encoding turns each of those into three bytes. A WASM module or an ONNX
+ * model served that way arrives larger than it left and no longer parses, with
+ * a 200 and no error anywhere to say why.
+ */
+const TEXTUAL_CONTENT_TYPE =
+  /^(text\/|application\/(json|javascript|ecmascript|xml|x-www-form-urlencoded)|[^;]*\+(json|xml)\b)/i
+
+/**
+ * Read a response body as text where that is meaningful, and as bytes
+ * otherwise. An absent content type is treated as text, which is what a body
+ * built from a string gets by default and so preserves existing behaviour.
+ */
+async function readBody(
+  webResponse: Response
+): Promise<string | Uint8Array | null> {
+  const contentType = webResponse.headers.get('content-type')
+  if (contentType === null || TEXTUAL_CONTENT_TYPE.test(contentType)) {
+    const text = await webResponse.text()
+    return text === '' ? null : text
+  }
+  const bytes = new Uint8Array(await webResponse.arrayBuffer())
+  return bytes.byteLength === 0 ? null : bytes
+}
+
+/**
  * Applies a Web API Response to a PikkuHTTPResponse.
  * Copies status, headers (including Set-Cookie), redirects, and body.
  */
@@ -138,8 +167,8 @@ export async function applyWebResponse(
     res.header('Set-Cookie', setCookieValues)
   }
 
-  const body = await webResponse.text()
-  if (body) {
+  const body = await readBody(webResponse)
+  if (body !== null) {
     if (res.send) {
       res.send(body)
     } else {

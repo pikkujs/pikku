@@ -371,9 +371,40 @@ export function wrapChannelWithAGUI(
           break
         }
 
-        case 'audio-delta':
-        case 'audio-done':
+        case 'interrupted': {
+          endTextMessage()
+          endThinkingMessage()
+          endStep()
+          send({
+            type: 'CUSTOM',
+            name: 'pikku:interrupted',
+            value: {
+              runId: event.runId,
+              text: event.text,
+              reason: event.reason,
+            },
+          })
           break
+        }
+
+        // AG-UI has no event for speech, so it travels as CUSTOM like the other
+        // pikku-specific ones. Dropping it instead — which is what this did —
+        // means a voice agent reached over HTTP is inaudible: `voiceOutput`
+        // synthesizes every sentence, the provider bills for it, and nothing
+        // gets past the mapper.
+        case 'audio-delta': {
+          send({
+            type: 'CUSTOM',
+            name: 'pikku:audio-delta',
+            value: { data: event.data, format: event.format },
+          })
+          break
+        }
+
+        case 'audio-done': {
+          send({ type: 'CUSTOM', name: 'pikku:audio-done', value: {} })
+          break
+        }
       }
     },
   }

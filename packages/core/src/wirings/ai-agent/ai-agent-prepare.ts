@@ -20,6 +20,7 @@ import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from './ai-agent-utils.js'
+import { awaitPendingInterruptNote } from './ai-agent-interrupt.js'
 import { streamAIAgent } from './ai-agent-stream.js'
 import { runAIAgent } from './ai-agent-runner.js'
 import {
@@ -663,6 +664,7 @@ export async function buildToolDefs(
         inputSchema,
         needsApproval: needsApproval || undefined,
         approvalDescriptionFn,
+        readonly: fnMeta?.readonly || undefined,
         execute: async (toolInput: unknown) => {
           const wire: PikkuRawWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
@@ -1022,6 +1024,11 @@ export async function prepareAgentRun(
 
   let messages: AIMessage[] = []
   if (storage) {
+    // A tool whose run was interrupted may still be writing its result to this
+    // thread. In voice the next turn lands within a second or two, so without
+    // this the model would load context that is missing the very thing it is
+    // about to be asked about.
+    await awaitPendingInterruptNote(threadId)
     messages = await storage.getMessages(threadId, {
       lastN: memoryConfig?.lastMessages ?? 20,
     })
@@ -1102,6 +1109,7 @@ export async function prepareAgentRun(
     tools,
     maxSteps: 1,
     toolChoice: agent.toolChoice ?? 'auto',
+    providerOptions: agent.providerOptions,
     outputSchema,
   }
 

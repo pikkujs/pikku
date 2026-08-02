@@ -562,8 +562,8 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
   })
 })
 
-describe('wrapChannelWithAGUI — silently dropped events', () => {
-  it('drops audio-delta without emitting anything', () => {
+describe('wrapChannelWithAGUI — speech', () => {
+  it('forwards audio-delta as a CUSTOM event', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
@@ -573,16 +573,41 @@ describe('wrapChannelWithAGUI — silently dropped events', () => {
       format: 'mp3',
     } as AIStreamEvent)
 
-    assert.equal(events.length, 0)
+    // AG-UI has no speech event, but dropping it makes a voice agent reached
+    // over HTTP inaudible: every sentence is synthesized and billed, then
+    // thrown away here.
+    const custom = find(events, 'CUSTOM', 'pikku:audio-delta')
+    assert.ok(custom)
+    assert.deepEqual(custom.value, { data: 'base64abc', format: 'mp3' })
   })
 
-  it('drops audio-done without emitting anything', () => {
+  it('forwards audio-done as a CUSTOM event', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
     wrapped.send({ type: 'audio-done' } as AIStreamEvent)
 
-    assert.equal(events.length, 0)
+    assert.ok(find(events, 'CUSTOM', 'pikku:audio-done'))
+  })
+
+  it('leaves an open text message open, so speech cannot split a reply', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({ type: 'text-delta', text: 'hello' } as AIStreamEvent)
+    wrapped.send({
+      type: 'audio-delta',
+      data: 'abc',
+      format: 'mp3',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'text-delta', text: ' there' } as AIStreamEvent)
+
+    // Audio arrives interleaved with the text it is saying. Ending the message
+    // around it would render one reply as several.
+    const starts = events.filter(
+      (event: any) => event.type === 'TEXT_MESSAGE_START'
+    )
+    assert.equal(starts.length, 1)
   })
 })
 
@@ -1107,5 +1132,50 @@ describe('wrapChannelWithAGUI — late-bound runId', () => {
     const started = find(fallback.events, 'RUN_STARTED')
     assert.ok(started.runId)
     assert.equal(started.runId, find(fallback.events, 'RUN_FINISHED').runId)
+  })
+})
+
+describe('wrapChannelWithAGUI — interruption', () => {
+  it('closes the open text message and forwards the fragment as a custom event', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel, { threadId: 't', runId: 'r' })
+
+    wrapped.send({
+      type: 'text-delta',
+      text: 'I will delete the ',
+    } as AIStreamEvent)
+    wrapped.send({
+      type: 'interrupted',
+      runId: 'r',
+      text: 'I will delete the ',
+      reason: 'speech',
+    } as AIStreamEvent)
+
+    // Leaving TEXT_MESSAGE_END unsent would strand the assistant bubble in a
+    // streaming state that never resolves.
+    assert.ok(types(events).includes('TEXT_MESSAGE_END'))
+    const custom = find(events, 'CUSTOM', 'pikku:interrupted')
+    assert.deepEqual(custom.value, {
+      runId: 'r',
+      text: 'I will delete the ',
+      reason: 'speech',
+    })
+  })
+
+  it('still ends the run exactly once, so an interrupted run is not terminal on its own', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel, { threadId: 't', runId: 'r' })
+
+    wrapped.send({ type: 'text-delta', text: 'partial' } as AIStreamEvent)
+    wrapped.send({
+      type: 'interrupted',
+      runId: 'r',
+      text: 'partial',
+      reason: 'speech',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    assert.equal(events.filter((e: any) => e.type === 'RUN_FINISHED').length, 1)
+    assert.equal(events.filter((e: any) => e.type === 'RUN_ERROR').length, 0)
   })
 })

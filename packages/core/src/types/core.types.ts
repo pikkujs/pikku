@@ -475,6 +475,20 @@ export type PikkuWire<
   audit: {
     durability: AuditDurability
   }
+  /**
+   * Declare that everything after this line changes something.
+   *
+   * Present only on functions that are not `readonly` — a read has nothing to
+   * declare. Throws `AbandonedError` if whatever asked for this work has
+   * already gone away (an interrupted agent run, a disconnected client), so the
+   * mutation never runs and the abort is clean. Otherwise it marks the call as
+   * mutating, so an interrupt landing after this point is reported rather than
+   * silently discarded.
+   *
+   * Cooperative: a function that never calls it is assumed to have changed
+   * something, which is the safe default.
+   */
+  beginChanges: () => Promise<void>
 }>
 
 /**

@@ -1087,7 +1087,10 @@ describe('streamAIAgent', () => {
 
     assert.equal(result, 'Hello')
     assert.ok(events.some((event) => event.type === 'reasoning-delta'))
-    assert.deepEqual(middlewareStateSnapshots, [1, 2, 3, 4])
+    // Five, not four: the terminal `done` goes through the middleware too. It
+    // is the only signal a buffering hook gets that the reply is over, so a
+    // hook that never sees it can never flush what it is holding.
+    assert.deepEqual(middlewareStateSnapshots, [1, 2, 3, 4, 5])
     assert.equal(savedMessages[0].messages[0].role, 'user')
     assert.equal(savedMessages[1].messages[0].role, 'assistant')
     assert.equal(savedMessages[1].messages[1].role, 'tool')

@@ -1,3 +1,4 @@
+import { beginChanges } from './abort-scope.js'
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import {
   combineChannelMiddleware,
@@ -288,6 +289,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     if ((session as any)?.readonly && !funcMeta.readonly) {
       throw new ReadonlySessionError()
+    }
+
+    // Only mutating functions get a checkpoint. A read has nothing to declare,
+    // and offering it there would invite the contradiction of a `readonly`
+    // function announcing where its changes begin.
+    if (!funcMeta.readonly) {
+      invocationWire.beginChanges = beginChanges
     }
 
     // Scopes gate before the data is evaluated: they depend only on the
