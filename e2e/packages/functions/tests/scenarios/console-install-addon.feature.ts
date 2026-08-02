@@ -8,7 +8,7 @@
  * namespace has to be refused before it ever reaches the server. The third
  * installs for real and is quarantined — see the note above it.
  *
- * The fixture project already wires "mailgun" (@pikku/addon-mailgun), so that
+ * The fixture project already wires "emails" (@pikku/addon-emails), so that
  * is the name to collide with. @pikku/addon-email-send and
  * @pikku/addon-mandrill are in the catalogue but not wired, so their cards open
  * the install drawer.
@@ -73,7 +73,7 @@ export const installAddonNameConflictScenario = pikkuScenario<
     await scenario.when(
       'names the instance after one already wired',
       'fillsTestId',
-      { testId: 'addon-install-name', value: 'mailgun' },
+      { testId: 'addon-install-name', value: 'emails' },
       { actor: actors.admin }
     )
     await scenario.when(

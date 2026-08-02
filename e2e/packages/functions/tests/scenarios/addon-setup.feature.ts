@@ -9,8 +9,8 @@
  *
  * The fixtures pick themselves: `@pikku/addon-fake-crm` declares one OAuth2
  * integration and one plain secret, so both requirement kinds appear on one
- * page; `@pikku/addon-mailgun` is wired twice — once bare and once remapping
- * MAILGUN_CREDENTIALS to MAILGUN_PROMO_CREDENTIALS — so the instance selector
+ * page; `@pikku/addon-emails` is wired twice — once bare and once remapping
+ * EMAILS_CREDENTIALS to EMAILS_PROMO_CREDENTIALS — so the instance selector
  * has something to switch between.
  */
 import {
@@ -21,11 +21,11 @@ import {
 
 const FAKE_CRM_SETUP =
   '/console/addons?id=%40pikku%2Faddon-fake-crm&source=installed'
-const MAILGUN_SETUP =
-  '/console/addons?id=%40pikku%2Faddon-mailgun&source=installed'
+const EMAILS_SETUP =
+  '/console/addons?id=%40pikku%2Faddon-emails&source=installed'
 const OAUTH_CARD = 'oauth-requirement-fake-crm'
 const SECRET_CARD = 'secret-requirement-fakeCrmApiKey'
-const MAILGUN_CARD = 'secret-requirement-mailgun'
+const EMAILS_CARD = 'secret-requirement-emailsCredentials'
 const INSTANCE_SELECT = 'addon-instance-select'
 
 /**
@@ -153,7 +153,7 @@ export const addonInstanceOverridesScenario = pikkuScenario<
     await scenario.given(
       'opens the addon’s setup',
       'opensConsolePage',
-      { path: MAILGUN_SETUP, waitFor: { testId: INSTANCE_SELECT } },
+      { path: EMAILS_SETUP, waitFor: { testId: INSTANCE_SELECT } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -166,15 +166,15 @@ export const addonInstanceOverridesScenario = pikkuScenario<
     await scenario.when(
       'selects the bare instance',
       'selectsOption',
-      { testId: INSTANCE_SELECT, value: 'mailgun' },
+      { testId: INSTANCE_SELECT, value: 'emails' },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees the addon’s own secret',
       'seesTestId',
       {
-        testId: MAILGUN_CARD,
-        where: { 'data-secret-id': 'MAILGUN_CREDENTIALS' },
+        testId: EMAILS_CARD,
+        where: { 'data-secret-id': 'EMAILS_CREDENTIALS' },
       },
       { actor: actors.admin }
     )
@@ -182,15 +182,15 @@ export const addonInstanceOverridesScenario = pikkuScenario<
     await scenario.when(
       'selects the remapped instance',
       'selectsOption',
-      { testId: INSTANCE_SELECT, value: 'mailgun-promo' },
+      { testId: INSTANCE_SELECT, value: 'emails-promo' },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees the remapped secret',
       'seesTestId',
       {
-        testId: MAILGUN_CARD,
-        where: { 'data-secret-id': 'MAILGUN_PROMO_CREDENTIALS' },
+        testId: EMAILS_CARD,
+        where: { 'data-secret-id': 'EMAILS_PROMO_CREDENTIALS' },
       },
       { actor: actors.admin }
     )

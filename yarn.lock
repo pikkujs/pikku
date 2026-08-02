@@ -5681,16 +5681,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/addon-mailgun@npm:0.1.2":
-  version: 0.1.2
-  resolution: "@pikku/addon-mailgun@npm:0.1.2"
-  peerDependencies:
-    "@pikku/core": ^0.12.36
-    zod: ^4
-  checksum: 10/734f210dbc976fbbf4dfa613fb1d231ea53723a98a5d7ec68c9efe3cbbd165dfb80ca2a3b374d2ce8c09f0a01bc061dadd0576bb602da8a468f655135bb8ca31
-  languageName: node
-  linkType: hard
-
 "@pikku/addon-mandrill@npm:0.1.2":
   version: 0.1.2
   resolution: "@pikku/addon-mandrill@npm:0.1.2"
@@ -6121,7 +6111,6 @@ __metadata:
     "@pikku/addon-gmail": "npm:0.1.2"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
-    "@pikku/addon-mailgun": "npm:0.1.2"
     "@pikku/addon-mandrill": "npm:0.1.2"
     "@pikku/ai-deepinfra": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"

@@ -30,7 +30,6 @@
     "@pikku/addon-gmail": "0.1.2",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
-    "@pikku/addon-mailgun": "0.1.2",
     "@pikku/addon-mandrill": "0.1.2",
     "@pikku/ai-deepinfra": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
