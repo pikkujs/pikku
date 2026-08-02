@@ -59,9 +59,9 @@ node --import tsx src/benchmark.ts <target-dir> <iterations>
 | `wireMCPTool`          | `addMCPTool`          |
 | `wireMCPPrompt`        | `addMCPPrompt`        |
 | `wireWorkflowGraph`    | `addWorkflowGraph`    |
-| `wireSecret`           | `addSecret`           |
+| `defineSecret`         | `addSecret`           |
 | `wireOAuth2Credential` | `addOAuth2Credential` |
-| `wireVariable`         | `addVariable`         |
+| `defineVariable`       | `addVariable`         |
 
 Fallback for unmatched identifiers: check `/pikku.*func/i` regex -> `addFunctions`.
 

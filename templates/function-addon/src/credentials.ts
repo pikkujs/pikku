@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { wireSecret } from '../.pikku/pikku-types.gen.js'
+import { defineSecret } from '../.pikku/pikku-types.gen.js'
 
 export const exampleCredentialsSchema = z.object({
   apiKey: z.string().describe('API key for external service'),
@@ -7,7 +7,7 @@ export const exampleCredentialsSchema = z.object({
   endpoint: z.url().optional().describe('Optional custom endpoint URL'),
 })
 
-wireSecret({
+defineSecret({
   name: 'example-api',
   displayName: 'Example API Credentials',
   description: 'Credentials for the example external API',

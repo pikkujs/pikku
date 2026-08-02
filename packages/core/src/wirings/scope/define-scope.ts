@@ -13,7 +13,7 @@ import type { CoreScopes } from './scope.types.js'
  *
  * @example
  * ```typescript
- * wireScope({
+ * defineScope({
  *   admin: {
  *     displayName: 'Administration',
  *     description: 'Administrative access',
@@ -31,4 +31,4 @@ import type { CoreScopes } from './scope.types.js'
  * })
  * ```
  */
-export const wireScope = (_config: CoreScopes): void => {}
+export const defineScope = (_config: CoreScopes): void => {}

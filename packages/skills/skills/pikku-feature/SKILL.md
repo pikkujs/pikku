@@ -126,7 +126,7 @@ in-app features don't.
 - **Migrations are inline SQL files** in the project's migrations dir
   (typically `sql/`). Use a numbered prefix matching existing files.
 - **Secrets and env-vars: NEVER `process.env`.** Declare them with
-  `wireSecret` (sensitive) or `wireVariable` (non-sensitive) — both with a
+  `defineSecret` (sensitive) or `defineVariable` (non-sensitive) — both with a
   zod schema for type-safe access. Read with
   `services.secrets.getSecret('NAME')` or `services.variables.get('NAME')`.
   See the **pikku-config** skill for the full pattern (including

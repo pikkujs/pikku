@@ -288,7 +288,7 @@ export type PikkuCLIInput = {
 
   /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).
-   * Must be within srcDirectories so wireSecret calls are picked up by the inspector.
+   * Must be within srcDirectories so defineSecret calls are picked up by the inspector.
    * Example: "src/auth.gen.ts"
    */
   authFile?: string

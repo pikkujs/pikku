@@ -1,6 +1,6 @@
-import { wireScope } from '#pikku'
+import { defineScope } from '#pikku'
 
-wireScope({
+defineScope({
   admin: {
     displayName: 'Administration',
     description: 'Administrative access',

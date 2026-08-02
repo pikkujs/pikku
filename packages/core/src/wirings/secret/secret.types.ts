@@ -50,4 +50,4 @@ export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
 
 export type SecretDefinitions = SecretDefinitionMeta[]
 
-export const wireSecret = <T>(_config: CoreSecret<T>): void => {}
+export const defineSecret = <T>(_config: CoreSecret<T>): void => {}

@@ -142,7 +142,7 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
   }
 
   const expression = node.expression
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireScope') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'defineScope') {
     return
   }
 

@@ -62,9 +62,9 @@ describe('wiring name must be a string literal', () => {
     await writeFile(
       file,
       [
-        "import { wireSecret } from '@pikku/core'",
+        "import { defineSecret } from '@pikku/core'",
         'const SECRET_ID = "STRIPE_SECRET_KEY"',
-        'wireSecret({',
+        'defineSecret({',
         '  secretId: SECRET_ID,',
         "  name: 'Stripe secret key',",
         "  displayName: 'Stripe secret key',",

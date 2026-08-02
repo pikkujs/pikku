@@ -1,4 +1,4 @@
-import { wireCredential } from '@pikku/core/credential'
+import { defineCredential } from '@pikku/core/credential'
 import { z } from 'zod'
 
 export const FakeCrmSchema = z.object({
@@ -12,7 +12,7 @@ export const FakeCrmSchema = z.object({
 // serialize as broken source text. Point at the same mock OAuth provider the
 // link suite runs (port 4098) so the "Connect" action completes a real
 // round-trip in e2e — matching the app-root `mock-oauth` credential.
-wireCredential({
+defineCredential({
   name: 'fake-crm',
   displayName: 'Fake CRM',
   description: 'OAuth2 connection to the (fake) CRM this addon talks to',

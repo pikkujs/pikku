@@ -139,7 +139,7 @@ const isInsideGlobalMiddlewareRegistration = (node: ts.Node): boolean => {
  *
  * The pikku CLI discovers that single export and generates a catch-all
  * `auth.gen.ts` that wires `${basePath}/**` to one shared handler, registers the
- * better-auth session middleware, and emits a `wireSecret` for every configured
+ * better-auth session middleware, and emits a `defineSecret` for every configured
  * social provider — so the auth routes and secret requirements flow through
  * normal inspection into the deploy manifest.
  *

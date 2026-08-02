@@ -25,7 +25,7 @@ interface CredentialOwner {
 
 /**
  * Per-user OAuth2 connections, backed by better-auth account linking. A
- * `wireCredential({ type: 'wire', oauth2 })` is registered by the
+ * `defineCredential({ type: 'wire', oauth2 })` is registered by the
  * `credentialOAuth` plugin under a providerId equal to the credential name, so
  * linking an account here is what makes `getCredential(name)` resolve for this
  * user.

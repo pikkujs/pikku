@@ -1071,7 +1071,7 @@ export async function runValidate(
           'services-process-env',
           'services.ts reads process.env directly — prefer variables.get() for portable secret/variable access',
           servicesPath,
-          'Replace process.env.SOME_VAR with await variables.get("SOME_VAR") — declare the binding with wireVariable/wireSecret; process.env is fine for optional/non-secret config'
+          'Replace process.env.SOME_VAR with await variables.get("SOME_VAR") — declare the binding with defineVariable/defineSecret; process.env is fine for optional/non-secret config'
         )
       }
 

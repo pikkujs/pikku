@@ -991,7 +991,7 @@ export function computeDiagnostics(state: InspectorState): void {
 
 /**
  * Validates that every scope referenced by a function is declared via
- * `wireScope`. Runs after all visitors, so declaration order does not matter.
+ * `defineScope`. Runs after all visitors, so declaration order does not matter.
  *
  * A `*` suffix is a wildcard requirement: `admin:*` requires the `admin` scope
  * to be declared, and grants its whole subtree.
@@ -1023,7 +1023,7 @@ export function validateScopeReferences(
         const available = Array.from(declared)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Function '${funcName}' requires scope '${scope}' which is not declared. Declare it with wireScope. Available scopes: ${available.join(', ') || 'none'}`
+          `Function '${funcName}' requires scope '${scope}' which is not declared. Declare it with defineScope. Available scopes: ${available.join(', ') || 'none'}`
         )
       }
     }

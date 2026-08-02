@@ -1,6 +1,6 @@
-import { wireScope } from '#pikku/pikku-types.gen.js'
+import { defineScope } from '#pikku/pikku-types.gen.js'
 
-wireScope({
+defineScope({
   reports: {
     displayName: 'Reports',
     description: 'Reporting access',

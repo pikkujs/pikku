@@ -1,6 +1,6 @@
 /**
  * Test file to verify TypedCredentialService type inference works correctly.
- * This validates wireCredential declarations and the generated typed wrapper.
+ * This validates defineCredential declarations and the generated typed wrapper.
  */
 
 import { LocalCredentialService } from '@pikku/core/services'

@@ -44,7 +44,7 @@ describe('serializeUserAdminFunctions', () => {
   })
 
   test('declares the scopes it gates on, so the vocabulary cannot drift', () => {
-    assert.match(out, /wireScope\(\{/)
+    assert.match(out, /defineScope\(\{/)
     for (const leaf of [
       'list',
       'create',

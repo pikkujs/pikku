@@ -46,9 +46,9 @@ describe('serializeAuthGen', () => {
     )
   })
 
-  test('secrets file imports zod and wireSecret', () => {
+  test('secrets file imports zod and defineSecret', () => {
     const output = genSecrets(['github'])
-    assert.match(output, /import { wireSecret } from '@pikku\/core\/secret'/)
+    assert.match(output, /import { defineSecret } from '@pikku\/core\/secret'/)
     assert.match(output, /import { z } from 'zod'/)
   })
 
@@ -84,7 +84,7 @@ describe('serializeAuthGen', () => {
     assert.match(output, /clientSecret:/)
   })
 
-  test('generates wireSecret for provider credentials', () => {
+  test('generates defineSecret for provider credentials', () => {
     assert.match(genSecrets(['github']), /secretId: 'GITHUB_OAUTH'/)
   })
 
@@ -153,7 +153,7 @@ describe('serializeAuthGen', () => {
     const { wiring } = gen(['github'])
     assert.doesNotMatch(wiring, /z\.object/)
     assert.doesNotMatch(wiring, /z\.string/)
-    assert.doesNotMatch(wiring, /wireSecret/)
+    assert.doesNotMatch(wiring, /defineSecret/)
   })
 
   test('keeps wireHTTPRoutes out of the secrets file (PKU490)', () => {
@@ -169,21 +169,21 @@ describe('serializeAuthGen', () => {
     assert.match(output, /secretId: 'MICROSOFT_OAUTH'/)
   })
 
-  test('does not emit wireVariable for standard oauth providers', () => {
-    assert.doesNotMatch(genSecrets(['github']), /wireVariable\({/)
+  test('does not emit defineVariable for standard oauth providers', () => {
+    assert.doesNotMatch(genSecrets(['github']), /defineVariable\({/)
   })
 
-  test('emits wireVariable for microsoft tenantId', () => {
+  test('emits defineVariable for microsoft tenantId', () => {
     assert.match(genSecrets(['microsoft']), /variableId: 'MICROSOFT_TENANT_ID'/)
   })
 
-  test('emits wireVariable for cognito domain', () => {
+  test('emits defineVariable for cognito domain', () => {
     assert.match(genSecrets(['cognito']), /variableId: 'COGNITO_DOMAIN'/)
   })
 
-  test('wireVariable schema is a named const reference, not inline (PKU111)', () => {
+  test('defineVariable schema is a named const reference, not inline (PKU111)', () => {
     const out = genSecrets(['cognito'])
-    // A named schema const must be exported and referenced by the wireVariable.
+    // A named schema const must be exported and referenced by the defineVariable.
     assert.match(out, /export const \w+VariableSchema = z\.string\(\)/)
     assert.match(out, /schema: \w+VariableSchema,/)
     // The inline form would trip PKU111 (schema must be an identifier).

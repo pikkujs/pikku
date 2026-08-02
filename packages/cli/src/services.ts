@@ -302,7 +302,7 @@ export const createSingletonServices: CreateSingletonServices<
         config.publicRpcFile,
         config.publicAgentFile,
         // The auth scaffold (catch-all routes + session middleware) and its
-        // sibling secrets file (wireSecret per provider) are generated into the
+        // sibling secrets file (defineSecret per provider) are generated into the
         // scaffold dir, which may live outside srcDirectories (e.g. a project's
         // `pikku/` dir). Add them explicitly so their wirings are inspected.
         config.authFile,

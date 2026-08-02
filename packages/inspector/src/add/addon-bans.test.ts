@@ -104,17 +104,17 @@ describe('addon authoring bans', () => {
     })
   })
 
-  test('wireSecret inside an addon is allowed', async () => {
+  test('defineSecret inside an addon is allowed', async () => {
     const source = [
-      "import { wireSecret } from '@pikku/core'",
-      "wireSecret({ name: 'example', secretId: 'EXAMPLE' } as any)",
+      "import { defineSecret } from '@pikku/core'",
+      "defineSecret({ name: 'example', secretId: 'EXAMPLE' } as any)",
     ].join('\n')
     await withTempApp(source, async (file, rootDir) => {
       const { logger, criticals } = recordingLogger()
       await inspect(logger, [file], { rootDir, isAddon: true })
       assert.ok(
         !criticals.some((c) => c.code === ErrorCode.ADDON_WIRING_NOT_ALLOWED),
-        `expected wireSecret to be allowed, got ${JSON.stringify(criticals)}`
+        `expected defineSecret to be allowed, got ${JSON.stringify(criticals)}`
       )
     })
   })
