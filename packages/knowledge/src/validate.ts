@@ -53,6 +53,7 @@ export const KNOWLEDGE_SECTIONS: Record<string, string> = {
   entities: 'a thing the app is about, in the language users use for it',
   decisions: 'a rule that was chosen, and what it rules out',
   'decisions/design': 'a rule about how the app looks and behaves',
+  'decisions/internals': 'a rule about how it works under the hood, and why',
   'decisions/security': 'a rule about who may do what',
   questions: 'something asked and not yet answered',
   wishlist: 'something wanted that nobody has asked to be built',

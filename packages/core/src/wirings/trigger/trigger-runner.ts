@@ -28,7 +28,7 @@ export const wireTrigger = (trigger: CoreTrigger) => {
   triggers.set(trigger.name, trigger as any)
 }
 
-// knowledge: decisions/design/trigger-declaration-is-split-from-trigger-source.md
+// knowledge: decisions/internals/trigger-declaration-is-split-from-trigger-source.md
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: CoreTriggerSource<TInput, TOutput>
 ) => {

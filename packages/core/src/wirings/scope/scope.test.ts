@@ -63,7 +63,7 @@ describe('flattenScopeDefinitions', () => {
     )
   })
 
-  // knowledge: decisions/design/scope-roots-may-be-co-declared-by-an-addon-and-its-host-app.md
+  // knowledge: decisions/internals/scope-roots-may-be-co-declared-by-an-addon-and-its-host-app.md
   test('a root declared twice is flattened once', () => {
     const tree = { users: { scopes: { ban: {} } } }
     const definitions: ScopeDefinitions = [

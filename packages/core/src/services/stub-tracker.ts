@@ -126,7 +126,7 @@ export class StubTracker {
 export function createStubProxy(tracker: StubTracker): Record<string, unknown> {
   return new Proxy({} as Record<string, unknown>, {
     get(_, prop: string) {
-      // knowledge: decisions/design/the-schema-service-is-never-stubbed.md
+      // knowledge: decisions/internals/the-schema-service-is-never-stubbed.md
       if (prop === 'schema') return undefined
       return tracker.stub(prop)
     },

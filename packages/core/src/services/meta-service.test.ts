@@ -6,7 +6,7 @@ import { join } from 'node:path'
 
 import { LocalMetaService } from './meta-service.js'
 
-// knowledge: decisions/design/scenario-meta-lives-apart-from-app-meta-but-merges-when-read-off-disk.md
+// knowledge: decisions/internals/scenario-meta-lives-apart-from-app-meta-but-merges-when-read-off-disk.md
 describe('LocalMetaService reads the scenario meta alongside the app meta', () => {
   let pikkuDir: string
 

@@ -2,7 +2,7 @@ import { pikkuState } from '../../../pikku-state.js'
 import type { CorePikkuCLIRender, CLIMeta } from '../cli.types.js'
 import { generateCommandHelp, parseCLIArguments } from '../command-parser.js'
 
-// knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
+// knowledge: decisions/internals/cli-stdout-is-reserved-for-machine-readable-output.md
 const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
   console.log(JSON.stringify(data))
 }
@@ -48,7 +48,7 @@ export async function executeCLIViaChannel({
   }
 
   if (parsed.errors.length > 0) {
-    // knowledge: decisions/design/cli-parse-errors-are-routed-by-message-prefix.md
+    // knowledge: decisions/internals/cli-parse-errors-are-routed-by-message-prefix.md
     const hasUnknownCommand = parsed.errors.some(
       (error) =>
         error.startsWith('Unknown command:') ||

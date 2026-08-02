@@ -43,7 +43,7 @@ export class CLIError extends Error {
   }
 }
 
-// knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
+// knowledge: decisions/internals/cli-stdout-is-reserved-for-machine-readable-output.md
 const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
   console.log(JSON.stringify(data))
 }
@@ -364,7 +364,7 @@ export async function runCLICommand({
       packageName: currentCommand.packageName,
     })
 
-    // knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
+    // knowledge: decisions/internals/cli-stdout-is-reserved-for-machine-readable-output.md
     // A void function has already emitted its own output.
     //
     // `onOutput` is progressive output only — the result goes back to the
@@ -460,11 +460,11 @@ export async function executeCLI({
       return
     }
 
-    // knowledge: decisions/design/cli-stdout-is-reserved-for-machine-readable-output.md
+    // knowledge: decisions/internals/cli-stdout-is-reserved-for-machine-readable-output.md
     parsed.warnings.forEach((warning) => console.error(`Warning: ${warning}`))
 
     if (parsed.errors.length > 0) {
-      // knowledge: decisions/design/cli-parse-errors-are-routed-by-message-prefix.md
+      // knowledge: decisions/internals/cli-parse-errors-are-routed-by-message-prefix.md
       const hasUnknownCommand = parsed.errors.some(
         (error) =>
           error.startsWith('Unknown command:') ||

@@ -263,7 +263,7 @@ export class LocalMetaService implements MetaService {
     }
   }
 
-  // knowledge: decisions/design/addon-package-roots-resolve-by-walking-node-module-search-paths.md
+  // knowledge: decisions/internals/addon-package-roots-resolve-by-walking-node-module-search-paths.md
   private packageRootCache = new Map<string, string | null>()
   private resolvePackageRoot(packageName: string): string | null {
     const cached = this.packageRootCache.get(packageName)
@@ -482,7 +482,7 @@ export class LocalMetaService implements MetaService {
 
     try {
       const result: WorkflowsMeta = {}
-      // knowledge: decisions/design/scenario-meta-lives-apart-from-app-meta-but-merges-when-read-off-disk.md
+      // knowledge: decisions/internals/scenario-meta-lives-apart-from-app-meta-but-merges-when-read-off-disk.md
       await Promise.all([
         this.readWorkflowMetaDir('workflow/meta', result),
         this.readWorkflowMetaDir('scenarios/meta', result),
@@ -626,7 +626,7 @@ export class LocalMetaService implements MetaService {
   }
 
   async getEmailMeta(): Promise<EmailsMeta> {
-    // knowledge: decisions/design/email-meta-is-read-uncached-because-codegen-rewrites-it-mid-session.md
+    // knowledge: decisions/internals/email-meta-is-read-uncached-because-codegen-rewrites-it-mid-session.md
     const content = await this.readFile('email/pikku-emails-meta.gen.json')
     return content
       ? JSON.parse(content)
@@ -648,7 +648,7 @@ export class LocalMetaService implements MetaService {
       )
     }
 
-    // knowledge: decisions/design/generated-src-paths-in-pikku-meta-are-absolute.md
+    // knowledge: decisions/internals/generated-src-paths-in-pikku-meta-are-absolute.md
     const baseDir = emailsMeta.src
     const readEmailFile = async (rel: string): Promise<string | null> => {
       try {

@@ -5,7 +5,7 @@ import type {
 } from '../wirings/queue/queue.types.js'
 import { runQueueJob } from '../wirings/queue/queue-runner.js'
 
-// knowledge: decisions/design/the-dev-queue-copies-prod-timing-and-serialization-semantics.md
+// knowledge: decisions/internals/the-dev-queue-copies-prod-timing-and-serialization-semantics.md
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults = false
   private jobCounter = 0

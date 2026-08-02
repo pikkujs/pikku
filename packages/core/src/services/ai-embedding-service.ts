@@ -1,4 +1,4 @@
-// knowledge: decisions/design/the-embedding-model-is-pinned-per-service-and-doc-query-embedding-is-split.md
+// knowledge: decisions/internals/the-embedding-model-is-pinned-per-service-and-doc-query-embedding-is-split.md
 export interface AIEmbeddingService {
   readonly model: string
   readonly dimensions?: number

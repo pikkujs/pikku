@@ -21,7 +21,7 @@ interface InternalStepData {
   stepName: string
 }
 
-// knowledge: decisions/design/the-in-memory-workflow-service-is-inline-only-and-single-process.md
+// knowledge: decisions/internals/the-in-memory-workflow-service-is-inline-only-and-single-process.md
 export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
@@ -155,7 +155,7 @@ export class InMemoryWorkflowService
     this.steps.set(key, step)
     this.stepData.set(stepId, { rpcName, data, stepName })
 
-    // knowledge: decisions/design/in-memory-workflow-history-aliases-the-live-step-object.md
+    // knowledge: decisions/internals/in-memory-workflow-history-aliases-the-live-step-object.md
     const history = this.stepHistory.get(runId) || []
     history.push(step)
     this.stepHistory.set(runId, history)
@@ -293,7 +293,7 @@ export class InMemoryWorkflowService
       this.stepData.set(newStepId, { ...failedStepData })
     }
 
-    // knowledge: decisions/design/in-memory-workflow-history-aliases-the-live-step-object.md
+    // knowledge: decisions/internals/in-memory-workflow-history-aliases-the-live-step-object.md
     const history = this.stepHistory.get(runId) || []
     history.push(newStep)
     this.stepHistory.set(runId, history)
@@ -364,7 +364,7 @@ export class InMemoryWorkflowService
   }
 
   async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
-    // knowledge: decisions/design/the-in-memory-workflow-service-is-inline-only-and-single-process.md
+    // knowledge: decisions/internals/the-in-memory-workflow-service-is-inline-only-and-single-process.md
     return fn()
   }
 
