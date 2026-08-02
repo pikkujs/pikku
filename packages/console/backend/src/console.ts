@@ -14,6 +14,7 @@ import {
   ref,
   wireAddon,
 } from '../.pikku/pikku-types.gen.js'
+import type { WiredSecretBrokerServices } from '../.pikku/pikku-types.gen.js'
 
 export const pikkuConsoleSetSecret = pikkuSessionlessFunc<
   {
@@ -22,7 +23,8 @@ export const pikkuConsoleSetSecret = pikkuSessionlessFunc<
   },
   {
     success: boolean
-  }
+  },
+  WiredSecretBrokerServices
 >({
   tags: ['pikku'],
   description: 'Set the value of a secret',
@@ -68,7 +70,8 @@ export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
 
 export const pikkuConsoleHasSecret = pikkuSessionlessFunc<
   { secretId: string },
-  { exists: boolean }
+  { exists: boolean },
+  WiredSecretBrokerServices
 >({
   tags: ['pikku'],
   description: 'Check if a secret exists without reading its value',
@@ -82,7 +85,8 @@ export const pikkuConsoleHasSecret = pikkuSessionlessFunc<
 
 export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
   { secretId: string },
-  { exists: boolean; value: unknown | null }
+  { exists: boolean; value: unknown | null },
+  WiredSecretBrokerServices
 >({
   tags: ['pikku'],
   description: 'Get the current value of a secret',

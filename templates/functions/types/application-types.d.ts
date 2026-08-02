@@ -20,6 +20,8 @@ import type { KyselyPikkuDB } from '@pikku/kysely'
 
 export interface Config extends CoreConfig {
   awsRegion: string
+  /** JWT signing keys, as key id -> the name of the secret holding its value. */
+  jwtSecrets?: Record<string, string>
 }
 
 export interface UserSession extends CoreUserSession {

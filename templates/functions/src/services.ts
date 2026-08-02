@@ -20,7 +20,7 @@ import { requiredSingletonServices } from '../.pikku/pikku-services.gen.js'
 export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
-    secrets: {
+    jwtSecrets: {
       remote: 'PIKKU_REMOTE_SECRET',
     },
   }
@@ -47,11 +47,11 @@ export const createSingletonServices = pikkuServices(
 
     const jwt = new JoseJWTService(async () => {
       const keys: Array<{ id: string; value: string }> = []
-      for (const [id, secretName] of Object.entries(config.secrets ?? {})) {
+      for (const [id, secretName] of Object.entries(config.jwtSecrets ?? {})) {
         try {
           keys.push({
             id,
-            value: await secrets.getSecret(secretName as string),
+            value: await secrets.getSecret(secretName),
           })
         } catch {}
       }
