@@ -5,7 +5,7 @@ export const serializeWorkflowTypes = (
   agentMapImportPath: string,
   scopesImportPath: string,
   scenarioStepMapImportPath: string = './pikku-scenario-step-map.gen.js',
-  scenarioActorsImportPath: string = './pikku-scenario-actors.gen.js'
+  scenarioActorsImportPath: string = './pikku-personas.gen.js'
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
@@ -22,10 +22,9 @@ import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
-import type { TypedScenarioActors, ScenarioActorName } from '${scenarioActorsImportPath}'
-import type { VirtualUserBudget, VirtualUserDisposition, VirtualUserTuning } from '@pikku/core/virtual-user'
+import type { TypedPersonas } from '${scenarioActorsImportPath}'
 
-export type { TypedScenarioActors }
+export type { TypedPersonas }
 
 export { template }
 
@@ -445,80 +444,85 @@ export function pikkuScenarioStep(config: any) {
   }
 }
 
-export type PikkuVirtualUserConfig = {
-  /** Which scenario actor this user signs in as — a real sign-in, over real auth. */
-  actor: ScenarioActorName
-  /** Human-readable name. The export identifier is the id. */
-  name?: string
-  description?: string
-  /**
-   * How it behaves, mechanically — not how it talks. \`realistic\` by default;
-   * \`adversarial\` probes authorization and treats an unexpected 2xx as the
-   * finding.
-   */
-  disposition?: VirtualUserDisposition
-  /**
-   * Overrides for that disposition's dials — how often it gets pulled away,
-   * how often it double-submits, how much it trusts its own notes. The six
-   * profiles are defaults chosen to be reasonable, not measurements of your
-   * users; when you know better, say so here rather than inventing a
-   * disposition.
-   *
-   * \`\`\`ts
-   * disposition: 'careless',
-   * tuning: { repeatRate: 0.35, moves: { suspend: 30 } },
-   * \`\`\`
-   */
-  tuning?: VirtualUserTuning
-  /**
-   * What it wants, in a person's words. Scenarios naming this actor are already
-   * intents on their own; these are the wants nobody wrote a scenario for.
-   */
-  goals?: string[]
-  tags?: string[]
-  /** Caps the engine counts itself. Anything it cannot count belongs to \`stop\`. */
-  budget?: VirtualUserBudget
-  /**
-   * Permission-function names this actor genuinely holds. Ordinary dispositions
-   * are only offered what these reach; an \`adversarial\` one is shown the whole
-   * surface and this becomes the oracle — a 2xx from outside it is a finding.
-   */
-  grants?: string[]
-  /**
-   * Whether approval-gated endpoints are on the table. Off by default: a
-   * virtual user runs against a real stage, and those are the calls that spend
-   * money and move real traffic.
-   */
-  allowApprovalRequired?: boolean
-  /** Files it may upload, relative to the project root. */
-  fixtures?: string[]
+/**
+ * What a step declares when nobody drives it: one implementation, and no
+ * surfaces to choose between.
+ *
+ * \`func\` rather than \`default\` is the point. \`default\` means *the fallback when
+ * no other surface applies*, which implies others could exist; \`func\` says
+ * structurally that there is one way this happens. That also keeps the phase
+ * rule coherent — an assertion runs every witness it has and fails if they
+ * disagree, and this has exactly one by construction.
+ */
+export type PikkuSubjectScenarioStepConfigWithSchema<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = Omit<
+  PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,
+  'browser' | 'cli' | 'default'
+> & {
+  func: PikkuFunctionScenarioStep<
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
+    'default'
+  >
+}
+
+export type PikkuSubjectScenarioStepConfig<In, Out> =
+  Omit<PikkuScenarioStepConfig<In, Out>, 'browser' | 'cli' | 'default'> & {
+    func: PikkuFunctionScenarioStep<In, Out, 'default'>
+  }
+
+/**
+ * A step in which the app acts on itself — "Given the platform has expired the
+ * trial".
+ *
+ * The grammatical subject of that sentence is not a user of your app; it **is**
+ * your app, which is why it is its own declaration rather than a persona with an
+ * asterisk. A persona is a person.
+ *
+ * Local-test-only, and never in a virtual user's catalogue: a virtual user that
+ * could expire its own trial is manufacturing the outcome it exists to discover.
+ */
+export function pikkuPlatformScenarioStep<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuSubjectScenarioStepConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenarioStep', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'default'>, InputSchema, OutputSchema>
+export function pikkuPlatformScenarioStep<In, Out = unknown>(
+  config: PikkuSubjectScenarioStepConfig<In, Out>
+): PikkuFunctionConfig<In, Out, 'scenarioStep'>
+export function pikkuPlatformScenarioStep(config: any) {
+  return { ...config, surfaces: ['default'] }
 }
 
 /**
- * A virtual user: someone who signs into a running stage and works the API in
- * character, non-deterministically, to find what a written scenario cannot.
+ * A step in which a third-party system acts — "Given Stripe's webhook arrives",
+ * "When Mailgun bounces it".
  *
- * It is not a test. Nothing here asserts an expected outcome — the run produces
- * findings, and a clean one only ever means "not this time, not with this seed".
+ * \`addon\` names the addon that wraps that service, the same name its
+ * \`wireAddon\` declares. These steps *are* the mock its consumers currently
+ * hand-write: shipped by the addon author, maintained with the addon, and the
+ * same artifact that appears in the prose.
  *
- * Everything it needs is already generated: the RPC meta is its catalogue, the
- * scenarios naming its actor are its intents (as prose — never their steps), and
- * the actor is its identity. The declaration is only who to be and what to want.
+ * Note that arranging and asserting are different — "Stripe's webhook arrives"
+ * stubs, "Then Stripe was charged" asserts, and only the first is a stub.
  *
- * \`\`\`ts
- * export const impatientShopper = pikkuVirtualUser({
- *   name: 'Impatient shopper',
- *   actor: 'shopper',
- *   disposition: 'careless',
- *   goals: ['buy something', 'change their mind about it'],
- *   budget: { steps: 40, mutations: 10 },
- * })
- * \`\`\`
+ * Local-test-only, and never in a virtual user's catalogue: one that could
+ * invoke this would forge its own payment success.
  */
-export function pikkuVirtualUser(
-  config: PikkuVirtualUserConfig
-): PikkuVirtualUserConfig {
-  return config
+export function pikkuAddonScenarioStep<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuSubjectScenarioStepConfigWithSchema<InputSchema, OutputSchema> & { addon: string }
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenarioStep', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'default'>, InputSchema, OutputSchema>
+export function pikkuAddonScenarioStep<In, Out = unknown>(
+  config: PikkuSubjectScenarioStepConfig<In, Out> & { addon: string }
+): PikkuFunctionConfig<In, Out, 'scenarioStep'>
+export function pikkuAddonScenarioStep(config: any) {
+  return { ...config, surfaces: ['default'] }
 }
 
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }

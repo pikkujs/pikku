@@ -11,14 +11,14 @@ import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
 } from '@pikku/core/workflow'
-import type { ScenarioActorConfig } from '@pikku/core/services'
+import type { ResolvedPersona } from '@pikku/core/services'
 
 /** The default driver, used when a project names no other. */
 export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'
 
 export interface ScenarioBrowserDriverOptions {
   secret: string
-  actors: Record<string, ScenarioActorConfig>
+  actors: Record<string, ResolvedPersona>
   signInPath?: string
   failureDir?: string
   config: unknown
@@ -60,7 +60,7 @@ export interface ResolveScenarioBrowserProviderOptions {
   apiUrl: string
   appUrl?: string
   secret: string
-  actors: Record<string, ScenarioActorConfig>
+  actors: Record<string, ResolvedPersona>
   signInPath?: string
   /** Where failure screenshots are written. */
   failureDir: string
@@ -123,7 +123,7 @@ export const resolveScenarioBrowserProvider = async ({
   if (!config.appUrl || config.appUrlSource === 'default') {
     throw new Error(
       `Scenario environment '${environment}' has browser steps but no 'appUrl', and '${driver}' resolved none from the environment. ` +
-        `Add it to scenarios.environments.${environment} in pikku.config.json, pass --app-url for a target that only exists at run time, or run with --no-browser to skip them.`
+        `Add it to environments.${environment} in pikku.config.json, pass --app-url for a target that only exists at run time, or run with --no-browser to skip them.`
     )
   }
   const options: ScenarioBrowserDriverOptions = {

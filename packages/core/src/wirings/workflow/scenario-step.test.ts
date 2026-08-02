@@ -5,7 +5,7 @@ import { createScenarioRunner } from './pikku-scenario-service.js'
 import type { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
-import type { ScenarioActor } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersona } from '../../services/personas-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
 import type { ScenarioSurface } from './scenario-step.types.js'
 import { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
@@ -15,7 +15,7 @@ const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 const fakeActor = (
   name: string,
   handler: (rpcName: string, data: unknown) => Promise<unknown>
-): ScenarioActor & { calls: Array<{ rpcName: string; data: unknown }> } => {
+): ScenarioPersona & { calls: Array<{ rpcName: string; data: unknown }> } => {
   const calls: Array<{ rpcName: string; data: unknown }> = []
   return {
     name,

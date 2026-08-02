@@ -1162,3 +1162,39 @@ export function validateSystemRoleScopes(
     }
   }
 }
+
+/**
+ * Validates that every role a persona names is declared with
+ * `defineSystemRole`. Runs after all visitors, so declaration order does not
+ * matter.
+ *
+ * Custom roles are refused rather than tolerated. A role composed in the
+ * console does not exist at build time and can be deleted after it, so a
+ * persona pinned to one silently stops testing what it claims to — and the
+ * symptom is a scatter of 403s that read like authorization findings rather
+ * than like a deleted role.
+ */
+export function validatePersonaRoles(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  if (!state.personas.definitions.length) {
+    return
+  }
+
+  const declared = new Set(state.systemRoles.definitions.map((r) => r.name))
+
+  for (const persona of state.personas.definitions) {
+    for (const role of persona.roles) {
+      if (!declared.has(role)) {
+        const available = Array.from(declared).sort()
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Persona '${persona.id}' holds role '${role}', which is not declared with defineSystemRole. ` +
+            `A persona may only name a system role — a role composed in the console can be deleted, and the persona would go on claiming to test it. ` +
+            `Declared roles: ${available.join(', ') || 'none'}`
+        )
+      }
+    }
+  }
+}

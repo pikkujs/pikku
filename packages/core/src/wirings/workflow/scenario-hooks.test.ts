@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { createScenarioRunner } from './pikku-scenario-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
-import type { ScenarioActors } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersonas } from '../../services/personas-service.js'
 
 const noopLogger = {
   error() {},
@@ -20,7 +20,7 @@ const actors = {
     invoke: async () => ({}),
     invokeRaw: async () => ({ status: 200, ok: true, body: {} }),
   },
-} as unknown as ScenarioActors
+} as unknown as ScenarioPersonas
 
 type ScenarioHooks = {
   before?: (services: any, data: any, wire: any) => Promise<void> | void

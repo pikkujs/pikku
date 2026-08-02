@@ -47,6 +47,7 @@
     "./credential": "./dist/wirings/credential/index.js",
     "./scope": "./dist/wirings/scope/index.js",
     "./role": "./dist/wirings/role/index.js",
+    "./persona": "./dist/wirings/persona/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
     "./oauth2": "./dist/wirings/oauth2/index.js",

@@ -1,13 +1,15 @@
-import { ADMIN_SCOPE_ROOT } from '@pikku/better-auth'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
-import { scenarioActorList } from '#pikku/workflow/pikku-scenario-actors.gen.js'
+import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
+import { personaList } from '#pikku/workflow/pikku-personas.gen.js'
 
 /** Role granting the console's own scope-admin capabilities. */
 export const CONSOLE_ADMIN_ROLE = 'console-admin'
 /** Role granting read access to reports, used by the scope-gate suite. */
 export const REPORT_VIEWER_ROLE = 'report-viewer'
+/** Role granting the umbrella `admin` scope and everything beneath it. */
+export const PLATFORM_ADMIN_ROLE = 'platform-admin'
 
 const userIdByEmail = async (
   services: SingletonServices,
@@ -26,33 +28,39 @@ const userIdByEmail = async (
 
 /**
  * Brings the scope store up: creates the tables, registers the declared scope
- * set, then composes the two roles the e2e suites rely on and grants them.
+ * and role sets, then grants them.
  *
- * - `admin@e2e.test` gets `pikku:scopes:manage`/`read` so the console Scopes UI
- *   RPCs return 200. It deliberately does NOT get `reports:read`.
- * - `guest@e2e.test` gets `reports:read` so the scope-gate suite can show a 200
+ * Both syncs are additive. Neither composes a role here any more — the three
+ * the suites rely on are declared with `defineSystemRole` in
+ * `packages/functions/src/roles.ts`, and `syncSystemRoles` writes exactly what
+ * the code says. A `createRole` naming one of them would now be refused, which
+ * is the point: a system role is part of the application's surface, and the
+ * console may grant it but not redefine it.
+ *
+ * - `admin@e2e.test` gets `console-admin`, so the console Scopes UI RPCs return
+ *   200. It deliberately does NOT get `reports:read`.
+ * - `guest@e2e.test` gets `report-viewer` so the scope-gate suite can show a 200
  *   for a scoped caller against the admin's 403.
- * - `admin@e2e.test` and `staff@e2e.test` are granted the umbrella `admin`
- *   scope directly, outside any role. That is what passes the console's global
- *   admin gate, what lets them impersonate (`admin:impersonate`) and what lets
- *   them read the user directory (`admin:users:list`) — one parent grant covers
- *   all three. It is a direct grant rather than a role so that staff stays what
- *   the scopes-console-permissions suite needs it to be: an admin holding no
- *   scope role, and therefore refused by the self-hosting scope RPCs.
- *   `guest@e2e.test` deliberately gets none of it.
- * - The scenario actors carry their own `scopes`/`roles` in
- *   `pikku.config.json`, and this applies whatever they declare. Pikku never
- *   applies them itself: which scope store exists and which roles have been
- *   created is the app's business, which is why the loop runs after the roles
- *   above are composed. Their user rows are created by `seedScenarioActors`,
- *   which must therefore run before this.
+ * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is the
+ *   umbrella `admin` scope and nothing else. That is what passes the console's
+ *   global admin gate, what lets them impersonate (`admin:impersonate`) and what
+ *   lets them read the user directory (`admin:users:list`) — one parent grant
+ *   covers all three. It is deliberately a *separate* role from `console-admin`
+ *   so that staff stays what the scopes-console-permissions suite needs it to
+ *   be: an admin holding no scope role, and therefore refused by the
+ *   self-hosting scope RPCs. `guest@e2e.test` gets none of it.
+ * - The personas carry their own `roles`, and this applies whatever they
+ *   declare. Pikku never applies them itself: which scope store exists is the
+ *   app's business, which is why the loop runs after the sync above. Their user
+ *   rows are created by `seedScenarioActors`, which must therefore run before
+ *   this.
  * - Those declarations mirror the fixture users of the same name, so a scenario
  *   expresses "an admin without a scope role", "a caller holding reports:read"
- *   and "a caller holding nothing" through the actor registry rather than by
- *   signing in with a fixture password. The `admin` actor mirrors
- *   `admin@e2e.test` exactly — the umbrella `admin` scope to pass the console's
- *   global admin gate, plus `console-admin` to drive the scope-admin RPCs,
- *   which the `admin` root does not reach. `target` declares nothing.
+ *   and "a caller holding nothing" through the persona registry rather than by
+ *   signing in with a fixture password. The `admin` persona mirrors
+ *   `admin@e2e.test` exactly — `platform-admin` to pass the console's global
+ *   admin gate, plus `console-admin` to drive the scope-admin RPCs, which the
+ *   `admin` root does not reach. `target` declares nothing.
  *
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
@@ -60,44 +68,29 @@ export const seedScopes = async (services: SingletonServices) => {
   const { scopeService } = services
   await scopeService.init()
   await scopeService.syncScopes(SCOPES)
-
-  await scopeService.createRole({
-    name: CONSOLE_ADMIN_ROLE,
-    description: 'Manage roles and scopes in the console',
-    scopes: ['pikku:scopes:read', 'pikku:scopes:manage'],
-  })
-  await scopeService.createRole({
-    name: REPORT_VIEWER_ROLE,
-    description: 'Read reports',
-    scopes: ['reports:read'],
-  })
+  await scopeService.syncSystemRoles(SYSTEM_ROLES)
 
   const adminId = await userIdByEmail(services, ADMIN_USER.email)
   const guestId = await userIdByEmail(services, GUEST_USER.email)
   const staffId = await userIdByEmail(services, STAFF_USER.email)
   await scopeService.addUserToRole(adminId, CONSOLE_ADMIN_ROLE)
   await scopeService.addUserToRole(guestId, REPORT_VIEWER_ROLE)
-  await scopeService.addScopeToUser(adminId, ADMIN_SCOPE_ROOT)
-  await scopeService.addScopeToUser(staffId, ADMIN_SCOPE_ROOT)
+  await scopeService.addUserToRole(adminId, PLATFORM_ADMIN_ROLE)
+  await scopeService.addUserToRole(staffId, PLATFORM_ADMIN_ROLE)
 
   const granted: string[] = []
-  for (const actor of scenarioActorList) {
-    const scopes = actor.scopes ?? []
-    const roles = actor.roles ?? []
-    if (scopes.length === 0 && roles.length === 0) {
+  for (const persona of personaList) {
+    if (persona.roles.length === 0) {
       continue
     }
-    const actorId = await userIdByEmail(services, actor.email)
-    for (const scope of scopes) {
-      await scopeService.addScopeToUser(actorId, scope)
+    const personaId = await userIdByEmail(services, persona.email)
+    for (const role of persona.roles) {
+      await scopeService.addUserToRole(personaId, role)
     }
-    for (const role of roles) {
-      await scopeService.addUserToRole(actorId, role)
-    }
-    granted.push(`${actor.email} -> ${[...scopes, ...roles].join(' + ')}`)
+    granted.push(`${persona.email} -> ${persona.roles.join(' + ')}`)
   }
 
   services.logger.info(
-    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${ADMIN_SCOPE_ROOT}, ${STAFF_USER.email} -> ${ADMIN_SCOPE_ROOT}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${granted.join(', ')}`
+    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${PLATFORM_ADMIN_ROLE}, ${STAFF_USER.email} -> ${PLATFORM_ADMIN_ROLE}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${granted.join(', ')}`
   )
 }

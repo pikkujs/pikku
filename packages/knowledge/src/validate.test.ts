@@ -147,8 +147,9 @@ describe('runKnowledgeValidate', () => {
   })
 
   test('a section duplicating what the project already declares fails', async () => {
-    // personas live in pikku.config.json; a note copying one drifts the moment
-    // someone edits the config, and the note is the copy that looks authoritative.
+    // personas live in `definePersonas()`; a note copying one drifts the moment
+    // someone edits the declaration, and the note is the copy that looks
+    // authoritative.
     const result = await validate(
       await project({
         ...CLEAN,
@@ -160,7 +161,7 @@ describe('runKnowledgeValidate', () => {
       'knowledge-forbidden-section-personas',
     ])
     assert.equal(result.ok, false)
-    assert.match(result.findings[0]!.fixHint, /pikku\.config\.json/)
+    assert.match(result.findings[0]!.fixHint, /definePersonas/)
   })
 
   test('a forbidden section with a sub-section is reported once, not per level', async () => {

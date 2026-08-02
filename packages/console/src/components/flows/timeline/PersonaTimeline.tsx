@@ -26,7 +26,7 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({
     [workflow.nodes, workflow.entryNodeIds]
   )
 
-  const actors = meta.scenarioActors ?? {}
+  const actors = meta.personas ?? {}
   const stepStates = run?.stepStates
 
   if (timeline.length === 0) {

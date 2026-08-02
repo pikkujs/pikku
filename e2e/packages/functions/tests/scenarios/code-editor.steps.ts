@@ -6,12 +6,12 @@
  * session are the same signed-in identity.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type { TypedScenarioActors } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import type { TypedPersonas } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { requireActor, type TestIdSelector } from '@pikku/core/workflow'
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 
-type Actor = TypedScenarioActors[keyof TypedScenarioActors]
+type Actor = TypedPersonas[keyof TypedPersonas]
 
 interface FunctionMeta {
   name?: string

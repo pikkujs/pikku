@@ -63,6 +63,44 @@ describe('serializeWorkflowTypes', () => {
       assert.match(result, /declares no surface bindings/)
     })
 
+    test('the platform and addon kinds are their own declarations', () => {
+      const result = emit()
+      assert.match(result, /export function pikkuPlatformScenarioStep/)
+      assert.match(result, /export function pikkuAddonScenarioStep/)
+    })
+
+    // `func` rather than `default:` is structural, not cosmetic: `default` means
+    // the fallback when no other surface applies, which implies others could
+    // exist. Neither of these has a surface — nobody clicks "Stripe's webhook
+    // arrives" — so the config has exactly one witness by construction.
+    test('neither takes surface bindings — one `func`, no witnesses to disagree', () => {
+      const result = emit()
+      assert.match(
+        result,
+        /PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,\n  'browser' \| 'cli' \| 'default'\n> & \{\n  func:/
+      )
+      assert.match(
+        result,
+        /Omit<PikkuScenarioStepConfig<In, Out>, 'browser' \| 'cli' \| 'default'> & \{\n    func:/
+      )
+    })
+
+    test('an addon step must name the addon whose system acts', () => {
+      const result = emit()
+      assert.match(
+        result,
+        /config: PikkuSubjectScenarioStepConfigWithSchema<InputSchema, OutputSchema> & \{ addon: string \}/
+      )
+    })
+
+    // Deleted with the collapse into personas — a virtual user is a persona run,
+    // not its own declaration.
+    test('pikkuVirtualUser is gone', () => {
+      const result = emit()
+      assert.doesNotMatch(result, /pikkuVirtualUser/)
+      assert.doesNotMatch(result, /PikkuVirtualUserConfig/)
+    })
+
     test('TypedScenario narrows step/given/when/then over the step map', () => {
       const result = emit()
       for (const phase of ['step', 'given', 'when', 'then']) {

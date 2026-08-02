@@ -20,10 +20,10 @@ const topLevelKeys = (
  * Every RPC a virtual user could reach, read off the meta a project already
  * generates.
  *
- * Nothing here is new authoring, which is the whole point: the permissions,
- * the `readonly` flags, the approval gates and the schemas were written for
- * other reasons, and a virtual user is another reader of them. A project that
- * has never heard of virtual users already ships everything one needs.
+ * Nothing here is new authoring, which is the whole point: the scopes, the
+ * `readonly` flags, the approval gates and the schemas were written for other
+ * reasons, and a virtual user is another reader of them. A project that has
+ * never heard of virtual users already ships everything one needs.
  */
 export const deriveCatalogue = (
   functions: FunctionsMeta,
@@ -34,7 +34,15 @@ export const deriveCatalogue = (
     // Scenario bodies and their steps are never network-callable — they are
     // held out of every deployed unit — so offering one would only ever waste
     // a turn on a 404.
-    if (meta.scenario || meta.scenarioStep) continue
+    //
+    // For a platform or addon step this is not an efficiency argument but the
+    // oracle: a virtual user's findings are worth something only because it
+    // cannot manufacture the outcomes it is meant to discover. One that could
+    // invoke "Stripe's webhook arrives" would forge its own payment success,
+    // and every finding downstream of that is worthless. Same class of argument
+    // as `allowApprovalRequired` defaulting to false — and enforced here, at
+    // derivation, rather than by convention.
+    if (meta.scenario || meta.scenarioStep || meta.scenarioStepKind) continue
     // `expose: true` is what puts a function on the rpc transport, and that is
     // what the shipped target calls over. Absent is not permissive: an unexposed
     // function 404s, and offering one spends a step to learn nothing about the
@@ -54,9 +62,7 @@ export const deriveCatalogue = (
       description: meta.description ?? meta.summary ?? meta.title,
       readonly: meta.readonly,
       approvalRequired: meta.approvalRequired,
-      permissions: meta.permissions?.length
-        ? [...new Set(meta.permissions.map((permission) => permission.name))]
-        : undefined,
+      scopes: meta.scopes?.length ? [...new Set(meta.scopes)] : undefined,
       tags: meta.tags?.length ? meta.tags : undefined,
       inputKeys: topLevelKeys(inputSchema),
       outputKeys: topLevelKeys(outputSchema),
@@ -160,7 +166,7 @@ export const deriveIntents = (
       description: meta.description,
       steps: steps.length ? steps : undefined,
       tags: meta.tags?.length ? meta.tags : undefined,
-      actors: meta.actors?.length ? meta.actors : undefined,
+      personas: meta.actors?.length ? meta.actors : undefined,
     })
   }
   return intents

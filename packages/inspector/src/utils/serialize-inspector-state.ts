@@ -3,7 +3,6 @@ import type {
   InspectorDiagnostic,
   InspectorFeature,
   InspectorState,
-  InspectorVirtualUser,
 } from '../types.js'
 import { TypesMap } from '../types-map.js'
 
@@ -145,7 +144,6 @@ export interface SerializableInspectorState {
     graphMeta: InspectorState['workflows']['graphMeta']
     graphFiles: Array<[string, { path: string; exportedName: string }]>
     featureFiles: Array<[string, InspectorFeature]>
-    virtualUserFiles: Array<[string, InspectorVirtualUser]>
     invokedWorkflows: string[]
   }
   rpc: {
@@ -214,6 +212,10 @@ export interface SerializableInspectorState {
   }
   systemRoles: {
     definitions: InspectorState['systemRoles']['definitions']
+    files: string[]
+  }
+  personas: {
+    definitions: InspectorState['personas']['definitions']
     files: string[]
   }
   variables: {
@@ -374,7 +376,6 @@ export function serializeInspectorState(
       graphMeta: state.workflows.graphMeta,
       graphFiles: Array.from(state.workflows.graphFiles.entries()),
       featureFiles: Array.from(state.workflows.featureFiles.entries()),
-      virtualUserFiles: Array.from(state.workflows.virtualUserFiles.entries()),
       invokedWorkflows: Array.from(state.workflows.invokedWorkflows),
     },
     rpc: {
@@ -435,6 +436,10 @@ export function serializeInspectorState(
     systemRoles: {
       definitions: state.systemRoles.definitions,
       files: Array.from(state.systemRoles.files),
+    },
+    personas: {
+      definitions: state.personas.definitions,
+      files: Array.from(state.personas.files),
     },
     variables: {
       definitions: state.variables.definitions,
@@ -576,7 +581,6 @@ export function deserializeInspectorState(
       graphMeta: data.workflows.graphMeta || {},
       graphFiles: new Map(data.workflows.graphFiles || []),
       featureFiles: new Map(data.workflows.featureFiles || []),
-      virtualUserFiles: new Map(data.workflows.virtualUserFiles || []),
       invokedWorkflows: new Set(data.workflows.invokedWorkflows || []),
     },
     rpc: {
@@ -635,6 +639,10 @@ export function deserializeInspectorState(
     systemRoles: {
       definitions: data.systemRoles?.definitions || [],
       files: new Set(data.systemRoles?.files || []),
+    },
+    personas: {
+      definitions: data.personas?.definitions || [],
+      files: new Set(data.personas?.files || []),
     },
     variables: {
       definitions: data.variables?.definitions || [],

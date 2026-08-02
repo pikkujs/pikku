@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { IntentStack, intentsForActor } from './virtual-user-intents.js'
+import { IntentStack, intentsForPersona } from './virtual-user-intents.js'
 import { createRng } from './virtual-user-rng.js'
 import { DISPOSITIONS, type DispositionProfile } from './virtual-user-dispositions.js'
 import type { IntentSource } from './virtual-user.types.js'
@@ -180,29 +180,29 @@ describe('intent stack', () => {
 
 describe('intents for an actor', () => {
   const catalogue: IntentSource[] = [
-    { id: 'a', title: 'invite a teammate', actors: ['orgAdmin'] },
+    { id: 'a', title: 'invite a teammate', personas: ['orgAdmin'] },
     { id: 'b', title: 'read the dashboard' },
-    { id: 'c', title: 'deploy a stage', actors: ['platformAdmin', 'orgAdmin'] },
+    { id: 'c', title: 'deploy a stage', personas: ['platformAdmin', 'orgAdmin'] },
   ]
 
   test('an actor gets what names it, plus anything that names nobody', () => {
     assert.deepEqual(
-      intentsForActor(catalogue, 'orgAdmin').map((i) => i.id),
+      intentsForPersona(catalogue, 'orgAdmin').map((i) => i.id),
       ['a', 'b', 'c']
     )
   })
 
   test('an actor is not given other people’s work', () => {
     assert.deepEqual(
-      intentsForActor(catalogue, 'member').map((i) => i.id),
+      intentsForPersona(catalogue, 'member').map((i) => i.id),
       ['b']
     )
   })
 
   test('an empty actor list means everyone', () => {
     assert.deepEqual(
-      intentsForActor([{ id: 'x', title: 'anything', actors: [] }], 'nobody'),
-      [{ id: 'x', title: 'anything', actors: [] }]
+      intentsForPersona([{ id: 'x', title: 'anything', personas: [] }], 'nobody'),
+      [{ id: 'x', title: 'anything', personas: [] }]
     )
   })
 })

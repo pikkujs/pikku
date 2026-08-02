@@ -34,7 +34,7 @@ holds the personality. The console says so out loud:
 | who you are | **persona** | a person: name, backstory, goals, roles | `definePersonas()` — code |
 | how you sign in | **account** | one login of that person | inside the persona |
 | who is acting | **actor** | whoever performs this step | a step parameter |
-| a persona, running | **virtual user** | the thing hitting your stage at 3pm | `pikku persona run <name>` |
+| a persona, running | **run** | the thing hitting your stage at 3pm — or doing the job in production | `pikku persona run <name>` |
 
 `actor` stops being a noun you declare and becomes the part something plays in a step —
 which is its honest use. `virtual user` stops being a declaration and becomes the runtime.
@@ -397,6 +397,120 @@ Declaring is not running. `target` — the persona that admins act *upon* — is
 seeded, and never run. This is why the declaration is `definePersonas` and not
 `defineVirtualUsers`.
 
+`runnable: false` stays an assertion rather than something inferred from the absence of a
+disposition. The two are not the same claim: `target` *must not* run, because a run
+signing in as her would race the scenario banning her. "Nobody has given this persona a
+disposition yet" is a different state, and collapsing them turns a deliberate constraint
+into a flaky suite.
+
+## Personas that run in production
+
+A virtual user hits staging to find out whether the app holds up. The same machinery
+pointed at production, with a real goal instead of a probing brief, is a colleague. The
+engine does not have to change for that to be true: a persona is already a real sign-in
+carrying real roles, and the loop already builds its tool list from what those roles
+reach.
+
+### The disposition is the whole difference
+
+```ts
+disposition: 'accountable'  // pursues its goals for real; consequences land
+disposition: 'adversarial'  // probes for what it should not be able to reach
+disposition: 'careless'     // does the wrong thing by accident
+disposition: 'thorough'     // exercises everything it can
+```
+
+`accountable` sits opposite `adversarial` on an *intent* axis — bad faith against good
+faith — where `careless` and `thorough` are a *care* axis. The word was chosen over
+`teammate` (a relationship, not a manner) and over `diligent` (reads as a degree of care,
+so everyone would file it with `thorough`). It carries the thing that should make you
+pause: not that it works hard, but that there is no oracle and no rollback.
+
+### An agent is something a persona can reach, not something it is
+
+An earlier draft gave the persona an `agent:` field naming its conversational front door.
+That was wrong twice over. Agents are already scope-gated (`CoreAIAgent.scopes` is checked
+against the session), so an agent appears in a persona's catalogue under exactly the same
+rule an RPC does — naming one adds no capability. And naming one narrows the persona to a
+single brain, when the interesting behaviour is the choice: Robin sees `social-poster` in
+her catalogue because `content-author` unlocks it, and decides whether to call the API
+herself or hand it to the specialist.
+
+The same reasoning kills "driven by a trigger" as a persona shape. A cron does not run *as*
+somebody; it wakes somebody up. A schedule is how a run starts, which is a scheduler wiring
+calling `personas.run('robin')` — not a field on the person.
+
+So the surface collapses to one axis. Every runnable persona has a disposition, and there
+is nothing else to declare about how it is driven.
+
+### `environments`, and the one rule on it
+
+`environments` moves up out of `scenarios` to the top level of the config. It stopped being
+a scenario concern the moment it gated persona sign-in:
+
+```jsonc
+{
+  "environments": {
+    "local":   { "apiUrl": "…", "appUrl": "…" },
+    "staging": { "apiUrl": "…", "appUrl": "…" },
+    "prod":    { "apiUrl": "…", "appUrl": "…", "production": true }
+  }
+}
+```
+
+- Omitting `environments` on a persona means every environment **except** production.
+  Production is opt-in for everybody, so nothing reaches it by being forgotten.
+- Listing a production environment **requires** `disposition: 'accountable'`. A `careless`
+  or `adversarial` persona naming production is a build error, not a warning.
+- Nothing else is constrained. Running an accountable persona against staging for a month
+  before anyone lets it near production is the intended path, and the declaration says so.
+
+`production: true` is a flag on the environment rather than a reserved name, because
+projects call it `prod`, `live` or `eu-prod`, and more than one environment can be
+production.
+
+Both ends enforce it, because they catch different failures. The inspector checks the
+declaration — `pikku` refuses to generate at all, before writing a `.pikku` that would
+typecheck while lying. Sign-in checks again, against the environment actually resolved,
+and against the *effective* disposition, so `--disposition` cannot turn an accountable
+persona adversarial and point it at production. The build check trusts the file; the
+sign-in check does not trust which artifact got deployed.
+
+The refusal fails closed on an environment it cannot identify, which is the `PIKKU_ENV`
+case: an unresolved environment is precisely where a *different* artifact passed the
+build check than the one now running, so "I do not know where I am" must not read as
+permission. Today the only sign-in path is `pikku persona run <environment>`, where the
+environment is an explicit argument rather than an ambient variable — `PIKKU_ENV` becomes
+load-bearing when a persona runs from inside a deployed app rather than from a developer's
+CLI, and `personaEnvironmentRefusal` already takes `undefined` for that caller.
+
+### Accountability is already built
+
+`accountable` promises attribution, and core already delivers it. `AuditService` writes an
+`AuditActor { userId, orgId, pikkuUserId }` per invocation through `function-runner.ts`,
+with `outcome: 'success' | 'failed' | 'denied'`. A persona signs in for real, so its calls
+land in the same log as any human's, and three things follow for free:
+
+- A persona timeline is not a new artifact — it is the audit log filtered by actor.
+- An adversarial run's probes are already `denied` rows attributed to that persona, which
+  is exactly the evidence the run exists to produce.
+- No `persona audit` command is needed. The log answers *what it did*; `persona list` and
+  the role's scopes answer *what it could*.
+
+### What this actually costs
+
+Two engine changes, and they are the only two:
+
+1. **Agents must appear in the computed catalogue.** The gating rule exists; the catalogue
+   builder reads RPC and HTTP meta today, so this is a real addition rather than free.
+2. **The loop needs a second exit condition.** A testing disposition ends on an oracle
+   verdict; an accountable one ends on the goal. There is no oracle hook at all today, so
+   both halves of this are new.
+
+Provisioning is the third piece and is not engine work: `pikku persona sync` mirrors
+`syncSystemRoles` — additive, creates the row, applies the declared grants, never deletes.
+Seeding is test data; this is deployment, and `db-seed` does not run in production.
+
 ## Non-person subjects
 
 ### `kind: 'system'` should be deleted
@@ -586,6 +700,32 @@ it is verifying against, and JSON cannot typecheck a role name.
 3. **Collapse `pikkuVirtualUser`** into personas; delete `kind`, `grants`, `actor`.
 4. **`pikkuPlatformScenarioStep` / `pikkuAddonScenarioStep`**, and exclude both from the
    virtual-user catalogue.
+
+Steps 1–4 are done. The production persona is a second phase, ordered so that nothing can
+reach production before the check that stops it exists:
+
+5. **Move `environments` to the top level** of the config and add `production: boolean`.
+   The CLI's config entry type becomes `PikkuEnvironment` (in `environment.ts`) — it is no
+   longer a scenario's anything. Core's `ScenarioEnvironment` keeps its name: that one is
+   genuinely the scenario step's window onto the environment, `{ apiUrl, appUrl }` and
+   nothing else.
+6. **`environments` on the persona**, with the inspector rule (production requires
+   `accountable`) and the fail-closed `PIKKU_ENV` check at sign-in. Before the disposition
+   exists, so the disposition cannot land without its guard.
+7. **`disposition: 'accountable'`**, and agents in the computed catalogue.
+8. **`pikku persona sync`** — the row and the grants, additively, outside `db-seed`.
+
+Steps 5–8 are done. `sync` needs both halves of an environment — its API to sign the
+person in, its database to write the grants — because the account is created by the actor
+plugin's own sign-in and nothing else creates it, while the grants are keyed by a user id
+that only the database knows. The same `personaEnvironmentRefusal` that decides who may
+*run* decides who may be provisioned, so production still takes only the accountable
+personas that named it. Of the two engine changes above, the catalogue half is done and the
+oracle half is not.
+
+The oracle hook is deliberately not in this list. An accountable run ends on its goal,
+which needs no oracle; giving testing dispositions a real verdict is a separate piece of
+work that this one does not block.
 
 ## Open questions
 

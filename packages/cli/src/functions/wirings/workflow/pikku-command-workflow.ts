@@ -3,8 +3,8 @@ import { ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
-import { serializeScenarioActors } from './serialize-scenario-actors.js'
-import { resolveScenarioActors } from '../../../utils/resolve-scenario-actors.js'
+import { serializePersonas } from './serialize-personas.js'
+import { resolvePersonas } from '../../../utils/resolve-personas.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
@@ -13,7 +13,6 @@ import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { partitionScenarioWorkflows } from '../scenarios/scenario-partition.js'
 import { serializeScenarioRegistration } from '../scenarios/serialize-scenario-registration.js'
 import { buildFeaturesMeta } from '../scenarios/serialize-feature-meta.js'
-import { buildVirtualUsersMeta } from '../scenarios/serialize-virtual-user-meta.js'
 import { serializeScenarioWorkflowMeta } from '../scenarios/serialize-scenario-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
@@ -231,9 +230,9 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       config.scenarioStepMapDeclarationFile,
       packageMappings
     )
-    const scenarioActorsImportPath = getFileImportRelativePath(
+    const personasImportPath = getFileImportRelativePath(
       workflowTypesFile,
-      config.scenarioActorsFile,
+      config.personasWiringFile,
       packageMappings
     )
 
@@ -247,7 +246,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         agentMapImportPath,
         scopesImportPath,
         scenarioStepMapImportPath,
-        scenarioActorsImportPath
+        personasImportPath
       )
     )
 
@@ -265,35 +264,38 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
     )
 
-    // Written even for an empty registry, so `TypedScenarioActors` is always a
-    // resolvable import for the generated function types.
-    const scenarioActors = resolveScenarioActors(config.scenarios)
+    // Written even when nobody declared a persona, so `TypedPersonas` is always
+    // a resolvable import for the generated function types.
+    const personas = resolvePersonas(
+      visitState.personas.definitions,
+      config.scenarios?.emailDomain
+    )
     {
       const agentMapImportPath = getFileImportRelativePath(
-        config.scenarioActorsFile,
+        config.personasWiringFile,
         config.agentMapDeclarationFile,
         packageMappings
       )
       const exposedRpcMapImportPath = getFileImportRelativePath(
-        config.scenarioActorsFile,
+        config.personasWiringFile,
         config.rpcMapDeclarationFile,
         packageMappings
       )
       await writeFileInDir(
         logger,
-        config.scenarioActorsFile,
-        serializeScenarioActors(
-          scenarioActors,
+        config.personasWiringFile,
+        serializePersonas(
+          personas,
           agentMapImportPath,
           exposedRpcMapImportPath
         )
       )
-      // Fixed path getScenarioActorsMeta() reads; kept out of workflow/meta,
-      // which getWorkflowMeta() globs as workflows.
+      // Fixed path getPersonasMeta() reads; kept out of workflow/meta, which
+      // getWorkflowMeta() globs as workflows.
       await writeFileInDir(
         logger,
-        join(config.outDir, 'workflow', 'scenario-actors.gen.json'),
-        JSON.stringify(scenarioActors, null, 2)
+        join(config.outDir, 'workflow', 'personas.gen.json'),
+        JSON.stringify(personas, null, 2)
       )
     }
 
@@ -303,15 +305,6 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       logger,
       join(config.outDir, 'scenarios', 'features.gen.json'),
       JSON.stringify(buildFeaturesMeta(workflows.featureFiles), null, 2)
-    )
-
-    // Fixed path getVirtualUsersMeta() reads. A virtual user is pure
-    // declaration, so this file is the entire primitive — nothing registers one
-    // at runtime the way a feature's scenarios have to.
-    await writeFileInDir(
-      logger,
-      join(config.outDir, 'scenarios', 'virtual-users.gen.json'),
-      JSON.stringify(buildVirtualUsersMeta(workflows.virtualUserFiles), null, 2)
     )
 
     await writeFileInDir(

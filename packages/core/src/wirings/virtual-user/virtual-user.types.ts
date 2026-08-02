@@ -1,11 +1,10 @@
-import type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
+import type { ScenarioHttpResponse } from '../../services/personas-service.js'
 import type { ActorFlowVerdict } from '../actor-flow/actor-flow.types.js'
-import type { VirtualUserTuning } from './virtual-user-dispositions.js'
 
 /**
  * How a virtual user behaves, mechanically. A disposition changes the loop, the
  * input generation, the memory and the oracle — anything that only changes how
- * the user *talks* is persona prose (`ScenarioActorConfig.personality`) and does
+ * the user *talks* is persona prose (`ResolvedPersona.personality`) and does
  * not belong here.
  *
  * - `realistic` — schema-first, goal-directed, plausible values (default).
@@ -14,6 +13,12 @@ import type { VirtualUserTuning } from './virtual-user-dispositions.js'
  * - `stale` — seeded from an earlier run's ids, some no longer valid.
  * - `auditor` — pursues no goal; reads one truth from several places and compares.
  * - `adversarial` — probes authorization and tenancy; a 2xx can be the finding.
+ * - `accountable` — pursues its goals for real; the only one production allows.
+ *
+ * `accountable` sits opposite `adversarial` on an *intent* axis — bad faith
+ * against good faith — where `careless` and `thorough` are a *care* axis. It is
+ * the one disposition whose actions carry consequences: no oracle, no rollback,
+ * and every call attributed to the persona in the audit log like anyone else's.
  */
 export type VirtualUserDisposition =
   | 'realistic'
@@ -22,6 +27,16 @@ export type VirtualUserDisposition =
   | 'stale'
   | 'auditor'
   | 'adversarial'
+  | 'accountable'
+
+/**
+ * The one disposition a production environment accepts.
+ *
+ * Every other disposition exists to find out what the product does wrong, which
+ * is not a thing to do to real customers' data. Named here so the declaration
+ * check and the sign-in check cannot drift apart.
+ */
+export const PRODUCTION_DISPOSITION: VirtualUserDisposition = 'accountable'
 
 /**
  * Hard caps the engine enforces itself. Anything the engine cannot count —
@@ -73,8 +88,15 @@ export interface ApiCatalogueEntry {
   readonly?: boolean
   /** Declared by the app as needing a human's approval — denied by default. */
   approvalRequired?: boolean
-  /** Permission gate names, used to narrow a large catalogue by actor tier. */
-  permissions?: readonly string[]
+  /**
+   * Scopes the session must hold to call this, all of them.
+   *
+   * Splits the catalogue in two: what a persona's roles entitle it to reach,
+   * and what they do not. Scopes rather than permission-function names because
+   * a scope is declared and checkable, whereas a permission is arbitrary code
+   * whose verdict nobody can predict without running it.
+   */
+  scopes?: readonly string[]
   tags?: readonly string[]
   /** JSON schema returned by `describe`, before the user may call. */
   inputSchema?: Record<string, unknown>
@@ -96,8 +118,8 @@ export interface IntentSource {
   /** Step prose, as a person would be told it. Never rpc names. */
   steps?: readonly string[]
   tags?: readonly string[]
-  /** Actor names this intent is available to. Empty means everyone. */
-  actors?: readonly string[]
+  /** Persona ids this intent is available to. Empty means everyone. */
+  personas?: readonly string[]
 }
 
 /** Why the engine flagged something. */
@@ -121,7 +143,7 @@ export interface VirtualUserFinding {
 
 /**
  * The transport the virtual user acts through. HTTP in production (an
- * `HttpScenarioActor`), but the engine only sees this contract — which is what
+ * `HttpPersona`), but the engine only sees this contract — which is what
  * lets the whole loop be tested without a network.
  */
 export interface VirtualUserTarget {
@@ -176,47 +198,6 @@ export interface StepRecord {
   tokensIn: number
   tokensOut: number
 }
-
-/**
- * A declared virtual user, as the console and the CLI read it.
- *
- * A `pikkuVirtualUser` config is entirely literal — an actor name, a
- * disposition, some goals — so unlike a feature there is no code body and
- * nothing to resolve at runtime. That is why this is generated straight to
- * `scenarios/virtual-users.gen.json` and read off disk: describing, listing or
- * running one never has to load the app.
- */
-export interface VirtualUserMeta {
-  /** The export identifier. */
-  id: string
-  name: string
-  description?: string
-  /** Which scenario actor it signs in as. */
-  actor: string
-  disposition: VirtualUserDisposition
-  /**
-   * Overrides for that disposition's dials. The six profiles are defaults, so a
-   * product that knows its users repeat themselves more than `careless` assumes
-   * says so here rather than inventing a seventh disposition.
-   */
-  tuning?: VirtualUserTuning
-  /** What it wants, beyond whatever scenarios name its actor. */
-  goals: string[]
-  tags: string[]
-  budget?: VirtualUserBudget
-  /**
-   * Permission-function names this actor genuinely holds. Withheld from an
-   * `adversarial` user's catalogue but still its oracle: a 2xx from an endpoint
-   * outside this list is the finding.
-   */
-  grants?: string[]
-  /** Whether approval-gated endpoints are on the table. Off by default. */
-  allowApprovalRequired?: boolean
-  /** Fixture paths it may upload, relative to the project root. */
-  fixtures?: string[]
-}
-
-export type VirtualUsersMeta = Record<string, VirtualUserMeta>
 
 /** Everything a run produced. Seeded, so it replays. */
 export interface VirtualUserRunResult {

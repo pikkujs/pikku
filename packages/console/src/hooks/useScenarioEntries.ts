@@ -25,7 +25,7 @@ export function useScenarioFlowEntries(): ScenarioFlowEntries {
   const { meta, loading } = usePikkuMeta()
 
   const flows = useMemo((): FlowEntry[] => {
-    const actors = meta.scenarioActors ?? {}
+    const actors = meta.personas ?? {}
     return (Object.values(meta.workflows ?? {}) as any[])
       .filter((w) => w.source === 'scenario' || w.scenario === true)
       .filter((w) => !(w.tags ?? []).includes('test-fixture'))
@@ -45,7 +45,7 @@ export function useScenarioFlowEntries(): ScenarioFlowEntries {
         })
       )
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.workflows, meta.scenarioActors])
+  }, [meta.workflows, meta.personas])
 
   return { flows, loading }
 }
@@ -58,7 +58,7 @@ export function useScenarioPersonaEntries(): ScenarioPersonaEntries {
   const { meta, loading } = usePikkuMeta()
 
   const personas = useMemo((): PersonaEntry[] => {
-    const actors = meta.scenarioActors ?? {}
+    const actors = meta.personas ?? {}
 
     const featureByScenario = new Map<string, string>()
     for (const feature of Object.values(meta.features ?? {}) as any[]) {
@@ -101,7 +101,7 @@ export function useScenarioPersonaEntries(): ScenarioPersonaEntries {
         })
       )
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.scenarioActors, meta.workflows, meta.features])
+  }, [meta.personas, meta.workflows, meta.features])
 
   return { personas, loading }
 }

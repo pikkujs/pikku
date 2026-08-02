@@ -1,5 +1,10 @@
 import type { Role, ScopeService } from '@pikku/core/services'
 import type { FlatScope } from '@pikku/core/scope'
+import type { SystemRole } from '@pikku/core/role'
+import {
+  SystemRoleImmutableError,
+  SystemRoleShadowedError,
+} from '@pikku/core/errors'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { ensurePikkuSchema } from './schema/index.js'
@@ -105,11 +110,80 @@ export class KyselyScopeService implements ScopeService {
     }))
   }
 
+  /**
+   * Registers the roles declared with `defineSystemRole`.
+   *
+   * Additive on the same terms as `syncScopes` — a role whose declaration has
+   * gone is marked `declared = false` rather than deleted, so a rollback or a
+   * rolling deploy cannot strip everyone's grant. Its *scope set* is replaced
+   * outright, because that is the declaration's entire content: editing
+   * `defineSystemRole` is how you change what a role means, and the deploy is
+   * when it takes effect.
+   */
+  async syncSystemRoles(roles: SystemRole[]): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      for (const role of roles) {
+        await trx
+          .insertInto('pikkuRoles')
+          .values({
+            name: role.name,
+            description: role.description ?? null,
+            system: true,
+            declared: true,
+          })
+          .onConflict((oc) =>
+            oc.column('name').doUpdateSet((eb) => ({
+              description: eb.ref('excluded.description'),
+              system: true,
+              declared: true,
+            }))
+          )
+          .execute()
+
+        await trx
+          .deleteFrom('pikkuRoleScopes')
+          .where('role', '=', role.name)
+          .execute()
+        if (role.scopes.length > 0) {
+          await trx
+            .insertInto('pikkuRoleScopes')
+            .values(role.scopes.map((scope) => ({ role: role.name, scope })))
+            .execute()
+        }
+      }
+
+      // Only system rows are in scope here: an admin's own role is not
+      // undeclared, it was never declared, and marking it would take it out of
+      // the console for a reason nobody could act on.
+      const markStale = trx
+        .updateTable('pikkuRoles')
+        .set({ declared: false })
+        .where('system', '=', true)
+      await (
+        roles.length > 0
+          ? markStale.where(
+              'name',
+              'not in',
+              roles.map((role) => role.name)
+            )
+          : markStale
+      ).execute()
+    })
+  }
+
   async createRole(role: Role): Promise<void> {
+    if (await this.isSystemRole(role.name)) {
+      throw new SystemRoleShadowedError(role.name)
+    }
     await this.db.transaction().execute(async (trx) => {
       await trx
         .insertInto('pikkuRoles')
-        .values({ name: role.name, description: role.description ?? null })
+        .values({
+          name: role.name,
+          description: role.description ?? null,
+          system: false,
+          declared: true,
+        })
         .execute()
 
       if (role.scopes.length > 0) {
@@ -122,10 +196,16 @@ export class KyselyScopeService implements ScopeService {
   }
 
   async deleteRole(name: string): Promise<void> {
+    if (await this.isSystemRole(name)) {
+      throw new SystemRoleImmutableError(name, 'delete')
+    }
     await this.db.deleteFrom('pikkuRoles').where('name', '=', name).execute()
   }
 
   async setRoleScopes(name: string, scopes: string[]): Promise<void> {
+    if (await this.isSystemRole(name)) {
+      throw new SystemRoleImmutableError(name, 're-scope')
+    }
     await this.db.transaction().execute(async (trx) => {
       await trx.deleteFrom('pikkuRoleScopes').where('role', '=', name).execute()
 
@@ -138,10 +218,26 @@ export class KyselyScopeService implements ScopeService {
     })
   }
 
+  /**
+   * Whether the store holds this name as a system role.
+   *
+   * Asked of the store rather than of the generated `SYSTEM_ROLES`, because the
+   * store is where a shadow would actually collide — and because a role whose
+   * declaration was deleted is still immutable until someone prunes it.
+   */
+  private async isSystemRole(name: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom('pikkuRoles')
+      .select('system')
+      .where('name', '=', name)
+      .executeTakeFirst()
+    return !!row?.system
+  }
+
   async listRoles(): Promise<Role[]> {
     const roles = await this.db
       .selectFrom('pikkuRoles')
-      .select(['name', 'description'])
+      .select(['name', 'description', 'system', 'declared'])
       .execute()
 
     const scopeRows = await this.db
@@ -163,6 +259,8 @@ export class KyselyScopeService implements ScopeService {
       name: role.name,
       description: role.description ?? undefined,
       scopes: byRole.get(role.name) ?? [],
+      system: !!role.system,
+      declared: !!role.declared,
     }))
   }
 
@@ -264,6 +362,57 @@ export class KyselyScopeService implements ScopeService {
     const deleted = await this.db
       .deleteFrom('pikkuScopes')
       .where('name', 'in', names)
+      .where('declared', '=', false)
+      .returning('name')
+      .execute()
+
+    return deleted.map((r) => r.name)
+  }
+
+  /**
+   * System roles the last sync found no declaration for, with how many people
+   * still hold each. Powers `pikku roles audit`.
+   *
+   * The count is the whole point: "this role is gone from the code" and "this
+   * role is gone from the code and 40 people are standing on it" call for
+   * different decisions, and the number is what makes pruning a choice rather
+   * than a formality.
+   */
+  async findStaleSystemRoles(): Promise<Array<{ role: string; users: number }>> {
+    const stale = await this.db
+      .selectFrom('pikkuRoles')
+      .leftJoin('pikkuUserRole', 'pikkuUserRole.role', 'pikkuRoles.name')
+      .select(['pikkuRoles.name as role', 'pikkuUserRole.userId as userId'])
+      .where('pikkuRoles.system', '=', true)
+      .where('pikkuRoles.declared', '=', false)
+      .execute()
+
+    const byRole = new Map<string, number>()
+    for (const row of stale) {
+      byRole.set(row.role, (byRole.get(row.role) ?? 0) + (row.userId ? 1 : 0))
+    }
+
+    return [...byRole.entries()].map(([role, users]) => ({ role, users }))
+  }
+
+  /**
+   * Removes undeclared system roles, cascading them out of every user grant
+   * that holds them. This revokes access, so it is never run implicitly.
+   */
+  async pruneSystemRoles(): Promise<string[]> {
+    const stale = await this.findStaleSystemRoles()
+    if (stale.length === 0) {
+      return []
+    }
+
+    const deleted = await this.db
+      .deleteFrom('pikkuRoles')
+      .where(
+        'name',
+        'in',
+        stale.map((s) => s.role)
+      )
+      .where('system', '=', true)
       .where('declared', '=', false)
       .returning('name')
       .execute()

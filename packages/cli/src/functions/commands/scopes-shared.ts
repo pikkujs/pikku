@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import type { Kysely } from 'kysely'
 import type { FlatScope, ScopeDefinitionsMeta } from '@pikku/core/scope'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { KyselyScopeService } from '@pikku/kysely'
@@ -63,6 +64,12 @@ export const loadDeclaredScopes = async (
 
 export type OpenedScopeService = {
   service: KyselyScopeService
+  /**
+   * The same connection the service holds, for the one thing it cannot answer:
+   * a user's id from their address. Grants are keyed by id, and the `user`
+   * table those ids come from is better-auth's, not the scope schema's.
+   */
+  db: Kysely<KyselyPikkuDB>
   destroy: () => Promise<void>
 }
 
@@ -117,7 +124,7 @@ export const openScopeService = async (
     const service = new KyselyScopeService(db)
     await service.init()
     await service.syncScopes(declared)
-    return { service, destroy: () => db.destroy() }
+    return { service, db, destroy: () => db.destroy() }
   } catch (e) {
     await db.destroy()
     throw e

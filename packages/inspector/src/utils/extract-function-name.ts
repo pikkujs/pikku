@@ -46,9 +46,19 @@ export function funcIdToTypeName(id: string): string {
 }
 
 /**
- * `pikkuScenarioStep({ name })` is the one wrapper whose `name` is its identity:
- * scenarios reference a step by that string, so it must become the pikkuFuncId
- * (and hence the generated step map's key), not just a cosmetic label the way
+ * The step wrappers, whichever kind of subject acts in them. A scenario calls a
+ * platform or addon step by name exactly as it calls a persona one.
+ */
+const SCENARIO_STEP_WRAPPERS = new Set([
+  'pikkuScenarioStep',
+  'pikkuPlatformScenarioStep',
+  'pikkuAddonScenarioStep',
+])
+
+/**
+ * A scenario step is the one wrapper whose `name` is its identity: scenarios
+ * reference a step by that string, so it must become the pikkuFuncId (and hence
+ * the generated step map's key), not just a cosmetic label the way
  * `pikkuMiddleware`/`pikkuAgent` use it.
  */
 function extractScenarioStepName(
@@ -58,7 +68,7 @@ function extractScenarioStepName(
   if (
     !ts.isCallExpression(callExpr) ||
     !ts.isIdentifier(callExpr.expression) ||
-    callExpr.expression.text !== 'pikkuScenarioStep'
+    !SCENARIO_STEP_WRAPPERS.has(callExpr.expression.text)
   ) {
     return
   }

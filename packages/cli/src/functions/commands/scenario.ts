@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { pikkuSessionlessFunc } from '#pikku'
 import {
   InMemoryWorkflowService,
-  createHttpScenarioActors,
+  createHttpPersonas,
 } from '@pikku/core/services'
 import { PikkuScenarioService } from '@pikku/core/scenario'
 import { pikkuState, getAllPackageStates } from '@pikku/core/internal'
@@ -31,11 +31,11 @@ import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,
 } from './scenario-browser.js'
-import { resolveScenarioActors } from '../../utils/resolve-scenario-actors.js'
+import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
-import { resolveScenarioEnvironment } from './scenario-environment.js'
+import { resolveEnvironment } from './environment.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 
 const isScenario = (wf: any) => wf?.scenario === true
@@ -174,9 +174,9 @@ export const scenarioRun = pikkuSessionlessFunc<
     // Resolved once, so actors, step env, the browser driver and any spawned
     // server all target the same place — including when the target only exists
     // at run time and arrives through --api-url/--app-url.
-    const env = resolveScenarioEnvironment({
+    const env = resolveEnvironment({
       environment,
-      environments: config.scenarios?.environments ?? {},
+      environments: config.environments ?? {},
       apiUrl,
       appUrl,
       spawn,
@@ -264,17 +264,20 @@ export const scenarioRun = pikkuSessionlessFunc<
           'Export it in the environment running this command (never put it in pikku.config.json).'
       )
     }
-    // Declared actors plus one per persona nobody declared a body for. Resolved
-    // once: the HTTP actors and the Playwright provider below must see the same
-    // registry, and codegen resolved the same way to type `ScenarioActorName`.
-    const scenarioActors = resolveScenarioActors(config.scenarios)
-    const actors = createHttpScenarioActors({
+    // Every declared persona, with its address filled in. Resolved once: the
+    // HTTP personas and the Playwright provider below must see the same
+    // registry, and codegen resolved the same way to type `PersonaName`.
+    const scenarioActors = resolvePersonas(
+      state.personas?.definitions ?? [],
+      config.scenarios?.emailDomain
+    )
+    const actors = createHttpPersonas({
       apiUrl: env.apiUrl,
       secret,
-      actors: scenarioActors,
+      personas: scenarioActors,
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,
-      model: config.scenarios?.actorModel,
+      model: config.scenarios?.model,
     })
 
     const functionsMeta = state.functions?.meta ?? {}

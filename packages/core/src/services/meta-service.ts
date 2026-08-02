@@ -17,8 +17,8 @@ import type {
   FeaturesMeta,
   WorkflowsMeta,
 } from '../wirings/workflow/workflow.types.js'
-import type { VirtualUsersMeta } from '../wirings/virtual-user/virtual-user.types.js'
-import type { ScenarioActorConfig } from './scenario-actors-service.js'
+import type { ResolvedPersona } from './personas-service.js'
+import type { SystemRoleDefinitionsMeta } from '../wirings/role/role.types.js'
 import type {
   TriggerMeta,
   TriggerSourceMeta,
@@ -189,9 +189,17 @@ export interface MetaService {
   getGatewayMeta(): Promise<GatewaysMeta>
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
-  getScenarioActorsMeta(): Promise<Record<string, ScenarioActorConfig>>
+  getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
+  /**
+   * The roles declared with `defineSystemRole`, keyed by name.
+   *
+   * A persona declares roles; a function checks scopes. Anything showing what a
+   * persona can reach — the console's persona page, a run's catalogue — needs
+   * this to get from one to the other, and needs it to be the same expansion the
+   * seed granted from rather than a second one.
+   */
+  getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
-  getVirtualUsersMeta(): Promise<VirtualUsersMeta>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>
   getFunctionsMeta(): Promise<FunctionsMeta>
@@ -230,10 +238,9 @@ export class LocalMetaService implements MetaService {
   private gatewayMetaCache: GatewaysMeta | null = null
   private rpcMetaCache: RPCMetaRecord | null = null
   private workflowMetaCache: WorkflowsMeta | null = null
-  private scenarioActorsMetaCache: Record<string, ScenarioActorConfig> | null =
-    null
+  private personasMetaCache: Record<string, ResolvedPersona> | null = null
+  private systemRolesMetaCache: SystemRoleDefinitionsMeta | null = null
   private featuresMetaCache: FeaturesMeta | null = null
-  private virtualUsersMetaCache: VirtualUsersMeta | null = null
   private triggerMetaCache: TriggerMeta | null = null
   private triggerSourceMetaCache: TriggerSourceMeta | null = null
   private functionsMetaCache: FunctionsMeta | null = null
@@ -335,9 +342,9 @@ export class LocalMetaService implements MetaService {
     this.gatewayMetaCache = null
     this.rpcMetaCache = null
     this.workflowMetaCache = null
-    this.scenarioActorsMetaCache = null
+    this.personasMetaCache = null
+    this.systemRolesMetaCache = null
     this.featuresMetaCache = null
-    this.virtualUsersMetaCache = null
     this.triggerMetaCache = null
     this.triggerSourceMetaCache = null
     this.functionsMetaCache = null
@@ -517,12 +524,21 @@ export class LocalMetaService implements MetaService {
     }
   }
 
-  async getScenarioActorsMeta(): Promise<Record<string, ScenarioActorConfig>> {
-    if (this.scenarioActorsMetaCache) return this.scenarioActorsMetaCache
+  async getPersonasMeta(): Promise<Record<string, ResolvedPersona>> {
+    if (this.personasMetaCache) return this.personasMetaCache
 
-    const content = await this.readFile('workflow/scenario-actors.gen.json')
-    this.scenarioActorsMetaCache = content ? JSON.parse(content) : {}
-    return this.scenarioActorsMetaCache!
+    const content = await this.readFile('workflow/personas.gen.json')
+    this.personasMetaCache = content ? JSON.parse(content) : {}
+    return this.personasMetaCache!
+  }
+
+  async getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta> {
+    if (this.systemRolesMetaCache) return this.systemRolesMetaCache
+
+    // Beside the scopes it is composed from, which is where codegen writes it.
+    const content = await this.readFile('scopes/pikku-roles-meta.gen.json')
+    this.systemRolesMetaCache = content ? JSON.parse(content) : {}
+    return this.systemRolesMetaCache!
   }
 
   async getFeaturesMeta(): Promise<FeaturesMeta> {
@@ -531,14 +547,6 @@ export class LocalMetaService implements MetaService {
     const content = await this.readFile('scenarios/features.gen.json')
     this.featuresMetaCache = content ? JSON.parse(content) : {}
     return this.featuresMetaCache!
-  }
-
-  async getVirtualUsersMeta(): Promise<VirtualUsersMeta> {
-    if (this.virtualUsersMetaCache) return this.virtualUsersMetaCache
-
-    const content = await this.readFile('scenarios/virtual-users.gen.json')
-    this.virtualUsersMetaCache = content ? JSON.parse(content) : {}
-    return this.virtualUsersMetaCache!
   }
 
   async getTriggerMeta(): Promise<TriggerMeta> {

@@ -5,7 +5,7 @@ import { formatVirtualUserReport } from './virtual-user-formatter.js'
 import type { VirtualUserRunResult } from '@pikku/core/virtual-user'
 
 const context = {
-  actor: 'orgAdmin',
+  persona: 'orgAdmin',
   disposition: 'careless',
   environment: 'staging',
   apiUrl: 'https://api.example.com/api',

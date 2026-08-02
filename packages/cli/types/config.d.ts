@@ -114,7 +114,7 @@ export interface PikkuCLICoreOutputFiles {
   scenarioStepMapDeclarationFile: string
   workflowTypesFile: string
   workflowMetaDir: string
-  scenarioActorsFile: string
+  personasWiringFile: string
 
   // Scenarios — kept out of the app bootstrap so a deployed server never
   // imports a step body (and whatever a step imports).
@@ -203,6 +203,12 @@ export interface PikkuCLICoreOutputFiles {
 
   // System roles metadata JSON
   rolesMetaJsonFile: string
+
+  // Personas (PersonaId union + typed definePersonas)
+  personasFile: string
+
+  // Personas metadata JSON
+  personasMetaJsonFile: string
 
   // Variables
   variableTypesFile: string
@@ -359,75 +365,45 @@ export type PikkuCLIInput = {
     workerQueue?: string
   }
 
+  /**
+   * The targets a run can point at, by name. Not under `scenarios` — a scenario
+   * suite is one thing that runs against an environment, and a persona is
+   * another, so an environment belongs to neither of them.
+   *
+   * The actor secret comes from SCENARIO_ACTOR_SECRET, never from here.
+   */
+  environments?: Record<
+    string,
+    {
+      apiUrl: string
+      /** Actor sign-in path under apiUrl. Default: /auth/sign-in/actor */
+      signInPath?: string
+      /** Exposed-RPC prefix under apiUrl. Default: /rpc */
+      rpcPath?: string
+      /** Frontend base URL browser steps navigate against. Required for steps with a `browser` binding. */
+      appUrl?: string
+      /**
+       * This environment carries real consequences, so only an `accountable`
+       * persona may run against it.
+       *
+       * A flag rather than a reserved name: projects call it `prod`, `live` or
+       * `eu-prod`, and more than one environment can be production.
+       */
+      production?: boolean
+    }
+  >
+
   scenarios?: {
     /**
-     * The KINDS of person this app is for. A persona is what a scenario talks
-     * about ("the owner", "the viewer"); an actor is one body that signs in as
-     * one. Declaring a persona is enough for the common case — an actor is
-     * materialised for it automatically.
+     * The mail domain a persona's address is built on — `susan@…`.
+     *
+     * Real and deliverable, not a `.local` dead end: a persona that cannot read
+     * its own mail cannot finish sign-up, a magic link, an invite or a password
+     * reset, which is most of what is worth exercising. Defaults to a domain
+     * nobody can own, so an app that never sends mail runs fine and one that
+     * does fails at the first send rather than mailing a stranger.
      */
-    personas?: Record<
-      string,
-      {
-        /** Who this kind of person is, and what the app is for them. */
-        description: string
-        /**
-         * Whose experience the product actually is. Without one, every persona
-         * weighs the same and the app grows equal-weight surfaces for its
-         * secondary ones.
-         */
-        primary?: boolean
-        /**
-         * `system` is the app acting on its own — a schedule, a cleanup, a send.
-         * It gets no actor: there is nobody to sign in. Defaults to `person`.
-         */
-        kind?: 'person' | 'system'
-        /** How much UI they can take: density, shortcuts, how much is disclosed up front. */
-        proficiency?: 'casual' | 'power'
-      }
-    >
-    /** Global scenario actor registry — any scenario can impersonate any actor */
-    actors?: Record<
-      string,
-      {
-        email: string
-        name?: string
-        jobTitle?: string
-        personality?: string
-        /**
-         * The persona this body is one of. Defaults to the actor's own key when
-         * a persona of that name is declared. Write it explicitly only for a
-         * SECOND body of the same kind — the tenant-isolation and peer-sharing
-         * case, where two actors must be different users of one persona.
-         */
-        persona?: string
-        /**
-         * Scopes this actor holds, granted directly rather than through a role.
-         * Declaring them here is what makes "a caller holding reports:read"
-         * readable at the call site as `{ actor: actors.guest }`.
-         */
-        scopes?: string[]
-        /**
-         * Roles this actor is a member of. Role names are the app's own — pikku
-         * never creates them, so the app's seed must have declared them before
-         * it applies this.
-         */
-        roles?: string[]
-      }
-    >
-    /** Environments `pikku scenario run <environment>` can target; the actor secret comes from SCENARIO_ACTOR_SECRET, never config */
-    environments?: Record<
-      string,
-      {
-        apiUrl: string
-        /** Actor sign-in path under apiUrl. Default: /auth/sign-in/actor */
-        signInPath?: string
-        /** Exposed-RPC prefix under apiUrl. Default: /rpc */
-        rpcPath?: string
-        /** Frontend base URL browser steps navigate against. Required for steps with a `browser` binding. */
-        appUrl?: string
-      }
-    >
+    emailDomain?: string
     /**
      * The package driving `browser` bindings. Anything exporting a
      * `ScenarioBrowserProvider` works — the runner never depends on a

@@ -29,10 +29,10 @@ import { addSecret } from './add/add-secret.js'
 import { addCredential } from './add/add-credential.js'
 import { addScope } from './add/add-scope.js'
 import { addSystemRole } from './add/add-system-role.js'
+import { addPersonas } from './add/add-personas.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addFeature } from './add/add-feature.js'
-import { addVirtualUser } from './add/add-virtual-user.js'
 import { addAIAgent } from './add/add-ai-agent.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 
@@ -155,6 +155,7 @@ export const visitRoutes = (
   addCredential(logger, node, checker, state, nextOptions)
   addScope(logger, node, checker, state, nextOptions)
   addSystemRole(logger, node, checker, state, nextOptions)
+  addPersonas(logger, node, checker, state, nextOptions)
   addVariable(logger, node, checker, state, nextOptions)
 
   addHTTPRoute(logger, node, checker, state, nextOptions)
@@ -170,7 +171,6 @@ export const visitRoutes = (
   addMCPPrompt(logger, node, checker, state, nextOptions)
   addWorkflowGraph(logger, node, checker, state, nextOptions)
   addFeature(logger, node, checker, state, nextOptions)
-  addVirtualUser(logger, node, checker, state, nextOptions)
   addAIAgent(logger, node, checker, state, nextOptions)
 
   ts.forEachChild(node, (child) =>

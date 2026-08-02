@@ -2,6 +2,7 @@ import type {
   ConverseOptions,
   ActorFlowVerdict,
 } from '../wirings/actor-flow/actor-flow.types.js'
+import type { PersonaMeta } from '../wirings/persona/persona.types.js'
 
 /**
  * What the transport answered, for a step that treats the status as data.
@@ -34,8 +35,8 @@ export interface ScenarioHttpResponse<T = unknown> {
  * Drain a response into the shape a step can carry: the parsed body (an empty
  * one counting as no body at all) alongside the text it was parsed from.
  *
- * `invokeRaw` returns this, and a step that has to reach past an actor — a
- * route with no RPC, an identity no actor can hold — reaches for this rather
+ * `invokeRaw` returns this, and a step that has to reach past a persona — a
+ * route with no RPC, an identity no persona can hold — reaches for this rather
  * than writing the same record by hand.
  */
 export const readScenarioHttpResponse = async <T = unknown>(
@@ -77,7 +78,7 @@ export interface ScenarioJsonRequest {
 /**
  * POST JSON somewhere and report what came back, without throwing on a 4xx/5xx.
  *
- * Every scenario that reaches past an actor was writing this by hand — the same
+ * Every scenario that reaches past a persona was writing this by hand — the same
  * `content-type`, the same `JSON.stringify`, the same drain — and the copies had
  * drifted: some returned `res.json()`, which loses the status and throws
  * outright when the target answers an empty body or an HTML error page. A
@@ -104,39 +105,45 @@ export const postScenarioJson = async <T = unknown>(
 /** Per-call transport options. */
 export interface ScenarioInvokeOptions {
   /**
-   * Headers to send alongside the actor's own session. This is how a step
-   * expresses an identity the actor registry cannot — an impersonation header,
-   * or one of the header-shim principals a credential scenario invents.
+   * Headers to send alongside the persona's own session. This is how a step
+   * expresses an identity no declared persona can — an impersonation header, or
+   * one of the header-shim principals a credential scenario invents.
    */
   headers?: Record<string, string>
 }
 
 /**
- * The RPC surface an actor can reach, as name → input/output. A project binds
+ * The RPC surface a persona can reach, as name → input/output. A project binds
  * its generated exposed RPC map here; the default leaves every name open, which
- * is what an actor built by hand (or by a third-party driver) gets.
+ * is what a persona built by hand (or by a third-party driver) gets.
  */
 export type ScenarioRpcMap = Record<string, { input: any; output: any }>
 
 /**
- * The actor a step wire carries, for a project whose actor registry is known.
- * An empty registry keeps the open actor type rather than collapsing to
- * `never` — a project may still build actors itself.
+ * The persona a step's `actor` slot carries, for a project whose personas are
+ * known. No declared personas keeps the open type rather than collapsing to
+ * `never` — a project may still build one itself.
  */
-export type ScenarioActorOf<TActors> = [keyof TActors] extends [never]
-  ? ScenarioActor
-  : TActors[keyof TActors]
+export type ScenarioPersonaOf<TPersonas> = [keyof TPersonas] extends [never]
+  ? ScenarioPersona
+  : TPersonas[keyof TPersonas]
 
-/** A synthetic user (a user row flagged `actor`) that workflow steps run as over the real transport */
-export interface ScenarioActor<
+/**
+ * A declared person, signed in and acting over the real transport.
+ *
+ * The runtime half of `definePersonas()`: sign-in materialises a user row
+ * flagged `actor: true`, and everything a step or a virtual user does goes
+ * through here.
+ */
+export interface ScenarioPersona<
   TAgentName extends string = string,
   TRpcMap extends ScenarioRpcMap = ScenarioRpcMap,
 > {
-  /** Stable actor name (the key in pikku.config.json's actor registry). */
+  /** The id it was declared under — what a step's `actor` slot names. */
   readonly name: string
-  /** The actor's user email — flows use it for invites/lookups. */
+  /** Their address, computed from the id. Flows use it for invites/lookups. */
   readonly email: string
-  /** Invoke an exposed RPC as this actor over the real transport. */
+  /** Invoke an exposed RPC as this person over the real transport. */
   invoke<TName extends keyof TRpcMap & string>(
     rpcName: TName,
     data: TRpcMap[TName]['input']
@@ -151,32 +158,30 @@ export interface ScenarioActor<
     data: TRpcMap[TName]['input'],
     options?: ScenarioInvokeOptions
   ): Promise<ScenarioHttpResponse>
-  /** Converse with a Pikku AI agent in this actor's persona and return its verdict */
+  /** Converse with a Pikku AI agent in character and return its verdict. */
   converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
+  /**
+   * The roles this person actually holds on the stage, read back after signing
+   * in — what a run compares against the declaration before its first step.
+   *
+   * `null` when the target does not say. That is not the same as "no roles": a
+   * run that treats silence as an empty list refuses to start against every
+   * stage whose auth reports roles somewhere else, so the caller must decide
+   * whether it can verify at all.
+   */
+  sessionRoles(): Promise<string[] | null>
 }
 
-/** Display/config metadata for an actor (from pikku.config.json) */
-export interface ScenarioActorConfig {
-  email: string
-  name?: string
-  jobTitle?: string
-  personality?: string
-  /**
-   * The persona this body is one of — the KIND of person, declared in
-   * `scenarios.personas`. Most personas have exactly one actor and it is
-   * materialised for them; a second body of the same persona is what tenant
-   * isolation and peer-sharing scenarios are made of.
-   */
-  persona?: string
-  /**
-   * Scopes this actor holds, granted directly rather than through a role, and
-   * the roles it belongs to. Pikku carries them; it never applies them — which
-   * scope store exists and which roles have been created is the app's own, so
-   * the app's seed reads these back off `scenarioActorConfigs` and grants them.
-   */
-  scopes?: readonly string[]
-  roles?: readonly string[]
-}
+/**
+ * A declared persona with its address filled in — what codegen writes and what
+ * a seed, a scenario run and a virtual-user run all read.
+ *
+ * The address is not declared. It is derived from the persona's id and the
+ * project's persona domain, so two people can never accidentally share one and
+ * sign in as the same user row — which would silently collapse exactly the
+ * isolation scenarios a second person exists for.
+ */
+export type ResolvedPersona = PersonaMeta & { email: string }
 
-/** The injected `actors` service: actor name → actor. */
-export type ScenarioActors = Record<string, ScenarioActor>
+/** The injected `personas` service: persona id → persona. */
+export type ScenarioPersonas = Record<string, ScenarioPersona>

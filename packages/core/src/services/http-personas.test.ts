@@ -2,7 +2,7 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpScenarioActors } from './http-scenario-actors.js'
+import { createHttpPersonas } from './http-personas.js'
 
 // Minimal target app: actor sign-in endpoint + exposed RPC endpoint, session
 // via cookie. Mirrors the Better Auth actor plugin's contract.
@@ -78,29 +78,46 @@ const startTarget = async () => {
   }
 }
 
-describe('HttpScenarioActor', async () => {
+describe('HttpPersona', async () => {
   const target = await startTarget()
   after(() => target.server.close())
 
-  const makeActors = (secret = 'impersonation-secret') =>
-    createHttpScenarioActors({
+  const makePersonas = (secret = 'impersonation-secret') =>
+    createHttpPersonas({
       apiUrl: target.apiUrl,
       secret,
-      actors: {
-        customer: { email: 'customer@actors.local', jobTitle: 'Buyer' },
-        manager: { email: 'manager@actors.local' },
+      personas: {
+        customer: {
+          id: 'customer',
+          name: 'Customer',
+          email: 'customer@personas.invalid',
+          jobTitle: 'Buyer',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+        manager: {
+          id: 'manager',
+          name: 'Manager',
+          email: 'manager@personas.invalid',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
       },
     })
 
-  test('builds one lazy actor per config entry', () => {
-    const actors = makeActors()
+  test('builds one lazy persona per declaration', () => {
+    const actors = makePersonas()
     assert.deepEqual(Object.keys(actors).sort(), ['customer', 'manager'])
     assert.equal(actors.customer!.name, 'customer')
     assert.equal(target.loginCount(), 0, 'no login until first invoke')
   })
 
   test('logs in lazily once and replays the session cookie on RPCs', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
 
     const first = (await actors.customer!.invoke('createTodo', {
       title: 'x',
@@ -120,7 +137,7 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('re-logs-in once when the session expires mid-run', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     await actors.manager!.invoke('ping', {})
     const loginsBefore = target.loginCount()
 
@@ -132,7 +149,7 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('invokeRaw returns the status and body instead of throwing', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
 
     // A refusal is the expected outcome of a permissions scenario, so the
     // status and the payload that names the missing scope both have to survive.
@@ -147,7 +164,7 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('invokeRaw reports a success the same way', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     const res = await actors.manager!.invokeRaw('listTodos', { page: 2 })
 
     assert.equal(res.status, 200)
@@ -156,7 +173,7 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('invokeRaw carries the response text so a step can search it', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     const res = await actors.customer!.invokeRaw('forbidden', {})
 
     assert.match(res.serialized, /MissingScopeError/)
@@ -164,7 +181,7 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('invokeRaw keeps a non-JSON error body instead of failing to parse it', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     const res = await actors.manager!.invokeRaw('html-error', {})
 
     assert.equal(res.status, 500)
@@ -174,14 +191,14 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('invokeRaw reports an empty body as an empty string', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     const res = await actors.manager!.invokeRaw('listTodos', {})
 
     assert.equal(typeof res.serialized, 'string')
   })
 
   test('invokeRaw passes extra headers through', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     const res = await actors.manager!.invokeRaw(
       'whoAmI',
       {},
@@ -192,7 +209,7 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('invoke still throws on a refusal, naming the status and body', async () => {
-    const actors = makeActors()
+    const actors = makePersonas()
     await assert.rejects(
       actors.customer!.invoke('forbidden', {}),
       /'forbidden' as 'customer' returned 403.*MissingScopeError/
@@ -200,10 +217,10 @@ describe('HttpScenarioActor', async () => {
   })
 
   test('a wrong impersonation secret surfaces status and body', async () => {
-    const actors = makeActors('wrong-secret')
+    const actors = makePersonas('wrong-secret')
     await assert.rejects(
       actors.customer!.invoke('ping', {}),
-      /actor sign-in failed for 'customer' \(401\).*bad actor secret/
+      /persona sign-in failed for 'customer' \(401\).*bad actor secret/
     )
   })
 })

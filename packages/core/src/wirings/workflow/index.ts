@@ -137,6 +137,7 @@ export type {
 // The step's own wire, and the shape of what it was given
 export type {
   ScenarioStepPhase,
+  ScenarioStepKind,
   ScenarioStepOptions,
   PikkuScenarioStepWire,
   ScenarioEnvironment,
@@ -166,11 +167,11 @@ export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
 export type {
   ScenarioHttpResponse,
   ScenarioJsonRequest,
-} from '../../services/scenario-actors-service.js'
+} from '../../services/personas-service.js'
 export {
   readScenarioHttpResponse,
   postScenarioJson,
-} from '../../services/scenario-actors-service.js'
+} from '../../services/personas-service.js'
 
 /* ------------------------------------------------------------------ *
  * Scenarios — driving a browser

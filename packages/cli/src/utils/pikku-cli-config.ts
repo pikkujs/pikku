@@ -630,10 +630,10 @@ const _getPikkuCLIConfig = async (
     if (!result.workflowMetaDir) {
       result.workflowMetaDir = join(workflowDir, 'meta')
     }
-    if (!result.scenarioActorsFile) {
-      result.scenarioActorsFile = join(
+    if (!result.personasWiringFile) {
+      result.personasWiringFile = join(
         workflowDir,
-        'pikku-scenario-actors.gen.ts'
+        'pikku-personas.gen.ts'
       )
     }
 
@@ -858,6 +858,18 @@ const _getPikkuCLIConfig = async (
     }
     if (!result.rolesMetaJsonFile) {
       result.rolesMetaJsonFile = join(scopesDir, 'pikku-roles-meta.gen.json')
+    }
+
+    // Personas. Beside the roles they are checked against, for the same reason
+    // roles sit beside their scopes.
+    if (!result.personasFile) {
+      result.personasFile = join(scopesDir, 'pikku-personas.gen.ts')
+    }
+    if (!result.personasMetaJsonFile) {
+      result.personasMetaJsonFile = join(
+        scopesDir,
+        'pikku-personas-meta.gen.json'
+      )
     }
 
     // Variables (typed wrapper for VariablesService)

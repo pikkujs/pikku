@@ -70,7 +70,7 @@ import {
   runFromMeta,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
-import type { ScenarioActors } from '../../services/scenario-actors-service.js'
+import type { ScenarioPersonas } from '../../services/personas-service.js'
 import {
   PikkuError,
   addError,
@@ -1396,7 +1396,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     options?: {
       inline?: boolean
       startNode?: string
-      actors?: ScenarioActors
+      actors?: ScenarioPersonas
       onRunCreated?: (runId: string) => void
     }
   ): Promise<{ runId: string }> {

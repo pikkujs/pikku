@@ -41,20 +41,20 @@ export type {
   CopyFileArgs,
 } from './content-service.js'
 export type {
-  ScenarioActor,
-  ScenarioActorConfig,
-  ScenarioActorOf,
-  ScenarioActors,
+  ScenarioPersona,
+  ResolvedPersona,
+  ScenarioPersonaOf,
+  ScenarioPersonas,
   ScenarioInvokeOptions,
   ScenarioRpcMap,
   ScenarioHttpResponse,
-} from './scenario-actors-service.js'
-export { readScenarioHttpResponse } from './scenario-actors-service.js'
+} from './personas-service.js'
+export { readScenarioHttpResponse } from './personas-service.js'
 export {
-  HttpScenarioActor,
-  createHttpScenarioActors,
-  type HttpScenarioActorsConfig,
-} from './http-scenario-actors.js'
+  HttpPersona,
+  createHttpPersonas,
+  type HttpPersonasConfig,
+} from './http-personas.js'
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailService,

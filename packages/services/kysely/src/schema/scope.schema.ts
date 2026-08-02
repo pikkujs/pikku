@@ -35,6 +35,20 @@ export const scopeSchema: PikkuSchema = {
         .createTable('pikkuRoles')
         .addColumn('name', 'text', (col) => col.primaryKey())
         .addColumn('description', 'text')
+        // Declared in code with `defineSystemRole` rather than composed by an
+        // admin. What it buys is the refusals: a system role cannot be renamed,
+        // re-scoped or deleted from the console, and a console role cannot be
+        // created with its name — two rows answering to one name would make
+        // "does Susan hold `buyer`?" depend on which one the store returned.
+        .addColumn('system', 'boolean', (col) => col.defaultTo(false).notNull())
+        // A system role whose declaration has gone: still held by whoever holds
+        // it, no longer offered for new grants, awaiting `pikku roles prune`.
+        // The same additive contract as `pikkuScopes.declared`, and for the same
+        // reason — a mid-deploy revocation is not something a code edit should
+        // be able to cause.
+        .addColumn('declared', 'boolean', (col) =>
+          col.defaultTo(true).notNull()
+        )
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),

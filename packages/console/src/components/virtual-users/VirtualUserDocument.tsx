@@ -24,6 +24,7 @@ const DISPOSITION_BLURB: Record<VirtualUserDisposition, () => unknown> = {
   stale: m.virtual_users_disposition_stale,
   auditor: m.virtual_users_disposition_auditor,
   adversarial: m.virtual_users_disposition_adversarial,
+  accountable: m.virtual_users_disposition_accountable,
 }
 
 const percent = (weight: number, total: number) =>
@@ -508,10 +509,10 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
                 })}
               </Text>
             )}
-            {reach.withheldByGrants > 0 && (
+            {reach.withheldByScopes > 0 && (
               <Text size="sm" c="dimmed">
                 {m.virtual_users_withheld_grants({
-                  count: reach.withheldByGrants,
+                  count: reach.withheldByScopes,
                 })}
               </Text>
             )}
@@ -539,20 +540,20 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
               <EndpointNames names={reach.inferredNames} />
             )}
           </Stack>
-          {user.grants && user.grants.length > 0 && (
+          {user.roles.length > 0 && (
             <Group gap={6}>
               <Text size="sm" fw={600}>
                 {m.virtual_users_grants()}
               </Text>
-              {user.grants.map((grant) => (
+              {user.roles.map((role) => (
                 <Badge
-                  key={grant}
+                  key={role}
                   size="xs"
                   variant="light"
                   radius="sm"
                   tt="none"
                 >
-                  {asI18n(grant)}
+                  {asI18n(role)}
                 </Badge>
               ))}
             </Group>
@@ -572,46 +573,57 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
         </Section>
 
         <Section title={m.virtual_users_stops()} testId="virtual-user-stops">
-          {user.budget?.steps ||
-          user.budget?.mutations ||
-          user.budget?.duration ? (
-            <Group gap="xl">
-              {user.budget?.steps !== undefined && (
-                <Figure
-                  value={user.budget.steps}
-                  label={m.virtual_users_budget_steps()}
-                />
-              )}
-              {user.budget?.mutations !== undefined && (
-                <Figure
-                  value={user.budget.mutations}
-                  label={m.virtual_users_budget_mutations()}
-                />
-              )}
-              {user.budget?.duration !== undefined && (
-                <Stack gap={2} style={{ minWidth: 96 }}>
-                  <Text size="xl" fw={700} className={styles.figure}>
-                    {asI18n(String(user.budget.duration))}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {m.virtual_users_budget_duration()}
-                  </Text>
-                </Stack>
-              )}
+          {/*
+            Nothing to show per declaration: how much you will spend today is
+            not a fact about this person, so the budget is a run flag. What the
+            engine does when nobody passes one is the only stable answer here.
+          */}
+          <Text size="sm" c="dimmed">
+            {m.virtual_users_budget_default()}
+          </Text>
+        </Section>
+
+        <Section
+          title={m.virtual_users_environments()}
+          testId="virtual-user-environments"
+        >
+          {user.environments ? (
+            <Group gap={6}>
+              {user.environments.map((name) => (
+                <Badge
+                  key={name}
+                  size="xs"
+                  variant="light"
+                  radius="sm"
+                  tt="none"
+                >
+                  {asI18n(name)}
+                </Badge>
+              ))}
             </Group>
           ) : (
-            <Text size="sm" c="dimmed">
-              {m.virtual_users_budget_default()}
+            <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
+              {m.virtual_users_environments_default()}
             </Text>
           )}
         </Section>
 
         <Section title={m.virtual_users_run()} testId="virtual-user-run">
           <Text size="sm" ff="monospace" className={styles.command}>
-            {asI18n(`pikku virtual-user run ${environment} ${user.id}`)}
+            {asI18n(`pikku persona run ${environment} ${user.id}`)}
           </Text>
           <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
             {m.virtual_users_run_note()}
+          </Text>
+          {/*
+            The account is not a by-product of a run: a persona doing the job in
+            production has to be provisioned before anybody signs in as them.
+          */}
+          <Text size="sm" ff="monospace" className={styles.command}>
+            {asI18n(`pikku persona sync ${environment}`)}
+          </Text>
+          <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
+            {m.virtual_users_sync_note()}
           </Text>
         </Section>
       </Stack>

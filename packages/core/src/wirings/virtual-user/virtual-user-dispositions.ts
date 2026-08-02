@@ -153,6 +153,25 @@ export const DISPOSITIONS: Readonly<
     reReadRate: 0.2,
     invertedOracle: true,
   },
+
+  // The only disposition that is not testing anything. It is doing the job, so
+  // it abandons rarely, runs cool, and is told to stop and say so rather than
+  // guess — the failure mode here is a wrong action nobody asked for, not a
+  // missed bug.
+  accountable: {
+    ...REALISTIC,
+    instructions: [
+      'You are doing this job for real. What you change stays changed, and every call you make is recorded against your name.',
+      'Work towards your goals as the person you are, using the tools you have been given.',
+      'Where a specialist agent exists for part of the work, hand that part to it rather than reconstructing it yourself.',
+      'When you are unsure whether something is wanted, stop and say what you would do and why, rather than doing it and reporting afterwards.',
+      'Never guess at an identifier, an amount or a recipient — read it from the product first.',
+    ].join(' '),
+    moves: { continue: 94, suspend: 5, resume: 1, abandon: 0 },
+    temperature: 0.4,
+    repeatRate: 0,
+    reReadRate: 0.25,
+  },
 }
 
 /**
