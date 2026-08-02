@@ -1,6 +1,6 @@
 {
   "name": "@pikku/redis",
-  "version": "0.12.13",
+  "version": "0.12.14",
   "description": "Redis services for Pikku — workflow state, agent runs, secrets, sessions and channel stores",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.71"
+    "@pikku/core": "^0.12.74"
   },
   "dependencies": {
     "ioredis": "^5.10.0"
