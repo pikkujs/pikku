@@ -34,6 +34,9 @@ import {
   validateScenarioSteps,
   validateWorkflowGraphAddons,
 } from './utils/post-process.js'
+import { validateExposedFunctionsGated } from './utils/validate-exposed-functions-gated.js'
+import { validateTagsResolveToMiddleware } from './utils/validate-tags-resolve-to-middleware.js'
+import { annotateHttpRouteAuth } from './utils/annotate-http-route-auth.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core/internal'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
@@ -467,6 +470,13 @@ export const inspect = async (
     validateWorkflowGraphAddons(logger, state)
     validateScenarioServices(logger, state)
     validateScenarioSteps(logger, state)
+    // Needs every route, every function and every wireAddon declaration
+    // together, so it can only run once the whole program is inspected.
+    annotateHttpRouteAuth(state)
+    // Last of the validators: they read function meta and every wireAddon
+    // declaration together, so they need the whole program inspected.
+    validateExposedFunctionsGated(logger, state)
+    validateTagsResolveToMiddleware(logger, state)
 
     if (options.openAPI) {
       state.openAPISpec = await generateOpenAPISpec(

@@ -272,18 +272,27 @@ export function registerHTTPRoute({
     }
   }
 
+  // The route's own `auth`, falling back to the group's. Recorded on the meta
+  // below so an audit can answer "is this route open?" without re-reading the
+  // source: the route can tighten a sessionless function, and until this was
+  // written down that tightening existed only in the wiring.
+  const routeAuthProp = getPropertyValue(obj, 'auth')
+  const resolvedAuth =
+    routeAuthProp === true || routeAuthProp === false
+      ? routeAuthProp
+      : inheritedAuth
+
   // For inline functions (e.g. oauth2 handlers), propagate sessionless: true
   // when auth is explicitly disabled at the route or group level — the
   // developer opted out of auth so no session is required.
   {
     const inlineMeta = state.functions.meta[funcName]
-    if (inlineMeta && inlineMeta.sessionless === undefined) {
-      const routeAuth = getPropertyValue(obj, 'auth')
-      const resolvedAuth =
-        routeAuth === true || routeAuth === false ? routeAuth : inheritedAuth
-      if (resolvedAuth === false) {
-        inlineMeta.sessionless = true
-      }
+    if (
+      inlineMeta &&
+      inlineMeta.sessionless === undefined &&
+      resolvedAuth === false
+    ) {
+      inlineMeta.sessionless = true
     }
   }
 
@@ -416,6 +425,7 @@ export function registerHTTPRoute({
     route: fullRoute,
     sourceFile: sourceFile.fileName,
     method: method as HTTPMethod,
+    ...(resolvedAuth !== undefined && { auth: resolvedAuth }),
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,
     inputTypes: undefined,
@@ -484,6 +494,9 @@ export function registerHTTPRouteMeta({
     route: fullRoute,
     sourceFile: sourceFile.fileName,
     method: method as HTTPMethod,
+    ...((route.auth ?? inheritedAuth) !== undefined && {
+      auth: route.auth ?? inheritedAuth,
+    }),
     params: params.length > 0 ? params : undefined,
     inputTypes: undefined,
     tags: tags.length > 0 ? tags : undefined,

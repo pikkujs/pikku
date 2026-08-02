@@ -23,6 +23,16 @@ satisfy an admin-only function's requirements, because the two gates are
 evaluated independently against separate inputs. An empty or absent group passes,
 so declaring no permissions means "globals only", not "deny".
 
+Globals are bucketed per package, and a function reads *both* the root bucket and
+its own package's — root first. The generated `addGlobalPermission` wrapper takes
+no package argument, so an application's rules only ever land in the root bucket;
+resolving the package bucket alone meant a host rule like "every request needs a
+signed-in user" silently stopped at the addon boundary, while the bucket an
+addon's functions actually read was one no host could write to. Unioning is safe
+in a way that nothing else here would be: globals AND, so adding the root ones
+can only tighten. Package buckets stay one-way — a package's globals never apply
+to root functions, or an installed addon could gate the whole application.
+
 **What this rules out:** short-circuiting the function gate when the globals
 passed, merging the global requirements into the function group (which would turn
 AND into OR and let any global satisfy any function), and giving

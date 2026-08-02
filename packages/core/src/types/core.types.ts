@@ -117,6 +117,19 @@ export type FunctionRuntimeMeta = {
   /** Scopes the session must hold to run this function. All are required (AND). */
   scopes?: string[]
   expose?: boolean
+  /**
+   * A sessionless function's own `auth: true`. `sessionless` carries the
+   * baseline — a `pikkuFunc` always requires a session — and this carries the
+   * tightening a `pikkuSessionlessFunc` applies to itself. Both are needed to
+   * know whether a function is gated without running it.
+   */
+  auth?: boolean
+  /**
+   * The author's declaration that this function authorizes callers in its own
+   * body. Carries no runtime effect — it records a gate codegen cannot see, so
+   * an audit is not left to guess whether a sessionless function is open.
+   */
+  selfAuthenticated?: boolean
   remote?: boolean
   /**
    * A step RPC: invoked by name only from a scenario run and refused

@@ -1,6 +1,19 @@
 import * as ts from 'typescript'
 import type { InspectorState, InspectorLogger } from '../types.js'
 
+function parseStringArray(node: ts.Expression): string[] | undefined {
+  if (!ts.isArrayLiteralExpression(node)) return undefined
+  const values: string[] = []
+  for (const element of node.elements) {
+    // A non-literal entry (a spread, a const reference) is not statically
+    // knowable. Dropping the whole array rather than a silent partial keeps a
+    // consumer from reading a short list as the complete set of gates.
+    if (!ts.isStringLiteral(element)) return undefined
+    values.push(element.text)
+  }
+  return values
+}
+
 function parseStringRecord(
   obj: ts.ObjectLiteralExpression
 ): Record<string, string> {
@@ -41,6 +54,9 @@ export function addWireAddon(
   let pkg: string | undefined
   let rpcEndpoint: string | undefined
   let mcp: boolean | undefined
+  let auth: boolean | undefined
+  let tags: string[] | undefined
+  let scopes: string[] | undefined
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
   let credentialOverrides: Record<string, string> | undefined
@@ -61,6 +77,16 @@ export function addWireAddon(
         prop.initializer.kind === ts.SyntaxKind.FalseKeyword)
     ) {
       mcp = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+    } else if (
+      key === 'auth' &&
+      (prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+        prop.initializer.kind === ts.SyntaxKind.FalseKeyword)
+    ) {
+      auth = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+    } else if (key === 'tags') {
+      tags = parseStringArray(prop.initializer)
+    } else if (key === 'scopes') {
+      scopes = parseStringArray(prop.initializer)
     } else if (
       key === 'secretOverrides' &&
       ts.isObjectLiteralExpression(prop.initializer)
@@ -86,6 +112,9 @@ export function addWireAddon(
     package: pkg,
     rpcEndpoint,
     mcp,
+    auth,
+    tags,
+    scopes,
     secretOverrides,
     variableOverrides,
     credentialOverrides,

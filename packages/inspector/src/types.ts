@@ -538,6 +538,15 @@ export interface InspectorState {
         package: string
         rpcEndpoint?: string
         mcp?: boolean
+        /**
+         * The addon's own gates. `runPikkuFunc` applies these to every function
+         * in the package, on every wiring path — not just `namespace:function`.
+         * Absent when the declared value was not a statically-knowable literal,
+         * which must be read as "unknown", never as "ungated".
+         */
+        auth?: boolean
+        tags?: string[]
+        scopes?: string[]
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
         /** wireRemoteAddon: whether an `auth` binding was supplied (vs a public surface) */

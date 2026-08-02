@@ -179,6 +179,17 @@ export type CorePikkuFunctionConfig<
   version?: number
   tags?: string[]
   expose?: boolean
+  /**
+   * The function performs its own authorization in its body — verifying a
+   * signed token, checking a webhook signature, matching an invite code — so
+   * it is not open despite carrying no session, scope or permission.
+   *
+   * Purely declarative: nothing at runtime reads it, and it grants nothing. It
+   * exists so the claim is written down where an audit can find it, and so
+   * codegen stops warning about a gate it has no way to see. Asserting it
+   * falsely disables the one check that would have caught the mistake.
+   */
+  selfAuthenticated?: boolean
   remote?: boolean
   mcp?: boolean
   readonly?: boolean

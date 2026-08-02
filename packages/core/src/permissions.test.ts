@@ -164,6 +164,36 @@ describe('runPermissions — package isolation', () => {
       message: 'Permission denied',
     })
   })
+
+  test('a root global applies inside a package too', async () => {
+    // The generated `addGlobalPermission` wrapper takes no package argument, so
+    // an application's rules always land in the root bucket. If those stopped
+    // at the addon boundary, "every request needs a signed-in user" would
+    // silently exempt every function an addon contributed.
+    addGlobalPermission([async () => false])
+    await assert.rejects(run({ packageName: 'pkg-a' }), {
+      message: 'Permission denied',
+    })
+  })
+
+  test('root and package globals both have to pass', async () => {
+    addGlobalPermission([async () => true])
+    addGlobalPermission([async () => false], 'pkg-a')
+    await assert.rejects(run({ packageName: 'pkg-a' }), {
+      message: 'Permission denied',
+    })
+  })
+
+  test('passes when the root and package globals both pass', async () => {
+    addGlobalPermission([async () => true])
+    addGlobalPermission([async () => true], 'pkg-a')
+    await run({ packageName: 'pkg-a' })
+  })
+
+  test('a package global does not leak back out to the root', async () => {
+    addGlobalPermission([async () => false], 'pkg-a')
+    await run({})
+  })
 })
 
 describe('checkAuthPermissions', () => {

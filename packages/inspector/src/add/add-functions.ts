@@ -572,6 +572,15 @@ export const addFunctions: AddWiring = (
   let expose: boolean | undefined
   let remote: boolean | undefined
   let mcp: boolean | undefined
+  /**
+   * A sessionless function's own `auth: true`. `sessionless` records the
+   * baseline — a `pikkuFunc` always needs a session — while this records the
+   * tightening a `pikkuSessionlessFunc` applies to itself, which is otherwise
+   * invisible to anything reading meta.
+   */
+  let auth: boolean | undefined
+  /** The author's claim that the body authorizes its own callers. */
+  let selfAuthenticated: boolean | undefined
   let readonly_: boolean | undefined
   let deploy: 'serverless' | 'server' | 'auto' | undefined
   let approvalRequired: boolean | undefined
@@ -669,6 +678,10 @@ export const addFunctions: AddWiring = (
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
+    auth = getPropertyValue(firstArg, 'auth') as boolean | undefined
+    selfAuthenticated = getPropertyValue(firstArg, 'selfAuthenticated') as
+      | boolean
+      | undefined
     readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
     deploy = getPropertyValue(firstArg, 'deploy') as
       | 'serverless'
@@ -1297,6 +1310,8 @@ export const addFunctions: AddWiring = (
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
+    auth: auth || undefined,
+    selfAuthenticated: selfAuthenticated || undefined,
     remote: remote || undefined,
     scenarioStep: isScenarioStep || undefined,
     scenario: isScenario || undefined,
