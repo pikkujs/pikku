@@ -173,7 +173,8 @@ export type FunctionMeta = FunctionRuntimeMeta &
   Partial<
     {
       name: string
-      functionType: 'user' | 'inline' | 'helper'
+      /** `remote`: a contract with no local body, answered by a connected client. */
+      functionType: 'user' | 'inline' | 'helper' | 'remote'
       funcWrapper: string
       services: FunctionServicesMeta
       wires: FunctionWiresMeta

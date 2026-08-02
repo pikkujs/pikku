@@ -20,19 +20,21 @@ timeout for an answer that was never coming.
 
 ## The two ends
 
-**Declare the contract as an ordinary function.** That is what gives the call a
-type and a schema. The body is what happens if it is ever invoked locally,
-which would mean a command asked the server for something only a client knows:
+**Declare the contract with `pikkuRemoteChannelFunc`.** That is what gives the
+call a name, a type and a schema. There is no `func`: this side owns the
+contract, the client owns the body. `description` is what the person at the
+terminal is shown when asked to approve the call, so write it for them:
 
 ```ts
-export const localCheckout = pikkuSessionlessFunc<
-  void,
-  { sha: string; branch: string }
->({
-  auth: false,
-  func: async () => {
-    throw new Error('localCheckout runs on the connected client')
-  },
+export const localCheckoutOutput = z.object({
+  sha: z.string(),
+  branch: z.string(),
+})
+
+export const localCheckout = pikkuRemoteChannelFunc({
+  title: 'localCheckout',
+  description: 'Read the current commit and branch of your working tree',
+  output: localCheckoutOutput,
 })
 ```
 
@@ -164,6 +166,9 @@ immediately rather than hanging.
   a failure would break callers that deliberately treat the answer as opaque.
 - A generated CLI client bootstraps no pikku state by design. That is why its
   version can drift from the server's, and why it is not shipped schemas.
+- `pikkuRemoteChannelFunc` still registers under its name, so `rpc.invoke` can
+  reach it. It throws when it does — a local call means a command asked the
+  server for something only a client knows.
 
 ## Where the code is
 

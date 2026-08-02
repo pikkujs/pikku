@@ -42,9 +42,13 @@ for an answer that was never going to come.
 What a peer answers with is its word, so it is checked before a caller sees it
 — against the schema codegen already generated from the function's declared
 return type, the same one an agent tool or an HTTP response is checked against.
-A capability is declared as a function like any other, which also means
-`channel.remote` is typed off the same generated map as `rpc.remote` and no
-caller has to cast. A client on an older build fails the call it answered
+A capability is declared with `pikkuRemoteChannelFunc`, which takes the usual
+`title` / `description` / `input` / `output` but no `func` — this side owns the
+contract, the peer owns the body. It registers under its name like any other
+function, so `channel.remote` is typed off the same generated map as
+`rpc.remote` and no caller has to cast, and a local call throws rather than
+missing: reaching it locally means a command asked the server for something
+only a client knows. A client on an older build fails the call it answered
 rather than the caller failing later somewhere with no reason to expect a bad
 shape; a name with no declared contract is left alone. Both frame guards
 validate the whole envelope rather than the action tag alone, and a failure

@@ -367,6 +367,95 @@ function computeImplementationHash(args: {
 }
 
 /**
+ * Registers a `pikkuRemoteChannelFunc` declaration: a name, its schemas and its
+ * description, with no body to inspect. The name has to reach `rpc.internalMeta`
+ * for `channel.remote` to resolve the schemas it validates each call against.
+ */
+const addRemoteChannelFunc = ({
+  state,
+  logger,
+  node,
+  pikkuFuncId,
+  name,
+  exportedName,
+  inputSchemaRef,
+  outputSchemaRef,
+  meta,
+}: {
+  state: InspectorState
+  logger: Parameters<AddWiring>[0]
+  node: ts.CallExpression
+  pikkuFuncId: string
+  name: string
+  exportedName?: string | null
+  inputSchemaRef: SchemaRef | null
+  outputSchemaRef: SchemaRef | null
+  meta: {
+    version?: number
+    title?: string
+    tags?: string[]
+    summary?: string
+    description?: string
+    errors?: string[]
+  }
+}) => {
+  const sourceFile = node.getSourceFile().fileName
+
+  if (!exportedName) {
+    logger.error(
+      `• Remote channel function '${name}' is not exported, this is not allowed.`
+    )
+    return
+  }
+
+  const existing = state.rpc.internalMeta[name]
+  if (existing && !areCompatibleFunctionIds(existing, pikkuFuncId)) {
+    logger.critical(
+      ErrorCode.DUPLICATE_FUNCTION_NAME,
+      `Function name '${name}' is not unique. ` +
+        `It already points to '${existing}' in '${resolveExistingFunctionSource(state, existing) || 'unknown file'}', but '${pikkuFuncId}' in '${sourceFile}' tried to use the same name.`
+    )
+    return
+  }
+
+  const capitalizedName = funcIdToTypeName(name)
+  const registerSchema = (
+    ref: SchemaRef | null,
+    suffix: 'Input' | 'Output'
+  ) => {
+    if (!ref) return null
+    const schemaName = `${capitalizedName}${suffix}`
+    state.schemaLookup.set(schemaName, ref)
+    state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
+    return schemaName
+  }
+  const inputSchemaName = registerSchema(inputSchemaRef, 'Input')
+  const outputSchemaName = registerSchema(outputSchemaRef, 'Output')
+
+  state.functions.meta[pikkuFuncId] = {
+    pikkuFuncId,
+    functionType: 'remote',
+    funcWrapper: 'pikkuRemoteChannelFunc',
+    sessionless: true,
+    name,
+    services: { optimized: true, services: [] },
+    inputSchemaName,
+    outputSchemaName,
+    inputs: inputSchemaName ? [inputSchemaName] : [],
+    outputs: outputSchemaName ? [outputSchemaName] : [],
+    sourceFile,
+    exportedName,
+    ...meta,
+  }
+
+  state.functions.files.set(pikkuFuncId, { path: sourceFile, exportedName })
+  state.rpc.internalMeta[name] = pikkuFuncId
+  // Imported so a local call gets the factory's "this runs on the client"
+  // error rather than a bare lookup miss.
+  state.rpc.internalFiles.set(pikkuFuncId, { path: sourceFile, exportedName })
+}
+
+/**
  * Inspect pikkuFunc calls, extract input/output and first-arg destructuring,
  * then push into state.functions.meta.
  */
@@ -682,6 +771,24 @@ export const addFunctions: AddWiring = (
       baseName = baseName.slice(0, -vSuffix.length)
     }
     pikkuFuncId = formatVersionedId(baseName, version)
+  }
+
+  // A remote channel capability is a contract with no body: the connected
+  // client answers it. Everything past this point reads the handler, so it gets
+  // its own path rather than a nullable handler threaded through all of it.
+  if (expression.text === 'pikkuRemoteChannelFunc') {
+    addRemoteChannelFunc({
+      state,
+      logger,
+      node,
+      pikkuFuncId,
+      name,
+      exportedName,
+      inputSchemaRef,
+      outputSchemaRef,
+      meta: { version, title, tags, summary, description, errors },
+    })
+    return
   }
 
   const isMCPToolFunc = expression.text === 'pikkuMCPToolFunc'
