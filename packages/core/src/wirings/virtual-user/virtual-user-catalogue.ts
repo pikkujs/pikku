@@ -118,6 +118,31 @@ export const catalogueIndex = (
   new Map(entries.map((entry) => [entry.name, entry]))
 
 /**
+ * Find an entry by the name a model gave, forgiving the signature it just read.
+ *
+ * The catalogue renders as `name(inputs) -> outputs`, and a model that has the
+ * line in front of it will sometimes hand the whole line back — `whoAmI() ->
+ * userId,scopes` instead of `whoAmI`. Measured on a live run, 8 of 24 steps
+ * went that way and every one of them was answered with "there is no endpoint
+ * called that", which is true and useless.
+ *
+ * Forgiving it is not the same as guessing: an rpc name never contains a
+ * bracket, so everything from the first one is the signature the catalogue
+ * printed, and taking it off is unambiguous.
+ */
+export const catalogueLookup = (
+  index: Map<string, ApiCatalogueEntry>,
+  rpcName: string
+): ApiCatalogueEntry | undefined => {
+  const exact = index.get(rpcName)
+  if (exact) {
+    return exact
+  }
+  const [head] = rpcName.trim().split('(')
+  return head && head !== rpcName ? index.get(head.trim()) : undefined
+}
+
+/**
  * What `describe` hands back: the full schemas, so the next call can be made
  * correctly rather than guessed at.
  *

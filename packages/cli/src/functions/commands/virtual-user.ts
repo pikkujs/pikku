@@ -24,6 +24,24 @@ import { formatVirtualUserReport } from './virtual-user-formatter.js'
 const dispositionNames = Object.keys(DISPOSITIONS)
 
 /**
+ * What a declaration overrode, in the order it was written.
+ *
+ * Listed rather than summarised as "tuned": the whole reason to override a dial
+ * is that the stock profile was wrong for this product, and which one you moved
+ * is the interesting part.
+ */
+const describeTuning = (tuning: NonNullable<VirtualUserMeta['tuning']>): string =>
+  Object.entries(tuning)
+    .map(([dial, value]) =>
+      dial === 'moves' && value && typeof value === 'object'
+        ? Object.entries(value)
+            .map(([move, weight]) => `${move} ${weight}`)
+            .join(', ')
+        : `${dial} ${dial === 'instructions' ? '+' : value}`
+    )
+    .join(', ')
+
+/**
  * The declaration a run starts from, if any.
  *
  * A run can come from a `pikkuVirtualUser` export, from flags alone, or from a
@@ -189,6 +207,9 @@ export const virtualUserRun = pikkuSessionlessFunc<
       actor: actorConfig,
       actorName: actor,
       disposition: disposition as VirtualUserDisposition,
+      // Tuning belongs to the declared user, so `--disposition` drops it: you
+      // asked to run a different user, not this one bent to fit another shape.
+      ...(dispositionFlag ? {} : { tuning: declaration?.tuning }),
       catalogue,
       intents,
       goals: [...(declaration?.goals ?? []), ...(flagGoals ?? [])],
@@ -256,7 +277,11 @@ export const virtualUserList = pikkuSessionlessFunc<void, void>({
 
     for (const user of users) {
       logger.info(`${user.id} — ${user.name}`)
-      logger.info(`  ${user.actor}, ${user.disposition}`)
+      logger.info(
+        `  ${user.actor}, ${user.disposition}${
+          user.tuning ? ` (tuned: ${describeTuning(user.tuning)})` : ''
+        }`
+      )
       if (user.description) {
         logger.info(`  ${user.description}`)
       }

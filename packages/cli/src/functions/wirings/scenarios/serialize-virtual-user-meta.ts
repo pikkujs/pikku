@@ -28,6 +28,9 @@ export const buildVirtualUsersMeta = (
       ...(user.description ? { description: user.description } : {}),
       actor: user.actor,
       disposition: (user.disposition ?? 'realistic') as VirtualUserDisposition,
+      // Left as declared rather than merged over the profile here: the console
+      // and the report want to show what was overridden, not just the result.
+      ...(user.tuning ? { tuning: user.tuning } : {}),
       goals: user.goals ?? [],
       tags: user.tags ?? [],
       ...(user.budget ? { budget: user.budget } : {}),

@@ -36,6 +36,35 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 
+/**
+ * Per-user overrides for a disposition's dials.
+ *
+ * The six profiles below are starting points, not laws — the weights are a
+ * considered guess about how people behave, and your product is allowed to know
+ * better. A user that declares `disposition: 'careless'` with a higher
+ * `repeatRate` is still a careless user; it is the same behaviour tuned to a
+ * product where double-submits actually happen.
+ *
+ * `instructions` is the one field that appends rather than replaces. Everything
+ * else is a number the engine reads, so overriding it changes the run and
+ * nothing else; instructions are the model's sense of who it is, and letting a
+ * declaration replace them wholesale is how you end up with a `careless` user
+ * that is not careless — which makes the name, and every run labelled with it,
+ * a lie.
+ */
+export interface VirtualUserTuning {
+  /** Relative weights for the scheduler's moves. Merged over the profile's. */
+  moves?: Partial<DispositionProfile['moves']>
+  temperature?: number
+  repeatRate?: number
+  reReadRate?: number
+  emptyMemory?: boolean
+  readOnly?: boolean
+  invertedOracle?: boolean
+  /** Extra behaviour, appended to the disposition's own instructions. */
+  instructions?: string
+}
+
 const REALISTIC: DispositionProfile = {
   instructions: [
     'Work towards your current goal the way a competent user would.',
@@ -126,7 +155,40 @@ export const DISPOSITIONS: Readonly<
   },
 }
 
-/** The profile for a disposition, defaulting to `realistic`. */
+/**
+ * The profile for a disposition, defaulting to `realistic`, with any declared
+ * tuning merged over it.
+ *
+ * Every consumer resolves a profile through here — the engine, the CLI report
+ * and the console screen — so a tuned user reads as tuned everywhere rather
+ * than only behaving differently when it runs.
+ */
 export const dispositionProfile = (
-  disposition: VirtualUserDisposition = 'realistic'
-): DispositionProfile => DISPOSITIONS[disposition] ?? DISPOSITIONS.realistic
+  disposition: VirtualUserDisposition = 'realistic',
+  tuning?: VirtualUserTuning
+): DispositionProfile => {
+  const base = DISPOSITIONS[disposition] ?? DISPOSITIONS.realistic
+  if (!tuning) {
+    return base
+  }
+
+  const { moves, instructions, ...dials } = tuning
+  const profile: DispositionProfile = {
+    ...base,
+    // An explicit `undefined` is someone spreading an optional value, not a
+    // request to unset a dial — spreading `dials` straight in would erase it.
+    ...Object.fromEntries(
+      Object.entries(dials).filter(([, value]) => value !== undefined)
+    ),
+    moves: {
+      ...base.moves,
+      ...Object.fromEntries(
+        Object.entries(moves ?? {}).filter(([, value]) => value !== undefined)
+      ),
+    },
+  }
+  if (instructions) {
+    profile.instructions = `${base.instructions} ${instructions}`
+  }
+  return profile
+}

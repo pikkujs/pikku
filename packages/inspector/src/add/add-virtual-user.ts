@@ -32,7 +32,20 @@ const numberProperty = (
   name: string
 ): number | undefined => {
   const value = getProperty(config, name)
-  return value && ts.isNumericLiteral(value) ? Number(value.text) : undefined
+  if (!value) {
+    return undefined
+  }
+  // `-1` parses as a unary minus over a literal, not as a literal. Reading it
+  // rather than ignoring it is what lets a negative be *rejected* below instead
+  // of silently dropped and defaulted.
+  if (
+    ts.isPrefixUnaryExpression(value) &&
+    value.operator === ts.SyntaxKind.MinusToken &&
+    ts.isNumericLiteral(value.operand)
+  ) {
+    return -Number(value.operand.text)
+  }
+  return ts.isNumericLiteral(value) ? Number(value.text) : undefined
 }
 
 const booleanProperty = (
@@ -64,6 +77,79 @@ const stringArrayProperty = (
     .filter(ts.isStringLiteralLike)
     .map((e) => e.text)
   return values.length === value.elements.length ? values : undefined
+}
+
+type Tuning = NonNullable<InspectorVirtualUser['tuning']>
+
+/** A dial and the range outside which it is a mistake rather than a choice. */
+const RATES: [keyof Tuning, number, number][] = [
+  ['temperature', 0, 2],
+  ['repeatRate', 0, 1],
+  ['reReadRate', 0, 1],
+]
+
+/**
+ * `{ moves, temperature, repeatRate, … }` — a disposition's dials, overridden.
+ *
+ * The ranges are checked here rather than at run time because these are the
+ * kind of typo that does not throw: `repeatRate: 18` meaning 18% would silently
+ * double every call the user makes, and you would read the run as a product bug.
+ */
+const tuningProperty = (
+  config: ts.ObjectLiteralExpression,
+  onError: (message: string) => void
+): InspectorVirtualUser['tuning'] => {
+  const value = getProperty(config, 'tuning')
+  if (!value || !ts.isObjectLiteralExpression(value)) {
+    return undefined
+  }
+
+  const tuning: Tuning = {}
+
+  const movesValue = getProperty(value, 'moves')
+  if (movesValue && ts.isObjectLiteralExpression(movesValue)) {
+    const moves: NonNullable<Tuning['moves']> = {}
+    for (const move of ['continue', 'suspend', 'resume', 'abandon'] as const) {
+      const weight = numberProperty(movesValue, move)
+      if (weight === undefined) {
+        continue
+      }
+      if (weight < 0) {
+        onError(`tuning.moves.${move} must not be negative (got ${weight}).`)
+        continue
+      }
+      moves[move] = weight
+    }
+    if (Object.keys(moves).length) {
+      tuning.moves = moves
+    }
+  }
+
+  for (const [name, min, max] of RATES) {
+    const rate = numberProperty(value, name)
+    if (rate === undefined) {
+      continue
+    }
+    if (rate < min || rate > max) {
+      onError(`tuning.${name} must be between ${min} and ${max} (got ${rate}).`)
+      continue
+    }
+    Object.assign(tuning, { [name]: rate })
+  }
+
+  for (const flag of ['emptyMemory', 'readOnly', 'invertedOracle'] as const) {
+    const declared = booleanProperty(value, flag)
+    if (declared !== undefined) {
+      tuning[flag] = declared
+    }
+  }
+
+  const instructions = stringProperty(value, 'instructions')
+  if (instructions !== undefined) {
+    tuning.instructions = instructions
+  }
+
+  return Object.keys(tuning).length ? tuning : undefined
 }
 
 /** `{ steps, mutations, duration }` — caps the engine can count for itself. */
@@ -170,6 +256,18 @@ export const addVirtualUser: AddWiring = (logger, node, checker, state) => {
   const allowApprovalRequired = booleanProperty(config, 'allowApprovalRequired')
   const budget = budgetProperty(config)
 
+  let tuningFailed = false
+  const tuning = tuningProperty(config, (message) => {
+    tuningFailed = true
+    logger.critical(
+      ErrorCode.INVALID_VALUE,
+      `pikkuVirtualUser('${exportedName}'): ${message}`
+    )
+  })
+  if (tuningFailed) {
+    return
+  }
+
   if (name !== undefined) {
     virtualUser.name = name
   }
@@ -178,6 +276,9 @@ export const addVirtualUser: AddWiring = (logger, node, checker, state) => {
   }
   if (disposition !== undefined) {
     virtualUser.disposition = disposition
+  }
+  if (tuning !== undefined) {
+    virtualUser.tuning = tuning
   }
   if (goals !== undefined) {
     virtualUser.goals = goals

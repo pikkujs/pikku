@@ -181,6 +181,93 @@ describe('addVirtualUser', () => {
     }
   })
 
+  test('tuning is read dial by dial, including a partial moves table', async () => {
+    const { users, criticals, cleanup } = await run(
+      [
+        'export const shopper = pikkuVirtualUser({',
+        "  actor: 'shopper',",
+        "  disposition: 'careless',",
+        '  tuning: {',
+        '    moves: { suspend: 30 },',
+        '    repeatRate: 0.35,',
+        '    readOnly: false,',
+        "    instructions: 'Paste ids from other tabs.',",
+        '  },',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      assert.deepEqual(users.get('shopper')?.tuning, {
+        moves: { suspend: 30 },
+        repeatRate: 0.35,
+        readOnly: false,
+        instructions: 'Paste ids from other tabs.',
+      })
+    } finally {
+      await cleanup()
+    }
+  })
+
+  // `repeatRate: 18` meaning 18% would double every call this user makes, and
+  // the run would read as a product bug rather than as a typo.
+  test('a rate outside its range is a build error, not a strange run', async () => {
+    const { users, criticals, cleanup } = await run(
+      [
+        'export const shopper = pikkuVirtualUser({',
+        "  actor: 'shopper',",
+        '  tuning: { repeatRate: 18 },',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.equal(users.size, 0)
+      assert.equal(criticals.length, 1)
+      assert.match(
+        criticals[0]!.message,
+        /tuning\.repeatRate must be between 0 and 1 \(got 18\)/
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a negative move weight is refused', async () => {
+    const { users, criticals, cleanup } = await run(
+      [
+        'export const shopper = pikkuVirtualUser({',
+        "  actor: 'shopper',",
+        '  tuning: { moves: { abandon: -1 } },',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.equal(users.size, 0)
+      assert.match(
+        criticals[0]!.message,
+        /tuning\.moves\.abandon must not be negative/
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('tuning that says nothing is left off rather than recorded empty', async () => {
+    const { users, cleanup } = await run(
+      [
+        'export const shopper = pikkuVirtualUser({',
+        "  actor: 'shopper',",
+        '  tuning: { moves: {} },',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.equal(users.get('shopper')?.tuning, undefined)
+    } finally {
+      await cleanup()
+    }
+  })
+
   test('a budget that says nothing is left off rather than recorded empty', async () => {
     const { users, cleanup } = await run(
       [

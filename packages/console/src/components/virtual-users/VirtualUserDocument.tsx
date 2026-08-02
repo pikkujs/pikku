@@ -281,6 +281,16 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
           <Text size="sm" style={{ maxWidth: '68ch' }}>
             {DISPOSITION_BLURB[user.disposition]() as never}
           </Text>
+          {/*
+            Everything below is the merged profile, so without this a tuned user
+            reads as a stock one whose numbers quietly contradict the blurb
+            above it.
+          */}
+          {user.tunedDials.length > 0 && (
+            <Text size="xs" c="dimmed" data-testid="virtual-user-tuned">
+              {m.virtual_users_tuned({ dials: user.tunedDials.join(', ') })}
+            </Text>
+          )}
           <Text size="sm" ff="monospace" c="dimmed">
             {m.virtual_users_moves({
               continue: percent(profile.moves.continue, moveTotal),

@@ -34,6 +34,15 @@ export const impatientShopper = pikkuVirtualUser({
   ],
   tags: ['virtual-user', 'shopper'],
   budget: { steps: 40, mutations: 15 },
+  // `careless` ships at an 18% repeat rate and 18 parts suspend, which is a
+  // guess about people in general. This app is a todo list used on a phone:
+  // being interrupted is the normal case, not the exception, and the submit
+  // gives no feedback worth trusting — so both go up. It is still a careless
+  // user; it is careless about *this* product.
+  tuning: {
+    repeatRate: 0.3,
+    moves: { suspend: 26 },
+  },
 })
 
 /**

@@ -43,10 +43,12 @@ export {
   DISPOSITIONS,
   dispositionProfile,
   type DispositionProfile,
+  type VirtualUserTuning,
 } from './virtual-user-dispositions.js'
 export {
   catalogueClassification,
   catalogueIndex,
+  catalogueLookup,
   describeEntry,
   isReadOnly,
   reachableCatalogue,

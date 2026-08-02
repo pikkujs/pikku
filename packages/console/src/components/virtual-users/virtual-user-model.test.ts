@@ -189,6 +189,34 @@ describe('the virtual user reading model', () => {
     assert.deepEqual(unclaimed.wants.byFeature, [])
   })
 
+  // The screen shows the merged profile, so a tuned user has to say so — a
+  // `careless` user whose numbers quietly disagree with the careless blurb is
+  // worse than no numbers at all.
+  test('tuning is merged into the profile and named as an override', () => {
+    const [doc] = build(
+      user({ tuning: { repeatRate: 0.4, moves: { suspend: 30 } } })
+    )
+    assert.equal(doc!.profile.repeatRate, 0.4)
+    assert.equal(doc!.profile.moves.suspend, 30)
+    // Untouched dials still come from the disposition.
+    assert.equal(doc!.profile.moves.continue, 88)
+    assert.deepEqual(doc!.tunedDials, ['repeatRate', 'moves'])
+  })
+
+  test('an untuned user names no overrides', () => {
+    const [doc] = build(user())
+    assert.deepEqual(doc!.tunedDials, [])
+  })
+
+  test('tuning readOnly off changes what the reach section reports', () => {
+    const [stock] = build(user({ disposition: 'auditor' }))
+    const [writing] = build(
+      user({ disposition: 'auditor', tuning: { readOnly: false } })
+    )
+    assert.equal(stock!.reach.mutations, 0)
+    assert.ok(writing!.reach.mutations > 0)
+  })
+
   test('users are listed by name, so the rail reads alphabetically', () => {
     const docs = build({
       ...user({ name: 'Zoe' }),
