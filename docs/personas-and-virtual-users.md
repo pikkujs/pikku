@@ -73,7 +73,8 @@ definePersonas({
     jobTitle: 'Founder',
     roles: ['admin', 'buyer'],
     personality: 'Moves fast, 40 tabs open, never reads a confirmation dialog.',
-    accounts: { google: {}, github: {} },   // one human, two logins
+    account: {},                            // email + password, address computed
+    linkedAccounts: { google: {} },         // rare: one human, a second login
   },
 
   mallory: {
@@ -211,28 +212,67 @@ rather than quietly using it.
 
 ## Accounts
 
-An account is a login: an email or a provider identity, plus any roles and scopes granted
-to it. Accounts are nested inside their persona, which makes a dangling reference
+An account is a login — nothing more. Not roles, not scopes, not an identity: those belong
+to the person. Accounts are nested inside their persona, which makes a dangling reference
 unrepresentable and deletes the check in `resolve-scenario-actors.ts:46-51` that exists
 only to catch one.
 
+**One account by default.** Multiple logins for one human is the rare case, so it does not
+get to shape the common one:
+
 ```ts
-yasser: {
-  // ...
-  accounts: { google: {}, github: {} },
-}
+susan:  { /* … */ account: {} },                        // email + password
+yasser: { /* … */ account: {}, linkedAccounts: { google: {} } },
 ```
 
-Two payoffs:
+`account: {}` is genuinely empty in the normal case: the address is computed and the
+password derives from `SCENARIO_ACTOR_SECRET`, so there is nothing left to write down. It
+fills up only for a provider login — `account: { provider: 'google' }`.
+
+### The shape is better-auth's, deliberately
+
+Better-auth is what most pikku apps will actually be running, so its model is the one to
+match rather than invent against:
+
+| better-auth | here |
+|---|---|
+| `user` — `id`, `name`, `email`, `role` | persona |
+| `account` — `userId`, `providerId`, `accountId`, `password?` | account |
+| `accountLinking`, `linkSocial`, `unlinkAccount` | `linkedAccounts` |
+
+Three things follow directly, none of them our choice to make:
+
+- **The account table has no email column.** `email` is on the `user`. A person has one
+  address; every login of theirs uses it.
+- **Linked accounts therefore share the persona's address.** Better-auth enforces this on
+  the way in: `allowDifferentEmails` defaults to `false`, so a per-account suffix
+  (`yasser+run1.google@…` vs `yasser+run1@…`) would be *refused* linking by the very
+  library we are trying to exercise. The cost is that the mailbox cannot attribute an
+  email to a specific login — but neither can better-auth, so it is the domain's limit
+  rather than one we are introducing.
+- **`account: {}` is `providerId: 'credential'`**, where `accountId === userId`. The empty
+  object is the honest representation of that row, not a placeholder.
+
+Worth reading before implementing `defineSystemRole()`: better-auth's admin plugin already
+declares roles in code as named sets of permissions —
+
+```ts
+const statement = { project: ['create', 'share', 'update', 'delete'] } as const
+export const user = ac.newRole({ project: ['create'] })
+```
+
+— and puts `role` on the **user**, not the account. Arrived at independently here; treat
+the convergence as evidence rather than coincidence.
+
+### Why more than one account at all
 
 - **Account linking.** One human with a Google and a GitHub login is a real bug class —
   whether your app links them, and whether unlinked accounts stay separate. Run 4 of the
   virtual user hit this by accident (`triggerWebhook` with `event: 'account-linking'`).
 - **Second bodies.** Tenant-isolation and peer-sharing scenarios need two distinct rows.
-  Today that means inventing a second character; now it is a second account, or a second
-  named persona if they deserve a name.
-
-Most personas need no `accounts` block at all — one is materialised, as today.
+  That is a second *persona* with a name, not a second login for the same human — two
+  accounts belonging to one person are the same person to the authorization layer, which
+  is precisely what isolation tests must not assume.
 
 ### A provider account is declarable, not runnable
 
@@ -245,7 +285,7 @@ The same shape as `kind: 'system'` having no account: not every account is runna
 
 Consequence worth stating rather than discovering: the account-linking bug class is only
 half testable. The *linked state* can be seeded and asserted; the linking *act* cannot be
-driven.
+driven — `linkSocial` ends at an OAuth consent screen, which is a human.
 
 ## Email is computed, not declared
 
@@ -525,12 +565,27 @@ rather than a pikku concern, but it belongs here so nobody meets it in productio
 | renamed | `wireScope`/`wireSecret`/`wireVariable`/`wireCredential` -> `define*` |
 | new | `definePersonas()` + inspector support |
 | new | `pikkuPlatformScenarioStep`, `pikkuAddonScenarioStep` |
-| moved | `scenarios.actors` / `scenarios.personas` → code (9 read-sites) |
+| deleted | `scenarioActorConfigs` in `pikku.config.json` — personas are code only |
+| renamed | injected `actors` service -> `personas` |
+| renamed | `accounts: {…}` -> `account: {}` + `linkedAccounts: {…}` |
 | moved | `budget`, `allowApprovalRequired` → run flags |
 | deleted | `kind`, `grants`, `actor`, the dangling-persona check, the knowledge special case |
 | touched | `personality` / `jobTitle` — ~28 files, ~20 of them console display |
 
 No config version machinery exists, so this is a clean rename rather than a migration.
+Personas leave `pikku.config.json` outright rather than being read from both places for a
+release: two sources of truth would leave the run-start role check unable to say which one
+it is verifying against, and JSON cannot typecheck a role name.
+
+### Build order
+
+1. **`defineSystemRole()`** — nothing else can be typechecked until roles exist, and the
+   run-start check has nothing to compare against. Read better-auth's `createAccessControl`
+   first.
+2. **`definePersonas()`** + inspector support, with `roles` typechecked against 1.
+3. **Collapse `pikkuVirtualUser`** into personas; delete `kind`, `grants`, `actor`.
+4. **`pikkuPlatformScenarioStep` / `pikkuAddonScenarioStep`**, and exclude both from the
+   virtual-user catalogue.
 
 ## Open questions
 
@@ -543,11 +598,18 @@ No config version machinery exists, so this is a clean rename rather than a migr
    declaration. The seed grants exactly what is declared, and every run verifies the roles
    at sign-in and stops on a mismatch. See
    [The declaration grants the role; the run verifies it](#the-declaration-grants-the-role-the-run-verifies-it).
-3. **Does the injected `actors` service keep its name** or become `accounts`? Keeping it
-   halves the blast radius and `actor` is defensible at the step level.
-4. **Do personas get default roles that accounts override**, or do roles stay strictly on
-   the account? Leaning strictly-on-the-account — a persona that grants scopes is a role
-   by another name, and roles already exist.
+3. ~~**Does the injected `actors` service keep its name?**~~ **Settled** — it becomes
+   `personas`. With one account per persona, `signIn('susan')` names a person, so calling
+   the service `accounts` would misdescribe its argument:
+   ```ts
+   services.personas.signIn('susan')            // picks her account
+   services.personas.signIn('yasser', 'google') // only when there is more than one
+   ```
+   `actor` survives as the word for whoever fills a step's slot — which is a persona — and
+   is no longer the name of any type or service.
+4. ~~**Do personas get default roles that accounts override?**~~ **Settled** — roles live
+   on the persona, full stop. An account is a login and holds no authority of its own.
+   Better-auth puts `role` on the `user` for the same reason.
 
 ## Deliberately out of scope
 
