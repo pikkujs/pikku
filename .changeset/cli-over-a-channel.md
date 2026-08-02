@@ -67,10 +67,14 @@ code that wrote them. The runtime around them is deliberately not shared, since
 an agent suspends its run and resumes it later while a reverse call is a live
 await with a person at the other end.
 
-**Breaking:** a capability written as a bare function is now unclassified, and
-unclassified means approval is required. The annotation nobody got round to
-writing is the one most likely to matter, so it fails closed; declare
-`{ execute, needsApproval: false }` to keep a capability running unattended.
+A capability written as a bare function is unclassified, and unclassified means
+approval is required — the annotation nobody got round to writing is the one
+most likely to matter, so it fails closed. Declare
+`{ execute, needsApproval: false }` for a capability that may run unattended.
+Nothing infers this: core cannot tell a read-only capability from a destructive
+one, so `needsApproval: false` is the author asserting it, and the assertion is
+the only thing standing between a remote caller and the machine.
+
 The default is the opposite of `AIAgentToolDef`'s, where absence means "do not
 ask" — a tool is written by the same people who run the server it executes on,
 and a capability is not.
