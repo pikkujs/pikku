@@ -2,10 +2,8 @@ import { resolve, join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
-import {
-  InMemoryWorkflowService,
-  createHttpPersonas,
-} from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services'
+import { createHttpPersonas } from '@pikku/core/persona'
 import { PikkuScenarioService } from '@pikku/core/scenario'
 import { pikkuState, getAllPackageStates } from '@pikku/core/internal'
 import { resolveFeatureScenarios } from '@pikku/core/workflow'

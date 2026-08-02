@@ -27,7 +27,10 @@ type FlattenedRPCMap = {
 `
 
 /** Written inside the package so the fixture resolves @pikku/core from node_modules. */
-const FIXTURE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../../..')
+const FIXTURE_ROOT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../..'
+)
 
 const generated = () =>
   serializePersonas(
@@ -45,9 +48,12 @@ const generated = () =>
     './agent-map.js',
     './rpc-map.js'
   )
-    .split('\n')
-    .filter((line) => !line.startsWith('import type {'))
-    .join('\n')
+    // Drop the imports of generated neighbours — the agent and RPC maps — which
+    // the fixture directory does not have. Imports of `@pikku/core/*` are kept
+    // and must resolve, since narrowing `invoke` is the whole subject here.
+    // Matched as whole statements rather than by line, because a multi-line
+    // `import type { … }` would otherwise leave its body behind as loose code.
+    .replace(/^import\s+(?:type\s+)?\{[^}]*\}\s+from\s+'\.[^']*'\n/gm, '')
 
 const typeErrors = (source: string): string[] => {
   const dir = mkdtempSync(join(FIXTURE_ROOT, '.scenario-actor-compile-'))
@@ -173,7 +179,8 @@ export const stepActor = (wire: Wire) => wire.scenarioStep?.actor
 
   test('HttpPersona still satisfies the default generic', () => {
     const errors = typeErrors(`
-import type { HttpPersona, ScenarioPersona } from '@pikku/core/services'
+import type { HttpPersona } from '@pikku/core/persona'
+import type { ScenarioPersona } from '@pikku/core/services'
 
 declare const actor: HttpPersona
 export const untyped: ScenarioPersona = actor

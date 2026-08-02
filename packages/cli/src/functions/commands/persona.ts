@@ -2,8 +2,8 @@ import { resolve, dirname } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
-import { createHttpPersonas } from '@pikku/core/services'
 import {
+  createHttpPersonas,
   personaEnvironmentRefusal,
   roleMismatchMessage,
   verifyPersonaRoles,
