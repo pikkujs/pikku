@@ -36,6 +36,7 @@ import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
 import { resolveScenarioEnvironment } from './scenario-environment.js'
+import { createDevAIAgentRunner } from './dev-ai-runner.js'
 
 const isScenario = (wf: any) => wf?.scenario === true
 
@@ -273,6 +274,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       actors: scenarioActors,
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,
+      model: config.scenarios?.actorModel,
     })
 
     const functionsMeta = state.functions?.meta ?? {}
@@ -352,10 +354,28 @@ export const scenarioRun = pikkuSessionlessFunc<
       appUrl: env.appUrl,
     })
     scenarioService.setRunSurface(effectiveSurface)
+
+    // Scenario steps run here, not on the target — everything they touch of the
+    // app goes over HTTP through an actor, which is what `guardRpc` below
+    // enforces. `actor.converse` is the exception, and the reason this is not
+    // just the three services above: the persona's own turns are LLM calls made
+    // in this process, and without a runner every conversing scenario fails
+    // before it says anything. Built the same way `pikku dev` builds its own,
+    // and only when the project declares agents, so a project with no agents
+    // does not have to have AI env set to run scenarios.
+    const aiAgentRunner =
+      Object.keys(state.agents?.agentsMeta ?? {}).length > 0
+        ? await createDevAIAgentRunner({
+            logger,
+            projectRoot: config.rootDir,
+            variables,
+          })
+        : undefined
     pikkuState(null, 'package', 'singletonServices', {
       logger,
       workflowService,
       workflowRunService: workflowService,
+      ...(aiAgentRunner ? { aiAgentRunner } : {}),
     } as any)
     const guardRpc = {
       rpcWithWire: async (rpcName: string) => {

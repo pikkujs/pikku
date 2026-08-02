@@ -4,20 +4,6 @@ import { pathToFileURL } from 'url'
 import type { Logger, VariablesService } from '@pikku/core/services'
 import type { AIAgentRunnerService } from '@pikku/core/services'
 
-// Provider prefixes a fabric/proxy baseURL fronts. Models are written as
-// `openai/gpt-4o-mini`, `openai/deepseek-v4-flash`, etc. — the runner splits on
-// the first `/`, so the prefix only selects the provider entry and the bare
-// model name is forwarded to the OpenAI-compatible proxy, which routes it.
-const PROXY_PROVIDER_NAMES = [
-  'openai',
-  'anthropic',
-  'google',
-  'gemini',
-  'deepseek',
-  'xai',
-  'litellm',
-]
-
 /**
  * Build the AI agent runner for `pikku dev` from env.
  *
@@ -25,10 +11,18 @@ const PROXY_PROVIDER_NAMES = [
  * has no equivalent, so agents 503 with AIProviderNotConfiguredError unless we
  * construct one here. When an OpenAI-compatible base URL + key are present
  * (fabric injects LITELLM_PROXY_URL/LITELLM_API_KEY; the standard OPENAI_*
- * vars are also honored) we point a single openai-compatible provider at it and
- * register it under every common provider prefix. Returns undefined when no AI
+ * vars are also honored) we point one provider at it and register it under
+ * `'*'`, so every provider prefix resolves to it. Returns undefined when no AI
  * env is configured (agents stay disabled, with the clear downstream error) or
  * when the AI SDK packages aren't installed in the project.
+ *
+ * Audio does not work here: `@ai-sdk/openai-compatible` exposes only
+ * language/embedding/image models, so a voice agent under `pikku dev` throws
+ * `Provider does not support transcription models`. Fixing that means the full
+ * `@ai-sdk/openai` provider, which assumes OpenAI's own request specifics — a
+ * bad default for a path whose entire purpose is fronting arbitrary gateways.
+ * If it becomes worth it, delegate just `transcription`/`speech` to the full
+ * provider and leave everything else on this one.
  */
 export async function createDevAIAgentRunner({
   logger,
@@ -84,14 +78,26 @@ export async function createDevAIAgentRunner({
     return undefined
   }
 
-  const buildProviders = (key: string): Record<string, unknown> => {
-    const provider = createOpenAICompatible({
+  // One provider under '*', so every prefix a model might name resolves to the
+  // proxy — including ones nobody thought to list. This was a hardcoded array
+  // of seven names, which silently excluded everything else.
+  //
+  // `supportsStructuredOutputs` defaults to false, and the default fails in the
+  // worst available way: an `outputSchema` is dropped, the call degrades to
+  // bare `json_object`, and the model returns well-formed JSON with whatever
+  // keys it felt like. Nothing errors — the caller reads `undefined` off every
+  // field it asked for and behaves as though the model said nothing. Anything
+  // fronting this URL that is worth calling speaks `json_schema`; the ones that
+  // do not now fail loudly on the first schema'd call, which is the outcome we
+  // want over silently ignoring the schema.
+  const buildProviders = (key: string): Record<string, unknown> => ({
+    '*': createOpenAICompatible({
       name: 'pikku-dev',
       baseURL,
       apiKey: key,
-    })
-    return Object.fromEntries(PROXY_PROVIDER_NAMES.map((name) => [name, provider]))
-  }
+      supportsStructuredOutputs: true,
+    }),
+  })
 
   logger.info(`pikku dev: AI agent runner wired to ${baseURL}`)
   return new VercelAIAgentRunner(buildProviders(apiKey), buildProviders)
