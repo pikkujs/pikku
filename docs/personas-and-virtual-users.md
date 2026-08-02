@@ -184,6 +184,31 @@ app is pushed to think in roles rather than describing permissions in prose. (Th
 `guest` actor's `personality` was *"Read-only user who can see reports and nothing else"* —
 that is a permission wearing a personality.)
 
+### The declaration grants the role; the run verifies it
+
+`susan: { roles: ['buyer'] }` in code means Susan **has** `buyer`. The generated seed
+grants it; there is no second place to keep that fact in sync.
+
+That holds wherever the seed actually runs — locally, and on any stage whose deploy runs
+it. It cannot be guaranteed on a stage pikku did not seed: the CLI talks HTTP as an
+account from outside and has no write access to the app's scope store there. Virtual users
+are meant to run against staging and production, so that case is the normal one, not the
+exception.
+
+So every run checks its personas' roles at sign-in, before the first step:
+
+- roles match the declaration → run;
+- roles missing or extra → **stop**, naming the persona and the difference.
+
+The check is one call against a session the run already holds. Without it the failure is a
+scatter of 403s that look like findings — an under-granted persona reports authorization
+bugs that are really seed drift, and an over-granted one silently stops testing the
+boundary it was written to test.
+
+This also settles the custom-role case above from the other direction: a persona declares
+only system roles, so a custom role found on the real row is *extra*, and the run stops
+rather than quietly using it.
+
 ## Accounts
 
 An account is a login: an email or a provider identity, plus any roles and scopes granted
@@ -514,9 +539,10 @@ No config version machinery exists, so this is a clean rename rather than a migr
    through a `PersonaMailbox` implementation, with a sender allowlist at delivery. A
    synthetic `.local` domain was rejected: it makes every email-driven flow untestable,
    which is most of the interesting ones.
-2. **Is `roles` on a persona a declaration or an expectation?** Declaration (the seed
-   grants exactly this) plus a startup check is the recommendation — a persona whose roles
-   do not match the store invalidates every finding it produces.
+2. ~~**Is `roles` on a persona a declaration or an expectation?**~~ **Settled** —
+   declaration. The seed grants exactly what is declared, and every run verifies the roles
+   at sign-in and stops on a mismatch. See
+   [The declaration grants the role; the run verifies it](#the-declaration-grants-the-role-the-run-verifies-it).
 3. **Does the injected `actors` service keep its name** or become `accounts`? Keeping it
    halves the blast radius and `actor` is defensible at the step level.
 4. **Do personas get default roles that accounts override**, or do roles stay strictly on
