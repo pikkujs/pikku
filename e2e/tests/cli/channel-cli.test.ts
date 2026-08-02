@@ -98,8 +98,10 @@ describe('CLI over a channel', () => {
     )
   })
 
-  after(() => {
-    server?.stop()
+  after(async () => {
+    // Awaited: `stop` tears the dev server down asynchronously, and returning
+    // before it finishes can leave the port held against the next run.
+    await server?.stop()
   })
 
   test('a signed-in connection runs a command the client never parsed', async () => {

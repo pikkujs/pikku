@@ -101,7 +101,13 @@ export async function handleRawCLI({
       allCLIMeta,
       parsed.commandPath
     )
-    return { help: helpText, exitCode: 1 }
+    // Help alone tells the user what is available, not what they got wrong.
+    // The parser knows ("Unknown command: x"), so it is carried alongside.
+    return {
+      help: helpText,
+      error: parsed.errors.length > 0 ? parsed.errors.join('\n') : undefined,
+      exitCode: 1,
+    }
   }
 
   // Check if the resolved command has a pikkuFuncId (is executable)
@@ -140,6 +146,10 @@ export async function handleRawCLI({
     })
     return { result, exitCode: 0, commandId }
   } catch (e: unknown) {
-    return { error: (e as Error).message, exitCode: 1, commandId }
+    // A command can throw anything. Reading `.message` off a string or an
+    // undefined gives undefined, and the client only prints an error frame it
+    // was actually sent — so the run would exit 1 saying nothing at all.
+    const message = e instanceof Error ? e.message : String(e)
+    return { error: message || 'Command failed', exitCode: 1, commandId }
   }
 }

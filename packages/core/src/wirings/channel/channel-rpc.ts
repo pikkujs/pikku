@@ -257,6 +257,13 @@ export class ChannelDeploymentService implements DeploymentService {
     traceId?: string
   ): Promise<unknown> {
     const { id, promise } = this.registry.register()
+    // A closed registry answers with an already-rejected promise and no id.
+    // Returning it before the send keeps that rejection from sitting unobserved
+    // across an await, on a channel already known to be gone.
+    if (!id) {
+      return promise
+    }
+
     const request: ChannelRPCRequest = {
       action: CHANNEL_RPC_REQUEST,
       id,
@@ -264,7 +271,27 @@ export class ChannelDeploymentService implements DeploymentService {
       data,
       traceId,
     }
-    await this.send(request)
+
+    try {
+      await this.send(request)
+    } catch (e: unknown) {
+      // The call is registered before the request goes out, so a failed send
+      // otherwise leaves an entry nobody waits on: this throws, `promise` never
+      // gets a handler, and the timeout later rejects it into an unhandled
+      // rejection. Settling retires the timer and the entry with it; the
+      // rejection is absorbed so the send error is the one the caller sees.
+      this.registry.settle({
+        action: CHANNEL_RPC_RESPONSE,
+        id,
+        ok: false,
+        error: {
+          name: (e as Error)?.name ?? 'Error',
+          message: (e as Error)?.message ?? String(e),
+        },
+      })
+      promise.catch(() => {})
+      throw e
+    }
 
     const result = await promise
     if (!this.validateResult) {
@@ -347,10 +374,20 @@ export const createChannelRPCResponder = ({
       return false
     }
 
-    const capability = capabilities[message.funcName]
+    // Own properties only. A plain object literal still inherits from
+    // `Object.prototype`, so a peer asking for `toString` or `constructor`
+    // would otherwise resolve a real function and this would call it — names
+    // the host never listed, through the boundary that is supposed to list
+    // them. `typeof` covers a map that carries a non-function value.
+    const capability = Object.prototype.hasOwnProperty.call(
+      capabilities,
+      message.funcName
+    )
+      ? capabilities[message.funcName]
+      : undefined
     let response: ChannelRPCResponse
 
-    if (!capability) {
+    if (typeof capability !== 'function') {
       response = {
         action: CHANNEL_RPC_RESPONSE,
         id: message.id,

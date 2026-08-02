@@ -15,6 +15,7 @@ import {
   unsupportedChannelRemote,
   type ChannelRPCError,
   type ChannelRPCRequest,
+  type ChannelRPCResponse,
   type ChannelRPCResultValidator,
 } from './channel-rpc.js'
 
@@ -230,6 +231,45 @@ describe('ChannelDeploymentService', () => {
     )
   })
 
+  test('a failed send does not leave a call nobody is waiting on', async () => {
+    const service = new ChannelDeploymentService(() => {
+      throw new Error('socket is closed')
+    })
+
+    await assert.rejects(service.invoke('gitHead', {}), (e: Error) => {
+      assert.match(e.message, /socket is closed/)
+      return true
+    })
+
+    // The call is registered before the request goes out. If the send fails
+    // and the entry stays, its timeout fires later against a promise nothing
+    // holds — which Node reports as an unhandled rejection, from a call the
+    // caller already saw fail.
+    assert.equal(
+      (service as unknown as { registry: { inFlight: number } }).registry
+        .inFlight,
+      0,
+      'the failed call is retired rather than left to time out'
+    )
+  })
+
+  test('a call on a stopped service does not reach the wire', async () => {
+    const sent: unknown[] = []
+    const service = new ChannelDeploymentService((data) => {
+      sent.push(data)
+    })
+    await service.stop()
+
+    await assert.rejects(
+      service.invoke('gitHead', {}),
+      (e: ChannelRPCError) => {
+        assert.equal(e.reason, 'closed')
+        return true
+      }
+    )
+    assert.deepEqual(sent, [], 'nothing is written to a channel already gone')
+  })
+
   test('stop() fails in-flight calls', async () => {
     const pendingForever = new ChannelDeploymentService(() => {})
     const call = pendingForever.invoke('gitHead', {})
@@ -268,6 +308,34 @@ describe('createChannelRPCResponder', () => {
     )
     assert.equal(await respond('some rendered line'), false)
     assert.equal(sent.length, 0, 'non-RPC frames are left for the renderer')
+  })
+
+  test('a name inherited from Object.prototype is not a capability', async () => {
+    const sent: ChannelRPCResponse[] = []
+    const respond = createChannelRPCResponder({
+      capabilities: { gitHead: () => 'ok' },
+      send: (d) => void sent.push(d as ChannelRPCResponse),
+    })
+
+    // The map is an object, so `capabilities['toString']` resolves a real
+    // function. Calling it would run code on the peer's machine under a name
+    // the peer never listed — the map is the authorisation boundary, and
+    // reaching past it through the prototype chain has to refuse like any
+    // other unknown name.
+    for (const funcName of ['toString', 'valueOf', 'constructor']) {
+      await respond({
+        action: CHANNEL_RPC_REQUEST,
+        id: funcName,
+        funcName,
+        data: {},
+      })
+    }
+
+    assert.equal(sent.length, 3)
+    for (const response of sent) {
+      assert.equal(response.ok, false)
+      assert.equal(response.error?.name, 'RPCNotFoundError')
+    }
   })
 })
 
