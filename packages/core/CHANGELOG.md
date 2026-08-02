@@ -1,3 +1,457 @@
+## 0.12.73
+
+### Patch Changes
+
+- c984df6: Give an agent's tools back the descriptions their authors wrote
+
+  A tool's description is what the model is told the tool does, and the main
+  thing it chooses between tools on. It was not reaching the model. `description`
+  is classed as a verbose field, so it is stripped from the metadata bundled into
+  the generated bootstrap — the copy `pikkuState('function', 'meta')` is built
+  from. `buildToolDefs` read the description from there, found it always
+  undefined, and fell through to the tool's own name. Every agent has been
+  choosing between bare identifiers. The same fallback was offering an addon's
+  MCP tools under their names, for the same reason.
+
+  Tool definitions now resolve descriptions through `metaService`, which reads
+  the verbose metadata and falls back to the minimal copy, so the authored text
+  is recovered wherever the generated `.pikku` directory is readable. Where it is
+  not — no `metaService`, or a deployment shipping only the stripped copy — a
+  tool falls back to its name, which is what it did before. Addon metadata is
+  likewise loaded verbose-first. `title` is no longer part of the chain: a title
+  labels a tool in a UI, it does not tell a model when to reach for it.
+
+  An addon has to ship the verbose file for any of this to reach it. `tsc` only
+  emits the JSON it sees imported and nothing imports the verbose meta, so the
+  bundled addons now copy it into `dist` explicitly.
+
+  `ref()` is resolved at build time. It used to be pushed through codegen as an
+  opaque string, so `ref('todos:doesNotExist')` generated cleanly and failed only
+  when the agent ran. The inspector now resolves each reference against the
+  project's functions, or — using the namespace-to-package mapping `wireAddon`
+  already provides — against the addon's own metadata, and reports an unwired
+  namespace (`PKU152`) or a missing function (`PKU153`) at codegen. An addon that
+  has not been built yet contributed no metadata and is skipped rather than
+  reported missing.
+
+  New `pikku --strict-meta` additionally fails the build on any agent tool with
+  no description (`PKU154`), including tools reached through an addon. It is off
+  by default, so nothing that builds today stops building; turn it on to hold a
+  project to the metadata its agents actually run on.
+
+- 63ff32b: Run a CLI's commands on the server, over the connection the client opened
+
+  A CLI that talks to a service has to ship the service's command tree, so the
+  two versions drift: the binary someone installed months ago still believes in
+  flags and commands the server has since changed. This makes the command tree
+  the server's, and leaves the client holding only a socket.
+
+  `wireCLI` gains `auth`, and a program wired with a channel entrypoint now
+  generates a `__raw` route: the client forwards argv untouched, the server
+  parses it, runs the command, and streams the output back as it happens. The
+  terminating frame carries the exit code, so a failed remote command still exits
+  non-zero locally. Renderers stay on the client and are matched by the command
+  id the server reports; an unrecognised command falls back to JSON rather than
+  failing.
+
+  Every channel gains `channel.remote(...)`: calling a function on the peer at
+  the other end of the connection and waiting for its answer. A channel is
+  otherwise fire-and-forget in both directions, so this is what reaches a peer
+  that has no address of its own — a CLI on a laptop, a browser tab, a sandbox
+  behind NAT. It is on `channel` rather than `rpc` because it is bound to one
+  connection: which peer answers is the socket the call goes out on, not
+  something the RPC map could resolve. Any `wireChannel` gets it — a client
+  registers what it is willing to answer to, and a name outside that list is
+  refused.
+
+  Requests are correlated by id, time out, and fail fast when the socket closes
+  rather than waiting out the timeout. Replies are taken off the socket ahead of
+  routing, so a channel needs no route for them and an answer can never be
+  mistaken for a new message; the transport is created on first use and released
+  when the channel closes, which is also what fails anything the departing peer
+  still owed an answer to. Channels that only flow one way — SSE, an agent's
+  output stream, a locally-run CLI — refuse the call outright instead of waiting
+  for an answer that was never going to come.
+
+  What a peer answers with is its word, so it is checked before a caller sees it
+  — against the schema codegen already generated from the function's declared
+  return type, the same one an agent tool or an HTTP response is checked against.
+  A capability is declared with `pikkuRemoteChannelFunc`, which takes the usual
+  `title` / `description` / `input` / `output` but no `func` — this side owns the
+  contract, the peer owns the body. It registers under its name like any other
+  function, so `channel.remote` is typed off the same generated map as
+  `rpc.remote` and no caller has to cast, and a local call throws rather than
+  missing: reaching it locally means a command asked the server for something
+  only a client knows. A client on an older build fails the call it answered
+  rather than the caller failing later somewhere with no reason to expect a bad
+  shape; a name with no declared contract is left alone. Both frame guards
+  validate the whole envelope rather than the action tag alone, and a failure
+  payload with a non-string name or message falls back rather than being attached
+  to an `Error`.
+
+  The arguments going the other way are checked too, against the schema for the
+  capability's declared input, before anything is registered or sent. That is not
+  a boundary — the peer runs the code and has to check what it was handed, and a
+  caller that meant harm would send arguments that pass. It catches drift, where a
+  server built against a newer capability signature calls a client that predates
+  it, and fails it here rather than inside someone else's process.
+
+  A channel-driven CLI command uses this to ask its caller for machine-local
+  facts mid-run — a git sha, a working tree, a local file. The CLI wire's own
+  channel is synthetic (it exists so a command can stream progress without
+  knowing where that goes), so it delegates `remote` to the connection the
+  command actually arrived on.
+
+  Because that runs code on someone's machine at a remote caller's request, the
+  capability map says what _can_ run and approval says whether a particular call
+  _should_. A capability may be declared `{ execute, needsApproval }`, sharing
+  `ApprovalPolicy` — `needsApproval` and `approvalDescriptionFn` — with
+  `AIAgentToolDef`, which has carried both since before channels could call back:
+  both are an allowlist of named callables invoked by something other than the
+  code that wrote them. The runtime around them is deliberately not shared, since
+  an agent suspends its run and resumes it later while a reverse call is a live
+  await with a person at the other end.
+
+  A capability written as a bare function is unclassified, and unclassified means
+  approval is required — the annotation nobody got round to writing is the one
+  most likely to matter, so it fails closed. Declare
+  `{ execute, needsApproval: false }` for a capability that may run unattended.
+  Nothing infers this: core cannot tell a read-only capability from a destructive
+  one, so `needsApproval: false` is the author asserting it, and the assertion is
+  the only thing standing between a remote caller and the machine.
+
+  The default is the opposite of `AIAgentToolDef`'s, where absence means "do not
+  ask" — a tool is written by the same people who run the server it executes on,
+  and a capability is not.
+
+  `executeRawCLIViaChannel` reads `--auto-approve` and
+  `--dangerously-auto-approve` out of argv (or `PIKKU_AUTO_APPROVE` /
+  `PIKKU_DANGEROUSLY_AUTO_APPROVE`) and strips them before argv reaches the
+  server — what may run on this machine is this machine's decision, and a flag
+  the server can see is one the server could act on. `--auto-approve` permits the
+  classified-safe set and refuses the rest; `--dangerously-auto-approve` permits
+  everything and says so once on stderr. Interactively the user is asked per
+  call, with `y` / `n` / `a`, where `a` is remembered for that one capability for
+  the rest of the run and never written to disk — widening it to the session
+  would quietly turn an interactive run into `--dangerously-auto-approve`. A run
+  with no terminal and no flag refuses rather than assuming yes, because CI is
+  exactly where an unattended `git push` would otherwise happen. The tiers are
+  meaningful here in a way they would not be for an agent: the caller is a
+  deterministic program whose source can be read, so "these calls are always
+  fine" is a claim someone can actually justify.
+
+  A peer that is asking a human sends a pending frame first, which stops the
+  caller's timeout. Without it any approval slower than the timeout would fail
+  the call and then discard the decision when it finally arrived. The call is
+  still failed the moment the socket drops — what actually happens when a peer
+  dies mid-prompt — and a peer that sends the frame dishonestly can do nothing
+  but keep its own call waiting. A refusal is sent as an answer, so a denied call
+  fails its command immediately rather than hanging.
+
+  Fixes found on the way, each of which broke this path:
+  - A websocket upgrade wrote middleware headers (CORS, on every request)
+    straight onto the socket, so the first bytes a client saw were headers rather
+    than `ws`'s `101` status line and the handshake failed to parse. Header
+    writes are now buffered and flushed behind a status line only when the
+    upgrade is actually being rejected.
+  - An upgrade socket had no error listener while the channel opened, so a client
+    that gave up mid-handshake took the whole server process down with an
+    unhandled `ECONNRESET`.
+  - `onConnect` and `onDisconnect` never saw the session established during the
+    upgrade, so a channel could not tell who had just connected.
+  - Setting the routing key on a channel result mutated the value in place, which
+    throws for a primitive under ESM strict mode.
+
+- ba6cc08: fix: stop leaking internal error detail and bound the request body size
+
+  HTTP error responses no longer forward an error's `payload` or its raw `message` for
+  registered 5xx errors — those responses carry the registered error message instead, so an
+  internal error that happens to hold a `payload` cannot leak it to the client. Errors
+  registered with a 4xx status keep their message and payload, and `exposeErrors` still
+  surfaces the full detail outside production.
+
+  `PikkuFetchHTTPRequest` now caps how much of a request body it buffers, rejecting the
+  declared `content-length` up front and measuring the stream as it arrives so a lying or
+  absent header cannot exhaust memory. Exceeding the limit throws `PayloadTooLargeError`
+  (413). The ceiling defaults to 10MB and is configurable via the new `maxBodySize` option on
+  the constructor and on `RunHTTPWiringOptions`.
+
+- d007191: `cors()` takes an `exposeHeaders` option.
+
+  Without `Access-Control-Expose-Headers` a cross-origin caller can read only the
+  CORS-safelisted response headers, so any header the client is meant to act on was
+  invisible to it. The cross-site session relay in `@pikku/better-auth` is the case that
+  surfaced it: the client cannot read `x-pikku-cross-site-set-cookie` off a cross-origin
+  response without being told it may.
+
+  Defaults to none, so nothing new is exposed unless it is named.
+
+- a7b26c5: rename the inspected declarations to `define*`: `wireScope` → `defineScope`, `wireSecret` → `defineSecret`, `wireVariable` → `defineVariable`, `wireCredential` → `defineCredential`
+
+  `wire*` meant two unrelated things. A transport wiring attaches a function to
+  something that can invoke it — `wireHTTP`, `wireChannel`, `wireScheduler`,
+  `wireQueueWorker` and the rest — and the thing it wires runs. These four wire
+  nothing: they are no-ops that exist only so the call typechecks, they are
+  tree-shaken out of the build, and their whole job is to be found by the
+  inspector's AST pass and turned into a type union. One word for both left the
+  declaration reading like a registration with a runtime.
+
+  So the vocabulary splits: **`wire*` is a transport, `define*` is an inspected
+  declaration.**
+
+  ```ts
+  import { defineScope } from '@pikku/core/scope'
+  import { defineSecret } from '@pikku/core/secret'
+  import { defineVariable } from '@pikku/core/variable'
+  import { defineCredential } from '@pikku/core/credential'
+
+  defineScope({ admin: { scopes: { invoices: { scopes: { create: {} } } } } })
+  ```
+
+  **Breaking:** no alias is kept. Rename the four call sites; the module subpaths
+  (`@pikku/core/scope`, `/secret`, `/variable`) are unchanged.
+
+  The inspector matches these by identifier text, so a stale `wire*` call is not a
+  type error — it is silently not extracted, and the generated union comes back
+  empty. That fails as "this scope isn't declared" on code that was fine a moment
+  ago, nowhere near the declaration. Grep for the old names rather than trusting a
+  clean build.
+
+  An addon published with `.pikku` output generated before this release re-exports
+  `wireSecret` from `@pikku/core/secret` and will not typecheck against this core
+  until it is rebuilt and republished.
+
+- 457cb25: Add `definePersonas()`: the people a project's scenarios and virtual users run
+  as, declared in code.
+
+  There used to be three names for two-and-a-bit things — an _actor_ in
+  `scenarios.actors`, a _persona_ in `scenarios.personas`, and a _virtual user_
+  declared separately against an actor. In practice almost every actor was its own
+  kind, so the second set carried no information and the third was a third place
+  for a name to drift. There is now one declaration:
+
+  ```ts
+  definePersonas({
+    shopper: {
+      name: 'Sam Shopper',
+      jobTitle: 'Shopper',
+      personality: 'Buys in a hurry and leaves tabs open',
+      roles: ['customer'],
+      disposition: 'careless',
+      goals: ['Buy something without reading anything'],
+      account: {},
+    },
+  })
+  ```
+
+  A persona is a person: what they are like, what they want, the roles they hold,
+  and **one** account they sign in with — `account: {}` plus `linkedAccounts` for
+  the rare case of more, modelled on how better-auth does linking. A persona with a
+  `disposition` is a virtual user; `runnable: false` marks someone who only ever
+  exists to be acted upon — banned, shared with, reset — and is never handed a
+  session.
+
+  **A persona names roles, never scopes.** Scopes come from `defineSystemRole()`
+  expansion, so the build fails if a persona names a role nobody declared, and
+  fails again if a role confers a scope no `defineScope` declares. Running one only
+  ever has to check that its roles are still valid.
+
+  **Addresses are computed, never declared.** `personaEmail(id, domain, runId)`
+  derives `<id>[+runId]@<domain>` from `scenarios.emailDomain`, so a seed, a
+  scenario run and a virtual-user run cannot disagree about who they are signing in
+  as. `scenarios.actors` and `scenarios.personas` are gone from
+  `pikku.config.json` — only `emailDomain` remains.
+
+  `actor` survives in exactly one place: the name of a **slot in a scenario step**,
+  which is the role a persona is cast in for that step. `pikkuVirtualUser()`,
+  `kind`, `grants` and the `actor` field are removed; the `actors` service is now
+  `personas`, and the CLI's `virtual-user` commands are now `pikku persona list` /
+  `pikku persona run`. `budget` and `allowApprovalRequired` moved to run flags —
+  how much you will spend today is not a fact about a person.
+
+  `@pikku/cucumber` drops its `Actor` class and `ActorDispatchContext`: a
+  hand-rolled cookie jar that a persona's own typed session replaces outright.
+
+- f7567ad: Add `defineSystemRole()`: roles that ship with the product, declared in code.
+
+  A system role is to a console-composed role what an AWS managed policy is to a
+  customer-managed one — the console may show and grant it, but not rename,
+  re-scope or delete it. The CLI extracts declarations by AST and generates a
+  `SystemRoleName` union, so naming a role that does not exist fails the build,
+  and a role granting a scope no `defineScope` declares fails it too.
+
+  Removal is additive on the same terms as `defineScope`: deleting a declaration
+  leaves an inert row rather than revoking everyone's grant mid-deploy.
+
+  `ScopeService` gains `syncSystemRoles`, `findStaleSystemRoles` and
+  `pruneSystemRoles`; `Role` gains `system` and `declared`. Implementations
+  enforce immutability through the shared `assertRoleIsMutable` /
+  `assertRoleNameAvailable` guards rather than each inventing the rule.
+
+- ba6cc08: Security hardening: removed the gopass secret service and stopped MCP internal errors leaking stack traces.
+
+  **Breaking:** `GopassSecretService` and the `@pikku/core/services/gopass-secrets` subpath export are gone. The service shelled out to the `gopass` binary and its key validation accepted `../`, so a caller-supplied key could traverse out of the configured prefix namespace and read secrets outside it. Rather than harden a shell-out that few projects used, the service is removed. Anyone importing it should implement `SecretService` against their own secret backend. Pre-0.13 breaking changes still ship as a patch.
+
+  MCP internal errors (JSON-RPC `-32603`) previously always attached `data: { message, stack }`, handing any MCP client an internal stack trace. That payload is now gated on `exposeErrors`, which defaults to `!isProduction()` — the same convention `handleHTTPError` already uses. In production a client receives a bare `Internal error` with no `message` and no `stack`; `RunMCPEndpointParams` accepts an explicit `exposeErrors` to override the default.
+
+- a2e21e5: Keep the persona runtime off the production barrels
+
+  `@pikku/core/services` exported `HttpPersona`, `createHttpPersonas` and
+  `readScenarioHttpResponse` as values, and `@pikku/core/workflow` exported
+  `readScenarioHttpResponse` and `postScenarioJson`. Both are barrels a production
+  server imports, and `http-personas` reaches the actor-flow conversation runner
+  and through it the agent runner — so signing-in-as-a-persona machinery sat in the
+  module graph of every app that imported services.
+
+  Tree-shaking only removes that if you bundle. An unbundled Node or Lambda deploy
+  loads whatever the graph names, which is the case this matters in.
+
+  The values now come from `@pikku/core/persona`, which is where the rest of the
+  persona API already lives. **Types stay exactly where they were** — `import type`
+  erases, so it costs a bundle nothing, and moving them would put core in a cycle
+  with the code that describes its own function types.
+
+  `serialize-personas` generates the new import, so a regenerated
+  `pikku-personas.gen.ts` picks it up with no edit. Anything importing these four
+  values from `@pikku/core/services` or `@pikku/core/workflow` changes the
+  specifier to `@pikku/core/persona`; the names and signatures are unchanged.
+
+  A test walks each barrel's value-import graph and fails if scenario runtime
+  reappears, so this cannot regress quietly.
+
+- 457cb25: Let a persona do a real job in production, and say where it may act.
+
+  A persona was only ever a test subject: something you pointed at a stage to find
+  out what the product does wrong. But the same declaration — a name, a job, the
+  roles it holds and what it is trying to get done — describes a teammate doing
+  the work for real, and nothing about the engine cared which one it was.
+
+  Four changes make that difference explicit and enforced.
+
+  **`environments` moves to the top level of `pikku.config.json`**, out from under
+  `scenarios`. It was never a scenario's anything: `persona run` targets one, and
+  now so does `persona sync`. An environment may be flagged `production: true` —
+  a flag rather than a reserved name, because projects call it `prod`, `live` or
+  `eu-prod`, and more than one environment can be production.
+
+  **A persona may name its `environments`.** Omitting them means every configured
+  environment _except_ the production ones, so nothing reaches production by being
+  forgotten. Naming a production environment requires `disposition: 'accountable'`.
+  The rule is checked twice, on purpose: the inspector refuses to generate a
+  declaration that breaks it, and sign-in re-checks against the environment
+  actually resolved — the build check trusts the file, and the run check does not
+  trust which artifact got deployed. An unresolved environment fails closed.
+
+  **`disposition: 'accountable'`** is that production disposition. It sits opposite
+  `adversarial` on the intent axis rather than the care axis: what it changes stays
+  changed, every call is recorded against its name, and it stops to ask rather than
+  acting and reporting afterwards. Alongside it, **agents now appear in a persona's
+  computed catalogue**, gated by the same scopes as the RPCs — an agent is reached
+  rather than declared, so a persona finds the specialists its roles unlock and
+  chooses between calling the API itself and handing the work over. That also fixes
+  a latent gap: `talkTo` was wired at the target but never advertised in the
+  instructions, so it was never used.
+
+  **`pikku persona sync <environment>`** provisions them: it creates each account
+  and applies the roles it declares, additively, and never revokes. Seeding is test
+  data and `db seed` does not run in production; a teammate doing a real job still
+  needs an account and its grants. It needs both halves of an environment — its API
+  to sign the person in, its database to write the grants — and `--dry-run` reports
+  who would be provisioned, with what, and why anyone was skipped.
+
+  In the console, a virtual user now says where it may act — the environments it
+  named, or the rule when it named none — and its dossier carries the `sync`
+  command alongside the `run` one, because the account is not a by-product of a
+  run. `accountable` reads as a disposition like the rest.
+
+- 86a50b9: scenario: replace `browser: true` + `func` with per-surface bindings on `pikkuScenarioStep`
+
+  A step now declares one implementation per surface it can be driven through:
+
+  ```ts
+  export const buysTheItem = pikkuScenarioStep<{ sku: string }, { orderId: string }>({
+    name: 'buysTheItem',
+    description: 'buys the item',
+    browser: async (services, data, { browser }) => { ... },
+    default: async (services, data, { rpc }) => { ... },
+  })
+  ```
+
+  `pikku scenario run --run browser|cli|default` picks which surface the run drives,
+  and the two phases resolve bindings differently:
+  - **Actions** (`given` / `when` / `step`) run exactly one binding — the run
+    surface if it has one, otherwise `default`. A step with neither now fails with
+    `ScenarioNoSurfaceBinding` instead of silently running server-side.
+  - **Assertions** (`then`) are witnesses, not alternatives: every declared binding
+    runs and they must agree. Two surfaces reporting different things fails the run
+    with `ScenarioWitnessDisagreement` rather than reporting a pass. An assertion
+    with no witness the run can execute at all fails with `ScenarioNoWitness` —
+    without it the step returns `undefined` and renders as a tick, reporting a pass
+    for something nobody checked.
+
+  A scenario written as a step ladder that never calls `then` is now a **PKU680**
+  critical. It proves only that nothing threw, so an assertion-free ladder of
+  browser-bound actions would score perfect coverage while checking nothing.
+
+  The report gains a surface-coverage line — `n/m steps ran on browser`, counted
+  over every step, so an action that fell back to the server lowers the ratio
+  rather than needing a footnote. That also makes surfaces comparable over one
+  denominator: a scenario is `4/4` on a default run and `3/4` on a browser one.
+  Assertions that fell back are named separately and gate `--strict`, since a
+  sentence claiming the actor saw something nobody looked at is a different problem
+  from an action taking a shortcut.
+
+  **Breaking:** `browser: true` and the third `B extends boolean` type argument are
+  gone. Rename `func` to `default` (or to `browser` where the step drove a browser)
+  and drop the type argument.
+
+- 0e0f6eb: Add virtual users: LLM-driven synthetic users that work a real stage in
+  character.
+
+  A scenario proves a path somebody thought of. A virtual user works the same
+  ground without the script — it signs in as a declared persona over the app's own
+  auth, is handed the scenarios' BDD prose and the schema of every endpoint it may
+  reach, and decides for itself what to do. It asserts nothing; a run produces
+  findings, and their absence only ever means "not this time, not with this seed".
+
+  There is nothing extra to declare. A persona with a `disposition` is a virtual
+  user, and running it is what makes it one — see the `definePersonas` changeset
+  for the declaration itself. Listing, describing or running one never loads the
+  app: the inspector reads the literal declaration, the CLI writes
+  `scopes/pikku-personas-meta.gen.json`, and `MetaService.getPersonasMeta()`
+  serves it.
+
+  **Dispositions are engine dials, not prose.** Each carries its own intent weights
+  (continue / suspend / resume / abandon), temperature, re-read and repeat rates,
+  and switches: `careless` puts things down and picks them up in the wrong order,
+  `newcomer` starts with no memory, `auditor` is never offered a mutation,
+  `adversarial` is shown the catalogue its roles do not cover — being offered a
+  call it should not be able to make is the test — while those roles stay live as
+  the oracle, so a success outside them is authorization drift rather than a pass.
+
+  **Nothing is retrieved against.** The whole reachable catalogue goes into the
+  instructions (~8k tokens on a 430-RPC project, cached for the run), because a
+  ranking function would make the user only as adventurous as the ranking and lose
+  exactly the endpoints worth stumbling into. Schema first: an endpoint must be
+  described before it may be called.
+
+  **No money in core.** The engine counts steps, calls, mutations and tokens; what
+  they cost is the app's to decide through `stop(tally)`.
+
+  CLI: `pikku persona list` and `pikku persona run <environment> [name]`, with
+  flags overriding a declaration for reproduction (`--seed`, `--steps`,
+  `--disposition`). Spending is a run flag too — `--steps`, `--mutations` and
+  `--duration` bound a run, because how much you will spend today is not a fact
+  about a person. Console: a Virtual Users screen beside Scenarios, built out of
+  core's own derivation functions so it shows a run's actual inputs rather than a
+  second implementation of them.
+
+  `dev-ai-runner` now ships its own `@pikku/ai-vercel` and
+  `@ai-sdk/openai-compatible` instead of requiring them from the project. Behind a
+  proxy one openai-compatible provider answers for every prefix, so there was never
+  a per-vendor package worth making somebody install; the project's copies still
+  win when it has them, and both load from the same place or neither does.
+
 ## 0.12.72
 
 ### Patch Changes
