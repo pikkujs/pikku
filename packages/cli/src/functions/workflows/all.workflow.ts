@@ -244,7 +244,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
 
-    // pikkuAuth generates auth-secrets.gen.ts (with wireSecret calls) inside the
+    // pikkuAuth generates auth-secrets.gen.ts (with defineSecret calls) inside the
     // Promise.all above, but pikkuSecrets runs concurrently from the pre-auth
     // inspector state. Re-run secret/credential/variable codegen now so that the
     // freshly-generated auth-secrets.gen.ts (just picked up by Re-inspect above)

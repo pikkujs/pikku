@@ -183,7 +183,7 @@ Links the repo to a Fabric project and declares its frontends:
 ```
 
 - `projectId`: written by `pikku fabric init` / `link`. Templates ship the
-  `__PROJECT_ID__` placeholder — that is *not* a link, and the CLI treats it as
+  `__PROJECT_ID__` placeholder — that is _not_ a link, and the CLI treats it as
   unlinked.
 - `production.domain`: optional custom domain. Production always maps to `main`;
   without a domain it lives on the platform `*.pikkufabric.app` hostnames.
@@ -290,7 +290,7 @@ The output card shows whether any breaking changes were detected.
 
 These apply in every Fabric app:
 
-- **No `process.env`** — use `variables.get('NAME')` and `secrets.getSecret('NAME')`. Declare with `wireVariable` / `wireSecret`.
+- **No `process.env`** — use `variables.get('NAME')` and `secrets.getSecret('NAME')`. Declare with `defineVariable` / `defineSecret`.
 - **No `as any`** — fix types properly.
 - **No generic `Error`** — throw `NotFoundError`, `ConflictError`, `BadRequestError`, `UnauthorizedError` from `@pikku/core/errors`.
 - **No auth checks in function bodies** — use `permissions:` field on the function config with a `pikkuPermission` factory.
@@ -311,7 +311,7 @@ Fix every `error` and `warn` in the output before continuing. Then:
 1. **Replace the database layer**: swap PostgreSQL/MySQL queries for Kysely + libSQL. Convert schema to SQLite-compatible SQL migrations in `db/sqlite/`.
 2. **Replace route handlers with pikkuFuncs**: extract business logic into `pikkuFunc`/`pikkuSessionlessFunc`, add `wireHTTP` or `expose: true` for transport.
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
-4. **Replace `process.env` calls** with `wireVariable`/`wireSecret` + `variables.get()`.
+4. **Replace `process.env` calls** with `defineVariable`/`defineSecret` + `variables.get()`.
 5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles`.
 6. **Add `fabric.config.json`** at project root with `projectId`, `production.branch`, and `frontends`.
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.

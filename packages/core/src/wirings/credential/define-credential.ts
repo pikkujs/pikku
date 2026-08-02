@@ -8,7 +8,7 @@ import type { CoreCredential } from './credential.types.js'
  * @example
  * ```typescript
  * // Per-user API key
- * wireCredential({
+ * defineCredential({
  *   name: 'stripe',
  *   displayName: 'Stripe API Key',
  *   type: 'wire',
@@ -16,7 +16,7 @@ import type { CoreCredential } from './credential.types.js'
  * })
  *
  * // Per-user OAuth
- * wireCredential({
+ * defineCredential({
  *   name: 'google-sheets',
  *   displayName: 'Google Sheets',
  *   type: 'wire',
@@ -31,7 +31,7 @@ import type { CoreCredential } from './credential.types.js'
  * })
  *
  * // Platform-level OAuth (singleton)
- * wireCredential({
+ * defineCredential({
  *   name: 'slack',
  *   displayName: 'Slack',
  *   type: 'singleton',
@@ -46,4 +46,4 @@ import type { CoreCredential } from './credential.types.js'
  * })
  * ```
  */
-export const wireCredential = <T>(_config: CoreCredential<T>): void => {}
+export const defineCredential = <T>(_config: CoreCredential<T>): void => {}

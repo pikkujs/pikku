@@ -1,4 +1,4 @@
-import { wireScope } from '#pikku'
+import { defineScope } from '#pikku'
 
 /**
  * Scopes the console's own authorization management requires, plus the `admin`
@@ -10,13 +10,13 @@ import { wireScope } from '#pikku'
  * set when the addon is wired, so a host role can grant them.
  *
  * The `admin` tree mirrors `ADMIN_SCOPE_TREE` in `@pikku/better-auth` — it is
- * spelled out inline because `wireScope` is extracted by AST, so an imported
+ * spelled out inline because `defineScope` is extracted by AST, so an imported
  * constant cannot be spread here. Keep the two in sync: pikku requires every
  * declaration of a shared scope root to be byte-identical, so this must match
  * the `scaffold.userAdmin` output too, including the leaves whose capabilities
  * only exist once better-auth's admin() plugin is wired.
  */
-wireScope({
+defineScope({
   admin: {
     displayName: 'Administration',
     description: 'Capabilities that act on the application as a whole',

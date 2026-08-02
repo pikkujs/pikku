@@ -2,8 +2,8 @@
 name: pikku-config
 description: >-
   Use when managing secrets, environment variables, config, or OAuth2 credentials in a Pikku app.
-  Covers wireSecret, wireVariable, wireOAuth2Credential, and typed config access. TRIGGER when:
-  code uses wireSecret/wireVariable/wireOAuth2Credential, user asks about env vars, secrets,
+  Covers defineSecret, defineVariable, wireOAuth2Credential, and typed config access. TRIGGER when:
+  code uses defineSecret/defineVariable/wireOAuth2Credential, user asks about env vars, secrets,
   config, OAuth2, or "how do I access environment variables". DO NOT TRIGGER when: user asks about
   API versioning/breaking changes (use pikku-versioning), service factories (use pikku-services),
   or auth middleware (use pikku-security).
@@ -35,23 +35,23 @@ See `pikku-concepts` for the core mental model.
 
 ## Secrets & Variables
 
-### `wireSecret(config)`
+### `defineSecret(config)`
 
 Declare a secret with a Zod schema for type-safe access:
 
 ```typescript
-wireSecret({
+defineSecret({
   name: string, // Secret identifier
   schema: ZodSchema, // Shape and validation
 })
 ```
 
-### `wireVariable(config)`
+### `defineVariable(config)`
 
 Declare a variable (non-sensitive config) with a Zod schema:
 
 ```typescript
-wireVariable({
+defineVariable({
   name: string,
   schema: ZodSchema,
 })
@@ -85,7 +85,7 @@ const createSingletonServices = pikkuServices(async (config) => ({
 
 ```typescript
 // Declare secrets with typed schemas
-wireSecret({
+defineSecret({
   name: 'STRIPE_CONFIG',
   schema: z.object({
     apiKey: z.string().startsWith('sk_'),
@@ -99,7 +99,7 @@ const config = await secrets.getSecret('STRIPE_CONFIG')
 // config.webhookSecret → string (autocompleted)
 
 // Declare variables
-wireVariable({
+defineVariable({
   name: 'FEATURE_FLAGS',
   schema: z.object({
     darkMode: z.boolean(),
@@ -171,7 +171,7 @@ const apiKey = services.variables.get('API_KEY')
 
 ```typescript
 // schemas/config.ts
-wireSecret({
+defineSecret({
   name: 'DATABASE_CONFIG',
   schema: z.object({
     connectionString: z.string().url(),
@@ -179,7 +179,7 @@ wireSecret({
   }),
 })
 
-wireVariable({
+defineVariable({
   name: 'APP_CONFIG',
   schema: z.object({
     appName: z.string(),

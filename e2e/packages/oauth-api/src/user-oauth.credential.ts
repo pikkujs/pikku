@@ -1,4 +1,4 @@
-import { wireCredential } from '@pikku/core/credential'
+import { defineCredential } from '@pikku/core/credential'
 import { z } from 'zod'
 
 export const UserOAuthSchema = z.object({
@@ -11,7 +11,7 @@ export const UserOAuthSchema = z.object({
 // is now merged into the consuming app's CREDENTIAL_OAUTH2_CONFIGS. A `${...}`
 // template would serialize as broken source text. Points at the mock OAuth
 // provider (port 4098) the link suite runs.
-wireCredential({
+defineCredential({
   name: 'user-oauth',
   displayName: 'User OAuth',
   description: 'Per-user OAuth2 credential',

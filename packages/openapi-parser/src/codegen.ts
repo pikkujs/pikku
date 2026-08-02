@@ -1575,8 +1575,8 @@ function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
 
   const lines: string[] = []
   lines.push("import { z } from 'zod'")
-  lines.push("import { wireCredential } from '@pikku/core/credential'")
-  lines.push("import { wireSecret } from '@pikku/core/secret'")
+  lines.push("import { defineCredential } from '@pikku/core/credential'")
+  lines.push("import { defineSecret } from '@pikku/core/secret'")
   lines.push('')
   lines.push(`export const ${camelName}TokenSchema = z.object({`)
   lines.push('  accessToken: z.string(),')
@@ -1601,7 +1601,7 @@ function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
 
   // oauth2 must stay an inline object literal: the inspector reads it via AST
   // (add-credential.ts) and silently drops a config behind an identifier.
-  lines.push('wireCredential({')
+  lines.push('defineCredential({')
   lines.push(`  name: '${camelName}',`)
   lines.push(`  displayName: '${displayName}',`)
   lines.push(`  description: '${description}',`)
@@ -1620,7 +1620,7 @@ function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
   lines.push('  },')
   lines.push('})')
   lines.push('')
-  lines.push('wireSecret({')
+  lines.push('defineSecret({')
   lines.push(`  name: '${camelName}OAuthApp',`)
   lines.push(`  displayName: '${displayName} OAuth App',`)
   lines.push(`  description: 'OAuth2 app credentials for ${displayName}',`)
@@ -1640,7 +1640,7 @@ function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
 
   const lines: string[] = []
   lines.push("import { z } from 'zod'")
-  lines.push("import { wireVariable } from '@pikku/core/variable'")
+  lines.push("import { defineVariable } from '@pikku/core/variable'")
   lines.push('')
 
   const schemaVarName = `${camelName}BaseUrlSchema`
@@ -1657,7 +1657,7 @@ function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
   }
 
   lines.push('')
-  lines.push(`wireVariable({`)
+  lines.push(`defineVariable({`)
   lines.push(`  name: '${screamingName}_BASE_URL',`)
   lines.push(`  displayName: '${displayName} Base URL',`)
   lines.push(`  description: 'The base URL for the ${displayName} API.',`)

@@ -24,7 +24,7 @@ export const addCredential: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireCredential') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'defineCredential') {
     return
   }
 

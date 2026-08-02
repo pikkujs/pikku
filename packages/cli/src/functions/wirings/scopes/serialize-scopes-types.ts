@@ -8,7 +8,7 @@ export interface SerializeScopesOptions {
 const quote = (value: string) => `'${value.replace(/'/g, "\\'")}'`
 
 /**
- * Generates the `ScopeId` union and scope metadata from `wireScope`
+ * Generates the `ScopeId` union and scope metadata from `defineScope`
  * declarations.
  *
  * The union carries every declared node plus a wildcard form for each node that

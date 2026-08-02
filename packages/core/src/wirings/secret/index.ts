@@ -1,4 +1,4 @@
-export { wireSecret } from './secret.types.js'
+export { defineSecret } from './secret.types.js'
 export type {
   CoreSecret,
   OAuth2CredentialConfig,

@@ -33,4 +33,4 @@ export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
 
 export type VariableDefinitions = VariableDefinitionMeta[]
 
-export const wireVariable = <T>(_config: CoreVariable<T>): void => {}
+export const defineVariable = <T>(_config: CoreVariable<T>): void => {}

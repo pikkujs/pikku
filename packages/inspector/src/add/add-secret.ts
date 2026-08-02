@@ -1,7 +1,7 @@
 import { createAddKeyedWiring } from './add-keyed-wiring.js'
 
 export const addSecret = createAddKeyedWiring({
-  functionName: 'wireSecret',
+  functionName: 'defineSecret',
   idField: 'secretId',
   label: 'Secret',
   schemaPrefix: 'SecretSchema',

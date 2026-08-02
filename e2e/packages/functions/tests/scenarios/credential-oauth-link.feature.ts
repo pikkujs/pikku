@@ -1,7 +1,7 @@
 /**
  * Per-user OAuth2 credentials via Better Auth account linking.
  *
- * A `wireCredential({ type: 'wire', oauth2 })` is registered as a Better Auth
+ * A `defineCredential({ type: 'wire', oauth2 })` is registered as a Better Auth
  * genericOAuth provider whose providerId is the credential name, so linking an
  * account is what makes `credentialService.get(name, userId)` resolve — no
  * parallel token store, and the token is refreshed on read.

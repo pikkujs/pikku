@@ -1,7 +1,7 @@
-import { wireCredential } from '@pikku/core/credential'
+import { defineCredential } from '@pikku/core/credential'
 import { z } from 'zod'
 
-wireCredential({
+defineCredential({
   name: 'hmac-key',
   displayName: 'HMAC Signing Key',
   description: 'Secret key for HMAC signature operations',
@@ -9,7 +9,7 @@ wireCredential({
   schema: z.object({ secretKey: z.string() }),
 })
 
-wireCredential({
+defineCredential({
   name: 'stripe',
   displayName: 'Stripe API Key',
   description: 'API key for Stripe payment processing',
@@ -17,7 +17,7 @@ wireCredential({
   schema: z.object({ apiKey: z.string() }),
 })
 
-wireCredential({
+defineCredential({
   name: 'mock-oauth',
   displayName: 'Mock OAuth Provider',
   description: 'Demo OAuth2 credential using mock server (global)',
@@ -35,7 +35,7 @@ wireCredential({
   },
 })
 
-wireCredential({
+defineCredential({
   name: 'user-oauth',
   displayName: 'User OAuth',
   description: 'Per-user OAuth2 credential using mock server',
