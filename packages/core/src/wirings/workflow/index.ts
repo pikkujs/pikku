@@ -147,10 +147,7 @@ export type {
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
 
 // Which of a step's bindings run: one for an action, every witness for a `then`
-export {
-  resolveScenarioSurfaces,
-  witnessesAgree,
-} from './scenario-surface.js'
+export { resolveScenarioSurfaces, witnessesAgree } from './scenario-surface.js'
 
 // Narrows the optional halves of the step wire, with a message that says what to do
 export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
@@ -168,10 +165,8 @@ export type {
   ScenarioHttpResponse,
   ScenarioJsonRequest,
 } from '../../services/personas-service.js'
-export {
-  readScenarioHttpResponse,
-  postScenarioJson,
-} from '../../services/personas-service.js'
+// The readers themselves live on `@pikku/core/persona`; workflow is a production
+// wiring and must not pull scenario runtime in behind it.
 
 /* ------------------------------------------------------------------ *
  * Scenarios — driving a browser

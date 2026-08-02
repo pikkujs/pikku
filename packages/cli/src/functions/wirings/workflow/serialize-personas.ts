@@ -14,11 +14,11 @@ export const serializePersonas = (
   rpcMapImportPath: string
 ) => {
   return `/** Personas declared with definePersonas() */
-import {
-  createHttpPersonas,
-  type HttpPersonasConfig,
-  type ScenarioPersona,
-  type ResolvedPersona,
+import { createHttpPersonas } from '@pikku/core/persona'
+import type {
+  HttpPersonasConfig,
+  ScenarioPersona,
+  ResolvedPersona,
 } from '@pikku/core/services'
 import type { AgentMap } from '${agentMapImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'

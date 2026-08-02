@@ -14,10 +14,10 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import {
-  postScenarioJson,
   requireScenarioEnv,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
+import { postScenarioJson } from '@pikku/core/persona'
 
 export const attemptsSignIn = pikkuScenarioStep<
   { email: string; password: string },

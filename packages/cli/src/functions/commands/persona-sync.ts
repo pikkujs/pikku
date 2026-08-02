@@ -1,7 +1,7 @@
 import type { Kysely } from 'kysely'
 
 import { pikkuSessionlessFunc } from '#pikku'
-import { createHttpPersonas } from '@pikku/core/services'
+import { createHttpPersonas } from '@pikku/core/persona'
 import type { ResolvedPersona } from '@pikku/core/services'
 import { personaEnvironmentRefusal } from '@pikku/core/persona'
 
@@ -119,7 +119,9 @@ export const personaSync = pikkuSessionlessFunc<
       for (const [id, persona] of eligible) {
         logger.info(
           `  ${id.padEnd(20)} ${persona.email}${
-            persona.roles.length ? ` -> ${persona.roles.join(' + ')}` : ' (no roles)'
+            persona.roles.length
+              ? ` -> ${persona.roles.join(' + ')}`
+              : ' (no roles)'
           }`
         )
       }

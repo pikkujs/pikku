@@ -13,11 +13,10 @@
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import {
   pollUntil,
-  postScenarioJson,
-  readScenarioHttpResponse,
   requireScenarioEnv,
   type ScenarioHttpResponse,
 } from '@pikku/core/workflow'
+import { postScenarioJson, readScenarioHttpResponse } from '@pikku/core/persona'
 import { readSseEvents } from './support.js'
 
 /** What the workflow route answered, plus what it says about the run itself. */
@@ -71,7 +70,11 @@ export const runsWorkflow = pikkuScenarioStep<
   name: 'runsWorkflow',
   description: 'runs a workflow to completion over HTTP and reports the run',
   template: 'runs {workflowName}',
-  default: async (_services, { workflowName, input, userId }, { scenarioStep }) =>
+  default: async (
+    _services,
+    { workflowName, input, userId },
+    { scenarioStep }
+  ) =>
     postWorkflow(
       requireScenarioEnv(scenarioStep).apiUrl,
       workflowName,

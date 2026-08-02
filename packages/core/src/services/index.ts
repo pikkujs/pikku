@@ -49,12 +49,11 @@ export type {
   ScenarioRpcMap,
   ScenarioHttpResponse,
 } from './personas-service.js'
-export { readScenarioHttpResponse } from './personas-service.js'
-export {
-  HttpPersona,
-  createHttpPersonas,
-  type HttpPersonasConfig,
-} from './http-personas.js'
+// The persona runtime — `HttpPersona`, `createHttpPersonas`,
+// `readScenarioHttpResponse`, `postScenarioJson` — is exported from
+// `@pikku/core/persona`, not from here. Types are free; those are values, and
+// they reach the actor-flow and agent runners, which no production server runs.
+export type { HttpPersonasConfig } from './http-personas.js'
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailService,
