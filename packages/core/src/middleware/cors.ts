@@ -86,9 +86,6 @@ export const cors = pikkuMiddlewareFactory<{
         response.header('Access-Control-Allow-Methods', methods.join(', '))
         response.header('Access-Control-Allow-Headers', headers.join(', '))
 
-        // Without this a cross-origin caller can read only the CORS-safelisted
-        // response headers, so any header the client is meant to act on has to
-        // be named here.
         if (exposeHeaders.length > 0) {
           response.header(
             'Access-Control-Expose-Headers',

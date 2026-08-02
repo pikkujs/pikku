@@ -36,12 +36,9 @@ const rewriteSetCookies = (response: Response): Response => {
     headers.append('set-cookie', cookie)
   }
   headers.set(CROSS_SITE_SET_COOKIE_HEADER, encodeSetCookies(rewritten))
-  // The echo carries a session token in an ordinary response header, and every
-  // cache in the path knows to be careful with `Set-Cookie` but nothing about
-  // this one — a CDN that would have refused to store the response (or would
-  // have stripped the cookie first) will happily store this and hand one user's
-  // session to the next. Say so explicitly rather than trusting whatever the
-  // auth route set.
+  // Caches special-case `Set-Cookie` and know nothing about the echo, so one
+  // that would have refused this response will happily store it — and hand one
+  // user's session to the next.
   headers.set('cache-control', 'no-store')
   return new Response(response.body, {
     status: response.status,
@@ -60,9 +57,7 @@ export const createAuthHandler = (): {
     }
     const auth = (await (services as any).auth()) as BetterAuthInstance
     const webRequest = toWebRequest(request)
-    // The relayed cookies stand in for the ones the browser refused to store,
-    // so better-auth must see them as cookies: /get-session, sign-out and
-    // /update-user all read the session off the Cookie header.
+    // /get-session, sign-out and /update-user all read the session off Cookie.
     mergeRelayedCookies(webRequest.headers)
     const basePath = (auth as any).options?.basePath ?? '/api/auth'
     const response = isDevQuickLoginRequest(webRequest, basePath)

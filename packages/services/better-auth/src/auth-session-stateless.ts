@@ -82,9 +82,6 @@ export const betterAuthStatelessSession = (
       // not throw.
       let cached: CachedSession | null
       try {
-        // No-op unless this runtime embeds its apps cross-site; there it folds
-        // the client-relayed cookies back in, for browsers that refuse to store
-        // a third-party cookie at all (see cross-site-cookies.ts).
         const headers = mergeRelayedCookies(new Headers(request.headers()))
         // Cookie is `__Secure-`-prefixed when secure, unprefixed otherwise; try
         // both since NODE_ENV is unreliable in serverless. Only one cookie exists.

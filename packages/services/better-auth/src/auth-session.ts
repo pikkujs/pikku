@@ -136,9 +136,6 @@ export const betterAuthSession = (
       // otherwise read the single-use request body just to discard it,
       // starving the route handler that actually needs it.
       result = (await auth.api.getSession({
-        // mergeRelayedCookies is a no-op unless this runtime embeds its apps
-        // cross-site; there it folds the client-relayed cookies back in, for
-        // browsers that refuse to store them at all (cross-site-cookies.ts).
         headers: mergeRelayedCookies(new Headers(request.headers())),
       })) as BetterAuthSessionResult | null
     } catch (e: any) {

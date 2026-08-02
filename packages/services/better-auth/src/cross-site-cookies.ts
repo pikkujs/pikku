@@ -22,6 +22,14 @@
  * sandbox) sets AUTH_COOKIE_CROSS_SITE. A deployed app both keeps the tighter
  * Lax cookies AND ignores the relay header, so a session token can never be
  * carried in JS-readable storage outside the preview.
+ *
+ * Why not better-auth's `bearer()` plugin, which is this same echo-and-relay
+ * shape and signature-verifies on the way in: it carries only `session_token`,
+ * and `betterAuthStatelessSession` reads `session_data` — the signed blob that
+ * lets it resolve a session without bundling the better-auth server. Bearer
+ * would force those apps onto `betterAuthSession`, which is the bundle weight
+ * serverless targets cannot take. Relaying the whole jar is what keeps preview
+ * and production on the same middleware.
  */
 
 /** Request header carrying the relayed `name=value; name=value` cookie pairs. */
@@ -62,10 +70,8 @@ export const encodeSetCookies = (cookies: string[]): string =>
   encodeURIComponent(JSON.stringify(cookies))
 
 /**
- * Never throws: this is the client's half of the relay, called on whatever the
- * response happened to carry. A proxy that mangled the header, or a stale
- * client reading a header it does not understand, must degrade to "no relayed
- * cookies" rather than blowing up the caller's fetch wrapper.
+ * Never throws — the client half runs this on whatever a response carried, and
+ * a mangled header must degrade to "no cookies" rather than break its fetch.
  */
 export const decodeSetCookies = (encoded: string): string[] => {
   let parsed: unknown
@@ -102,8 +108,7 @@ export const mergeRelayedCookies = (headers: Headers): Headers => {
   if (!relayed) return headers
   const existing = headers.get('cookie') ?? ''
   // Grows as pairs are accepted, so a name repeated inside the relay header
-  // itself resolves the same way a repeated real cookie would — first wins —
-  // instead of both copies reaching a parser that may disagree about which one.
+  // itself resolves first-wins instead of reaching a parser twice.
   const taken = cookieNames(existing)
   const added: string[] = []
   for (const pair of relayed.split(';').map((p) => p.trim())) {

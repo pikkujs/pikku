@@ -131,8 +131,6 @@ describe('cross-site cookies', () => {
   })
 
   test('a mangled echo header decodes to nothing rather than throwing', () => {
-    // The client half runs this on whatever a response happened to carry: a
-    // proxy that rewrote the header must not blow up the caller's fetch.
     assert.deepEqual(decodeSetCookies('not-json'), [])
     assert.deepEqual(decodeSetCookies('%E0%A4%A'), [])
     assert.deepEqual(decodeSetCookies(encodeURIComponent('{"a":1}')), [])
@@ -183,9 +181,8 @@ describe('cross-site cookies', () => {
     )
   })
 
-  // Every other place this package hands caller headers to better-auth has to
-  // relay too: resolving the session in middleware and then losing it one call
-  // later is the confusing half-authenticated failure this exists to avoid.
+  // Resolving the session in middleware and losing it one call later is the
+  // half-authenticated failure these two exist to prevent.
 
   test('callAdminApi forwards the relayed cookies', async () => {
     withFlag('true')
