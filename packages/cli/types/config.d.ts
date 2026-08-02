@@ -428,6 +428,14 @@ export type PikkuCLIInput = {
      * particular browser tool. Defaults to `@pikku/playwright`.
      */
     browserDriver?: string
+    /**
+     * The model an actor thinks with in `actor.converse(...)` — its own turns,
+     * its approval decisions and its closing verdict. Not the model under test:
+     * that one belongs to the agent being conversed with, and the whole point
+     * of the exercise is that the two are different. A step can override it per
+     * conversation; with neither set, `converse` refuses rather than guessing.
+     */
+    actorModel?: string
   }
 
   scaffold?: {
