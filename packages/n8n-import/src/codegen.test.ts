@@ -1253,7 +1253,8 @@ test('toolHttpRequest agent tool → a real http function (not a stub)', () => {
   assert.ok(toolFile, 'tool function file emitted')
   // real function: performs the fetch, carries the tool description, no stub marker
   assert.doesNotMatch(toolFile, /implement me/)
-  assert.match(toolFile, /await fetch\(/)
+  assert.match(toolFile, /await httpRequester\.request\(/)
+  assert.doesNotMatch(toolFile, /secrets/)
   assert.match(
     toolFile,
     /https:\/\/api\.dexscreener\.com\/token-profiles\/latest\/v1/

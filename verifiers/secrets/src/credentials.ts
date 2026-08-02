@@ -19,6 +19,7 @@ defineSecret({
   secretId: 'EXAMPLE_API_CREDENTIALS',
   schema: apiCredentialsSchema,
   rotationPeriod: '30day',
+  allowedHosts: ['api.example.com', '*.example.com'],
 })
 
 /**

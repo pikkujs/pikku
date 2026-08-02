@@ -28,6 +28,9 @@ import {
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
   computeRequiredSchemas,
+  computeSecretBrokers,
+  validateNoSecretAliasServices,
+  validateSecretUsage,
   computeDiagnostics,
   validateSchemaWiringSeparation,
   validateScenarioServices,
@@ -46,6 +49,7 @@ import {
   finalizeWorkflowWires,
 } from './utils/workflow/graph/finalize-workflow-wires.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
+import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
   loadAddonFunctionsMeta,
   loadAddonSchemas,
@@ -175,6 +179,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     secrets: {
       definitions: [],
       files: new Set(),
+      usage: new Map(),
     },
     credentials: {
       definitions: [],
@@ -368,6 +373,13 @@ export const inspect = async (
 
   const state = getInitialInspectorState(rootDir)
 
+  for (const sourceFile of sourceFiles) {
+    const usage = extractSecretUsage(sourceFile)
+    if (usage.keys.length > 0 || usage.dynamic.length > 0) {
+      state.secrets.usage.set(sourceFile.fileName, usage)
+    }
+  }
+
   // First sweep: add all functions
   const startSetup = performance.now()
   for (const sourceFile of sourceFiles) {
@@ -465,6 +477,9 @@ export const inspect = async (
     computeResolvedIOTypes(state)
     computeMiddlewareGroupsMeta(state)
     computePermissionsGroupsMeta(state)
+    computeSecretBrokers(state)
+    validateNoSecretAliasServices(logger, checker, state)
+    validateSecretUsage(logger, state)
     computeDiagnostics(state)
     validateSchemaWiringSeparation(logger, state)
     validateWorkflowGraphAddons(logger, state)

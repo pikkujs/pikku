@@ -1,4 +1,5 @@
 import type * as ts from 'typescript'
+import type { SecretUsage } from './utils/extract-secret-usage.js'
 import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -620,6 +621,8 @@ export interface InspectorState {
   secrets: {
     definitions: SecretDefinitions
     files: Set<string>
+    /** Secret reads found per source file, keyed by absolute path. */
+    usage: Map<string, SecretUsage>
   }
   credentials: {
     definitions: CredentialDefinitions

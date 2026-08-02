@@ -13,8 +13,10 @@ const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
     info: () => {},
     warn: () => {},
     error: () => {},
-    diagnostic: ({ code, message }) => {
-      criticals.push({ code, message })
+    diagnostic: ({ severity, code, message }) => {
+      if (severity !== 'warn') {
+        criticals.push({ code, message })
+      }
     },
     critical: (code: ErrorCode, message: string) => {
       criticals.push({ code, message })
@@ -111,7 +113,7 @@ describe('addAuth inspector', () => {
         'export const auth = pikkuBetterAuth(() =>',
         '  betterAuth({',
         '    session: { cookieCache: { enabled: true } },',
-        "    emailAndPassword: { enabled: true },",
+        '    emailAndPassword: { enabled: true },',
         '  })',
         ')',
       ].join('\n')
