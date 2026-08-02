@@ -1,5 +1,6 @@
 import type { ScenarioHttpResponse } from '../../services/scenario-actors-service.js'
 import type { ActorFlowVerdict } from '../actor-flow/actor-flow.types.js'
+import type { VirtualUserTuning } from './virtual-user-dispositions.js'
 
 /**
  * How a virtual user behaves, mechanically. A disposition changes the loop, the
@@ -193,6 +194,12 @@ export interface VirtualUserMeta {
   /** Which scenario actor it signs in as. */
   actor: string
   disposition: VirtualUserDisposition
+  /**
+   * Overrides for that disposition's dials. The six profiles are defaults, so a
+   * product that knows its users repeat themselves more than `careless` assumes
+   * says so here rather than inventing a seventh disposition.
+   */
+  tuning?: VirtualUserTuning
   /** What it wants, beyond whatever scenarios name its actor. */
   goals: string[]
   tags: string[]

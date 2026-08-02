@@ -4,6 +4,7 @@ import type { ActorLLM } from '../actor-flow/run-conversation.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   catalogueIndex,
+  catalogueLookup,
   describeEntry,
   isReadOnly,
   reachableCatalogue,
@@ -12,6 +13,7 @@ import {
 import {
   dispositionProfile,
   type DispositionProfile,
+  type VirtualUserTuning,
 } from './virtual-user-dispositions.js'
 import { IntentStack, intentsForActor } from './virtual-user-intents.js'
 import { createRng } from './virtual-user-rng.js'
@@ -79,6 +81,8 @@ export interface RunVirtualUserParams {
   actorName: string
   /** How it behaves. Default `realistic`. */
   disposition?: VirtualUserDisposition
+  /** Per-user overrides for that disposition's dials. */
+  tuning?: VirtualUserTuning
   /** Every RPC the app exposes. Narrowed internally; nothing is hidden by default. */
   catalogue: readonly ApiCatalogueEntry[]
   /** Features and scenarios in the app's own words — never their step graphs. */
@@ -257,6 +261,7 @@ export const runVirtualUser = async (
     actor,
     actorName,
     disposition = 'realistic',
+    tuning,
     target,
     llm,
     model,
@@ -271,7 +276,7 @@ export const runVirtualUser = async (
     maxStepsPerIntent = DEFAULT_MAX_STEPS_PER_INTENT,
   } = params
 
-  const profile = dispositionProfile(disposition)
+  const profile = dispositionProfile(disposition, tuning)
   const seed = params.seed ?? Math.floor(Math.random() * 2 ** 31)
   const rng = createRng(seed)
   const startedAt = Date.now()
@@ -466,7 +471,7 @@ export const runVirtualUser = async (
     }
 
     if (action.kind === 'describe') {
-      const entry = index.get(action.rpcName)
+      const entry = catalogueLookup(index, action.rpcName)
       if (!entry) {
         reply(`There is no endpoint called '${action.rpcName}'.`)
         steps.push(record)
@@ -525,7 +530,7 @@ export const runVirtualUser = async (
     }
 
     // Everything below is a call.
-    const entry = index.get(action.rpcName)
+    const entry = catalogueLookup(index, action.rpcName)
     if (!entry) {
       reply(`There is no endpoint called '${action.rpcName}'.`)
       steps.push(record)

@@ -91,6 +91,12 @@ export interface VirtualUserDoc {
   disposition: VirtualUserDisposition
   /** The engine dials this disposition sets. Shown, not summarised away. */
   profile: DispositionProfile
+  /**
+   * The dials this declaration overrode, if any. The screen shows the merged
+   * profile, so without this a tuned `careless` user would be indistinguishable
+   * from a stock one that happens to disagree with the documentation.
+   */
+  tunedDials: string[]
   /** Declared wants, in the author's words. */
   goals: string[]
   /**
@@ -141,7 +147,10 @@ export const toVirtualUserDocs = ({
 
   return Object.values(virtualUsers ?? {})
     .map((user): VirtualUserDoc => {
-      const profile = dispositionProfile(user.disposition)
+      // Tuning is merged in here, so every figure on the screen — the move
+      // percentages, the re-read rate, whether mutations are offered at all —
+      // describes the run this declaration would actually produce.
+      const profile = dispositionProfile(user.disposition, user.tuning)
       const actor = scenarioActors?.[user.actor]
 
       // An adversarial user is handed the whole surface deliberately: its
@@ -179,6 +188,7 @@ export const toVirtualUserDocs = ({
         },
         disposition: user.disposition,
         profile,
+        tunedDials: Object.keys(user.tuning ?? {}),
         goals: user.goals ?? [],
         intents,
         featureByIntent,

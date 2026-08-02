@@ -35,7 +35,12 @@ export const deriveCatalogue = (
     // held out of every deployed unit — so offering one would only ever waste
     // a turn on a 404.
     if (meta.scenario || meta.scenarioStep) continue
-    if (meta.expose === false) continue
+    // `expose: true` is what puts a function on the rpc transport, and that is
+    // what the shipped target calls over. Absent is not permissive: an unexposed
+    // function 404s, and offering one spends a step to learn nothing about the
+    // product. Measured on the e2e app, 34 of its 72 functions are in exactly
+    // that state — nearly half a catalogue that cannot be called.
+    if (meta.expose !== true) continue
 
     const inputSchema = meta.inputSchemaName
       ? schemas[meta.inputSchemaName]

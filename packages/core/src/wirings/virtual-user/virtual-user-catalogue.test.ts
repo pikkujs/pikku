@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   catalogueClassification,
   catalogueIndex,
+  catalogueLookup,
   describeEntry,
   isReadOnly,
   reachableCatalogue,
@@ -174,5 +175,23 @@ describe('catalogue index', () => {
     const index = catalogueIndex([entry('getProject'), entry('createProject')])
     assert.equal(index.get('getProject')?.name, 'getProject')
     assert.equal(index.get('nonsense'), undefined)
+  })
+
+  // Found by running one: a model that has just read `whoAmI() -> userId,scopes`
+  // off the catalogue will sometimes hand the whole line back as the name.
+  test('an rpc name given with the signature the catalogue printed still resolves', () => {
+    const index = catalogueIndex([entry('getProject'), entry('createProject')])
+    assert.equal(catalogueLookup(index, 'getProject')?.name, 'getProject')
+    assert.equal(
+      catalogueLookup(index, 'getProject(id) -> project')?.name,
+      'getProject'
+    )
+    assert.equal(catalogueLookup(index, '  getProject()  ')?.name, 'getProject')
+  })
+
+  test('a name that is genuinely not there is still not there', () => {
+    const index = catalogueIndex([entry('getProject'), entry('createProject')])
+    assert.equal(catalogueLookup(index, 'nope'), undefined)
+    assert.equal(catalogueLookup(index, 'nope(x) -> y'), undefined)
   })
 })

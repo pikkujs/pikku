@@ -23,7 +23,7 @@ import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
 import type { TypedScenarioActors, ScenarioActorName } from '${scenarioActorsImportPath}'
-import type { VirtualUserBudget, VirtualUserDisposition } from '@pikku/core/virtual-user'
+import type { VirtualUserBudget, VirtualUserDisposition, VirtualUserTuning } from '@pikku/core/virtual-user'
 
 export type { TypedScenarioActors }
 
@@ -329,6 +329,19 @@ export type PikkuVirtualUserConfig = {
    * finding.
    */
   disposition?: VirtualUserDisposition
+  /**
+   * Overrides for that disposition's dials — how often it gets pulled away,
+   * how often it double-submits, how much it trusts its own notes. The six
+   * profiles are defaults chosen to be reasonable, not measurements of your
+   * users; when you know better, say so here rather than inventing a
+   * disposition.
+   *
+   * \`\`\`ts
+   * disposition: 'careless',
+   * tuning: { repeatRate: 0.35, moves: { suspend: 30 } },
+   * \`\`\`
+   */
+  tuning?: VirtualUserTuning
   /**
    * What it wants, in a person's words. Scenarios naming this actor are already
    * intents on their own; these are the wants nobody wrote a scenario for.

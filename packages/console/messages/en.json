@@ -728,6 +728,7 @@
   "virtual_users_signs_in_as": "Signs in as",
   "virtual_users_behaviour": "How it behaves",
   "virtual_users_moves": "keeps going {continue}% · puts it down {suspend}% · picks one back up {resume}% · gives up {abandon}%",
+  "virtual_users_tuned": "Tuned for this product — overrides the disposition's {dials}",
   "virtual_users_dial_reread": "Re-reads before acting instead of trusting memory, {percent}% of the time",
   "virtual_users_dial_repeat": "Re-sends the call it just made, {percent}% of the time — the double-click",
   "virtual_users_dial_empty_memory": "Starts remembering nothing, whatever it is seeded with",

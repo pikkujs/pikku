@@ -10,11 +10,18 @@ import type {
   ScenarioHttpResponse,
 } from '../../services/scenario-actors-service.js'
 
+/**
+ * `expose: true` by default, because these fixtures stand for functions a
+ * virtual user could actually call. The two cases that matter — explicitly
+ * unexposed, and the far commoner un-annotated — are spelled out where they
+ * are tested.
+ */
 const fn = (extra: Partial<FunctionsMeta[string]> = {}): FunctionsMeta[string] =>
   ({
     pikkuFuncId: 'f',
     inputSchemaName: null,
     outputSchemaName: null,
+    expose: true,
     ...extra,
   }) as FunctionsMeta[string]
 
@@ -33,6 +40,9 @@ describe('deriving the catalogue from generated meta', () => {
     getProject: fn({ readonly: true, summary: 'Read a project' }),
     deployStage: fn({ approvalRequired: true }),
     internalReindex: fn({ expose: false }),
+    // No `expose` at all — the shape almost half the e2e app's functions are
+    // in, and the one that used to reach the model and 404.
+    agentCaller: fn({ expose: undefined }),
     userSeesTheDashboard: fn({ scenarioStep: true }),
     onboardingScenario: fn({ scenario: true }),
   }
@@ -71,9 +81,16 @@ describe('deriving the catalogue from generated meta', () => {
       'createProject',
       'getProject',
       'deployStage',
-      // internalReindex is not exposed; the scenario body and its step are not
-      // shipped at all.
+      // internalReindex is not exposed and agentCaller was never put on the rpc
+      // transport at all; the scenario body and its step are not shipped.
     ])
+  })
+
+  // Found by running one: 4 of 11 calls in the first live run were 404s, all of
+  // them functions with no `expose` annotation. Absent has to mean no.
+  test('a function that was never exposed is not offered either', () => {
+    const names = deriveCatalogue(functions, schemas).map((e) => e.name)
+    assert.ok(!names.includes('agentCaller'))
   })
 
   test('an approval gate and a readonly flag survive the trip', () => {

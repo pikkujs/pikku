@@ -477,6 +477,22 @@ export interface InspectorVirtualUser {
   name?: string
   description?: string
   disposition?: string
+  /** Overrides for that disposition's dials, exactly as declared. */
+  tuning?: {
+    moves?: {
+      continue?: number
+      suspend?: number
+      resume?: number
+      abandon?: number
+    }
+    temperature?: number
+    repeatRate?: number
+    reReadRate?: number
+    emptyMemory?: boolean
+    readOnly?: boolean
+    invertedOracle?: boolean
+    instructions?: string
+  }
   goals?: string[]
   tags?: string[]
   grants?: string[]
