@@ -7,6 +7,7 @@ import type {
   BetterAuthInstance,
   PikkuBetterAuthFactory,
 } from './define-auth.js'
+import { mergeRelayedCookies } from './cross-site-cookies.js'
 
 export const createResolvedAuthGetter = <
   I extends BetterAuthInstance,
@@ -91,6 +92,10 @@ export async function getAuthSession<
     createSingletonServices
   )()
 
-  const headers = request instanceof Headers ? request : new Headers(request.headers)
+  // Always copy before merging the relayed cookies — the caller's Headers is
+  // theirs, and mergeRelayedCookies mutates what it is given.
+  const headers = mergeRelayedCookies(
+    new Headers(request instanceof Headers ? request : request.headers)
+  )
   return await instance.api.getSession({ headers })
 }

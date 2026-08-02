@@ -38,6 +38,12 @@ export type BetterAuthStatelessSessionOptions = {
  * server-side revocation isn't seen until the cookie cache expires; sign-out is
  * still immediate (it deletes the cookie).
  *
+ * That last part is the browser's to keep under AUTH_COOKIE_CROSS_SITE: a
+ * relayed cookie lives in the client's own storage, so deleting the real cookie
+ * cannot reach it. A client implementing the relay MUST drop the entries the
+ * sign-out response expires; if it does not, the stale cache blob keeps
+ * verifying here until it ages out on its own (see cross-site-cookies.ts).
+ *
  * The one exception to "no DB": if a `ScopeService` is registered, scopes are
  * resolved per request (see {@link withResolvedScopes}), which costs a query.
  * That is the price of grants that take effect immediately; leave the service

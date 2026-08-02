@@ -9,6 +9,7 @@ import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
  * @param options.origin - Allowed origin(s). Use `'*'` for any origin, `true` to reflect the request origin, a string for a single origin, or an array for multiple origins. Defaults to `'*'`.
  * @param options.methods - Allowed HTTP methods. Defaults to common methods.
  * @param options.headers - Allowed request headers. Defaults to common headers.
+ * @param options.exposeHeaders - Response headers a cross-origin caller is allowed to read, beyond the CORS-safelisted ones. Defaults to none.
  * @param options.credentials - Whether to allow credentials. Defaults to `false`.
  * @param options.maxAge - Preflight cache duration in seconds. Defaults to `86400` (24 hours).
  *
@@ -39,6 +40,7 @@ export const cors = pikkuMiddlewareFactory<{
   origin?: string | string[] | true
   methods?: string[]
   headers?: string[]
+  exposeHeaders?: string[]
   credentials?: boolean
   maxAge?: number
 }>(
@@ -46,6 +48,7 @@ export const cors = pikkuMiddlewareFactory<{
     origin = '*',
     methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     headers = ['Content-Type', 'Authorization', 'x-api-key'],
+    exposeHeaders = [],
     credentials = false,
     maxAge = 86400,
   } = {}) => {
@@ -82,6 +85,16 @@ export const cors = pikkuMiddlewareFactory<{
         response.header('Access-Control-Allow-Origin', allowedOrigin)
         response.header('Access-Control-Allow-Methods', methods.join(', '))
         response.header('Access-Control-Allow-Headers', headers.join(', '))
+
+        // Without this a cross-origin caller can read only the CORS-safelisted
+        // response headers, so any header the client is meant to act on has to
+        // be named here.
+        if (exposeHeaders.length > 0) {
+          response.header(
+            'Access-Control-Expose-Headers',
+            exposeHeaders.join(', ')
+          )
+        }
 
         if (credentials) {
           response.header('Access-Control-Allow-Credentials', 'true')

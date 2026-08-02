@@ -61,9 +61,22 @@ export const getSetCookies = (headers: Headers): string[] =>
 export const encodeSetCookies = (cookies: string[]): string =>
   encodeURIComponent(JSON.stringify(cookies))
 
+/**
+ * Never throws: this is the client's half of the relay, called on whatever the
+ * response happened to carry. A proxy that mangled the header, or a stale
+ * client reading a header it does not understand, must degrade to "no relayed
+ * cookies" rather than blowing up the caller's fetch wrapper.
+ */
 export const decodeSetCookies = (encoded: string): string[] => {
-  const parsed = JSON.parse(decodeURIComponent(encoded))
-  return Array.isArray(parsed) ? parsed.filter((c) => typeof c === 'string') : []
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(decodeURIComponent(encoded))
+  } catch {
+    return []
+  }
+  return Array.isArray(parsed)
+    ? parsed.filter((c) => typeof c === 'string')
+    : []
 }
 
 const cookieNames = (cookieHeader: string): Set<string> => {
@@ -88,14 +101,17 @@ export const mergeRelayedCookies = (headers: Headers): Headers => {
   const relayed = headers.get(CROSS_SITE_COOKIE_HEADER)
   if (!relayed) return headers
   const existing = headers.get('cookie') ?? ''
+  // Grows as pairs are accepted, so a name repeated inside the relay header
+  // itself resolves the same way a repeated real cookie would — first wins —
+  // instead of both copies reaching a parser that may disagree about which one.
   const taken = cookieNames(existing)
-  const added = relayed
-    .split(';')
-    .map((pair) => pair.trim())
-    .filter((pair) => {
-      const name = pair.split('=')[0]?.trim()
-      return !!name && pair.includes('=') && !taken.has(name)
-    })
+  const added: string[] = []
+  for (const pair of relayed.split(';').map((p) => p.trim())) {
+    const name = pair.split('=')[0]?.trim()
+    if (!name || !pair.includes('=') || taken.has(name)) continue
+    taken.add(name)
+    added.push(pair)
+  }
   if (added.length === 0) return headers
   headers.set('cookie', [existing, ...added].filter(Boolean).join('; '))
   return headers

@@ -243,6 +243,40 @@ describe('cors', () => {
       )
     })
 
+    test('should not expose any headers by default', async () => {
+      const middleware = cors()
+      const request = createMockRequest()
+      const response = createMockResponse()
+
+      await middleware(
+        {} as any,
+        { http: { request, response } } as any,
+        async () => {}
+      )
+
+      assert.strictEqual(
+        response._headers['Access-Control-Expose-Headers'],
+        undefined
+      )
+    })
+
+    test('should set exposed headers', async () => {
+      const middleware = cors({ exposeHeaders: ['X-Custom', 'X-Other'] })
+      const request = createMockRequest()
+      const response = createMockResponse()
+
+      await middleware(
+        {} as any,
+        { http: { request, response } } as any,
+        async () => {}
+      )
+
+      assert.strictEqual(
+        response._headers['Access-Control-Expose-Headers'],
+        'X-Custom, X-Other'
+      )
+    })
+
     test('should not set Vary when origin is string', async () => {
       const middleware = cors({ origin: 'https://example.com' })
       const request = createMockRequest()

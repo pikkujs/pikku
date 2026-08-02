@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, test } from 'node:test'
 import { createAuthHandler } from './auth-handler.js'
+import { callAdminApi } from './admin-api.js'
+import { getAuthSession } from './auth-api.js'
+import type { BetterAuthInstance } from './define-auth.js'
 import {
   CROSS_SITE_COOKIE_HEADER,
   CROSS_SITE_SET_COOKIE_HEADER,
@@ -59,11 +62,9 @@ async function runHandler(headers: Record<string, string> = {}) {
     logger: { info() {}, warn() {}, error() {} },
     auth: async () => auth,
   }
-  const response = (await func(
-    services,
-    {},
-    { http: { request: fakeHttpRequest({ host: 'app.dev', ...headers }) } } as any
-  )) as Response
+  const response = (await func(services, {}, {
+    http: { request: fakeHttpRequest({ host: 'app.dev', ...headers }) },
+  } as any)) as Response
   return { response, seen }
 }
 
@@ -120,6 +121,26 @@ describe('cross-site cookies', () => {
     )
   })
 
+  test('a name repeated inside the relay header is taken once', () => {
+    withFlag('true')
+    const headers = new Headers({
+      [CROSS_SITE_COOKIE_HEADER]: 'a=first; a=second; b=only',
+    })
+    // Both copies reaching a parser leaves which one wins up to the parser.
+    assert.equal(mergeRelayedCookies(headers).get('cookie'), 'a=first; b=only')
+  })
+
+  test('a mangled echo header decodes to nothing rather than throwing', () => {
+    // The client half runs this on whatever a response happened to carry: a
+    // proxy that rewrote the header must not blow up the caller's fetch.
+    assert.deepEqual(decodeSetCookies('not-json'), [])
+    assert.deepEqual(decodeSetCookies('%E0%A4%A'), [])
+    assert.deepEqual(decodeSetCookies(encodeURIComponent('{"a":1}')), [])
+    assert.deepEqual(decodeSetCookies(encodeURIComponent('["a=b", 7, null]')), [
+      'a=b',
+    ])
+  })
+
   test('an echoed response is never cacheable', async () => {
     withFlag('true')
     const { response } = await runHandler()
@@ -160,5 +181,61 @@ describe('cross-site cookies', () => {
       seen[0]!.headers.get('cookie'),
       '__Secure-better-auth.session_token=tok'
     )
+  })
+
+  // Every other place this package hands caller headers to better-auth has to
+  // relay too: resolving the session in middleware and then losing it one call
+  // later is the confusing half-authenticated failure this exists to avoid.
+
+  test('callAdminApi forwards the relayed cookies', async () => {
+    withFlag('true')
+    const auth = async () =>
+      ({ api: { banUser: async () => ({}) } }) as unknown as BetterAuthInstance
+    const http = {
+      request: {
+        headers: () => ({
+          [CROSS_SITE_COOKIE_HEADER]: '__Secure-better-auth.session_token=tok',
+        }),
+      },
+    }
+    const forwarded = await callAdminApi(auth, http, async (_api, headers) =>
+      headers.get('cookie')
+    )
+    assert.equal(forwarded, '__Secure-better-auth.session_token=tok')
+  })
+
+  test('getAuthSession forwards the relayed cookies', async () => {
+    withFlag('true')
+    const session = await getAuthSession(
+      {
+        handler: async () => new Response(null, { status: 204 }),
+        api: {
+          getSession: async ({ headers }: { headers: Headers }) => ({
+            cookie: headers.get('cookie'),
+          }),
+        },
+      } as any,
+      new Request('https://example.com/me', {
+        headers: {
+          [CROSS_SITE_COOKIE_HEADER]: 'better-auth.session_token=abc',
+        },
+      })
+    )
+    assert.deepEqual(session, { cookie: 'better-auth.session_token=abc' })
+  })
+
+  test('getAuthSession never mutates a Headers the caller still owns', async () => {
+    withFlag('true')
+    const caller = new Headers({
+      [CROSS_SITE_COOKIE_HEADER]: 'better-auth.session_token=abc',
+    })
+    await getAuthSession(
+      {
+        handler: async () => new Response(null, { status: 204 }),
+        api: { getSession: async () => null },
+      } as any,
+      caller
+    )
+    assert.equal(caller.get('cookie'), null)
   })
 })
