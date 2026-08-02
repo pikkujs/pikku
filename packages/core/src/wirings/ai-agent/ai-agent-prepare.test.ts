@@ -134,29 +134,26 @@ describe('ai-agent-prepare', () => {
     assert.match(instructions, /When calling a sub-agent/)
   })
 
-  test('buildInstructions joins role, personality, goal and instructions in order, blank-line separated', async () => {
+  test('buildInstructions joins role, personality and goal in order, blank-line separated', async () => {
     addAgent('scribe', {
       role: 'ROLE',
       personality: 'PERSONALITY',
       goal: 'GOAL',
-      instructions: 'INSTRUCTIONS',
     })
 
-    // Instructions come last: the goal is what the work is, and these are how
-    // to go about it.
     const instructions = await buildInstructions('scribe', null)
-    assert.equal(instructions, 'ROLE\n\nPERSONALITY\n\nGOAL\n\nINSTRUCTIONS')
+    assert.equal(instructions, 'ROLE\n\nPERSONALITY\n\nGOAL')
   })
 
   test('buildInstructions omits missing sections rather than leaving blank gaps', async () => {
-    addAgent('terse', { role: 'ROLE', goal: 'GOAL', instructions: undefined })
+    addAgent('terse', { role: 'ROLE', goal: 'GOAL' })
 
     const instructions = await buildInstructions('terse', null)
     assert.equal(instructions, 'ROLE\n\nGOAL')
   })
 
   test('buildInstructions adds no tool or sub-agent guidance when none are configured', async () => {
-    addAgent('bare', { role: 'ROLE', goal: undefined, instructions: undefined })
+    addAgent('bare', { role: 'ROLE', goal: undefined })
 
     const instructions = await buildInstructions('bare', null)
     assert.equal(instructions, 'ROLE')

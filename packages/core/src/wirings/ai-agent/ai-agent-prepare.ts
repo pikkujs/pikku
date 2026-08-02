@@ -392,7 +392,6 @@ export async function buildInstructions(
   if (meta?.role) parts.push(meta.role)
   if (meta?.personality) parts.push(meta.personality)
   if (meta?.goal) parts.push(meta.goal)
-  if (meta?.instructions) parts.push(meta.instructions)
   let instructions = parts.join('\n\n')
 
   if (meta?.tools?.length || meta?.workflows?.length) {

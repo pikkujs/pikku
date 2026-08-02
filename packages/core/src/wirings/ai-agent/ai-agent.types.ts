@@ -240,11 +240,6 @@ export type CoreAIAgent<
   role?: string
   personality?: string
   goal: string
-  /**
-   * Appended to the system prompt after the goal: how to go about the work,
-   * where `goal` is what the work is.
-   */
-  instructions?: string
   model: string
   temperature?: number
   /** Ownership/partitioning of this agent's threads and runs. Defaults to `'user'`. */
