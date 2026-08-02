@@ -30,7 +30,7 @@ holds the personality. The console says so out loud:
 
 | layer | word | what it is | declared |
 |---|---|---|---|
-| what you may do | **role** | a named bag of scopes | `wireRole()` — code, additive |
+| what you may do | **role** | a named bag of scopes | `defineSystemRole()` — code, additive |
 | who you are | **persona** | a person: name, backstory, goals, roles | `definePersonas()` — code |
 | how you sign in | **account** | one login of that person | inside the persona |
 | who is acting | **actor** | whoever performs this step | a step parameter |
@@ -57,7 +57,7 @@ definePersonas({
   susan: {
     name: 'Susan',
     jobTitle: 'Buys for a small café',
-    roles: ['buyer'],                    // typechecked against wireRole()
+    roles: ['buyer'],                    // typechecked against defineSystemRole()
     personality: 'Hunts cheap deals. Tries three coupon codes before giving up.',
     goals: [
       'Get the weekly order in under five minutes',
@@ -106,23 +106,78 @@ An adversarial user is not a fourth kind of thing. It decomposes:
 Which is the more interesting test anyway: not an outsider hammering the door, an
 ordinary logged-in customer probing what they can reach.
 
-## Roles: `wireRole()`
+## `wire*` versus `define*`
+
+`wire*` currently means two different things. `wireHTTP`, `wireChannel`, `wireScheduler`,
+`wireQueueWorker` and friends attach a function to something that can invoke it. But
+`wireScope`, `wireSecret`, `wireVariable` and `wireCredential` wire nothing —
+`wire-scope.ts` says so outright:
+
+> *No-op function for declaring scopes. This exists purely for TypeScript type checking
+> and will be tree-shaken. The CLI extracts metadata via AST parsing and generates a
+> `ScopeId` union.*
+
+The four declaration functions are being renamed so each word means one thing:
+
+> **`wire*`** — this function can now be invoked by X.
+> **`define*`** — this name exists, and the build will check you used it.
+
+`defineScope`, `defineSecret`, `defineVariable`, `defineCredential`. Everything this
+document adds is a declaration, so it is `define*` throughout.
+
+## Roles: `defineSystemRole()`
 
 Roles are currently **runtime-composed on purpose** — `ScopeService.createRole`,
 `setRoleScopes`, and a console editor, so an admin can invent `invoicing-clerk` without a
 deploy. A code declaration must not take that away.
 
-The solution already exists one layer down: `wireScope()` declares scopes in code and
-`syncScopes` is **additive** — *"scopes are declared in code, so a removed declaration
-leaves an inert row rather than silently revoking a grant mid-deploy"*. Removal is
-explicit (`pikku scopes prune`).
+So a code declaration does not replace runtime roles; it introduces a second, distinct
+class. The AWS parallel is exact:
 
-`wireRole()` copies that exactly:
+| AWS | pikku |
+|---|---|
+| AWS-managed policies — attach, cannot edit or delete | **system roles** — `defineSystemRole()`, code |
+| Customer-managed policies — yours, full control | **custom roles** — console, `createRole()` |
 
-| | declared in code | runtime composition |
-|---|---|---|
-| `wireScope()` | yes, synced additively | — |
-| `wireRole()` **(new)** | yes, synced additively | still works, untouched |
+A system role is part of the *product*. A custom role is part of one customer's
+configuration.
+
+### "System" has to be enforced, not labelled
+
+Three behaviours the code does not have today. Without them "system" is a comment:
+
+| | |
+|---|---|
+| `deleteRole` / `setRoleScopes` | must refuse for a system role |
+| the console | must render the lock **and say why** — not fail on click |
+| creating a custom role that shadows a system name | must be refused |
+
+The third is a security bug rather than a UX annoyance: a custom `admin` shadowing the
+system `admin` silently changes what every persona and every permission check means.
+
+### Removal copies `defineScope` verbatim
+
+`syncScopes` is deliberately additive — *"scopes are declared in code, so a removed
+declaration leaves an inert row rather than silently revoking a grant mid-deploy"* — with
+`pikku scopes prune` as the explicit removal.
+
+Roles must behave identically. Deleting a `defineSystemRole` declaration leaves the role
+inert and still granted, marked undeclared, until `pikku roles prune`. The alternative is
+that deleting one line revokes access for everyone holding it, at deploy time, silently.
+
+### Personas may only use system roles
+
+```ts
+susan: { roles: ['buyer'] }             // system, typechecked
+susan: { roles: ['invoicing-clerk'] }   // custom — an admin can delete this. Refused.
+```
+
+A custom role does not exist at build time and can be deleted from the console, so a
+persona pinned to one silently stops testing what it claims to. That is the same failure
+mode as the unexposed RPCs: it does not error, it just quietly stops meaning anything.
+
+Which gives `defineSystemRole` a second job beyond safety — it is the set of roles that
+ship *with the product*, and that is exactly the set personas should be built from.
 
 Nothing is removed from admins. Personas get something real to typecheck against, and the
 app is pushed to think in roles rather than describing permissions in prose. (The old
@@ -308,7 +363,8 @@ by convention.
 
 | | |
 |---|---|
-| new | `wireRole()` + additive sync (mirrors `wireScope`) |
+| new | `defineSystemRole()` + additive sync, refusal-to-delete, shadow check |
+| renamed | `wireScope`/`wireSecret`/`wireVariable`/`wireCredential` -> `define*` |
 | new | `definePersonas()` + inspector support |
 | new | `pikkuPlatformScenarioStep`, `pikkuAddonScenarioStep` |
 | moved | `scenarios.actors` / `scenarios.personas` → code (9 read-sites) |
