@@ -111,6 +111,25 @@ jobs:
       - name: Run deterministic agent e2e tests
         run: yarn test:e2e:agent
 
+  # Newly guarded: `tests/cli/` drives the CLI as a subprocess against a server
+  # it spawns itself, so it is a node:test suite rather than a scenario and ran
+  # in no job until now.
+  e2e-cli:
+    name: E2E CLI
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install native build tools
+        run: apt-get update && apt-get install -y build-essential python3 unzip
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
+      - name: Run CLI e2e tests
+        run: yarn test:e2e:cli
+
   # Newly guarded: the console browser scenarios ran in no CI job while they were
   # cucumber, so their first exposure here is expected to surface real flake.
   # `continue-on-error` keeps that from blocking; remove it once it settles.

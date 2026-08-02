@@ -25,12 +25,32 @@ interface ScenarioRunResult {
   output: string
 }
 
+/** The server this file started, which the spawned CLI has to be pointed at. */
+let apiUrl: string
+
 const run = (args: string[]): Promise<ScenarioRunResult> =>
   new Promise((resolvePromise) => {
-    const child = spawn('npx', ['pikku', 'scenario', 'run', 'local', ...args], {
-      cwd: PROJECT_DIR,
-      env: { ...process.env },
-    })
+    // The `local` environment in pikku.config.json names a fixed port. Without
+    // these the run targets that port whatever this file actually started on —
+    // which passes against someone else's server and fails against nothing.
+    const child = spawn(
+      'npx',
+      [
+        'pikku',
+        'scenario',
+        'run',
+        'local',
+        '--api-url',
+        apiUrl,
+        '--app-url',
+        apiUrl,
+        ...args,
+      ],
+      {
+        cwd: PROJECT_DIR,
+        env: { ...process.env },
+      }
+    )
     let output = ''
     child.stdout.on('data', (d: Buffer) => {
       output += d.toString()
@@ -64,6 +84,7 @@ describe('pikku scenario run', () => {
   before(async () => {
     const server = await startBackend()
     stop = server.stop
+    apiUrl = server.apiUrl
     await server.waitUntilReady()
   })
 
