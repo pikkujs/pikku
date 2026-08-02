@@ -5,6 +5,17 @@ import {
 } from './type-utils.js'
 
 /**
+ * Where a config object's implementation can live, in the order it is looked for.
+ *
+ * `func` is the ordinary case. A `pikkuScenarioStep` instead declares one
+ * implementation per surface, and every binding shares the step's input and
+ * output — that is what makes them interchangeable — so any one of them types
+ * the step. `default` is preferred because it is the binding every step is
+ * expected to have.
+ */
+const IMPLEMENTATION_KEYS = ['func', 'default', 'browser', 'cli'] as const
+
+/**
  * Extracts the actual function node from a pikkuFunc/pikkuWorkflowFunc call
  * Handles both direct function form and config object form { func: ... }
  */
@@ -22,12 +33,13 @@ export function extractFunctionNode(
   // Check if first argument is a config object with 'func' property
   if (ts.isObjectLiteralExpression(firstArg)) {
     isDirectFunction = false
-    const funcInitializer = getPropertyAssignmentInitializer(
-      firstArg,
-      'func',
-      true,
-      checker
-    )
+    let funcInitializer: ts.Expression | undefined
+    for (const key of IMPLEMENTATION_KEYS) {
+      funcInitializer =
+        getPropertyAssignmentInitializer(firstArg, key, true, checker) ??
+        undefined
+      if (funcInitializer) break
+    }
 
     if (funcInitializer) {
       funcNode = funcInitializer

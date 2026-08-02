@@ -30,13 +30,13 @@ const STEPS = [
   'export const buysAnApple = pikkuScenarioStep({',
   "  name: 'buysAnApple',",
   "  description: 'buys an apple',",
-  '  browser: true,',
-  '  func: async ({ logger }, data: { qty: number }) => ({ ok: data.qty > 0 }),',
+  '  browser: async ({ logger }, data: { qty: number }) => ({ ok: data.qty > 0 }),',
+  '  default: async ({ logger }, data: { qty: number }) => ({ ok: data.qty > 0 }),',
   '})',
   'export const seesAReceipt = pikkuScenarioStep({',
   "  name: 'seesAReceipt',",
   "  description: 'sees a receipt',",
-  '  func: async ({ logger }) => ({ ok: true }),',
+  '  default: async ({ logger }) => ({ ok: true }),',
   '})',
 ].join('\n')
 
@@ -203,6 +203,52 @@ describe('pikkuScenarioStep', () => {
       assert.ok(
         criticals.find((c) => c.code === 'PKU677'),
         `expected a PKU677 critical for a browser step without an actor, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a scenario that never asserts is a PKU680 critical', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.when('buys an apple', 'buysAnApple', { qty: 2 }, { actor: actors.shopper })",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU680'),
+        `a flow with no 'then' proves only that nothing threw, and contributes 0/0 to witness coverage, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a scenario with an assertion is not flagged', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU680').length,
+        0,
+        `got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a scenario driving only rpc steps is not flagged — it has no step ladder to assert on', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.do('reads the order', 'orderGet', { orderId: 'o1' })",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU680').length,
+        0,
+        `the rule is about scenarios written as given/when/then, got: ${JSON.stringify(criticals)}`
       )
     } finally {
       await cleanup()

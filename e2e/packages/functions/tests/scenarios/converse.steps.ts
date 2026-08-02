@@ -29,7 +29,7 @@ export const conversesWithAgent = pikkuScenarioStep<
   name: 'conversesWithAgent',
   description: 'converses with an agent in persona and returns a verdict',
   template: 'converses with {agent}',
-  func: async (_services, { agent, task, evaluate }, { scenarioStep }) => {
+  default: async (_services, { agent, task, evaluate }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     // `always` because the agent's tools are approval-gated and there is nobody
     // at a keyboard: the persona is standing in for the user who would say yes.
@@ -61,7 +61,7 @@ export const expectsActorVerdict = pikkuScenarioStep<
   name: 'expectsActorVerdict',
   description: 'expects the actor to have judged the task a given way',
   template: 'expects the actor to have judged the task {passed}',
-  func: async (_services, { verdict, passed }) => {
+  default: async (_services, { verdict, passed }) => {
     if (verdict.passed !== passed) {
       throw new Error(
         `Expected the actor to judge the task ${passed ? 'succeeded' : 'failed'}: ${verdict.reasoning}\n\nTranscript:\n${verdict.transcript.join('\n')}`
@@ -85,7 +85,7 @@ export const expectsTodoTitled = pikkuScenarioStep<
   name: 'expectsTodoTitled',
   description: 'expects the todo store to hold a todo with a given title',
   template: 'expects the store to hold a todo titled {title}',
-  func: async (_services, { title }, { scenarioStep }) => {
+  default: async (_services, { title }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const { todos } = (await actor.invoke(
       'todos:listTodos' as never,

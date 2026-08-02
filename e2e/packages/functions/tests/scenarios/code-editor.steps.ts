@@ -62,7 +62,7 @@ export const readsFunctionSource = pikkuScenarioStep<
 >({
   name: 'readsFunctionSource',
   description: 'reads a function definition in the console',
-  func: async (_services, { functionName }, { scenarioStep }) => {
+  default: async (_services, { functionName }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
     return (await actor.invoke('console:readFunctionSource', location)) as {
@@ -79,7 +79,7 @@ export const readsFunctionBody = pikkuScenarioStep<
 >({
   name: 'readsFunctionBody',
   description: 'reads a function body in the console',
-  func: async (_services, { functionName }, { scenarioStep }) => {
+  default: async (_services, { functionName }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
     return (await actor.invoke('console:readFunctionBody', location)) as {
@@ -94,7 +94,7 @@ export const updatesFunctionConfig = pikkuScenarioStep<
 >({
   name: 'updatesFunctionConfig',
   description: 'edits a function config in the console',
-  func: async (_services, { functionName, changes }, { scenarioStep }) => {
+  default: async (_services, { functionName, changes }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
     const result = (await actor.invoke('console:updateFunctionConfig', {
@@ -114,7 +114,7 @@ export const updatesFunctionBody = pikkuScenarioStep<
 >({
   name: 'updatesFunctionBody',
   description: 'rewrites a function body in the console',
-  func: async (_services, { functionName, body }, { scenarioStep }) => {
+  default: async (_services, { functionName, body }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await functionLocation(actor, functionName)
     const result = (await actor.invoke('console:updateFunctionBody', {
@@ -134,7 +134,7 @@ export const readsAgentSource = pikkuScenarioStep<
 >({
   name: 'readsAgentSource',
   description: 'reads an agent definition in the console',
-  func: async (_services, { agentKey }, { scenarioStep }) => {
+  default: async (_services, { agentKey }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await agentLocation(actor, agentKey)
     return (await actor.invoke('console:readAgentSource', location)) as {
@@ -149,7 +149,7 @@ export const updatesAgentConfig = pikkuScenarioStep<
 >({
   name: 'updatesAgentConfig',
   description: 'edits an agent config in the console',
-  func: async (_services, { agentKey, changes }, { scenarioStep }) => {
+  default: async (_services, { agentKey, changes }, { scenarioStep }) => {
     const actor = requireActor(scenarioStep)
     const location = await agentLocation(actor, agentKey)
     const result = (await actor.invoke('console:updateAgentConfig', {
@@ -169,7 +169,7 @@ export const expectsValues = pikkuScenarioStep<
 >({
   name: 'expectsValues',
   description: 'sees the expected values',
-  func: async (_services, { actual, expected }) => {
+  default: async (_services, { actual, expected }) => {
     for (const [key, want] of Object.entries(expected)) {
       const got = actual?.[key]
       if (String(got) !== String(want)) {
@@ -188,7 +188,7 @@ export const expectsText = pikkuScenarioStep<
 >({
   name: 'expectsText',
   description: 'sees the expected text',
-  func: async (_services, { actual, contains }) => {
+  default: async (_services, { actual, contains }) => {
     if (!actual?.includes(contains)) {
       throw new Error(`Expected text containing "${contains}", got: ${actual}`)
     }
@@ -206,14 +206,12 @@ export const expectsText = pikkuScenarioStep<
  */
 export const opensConsolePage = pikkuScenarioStep<
   { path: string; waitFor?: TestIdSelector },
-  { url: string },
-  true
+  { url: string }
 >({
   name: 'opensConsolePage',
   description: 'opens a console page',
   template: 'opens {path}',
-  browser: true,
-  func: async (_services, { path, waitFor }, { browser }) => {
+  browser: async (_services, { path, waitFor }, { browser }) => {
     await browser.goto(path)
     if (waitFor) {
       await browser
@@ -227,13 +225,11 @@ export const opensConsolePage = pikkuScenarioStep<
 
 export const clicksRowContaining = pikkuScenarioStep<
   { text: string },
-  { clicked: string },
-  true
+  { clicked: string }
 >({
   name: 'clicksRowContaining',
   description: 'clicks a row in the console',
-  browser: true,
-  func: async (_services, { text }, { browser }) => {
+  browser: async (_services, { text }, { browser }) => {
     const row = browser.page.locator('table tbody tr', { hasText: text })
     await row.first().click({ timeout: 15_000 })
     return { clicked: text }
@@ -242,13 +238,11 @@ export const clicksRowContaining = pikkuScenarioStep<
 
 export const clicksAgentCard = pikkuScenarioStep<
   { agentKey: string },
-  { clicked: string },
-  true
+  { clicked: string }
 >({
   name: 'clicksAgentCard',
   description: 'opens an agent in the console',
-  browser: true,
-  func: async (_services, { agentKey }, { browser }) => {
+  browser: async (_services, { agentKey }, { browser }) => {
     const badge = browser.page
       .locator('[data-agent-id]', { hasText: agentKey })
       .first()
@@ -266,13 +260,11 @@ export const clicksAgentCard = pikkuScenarioStep<
 
 export const seesEditButton = pikkuScenarioStep<
   { title: string },
-  { visible: true },
-  true
+  { visible: true }
 >({
   name: 'seesEditButton',
   description: 'sees the edit button',
-  browser: true,
-  func: async (_services, { title }, { browser }) => {
+  browser: async (_services, { title }, { browser }) => {
     await browser.page
       .locator(`button[title="${title}"]`)
       .first()

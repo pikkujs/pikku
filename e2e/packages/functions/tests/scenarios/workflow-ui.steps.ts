@@ -10,14 +10,12 @@ import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const opensWorkflowRun = pikkuScenarioStep<
   { workflowName: string; runId?: string },
-  { opened: string },
-  true
+  { opened: string }
 >({
   name: 'opensWorkflowRun',
   description: 'opens one workflow run on the console canvas',
   template: 'opens the {workflowName} run on the canvas',
-  browser: true,
-  func: async (_services, { workflowName, runId }, { browser }) => {
+  browser: async (_services, { workflowName, runId }, { browser }) => {
     if (!runId) {
       throw new Error(
         `opensWorkflowRun needs the run id — start the run first and pass its runId`

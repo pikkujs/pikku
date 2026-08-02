@@ -66,7 +66,7 @@ export const signsUpLinkUser = pikkuScenarioStep<{ name: string }, LinkUser>({
   name: 'signsUpLinkUser',
   description: 'signs a new user up and reports their Better Auth id',
   template: 'signs {name} up',
-  func: async (_services, { name }, { scenarioStep }) => {
+  default: async (_services, { name }, { scenarioStep }) => {
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const client = createAuthClient({
       baseURL: apiUrl,
@@ -104,7 +104,7 @@ export const startsProviderLink = pikkuScenarioStep<
   name: 'startsProviderLink',
   description: 'starts an OAuth link and reports its redirect target',
   template: 'starts linking {providerId}',
-  func: async (_services, { user, providerId }, { scenarioStep }) => {
+  default: async (_services, { user, providerId }, { scenarioStep }) => {
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const { cookieFetch } = await sessionFor(apiUrl, user)
     const response = await requestLink(apiUrl, cookieFetch, providerId)
@@ -134,7 +134,7 @@ export const linksProvider = pikkuScenarioStep<
   name: 'linksProvider',
   description: 'links an OAuth provider end to end through the mock provider',
   template: 'links {providerId}',
-  func: async (_services, { user, providerId }, { scenarioStep }) => {
+  default: async (_services, { user, providerId }, { scenarioStep }) => {
     const apiUrl = requireScenarioEnv(scenarioStep).apiUrl
     const { cookieFetch } = await sessionFor(apiUrl, user)
     const start = await requestLink(apiUrl, cookieFetch, providerId)
@@ -164,7 +164,7 @@ export const unlinksProvider = pikkuScenarioStep<
   name: 'unlinksProvider',
   description: "unlinks a provider through the user's own session",
   template: 'unlinks {providerId}',
-  func: async (_services, { user, providerId }, { scenarioStep }) => {
+  default: async (_services, { user, providerId }, { scenarioStep }) => {
     const { client } = await sessionFor(
       requireScenarioEnv(scenarioStep).apiUrl,
       user
@@ -186,7 +186,7 @@ export const readsLinkedProviders = pikkuScenarioStep<
   name: 'readsLinkedProviders',
   description: 'reads the providers currently linked to a user',
   template: 'reads the linked providers',
-  func: async (_services, { user }, { scenarioStep }) => {
+  default: async (_services, { user }, { scenarioStep }) => {
     const { client } = await sessionFor(
       requireScenarioEnv(scenarioStep).apiUrl,
       user
@@ -203,7 +203,7 @@ export const expectsLinkedProviders = pikkuScenarioStep<
   name: 'expectsLinkedProviders',
   description: 'expects a provider to be linked, or not to be',
   template: 'expects the linked providers',
-  func: async (_services, { linked, contains, excludes }) => {
+  default: async (_services, { linked, contains, excludes }) => {
     if (contains !== undefined && !linked.providers.includes(contains)) {
       throw new Error(
         `Expected ${contains} to be linked, got ${linked.providers.join(', ') || 'nothing'}`
@@ -228,7 +228,7 @@ export const expectsLinkStart = pikkuScenarioStep<
   name: 'expectsLinkStart',
   description: 'expects a link start to have been allowed or refused',
   template: 'expects the link start to answer {status}',
-  func: async (_services, { start, status, urlContains, scopes }) => {
+  default: async (_services, { start, status, urlContains, scopes }) => {
     if (status !== undefined && start.status !== status) {
       throw new Error(
         `Expected the link start to answer ${status}, got ${start.status}`

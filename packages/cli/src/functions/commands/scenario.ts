@@ -17,7 +17,11 @@ import {
   scenarioBrowserSteps,
   scenarioFailureFromSteps,
   scenarioStepRows,
+  scenarioStepsWithoutBinding,
+  scenarioSurfaceCoverage,
 } from './scenario-ladder.js'
+import { SCENARIO_SURFACES } from '@pikku/core/workflow'
+import type { ScenarioSurface } from '@pikku/core/workflow'
 import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
@@ -130,6 +134,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     excludeTags?: string
     coverage?: boolean
     browser?: boolean
+    run?: ScenarioSurface
+    strict?: boolean
     spawn?: boolean
     keepAlive?: boolean
     trace?: boolean
@@ -148,6 +154,8 @@ export const scenarioRun = pikkuSessionlessFunc<
       excludeTags,
       coverage,
       browser = true,
+      run: runSurface = 'default',
+      strict = false,
       spawn = false,
       keepAlive = false,
       trace = false,
@@ -155,6 +163,11 @@ export const scenarioRun = pikkuSessionlessFunc<
       appUrl,
     }
   ) => {
+    if (!SCENARIO_SURFACES.includes(runSurface)) {
+      throw new Error(
+        `Unknown --run surface '${runSurface}'. Expected one of: ${SCENARIO_SURFACES.join(', ')}.`
+      )
+    }
     const state = await getInspectorState(true, false, false, true)
 
     // Resolved once, so actors, step env, the browser driver and any spawned
@@ -280,6 +293,25 @@ export const scenarioRun = pikkuSessionlessFunc<
         )
         .filter(([, steps]) => steps.length > 0)
     )
+    // `--no-browser` is the blunt form of `--run default`: a machine with no
+    // browser takes the server-side path rather than skipping the scenario.
+    const effectiveSurface: ScenarioSurface =
+      browser === false && runSurface === 'browser' ? 'default' : runSurface
+    const unrunnableStepsByFlow = new Map<string, string[]>(
+      [...scenarioNames]
+        .map(
+          (name) =>
+            [
+              name,
+              scenarioStepsWithoutBinding(
+                state.workflows?.meta?.[name],
+                functionsMeta,
+                effectiveSurface
+              ),
+            ] as const
+        )
+        .filter(([, steps]) => steps.length > 0)
+    )
 
     // Two reasons a scenario is held back, both reported as SKIP rather than
     // failed. `--no-browser` is the direct replacement for cucumber's `@console`
@@ -291,8 +323,9 @@ export const scenarioRun = pikkuSessionlessFunc<
       skip?: string
     }): string | undefined => {
       if (entry.skip) return entry.skip
-      if (!browser && browserStepsByFlow.has(entry.scenarioName)) {
-        return 'browser steps, --no-browser'
+      const unrunnable = unrunnableStepsByFlow.get(entry.scenarioName)
+      if (unrunnable?.length) {
+        return `no ${effectiveSurface} or default binding: ${unrunnable.join(', ')}`
       }
       return undefined
     }
@@ -318,6 +351,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       apiUrl: env.apiUrl,
       appUrl: env.appUrl,
     })
+    scenarioService.setRunSurface(effectiveSurface)
     pikkuState(null, 'package', 'singletonServices', {
       logger,
       workflowService,
@@ -333,9 +367,16 @@ export const scenarioRun = pikkuSessionlessFunc<
       },
     }
 
-    const needsBrowser = groups.some((group) =>
-      group.entries.some((entry) => browserStepsByFlow.has(entry.scenarioName))
-    )
+    // Only a browser run launches one. Under `--run default` a step with a
+    // browser binding takes its default path instead, so there is nothing to
+    // drive and nothing to pay for.
+    const needsBrowser =
+      effectiveSurface === 'browser' &&
+      groups.some((group) =>
+        group.entries.some((entry) =>
+          browserStepsByFlow.has(entry.scenarioName)
+        )
+      )
     const failureDir = join(
       resolve(config.rootDir, config.outDir),
       'scenario-failures'
@@ -613,8 +654,39 @@ export const scenarioRun = pikkuSessionlessFunc<
       logger[level](text)
     }
 
+    // How much of the run actually happened on the surface it targeted. Every
+    // step counts, so a step that fell back to the server lowers the ratio
+    // rather than needing a footnote. Assertions that fell back are named
+    // separately — those are sentences claiming an observation nobody made.
+    const surfaceCoverage = { onSurface: 0, total: 0 }
+    const unwitnessed = new Set<string>()
+    for (const name of scenarioNames) {
+      const scenario = scenarioSurfaceCoverage(
+        state.workflows?.meta?.[name],
+        functionsMeta,
+        effectiveSurface
+      )
+      surfaceCoverage.onSurface += scenario.onSurface
+      surfaceCoverage.total += scenario.total
+      for (const step of scenario.unwitnessed) unwitnessed.add(step)
+    }
+    if (effectiveSurface !== 'default' && surfaceCoverage.total > 0) {
+      const line = `${surfaceCoverage.onSurface}/${surfaceCoverage.total} steps ran on ${effectiveSurface}`
+      if (unwitnessed.size === 0) {
+        logger.info(line)
+      } else {
+        logger[strict ? 'error' : 'warn'](
+          `${line} — asserted server-side only: ${[...unwitnessed].join(', ')}`
+        )
+      }
+    }
+
     const failed = results.filter((r) => r.status === 'failed')
-    if (failed.length > 0 || hookFailures.length > 0) {
+    if (
+      failed.length > 0 ||
+      hookFailures.length > 0 ||
+      (strict && unwitnessed.size > 0)
+    ) {
       process.exitCode = 1
     }
   },

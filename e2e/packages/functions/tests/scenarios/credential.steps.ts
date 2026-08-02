@@ -47,7 +47,7 @@ export const resetsCredentials = pikkuScenarioStep<void, { reset: true }>({
   name: 'resetsCredentials',
   description: 'clears every stored credential',
   template: 'resets the credentials',
-  func: async (_services, _data, { scenarioStep }) => {
+  default: async (_services, _data, { scenarioStep }) => {
     await callRpc<unknown>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'resetCredentials',
@@ -64,7 +64,7 @@ export const setsCredential = pikkuScenarioStep<
   name: 'setsCredential',
   description: 'stores a credential, globally or for one user',
   template: 'sets the {name} credential',
-  func: async (_services, { name, value, userId }, { scenarioStep }) => {
+  default: async (_services, { name, value, userId }, { scenarioStep }) => {
     await callRpc(requireScenarioEnv(scenarioStep).apiUrl, 'setCredential', {
       name,
       valueJson: JSON.stringify(value),
@@ -88,7 +88,7 @@ export const readsCredential = pikkuScenarioStep<
   name: 'readsCredential',
   description: 'reads a credential through the service addons resolve through',
   template: 'reads the {name} credential',
-  func: async (_services, { name, userId }, { scenarioStep }) => {
+  default: async (_services, { name, userId }, { scenarioStep }) => {
     const data = { name, ...(userId ? { userId } : {}) }
     const result = await callRpc<{ valueJson?: string | null }>(
       requireScenarioEnv(scenarioStep).apiUrl,
@@ -111,7 +111,7 @@ export const deletesCredential = pikkuScenarioStep<
   name: 'deletesCredential',
   description: 'revokes a credential server-side, with no session anywhere',
   template: 'deletes the {name} credential',
-  func: async (_services, { name, userId }, { scenarioStep }) => {
+  default: async (_services, { name, userId }, { scenarioStep }) => {
     const result = await callRpc<{ success?: boolean }>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'deleteCredential',
@@ -136,7 +136,7 @@ export const readsAllCredentials = pikkuScenarioStep<
   name: 'readsAllCredentials',
   description: 'reads every credential belonging to one user',
   template: 'reads every credential of {userId}',
-  func: async (_services, { userId }, { scenarioStep }) => {
+  default: async (_services, { userId }, { scenarioStep }) => {
     const result = await callRpc<{ credentialsJson: string }>(
       requireScenarioEnv(scenarioStep).apiUrl,
       'getAllCredentials',
@@ -154,7 +154,7 @@ export const expectsCredential = pikkuScenarioStep<
   name: 'expectsCredential',
   description: 'expects a credential to resolve, and optionally to a value',
   template: 'expects the credential to exist: {exists}',
-  func: async (_services, { credential, exists, value }) => {
+  default: async (_services, { credential, exists, value }) => {
     if (exists !== undefined && credential.exists !== exists) {
       throw new Error(
         `Expected ${credential.name} to ${exists ? 'resolve' : 'not resolve'}, got ${JSON.stringify(credential.value)}`
@@ -183,7 +183,7 @@ export const expectsCredentials = pikkuScenarioStep<
   name: 'expectsCredentials',
   description: "expects a user's credentials to be the given set",
   template: 'expects {count} credential(s)',
-  func: async (_services, { all, count, values }) => {
+  default: async (_services, { all, count, values }) => {
     if (count !== undefined && all.count !== count) {
       throw new Error(`Expected ${count} credential(s), got ${all.count}`)
     }
@@ -220,7 +220,7 @@ export const signsMessage = pikkuScenarioStep<
   name: 'signsMessage',
   description: 'signs a message through the HMAC addon',
   template: 'signs {message}',
-  func: async (
+  default: async (
     _services,
     { message, credential, userId },
     { scenarioStep }
@@ -258,7 +258,7 @@ export const verifiesMessage = pikkuScenarioStep<
   name: 'verifiesMessage',
   description: 'verifies a signature through the HMAC addon',
   template: 'verifies {message}',
-  func: async (
+  default: async (
     _services,
     { message, signature, credential, userId },
     { scenarioStep }
@@ -290,7 +290,7 @@ export const expectsSignature = pikkuScenarioStep<
   name: 'expectsSignature',
   description: 'expects a signing attempt to have been accepted or refused',
   template: 'expects the signing to be accepted: {accepted}',
-  func: async (_services, { signed, accepted, error, differsFrom }) => {
+  default: async (_services, { signed, accepted, error, differsFrom }) => {
     if (accepted !== undefined && signed.ok !== accepted) {
       throw new Error(
         `Expected signing to be ${accepted ? 'accepted' : 'refused'}, got ${signed.status}: ${signed.error ?? signed.signature}`
@@ -318,7 +318,7 @@ export const expectsVerification = pikkuScenarioStep<
   name: 'expectsVerification',
   description: 'expects a signature check to have come out a given way',
   template: 'expects the verification to be valid: {valid}',
-  func: async (_services, { verification, valid }) => {
+  default: async (_services, { verification, valid }) => {
     if (verification.valid !== valid) {
       throw new Error(
         `Expected the verification to be ${valid ? 'valid' : 'invalid'}`
@@ -341,7 +341,7 @@ export const readsOAuthProfile = pikkuScenarioStep<
   name: 'readsOAuthProfile',
   description: 'calls the OAuth addon profile endpoint as a given principal',
   template: 'reads the OAuth profile as {userId}',
-  func: async (_services, { userId }, { scenarioStep }) => {
+  default: async (_services, { userId }, { scenarioStep }) => {
     const { status, body } = await postScenarioJson<{
       authenticated?: boolean
       token?: string
@@ -364,7 +364,7 @@ export const expectsOAuthProfile = pikkuScenarioStep<
   name: 'expectsOAuthProfile',
   description: 'expects the OAuth addon to have allowed or refused the call',
   template: 'expects the OAuth profile to answer {status}',
-  func: async (_services, { profile, status, authenticated }) => {
+  default: async (_services, { profile, status, authenticated }) => {
     if (profile.status !== status) {
       throw new Error(
         `Expected the OAuth profile to answer ${status}, got ${profile.status}`
@@ -391,7 +391,7 @@ export const expectsCredentialToken = pikkuScenarioStep<
   name: 'expectsCredentialToken',
   description: 'expects a resolved credential to carry a provider access token',
   template: 'expects the access token to contain {contains}',
-  func: async (_services, { credential, contains }) => {
+  default: async (_services, { credential, contains }) => {
     const accessToken = (credential.value as { accessToken?: string } | null)
       ?.accessToken
     if (!accessToken?.includes(contains)) {

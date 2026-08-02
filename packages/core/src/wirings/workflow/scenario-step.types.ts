@@ -15,6 +15,61 @@ import type { ScenarioActor } from '../../services/scenario-actors-service.js'
 export type ScenarioStepPhase = 'step' | 'given' | 'when' | 'then'
 
 /**
+ * How an actor drives the system for one step.
+ *
+ * A step declares one implementation per surface it supports, and the runner
+ * picks between them — so the same ladder can run through a real browser, over
+ * the websocket, or entirely server-side.
+ *
+ * `default` is the floor: it is what every other surface falls back to, so it
+ * can never itself fall back.
+ */
+export type ScenarioSurface = 'browser' | 'cli' | 'default'
+
+export const SCENARIO_SURFACES: readonly ScenarioSurface[] = [
+  'browser',
+  'cli',
+  'default',
+]
+
+/**
+ * How a step's declared surfaces resolve for one run.
+ *
+ * `given`/`when`/`step` bindings are **alternatives** — clicking Buy and calling
+ * `createOrder` are two ways to cause one effect, so exactly one runs.
+ *
+ * `then` bindings are **witnesses** — "the order row says paid" and "the
+ * confirmation panel says paid" are different claims that share a name, and the
+ * gap between them is the bug nobody catches. So every declared witness runs and
+ * they must agree.
+ */
+export type ScenarioSurfaceResolution =
+  | {
+      kind: 'action'
+      surface: ScenarioSurface
+      /** The run asked for a surface this step does not implement. */
+      fellBack: boolean
+    }
+  | {
+      kind: 'witness'
+      /**
+       * Every witness to run, surface first. Empty means the assertion has no
+       * binding this run can execute at all — nothing would check anything, so
+       * the step fails rather than reporting a pass it never earned.
+       */
+      surfaces: ScenarioSurface[]
+      /**
+       * Something checked the assertion, but not on the surface its prose
+       * claims — so nobody looked at the UI. Reported as its own state and
+       * counted against coverage: not being in the UI *is* the finding.
+       *
+       * Disjoint from an empty `surfaces`; an assertion that ran nowhere is a
+       * failure, not a coverage statistic.
+       */
+      unwitnessed: boolean
+    }
+
+/**
  * Options accepted by `scenario.step/given/when/then`.
  *
  * Note the retry default differs from an ordinary workflow step: retrying a
@@ -22,7 +77,7 @@ export type ScenarioStepPhase = 'step' | 'given' | 'when' | 'then'
  * default to no retries.
  */
 export interface ScenarioStepOptions {
-  /** The actor this step runs as. Required for steps declaring `browser: true`. */
+  /** The actor this step runs as. Required for steps declaring a `browser` binding. */
   actor?: unknown
   /** Overrides the step's own `description` for this call site only. */
   description?: string
@@ -56,6 +111,11 @@ export interface PikkuScenarioStepWire<TActor = ScenarioActor> {
   stepName: string
   runId: string
   phase: ScenarioStepPhase
+  /**
+   * Which of the step's bindings is currently executing. A `then` step runs once
+   * per witness, so its body sees this change between invocations.
+   */
+  surface: ScenarioSurface
   /**
    * The actor this step runs as, when one was given. Call RPCs through it
    * (`actor.invoke(...)`) so they run against the target environment as that
@@ -96,7 +156,7 @@ export interface TestIdSelector {
 
 /**
  * Structural browser handle, present only when the runner provisioned a
- * browser for this step (`browser: true` on the step config).
+ * browser for this step (a `browser` binding on the step config).
  *
  * `@pikku/core` deliberately never imports playwright — it must stay
  * dependency-free for edge runtimes. `@pikku/playwright` augments this

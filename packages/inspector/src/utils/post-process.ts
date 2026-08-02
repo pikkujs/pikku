@@ -745,8 +745,11 @@ export function validateScenarioServices(
  *
  * - the step target must be a static string literal (PKU678) — otherwise it
  *   can't be bundled, typed or drawn;
- * - a `browser: true` step must be given an actor (PKU677), since the browser
- *   context signs in as that persona.
+ * - a step declaring a `browser` binding must be given an actor (PKU677), since
+ *   the browser context signs in as that persona. It is checked statically even
+ *   though the binding only runs on a browser run: a step that can never be
+ *   driven by a human is a latent failure, not a passing default run.
+ * - a scenario written as a step ladder must assert something (PKU680).
  *
  * It also marks the step's function as used, so `scenario run` boots the
  * singletons the step actually needs.
@@ -755,9 +758,12 @@ export function validateScenarioSteps(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>
 ): void {
+  const phasesSeen = new Set<string>()
+
   const visit = (workflowName: string, steps: WorkflowStepMeta[]): void => {
     for (const step of steps) {
       if (step.type === 'scenarioStep') {
+        phasesSeen.add(step.phase)
         if (step.stepFunc === DYNAMIC_SCENARIO_STEP_TARGET) {
           logger.critical(
             ErrorCode.SCENARIO_STEP_TARGET_NOT_STATIC,
@@ -769,10 +775,13 @@ export function validateScenarioSteps(
         }
         state.serviceAggregation.usedFunctions.add(step.stepFunc)
         const stepMeta = state.functions.meta[step.stepFunc]
-        if (stepMeta?.scenarioStepBrowser && !step.actor) {
+        if (
+          stepMeta?.scenarioStepSurfaces?.includes('browser') &&
+          !step.actor
+        ) {
           logger.critical(
             ErrorCode.SCENARIO_BROWSER_STEP_NEEDS_ACTOR,
-            `Scenario '${workflowName}' calls browser step '${step.stepFunc}' without an actor. ` +
+            `Scenario '${workflowName}' calls step '${step.stepFunc}', which declares a browser binding, without an actor. ` +
               `Pass { actor: actors.<name> } so the browser context signs in as that persona.`
           )
         }
@@ -795,7 +804,20 @@ export function validateScenarioSteps(
   }
 
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
+    phasesSeen.clear()
     visit(workflowName, meta.steps ?? [])
+    // A scenario written as a step ladder but with no `then` proves only that
+    // nothing threw. It is also invisible to witness coverage — it contributes
+    // 0/0, so it can never lower the number — which makes an assertion-free
+    // flow the cheapest way to make a suite look better covered than it is.
+    if (phasesSeen.size > 0 && !phasesSeen.has('then')) {
+      logger.critical(
+        ErrorCode.SCENARIO_HAS_NO_ASSERTION,
+        `Scenario '${workflowName}' has ${[...phasesSeen].join('/')} steps but never asserts. ` +
+          `Add a scenario.then(...) naming what the actor should now see — a flow with no 'then' ` +
+          `only proves nothing threw, and contributes nothing to witness coverage.`
+      )
+    }
   }
 }
 

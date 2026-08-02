@@ -23,7 +23,9 @@ import type {
   ScenarioEnvironment,
   ScenarioStepOptions,
   ScenarioStepPhase,
+  ScenarioSurface,
 } from './scenario-step.types.js'
+import { resolveScenarioSurfaces, witnessesAgree } from './scenario-surface.js'
 import type {
   PikkuScenarioWire,
   PikkuWorkflowWire,
@@ -104,6 +106,118 @@ addError(ScenarioHookError, {
 })
 
 /**
+ * Two witnesses of the same `then` disagreed.
+ *
+ * This is the failure the whole additive-witness design exists to produce: the
+ * system of record is right and the surface the actor was looking at is not, or
+ * the other way round. Both observations go in the message, because either one
+ * alone reads as a passing assertion.
+ */
+export class ScenarioWitnessDisagreement extends PikkuError {
+  constructor(
+    public readonly stepFunc: string,
+    public readonly expected: { surface: ScenarioSurface; observed: unknown },
+    public readonly actual: { surface: ScenarioSurface; observed: unknown }
+  ) {
+    super(
+      `Scenario step '${stepFunc}' observed different things on different surfaces — ` +
+        `${expected.surface}: ${JSON.stringify(expected.observed)}, ` +
+        `${actual.surface}: ${JSON.stringify(actual.observed)}.`
+    )
+  }
+}
+addError(ScenarioWitnessDisagreement, {
+  status: 500,
+  message: 'Two surfaces disagreed about what happened.',
+})
+
+/**
+ * A step resolved to its browser binding but nothing can provide a browser.
+ */
+export class ScenarioBrowserUnavailable extends PikkuError {
+  constructor(public readonly stepFunc: string) {
+    super(
+      `[scenario] step '${stepFunc}' resolved to its browser binding but no browser provider is registered. ` +
+        `Install @pikku/playwright and register its provider, or run with --run default to take the server-side path.`
+    )
+  }
+}
+addError(ScenarioBrowserUnavailable, {
+  status: 500,
+  message: 'No browser provider is registered.',
+})
+
+/**
+ * A browser binding was reached without an actor, so there is no persona whose
+ * window it would run in.
+ */
+export class ScenarioBrowserActorRequired extends PikkuError {
+  constructor(public readonly stepFunc: string) {
+    super(
+      `[scenario] step '${stepFunc}' resolved to its browser binding but was called without an actor. ` +
+        `Pass { actor: actors.<name> } so the browser signs in as that persona.`
+    )
+  }
+}
+addError(ScenarioBrowserActorRequired, {
+  status: 500,
+  message: 'A browser binding needs an actor.',
+})
+
+/**
+ * A step declares no binding the run can execute.
+ *
+ * Reached when a step has no `default` and the run targets a surface it does not
+ * implement — an action step with nothing to run is a broken ladder, not a
+ * coverage gap. (A `then` that ran somewhere, just not on the run surface, is
+ * the coverage gap; it is reported rather than thrown. See
+ * {@link ScenarioNoWitness} for one that ran nowhere.)
+ */
+export class ScenarioNoSurfaceBinding extends PikkuError {
+  constructor(
+    public readonly stepFunc: string,
+    public readonly declared: ScenarioSurface[],
+    public readonly runSurface: ScenarioSurface
+  ) {
+    super(
+      `[scenario] step '${stepFunc}' declares no binding for '${runSurface}' and no 'default' to fall back to ` +
+        `(declares: ${declared.join(', ') || 'nothing'}).`
+    )
+  }
+}
+addError(ScenarioNoSurfaceBinding, {
+  status: 500,
+  message: 'Step has no runnable binding for this surface.',
+})
+
+/**
+ * An assertion had no witness this run could execute.
+ *
+ * Distinct from an unwitnessed `then`, which ran server-side and merely did not
+ * look at the surface its prose claims. This one ran nowhere: without the throw
+ * the step returns `undefined` and renders as a tick, reporting a pass for
+ * something nobody checked. That is the exact failure the phase exists to
+ * prevent, so it is fatal regardless of `--strict`.
+ */
+export class ScenarioNoWitness extends PikkuError {
+  constructor(
+    public readonly stepFunc: string,
+    public readonly declared: ScenarioSurface[],
+    public readonly runSurface: ScenarioSurface
+  ) {
+    super(
+      `[scenario] assertion '${stepFunc}' has no witness to run on '${runSurface}' ` +
+        `(declares: ${declared.join(', ') || 'nothing'}). Add a 'default' witness so the ` +
+        `assertion is checked server-side even when the surface cannot check it.`
+    )
+  }
+}
+addError(ScenarioNoWitness, {
+  status: 500,
+  message: 'Assertion has no witness for this surface.',
+})
+
+/**
  * The scenario capability, layered onto a workflow service rather than being
  * one.
  *
@@ -133,8 +247,21 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   private runActors = new Map<string, ScenarioActors>()
   private scenarioBrowserProvider?: ScenarioBrowserProvider
   private scenarioEnvironment?: ScenarioEnvironment
+  private runSurface: ScenarioSurface = 'default'
 
   constructor(private readonly engine: WorkflowRunEngine) {}
+
+  /**
+   * The surface every actor drives the system through for this run, set once by
+   * the runner from `--run`. `default` is the server-side path — the fast suite.
+   */
+  public setRunSurface(surface: ScenarioSurface) {
+    this.runSurface = surface
+  }
+
+  public getRunSurface(): ScenarioSurface {
+    return this.runSurface
+  }
 
   /**
    * Registered by `@pikku/playwright` (or any other driver) before a scenario
@@ -522,8 +649,11 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       },
 
       // Scenario steps: a named `pikkuScenarioStep` run as one durable step.
-      // `given`/`when`/`then` are pure sugar over `step` — the phase only
-      // changes the prose a reporter renders.
+      // `given`/`when`/`step` are sugar for each other, differing only in the
+      // prose a reporter renders. `then` is not: the phase is what decides
+      // whether the step's bindings are alternatives or witnesses, so the same
+      // step function called two ways runs differently. See
+      // {@link resolveScenarioSurfaces}.
       step: (stepName, stepFunc, data, options) =>
         this.scenarioStep(
           'step',
@@ -598,50 +728,98 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       this.scenarioStepDescription(packageName, resolvedStepFunc) ??
       stepName
 
+    const declared = this.declaredSurfaces(packageName, resolvedStepFunc)
+    const resolution = resolveScenarioSurfaces(phase, declared, this.runSurface)
+
     return await this.engine.inlineStep(
       runId,
       stepName,
       async () => {
-        const wire: PikkuWire = {
-          workflow: workflowWire,
-          scenario: workflowWire,
-          rpc: rpcService?.wire?.rpc,
-          session: rpcService?.wire?.session,
-          pikkuUserId: workflowWire.pikkuUserId,
-          actors: this.runActors.get(runId),
-          scenarioStep: {
-            name: resolvedStepFunc,
-            stepName,
-            runId,
-            phase,
-            actor,
-            env: this.scenarioEnvironment,
-          },
-        }
-        if (this.requiresBrowser(packageName, resolvedStepFunc)) {
-          if (!this.scenarioBrowserProvider) {
-            throw new Error(
-              `[scenario] step '${resolvedStepFunc}' declares 'browser: true' but no browser provider is registered. ` +
-                `Install @pikku/playwright and register its provider, or run with --no-browser to skip browser steps.`
+        const runOnSurface = async (surface: ScenarioSurface) => {
+          const wire: PikkuWire = {
+            workflow: workflowWire,
+            scenario: workflowWire,
+            rpc: rpcService?.wire?.rpc,
+            session: rpcService?.wire?.session,
+            pikkuUserId: workflowWire.pikkuUserId,
+            actors: this.runActors.get(runId),
+            scenarioStep: {
+              name: resolvedStepFunc,
+              stepName,
+              runId,
+              phase,
+              surface,
+              actor,
+              env: this.scenarioEnvironment,
+            },
+          }
+          if (surface === 'browser') {
+            if (!this.scenarioBrowserProvider) {
+              throw new ScenarioBrowserUnavailable(resolvedStepFunc)
+            }
+            if (!actor) {
+              throw new ScenarioBrowserActorRequired(resolvedStepFunc)
+            }
+            wire.browser = await this.scenarioBrowserProvider.sessionFor(
+              actor.name
             )
           }
-          if (!actor) {
-            throw new Error(
-              `[scenario] step '${resolvedStepFunc}' declares 'browser: true' but was called without an actor. ` +
-                `Pass { actor: actors.<name> } so the browser signs in as that persona.`
-            )
-          }
-          wire.browser = await this.scenarioBrowserProvider.sessionFor(
-            actor.name
+          return await runPikkuFunc(
+            'workflow',
+            workflowName,
+            resolvedStepFunc,
+            {
+              singletonServices: getSingletonServices()!,
+              createWireServices: getCreateWireServices(),
+              data: () => data,
+              wire,
+              packageName: packageName ?? undefined,
+            }
           )
         }
-        return await runPikkuFunc('workflow', workflowName, resolvedStepFunc, {
-          singletonServices: getSingletonServices()!,
-          createWireServices: getCreateWireServices(),
-          data: () => data,
-          wire,
-          packageName: packageName ?? undefined,
-        })
+
+        if (resolution.kind === 'action') {
+          if (resolution.fellBack && !declared.includes('default')) {
+            throw new ScenarioNoSurfaceBinding(
+              resolvedStepFunc,
+              declared,
+              this.runSurface
+            )
+          }
+          return await runOnSurface(resolution.surface)
+        }
+
+        if (resolution.surfaces.length === 0) {
+          throw new ScenarioNoWitness(
+            resolvedStepFunc,
+            declared,
+            this.runSurface
+          )
+        }
+
+        // A `then` runs every witness it has and they must agree. The surface
+        // witness runs first so that when the page is the thing that is wrong,
+        // it is the failure that surfaces.
+        let first: { surface: ScenarioSurface; observed: unknown } | undefined
+        for (const surface of resolution.surfaces) {
+          const observed = await runOnSurface(surface)
+          if (!first) {
+            first = { surface, observed }
+            continue
+          }
+          if (!witnessesAgree(first.observed, observed)) {
+            throw new ScenarioWitnessDisagreement(resolvedStepFunc, first, {
+              surface,
+              observed,
+            })
+          }
+          // Keep whichever witness actually reported a value, so a step pairing
+          // a returning witness with a throwing one still records an output.
+          if (first.observed === undefined) {
+            first = { surface, observed }
+          }
+        }
+        return first?.observed
       },
       {
         description,
@@ -673,10 +851,15 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     return this.scenarioStepConfig(packageName, stepFunc)?.description
   }
 
-  private requiresBrowser(
+  /**
+   * Which surfaces a step declares a binding for. A step that declares none is
+   * treated as server-side only, which is what an ordinary function is.
+   */
+  private declaredSurfaces(
     packageName: string | null,
     stepFunc: string
-  ): boolean {
-    return this.scenarioStepConfig(packageName, stepFunc)?.browser === true
+  ): ScenarioSurface[] {
+    const surfaces = this.scenarioStepConfig(packageName, stepFunc)?.surfaces
+    return surfaces?.length ? surfaces : ['default']
   }
 }

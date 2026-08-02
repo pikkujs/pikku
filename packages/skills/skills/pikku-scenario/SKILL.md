@@ -6,7 +6,8 @@ description: >-
   over the real transport against a running server — so a flow doubles as an e2e test and a
   staged/production health check. Covers scenario.do / expectEventually / expectError /
   expectService, declared steps via pikkuScenarioStep (including browser steps driven by
-  @pikku/playwright), actors and environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
+  @pikku/playwright) written as intent rather than as clicks, with the actions factored into
+  shared browser utilities, actors and environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
   `pikku scenario list|run` commands, live function coverage via `pikku dev --coverage`, and
   plain unit tests for pure function logic. TRIGGER when: user asks about scenarios, testing a
   Pikku function, test coverage, end-to-end flows, browser/UI e2e, or health checks. DO NOT
@@ -166,6 +167,200 @@ export const credentialFeature = pikkuFeature({
 
 The **feature is the run unit**: `--flows` on a scenario whose every feature entry carries `data` errors and names the features containing it, because the feature is what supplies that data. Use `--features` for those. A scenario referenced bare anywhere, or in no feature at all, still runs standalone.
 
+### Steps describe intent, not actions
+
+A scenario records what someone was **trying to do**, never the keystrokes they used to do it. This is the one decision that determines whether a suite survives its first redesign, and it applies to every step name you write.
+
+| Action ladder — wrong                  | Intent ladder — right                          |
+| -------------------------------------- | ---------------------------------------------- |
+| `Given opens /shop`                    | `Given the shopper is browsing the shop`       |
+| `When clicks the category filter`      | `When the shopper buys the £5 strawberry milkshake` |
+| `And clicks "Drinks"`                  | `Then it is in their basket`                   |
+| `And clicks the first product card`    |                                                |
+| `And clicks Add to basket`             |                                                |
+| `Then sees "1 item"`                   |                                                |
+
+Three things go wrong with the left-hand column, and all three are expensive:
+
+- **A layout change rewrites every scenario that touched that screen.** In the right-hand column it rewrites one function.
+- **The report is the deliverable.** `buys the £5 strawberry milkshake` is readable by someone who has never seen the app; `clicks [data-testid=add]` tells them nothing about whether the product works.
+- **An action step cannot arrive on its own.** It assumes the previous click left the browser somewhere, so the scenario only runs front-to-back, as a whole, in one order.
+
+So there are three layers, and only two of them are named in the report:
+
+| Layer                          | What it is                                          | On the ladder |
+| ------------------------------ | --------------------------------------------------- | ------------- |
+| Scenario                       | The flow, written as intents                        | yes — the ladder |
+| Step (`pikkuScenarioStep`)     | One intent                                          | yes — one row |
+| Utility                        | An ordinary TS function over `browser`              | no            |
+
+Utilities are **not steps**. They are plain exported functions, they take the browser handle, and they hold the clicking:
+
+```typescript
+// shop.browser.ts — shared actions. Not steps: nothing here is an intent.
+import type { PikkuBrowserWire } from '@pikku/core/workflow'
+import type {} from '@pikku/playwright'
+
+/** Arrive on the shop, from wherever the browser happens to be. */
+export const ensureOnShop = async (browser: PikkuBrowserWire) => {
+  if (!new URL(browser.page.url()).pathname.startsWith('/shop')) {
+    await browser.goto('/shop')
+  }
+  await browser
+    .locate({ testId: 'product-grid' })
+    .first()
+    .waitFor({ state: 'visible' })
+}
+
+export const searchFor = async (browser: PikkuBrowserWire, query: string) => {
+  await browser.locate({ testId: 'shop-search' }).first().fill(query)
+  await browser.page.keyboard.press('Enter')
+}
+
+export const filterByCategory = async (
+  browser: PikkuBrowserWire,
+  category: string
+) => {
+  await browser.locate({ testId: 'category-filter' }).first().click()
+  await browser
+    .locate({ testId: 'category-option', where: { 'data-category': category } })
+    .first()
+    .click()
+}
+
+export const addToBasket = async (browser: PikkuBrowserWire, name: string) => {
+  const card = browser
+    .locate({ testId: 'product-card', containing: name })
+    .first()
+  await card.waitFor({ state: 'visible' })
+  await card.locate('[data-testid=add-to-basket]').click()
+}
+```
+
+The step composes them, and it is the step — one row — that the report shows:
+
+```typescript
+export const buysTheItem = pikkuScenarioStep<
+  { name: string },
+  { name: string }
+>({
+  name: 'buysTheItem',
+  description: 'finds one item in the shop and puts it in the basket',
+  template: 'buys the {name}',
+  // One intent, one implementation per surface an actor can drive it through.
+  browser: async (_services, { name }, { browser }) => {
+    await ensureOnShop(browser)
+    await searchFor(browser, name)
+    await addToBasket(browser, name)
+    return { name }
+  },
+  default: async ({ rpc }, { name }) => {
+    const item = await rpc.invoke('findItemByName', { name })
+    await rpc.invoke('addToBasket', { itemId: item.id })
+    return { name }
+  },
+})
+```
+
+The two bindings are **alternatives**: `pikku scenario run --run browser` clicks through the shop, `--run default` (the fast suite) takes the server-side path, and both report the same sentence.
+
+```typescript
+await scenario.when(
+  'buys a milkshake',
+  'buysTheItem',
+  { name: '£5 strawberry milkshake' },
+  { actor: actors.shopper }
+)
+// reporter renders: When the shopper buys the £5 strawberry milkshake  ✓  1.2s
+```
+
+**Every intent step begins by arriving.** `ensureOnShop` is not defensive noise — it is what lets a scenario start at any step, run alone, and be reordered without touching it. It checks first and navigates only if needed, so a scenario already on the shop pays nothing. This is about the *browser's* starting position, not the database: there is still no state reset (see above), and you still scope what you create.
+
+**The same utilities, a different intent.** A scenario about filtering has filtering as its subject, so there the filter *is* the intent — same helper, its own step:
+
+```typescript
+export const filtersTheShop = pikkuScenarioStep<
+  { category: string },
+  { shown: number }
+>({
+  name: 'filtersTheShop',
+  description: 'narrows the catalogue to one category',
+  template: 'filters the shop by {category}',
+  browser: async (_services, { category }, { browser }) => {
+    await ensureOnShop(browser)
+    await filterByCategory(browser, category)
+    return {
+      shown: await browser.locate({ testId: 'product-card' }).count(),
+    }
+  },
+  default: async ({ rpc }, { category }) => ({
+    shown: (await rpc.invoke('listItems', { categorySlug: category })).length,
+  }),
+})
+```
+
+Two scenarios, two intents, one set of utilities. That is the shape to aim for: when a helper is reused by a step whose *subject* it is, promote it to a step there — never the reverse.
+
+**Non-browser steps need none of this.** Without a browser there is no navigation to absorb and no DOM to hide, so an intent maps to one RPC and `scenario.do` names it directly:
+
+```typescript
+const order = await scenario.do(
+  'Shopper checks out',
+  'createOrder',
+  { basketId, shippingAddress },
+  { actor: actors.shopper }
+)
+```
+
+Reach for a `pikkuScenarioStep` on the non-browser side only when one intent genuinely spans several RPCs, or when the step asserts something the RPC result alone does not say.
+
+### `then` bindings are witnesses, not alternatives
+
+This is the one place the surface bindings do **not** behave like a switch, and it is the part worth reading twice.
+
+On a `given` or `when`, the bindings are alternatives — clicking Buy and calling `createOrder` are two ways to cause one effect, so exactly one runs.
+
+On a `then`, they are not two implementations of one assertion. They are two *different claims*:
+
+| binding | what it actually proves |
+| ------- | ----------------------- |
+| `default` | the order row says `paid` — the system of record is right |
+| `browser` | the confirmation panel says paid — the truth reached the human |
+
+The gap between them is the bug nobody catches: 200 OK, database correct, user still watching a spinner. So a `then` runs **every** binding it declares and fails if they disagree.
+
+```typescript
+export const seesTheOrderConfirmed = pikkuScenarioStep<
+  { orderId: string },
+  { status: string }
+>({
+  name: 'seesTheOrderConfirmed',
+  template: 'sees order {orderId} confirmed',
+  // Both run on `--run browser`. Each returns what it observed, and the runner
+  // compares them — so this fails when the page disagrees with the database.
+  browser: async (_services, { orderId }, { browser }) => ({
+    status: await browser
+      .locate({ testId: 'order-status', where: { 'data-order': orderId } })
+      .getAttribute('data-status'),
+  }),
+  default: async ({ rpc }, { orderId }) => ({
+    status: (await rpc.invoke('getOrder', { orderId })).status,
+  }),
+})
+```
+
+Three rules follow, and they are the ones that get broken:
+
+- **A browser witness must observe on the page.** One that quietly calls an RPC to check the result is worse than no binding at all — it reports a tick for a surface it never looked at.
+- **Return what you observed, don't just assert.** A witness returning a value lets the runner diff the two. A witness that only throws still works, but it can never disagree with anything, so it proves less. Read structured state with `where` on the test-id selector rather than parsing translated copy.
+- **A step with no binding for the run's surface is counted, not excused.** `--run browser` prints `n/m steps ran on browser` over *every* step, so an action that quietly fell back to the server lowers the number just as an assertion does. A `then` that fell back is additionally named — `--strict` fails on those, because a sentence saying the actor saw something nobody looked at is a different problem from a shortcut. Not being in the UI *is* the finding: do not add a browser binding that fakes it.
+
+**Always give a `then` a `default` witness.** It is the floor every run can fall back to, and an assertion with no witness the run can execute is fatal (`ScenarioNoWitness`) — not a coverage gap. The distinction is the point: a `then` checked server-side under `--run browser` did happen, it just wasn't seen where the prose claims; one checked nowhere never happened at all, and without the error it would return `undefined` and render as a tick. A browser-only `then` is therefore a step that fails the fast suite, which is rarely what you want.
+
+**Every scenario must assert.** A flow of only `given`/`when` is a PKU680 critical — it proves nothing threw. Since coverage counts every step, an assertion-free ladder of browser-bound actions would score a perfect `3/3` while checking nothing, so clicking through the UI and never looking at the result is the cheapest way to fake the number. The rule closes that.
+
+Assertions with no possible browser witness are a different thing and should not be written as a `then`: "the audit log recorded it" is a system check, and "the receipt email arrives" is `expectEventually`, which is always out-of-band and always server-side.
+
 ### Declared steps (`pikkuScenarioStep`)
 
 `scenario.do` can only name an RPC. A **step** is a named, typed unit of scenario behaviour whose body is an ordinary pikku function — so it can call several RPCs as its actor, assert, or drive a browser.
@@ -210,7 +405,11 @@ Rules that bite:
 
 ### Browser steps
 
+`browser` is a boolean on the step, and it is the whole switch: `browser: true` and a browser is guaranteed present on the wire, `browser: false` (the default) and there is none. There is no third state and nothing to null-check — `wire.browser` is optional in the type only for the steps that did not ask for one.
+
 A step declaring `browser: true` gets `wire.browser` — a session bound to **its actor**, signed in through the same `signInPath` + `SCENARIO_ACTOR_SECRET` path the HTTP actors use, so the browser and the RPC calls are one identity. Calling such a step without an actor is a critical error (`PKU677`).
+
+Browser steps are where **intent, not actions** earns its keep: the step is one intent, the clicking lives in shared utilities, and the step arrives before it acts. Write the mechanics below into utilities and keep the step body to three or four calls that read as a sentence.
 
 ```typescript
 export const opensTheCart = pikkuScenarioStep<
@@ -374,6 +573,9 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | A scenario per function                       | Scenarios are user flows. One flow covers many functions; that is the point.                              |
 | Assuming a clean database                     | There is no state reset — it may be a staging server. Scope what you create.                              |
 | `sleep()` before asserting                    | Use `expectEventually`.                                                                                   |
+| A step named `clicksAddToBasket` / `opensThePage` | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility. |
+| A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                       |
+| A `browser: true` step guarding `if (!browser)` | `browser: true` guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).      |
 | `expectEventually` in a `pikkuWorkflowFunc`   | `PKU675` — scenario-only.                                                                                 |
 | Coverage silently 0                           | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
 

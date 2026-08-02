@@ -43,7 +43,7 @@ export const signsUpUser = pikkuScenarioStep<
   name: 'signsUpUser',
   description: 'signs a new user up and reads the session it established',
   template: 'signs up as {email}',
-  func: async (_services, { email, password }, { scenarioStep }) => {
+  default: async (_services, { email, password }, { scenarioStep }) => {
     const client = authClientFor(requireScenarioEnv(scenarioStep).apiUrl)
     const { error } = await client.signUp.email({
       name: email,
@@ -70,7 +70,7 @@ export const signsInAndReadsSession = pikkuScenarioStep<
   name: 'signsInAndReadsSession',
   description: 'signs in and reads the session back on a second request',
   template: 'signs in as {email}',
-  func: async (_services, { email, password }, { scenarioStep }) => {
+  default: async (_services, { email, password }, { scenarioStep }) => {
     const client = authClientFor(requireScenarioEnv(scenarioStep).apiUrl)
     const { error } = await client.signIn.email({ email, password })
     if (error) {
@@ -93,7 +93,7 @@ export const signsOutAndReadsSession = pikkuScenarioStep<
   name: 'signsOutAndReadsSession',
   description: 'signs in, signs out and reads the session back',
   template: 'signs {email} out',
-  func: async (_services, { email, password }, { scenarioStep }) => {
+  default: async (_services, { email, password }, { scenarioStep }) => {
     const client = authClientFor(requireScenarioEnv(scenarioStep).apiUrl)
     const signIn = await client.signIn.email({ email, password })
     if (signIn.error) {
@@ -119,7 +119,7 @@ export const expectsAuthAttempt = pikkuScenarioStep<
   name: 'expectsAuthAttempt',
   description: 'expects an auth call to have been accepted and its session',
   template: 'expects the attempt to be accepted: {accepted}',
-  func: async (_services, { attempt, accepted, sessionEmail }) => {
+  default: async (_services, { attempt, accepted, sessionEmail }) => {
     if (accepted !== undefined && attempt.ok !== accepted) {
       throw new Error(
         `Expected the call to be ${accepted ? 'accepted' : 'refused'}, got ${

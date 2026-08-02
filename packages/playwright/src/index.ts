@@ -1,7 +1,7 @@
 /**
  * Playwright driver for pikku scenario steps.
  *
- * A step declared with `browser: true` is handed a browser session on
+ * A step's `browser` binding is handed a browser session on
  * `wire.browser`; this package provides that session, one isolated context per
  * actor, signed in as that actor.
  */

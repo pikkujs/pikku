@@ -61,14 +61,12 @@ const waitForComposerEnabled = async (browser: PikkuBrowserWire) => {
 
 export const opensAgentPlayground = pikkuScenarioStep<
   { agent: string },
-  { threadId: string },
-  true
+  { threadId: string }
 >({
   name: 'opensAgentPlayground',
   description: 'opens an agent playground on a fresh thread',
   template: 'opens the {agent} playground',
-  browser: true,
-  func: async (_services, { agent }, { browser }) => {
+  browser: async (_services, { agent }, { browser }) => {
     const threadId = randomUUID()
     await browser.goto(
       `/console/agents/playground?id=${agent}&threadId=${threadId}`
@@ -107,14 +105,12 @@ export const opensAgentPlayground = pikkuScenarioStep<
  */
 export const sendsAgentMessage = pikkuScenarioStep<
   { message: string },
-  { sent: string },
-  true
+  { sent: string }
 >({
   name: 'sendsAgentMessage',
   description: 'types a message into the composer and sends it',
   template: 'sends {message}',
-  browser: true,
-  func: async (_services, { message }, { browser }) => {
+  browser: async (_services, { message }, { browser }) => {
     const input = browser.locate(COMPOSER)
     await waitForComposerEnabled(browser)
 
@@ -161,14 +157,12 @@ export const sendsAgentMessage = pikkuScenarioStep<
 
 export const waitsForAgentResponse = pikkuScenarioStep<
   void,
-  { idle: true },
-  true
+  { idle: true }
 >({
   name: 'waitsForAgentResponse',
   description: 'waits for the agent to finish responding',
   template: 'waits for the response',
-  browser: true,
-  func: async (_services, _data, { browser }) => {
+  browser: async (_services, _data, { browser }) => {
     await waitForComposerEnabled(browser)
     return { idle: true }
   },
@@ -176,14 +170,12 @@ export const waitsForAgentResponse = pikkuScenarioStep<
 
 export const seesApprovalRequests = pikkuScenarioStep<
   { count?: number },
-  { count: number },
-  true
+  { count: number }
 >({
   name: 'seesApprovalRequests',
   description: 'sees pending approval requests',
   template: 'sees the approval request(s)',
-  browser: true,
-  func: async (_services, { count }, { browser }) => {
+  browser: async (_services, { count }, { browser }) => {
     const cards = browser.locate(PENDING_APPROVAL)
     await cards.first().waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
     if (count !== undefined) {
@@ -201,14 +193,12 @@ export const seesApprovalRequests = pikkuScenarioStep<
  */
 export const expectsApprovalReason = pikkuScenarioStep<
   { containing: string },
-  { reason: string },
-  true
+  { reason: string }
 >({
   name: 'expectsApprovalReason',
   description: 'expects a pending approval to explain itself',
   template: 'expects the approval reason to mention {containing}',
-  browser: true,
-  func: async (_services, { containing }, { browser }) => {
+  browser: async (_services, { containing }, { browser }) => {
     const reasons = browser.locate({
       testId: 'approval-reason',
       within: PENDING_APPROVAL,
@@ -230,14 +220,12 @@ export const expectsApprovalReason = pikkuScenarioStep<
 
 export const respondsToApproval = pikkuScenarioStep<
   { decision: 'approve' | 'deny' },
-  { decision: string },
-  true
+  { decision: string }
 >({
   name: 'respondsToApproval',
   description: 'approves or denies the first pending request',
   template: '{decision}s the request',
-  browser: true,
-  func: async (_services, { decision }, { browser }) => {
+  browser: async (_services, { decision }, { browser }) => {
     await browser
       .locate({ testId: `approval-${decision}`, within: PENDING_APPROVAL })
       .first()
@@ -256,14 +244,12 @@ export const respondsToApproval = pikkuScenarioStep<
  */
 export const approvesAllPending = pikkuScenarioStep<
   void,
-  { approved: number },
-  true
+  { approved: number }
 >({
   name: 'approvesAllPending',
   description: 'approves every pending request, including any that follow',
   template: 'approves everything pending',
-  browser: true,
-  func: async (_services, _data, { browser }) => {
+  browser: async (_services, _data, { browser }) => {
     let approved = 0
     for (let round = 0; round < 10; round++) {
       const buttons = browser.locate({
@@ -291,14 +277,12 @@ export const approvesAllPending = pikkuScenarioStep<
  */
 export const deniesNthApprovesRest = pikkuScenarioStep<
   { nth: number },
-  { denied: number; approved: number },
-  true
+  { denied: number; approved: number }
 >({
   name: 'deniesNthApprovesRest',
   description: 'denies one request in a batch and approves the rest',
   template: 'denies request {nth} and approves the rest',
-  browser: true,
-  func: async (_services, { nth }, { browser }) => {
+  browser: async (_services, { nth }, { browser }) => {
     const pending = browser.locate(PENDING_APPROVAL)
     const count = await pending.count()
     let approved = 0
@@ -323,14 +307,12 @@ export const deniesNthApprovesRest = pikkuScenarioStep<
  */
 export const expectsApprovalOutcomes = pikkuScenarioStep<
   { approved?: number; denied?: number },
-  { approved: number; denied: number },
-  true
+  { approved: number; denied: number }
 >({
   name: 'expectsApprovalOutcomes',
   description: 'expects a given number of approved and denied requests',
   template: 'expects the approvals to have resolved as asked',
-  browser: true,
-  func: async (_services, { approved, denied }, { browser }) => {
+  browser: async (_services, { approved, denied }, { browser }) => {
     const countOf = async (state: string) =>
       browser.locate(approvalCard(state)).count()
     if (approved !== undefined) {
@@ -360,14 +342,12 @@ export const expectsApprovalOutcomes = pikkuScenarioStep<
  */
 export const seesInChat = pikkuScenarioStep<
   { text: string; caseSensitive?: boolean },
-  { seen: string },
-  true
+  { seen: string }
 >({
   name: 'seesInChat',
   description: 'sees text somewhere in the conversation',
   template: 'sees {text} in the chat',
-  browser: true,
-  func: async (_services, { text, caseSensitive }, { browser }) => {
+  browser: async (_services, { text, caseSensitive }, { browser }) => {
     await browser.page.waitForFunction(
       ({ needle, exact }) => {
         const body = document.body.innerText
@@ -384,14 +364,12 @@ export const seesInChat = pikkuScenarioStep<
 
 export const doesNotSeeInChat = pikkuScenarioStep<
   { text: string },
-  { absent: string },
-  true
+  { absent: string }
 >({
   name: 'doesNotSeeInChat',
   description: 'expects text to be absent from a settled conversation',
   template: 'does not see {text} in the chat',
-  browser: true,
-  func: async (_services, { text }, { browser }) => {
+  browser: async (_services, { text }, { browser }) => {
     await waitForComposerEnabled(browser)
     const body = await browser.page.innerText('body')
     if (body.toLowerCase().includes(text.toLowerCase())) {
@@ -410,14 +388,12 @@ export const doesNotSeeInChat = pikkuScenarioStep<
  */
 export const lastAssistantMessageExcludes = pikkuScenarioStep<
   { text: string },
-  { checked: string },
-  true
+  { checked: string }
 >({
   name: 'lastAssistantMessageExcludes',
   description: 'expects the newest assistant message to omit some text',
   template: 'expects the last reply to omit {text}',
-  browser: true,
-  func: async (_services, { text }, { browser }) => {
+  browser: async (_services, { text }, { browser }) => {
     const blocks = browser.locate({ testId: 'assistant-block' })
     const count = await blocks.count()
     if (count === 0) {
@@ -442,14 +418,12 @@ export const lastAssistantMessageExcludes = pikkuScenarioStep<
  */
 export const expectsNoEmptyAssistantBlocks = pikkuScenarioStep<
   void,
-  { blocks: number },
-  true
+  { blocks: number }
 >({
   name: 'expectsNoEmptyAssistantBlocks',
   description: 'expects every assistant message to have rendered content',
   template: 'expects no empty assistant messages',
-  browser: true,
-  func: async (_services, _data, { browser }) => {
+  browser: async (_services, _data, { browser }) => {
     const blocks = browser.locate({ testId: 'assistant-block' })
     const count = await blocks.count()
     for (let i = 0; i < count; i++) {
@@ -473,14 +447,12 @@ export const expectsNoEmptyAssistantBlocks = pikkuScenarioStep<
  */
 export const seesCredentialCard = pikkuScenarioStep<
   { credentialName: string },
-  { credentialName: string },
-  true
+  { credentialName: string }
 >({
   name: 'seesCredentialCard',
   description: 'sees a mid-conversation request for a credential',
   template: 'sees the conversation ask for {credentialName}',
-  browser: true,
-  func: async (_services, { credentialName }, { browser }) => {
+  browser: async (_services, { credentialName }, { browser }) => {
     await browser
       .locate({
         testId: 'credential-card',
@@ -504,14 +476,12 @@ export const seesCredentialCard = pikkuScenarioStep<
  */
 export const connectsCredentialViaPopup = pikkuScenarioStep<
   void,
-  { connected: true },
-  true
+  { connected: true }
 >({
   name: 'connectsCredentialViaPopup',
   description: 'completes the OAuth popup a credential card opens',
   template: 'connects the credential through the popup',
-  browser: true,
-  func: async (_services, _data, { browser }) => {
+  browser: async (_services, _data, { browser }) => {
     const popupOpened = browser.page.waitForEvent('popup')
     await browser
       .locate({ testId: 'credential-connect' })
@@ -528,14 +498,12 @@ export const connectsCredentialViaPopup = pikkuScenarioStep<
 
 export const seesCredentialPrompt = pikkuScenarioStep<
   { credentialName: string },
-  { credentialName: string },
-  true
+  { credentialName: string }
 >({
   name: 'seesCredentialPrompt',
   description: 'sees the playground gate asking for a credential',
   template: 'sees the gate asking for {credentialName}',
-  browser: true,
-  func: async (_services, { credentialName }, { browser }) => {
+  browser: async (_services, { credentialName }, { browser }) => {
     await browser
       .locate({ testId: 'agent-credential-prompt' })
       .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })

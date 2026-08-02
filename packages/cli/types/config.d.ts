@@ -418,12 +418,12 @@ export type PikkuCLIInput = {
         signInPath?: string
         /** Exposed-RPC prefix under apiUrl. Default: /rpc */
         rpcPath?: string
-        /** Frontend base URL browser steps navigate against. Required for `browser: true` steps. */
+        /** Frontend base URL browser steps navigate against. Required for steps with a `browser` binding. */
         appUrl?: string
       }
     >
     /**
-     * The package driving `browser: true` steps. Anything exporting a
+     * The package driving `browser` bindings. Anything exporting a
      * `ScenarioBrowserProvider` works — the runner never depends on a
      * particular browser tool. Defaults to `@pikku/playwright`.
      */

@@ -6,6 +6,8 @@ import {
   scenarioBrowserSteps,
   scenarioFailureFromSteps,
   scenarioStepRows,
+  scenarioStepsWithoutBinding,
+  scenarioSurfaceCoverage,
 } from './scenario-ladder.js'
 import { buildStepLadder } from './scenario-formatter.js'
 import type { ScenarioProse, ScenarioStepOutcome } from './scenario-ladder.js'
@@ -48,7 +50,10 @@ const workflowMeta = () => ({
 })
 
 const functionsMeta = () => ({
-  buysAnApple: { pikkuFuncId: 'buysAnApple', scenarioStepBrowser: true },
+  buysAnApple: {
+    pikkuFuncId: 'buysAnApple',
+    scenarioStepSurfaces: ['browser', 'default'],
+  },
   checksOut: {
     pikkuFuncId: 'checksOut',
     description: 'ignored at the call site',
@@ -103,6 +108,140 @@ describe('scenarioBrowserSteps', () => {
       scenarioBrowserSteps({ steps: [] } as any, functionsMeta() as any),
       []
     )
+  })
+})
+
+describe('scenarioStepsWithoutBinding', () => {
+  test('an action with neither the run surface nor a default cannot run', () => {
+    // `buysAnApple` binds browser + default, so it falls back; `checksOut`
+    // declares nothing at all, which reads as default-only.
+    assert.deepEqual(
+      scenarioStepsWithoutBinding(
+        workflowMeta() as any,
+        functionsMeta() as any,
+        'cli'
+      ),
+      []
+    )
+
+    const cliOnly = {
+      ...functionsMeta(),
+      checksOut: { pikkuFuncId: 'checksOut', scenarioStepSurfaces: ['cli'] },
+    }
+    assert.deepEqual(
+      scenarioStepsWithoutBinding(
+        workflowMeta() as any,
+        cliOnly as any,
+        'browser'
+      ),
+      ['checksOut']
+    )
+  })
+
+  test('an assertion that can run nowhere holds the flow back too', () => {
+    const browserOnlyThen = {
+      ...functionsMeta(),
+      seesAReceipt: {
+        pikkuFuncId: 'seesAReceipt',
+        scenarioStepSurfaces: ['browser'],
+      },
+    }
+    assert.deepEqual(
+      scenarioStepsWithoutBinding(
+        workflowMeta() as any,
+        browserOnlyThen as any,
+        'cli'
+      ),
+      ['seesAReceipt'],
+      'an assertion nothing can check would report a pass it never earned — skip the flow, do not run it'
+    )
+  })
+
+  test('an assertion that runs, just not on the run surface, is a coverage gap not a blocker', () => {
+    assert.deepEqual(
+      scenarioStepsWithoutBinding(
+        workflowMeta() as any,
+        functionsMeta() as any,
+        'browser'
+      ),
+      [],
+      'seesAReceipt has a default witness, so the flow still runs and the gap is reported'
+    )
+  })
+})
+
+describe('scenarioSurfaceCoverage', () => {
+  test('every step counts, so a step that fell back to the server drags the ratio down', () => {
+    // `buysAnApple` is bound to the browser; `checksOut` and `seesAReceipt` are
+    // not, so they run server-side. That is 1 of 3 — no annotation needed, the
+    // denominator says it.
+    const coverage = scenarioSurfaceCoverage(
+      workflowMeta() as any,
+      functionsMeta() as any,
+      'browser'
+    )
+    assert.equal(coverage.total, 3)
+    assert.equal(coverage.onSurface, 1)
+  })
+
+  test('an action that fell back is counted but not called unwitnessed', () => {
+    const coverage = scenarioSurfaceCoverage(
+      workflowMeta() as any,
+      functionsMeta() as any,
+      'browser'
+    )
+    assert.deepEqual(
+      coverage.unwitnessed,
+      ['seesAReceipt'],
+      'only a `then` claims the actor observed something, so only a `then` can be a false sentence'
+    )
+  })
+
+  test('a fully browser-bound ladder is 100%', () => {
+    const allInBrowser = Object.fromEntries(
+      Object.entries(functionsMeta()).map(([name, meta]) => [
+        name,
+        { ...meta, scenarioStepSurfaces: ['browser', 'default'] },
+      ])
+    )
+    const coverage = scenarioSurfaceCoverage(
+      workflowMeta() as any,
+      allInBrowser as any,
+      'browser'
+    )
+    assert.equal(coverage.onSurface, coverage.total)
+    assert.deepEqual(coverage.unwitnessed, [])
+  })
+
+  test('a default run covers everything — default is the floor, nothing can miss it', () => {
+    const coverage = scenarioSurfaceCoverage(
+      workflowMeta() as any,
+      functionsMeta() as any,
+      'default'
+    )
+    assert.equal(coverage.onSurface, coverage.total)
+    assert.deepEqual(coverage.unwitnessed, [])
+  })
+
+  test('a step that runs nowhere is not credited to the run that refuses it', () => {
+    const browserOnlyThen = {
+      ...functionsMeta(),
+      seesAReceipt: {
+        pikkuFuncId: 'seesAReceipt',
+        scenarioStepSurfaces: ['browser'],
+      },
+    }
+    const coverage = scenarioSurfaceCoverage(
+      workflowMeta() as any,
+      browserOnlyThen as any,
+      'default'
+    )
+    assert.equal(
+      coverage.total,
+      2,
+      'a default run cannot execute a browser-only step, so it is not a statistic about that run'
+    )
+    assert.equal(coverage.onSurface, 2)
   })
 })
 
