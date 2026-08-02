@@ -110,19 +110,28 @@ describe('executeRawCLIViaChannel', () => {
     const ws = fakeWS({ readyState: 0 })
     const console = captureConsole()
 
-    const run = executeRawCLIViaChannel({ pikkuWS: ws.pikkuWS, args: ['ping'] })
-    assert.deepEqual(
-      ws.sent,
-      [],
-      'nothing may be written before the open event'
-    )
+    // The capture replaces the process-global console, so a throwing assertion
+    // between here and the restore would leave it replaced for every test
+    // after this one — including their own idea of what the original was.
+    try {
+      const run = executeRawCLIViaChannel({
+        pikkuWS: ws.pikkuWS,
+        args: ['ping'],
+      })
+      assert.deepEqual(
+        ws.sent,
+        [],
+        'nothing may be written before the open event'
+      )
 
-    ws.emit('open')
-    assert.equal(ws.sent.length, 1)
+      ws.emit('open')
+      assert.equal(ws.sent.length, 1)
 
-    ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
-    await run
-    console.restore()
+      ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
+      await run
+    } finally {
+      console.restore()
+    }
   })
 
   test('renders output with the renderer for the command the server reports', async () => {
@@ -202,69 +211,83 @@ describe('executeRawCLIViaChannel', () => {
     const console = captureConsole()
     const rendered: unknown[] = []
 
-    const run = executeRawCLIViaChannel({
-      pikkuWS: ws.pikkuWS,
-      args: ['deploy'],
-      defaultRenderer: (_services, data) => rendered.push(data),
-      capabilities: {
-        localCheckout: () => ({ sha: 'deadbeef', branch: 'main' }),
-      },
-    })
-    ws.receive({
-      action: CHANNEL_RPC_REQUEST,
-      id: '1',
-      funcName: 'localCheckout',
-      data: {},
-    })
+    try {
+      const run = executeRawCLIViaChannel({
+        pikkuWS: ws.pikkuWS,
+        args: ['deploy'],
+        defaultRenderer: (_services, data) => rendered.push(data),
+        capabilities: {
+          localCheckout: () => ({ sha: 'deadbeef', branch: 'main' }),
+        },
+      })
+      ws.receive({
+        action: CHANNEL_RPC_REQUEST,
+        id: '1',
+        funcName: 'localCheckout',
+        data: {},
+      })
 
-    // Answering is async, so let the responder settle before asserting.
-    await new Promise((resolve) => setImmediate(resolve))
+      // Answering is async, so let the responder settle before asserting.
+      await new Promise((resolve) => setImmediate(resolve))
 
-    assert.deepEqual(ws.rawSent[0], {
-      action: CHANNEL_RPC_RESPONSE,
-      id: '1',
-      ok: true,
-      result: { sha: 'deadbeef', branch: 'main' },
-    })
-    assert.equal(
-      ws.sent.length,
-      1,
-      'the answer does not go out on a command route'
-    )
-    assert.deepEqual(rendered, [], 'an RPC request is not command output')
+      assert.deepEqual(ws.rawSent[0], {
+        action: CHANNEL_RPC_RESPONSE,
+        id: '1',
+        ok: true,
+        result: { sha: 'deadbeef', branch: 'main' },
+      })
+      assert.equal(
+        ws.sent.length,
+        1,
+        'the answer does not go out on a command route'
+      )
+      assert.deepEqual(rendered, [], 'an RPC request is not command output')
 
-    ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
-    await run
-    console.restore()
+      ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
+      await run
+    } finally {
+      console.restore()
+    }
   })
 
   test('refuses a capability outside the declared map', async () => {
     const ws = fakeWS()
     const console = captureConsole()
 
-    const run = executeRawCLIViaChannel({
-      pikkuWS: ws.pikkuWS,
-      args: ['deploy'],
-      capabilities: { localCheckout: () => ({}) },
-    })
-    ws.receive({
-      action: CHANNEL_RPC_REQUEST,
-      id: '1',
-      funcName: 'readSSHKey',
-      data: {},
-    })
-    await new Promise((resolve) => setImmediate(resolve))
+    try {
+      const run = executeRawCLIViaChannel({
+        pikkuWS: ws.pikkuWS,
+        args: ['deploy'],
+        capabilities: { localCheckout: () => ({}) },
+      })
+      ws.receive({
+        action: CHANNEL_RPC_REQUEST,
+        id: '1',
+        funcName: 'readSSHKey',
+        data: {},
+      })
+      // `toString` is not in the map, but a map is an object and inherits one.
+      // Refusing it is the same refusal as for a name nobody has heard of.
+      ws.receive({
+        action: CHANNEL_RPC_REQUEST,
+        id: '2',
+        funcName: 'toString',
+        data: {},
+      })
+      await new Promise((resolve) => setImmediate(resolve))
 
-    const response = ws.rawSent[0] as {
-      ok: boolean
-      error: { name: string }
+      for (const sent of ws.rawSent) {
+        const response = sent as { ok: boolean; error: { name: string } }
+        assert.equal(response.ok, false)
+        assert.equal(response.error.name, 'RPCNotFoundError')
+      }
+      assert.equal(ws.rawSent.length, 2)
+
+      ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
+      await run
+    } finally {
+      console.restore()
     }
-    assert.equal(response.ok, false)
-    assert.equal(response.error.name, 'RPCNotFoundError')
-
-    ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
-    await run
-    console.restore()
   })
 
   test('ignores frames that are not part of the CLI protocol', async () => {

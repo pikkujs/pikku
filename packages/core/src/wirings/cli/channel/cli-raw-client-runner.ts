@@ -14,6 +14,14 @@ const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
 }
 
 /**
+ * There are no services on this side — the command ran on the server. A
+ * renderer written for local execution can still reach for `services.logger`,
+ * so it gets a console-backed stub rather than a `null` that turns a rendering
+ * call into a `TypeError`.
+ */
+const clientServices = { logger: console } as any
+
+/**
  * Runs a CLI command entirely on the server.
  *
  * Unlike `executeCLIViaChannel`, argv is forwarded untouched and never parsed
@@ -44,21 +52,30 @@ export async function executeRawCLIViaChannel({
       (commandId ? renderers[commandId] : undefined) ||
       defaultRenderer ||
       defaultJSONRenderer
-    renderer(null as any, data, undefined)
+    renderer(clientServices, data, undefined)
   }
 
   return new Promise<number>((resolve) => {
     const commandRoute = pikkuWS.getRoute('command')
+
+    let settled = false
 
     // Answers go back as plain frames rather than on a command route: the
     // server takes them off the socket before routing, so replying does not
     // depend on the channel having declared a route for them.
     const respond = createChannelRPCResponder({
       capabilities,
-      send: (data) => pikkuWS.ws.send(JSON.stringify(data)),
+      send: (data) => {
+        // A capability can still be resolving when the run settles and the
+        // socket closes. `respond` is dispatched without a handler, so a throw
+        // from `send` here would surface as an unhandled rejection rather than
+        // as anything the run could act on — by then the answer is moot.
+        if (settled || pikkuWS.ws.readyState !== 1) {
+          return
+        }
+        pikkuWS.ws.send(JSON.stringify(data))
+      },
     })
-
-    let settled = false
 
     const finish = (code: number) => {
       if (settled) {

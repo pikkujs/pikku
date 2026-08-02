@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http'
 import { connect, type Socket } from 'node:net'
 import { after, before, describe, test } from 'node:test'
 import { WebSocketServer } from 'ws'
-import { setSingletonServices } from '@pikku/core'
+import { getSingletonServices, setSingletonServices } from '@pikku/core'
 
 import { pikkuWebsocketHandler } from './pikku-ws-server.js'
 
@@ -46,10 +46,22 @@ describe('pikkuWebsocketHandler upgrade', () => {
   let server: Server
   let wss: WebSocketServer
   let port: number
+  let previousSingletons: unknown
   const unhandled: unknown[] = []
   const onUnhandled = (error: unknown) => unhandled.push(error)
 
+  /** Resolves once the injected upgrade listener has fired the reset. */
+  let resetEmitted: Promise<void>
+
   before(async () => {
+    // Singleton services are process-global. Whatever was there is put back in
+    // `after` so `silentLogger` does not follow this file into another suite
+    // sharing the process. Nothing set is the normal case, and is not an error.
+    try {
+      previousSingletons = getSingletonServices()
+    } catch {
+      previousSingletons = undefined
+    }
     setSingletonServices({ logger: silentLogger } as any)
 
     server = createServer()
@@ -60,8 +72,11 @@ describe('pikkuWebsocketHandler upgrade', () => {
     // has had its synchronous chance to claim the socket and has gone async
     // opening the channel. That is the window a real connection reset lands
     // in; reproducing it by actually resetting the connection would be a race.
-    server.on('upgrade', (_req, socket) => {
-      socket.emit('error', new Error('read ECONNRESET'))
+    resetEmitted = new Promise<void>((resolve) => {
+      server.on('upgrade', (_req, socket) => {
+        socket.emit('error', new Error('read ECONNRESET'))
+        resolve()
+      })
     })
 
     port = await listen(server)
@@ -73,17 +88,28 @@ describe('pikkuWebsocketHandler upgrade', () => {
     process.on('unhandledRejection', onUnhandled)
   })
 
-  after(() => {
+  after(async () => {
     process.off('uncaughtException', onUnhandled)
     process.off('unhandledRejection', onUnhandled)
-    wss.close()
-    server.close()
+    // Both close asynchronously — they wait out live connections — so the
+    // teardown phase has to wait for them rather than just asking.
+    await new Promise<void>((resolve) => wss.close(() => resolve()))
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+    if (previousSingletons) {
+      setSingletonServices(previousSingletons as any)
+    }
   })
 
   test('a connection reset mid-handshake does not take the process down', async () => {
     const socket = await startUpgrade(port)
 
-    await new Promise((resolve) => setTimeout(resolve, 250))
+    // Waits on the reset itself. A fixed delay is not a synchronisation point:
+    // if the upgrade ran late, an empty `unhandled` would only prove the error
+    // path had not run yet.
+    await resetEmitted
+    // One turn of the loop, so an error escalating asynchronously out of the
+    // handler has landed before the assertion reads the list.
+    await new Promise((resolve) => setImmediate(resolve))
     socket.destroy()
 
     assert.deepEqual(

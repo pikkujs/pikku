@@ -172,8 +172,14 @@ export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
         channel?.send({ action: 'cli-output', commandId, data: output }),
     })
 
+    // A failed parse carries both: the error says what was wrong, the help
+    // says what was available. The error goes last so it is the line still on
+    // screen after the help text has scrolled past.
     if (help !== undefined) {
       await channel?.send({ action: 'cli-help', help })
+      if (error !== undefined) {
+        await channel?.send({ action: 'cli-error', error })
+      }
     } else if (error !== undefined) {
       await channel?.send({ action: 'cli-error', error })
     } else if (result !== undefined) {
