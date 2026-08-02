@@ -40,7 +40,7 @@ export interface CredentialOAuthLogger {
 }
 
 /**
- * Turns `wireCredential({ oauth2 })` declarations into better-auth genericOAuth
+ * Turns `defineCredential({ oauth2 })` declarations into better-auth genericOAuth
  * providers, one per credential, with the credential name as the providerId.
  *
  * One provider per credential rather than reusing better-auth's social

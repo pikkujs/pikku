@@ -1,9 +1,9 @@
 import { z } from 'zod'
-import { wireSecret } from '@pikku/core/secret'
-import { wireCredential } from '@pikku/core/credential'
+import { defineSecret } from '@pikku/core/secret'
+import { defineCredential } from '@pikku/core/credential'
 
 /**
- * Example API credentials using wireSecret with Zod schema.
+ * Example API credentials using defineSecret with Zod schema.
  * Tests type inference for regular secrets.
  */
 export const apiCredentialsSchema = z.object({
@@ -12,7 +12,7 @@ export const apiCredentialsSchema = z.object({
   baseUrl: z.url().optional().describe('Optional custom API endpoint'),
 })
 
-wireSecret({
+defineSecret({
   name: 'example-api',
   displayName: 'Example API',
   description: 'Credentials for the example external API',
@@ -25,7 +25,7 @@ wireSecret({
  * Mock OAuth2 credential for testing OAuth flows.
  * Uses oauth2-mock-server running on localhost:8080
  */
-wireCredential({
+defineCredential({
   name: 'mock',
   displayName: 'Mock OAuth Provider',
   description: 'Mock OAuth2 provider for testing',

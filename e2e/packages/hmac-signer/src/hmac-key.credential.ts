@@ -1,9 +1,9 @@
-import { wireCredential } from '@pikku/core/credential'
+import { defineCredential } from '@pikku/core/credential'
 import { z } from 'zod'
 
 export const HmacKeySchema = z.object({ secretKey: z.string() })
 
-wireCredential({
+defineCredential({
   name: 'hmac-key',
   displayName: 'HMAC Signing Key',
   type: 'wire',

@@ -96,7 +96,7 @@ export const Success = z.object({
  * Auto-generated user management functions
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuFunc, wireScope } from '${pathToPikkuTypes}'
+import { pikkuFunc, defineScope } from '${pathToPikkuTypes}'
 import { callAdminApi } from '@pikku/better-auth'
 import {
   CreateUserInput,
@@ -113,7 +113,7 @@ import {
 // this is the whole \`admin\` tree — not just the leaves gated below. It must stay
 // byte-identical to ADMIN_SCOPE_TREE in @pikku/better-auth and to the copy in
 // @pikku/addon-console, or codegen fails with conflicting declarations.
-wireScope({
+defineScope({
   admin: {
     displayName: 'Administration',
     description: 'Capabilities that act on the application as a whole',

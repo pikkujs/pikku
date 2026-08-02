@@ -10,7 +10,7 @@ import { pikkuBetterAuth } from '#pikku'
  * from the seeded secrets via the typed secret/variables services — the types
  * flow from the generated `CredentialsMap`/`VariablesMap`, so no inline generic
  * is needed. The pikku CLI generates the catch-all `/api/auth/**` wiring, the
- * session middleware, and a wireSecret for each provider.
+ * session middleware, and a defineSecret for each provider.
  *
  * Better Auth owns its own user/session/account/verification tables. The
  * verifier injects a dedicated in-memory Kysely (see `services.ts`) and runs

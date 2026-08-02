@@ -631,13 +631,13 @@ export interface Services extends CoreServices<SingletonServices> {}
   // Conditional: credential / secret file
   if (flags.credential === 'apikey') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { wireCredential } from '@pikku/core/credential'
+import { defineCredential } from '@pikku/core/credential'
 
 export const ${camelName}CredentialSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
 })
 
-wireCredential({
+defineCredential({
   name: '${camelName}',
   displayName: ${literal(displayName)},
   description: ${literal(description)},
@@ -652,13 +652,13 @@ wireCredential({
   tenantId: z.string().optional().describe('Upstream tenant id'),`
       : `  token: z.string().describe(${literal(`${displayName} bearer token`)}),`
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { wireCredential } from '@pikku/core/credential'
+import { defineCredential } from '@pikku/core/credential'
 
 export const ${camelName}CredentialSchema = z.object({
 ${credentialFields}
 })
 
-wireCredential({
+defineCredential({
   name: '${camelName}',
   displayName: ${literal(displayName)},
   description: ${literal(description)},
@@ -668,15 +668,15 @@ wireCredential({
 `
   } else if (flags.oauth || flags.credential === 'oauth2') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { wireCredential } from '@pikku/core/credential'
-import { wireSecret } from '@pikku/core/secret'
+import { defineCredential } from '@pikku/core/credential'
+import { defineSecret } from '@pikku/core/secret'
 
 export const ${camelName}TokenSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string().optional(),
 })
 
-wireCredential({
+defineCredential({
   name: '${camelName}',
   displayName: ${literal(displayName)},
   description: ${literal(description)},
@@ -691,7 +691,7 @@ wireCredential({
   },
 })
 
-wireSecret({
+defineSecret({
   name: '${camelName}OAuthApp',
   displayName: ${literal(`${displayName} OAuth App`)},
   description: ${literal(`OAuth2 app credentials for ${displayName}`)},
@@ -700,7 +700,7 @@ wireSecret({
 `
   } else if (flags.secret) {
     files[`src/${name}.secret.ts`] = `import { z } from 'zod'
-import { wireSecret } from '@pikku/core/secret'
+import { defineSecret } from '@pikku/core/secret'
 
 export const ${camelName}SecretsSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
@@ -709,7 +709,7 @@ export const ${camelName}SecretsSchema = z.object({
 
 export type ${pascalName}Secrets = z.infer<typeof ${camelName}SecretsSchema>
 
-wireSecret({
+defineSecret({
   name: '${camelName}',
   displayName: ${literal(`${displayName} API`)},
   description: ${literal(description)},
@@ -722,11 +722,11 @@ wireSecret({
   // Conditional: variable file
   if (flags.variable) {
     files[`src/${name}.variable.ts`] = `import { z } from 'zod'
-import { wireVariable } from '@pikku/core/variable'
+import { defineVariable } from '@pikku/core/variable'
 
 export const ${camelName}VariableSchema = z.string().optional().describe('TODO: describe this variable')
 
-wireVariable({
+defineVariable({
   name: '${camelName}_variable',
   displayName: ${literal(`${displayName} Variable`)},
   description: 'TODO: describe this variable',

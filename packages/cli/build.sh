@@ -79,6 +79,31 @@ JSON
 # that release that did not publish. Peers here buy nothing — nothing consumes
 # this tree — and cost the release.
 (cd "$_bootstrap_dir" && npm install --no-save --no-package-lock --legacy-peer-deps)
+# Split into `bootstrap` (setup phase: type files only) and then the default
+# `all`, with a rename pass in between, because `all`'s zod schema generation
+# *imports* the tree the setup phase has just written.
+#
+# The pinned CLI emits `export { wireSecret } from '@pikku/core/secret'`, and the
+# local @pikku/core no longer exports that name — the declaration helpers are
+# `defineSecret` / `defineVariable` / `defineScope` / `defineCredential` now. Run
+# as one `all`, the import throws and takes the whole bootstrap with it, long
+# before the patch loop further down could rewrite anything. Renaming between the
+# two phases puts the fix ahead of the first thing that loads the files.
+#
+# `all` regenerates those same files with the old names again on its way out;
+# the patch loop below is what leaves the tree consistent for tsc.
+#
+# Collapse this back into a single `pikku` call once PIKKU_CLI_VERSION moves past
+# the rename.
+"$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
+while IFS= read -r -d '' f; do
+  tmp=$(mktemp)
+  sed -e 's|wireScope|defineScope|g' \
+      -e 's|wireSecret|defineSecret|g' \
+      -e 's|wireVariable|defineVariable|g' \
+      -e 's|wireCredential|defineCredential|g' \
+      "$f" > "$tmp" && mv "$tmp" "$f"
+done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
@@ -90,7 +115,14 @@ if [ -f .pikku/pikku-types.gen.ts ]; then
 fi
 mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
 
-# Patch legacy field names and stale imports in bootstrapped files
+# Patch legacy field names and stale imports in bootstrapped files.
+#
+# The wire*→define* substitutions below cover the declaration helpers
+# (`defineScope`/`defineSecret`/`defineVariable`/`defineCredential`). The pinned
+# bootstrap CLI still emits the old `wire*` re-exports into .pikku, and the local
+# @pikku/core no longer exports those names, so the bootstrapped tree fails to
+# load before the local CLI ever gets to regenerate it. Drop these once
+# PIKKU_CLI_VERSION moves past the rename.
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
   sed -e 's/pikkuFuncName/pikkuFuncId/g' \
@@ -107,6 +139,10 @@ while IFS= read -r -d '' f; do
       -e 's|addPermissionCore(|addTagPermissionCore(|g' \
       -e 's|^export const addMiddleware |export const addTagMiddleware |' \
       -e 's|^export const addPermission |export const addTagPermission |' \
+      -e 's|wireScope|defineScope|g' \
+      -e 's|wireSecret|defineSecret|g' \
+      -e 's|wireVariable|defineVariable|g' \
+      -e 's|wireCredential|defineCredential|g' \
       -e "/metaDir/d" \
       -e "/^try {$/d" \
       -e "/^} catch.*{.*}$/d" \

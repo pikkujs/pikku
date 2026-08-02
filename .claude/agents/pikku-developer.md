@@ -35,7 +35,9 @@ const myFunc = pikkuFunc({
 
 **Services**: `pikkuServices()` for singletons (created once at startup), `pikkuWireServices()` for per-request services. Import from `#pikku`.
 
-**Wiring**: `wireHTTP`, `wireHTTPRoutes`, `wireQueueWorker`, `wireScheduler`, `wireChannel`, `wireCLI`, `wireMCPPrompt`, `wireMCPResource`, `wireTrigger`, `wireGateway`, `wireScope` — each connects a function to a transport. Registration calls must be top-level; the inspector reads source statically and never executes it.
+**Wiring**: `wireHTTP`, `wireHTTPRoutes`, `wireQueueWorker`, `wireScheduler`, `wireChannel`, `wireCLI`, `wireMCPPrompt`, `wireMCPResource`, `wireTrigger`, `wireGateway` — each connects a function to a transport. Registration calls must be top-level; the inspector reads source statically and never executes it.
+
+**Declarations**: `defineScope`, `defineSecret`, `defineVariable`, `defineCredential` — no-ops that wire nothing. They exist so the inspector can extract them and generate the matching type union, and are tree-shaken out of the build. Same rule: top-level calls only.
 
 Not everything has a `wire*` primitive. Workflows and AI agents are declared with `pikkuWorkflowFunc` / `pikkuAIAgent` and registered by codegen via the internal `addWorkflow` / `addAIAgent`; MCP tools are derived from function metadata; RPC is exposed through generated `wireHTTP` / `wireQueueWorker` wirings. Do not invent `wireWorkflow`, `wireAIAgent`, `wireMCPTool`, or `wireRPC` — none exist.
 

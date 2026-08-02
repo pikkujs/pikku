@@ -10,7 +10,7 @@ import { m } from '@/i18n/messages'
 const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
 
 /**
- * Read-only view of the scope vocabulary declared in code via wireScope. A row
+ * Read-only view of the scope vocabulary declared in code via defineScope. A row
  * flagged stale is still stored but no longer declared — it grants nothing and
  * is what `pikku scopes prune` removes.
  */

@@ -1,4 +1,4 @@
-export { wireScope } from './wire-scope.js'
+export { defineScope } from './define-scope.js'
 export {
   flattenScopeDefinitions,
   validateAndBuildScopeDefinitionsMeta,

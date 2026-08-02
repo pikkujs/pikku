@@ -17,7 +17,7 @@ import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
  * from the seeded secrets via the typed secret service (the secret types flow
  * from the generated `CredentialsMap`, so no inline generic is needed). The
  * pikku CLI generates the catch-all `/api/auth/**` wiring, the session-bridge
- * middleware, a wireSecret per provider, and the `auth-meta.gen.json` that
+ * middleware, a defineSecret per provider, and the `auth-meta.gen.json` that
  * powers the console SSO page (providers + plugins).
  *
  * Better Auth owns its own user/session/account/verification tables. The suite
@@ -51,7 +51,7 @@ export const auth = pikkuBetterAuth(
       // Admin capabilities (impersonation, the user directory, singleton
       // credential links) are gated on the `admin` scope tree, not on
       // better-auth's admin() plugin. The tree itself is declared by
-      // @pikku/addon-console's wireScope, which this app inherits.
+      // @pikku/addon-console's defineScope, which this app inherits.
       //
       // admin() is wired only for what pikku does NOT implement itself: ban,
       // delete, session revocation and set-password. Its `role` column is never
@@ -64,7 +64,7 @@ export const auth = pikkuBetterAuth(
         actor({
           secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
         }),
-        // Every wireCredential oauth2 declaration becomes a provider here, so
+        // Every defineCredential oauth2 declaration becomes a provider here, so
         // linking an account is what makes getCredential(name) resolve.
         credentialOAuth({
           config: await credentialOAuthProviders(

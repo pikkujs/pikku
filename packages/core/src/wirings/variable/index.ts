@@ -1,4 +1,4 @@
-export { wireVariable } from './variable.types.js'
+export { defineVariable } from './variable.types.js'
 export type {
   CoreVariable,
   VariableDefinitionMeta,

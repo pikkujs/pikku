@@ -36,17 +36,17 @@ const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
  * downstream, which is exactly how `displayName` went unused.
  */
 describe('config value metadata (docsUrl)', () => {
-  test('carries docsUrl from wireSecret into the definition', async () => {
+  test('carries docsUrl from defineSecret into the definition', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-secret-`)
     const file = join(rootDir, 'secret.ts')
 
     await writeFile(
       file,
       [
-        "import { wireSecret } from '@pikku/core'",
+        "import { defineSecret } from '@pikku/core'",
         "import { z } from 'zod'",
         'export const StripeKeySchema = z.string()',
-        'wireSecret({',
+        'defineSecret({',
         "  name: 'stripeKey',",
         "  displayName: 'Stripe Secret Key',",
         "  secretId: 'STRIPE_SECRET_KEY',",
@@ -76,10 +76,10 @@ describe('config value metadata (docsUrl)', () => {
     await writeFile(
       file,
       [
-        "import { wireSecret } from '@pikku/core'",
+        "import { defineSecret } from '@pikku/core'",
         "import { z } from 'zod'",
         'export const ApiKeySchema = z.string()',
-        'wireSecret({',
+        'defineSecret({',
         "  name: 'apiKey',",
         "  displayName: 'API Key',",
         "  secretId: 'API_KEY',",
@@ -101,17 +101,17 @@ describe('config value metadata (docsUrl)', () => {
     }
   })
 
-  test('carries docsUrl from wireVariable into the definition', async () => {
+  test('carries docsUrl from defineVariable into the definition', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-variable-`)
     const file = join(rootDir, 'variable.ts')
 
     await writeFile(
       file,
       [
-        "import { wireVariable } from '@pikku/core'",
+        "import { defineVariable } from '@pikku/core'",
         "import { z } from 'zod'",
         'export const ConsoleUrlSchema = z.string()',
-        'wireVariable({',
+        'defineVariable({',
         "  name: 'consoleUrl',",
         "  displayName: 'Console URL',",
         "  variableId: 'CONSOLE_URL',",
@@ -134,17 +134,17 @@ describe('config value metadata (docsUrl)', () => {
     }
   })
 
-  test('carries docsUrl from wireCredential into the definition', async () => {
+  test('carries docsUrl from defineCredential into the definition', async () => {
     const rootDir = await mkdtemp(`${fixtureRoot}-credential-`)
     const file = join(rootDir, 'credential.ts')
 
     await writeFile(
       file,
       [
-        "import { wireCredential } from '@pikku/core'",
+        "import { defineCredential } from '@pikku/core'",
         "import { z } from 'zod'",
         'export const TokenSchema = z.object({ token: z.string() })',
-        'wireCredential({',
+        'defineCredential({',
         "  name: 'githubToken',",
         "  displayName: 'GitHub Token',",
         "  type: 'wire',",

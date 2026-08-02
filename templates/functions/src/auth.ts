@@ -8,7 +8,7 @@ import type { KyselyPikkuDB } from '@pikku/kysely'
  * Better Auth configuration.
  *
  * The pikku CLI inspects this `pikkuBetterAuth` export and generates the catch-all
- * `/api/auth/**` HTTP wiring, the session-bridge middleware, and a `wireSecret`
+ * `/api/auth/**` HTTP wiring, the session-bridge middleware, and a `defineSecret`
  * for every configured social provider — so the auth routes and secret
  * requirements flow through normal inspection into the deploy manifest.
  *

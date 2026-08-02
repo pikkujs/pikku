@@ -6,7 +6,7 @@ import type { Logger, ScopeService } from '@pikku/core/services'
  * The scope ids this package's own gates check.
  *
  * Declared here so a host never has to spell them out as bare strings, and so
- * the tree an app must `wireScope` is discoverable from one place. Every one
+ * the tree an app must `defineScope` is discoverable from one place. Every one
  * hangs off the `admin` root, which means a single `admin` grant covers the
  * lot — pikku's parent-grant rule makes it the direct replacement for what
  * better-auth's `admin()` plugin expressed as `role === 'admin'`.
@@ -53,10 +53,10 @@ export const ADMIN_ROLE_SCOPES = [
 
 /**
  * The `admin` scope tree the framework's gates check, ready to spread into a
- * host's own `wireScope({ ... })` call.
+ * host's own `defineScope({ ... })` call.
  *
  * Scopes are declared by the app, not the framework — the CLI extracts them
- * from `wireScope` by AST, so this is documentation-as-code rather than a
+ * from `defineScope` by AST, so this is documentation-as-code rather than a
  * registration hook. `@pikku/addon-console` declares the same tree, so an app
  * wiring the console inherits it and need not repeat this.
  */
