@@ -1,0 +1,33 @@
+{
+  "name": "@pikku/voice-agents",
+  "version": "0.0.1",
+  "description": "Headless browser primitives for voice conversations with Pikku AI agents — persistent microphone, silence detection, speech playback and barge-in",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "test": "bash run-tests.sh",
+    "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
+    "build:cjs": "tsc -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
+    "build": "yarn build:esm && yarn build:cjs",
+    "prepublishOnly": "yarn build"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19"
+  },
+  "devDependencies": {
+    "@ricky0123/vad-web": "^0.0.30",
+    "@types/react": "^19",
+    "react": "^19",
+    "typescript": "^6.0.3"
+  }
+}
