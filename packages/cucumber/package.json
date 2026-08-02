@@ -5,5 +5,8 @@
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "type": "module",
-  "files": ["README.md", "LICENSE"]
+  "files": [
+    "README.md",
+    "LICENSE"
+  ]
 }
