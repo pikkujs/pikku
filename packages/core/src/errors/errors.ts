@@ -475,3 +475,64 @@ addError(AIProviderAuthError, {
   message:
     'AI provider API key is missing or invalid. Please check your API key configuration.',
 })
+
+/**
+ * An administrative operation targeted a role that is declared in code.
+ *
+ * System roles ship with the product: the console may show and grant them, but
+ * renaming, re-scoping or deleting one would let a UI action silently change
+ * what a declared persona means, and what every scenario written against that
+ * role is actually testing.
+ * @group Error
+ */
+export class SystemRoleImmutableError extends PikkuError {
+  public payload: {
+    error: 'system_role_immutable'
+    role: string
+    operation: string
+  }
+
+  constructor(role: string, operation: string) {
+    super(
+      `Cannot ${operation} '${role}': it is a system role, declared in code with defineSystemRole. ` +
+        `Edit the declaration, or create a separate role in the console.`
+    )
+    this.payload = {
+      error: 'system_role_immutable',
+      role,
+      operation,
+    }
+  }
+}
+addError(SystemRoleImmutableError, {
+  status: 409,
+  message: 'This role is declared in code and cannot be changed here.',
+})
+
+/**
+ * A role was created with the name of a role declared in code.
+ *
+ * Shadowing is refused rather than merged: two rows answering to one name make
+ * "does Susan hold `buyer`?" depend on which one the store happened to return.
+ * @group Error
+ */
+export class SystemRoleShadowedError extends PikkuError {
+  public payload: {
+    error: 'system_role_shadowed'
+    role: string
+  }
+
+  constructor(role: string) {
+    super(
+      `Cannot create role '${role}': a system role of that name is declared in code.`
+    )
+    this.payload = {
+      error: 'system_role_shadowed',
+      role,
+    }
+  }
+}
+addError(SystemRoleShadowedError, {
+  status: 409,
+  message: 'A system role of that name is already declared in code.',
+})

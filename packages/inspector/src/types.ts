@@ -18,6 +18,7 @@ import type { NodesMeta } from '@pikku/core/node'
 import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
+import type { SystemRoleDefinitions } from '@pikku/core/role'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
 import type {
@@ -641,6 +642,10 @@ export interface InspectorState {
   }
   scopes: {
     definitions: ScopeDefinitions
+    files: Set<string>
+  }
+  systemRoles: {
+    definitions: SystemRoleDefinitions
     files: Set<string>
   }
   variables: {

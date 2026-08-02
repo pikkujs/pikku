@@ -212,6 +212,10 @@ export interface SerializableInspectorState {
     definitions: InspectorState['scopes']['definitions']
     files: string[]
   }
+  systemRoles: {
+    definitions: InspectorState['systemRoles']['definitions']
+    files: string[]
+  }
   variables: {
     definitions: InspectorState['variables']['definitions']
     files: string[]
@@ -428,6 +432,10 @@ export function serializeInspectorState(
       definitions: state.scopes.definitions,
       files: Array.from(state.scopes.files),
     },
+    systemRoles: {
+      definitions: state.systemRoles.definitions,
+      files: Array.from(state.systemRoles.files),
+    },
     variables: {
       definitions: state.variables.definitions,
       files: Array.from(state.variables.files),
@@ -623,6 +631,10 @@ export function deserializeInspectorState(
     scopes: {
       definitions: data.scopes?.definitions || [],
       files: new Set(data.scopes?.files || []),
+    },
+    systemRoles: {
+      definitions: data.systemRoles?.definitions || [],
+      files: new Set(data.systemRoles?.files || []),
     },
     variables: {
       definitions: data.variables?.definitions || [],
