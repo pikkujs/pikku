@@ -11,7 +11,7 @@ import type {
 } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import { isChannelRPCResponse } from './channel-rpc.js'
+import { isChannelRPCPending, isChannelRPCResponse } from './channel-rpc.js'
 import { handleChannelRPCResponse } from './channel-host-rpc.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
@@ -174,8 +174,10 @@ export const processMessageHandlers = (
     // it belongs to whichever caller is still awaiting it, anywhere in a
     // function that is mid-run. Taken ahead of routing so that every channel
     // gets reverse RPC without declaring a route for the replies, and so an
-    // answer can never be mistaken for a new message.
-    if (isChannelRPCResponse(frame)) {
+    // answer can never be mistaken for a new message. A pending frame — the
+    // peer saying it is asking a human — rides the same path for the same
+    // reason.
+    if (isChannelRPCResponse(frame) || isChannelRPCPending(frame)) {
       handleChannelRPCResponse(channelHandler.getChannel().channelId, frame)
       return
     }

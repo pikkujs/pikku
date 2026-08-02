@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict'
 
 import { executeRawCLIViaChannel } from './cli-raw-client-runner.js'
 import {
+  CHANNEL_RPC_PENDING,
   CHANNEL_RPC_REQUEST,
   CHANNEL_RPC_RESPONSE,
 } from '../../channel/channel-rpc.js'
@@ -217,7 +218,10 @@ describe('executeRawCLIViaChannel', () => {
         args: ['deploy'],
         defaultRenderer: (_services, data) => rendered.push(data),
         capabilities: {
-          localCheckout: () => ({ sha: 'deadbeef', branch: 'main' }),
+          localCheckout: {
+            execute: () => ({ sha: 'deadbeef', branch: 'main' }),
+            needsApproval: false,
+          },
         },
       })
       ws.receive({
@@ -242,6 +246,100 @@ describe('executeRawCLIViaChannel', () => {
         'the answer does not go out on a command route'
       )
       assert.deepEqual(rendered, [], 'an RPC request is not command output')
+
+      ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
+      await run
+    } finally {
+      console.restore()
+    }
+  })
+
+  test('an unclassified capability is put to the user before it runs', async () => {
+    const ws = fakeWS()
+    const console = captureConsole()
+    const asked: unknown[] = []
+    let ran = false
+
+    try {
+      const run = executeRawCLIViaChannel({
+        pikkuWS: ws.pikkuWS,
+        args: ['publish'],
+        // A bare function: nobody classified it. The map says this *can* run;
+        // approval is what says this particular call *should*.
+        capabilities: {
+          localPush: () => {
+            ran = true
+            return 'pushed'
+          },
+        },
+        approve: (request) => {
+          asked.push(request)
+          return true
+        },
+      })
+      ws.receive({
+        action: CHANNEL_RPC_REQUEST,
+        id: '1',
+        funcName: 'localPush',
+        data: { tag: 'v2' },
+      })
+      await new Promise((resolve) => setImmediate(resolve))
+
+      assert.equal(asked.length, 1, 'the user was asked exactly once')
+      assert.equal(ran, true)
+
+      // The hold goes out first. The server's timer knows nothing about how
+      // long a person takes, and an answer arriving past it would be dropped.
+      assert.equal((ws.rawSent[0] as any).action, CHANNEL_RPC_PENDING)
+      assert.equal((ws.rawSent[1] as any).result, 'pushed')
+
+      ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
+      await run
+    } finally {
+      console.restore()
+    }
+  })
+
+  test('with nobody to ask, an unclassified capability is refused', async () => {
+    const ws = fakeWS()
+    const console = captureConsole()
+    let ran = false
+
+    try {
+      // No `approve` and no terminal — a non-interactive run. Refusing is the
+      // point: CI is where an unattended push would otherwise happen.
+      const run = executeRawCLIViaChannel({
+        pikkuWS: ws.pikkuWS,
+        args: ['publish', '--auto-approve'],
+        capabilities: {
+          localPush: () => {
+            ran = true
+            return 'pushed'
+          },
+          gitHead: { execute: () => ({ sha: 'abc' }), needsApproval: false },
+        },
+      })
+      ws.receive({
+        action: CHANNEL_RPC_REQUEST,
+        id: '1',
+        funcName: 'localPush',
+        data: {},
+      })
+      ws.receive({
+        action: CHANNEL_RPC_REQUEST,
+        id: '2',
+        funcName: 'gitHead',
+        data: {},
+      })
+      await new Promise((resolve) => setImmediate(resolve))
+
+      assert.equal(ran, false, 'the unclassified capability did not run')
+      assert.equal((ws.rawSent[0] as any).error.name, 'RPCNotApprovedError')
+      // ...while the classified-safe one is exactly what --auto-approve is for.
+      assert.deepEqual((ws.rawSent[1] as any).result, { sha: 'abc' })
+
+      // The flag is the client's business and never reaches the server.
+      assert.deepEqual(ws.sent[0]?.data, { args: ['publish'] })
 
       ws.receive({ action: 'cli-control', event: 'complete', exitCode: 0 })
       await run

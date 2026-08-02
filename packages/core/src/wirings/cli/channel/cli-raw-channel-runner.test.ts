@@ -125,10 +125,15 @@ describe('handleRawCLI', () => {
   test('a server-side command can call back into the client mid-run', async () => {
     const streamed: unknown[] = []
 
-    // The "client": answers capability requests off the same socket.
+    // The "client": answers capability requests off the same socket. Reading a
+    // git sha takes no arguments and changes nothing, so it is classified safe
+    // and runs without anyone being asked.
     const respond = createChannelRPCResponder({
       capabilities: {
-        gitHead: async () => ({ sha: 'deadbeef' }),
+        gitHead: {
+          execute: async () => ({ sha: 'deadbeef' }),
+          needsApproval: false,
+        },
       },
       send: (data) => deployment.handleResponse(data),
     })

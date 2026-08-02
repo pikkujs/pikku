@@ -4,6 +4,7 @@ import * as assert from 'node:assert/strict'
 import { pikkuState } from '../../pikku-state.js'
 
 import {
+  CHANNEL_RPC_PENDING,
   CHANNEL_RPC_REQUEST,
   CHANNEL_RPC_RESPONSE,
   ChannelDeploymentService,
@@ -31,8 +32,18 @@ const connect = (
   const clientSent: unknown[] = []
   const serverSent: unknown[] = []
 
+  // These tests are about the transport, so their capabilities are declared
+  // safe rather than left unclassified — an unclassified one is refused before
+  // it reaches any of the machinery under test here.
+  const classified = Object.fromEntries(
+    Object.entries(capabilities).map(([name, execute]) => [
+      name,
+      { execute, needsApproval: false },
+    ])
+  )
+
   const respond = createChannelRPCResponder({
-    capabilities,
+    capabilities: classified,
     send: async (data) => {
       clientSent.push(data)
       service.handleResponse(data)
@@ -119,6 +130,55 @@ describe('ChannelRPCRegistry', () => {
       result: 'too late',
     })
     assert.equal(settled, false)
+  })
+
+  test('hold stops the clock while a human is being asked', async () => {
+    const registry = new ChannelRPCRegistry(10)
+    const call = registry.register()
+
+    assert.equal(registry.hold(call.id), true)
+
+    // Comfortably past the timeout the call was registered with. Without the
+    // hold this is the point at which a prompt still on someone's screen has
+    // already failed the command.
+    await new Promise((r) => setTimeout(r, 40))
+    assert.equal(registry.inFlight, 1, 'the call is still waiting')
+
+    registry.settle({
+      action: CHANNEL_RPC_RESPONSE,
+      id: call.id,
+      ok: true,
+      result: 'approved and done',
+    })
+    assert.equal(await call.promise, 'approved and done')
+  })
+
+  test('a held call still fails the moment the socket drops', async () => {
+    const registry = new ChannelRPCRegistry(10)
+    const call = registry.register()
+    registry.hold(call.id)
+
+    // Holding removes the timer, so this is the only thing left that can fail
+    // the call — and it is the one that matches reality, because a peer that
+    // dies mid-prompt takes the connection with it.
+    registry.rejectAll('socket closed')
+
+    await assert.rejects(call.promise, (e: ChannelRPCError) => {
+      assert.equal(e.reason, 'closed')
+      return true
+    })
+  })
+
+  test('hold is ignored for an unknown or already-held call', async () => {
+    const registry = new ChannelRPCRegistry()
+    const call = registry.register()
+
+    assert.equal(registry.hold('does-not-exist'), false)
+    assert.equal(registry.hold(call.id), true)
+    assert.equal(registry.hold(call.id), false, 'holding twice changes nothing')
+
+    registry.rejectAll()
+    await assert.rejects(call.promise)
   })
 
   test('rejects every in-flight call when the channel drops', async () => {
@@ -308,6 +368,128 @@ describe('createChannelRPCResponder', () => {
     )
     assert.equal(await respond('some rendered line'), false)
     assert.equal(sent.length, 0, 'non-RPC frames are left for the renderer')
+  })
+
+  test('an unclassified capability is not run without approval', async () => {
+    const sent: ChannelRPCResponse[] = []
+    let ran = false
+    // No approver: there is nobody to ask. A bare function carries no policy,
+    // which resolves to needing one — the annotation nobody wrote is the one
+    // most likely to matter, so it fails closed.
+    const respond = createChannelRPCResponder({
+      capabilities: {
+        localPush: () => {
+          ran = true
+          return 'pushed'
+        },
+      },
+      send: (d) => void sent.push(d as ChannelRPCResponse),
+    })
+
+    await respond({
+      action: CHANNEL_RPC_REQUEST,
+      id: '1',
+      funcName: 'localPush',
+      data: {},
+    })
+
+    assert.equal(ran, false, 'the capability must not have run')
+    assert.equal(sent[0]?.ok, false)
+    assert.equal(sent[0]?.error?.name, 'RPCNotApprovedError')
+  })
+
+  test('a capability classified safe runs without asking', async () => {
+    const sent: ChannelRPCResponse[] = []
+    const respond = createChannelRPCResponder({
+      capabilities: {
+        gitHead: { execute: () => ({ sha: 'abc' }), needsApproval: false },
+      },
+      send: (d) => void sent.push(d as ChannelRPCResponse),
+    })
+
+    await respond({
+      action: CHANNEL_RPC_REQUEST,
+      id: '1',
+      funcName: 'gitHead',
+      data: {},
+    })
+
+    assert.equal(sent.length, 1, 'nothing was asked, so nothing was held')
+    assert.equal(sent[0]?.ok, true)
+    assert.deepEqual(sent[0]?.result, { sha: 'abc' })
+  })
+
+  test('an approved call holds the caller clock, then runs', async () => {
+    const sent: unknown[] = []
+    const asked: unknown[] = []
+    const respond = createChannelRPCResponder({
+      capabilities: {
+        localPush: {
+          execute: () => 'pushed',
+          needsApproval: true,
+          approvalDescriptionFn: ({ tag }: any) => `push tag ${tag} to origin`,
+        },
+      },
+      send: (d) => void sent.push(d),
+      approve: (request) => {
+        asked.push(request)
+        return true
+      },
+    })
+
+    await respond({
+      action: CHANNEL_RPC_REQUEST,
+      id: '1',
+      funcName: 'localPush',
+      data: { tag: 'v2.1.0' },
+    })
+
+    // The hold has to go out before the human is asked. Sent afterwards it
+    // races the caller's timeout, and an answer past the timeout is dropped —
+    // the decision would be taken and then silently thrown away.
+    assert.deepEqual(sent[0], {
+      action: CHANNEL_RPC_PENDING,
+      id: '1',
+      reason: 'push tag v2.1.0 to origin',
+    })
+    assert.deepEqual(asked, [
+      {
+        funcName: 'localPush',
+        data: { tag: 'v2.1.0' },
+        description: 'push tag v2.1.0 to origin',
+      },
+    ])
+    assert.equal((sent[1] as ChannelRPCResponse).result, 'pushed')
+  })
+
+  test('a refusal is an answer, not a hang', async () => {
+    const sent: unknown[] = []
+    let ran = false
+    const respond = createChannelRPCResponder({
+      capabilities: {
+        localPush: {
+          execute: () => {
+            ran = true
+            return 'pushed'
+          },
+          needsApproval: true,
+        },
+      },
+      send: (d) => void sent.push(d),
+      approve: () => false,
+    })
+
+    await respond({
+      action: CHANNEL_RPC_REQUEST,
+      id: '1',
+      funcName: 'localPush',
+      data: {},
+    })
+
+    assert.equal(ran, false)
+    const response = sent[sent.length - 1] as ChannelRPCResponse
+    assert.equal(response.ok, false)
+    assert.equal(response.error?.name, 'RPCDeniedError')
   })
 
   test('a name inherited from Object.prototype is not a capability', async () => {
