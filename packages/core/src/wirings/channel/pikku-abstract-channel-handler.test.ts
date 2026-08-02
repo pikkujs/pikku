@@ -22,6 +22,12 @@ class TestChannelHandler extends PikkuAbstractChannelHandler<
 
 let handler: TestChannelHandler
 
+/**
+ * Arguments are checked before the request goes out, so the write lands a tick
+ * after the call rather than in the same one.
+ */
+const sent = () => new Promise((resolve) => setImmediate(resolve))
+
 beforeEach(() => {
   handler = new TestChannelHandler('test-channel-id', 'channel-name', {
     param: 'testParam',
@@ -73,6 +79,7 @@ describe('channel.remote', () => {
   test('writes a request to the peer and resolves when it answers', async () => {
     const channel = handler.getChannel()
     const call = channel.remote('localCheckout', { cwd: '/repo' })
+    await sent()
 
     const request = handler.sent[0] as {
       action: string
@@ -118,6 +125,7 @@ describe('channel.remote', () => {
       { param: 'testParam' }
     )
     const second = reconnected.getChannel().remote('localCheckout')
+    await sent()
     // Ids restart, which is only safe because the closed transport was
     // forgotten rather than reused.
     assert.equal((reconnected.sent[0] as { id: string }).id, '1')

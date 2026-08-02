@@ -201,12 +201,12 @@ export type ApprovalRequester = (request: {
 }) => Promise<boolean> | boolean
 
 /**
- * Checks what a peer returned for one capability, throwing to reject the call.
- * Async because schema validation is.
+ * Checks one end of a reverse call — the arguments going out or the answer
+ * coming back — throwing to fail it. Async because schema validation is.
  */
-export type ChannelRPCResultValidator = (
+export type ChannelRPCValidator = (
   funcName: string,
-  result: unknown
+  value: unknown
 ) => Promise<void> | void
 
 interface PendingCall {
@@ -348,16 +348,19 @@ export class ChannelRPCRegistry {
  */
 export class ChannelDeploymentService implements DeploymentService {
   public readonly registry: ChannelRPCRegistry
-  private readonly validateResult?: ChannelRPCResultValidator
+  private readonly validateInput?: ChannelRPCValidator
+  private readonly validateResult?: ChannelRPCValidator
 
   constructor(
     private readonly send: (data: unknown) => Promise<void> | void,
     options: {
       timeoutMs?: number
-      validateResult?: ChannelRPCResultValidator
+      validateInput?: ChannelRPCValidator
+      validateResult?: ChannelRPCValidator
     } = {}
   ) {
     this.registry = new ChannelRPCRegistry(options.timeoutMs)
+    this.validateInput = options.validateInput
     this.validateResult = options.validateResult
   }
 
@@ -393,6 +396,24 @@ export class ChannelDeploymentService implements DeploymentService {
     _session?: unknown,
     traceId?: string
   ): Promise<unknown> {
+    // Checked before anything is registered or sent, so a call this app got
+    // wrong fails here rather than on the peer's machine. It is not a security
+    // control — the peer must check its own inputs, since a caller that means
+    // harm would send arguments that pass this. What it catches is drift: a
+    // server built against a newer capability signature than the client it
+    // happens to be talking to, which would otherwise surface as a confusing
+    // failure inside someone else's process.
+    if (this.validateInput) {
+      try {
+        await this.validateInput(funcName, data)
+      } catch (e: unknown) {
+        throw new ChannelRPCError(
+          `Invalid arguments for "${funcName}": ${(e as Error)?.message ?? String(e)}`,
+          'invalid'
+        )
+      }
+    }
+
     const { id, promise } = this.registry.register()
     // A closed registry answers with an already-rejected promise and no id.
     // Returning it before the send keeps that rejection from sitting unobserved
@@ -467,18 +488,50 @@ export class ChannelDeploymentService implements DeploymentService {
  * never declared a contract for, and inventing a failure for it would break
  * callers who deliberately treat the answer as opaque.
  */
-export const createChannelRPCResultValidator =
+export const createChannelRPCResultValidator = (
+  singletonServices: Pick<CoreSingletonServices, 'logger' | 'schema'>,
+  packageName: string | null = null
+): ChannelRPCValidator =>
+  createChannelRPCSchemaValidator(
+    'outputSchemaName',
+    singletonServices,
+    packageName
+  )
+
+/**
+ * Checks the arguments going out to a capability against the schema generated
+ * for its declared input type.
+ *
+ * Unlike the result check this is not a boundary — the peer runs the code and
+ * must validate what it was handed. It catches version drift, where a server
+ * built against a newer capability signature calls a client that predates it,
+ * and turns what would be a confusing failure inside someone else's process
+ * into a clear one here.
+ */
+export const createChannelRPCInputValidator = (
+  singletonServices: Pick<CoreSingletonServices, 'logger' | 'schema'>,
+  packageName: string | null = null
+): ChannelRPCValidator =>
+  createChannelRPCSchemaValidator(
+    'inputSchemaName',
+    singletonServices,
+    packageName
+  )
+
+const createChannelRPCSchemaValidator =
   (
+    key: 'inputSchemaName' | 'outputSchemaName',
     singletonServices: Pick<CoreSingletonServices, 'logger' | 'schema'>,
     packageName: string | null = null
-  ) =>
-  async (funcName: string, result: unknown): Promise<void> => {
+  ): ChannelRPCValidator =>
+  async (funcName: string, value: unknown): Promise<void> => {
     const pikkuFuncId = pikkuState(packageName, 'rpc', 'meta')[funcName]
     if (!pikkuFuncId) {
       return
     }
-    const schemaName = pikkuState(packageName, 'function', 'meta')[pikkuFuncId]
-      ?.outputSchemaName
+    const schemaName = pikkuState(packageName, 'function', 'meta')[
+      pikkuFuncId
+    ]?.[key]
     if (!schemaName) {
       return
     }
@@ -486,7 +539,7 @@ export const createChannelRPCResultValidator =
       singletonServices.logger,
       singletonServices.schema,
       schemaName,
-      result,
+      value,
       packageName
     )
   }
