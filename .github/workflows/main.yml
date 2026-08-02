@@ -130,6 +130,12 @@ jobs:
         run: yarn test:e2e:ai-live
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # A persona's own turns are LLM calls made in the scenario process,
+          # not on the target, and that runner is built by `createDevAIAgentRunner`
+          # — which needs a base URL paired with the key and disables agents
+          # without one. Every conversing scenario then fails with
+          # AIProviderNotConfiguredError before it says anything.
+          OPENAI_BASE_URL: https://api.openai.com/v1
 
   verifiers:
     name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
