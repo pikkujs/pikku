@@ -8,6 +8,7 @@ export {
 } from './use-pikku-agent-runtime.js'
 export type {
   PikkuAgentRuntimeOptions,
+  PikkuVoiceEvents,
   PendingApproval,
   PikkuApprovalContextValue,
   PikkuToolStatusType,

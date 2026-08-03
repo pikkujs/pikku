@@ -12,6 +12,7 @@ import type {
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { randomUUID } from './ai-agent-utils.js'
+import { SPOKEN_TRANSCRIPT } from './voice-input.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
@@ -672,6 +673,9 @@ export async function streamAIAgent(
     ...(agent.aiMiddleware ?? []),
   ]
 
+  // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
+  const sharedNotes: Record<string, unknown> = {}
+
   let modifiedMessages = runnerParams.messages
   let modifiedInstructions = runnerParams.instructions
   for (const mw of aiMiddlewares) {
@@ -679,6 +683,7 @@ export async function streamAIAgent(
       const result = await mw.modifyInput(singletonServices, {
         messages: modifiedMessages,
         instructions: modifiedInstructions,
+        shared: sharedNotes,
       })
       modifiedMessages = result.messages
       modifiedInstructions = result.instructions
@@ -686,6 +691,26 @@ export async function streamAIAgent(
   }
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
+
+  // Sent on the raw channel, ahead of the run. A voice client sent audio and so
+  // has no idea what it said; until this arrives its own message is a blank
+  // bubble. Ahead of the run rather than alongside it because the answer starts
+  // streaming within a few hundred milliseconds, and a question that appears
+  // after its answer reads as the wrong question.
+  const transcript = sharedNotes[SPOKEN_TRANSCRIPT]
+  if (typeof transcript === 'string') {
+    channel.send({ type: 'transcript', text: transcript })
+  }
+
+  // What goes into thread history is what the model was actually asked. For a
+  // spoken turn that is not what arrived over the wire: the wire carried a
+  // base64 audio blob, and persisting it would write megabytes of unreadable
+  // data into the history while losing the only readable record of the turn.
+  // Identity-checked rather than assumed — a middleware is free to rewrite the
+  // message list into something with no relation to the turn.
+  const lastModified = modifiedMessages[modifiedMessages.length - 1]
+  const persistedUserMessage =
+    lastModified?.id === userMessage.id ? lastModified : userMessage
 
   const runId = await aiRunState.createRun({
     agentName,
@@ -706,7 +731,7 @@ export async function streamAIAgent(
   runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
 
   if (storage) {
-    await storage.saveMessages(threadId, [userMessage])
+    await storage.saveMessages(threadId, [persistedUserMessage])
   }
 
   const streamMiddleware = aiMiddlewares
@@ -720,6 +745,7 @@ export async function streamAIAgent(
           event,
           allEvents,
           state,
+          shared: sharedNotes,
           // Sends downstream directly, so a hook can hand back the fast event
           // now and push the slow one when it is ready.
           emit: next,
@@ -1288,6 +1314,9 @@ async function continueAfterToolResult(
     }),
     ...(agent.aiMiddleware ?? []),
   ]
+  // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
+  const sharedNotes: Record<string, unknown> = {}
+
   let modifiedMessages = trimmedMessages
   let modifiedInstructions = instructions
   for (const mw of aiMiddlewares) {
@@ -1295,6 +1324,7 @@ async function continueAfterToolResult(
       const result = await mw.modifyInput(singletonServices, {
         messages: modifiedMessages,
         instructions: modifiedInstructions,
+        shared: sharedNotes,
       })
       modifiedMessages = result.messages
       modifiedInstructions = result.instructions
@@ -1318,6 +1348,7 @@ async function continueAfterToolResult(
           event,
           allEvents,
           state,
+          shared: sharedNotes,
           // Sends downstream directly, so a hook can hand back the fast event
           // now and push the slow one when it is ready.
           emit: next,

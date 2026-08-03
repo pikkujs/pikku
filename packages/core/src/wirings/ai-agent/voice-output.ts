@@ -1,5 +1,6 @@
 import type { AIAgentRunnerService } from '../../services/ai-agent-runner-service.js'
 import { pikkuAIMiddleware } from '../../types/core.types.js'
+import { SPOKEN_TURN } from './voice-input.js'
 
 type VoiceOutputState = {
   textBuffer?: string
@@ -178,14 +179,39 @@ export const voiceOutput = (config?: {
    * the right default for a provider that genuinely is multilingual.
    */
   speakableScripts?: SpeakableScripts
+  /**
+   * Speak every reply, including answers to turns that were typed.
+   *
+   * The default is to speak only what was spoken to. An agent is usually one
+   * agent serving both kinds of caller — the same thread is typed at from a
+   * desk and talked to from a phone — and synthesizing a reply nobody is
+   * listening to costs real money on every sentence of every turn. Whether the
+   * user is in a call is not something the client needs to declare: sending
+   * audio is what saying so looks like.
+   *
+   * Set this for the cases where speech is not a reply to speech at all — a
+   * read-aloud accessibility mode, a kiosk, anything whose whole output is
+   * meant to be heard.
+   */
+  always?: boolean
 }) =>
   pikkuAIMiddleware<VoiceOutputState>({
-    modifyOutputStream: async (services, { event, state, emit, signal }) => {
+    modifyOutputStream: async (
+      services,
+      { event, state, shared, emit, signal }
+    ) => {
       const { aiAgentRunner, logger } = services as {
         aiAgentRunner?: AIAgentRunnerService
         logger?: { error: (message: string) => void }
       }
       if (!aiAgentRunner?.generateSpeech) return event
+
+      // Only an explicit `false` silences the reply. `voiceInput` sets this on
+      // every turn it handles, so `false` means a real user really typed; the
+      // key being absent means nothing reported either way — no voice input is
+      // wired — and that caller's replies are spoken exactly as they were before
+      // this option existed.
+      if (!config?.always && shared[SPOKEN_TURN] === false) return event
 
       /**
        * Queue a finished sentence for speech.
@@ -261,6 +287,7 @@ export const voiceOutput = (config?: {
             type: 'audio-delta',
             data: bufferToBase64(result.audio.bytes),
             format: result.audio.format,
+            text,
           })
         })
       }

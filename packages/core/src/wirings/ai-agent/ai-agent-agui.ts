@@ -381,13 +381,26 @@ export function wrapChannelWithAGUI(
           send({
             type: 'CUSTOM',
             name: 'pikku:audio-delta',
-            value: { data: event.data, format: event.format },
+            value: {
+              data: event.data,
+              format: event.format,
+              ...(event.text === undefined ? {} : { text: event.text }),
+            },
           })
           break
         }
 
         case 'audio-done': {
           send({ type: 'CUSTOM', name: 'pikku:audio-done', value: {} })
+          break
+        }
+
+        case 'transcript': {
+          send({
+            type: 'CUSTOM',
+            name: 'pikku:transcript',
+            value: { text: event.text },
+          })
           break
         }
       }

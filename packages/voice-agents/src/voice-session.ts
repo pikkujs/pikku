@@ -1,3 +1,4 @@
+import { meterInput } from './input-level.js'
 import { detectSilence } from './silence-detector.js'
 import { detectSpeech, type SpeechDetectorOptions } from './speech-detector.js'
 
@@ -39,6 +40,20 @@ export interface VoiceSessionOptions {
    */
   minTurnMs?: number
   /**
+   * Let the caller say where turns begin and end, instead of detecting it.
+   *
+   * This is push-to-talk. No detector is armed, so nothing ends a turn but
+   * {@link VoiceSession.finishTurn} — which is the whole point: holding a key
+   * through a three-second pause is someone thinking, and any endpointer worth
+   * having would cut them off. {@link VoiceSessionOptions.onSpeechStart} does
+   * not fire either, so there is no barge-in on this path; the user pressing
+   * the key is the barge-in, and the caller already knows they did.
+   *
+   * The microphone is still held open across turns — only the recorder cycles,
+   * exactly as on the detected path.
+   */
+  manualTurns?: boolean
+  /**
    * End turns with Silero VAD instead of the energy detector — "has the user
    * stopped speaking" rather than "has the room gone quiet". Opt-in, and the
    * `load` it requires is what pulls in the model, so a caller that omits this
@@ -63,6 +78,14 @@ export interface VoiceSessionOptions {
   /** 0–100 through the trailing pause, for a countdown affordance. Energy
    *  detector only — see {@link VoiceSessionOptions.speech}. */
   onSilenceProgress?: (percentage: number) => void
+  /**
+   * Microphone loudness, 0–1, while the session is listening. For a level
+   * meter — it says nothing about whether a turn is in progress.
+   *
+   * Costs nothing unless asked for: the analyser is only attached when this is
+   * set, so a caller that renders no meter runs no meter.
+   */
+  onLevel?: (level: number) => void
   /** Fires once a turn ends and passes the {@link VoiceSessionOptions.minTurnMs} floor. */
   onTurn: (turn: VoiceTurn) => void
   /** Fires when a turn ended but was too short to be speech. Distinguished from
@@ -119,6 +142,13 @@ export class VoiceSession {
    * model and a WASM runtime, which is not something to do between sentences.
    */
   private stopSpeech: (() => void) | null = null
+  /** The level meter, when a caller asked for one. Armed per session, like the
+   *  speech detector and unlike the per-turn energy detector. */
+  private stopMeter: (() => void) | null = null
+  /** Push-to-talk hooks into the armed recorder, set by `captureNextTurn` when
+   *  {@link VoiceSessionOptions.manualTurns} is on. */
+  private beginTurnNow: (() => void) | null = null
+  private finishTurnNow: (() => void) | null = null
   private listening = false
   private deviceId: string | undefined
 
@@ -138,6 +168,7 @@ export class VoiceSession {
     // has. Loading the model takes a second or two on a cold cache, and that
     // wait belongs here rather than in the middle of the user's first sentence.
     if (this.options.speech) await this.startSpeechDetector()
+    this.startMeter()
     this.listening = true
     this.captureNextTurn()
   }
@@ -147,6 +178,29 @@ export class VoiceSession {
   stop(): void {
     this.listening = false
     this.endTurn()
+    this.stopMeter?.()
+    this.stopMeter = null
+    // Nothing is listening any more, so a meter left at its last reading would
+    // sit there showing a level the microphone is no longer producing.
+    this.options.onLevel?.(0)
+  }
+
+  /**
+   * Start recording a push-to-talk turn. No-op unless
+   * {@link VoiceSessionOptions.manualTurns} is set, or if a turn is already
+   * recording — a key that repeats while held must not restart the clip.
+   */
+  beginTurn(): void {
+    this.beginTurnNow?.()
+  }
+
+  /**
+   * End the push-to-talk turn and emit it, subject to the same
+   * {@link VoiceSessionOptions.minTurnMs} floor as a detected one — a stray tap
+   * on the key is as much a non-turn as a cough is.
+   */
+  finishTurn(): void {
+    this.finishTurnNow?.()
   }
 
   /**
@@ -244,9 +298,17 @@ export class VoiceSession {
     }
   }
 
+  private startMeter(): void {
+    const { ctx, source, options } = this
+    if (!ctx || !source || !options.onLevel || this.stopMeter) return
+    this.stopMeter = meterInput(ctx, source, options.onLevel)
+  }
+
   private async release(): Promise<void> {
     this.stopSpeech?.()
     this.stopSpeech = null
+    this.stopMeter?.()
+    this.stopMeter = null
     this.stream?.getTracks().forEach((track) => track.stop())
     this.source?.disconnect()
     await this.ctx?.close()
@@ -259,6 +321,8 @@ export class VoiceSession {
   private endTurn(): void {
     this.stopDetector?.()
     this.stopDetector = null
+    this.beginTurnNow = null
+    this.finishTurnNow = null
     if (this.recorder && this.recorder.state !== 'inactive') {
       this.recorder.stop()
     }
@@ -299,6 +363,33 @@ export class VoiceSession {
         this.options.onTurnDiscarded?.()
       }
       this.captureNextTurn()
+    }
+
+    if (this.options.manualTurns) {
+      // Armed but not started, and no detector. The recorder waits here until
+      // the caller presses the key — starting it now would put every second of
+      // room between the turns into the clip.
+      let startedAt = 0
+      this.beginTurnNow = () => {
+        if (recorder.state !== 'inactive') return
+        startedAt = Date.now()
+        try {
+          recorder.start()
+        } catch (error) {
+          this.options.onError?.(
+            error instanceof Error ? error : new Error(String(error))
+          )
+        }
+      }
+      this.finishTurnNow = () => {
+        if (recorder.state === 'inactive') return
+        // Wall clock rather than the AudioContext's: there is no detector on
+        // this path to report times against, and the press and the release are
+        // both wall-clock events.
+        durationMs = Date.now() - startedAt
+        recorder.stop()
+      }
+      return
     }
 
     this.stopDetector = detectSilence(

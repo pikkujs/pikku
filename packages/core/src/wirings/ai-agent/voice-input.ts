@@ -70,13 +70,35 @@ async function fetchAsUint8Array(
   return new Uint8Array(buffer)
 }
 
+/**
+ * Shared-notes key recording whether the user's turn arrived as audio.
+ *
+ * Written here because this is the last point at which it is knowable: the
+ * transcript that replaces the audio is indistinguishable from something typed.
+ * Read by `voiceOutput` to decide whether to answer aloud.
+ *
+ * Absent — rather than `false` — when this middleware is not wired at all, which
+ * is what lets `voiceOutput` still speak for a caller that has no voice input.
+ */
+export const SPOKEN_TURN = 'voice:spokenTurn'
+
+/**
+ * Shared-notes key holding what the user was heard to say, when they spoke.
+ *
+ * Absent on a typed turn. Read by the stream wiring, which forwards it to the
+ * client as a `transcript` event — a voice client has no idea what its own
+ * audio said, and without this the user's turn shows up in the UI as an empty
+ * bubble followed by an answer to a question they cannot see.
+ */
+export const SPOKEN_TRANSCRIPT = 'voice:transcript'
+
 export const voiceInput = (config?: {
   language?: string
   model?: string
   allowedAudioHosts?: string[]
 }) =>
   pikkuAIMiddleware({
-    modifyInput: async (services, { messages, instructions }) => {
+    modifyInput: async (services, { messages, instructions, shared }) => {
       const aiAgentRunner = (
         services as {
           aiAgentRunner?: AIAgentRunnerService
@@ -85,19 +107,22 @@ export const voiceInput = (config?: {
       if (!aiAgentRunner?.transcribe) return { messages, instructions }
 
       const last = messages[messages.length - 1]
-      if (!last || last.role !== 'user' || typeof last.content === 'string') {
-        return { messages, instructions }
-      }
+      const parts =
+        last?.role === 'user' && typeof last.content !== 'string'
+          ? (last.content as AIContentPart[] | undefined)
+          : undefined
 
-      const parts = last.content as AIContentPart[]
-      if (!parts) return { messages, instructions }
-
-      const hasAudio = parts.some(
+      const hasAudio = !!parts?.some(
         (p) => p.type === 'file' && !!p.mediaType?.startsWith('audio/')
       )
-      if (!hasAudio) return { messages, instructions }
+      // Recorded on every turn this middleware sees, spoken or not, so that a
+      // typed turn is an explicit `false` downstream rather than a silence that
+      // could equally mean nobody was asked.
+      shared[SPOKEN_TURN] = hasAudio
+      if (!hasAudio || !parts) return { messages, instructions }
 
       const updatedContent: AIContentPart[] = []
+      const heard: string[] = []
       for (const p of parts) {
         if (!(p.type === 'file' && p.mediaType?.startsWith('audio/'))) {
           updatedContent.push(p)
@@ -128,12 +153,15 @@ export const voiceInput = (config?: {
         // model will answer, and what it answers is a guess about what it could
         // not hear.
         if (readsAsNonSpeech(result)) continue
+        heard.push(result.text)
         updatedContent.push({ type: 'text' as const, text: result.text })
       }
 
       // Every part was audio, and none of it was speech. There is nothing left
       // to send, and a message with no content is not a question.
       if (updatedContent.length === 0) throw new NoSpeechDetectedError()
+
+      shared[SPOKEN_TRANSCRIPT] = heard.join(' ')
 
       return {
         messages: [

@@ -252,6 +252,31 @@ type PendingResume = {
   approved: boolean
 }
 
+/**
+ * A spoken turn waiting to be sent as the next run.
+ *
+ * `marker` is the text the thread's user message was appended with, and it
+ * exists because of an ordering problem: the run has to start before anyone
+ * knows what the user said, since the transcription happens on the server. So
+ * the message goes into the thread as this marker, is rendered as the
+ * transcript once `pikku:transcript` arrives, and is swapped for an empty
+ * `message` here so the marker itself never leaves the browser — a model asked
+ * to answer `⟦voice:3⟧` would try.
+ */
+type PendingVoiceTurn = {
+  marker: string
+  mediaType: string
+  /** base64, no data-URL prefix. */
+  data: string
+}
+
+/** Prefix of the placeholder text a spoken turn is appended with. Private to
+ *  this package — see {@link PendingVoiceTurn}. */
+export const VOICE_MARKER_PREFIX = '⸢voice:'
+
+export const isVoiceMarker = (text: string): boolean =>
+  text.startsWith(VOICE_MARKER_PREFIX)
+
 function extractLastUserMessage(messages: RunAgentInput['messages']): string {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')
   if (!lastUser) return ''
@@ -270,6 +295,8 @@ class PikkuAgent extends HttpAgent {
   private pikkuOpts: PikkuAgentRuntimeOptions
   private _pendingResume: PendingResume | null = null
   private _currentResume: PendingResume | null = null
+  private _pendingVoice: PendingVoiceTurn | null = null
+  private _currentVoice: PendingVoiceTurn | null = null
 
   constructor(opts: PikkuAgentRuntimeOptions) {
     super({
@@ -287,10 +314,22 @@ class PikkuAgent extends HttpAgent {
     this._pendingResume = data
   }
 
+  queueVoiceTurn(turn: PendingVoiceTurn) {
+    this._pendingVoice = turn
+  }
+
+  /** The marker of the spoken turn this run is answering, if it is one. Read by
+   *  the runtime to attach an incoming transcript to the right message. */
+  get currentVoiceMarker(): string | null {
+    return this._currentVoice?.marker ?? null
+  }
+
   run(input: RunAgentInput): Observable<BaseEvent> {
     const resume = this._pendingResume
     this._pendingResume = null
     this._currentResume = resume
+    this._currentVoice = this._pendingVoice
+    this._pendingVoice = null
     this.url = resume
       ? `${this.pikkuOpts.api}/${this.pikkuOpts.agentName}/resume`
       : `${this.pikkuOpts.api}/${this.pikkuOpts.agentName}/stream`
@@ -316,13 +355,30 @@ class PikkuAgent extends HttpAgent {
       }
     }
 
+    const voice = this._currentVoice
+    // The marker is a rendering placeholder, not something the user said, so a
+    // spoken turn is sent as audio with no text at all — the server's
+    // `voiceInput` middleware puts the transcript in its place.
+    const message = voice ? '' : extractLastUserMessage(input.messages)
+
     return {
       ...base,
       headers,
       credentials: opts.credentials,
       body: JSON.stringify({
         agentName: opts.agentName,
-        message: extractLastUserMessage(input.messages),
+        message,
+        ...(voice
+          ? {
+              attachments: [
+                {
+                  type: 'file' as const,
+                  mediaType: voice.mediaType,
+                  data: voice.data,
+                },
+              ],
+            }
+          : {}),
         threadId: opts.threadId,
         resourceId: opts.resourceId,
         model: opts.model,
@@ -333,10 +389,24 @@ class PikkuAgent extends HttpAgent {
   }
 }
 
-export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
+export interface PikkuVoiceEvents {
+  /** A base64 chunk of the agent's speech, the format it is in, and the
+   *  sentence it says. */
+  onAudio?: (chunk: { data: string; format: string; text?: string }) => void
+  /** The agent has finished speaking this reply. */
+  onAudioDone?: () => void
+}
+
+export function usePikkuAgentRuntime(
+  options: PikkuAgentRuntimeOptions,
+  voice?: PikkuVoiceEvents
+) {
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
     []
   )
+  // What the server heard, keyed by the marker of the message it belongs to.
+  // Rendering reads this; nothing else does — see PendingVoiceTurn.
+  const [transcripts, setTranscripts] = useState<Record<string, string>>({})
   // Authoritative pending list, mutated synchronously so two approval clicks
   // in the same tick can't both read a stale "remaining" and skip the resume.
   // State mirrors it purely for rendering.
@@ -348,6 +418,11 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
 
   const onFinishRef = useRef(options.onFinish)
   onFinishRef.current = options.onFinish
+
+  // Held in a ref so a caller can pass fresh closures every render without
+  // resubscribing the agent — which would drop events mid-reply.
+  const voiceRef = useRef(voice)
+  voiceRef.current = voice
 
   const agent = useMemo(
     () => new PikkuAgent(options),
@@ -392,6 +467,17 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
               connectUrl: v.connectUrl,
             },
           ])
+        } else if (e.name === 'pikku:transcript') {
+          const marker = agent.currentVoiceMarker
+          if (marker) {
+            const text = (e.value as { text?: string })?.text ?? ''
+            setTranscripts((prev) => ({ ...prev, [marker]: text }))
+          }
+        } else if (e.name === 'pikku:audio-delta') {
+          const v = e.value as { data: string; format: string; text?: string }
+          voiceRef.current?.onAudio?.(v)
+        } else if (e.name === 'pikku:audio-done') {
+          voiceRef.current?.onAudioDone?.()
         }
       },
       onRunFinalized: () => {
@@ -474,10 +560,43 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
     [agent, commitPending]
   )
 
+  /**
+   * Send a recorded turn. Appends a placeholder user message, which starts the
+   * run, and returns the marker that message carries so the caller can leave
+   * the rendering of it to {@link transcripts}.
+   */
+  const sendVoiceTurn = useCallback(
+    async (audio: Blob) => {
+      const marker = `${VOICE_MARKER_PREFIX}${Date.now().toString(36)}⸣`
+      const buffer = await audio.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      let binary = ''
+      // Chunked: `String.fromCharCode(...bytes)` on a several-hundred-kilobyte
+      // clip is an argument list long enough to overflow the call stack.
+      const CHUNK = 0x8000
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+      }
+      agent.queueVoiceTurn({
+        marker,
+        mediaType: audio.type || 'audio/webm',
+        data: btoa(binary),
+      })
+      await runtime.thread.append({
+        role: 'user',
+        content: [{ type: 'text', text: marker }],
+      })
+      return marker
+    },
+    [agent, runtime]
+  )
+
   return {
     runtime,
     pendingApprovals,
     isAwaitingApproval: pendingApprovals.length > 0,
     handleApproval,
+    sendVoiceTurn,
+    transcripts,
   }
 }

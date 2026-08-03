@@ -171,7 +171,27 @@ export interface PikkuAIMiddlewareHooks<
 > {
   modifyInput?: (
     services: Services,
-    ctx: { messages: AIMessage[]; instructions: string }
+    ctx: {
+      messages: AIMessage[]
+      instructions: string
+      /**
+       * Notes about this run that every middleware can read and write, as
+       * opposed to {@link modifyOutputStream}'s `state`, which is private to
+       * one middleware.
+       *
+       * It exists because middlewares transform the turn for each other, and
+       * the transformation can destroy what a later one needed to know. Voice
+       * is the case in point: `voiceInput` replaces the user's audio with its
+       * transcript, so by the time anything downstream looks, the turn is
+       * indistinguishable from one that was typed — and whether it was typed is
+       * exactly what `voiceOutput` needs in order to decide whether to answer
+       * aloud. Only the middleware that consumed the audio can still say so.
+       *
+       * Namespace what you put here (`voice:spokenTurn`); it is one bag for
+       * everybody. Cleared between runs.
+       */
+      shared: Record<string, unknown>
+    }
   ) =>
     | Promise<{ messages: AIMessage[]; instructions: string }>
     | { messages: AIMessage[]; instructions: string }
@@ -181,7 +201,10 @@ export interface PikkuAIMiddlewareHooks<
     ctx: {
       event: AIStreamEvent
       allEvents: readonly AIStreamEvent[]
+      /** Private to this middleware, for this run. Cross-middleware facts go in `shared`. */
       state: State
+      /** Per-run notes shared with every middleware — see {@link modifyInput}. */
+      shared: Record<string, unknown>
       /**
        * Push an event into the stream *after* this call has returned.
        *
@@ -418,10 +441,31 @@ export type AIStreamEvent =
       type: 'audio-delta'
       data: string
       format: string
+      /**
+       * The sentence this audio says.
+       *
+       * Carried alongside the bytes because a client that gets talked over has
+       * to tell the model what the user actually heard, and playback position
+       * is the only place that is knowable. Without it a barge-in can stop the
+       * sound but not report it, and the next turn is answered as though the
+       * whole reply had landed.
+       */
+      text?: string
       agent?: string
       session?: string
     }
   | { type: 'audio-done'; agent?: string; session?: string }
+  | {
+      /**
+       * What the user was heard to say, sent once at the start of a spoken
+       * turn. Only the server knows this — the client sent audio — and a chat
+       * surface needs it to show the user's own message.
+       */
+      type: 'transcript'
+      text: string
+      agent?: string
+      session?: string
+    }
   | {
       type: 'data'
       name: string

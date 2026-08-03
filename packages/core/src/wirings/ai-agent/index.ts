@@ -16,6 +16,8 @@ export {
   voiceInput,
   readsAsNonSpeech,
   NoSpeechDetectedError,
+  SPOKEN_TURN,
+  SPOKEN_TRANSCRIPT,
 } from './voice-input.js'
 export {
   voiceOutput,
