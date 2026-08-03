@@ -51,9 +51,11 @@ export enum ErrorCode {
   DUPLICATE_AUTH_DEFINITION = 'PKU581',
   AUTH_NOT_EXPORTED = 'PKU582',
 
-  // Single-declaration constructs — one call site per codebase
-  DUPLICATE_SCOPE_DEFINITION = 'PKU583',
-  DUPLICATE_SYSTEM_ROLE_DEFINITION = 'PKU584',
+  // Single-declaration constructs — one call site per codebase.
+  // PKU583 (defineScope) and PKU584 (defineSystemRole) are retired, not free:
+  // scopes and roles held this rule until the generated `admin` tree made it
+  // unsatisfiable, and get it back once `admin` is a default scope nobody
+  // declares. Do not reuse those two numbers for anything else.
   DUPLICATE_PERSONAS_DEFINITION = 'PKU585',
 
   // HTTP Route errors

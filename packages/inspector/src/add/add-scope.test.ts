@@ -166,10 +166,8 @@ describe('addScope inspector', () => {
     assert.deepEqual(state.scopes.definitions[1]!.scopes, { read: {} })
   })
 
-  // One call site per codebase, so there is one place to read the scopes from
-  // and one place to add to. The keyed form above is how you declare more.
-  test('a second defineScope in the same file is refused', async () => {
-    const { state, criticals } = await inspectSource(
+  test('extracts several declarations', async () => {
+    const { state } = await inspectSource(
       [
         "import { defineScope } from '@pikku/core/scope'",
         'defineScope({ admin: {} })',
@@ -177,42 +175,36 @@ describe('addScope inspector', () => {
       ].join('\n')
     )
 
-    const hit = criticals.find(
-      (c) => c.code === ErrorCode.DUPLICATE_SCOPE_DEFINITION
-    )
-    assert.ok(
-      hit,
-      `expected DUPLICATE_SCOPE_DEFINITION, got ${JSON.stringify(criticals)}`
-    )
     assert.deepEqual(
       state.scopes.definitions.map((d) => d.name),
-      ['admin']
+      ['admin', 'billing']
     )
   })
 
-  test('a second defineScope in another file is refused', async () => {
-    const { criticals, files } = await inspectSources({
-      'scopes.ts': [
+  // The CLI generates a `defineScope` of its own — `user-admin.gen.ts` ships
+  // the whole `admin` tree, and `@pikku/addon-console` spells it out again — so
+  // a project that scaffolds user-admin declares scopes in more than one file
+  // and every one of them has to survive.
+  test('declarations in separate files all survive', async () => {
+    const { state, criticals } = await inspectSources({
+      'user-admin.gen.ts': [
         "import { defineScope } from '@pikku/core/scope'",
         'defineScope({ admin: {} })',
       ].join('\n'),
-      'more-scopes.ts': [
+      'scopes.ts': [
         "import { defineScope } from '@pikku/core/scope'",
         'defineScope({ billing: {} })',
       ].join('\n'),
     })
 
-    const hit = criticals.find(
-      (c) => c.code === ErrorCode.DUPLICATE_SCOPE_DEFINITION
+    assert.deepEqual(
+      criticals.filter((c) => /Only one defineScope/.test(c.message)),
+      [],
+      `expected no duplicate critical, got ${JSON.stringify(criticals)}`
     )
-    assert.ok(
-      hit,
-      `expected DUPLICATE_SCOPE_DEFINITION, got ${JSON.stringify(criticals)}`
-    )
-    assert.ok(
-      hit!.message.includes(files['scopes.ts']!) &&
-        hit!.message.includes(files['more-scopes.ts']!),
-      `expected both files named, got ${hit!.message}`
+    assert.deepEqual(
+      state.scopes.definitions.map((d) => d.name).sort(),
+      ['admin', 'billing']
     )
   })
 
