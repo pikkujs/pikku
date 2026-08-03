@@ -20,6 +20,9 @@
     "websocketFile": ".pikku/pikku-websocket.gen.ts"
   },
   "supportsImportAttributes": true,
+  "allow": {
+    "complexWorkflows": true
+  },
   "schema": {
     "supportsImportAttributes": true
   },

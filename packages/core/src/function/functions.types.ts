@@ -192,16 +192,18 @@ export type CorePikkuFunctionConfig<
   tags?: string[]
   expose?: boolean
   /**
-   * The function performs its own authorization in its body — verifying a
+   * The permission check for this function lives in its body — verifying a
    * signed token, checking a webhook signature, matching an invite code — so
-   * it is not open despite carrying no session, scope or permission.
+   * it is not open despite declaring no session, scope or permission.
    *
-   * Purely declarative: nothing at runtime reads it, and it grants nothing. It
-   * exists so the claim is written down where an audit can find it, and so
-   * codegen stops warning about a gate it has no way to see. Asserting it
-   * falsely disables the one check that would have caught the mistake.
+   * A last resort. Prefer `permissions`, which are declared, inspectable, and
+   * reusable; reach for this only when the check cannot be expressed as one.
+   *
+   * Purely declarative — it grants nothing, and asserting it falsely disables
+   * the audit that would have caught the mistake. Requires
+   * `allow.permissionsInBody` in `pikku.config.json`.
    */
-  selfAuthenticated?: boolean
+  permissionsInBody?: boolean
   remote?: boolean
   mcp?: boolean
   readonly?: boolean
@@ -248,7 +250,8 @@ export type CorePikkuFunctionConfig<
    * Scopes the session must hold; all are required (AND) and checked before
    * `permissions`, which OR together — a scope can only narrow access.
    * Narrowed to the generated `ScopeId` union, so an undeclared scope is a
-   * compile error.
+   * compile error. Requires a session — see
+   * {@link CorePikkuSessionlessFunctionConfig}.
    */
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
@@ -258,3 +261,32 @@ export type CorePikkuFunctionConfig<
   node?: CoreNodeConfig
   errors?: Array<typeof PikkuError>
 }
+
+/**
+ * {@link CorePikkuFunctionConfig} for a function that runs without a session.
+ *
+ * Identical, minus `scopes`. Scopes are AND-ed and `verifyScopes` fails closed,
+ * so an anonymous caller holds none and satisfies none — a sessionless function
+ * with scopes rejects every caller it exists to serve. Gate it with
+ * `permissions`, which receive the optional session and may pass anonymous.
+ */
+export type CorePikkuSessionlessFunctionConfig<
+  PikkuFunction extends CorePikkuFunctionSessionless<any, any, any, any, any>,
+  PikkuPermission extends CorePikkuPermission<any, any, any> =
+    CorePikkuPermission<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> = Omit<
+  CorePikkuFunctionConfig<
+    PikkuFunction,
+    PikkuPermission,
+    PikkuMiddleware,
+    InputSchema,
+    OutputSchema
+  >,
+  'scopes'
+>

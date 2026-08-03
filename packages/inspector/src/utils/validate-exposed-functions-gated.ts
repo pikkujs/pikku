@@ -32,7 +32,7 @@ export function validateExposedFunctionsGated(
     // this check has no way to see. Taking the claim at face value is the
     // point: without it the warning fires forever on functions that are fine,
     // and a warning that is usually wrong stops being read.
-    if (meta.selfAuthenticated === true) continue
+    if (meta.permissionsInBody === true) continue
 
     // The function gates itself.
     if (meta.auth === true) continue
@@ -49,18 +49,27 @@ export function validateExposedFunctionsGated(
   const shown = ungated.slice(0, 10)
   const rest = ungated.length - shown.length
 
+  const one = ungated.length === 1
+
+  // Every function here is sessionless — that is the population, not the
+  // finding, so the message names it as given rather than reporting it as a
+  // defect. The remedies are the ones that can actually apply to an anonymous
+  // caller: `scopes` cannot, because `verifyScopes` fails closed on a session
+  // that does not exist, and telling someone to add them sends them to a
+  // MissingScopeError on every public request.
   logger.diagnostic({
     severity: 'warn',
     code: ErrorCode.EXPOSED_FUNCTION_HAS_NO_GATE,
     message:
-      `${ungated.length} exposed function${ungated.length === 1 ? '' : 's'} ` +
-      `require neither a session nor any permission or scope, and ` +
-      `${ungated.length === 1 ? 'is' : 'are'} reachable by anyone through ` +
+      `${ungated.length} exposed sessionless function${one ? '' : 's'} ` +
+      `carr${one ? 'ies' : 'y'} no permission and no addon gate, so ` +
+      `${one ? 'it is' : 'they are'} reachable by anyone through ` +
       `POST /rpc/:rpcName: ${shown.join(', ')}` +
       (rest > 0 ? `, and ${rest} more` : '') +
-      `. Add scopes or permissions to the function, gate the whole addon with ` +
-      `wireAddon({ scopes: [...] }), or drop \`expose: true\` if it was not ` +
-      `meant to be callable from outside.`,
+      `. Add permissions to the function, set \`auth: true\` if a session is ` +
+      `required after all, gate the whole addon with ` +
+      `wireAddon({ auth: true }), or drop \`expose: true\` if ` +
+      `${one ? 'it was' : 'they were'} not meant to be callable from outside.`,
   })
 }
 

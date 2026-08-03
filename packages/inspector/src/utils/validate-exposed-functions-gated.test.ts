@@ -108,7 +108,7 @@ describe('validateExposedFunctionsGated', () => {
       // nobody reads.
       run(
         stateWith({
-          stripeWebhook: ungatedFunction({ selfAuthenticated: true }),
+          stripeWebhook: ungatedFunction({ permissionsInBody: true }),
         })
       )
 
@@ -118,7 +118,7 @@ describe('validateExposedFunctionsGated', () => {
     test('still warns when the declaration is explicitly false', () => {
       run(
         stateWith({
-          credentialGet: ungatedFunction({ selfAuthenticated: false }),
+          credentialGet: ungatedFunction({ permissionsInBody: false }),
         })
       )
 

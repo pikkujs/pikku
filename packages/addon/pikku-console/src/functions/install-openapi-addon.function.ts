@@ -1,12 +1,12 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
   execPrefix,
   resolvePackageManager,
 } from '../lib/resolve-package-manager.js'
 
-export const installOpenapiAddon = pikkuSessionlessFunc<
+export const installOpenapiAddon = pikkuFunc<
   {
     name: string
     swaggerUrl: string

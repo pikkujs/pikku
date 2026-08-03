@@ -5,7 +5,7 @@
  */
 
 import * as assert from 'node:assert'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { verifyScopes } from '@pikku/core'
 import { MissingScopeError } from '@pikku/core/errors'
 import type { ScopeId } from '../.pikku/scopes/pikku-scopes.gen.js'
@@ -15,25 +15,25 @@ import { SCOPES, SCOPES_META } from '../.pikku/scopes/pikku-scopes.gen.js'
 // Compile-time assertions — an undeclared scope must not type-check
 // ============================================================================
 
-void pikkuSessionlessFunc<void, string>({
+void pikkuFunc<void, string>({
   // @ts-expect-error - 'billing:write' is not declared in scopes.ts
   scopes: ['billing:write'],
   func: async () => 'x',
 })
 
-void pikkuSessionlessFunc<void, string>({
+void pikkuFunc<void, string>({
   // @ts-expect-error - typo: the declared scope is 'admin:invoices', not 'admin:invoice'
   scopes: ['admin:invoice:create'],
   func: async () => 'x',
 })
 
-void pikkuSessionlessFunc<void, string>({
+void pikkuFunc<void, string>({
   // @ts-expect-error - 'admin:users' has no children, so it has no wildcard form
   scopes: ['admin:users:*'],
   func: async () => 'x',
 })
 
-void pikkuSessionlessFunc<void, string>({
+void pikkuFunc<void, string>({
   // @ts-expect-error - the bare wildcard is a grant, never a requirement
   scopes: ['*'],
   func: async () => 'x',

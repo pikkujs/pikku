@@ -18,5 +18,8 @@
   },
   "scenarios": {
     "emailDomain": "actors.local"
+  },
+  "allow": {
+    "complexWorkflows": true
   }
 }

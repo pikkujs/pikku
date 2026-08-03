@@ -125,11 +125,12 @@ export type FunctionRuntimeMeta = {
    */
   auth?: boolean
   /**
-   * The author's declaration that this function authorizes callers in its own
-   * body. Carries no runtime effect — it records a gate codegen cannot see, so
-   * an audit is not left to guess whether a sessionless function is open.
+   * The author's declaration that this function's permission check lives in its
+   * own body. Carries no runtime effect — it records a gate codegen cannot see,
+   * so an audit is not left to guess whether a sessionless function is open.
+   * Refused unless `allow.permissionsInBody` is set in `pikku.config.json`.
    */
-  selfAuthenticated?: boolean
+  permissionsInBody?: boolean
   remote?: boolean
   /**
    * A step RPC: invoked by name only from a scenario run and refused

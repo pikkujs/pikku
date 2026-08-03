@@ -13,5 +13,8 @@
     "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
     "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
     "reactQueryFile": ".pikku/pikku-react-query.gen.ts"
+  },
+  "allow": {
+    "complexWorkflows": true
   }
 }

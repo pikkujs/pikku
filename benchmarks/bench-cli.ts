@@ -72,6 +72,8 @@ function setupProject() {
         srcDirectories: ['./src', './types'],
         outDir: './.pikku',
         tsconfig: './tsconfig.json',
+        // The generated graphs are built from pikkuWorkflowComplexFunc.
+        allow: { complexWorkflows: true },
       },
       null,
       2
