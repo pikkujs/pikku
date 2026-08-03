@@ -179,6 +179,16 @@ function generateChannels(
     }
   }
 
+  /**
+   * A route or message key that is not a bare identifier has to be quoted to be
+   * a legal property name. Channel routes are author-chosen strings and a CLI
+   * channel's are command ids, where `app-smoke` and `registry.search` are the
+   * norm — unquoted, each one ends the property early and the whole map fails
+   * to parse. Quoted only when it has to be, so existing output is unchanged.
+   */
+  const propertyKey = (key: string): string =>
+    /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${key}'`
+
   let routesStr = 'export type ChannelsMap = {\n'
 
   for (const [channelPath, { routes, message }] of Object.entries(
@@ -189,9 +199,9 @@ function generateChannels(
     // Add `routes` object
     routesStr += `    readonly routes: {\n`
     for (const [key, methods] of Object.entries(routes)) {
-      routesStr += `      readonly ${key}: {\n`
+      routesStr += `      readonly ${propertyKey(key)}: {\n`
       for (const [method, handler] of Object.entries(methods)) {
-        routesStr += `        readonly ${method}: ChannelHandler<${
+        routesStr += `        readonly ${propertyKey(method)}: ChannelHandler<${
           formatTypeArray(handler.inputTypes) || 'void'
         }, ${formatTypeArray(handler.outputTypes) || 'never'}>,\n`
       }

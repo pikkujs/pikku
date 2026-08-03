@@ -149,11 +149,12 @@ export function serializeChannelCLIClient(
     ? resolveRendererBinding(programMeta.defaultRenderName, renderersMeta)
     : null
   const defaultRendererCode = defaultRendererBinding
-    ? `,\n    defaultRenderer: ${defaultRendererBinding}`
+    ? `,\n    defaultRenderer: ${defaultRendererBinding} as CorePikkuCLIClientRender<any>`
     : ''
 
   return `
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
+import type { CorePikkuCLIClientRender } from '@pikku/core/cli/channel'
 import type { Capabilities } from '@pikku/core/channel'
 import { CorePikkuWebsocket } from '@pikku/websocket'
 ${rendererImports}
@@ -179,8 +180,12 @@ export async function ${capitalizedName}CLIClient(
   // Create Pikku WebSocket wrapper
   const pikkuWS = new CorePikkuWebsocket(ws)
 
-  // Register renderers for CLI commands
-  const renderers = ${renderersMap}
+  // Renderers are declared against this app's \`SingletonServices\`, but on this
+  // side of the socket the only service that exists is a logger. The cast is
+  // sound because generation refuses to emit this file at all when a renderer
+  // reaches for anything else — see CLI_CLIENTSIDE_RENDERER_HAS_SERVICES. It is
+  // localised here so \`executeRawCLIViaChannel\` can keep an honest signature.
+  const renderers = ${renderersMap} as Record<string, CorePikkuCLIClientRender<any>>
 
   return executeRawCLIViaChannel({
     pikkuWS,

@@ -7,18 +7,48 @@ import type {
   Capabilities,
 } from '../../channel/channel-rpc.js'
 import { approverForMode, takeApprovalFlags } from './cli-approval.js'
-import type { CorePikkuCLIRender } from '../cli.types.js'
+import type { Logger } from '../../../services/logger.js'
+
+/**
+ * Everything a renderer gets when the command ran on the server: a logger, and
+ * nothing else. There is no container on this side of the socket to resolve a
+ * service from, so this is the whole of it rather than a subset of
+ * `CoreSingletonServices` — which requires `config`, `variables` and `secrets`
+ * the client does not have and cannot invent.
+ */
+export type ClientCLIRenderServices = { logger: Logger }
+
+/**
+ * A renderer that runs on the client of a CLI-over-channel connection.
+ *
+ * Deliberately not `CorePikkuCLIRender`: that type's `Services` parameter is
+ * constrained to `CoreSingletonServices`, so the honest logger-only shape
+ * cannot be spelled through it.
+ */
+export type CorePikkuCLIClientRender<Data> = (
+  services: ClientCLIRenderServices,
+  data: Data,
+  session?: undefined
+) => void | Promise<void>
 
 /** The normal case once the server owns the command tree. */
-const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
+const defaultJSONRenderer: CorePikkuCLIClientRender<any> = (_services, data) => {
   console.log(JSON.stringify(data))
 }
 
-/**
- * The command ran on the server, so there are no services here — but a renderer
- * written for local execution can still reach for `services.logger`.
- */
-const clientServices = { logger: console } as any
+// `console` is the whole logger a CLI wants — its output is the command's output.
+// `setLevel` is a no-op rather than an omission because `Logger` requires it and
+// there is no level to set: a renderer writes what the user asked to see.
+const clientServices: ClientCLIRenderServices = {
+  logger: {
+    info: (...args: any[]) => console.info(...(args as [any])),
+    warn: (...args: any[]) => console.warn(...(args as [any])),
+    error: (...args: any[]) => console.error(...(args as [any])),
+    debug: (...args: any[]) => console.debug(...(args as [any])),
+    trace: (...args: any[]) => console.trace(...(args as [any])),
+    setLevel: () => {},
+  },
+}
 
 /**
  * Runs a CLI command entirely on the server. Unlike `executeCLIViaChannel`,
@@ -40,8 +70,8 @@ export async function executeRawCLIViaChannel({
 }: {
   pikkuWS: any // CorePikkuWebsocket instance
   args?: string[]
-  renderers?: Record<string, CorePikkuCLIRender<any>>
-  defaultRenderer?: CorePikkuCLIRender<any>
+  renderers?: Record<string, CorePikkuCLIClientRender<any>>
+  defaultRenderer?: CorePikkuCLIClientRender<any>
   capabilities?: Capabilities
   approve?: ApprovalRequester
 }): Promise<number> {
