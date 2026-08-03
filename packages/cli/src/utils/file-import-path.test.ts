@@ -199,4 +199,41 @@ describe('getFileImportRelativePath', () => {
 
     assert.strictEqual(result, '@pikku/core/dist/types/core.types')
   })
+
+  // The bootstrap zero state records core's types as `typePath: '@pikku/core'`
+  // — a specifier, not a path — while every other producer of that field
+  // supplies a real file. Relativising one produces a directory that does not
+  // exist (`../../@pikku/core`), extensionless, which nodenext rejects.
+  test('should leave a bare package specifier alone', () => {
+    const from = '/project/packages/addon/.pikku/cli/pikku-cli-types.gen.ts'
+
+    assert.strictEqual(
+      getFileImportRelativePath(from, '@pikku/core', {}),
+      '@pikku/core'
+    )
+  })
+
+  test('should leave a bare specifier alone regardless of package mappings', () => {
+    const from = '/project/packages/addon/.pikku/cli/pikku-cli-types.gen.ts'
+    const packageMappings = { 'packages/addon': '@myorg/addon' }
+
+    assert.strictEqual(
+      getFileImportRelativePath(from, '@pikku/core/services', packageMappings),
+      '@pikku/core/services'
+    )
+    assert.strictEqual(
+      getFileImportRelativePath(from, 'zod', packageMappings),
+      'zod'
+    )
+  })
+
+  test('should still relativise a path that merely lacks a leading dot', () => {
+    const from = '/project/src/file1.ts'
+    const to = '/project/src/nested/file2.ts'
+
+    assert.strictEqual(
+      getFileImportRelativePath(from, to, {}),
+      './nested/file2.js'
+    )
+  })
 })

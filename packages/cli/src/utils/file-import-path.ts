@@ -9,6 +9,16 @@ export const getFileImportRelativePath = (
    *  where package-name imports can't be resolved by the bundler. */
   forceRelative = false
 ): string => {
+  // `to` is normally a file on disk, but the bootstrap zero state records core's
+  // types as `typePath: '@pikku/core'` — already an import specifier. Doing path
+  // arithmetic on one yields a directory that does not exist ('../../@pikku/core')
+  // and, being extensionless, one that nodenext then refuses to resolve. The
+  // node_modules branch below cannot catch these: a bare specifier has no
+  // 'node_modules/' in it to key off.
+  if (!to.startsWith('.') && !to.startsWith('/') && !/^[a-zA-Z]:/.test(to)) {
+    return to
+  }
+
   let filePath = relative(dirname(from), to)
   if (!/^\.+\//.test(filePath)) {
     filePath = `./${filePath}`
