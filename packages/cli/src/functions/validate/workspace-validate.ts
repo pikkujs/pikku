@@ -2,7 +2,9 @@ import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
+import { runKnowledgeValidate } from '@pikku/knowledge'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
+import { runPersonaChecks } from './persona-checks.js'
 
 export const FindingSchema = z.object({
   id: z.string(),
@@ -403,6 +405,23 @@ export async function runWorkspaceValidate(
         'Create src/config.ts and export your workspace config factory'
       )
     }
+  }
+
+  // ── personas and the knowledge base ────────────────────────────────────
+  // Both shared with `pikku fabric validate` rather than reimplemented: the two
+  // validators are separate walks over the same project, and a check only one of
+  // them makes is a check half the projects never see.
+  findings.push(...(await runPersonaChecks(root, pikkuConfig)))
+
+  const knowledge = await runKnowledgeValidate(
+    root,
+    join(
+      root,
+      typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
+    )
+  )
+  for (const finding of knowledge.findings) {
+    findings.push({ ...finding, path: join(root, finding.path) })
   }
 
   const sdkDir = join(root, 'packages', 'functions-sdk')

@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -36,6 +36,7 @@ async function makeValidProject(root: string) {
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
+    environments: { local: { apiUrl: 'http://localhost:4002' } },
   })
   await writeJson(join(root, 'package.json'), {
     workspaces: ['packages/*', 'apps/*'],
@@ -63,6 +64,7 @@ async function makeValidProject(root: string) {
       '@pikku/schema-cfworker': '^0.12.0',
       '@pikku/kysely': '^0.12.0',
       '@pikku/addon-console': '^0.12.0',
+      '@pikku/better-auth': '^0.12.0',
     },
   })
   await writeFile(
@@ -73,6 +75,24 @@ async function makeValidProject(root: string) {
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'config.ts'),
     'export const createConfig = () => ({})\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'personas.ts'),
+    [
+      "import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'",
+      "definePersonas({ founder: { name: 'Anna Müller' } })",
+      '',
+    ].join('\n'),
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'auth.wiring.ts'),
+    [
+      "import { actor } from '@pikku/better-auth'",
+      'export const auth = () => ({ plugins: [actor({ secret: undefined })] })',
+      '',
+    ].join('\n'),
     'utf8'
   )
   await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
@@ -171,6 +191,58 @@ describe('pikku fabric validate', () => {
         0,
         `unexpected findings: ${JSON.stringify(result.findings.map((f) => f.id))}`
       )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('no personas → warn, and the project still passes', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'packages', 'functions', 'src', 'personas.ts'))
+      const result = await runValidate(tmp)
+      const finding = result.findings.find((f) => f.id === 'no-personas')
+      assert.ok(finding, 'expected a no-personas finding')
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('personas without actor sign-in → warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'packages', 'functions', 'src', 'auth.wiring.ts'))
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'personas-no-actor-sign-in'
+      )
+      assert.ok(finding, 'expected a personas-no-actor-sign-in finding')
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('personas with no configured environments → warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      const config = JSON.parse(
+        await readFile(join(tmp, 'pikku.config.json'), 'utf8')
+      )
+      delete config.environments
+      await writeJson(join(tmp, 'pikku.config.json'), config)
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'personas-no-environments'
+      )
+      assert.ok(finding, 'expected a personas-no-environments finding')
+      assert.strictEqual(finding!.severity, 'warn')
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
@@ -551,6 +623,7 @@ describe('pikku fabric validate', () => {
             '@pikku/schema-cfworker': '^0.12.0',
             '@pikku/kysely': '^0.12.0',
             '@pikku/addon-console': '^0.12.0',
+            '@pikku/better-auth': '^0.12.0',
           },
           // no type: 'module'
         })
