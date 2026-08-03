@@ -161,7 +161,15 @@ export const voiceInput = (config?: {
       // to send, and a message with no content is not a question.
       if (updatedContent.length === 0) throw new NoSpeechDetectedError()
 
-      shared[SPOKEN_TRANSCRIPT] = heard.join(' ')
+      // Only when something was actually heard. A turn can carry audio that all
+      // reads as non-speech and still have content — an image with a silent
+      // caption clip — which leaves nothing above to throw. Recording `''` here
+      // would send a transcript event saying the user said nothing, and a client
+      // that tells "not transcribed yet" from "transcribed" by the key being
+      // absent would render the turn as an empty bubble rather than a pending one.
+      if (heard.length > 0) {
+        shared[SPOKEN_TRANSCRIPT] = heard.join(' ')
+      }
 
       return {
         messages: [

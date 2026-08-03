@@ -99,6 +99,7 @@ export const useVoiceConversation = (
 
   const sessionRef = useRef<VoiceSession | null>(null)
   const playbackRef = useRef<AudioPlaybackQueue | null>(null)
+  const mountedRef = useRef(true)
   // Whether the current turn began over the agent's voice. Read when the turn
   // ends, which is why it is a ref and not state: a re-render in between would
   // lose the race with `onTurn`.
@@ -200,7 +201,10 @@ export const useVoiceConversation = (
     const wasListening = session.isListening
     sessionRef.current = null
     void session.destroy().then(() => {
-      if (wasListening) void start()
+      // Unmounting during the destroy leaves the teardown below with a null
+      // ref and nothing to release, so a restart here would acquire a
+      // microphone that no longer has an owner to give it back.
+      if (wasListening && mountedRef.current) void start()
     })
   }, [options.holdToTalk, start])
 
@@ -229,15 +233,16 @@ export const useVoiceConversation = (
   )
 
   // The microphone is released on unmount and nowhere else — see VoiceSession.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
       void sessionRef.current?.destroy()
       void playbackRef.current?.destroy()
       sessionRef.current = null
       playbackRef.current = null
-    },
-    []
-  )
+    }
+  }, [])
 
   return {
     listening,

@@ -99,13 +99,19 @@ JSON
 # Delete this once a core carrying these names is published and the pins above
 # move to that release wave.
 _local_core=$(cd ../core && pwd)
+# Missing artifacts are fatal rather than a warning. Carrying on leaves the
+# pinned core without the very exports the overlay exists to supply, so the
+# bootstrap dies further down on a missing name that says nothing about the real
+# cause — core not having been built yet.
 for _m in services/local-content crypto-utils errors/errors; do
-  if [ -f "$_local_core/dist/$_m.js" ]; then
-    cp "$_local_core/dist/$_m.js" "$_bootstrap_dir/node_modules/@pikku/core/dist/$_m.js"
-    cp "$_local_core/dist/$_m.d.ts" "$_bootstrap_dir/node_modules/@pikku/core/dist/$_m.d.ts"
-  else
-    echo "Warning: local core is not built, skipping the $_m overlay"
-  fi
+  for _ext in js d.ts; do
+    if [ ! -f "$_local_core/dist/$_m.$_ext" ]; then
+      echo "Cannot overlay $_m.$_ext: $_local_core/dist/$_m.$_ext is missing." >&2
+      echo "Build @pikku/core first (yarn workspace @pikku/core build)." >&2
+      exit 1
+    fi
+    cp "$_local_core/dist/$_m.$_ext" "$_bootstrap_dir/node_modules/@pikku/core/dist/$_m.$_ext"
+  done
 done
 # Split into `bootstrap` (setup phase: type files only) and then the default
 # `all`, with a rename pass in between, because `all`'s zod schema generation

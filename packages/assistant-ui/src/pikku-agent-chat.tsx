@@ -8,6 +8,7 @@ import {
   useRef,
   type ComponentType,
   type FunctionComponent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
 import Markdown from 'react-markdown'
@@ -796,6 +797,9 @@ const VoiceIndicator: FunctionComponent = () => {
   if (!voice) return null
   const { conversation, devices, deviceId, holdToTalk, setHoldToTalk } = voice
 
+  // Rows are real buttons, so they are tabbable and fire on Enter and Space
+  // without any key handling of their own. The reset is what a `div` gave for
+  // free and a `button` does not.
   const row = {
     display: 'flex',
     alignItems: 'center',
@@ -804,6 +808,11 @@ const VoiceIndicator: FunctionComponent = () => {
     fontSize: 13,
     cursor: 'pointer',
     color: colors.text,
+    width: '100%',
+    background: 'none',
+    border: 'none',
+    font: 'inherit',
+    textAlign: 'left',
   } as const
 
   return (
@@ -878,9 +887,10 @@ const VoiceIndicator: FunctionComponent = () => {
           ? device.deviceId === deviceId
           : device.deviceId === 'default'
         return (
-          <div
+          <button
             key={device.deviceId}
-            role="button"
+            type="button"
+            aria-pressed={selected}
             onClick={() => voice.selectDevice(device.deviceId)}
             style={row}
           >
@@ -896,14 +906,15 @@ const VoiceIndicator: FunctionComponent = () => {
             >
               {device.label}
             </span>
-          </div>
+          </button>
         )
       })}
 
       <div style={{ borderTop: `1px solid ${colors.border}` }} />
 
-      <div
-        role="button"
+      <button
+        type="button"
+        aria-pressed={holdToTalk}
         onClick={() => setHoldToTalk(!holdToTalk)}
         style={{ ...row, justifyContent: 'space-between' }}
       >
@@ -932,7 +943,7 @@ const VoiceIndicator: FunctionComponent = () => {
             }}
           />
         </span>
-      </div>
+      </button>
     </div>
   )
 }
@@ -952,6 +963,7 @@ const VoiceButton: FunctionComponent<{
   const colors = useContext(ColorsContext)
   const voice = useContext(VoiceContext)
   const [open, setOpen] = useState(false)
+  const heldRef = useRef(false)
   const listening = voice?.conversation.listening ?? false
 
   // Closed as soon as the microphone is off. The panel is a readout of a live
@@ -966,15 +978,46 @@ const VoiceButton: FunctionComponent<{
   const press = () => {
     if (disabled) return
     if (!holdToTalk) return
+    if (heldRef.current) return
+    heldRef.current = true
     setOpen(true)
     // Ordered: the session has to exist before a turn can be begun on it,
     // and `start` is a permission prompt on the first press.
-    void conversation.start().then(() => conversation.beginTurn())
+    void conversation.start().then(() => {
+      // Unless the press is already over. On the first one `start` covers the
+      // permission prompt and `getUserMedia`, which can run for seconds — long
+      // enough to release inside it. `finishTurn` would have found no turn
+      // recording and done nothing, so beginning one now starts a recording
+      // nothing will ever end, and the microphone runs until the next press.
+      if (heldRef.current) conversation.beginTurn()
+    })
   }
 
   const release = () => {
     if (!holdToTalk) return
+    if (!heldRef.current) return
+    heldRef.current = false
     conversation.finishTurn()
+  }
+
+  // Enter and Space hold the button the way a pointer does. Without this the
+  // microphone is reachable by keyboard but not usable by one: the browser fires
+  // a click on keyup, which push-to-talk ignores, so the turn never begins.
+  const keyDown = (event: ReactKeyboardEvent) => {
+    if (!holdToTalk) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    // Space scrolls the page otherwise, and the repeat would re-enter `press`
+    // for as long as the key is held.
+    event.preventDefault()
+    if (event.repeat) return
+    press()
+  }
+
+  const keyUp = (event: ReactKeyboardEvent) => {
+    if (!holdToTalk) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    release()
   }
 
   const click = () => {
@@ -1000,6 +1043,11 @@ const VoiceButton: FunctionComponent<{
         onPointerDown={press}
         onPointerUp={release}
         onPointerLeave={release}
+        // A gesture the browser takes over — a scroll, a system gesture — fires
+        // no pointerup, and without this the turn stays open.
+        onPointerCancel={release}
+        onKeyDown={keyDown}
+        onKeyUp={keyUp}
         style={{
           width: 30,
           height: 30,

@@ -370,8 +370,15 @@ export class VoiceSession {
       // the caller presses the key — starting it now would put every second of
       // room between the turns into the clip.
       let startedAt = 0
+      // `stop()` flips `recorder.state` to 'inactive' synchronously, but `onstop`
+      // — which is what emits the clip and clears these hooks — runs a task
+      // later. A press landing in that window would see 'inactive' and restart
+      // the same recorder, appending the new turn to the parts array the old one
+      // is about to emit: one clip holding both turns, timed from the second
+      // press. The flag closes the window; `onstop` is what opens it again.
+      let finished = false
       this.beginTurnNow = () => {
-        if (recorder.state !== 'inactive') return
+        if (finished || recorder.state !== 'inactive') return
         startedAt = Date.now()
         try {
           recorder.start()
@@ -382,7 +389,8 @@ export class VoiceSession {
         }
       }
       this.finishTurnNow = () => {
-        if (recorder.state === 'inactive') return
+        if (finished || recorder.state === 'inactive') return
+        finished = true
         // Wall clock rather than the AudioContext's: there is no detector on
         // this path to report times against, and the press and the release are
         // both wall-clock events.
