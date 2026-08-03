@@ -4,15 +4,19 @@ import type { ScenarioPersona } from '../../services/personas-service.js'
  * Scenario steps: named, typed units of scenario behaviour.
  *
  * A step's body is an ordinary pikku function, so it may drive a browser, call
- * an RPC as its actor, or run a workflow. `given`/`when`/`then` are sugar over
- * `step` — they only change the prose the reporter renders.
+ * an RPC as its actor, or run a workflow. `given`/`when`/`then` differ only in
+ * the prose the reporter renders.
  */
 
 /**
- * Which Gherkin-style keyword the reporter prefixes this step with. `step`
- * renders no prefix at all.
+ * Which Gherkin-style keyword the reporter prefixes this step with.
+ *
+ * Every step takes one. A scenario is read by people deciding whether it
+ * describes the behaviour they wanted, and a step that says only what it does
+ * without saying whether it is setup, action or claim is the one nobody can
+ * check — which is also why PKU680 can tell a scenario that never asserts.
  */
-export type ScenarioStepPhase = 'step' | 'given' | 'when' | 'then'
+export type ScenarioStepPhase = 'given' | 'when' | 'then'
 
 /**
  * Who acts in a step.
@@ -51,7 +55,7 @@ export const SCENARIO_SURFACES: readonly ScenarioSurface[] = [
 /**
  * How a step's declared surfaces resolve for one run.
  *
- * `given`/`when`/`step` bindings are **alternatives** — clicking Buy and calling
+ * `given`/`when` bindings are **alternatives** — clicking Buy and calling
  * `createOrder` are two ways to cause one effect, so exactly one runs.
  *
  * `then` bindings are **witnesses** — "the order row says paid" and "the
@@ -86,7 +90,7 @@ export type ScenarioSurfaceResolution =
     }
 
 /**
- * Options accepted by `scenario.step/given/when/then`.
+ * Options accepted by `scenario.given/when/then`.
  *
  * Note the retry default differs from an ordinary workflow step: retrying a
  * failed assertion is the wrong behaviour for a test primitive, so steps

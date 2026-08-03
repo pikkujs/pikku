@@ -36,7 +36,7 @@ A scenario is a `pikkuScenario` export that drives the app **as real actors over
 Consequences that matter, and bite if ignored:
 
 - **There is no state reset.** A scenario runs against a live server. Scope what you create (unique ids, your own rows) and never assume a clean database.
-- **Every effect runs as somebody, or as a declared step.** `scenario.do(...)` without `{ actor }` throws `Scenario tried to run '<rpc>' as an internal step…` — there is no bare internal-RPC step. The other way to do work is `scenario.step/given/when/then`, which runs a `pikkuScenarioStep`; its actor is optional (setup steps have none) unless it declares `browser: true`.
+- **Every effect runs as somebody, or as a declared step.** `scenario.do(...)` without `{ actor }` throws `Scenario tried to run '<rpc>' as an internal step…` — there is no bare internal-RPC step. The other way to do work is `scenario.given/when/then`, which runs a `pikkuScenarioStep`; its actor is optional (setup steps have none) unless it declares `browser: true`.
 - **Actors must be configured and signed in**, or the scenario cannot run.
 
 Scenarios live in `srcDirectories` like any other function — by convention `*.scenario.ts`.
@@ -85,13 +85,13 @@ A scenario takes the same config fields as a workflow (`title`, `description`, `
 
 ### The scenario API
 
-| Call                                                                                 | Purpose                                                                                                              |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `scenario.do(step, rpc, data, { actor })`                                            | Run an RPC as that actor. The step name is what appears in the run output.                                           |
-| `scenario.expectEventually(step, rpc, data, predicate, { actor, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state. |
-| `scenario.expectError(step, rpc, data, { actor, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                   |
-| `scenario.expectService(step, 'service.method', { actor, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                       |
-| `scenario.step(step, stepName, data, { actor })`                                     | Run a declared `pikkuScenarioStep`. `given`/`when`/`then` are the same call with a keyword in the rendered prose.    |
+| Call                                                                                 | Purpose                                                                                                                |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `scenario.do(step, rpc, data, { actor })`                                            | Run an RPC as that actor. The step name is what appears in the run output.                                             |
+| `scenario.expectEventually(step, rpc, data, predicate, { actor, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state.   |
+| `scenario.expectError(step, rpc, data, { actor, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
+| `scenario.expectService(step, 'service.method', { actor, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
+| `scenario.given(stepName, step, data, { actor })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
@@ -111,7 +111,9 @@ export const credentialScenario = pikkuScenario({
   tags: ['scenario', 'credential'],
   before: resetsCredentials,
   after: removesInstalledAddon,
-  func: async (services, data, { scenario, actors }) => { /* … */ },
+  func: async (services, data, { scenario, actors }) => {
+    /* … */
+  },
 })
 ```
 
@@ -124,7 +126,7 @@ export const credentialScenario = pikkuScenario({
 | Neither runs when the run is suspended or waiting — teardown only fires at a terminal outcome.           |
 | Hooks are **not** ladder rows. The runner records nothing for them; a failure is labelled by phase.      |
 
-A hook reaches the app the same way the body does: through `wire.actors`. If you want cleanup to be *visible* on the ladder, make it an ordinary `scenario.then(...)` instead.
+A hook reaches the app the same way the body does: through `wire.actors`. If you want cleanup to be _visible_ on the ladder, make it an ordinary `scenario.then(...)` instead.
 
 Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs — a workflow is durable and resumable, so a callback that reran on every replay would have no honest meaning.
 
@@ -155,14 +157,14 @@ export const credentialFeature = pikkuFeature({
 })
 ```
 
-| Rule                                                                                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
-| The **export identifier is the feature's id**; `name` is the human-readable label. Both must be exported or the build fails.              |
-| A `{ scenario, data }` entry is gherkin's `Examples:` — one run per entry. `data` is typed against that scenario's input.                 |
-| Feature hooks run **once around the whole group** (`before → a → b → c → after`), _not_ per scenario. `after` runs in a `finally`.         |
-| There is deliberately **no `Background:`**. Per-scenario setup is the scenario's own `before`, referencing a shared function.             |
-| A scenario's effective tags are its own **plus** the feature's, so `--tags credential` selects through the feature.                       |
-| A scenario need not belong to a feature — one with no input still runs standalone.                                                        |
+| Rule                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------- |
+| The **export identifier is the feature's id**; `name` is the human-readable label. Both must be exported or the build fails.                  |
+| A `{ scenario, data }` entry is gherkin's `Examples:` — one run per entry. `data` is typed against that scenario's input.                     |
+| Feature hooks run **once around the whole group** (`before → a → b → c → after`), _not_ per scenario. `after` runs in a `finally`.            |
+| There is deliberately **no `Background:`**. Per-scenario setup is the scenario's own `before`, referencing a shared function.                 |
+| A scenario's effective tags are its own **plus** the feature's, so `--tags credential` selects through the feature.                           |
+| A scenario need not belong to a feature — one with no input still runs standalone.                                                            |
 | Membership is resolved by **object identity** at runtime, which is why a loop works and why a scenario built inline in a feature is an error. |
 
 The **feature is the run unit**: `--flows` on a scenario whose every feature entry carries `data` errors and names the features containing it, because the feature is what supplies that data. Use `--features` for those. A scenario referenced bare anywhere, or in no feature at all, still runs standalone.
@@ -171,14 +173,14 @@ The **feature is the run unit**: `--flows` on a scenario whose every feature ent
 
 A scenario records what someone was **trying to do**, never the keystrokes they used to do it. This is the one decision that determines whether a suite survives its first redesign, and it applies to every step name you write.
 
-| Action ladder — wrong                  | Intent ladder — right                          |
-| -------------------------------------- | ---------------------------------------------- |
-| `Given opens /shop`                    | `Given the shopper is browsing the shop`       |
-| `When clicks the category filter`      | `When the shopper buys the £5 strawberry milkshake` |
-| `And clicks "Drinks"`                  | `Then it is in their basket`                   |
-| `And clicks the first product card`    |                                                |
-| `And clicks Add to basket`             |                                                |
-| `Then sees "1 item"`                   |                                                |
+| Action ladder — wrong               | Intent ladder — right                               |
+| ----------------------------------- | --------------------------------------------------- |
+| `Given opens /shop`                 | `Given the shopper is browsing the shop`            |
+| `When clicks the category filter`   | `When the shopper buys the £5 strawberry milkshake` |
+| `And clicks "Drinks"`               | `Then it is in their basket`                        |
+| `And clicks the first product card` |                                                     |
+| `And clicks Add to basket`          |                                                     |
+| `Then sees "1 item"`                |                                                     |
 
 Three things go wrong with the left-hand column, and all three are expensive:
 
@@ -188,11 +190,11 @@ Three things go wrong with the left-hand column, and all three are expensive:
 
 So there are three layers, and only two of them are named in the report:
 
-| Layer                          | What it is                                          | On the ladder |
-| ------------------------------ | --------------------------------------------------- | ------------- |
-| Scenario                       | The flow, written as intents                        | yes — the ladder |
-| Step (`pikkuScenarioStep`)     | One intent                                          | yes — one row |
-| Utility                        | An ordinary TS function over `browser`              | no            |
+| Layer                      | What it is                             | On the ladder    |
+| -------------------------- | -------------------------------------- | ---------------- |
+| Scenario                   | The flow, written as intents           | yes — the ladder |
+| Step (`pikkuScenarioStep`) | One intent                             | yes — one row    |
+| Utility                    | An ordinary TS function over `browser` | no               |
 
 Utilities are **not steps**. They are plain exported functions, they take the browser handle, and they hold the clicking:
 
@@ -274,9 +276,9 @@ await scenario.when(
 // reporter renders: When the shopper buys the £5 strawberry milkshake  ✓  1.2s
 ```
 
-**Every intent step begins by arriving.** `ensureOnShop` is not defensive noise — it is what lets a scenario start at any step, run alone, and be reordered without touching it. It checks first and navigates only if needed, so a scenario already on the shop pays nothing. This is about the *browser's* starting position, not the database: there is still no state reset (see above), and you still scope what you create.
+**Every intent step begins by arriving.** `ensureOnShop` is not defensive noise — it is what lets a scenario start at any step, run alone, and be reordered without touching it. It checks first and navigates only if needed, so a scenario already on the shop pays nothing. This is about the _browser's_ starting position, not the database: there is still no state reset (see above), and you still scope what you create.
 
-**The same utilities, a different intent.** A scenario about filtering has filtering as its subject, so there the filter *is* the intent — same helper, its own step:
+**The same utilities, a different intent.** A scenario about filtering has filtering as its subject, so there the filter _is_ the intent — same helper, its own step:
 
 ```typescript
 export const filtersTheShop = pikkuScenarioStep<
@@ -299,7 +301,7 @@ export const filtersTheShop = pikkuScenarioStep<
 })
 ```
 
-Two scenarios, two intents, one set of utilities. That is the shape to aim for: when a helper is reused by a step whose *subject* it is, promote it to a step there — never the reverse.
+Two scenarios, two intents, one set of utilities. That is the shape to aim for: when a helper is reused by a step whose _subject_ it is, promote it to a step there — never the reverse.
 
 **Non-browser steps need none of this.** Without a browser there is no navigation to absorb and no DOM to hide, so an intent maps to one RPC and `scenario.do` names it directly:
 
@@ -320,11 +322,11 @@ This is the one place the surface bindings do **not** behave like a switch, and 
 
 On a `given` or `when`, the bindings are alternatives — clicking Buy and calling `createOrder` are two ways to cause one effect, so exactly one runs.
 
-On a `then`, they are not two implementations of one assertion. They are two *different claims*:
+On a `then`, they are not two implementations of one assertion. They are two _different claims_:
 
-| binding | what it actually proves |
-| ------- | ----------------------- |
-| `default` | the order row says `paid` — the system of record is right |
+| binding   | what it actually proves                                        |
+| --------- | -------------------------------------------------------------- |
+| `default` | the order row says `paid` — the system of record is right      |
 | `browser` | the confirmation panel says paid — the truth reached the human |
 
 The gap between them is the bug nobody catches: 200 OK, database correct, user still watching a spinner. So a `then` runs **every** binding it declares and fails if they disagree.
@@ -353,7 +355,7 @@ Three rules follow, and they are the ones that get broken:
 
 - **A browser witness must observe on the page.** One that quietly calls an RPC to check the result is worse than no binding at all — it reports a tick for a surface it never looked at.
 - **Return what you observed, don't just assert.** A witness returning a value lets the runner diff the two. A witness that only throws still works, but it can never disagree with anything, so it proves less. Read structured state with `where` on the test-id selector rather than parsing translated copy.
-- **A step with no binding for the run's surface is counted, not excused.** `--run browser` prints `n/m steps ran on browser` over *every* step, so an action that quietly fell back to the server lowers the number just as an assertion does. A `then` that fell back is additionally named — `--strict` fails on those, because a sentence saying the actor saw something nobody looked at is a different problem from a shortcut. Not being in the UI *is* the finding: do not add a browser binding that fakes it.
+- **A step with no binding for the run's surface is counted, not excused.** `--run browser` prints `n/m steps ran on browser` over _every_ step, so an action that quietly fell back to the server lowers the number just as an assertion does. A `then` that fell back is additionally named — `--strict` fails on those, because a sentence saying the actor saw something nobody looked at is a different problem from a shortcut. Not being in the UI _is_ the finding: do not add a browser binding that fakes it.
 
 **Always give a `then` a `default` witness.** It is the floor every run can fall back to, and an assertion with no witness the run can execute is fatal (`ScenarioNoWitness`) — not a coverage gap. The distinction is the point: a `then` checked server-side under `--run browser` did happen, it just wasn't seen where the prose claims; one checked nowhere never happened at all, and without the error it would return `undefined` and render as a tick. A browser-only `then` is therefore a step that fails the fast suite, which is rarely what you want.
 
@@ -396,7 +398,7 @@ Rules that bite:
 
 - **The step is referenced by its typed string name, not by importing the const** — exactly like `workflow.do`. The name is the step's `pikkuFuncId` and is checked against the generated step map. A non-literal target is a critical error (`PKU678`).
 - **Steps are not RPCs.** They are deliberately never network-callable — a browser-driving step must not be.
-- **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal *is* the assertion.
+- **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal _is_ the assertion.
 - **`actor` and `env` are optional on the wire**, because a pure assertion step needs neither. Narrow them with `requireActor(scenarioStep)` and `requireScenarioEnv(scenarioStep)` from `@pikku/core/workflow` rather than a local guard — both name the step and say what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
@@ -441,8 +443,14 @@ Personas, actors and environments live in `pikku.config.json`:
   "scenarios": {
     "personas": {
       "shopper": { "description": "Buys things here", "primary": true },
-      "support": { "description": "Answers for the shop", "proficiency": "power" },
-      "reminders": { "description": "The shop chasing abandoned carts", "kind": "system" }
+      "support": {
+        "description": "Answers for the shop",
+        "proficiency": "power"
+      },
+      "reminders": {
+        "description": "The shop chasing abandoned carts",
+        "kind": "system"
+      }
     },
     "actors": {
       "shopper": {
@@ -565,19 +573,19 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 
 ## Red flags
 
-| Smell                                         | Why it's wrong                                                                                            |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `pikku tests …`                               | Removed in #865. Use `pikku scenario`.                                                                    |
-| `.feature` files / Gherkin for function tests | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                |
-| `scenario.do(...)` with no `{ actor }`        | Throws. Every step runs as somebody.                                                                      |
-| A scenario per function                       | Scenarios are user flows. One flow covers many functions; that is the point.                              |
-| Assuming a clean database                     | There is no state reset — it may be a staging server. Scope what you create.                              |
-| `sleep()` before asserting                    | Use `expectEventually`.                                                                                   |
-| A step named `clicksAddToBasket` / `opensThePage` | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility. |
-| A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                       |
-| A `browser: true` step guarding `if (!browser)` | `browser: true` guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).      |
-| `expectEventually` in a `pikkuWorkflowFunc`   | `PKU675` — scenario-only.                                                                                 |
-| Coverage silently 0                           | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
+| Smell                                               | Why it's wrong                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pikku tests …`                                     | Removed in #865. Use `pikku scenario`.                                                                                      |
+| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                                  |
+| `scenario.do(...)` with no `{ actor }`              | Throws. Every step runs as somebody.                                                                                        |
+| A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                |
+| Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                |
+| `sleep()` before asserting                          | Use `expectEventually`.                                                                                                     |
+| A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
+| A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
+| A `browser: true` step guarding `if (!browser)`     | `browser: true` guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                         |
+| `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                   |
+| Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
 
 `@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `PersonaData`, `DbUtils`) — out of scope here.
 

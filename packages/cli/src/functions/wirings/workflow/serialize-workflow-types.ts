@@ -51,18 +51,12 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
 }
 
 /**
- * The typed half of a scenario wire: \`step\` and its \`given\`/\`when\`/\`then\`
- * sugar, narrowed to the names declared by \`pikkuScenarioStep\` in this project.
- * The phase only changes the prose the reporter renders.
+ * The typed half of a scenario wire: \`given\`/\`when\`/\`then\`, narrowed to the
+ * names declared by \`pikkuScenarioStep\` in this project. \`given\` and \`when\`
+ * differ only in the prose the reporter renders; \`then\` additionally makes the
+ * step's bindings witnesses rather than alternatives.
  */
 export interface TypedScenarioSteps {
-  step<K extends keyof FlattenedScenarioStepMap>(
-    stepName: string,
-    stepFunc: K,
-    data?: FlattenedScenarioStepMap[K]['input'],
-    options?: ScenarioStepOptions
-  ): Promise<FlattenedScenarioStepMap[K]['output']>
-
   given<K extends keyof FlattenedScenarioStepMap>(
     stepName: string,
     stepFunc: K,
@@ -337,7 +331,7 @@ export type PikkuScenarioStepConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
-  /** Registered name — this is the string \`scenario.step()\` references. */
+  /** Registered name — this is the string \`scenario.given()\` references. */
   name: string
   /**
    * What this step does, for the console and for whoever reads the source. It

@@ -22,11 +22,9 @@ describe('action steps pick exactly one binding', () => {
     })
   })
 
-  test('given and step resolve like when, not like then', () => {
-    for (const phase of ['given', 'step'] as const) {
-      const resolution = resolveScenarioSurfaces(phase, ALL, 'cli')
-      assert.equal(resolution.kind, 'action')
-    }
+  test('given resolves like when, not like then', () => {
+    const resolution = resolveScenarioSurfaces('given', ALL, 'cli')
+    assert.equal(resolution.kind, 'action')
   })
 
   test('a default run never counts as a fallback', () => {

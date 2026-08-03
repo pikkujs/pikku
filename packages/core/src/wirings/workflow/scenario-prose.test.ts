@@ -110,14 +110,14 @@ describe('composeStepProse basics', () => {
     )
   })
 
-  test('the neutral `step` phase adds no keyword', () => {
+  test('every phase renders its keyword', () => {
     assert.equal(
       composeStepProse({
-        phase: 'step',
+        phase: 'when',
         description: 'refreshes the dashboard',
         actor: 'admin',
       }),
-      'the admin refreshes the dashboard'
+      'When the admin refreshes the dashboard'
     )
   })
 
@@ -127,7 +127,6 @@ describe('composeStepProse basics', () => {
         { phase: 'given', description: 'buys an apple' },
         { phase: 'when', description: 'checks out' },
         { phase: 'then', description: 'sees a receipt' },
-        { phase: 'step', description: 'waits' },
       ] as const
     ).map((step) =>
       composeStepProse({ ...step, actor: 'shopper', keywordWidth: 5 })
@@ -137,7 +136,6 @@ describe('composeStepProse basics', () => {
       'Given the shopper buys an apple',
       'When  the shopper checks out',
       'Then  the shopper sees a receipt',
-      '      the shopper waits',
     ])
     const columns = new Set(rendered.map((line) => line.indexOf('the shopper')))
     assert.equal(columns.size, 1, 'every sentence starts in the same column')
@@ -145,8 +143,8 @@ describe('composeStepProse basics', () => {
 
   test('prose degrades to just the description when nothing else is known', () => {
     assert.equal(
-      composeStepProse({ phase: 'step', description: 'does the thing' }),
-      'does the thing'
+      composeStepProse({ phase: 'when', description: 'does the thing' }),
+      'When does the thing'
     )
   })
 })

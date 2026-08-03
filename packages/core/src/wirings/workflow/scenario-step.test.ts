@@ -155,7 +155,7 @@ const registerStep = (
   } as any
 }
 
-describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
+describe('pikkuScenarioStep (scenario.given/when/then)', () => {
   beforeEach(() => resetPikkuState())
 
   test('the step func is called with the phase, step identity and data on the wire', async () => {
@@ -202,12 +202,11 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
 
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    await wire.step('a', 'noop')
     await wire.given('b', 'noop')
     await wire.when('c', 'noop')
     await wire.then('d', 'noop')
 
-    assert.deepEqual(phases, ['step', 'given', 'when', 'then'])
+    assert.deepEqual(phases, ['given', 'when', 'then'])
   })
 
   test('the actor is handed to the step rather than used to dispatch it', async () => {
@@ -291,7 +290,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
 
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    const result = await wire.step('waits for the page', 'flaky', undefined, {
+    const result = await wire.when('waits for the page', 'flaky', undefined, {
       retries: 3,
       retryDelay: 1,
     })
@@ -509,7 +508,7 @@ describe('pikkuScenarioStep (scenario.step/given/when/then)', () => {
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
     await assert.rejects(
-      (wire.step as any)('a name', async () => 'inline'),
+      (wire.when as any)('a name', async () => 'inline'),
       /string/i
     )
   })

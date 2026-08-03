@@ -144,7 +144,7 @@ describe('pikkuScenarioStep', () => {
 
   test('the step target is bundled, so the step function is wired', async () => {
     const { state, cleanup } = await run([
-      "await scenario.step('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
     ])
     try {
       assert.ok(
@@ -183,7 +183,7 @@ describe('pikkuScenarioStep', () => {
   test('a non-literal step target is a PKU678 critical', async () => {
     const { criticals, cleanup } = await run([
       'const target = Math.random() > 0.5 ? "buysAnApple" : "seesAReceipt"',
-      "await scenario.step('buys something', target as any, {}, { actor: actors.shopper })",
+      "await scenario.when('buys something', target as any, {}, { actor: actors.shopper })",
     ])
     try {
       assert.ok(

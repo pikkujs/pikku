@@ -44,14 +44,14 @@ export function isWorkflowDoCall(
  */
 export const DYNAMIC_SCENARIO_STEP_TARGET = '<dynamic>'
 
-const SCENARIO_STEP_PHASES = ['step', 'given', 'when', 'then'] as const
+const SCENARIO_STEP_PHASES = ['given', 'when', 'then'] as const
 
 export type ScenarioStepPhaseName = (typeof SCENARIO_STEP_PHASES)[number]
 
 /**
- * Check if a call expression is scenario.step()/given()/when()/then() — a
- * declared `pikkuScenarioStep` invoked by name. `given`/`when`/`then` are pure
- * sugar over `step`: the phase only changes the prose a reporter renders.
+ * Check if a call expression is scenario.given()/when()/then() — a declared
+ * `pikkuScenarioStep` invoked by name. `given`/`when` are pure sugar for each
+ * other; `then` additionally makes the step's bindings witnesses.
  */
 export function isScenarioStepCall(node: ts.CallExpression): boolean {
   return getScenarioStepPhase(node) !== undefined
