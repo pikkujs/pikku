@@ -167,16 +167,34 @@ export const createLocalContentRequestHandler = ({
     }
 
     const maxBytes = parseSizeLimit(content.sizeLimit ?? '1mb')
-    const body = Buffer.from(await request.arrayBuffer())
-    // Checked after buffering rather than while streaming: `Request` has already
-    // read the body by the time it can be measured. Runtimes that want to reject
-    // early should cap the body at the transport.
-    if (body.length > maxBytes) {
-      return text(413, 'Content too large')
+
+    // Counted as it arrives and abandoned the moment it goes over, so an
+    // oversized upload costs the limit rather than its own size — `arrayBuffer()`
+    // would have to hold all of it first, which hands an unauthenticated caller
+    // a way to spend the server's memory. Mirrors node-http-server's
+    // `readRequestBody`, which aborts the same way.
+    const chunks: Buffer[] = []
+    let bytesRead = 0
+    const reader = request.body?.getReader()
+    if (reader) {
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          bytesRead += value.byteLength
+          if (bytesRead > maxBytes) {
+            await reader.cancel()
+            return text(413, 'Content too large')
+          }
+          chunks.push(Buffer.from(value))
+        }
+      } finally {
+        reader.releaseLock()
+      }
     }
 
     await mkdir(resolve(targetPath, '..'), { recursive: true })
-    await writeFile(targetPath, body)
+    await writeFile(targetPath, Buffer.concat(chunks))
     return new Response(null, { status: 200 })
   }
 

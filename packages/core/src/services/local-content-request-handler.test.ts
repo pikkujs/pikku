@@ -5,6 +5,7 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
+  existsSync,
   rmSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -186,7 +187,7 @@ describe('createLocalContentRequestHandler', () => {
     assert.equal(response?.status, 403)
   })
 
-  test('rejects a body over the size limit', async () => {
+  test('rejects a body over the size limit without writing it', async () => {
     const response = await handler(
       new Request('http://localhost/upload/bucket/big.bin', {
         method: 'PUT',
@@ -194,5 +195,8 @@ describe('createLocalContentRequestHandler', () => {
       })
     )
     assert.equal(response?.status, 413)
+    // Abandoning the stream must leave nothing behind — a partial file here
+    // would be a truncated asset that later reads would serve as if whole.
+    assert.equal(existsSync(join(tmpDir, 'bucket', 'big.bin')), false)
   })
 })
