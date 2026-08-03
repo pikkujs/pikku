@@ -12,6 +12,8 @@ import {
   ReadResourceResultSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+import { realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 export class PikkuMCPTestClient {
   private client: Client
@@ -201,7 +203,15 @@ export async function runMCPHTTPClientTest(url: string): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Comparing `import.meta.url` to a hand-built `file://${process.argv[1]}` looks
+// equivalent but is false whenever the path needs percent-encoding — a space
+// anywhere in the project directory is enough — and whenever the script is
+// reached through a symlink. Either way this block silently never runs.
+const isMain =
+  process.argv[1] !== undefined &&
+  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (isMain) {
   const client = new PikkuMCPTestClient('yarn', ['run', 'start:mcp:http'])
   try {
     await client.connect()

@@ -1,6 +1,7 @@
 import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { Config } from '../../../../types/application-types.js'
+import { DIRECT_EXECUTION_GUARD } from './serialize-cli-entrypoint-guard.js'
 
 /**
  * Collect all unique renderer names from CLI metadata (populated by inspector)
@@ -193,15 +194,17 @@ export async function ${capitalizedName}CLIClient(
 export default ${capitalizedName}CLIClient
 
 // For direct execution (if this file is run directly)
-if (import.meta.url === \`file://\${process.argv[1]}\`) {
+${DIRECT_EXECUTION_GUARD}
+
+if (isDirectExecution) {
   const url = process.env.PIKKU_WS_URL || 'ws://localhost:4002${finalChannelRoute}'
 
   // Attach credentials so the channel authenticates like any other pikku client.
   // A machine API key (PIKKU_API_KEY -> x-api-key) takes precedence; otherwise
   // the human session token saved by \`pikku login\` (~/.pikku/session.json ->
-  // Authorization: Bearer) is used. This block only runs under Node (direct
-  // execution), so reading the session file and using the 'ws' headers option
-  // is safe — the browser WebSocket cannot set custom headers anyway.
+  // Authorization: Bearer) is used. This block only runs on a server runtime
+  // (direct execution), so reading the session file is safe — a browser could
+  // neither reach it nor set custom headers on its WebSocket.
   const headers: Record<string, string> = {}
   if (process.env.PIKKU_API_KEY) {
     headers['x-api-key'] = process.env.PIKKU_API_KEY
@@ -228,12 +231,26 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
   }
   const hasAuth = Object.keys(headers).length > 0
 
-  // Custom headers require the Node 'ws' module — the global/browser WebSocket
-  // cannot set them — so prefer 'ws' whenever we have credentials to send.
+  // Node's global WebSocket reads its second argument as subprotocols and drops
+  // custom headers on the floor, so credentials there need the 'ws' module.
+  // Bun's honours them natively, and reaching for 'ws' under Bun would load its
+  // compatibility shim for nothing. Detected once, the way the CLI picks its
+  // dev-server runner.
+  const isBun = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+
+  // Only the header-carrying Bun call needs the cast: the DOM lib types the
+  // second argument as subprotocols, which is what Node implements.
+  type WebSocketWithHeaders = new (
+    url: string,
+    options: { headers: Record<string, string> }
+  ) => WebSocket
+
   let ws: WebSocket
-  if (hasAuth || typeof WebSocket === 'undefined') {
+  if (!isBun && (hasAuth || typeof WebSocket === 'undefined')) {
     const wsModule = await import('ws')
     ws = new wsModule.default(url, { headers }) as unknown as WebSocket
+  } else if (hasAuth) {
+    ws = new (WebSocket as unknown as WebSocketWithHeaders)(url, { headers })
   } else {
     ws = new WebSocket(url)
   }

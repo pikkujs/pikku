@@ -119,4 +119,34 @@ describe('serializeChannelCLIClient', () => {
     const occurrences = out.match(/cardsRenderer/g) ?? []
     assert.strictEqual(occurrences.length, 3)
   })
+
+  test('picks the WebSocket implementation by runtime: native under Bun, the ws module only when Node needs headers', () => {
+    const out = serializeChannelCLIClient(
+      'kanban',
+      programMeta(),
+      clientFile,
+      config,
+      bootstrapFile
+    )
+    // Detected the same way services.ts picks its dev-server runner.
+    assert.match(out, /typeof \(globalThis as \{ Bun\?: unknown \}\)\.Bun/)
+    // Bun's WebSocket honours `headers`, so the ws shim is never loaded there.
+    assert.match(
+      out,
+      /if \(!isBun && \(hasAuth \|\| typeof WebSocket === 'undefined'\)\)/
+    )
+    assert.match(out, /await import\('ws'\)/)
+  })
+
+  test('guards direct execution with the shared entrypoint guard, not a file:// argv comparison', () => {
+    const out = serializeChannelCLIClient(
+      'kanban',
+      programMeta(),
+      clientFile,
+      config,
+      bootstrapFile
+    )
+    assert.match(out, /if \(isDirectExecution\)/)
+    assert.doesNotMatch(out, /file:\/\/\$\{process\.argv/)
+  })
 })

@@ -1,5 +1,6 @@
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { Config } from '../../../../types/application-types.js'
+import { DIRECT_EXECUTION_GUARD } from './serialize-cli-entrypoint-guard.js'
 
 /**
  * Serializes the local (in-program) CLI bootstrap code
@@ -69,7 +70,9 @@ ${wireServicesFactory ? '      createWireServices,' : ''}
 export default ${capitalizedName}CLI
 
 // For direct execution (if this file is run directly)
-if (import.meta.url === \`file://\${process.argv[1]}\`) {
+${DIRECT_EXECUTION_GUARD}
+
+if (isDirectExecution) {
   ${capitalizedName}CLI(process.argv.slice(2)).catch(error => {
     console.error('Fatal error:', error.message)
     process.exit(1)
