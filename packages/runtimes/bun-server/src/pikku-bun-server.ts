@@ -2,7 +2,13 @@ import type { Server as BunServer, ServerWebSocket } from 'bun'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
-import type { Logger } from '@pikku/core/services'
+import type { JWTService, Logger } from '@pikku/core/services'
+import { pikkuState } from '@pikku/core/internal'
+import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import {
+  createLocalContentRequestHandler,
+  type LocalContentRequestHandler,
+} from '@pikku/core/services/local-content-request-handler'
 import {
   fetchData,
   PikkuFetchHTTPRequest,
@@ -30,6 +36,13 @@ export type BunServerConfig = CoreConfig & {
   hostname?: string
   staticMounts?: StaticMount[]
   healthCheckPath?: string
+  /**
+   * Serve the `LocalContent` upload and asset prefixes. Pass the same config the
+   * `LocalContent` service was built from — it is that service which hands the
+   * browser these URLs, and a prefix that disagrees produces a 404 naming
+   * nothing. Mirrors `PikkuNodeHTTPServerConfig.content`.
+   */
+  content?: LocalContentConfig
 }
 
 export type PikkuBunServerOptions = RunHTTPWiringOptions & {
@@ -53,6 +66,14 @@ export type PikkuBunServerOptions = RunHTTPWiringOptions & {
    * Path the MCP server is mounted at when `mcpJson` is provided. Default `/mcp`.
    */
   mcpPath?: string
+  /**
+   * The JWT service `LocalContent` signs asset URLs with. Required to serve
+   * `config.content`'s asset prefix: without it every signed read is refused,
+   * since an unverifiable signature is no signature. Falls back to
+   * `singletonServices.jwt`. Mirrors
+   * `PikkuNodeHTTPServerOptions.contentSigningJWT`.
+   */
+  contentSigningJWT?: JWTService
 }
 
 type WsData = { channelHandler: PikkuLocalChannelHandler }
@@ -84,17 +105,30 @@ export class PikkuBunServer {
   private readonly mcpJson?: PikkuBunServerOptions['mcpJson']
   private readonly mcpPath: string
   private mcpHandler?: (request: Request) => Promise<Response>
+  private readonly localContent?: LocalContentRequestHandler
 
   constructor(
     private readonly config: BunServerConfig,
     private readonly logger: Logger,
     options: PikkuBunServerOptions = {}
   ) {
-    const { eventHub, mcpJson, mcpPath, ...httpOptions } = options
+    const { eventHub, mcpJson, mcpPath, contentSigningJWT, ...httpOptions } =
+      options
     this.eventHub = eventHub ?? new BunEventHubService()
     this.mcpJson = mcpJson
     this.mcpPath = mcpPath ?? '/mcp'
     this.options = httpOptions
+    this.localContent = config.content
+      ? createLocalContentRequestHandler({
+          content: config.content,
+          logger,
+          // Resolved per request: `singletonServices` is populated after the
+          // server is constructed, so reading it here would always miss.
+          getJWT: () =>
+            contentSigningJWT ??
+            pikkuState(null, 'package', 'singletonServices')?.jwt,
+        })
+      : undefined
   }
 
   public async init(): Promise<void> {
@@ -174,6 +208,14 @@ export class PikkuBunServer {
           if (pathname === mcpPath || pathname.startsWith(`${mcpPath}/`)) {
             return await mcpHandler(req)
           }
+        }
+
+        // Ahead of static mounts and routing: these prefixes belong to the
+        // content service, and `fetchData` would answer them with a 404 since
+        // no wiring claims them.
+        const contentResponse = await this.localContent?.(req)
+        if (contentResponse) {
+          return contentResponse
         }
 
         const staticResponse = await this.serveStaticMounts(req)
