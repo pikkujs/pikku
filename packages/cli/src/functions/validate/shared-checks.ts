@@ -24,6 +24,9 @@ export type SharedPikkuConfig = {
   db?: {
     engine?: 'sqlite' | 'postgres'
   }
+  lint?: {
+    customServerBootstrap?: 'off' | 'warn' | 'error'
+  }
 }
 
 export type SharedFnPkg = {
