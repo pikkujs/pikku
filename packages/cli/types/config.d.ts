@@ -540,6 +540,14 @@ export type PikkuCLIInput = {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'
     functionDynamicImport?: 'off' | 'warn' | 'error'
+    /**
+     * Flag a root `start`/`dev` script that boots a server without `pikku dev`
+     * or `pikku serve`, since a hand-rolled entrypoint constructs its own
+     * services and never runs the `pikkuServerLifecycle` hooks. Defaults to
+     * 'warn'; set 'off' to keep a custom entrypoint. Unlike the rules above
+     * this one is evaluated by `pikku workspace validate`, not by codegen.
+     */
+    customServerBootstrap?: 'off' | 'warn' | 'error'
   }
 
   /**

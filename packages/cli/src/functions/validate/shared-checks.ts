@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runKnowledgeValidate } from '@pikku/knowledge'
+import { runBootstrapChecks } from './bootstrap-checks.js'
 import { runPersonaChecks, type ValidateFinding } from './persona-checks.js'
 import { runScenarioFileChecks } from './scenario-file-checks.js'
 
@@ -244,6 +245,7 @@ export async function runSharedProjectChecks(
   // ── root package.json ──────────────────────────────────────────────────
   type RootPkg = {
     workspaces?: unknown
+    scripts?: Record<string, string>
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
   }
@@ -535,6 +537,9 @@ export async function runSharedProjectChecks(
       'Create packages/functions-sdk/ as a workspace with src/pikku/ as the generated output root; point clientFiles.rpcMapDeclarationFile and clientFiles.reactQueryFile there'
     )
   }
+
+  // ── server bootstrap ───────────────────────────────────────────────────
+  findings.push(...(await runBootstrapChecks(root, rootPkg, pikkuConfig)))
 
   // ── personas, scenario files and the knowledge base ────────────────────
   findings.push(...(await runPersonaChecks(root, pikkuConfig)))
