@@ -319,6 +319,26 @@ export type { PersonaDetailProps } from './components/personas/PersonaDetail'
 export { ScenarioPersonasPanel } from './components/personas/ScenarioPersonasPanel'
 export type { ScenarioPersonasPanelProps } from './components/personas/ScenarioPersonasPanel'
 
+// Personas as a surface of their own — the people a product is for, rather than
+// the cast of its scenarios. A host mounts the workspace whole, or assembles it
+// from the card, the avatar and the role list.
+export { PersonasWorkspace } from './components/personas/PersonasWorkspace'
+export { PersonasView } from './components/personas/PersonasView'
+export { PersonaRow } from './components/personas/PersonaRow'
+export type { PersonaRowProps } from './components/personas/PersonaRow'
+export { PersonaAvatar } from './components/personas/PersonaAvatar'
+export { PersonaRoleList } from './components/personas/PersonaRoleList'
+export type { PersonaRoleListProps } from './components/personas/PersonaRoleList'
+export { toPersonaEntries } from './components/personas/persona-model'
+export type { PersonaModelInput } from './components/personas/persona-model'
+export type {
+  PersonaEntry,
+  PersonaRoleRef,
+  PersonaAccountRef,
+  PersonaScenarioRef,
+  PersonaRef,
+} from './components/personas/persona-types'
+
 // What an addon/API contains, as panel content — opened from the catalogue,
 // and mountable directly by a host that wants it in its own panel.
 export { AddonDetail } from './components/packages/AddonDetail'

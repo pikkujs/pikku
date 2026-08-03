@@ -108,6 +108,30 @@ describe('addPersonas inspector', () => {
     assert.equal(susan.runnable, true)
   })
 
+  test('extracts a declared avatar', async () => {
+    const { state } = await inspectSource(
+      withRoles(
+        'definePersonas({',
+        '  susan: {',
+        "    name: 'Susan',",
+        "    avatarUrl: '/avatars/susan.png',",
+        '  },',
+        '})'
+      )
+    )
+    assert.equal(state.personas.definitions[0]!.avatarUrl, '/avatars/susan.png')
+  })
+
+  // The console draws a colour-and-icon avatar from the persona's id when none
+  // is declared, so an absent field has to stay absent rather than become an
+  // empty string the renderer would treat as a broken image.
+  test('leaves the avatar absent when none is declared', async () => {
+    const { state } = await inspectSource(
+      withRoles('definePersonas({', "  susan: { name: 'Susan' },", '})')
+    )
+    assert.equal(state.personas.definitions[0]!.avatarUrl, undefined)
+  })
+
   test('extracts the environments a persona declares', async () => {
     const { state } = await inspectSource(
       withRoles(

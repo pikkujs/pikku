@@ -23,6 +23,7 @@ import { ScopesPage } from './pages/ScopesPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { ScenariosPage } from './pages/ScenariosPage'
+import { PersonasPage } from './pages/PersonasPage'
 import { VirtualUsersPage } from './pages/VirtualUsersPage'
 import { KnowledgePage } from './pages/KnowledgePage'
 import { DatabasePage } from './pages/DatabasePage'
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
         <Route path="/agents/playground" element={<AgentPlaygroundPage />} />
         <Route path="/changes" element={<ChangesPage />} />
         <Route path="/scenarios" element={<ScenariosPage />} />
+        <Route path="/personas" element={<PersonasPage />} />
         <Route path="/virtual-users" element={<VirtualUsersPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/database" element={<DatabasePage />} />

@@ -261,6 +261,8 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     if (jobTitle !== undefined) persona.jobTitle = jobTitle
     const description = stringProperty(config, 'description')
     if (description !== undefined) persona.description = description
+    const avatarUrl = stringProperty(config, 'avatarUrl')
+    if (avatarUrl !== undefined) persona.avatarUrl = avatarUrl
     const personality = stringProperty(config, 'personality')
     if (personality !== undefined) persona.personality = personality
     if (disposition !== undefined) {

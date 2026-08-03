@@ -1,0 +1,48 @@
+/*
+ * The persona list is laid out against its own container rather than the
+ * viewport: the same list is the page's full-width body and a 450px panel on
+ * the scenarios screen, and on a 27" display both of those are "large".
+ */
+.list {
+  container-type: inline-size;
+  container-name: personas;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 300px 132px 16px;
+  align-items: center;
+  column-gap: 16px;
+}
+
+@container personas (max-width: 1000px) {
+  .row {
+    grid-template-columns: 48px minmax(0, 1fr) 300px 16px;
+  }
+
+  .facts {
+    display: none;
+  }
+}
+
+@container personas (max-width: 720px) {
+  .row {
+    grid-template-columns: 48px minmax(0, 1fr) 200px 16px;
+  }
+}
+
+/*
+ * Narrower than this, the roles stop being a column and go under the name —
+ * which is what they are worth here. Dropping them instead would leave a list
+ * of faces, and who holds which role is the reason to be on this page at all.
+ */
+@container personas (max-width: 480px) {
+  .row {
+    grid-template-columns: 48px minmax(0, 1fr) 16px;
+  }
+
+  .roles {
+    grid-column: 2 / 3;
+    grid-row: 2;
+  }
+}

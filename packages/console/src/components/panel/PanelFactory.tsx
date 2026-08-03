@@ -595,6 +595,7 @@ export const createPanelChildren = (
                   <PersonaDetail
                     persona={panelData.metadata.persona}
                     onOpenScenario={panelData.metadata.onOpenScenario}
+                    onOpenVirtualUser={panelData.metadata.onOpenVirtualUser}
                   />
                 </Box>
               ),

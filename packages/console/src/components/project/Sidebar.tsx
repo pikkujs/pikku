@@ -34,6 +34,7 @@ import {
   Mail,
   Route,
   UserSearch,
+  UserRound,
   BookOpen,
   Database,
   Users,
@@ -190,15 +191,30 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
-      id: 'auth',
-      title: m.nav_auth(),
+      // Declared people and real ones sit together: a persona is who the
+      // product is for, a user is who turned up. Reading either without the
+      // other is what let the two drift in the first place.
+      id: 'people',
+      title: m.nav_people(),
       items: [
+        {
+          label: m.nav_personas(),
+          href: '/personas',
+          icon: UserRound,
+          matchPrefix: '/personas',
+        },
         {
           label: m.nav_users(),
           href: '/users',
           icon: Users,
           matchPrefix: '/users',
         },
+      ],
+    },
+    {
+      id: 'auth',
+      title: m.nav_auth(),
+      items: [
         {
           label: m.nav_scopes(),
           href: '/scopes',

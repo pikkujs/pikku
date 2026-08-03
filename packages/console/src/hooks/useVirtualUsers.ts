@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { useSearchParams } from '../router'
 import {
   toVirtualUserDocs,
   type VirtualUserDoc,
@@ -14,6 +15,7 @@ export interface VirtualUsersBrowse {
 
 export function useVirtualUsers(): VirtualUsersBrowse {
   const { meta, loading } = usePikkuMeta()
+  const [searchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string>()
 
   const users = useMemo(() => {
@@ -28,7 +30,12 @@ export function useVirtualUsers(): VirtualUsersBrowse {
     })
   }, [meta])
 
-  const selected = users.find((user) => user.id === selectedId) ?? users[0]
+  // `?persona=` is how the personas page hands one over. It only seeds the
+  // choice — picking someone else in the rail wins from then on, so arriving
+  // by link does not pin the page to whoever the url named.
+  const linkedId = searchParams.get('persona') ?? undefined
+  const selected =
+    users.find((user) => user.id === (selectedId ?? linkedId)) ?? users[0]
 
   return { users, selected, setSelectedId, loading }
 }

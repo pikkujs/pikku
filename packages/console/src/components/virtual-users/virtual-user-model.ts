@@ -138,7 +138,7 @@ export interface VirtualUserModelInput {
  * The scopes a persona holds, resolved through its roles — the same expansion
  * the seed grants from and a run narrows the catalogue with.
  */
-const scopesForRoles = (
+export const scopesForRoles = (
   roles: readonly string[],
   systemRoles: SystemRoleDefinitionsMeta
 ): string[] => {
@@ -233,7 +233,9 @@ export const toVirtualUserDocs = ({
             steps: stepCount,
             byFeature: [...perFeature]
               .map(([name, count]) => ({ name, count }))
-              .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+              .sort(
+                (a, b) => b.count - a.count || a.name.localeCompare(b.name)
+              ),
           },
           tags: persona.tags ?? [],
           roles,
