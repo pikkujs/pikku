@@ -155,15 +155,31 @@ export class CLILogger implements Logger {
     console.log(c(normalizedMessage))
   }
 
+  /**
+   * Splits a log line into the parts `emit` needs.
+   *
+   * The public methods declare their message as `Safe<M>`, which distributes
+   * over the `CLILogMessage` union and cannot be narrowed by `typeof`. The
+   * guard's job is done once the call site has been checked, so the message is
+   * converted back to its domain type here — in one place rather than in each
+   * method.
+   */
+  private messageParts(message: Safe<CLILogMessage>) {
+    const value = message as CLILogMessage
+    return {
+      msg: typeof value === 'string' ? value : value.message,
+      type: typeof value === 'string' ? undefined : value.type,
+      data: typeof value === 'string' ? undefined : value.data,
+    }
+  }
+
   info<M extends CLILogMessage, A extends unknown[]>(
     message: Safe<M>,
     ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.info || this.silent) return
 
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('info', msg, type, undefined, data)
   }
 
@@ -184,9 +200,7 @@ export class CLILogger implements Logger {
       )
       return
     }
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('error', msg, type, undefined, data)
   }
 
@@ -195,9 +209,7 @@ export class CLILogger implements Logger {
     ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.warn) return
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('warn', msg, type, undefined, data)
   }
 
@@ -207,9 +219,7 @@ export class CLILogger implements Logger {
   ) {
     if (this.level > LogLevel.debug || this.silent) return
 
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('debug', msg, type, undefined, data)
   }
 
