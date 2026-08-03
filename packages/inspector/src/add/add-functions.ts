@@ -682,10 +682,6 @@ export const addFunctions: AddWiring = (
     permissionsInBody = getPropertyValue(firstArg, 'permissionsInBody') as
       | boolean
       | undefined
-    // Refused unless the project opted in. The flag silences the gate audit
-    // without gating anything, so it is the cheapest way out of a PKU574 and
-    // the easiest to reach for when the real fix is a `permissions` entry.
-    // Turning it on is a decision about the project, not about one function.
     if (permissionsInBody && !options.allow?.permissionsInBody) {
       logger.critical(
         ErrorCode.PERMISSIONS_IN_BODY_NOT_ALLOWED,

@@ -199,12 +199,9 @@ export type CorePikkuFunctionConfig<
    * A last resort. Prefer `permissions`, which are declared, inspectable, and
    * reusable; reach for this only when the check cannot be expressed as one.
    *
-   * Purely declarative: nothing at runtime reads it, and it grants nothing. It
-   * exists so the claim is written down where an audit can find it, and so
-   * codegen stops warning about a gate it has no way to see. Asserting it
-   * falsely disables the one check that would have caught the mistake — which
-   * is why it must be opted into with `allow.permissionsInBody` in
-   * `pikku.config.json` before it can be used at all.
+   * Purely declarative — it grants nothing, and asserting it falsely disables
+   * the audit that would have caught the mistake. Requires
+   * `allow.permissionsInBody` in `pikku.config.json`.
    */
   permissionsInBody?: boolean
   remote?: boolean

@@ -58,12 +58,6 @@ const COMPLEX_WORKFLOW = [
   ')',
 ].join('\n')
 
-/**
- * Both of these buy something the tooling cannot inspect. Neither is wrong in
- * every case, which is exactly why the decision belongs to the project once
- * rather than to each author at the call site — and why the default has to be
- * "no" rather than "warn".
- */
 describe('allow: escape hatches are refused unless opted into', () => {
   test('permissionsInBody is a critical when not allowed', async () => {
     const { criticals } = await run(PERMISSIONS_IN_BODY)

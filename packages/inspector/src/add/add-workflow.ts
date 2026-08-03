@@ -252,10 +252,6 @@ export const addWorkflow: AddWiring = (
   if (expression.text === 'pikkuWorkflowFunc') {
     wrapperType = 'dsl'
   } else if (expression.text === 'pikkuWorkflowComplexFunc') {
-    // Refused unless the project opted in. A complex workflow's inline steps
-    // are not serializable, so the graph, replay and migration all lose sight
-    // of them — and it is the obvious way out whenever the DSL is merely
-    // inconvenient, which is most of the time it gets reached for.
     if (!options.allow?.complexWorkflows) {
       logger.critical(
         ErrorCode.COMPLEX_WORKFLOW_NOT_ALLOWED,
