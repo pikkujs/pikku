@@ -110,31 +110,24 @@ describe('addSystemRole inspector', () => {
     )
   })
 
-  // One call site per codebase, so there is one place to read the roles from
-  // and one place to add to. The keyed form above is how you declare more.
-  test('a second defineSystemRole in the same file is refused', async () => {
-    const { state, criticals } = await inspectSource(
+  test('extracts roles from several calls in one file', async () => {
+    const { state } = await inspectSource(
       withScopes(
         "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })",
         "defineSystemRole({ admin: { scopes: ['admin'] } })"
       )
     )
 
-    const hit = criticals.find(
-      (c) => c.code === ErrorCode.DUPLICATE_SYSTEM_ROLE_DEFINITION
-    )
-    assert.ok(
-      hit,
-      `expected DUPLICATE_SYSTEM_ROLE_DEFINITION, got ${JSON.stringify(criticals)}`
-    )
     assert.deepEqual(
-      state.systemRoles.definitions.map((r) => r.name),
-      ['buyer']
+      state.systemRoles.definitions.map((r) => r.name).sort(),
+      ['admin', 'buyer']
     )
   })
 
-  test('a second defineSystemRole in another file is refused', async () => {
-    const { criticals, files } = await inspectSources({
+  // Roles follow scopes: a project scaffolding user-admin has a generated
+  // declaration beside its own, so every file's roles have to survive.
+  test('declarations in separate files all survive', async () => {
+    const { state, criticals } = await inspectSources({
       'roles.ts': withScopes(
         "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })"
       ),
@@ -144,17 +137,14 @@ describe('addSystemRole inspector', () => {
       ].join('\n'),
     })
 
-    const hit = criticals.find(
-      (c) => c.code === ErrorCode.DUPLICATE_SYSTEM_ROLE_DEFINITION
+    assert.deepEqual(
+      criticals.filter((c) => /Only one defineSystemRole/.test(c.message)),
+      [],
+      `expected no duplicate critical, got ${JSON.stringify(criticals)}`
     )
-    assert.ok(
-      hit,
-      `expected DUPLICATE_SYSTEM_ROLE_DEFINITION, got ${JSON.stringify(criticals)}`
-    )
-    assert.ok(
-      hit!.message.includes(files['roles.ts']!) &&
-        hit!.message.includes(files['more-roles.ts']!),
-      `expected both files named, got ${hit!.message}`
+    assert.deepEqual(
+      state.systemRoles.definitions.map((r) => r.name).sort(),
+      ['admin', 'buyer']
     )
   })
 

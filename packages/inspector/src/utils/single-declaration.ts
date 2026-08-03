@@ -4,11 +4,10 @@ import type { InspectorLogger } from '../types.js'
 /**
  * Claims the one call site a single-declaration construct is allowed.
  *
- * `defineScope`, `defineSystemRole` and `definePersonas` each take a keyed
- * object, so one call already declares as many entries as you like. Letting the
- * call itself repeat buys nothing and costs the thing that matters: a single
- * place to read the declared set from, and a single place to add to it. The
- * same rule `pikkuBetterAuth` has had all along.
+ * `definePersonas` takes a keyed object, so one call already declares as many
+ * entries as you like. Letting the call itself repeat buys nothing and costs
+ * the thing that matters: a single place to read the declared set from, and a
+ * single place to add to it. The same rule `pikkuBetterAuth` has had all along.
  *
  * A second call in the SAME file is refused too — "the file" is not an answer
  * to "where do I add a persona?" when the file holds two calls, so allowing it
@@ -16,10 +15,17 @@ import type { InspectorLogger } from '../types.js'
  *
  * A generated file is exempt, and never claims the slot either. The rule exists
  * to name the one place a person adds to, and nobody adds to a file the CLI
- * rewrites on the next run — the scaffolds that ship a scope tree of their own
- * (`user-admin.gen.ts`, and the addon scaffolds beside it) would otherwise make
- * every project that generates one unbuildable, and take the app's own
- * declaration down with them.
+ * rewrites on the next run — `pikku-personas.gen.ts` would otherwise make every
+ * project that scaffolds one unbuildable, and take the app's own declaration
+ * down with it.
+ *
+ * `defineScope` and `defineSystemRole` held this rule too, briefly, and do not
+ * until the `admin` tree stops being app-declared. The exemption above is not
+ * enough for them: the CLI generates a `defineScope` in `user-admin.gen.ts` and
+ * `@pikku/addon-console` spells the same tree out again in a hand-written file,
+ * so two non-generated declarations remain and the build still fails. The fix
+ * is for `admin` to be a default scope nobody declares, and the rule comes back
+ * for scopes and roles once that lands.
  *
  * @param files - The construct's `files` set, which doubles as the claim.
  * @returns true when the caller holds the claim and should carry on.
