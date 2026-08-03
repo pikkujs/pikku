@@ -42,6 +42,7 @@ import { resolvePermissions } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import { findPiiPaths } from '../utils/check-pii-output.js'
+import { findRevealedSecretSinks } from '../utils/check-secret-sinks.js'
 import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
 import type { NodeType } from '@pikku/core/node'
 
@@ -1208,6 +1209,20 @@ export const addFunctions: AddWiring = (
   // it runs ONLY when explicitly requested (`pikku all --security`) — see the
   // classificationCheck option. Default codegen skips it entirely.
   if (options.classificationCheck) {
+    // A revealed vault secret is invisible to the return-type scan below when it
+    // is written out mid-body rather than returned, so walk the sinks too.
+    for (const violation of findRevealedSecretSinks(checker, handler)) {
+      logger.diagnostic({
+        severity: 'error',
+        code: ErrorCode.SECRET_REVEALED_INTO_SINK,
+        message:
+          `Function '${name}' passes a revealed secret to '${violation.sink}' ` +
+          `at line ${violation.line} (path '${violation.path}').\n  ` +
+          `A vault secret must not be written to a log, a queue, an email or a webhook. ` +
+          `Pass the value only to the client that needs it, and reveal it there.`,
+      })
+    }
+
     const sig = checker.getSignatureFromDeclaration(handler)
     if (sig) {
       const rawRet = checker.getReturnTypeOfSignature(sig)

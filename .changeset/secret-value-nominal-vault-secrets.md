@@ -1,6 +1,7 @@
 ---
 '@pikku/core': patch
 '@pikku/cli': patch
+'@pikku/inspector': patch
 '@pikku/redis': patch
 '@pikku/mongodb': patch
 '@pikku/kysely': patch
@@ -34,6 +35,11 @@ Two behaviours cover what types cannot see. Structured serialization redacts —
 `JSON.stringify` and node's inspect both yield `[secret]`, so an audit or log
 write stays honest without crashing the request. String coercion throws
 `SecretCoercionError`, because a template literal is always a leak.
+
+`.reveal()` is the deliberate escape hatch, and what it hands back is an
+ordinary string as far as every sink signature is concerned. **PKU953** closes
+that gap: under `pikku all --security` the inspector reports a revealed secret
+that flows into a logger, a queue, an email or a webhook — `console` included.
 
 This also fixed a real one: `remote-addon-auth.ts` called `String(token)` on an
 `unknown` and wrote the result straight into an `Authorization` header.
