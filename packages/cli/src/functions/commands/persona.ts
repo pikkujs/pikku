@@ -276,7 +276,8 @@ export const personaRun = pikkuSessionlessFunc<
       apiUrl: env.apiUrl,
       catalogue: catalogueClassification(catalogue),
     })) {
-      logger[level](text)
+      const write: (message: string) => void = logger[level].bind(logger)
+      write(text)
     }
 
     if (out) {

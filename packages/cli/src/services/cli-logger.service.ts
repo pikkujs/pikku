@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
+import type { Safe } from '@pikku/core'
 import { LogLevel } from '@pikku/core/services'
 import { isExpectedError } from '@pikku/core'
 import type {
@@ -154,7 +155,10 @@ export class CLILogger implements Logger {
     console.log(c(normalizedMessage))
   }
 
-  info(message: CLILogMessage, ..._meta: any[]) {
+  info<M extends CLILogMessage, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
     if (this.level > LogLevel.info || this.silent) return
 
     const msg = typeof message === 'string' ? message : message.message
@@ -163,7 +167,10 @@ export class CLILogger implements Logger {
     this.emit('info', msg, type, undefined, data)
   }
 
-  error(message: CLILogMessage | Error, ..._meta: any[]) {
+  error<M extends CLILogMessage | Error, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
     if (this.level > LogLevel.error) return
     if (message instanceof Error) {
       // An expected failure (a deliberate PikkuError, e.g. a build gate
@@ -183,7 +190,10 @@ export class CLILogger implements Logger {
     this.emit('error', msg, type, undefined, data)
   }
 
-  warn(message: CLILogMessage, ..._meta: any[]) {
+  warn<M extends CLILogMessage, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
     if (this.level > LogLevel.warn) return
     const msg = typeof message === 'string' ? message : message.message
     const type = typeof message === 'string' ? undefined : message.type
@@ -191,7 +201,10 @@ export class CLILogger implements Logger {
     this.emit('warn', msg, type, undefined, data)
   }
 
-  debug(message: CLILogMessage, ..._meta: any[]) {
+  debug<M extends CLILogMessage, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
     if (this.level > LogLevel.debug || this.silent) return
 
     const msg = typeof message === 'string' ? message : message.message

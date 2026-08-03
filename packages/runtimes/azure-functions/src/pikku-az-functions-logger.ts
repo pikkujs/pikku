@@ -1,37 +1,44 @@
 import type { InvocationContext } from '@azure/functions'
 import type { Logger, LogLevel } from '@pikku/core/services'
+import type { Safe } from '@pikku/core'
 
 export class AzInvocationLogger implements Logger {
   // private logLevel: LogLevel = LogLevel.info
 
   constructor(private context: InvocationContext) {}
 
-  public info(
-    messageOrObj: string | Record<string, any>,
-    ...meta: any[]
+  public info<M extends string | Record<string, any>, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
   ): void {
-    this.context.info(messageOrObj, ...meta)
+    this.context.info(messageOrObj as any, ...meta)
   }
 
-  public warn(
-    messageOrObj: string | Record<string, any>,
-    ...meta: any[]
+  public warn<M extends string | Record<string, any>, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
   ): void {
-    this.context.warn(messageOrObj, ...meta)
+    this.context.warn(messageOrObj as any, ...meta)
   }
 
-  public error(
-    messageOrObj: string | Record<string, any> | Error,
-    ...meta: any[]
-  ): void {
-    this.context.error(messageOrObj, ...meta)
+  public error<
+    M extends string | Record<string, any> | Error,
+    A extends unknown[],
+  >(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void {
+    this.context.error(messageOrObj as any, ...meta)
   }
 
-  public debug(message: string, ...meta: any[]): void {
+  public debug<A extends unknown[]>(
+    message: string,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void {
     this.context.debug(message, ...meta)
   }
 
-  public trace(message: string, ...meta: any[]): void {
+  public trace<A extends unknown[]>(
+    message: string,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void {
     this.context.trace(message, ...meta)
   }
 

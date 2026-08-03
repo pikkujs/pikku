@@ -7,6 +7,6 @@
     "declarationMap": false
   },
   "files": [
-    "src/secret-value.test.ts"
+    "src/services/cli-logger.service.type.test.ts"
   ]
 }

@@ -7,6 +7,6 @@
     "declarationMap": false
   },
   "files": [
-    "src/secret-value.test.ts"
+    "src/pikku-az-functions-logger.type.test.ts"
   ]
 }

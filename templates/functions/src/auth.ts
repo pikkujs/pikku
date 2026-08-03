@@ -29,12 +29,15 @@ export const auth = pikkuBetterAuth(
       GITHUB_OAUTH: { clientId: string; clientSecret: string }
     }>(['BETTER_AUTH_SECRET', 'GITHUB_OAUTH'])
 
-    if (!BETTER_AUTH_SECRET) {
+    // Reveal before the guard: a `SecretValue` wrapper is always truthy, so
+    // testing it would let an empty secret through.
+    const betterAuthSecret = BETTER_AUTH_SECRET?.reveal()
+    if (!betterAuthSecret) {
       throw new Error('Missing required secret: BETTER_AUTH_SECRET')
     }
 
     return betterAuth({
-      secret: BETTER_AUTH_SECRET.reveal(),
+      secret: betterAuthSecret,
       database: { db: kysely, type: 'sqlite' },
       emailAndPassword: { enabled: true },
       // Enables the stateless session middleware split (CLI detects this), so

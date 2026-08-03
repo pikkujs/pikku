@@ -113,7 +113,10 @@ const _typeAssertions = (
   secret: SecretValue<string>,
   creds: SecretValue<{ token: string }>,
   anything: any,
-  sink: <T>(value: Safe<T>) => void
+  sink: <T>(value: Safe<T>) => void,
+  secretPromise: Promise<SecretValue<string>>,
+  secretMap: Map<string, SecretValue<string>>,
+  secretSet: Set<SecretValue<string>>
 ) => {
   // Nominal: not assignable to what it wraps.
   // @ts-expect-error a secret is not a string
@@ -151,6 +154,20 @@ const _typeAssertions = (
   sink(Buffer.from('bytes'))
   sink(new Map([['k', 'v']]))
   sink([{ a: 1 }, { a: 2 }])
+
+  // A container is not a hiding place: a mapped type cannot reach what a
+  // `Promise`, `Map` or `Set` holds, so `Safe` recurses into them explicitly.
+  // @ts-expect-error nor awaiting later — `getSecret()` returns exactly this
+  sink(secretPromise)
+  // @ts-expect-error nor as a map value
+  sink(secretMap)
+  // @ts-expect-error nor as a set member
+  sink(secretSet)
+
+  // The same containers holding ordinary values must still pass.
+  sink(Promise.resolve('plain'))
+  sink(new Map([['k', 'v']]))
+  sink(new Set(['plain']))
 
   // `any` cannot be guarded and must stay usable rather than collapsing to never.
   sink(anything)

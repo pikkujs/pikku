@@ -76,9 +76,6 @@ type Passthrough =
   | Error
   | ArrayBuffer
   | ArrayBufferView
-  | Map<unknown, unknown>
-  | Set<unknown>
-  | Promise<unknown>
 
 /**
  * Rejects a `SecretValue` anywhere in `T`, however deeply nested, by collapsing
@@ -88,14 +85,27 @@ type Passthrough =
  * queue payloads, channel messages — where nominality alone cannot help.
  * `any` is passed through untouched: it cannot be guarded, and collapsing it
  * would reject every legitimate call.
+ *
+ * `Promise`, `Map` and `Set` are recursed into rather than passed through. A
+ * mapped type cannot reach what they hold — mapping their keys yields their
+ * methods, not their contents — so treating them as opaque let a secret ride
+ * through inside one. `Promise` is the case that bites: `getSecret()` returns
+ * `Promise<SecretValue<T>>`, so a forgotten `await` would otherwise log a
+ * secret.
  */
 export type Safe<T> =
   IsAny<T> extends true
     ? T
     : [Extract<T, SecretValue<any>>] extends [never]
-      ? T extends Passthrough
-        ? T
-        : T extends object
-          ? { [K in keyof T]: Safe<T[K]> }
-          : T
+      ? T extends Promise<infer V>
+        ? Promise<Safe<V>>
+        : T extends Map<infer K, infer V>
+          ? Map<Safe<K>, Safe<V>>
+          : T extends Set<infer V>
+            ? Set<Safe<V>>
+            : T extends Passthrough
+              ? T
+              : T extends object
+                ? { [K in keyof T]: Safe<T[K]> }
+                : T
       : never
