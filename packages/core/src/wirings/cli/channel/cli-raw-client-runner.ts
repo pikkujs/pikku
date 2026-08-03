@@ -40,8 +40,14 @@ export async function executeRawCLIViaChannel({
 }: {
   pikkuWS: any // CorePikkuWebsocket instance
   args?: string[]
-  renderers?: Record<string, CorePikkuCLIRender<any>>
-  defaultRenderer?: CorePikkuCLIRender<any>
+  // `any` for the services parameter rather than the default `CoreServices`:
+  // the renderers handed in are the app's own, typed against its
+  // `SingletonServices`, and a function taking those is not assignable to one
+  // taking `CoreServices`. Nothing is lost by widening — a client-side renderer
+  // is never called with services at all, which is why generation rejects one
+  // that reads them.
+  renderers?: Record<string, CorePikkuCLIRender<any, any>>
+  defaultRenderer?: CorePikkuCLIRender<any, any>
   capabilities?: Capabilities
   approve?: ApprovalRequester
 }): Promise<number> {
