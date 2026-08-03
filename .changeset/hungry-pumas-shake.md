@@ -1,6 +1,6 @@
 ---
-'@pikku/kysely': minor
-'@pikku/cli': minor
+'@pikku/kysely': patch
+'@pikku/cli': patch
 ---
 
 Add a `db.schema` CLI config option, so `pikku db generate` can write the runtime tables into a named postgres schema.
