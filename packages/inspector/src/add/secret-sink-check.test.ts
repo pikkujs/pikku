@@ -47,12 +47,20 @@ interface EmailService {
 interface WebhookService {
   send(input: any): Promise<void>
 }
+interface AuditService {
+  audit(event: { type: string; input?: unknown }): Promise<void>
+}
+interface AuditLog {
+  write(event: { type: string; input?: unknown }): Promise<void>
+}
 
 type Services = {
   logger: Logger
   queueService: QueueService
   email: EmailService
   webhooks: WebhookService
+  audit?: AuditService
+  auditLog?: AuditLog
   secrets: { getSecret(key: string): Promise<SecretValue<string>> }
 }
 
@@ -119,6 +127,22 @@ describe('PKU953 — a revealed secret reaching a sink', () => {
       })
     `)
     assert.equal(sinkErrors(diagnostics).length, 3)
+  })
+
+  test('flags a secret written to an audit, through the optional chain it is reached by', async () => {
+    const diagnostics = await runInspect(`
+      export const leak = pikkuFunc<void, void>({
+        func: async ({ audit, auditLog, secrets }) => {
+          const token = (await secrets.getSecret('API_KEY')).reveal()
+          await audit?.audit({ type: 'used', input: { token } })
+          await auditLog?.write({ type: 'used', input: token })
+        },
+      })
+    `)
+    const errors = sinkErrors(diagnostics)
+    assert.equal(errors.length, 2)
+    assert.match(errors[0]!.message, /audit\.audit/)
+    assert.match(errors[1]!.message, /auditLog\.write/)
   })
 
   test('flags console, which no type guard covers', async () => {

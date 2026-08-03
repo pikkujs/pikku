@@ -1218,7 +1218,7 @@ export const addFunctions: AddWiring = (
         message:
           `Function '${name}' passes a revealed secret to '${violation.sink}' ` +
           `at line ${violation.line} (path '${violation.path}').\n  ` +
-          `A vault secret must not be written to a log, a queue, an email or a webhook. ` +
+          `A vault secret must not be written to a log, an audit, a queue, an email or a webhook. ` +
           `Pass the value only to the client that needs it, and reveal it there.`,
       })
     }

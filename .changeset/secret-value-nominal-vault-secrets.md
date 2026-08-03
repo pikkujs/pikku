@@ -39,7 +39,7 @@ write stays honest without crashing the request. String coercion throws
 `.reveal()` is the deliberate escape hatch, and what it hands back is an
 ordinary string as far as every sink signature is concerned. **PKU953** closes
 that gap: under `pikku all --security` the inspector reports a revealed secret
-that flows into a logger, a queue, an email or a webhook — `console` included.
+that flows into a logger, an audit, a queue, an email or a webhook — `console` included.
 
 This also fixed a real one: `remote-addon-auth.ts` called `String(token)` on an
 `unknown` and wrote the result straight into an `Authorization` header.

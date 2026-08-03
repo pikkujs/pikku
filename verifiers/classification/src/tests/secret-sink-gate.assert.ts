@@ -131,9 +131,15 @@ import { pikkuSessionlessFunc } from '@pikku/core'
 import type { Services } from './services.js'
 
 export const dumpToken = pikkuSessionlessFunc({
-  func: async ({ logger, secrets }: Services) => {
+  func: async ({ logger, secrets, audit }: Services) => {
     const token = await secrets.getSecret('API_KEY')
     logger.info({ msg: 'using token', token: token.reveal() })
+    await audit?.audit({
+      type: 'token.used',
+      source: 'explicit',
+      occurredAt: new Date().toISOString(),
+      input: { token: token.reveal() },
+    })
     return { ok: true }
   }
 })
@@ -164,6 +170,7 @@ describe('PKU953 — a revealed secret written to a sink', () => {
       const { exitCode, output } = runPikkuAll(dir)
       assert.match(output, /PKU953/)
       assert.match(output, /logger\.info/)
+      assert.match(output, /audit\.audit/)
       assert.equal(
         exitCode,
         0,

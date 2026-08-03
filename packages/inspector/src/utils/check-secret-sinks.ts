@@ -21,6 +21,8 @@ const SINKS: Array<{ coreType: string; methods: '*' | string[] }> = [
   { coreType: 'QueueService', methods: ['add'] },
   { coreType: 'EmailService', methods: ['send'] },
   { coreType: 'WebhookService', methods: ['send'] },
+  { coreType: 'AuditService', methods: ['audit', 'write'] },
+  { coreType: 'AuditLog', methods: ['write'] },
 ]
 
 /**
