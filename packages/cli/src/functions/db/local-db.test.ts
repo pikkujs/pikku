@@ -1291,6 +1291,47 @@ describe('db.schema', () => {
     assert.doesNotMatch(runtime.sql, /"app"\./)
     assert.match(runtime.sql, /create table "workflow_step"/i)
   })
+
+  /**
+   * A table of the same name in another schema is a different table.
+   *
+   * The bare desired names match a qualified covered one so that migrations
+   * written before the option existed still count. Letting that match ignore
+   * which schema the copy is in makes `public.workflow_step` — the very table
+   * the option exists to move away from — read as coverage, and generation
+   * would call the source up to date having created nothing in `app`.
+   */
+  test('a table covered in another schema is not coverage for this one', async () => {
+    usePostgresProject({
+      migrationSql: `CREATE TABLE public.workflow_step (
+  run_id TEXT NOT NULL,
+  step_name TEXT NOT NULL
+);
+`,
+    })
+    const resolved = resolveDb({}, root, root, undefined, 'app')!
+
+    const { written, upToDate } = await generateMigrations(
+      resolved,
+      root,
+      ['src'],
+      { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) }
+    )
+
+    assert.ok(
+      !upToDate.includes('pikku-runtime'),
+      'the runtime source still needs its tables in app'
+    )
+    const migration = written.find((w) => w.source === 'pikku-runtime')
+    assert.ok(migration, 'the runtime source got a migration')
+    const body = readFileSync(migration.file, 'utf8')
+
+    // Created, not altered. Counting the `public` copy as coverage turns the
+    // table into a column-level delta, and every one of those ALTERs then runs
+    // against an `app.workflow_step` that was never created.
+    assert.match(body, /create table ("app"\.)?"?workflow_step"?/i)
+    assert.doesNotMatch(body, /ALTER TABLE "app"\.workflow_step/)
+  })
 })
 
 /**
@@ -1325,7 +1366,7 @@ CREATE TABLE app.workflow_step (
 
   // The column the covered table is missing, as an alteration of the table in
   // `app` — not of whatever `workflow_step` resolves to.
-  assert.match(body, /ALTER TABLE app\.workflow_step ADD COLUMN/)
+  assert.match(body, /ALTER TABLE "app"\.workflow_step ADD COLUMN/)
   assert.doesNotMatch(
     body,
     /ALTER TABLE workflow_step /,
