@@ -35,6 +35,25 @@ const inspectSource = async (source: string) => {
   }
 }
 
+/** Inspects several files at once, keyed by basename. */
+const inspectSources = async (sources: Record<string, string>) => {
+  const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-scope-multi-'))
+  const files: Record<string, string> = {}
+  for (const [name, source] of Object.entries(sources)) {
+    files[name] = join(rootDir, name)
+    await writeFile(files[name]!, source)
+  }
+  const criticals: Array<{ code: ErrorCode; message: string }> = []
+  try {
+    const state = await inspect(makeLogger(criticals), Object.values(files), {
+      rootDir,
+    })
+    return { state, criticals, files }
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
+}
+
 describe('addScope inspector', () => {
   test('extracts a flat scope', async () => {
     const { state, criticals } = await inspectSource(
@@ -147,8 +166,10 @@ describe('addScope inspector', () => {
     assert.deepEqual(state.scopes.definitions[1]!.scopes, { read: {} })
   })
 
-  test('extracts several declarations', async () => {
-    const { state } = await inspectSource(
+  // One call site per codebase, so there is one place to read the scopes from
+  // and one place to add to. The keyed form above is how you declare more.
+  test('a second defineScope in the same file is refused', async () => {
+    const { state, criticals } = await inspectSource(
       [
         "import { defineScope } from '@pikku/core/scope'",
         'defineScope({ admin: {} })',
@@ -156,9 +177,42 @@ describe('addScope inspector', () => {
       ].join('\n')
     )
 
+    const hit = criticals.find(
+      (c) => c.code === ErrorCode.DUPLICATE_SCOPE_DEFINITION
+    )
+    assert.ok(
+      hit,
+      `expected DUPLICATE_SCOPE_DEFINITION, got ${JSON.stringify(criticals)}`
+    )
     assert.deepEqual(
       state.scopes.definitions.map((d) => d.name),
-      ['admin', 'billing']
+      ['admin']
+    )
+  })
+
+  test('a second defineScope in another file is refused', async () => {
+    const { criticals, files } = await inspectSources({
+      'scopes.ts': [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ admin: {} })',
+      ].join('\n'),
+      'more-scopes.ts': [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ billing: {} })',
+      ].join('\n'),
+    })
+
+    const hit = criticals.find(
+      (c) => c.code === ErrorCode.DUPLICATE_SCOPE_DEFINITION
+    )
+    assert.ok(
+      hit,
+      `expected DUPLICATE_SCOPE_DEFINITION, got ${JSON.stringify(criticals)}`
+    )
+    assert.ok(
+      hit!.message.includes(files['scopes.ts']!) &&
+        hit!.message.includes(files['more-scopes.ts']!),
+      `expected both files named, got ${hit!.message}`
     )
   })
 

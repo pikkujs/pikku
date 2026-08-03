@@ -10,6 +10,10 @@ import type { CoreScopes } from './scope.types.js'
  * yields `admin`, `admin:invoices`, `admin:invoices:create`,
  * `admin:invoices:void` and `billing`.
  *
+ * Exactly one `defineScope(...)` is allowed per codebase, so there is one place
+ * to read the declared scopes from and one place to add to. A second call —
+ * even in the same file — fails the build.
+ *
  * @example
  * ```typescript
  * defineScope({

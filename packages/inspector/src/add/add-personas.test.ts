@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
-import type { ErrorCode } from '../error-codes.js'
+import { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
@@ -30,6 +30,25 @@ const inspectSource = async (source: string) => {
   try {
     const state = await inspect(makeLogger(criticals), [file], { rootDir })
     return { state, criticals }
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
+}
+
+/** Inspects several files at once, keyed by basename. */
+const inspectSources = async (sources: Record<string, string>) => {
+  const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-personas-multi-'))
+  const files: Record<string, string> = {}
+  for (const [name, source] of Object.entries(sources)) {
+    files[name] = join(rootDir, name)
+    await writeFile(files[name]!, source)
+  }
+  const criticals: Array<{ code: ErrorCode; message: string }> = []
+  try {
+    const state = await inspect(makeLogger(criticals), Object.values(files), {
+      rootDir,
+    })
+    return { state, criticals, files }
   } finally {
     await rm(rootDir, { recursive: true, force: true })
   }
@@ -214,6 +233,52 @@ describe('addPersonas inspector', () => {
       )
     )
     assert.equal(state.personas.definitions[0]!.runnable, false)
+  })
+
+  // One call site per codebase, so there is one place to read the cast from
+  // and one place to add to. The keyed form above is how you declare more.
+  test('a second definePersonas in the same file is refused', async () => {
+    const { state, criticals } = await inspectSource(
+      withRoles(
+        "definePersonas({ susan: { name: 'Susan' } })",
+        "definePersonas({ dave: { name: 'Dave' } })"
+      )
+    )
+
+    const hit = criticals.find(
+      (c) => c.code === ErrorCode.DUPLICATE_PERSONAS_DEFINITION
+    )
+    assert.ok(
+      hit,
+      `expected DUPLICATE_PERSONAS_DEFINITION, got ${JSON.stringify(criticals)}`
+    )
+    assert.deepEqual(
+      state.personas.definitions.map((p) => p.id),
+      ['susan']
+    )
+  })
+
+  test('a second definePersonas in another file is refused', async () => {
+    const { criticals, files } = await inspectSources({
+      'personas.ts': withRoles("definePersonas({ susan: { name: 'Susan' } })"),
+      'more-personas.ts': [
+        "import { definePersonas } from '@pikku/core/persona'",
+        "definePersonas({ dave: { name: 'Dave' } })",
+      ].join('\n'),
+    })
+
+    const hit = criticals.find(
+      (c) => c.code === ErrorCode.DUPLICATE_PERSONAS_DEFINITION
+    )
+    assert.ok(
+      hit,
+      `expected DUPLICATE_PERSONAS_DEFINITION, got ${JSON.stringify(criticals)}`
+    )
+    assert.ok(
+      hit!.message.includes(files['personas.ts']!) &&
+        hit!.message.includes(files['more-personas.ts']!),
+      `expected both files named, got ${hit!.message}`
+    )
   })
 
   // A half-read roles array typechecks, runs, and grants less than the source
