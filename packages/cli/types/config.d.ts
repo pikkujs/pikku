@@ -353,6 +353,20 @@ export type PikkuCLIInput = {
   db?: {
     engine?: 'sqlite' | 'postgres'
     pgVersion?: number
+
+    /**
+     * The postgres schema the generated runtime migrations create their tables
+     * in. Defaults to none, which lands them wherever `search_path` points.
+     *
+     * For a project that keeps everything in one namespace — `app`, say. Without
+     * it `pikku db generate` emits unqualified `create table`, which against the
+     * default `search_path` of `"$user", public` writes a second copy of every
+     * runtime table into `public` alongside the ones already in `app`.
+     *
+     * Postgres only: sqlite has one schema to be in, and its `REFERENCES` clause
+     * takes a bare table name, so qualified DDL does not compile there.
+     */
+    schema?: string
   }
 
   cli?: {

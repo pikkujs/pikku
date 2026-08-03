@@ -238,7 +238,8 @@ export const dev = pikkuSessionlessFunc<
       effectiveDbConfig,
       config.rootDir,
       config.outDir,
-      config.runtimeDir
+      config.runtimeDir,
+      config.db?.schema
     )
     const resolvedLocalDb: ResolvedDb | undefined = resolvedDb ?? undefined
     const kysely = resolvedLocalDb

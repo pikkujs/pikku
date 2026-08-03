@@ -398,10 +398,9 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     // raise a syntax error of its own on this DDL — a column type resolved from
     // `requires` goes in verbatim. Answering for it in sqlite's name would be
     // the misleading-error bug, reintroduced.
-    const pgError = Object.assign(
-      new Error('syntax error at or near "not"'),
-      { code: '42601' }
-    )
+    const pgError = Object.assign(new Error('syntax error at or near "not"'), {
+      code: '42601',
+    })
     const db = new Kysely<any>({
       dialect: {
         ...dialect('postgres'),
@@ -451,6 +450,85 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     await assert.rejects(
       ensurePikkuSchema(db.withSchema('app'), workflowSchema),
       /app\.workflow_step.*missing.*app\.workflow_runs already there/s
+    )
+  })
+})
+
+describe('compiling into a schema', () => {
+  const compilePg = (schemaName?: string) =>
+    compilePikkuSchemas(
+      new Kysely<any>({ dialect: dialect('postgres') }),
+      pikkuSchemas,
+      {},
+      schemaName
+    )
+
+  test('qualifies every table it creates', () => {
+    const sql = compilePg('app')
+    const creates = sql.match(/create table[^(]*/gi) ?? []
+
+    assert.ok(creates.length > 0, 'nothing was compiled')
+    for (const create of creates) {
+      assert.match(
+        create,
+        /"app"\./,
+        `unqualified create table in a schema-bound compile: ${create.trim()}`
+      )
+    }
+  })
+
+  test('qualifies foreign key targets, so they do not resolve by search path', () => {
+    const sql = compilePg('app')
+
+    assert.match(sql, /references "app"\./)
+    assert.doesNotMatch(
+      sql,
+      /references "(?!app")[^"]+" \(/,
+      'a foreign key onto an unqualified table would find whatever search_path points at'
+    )
+  })
+
+  /**
+   * The regression this option exists for.
+   *
+   * Raw SQL is passed through verbatim, so the expression index on `credentials`
+   * is the one statement `withSchema` cannot reach. Left unqualified it creates
+   * the uniqueness rule on a different table than the `create table` above it.
+   */
+  test('qualifies the raw expression index too', () => {
+    assert.match(
+      compilePg('app'),
+      /CREATE UNIQUE INDEX credentials_name_user_id_unique ON "app"\."credentials"/
+    )
+  })
+
+  test('leaves the index name itself unqualified', () => {
+    // An index belongs to the schema of the table it is on; postgres rejects a
+    // CREATE INDEX that says otherwise.
+    assert.doesNotMatch(compilePg('app'), /INDEX "?app"?\."?credentials_name/i)
+  })
+
+  test('compiles unqualified when no schema is asked for', () => {
+    const sql = compilePg()
+
+    assert.doesNotMatch(sql, /"app"\./)
+    assert.match(sql, /create table "credentials"/i)
+    assert.match(
+      sql,
+      /CREATE UNIQUE INDEX credentials_name_user_id_unique ON "credentials"/
+    )
+  })
+
+  test('does not qualify the connection it was handed', () => {
+    // The caller's connection is a scratch database the declaration was just
+    // applied to. Binding it would create tables in a schema that database has
+    // never heard of — so the schema must reach the SQL and nothing else.
+    const db = new Kysely<any>({ dialect: dialect('postgres') })
+    compilePikkuSchemas(db, pikkuSchemas, {}, 'app')
+
+    assert.match(
+      db.schema.createTable('after').addColumn('id', 'text').compile().sql,
+      /create table "after"/
     )
   })
 })
