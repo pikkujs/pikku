@@ -9,6 +9,7 @@ export type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuFunctionConfig,
+  CorePikkuSessionlessFunctionConfig,
   CorePikkuAuth,
   CorePikkuAuthConfig,
   CorePikkuPermission,

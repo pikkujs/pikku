@@ -580,7 +580,7 @@ export const addFunctions: AddWiring = (
    */
   let auth: boolean | undefined
   /** The author's claim that the body authorizes its own callers. */
-  let selfAuthenticated: boolean | undefined
+  let permissionsInBody: boolean | undefined
   let readonly_: boolean | undefined
   let deploy: 'serverless' | 'server' | 'auto' | undefined
   let approvalRequired: boolean | undefined
@@ -679,9 +679,25 @@ export const addFunctions: AddWiring = (
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
     auth = getPropertyValue(firstArg, 'auth') as boolean | undefined
-    selfAuthenticated = getPropertyValue(firstArg, 'selfAuthenticated') as
+    permissionsInBody = getPropertyValue(firstArg, 'permissionsInBody') as
       | boolean
       | undefined
+    // Refused unless the project opted in. The flag silences the gate audit
+    // without gating anything, so it is the cheapest way out of a PKU574 and
+    // the easiest to reach for when the real fix is a `permissions` entry.
+    // Turning it on is a decision about the project, not about one function.
+    if (permissionsInBody && !options.allow?.permissionsInBody) {
+      logger.critical(
+        ErrorCode.PERMISSIONS_IN_BODY_NOT_ALLOWED,
+        `'${name}' declares \`permissionsInBody: true\`, which this project has not enabled. ` +
+          `It silences the exposed-and-ungated audit without gating anything, so it is opt-in: ` +
+          `set \`allow: { permissionsInBody: true }\` in pikku.config.json if the project accepts ` +
+          `permission checks that only a reader can verify. Otherwise express the check as a ` +
+          `\`permissions\` entry, or drop \`expose: true\` if the function was not meant to be ` +
+          `callable from outside.`
+      )
+      return
+    }
     readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
     deploy = getPropertyValue(firstArg, 'deploy') as
       | 'serverless'
@@ -1311,7 +1327,7 @@ export const addFunctions: AddWiring = (
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
     auth: auth || undefined,
-    selfAuthenticated: selfAuthenticated || undefined,
+    permissionsInBody: permissionsInBody || undefined,
     remote: remote || undefined,
     scenarioStep: isScenarioStep || undefined,
     scenario: isScenario || undefined,

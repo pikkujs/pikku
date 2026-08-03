@@ -528,6 +528,34 @@ export type PikkuCLIInput = {
     functionDynamicImport?: 'off' | 'warn' | 'error'
   }
 
+  /**
+   * Escape hatches, refused unless named here.
+   *
+   * Each of these trades something the tooling can inspect for something only a
+   * person can read — a permission check buried in a function body, a workflow
+   * whose steps are not statically knowable. Each is occasionally the right
+   * answer, and each is the path of least resistance when the declarative form
+   * is merely inconvenient. Whoever owns the project decides that trade once,
+   * in writing, rather than every author deciding it silently at the call site.
+   *
+   * Unset means unavailable: using the feature is a build error naming the flag
+   * that would permit it. Opting in is not a suppression — the diagnostics that
+   * surround these still fire.
+   */
+  allow?: {
+    /**
+     * Permits `permissionsInBody: true` on a function config, the declaration
+     * that a function gates its callers in its own body.
+     */
+    permissionsInBody?: boolean
+    /**
+     * Permits `pikkuWorkflowComplexFunc`, whose inline steps cannot be
+     * serialized into the workflow graph — so they cannot be replayed,
+     * migrated across a definition change, or shown in the console.
+     */
+    complexWorkflows?: boolean
+  }
+
   addonMetaJsonFile?: string
 
   globalHTTPPrefix?: string

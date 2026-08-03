@@ -62,5 +62,8 @@
   "scenarios": {
     "emailDomain": "actors.local",
     "model": "openai/gpt-4.1-mini"
+  },
+  "allow": {
+    "complexWorkflows": true
   }
 }

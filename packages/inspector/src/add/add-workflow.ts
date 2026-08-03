@@ -229,7 +229,13 @@ function getWorkflowInvocations(
  * Inspector for pikkuWorkflowFunc(), pikkuWorkflowComplexFunc() and
  * pikkuScenario() calls. Detects workflow registration and extracts metadata.
  */
-export const addWorkflow: AddWiring = (logger, node, checker, state) => {
+export const addWorkflow: AddWiring = (
+  logger,
+  node,
+  checker,
+  state,
+  options
+) => {
   if (!ts.isCallExpression(node)) {
     return
   }
@@ -246,6 +252,21 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (expression.text === 'pikkuWorkflowFunc') {
     wrapperType = 'dsl'
   } else if (expression.text === 'pikkuWorkflowComplexFunc') {
+    // Refused unless the project opted in. A complex workflow's inline steps
+    // are not serializable, so the graph, replay and migration all lose sight
+    // of them — and it is the obvious way out whenever the DSL is merely
+    // inconvenient, which is most of the time it gets reached for.
+    if (!options.allow?.complexWorkflows) {
+      logger.critical(
+        ErrorCode.COMPLEX_WORKFLOW_NOT_ALLOWED,
+        `'${expression.text}' is used here, but this project has not enabled complex workflows. ` +
+          `Their inline steps cannot be serialized, so they are absent from the workflow graph and ` +
+          `cannot be replayed or migrated across a definition change. Express the workflow with ` +
+          `pikkuWorkflowFunc and the step DSL, or set \`allow: { complexWorkflows: true }\` in ` +
+          `pikku.config.json if the project accepts that trade.`
+      )
+      return
+    }
     wrapperType = 'complex'
   } else if (expression.text === 'pikkuScenario') {
     // A scenario is a complex workflow whose steps run as actors over the

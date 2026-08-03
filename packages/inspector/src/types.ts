@@ -335,6 +335,15 @@ export type InspectorOptions = Partial<{
    * function, which is expensive. Enabled via `pikku all --security`.
    */
   classificationCheck: boolean
+  /**
+   * Escape hatches the project has opted into, from `allow` in
+   * `pikku.config.json`. Absent or false means the feature is refused with a
+   * critical naming the flag that would permit it.
+   */
+  allow: Partial<{
+    permissionsInBody: boolean
+    complexWorkflows: boolean
+  }>
 }>
 
 export interface InspectorLogger {

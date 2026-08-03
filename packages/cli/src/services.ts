@@ -347,6 +347,10 @@ export const createSingletonServices: CreateSingletonServices<
         // cost. Never runs during a plain `pikku all`.
         classificationCheck: !setupOnly && !!config.security,
         strictMeta: !!(config as any).strictMeta,
+        // Escape hatches stay refused unless the project opted into them. The
+        // default is the empty object rather than undefined, so a missing
+        // `allow` block reads the same as one that turns everything off.
+        allow: config.allow ?? {},
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,

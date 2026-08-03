@@ -32,7 +32,7 @@ export const serializeFunctionTypes = (
  */
 
 import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired, SecretlessServices, SecretService } from '@pikku/core'
-import type { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
+import type { CorePikkuFunctionConfig, CorePikkuSessionlessFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import {
   addTagMiddleware as addTagMiddlewareCore,
@@ -375,6 +375,19 @@ export type PikkuFunctionConfig<
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>
 
 /**
+ * {@link PikkuFunctionConfig} for a function that runs without a session.
+ * Has no \`scopes\`: an anonymous caller holds none, so none can ever be met.
+ */
+export type PikkuFunctionSessionlessConfig<
+  In = unknown,
+  Out = unknown,
+  RequiredWires extends keyof PikkuWire = never,
+  PikkuFunc extends PikkuFunctionSessionless<In, Out, RequiredWires, any> = PikkuFunctionSessionless<In, Out, RequiredWires>,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>
+
+/**
  * Configuration object for Pikku functions with Zod schema validation.
  * Use this when you want to define input/output schemas using Zod.
  * Types are automatically inferred from the schemas.
@@ -495,7 +508,8 @@ export const pikkuListFunc = <
  */
 /**
  * Schema-overload variant for pikkuSessionlessFunc. Derived from
- * CorePikkuFunctionConfig to stay in sync with the generic-typed config.
+ * CorePikkuSessionlessFunctionConfig to stay in sync with the generic-typed
+ * config — so it has no \`scopes\` either.
  */
 export type PikkuFunctionSessionlessConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -503,7 +517,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   RequiredWires extends keyof PikkuWire = never,
   RequiredServices extends SecretlessServices<Services> = WiredServices
 > = Omit<
-  CorePikkuFunctionConfig<
+  CorePikkuSessionlessFunctionConfig<
     PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
@@ -558,7 +572,7 @@ export function pikkuSessionlessFunc<
 export function pikkuSessionlessFunc<In, Out = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices>(
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>
-    | PikkuFunctionConfig<In, Out, 'session' | 'rpc', PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>>
+    | PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc', PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 export function pikkuSessionlessFunc(func: any) {
   return typeof func === 'function' ? { func } : func
@@ -583,7 +597,7 @@ export function pikkuSessionlessFunc(func: any) {
 export const pikkuVoidFunc = (
   func:
     | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
-    | PikkuFunctionConfig<void, void, 'session' | 'rpc'>
+    | PikkuFunctionSessionlessConfig<void, void, 'session' | 'rpc'>
 ) => {
   return typeof func === 'function' ? { func } : func
 }
