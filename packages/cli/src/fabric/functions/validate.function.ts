@@ -150,6 +150,26 @@ const SINGLETON_SENSITIVE_PKGS = [
   'react-dom',
 ]
 
+// A file whose name says "this is the login surface". Used to decide whether an
+// app needs the actor quick-login control — an app with no login screen has
+// nothing to attach it to. Matched against the path relative to the app root, so
+// it covers src/pages/LoginPage.tsx as well as Next's app/login/page.tsx.
+const LOGIN_FILE_PATTERN =
+  /(?:^|\/)[\w[\]-]*(?:login|sign-?in)[\w[\]-]*(?:\/|\.)/i
+
+// Fingerprints of the dev-only "Sign in as …" quick login (the actor switcher):
+// one click signs in as a declared scenario persona, no password. Any one of
+// these means the app actually wires actor sign-in — the component's own
+// definition is excluded, since defining it without rendering it locks the
+// reviewer out just as thoroughly.
+// Canonical implementation: starter-template's DevActorSwitcher, rendered from
+// LoginPage and backed by signInAsActor() → POST /auth/sign-in/actor.
+const ACTOR_QUICK_LOGIN_PATTERNS = [
+  /<\s*DevActorSwitcher\b/,
+  /(?<!function\s)\bsignInAsActor\s*\(/,
+  /\/auth\/sign-in\/actor/,
+]
+
 // Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
 // independently (e.g. @pikku/cli moves faster than @pikku/core), so this is a
 // per-package floor map, not a single number. Only listed packages are
@@ -1669,6 +1689,53 @@ export async function runValidate(
                 ? [`  …and ${rawMantineFiles.length - 10} more`]
                 : []),
               'Keep "@mantine/core/styles.css", @mantine/hooks and @mantine/notifications imports as-is.'
+            )
+          )
+        }
+
+        // ── one-click actor sign-in (the "Sign in as …" quick login) ────────
+        // Any frontend that ships a login screen must also ship the dev-only
+        // actor switcher, so the app can be reviewed as each scenario persona
+        // without knowing a password. Without it the reviewer is locked out of
+        // their own sandbox. Only fires when a login surface exists — an app
+        // with no auth has nothing to attach the control to.
+        // Next.js keeps its routes outside src/, so scan app/ and pages/ too.
+        const isNextApp = !!appAllDeps['next']
+        const uiFiles = isNextApp
+          ? [
+              ...srcFiles,
+              ...(await listSourceFiles(join(appPath, 'app'))),
+              ...(await listSourceFiles(join(appPath, 'pages'))),
+            ]
+          : srcFiles
+
+        const loginFiles: string[] = []
+        let hasQuickLogin = false
+        for (const file of uiFiles) {
+          const text = await readTextSafe(file)
+          if (!text) continue
+          const rel = file.slice(appPath.length + 1).replace(/\\/g, '/')
+          if (LOGIN_FILE_PATTERN.test(rel)) loginFiles.push(rel)
+          if (ACTOR_QUICK_LOGIN_PATTERNS.some((p) => p.test(text))) {
+            hasQuickLogin = true
+          }
+        }
+
+        if (loginFiles.length > 0 && !hasQuickLogin) {
+          e(
+            `app-missing-actor-quick-login-${name}`,
+            `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario persona without a password`,
+            join(appPath, loginFiles[0]!),
+            lines(
+              'Add the dev-only "Sign in as …" switcher and render it from the login screen:',
+              '1. lib/auth: devActors() reading the DEV_ACTORS env var, and',
+              '   signInAsActor(email) → POST `${apiUrl()}/auth/sign-in/actor`',
+              '   with { email, secret } and credentials: "include".',
+              '2. components/DevActorSwitcher.tsx: a Menu of the declared actors,',
+              '   each Menu.Item signing in as that persona. Render null when',
+              '   devActors() is empty, so it disappears in production.',
+              `3. Render <DevActorSwitcher /> from ${loginFiles[0]}.`,
+              'Reference: templates/starter-template/apps/app/src/components/DevActorSwitcher.tsx.'
             )
           )
         }
