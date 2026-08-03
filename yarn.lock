@@ -5761,6 +5761,7 @@ __metadata:
     "@ag-ui/client": "npm:^0.0.57"
     "@assistant-ui/react": "npm:^0.14.24"
     "@assistant-ui/react-ag-ui": "npm:^0.0.43"
+    "@pikku/voice-agents": "npm:^0.0.2"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
     react: "npm:^19"
@@ -7500,7 +7501,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/voice-agents@workspace:*, @pikku/voice-agents@workspace:packages/voice-agents":
+"@pikku/voice-agents@npm:^0.0.2, @pikku/voice-agents@workspace:*, @pikku/voice-agents@workspace:packages/voice-agents":
   version: 0.0.0-use.local
   resolution: "@pikku/voice-agents@workspace:packages/voice-agents"
   dependencies:

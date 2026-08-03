@@ -96,10 +96,14 @@ The write is not awaited before the stream closes, because barge-in has to stop 
 ```ts
 case 'CUSTOM':
   if (event.name === 'pikku:audio-delta') {
-    // { data: base64, format: 'mp3' | 'pcm16' | … }
-    voice.speak({ text: '', audio: fromBase64(event.value.data) })
+    // { data: base64, format: 'mp3' | 'pcm16' | …, text: the sentence it says }
+    voice.speak({ text: event.value.text, audio: fromBase64(event.value.data) })
   }
 ```
+
+Pass the `text` through. It is what a barge-in reports back as the part the user actually heard, and a reply cut off after "I'll delete the staging database and" is answered very differently depending on whether the model knows the sentence never landed.
+
+Using `@pikku/assistant-ui`, none of this is yours to wire: `<PikkuAgentChat voice />` renders the microphone, plays the deltas, cancels the run on barge-in, and fills the user's own message in from `pikku:transcript` — the client sent audio, so the server is the only one that knows what was said.
 
 `pikku:audio-done` follows the last delta and precedes `RUN_FINISHED`. It means every sentence has been synthesized and sent — not that playback has finished, which only the queue knows. Use it to stop showing a "thinking" state; use `AudioPlaybackQueue`'s idle callback to know the agent has stopped talking.
 

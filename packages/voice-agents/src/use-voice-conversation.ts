@@ -30,6 +30,22 @@ export interface VoiceConversationOptions {
   silenceDelay?: number
   minDecibels?: number
   minTurnMs?: number
+  /**
+   * Track microphone loudness in {@link VoiceConversation.inputLevel}.
+   *
+   * Off by default because it is a render every 50ms for as long as the
+   * conversation lasts, and most surfaces show no meter. Turn it on with the
+   * meter, not with the conversation.
+   */
+  meterInput?: boolean
+  /**
+   * Push-to-talk: turns start and end when the caller says so, via
+   * {@link VoiceConversation.beginTurn} and {@link VoiceConversation.finishTurn},
+   * instead of being detected. Changing this mid-conversation rebuilds the
+   * session, which re-acquires the microphone — so drive it from a setting the
+   * user changes, not from something that moves per turn.
+   */
+  holdToTalk?: boolean
   onError?: (error: Error) => void
 }
 
@@ -39,10 +55,18 @@ export interface VoiceConversation {
   speaking: boolean
   /** 0–100 through the trailing pause, or `null` when not in one. */
   silenceProgress: number | null
+  /** Microphone loudness, 0–1, or 0 when not listening. Always 0 unless
+   *  {@link VoiceConversationOptions.meterInput} is set. */
+  inputLevel: number
   error: Error | null
   start: () => Promise<void>
   stop: () => void
   setDevice: (deviceId: string | undefined) => Promise<void>
+  /** Start a push-to-talk turn. Only meaningful with
+   *  {@link VoiceConversationOptions.holdToTalk}. */
+  beginTurn: () => void
+  /** End a push-to-talk turn and send it. */
+  finishTurn: () => void
   /** Queue a synthesized utterance for playback. */
   speak: (chunk: SpeechChunk) => Promise<void>
   /** Stop the agent talking now and report what was heard. */
@@ -70,10 +94,12 @@ export const useVoiceConversation = (
   const [listening, setListening] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [silenceProgress, setSilenceProgress] = useState<number | null>(null)
+  const [inputLevel, setInputLevel] = useState(0)
   const [error, setError] = useState<Error | null>(null)
 
   const sessionRef = useRef<VoiceSession | null>(null)
   const playbackRef = useRef<AudioPlaybackQueue | null>(null)
+  const mountedRef = useRef(true)
   // Whether the current turn began over the agent's voice. Read when the turn
   // ends, which is why it is a ref and not state: a re-render in between would
   // lose the race with `onTurn`.
@@ -116,6 +142,8 @@ export const useVoiceConversation = (
       silenceDelay: optionsRef.current.silenceDelay,
       minDecibels: optionsRef.current.minDecibels,
       minTurnMs: optionsRef.current.minTurnMs,
+      manualTurns: optionsRef.current.holdToTalk,
+      onLevel: optionsRef.current.meterInput ? setInputLevel : undefined,
       onSpeechStart: () => {
         setSilenceProgress(null)
         const playback = playbackRef.current
@@ -155,7 +183,30 @@ export const useVoiceConversation = (
     sessionRef.current?.stop()
     setListening(false)
     setSilenceProgress(null)
+    setInputLevel(0)
   }, [])
+
+  const beginTurn = useCallback(() => sessionRef.current?.beginTurn(), [])
+  const finishTurn = useCallback(() => sessionRef.current?.finishTurn(), [])
+
+  // The mode is baked into the session at construction, so changing it has to
+  // build a new one. Only on a real change: this runs on every render otherwise
+  // and rebuilding the session drops the microphone.
+  const holdToTalkRef = useRef(options.holdToTalk)
+  useEffect(() => {
+    if (holdToTalkRef.current === options.holdToTalk) return
+    holdToTalkRef.current = options.holdToTalk
+    const session = sessionRef.current
+    if (!session) return
+    const wasListening = session.isListening
+    sessionRef.current = null
+    void session.destroy().then(() => {
+      // Unmounting during the destroy leaves the teardown below with a null
+      // ref and nothing to release, so a restart here would acquire a
+      // microphone that no longer has an owner to give it back.
+      if (wasListening && mountedRef.current) void start()
+    })
+  }, [options.holdToTalk, start])
 
   const setDevice = useCallback(
     async (deviceId: string | undefined) => {
@@ -182,24 +233,28 @@ export const useVoiceConversation = (
   )
 
   // The microphone is released on unmount and nowhere else — see VoiceSession.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
       void sessionRef.current?.destroy()
       void playbackRef.current?.destroy()
       sessionRef.current = null
       playbackRef.current = null
-    },
-    []
-  )
+    }
+  }, [])
 
   return {
     listening,
     speaking,
     silenceProgress,
+    inputLevel,
     error,
     start,
     stop,
     setDevice,
+    beginTurn,
+    finishTurn,
     speak,
     interrupt,
   }

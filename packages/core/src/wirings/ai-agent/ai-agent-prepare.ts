@@ -959,7 +959,13 @@ export async function prepareAgentRun(
 
   const userContent: AIMessage['content'] = input.attachments?.length
     ? [
-        { type: 'text' as const, text: input.message },
+        // Omitted when there is nothing to say. An attachment on its own is a
+        // real turn — a spoken one carries audio and no text at all — and an
+        // empty text part alongside it is a part providers are entitled to
+        // reject, for a caller who never wrote one.
+        ...(input.message
+          ? [{ type: 'text' as const, text: input.message }]
+          : []),
         ...input.attachments.map(
           (a) =>
             ({

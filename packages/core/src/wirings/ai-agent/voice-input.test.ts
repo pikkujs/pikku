@@ -5,6 +5,8 @@ import {
   voiceInput,
   readsAsNonSpeech,
   NoSpeechDetectedError,
+  SPOKEN_TURN,
+  SPOKEN_TRANSCRIPT,
 } from './voice-input.js'
 import type { AIContentPart, AIMessage } from './ai-agent.types.js'
 
@@ -39,6 +41,7 @@ describe('voiceInput', () => {
     const result = await mw.modifyInput!(services as any, {
       messages: [audioMessage()],
       instructions: 'sys',
+      shared: {},
     })
 
     const last = result.messages[result.messages.length - 1]!
@@ -67,6 +70,7 @@ describe('voiceInput', () => {
     const result = await mw.modifyInput!(services as any, {
       messages,
       instructions: 'sys',
+      shared: {},
     })
 
     assert.equal(result.messages[0]!.content, 'just text')
@@ -81,6 +85,7 @@ describe('voiceInput', () => {
         mw.modifyInput!(services as any, {
           messages: [audioMessage()],
           instructions: 'sys',
+          shared: {},
         }),
       /voiceInput requires a transcription model/
     )
@@ -105,6 +110,7 @@ describe('voiceInput', () => {
         mw.modifyInput!({ aiAgentRunner: silent } as any, {
           messages: [audioMessage()],
           instructions: 'sys',
+          shared: {},
         }),
       NoSpeechDetectedError
     )
@@ -127,6 +133,7 @@ describe('voiceInput', () => {
     const result = await mw.modifyInput!({ aiAgentRunner: spaced } as any, {
       messages: [audioMessage()],
       instructions: 'sys',
+      shared: {},
     })
 
     const parts = result.messages.at(-1)!.content as AIContentPart[]
@@ -151,5 +158,63 @@ describe('readsAsNonSpeech', () => {
     // because it is brief or quiet is far worse than keeping a stray one.
     assert.equal(readsAsNonSpeech({ text: 'yes' }), false)
     assert.equal(readsAsNonSpeech({ text: 'Thank you.' }), false)
+  })
+  test('records that the turn was spoken, for voiceOutput to read', async () => {
+    // The note has to be written here: the transcript this middleware puts in
+    // the message's place is indistinguishable from something typed, so no
+    // later middleware can tell what it started as.
+    const mw = voiceInput({ model: 'mock/whisper' })
+    const shared: Record<string, unknown> = {}
+
+    await mw.modifyInput!({ aiAgentRunner: new ThisDependentRunner() } as any, {
+      messages: [audioMessage()],
+      instructions: 'sys',
+      shared,
+    })
+
+    assert.equal(shared[SPOKEN_TURN], true)
+  })
+
+  test('records a typed turn as not spoken, rather than leaving it unsaid', async () => {
+    const mw = voiceInput({ model: 'mock/whisper' })
+    const shared: Record<string, unknown> = {}
+
+    await mw.modifyInput!({ aiAgentRunner: new ThisDependentRunner() } as any, {
+      messages: [{ role: 'user', content: 'typed' } as any],
+      instructions: 'sys',
+      shared,
+    })
+
+    // Explicitly false, not absent: absent is what a caller with no voice input
+    // at all looks like, and that one should still be spoken to.
+    assert.equal(shared[SPOKEN_TURN], false)
+  })
+
+  test('records what was heard, so the client can show the user their own turn', async () => {
+    const mw = voiceInput({ model: 'mock/whisper' })
+    const shared: Record<string, unknown> = {}
+
+    await mw.modifyInput!({ aiAgentRunner: new ThisDependentRunner() } as any, {
+      messages: [audioMessage()],
+      instructions: 'sys',
+      shared,
+    })
+
+    assert.equal(shared[SPOKEN_TRANSCRIPT], 'the transcribed spoken words')
+  })
+
+  test('a typed turn leaves no transcript behind', async () => {
+    // Absence is the signal: the stream only announces a transcript when there
+    // was one, and a typed message is already on the client's screen.
+    const mw = voiceInput({ model: 'mock/whisper' })
+    const shared: Record<string, unknown> = {}
+
+    await mw.modifyInput!({ aiAgentRunner: new ThisDependentRunner() } as any, {
+      messages: [{ role: 'user', content: 'typed' } as any],
+      instructions: 'sys',
+      shared,
+    })
+
+    assert.equal(SPOKEN_TRANSCRIPT in shared, false)
   })
 })

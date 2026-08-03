@@ -24,6 +24,7 @@
     "@ag-ui/client": "^0.0.57",
     "@assistant-ui/react": "^0.14.24",
     "@assistant-ui/react-ag-ui": "^0.0.43",
+    "@pikku/voice-agents": "^0.0.2",
     "react-markdown": "^10.1.0"
   },
   "peerDependencies": {

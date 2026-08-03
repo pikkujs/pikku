@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   useMemo,
@@ -7,6 +8,7 @@ import {
   useRef,
   type ComponentType,
   type FunctionComponent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
 import Markdown from 'react-markdown'
@@ -19,10 +21,17 @@ import {
   type ToolCallMessagePartComponent,
 } from '@assistant-ui/react'
 import {
+  useVoiceConversation,
+  useAudioInputs,
+  type VoiceConversation,
+  type AudioInput,
+} from '@pikku/voice-agents'
+import {
   usePikkuAgentRuntime,
   PikkuApprovalContext,
   usePikkuApproval,
   resolvePikkuToolStatus,
+  isVoiceMarker,
   type PikkuToolStatus,
   type PikkuAgentRuntimeOptions,
 } from './use-pikku-agent-runtime.js'
@@ -51,6 +60,15 @@ export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
   toolComponents?: Record<string, ToolCallMessagePartComponent>
   renderAssistantText?: (text: string) => ReactNode
   generativeUIComponents?: Record<string, ComponentType<any>>
+  /**
+   * Show the microphone, and speak replies aloud.
+   *
+   * Opt-in because it takes two things this component cannot check: the agent
+   * has to be wired with `voiceInput` for the audio to be understood, and with
+   * `voiceOutput` for anything to come back. A mic on an agent with neither
+   * sends a clip that reaches the model as an unreadable attachment.
+   */
+  voice?: boolean
 }
 
 interface ChatColors {
@@ -129,6 +147,24 @@ const GenerativeUIComponentsContext = createContext<
 const RenderAssistantTextContext = createContext<
   ((text: string) => ReactNode) | undefined
 >(undefined)
+
+/**
+ * Everything the composer's microphone needs. Absent when the chat was not
+ * given `voice`, which is what hides the button.
+ */
+interface VoiceControls {
+  conversation: VoiceConversation
+  devices: AudioInput[]
+  deviceId: string | undefined
+  selectDevice: (deviceId: string | undefined) => void
+  holdToTalk: boolean
+  setHoldToTalk: (hold: boolean) => void
+}
+
+const VoiceContext = createContext<VoiceControls | undefined>(undefined)
+
+/** What the server heard for each spoken turn, keyed by its placeholder. */
+const TranscriptsContext = createContext<Record<string, string>>({})
 
 function shouldHideToolCall(
   hideToolCalls: boolean | string[] | undefined,
@@ -573,6 +609,35 @@ const MarkdownText: FunctionComponent<{ text: string; colors: ChatColors }> = ({
   return <Markdown components={components}>{text}</Markdown>
 }
 
+/**
+ * A user message's text — except for a spoken turn, where the "text" is a
+ * placeholder and the real words arrive from the server a moment later.
+ *
+ * The gap is unavoidable: the transcription happens on the server, so the run
+ * has to be under way before anyone knows what was said. Rendering the wait as
+ * three dots rather than as the marker keeps the placeholder out of the UI in
+ * the one second it exists — and out of it entirely if the run fails before the
+ * transcript lands.
+ */
+const UserText: FunctionComponent<{ text: string }> = ({ text }) => {
+  const colors = useContext(ColorsContext)
+  const transcripts = useContext(TranscriptsContext)
+  const spoken = isVoiceMarker(text)
+  const shown = spoken ? transcripts[text] : text
+
+  return (
+    <span
+      style={{
+        fontSize: 14,
+        whiteSpace: 'pre-wrap',
+        color: shown === undefined ? colors.textMuted : colors.text,
+      }}
+    >
+      {shown ?? '···'}
+    </span>
+  )
+}
+
 const UserMessage: FunctionComponent = () => {
   const colors = useContext(ColorsContext)
   return (
@@ -603,17 +668,7 @@ const UserMessage: FunctionComponent = () => {
         >
           <MessagePrimitive.Content
             components={{
-              Text: ({ text }) => (
-                <span
-                  style={{
-                    fontSize: 14,
-                    whiteSpace: 'pre-wrap',
-                    color: colors.text,
-                  }}
-                >
-                  {text}
-                </span>
-              ),
+              Text: ({ text }) => <UserText text={text} />,
             }}
           />
         </div>
@@ -709,10 +764,337 @@ const ComposerPrefill: FunctionComponent<{ text?: string }> = ({ text }) => {
   return null
 }
 
+const MicIcon: FunctionComponent<{ size?: number }> = ({ size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect x="9" y="2" width="6" height="11" rx="3" />
+    <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+    <path d="M12 18v4" />
+  </svg>
+)
+
+/**
+ * The state of the microphone, shown while it is on.
+ *
+ * A live level bar rather than a static "recording" light, because the failure
+ * this catches is the one people cannot debug for themselves: the browser
+ * handed over the wrong input and every turn comes back empty. A bar that does
+ * not move while you talk says that in a second, and the device list next to it
+ * is the fix.
+ */
+const VoiceIndicator: FunctionComponent = () => {
+  const colors = useContext(ColorsContext)
+  const voice = useContext(VoiceContext)
+  if (!voice) return null
+  const { conversation, devices, deviceId, holdToTalk, setHoldToTalk } = voice
+
+  // Rows are real buttons, so they are tabbable and fire on Enter and Space
+  // without any key handling of their own. The reset is what a `div` gave for
+  // free and a `button` does not.
+  const row = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '7px 12px',
+    fontSize: 13,
+    cursor: 'pointer',
+    color: colors.text,
+    width: '100%',
+    background: 'none',
+    border: 'none',
+    font: 'inherit',
+    textAlign: 'left',
+  } as const
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 'calc(100% + 8px)',
+        right: 0,
+        zIndex: 5,
+        minWidth: 250,
+        maxWidth: 320,
+        borderRadius: 12,
+        border: `1px solid ${colors.border}`,
+        background: colors.assistantBubble,
+        boxShadow: '0 12px 28px rgba(0,0,0,0.18)',
+        padding: '8px 0',
+      }}
+    >
+      <div style={{ ...row, cursor: 'default', gap: 10 }}>
+        <span
+          style={{
+            color: conversation.speaking ? colors.textMuted : colors.sendBg,
+            display: 'flex',
+          }}
+        >
+          <MicIcon size={16} />
+        </span>
+        <div
+          style={{
+            flex: 1,
+            height: 6,
+            borderRadius: 999,
+            background: colors.border,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: `${Math.round(conversation.inputLevel * 100)}%`,
+              height: '100%',
+              background: colors.sendBg,
+              // Fast enough to track a voice, slow enough not to strobe on the
+              // 50ms sampling interval behind it.
+              transition: 'width 80ms linear',
+            }}
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          padding: '2px 12px 8px',
+          fontSize: 12,
+          color: colors.textMuted,
+        }}
+      >
+        {conversation.error
+          ? conversation.error.message
+          : conversation.speaking
+            ? 'Speaking — talk to interrupt'
+            : holdToTalk
+              ? 'Hold the microphone to talk'
+              : conversation.silenceProgress !== null
+                ? 'Finishing up…'
+                : 'Listening'}
+      </div>
+
+      <div style={{ borderTop: `1px solid ${colors.border}` }} />
+
+      {devices.map((device) => {
+        const selected = deviceId
+          ? device.deviceId === deviceId
+          : device.deviceId === 'default'
+        return (
+          <button
+            key={device.deviceId}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => voice.selectDevice(device.deviceId)}
+            style={row}
+          >
+            <span style={{ width: 14, color: colors.sendBg }}>
+              {selected ? '✓' : ''}
+            </span>
+            <span
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {device.label}
+            </span>
+          </button>
+        )
+      })}
+
+      <div style={{ borderTop: `1px solid ${colors.border}` }} />
+
+      <button
+        type="button"
+        aria-pressed={holdToTalk}
+        onClick={() => setHoldToTalk(!holdToTalk)}
+        style={{ ...row, justifyContent: 'space-between' }}
+      >
+        <span>Hold to record</span>
+        <span
+          style={{
+            width: 30,
+            height: 18,
+            borderRadius: 999,
+            background: holdToTalk ? colors.sendBg : colors.border,
+            position: 'relative',
+            transition: 'background-color 150ms ease',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: holdToTalk ? 14 : 2,
+              width: 14,
+              height: 14,
+              borderRadius: 999,
+              background: '#ffffff',
+              transition: 'left 150ms ease',
+            }}
+          />
+        </span>
+      </button>
+    </div>
+  )
+}
+
+/**
+ * The microphone button, and the indicator it opens.
+ *
+ * Two interactions live here because the popover's "Hold to record" toggle
+ * decides which one is in effect: a press-and-hold that records for exactly as
+ * long as it is held, or a click that hands the turn-taking to the detector and
+ * leaves the conversation running until it is clicked again.
+ */
+const VoiceButton: FunctionComponent<{
+  primary: boolean
+  disabled: boolean
+}> = ({ primary, disabled }) => {
+  const colors = useContext(ColorsContext)
+  const voice = useContext(VoiceContext)
+  const [open, setOpen] = useState(false)
+  const heldRef = useRef(false)
+  const listening = voice?.conversation.listening ?? false
+
+  // Closed as soon as the microphone is off. The panel is a readout of a live
+  // microphone, and one showing a dead level bar reads as a broken mic.
+  useEffect(() => {
+    if (!listening) setOpen(false)
+  }, [listening])
+
+  if (!voice) return null
+  const { conversation, holdToTalk } = voice
+
+  const press = () => {
+    if (disabled) return
+    if (!holdToTalk) return
+    if (heldRef.current) return
+    heldRef.current = true
+    setOpen(true)
+    // Ordered: the session has to exist before a turn can be begun on it,
+    // and `start` is a permission prompt on the first press.
+    void conversation.start().then(() => {
+      // Unless the press is already over. On the first one `start` covers the
+      // permission prompt and `getUserMedia`, which can run for seconds — long
+      // enough to release inside it. `finishTurn` would have found no turn
+      // recording and done nothing, so beginning one now starts a recording
+      // nothing will ever end, and the microphone runs until the next press.
+      if (heldRef.current) conversation.beginTurn()
+    })
+  }
+
+  const release = () => {
+    if (!holdToTalk) return
+    if (!heldRef.current) return
+    heldRef.current = false
+    conversation.finishTurn()
+  }
+
+  // Enter and Space hold the button the way a pointer does. Without this the
+  // microphone is reachable by keyboard but not usable by one: the browser fires
+  // a click on keyup, which push-to-talk ignores, so the turn never begins.
+  const keyDown = (event: ReactKeyboardEvent) => {
+    if (!holdToTalk) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    // Space scrolls the page otherwise, and the repeat would re-enter `press`
+    // for as long as the key is held.
+    event.preventDefault()
+    if (event.repeat) return
+    press()
+  }
+
+  const keyUp = (event: ReactKeyboardEvent) => {
+    if (!holdToTalk) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    release()
+  }
+
+  const click = () => {
+    if (disabled || holdToTalk) return
+    if (listening) {
+      conversation.stop()
+      setOpen(false)
+      return
+    }
+    setOpen(true)
+    void conversation.start()
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'flex' }}>
+      {open && <VoiceIndicator />}
+      <button
+        type="button"
+        aria-label={listening ? 'Stop voice chat' : 'Start voice chat'}
+        aria-pressed={listening}
+        disabled={disabled}
+        onClick={click}
+        onPointerDown={press}
+        onPointerUp={release}
+        onPointerLeave={release}
+        // A gesture the browser takes over — a scroll, a system gesture — fires
+        // no pointerup, and without this the turn stays open.
+        onPointerCancel={release}
+        onKeyDown={keyDown}
+        onKeyUp={keyUp}
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: 999,
+          border: `1px solid ${listening ? colors.sendBg : colors.border}`,
+          background: listening
+            ? colors.sendBg
+            : primary
+              ? '#e8e8e8'
+              : 'transparent',
+          color: listening
+            ? colors.sendColor
+            : primary
+              ? '#111111'
+              : colors.textMuted,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          transition:
+            'background-color 150ms ease, color 150ms ease, border-color 150ms ease',
+        }}
+      >
+        <MicIcon />
+      </button>
+    </div>
+  )
+}
+
 const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
   disabled,
 }) => {
   const colors = useContext(ColorsContext)
+  const voice = useContext(VoiceContext)
+  const composer = useComposerRuntime()
+  const [empty, setEmpty] = useState(true)
+
+  // Which of the two buttons is the primary one follows what is in the box:
+  // with something typed the send arrow is the obvious next action, and with
+  // nothing typed it does nothing at all, so the microphone takes the slot.
+  useEffect(() => {
+    setEmpty(composer.getState().text.trim() === '')
+    return composer.subscribe(() =>
+      setEmpty(composer.getState().text.trim() === '')
+    )
+  }, [composer])
 
   return (
     <div style={{ padding: '8px 0 16px' }}>
@@ -766,6 +1148,11 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
               justifyContent: 'flex-end',
             }}
           >
+            {voice && (
+              <VoiceButton primary={empty} disabled={disabled ?? false} />
+            )}
+            {/* Kept mounted with nothing typed rather than removed, so the row
+                does not reflow under the cursor on the first keystroke. */}
             <ComposerPrimitive.Send
               disabled={disabled ?? false}
               style={{
@@ -773,8 +1160,8 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
                 height: 30,
                 borderRadius: 999,
                 border: `1px solid ${colors.border}`,
-                background: '#e8e8e8',
-                color: '#111111',
+                background: empty && voice ? 'transparent' : '#e8e8e8',
+                color: empty && voice ? colors.textMuted : '#111111',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -793,6 +1180,94 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
   )
 }
 
+/**
+ * Ties the microphone to the agent: recorded turns go out as runs, and the
+ * audio the agent sends back is played.
+ *
+ * Kept in one hook because the two halves have to know about each other. A
+ * turn that starts while the agent is talking is a barge-in, and answering it
+ * correctly means stopping playback, telling the server to abandon the rest of
+ * the reply, and reporting how far the user actually got.
+ */
+const useChatVoice = (
+  enabled: boolean,
+  runtimeOptions: PikkuAgentRuntimeOptions
+) => {
+  const [holdToTalk, setHoldToTalk] = useState(false)
+  const [deviceId, setDeviceId] = useState<string | undefined>(undefined)
+  const { devices, refresh } = useAudioInputs()
+  // Assigned below; the conversation and the runtime each need the other, and
+  // this is the seam that lets them be created in either order.
+  const sendRef = useRef<((audio: Blob) => Promise<string>) | null>(null)
+  const cancelRef = useRef<(() => void) | null>(null)
+
+  const conversation = useVoiceConversation({
+    deviceId,
+    holdToTalk,
+    meterInput: enabled,
+    onTurn: async (turn) => {
+      await sendRef.current?.(turn.audio)
+    },
+    // Talking over the agent stops the run, not just the sound. Left running,
+    // the server keeps generating — and keeps synthesizing and billing for —
+    // sentences of a reply nobody is listening to any more.
+    onBargeIn: () => cancelRef.current?.(),
+    onError: () => {},
+  })
+
+  const runtimeResult = usePikkuAgentRuntime(runtimeOptions, {
+    onAudio: ({ data, format, text }) => {
+      const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+      // `format` is carried for the caller's sake; decoding is by content, and
+      // every format the speech providers return is one the browser sniffs.
+      void conversation.speak({
+        text: text ?? '',
+        audio: bytes.buffer as ArrayBuffer,
+      })
+      void format
+    },
+  })
+  sendRef.current = runtimeResult.sendVoiceTurn
+  cancelRef.current = () => {
+    if (runtimeResult.runtime.thread.getState().isRunning) {
+      runtimeResult.runtime.thread.cancelRun()
+    }
+  }
+
+  // Device labels are empty until the page has microphone permission, and
+  // nothing fires when that permission is granted — so the list is re-read the
+  // first time a conversation is actually running.
+  const listening = conversation.listening
+  useEffect(() => {
+    if (listening) void refresh()
+  }, [listening, refresh])
+
+  const selectDevice = useCallback(
+    (next: string | undefined) => {
+      setDeviceId(next)
+      void conversation.setDevice(next)
+    },
+    [conversation]
+  )
+
+  const controls = useMemo<VoiceControls | undefined>(
+    () =>
+      enabled
+        ? {
+            conversation,
+            devices,
+            deviceId,
+            selectDevice,
+            holdToTalk,
+            setHoldToTalk,
+          }
+        : undefined,
+    [enabled, conversation, devices, deviceId, selectDevice, holdToTalk]
+  )
+
+  return { ...runtimeResult, voiceControls: controls }
+}
+
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
   const {
     emptyMessage,
@@ -803,10 +1278,17 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
     renderAssistantText,
     generativeUIComponents,
     initialPrompt,
+    voice,
     ...runtimeOptions
   } = props
-  const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
-    usePikkuAgentRuntime(runtimeOptions)
+  const {
+    runtime,
+    isAwaitingApproval,
+    pendingApprovals,
+    handleApproval,
+    transcripts,
+    voiceControls,
+  } = useChatVoice(voice ?? false, runtimeOptions)
 
   const colors = dark ? darkColors : lightColors
 
@@ -821,81 +1303,86 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
               value={generativeUIComponents}
             >
               <RenderAssistantTextContext.Provider value={renderAssistantText}>
-                <AssistantRuntimeProvider runtime={runtime}>
-                  <ComposerPrefill text={initialPrompt} />
-                  <div
-                    style={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      background: colors.bg,
-                    }}
-                  >
-                    <ThreadPrimitive.Root
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        flex: 1,
-                        minHeight: 0,
-                      }}
-                    >
-                      <ThreadPrimitive.Viewport
-                        style={{
-                          flex: 1,
-                          minHeight: 0,
-                          overflowY: 'auto',
-                        }}
-                      >
-                        <div
-                          style={{
-                            maxWidth:
-                              maxWidth === 'none' ? undefined : maxWidth,
-                            margin: '0 auto',
-                            padding: 16,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 16,
-                          }}
-                        >
-                          <ThreadPrimitive.Empty>
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minHeight: 300,
-                                color: colors.textMuted,
-                                textAlign: 'center',
-                                fontSize: 14,
-                              }}
-                            >
-                              {emptyMessage ??
-                                (props.threadId
-                                  ? 'Send a message to start the conversation.'
-                                  : 'Start a new conversation.')}
-                            </div>
-                          </ThreadPrimitive.Empty>
-                          <ThreadPrimitive.Messages
-                            components={{
-                              UserMessage,
-                              AssistantMessage,
-                            }}
-                          />
-                        </div>
-                      </ThreadPrimitive.Viewport>
+                <VoiceContext.Provider value={voiceControls}>
+                  <TranscriptsContext.Provider value={transcripts}>
+                    <AssistantRuntimeProvider runtime={runtime}>
+                      <ComposerPrefill text={initialPrompt} />
                       <div
                         style={{
-                          maxWidth: maxWidth === 'none' ? undefined : maxWidth,
-                          margin: '0 auto',
-                          width: '100%',
-                          padding: '0 16px',
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          background: colors.bg,
                         }}
                       >
-                        <PikkuComposer disabled={isAwaitingApproval} />
+                        <ThreadPrimitive.Root
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            flex: 1,
+                            minHeight: 0,
+                          }}
+                        >
+                          <ThreadPrimitive.Viewport
+                            style={{
+                              flex: 1,
+                              minHeight: 0,
+                              overflowY: 'auto',
+                            }}
+                          >
+                            <div
+                              style={{
+                                maxWidth:
+                                  maxWidth === 'none' ? undefined : maxWidth,
+                                margin: '0 auto',
+                                padding: 16,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 16,
+                              }}
+                            >
+                              <ThreadPrimitive.Empty>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minHeight: 300,
+                                    color: colors.textMuted,
+                                    textAlign: 'center',
+                                    fontSize: 14,
+                                  }}
+                                >
+                                  {emptyMessage ??
+                                    (props.threadId
+                                      ? 'Send a message to start the conversation.'
+                                      : 'Start a new conversation.')}
+                                </div>
+                              </ThreadPrimitive.Empty>
+                              <ThreadPrimitive.Messages
+                                components={{
+                                  UserMessage,
+                                  AssistantMessage,
+                                }}
+                              />
+                            </div>
+                          </ThreadPrimitive.Viewport>
+                          <div
+                            style={{
+                              maxWidth:
+                                maxWidth === 'none' ? undefined : maxWidth,
+                              margin: '0 auto',
+                              width: '100%',
+                              padding: '0 16px',
+                            }}
+                          >
+                            <PikkuComposer disabled={isAwaitingApproval} />
+                          </div>
+                        </ThreadPrimitive.Root>
                       </div>
-                    </ThreadPrimitive.Root>
-                  </div>
-                </AssistantRuntimeProvider>
+                    </AssistantRuntimeProvider>
+                  </TranscriptsContext.Provider>
+                </VoiceContext.Provider>
               </RenderAssistantTextContext.Provider>
             </GenerativeUIComponentsContext.Provider>
           </ToolComponentsContext.Provider>

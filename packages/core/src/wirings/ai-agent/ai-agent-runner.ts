@@ -144,6 +144,9 @@ export async function runAIAgent(
     ...(agent.aiMiddleware ?? []),
   ]
 
+  // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
+  const sharedNotes: Record<string, unknown> = {}
+
   let modifiedMessages = runnerParams.messages
   let modifiedInstructions = runnerParams.instructions
   for (const mw of aiMiddlewares) {
@@ -151,6 +154,7 @@ export async function runAIAgent(
       const result = await mw.modifyInput(singletonServices, {
         messages: modifiedMessages,
         instructions: modifiedInstructions,
+        shared: sharedNotes,
       })
       modifiedMessages = result.messages
       modifiedInstructions = result.instructions
@@ -158,6 +162,14 @@ export async function runAIAgent(
   }
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
+
+  // History records what the model was asked, which for a spoken turn is the
+  // transcript rather than the base64 audio that arrived — see the same note on
+  // the streaming path. Identity-checked, because a middleware may legitimately
+  // replace the message list with something unrelated to this turn.
+  const lastModified = modifiedMessages[modifiedMessages.length - 1]
+  const persistedUserMessage =
+    lastModified?.id === userMessage.id ? lastModified : userMessage
 
   const runId = await aiRunState.createRun({
     agentName,
@@ -275,7 +287,7 @@ export async function runAIAgent(
           threadId,
           input.resourceId,
           memoryConfig,
-          userMessage,
+          persistedUserMessage,
           { text: '', steps: completedStepsForSave }
         )
 
@@ -351,7 +363,7 @@ export async function runAIAgent(
       threadId,
       input.resourceId,
       memoryConfig,
-      userMessage,
+      persistedUserMessage,
       {
         ...result,
         text: outputText,
@@ -608,6 +620,9 @@ async function continueAfterToolResultSync(
     }),
     ...(agent.aiMiddleware ?? []),
   ]
+  // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
+  const sharedNotes: Record<string, unknown> = {}
+
   let modifiedMessages = trimmedMessages
   let modifiedInstructions = instructions
   for (const mw of aiMiddlewares) {
@@ -615,6 +630,7 @@ async function continueAfterToolResultSync(
       const result = await mw.modifyInput(singletonServices, {
         messages: modifiedMessages,
         instructions: modifiedInstructions,
+        shared: sharedNotes,
       })
       modifiedMessages = result.messages
       modifiedInstructions = result.instructions

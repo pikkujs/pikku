@@ -13,6 +13,8 @@ export type {
   VadModule,
 } from './speech-detector.js'
 
+export { meterInput } from './input-level.js'
+
 export { VoiceSession } from './voice-session.js'
 export type { VoiceSessionOptions, VoiceTurn } from './voice-session.js'
 
@@ -36,3 +38,6 @@ export type {
   VoiceConversation,
   VoiceConversationOptions,
 } from './use-voice-conversation.js'
+
+export { useAudioInputs } from './use-audio-inputs.js'
+export type { AudioInput, AudioInputs } from './use-audio-inputs.js'

@@ -590,6 +590,22 @@ describe('wrapChannelWithAGUI — speech', () => {
     assert.ok(find(events, 'CUSTOM', 'pikku:audio-done'))
   })
 
+  it('forwards the transcript as a CUSTOM event', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({
+      type: 'transcript',
+      text: 'what the user said',
+    } as AIStreamEvent)
+
+    // The client sent audio, so this is the only way it learns what its own
+    // turn was. Dropped, the user's message renders as an empty bubble.
+    const custom = find(events, 'CUSTOM', 'pikku:transcript')
+    assert.ok(custom)
+    assert.deepEqual(custom.value, { text: 'what the user said' })
+  })
+
   it('leaves an open text message open, so speech cannot split a reply', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)

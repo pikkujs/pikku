@@ -7,6 +7,7 @@ import {
   voiceForText,
 } from './voice-output.js'
 import type { AIStreamEvent } from './ai-agent.types.js'
+import { SPOKEN_TURN } from './voice-input.js'
 
 const KOKORO_SCRIPTS = ['latin', 'devanagari', 'han', 'kana']
 
@@ -33,7 +34,8 @@ const deferred = () => {
  */
 const createStream = (
   mw: ReturnType<typeof voiceOutput>,
-  services: unknown
+  services: unknown,
+  shared: Record<string, unknown> = {}
 ) => {
   const state: Record<string, unknown> = {}
   const allEvents: AIStreamEvent[] = []
@@ -54,6 +56,7 @@ const createStream = (
         event,
         allEvents,
         state,
+        shared,
         emit: next,
       })
       if (result == null) return
@@ -312,6 +315,93 @@ describe('voiceOutput', () => {
       { text: 'Added it.', voice: 'af_bella' },
       { text: '已添加。', voice: 'zf_xiaobei' },
     ])
+  })
+
+  test('a typed turn is answered in text only', async () => {
+    // The cost case. One agent serves both kinds of caller, so a reply to
+    // something typed must not quietly synthesize speech nobody asked to hear
+    // — it is billed per sentence, on every turn.
+    const asked: string[] = []
+    const services = {
+      aiAgentRunner: {
+        generateSpeech: async ({ text }: { text: string }) => {
+          asked.push(text)
+          return speechFor(text)
+        },
+      },
+    }
+    const stream = createStream(voiceOutput({ model: 'mock/tts' }), services, {
+      [SPOKEN_TURN]: false,
+    })
+
+    await stream.send({ type: 'text-delta', text: 'Added it.' })
+    await stream.send({ type: 'done' })
+
+    assert.deepEqual(asked, [])
+    assert.deepEqual(stream.types(), ['text-delta', 'done'])
+  })
+
+  test('a spoken turn is answered aloud', async () => {
+    const asked: string[] = []
+    const services = {
+      aiAgentRunner: {
+        generateSpeech: async ({ text }: { text: string }) => {
+          asked.push(text)
+          return speechFor(text)
+        },
+      },
+    }
+    const stream = createStream(voiceOutput({ model: 'mock/tts' }), services, {
+      [SPOKEN_TURN]: true,
+    })
+
+    await stream.send({ type: 'text-delta', text: 'Added it.' })
+    await stream.send({ type: 'done' })
+
+    assert.deepEqual(asked, ['Added it.'])
+  })
+
+  test('`always` speaks a typed turn too', async () => {
+    // Read-aloud modes exist, and for them speech is not a reply to speech.
+    const asked: string[] = []
+    const services = {
+      aiAgentRunner: {
+        generateSpeech: async ({ text }: { text: string }) => {
+          asked.push(text)
+          return speechFor(text)
+        },
+      },
+    }
+    const stream = createStream(
+      voiceOutput({ model: 'mock/tts', always: true }),
+      services,
+      { [SPOKEN_TURN]: false }
+    )
+
+    await stream.send({ type: 'text-delta', text: 'Added it.' })
+    await stream.send({ type: 'done' })
+
+    assert.deepEqual(asked, ['Added it.'])
+  })
+
+  test('speaks when nothing reported how the turn arrived', async () => {
+    // voiceOutput without voiceInput: nobody set the note, so there is no
+    // evidence the turn was typed and the pre-existing behaviour stands.
+    const asked: string[] = []
+    const services = {
+      aiAgentRunner: {
+        generateSpeech: async ({ text }: { text: string }) => {
+          asked.push(text)
+          return speechFor(text)
+        },
+      },
+    }
+    const stream = createStream(voiceOutput({ model: 'mock/tts' }), services)
+
+    await stream.send({ type: 'text-delta', text: 'Added it.' })
+    await stream.send({ type: 'done' })
+
+    assert.deepEqual(asked, ['Added it.'])
   })
 
   test('a script with no voice mapped is still refused, not mis-voiced', async () => {
