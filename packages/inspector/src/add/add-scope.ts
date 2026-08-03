@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import type { AddWiring, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
+import { claimSingleDeclaration } from '../utils/single-declaration.js'
 import type { ScopeNodeMeta } from '@pikku/core/scope'
 
 const SEPARATOR = ':'
@@ -158,6 +159,18 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
 
   const sourceFile = node.getSourceFile().fileName
 
+  if (
+    !claimSingleDeclaration(
+      logger,
+      state.scopes.files,
+      ErrorCode.DUPLICATE_SCOPE_DEFINITION,
+      'defineScope',
+      sourceFile
+    )
+  ) {
+    return
+  }
+
   // Roots are keyed exactly like the nodes beneath them, so each property of
   // the call's single argument is one tree.
   for (const prop of unwrapped.properties) {
@@ -213,7 +226,6 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
       scopes = extractScopeNodes(scopesProp.initializer, name, logger)
     }
 
-    state.scopes.files.add(sourceFile)
     state.scopes.definitions.push({
       name,
       displayName: displayNameValue || undefined,

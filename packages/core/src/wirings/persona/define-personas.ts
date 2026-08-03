@@ -11,6 +11,10 @@ import type { CorePersonas } from './persona.types.js'
  * running: a persona that exists only to be acted upon (the account an admin
  * bans, the colleague a document is shared with) is seeded and never run.
  *
+ * Exactly one `definePersonas(...)` is allowed per codebase, so there is one
+ * place to read the cast from and one place to add to. A second call — even in
+ * the same file — fails the build.
+ *
  * @example
  * ```typescript
  * definePersonas({

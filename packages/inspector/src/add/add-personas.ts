@@ -1,11 +1,9 @@
 import * as ts from 'typescript'
 import { DISPOSITIONS } from '@pikku/core/virtual-user'
 import { isRunnablePersona } from '@pikku/core/persona'
-import type {
-  PersonaAccountMeta,
-  PersonaMeta,
-} from '@pikku/core/persona'
+import type { PersonaAccountMeta, PersonaMeta } from '@pikku/core/persona'
 import { ErrorCode } from '../error-codes.js'
+import { claimSingleDeclaration } from '../utils/single-declaration.js'
 import type { AddWiring, InspectorLogger } from '../types.js'
 import {
   booleanProperty,
@@ -172,6 +170,19 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
   }
 
   const sourceFile = node.getSourceFile().fileName
+
+  if (
+    !claimSingleDeclaration(
+      logger,
+      state.personas.files,
+      ErrorCode.DUPLICATE_PERSONAS_DEFINITION,
+      'definePersonas',
+      sourceFile
+    )
+  ) {
+    return
+  }
+
   const known = Object.keys(DISPOSITIONS)
 
   for (const prop of unwrapped.properties) {
@@ -222,10 +233,7 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     let tuningFailed = false
     const tuning = tuningProperty(config, (message) => {
       tuningFailed = true
-      logger.critical(
-        ErrorCode.INVALID_VALUE,
-        `Persona '${id}': ${message}`
-      )
+      logger.critical(ErrorCode.INVALID_VALUE, `Persona '${id}': ${message}`)
     })
     if (tuningFailed) {
       continue
@@ -270,7 +278,6 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     const linkedAccounts = linkedAccountsProperty(config, id, logger)
     if (linkedAccounts !== undefined) persona.linkedAccounts = linkedAccounts
 
-    state.personas.files.add(sourceFile)
     state.personas.definitions.push(persona)
   }
 }

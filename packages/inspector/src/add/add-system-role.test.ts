@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
-import type { ErrorCode } from '../error-codes.js'
+import { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
@@ -30,6 +30,25 @@ const inspectSource = async (source: string) => {
   try {
     const state = await inspect(makeLogger(criticals), [file], { rootDir })
     return { state, criticals, file }
+  } finally {
+    await rm(rootDir, { recursive: true, force: true })
+  }
+}
+
+/** Inspects several files at once, keyed by basename. */
+const inspectSources = async (sources: Record<string, string>) => {
+  const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-role-multi-'))
+  const files: Record<string, string> = {}
+  for (const [name, source] of Object.entries(sources)) {
+    files[name] = join(rootDir, name)
+    await writeFile(files[name]!, source)
+  }
+  const criticals: Array<{ code: ErrorCode; message: string }> = []
+  try {
+    const state = await inspect(makeLogger(criticals), Object.values(files), {
+      rootDir,
+    })
+    return { state, criticals, files }
   } finally {
     await rm(rootDir, { recursive: true, force: true })
   }
@@ -88,6 +107,54 @@ describe('addSystemRole inspector', () => {
     assert.deepEqual(
       state.systemRoles.definitions.map((r) => r.name),
       ['buyer', 'admin']
+    )
+  })
+
+  // One call site per codebase, so there is one place to read the roles from
+  // and one place to add to. The keyed form above is how you declare more.
+  test('a second defineSystemRole in the same file is refused', async () => {
+    const { state, criticals } = await inspectSource(
+      withScopes(
+        "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })",
+        "defineSystemRole({ admin: { scopes: ['admin'] } })"
+      )
+    )
+
+    const hit = criticals.find(
+      (c) => c.code === ErrorCode.DUPLICATE_SYSTEM_ROLE_DEFINITION
+    )
+    assert.ok(
+      hit,
+      `expected DUPLICATE_SYSTEM_ROLE_DEFINITION, got ${JSON.stringify(criticals)}`
+    )
+    assert.deepEqual(
+      state.systemRoles.definitions.map((r) => r.name),
+      ['buyer']
+    )
+  })
+
+  test('a second defineSystemRole in another file is refused', async () => {
+    const { criticals, files } = await inspectSources({
+      'roles.ts': withScopes(
+        "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })"
+      ),
+      'more-roles.ts': [
+        "import { defineSystemRole } from '@pikku/core/role'",
+        "defineSystemRole({ admin: { scopes: ['admin'] } })",
+      ].join('\n'),
+    })
+
+    const hit = criticals.find(
+      (c) => c.code === ErrorCode.DUPLICATE_SYSTEM_ROLE_DEFINITION
+    )
+    assert.ok(
+      hit,
+      `expected DUPLICATE_SYSTEM_ROLE_DEFINITION, got ${JSON.stringify(criticals)}`
+    )
+    assert.ok(
+      hit!.message.includes(files['roles.ts']!) &&
+        hit!.message.includes(files['more-roles.ts']!),
+      `expected both files named, got ${hit!.message}`
     )
   })
 
