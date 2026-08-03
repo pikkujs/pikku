@@ -36,6 +36,10 @@ Two behaviours cover what types cannot see. Structured serialization redacts —
 write stays honest without crashing the request. String coercion throws
 `SecretCoercionError`, because a template literal is always a leak.
 
+`AuditLog.write` is guarded the same way as the logger, since an audit event
+carries `input` and `metadata` as `unknown` and nominality alone cannot stop a
+secret landing in one.
+
 `.reveal()` is the deliberate escape hatch, and what it hands back is an
 ordinary string as far as every sink signature is concerned. **PKU953** closes
 that gap: under `pikku all --security` the inspector reports a revealed secret

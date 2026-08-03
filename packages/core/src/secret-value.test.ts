@@ -8,6 +8,8 @@ import {
   type Safe,
   type SecretValue,
 } from './secret-value.js'
+import type { Logger } from './services/logger.js'
+import type { AuditLog } from './services/audit-service.js'
 
 const VALUE = 'sk-live-DEADBEEF'
 
@@ -101,6 +103,11 @@ describe('string coercion throws', () => {
 // ── Type-level assertions ────────────────────────────────────────────────────
 // The point of the exercise: these fail `yarn tsc`, not `yarn test`. Held in a
 // function that is never called so the runtime never evaluates them.
+//
+// `tsconfig.json` excludes `**/*.test.ts`, so this file is only reached through
+// `tsconfig.type-tests.json`, which lists it under `files` — `exclude` filters
+// `include` but not `files`. Both run from this package's `tsc` script. Without
+// that second pass the assertions below type-check nothing at all.
 
 const _typeAssertions = (
   secret: SecretValue<string>,
@@ -149,3 +156,32 @@ const _typeAssertions = (
   sink(anything)
 }
 void _typeAssertions
+
+// The assertions above prove `Safe<>` works against a stand-in sink. These prove
+// the real interfaces are actually wired to it — the two can drift apart, and a
+// sink that forgot the guard is exactly the leak this design exists to stop.
+
+const _sinkAssertions = (
+  secret: SecretValue<string>,
+  logger: Logger,
+  auditLog: AuditLog
+) => {
+  // @ts-expect-error a secret cannot be logged
+  logger.info(secret)
+  // @ts-expect-error nor nested in a log message
+  logger.info({ token: secret })
+  // @ts-expect-error nor in the log metadata
+  logger.info('using', { token: secret })
+
+  // @ts-expect-error nor written into an audit input
+  auditLog.write({ type: 'used', source: 'explicit', input: { token: secret } })
+  const metadata = { token: secret }
+  // @ts-expect-error nor into audit metadata
+  auditLog.write({ type: 'used', source: 'explicit', metadata })
+
+  // Ordinary logging and auditing must still compile.
+  logger.info({ msg: 'fine' })
+  logger.info('fine', { count: 1 })
+  auditLog.write({ type: 'used', source: 'explicit', input: { userId: 'u1' } })
+}
+void _sinkAssertions

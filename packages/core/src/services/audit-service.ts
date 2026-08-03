@@ -4,6 +4,7 @@ import type {
   PikkuWiringTypes,
 } from '../types/core.types.js'
 import type { Logger } from './logger.js'
+import type { Safe } from '../secret-value.js'
 
 export type AuditDurability = 'best-effort' | 'transactional'
 export type AuditOutcome = 'success' | 'failed' | 'denied'
@@ -57,9 +58,18 @@ export class NoopAuditService implements AuditService {
 
 export type AuditLogWriteInput = Omit<AuditEvent, 'occurredAt'>
 
+/**
+ * The audit an invocation writes to. `write` is `Safe<>`-guarded like the
+ * logger: an audit event carries `input` and `metadata` as `unknown`, so
+ * nominality alone cannot stop a `SecretValue` landing in one. A secret
+ * anywhere in the event, however deeply nested, collapses to `never`.
+ *
+ * An unrevealed `SecretValue` would serialize as `[secret]` anyway; the guard
+ * is what makes that an explicit choice rather than a near miss.
+ */
 export interface AuditLog {
   readonly config: ResolvedAuditConfig | undefined
-  write(event: AuditLogWriteInput): Promise<void>
+  write<E extends AuditLogWriteInput>(event: Safe<E>): Promise<void>
   flush(): Promise<void>
   close(): Promise<void>
 }
