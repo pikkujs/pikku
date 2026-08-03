@@ -57,6 +57,7 @@
     "./services/v8-coverage": "./dist/services/v8-coverage-service.js",
     "./services/istanbul-coverage": "./dist/services/istanbul-coverage-service.js",
     "./services/local-content": "./dist/services/local-content.js",
+    "./services/local-content-request-handler": "./dist/services/local-content-request-handler.js",
     "./services/temporary-file-service": "./dist/services/temporary-file-service.js",
     "./crypto-utils": "./dist/crypto-utils.js",
     "./hmac": "./dist/utils/hmac.js",
