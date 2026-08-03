@@ -2,6 +2,7 @@
 '@pikku/inspector': patch
 '@pikku/core': patch
 '@pikku/cli': patch
+'@pikku/addon-console': patch
 ---
 
 Drop `scopes` from sessionless functions, rename `selfAuthenticated`, and make both
@@ -12,6 +13,11 @@ fails closed on a session that does not exist, so every scope listed on a sessio
 function rejected the anonymous caller it exists to serve. `CorePikkuSessionlessFunctionConfig`
 now states this once in core, and the generated `pikkuSessionlessFunc` / `pikkuVoidFunc`
 configs derive from it — so the field is absent rather than subtracted.
+
+`@pikku/addon-console`'s `installAddon` and `installOpenapiAddon` are now `pikkuFunc`.
+Both set `auth: true` and `scopes: ['admin']`, and a test exercises that gate, so the
+scopes were load-bearing — they only compiled as sessionless because the config accepted
+a field it could not honour. No behaviour change: both already required a session.
 
 **`selfAuthenticated` is now `permissionsInBody`.** It never described authentication:
 what it records is that the permission check lives in the function body rather than in a
