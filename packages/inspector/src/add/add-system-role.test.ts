@@ -158,6 +158,32 @@ describe('addSystemRole inspector', () => {
     )
   })
 
+  // A generated file is not the one place a person adds a role to, so it neither
+  // takes the single slot nor collides with the app's own declaration.
+  test('a generated declaration neither claims the slot nor conflicts', async () => {
+    const { state, criticals } = await inspectSources({
+      'roles.gen.ts': [
+        "import { defineSystemRole } from '@pikku/core/role'",
+        'defineSystemRole({ admin: { scopes: [] } })',
+      ].join('\n'),
+      'roles.ts': withScopes(
+        "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })"
+      ),
+    })
+
+    assert.deepEqual(
+      criticals.filter(
+        (c) => c.code === ErrorCode.DUPLICATE_SYSTEM_ROLE_DEFINITION
+      ),
+      [],
+      `expected no duplicate critical, got ${JSON.stringify(criticals)}`
+    )
+    assert.deepEqual(state.systemRoles.definitions.map((r) => r.name).sort(), [
+      'admin',
+      'buyer',
+    ])
+  })
+
   test('a role granting nothing is legitimate, said explicitly', async () => {
     const { state, criticals } = await inspectSource(
       withScopes('defineSystemRole({', '  guest: { scopes: [] },', '})')
