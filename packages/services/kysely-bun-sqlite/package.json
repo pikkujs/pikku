@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-bun-sqlite",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Kysely driver for Pikku backed by the built-in bun:sqlite module",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -19,8 +19,8 @@
     "bun": ">=1.0.0"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.0",
-    "@pikku/kysely-sqlite": "^0.12.7",
+    "@pikku/kysely": "^0.13.8",
+    "@pikku/kysely-sqlite": "^0.12.10",
     "kysely": "^0.29.0"
   },
   "devDependencies": {

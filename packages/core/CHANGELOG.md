@@ -1,3 +1,209 @@
+## 0.12.75
+
+### Patch Changes
+
+- 32277d5: Make a voice conversation with an agent something a chat surface can turn on, rather than
+  something each consumer reassembles.
+
+  The server half already worked — `voiceInput` transcribed, `voiceOutput` synthesized a
+  sentence at a time, and the AG-UI mapper forwarded the audio. What was missing was the
+  turn's own words. The client sends audio, so only the server ever knows what was said,
+  and nothing carried that back: a spoken turn rendered as an empty user bubble followed by
+  an answer to a question nobody could see, and thread history recorded the base64 audio
+  blob instead of the transcript — megabytes of unreadable data in place of the only
+  readable record of the turn.
+
+  `voiceInput` now records what it heard, the stream emits it as a `transcript` event ahead
+  of the run (the reply starts within a few hundred milliseconds, and a question that
+  appears after its answer reads as the wrong question), and it reaches the browser as
+  `pikku:transcript`. Both run paths persist the transcribed message rather than the one
+  that arrived on the wire. `audio-delta` also carries the sentence it says, which is what
+  a barge-in needs to report the part the user actually heard — a reply cut off after "I'll
+  delete the staging database and" is answered very differently depending on whether the
+  model knows the sentence never landed.
+
+  `@pikku/voice-agents` gains the two things a voice UI needs and could not get: a live
+  input level, attached to the source rather than to a detector so it keeps reading on the
+  Silero path, and the microphone list — re-readable on demand, because device labels are
+  empty until permission is granted and nothing fires when it is. `VoiceSession` also
+  learned manual turn boundaries, so push-to-talk is a mode rather than a detector fought
+  to a standstill: holding the key through a three-second pause is someone thinking, and
+  any endpointer worth having would cut them off.
+
+  `<PikkuAgentChat voice />` puts a microphone beside the send button, promotes it to
+  primary when nothing is typed, and opens an indicator with a live level bar, a device
+  picker and a hold-to-record toggle. It plays the agent's speech, and cancels the run on
+  barge-in — talking over the agent should stop the bill, not just the sound.
+
+  Opt-in, because the component cannot check the two things it depends on: the agent has to
+  be wired with `voiceInput` for the audio to be understood and `voiceOutput` for anything
+  to come back.
+
+- ea8aabf: Serve `LocalContent` uploads and signed reads under Bun.
+
+  `LocalContent` hands the browser a `PUT <uploadUrlPrefix>/<key>` upload URL and a signed
+  `GET <assetUrlPrefix>/<key>` read URL, but it is a `ContentService` and cannot answer
+  either — something in the serving path has to. Only `@pikku/node-http-server` did. The
+  same project served under Bun handed out upload URLs that 404ed, with nothing naming the
+  cause: the config was accepted, the service was constructed, and the URLs looked right.
+
+  `@pikku/core` now exports `createLocalContentRequestHandler` from
+  `@pikku/core/services/local-content-request-handler` — the server half of `LocalContent`,
+  expressed in Web `Request`/`Response` so every runtime shares one implementation of the
+  signature check rather than each re-deriving it. It returns `null` for anything that is
+  not a content request, which is the caller's signal to carry on with its normal routing.
+
+  `PikkuBunServer` accepts `config.content` and a `contentSigningJWT` option, mirroring
+  `PikkuNodeHTTPServer`, and answers both prefixes ahead of static mounts and routing.
+  `BunServerRunner` was dropping `contentSigningJWT` on the floor, which silently disabled
+  signed asset reads for every Bun project even once the prefixes were served — the config
+  arrived, the service that verifies its signatures did not.
+
+  Signed reads are refused unless every claim matches, the path included: without that, a
+  signature minted for one asset would read any other.
+
+- 33e96ab: Make a CLI served over a channel typecheck in a real project.
+
+  Both of these are unreachable for a hand-written `wireChannel`, whose routes are usually
+  bare identifiers, and unavoidable for a CLI one, whose routes are command ids.
+
+  `ChannelsMap` emitted route and message keys unquoted. A command id is a kebab or dotted
+  name far more often than not — `app-smoke`, `registry.search`, `package.upgrade-pikku` —
+  and each one ends the property early, so the generated map is not parseable TypeScript at
+  all. One project's map came out with 107 syntax errors from a single CLI channel. Keys are
+  now quoted when they are not bare identifiers, and left alone when they are, so existing
+  generated output is unchanged.
+
+  `executeRawCLIViaChannel` typed its renderers `Record<string, CorePikkuCLIRender<any>>`,
+  whose services parameter defaults to `CoreServices`. The renderers a generated client
+  passes are the app's own, typed against its `SingletonServices`, and a function taking
+  those is not assignable to one taking `CoreServices` — so the generated client failed to
+  compile for any app that adds a service, which is every app.
+
+  Rather than widen the type, it now says what is actually true on that side of the socket:
+  a renderer running on the client gets a logger and nothing else, because there is no
+  service container there to resolve anything from. `CorePikkuCLIClientRender` and
+  `ClientCLIRenderServices` are new exports of `@pikku/core/cli/channel`. They are not
+  expressible as `CorePikkuCLIRender`, whose `Services` parameter is constrained to
+  `CoreSingletonServices` and so demands a `config`, `variables` and `secrets` the client
+  cannot invent. The one cast from the app's renderer type to that shape is localised to the
+  generated client, where it is sound: generation refuses to emit the file at all if a
+  renderer reaches for a service other than `logger`.
+
+- fd72e58: Drop `scenario.step` — a scenario step is now always a `given`, `when` or
+  `then`.
+
+  `step` rendered no keyword, which made it the phase to reach for whenever a
+  step did not obviously fit one of the three. That is exactly the step a reader
+  cannot check: a scenario is read by people deciding whether it describes the
+  behaviour they wanted, and a row that says what it does without saying whether
+  it is setup, action or claim tells them nothing to agree or disagree with. It
+  was also the escape hatch from the assertion lint — a scenario with no `then`
+  could be made to stop complaining by demoting its steps rather than by
+  asserting anything.
+
+  Replace `scenario.step(...)` with whichever of `given`, `when` or `then` the
+  step actually is. `then` is not a rename: it makes the step's bindings
+  witnesses rather than alternatives, so every declared surface runs and they
+  must agree.
+
+- fd72e58: Make personas a first-class surface rather than a detail of the test runner.
+
+  A persona is now read in three places — the knowledge base resolves `persona:`
+  URIs against it, scenarios cast it as an actor, and a virtual user runs as it —
+  so it gets its own page at `/personas` under a new **People** section in the
+  rail, alongside Users. The card is a profile: avatar, name, job title, computed
+  address, the system roles they hold, and how many scenarios cast them. Opening
+  one expands each role to the scopes it confers, which is the half of the picture
+  that explains a 403.
+
+  `definePersonas` takes an optional `avatarUrl` — any URL a browser can load.
+  Nothing is derived from the address: a persona's address is synthetic, so a
+  derived identicon would be the same shrug for everyone. Omitted, the console
+  keeps drawing the deterministic colour-and-icon avatar from the persona's id.
+
+- fd72e58: Read the actors that are not people on the personas page.
+
+  The platform — the app acting on itself, what `pikkuPlatformScenarioStep`
+  declares — now has a row of its own, alongside one per addon whose system a
+  step makes act. They sit behind a People / System / All filter that opens on
+  the people: a subject holds no roles and signs in as nobody, so leading with it
+  would put the rows nothing is authorized through above the ones that are.
+
+  The platform row is built in rather than derived. A project that has never
+  written a platform step still has a platform, and a card that appeared the
+  moment somebody declared their first step would read as a feature they had
+  switched on.
+
+  Also: PKU680 now counts `expectService`, `expectError` and `expectEventually`
+  as assertions. They are inline steps and carry no phase, so a scenario whose
+  only witness was a recorded service call was being told it never asserts.
+
+- 894b2f8: `defineScope` and `defineSystemRole` accumulate across call sites again. Only `definePersonas` is one-per-codebase.
+
+  The previous release made all three single-declaration constructs, which no project scaffolding user-admin could satisfy: the CLI generates a `defineScope` of its own in `user-admin.gen.ts` carrying the whole `admin` tree, and `@pikku/addon-console` spells the same tree out again, so a second hand-written declaration failed the build with PKU583 — and the losing file's scopes were dropped from the metadata rather than merged.
+
+  Exempting generated files would have reinstated exactly the ambiguity the rule removes, only for the files nobody can read the rule from. The real fix is for `admin` to be a default scope nobody declares, at which point the rule can come back for scopes and roles.
+
+  `definePersonas` is unaffected: nothing generates one, so its single call site stands.
+
+- dd19aa7: Drop `scopes` from sessionless functions, rename `selfAuthenticated`, and make both
+  escape hatches opt-in.
+
+  **`scopes` are gone from `pikkuSessionlessFunc`.** They are AND-ed and `verifyScopes`
+  fails closed on a session that does not exist, so every scope listed on a sessionless
+  function rejected the anonymous caller it exists to serve. `CorePikkuSessionlessFunctionConfig`
+  now states this once in core, and the generated `pikkuSessionlessFunc` / `pikkuVoidFunc`
+  configs derive from it — so the field is absent rather than subtracted.
+
+  `@pikku/addon-console`'s `installAddon` and `installOpenapiAddon` are now `pikkuFunc`.
+  Both set `auth: true` and `scopes: ['admin']`, and a test exercises that gate, so the
+  scopes were load-bearing — they only compiled as sessionless because the config accepted
+  a field it could not honour. No behaviour change: both already required a session.
+
+  **`selfAuthenticated` is now `permissionsInBody`.** It never described authentication:
+  what it records is that the permission check lives in the function body rather than in a
+  declared `permissions` entry.
+
+  **Both escape hatches must be opted into**, via a new `allow` block in
+  `pikku.config.json`:
+
+  ```json
+  "allow": { "permissionsInBody": true, "complexWorkflows": true }
+  ```
+
+  Unset means unavailable, and using the feature is a build error naming the flag that
+  would permit it — PKU576 for `permissionsInBody`, PKU643 for `pikkuWorkflowComplexFunc`.
+  Both trade something the tooling can inspect for something only a reader can verify: a
+  permission check buried in a body, or workflow steps that cannot be serialized into the
+  graph, replayed, or migrated. Both are occasionally right, and both are the path of least
+  resistance whenever the declarative form is merely inconvenient. Whoever owns the project
+  makes that call once, in writing, instead of every author making it silently at the call
+  site.
+
+  **PKU574's message no longer contradicts any of this.** Every function it reports is
+  sessionless — that is how the population is selected, not a finding — yet it opened by
+  reporting that they "require neither a session", then advised adding scopes. It now names
+  them as sessionless and recommends only gates an anonymous caller can meet:
+  `permissions`, `auth: true`, `wireAddon({ auth: true })`, or dropping `expose: true`.
+  `permissionsInBody` is deliberately absent from that list: a diagnostic should not
+  advertise its own escape hatch.
+
+- 50ec500: Make `defineScope`, `defineSystemRole` and `definePersonas` single-declaration constructs
+  — exactly one call site per codebase, the rule `pikkuBetterAuth` has always had.
+
+  Each of the three already takes a keyed object, so one call declares as many entries as
+  you like. Spreading the calls across files bought nothing and cost the thing that matters:
+  there was no answer to "where do I add a persona?", so downstream tooling and agents had
+  nowhere unambiguous to read from or append to. The only duplicate handling that existed
+  caught a narrow case — the same id declared twice with different content — and said
+  nothing about the same id declared twice in two files.
+
+  A second call now fails the build with `PKU583` (`defineScope`), `PKU584`
+  (`defineSystemRole`) or `PKU585` (`definePersonas`), naming both source files and saying
+  to declare them all in one call. A second call in the _same_ file is refused too: "the
+  file" is not an answer either when the file holds two calls.
+
 ## 0.12.74
 
 ### Patch Changes
