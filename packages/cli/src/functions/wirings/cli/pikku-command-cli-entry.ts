@@ -107,7 +107,10 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
           if (channelClientPath) {
             const channelClientFile = join(config.rootDir, channelClientPath)
 
-            // Validate that renderers don't depend on services (client-side renderers can't access server services)
+            // A renderer for a CLI-over-channel program runs on the client, where
+            // there is no service container to resolve from — the only thing the
+            // runtime can hand it is a logger. Anything else it destructures
+            // would be undefined at runtime, so it fails generation instead.
             const rendererNames = collectRendererNames(programMeta)
             const problematicRenderers: Array<{
               name: string
@@ -116,10 +119,13 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
 
             for (const rendererName of rendererNames) {
               const rendererMeta = visitState.cli.meta.renderers[rendererName]
-              if (rendererMeta?.services?.services?.length > 0) {
+              const services: string[] =
+                rendererMeta?.services?.services ?? []
+              const unavailable = services.filter((name) => name !== 'logger')
+              if (unavailable.length > 0) {
                 problematicRenderers.push({
                   name: rendererName,
-                  services: rendererMeta.services.services,
+                  services: unavailable,
                 })
               }
             }
@@ -134,7 +140,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
 
               logger.critical(
                 ErrorCode.CLI_CLIENTSIDE_RENDERER_HAS_SERVICES,
-                `Cannot generate CLI channel client for '${programName}': renderers cannot depend on services (client-side execution)\n${details}\n\nRenderers used in CLI-over-channel must be service-free since they execute on the client.`
+                `Cannot generate CLI channel client for '${programName}': a renderer reached for a service that does not exist on the client\n${details}\n\nRenderers in a CLI-over-channel program run on the client side of the socket, where the only available service is 'logger'.`
               )
 
               // Delete existing client file if it exists

@@ -19,6 +19,14 @@ generated output is unchanged.
 whose services parameter defaults to `CoreServices`. The renderers a generated client
 passes are the app's own, typed against its `SingletonServices`, and a function taking
 those is not assignable to one taking `CoreServices` — so the generated client failed to
-compile for any app that adds a service, which is every app. Widened to `<any, any>`;
-nothing is lost, because a client-side renderer is never handed services at all, which is
-why generation already rejects one that reads them.
+compile for any app that adds a service, which is every app.
+
+Rather than widen the type, it now says what is actually true on that side of the socket:
+a renderer running on the client gets a logger and nothing else, because there is no
+service container there to resolve anything from. `CorePikkuCLIClientRender` and
+`ClientCLIRenderServices` are new exports of `@pikku/core/cli/channel`. They are not
+expressible as `CorePikkuCLIRender`, whose `Services` parameter is constrained to
+`CoreSingletonServices` and so demands a `config`, `variables` and `secrets` the client
+cannot invent. The one cast from the app's renderer type to that shape is localised to the
+generated client, where it is sound: generation refuses to emit the file at all if a
+renderer reaches for a service other than `logger`.
