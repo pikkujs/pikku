@@ -4,6 +4,7 @@ import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 import type { Kysely } from 'kysely'
 import { PIKKU_BETTER_AUTH } from '@pikku/better-auth'
+import { createSecretValue } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import { loadUserModule } from '../commands/load-user-project.js'
 
@@ -115,7 +116,7 @@ async function loadAuthFactory(
 function fakeSecretService() {
   const placeholder = 'schema-introspection-only'
   return {
-    getSecret: async () => placeholder,
+    getSecret: async () => createSecretValue(placeholder),
     hasSecret: async () => true,
     setSecret: async () => {},
   }

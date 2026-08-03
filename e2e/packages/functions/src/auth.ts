@@ -34,7 +34,7 @@ export const auth = pikkuBetterAuth(
     const consoleURL =
       (await variables.get('CONSOLE_URL')) ?? 'http://localhost:7071'
     const instance = betterAuth({
-      secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
+      secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
       baseURL,
       // Console signs in cross-origin; without this better-auth rejects the POST.
       trustedOrigins: [baseURL, consoleURL],
@@ -46,7 +46,7 @@ export const auth = pikkuBetterAuth(
         minPasswordLength: 6,
       },
       socialProviders: {
-        github: await secrets.getSecret('GITHUB_OAUTH'),
+        github: (await secrets.getSecret('GITHUB_OAUTH')).reveal(),
       },
       // Admin capabilities (impersonation, the user directory, singleton
       // credential links) are gated on the `admin` scope tree, not on

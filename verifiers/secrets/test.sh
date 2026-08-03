@@ -18,5 +18,10 @@ echo ""
 echo "=== Testing the secretless boundary ==="
 npx tsx src/test-secretless.ts
 
+# Test 4: a vault secret cannot reach a sink
+echo ""
+echo "=== Testing SecretValue at the sinks ==="
+npx tsx src/test-secret-value.ts
+
 echo ""
 echo "=== All tests passed ==="

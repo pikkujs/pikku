@@ -1,3 +1,4 @@
+import type { SecretValue } from '@pikku/core'
 import type { OAuth2CredentialConfig } from '@pikku/core/secret'
 
 export type CredentialOAuth2Configs = Record<
@@ -31,7 +32,7 @@ export interface CredentialOAuthApp {
 }
 
 export interface CredentialOAuthSecretReader {
-  getSecret<T = unknown>(secretId: string): Promise<T>
+  getSecret<T = unknown>(secretId: string): Promise<SecretValue<T>>
 }
 
 /** Minimal logger surface; the singleton `logger` satisfies it. */
@@ -77,9 +78,11 @@ export const credentialOAuthProviders = async (
       async ([providerId, config]): Promise<CredentialOAuthProvider | null> => {
         let app: CredentialOAuthApp | undefined
         try {
-          app = await secrets.getSecret<CredentialOAuthApp>(
-            config.appCredentialSecretId
-          )
+          app = (
+            await secrets.getSecret<CredentialOAuthApp>(
+              config.appCredentialSecretId
+            )
+          ).reveal()
         } catch (e: any) {
           // Not configured yet — skip this provider, don't take down all of auth.
           if (e?.message === 'Requested secret not found') {

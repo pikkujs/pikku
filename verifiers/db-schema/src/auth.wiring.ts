@@ -28,7 +28,7 @@ import { pikkuBetterAuth } from '#pikku'
  */
 export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) =>
   betterAuth({
-    secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
+    secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
     baseURL: 'http://localhost',
     database: {
       db: kysely,

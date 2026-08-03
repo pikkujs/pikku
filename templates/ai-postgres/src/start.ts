@@ -36,12 +36,12 @@ async function main(): Promise<void> {
 
     if (await secrets.hasSecret('OPENAI_API_KEY')) {
       providers.openai = createOpenAI({
-        apiKey: await secrets.getSecret('OPENAI_API_KEY'),
+        apiKey: (await secrets.getSecret('OPENAI_API_KEY')).reveal(),
       })
     }
     if (await secrets.hasSecret('ANTHROPIC_API_KEY')) {
       providers.anthropic = createAnthropic({
-        apiKey: await secrets.getSecret('ANTHROPIC_API_KEY'),
+        apiKey: (await secrets.getSecret('ANTHROPIC_API_KEY')).reveal(),
       })
     }
 

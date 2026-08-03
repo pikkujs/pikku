@@ -51,7 +51,7 @@ export const createSingletonServices = pikkuServices(
         try {
           keys.push({
             id,
-            value: await secrets.getSecret(secretName),
+            value: (await secrets.getSecret(secretName)).reveal(),
           })
         } catch {}
       }

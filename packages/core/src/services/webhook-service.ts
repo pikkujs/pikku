@@ -1,5 +1,6 @@
 import { NotImplementedError } from '../errors/errors.js'
 import { hmacSha256Hex, timingSafeStringEqual } from '../utils/hmac.js'
+import type { Safe } from '../secret-value.js'
 
 export interface SendWebhookInput {
   url: string
@@ -90,7 +91,9 @@ export const DEFAULT_WEBHOOK_SIGNATURE_HEADER = 'X-Pikku-Signature'
 export const DEFAULT_WEBHOOK_RETRIES = 3
 
 export abstract class WebhookService {
-  abstract send(input: SendWebhookInput): Promise<SendWebhookResult>
+  abstract send<T extends SendWebhookInput>(
+    input: Safe<T>
+  ): Promise<SendWebhookResult>
 
   /** Produces the header value, `sha256=<hex>`, not the bare digest. */
   protected sign(secret: string, body: string): string {

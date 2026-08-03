@@ -17,6 +17,15 @@ const BASE_ERROR_URL = 'https://pikku.dev/docs/pikku-cli/errors'
 const ANSI_ESCAPE_REGEX = /\x1B\[[0-?]*[ -/]*[@-~]/g
 export type CLIOutputMode = 'text' | 'json'
 
+/**
+ * The structured form a CLI log line may take. The `Record<string, any>` arm
+ * mirrors the `Logger` interface, which admits any object as a message.
+ */
+export type CLILogMessage =
+  | string
+  | { message: string; type?: string; data?: Record<string, unknown> }
+  | Record<string, any>
+
 export class CLILogger implements Logger {
   private silent: boolean
   private level: LogLevel = LogLevel.info // default to info level
@@ -145,11 +154,7 @@ export class CLILogger implements Logger {
     console.log(c(normalizedMessage))
   }
 
-  info(
-    message:
-      | string
-      | { message: string; type?: string; data?: Record<string, unknown> }
-  ) {
+  info(message: CLILogMessage, ..._meta: any[]) {
     if (this.level > LogLevel.info || this.silent) return
 
     const msg = typeof message === 'string' ? message : message.message
@@ -158,12 +163,7 @@ export class CLILogger implements Logger {
     this.emit('info', msg, type, undefined, data)
   }
 
-  error(
-    message:
-      | string
-      | Error
-      | { message: string; type?: string; data?: Record<string, unknown> }
-  ) {
+  error(message: CLILogMessage | Error, ..._meta: any[]) {
     if (this.level > LogLevel.error) return
     if (message instanceof Error) {
       // An expected failure (a deliberate PikkuError, e.g. a build gate
@@ -183,11 +183,7 @@ export class CLILogger implements Logger {
     this.emit('error', msg, type, undefined, data)
   }
 
-  warn(
-    message:
-      | string
-      | { message: string; type?: string; data?: Record<string, unknown> }
-  ) {
+  warn(message: CLILogMessage, ..._meta: any[]) {
     if (this.level > LogLevel.warn) return
     const msg = typeof message === 'string' ? message : message.message
     const type = typeof message === 'string' ? undefined : message.type
@@ -195,11 +191,7 @@ export class CLILogger implements Logger {
     this.emit('warn', msg, type, undefined, data)
   }
 
-  debug(
-    message:
-      | string
-      | { message: string; type?: string; data?: Record<string, unknown> }
-  ) {
+  debug(message: CLILogMessage, ..._meta: any[]) {
     if (this.level > LogLevel.debug || this.silent) return
 
     const msg = typeof message === 'string' ? message : message.message

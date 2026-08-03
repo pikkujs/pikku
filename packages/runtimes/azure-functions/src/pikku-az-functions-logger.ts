@@ -6,24 +6,33 @@ export class AzInvocationLogger implements Logger {
 
   constructor(private context: InvocationContext) {}
 
-  public info(messageOrObj: string | Record<string, any>): void {
-    this.context.info(messageOrObj)
+  public info(
+    messageOrObj: string | Record<string, any>,
+    ...meta: any[]
+  ): void {
+    this.context.info(messageOrObj, ...meta)
   }
 
-  public warn(messageOrObj: string | Record<string, any>): void {
-    this.context.warn(messageOrObj)
+  public warn(
+    messageOrObj: string | Record<string, any>,
+    ...meta: any[]
+  ): void {
+    this.context.warn(messageOrObj, ...meta)
   }
 
-  public error(messageOrObj: string | Record<string, any> | Error): void {
-    this.context.error(messageOrObj)
+  public error(
+    messageOrObj: string | Record<string, any> | Error,
+    ...meta: any[]
+  ): void {
+    this.context.error(messageOrObj, ...meta)
   }
 
-  public debug(message: string): void {
-    this.context.debug(message)
+  public debug(message: string, ...meta: any[]): void {
+    this.context.debug(message, ...meta)
   }
 
-  public trace(message: string): void {
-    this.context.trace(message)
+  public trace(message: string, ...meta: any[]): void {
+    this.context.trace(message, ...meta)
   }
 
   public setLevel(level: LogLevel): void {

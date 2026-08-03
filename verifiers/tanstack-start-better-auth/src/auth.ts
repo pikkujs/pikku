@@ -9,7 +9,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
     (await variables.get('FRONTEND_URL')) ?? 'http://127.0.0.1:3120'
 
   const instance = betterAuth({
-    secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
+    secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
     baseURL: frontendUrl,
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: { enabled: true },

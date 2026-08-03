@@ -374,7 +374,7 @@ export const createSingletonServices = pikkuAddonServices(async (
   { secrets, variables }
 ) => {
   const creds = await secrets.getSecret<${pascalName}Secrets>('${screamingName}_CREDENTIALS')
-  const ${camelName} = new ${pascalName}Service(creds, variables)
+  const ${camelName} = new ${pascalName}Service(creds.reveal(), variables)
 
   return { ${camelName} }
 })

@@ -15,19 +15,28 @@ export class PinoLogger implements Logger {
     this.pino.level = LogLevel[level]
   }
 
-  info(messageOrObj: string | Record<string, any> | Error): void {
-    this.pino.info(messageOrObj)
+  info(
+    messageOrObj: string | Record<string, any> | Error,
+    ...meta: any[]
+  ): void {
+    this.pino.info(messageOrObj as any, ...meta)
   }
 
-  warn(messageOrObj: string | Record<string, any> | Error): void {
-    this.pino.warn(messageOrObj)
+  warn(
+    messageOrObj: string | Record<string, any> | Error,
+    ...meta: any[]
+  ): void {
+    this.pino.warn(messageOrObj as any, ...meta)
   }
 
-  error(messageOrObj: string | Record<string, any> | Error): void {
-    this.pino.error(messageOrObj)
+  error(
+    messageOrObj: string | Record<string, any> | Error,
+    ...meta: any[]
+  ): void {
+    this.pino.error(messageOrObj as any, ...meta)
   }
 
-  debug(messageOrObj: string | Record<string, any>): void {
-    this.pino.debug(messageOrObj)
+  debug(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
+    this.pino.debug(messageOrObj as any, ...meta)
   }
 }

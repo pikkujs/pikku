@@ -1,4 +1,8 @@
-import { createSecretValue, type SecretValue } from '../secret-value.js'
+import {
+  createSecretValue,
+  isSecretValue,
+  type SecretValue,
+} from '../secret-value.js'
 import { LocalVariablesService } from './local-variables.js'
 import type { SecretService, SecretValues } from './secret-service.js'
 import type { VariablesService } from './variables-service.js'
@@ -32,9 +36,12 @@ export class LocalSecretService implements SecretService {
   }
 
   public async setSecret(key: string, value: unknown): Promise<void> {
+    // Storing the wrapper would serialize it to '[secret]', so unwrap first —
+    // writing a secret back to the vault is exactly what this method is for.
+    const raw = isSecretValue(value) ? value.reveal() : value
     this.localSecrets.set(
       key,
-      typeof value === 'string' ? value : JSON.stringify(value)
+      typeof raw === 'string' ? raw : JSON.stringify(raw)
     )
   }
 

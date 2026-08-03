@@ -1,3 +1,5 @@
+import type { Safe } from '../secret-value.js'
+
 export interface EmailTemplateReference {
   name: string
   locale?: string
@@ -42,5 +44,5 @@ export interface SendEmailResult {
 }
 
 export interface EmailService {
-  send(input: SendEmailInput): Promise<SendEmailResult>
+  send<T extends SendEmailInput>(input: Safe<T>): Promise<SendEmailResult>
 }

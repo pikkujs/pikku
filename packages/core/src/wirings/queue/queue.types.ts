@@ -1,6 +1,7 @@
 import type { CommonWireMeta } from '../../types/core.types.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { QueueConfigMapping } from './validate-worker-config.js'
+import type { Safe } from '../../secret-value.js'
 
 export interface PikkuWorkerConfig {
   name?: string
@@ -107,7 +108,11 @@ export interface JobOptions {
 export interface QueueService {
   readonly supportsResults: boolean
 
-  add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
+  add<T>(
+    queueName: string,
+    data: Safe<T>,
+    options?: JobOptions
+  ): Promise<string>
 
   getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
 }

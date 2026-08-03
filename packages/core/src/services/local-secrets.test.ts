@@ -78,3 +78,18 @@ describe('LocalSecretService', () => {
     assert.strictEqual(await service.hasSecret('DEL_KEY'), false)
   })
 })
+
+describe('LocalSecretService round-trips a wrapped secret', () => {
+  test('setSecret unwraps rather than storing the redaction', async () => {
+    const service = new LocalSecretService()
+    await service.setSecret('SOURCE', 'sk-live-DEADBEEF')
+    const read = await service.getSecret('SOURCE')
+
+    await service.setSecret('COPY', read)
+
+    assert.strictEqual(
+      (await service.getSecret('COPY')).reveal(),
+      'sk-live-DEADBEEF'
+    )
+  })
+})

@@ -23,7 +23,7 @@ describe('AWSSecrets', () => {
     const service = new AWSSecrets({ awsRegion: 'us-east-1' } as any)
     const secret = await service.getSecret('MY_SECRET')
 
-    assert.equal(secret, 'super-secret')
+    assert.equal(secret.reveal(), 'super-secret')
     const command = sendStub.getCall(0).args[0] as GetSecretValueCommand
     assert.equal(command.input.SecretId, 'MY_SECRET')
   })

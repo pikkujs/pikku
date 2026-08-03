@@ -1,4 +1,5 @@
-import type { SecretService } from '@pikku/core/services'
+import { createSecretValue, isSecretValue, type SecretValue } from '@pikku/core'
+import type { SecretService, SecretValues } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import {
@@ -112,7 +113,7 @@ export class KyselySecretService implements SecretService {
     return kek
   }
 
-  async getSecret<T = string>(key: string): Promise<T> {
+  async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     const row = await this.db
       .selectFrom('secrets')
       .select(['ciphertext', 'wrappedDek', 'keyVersion'])
@@ -124,7 +125,7 @@ export class KyselySecretService implements SecretService {
     const kek = await this.getKEK(row.keyVersion)
     const result = await envelopeDecrypt<T>(kek, row.ciphertext, row.wrappedDek)
     await this.logAudit(key, 'read')
-    return result
+    return createSecretValue(result)
   }
 
   async hasSecret(key: string): Promise<boolean> {
@@ -137,9 +138,11 @@ export class KyselySecretService implements SecretService {
   }
 
   async setSecret(key: string, value: unknown): Promise<void> {
+    // Encrypting the wrapper would store its redaction, not the secret —
+    // writing a secret back to the vault is exactly what this method is for.
     const { ciphertext, wrappedDEK } = await envelopeEncrypt(
       await this.getKEK(this.keyVersion),
-      value
+      isSecretValue(value) ? value.reveal() : value
     )
     const now = new Date().toISOString()
 
@@ -173,7 +176,7 @@ export class KyselySecretService implements SecretService {
 
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
-  ): Promise<T> {
+  ): Promise<Partial<SecretValues<T>>> {
     const rows = await this.db
       .selectFrom('secrets')
       .select(['key', 'ciphertext', 'wrappedDek', 'keyVersion'])
@@ -184,10 +187,8 @@ export class KyselySecretService implements SecretService {
     for (const row of rows) {
       try {
         const kek = await this.getKEK(row.keyVersion)
-        out[row.key] = await envelopeDecrypt(
-          kek,
-          row.ciphertext,
-          row.wrappedDek
+        out[row.key] = createSecretValue(
+          await envelopeDecrypt(kek, row.ciphertext, row.wrappedDek)
         )
       } catch (cause) {
         // A stored secret that fails to decrypt is never expected — it means the
@@ -203,7 +204,7 @@ export class KyselySecretService implements SecretService {
         )
       }
     }
-    return out as T
+    return out as Partial<SecretValues<T>>
   }
 
   async rotateKEK(): Promise<number> {
