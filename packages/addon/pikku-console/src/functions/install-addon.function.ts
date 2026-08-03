@@ -3,7 +3,7 @@ import {
   ConflictError,
   LocalEnvironmentOnlyError,
 } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
   deriveInstanceOverrides,
@@ -15,7 +15,7 @@ import {
   resolvePackageManager,
 } from '../lib/resolve-package-manager.js'
 
-export const installAddon = pikkuSessionlessFunc<
+export const installAddon = pikkuFunc<
   {
     packageName: string
     namespace: string
