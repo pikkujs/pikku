@@ -6297,6 +6297,7 @@ __metadata:
     "@pikku/kysely-sqlite": "npm:^0.12.7"
     "@types/node": "npm:^22"
     kysely: "npm:^0.29.0"
+    tsx: "npm:^4.19.2"
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@pikku/core": ^0.12.44

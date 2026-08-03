@@ -3,6 +3,12 @@ export {
   createBunSqliteKysely,
   type CreateBunSqliteKyselyOptions,
 } from './create-bun-sqlite-kysely.js'
+export { registerSqliteFunctions } from './register-functions.js'
+export {
+  SqliteFunctionsUnsupportedError,
+  type SqliteFunction,
+  type SqliteFunctionMap,
+} from '@pikku/kysely-sqlite'
 export {
   createCoercionPlugin,
   type CoercionMap,
