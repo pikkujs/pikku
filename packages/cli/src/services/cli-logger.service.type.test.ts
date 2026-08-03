@@ -1,5 +1,5 @@
 import { createSecretValue } from '@pikku/core'
-import { CLILogger } from './cli-logger.service.js'
+import type { CLILogger } from './cli-logger.service.js'
 
 // A concrete logger must not be a way around the `Logger` guard: code holding
 // `CLILogger` rather than `Logger` gets the same `Safe<>` protection.

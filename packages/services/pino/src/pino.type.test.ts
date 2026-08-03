@@ -1,5 +1,5 @@
 import { createSecretValue } from '@pikku/core'
-import { PinoLogger } from './pino.js'
+import type { PinoLogger } from './pino.js'
 
 // A concrete logger must not be a way around the `Logger` guard.
 const _assertions = (logger: PinoLogger) => {

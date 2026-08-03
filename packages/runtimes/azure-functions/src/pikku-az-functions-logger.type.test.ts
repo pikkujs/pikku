@@ -1,5 +1,5 @@
 import { createSecretValue } from '@pikku/core'
-import { AzInvocationLogger } from './pikku-az-functions-logger.js'
+import type { AzInvocationLogger } from './pikku-az-functions-logger.js'
 
 // A concrete logger must not be a way around the `Logger` guard.
 const _assertions = (logger: AzInvocationLogger) => {
