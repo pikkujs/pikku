@@ -136,6 +136,9 @@ export const voiceInput = (config?: {
         const audioData = p.data
           ? base64ToUint8Array(p.data)
           : await fetchAsUint8Array(p.url!, config.allowedAudioHosts)
+        if (audioData.byteLength > MAX_AUDIO_SIZE) {
+          throw new Error('Audio file exceeds maximum size')
+        }
         const result = await aiAgentRunner.transcribe({
           model: config.model,
           audio: audioData,
