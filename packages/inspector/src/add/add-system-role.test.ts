@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
-import { ErrorCode } from '../error-codes.js'
+import type { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger } from '../types.js'
 
 const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
