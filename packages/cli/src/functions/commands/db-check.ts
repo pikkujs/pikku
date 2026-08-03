@@ -40,12 +40,13 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
       logger
     )
 
-    // Table names elide the `public` schema, which reads as ambiguous in a
-    // report whose whole point can be a second copy of `app.orders` sitting in
-    // `public`. Put the schema back for display only.
+    // Table names elide the schema they landed in, which reads as ambiguous in
+    // a report whose whole point can be a second copy of `app.orders` sitting
+    // in `public`. Put the schema back for display only — the configured one
+    // when there is one, since that is where these tables belong.
     const qualify = (table: string) =>
       resolved.dialect === 'postgres' && !table.includes('.')
-        ? `public.${table}`
+        ? `${resolved.schema ?? 'public'}.${table}`
         : table
 
     if (drift.runtimeTables.length) {

@@ -704,8 +704,9 @@ export async function reset(
     `)
 
     for (const { schema_name: schemaName } of result.rows) {
-      const quoted = `"${schemaName.replace(/"/g, '""')}"`
-      await client.query(`DROP SCHEMA IF EXISTS ${quoted} CASCADE`)
+      await client.query(
+        `DROP SCHEMA IF EXISTS ${quoteIdentifier(schemaName)} CASCADE`
+      )
     }
 
     await client.query('CREATE SCHEMA IF NOT EXISTS public')
@@ -879,9 +880,19 @@ async function introspectorToMap(intro: DbIntrospector): Promise<SchemaMap> {
   return map
 }
 
+/**
+ * The tables and columns `desired` has that `actual` does not.
+ *
+ * `schema` is the one the desired bare names belong in, when the caller knows.
+ * Given it, only that schema's copy of a table counts: a `workflow_step` in
+ * `public` is a different table from the `app.workflow_step` a source with
+ * `db.schema: "app"` wants, and letting it match would report the source
+ * satisfied by a table its SQL never creates.
+ */
 function diffSchemas(
   desired: SchemaMap,
-  actual: SchemaMap
+  actual: SchemaMap,
+  schema?: string
 ): {
   missingTables: string[]
   missingColumns: { table: string; columns: string[] }[]
@@ -890,7 +901,9 @@ function diffSchemas(
   const missingColumns: { table: string; columns: string[] }[] = []
 
   for (const [table, cols] of desired) {
-    const actualCols = actual.get(table) ?? schemaQualifiedMatch(actual, table)
+    const actualCols = schema
+      ? actual.get(qualifiedTableKey(schema, table))
+      : (actual.get(table) ?? schemaQualifiedMatch(actual, table))
     if (!actualCols) {
       missingTables.push(table)
       continue
@@ -899,6 +912,21 @@ function diffSchemas(
     if (missing.length) missingColumns.push({ table, columns: missing })
   }
   return { missingTables, missingColumns }
+}
+
+/**
+ * How an introspected schema map keys a table in a given schema.
+ *
+ * Introspection elides `public`, so the key for a table there is the bare name.
+ * Anything else carries its qualifier.
+ */
+function qualifiedTableKey(schema: string, table: string): string {
+  return schema === 'public' ? table : `${schema}.${table}`
+}
+
+/** A PostgreSQL identifier, quoted so its casing survives the parser. */
+function quoteIdentifier(name: string): string {
+  return `"${name.replace(/"/g, '""')}"`
 }
 
 /**
@@ -1766,7 +1794,8 @@ export async function generateMigrations(
 
     const { missingTables, missingColumns } = diffSchemas(
       source.desired.tables,
-      covered
+      covered,
+      source.schema
     )
     if (missingTables.length === 0 && missingColumns.length === 0) {
       result.upToDate.push(source.name)
@@ -1777,9 +1806,12 @@ export async function generateMigrations(
     // that keeps its tables in a schema has them covered as `app.workflow_step`
     // while the declaration names them bare, so a strict `covered.has(t)` reads
     // "nothing is covered" and re-emits the whole schema over tables that are
-    // already there.
-    const partial = [...source.desired.tables.keys()].some(
-      (t) => covered.has(t) || schemaQualifiedMatch(covered, t) !== undefined
+    // already there — and a copy in some other schema is not that table, so it
+    // must not count either.
+    const partial = [...source.desired.tables.keys()].some((t) =>
+      source.schema
+        ? covered.has(qualifiedTableKey(source.schema, t))
+        : covered.has(t) || schemaQualifiedMatch(covered, t) !== undefined
     )
 
     let body: string
@@ -1788,8 +1820,12 @@ export async function generateMigrations(
     // The source's own SQL is already qualified when it can be; the delta below
     // is written here from bare introspected names, so it has to be qualified
     // to match, or it alters a table in whichever schema `search_path` finds.
+    // Quoted, because the compiled SQL this delta has to line up with goes
+    // through the schema builder and is quoted there. `db.schema: "App"` left
+    // raw folds to `app`, so the delta would alter a table in a schema the
+    // runtime never uses.
     const qualify = (table: string) =>
-      source.schema ? `${source.schema}.${table}` : table
+      source.schema ? `${quoteIdentifier(source.schema)}.${table}` : table
 
     if (!partial) {
       body = source.desired.sql
