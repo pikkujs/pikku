@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import {
   runValidate,
   renderValidate,
@@ -1345,6 +1345,171 @@ describe('pikku fabric validate', () => {
         const result = await runValidate(tmp)
         // app-not-declared warn fires (no frontends declared), but no crash
         assert.ok(result.findings.some((f) => f.id === 'app-not-declared-web'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('actor quick login', () => {
+    // Writes a React frontend at apps/web. `files` is a map of app-relative
+    // path → contents, so each test only spells out the UI it cares about.
+    async function makeFrontend(
+      root: string,
+      files: Record<string, string>,
+      pkgExtra: Record<string, unknown> = {}
+    ) {
+      const app = join(root, 'apps', 'web')
+      await mkdir(app, { recursive: true })
+      await writeJson(join(app, 'package.json'), {
+        name: 'web',
+        dependencies: { react: '^19.0.0', ...(pkgExtra as any).dependencies },
+        devDependencies: {
+          '@babel/core': '^7.26.0',
+          '@inlang/paraglide-js': '^2.0.0',
+        },
+      })
+      await mkdir(join(app, 'messages'), { recursive: true })
+      await mkdir(join(app, 'project.inlang'), { recursive: true })
+      await writeJson(join(app, 'project.inlang', 'settings.json'), {})
+      for (const [rel, body] of Object.entries(files)) {
+        const full = join(app, rel)
+        await mkdir(dirname(full), { recursive: true })
+        await writeFile(full, body, 'utf8')
+      }
+      return app
+    }
+
+    test('login screen without the actor switcher → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            'export const LoginPage = () => <form>email + password</form>\n',
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'app-missing-actor-quick-login-web'
+        )
+        assert.ok(finding, 'expected app-missing-actor-quick-login-web finding')
+        assert.strictEqual(finding!.severity, 'error')
+        assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
+        assert.strictEqual(result.ok, false)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('login screen rendering <DevActorSwitcher /> → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            "import { DevActorSwitcher } from '@/components/DevActorSwitcher'\n" +
+            'export const LoginPage = () => <><form /><DevActorSwitcher /></>\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'expected no actor quick-login finding'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a DevActorSwitcher that is defined but never rendered still errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            'export const LoginPage = () => <form>email + password</form>\n',
+          // Definition only — nothing renders it, so the reviewer is still
+          // locked out. `signInAsActor(` here is the declaration, not a call.
+          'src/lib/auth.ts':
+            'export async function signInAsActor(email: string) {\n' +
+            '  return email\n}\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'expected the finding to survive a definition-only auth helper'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a frontend with no login screen is not asked for one', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/HomePage.tsx': 'export const HomePage = () => <main />\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'an app with no auth has nothing to attach the control to'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('Next.js app/login/page.tsx is scanned even though it is outside src/', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(
+          tmp,
+          {
+            'app/login/page.tsx':
+              'export default function Page() { return <form /> }\n',
+          },
+          { dependencies: { next: '^15.0.0' } }
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'app-missing-actor-quick-login-web'
+        )
+        assert.ok(finding, 'expected the Next.js route to be scanned')
+        assert.match(finding!.message, /app\/login\/page\.tsx/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('Next.js login route wired to the actor endpoint → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(
+          tmp,
+          {
+            'app/login/page.tsx':
+              "const signIn = (email: string) => fetch('/auth/sign-in/actor', {\n" +
+              "  method: 'POST', body: JSON.stringify({ email }) })\n" +
+              'export default function Page() { return <button onClick={() => signIn("a@b.c")} /> }\n',
+          },
+          { dependencies: { next: '^15.0.0' } }
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'the /auth/sign-in/actor endpoint is a valid quick-login fingerprint'
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
