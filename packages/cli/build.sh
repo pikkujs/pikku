@@ -79,6 +79,34 @@ JSON
 # that release that did not publish. Peers here buy nothing — nothing consumes
 # this tree — and cost the release.
 (cd "$_bootstrap_dir" && npm install --no-save --no-package-lock --legacy-peer-deps)
+# Overlay the local build of the core modules this package's own sources reach
+# for, onto the pinned core.
+#
+# The bootstrap CLI loads those sources, and they track local core — `dev.ts` and
+# `serve.ts` import `signedContentPath`, the crypto helpers import `deriveKEK`,
+# and no published core exports either yet. Resolved against the pin, the load
+# dies on the first missing name.
+#
+# Only the drifted modules are replaced, not the whole package. The pin is ahead
+# of the repo as well as behind it: the bootstrap CLI imports
+# `createHttpScenarioActors` from `@pikku/core/services`, which local core has
+# since dropped, so swapping wholesale trades one broken build for another.
+#
+# `errors/errors` rides along because `crypto-utils` imports `WeakKeyMaterialError`
+# from it, and that class is as new as `deriveKEK` itself. The chain stops there:
+# it reaches only `error-handler`, which has not moved.
+#
+# Delete this once a core carrying these names is published and the pins above
+# move to that release wave.
+_local_core=$(cd ../core && pwd)
+for _m in services/local-content crypto-utils errors/errors; do
+  if [ -f "$_local_core/dist/$_m.js" ]; then
+    cp "$_local_core/dist/$_m.js" "$_bootstrap_dir/node_modules/@pikku/core/dist/$_m.js"
+    cp "$_local_core/dist/$_m.d.ts" "$_bootstrap_dir/node_modules/@pikku/core/dist/$_m.d.ts"
+  else
+    echo "Warning: local core is not built, skipping the $_m overlay"
+  fi
+done
 # Split into `bootstrap` (setup phase: type files only) and then the default
 # `all`, with a rename pass in between, because `all`'s zod schema generation
 # *imports* the tree the setup phase has just written.
