@@ -276,6 +276,73 @@ export const personaPersonalityScenario = pikkuScenario<
   },
 })
 
+export const platformSubjectScenario = pikkuScenario<void, { shown: true }>({
+  title: 'The system is one of the actors, and is never mistaken for a person',
+  description:
+    'The platform has a row of its own behind the System filter, carrying the steps declared for it',
+  tags: ['scenario'],
+  func: async (_services, _data, { scenario, actors }) => {
+    if (!actors?.admin) {
+      throw new Error(
+        'platformSubjectScenario needs the admin actor — run via `pikku scenario run <environment>`'
+      )
+    }
+
+    await scenario.given(
+      'opens the personas page',
+      'opensConsolePage',
+      { path: PERSONAS_PAGE, waitFor: { testId: 'persona-row-admin' } },
+      { actor: actors.admin }
+    )
+
+    // The page opens on the people: the platform acts, but it holds no roles
+    // and signs in as nobody, so leading with it would put the row nothing is
+    // authorized through above the ones that are.
+    await scenario.then(
+      'sees no platform row until it asks for one',
+      'doesNotSeeTestId',
+      { testId: 'subject-row-platform' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'switches to the system actors',
+      'clicksTestId',
+      { testId: 'personas-filter-system' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the platform',
+      'seesTestId',
+      { testId: 'subject-row-platform' },
+      { actor: actors.admin }
+    )
+    // Declared, so the row has to carry it — a subject's steps are the whole of
+    // what it can do, the way a person's roles are.
+    await scenario.then(
+      'sees a step the platform takes',
+      'seesText',
+      { text: 'Ships The Order' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees it marked as not a person',
+      'seesTestId',
+      { testId: 'subject-not-a-person-platform' },
+      { actor: actors.admin }
+    )
+    // And the people are gone while it is filtered, so the two are never read
+    // as one list of users.
+    await scenario.then(
+      'sees no people under the system filter',
+      'doesNotSeeTestId',
+      { testId: 'persona-row-admin' },
+      { actor: actors.admin }
+    )
+
+    return { shown: true }
+  },
+})
+
 export const personasConsoleFeature = pikkuFeature({
   name: 'Personas Console Page',
   description:
@@ -287,5 +354,6 @@ export const personasConsoleFeature = pikkuFeature({
     personaTargetScenario,
     personaAvatarScenario,
     personaPersonalityScenario,
+    platformSubjectScenario,
   ],
 })

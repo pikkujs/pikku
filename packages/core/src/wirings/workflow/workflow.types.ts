@@ -302,6 +302,13 @@ export type WorkflowsMeta = Record<
     dsl?: boolean
     expose?: boolean
     scenario?: boolean
+    /**
+     * The flow asserts through an expectation helper — `expectService`,
+     * `expectError`, `expectEventually` — rather than a `then` step. Those are
+     * inline steps and carry no phase, so without this PKU680 reads a scenario
+     * whose only witness is a recorded service call as asserting nothing.
+     */
+    asserts?: boolean
     skip?: string
     actors?: string[]
   }

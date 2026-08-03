@@ -3,6 +3,8 @@ import { usePikkuMeta } from '../context/PikkuMetaContext'
 import type { FlowEntry } from '../components/flows/flow-types'
 import type { PersonaEntry } from '../components/personas/persona-types'
 import { toPersonaEntries } from '../components/personas/persona-model'
+import { toSubjectEntries } from '../components/personas/subject-model'
+import type { SubjectEntry } from '../components/personas/subject-types'
 import { toEnglishName } from '../lib/strings'
 
 export interface ScenarioFlowEntries {
@@ -12,6 +14,11 @@ export interface ScenarioFlowEntries {
 
 export interface ScenarioPersonaEntries {
   personas: PersonaEntry[]
+  loading: boolean
+}
+
+export interface ScenarioSubjectEntries {
+  subjects: SubjectEntry[]
   loading: boolean
 }
 
@@ -71,4 +78,25 @@ export function useScenarioPersonaEntries(): ScenarioPersonaEntries {
   )
 
   return { personas, loading }
+}
+
+/**
+ * The actors that are not people — the platform, and any addon whose system a
+ * step makes act. Separate from the personas hook rather than folded into it,
+ * so nothing downstream can read a subject as somebody.
+ */
+export function useScenarioSubjectEntries(): ScenarioSubjectEntries {
+  const { meta, loading } = usePikkuMeta()
+
+  const subjects = useMemo(
+    (): SubjectEntry[] =>
+      toSubjectEntries({
+        functions: meta.functions ?? [],
+        workflows: meta.workflows ?? {},
+        features: (meta.features ?? {}) as any,
+      }),
+    [meta.functions, meta.workflows, meta.features]
+  )
+
+  return { subjects, loading }
 }

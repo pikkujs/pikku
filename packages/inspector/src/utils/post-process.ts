@@ -817,7 +817,10 @@ export function validateScenarioSteps(
     // nothing threw. It is also invisible to witness coverage — it contributes
     // 0/0, so it can never lower the number — which makes an assertion-free
     // flow the cheapest way to make a suite look better covered than it is.
-    if (phasesSeen.size > 0 && !phasesSeen.has('then')) {
+    // `asserts` is the escape for a flow whose witness is an expectation helper
+    // instead: those are inline steps and leave no phase behind, but a recorded
+    // service call or a refusal is an assertion all the same.
+    if (phasesSeen.size > 0 && !phasesSeen.has('then') && !meta.asserts) {
       logger.critical(
         ErrorCode.SCENARIO_HAS_NO_ASSERTION,
         `Scenario '${workflowName}' has ${[...phasesSeen].join('/')} steps but never asserts. ` +

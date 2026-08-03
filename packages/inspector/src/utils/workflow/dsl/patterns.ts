@@ -75,6 +75,35 @@ export function getScenarioStepPhase(
 }
 
 /**
+ * The expectation helpers that assert without being a `then`.
+ *
+ * `expectService` and `expectError` are inline steps rather than scenario
+ * steps, so they carry no phase and never reach the step meta — but each one is
+ * a witness: a recorded service call, or a refusal. PKU680 has to see them, or
+ * a scenario whose only assertion is one of these reads as asserting nothing.
+ */
+const SCENARIO_EXPECTATION_CALLS = [
+  'expectService',
+  'expectError',
+  'expectEventually',
+] as const
+
+/**
+ * Check if a call expression is one of the scenario expectation helpers —
+ * `scenario.expectService()`, `.expectError()` or `.expectEventually()`.
+ */
+export function isScenarioExpectationCall(node: ts.CallExpression): boolean {
+  return (
+    ts.isPropertyAccessExpression(node.expression) &&
+    SCENARIO_EXPECTATION_CALLS.some(
+      (name) =>
+        name === (node.expression as ts.PropertyAccessExpression).name.text
+    ) &&
+    isWorkflowWireIdentifier(node.expression.expression)
+  )
+}
+
+/**
  * Check if a call expression is workflow.expectEventually()
  */
 export function isWorkflowExpectEventuallyCall(

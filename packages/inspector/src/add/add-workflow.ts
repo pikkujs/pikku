@@ -368,6 +368,7 @@ export const addWorkflow: AddWiring = (
   let steps: WorkflowStepMeta[] = []
   let context: WorkflowContext | undefined = undefined
   let dsl: boolean | undefined = undefined
+  let asserts: boolean | undefined = undefined
 
   // Try DSL workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
@@ -379,6 +380,7 @@ export const addWorkflow: AddWiring = (
     // Extraction succeeded
     steps = result.steps
     context = result.context
+    asserts = result.asserts
 
     // Check if workflow contains inline steps (non-serializable)
     if (hasInlineSteps(steps)) {
@@ -466,6 +468,7 @@ export const addWorkflow: AddWiring = (
     expose,
     skip,
     scenario: wrapperType === 'scenario' ? true : undefined,
+    asserts,
     actors: actorNames.length > 0 ? actorNames : undefined,
   }
 

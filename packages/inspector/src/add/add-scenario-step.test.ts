@@ -224,6 +224,25 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
+  test('a scenario whose witness is an expectation helper is not flagged', async () => {
+    // `expectService` is an inline step and carries no phase, so it reaches
+    // PKU680 as nothing at all — but a recorded service call is a witness, and
+    // a flow that has one is not the assertion-free flow the rule is for.
+    const { criticals, cleanup } = await run([
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.expectService('the receipt was emailed', 'emailService.send', { actor: actors.shopper })",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU680').length,
+        0,
+        `got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
   test('a scenario with an assertion is not flagged', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",

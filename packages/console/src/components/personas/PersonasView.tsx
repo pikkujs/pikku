@@ -5,14 +5,21 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { PersonaRow } from './PersonaRow'
+import { SubjectRow } from './SubjectRow'
 import { usePanelContext } from '../../context/PanelContext'
 import type { PersonaEntry } from './persona-types'
+import type { SubjectEntry } from './subject-types'
 import classes from './personas.module.css'
 
 const PERSONAS_DOCS = 'https://pikku.dev/docs/wiring/personas'
 
 type PersonasViewProps = {
   personas: PersonaEntry[]
+  /**
+   * The actors that are not people, rendered after them in the same grid.
+   * Empty unless the filter asks for them — the page opens on the people.
+   */
+  subjects?: SubjectEntry[]
   loading?: boolean
   onOpenScenario?: (name: string) => void
   onOpenVirtualUser?: (key: string) => void
@@ -27,6 +34,7 @@ type PersonasViewProps = {
 
 export const PersonasView: React.FC<PersonasViewProps> = ({
   personas,
+  subjects = [],
   loading = false,
   onOpenScenario,
   onOpenVirtualUser,
@@ -45,7 +53,7 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
     )
   }
 
-  if (personas.length === 0) {
+  if (personas.length === 0 && subjects.length === 0) {
     return query ? (
       <Text size="sm" c="dimmed" p="md" data-testid="personas-no-matches">
         {m.personas_no_matches({ query })}
@@ -71,6 +79,18 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
               persona,
               onOpenScenario,
               onOpenVirtualUser,
+            })
+          }
+        />
+      ))}
+      {subjects.map((subject) => (
+        <SubjectRow
+          key={subject.key}
+          subject={subject}
+          onOpen={() =>
+            openPersona(subject.key, subject.name, {
+              subject,
+              onOpenScenario,
             })
           }
         />

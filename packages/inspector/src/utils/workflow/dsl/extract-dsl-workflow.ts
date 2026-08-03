@@ -26,6 +26,7 @@ import {
   isWorkflowDoCall,
   isWorkflowExpectEventuallyCall,
   isScenarioStepCall,
+  isScenarioExpectationCall,
   getScenarioStepPhase,
   DYNAMIC_SCENARIO_STEP_TARGET,
   extractActorFromOptions,
@@ -82,7 +83,35 @@ export interface ExtractionResult {
   steps?: WorkflowStepMeta[]
   /** Workflow context (top-level variables) */
   context?: WorkflowContext
+  /**
+   * The flow asserts something through an expectation helper rather than a
+   * `then` step. Recorded separately because those helpers are inline steps and
+   * leave no phase behind, so PKU680 has no other way to see them.
+   */
+  asserts?: boolean
   reason?: string
+}
+
+/**
+ * Whether the body calls one of the expectation helpers anywhere.
+ *
+ * A whole-body walk rather than a check inside step extraction: the helpers
+ * produce no step of their own, so there is no extraction result to hang the
+ * answer off, and one nested inside a branch asserts just as much as one at the
+ * top level.
+ */
+function hasScenarioExpectation(body: ts.Node): boolean {
+  let found = false
+  const visit = (node: ts.Node): void => {
+    if (found) return
+    if (ts.isCallExpression(node) && isScenarioExpectationCall(node)) {
+      found = true
+      return
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(body)
+  return found
 }
 
 /**
@@ -170,6 +199,7 @@ export function extractDSLWorkflow(
       steps,
       context:
         Object.keys(workflowContext).length > 0 ? workflowContext : undefined,
+      asserts: hasScenarioExpectation(arrowFunc.body) || undefined,
     }
   } catch (error) {
     return {
