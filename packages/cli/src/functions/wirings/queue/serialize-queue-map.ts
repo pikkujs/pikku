@@ -36,6 +36,7 @@ ${serializedImportMap}
 ${serializedCustomTypes}
 
 import type { QueueJob } from '@pikku/core/queue'
+import type { Safe } from '@pikku/core'
 
 interface QueueHandler<I, O> {
     input: I;
@@ -46,7 +47,7 @@ ${serializedQueues}
 
 type QueueAdd = <Name extends keyof QueueMap>(
   name: Name,
-  data: QueueMap[Name]['input'],
+  data: Safe<QueueMap[Name]['input']>,
   options?: {
     priority?: number
     delay?: number

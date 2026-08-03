@@ -1,6 +1,7 @@
 export const serializeQueueWrapper = (queueMapPath: string) => {
   return `
 import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { Safe } from '@pikku/core'
 import type { QueueMap, TypedPikkuQueue } from '${queueMapPath}'
 
 export class PikkuQueue implements TypedPikkuQueue {
@@ -8,7 +9,7 @@ export class PikkuQueue implements TypedPikkuQueue {
 
     public async add<Name extends keyof QueueMap>(
         queueName: Name,
-        data: QueueMap[Name]['input'],
+        data: Safe<QueueMap[Name]['input']>,
         options?: {
             priority?: number
             delay?: number
