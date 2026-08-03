@@ -445,6 +445,130 @@ test('scratch codegen types the postgres migrations without touching the configu
   assert.deepEqual(live.migrate.applied, ['0001-init.sql'])
 })
 
+test('resolveDb carries the declared PGlite extensions onto the postgres descriptor', () => {
+  usePostgresProject()
+
+  const local = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
+  assert.equal(local.dialect, 'postgres')
+  if (local.dialect !== 'postgres') throw new Error('expected postgres')
+  assert.deepEqual(local.pgliteExtensions, ['hstore'])
+
+  // A project on a real Postgres server still needs them: the shadow database
+  // the CLI diffs against is PGlite either way.
+  const remote = resolveDb(
+    {
+      postgresUrl: 'postgres://user:pass@localhost:5432/mydb',
+      pgliteExtensions: ['hstore'],
+    },
+    root,
+    root
+  )!
+  if (remote.dialect !== 'postgres') throw new Error('expected postgres')
+  assert.deepEqual(remote.pgliteExtensions, ['hstore'])
+
+  const undeclared = resolveDb({}, root, root)!
+  if (undeclared.dialect !== 'postgres') throw new Error('expected postgres')
+  assert.deepEqual(undeclared.pgliteExtensions, [])
+})
+
+test('a declared extension is available to the scratch database', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE EXTENSION IF NOT EXISTS hstore;
+CREATE TABLE docs (
+  id SERIAL PRIMARY KEY,
+  meta hstore
+);
+`,
+    seedSql: '',
+  })
+
+  const resolved = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
+  const scratch = await migrateAndCodegen(resolved, { scratch: true })
+  assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
+  assert.match(readFileSync(resolved.schemaFile, 'utf8'), /Docs/)
+})
+
+test('a declared extension is available to the local PGlite database', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE EXTENSION IF NOT EXISTS hstore;
+CREATE TABLE docs (
+  id SERIAL PRIMARY KEY,
+  meta hstore
+);
+`,
+    seedSql: '',
+  })
+
+  const resolved = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const kysely = await createKysely<{ docs: { id: number } }>(resolved)
+  try {
+    const rows = await kysely.selectFrom('docs').select('id').execute()
+    assert.deepEqual(rows, [])
+  } finally {
+    await kysely.destroy()
+  }
+})
+
+test('an undeclared extension fails with guidance rather than a bare Postgres error', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE EXTENSION IF NOT EXISTS hstore;\n`,
+    seedSql: '',
+  })
+
+  const resolved = resolveDb({}, root, root)!
+  await assert.rejects(
+    () => migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /hstore/)
+      assert.match(error.message, /pgliteExtensions/)
+      return true
+    }
+  )
+})
+
+test('an unresolvable extension specifier says where it was looked for', async () => {
+  usePostgresProject()
+  const resolved = resolveDb(
+    { pgliteExtensions: ['@not-installed/pglite-nothing'] },
+    root,
+    root
+  )!
+
+  await assert.rejects(
+    () => migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /@not-installed\/pglite-nothing/)
+      assert.match(error.message, /install/i)
+      return true
+    }
+  )
+})
+
+test('a module that exports no PGlite extension is rejected by name', async () => {
+  usePostgresProject()
+  writeFileSync(
+    join(root, 'not-an-extension.mjs'),
+    'export const nope = { hello: "world" }\n'
+  )
+
+  const resolved = resolveDb(
+    { pgliteExtensions: ['./not-an-extension.mjs'] },
+    root,
+    root
+  )!
+
+  await assert.rejects(
+    () => migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /not-an-extension\.mjs/)
+      assert.match(error.message, /no PGlite extension/)
+      return true
+    }
+  )
+})
+
 test('scratch codegen types the sqlite migrations without creating the db file', async () => {
   const resolved = resolveDb({}, root, root)!
   assert.equal(resolved.dialect, 'sqlite')

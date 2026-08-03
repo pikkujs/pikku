@@ -8,6 +8,7 @@ import {
 } from 'node:fs'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
 import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
@@ -72,6 +73,16 @@ export interface ResolvedPostgresDb extends ResolvedDbBase {
   pgliteDir?: string
   runtimeDir: string
   seedFile: string
+  /**
+   * Postgres extensions the embedded PGlite databases must load, as declared by
+   * `pgliteExtensions` in the project's config. See
+   * {@link loadPGliteExtensions}.
+   *
+   * Carried even in `url` mode: the shadow database the CLI migrates and
+   * introspects is PGlite whichever server the project itself runs against, so
+   * a migration that needs an extension needs it here too.
+   */
+  pgliteExtensions: string[]
 }
 
 export type ResolvedDb = ResolvedSqliteDb | ResolvedPostgresDb
@@ -130,6 +141,8 @@ export function resolveDb(
     )
   }
 
+  const pgliteExtensions = userConfig.pgliteExtensions ?? []
+
   if (userConfig.postgresUrl) {
     return {
       dialect: 'postgres',
@@ -137,6 +150,7 @@ export function resolveDb(
       connectionString: userConfig.postgresUrl,
       runtimeDir: resolvedRuntimeDir,
       seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
+      pgliteExtensions,
       ...base('db/postgres'),
     }
   }
@@ -164,6 +178,7 @@ export function resolveDb(
       pgliteDir: join(resolvedRuntimeDir, 'dev-postgres'),
       runtimeDir: resolvedRuntimeDir,
       seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
+      pgliteExtensions,
       ...base('db/postgres'),
     }
   }
@@ -213,8 +228,20 @@ async function createPostgresClient(
   }
 
   mkdirSync(dirname(resolved.pgliteDir), { recursive: true })
-  const db = await createEmbeddedPostgres(resolved.pgliteDir)
+  const db = await createEmbeddedPostgres(resolved, resolved.pgliteDir)
   return pgliteAsClient(db)
+}
+
+/**
+ * What an embedded PGlite instance needs beyond its data directory: where to
+ * resolve extension packages from, and which ones to load.
+ *
+ * A `ResolvedPostgresDb` already is one, which is what lets every call site
+ * that has one pass it straight through.
+ */
+export interface PGliteExtensionContext {
+  rootDir: string
+  pgliteExtensions: string[]
 }
 
 interface EmbeddedPostgresWasm {
@@ -261,13 +288,113 @@ async function loadEmbeddedPostgresWasm(): Promise<
   }
 }
 
-async function createEmbeddedPostgres(dataDir?: string): Promise<PGlite> {
+/**
+ * A PGlite extension, as the packages that publish one export it: an object
+ * carrying the `setup` that hands PGlite the WASM bundle, or a URL/string
+ * pointing at a remote one.
+ *
+ * Structural rather than imported from PGlite so a project's extension package
+ * — built against its own copy of `@electric-sql/pglite` — is recognised
+ * whatever the two versions are.
+ */
+type PGliteExtension = { name?: string; setup: (...args: any[]) => unknown }
+
+const isPGliteExtension = (value: unknown): value is PGliteExtension =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as PGliteExtension).setup === 'function'
+
+/**
+ * Turn a declared extension specifier into the module that publishes it.
+ *
+ * A bare name is one of PGlite's own contrib extensions (`hstore`, `citext`,
+ * `uuid_ossp`), which ship with the CLI's copy of PGlite and need nothing
+ * installed. Anything else is a package the project depends on — pgvector, say,
+ * as `@electric-sql/pglite-pgvector` — so it is resolved from the project first
+ * and only then from the CLI, since the project is where a user installs it.
+ */
+async function importPGliteExtensionModule(
+  spec: string,
+  rootDir: string
+): Promise<Record<string, unknown>> {
+  const id =
+    spec.includes('/') || spec.startsWith('@')
+      ? spec
+      : `@electric-sql/pglite/contrib/${spec}`
+
+  for (const from of [join(rootDir, 'package.json'), import.meta.url]) {
+    let resolvedPath: string
+    try {
+      resolvedPath = createRequire(from).resolve(id)
+    } catch {
+      continue
+    }
+    return (await import(pathToFileURL(resolvedPath).href)) as Record<
+      string,
+      unknown
+    >
+  }
+
+  throw new Error(
+    `The PGlite extension '${spec}' could not be resolved as '${id}', ` +
+      `from either the project (${rootDir}) or the pikku CLI. ` +
+      `Install it in your project, or name one of PGlite's bundled contrib ` +
+      `extensions (hstore, citext, uuid_ossp, …), which need no install.`
+  )
+}
+
+/**
+ * Load every extension the project declares, keyed the way PGlite wants them.
+ *
+ * The key is the export name (`vector`, `hstore`), which is also the name the
+ * SQL uses, so `CREATE EXTENSION vector` finds what a declaration of
+ * `@electric-sql/pglite-pgvector` loaded. A module exporting several is fine —
+ * all of them are taken — and a `default` export is used only when it is the
+ * only extension there, so a package that default-exports the same object it
+ * also names is not registered twice.
+ */
+export async function loadPGliteExtensions(
+  rootDir: string,
+  specs: string[]
+): Promise<Record<string, PGliteExtension>> {
+  const extensions: Record<string, PGliteExtension> = {}
+
+  for (const spec of specs) {
+    const module = await importPGliteExtensionModule(spec, rootDir)
+    const found = Object.entries(module).filter(([, value]) =>
+      isPGliteExtension(value)
+    ) as [string, PGliteExtension][]
+    const named = found.filter(([name]) => name !== 'default')
+    const chosen = named.length > 0 ? named : found
+
+    if (chosen.length === 0) {
+      throw new Error(
+        `'${spec}' exports no PGlite extension. A PGlite extension is an ` +
+          `object with a 'setup' function — check that the package is one, ` +
+          `and that its version matches the PGlite the CLI runs.`
+      )
+    }
+
+    for (const [name, extension] of chosen) {
+      extensions[name === 'default' ? (extension.name ?? spec) : name] =
+        extension
+    }
+  }
+
+  return extensions
+}
+
+async function createEmbeddedPostgres(
+  context: PGliteExtensionContext,
+  dataDir?: string
+): Promise<PGlite> {
   embeddedPostgresWasm ??= loadEmbeddedPostgresWasm()
 
-  const [{ PGlite }, { pgcrypto }, wasm] = await Promise.all([
+  const [{ PGlite }, { pgcrypto }, wasm, declared] = await Promise.all([
     import('@electric-sql/pglite'),
     import('@electric-sql/pglite/contrib/pgcrypto'),
     embeddedPostgresWasm,
+    loadPGliteExtensions(context.rootDir, context.pgliteExtensions),
   ])
 
   return new PGlite({
@@ -275,8 +402,37 @@ async function createEmbeddedPostgres(dataDir?: string): Promise<PGlite> {
     ...wasm,
     extensions: {
       pgcrypto,
+      ...declared,
     },
   })
+}
+
+/**
+ * PGlite reports an extension it was never given as a plain
+ * `extension "x" is not available`, which reads as though the SQL is at fault.
+ * It is not: the database is real Postgres, the migration is fine, and the one
+ * thing missing is the declaration that would have loaded the extension into
+ * this particular instance. Say so, since nothing else in the message points
+ * anywhere near the fix.
+ */
+function explainMissingExtension(error: unknown, declared: string[]): unknown {
+  const message = error instanceof Error ? error.message : ''
+  const match = /extension "([^"]+)" is not available/.exec(message)
+  if (!match) return error
+
+  const name = match[1]
+  return new Error(
+    `The embedded PGlite database has no '${name}' extension. ` +
+      `The CLI migrates a PGlite shadow database to type and diff your schema, ` +
+      `so every extension your migrations use has to be declared as ` +
+      `pgliteExtensions in createConfig — e.g. pgliteExtensions: ['${name}'] ` +
+      `for a PGlite contrib extension, or the package that publishes it ` +
+      `('@electric-sql/pglite-pgvector' for pgvector).` +
+      (declared.length > 0
+        ? ` Currently declared: ${declared.join(', ')}.`
+        : ''),
+    { cause: error }
+  )
 }
 
 function pgliteAsClient(db: PGlite): PostgresQueryClient {
@@ -299,6 +455,13 @@ async function withPostgresClient<T>(
   const client = await createPostgresClient(resolved)
   try {
     return await run(client)
+  } catch (error) {
+    // Only the embedded database's missing extensions are the declaration's
+    // doing. On a real server it is the server that lacks the extension, and
+    // pointing at the CLI's config would send the reader the wrong way.
+    throw resolved.mode === 'pglite'
+      ? explainMissingExtension(error, resolved.pgliteExtensions)
+      : error
   } finally {
     await client.end()
   }
@@ -385,9 +548,9 @@ export async function migrateAndCodegen(
   } else {
     const withClient = options.scratch
       ? <T>(
-          _r: ResolvedPostgresDb,
+          r: ResolvedPostgresDb,
           run: (c: PostgresQueryClient) => Promise<T>
-        ) => withScratchPostgresDatabase(run)
+        ) => withScratchPostgresDatabase(r, run)
       : withPostgresClient
     await withClient(resolved, async (client) => {
       const introspector = new PostgresIntrospector(client)
@@ -674,7 +837,7 @@ export async function createKysely<DB>(
 
   mkdirSync(dirname(resolved.pgliteDir), { recursive: true })
   return createPGliteKysely<DB>({
-    db: await createEmbeddedPostgres(resolved.pgliteDir),
+    db: await createEmbeddedPostgres(resolved, resolved.pgliteDir),
     camelCase: resolved.camelCase,
     plugins,
   })
@@ -769,11 +932,14 @@ function isPostgresAuthDatabase(options: {
 // elevated privileges that application roles (correctly) don't have, which made
 // `pikku db migrate` fail against managed/locked-down Postgres (error 42501).
 async function withScratchPostgresDatabase<T>(
+  context: PGliteExtensionContext,
   run: (scratchDb: PostgresQueryClient) => Promise<T>
 ): Promise<T> {
-  const scratchDb = await createEmbeddedPostgres()
+  const scratchDb = await createEmbeddedPostgres(context)
   try {
     return await run(pgliteAsClient(scratchDb))
+  } catch (error) {
+    throw explainMissingExtension(error, context.pgliteExtensions)
   } finally {
     if (!scratchDb.closed) {
       await scratchDb.close()
@@ -794,11 +960,12 @@ async function postgresDatabaseToMap(
 }
 
 async function desiredPostgresAuthSchema(
+  context: PGliteExtensionContext,
   rootDir: string,
   srcDirectories: string[],
   logger: { error: (msg: string) => void }
 ): Promise<DesiredAuthSchema | null> {
-  return withScratchPostgresDatabase(async (scratchDb) => {
+  return withScratchPostgresDatabase(context, async (scratchDb) => {
     // The scratch DB is always an embedded PGlite instance (see
     // withScratchPostgresDatabase), so drive Better Auth's migration codegen
     // through the PGlite-backed Kysely regardless of how the app DB is
@@ -852,7 +1019,12 @@ export async function desiredAuthSchema(
           'Better Auth database.type is postgres, but the resolved app database is not postgres.'
         )
       }
-      return desiredPostgresAuthSchema(rootDir, srcDirectories, logger)
+      return desiredPostgresAuthSchema(
+        resolved,
+        rootDir,
+        srcDirectories,
+        logger
+      )
     }
     const { runMigrations, compileMigrations } =
       await getAuthMigrations(options)
@@ -974,7 +1146,7 @@ export async function desiredRuntimeSchema(
     }
   }
 
-  return withScratchPostgresDatabase(async (db) => {
+  return withScratchPostgresDatabase(resolved, async (db) => {
     const kysely = createPGliteKysely<any>({
       db: db.__pglite!,
       camelCase: true,
@@ -1029,9 +1201,10 @@ async function coveredSqliteSchema(migrationsDir: string): Promise<SchemaMap> {
 }
 
 async function coveredPostgresSchema(
-  migrationsDir: string
+  migrationsDir: string,
+  context: PGliteExtensionContext
 ): Promise<SchemaMap> {
-  return withScratchPostgresDatabase(async (client) => {
+  return withScratchPostgresDatabase(context, async (client) => {
     await migrate(new PostgresMigrationExecutor(client), migrationsDir)
     return postgresDatabaseToMap(client)
   })
@@ -1085,7 +1258,7 @@ export async function computeSchemaDrift(
   const covered =
     resolved.dialect === 'sqlite'
       ? await coveredSqliteSchema(resolved.migrationsDir)
-      : await coveredPostgresSchema(resolved.migrationsDir)
+      : await coveredPostgresSchema(resolved.migrationsDir, resolved)
   const actual = await introspectSchema(resolved)
 
   const { missingTables, missingColumns } = diffSchemas(covered, actual)
@@ -1326,7 +1499,10 @@ const concatMigrations = (migrationsDir: string): string =>
  * happens to be configured against — an addon is published once and consumed by
  * projects on either engine.
  */
-export async function exportSchema(rootDir: string): Promise<SchemaArtifact> {
+export async function exportSchema(
+  rootDir: string,
+  pgliteExtensions: string[] = []
+): Promise<SchemaArtifact> {
   const artifact: SchemaArtifact = {}
 
   const sqliteDir = join(rootDir, 'db', 'sqlite')
@@ -1341,7 +1517,9 @@ export async function exportSchema(rootDir: string): Promise<SchemaArtifact> {
   if (existsSync(postgresDir)) {
     artifact.postgres = {
       sql: concatMigrations(postgresDir),
-      tables: serializeSchemaMap(await coveredPostgresSchema(postgresDir)),
+      tables: serializeSchemaMap(
+        await coveredPostgresSchema(postgresDir, { rootDir, pgliteExtensions })
+      ),
     }
   }
 
@@ -1553,7 +1731,7 @@ export async function generateMigrations(
     const covered =
       resolved.dialect === 'sqlite'
         ? await coveredSqliteSchema(resolved.migrationsDir)
-        : await coveredPostgresSchema(resolved.migrationsDir)
+        : await coveredPostgresSchema(resolved.migrationsDir, resolved)
 
     const { missingTables, missingColumns } = diffSchemas(
       source.desired.tables,
