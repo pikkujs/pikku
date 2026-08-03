@@ -43,6 +43,7 @@ import { BunBundler } from './deploy/bundler/bun-bundler.js'
 import { NodeServerRunner } from './server/node-server-runner.js'
 import { BunServerRunner } from './server/bun-server-runner.js'
 import { parseCLIFilters } from './utils/parse-cli-filters.js'
+import { personasSecretsFilePath } from './functions/wirings/personas/personas-secrets-file.js'
 
 const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
   string,
@@ -313,6 +314,12 @@ export const createSingletonServices: CreateSingletonServices<
         // unreachable via the import graph — add it explicitly to get inspected.
         config.authFile
           ? path.join(path.dirname(config.authFile), 'auth-middleware.gen.ts')
+          : undefined,
+        // The personas scaffold's sibling secrets file (SCENARIO_ACTOR_SECRET),
+        // generated into outDir where nothing imports it — same reasoning as the
+        // auth files above.
+        config.personasFile
+          ? personasSecretsFilePath(config.personasFile)
           : undefined,
       ]
       for (const file of scaffoldFiles) {
