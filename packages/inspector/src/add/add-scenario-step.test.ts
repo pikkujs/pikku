@@ -243,6 +243,23 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
+  test('an expectation parked in an uncalled helper is still no assertion', async () => {
+    const { criticals, cleanup } = await run([
+      'const neverCalled = async () => {',
+      "  await scenario.expectService('the receipt was emailed', 'emailService.send')",
+      '}',
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU680'),
+        `expected PKU680 — the helper never runs, so nothing is asserted; got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
   test('a scenario with an assertion is not flagged', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",

@@ -833,6 +833,7 @@
   "personas_appears_in": "Appears in {features} and {scenarios}",
   "personas_feature_count": "{count} features",
   "personas_feature_count_one": "1 feature",
+  "personas_blurb_quoted": "“{blurb}”",
   "personas_scenario_count": "{count} scenarios",
   "personas_scenario_count_one": "1 scenario",
   "personas_scope_count": "{count} scopes",

@@ -572,7 +572,7 @@ export interface PikkuScenarioWire extends PikkuWorkflowWire {
     options?: ScenarioStepOptions
   ): Promise<any>
 
-  /** `given`, rendered as the action the scenario is actually about */
+  /** `when`: the same call as `given`, rendered as the action under test */
   when(
     stepName: string,
     stepFunc: string,
@@ -580,7 +580,11 @@ export interface PikkuScenarioWire extends PikkuWorkflowWire {
     options?: ScenarioStepOptions
   ): Promise<any>
 
-  /** `given`, rendered as a claim about what the action left behind */
+  /**
+   * `then`: a claim about what the action left behind. Unlike `given`/`when`
+   * this is not prose alone — the step's bindings become witnesses, so every
+   * declared surface is observed and the observations must agree.
+   */
   then(
     stepName: string,
     stepFunc: string,

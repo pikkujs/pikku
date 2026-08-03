@@ -4,8 +4,10 @@ import type { ScenarioPersona } from '../../services/personas-service.js'
  * Scenario steps: named, typed units of scenario behaviour.
  *
  * A step's body is an ordinary pikku function, so it may drive a browser, call
- * an RPC as its actor, or run a workflow. `given`/`when`/`then` differ only in
- * the prose the reporter renders.
+ * an RPC as its actor, or run a workflow. `given` and `when` differ only in the
+ * prose the reporter renders; `then` also changes what runs, because its
+ * bindings are witnesses — every declared surface is observed and the
+ * observations must agree. See {@link ScenarioSurfaceResolution}.
  */
 
 /**

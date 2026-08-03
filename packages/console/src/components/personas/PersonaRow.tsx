@@ -121,7 +121,9 @@ export const PersonaRow: React.FC<PersonaRowProps> = ({ persona, onOpen }) => {
             lineClamp={1}
             data-testid={`persona-blurb-${persona.key}`}
           >
-            {persona.personality ? asI18n(`“${blurb}”`) : asI18n(blurb)}
+            {persona.personality
+              ? m.personas_blurb_quoted({ blurb })
+              : asI18n(blurb)}
           </Text>
         )}
       </Stack>

@@ -93,7 +93,33 @@ export interface ExtractionResult {
 }
 
 /**
- * Whether the body calls one of the expectation helpers anywhere.
+ * A function the walk must not step into, because nothing here says it runs.
+ *
+ * A callback handed straight to a call — a fanout's `map`, an inline
+ * `workflow.do` step — executes as part of the body and counts. A function that
+ * is merely *declared* or assigned to a name does not: an assertion parked in an
+ * unused helper asserts nothing, and counting it would let a scenario silence
+ * PKU680 with dead code.
+ */
+function isUncalledFunction(node: ts.Node): boolean {
+  if (
+    !ts.isFunctionDeclaration(node) &&
+    !ts.isFunctionExpression(node) &&
+    !ts.isArrowFunction(node)
+  ) {
+    return false
+  }
+  if (ts.isFunctionDeclaration(node)) return true
+  const parent = node.parent
+  return !(
+    parent &&
+    ts.isCallExpression(parent) &&
+    parent.arguments.some((argument) => argument === node)
+  )
+}
+
+/**
+ * Whether the body calls one of the expectation helpers anywhere it runs.
  *
  * A whole-body walk rather than a check inside step extraction: the helpers
  * produce no step of their own, so there is no extraction result to hang the
@@ -108,6 +134,7 @@ function hasScenarioExpectation(body: ts.Node): boolean {
       found = true
       return
     }
+    if (node !== body && isUncalledFunction(node)) return
     ts.forEachChild(node, visit)
   }
   visit(body)

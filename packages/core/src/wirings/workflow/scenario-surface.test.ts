@@ -23,8 +23,11 @@ describe('action steps pick exactly one binding', () => {
   })
 
   test('given resolves like when, not like then', () => {
-    const resolution = resolveScenarioSurfaces('given', ALL, 'cli')
-    assert.equal(resolution.kind, 'action')
+    assert.deepEqual(resolveScenarioSurfaces('given', ALL, 'cli'), {
+      kind: 'action',
+      surface: 'cli',
+      fellBack: false,
+    })
   })
 
   test('a default run never counts as a fallback', () => {

@@ -28,10 +28,13 @@ export const PersonaAvatar: React.FC<PersonaAvatarProps> = ({
   avatarUrl,
   size = 48,
 }) => {
-  const [failed, setFailed] = useState(false)
+  // The failed URL rather than a flag: the panel renders one avatar and swaps
+  // the persona under it, and a flag would keep showing the fallback icon for
+  // a person whose picture loads perfectly well.
+  const [failedUrl, setFailedUrl] = useState<string>()
   const { color, Icon } = personaVisual(personaKey, jobTitle, name)
   const ring = Math.max(2, Math.round(size * 0.06))
-  const showImage = !!avatarUrl && !failed
+  const showImage = !!avatarUrl && failedUrl !== avatarUrl
 
   return (
     <Box
@@ -61,7 +64,7 @@ export const PersonaAvatar: React.FC<PersonaAvatarProps> = ({
             alt=""
             width={size}
             height={size}
-            onError={() => setFailed(true)}
+            onError={() => setFailedUrl(avatarUrl)}
             style={{ width: size, height: size, objectFit: 'cover' }}
           />
         ) : (
