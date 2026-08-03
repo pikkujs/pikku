@@ -1,5 +1,6 @@
+import { createSecretValue, type SecretValue } from '../secret-value.js'
 import { LocalVariablesService } from './local-variables.js'
-import type { SecretService } from './secret-service.js'
+import type { SecretService, SecretValues } from './secret-service.js'
 import type { VariablesService } from './variables-service.js'
 
 export class LocalSecretService implements SecretService {
@@ -17,15 +18,15 @@ export class LocalSecretService implements SecretService {
     private variables: VariablesService = new LocalVariablesService()
   ) {}
 
-  public async getSecret<T = string>(key: string): Promise<T> {
+  public async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     const localValue = this.localSecrets.get(key)
     if (localValue) {
-      return this.parseSecret<T>(localValue)
+      return createSecretValue(this.parseSecret<T>(localValue))
     }
 
     const value = await this.variables.get(key)
     if (value) {
-      return this.parseSecret<T>(value)
+      return createSecretValue(this.parseSecret<T>(value))
     }
     throw new Error('Requested secret not found')
   }
@@ -51,13 +52,13 @@ export class LocalSecretService implements SecretService {
 
   public async getSecrets<
     T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<Partial<T>> {
+  >(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>> {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
       if (results[i].status === 'fulfilled')
         out[key] = (results[i] as PromiseFulfilledResult<unknown>).value
     })
-    return out as Partial<T>
+    return out as Partial<SecretValues<T>>
   }
 }

@@ -4,6 +4,7 @@ import { buildRemoteHeaders } from './remote.js'
 import { pikkuRemoteAuthMiddleware } from './middleware/remote-auth.js'
 import { resetPikkuState } from './pikku-state.js'
 import { WeakKeyMaterialError } from './errors/errors.js'
+import { createSecretValue } from './secret-value.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -14,7 +15,7 @@ const WEAK_SECRET = 'dev-remote-secret'
 
 const createSecrets = (secret: string) => ({
   getSecret: async (key: string) => {
-    if (key === 'PIKKU_REMOTE_SECRET') return secret
+    if (key === 'PIKKU_REMOTE_SECRET') return createSecretValue(secret)
     throw new Error(`Secret ${key} not found`)
   },
 })

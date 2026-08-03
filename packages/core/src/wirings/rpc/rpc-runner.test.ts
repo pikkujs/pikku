@@ -13,6 +13,7 @@ import {
 import { RemoteAddonAuthError } from './remote-addon-auth.js'
 import { wireAddon } from './wire-addon.js'
 import { wireRemoteAddon } from './wire-remote-addon.js'
+import { createSecretValue } from '../../secret-value.js'
 
 const createLogger = () => ({
   debug: () => {},
@@ -690,7 +691,7 @@ describe('ContextAwareRPCService.remote', () => {
 
 describe('multi-instance addons', () => {
   const createSecretService = () => ({
-    getSecret: async (key: string) => `secret:${key}`,
+    getSecret: async (key: string) => createSecretValue(`secret:${key}`),
     hasSecret: async () => true,
     setSecret: async () => {},
     deleteSecret: async () => {},
@@ -701,7 +702,7 @@ describe('multi-instance addons', () => {
     const createdServices: any[] = []
     pikkuState('@addon/slack', 'package', 'factories', {
       createSingletonServices: async (_config: any, parent: any) => {
-        const token = await parent.secrets.getSecret('slackToken')
+        const token = (await parent.secrets.getSecret('slackToken')).reveal()
         const svc = { logger: createLogger(), token }
         createdServices.push(svc)
         return svc
@@ -748,7 +749,7 @@ describe('multi-instance addons', () => {
         factoryCalls++
         return {
           logger: createLogger(),
-          token: await parent.secrets.getSecret('slackToken'),
+          token: (await parent.secrets.getSecret('slackToken')).reveal(),
         }
       },
     } as never)
@@ -854,7 +855,8 @@ describe('wireRemoteAddon dispatch', () => {
 
   const secretService = () =>
     ({
-      getSecret: async (key: string) => `secret-value-for-${key}`,
+      getSecret: async (key: string) =>
+        createSecretValue(`secret-value-for-${key}`),
       getSecrets: async () => ({}),
       hasSecret: async () => true,
       setSecret: async () => {},

@@ -21,6 +21,7 @@ import type {
   QueueJob,
   QueueService,
 } from './queue.types.js'
+import { createSecretValue } from '../../secret-value.js'
 
 const QUEUE_NAME = 'identity-queue'
 const SECRET = 'a'.repeat(48)
@@ -49,7 +50,7 @@ const createSecretService = (secrets: Record<string, string>) =>
       if (value === undefined) {
         throw new Error(`Secret not found: ${key}`)
       }
-      return value
+      return createSecretValue(value)
     },
     hasSecret: async (key: string) => secrets[key] !== undefined,
     setSecret: async () => {},

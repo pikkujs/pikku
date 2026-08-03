@@ -285,3 +285,11 @@ export type {
   ColumnClassification,
   ClassificationManifest,
 } from './data-classification.js'
+
+export type { SecretValue, Safe } from './secret-value.js'
+export {
+  createSecretValue,
+  isSecretValue,
+  SecretCoercionError,
+  REDACTED,
+} from './secret-value.js'

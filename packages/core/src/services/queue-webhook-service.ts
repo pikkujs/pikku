@@ -52,7 +52,7 @@ export class QueueWebhookService extends WebhookService {
     let secret = input.secret
     if (secret === undefined && webhookConfig?.secret) {
       // Naive read: caching is the secret service's concern, not ours.
-      secret = await services.secrets.getSecret(webhookConfig.secret)
+      secret = (await services.secrets.getSecret(webhookConfig.secret)).reveal()
       if (!secret) {
         services.logger.error(
           `Webhook signing secret '${webhookConfig.secret}' (config.webhook.secret) resolved to nothing — outgoing webhooks will be sent UNSIGNED.`

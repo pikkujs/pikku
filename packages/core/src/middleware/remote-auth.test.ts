@@ -4,6 +4,7 @@ import { pikkuRemoteAuthMiddleware } from './remote-auth.js'
 import { UnauthorizedError } from '../errors/errors.js'
 import { resetPikkuState } from '../pikku-state.js'
 import { encryptWithKeyMaterial, REMOTE_SESSION_INFO } from '../crypto-utils.js'
+import { createSecretValue } from '../secret-value.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -14,7 +15,7 @@ const TEST_SECRET = 'test-remote-secret-key-with-enough-entropy'
 const createMockSecrets = (secret?: string) => ({
   getSecret: async (key: string) => {
     if (key === 'PIKKU_REMOTE_SECRET' && secret !== undefined) {
-      return secret
+      return createSecretValue(secret)
     }
     throw new Error(`Secret ${key} not found`)
   },

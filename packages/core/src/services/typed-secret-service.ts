@@ -1,4 +1,5 @@
-import type { SecretService } from './secret-service.js'
+import type { SecretValue } from '../secret-value.js'
+import type { SecretService, SecretValues } from './secret-service.js'
 
 export interface CredentialStatus {
   secretId: string
@@ -25,8 +26,10 @@ export class TypedSecretService<
     private credentialsMeta: Record<string, CredentialMeta>
   ) {}
 
-  async getSecret<K extends keyof TMap & string>(key: K): Promise<TMap[K]>
-  async getSecret<T = string>(key: string): Promise<T>
+  async getSecret<K extends keyof TMap & string>(
+    key: K
+  ): Promise<SecretValue<TMap[K]>>
+  async getSecret<T = string>(key: string): Promise<SecretValue<T>>
   async getSecret(key: string): Promise<unknown> {
     if (this.cache.has(key)) {
       return this.cache.get(key)
@@ -58,12 +61,12 @@ export class TypedSecretService<
 
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
-  ): Promise<Partial<T>> {
-    const result: Partial<T> = {}
+  ): Promise<Partial<SecretValues<T>>> {
+    const result: Partial<SecretValues<T>> = {}
     const missing: (keyof T & string)[] = []
     for (const key of keys) {
       if (this.cache.has(key)) {
-        result[key] = this.cache.get(key) as T[keyof T & string]
+        result[key] = this.cache.get(key) as SecretValues<T>[keyof T & string]
       } else {
         missing.push(key)
       }
@@ -72,7 +75,8 @@ export class TypedSecretService<
       const fetched = await this.secrets.getSecrets<T>(missing)
       for (const [key, value] of Object.entries(fetched)) {
         this.cache.set(key, value)
-        result[key as keyof T & string] = value as T[keyof T & string]
+        result[key as keyof T & string] = value as SecretValues<T>[keyof T &
+          string]
       }
     }
     return result

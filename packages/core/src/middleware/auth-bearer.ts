@@ -55,9 +55,10 @@ export const authBearer = pikkuMiddlewareFactory<{
             expected = token.value
           } else {
             // An unset secret means the feature is off — never a request error.
-            expected = await secrets
+            const stored = await secrets
               ?.getSecret<string>(token.secretId)
               .catch(() => undefined)
+            expected = stored?.reveal()
           }
           if (expected && constantTimeEqual(bearerToken, expected)) {
             userSession = token.userSession

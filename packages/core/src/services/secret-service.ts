@@ -1,6 +1,11 @@
+import type { SecretValue } from '../secret-value.js'
+
+/** A record of secrets, each still wrapped. */
+export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }
+
 export interface SecretService {
-  /** Throws if the secret is not found. */
-  getSecret<T = string>(key: string): Promise<T>
+  /** Throws if the secret is not found. Unwrap the result with `s()`. */
+  getSecret<T = string>(key: string): Promise<SecretValue<T>>
   /** Answers for any key, including a disallowed one — it must not throw. */
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
@@ -12,5 +17,5 @@ export interface SecretService {
    */
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
-  ): Promise<Partial<T>>
+  ): Promise<Partial<SecretValues<T>>>
 }

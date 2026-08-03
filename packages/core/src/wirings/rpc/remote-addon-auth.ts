@@ -1,5 +1,6 @@
 import type { CoreServices, PikkuRawWire } from '../../types/core.types.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
+import { isSecretValue } from '../../secret-value.js'
 
 export type RemoteAddonAuthBinding =
   | { credentialId: string }
@@ -49,9 +50,13 @@ export async function resolveRemoteAddonToken(
     token = await auth.resolve(services, wire)
   }
 
-  if (token === null || token === undefined || token === '') {
+  // The wire is where a secret is meant to end up, so unwrap it here rather
+  // than at each branch — `resolve` and `getCredential` may hand one back too.
+  const resolved = isSecretValue(token) ? token.reveal() : token
+
+  if (resolved === null || resolved === undefined || resolved === '') {
     throw new RemoteAddonAuthError(namespace, 'resolved token was empty')
   }
 
-  return String(token)
+  return String(resolved)
 }
