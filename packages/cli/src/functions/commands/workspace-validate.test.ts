@@ -31,6 +31,7 @@ async function makeValidWorkspace(root: string) {
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
     scaffold: { console: true },
+    environments: { local: { apiUrl: 'http://localhost:4002' } },
   })
   await writeJson(join(root, 'package.json'), {
     workspaces: ['packages/*', 'apps/*'],
@@ -81,6 +82,41 @@ async function makeValidWorkspace(root: string) {
       'pikku-middleware-groups-meta.gen.json'
     ),
     JSON.stringify({ definitions: {}, instances: {}, httpGroups: {} }, null, 2),
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'personas.ts'),
+    [
+      "import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'",
+      "definePersonas({ founder: { name: 'Anna Müller' } })",
+      '',
+    ].join('\n'),
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
+    [
+      "import { actor } from '@pikku/better-auth'",
+      'export const auth = () => ({ plugins: [actor({ secret: undefined })] })',
+      '',
+    ].join('\n'),
+    'utf8'
+  )
+  await mkdir(join(root, 'knowledge'), { recursive: true })
+  await writeFile(
+    join(root, 'knowledge', 'index.md'),
+    [
+      '---',
+      'type: overview',
+      'title: Fixture knowledge base',
+      'description: What this app is, for a workspace that has one',
+      '---',
+      '',
+      '# Fixture knowledge base',
+      '',
+      'A workspace with somewhere to write things down.',
+      '',
+    ].join('\n'),
     'utf8'
   )
 }
@@ -137,6 +173,55 @@ describe('pikku workspace validate', () => {
       assert.ok(finding, 'expected pikku-config-no-console-scaffold finding')
       assert.strictEqual(finding!.severity, 'error')
       assert.strictEqual(result.ok, false)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('no personas → warn, and ok stays true', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await rm(join(tmp, 'packages', 'functions', 'src', 'personas.ts'))
+      const result = await runWorkspaceValidate(tmp)
+      const finding = result.findings.find((f) => f.id === 'no-personas')
+      assert.ok(finding, 'expected a no-personas finding')
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('personas without actor sign-in → warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await rm(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts')
+      )
+      const result = await runWorkspaceValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'personas-no-actor-sign-in'
+      )
+      assert.ok(finding, 'expected a personas-no-actor-sign-in finding')
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('no knowledge base → the shared knowledge checker reports it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await rm(join(tmp, 'knowledge'), { recursive: true, force: true })
+      const result = await runWorkspaceValidate(tmp)
+      assert.ok(
+        result.findings.some((f) => f.id === 'knowledge-empty'),
+        'expected a knowledge-empty finding'
+      )
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

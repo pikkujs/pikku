@@ -7,6 +7,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { added, changed, removed, dim } from '../lib/output.js'
 import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
 import { runKnowledgeValidate } from '@pikku/knowledge'
+import { runPersonaChecks } from '../../functions/validate/persona-checks.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -293,6 +294,7 @@ export async function runValidate(
   type PikkuConfig = {
     srcDirectories?: unknown
     outDir?: unknown
+    environments?: unknown
     clientFiles?: unknown
     scaffold?: {
       console?: unknown
@@ -484,6 +486,12 @@ export async function runValidate(
       )
     }
   }
+
+  // ── personas ───────────────────────────────────────────────────────────
+  // Shared with `pikku workspace validate`: the two validators are separate
+  // walks over the same project, and a check only one of them makes is a check
+  // half the projects never see.
+  findings.push(...(await runPersonaChecks(root, pikkuConfig)))
 
   // ── knowledge base ─────────────────────────────────────────────────────
   // Delegated to the shared checker rather than asserting a list of filenames.
