@@ -13,4 +13,6 @@ The two validators were separate implementations that walked the same project an
 
 Two finding ids changed as a result: `pikku-config-no-console-scaffold` → `pikku-config-no-scaffold-console`, and `auth-schema-missing-app-user`/`auth-schema-missing-verification-token` → a single `auth-schema-missing-tables`.
 
+New warning: a project that depends on `@pikku/playwright` but pins `compilerOptions.types` without listing it, since the package types a step's browser bindings by declaration merging and an explicit `types` array never loads it.
+
 New errors: `pikkuScenario`, `pikkuFeature` and `pikkuScenarioStep` must live in a `*.scenario.ts`, `*.scenarios.ts` or `*.steps.ts` file, and `definePersonas`/`runVirtualUser` in a `*.virtual-user.ts` or `*.vu.ts` file, rather than mixed into application code.

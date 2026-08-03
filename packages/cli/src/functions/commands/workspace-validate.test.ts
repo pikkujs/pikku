@@ -235,6 +235,62 @@ describe('pikku workspace validate', () => {
     }
   })
 
+  test('@pikku/playwright must be in tsconfig types when it is installed', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+        type: 'module',
+        dependencies: { zod: '^4' },
+        devDependencies: { '@pikku/playwright': '^0.1.0' },
+      })
+      await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
+        compilerOptions: { types: ['node'] },
+      })
+
+      const withoutIt = await runWorkspaceValidate(tmp)
+      const finding = withoutIt.findings.find(
+        (f) => f.id === 'playwright-types-not-loaded'
+      )
+      assert.ok(finding, 'expected a playwright-types-not-loaded finding')
+      assert.strictEqual(finding.severity, 'warn')
+      assert.match(finding.fixHint, /"@pikku\/playwright"/)
+
+      await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
+        compilerOptions: { types: ['node', '@pikku/playwright'] },
+      })
+      const withIt = await runWorkspaceValidate(tmp)
+      assert.ok(
+        !withIt.findings.some((f) => f.id === 'playwright-types-not-loaded')
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a tsconfig with no explicit types array is left alone', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+        type: 'module',
+        dependencies: { zod: '^4' },
+        devDependencies: { '@pikku/playwright': '^0.1.0' },
+      })
+      await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
+        compilerOptions: { strict: true },
+      })
+
+      const result = await runWorkspaceValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'playwright-types-not-loaded'),
+        'no types array means the compiler already loads what it resolves'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('fabric-only db adapter checks stay out of workspace validate', async () => {
     const tmp = await makeTmp()
     try {

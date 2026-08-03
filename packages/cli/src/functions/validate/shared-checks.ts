@@ -351,6 +351,35 @@ export async function runSharedProjectChecks(
           'Set "zod": "^4" in packages/functions dependencies'
         )
       }
+
+      // @pikku/playwright earns its keep by declaration merging: it is what
+      // puts `page`, `context` and `locate` on a step's `PikkuBrowserWire`. A
+      // merge only applies if the compiler loads the module, and a tsconfig
+      // with an explicit `types` array loads nothing it is not told to. A step
+      // that reaches for `wire.page` without importing the package anywhere in
+      // the program then fails to type-check with a message about a property
+      // that does not exist — which reads like the step is wrong, not the
+      // tsconfig. Listing the package in `types` loads it either way.
+      if (fnDeps['@pikku/playwright']) {
+        const tsconfigPath = join(fnDir, 'tsconfig.json')
+        const tsconfig = await readJsonSafe<{
+          compilerOptions?: { types?: string[] }
+        }>(tsconfigPath)
+        const types = tsconfig?.compilerOptions?.types
+        if (types && !types.includes('@pikku/playwright')) {
+          w(
+            'playwright-types-not-loaded',
+            'packages/functions depends on @pikku/playwright but does not list it in "compilerOptions.types" — the browser bindings it adds to a step (page, context, locate) will not be typed',
+            tsconfigPath,
+            lines(
+              'Add it to the types array in packages/functions/tsconfig.json:',
+              `  "types": ${JSON.stringify([...types, '@pikku/playwright'])}`,
+              'The package declaration-merges PikkuBrowserWire, and an explicit',
+              '`types` array means the compiler only loads what it is told to.'
+            )
+          )
+        }
+      }
     }
 
     const servicesPath = join(fnDir, 'src', 'services.ts')
