@@ -82,7 +82,10 @@ async function testTypedSecretService() {
   // Test 1: getSecret() returns correct types
   console.log('Test 1: Type inference for getSecret()')
 
-  const apiCreds = await secrets.getSecret('EXAMPLE_API_CREDENTIALS')
+  // `getSecret` hands back a `SecretValue`, so the shape is only reachable
+  // through a deliberate `.reveal()` — the typed inference this asserts now
+  // applies to what `.reveal()` returns.
+  const apiCreds = (await secrets.getSecret('EXAMPLE_API_CREDENTIALS')).reveal()
   console.log(`  EXAMPLE_API_CREDENTIALS.apiKey: ${apiCreds.apiKey}`)
   console.log(`  EXAMPLE_API_CREDENTIALS.apiSecret: ${apiCreds.apiSecret}`)
   console.log(`  EXAMPLE_API_CREDENTIALS.baseUrl: ${apiCreds.baseUrl}`)
