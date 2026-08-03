@@ -2,7 +2,6 @@ import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import type { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
-import { claimSingleDeclaration } from '../utils/single-declaration.js'
 
 const SEPARATOR = ':'
 
@@ -98,18 +97,6 @@ export const addSystemRole: AddWiring = (
 
   const sourceFile = node.getSourceFile().fileName
 
-  if (
-    !claimSingleDeclaration(
-      logger,
-      state.systemRoles.files,
-      ErrorCode.DUPLICATE_SYSTEM_ROLE_DEFINITION,
-      'defineSystemRole',
-      sourceFile
-    )
-  ) {
-    return
-  }
-
   for (const prop of unwrapped.properties) {
     if (!ts.isPropertyAssignment(prop)) {
       continue
@@ -165,6 +152,7 @@ export const addSystemRole: AddWiring = (
       | string
       | null
 
+    state.systemRoles.files.add(sourceFile)
     state.systemRoles.definitions.push({
       name,
       displayName: displayName || undefined,

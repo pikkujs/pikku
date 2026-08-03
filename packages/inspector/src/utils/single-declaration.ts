@@ -4,15 +4,22 @@ import type { InspectorLogger } from '../types.js'
 /**
  * Claims the one call site a single-declaration construct is allowed.
  *
- * `defineScope`, `defineSystemRole` and `definePersonas` each take a keyed
- * object, so one call already declares as many entries as you like. Letting the
- * call itself repeat buys nothing and costs the thing that matters: a single
- * place to read the declared set from, and a single place to add to it. The
- * same rule `pikkuBetterAuth` has had all along.
+ * `definePersonas` takes a keyed object, so one call already declares as many
+ * entries as you like. Letting the call itself repeat buys nothing and costs
+ * the thing that matters: a single place to read the declared set from, and a
+ * single place to add to it. The same rule `pikkuBetterAuth` has had all along.
  *
  * A second call in the SAME file is refused too — "the file" is not an answer
  * to "where do I add a persona?" when the file holds two calls, so allowing it
  * would keep the ambiguity the rule exists to remove.
+ *
+ * `defineScope` and `defineSystemRole` held this rule too, briefly, and cannot
+ * until the `admin` tree stops being app-declared: the CLI generates a
+ * `defineScope` of its own in `user-admin.gen.ts`, and `@pikku/addon-console`
+ * spells the same tree out again, so every project scaffolding user-admin had
+ * two and failed to build. Exempting generated files would only reinstate the
+ * ambiguity for them; the fix is to make `admin` a default scope nobody
+ * declares, and the rule comes back once that lands.
  *
  * @param files - The construct's `files` set, which doubles as the claim.
  * @returns true when the caller holds the claim and should carry on.
