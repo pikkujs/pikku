@@ -253,11 +253,11 @@ export const ShellHeader = <T extends string = string>({
       <Paper
         radius={0}
         py={0}
-        px="xl"
         h={50}
         style={{
           display: 'flex',
           alignItems: 'center',
+          paddingInline: 'var(--console-body-gutter, var(--mantine-spacing-xl))',
         }}
       >
         <Group
@@ -359,10 +359,10 @@ export const ShellHeader = <T extends string = string>({
           second toolbar row, pushing the page content below it. */}
       <Collapse expanded={panelOpen && showFunnel}>
         <Box
-          px="xl"
           py="xs"
           style={{
             borderBottom: '1px solid var(--mantine-color-default-border)',
+            paddingInline: 'var(--console-body-gutter, var(--mantine-spacing-xl))',
           }}
         >
           <Group wrap="wrap" gap="sm" align="center">
