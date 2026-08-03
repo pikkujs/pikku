@@ -15,8 +15,50 @@ export interface SchemaStatement {
 
 export type SchemaStatementFactory = (
   db: Kysely<any>,
-  types: RequiredTypes
+  types: RequiredTypes,
+  ctx: SchemaContext
 ) => SchemaStatement
+
+/**
+ * What a statement needs to know about the schema its DDL lands in.
+ *
+ * Only raw SQL needs this. The schema builder learns the schema from the
+ * connection — `withSchema('app')` qualifies every table it names, foreign key
+ * targets included — but a raw fragment is passed through verbatim, so a
+ * statement that spells its own SQL has to spell the qualifier too.
+ */
+export interface SchemaContext {
+  /**
+   * A table as the surrounding DDL addresses it: `"app"."credentials"` on a
+   * schema-bound connection, `"credentials"` otherwise.
+   *
+   * Takes the physical name, not the camelCase one the schema builder accepts.
+   * Raw SQL does not go through `CamelCasePlugin`, so it is already written in
+   * physical names throughout and this is no exception.
+   */
+  table: (name: string) => RawBuilder<unknown>
+}
+
+/**
+ * The `SchemaContext` for DDL that names no schema.
+ *
+ * The default everywhere a schema has not been asked for, which is every engine
+ * but postgres and most postgres projects too.
+ */
+export const unqualifiedContext: SchemaContext = {
+  table: (name) => sql.raw(`"${name}"`),
+}
+
+/**
+ * A `SchemaContext` qualifying every table into `schema`.
+ *
+ * Identifiers are quoted rather than interpolated bare so a schema named after
+ * a reserved word still compiles.
+ */
+export const schemaContext = (schema: string | undefined): SchemaContext =>
+  schema
+    ? { table: (name) => sql.raw(`"${schema}"."${name}"`) }
+    : unqualifiedContext
 
 /**
  * The physical types of the columns named in `requires`, keyed `table.column`.
@@ -82,13 +124,26 @@ export interface SchemaRequirement {
  * Wrap a raw SQL fragment as a statement.
  *
  * For the DDL kysely's schema builder cannot express — a unique index over an
- * expression, say. Note that raw SQL is *not* rewritten by `withSchema`, so a
- * fragment naming a table unqualified will resolve against the connection's
- * search path rather than the schema the rest of the declaration lands in.
+ * expression, say. Raw SQL is *not* rewritten by `withSchema`, so a fragment
+ * naming a table unqualified resolves against the connection's search path
+ * rather than the schema the rest of the declaration lands in. Take the
+ * function form and name tables through `ctx.table` to stay with them; the
+ * bare-fragment form is for SQL that names no table at all.
  */
-export const rawStatement =
-  (fragment: RawBuilder<unknown>): SchemaStatementFactory =>
-  (db) => ({
-    execute: () => fragment.execute(db),
-    compile: () => fragment.compile(db),
-  })
+export function rawStatement(
+  fragment: RawBuilder<unknown>
+): SchemaStatementFactory
+export function rawStatement(
+  build: (ctx: SchemaContext) => RawBuilder<unknown>
+): SchemaStatementFactory
+export function rawStatement(
+  source: RawBuilder<unknown> | ((ctx: SchemaContext) => RawBuilder<unknown>)
+): SchemaStatementFactory {
+  return (db, _types, ctx = unqualifiedContext) => {
+    const fragment = typeof source === 'function' ? source(ctx) : source
+    return {
+      execute: () => fragment.execute(db),
+      compile: () => fragment.compile(db),
+    }
+  }
+}

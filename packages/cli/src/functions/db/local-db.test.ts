@@ -14,6 +14,7 @@ import { sql } from 'kysely'
 
 import {
   resolveDb,
+  desiredRuntimeSchema,
   type ResolvedSqliteDb,
   type SchemaArtifact,
   addonSchemaSources,
@@ -1216,4 +1217,121 @@ describe('parseDatabaseUrl', () => {
       sqliteDb: '/var/data/dev.db',
     })
   })
+})
+
+describe('db.schema', () => {
+  test('resolveDb carries the schema onto a postgres database', () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root, undefined, 'app')!
+
+    assert.equal(resolved.dialect, 'postgres')
+    if (resolved.dialect !== 'postgres') throw new Error('expected postgres')
+    assert.equal(resolved.schema, 'app')
+  })
+
+  test('resolveDb leaves it unset when nothing asked for one', () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root)!
+
+    assert.equal(resolved.dialect, 'postgres')
+    if (resolved.dialect !== 'postgres') throw new Error('expected postgres')
+    assert.equal(resolved.schema, undefined)
+  })
+
+  test('resolveDb refuses it on sqlite rather than silently ignoring it', () => {
+    // sqlite's REFERENCES clause takes a bare table name, so there is no
+    // qualified DDL to generate — and a setting that does nothing is worse
+    // than one that says so.
+    assert.throws(
+      () =>
+        resolveDb(
+          { sqliteDb: '.pikku-runtime/dev.db' },
+          root,
+          root,
+          undefined,
+          'app'
+        ),
+      /db\.schema is set to 'app'.*sqlite/s
+    )
+  })
+
+  test('the runtime SQL is qualified while the table names stay bare', async () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root, undefined, 'app')!
+    const logger = {
+      error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+    }
+
+    const runtime = await desiredRuntimeSchema(resolved, root, ['src'], logger)
+
+    assert.match(runtime.sql, /create table "app"\./)
+    assert.doesNotMatch(
+      runtime.sql,
+      /create table "(?!app")[^"]+" \(/,
+      'every runtime table belongs in the configured schema'
+    )
+
+    // The table map is what drift and coverage compare on, and those speak bare
+    // names throughout. Qualifying it would make every table look unrecorded.
+    for (const table of runtime.tables.keys()) {
+      assert.doesNotMatch(table, /\./, `${table} should be a bare name`)
+    }
+    assert.ok(runtime.tables.has('workflow_step'))
+  })
+
+  test('without a schema the same SQL is unqualified', async () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root)!
+    const logger = {
+      error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+    }
+
+    const runtime = await desiredRuntimeSchema(resolved, root, ['src'], logger)
+
+    assert.doesNotMatch(runtime.sql, /"app"\./)
+    assert.match(runtime.sql, /create table "workflow_step"/i)
+  })
+})
+
+/**
+ * The case the option was added for.
+ *
+ * A project whose migrations already create the runtime tables but are a column
+ * short — what upgrading `@pikku/kysely` looks like — gets a delta rather than
+ * the whole schema. The delta is written from bare introspected names, so it is
+ * the one output that does not inherit the qualification from the compiled SQL
+ * and has to be given it. Unqualified, `ALTER TABLE workflow_step` resolves
+ * against `search_path` and alters a table in `public` that nothing reads.
+ */
+test('db generate qualifies the ALTER TABLE delta too', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE SCHEMA IF NOT EXISTS app;
+
+CREATE TABLE app.workflow_step (
+  run_id TEXT NOT NULL,
+  step_name TEXT NOT NULL
+);
+`,
+  })
+  const resolved = resolveDb({}, root, root, undefined, 'app')!
+
+  const { written } = await generateMigrations(resolved, root, ['src'], {
+    error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+  })
+
+  const migration = written.find((w) => w.source === 'pikku-runtime')
+  assert.ok(migration, 'the runtime source got a migration')
+  const body = readFileSync(migration.file, 'utf8')
+
+  // The column the covered table is missing, as an alteration of the table in
+  // `app` — not of whatever `workflow_step` resolves to.
+  assert.match(body, /ALTER TABLE app\.workflow_step ADD COLUMN/)
+  assert.doesNotMatch(
+    body,
+    /ALTER TABLE workflow_step /,
+    'an unqualified ALTER would land in whichever schema search_path finds'
+  )
+
+  // And the tables it does create wholesale are qualified as well.
+  assert.match(body, /create table "app"\./i)
 })

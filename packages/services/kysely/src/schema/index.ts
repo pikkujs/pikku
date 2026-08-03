@@ -1,8 +1,10 @@
 import { CamelCasePlugin, type Kysely } from 'kysely'
-import type {
-  PikkuSchema,
-  RequiredTypes,
-  SchemaRequirement,
+import {
+  schemaContext,
+  type PikkuSchema,
+  type RequiredTypes,
+  type SchemaContext,
+  type SchemaRequirement,
 } from './pikku-schema.types.js'
 import { aiSchema } from './ai.schema.js'
 import { channelSchema } from './channel.schema.js'
@@ -17,11 +19,17 @@ import { workflowSchema } from './workflow.schema.js'
 export type {
   PikkuSchema,
   RequiredTypes,
+  SchemaContext,
   SchemaRequirement,
   SchemaStatement,
   SchemaStatementFactory,
 } from './pikku-schema.types.js'
-export { rawStatement, requiredType } from './pikku-schema.types.js'
+export {
+  rawStatement,
+  requiredType,
+  schemaContext,
+  unqualifiedContext,
+} from './pikku-schema.types.js'
 
 /**
  * Every table the pikku runtime needs, in dependency order.
@@ -52,6 +60,29 @@ export const pikkuSchemas: PikkuSchema[] = [
  * silently creates quoted camelCase tables that nothing can read.
  */
 const bind = (db: Kysely<any>) => db.withPlugin(new CamelCasePlugin())
+
+/**
+ * The schema a connection is bound to, or `undefined` for one that is not.
+ *
+ * Read back out of compiled DDL rather than off the connection, because kysely
+ * keeps the `withSchema(...)` setting inside its executor and exposes no way to
+ * ask. Compiling a throwaway `create table` is the same trick `declaredTables`
+ * uses on the real statements, against the same regex — nothing is executed and
+ * the probe never leaves this function.
+ *
+ * Derived rather than passed in so that raw statements follow whatever
+ * connection they are handed. A caller that had to remember to say the schema
+ * twice would eventually say it once.
+ */
+const boundSchema = (db: Kysely<any>): string | undefined =>
+  CREATE_TABLE.exec(
+    db.schema.createTable('pikkuSchemaProbe').addColumn('id', 'text').compile()
+      .sql
+  )?.[1]
+
+/** The context for statements compiled against `db`, matching its binding. */
+const contextFor = (db: Kysely<any>): SchemaContext =>
+  schemaContext(boundSchema(db))
 
 export interface UnmetRequirement {
   schema: PikkuSchema
@@ -141,9 +172,10 @@ export const applyPikkuSchemas = async (
 
   await db.transaction().execute(async (trx) => {
     const bound = bind(trx)
+    const ctx = contextFor(bound)
     for (const schema of schemas) {
       for (const statement of schema.statements) {
-        const query = statement(bound, types)
+        const query = statement(bound, types, ctx)
         try {
           await query.execute()
         } catch (error) {
@@ -239,9 +271,10 @@ export const declaredTables = (
   db: Kysely<any>
 ): DeclaredTable[] => {
   const bound = bind(db)
+  const ctx = contextFor(bound)
   const tables: DeclaredTable[] = []
   for (const statement of schema.statements) {
-    const match = CREATE_TABLE.exec(statement(bound, {}).compile().sql)
+    const match = CREATE_TABLE.exec(statement(bound, {}, ctx).compile().sql)
     if (match) tables.push({ schema: match[1], name: match[2]! })
   }
   return tables
@@ -357,17 +390,26 @@ export const ensurePikkuSchema = async (
  * `types` comes from `resolveRequirements` against the database the migration
  * is being written for. Omit it and foreign keys onto another source's columns
  * compile as `text`, which is a shape, not a migration.
+ *
+ * `schema` qualifies every table the migration creates, for a project that
+ * keeps the runtime tables somewhere other than the default search path. It is
+ * applied here and not to `db` itself because the caller's connection is a
+ * throwaway the declaration was just *applied* to, in whatever schema that
+ * database actually has — qualifying that would create tables in a schema the
+ * scratch database has never heard of. Only the rendered SQL is bound.
  */
 export const compilePikkuSchemas = (
   db: Kysely<any>,
   schemas: PikkuSchema[] = pikkuSchemas,
-  types: RequiredTypes = {}
+  types: RequiredTypes = {},
+  schemaName?: string
 ): string => {
-  const bound = bind(db)
+  const bound = schemaName ? bind(db).withSchema(schemaName) : bind(db)
+  const ctx = contextFor(bound)
   return schemas
     .flatMap((schema) =>
       schema.statements.map(
-        (statement) => `${statement(bound, types).compile().sql};`
+        (statement) => `${statement(bound, types, ctx).compile().sql};`
       )
     )
     .join('\n\n')

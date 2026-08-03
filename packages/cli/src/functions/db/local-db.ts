@@ -83,6 +83,14 @@ export interface ResolvedPostgresDb extends ResolvedDbBase {
    * a migration that needs an extension needs it here too.
    */
   pgliteExtensions: string[]
+  /**
+   * The schema generated migrations create their tables in, from `db.schema`.
+   *
+   * Postgres only — hence its absence from `ResolvedSqliteDb` rather than a
+   * runtime check. sqlite's `REFERENCES` clause takes a bare table name, so
+   * qualified DDL does not compile there at all.
+   */
+  schema?: string
 }
 
 export type ResolvedDb = ResolvedSqliteDb | ResolvedPostgresDb
@@ -111,7 +119,8 @@ export function resolveDb(
   userConfig: UserConfigShape,
   rootDir: string,
   outDir: string,
-  runtimeDir?: string
+  runtimeDir?: string,
+  schema?: string
 ): ResolvedDb | null {
   const resolvedRuntimeDir = runtimeDir
     ? resolveAgainst(rootDir, runtimeDir)
@@ -151,6 +160,7 @@ export function resolveDb(
       runtimeDir: resolvedRuntimeDir,
       seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
       pgliteExtensions,
+      schema,
       ...base('db/postgres'),
     }
   }
@@ -162,6 +172,14 @@ export function resolveDb(
       : undefined)
 
   if (sqliteDb) {
+    if (schema) {
+      throw new Error(
+        `db.schema is set to '${schema}', but the resolved database is sqlite. ` +
+          'sqlite has one schema to be in, and its REFERENCES clause takes a bare ' +
+          'table name, so qualified DDL does not compile there. Remove db.schema, ' +
+          'or configure postgres.'
+      )
+    }
     return {
       dialect: 'sqlite',
       dbFile: resolveAgainst(rootDir, sqliteDb),
@@ -179,6 +197,7 @@ export function resolveDb(
       runtimeDir: resolvedRuntimeDir,
       seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
       pgliteExtensions,
+      schema,
       ...base('db/postgres'),
     }
   }
@@ -1157,7 +1176,7 @@ export async function desiredRuntimeSchema(
       )
       return {
         tables,
-        sql: compilePikkuSchemas(kysely, schemas, types),
+        sql: compilePikkuSchemas(kysely, schemas, types, resolved.schema),
         skipped,
       }
     } finally {
@@ -1424,6 +1443,17 @@ export interface SchemaSource {
   desired: DesiredSchema
   /** Prose for the migration header, saying where the SQL came from. */
   origin: string
+  /**
+   * The schema this source's SQL is qualified into, when it is.
+   *
+   * Carried per source rather than read off the resolved database because only
+   * the sources pikku compiles can honour it. Better Auth writes its own
+   * migration SQL through its own migrator and an addon ships SQL as text —
+   * neither goes through the schema builder, so neither can be qualified from
+   * here, and claiming otherwise on their behalf would emit a delta that names
+   * a table in a schema their `CREATE TABLE` never put it in.
+   */
+  schema?: string
 }
 
 // ─── The addon schema channel ────────────────────────────────────────────────
@@ -1625,6 +1655,7 @@ export async function schemaSources(
       name: 'pikku-runtime',
       desired: runtime,
       origin: "@pikku/kysely's runtime services",
+      schema: resolved.dialect === 'postgres' ? resolved.schema : undefined,
     })
   }
 
@@ -1742,12 +1773,24 @@ export async function generateMigrations(
       continue
     }
 
-    const partial = [...source.desired.tables.keys()].some((t) =>
-      covered.has(t)
+    // Matched the same way `diffSchemas` matches, qualifier and all. A project
+    // that keeps its tables in a schema has them covered as `app.workflow_step`
+    // while the declaration names them bare, so a strict `covered.has(t)` reads
+    // "nothing is covered" and re-emits the whole schema over tables that are
+    // already there.
+    const partial = [...source.desired.tables.keys()].some(
+      (t) => covered.has(t) || schemaQualifiedMatch(covered, t) !== undefined
     )
 
     let body: string
     let needsBackfill: string[] = []
+
+    // The source's own SQL is already qualified when it can be; the delta below
+    // is written here from bare introspected names, so it has to be qualified
+    // to match, or it alters a table in whichever schema `search_path` finds.
+    const qualify = (table: string) =>
+      source.schema ? `${source.schema}.${table}` : table
+
     if (!partial) {
       body = source.desired.sql
     } else {
@@ -1769,7 +1812,7 @@ export async function generateMigrations(
           `-- REVIEW: ${table} is new, and its CREATE TABLE could not be found in the\n` +
             `-- source's own SQL. The column list below carries no indexes, constraints\n` +
             `-- or foreign keys — copy the real statement over it before applying.\n` +
-            `CREATE TABLE ${table} (\n` +
+            `CREATE TABLE ${qualify(table)} (\n` +
             [...(columns?.values() ?? [])]
               .map(
                 (c) => `  ${c.name} ${c.type}${c.notNull ? ' NOT NULL' : ''}`
@@ -1782,7 +1825,7 @@ export async function generateMigrations(
         const infos = columns
           .map((name) => source.desired.tables.get(table)?.get(name))
           .filter((c): c is ColumnInfo => c !== undefined)
-        const added = addColumnStatements(table, infos)
+        const added = addColumnStatements(qualify(table), infos)
         statements.push(...added.sql)
         needsBackfill.push(...added.needsBackfill)
       }

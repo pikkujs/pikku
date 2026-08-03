@@ -7,8 +7,9 @@ import { rawStatement, type PikkuSchema } from './pikku-schema.types.js'
  * The uniqueness rule is an expression index — `user_id` is nullable and two
  * rows with a null user must still collide on name — which the schema builder
  * cannot express, so it stays raw. Raw SQL is not rewritten by `withSchema`,
- * which is why the table is named explicitly rather than left to the search
- * path.
+ * which is why the table goes through `ctx.table` rather than being left to the
+ * search path. The index's own name stays unqualified: an index belongs to the
+ * schema of the table it is on, and postgres rejects one that says otherwise.
  */
 export const credentialSchema: PikkuSchema = {
   name: 'credential',
@@ -29,7 +30,8 @@ export const credentialSchema: PikkuSchema = {
         ),
 
     rawStatement(
-      sql`CREATE UNIQUE INDEX credentials_name_user_id_unique ON credentials (name, COALESCE(user_id, ''))`
+      ({ table }) =>
+        sql`CREATE UNIQUE INDEX credentials_name_user_id_unique ON ${table('credentials')} (name, COALESCE(user_id, ''))`
     ),
 
     (db) =>
