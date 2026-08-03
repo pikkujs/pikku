@@ -281,6 +281,31 @@ describe('addPersonas inspector', () => {
     )
   })
 
+  // The CLI scaffolds personas of its own, and nobody adds a persona to a file
+  // the next codegen run overwrites — so a generated declaration neither takes
+  // the single slot nor collides with the app's own.
+  test('a generated declaration neither claims the slot nor conflicts', async () => {
+    const { state, criticals } = await inspectSources({
+      'pikku-personas.gen.ts': [
+        "import { definePersonas } from '@pikku/core/persona'",
+        "definePersonas({ dave: { name: 'Dave' } })",
+      ].join('\n'),
+      'personas.ts': withRoles("definePersonas({ susan: { name: 'Susan' } })"),
+    })
+
+    assert.deepEqual(
+      criticals.filter(
+        (c) => c.code === ErrorCode.DUPLICATE_PERSONAS_DEFINITION
+      ),
+      [],
+      `expected no duplicate critical, got ${JSON.stringify(criticals)}`
+    )
+    assert.deepEqual(state.personas.definitions.map((d) => d.id).sort(), [
+      'dave',
+      'susan',
+    ])
+  })
+
   // A half-read roles array typechecks, runs, and grants less than the source
   // says — so an unreadable one reads as absent.
   test('a computed roles array is not half-extracted', async () => {

@@ -216,6 +216,33 @@ describe('addScope inspector', () => {
     )
   })
 
+  // The CLI scaffolds a scope tree of its own — `user-admin.gen.ts` declares the
+  // whole `admin` tree — so a generated declaration cannot be made to compete
+  // with the app's own for the single slot.
+  test('a generated declaration neither claims the slot nor conflicts', async () => {
+    const { state, criticals } = await inspectSources({
+      'user-admin.gen.ts': [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ admin: {} })',
+      ].join('\n'),
+      'scopes.ts': [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ billing: {} })',
+      ].join('\n'),
+    })
+
+    assert.deepEqual(
+      criticals.filter((c) => c.code === ErrorCode.DUPLICATE_SCOPE_DEFINITION),
+      [],
+      `expected no duplicate critical, got ${JSON.stringify(criticals)}`
+    )
+    assert.deepEqual(
+      state.scopes.definitions.map((d) => d.name).sort(),
+      ['admin', 'billing'],
+      "both the generated tree and the app's own must survive"
+    )
+  })
+
   test('is critical when a root embeds the separator', async () => {
     const { criticals } = await inspectSource(
       [
