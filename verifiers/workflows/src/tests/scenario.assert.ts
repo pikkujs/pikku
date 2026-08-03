@@ -98,8 +98,7 @@ describe('pikkuScenario verification', () => {
   })
 
   test('codegen: definePersonas generates the typed registry, addresses and all', async () => {
-    const gen =
-      await import('../../.pikku/workflow/pikku-personas.gen.js')
+    const gen = await import('../../.pikku/workflow/pikku-personas.gen.js')
     assert.deepEqual(Object.keys(gen.personaConfigs).sort(), [
       'customer',
       'ops',
@@ -116,6 +115,26 @@ describe('pikkuScenario verification', () => {
     })
     assert.equal(actors.customer.name, 'customer')
     assert.equal(typeof actors.ops.invoke, 'function')
+  })
+
+  test('codegen: declaring personas declares the actor sign-in secret', async () => {
+    // Nothing in this verifier's source declares SCENARIO_ACTOR_SECRET. It is
+    // the platform's — the scenario service and `pikku persona` read it, no app
+    // code does — so the personas scaffold declares it, the way the auth
+    // scaffold declares BETTER_AUTH_SECRET. A project that has to hand-write it
+    // is a project that finds out it is missing at the first actor sign-in.
+    const meta = JSON.parse(
+      await readFile(
+        join(__dirname, '../../.pikku/secrets/pikku-secrets-meta.gen.json'),
+        'utf-8'
+      )
+    )
+    const secret = meta['scenarioActorSecret']
+    assert.ok(
+      secret,
+      `scenarioActorSecret not in the secrets manifest, got: ${Object.keys(meta).join(', ')}`
+    )
+    assert.equal(secret.secretId, 'SCENARIO_ACTOR_SECRET')
   })
 
   test('runtime: actor steps route through injected actors, internal steps stay in-process', async () => {
