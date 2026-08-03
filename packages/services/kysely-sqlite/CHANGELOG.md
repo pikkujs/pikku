@@ -1,5 +1,37 @@
 # @pikku/kysely-sqlite
 
+## 0.12.10
+
+### Patch Changes
+
+- 9d62571: Make user-defined SQL functions an explicit, checked capability of the SQLite drivers.
+
+  `node:sqlite` can register scalar UDFs (`db.function()`); `bun:sqlite` cannot. Until now
+  neither driver mentioned that, so an app that registered a UDF by reaching for the raw
+  connection worked on Node and, on bun, failed as `no such function: …` from whichever
+  query used it — typically one endpoint breaking in production while everything else
+  looked healthy.
+
+  Both drivers now export `registerSqliteFunctions(db, functions)` and accept a
+  `functions` option on `createNodeSqliteKysely` / `createBunSqliteKysely`. The Node
+  implementation registers them as deterministic; the bun implementation throws
+  `SqliteFunctionsUnsupportedError` — exported from `@pikku/kysely-sqlite`, and naming
+  every function requested — so the incompatibility surfaces at wiring time with a message
+  saying what to do about it.
+
+- Updated dependencies [32277d5]
+- Updated dependencies [ea8aabf]
+- Updated dependencies [33e96ab]
+- Updated dependencies [fd72e58]
+- Updated dependencies [cabd9dc]
+- Updated dependencies [fd72e58]
+- Updated dependencies [fd72e58]
+- Updated dependencies [894b2f8]
+- Updated dependencies [dd19aa7]
+- Updated dependencies [50ec500]
+  - @pikku/core@0.12.75
+  - @pikku/kysely@0.13.8
+
 ## 0.12.9
 
 ### Patch Changes

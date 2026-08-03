@@ -1,3 +1,234 @@
+## 0.12.97
+
+### Patch Changes
+
+- fb1d853: Stop `getFileImportRelativePath` doing path arithmetic on bare package specifiers. The bootstrap zero state records core's types as `typePath: '@pikku/core'` — already an import specifier, where every other producer of that field supplies a file on disk — so relativising it produced `../../@pikku/core`: a directory that does not exist, extensionless, which `nodenext` then refuses to resolve (TS2834). The existing node_modules branch could not catch these, having no `node_modules/` in the string to key off. A `to` that starts with neither `.`, `/` nor a drive letter is now returned unchanged.
+- a1ab24f: fix(cli): pick the CLI channel client's WebSocket by runtime, and fix the direct-execution check
+
+  The generated CLI-over-channel client always reached for the `ws` module when it had credentials to send, because Node's global `WebSocket` reads its second argument as subprotocols and silently drops custom headers. Bun's honours them, so it now uses the native `WebSocket` there and never loads Bun's `ws` compatibility shim. The runtime is detected once, the same way the CLI picks its dev-server runner.
+
+  Both generated CLI entrypoints also guarded direct execution by comparing `import.meta.url` against a hand-built `file://` path from `process.argv[1]`. That is false for any CLI invoked through a symlinked `node_modules/.bin/<name>` — Node reports the symlink in argv and the realpath in the URL — so the block never ran. It also failed on paths needing percent-encoding, such as one containing a space. Both now use `import.meta.main`, falling back to a realpath comparison on Node before 24.2.
+
+- ea8aabf: Serve `LocalContent` uploads and signed reads under Bun.
+
+  `LocalContent` hands the browser a `PUT <uploadUrlPrefix>/<key>` upload URL and a signed
+  `GET <assetUrlPrefix>/<key>` read URL, but it is a `ContentService` and cannot answer
+  either — something in the serving path has to. Only `@pikku/node-http-server` did. The
+  same project served under Bun handed out upload URLs that 404ed, with nothing naming the
+  cause: the config was accepted, the service was constructed, and the URLs looked right.
+
+  `@pikku/core` now exports `createLocalContentRequestHandler` from
+  `@pikku/core/services/local-content-request-handler` — the server half of `LocalContent`,
+  expressed in Web `Request`/`Response` so every runtime shares one implementation of the
+  signature check rather than each re-deriving it. It returns `null` for anything that is
+  not a content request, which is the caller's signal to carry on with its normal routing.
+
+  `PikkuBunServer` accepts `config.content` and a `contentSigningJWT` option, mirroring
+  `PikkuNodeHTTPServer`, and answers both prefixes ahead of static mounts and routing.
+  `BunServerRunner` was dropping `contentSigningJWT` on the floor, which silently disabled
+  signed asset reads for every Bun project even once the prefixes were served — the config
+  arrived, the service that verifies its signatures did not.
+
+  Signed reads are refused unless every claim matches, the path included: without that, a
+  signature minted for one asset would read any other.
+
+- 33e96ab: Make a CLI served over a channel typecheck in a real project.
+
+  Both of these are unreachable for a hand-written `wireChannel`, whose routes are usually
+  bare identifiers, and unavoidable for a CLI one, whose routes are command ids.
+
+  `ChannelsMap` emitted route and message keys unquoted. A command id is a kebab or dotted
+  name far more often than not — `app-smoke`, `registry.search`, `package.upgrade-pikku` —
+  and each one ends the property early, so the generated map is not parseable TypeScript at
+  all. One project's map came out with 107 syntax errors from a single CLI channel. Keys are
+  now quoted when they are not bare identifiers, and left alone when they are, so existing
+  generated output is unchanged.
+
+  `executeRawCLIViaChannel` typed its renderers `Record<string, CorePikkuCLIRender<any>>`,
+  whose services parameter defaults to `CoreServices`. The renderers a generated client
+  passes are the app's own, typed against its `SingletonServices`, and a function taking
+  those is not assignable to one taking `CoreServices` — so the generated client failed to
+  compile for any app that adds a service, which is every app.
+
+  Rather than widen the type, it now says what is actually true on that side of the socket:
+  a renderer running on the client gets a logger and nothing else, because there is no
+  service container there to resolve anything from. `CorePikkuCLIClientRender` and
+  `ClientCLIRenderServices` are new exports of `@pikku/core/cli/channel`. They are not
+  expressible as `CorePikkuCLIRender`, whose `Services` parameter is constrained to
+  `CoreSingletonServices` and so demands a `config`, `variables` and `secrets` the client
+  cannot invent. The one cast from the app's renderer type to that shape is localised to the
+  generated client, where it is sound: generation refuses to emit the file at all if a
+  renderer reaches for a service other than `logger`.
+
+- e40b8f1: `db generate` and `db check` now agree with PostgreSQL about which schema a runtime table lives in, when `db.schema` names one.
+
+  Coverage matching let a copy of a runtime table in another schema satisfy a source whose tables belong in the configured one, so `db generate` could call the source up to date having created nothing there. The generated `ALTER TABLE` delta inserted the schema raw, and PostgreSQL folds an unquoted identifier, so a mixed-case `db.schema` altered a table the runtime never reads. `db check` reported the configured schema's tables as living in `public`.
+
+- fd72e58: Drop `scenario.step` — a scenario step is now always a `given`, `when` or
+  `then`.
+
+  `step` rendered no keyword, which made it the phase to reach for whenever a
+  step did not obviously fit one of the three. That is exactly the step a reader
+  cannot check: a scenario is read by people deciding whether it describes the
+  behaviour they wanted, and a row that says what it does without saying whether
+  it is setup, action or claim tells them nothing to agree or disagree with. It
+  was also the escape hatch from the assertion lint — a scenario with no `then`
+  could be made to stop complaining by demoting its steps rather than by
+  asserting anything.
+
+  Replace `scenario.step(...)` with whichever of `given`, `when` or `then` the
+  step actually is. `then` is not a rename: it makes the step's bindings
+  witnesses rather than alternatives, so every declared surface runs and they
+  must agree.
+
+- 6280ce4: `pikku fabric validate` now checks that a frontend with a login screen also ships the
+  one-click actor sign-in.
+
+  The dev-only "Sign in as …" switcher is what lets anyone open a sandbox and view the app
+  as each scenario persona without knowing a password. When a generated app shipped a login
+  form and nothing else, the reviewer was locked out of their own project — and nothing
+  caught it until someone tried to log in by hand.
+
+  The check fires only when the app actually has a login surface, so an app with no auth is
+  left alone. It looks for the canonical fingerprints — a rendered `<DevActorSwitcher />`, a
+  call to `signInAsActor()`, or a request to `/auth/sign-in/actor` — and reports
+  `app-missing-actor-quick-login-<app>` as an error when a login screen exists without any
+  of them. Defining the switcher without rendering it does not count.
+
+  Next.js apps keep their routes outside `src/`, so `app/` and `pages/` are scanned too.
+
+- cabd9dc: Add a `db.schema` CLI config option, so `pikku db generate` can write the runtime tables into a named postgres schema.
+
+  Without it the generator emits unqualified `create table` against the default `search_path` of `"$user", public`. A project that keeps everything in one namespace — `app`, say — gets a second copy of every runtime table in `public` alongside the ones it already has, which is how stray `public.ai_*` tables appear next to the real `app.ai_*` ones.
+
+  `compilePikkuSchemas` takes the schema and binds only the rendered SQL, never the caller's connection: that connection is the throwaway database the declaration was just applied to, and qualifying it would create tables in a schema the scratch database has never heard of.
+
+  Raw SQL is not rewritten by `withSchema`, so `rawStatement` now also accepts a builder taking a `SchemaContext` — the expression index on `credentials` uses it to qualify its own table. Statements otherwise pick the context up from whatever connection they are handed, so a schema-bound connection needs nothing said twice.
+
+  Two fixes fall out of it:
+  - The `ALTER TABLE` delta for a partially covered source is written from bare introspected names, so it is qualified explicitly. Unqualified it altered a table in whichever schema `search_path` found.
+  - A source was only counted as partially covered on an exact name match, so a project whose migrations already create `app.workflow_step` read as "nothing covered" and had its whole schema re-emitted over tables that were already there. It now matches the schema qualifier the same way the drift diff does.
+
+  `db.schema` is postgres only, and is rejected with an explanation on sqlite, whose `REFERENCES` clause takes a bare table name.
+
+- 4e180ed: validate: warn when a project declares no personas, wires no actor sign-in, or configures no environments
+
+  The checks live in one shared module and run from both `pikku workspace validate` and `pikku fabric validate`, so a project sees them whichever command it uses. Workspace validate now also runs the knowledge-base checks fabric validate already ran. Everything reported here is a warning — a project with no personas is under-tested, not broken.
+
+- 8fe342b: validate: `pikku fabric validate` is now `pikku workspace validate` plus the deploy checks
+
+  The two validators were separate implementations that walked the same project and emitted sixteen identical findings. The shared half moved into one module both call, which also fixes four things the duplication was hiding:
+  - fabric validate now checks zod v4 and `packages/functions/package.json`, and reports a corrupt `pikku.config.json` as corrupt rather than missing
+  - workspace validate now checks all five scaffold flags, not just `console`
+  - the auth checks were gated on `betterAuthSession` and never fired for apps wiring the stateless variant; they now match either
+  - they read migrations from `<root>/db/<engine>/`, where `pikku db migrate` reads them, and look for better-auth's own tables (`user`, `session`, `account`, `verification`) instead of `app_user`/`auth_verification_token`, which no scaffold ever generated
+
+  Two finding ids changed as a result: `pikku-config-no-console-scaffold` → `pikku-config-no-scaffold-console`, and `auth-schema-missing-app-user`/`auth-schema-missing-verification-token` → a single `auth-schema-missing-tables`.
+
+  New warning: a project that depends on `@pikku/playwright` but pins `compilerOptions.types` without listing it, since the package types a step's browser bindings by declaration merging and an explicit `types` array never loads it.
+
+  New errors: `pikkuScenario`, `pikkuFeature` and `pikkuScenarioStep` must live in a `*.scenario.ts`, `*.scenarios.ts` or `*.steps.ts` file, and `definePersonas`/`runVirtualUser` in a `*.virtual-user.ts` or `*.vu.ts` file, rather than mixed into application code.
+
+- 4a3bb6d: Declare `SCENARIO_ACTOR_SECRET` from the personas scaffold instead of leaving every project to hand-write it. Nothing in app code reads the actor sign-in secret — the scenario service, `pikku scenario`, `pikku persona`, `pikku persona sync` and the Playwright provider do — so a project that declares personas now gets a generated `pikku-personas-secrets.gen.ts` beside its personas file, and the platform collects the value the way it already collects `BETTER_AUTH_SECRET`. The file is removed again when the last persona goes.
+
+  The post-auth secret/credential/variable re-run is now a post-scaffold re-run, gated on personas as well as auth. Both scaffolds write `defineSecret` calls after `pikkuSecrets` has already read the inspector state, so without it the declaration only appeared on a second `pikku` run — and a cold project would deploy without ever being asked for the value.
+
+- 4f8fd25: Let a project declare the Postgres extensions its embedded PGlite databases need
+
+  The CLI migrates a PGlite shadow database to type and diff a schema, and PGlite
+  only has the extensions it was constructed with — pgcrypto, and nothing else.
+  A migration doing `CREATE EXTENSION vector` therefore failed every `db` command
+  with `extension "vector" is not available`, whatever the real server had, and
+  there was no way to say otherwise.
+
+  `createConfig` now takes `pgliteExtensions`. A bare name is one of PGlite's
+  bundled contrib extensions and needs no install; anything else is a package the
+  project depends on:
+
+  ```ts
+  export const createConfig = async () => ({
+    postgresUrl: process.env.DATABASE_URL,
+    pgliteExtensions: ['@electric-sql/pglite-pgvector', 'hstore'],
+  })
+  ```
+
+  They are loaded into both embedded databases — the local dev one and the shadow
+  — and resolved from the project before the CLI, so the version the project
+  installed is the one that runs. Declared for a `postgresUrl` project too: the
+  shadow is PGlite whichever server the app itself talks to.
+
+  An extension that is used but not declared now says so, rather than reporting
+  Postgres' own message about an unavailable extension with nothing pointing at
+  the config that would have loaded it.
+
+- dd19aa7: Drop `scopes` from sessionless functions, rename `selfAuthenticated`, and make both
+  escape hatches opt-in.
+
+  **`scopes` are gone from `pikkuSessionlessFunc`.** They are AND-ed and `verifyScopes`
+  fails closed on a session that does not exist, so every scope listed on a sessionless
+  function rejected the anonymous caller it exists to serve. `CorePikkuSessionlessFunctionConfig`
+  now states this once in core, and the generated `pikkuSessionlessFunc` / `pikkuVoidFunc`
+  configs derive from it — so the field is absent rather than subtracted.
+
+  `@pikku/addon-console`'s `installAddon` and `installOpenapiAddon` are now `pikkuFunc`.
+  Both set `auth: true` and `scopes: ['admin']`, and a test exercises that gate, so the
+  scopes were load-bearing — they only compiled as sessionless because the config accepted
+  a field it could not honour. No behaviour change: both already required a session.
+
+  **`selfAuthenticated` is now `permissionsInBody`.** It never described authentication:
+  what it records is that the permission check lives in the function body rather than in a
+  declared `permissions` entry.
+
+  **Both escape hatches must be opted into**, via a new `allow` block in
+  `pikku.config.json`:
+
+  ```json
+  "allow": { "permissionsInBody": true, "complexWorkflows": true }
+  ```
+
+  Unset means unavailable, and using the feature is a build error naming the flag that
+  would permit it — PKU576 for `permissionsInBody`, PKU643 for `pikkuWorkflowComplexFunc`.
+  Both trade something the tooling can inspect for something only a reader can verify: a
+  permission check buried in a body, or workflow steps that cannot be serialized into the
+  graph, replayed, or migrated. Both are occasionally right, and both are the path of least
+  resistance whenever the declarative form is merely inconvenient. Whoever owns the project
+  makes that call once, in writing, instead of every author making it silently at the call
+  site.
+
+  **PKU574's message no longer contradicts any of this.** Every function it reports is
+  sessionless — that is how the population is selected, not a finding — yet it opened by
+  reporting that they "require neither a session", then advised adding scopes. It now names
+  them as sessionless and recommends only gates an anonymous caller can meet:
+  `permissions`, `auth: true`, `wireAddon({ auth: true })`, or dropping `expose: true`.
+  `permissionsInBody` is deliberately absent from that list: a diagnostic should not
+  advertise its own escape hatch.
+
+- 75e81b1: `pikku workspace validate` now warns when a project boots its own server instead of using the `pikkuServerLifecycle` hooks.
+
+  It fires only when the root `start`/`dev` script starts a server without `pikku dev` / `pikku serve` **and** no Pikku runtime adapter (`@pikku/express`, `@pikku/fastify`, `@pikku/uws`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/next`, …) is installed — depending on an adapter means the hand-rolled entrypoint is deliberate, since `pikku serve` cannot host those runtimes. Scripts that delegate (turbo, nx, `yarn workspace`, npm-run-all, …) are not flagged either.
+
+  Opt out — or escalate to an error — with `"lint": { "customServerBootstrap": "off" }` in `pikku.config.json`.
+
+- Updated dependencies [32277d5]
+- Updated dependencies [ea8aabf]
+- Updated dependencies [33e96ab]
+- Updated dependencies [fd72e58]
+- Updated dependencies [d041d5b]
+- Updated dependencies [cabd9dc]
+- Updated dependencies [fd72e58]
+- Updated dependencies [fd72e58]
+- Updated dependencies [894b2f8]
+- Updated dependencies [dd19aa7]
+- Updated dependencies [50ec500]
+- Updated dependencies [75e81b1]
+- Updated dependencies [9d62571]
+  - @pikku/core@0.12.75
+  - @pikku/bun-server@0.12.5
+  - @pikku/inspector@0.12.53
+  - @pikku/skills@0.12.5
+  - @pikku/kysely@0.13.8
+  - @pikku/kysely-node-sqlite@0.12.4
+
 ## 0.12.96
 
 ### Patch Changes

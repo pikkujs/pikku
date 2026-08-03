@@ -1,3 +1,51 @@
+## 0.12.52
+
+### Patch Changes
+
+- fd72e58: Make personas a first-class surface rather than a detail of the test runner.
+
+  A persona is now read in three places — the knowledge base resolves `persona:`
+  URIs against it, scenarios cast it as an actor, and a virtual user runs as it —
+  so it gets its own page at `/personas` under a new **People** section in the
+  rail, alongside Users. The card is a profile: avatar, name, job title, computed
+  address, the system roles they hold, and how many scenarios cast them. Opening
+  one expands each role to the scopes it confers, which is the half of the picture
+  that explains a 403.
+
+  `definePersonas` takes an optional `avatarUrl` — any URL a browser can load.
+  Nothing is derived from the address: a persona's address is synthetic, so a
+  derived identicon would be the same shrug for everyone. Omitted, the console
+  keeps drawing the deterministic colour-and-icon avatar from the persona's id.
+
+- fd72e58: Read the actors that are not people on the personas page.
+
+  The platform — the app acting on itself, what `pikkuPlatformScenarioStep`
+  declares — now has a row of its own, alongside one per addon whose system a
+  step makes act. They sit behind a People / System / All filter that opens on
+  the people: a subject holds no roles and signs in as nobody, so leading with it
+  would put the rows nothing is authorized through above the ones that are.
+
+  The platform row is built in rather than derived. A project that has never
+  written a platform step still has a platform, and a card that appeared the
+  moment somebody declared their first step would read as a feature they had
+  switched on.
+
+  Also: PKU680 now counts `expectService`, `expectError` and `expectEventually`
+  as assertions. They are inline steps and carry no phase, so a scenario whose
+  only witness was a recorded service call was being told it never asserts.
+
+- Updated dependencies [32277d5]
+- Updated dependencies [ea8aabf]
+- Updated dependencies [33e96ab]
+- Updated dependencies [fd72e58]
+- Updated dependencies [fd72e58]
+- Updated dependencies [fd72e58]
+- Updated dependencies [894b2f8]
+- Updated dependencies [dd19aa7]
+- Updated dependencies [50ec500]
+  - @pikku/assistant-ui@0.12.9
+  - @pikku/core@0.12.75
+
 ## 0.12.51
 
 ### Patch Changes
@@ -752,8 +800,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                          "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                          "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                            "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                            "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
