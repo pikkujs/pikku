@@ -44,14 +44,14 @@ export function isWorkflowDoCall(
  */
 export const DYNAMIC_SCENARIO_STEP_TARGET = '<dynamic>'
 
-const SCENARIO_STEP_PHASES = ['step', 'given', 'when', 'then'] as const
+const SCENARIO_STEP_PHASES = ['given', 'when', 'then'] as const
 
 export type ScenarioStepPhaseName = (typeof SCENARIO_STEP_PHASES)[number]
 
 /**
- * Check if a call expression is scenario.step()/given()/when()/then() — a
- * declared `pikkuScenarioStep` invoked by name. `given`/`when`/`then` are pure
- * sugar over `step`: the phase only changes the prose a reporter renders.
+ * Check if a call expression is scenario.given()/when()/then() — a declared
+ * `pikkuScenarioStep` invoked by name. `given`/`when` are pure sugar for each
+ * other; `then` additionally makes the step's bindings witnesses.
  */
 export function isScenarioStepCall(node: ts.CallExpression): boolean {
   return getScenarioStepPhase(node) !== undefined
@@ -72,6 +72,35 @@ export function getScenarioStepPhase(
     return
   }
   return SCENARIO_STEP_PHASES.find((phase) => phase === propAccess.name.text)
+}
+
+/**
+ * The expectation helpers that assert without being a `then`.
+ *
+ * `expectService` and `expectError` are inline steps rather than scenario
+ * steps, so they carry no phase and never reach the step meta — but each one is
+ * a witness: a recorded service call, or a refusal. PKU680 has to see them, or
+ * a scenario whose only assertion is one of these reads as asserting nothing.
+ */
+const SCENARIO_EXPECTATION_CALLS = [
+  'expectService',
+  'expectError',
+  'expectEventually',
+] as const
+
+/**
+ * Check if a call expression is one of the scenario expectation helpers —
+ * `scenario.expectService()`, `.expectError()` or `.expectEventually()`.
+ */
+export function isScenarioExpectationCall(node: ts.CallExpression): boolean {
+  return (
+    ts.isPropertyAccessExpression(node.expression) &&
+    SCENARIO_EXPECTATION_CALLS.some(
+      (name) =>
+        name === (node.expression as ts.PropertyAccessExpression).name.text
+    ) &&
+    isWorkflowWireIdentifier(node.expression.expression)
+  )
 }
 
 /**

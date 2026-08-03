@@ -649,20 +649,11 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       },
 
       // Scenario steps: a named `pikkuScenarioStep` run as one durable step.
-      // `given`/`when`/`step` are sugar for each other, differing only in the
+      // `given`/`when` are sugar for each other, differing only in the
       // prose a reporter renders. `then` is not: the phase is what decides
       // whether the step's bindings are alternatives or witnesses, so the same
       // step function called two ways runs differently. See
       // {@link resolveScenarioSurfaces}.
-      step: (stepName, stepFunc, data, options) =>
-        this.scenarioStep(
-          'step',
-          scenarioStepContext(),
-          stepName,
-          stepFunc,
-          data,
-          options
-        ),
       given: (stepName, stepFunc, data, options) =>
         this.scenarioStep(
           'given',

@@ -39,6 +39,16 @@ export type CorePersona = {
   jobTitle?: string
   description?: string
   /**
+   * A picture of this person, as any URL a browser can load: a file your app
+   * serves, an asset on a CDN, a Gravatar link.
+   *
+   * Optional because it is decoration. Omitted, the console draws a colour and
+   * an icon derived from the persona's id, which is stable, needs no network and
+   * is more legible than the identicon a synthetic address would resolve to —
+   * which is also why nothing is derived here.
+   */
+  avatarUrl?: string
+  /**
    * The roles this person holds. Only system roles may be named — a custom
    * role can be deleted from the console, so a persona pinned to one silently
    * stops testing what it claims to.
@@ -112,6 +122,7 @@ export type PersonaMeta = {
   name: string
   jobTitle?: string
   description?: string
+  avatarUrl?: string
   roles: string[]
   personality?: string
   goals: string[]

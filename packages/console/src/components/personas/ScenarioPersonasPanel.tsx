@@ -35,6 +35,7 @@ export const ScenarioPersonasPanel: React.FC<ScenarioPersonasPanelProps> = ({
     <PersonasView
       personas={filteredPersonas}
       loading={loading}
+      query={searchQuery.trim() || undefined}
       onOpenScenario={onOpenScenario}
     />
   )

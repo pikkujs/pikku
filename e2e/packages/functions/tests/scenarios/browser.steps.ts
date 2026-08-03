@@ -34,10 +34,7 @@ import { expect } from '@pikku/playwright'
  */
 export type { TestIdSelector }
 
-export const seesText = pikkuScenarioStep<
-  { text: string },
-  { visible: true }
->({
+export const seesText = pikkuScenarioStep<{ text: string }, { visible: true }>({
   name: 'seesText',
   description: 'sees a piece of text on the page',
   template: 'sees {text}',
@@ -375,7 +372,11 @@ export const expectsControl = pikkuScenarioStep<
   name: 'expectsControl',
   description: 'expects a control to be in a given enabled/checked state',
   template: 'expects {testId} to be in the expected state',
-  browser: async (_services, { enabled, checked, ...selector }, { browser }) => {
+  browser: async (
+    _services,
+    { enabled, checked, ...selector },
+    { browser }
+  ) => {
     const target = browser.locate(selector).first()
     if (enabled === true) {
       await expect(target).toBeEnabled()
@@ -473,6 +474,33 @@ export const expectsTestIdValue = pikkuScenarioStep<
       )
     }
     return { value: actual }
+  },
+})
+
+/**
+ * The read-only counterpart of {@link expectsTestIdValue}.
+ *
+ * A value a person cannot change does not belong in a form field — a disabled
+ * input still reads as "you could type here, but not today" — so anything the
+ * app computes is rendered as text and has to be asserted as text.
+ */
+export const expectsTestIdText = pikkuScenarioStep<
+  TestIdSelector & { text: string },
+  { text: string }
+>({
+  name: 'expectsTestIdText',
+  description: 'expects an element to read exactly as given',
+  template: 'expects {testId} to read {text}',
+  browser: async (_services, { text, ...selector }, { browser }) => {
+    const target = browser.locate(selector).first()
+    await target.waitFor({ state: 'visible' })
+    const actual = (await target.innerText()).trim()
+    if (actual !== text) {
+      throw new Error(
+        `Expected ${selector.testId} to read "${text}", got "${actual}"`
+      )
+    }
+    return { text: actual }
   },
 })
 

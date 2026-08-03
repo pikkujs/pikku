@@ -1,5 +1,13 @@
 import { toEnglishName } from '../../lib/strings'
 
+/**
+ * The console's own display bands, which are core's three phases plus `step`.
+ *
+ * `step` is not a phase a scenario can write — it is what a ladder row gets
+ * when it is not a scenario step at all: a repeat header, or an RPC the
+ * scenario ran directly. Those rows carry no keyword, and giving them one
+ * would claim they said something the scenario never said.
+ */
 export type ScenarioStepPhase = 'given' | 'when' | 'then' | 'step'
 
 export interface ScenarioLadderStep {

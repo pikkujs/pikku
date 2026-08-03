@@ -104,7 +104,7 @@ export const collectScenarioStepProse = (
   for (const step of walkScenarioSteps(workflowMeta?.steps)) {
     const stepMeta = functionsMeta[step.stepFunc]
     const parts: ScenarioStepProse = {
-      phase: step.phase ?? 'step',
+      phase: step.phase,
       description:
         step.options?.description ?? stepMeta?.description ?? step.stepName,
       // A call-site description is an explicit override, so it wins over the

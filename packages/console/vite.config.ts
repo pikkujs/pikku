@@ -32,6 +32,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
       crypto: path.resolve(__dirname, 'src/polyfills/crypto.ts'),
+      'node:async_hooks': path.resolve(
+        __dirname,
+        'src/polyfills/async_hooks.ts'
+      ),
       '@pikku/mantine/core': path.resolve(
         __dirname,
         '../frontend/mantine/src/core/index.ts'

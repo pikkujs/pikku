@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import type { FlowEntry } from '../components/flows/flow-types'
-import type {
-  PersonaEntry,
-  PersonaScenarioRef,
-} from '../components/personas/persona-types'
+import type { PersonaEntry } from '../components/personas/persona-types'
+import { toPersonaEntries } from '../components/personas/persona-model'
+import { toSubjectEntries } from '../components/personas/subject-model'
+import type { SubjectEntry } from '../components/personas/subject-types'
 import { toEnglishName } from '../lib/strings'
 
 export interface ScenarioFlowEntries {
@@ -14,6 +14,11 @@ export interface ScenarioFlowEntries {
 
 export interface ScenarioPersonaEntries {
   personas: PersonaEntry[]
+  loading: boolean
+}
+
+export interface ScenarioSubjectEntries {
+  subjects: SubjectEntry[]
   loading: boolean
 }
 
@@ -51,57 +56,47 @@ export function useScenarioFlowEntries(): ScenarioFlowEntries {
 }
 
 /**
- * The personas scenarios sign in as, each carrying back-references to the
- * scenarios that cast them and the features those scenarios belong to.
+ * Every declared person, each carrying the scopes their roles confer and
+ * back-references to the scenarios that cast them.
+ *
+ * Named for scenarios because that is where it started; it is now the personas
+ * page's source too, which is why the model itself lives beside the components
+ * rather than in this hook.
  */
 export function useScenarioPersonaEntries(): ScenarioPersonaEntries {
   const { meta, loading } = usePikkuMeta()
 
-  const personas = useMemo((): PersonaEntry[] => {
-    const actors = meta.personas ?? {}
-
-    const featureByScenario = new Map<string, string>()
-    for (const feature of Object.values(meta.features ?? {}) as any[]) {
-      for (const entry of feature.entries ?? []) {
-        featureByScenario.set(entry.scenario, feature.name)
-      }
-    }
-
-    const scenariosByActor = new Map<string, PersonaScenarioRef[]>()
-    const featuresByActor = new Map<string, Set<string>>()
-    for (const w of Object.values(meta.workflows ?? {}) as any[]) {
-      if (!(w.source === 'scenario' || w.scenario === true)) continue
-      if ((w.tags ?? []).includes('test-fixture')) continue
-      const feature = featureByScenario.get(w.name)
-      for (const actor of w.actors ?? []) {
-        const list = scenariosByActor.get(actor) ?? []
-        list.push({
-          name: w.name,
-          displayName: w.title ?? toEnglishName(w.name),
-        })
-        scenariosByActor.set(actor, list)
-        if (feature) {
-          const features = featuresByActor.get(actor) ?? new Set<string>()
-          features.add(feature)
-          featuresByActor.set(actor, features)
-        }
-      }
-    }
-
-    return Object.entries(actors)
-      .map(
-        ([key, cfg]: [string, any]): PersonaEntry => ({
-          key,
-          name: cfg.name ?? key,
-          email: cfg.email,
-          jobTitle: cfg.jobTitle,
-          personality: cfg.personality,
-          scenarios: scenariosByActor.get(key) ?? [],
-          features: [...(featuresByActor.get(key) ?? [])].sort(),
-        })
-      )
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.personas, meta.workflows, meta.features])
+  const personas = useMemo(
+    (): PersonaEntry[] =>
+      toPersonaEntries({
+        personas: meta.personas ?? {},
+        systemRoles: meta.systemRoles ?? {},
+        workflows: meta.workflows ?? {},
+        features: (meta.features ?? {}) as any,
+      }),
+    [meta.personas, meta.systemRoles, meta.workflows, meta.features]
+  )
 
   return { personas, loading }
+}
+
+/**
+ * The actors that are not people — the platform, and any addon whose system a
+ * step makes act. Separate from the personas hook rather than folded into it,
+ * so nothing downstream can read a subject as somebody.
+ */
+export function useScenarioSubjectEntries(): ScenarioSubjectEntries {
+  const { meta, loading } = usePikkuMeta()
+
+  const subjects = useMemo(
+    (): SubjectEntry[] =>
+      toSubjectEntries({
+        functions: meta.functions ?? [],
+        workflows: meta.workflows ?? {},
+        features: (meta.features ?? {}) as any,
+      }),
+    [meta.functions, meta.workflows, meta.features]
+  )
+
+  return { subjects, loading }
 }

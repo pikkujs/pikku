@@ -144,7 +144,7 @@ describe('pikkuScenarioStep', () => {
 
   test('the step target is bundled, so the step function is wired', async () => {
     const { state, cleanup } = await run([
-      "await scenario.step('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
     ])
     try {
       assert.ok(
@@ -183,7 +183,7 @@ describe('pikkuScenarioStep', () => {
   test('a non-literal step target is a PKU678 critical', async () => {
     const { criticals, cleanup } = await run([
       'const target = Math.random() > 0.5 ? "buysAnApple" : "seesAReceipt"',
-      "await scenario.step('buys something', target as any, {}, { actor: actors.shopper })",
+      "await scenario.when('buys something', target as any, {}, { actor: actors.shopper })",
     ])
     try {
       assert.ok(
@@ -218,6 +218,42 @@ describe('pikkuScenarioStep', () => {
       assert.ok(
         criticals.find((c) => c.code === 'PKU680'),
         `a flow with no 'then' proves only that nothing threw, and contributes 0/0 to witness coverage, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a scenario whose witness is an expectation helper is not flagged', async () => {
+    // `expectService` is an inline step and carries no phase, so it reaches
+    // PKU680 as nothing at all — but a recorded service call is a witness, and
+    // a flow that has one is not the assertion-free flow the rule is for.
+    const { criticals, cleanup } = await run([
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.expectService('the receipt was emailed', 'emailService.send', { actor: actors.shopper })",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU680').length,
+        0,
+        `got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('an expectation parked in an uncalled helper is still no assertion', async () => {
+    const { criticals, cleanup } = await run([
+      'const neverCalled = async () => {',
+      "  await scenario.expectService('the receipt was emailed', 'emailService.send')",
+      '}',
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU680'),
+        `expected PKU680 — the helper never runs, so nothing is asserted; got: ${JSON.stringify(criticals)}`
       )
     } finally {
       await cleanup()

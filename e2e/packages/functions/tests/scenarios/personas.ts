@@ -79,6 +79,10 @@ definePersonas({
   admin: {
     name: 'Admin',
     jobTitle: 'Console administrator',
+    // The one persona here carrying a picture, so the console's avatar has both
+    // branches covered by the same suite. Same-origin and always served, which
+    // an external URL would not be on a machine with no network.
+    avatarUrl: '/console/pikku-console-logo.png',
     description:
       'Edits code through the console and always puts it back the way they found it',
     personality:

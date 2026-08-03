@@ -85,7 +85,7 @@ export type WorkflowWireDoInline = <T>(
 ) => Promise<T>
 
 /**
- * Type signature for scenario.step/given/when/then - used by inspector.
+ * Type signature for scenario.given/when/then - used by inspector.
  *
  * Deliberately mirrors WorkflowWireDoRPC's shape: the target is a string, not
  * an imported symbol, so the extractor reads it as a literal.
@@ -199,7 +199,7 @@ export interface RpcStepMeta {
 }
 
 /**
- * Scenario step metadata — a call to `scenario.step/given/when/then`.
+ * Scenario step metadata — a call to `scenario.given/when/then`.
  *
  * Distinct from RpcStepMeta on purpose: a step runs locally through
  * runPikkuFunc and must never be treated as dispatchable on the queue/replay
@@ -212,7 +212,7 @@ export interface ScenarioStepMeta {
   stepName: string
   /** Registered name of the step function being run */
   stepFunc: string
-  /** Which keyword the reporter prefixes — given/when/then, or none for `step` */
+  /** Which keyword the reporter prefixes — Given, When or Then */
   phase: ScenarioStepPhase
   /** Output variable name (if assigned) */
   outputVar?: string
@@ -557,20 +557,14 @@ export interface PikkuScenarioWire extends PikkuWorkflowWire {
   ) => Promise<void>
 
   /**
-   * Run a registered scenario step. Shaped exactly like `do`'s RPC form —
-   * `(stepName, target, data, options)` — so the inspector reads the target as
-   * a string literal rather than resolving an imported symbol.
+   * Run a registered scenario step, as the setup the scenario starts from.
+   *
+   * Shaped exactly like `do`'s RPC form — `(stepName, target, data, options)` —
+   * so the inspector reads the target as a string literal rather than resolving
+   * an imported symbol.
    *
    * The generated `TypedScenario` narrows these over `FlattenedScenarioStepMap`.
    */
-  step(
-    stepName: string,
-    stepFunc: string,
-    data?: any,
-    options?: ScenarioStepOptions
-  ): Promise<any>
-
-  /** `step` with a "Given" prefix in the rendered prose */
   given(
     stepName: string,
     stepFunc: string,
@@ -578,7 +572,7 @@ export interface PikkuScenarioWire extends PikkuWorkflowWire {
     options?: ScenarioStepOptions
   ): Promise<any>
 
-  /** `step` with a "When" prefix in the rendered prose */
+  /** `when`: the same call as `given`, rendered as the action under test */
   when(
     stepName: string,
     stepFunc: string,
@@ -586,7 +580,11 @@ export interface PikkuScenarioWire extends PikkuWorkflowWire {
     options?: ScenarioStepOptions
   ): Promise<any>
 
-  /** `step` with a "Then" prefix in the rendered prose */
+  /**
+   * `then`: a claim about what the action left behind. Unlike `given`/`when`
+   * this is not prose alone — the step's bindings become witnesses, so every
+   * declared surface is observed and the observations must agree.
+   */
   then(
     stepName: string,
     stepFunc: string,

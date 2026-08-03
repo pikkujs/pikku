@@ -37,7 +37,7 @@ export const composeStepProse = ({
   actor?: string
   keywordWidth?: number
 }): string => {
-  const keyword = phase === 'step' ? '' : capitalise(phase)
+  const keyword = capitalise(phase)
   const subject = actor ? `the ${actor}` : ''
   const rendered = template ? renderStepTemplate(template, input) : description
   const sentence = [subject, rendered].filter(Boolean).join(' ')

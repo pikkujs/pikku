@@ -1,59 +1,98 @@
 import React from 'react'
-import { Stack, Skeleton } from '@pikku/mantine/core'
+import { Skeleton, Stack, Text } from '@pikku/mantine/core'
 import { UserRound } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
-import { PersonaCard } from './PersonaCard'
+import { PersonaRow } from './PersonaRow'
+import { SubjectRow } from './SubjectRow'
 import { usePanelContext } from '../../context/PanelContext'
 import type { PersonaEntry } from './persona-types'
+import type { SubjectEntry } from './subject-types'
+import classes from './personas.module.css'
+
+const PERSONAS_DOCS = 'https://pikku.dev/docs/wiring/personas'
 
 type PersonasViewProps = {
   personas: PersonaEntry[]
+  /**
+   * The actors that are not people, rendered after them in the same grid.
+   * Empty unless the filter asks for them — the page opens on the people.
+   */
+  subjects?: SubjectEntry[]
   loading?: boolean
   onOpenScenario?: (name: string) => void
+  onOpenVirtualUser?: (key: string) => void
+  /**
+   * What the caller is filtering by, when it is filtering. An empty list means
+   * two different things — this project declares nobody, or this search matched
+   * nobody — and telling someone with forty personas to go and declare one is a
+   * lie about their own codebase.
+   */
+  query?: string
 }
 
 export const PersonasView: React.FC<PersonasViewProps> = ({
   personas,
+  subjects = [],
   loading = false,
   onOpenScenario,
+  onOpenVirtualUser,
+  query,
 }) => {
   useLocale()
   const { openPersona } = usePanelContext()
 
   if (loading) {
     return (
-      <Stack gap={12} p="md">
-        <Skeleton height={92} radius={14} />
-        <Skeleton height={92} radius={14} />
+      <Stack gap={8} p="md">
+        <Skeleton height={62} radius={10} />
+        <Skeleton height={62} radius={10} />
+        <Skeleton height={62} radius={10} />
       </Stack>
     )
   }
 
-  if (personas.length === 0) {
-    return (
+  if (personas.length === 0 && subjects.length === 0) {
+    return query ? (
+      <Text size="sm" c="dimmed" p="md" data-testid="personas-no-matches">
+        {m.personas_no_matches({ query })}
+      </Text>
+    ) : (
       <EmptyStatePlaceholder
         icon={UserRound}
         title={m.personas_empty_title()}
         description={m.personas_empty_description()}
-        docsHref="https://pikku.dev/docs/wiring/workflows"
+        docsHref={PERSONAS_DOCS}
       />
     )
   }
 
   return (
-    <Stack gap={12}>
-      {personas.map((p) => (
-        <PersonaCard
-          key={p.key}
-          persona={p}
-          onOpen={(key) => {
-            const persona = personas.find((entry) => entry.key === key)
-            if (persona) {
-              openPersona(key, persona.name, { persona, onOpenScenario })
-            }
-          }}
+    <Stack gap={8} className={classes.list}>
+      {personas.map((persona) => (
+        <PersonaRow
+          key={persona.key}
+          persona={persona}
+          onOpen={(key) =>
+            openPersona(key, persona.name, {
+              persona,
+              onOpenScenario,
+              onOpenVirtualUser,
+            })
+          }
+        />
+      ))}
+      {subjects.map((subject) => (
+        <SubjectRow
+          key={subject.key}
+          subject={subject}
+          onOpen={() =>
+            openPersona(subject.key, subject.name, {
+              subject,
+              onOpenScenario,
+            })
+          }
         />
       ))}
     </Stack>

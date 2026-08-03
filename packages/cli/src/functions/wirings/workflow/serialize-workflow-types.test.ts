@@ -101,15 +101,25 @@ describe('serializeWorkflowTypes', () => {
       assert.doesNotMatch(result, /PikkuVirtualUserConfig/)
     })
 
-    test('TypedScenario narrows step/given/when/then over the step map', () => {
+    test('TypedScenario narrows given/when/then over the step map', () => {
       const result = emit()
-      for (const phase of ['step', 'given', 'when', 'then']) {
+      for (const phase of ['given', 'when', 'then']) {
         assert.match(
           result,
           new RegExp(`${phase}<K extends keyof FlattenedScenarioStepMap>`),
           `expected TypedScenario to declare a typed '${phase}' overload`
         )
       }
+    })
+
+    // A step that says what it does without saying whether it is setup, action
+    // or claim is the one nobody can read back — and it was the phase to reach
+    // for when a scenario wanted to dodge the assertion lint.
+    test('the phaseless step is gone', () => {
+      assert.doesNotMatch(
+        emit(),
+        /step<K extends keyof FlattenedScenarioStepMap>/
+      )
     })
   })
 })

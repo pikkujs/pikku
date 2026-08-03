@@ -17,6 +17,7 @@ import { WorkflowPanelFlow } from './WorkflowPanelFlow'
 import { useWorkflowInputSchema } from '../../hooks/useWorkflowInputSchema'
 import { FunctionTabbedPanel } from '../project/panels/FunctionDetailsForm'
 import { PersonaDetail } from '../personas/PersonaDetail'
+import { SubjectDetail } from '../personas/SubjectDetail'
 import { AddonDetail } from '../packages/AddonDetail'
 import { createCanvasDrawerContent } from '../canvas-drawer/CanvasDrawerFactory'
 import {
@@ -585,6 +586,25 @@ export const createPanelChildren = (
       ]
 
     case 'persona':
+      // The same panel type carries both, because they are opened from the same
+      // list and answer the same question — who acts here, and what can they do.
+      if (panelData.metadata?.subject) {
+        return [
+          {
+            id: 'subject',
+            title: 'Subject',
+            content: (
+              <Box px="md">
+                <SubjectDetail
+                  key={panelData.metadata.subject.key}
+                  subject={panelData.metadata.subject}
+                  onOpenScenario={panelData.metadata.onOpenScenario}
+                />
+              </Box>
+            ),
+          },
+        ]
+      }
       return panelData.metadata?.persona
         ? [
             {
@@ -593,8 +613,10 @@ export const createPanelChildren = (
               content: (
                 <Box px="md">
                   <PersonaDetail
+                    key={panelData.metadata.persona.key}
                     persona={panelData.metadata.persona}
                     onOpenScenario={panelData.metadata.onOpenScenario}
+                    onOpenVirtualUser={panelData.metadata.onOpenVirtualUser}
                   />
                 </Box>
               ),

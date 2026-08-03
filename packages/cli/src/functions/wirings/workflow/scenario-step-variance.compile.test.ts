@@ -6,7 +6,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
- * `TypedScenario` narrows core's `step`/`given`/`when`/`then` over the project's
+ * `TypedScenario` narrows core's `given`/`when`/`then` over the project's
  * own step map, and the generated function types then require it to satisfy
  * `PikkuScenarioWire`. That assignability is the whole contract.
  *

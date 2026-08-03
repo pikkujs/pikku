@@ -21,7 +21,6 @@ const SCENARIO_MEMBERS = [
 ]
 
 const SCENARIO_WIRE_MEMBERS = [
-  'step',
   'given',
   'when',
   'then',

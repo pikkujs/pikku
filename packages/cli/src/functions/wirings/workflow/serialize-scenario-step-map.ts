@@ -1,6 +1,6 @@
 /**
  * Generate the scenario step map: the typed set of names a scenario may pass to
- * `scenario.step/given/when/then`.
+ * `scenario.given/when/then`.
  *
  * Steps are referenced by string, exactly like `workflow.do` references an RPC,
  * so type safety has to come from a generated map rather than from importing
@@ -33,7 +33,8 @@ export const serializeScenarioStepMap = (
   const requiredTypes = new Set<string>()
 
   const steps = Object.entries(functionsMeta).filter(
-    ([, meta]) => !!meta.funcWrapper && SCENARIO_STEP_WRAPPERS.has(meta.funcWrapper)
+    ([, meta]) =>
+      !!meta.funcWrapper && SCENARIO_STEP_WRAPPERS.has(meta.funcWrapper)
   )
 
   const resolveType = (name: string | undefined) => {
@@ -78,7 +79,7 @@ export const serializeScenarioStepMap = (
     .join('\n')
 
   return `/**
- * Scenario step map: the names \`scenario.step/given/when/then\` accepts, with
+ * Scenario step map: the names \`scenario.given/when/then\` accepts, with
  * the input and output types of each step.
  */
 
