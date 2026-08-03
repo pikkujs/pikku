@@ -16,21 +16,25 @@ rm -rf -- .pikku dist
 # `routePermissions.size`, and every bootstrap build broke at once — including
 # on main, which had been green minutes earlier.
 #
-# 0.12.83 is the CLI from that same release wave, so it matches 0.12.43. It
-# imports @pikku/better-auth rather than @pikku/auth-js, which is why the
-# bootstrap installs better-auth directly instead of overriding it.
+# The whole set moves together or none of it does. The 2026-08-03 wave went out
+# inside 62 seconds — inspector 00:16:45, core 00:16:47, better-auth 00:16:54,
+# cli 00:17:47 — so these four are members of one release.
+#
+# The previous pin (cli 0.12.83 / core 0.12.64) had to move: the workspace now
+# calls `signedContentPath` from @pikku/node-http-server, and core 0.12.64
+# predates that export, so the bootstrap CLI died loading the tree it was meant
+# to inspect. A pin is only as good as the exports that tree depends on.
 #
 # Historical note, still relevant when choosing a version: 0.12.36 shipped a
 # `@pikku/better-auth: workspace:*` dependency that leaked verbatim to npm and
 # is uninstallable, so bootstrapping off `latest` can self-deadlock.
 echo "Bootstrapping with published @pikku/cli..."
-: "${PIKKU_CLI_VERSION:=0.12.83}"
-: "${PIKKU_INSPECTOR_VERSION:=0.12.43}"
-: "${PIKKU_BETTER_AUTH_VERSION:=0.12.12}"
-# core 0.12.64 went out 40 seconds before cli 0.12.83, so it is the third member
-# of that same wave. It is a *peer* of both the CLI and the inspector, which is
-# why it has to be named here to exist at all once peer resolution is off.
-: "${PIKKU_CORE_VERSION:=0.12.64}"
+: "${PIKKU_CLI_VERSION:=0.12.96}"
+: "${PIKKU_INSPECTOR_VERSION:=0.12.52}"
+: "${PIKKU_BETTER_AUTH_VERSION:=0.12.20}"
+# core is a *peer* of both the CLI and the inspector, which is why it has to be
+# named here to exist at all once peer resolution is off.
+: "${PIKKU_CORE_VERSION:=0.12.74}"
 # The other peer that has to be named: @pikku/better-auth peers on the upstream
 # `better-auth` library and imports it at module load, so without it the
 # bootstrap CLI dies on "Cannot find package 'better-auth'".
