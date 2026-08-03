@@ -30,7 +30,13 @@ async function makeValidWorkspace(root: string) {
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
-    scaffold: { console: true },
+    scaffold: {
+      console: true,
+      rpc: true,
+      agent: true,
+      workflow: true,
+      events: true,
+    },
     environments: { local: { apiUrl: 'http://localhost:4002' } },
   })
   await writeJson(join(root, 'package.json'), {
@@ -85,7 +91,7 @@ async function makeValidWorkspace(root: string) {
     'utf8'
   )
   await writeFile(
-    join(root, 'packages', 'functions', 'src', 'personas.ts'),
+    join(root, 'packages', 'functions', 'src', 'personas.virtual-user.ts'),
     [
       "import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'",
       "definePersonas({ founder: { name: 'Anna Müller' } })",
@@ -168,9 +174,9 @@ describe('pikku workspace validate', () => {
       })
       const result = await runWorkspaceValidate(tmp)
       const finding = result.findings.find(
-        (f) => f.id === 'pikku-config-no-console-scaffold'
+        (f) => f.id === 'pikku-config-no-scaffold-console'
       )
-      assert.ok(finding, 'expected pikku-config-no-console-scaffold finding')
+      assert.ok(finding, 'expected pikku-config-no-scaffold-console finding')
       assert.strictEqual(finding!.severity, 'error')
       assert.strictEqual(result.ok, false)
     } finally {
@@ -182,7 +188,9 @@ describe('pikku workspace validate', () => {
     const tmp = await makeTmp()
     try {
       await makeValidWorkspace(tmp)
-      await rm(join(tmp, 'packages', 'functions', 'src', 'personas.ts'))
+      await rm(
+        join(tmp, 'packages', 'functions', 'src', 'personas.virtual-user.ts')
+      )
       const result = await runWorkspaceValidate(tmp)
       const finding = result.findings.find((f) => f.id === 'no-personas')
       assert.ok(finding, 'expected a no-personas finding')
@@ -221,6 +229,62 @@ describe('pikku workspace validate', () => {
       assert.ok(
         result.findings.some((f) => f.id === 'knowledge-empty'),
         'expected a knowledge-empty finding'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('@pikku/playwright must be in tsconfig types when it is installed', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+        type: 'module',
+        dependencies: { zod: '^4' },
+        devDependencies: { '@pikku/playwright': '^0.1.0' },
+      })
+      await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
+        compilerOptions: { types: ['node'] },
+      })
+
+      const withoutIt = await runWorkspaceValidate(tmp)
+      const finding = withoutIt.findings.find(
+        (f) => f.id === 'playwright-types-not-loaded'
+      )
+      assert.ok(finding, 'expected a playwright-types-not-loaded finding')
+      assert.strictEqual(finding.severity, 'warn')
+      assert.match(finding.fixHint, /"@pikku\/playwright"/)
+
+      await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
+        compilerOptions: { types: ['node', '@pikku/playwright'] },
+      })
+      const withIt = await runWorkspaceValidate(tmp)
+      assert.ok(
+        !withIt.findings.some((f) => f.id === 'playwright-types-not-loaded')
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a tsconfig with no explicit types array is left alone', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+        type: 'module',
+        dependencies: { zod: '^4' },
+        devDependencies: { '@pikku/playwright': '^0.1.0' },
+      })
+      await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
+        compilerOptions: { strict: true },
+      })
+
+      const result = await runWorkspaceValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'playwright-types-not-loaded'),
+        'no types array means the compiler already loads what it resolves'
       )
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -315,9 +379,15 @@ describe('pikku workspace validate', () => {
       const ids = result.findings.map((f) => f.id)
 
       assert.strictEqual(result.ok, false)
+      // No db/ assets at all, so `pikku db migrate` has nothing to fall back to.
       assert.ok(ids.includes('auth-dev-db-missing'))
-      assert.ok(ids.includes('auth-schema-missing-app-user'))
-      assert.ok(ids.includes('auth-schema-missing-verification-token'))
+      const missing = result.findings.find(
+        (f) => f.id === 'auth-schema-missing-tables'
+      )
+      assert.ok(missing, 'expected auth-schema-missing-tables')
+      for (const table of ['user', 'session', 'account', 'verification']) {
+        assert.match(missing!.message, new RegExp(`\\b${table}\\b`))
+      }
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
@@ -356,22 +426,14 @@ describe('pikku workspace validate', () => {
         ),
         'utf8'
       )
-      await mkdir(join(tmp, 'packages', 'functions', 'db', 'sqlite'), {
-        recursive: true,
-      })
+      await mkdir(join(tmp, 'db', 'sqlite'), { recursive: true })
       await writeFile(
-        join(tmp, 'packages', 'functions', 'db', 'sqlite', '0001-auth.sql'),
+        join(tmp, 'db', 'sqlite', '0001-auth.sql'),
         [
-          'CREATE TABLE IF NOT EXISTS app_user (',
-          '  user_id TEXT PRIMARY KEY,',
-          '  email TEXT NOT NULL',
-          ');',
-          '',
-          'CREATE TABLE IF NOT EXISTS auth_verification_token (',
-          '  identifier TEXT NOT NULL,',
-          '  token TEXT NOT NULL,',
-          '  expires_at TEXT NOT NULL',
-          ');',
+          'CREATE TABLE IF NOT EXISTS "user" (id TEXT PRIMARY KEY);',
+          'CREATE TABLE IF NOT EXISTS "session" (id TEXT PRIMARY KEY);',
+          'CREATE TABLE IF NOT EXISTS "account" (id TEXT PRIMARY KEY);',
+          'CREATE TABLE IF NOT EXISTS "verification" (id TEXT PRIMARY KEY);',
           '',
         ].join('\n'),
         'utf8'
@@ -381,8 +443,7 @@ describe('pikku workspace validate', () => {
       const ids = result.findings.map((f) => f.id)
 
       assert.ok(!ids.includes('auth-dev-db-missing'))
-      assert.ok(!ids.includes('auth-schema-missing-app-user'))
-      assert.ok(!ids.includes('auth-schema-missing-verification-token'))
+      assert.ok(!ids.includes('auth-schema-missing-tables'))
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

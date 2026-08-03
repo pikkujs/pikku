@@ -65,6 +65,7 @@ async function makeValidProject(root: string) {
       '@pikku/kysely': '^0.12.0',
       '@pikku/addon-console': '^0.12.0',
       '@pikku/better-auth': '^0.12.0',
+      zod: '^4',
     },
   })
   await writeFile(
@@ -78,7 +79,7 @@ async function makeValidProject(root: string) {
     'utf8'
   )
   await writeFile(
-    join(root, 'packages', 'functions', 'src', 'personas.ts'),
+    join(root, 'packages', 'functions', 'src', 'personas.virtual-user.ts'),
     [
       "import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'",
       "definePersonas({ founder: { name: 'Anna Müller' } })",
@@ -200,7 +201,9 @@ describe('pikku fabric validate', () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
-      await rm(join(tmp, 'packages', 'functions', 'src', 'personas.ts'))
+      await rm(
+        join(tmp, 'packages', 'functions', 'src', 'personas.virtual-user.ts')
+      )
       const result = await runValidate(tmp)
       const finding = result.findings.find((f) => f.id === 'no-personas')
       assert.ok(finding, 'expected a no-personas finding')
@@ -624,6 +627,7 @@ describe('pikku fabric validate', () => {
             '@pikku/kysely': '^0.12.0',
             '@pikku/addon-console': '^0.12.0',
             '@pikku/better-auth': '^0.12.0',
+            zod: '^4',
           },
           // no type: 'module'
         })

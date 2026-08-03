@@ -163,7 +163,7 @@ export const runPersonaChecks = async (
       pikkuConfigPath,
       lines(
         'Declare the people who use this app with definePersonas(), e.g. in',
-        'packages/functions/src/scenarios/personas.ts:',
+        'packages/functions/src/scenarios/personas.virtual-user.ts:',
         "  import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'",
         '  definePersonas({',
         "    founder: { name: 'Anna Müller', jobTitle: 'Managing director' },",
