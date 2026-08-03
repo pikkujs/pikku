@@ -2,10 +2,11 @@
 name: pikku-services
 description: >-
   Use when setting up dependency injection, creating custom services, or configuring the service
-  layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service
-  typing, built-in services, and tree-shaking. TRIGGER when: code uses
-  pikkuServices/pikkuWireServices, user asks about services.ts, dependency injection, service
-  factories, or built-in services (ConsoleLogger, JoseJWTService). DO NOT TRIGGER when: user asks
+  layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request),
+  pikkuServerLifecycle (startup/shutdown hooks), service typing, built-in services, and
+  tree-shaking. TRIGGER when: code uses pikkuServices/pikkuWireServices/pikkuServerLifecycle, user
+  asks about services.ts, lifecycle.ts, dependency injection, service factories, startup or
+  shutdown work, or built-in services (ConsoleLogger, JoseJWTService). DO NOT TRIGGER when: user asks
   about auth middleware (use pikku-security) or secrets/variables (use pikku-config).
 installGroups: [core]
 ---
@@ -73,6 +74,39 @@ export const createWireServices = pikkuWireServices(
   }
 )
 ```
+
+### `pikkuServerLifecycle(hooks)` — startup and shutdown work
+
+A service factory should **construct** services, not run startup side effects. Seeding a database, warming a cache, starting a background consumer or draining a queue belongs in lifecycle hooks, which receive the singleton services after they are built:
+
+```typescript
+// src/lifecycle.ts
+import { pikkuServerLifecycle } from '@pikku/core'
+import type { SingletonServices } from '../types/application-types.js'
+
+export const lifecycle = pikkuServerLifecycle<SingletonServices>({
+  beforeStart: async ({ kysely }) => {
+    await runMigrations(kysely) // before the port opens
+  },
+  afterStart: async (services) => {
+    await seedDevData(services) // server is accepting traffic
+  },
+  beforeStop: async ({ queueService }) => {
+    await queueService.drain() // services are still alive here
+  },
+  afterStop: async () => {
+    await releaseExternalLock() // services are ALREADY stopped
+  },
+})
+```
+
+Every hook is optional. Order is `beforeStart` → server starts → `afterStart`, then on SIGINT `beforeStop` → services stopped → server stopped → `afterStop`.
+
+**`afterStop` runs after the singleton services have been stopped.** It still receives the services object, but the services inside it are shut down — using one there is a use-after-close bug. Anything that needs a live service goes in `beforeStop`.
+
+Export **exactly one** `pikkuServerLifecycle` from anywhere in `srcDirectories`; the inspector finds it by the wrapper call, so the filename is free (`src/lifecycle.ts` by convention). It must be an exported `const` initialized with a direct call to `pikkuServerLifecycle` — a re-export or a conditional wrapper is invisible to the inspector.
+
+**Only `pikku dev` and `pikku serve` run these hooks.** If you bootstrap your own server (Express, Fastify, uWS, Lambda, Cloudflare, Next.js), no runtime adapter invokes them — put the work in your entrypoint instead.
 
 ### Auto-Generated Service Manifest
 

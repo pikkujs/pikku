@@ -6,6 +6,7 @@ import { describe, test } from 'node:test'
 import {
   readJsonSafe,
   runWorkspaceValidate,
+  type Finding,
 } from '../validate/workspace-validate.js'
 
 async function makeTmp() {
@@ -14,6 +15,40 @@ async function makeTmp() {
 
 async function writeJson(path: string, data: unknown) {
   await writeFile(path, JSON.stringify(data, null, 2), 'utf8')
+}
+
+async function setRootScripts(
+  root: string,
+  scripts: Record<string, string>,
+  extraDeps: Record<string, string> = {}
+) {
+  await writeJson(join(root, 'package.json'), {
+    workspaces: ['packages/*', 'apps/*'],
+    dependencies: { '@pikku/core': '^1.0.0', ...extraDeps },
+    scripts,
+  })
+}
+
+async function setFunctionsDeps(root: string, deps: Record<string, string>) {
+  await writeJson(join(root, 'packages', 'functions', 'package.json'), {
+    type: 'module',
+    dependencies: { zod: '^4', ...deps },
+  })
+}
+
+async function setLintRule(root: string, severity: string) {
+  await writeJson(join(root, 'pikku.config.json'), {
+    srcDirectories: ['packages/functions/src'],
+    outDir: 'packages/functions/.pikku',
+    dev: { db: { file: '.pikku-runtime/dev.db' } },
+    clientFiles: {
+      rpcMapDeclarationFile:
+        'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+      reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
+    },
+    scaffold: { console: true },
+    lint: { customServerBootstrap: severity },
+  })
 }
 
 async function makeValidWorkspace(root: string) {
@@ -444,6 +479,205 @@ describe('pikku workspace validate', () => {
 
       assert.ok(!ids.includes('auth-dev-db-missing'))
       assert.ok(!ids.includes('auth-schema-missing-tables'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('custom-server-bootstrap', () => {
+  const findBootstrap = (findings: Finding[]) =>
+    findings.find((f) => f.id === 'custom-server-bootstrap')
+
+  test('no start or dev script → no finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, { build: 'tsc' })
+      const result = await runWorkspaceValidate(tmp)
+      assert.strictEqual(findBootstrap(result.findings), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('start script booting its own server → warn finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, { start: 'node dist/start.js' })
+      const result = await runWorkspaceValidate(tmp)
+      const finding = findBootstrap(result.findings)
+      assert.ok(finding, 'expected custom-server-bootstrap finding')
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.match(finding!.message, /"start"/)
+      assert.match(finding!.fixHint, /pikkuServerLifecycle/)
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('dev script booting its own server → warn finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, { dev: 'tsx watch src/server.ts' })
+      const result = await runWorkspaceValidate(tmp)
+      const finding = findBootstrap(result.findings)
+      assert.ok(finding, 'expected custom-server-bootstrap finding')
+      assert.match(finding!.message, /"dev"/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('both scripts custom → one finding naming both', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, {
+        start: 'node dist/start.js',
+        dev: 'tsx watch src/server.ts',
+      })
+      const result = await runWorkspaceValidate(tmp)
+      const matches = result.findings.filter(
+        (f) => f.id === 'custom-server-bootstrap'
+      )
+      assert.strictEqual(matches.length, 1)
+      assert.match(matches[0]!.message, /"start", "dev"/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  for (const script of [
+    'pikku serve',
+    'pikku serve --port 4077',
+    'npx pikku dev',
+    'yarn pikku serve --console',
+    'pnpm exec pikku dev',
+    'bunx pikku serve',
+    'NODE_ENV=production pikku serve -p 3000',
+    'pikku prebuild && pikku serve',
+  ]) {
+    test(`"${script}" is recognised as a pikku-owned server`, async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidWorkspace(tmp)
+        await setRootScripts(tmp, { start: script })
+        const result = await runWorkspaceValidate(tmp)
+        assert.strictEqual(findBootstrap(result.findings), undefined)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  }
+
+  for (const script of [
+    'turbo run start',
+    'yarn workspace @app/functions start',
+    'npm run start --workspace=functions',
+    'npm-run-all build serve',
+  ]) {
+    test(`"${script}" delegates, so it is not flagged`, async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidWorkspace(tmp)
+        await setRootScripts(tmp, { start: script })
+        const result = await runWorkspaceValidate(tmp)
+        assert.strictEqual(findBootstrap(result.findings), undefined)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  }
+
+  for (const pkg of [
+    '@pikku/express',
+    '@pikku/express-middleware',
+    '@pikku/fastify',
+    '@pikku/uws',
+    '@pikku/lambda',
+    '@pikku/cloudflare',
+    '@pikku/next',
+    '@pikku/node-http-server',
+    '@pikku/bun-server',
+    '@pikku/modelcontextprotocol',
+  ]) {
+    test(`${pkg} in root deps means the custom entrypoint is intentional`, async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidWorkspace(tmp)
+        await setRootScripts(
+          tmp,
+          { start: 'node dist/start.js' },
+          { [pkg]: '^1.0.0' }
+        )
+        const result = await runWorkspaceValidate(tmp)
+        assert.strictEqual(findBootstrap(result.findings), undefined)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  }
+
+  test('a runtime adapter in the functions package also silences it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, { start: 'node dist/start.js' })
+      await setFunctionsDeps(tmp, { '@pikku/fastify-plugin': '^1.0.0' })
+      const result = await runWorkspaceValidate(tmp)
+      assert.strictEqual(findBootstrap(result.findings), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a non-runtime @pikku package does not silence it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(
+        tmp,
+        { start: 'node dist/start.js' },
+        { '@pikku/jose': '^1.0.0', '@pikku/kysely': '^1.0.0' }
+      )
+      const result = await runWorkspaceValidate(tmp)
+      assert.ok(
+        findBootstrap(result.findings),
+        'expected custom-server-bootstrap finding'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test("lint.customServerBootstrap 'off' opts out", async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, { start: 'node dist/start.js' })
+      await setLintRule(tmp, 'off')
+      const result = await runWorkspaceValidate(tmp)
+      assert.strictEqual(findBootstrap(result.findings), undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test("lint.customServerBootstrap 'error' fails the run", async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await setRootScripts(tmp, { start: 'node dist/start.js' })
+      await setLintRule(tmp, 'error')
+      const result = await runWorkspaceValidate(tmp)
+      const finding = findBootstrap(result.findings)
+      assert.ok(finding, 'expected custom-server-bootstrap finding')
+      assert.strictEqual(finding!.severity, 'error')
+      assert.strictEqual(result.ok, false)
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

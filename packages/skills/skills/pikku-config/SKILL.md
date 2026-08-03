@@ -201,7 +201,24 @@ const apiKey = process.env.API_KEY
 const apiKey = services.variables.get('API_KEY')
 ```
 
-`process.env` belongs only in server bootstrap code (`start.ts`).
+`process.env` belongs only in server bootstrap code (`start.ts`). Under `pikku dev` / `pikku serve` there is no `start.ts` — startup work goes in a `pikkuServerLifecycle` export, and the hooks receive the singleton services, so read configuration through `variables` there too (see pikku-services).
+
+### Lint rules
+
+`pikku.config.json` can set the severity of individual checks:
+
+```json
+{
+  "lint": {
+    "servicesNotDestructured": "error",
+    "wiresNotDestructured": "error",
+    "functionDynamicImport": "warn",
+    "customServerBootstrap": "warn"
+  }
+}
+```
+
+`customServerBootstrap` is the one evaluated by `pikku workspace validate` rather than codegen: it warns when the root `start`/`dev` script boots a server without `pikku dev` / `pikku serve` and no runtime adapter is installed. Set it to `"off"` to keep a hand-rolled entrypoint, or `"error"` to enforce the hooks.
 
 ## Complete Example
 
