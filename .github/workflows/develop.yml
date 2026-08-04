@@ -85,13 +85,14 @@ jobs:
     name: E2E Standard
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
     needs: build
     steps:
       - uses: actions/checkout@v7
-      - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
@@ -101,13 +102,14 @@ jobs:
     name: E2E Agent (deterministic)
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 15
     needs: build
     steps:
       - uses: actions/checkout@v7
-      - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run deterministic agent e2e tests
@@ -120,13 +122,14 @@ jobs:
     name: E2E CLI
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 15
     needs: build
     steps:
       - uses: actions/checkout@v7
-      - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run CLI e2e tests
@@ -139,13 +142,14 @@ jobs:
     name: E2E Console
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 20
     needs: build
     steps:
       - uses: actions/checkout@v7
-      - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run console browser scenarios
