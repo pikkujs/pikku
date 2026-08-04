@@ -8,7 +8,7 @@ import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
 import { GatewaysTab } from '../components/tabs/GatewaysTab'
-import { m, mKey } from '@/i18n/messages'
+import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
 type ApisPageProps = {
@@ -30,7 +30,7 @@ export const ApisPage: React.FC<ApisPageProps> = ({
     {
       value: 'http',
       label: m.apis_tab_http(),
-      searchPlaceholder: mKey('apis.search.http'),
+      searchPlaceholder: m.apis_search_http(),
       render: (searchQuery) => (
         <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
       ),
@@ -38,7 +38,7 @@ export const ApisPage: React.FC<ApisPageProps> = ({
     {
       value: 'channels',
       label: m.apis_tab_channels(),
-      searchPlaceholder: mKey('apis.search.channels'),
+      searchPlaceholder: m.apis_search_channels(),
       render: (searchQuery) => (
         <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
       ),
@@ -46,7 +46,7 @@ export const ApisPage: React.FC<ApisPageProps> = ({
     {
       value: 'mcp',
       label: m.apis_tab_mcp(),
-      searchPlaceholder: mKey('apis.search.mcp'),
+      searchPlaceholder: m.apis_search_mcp(),
       render: (searchQuery) => (
         <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
       ),
@@ -54,13 +54,13 @@ export const ApisPage: React.FC<ApisPageProps> = ({
     {
       value: 'cli',
       label: m.apis_tab_cli(),
-      searchPlaceholder: mKey('apis.search.cli'),
+      searchPlaceholder: m.apis_search_cli(),
       render: (searchQuery) => <CliTab searchQuery={searchQuery} />,
     },
     {
       value: 'gateways',
       label: m.apis_tab_gateways(),
-      searchPlaceholder: mKey('apis.search.gateways'),
+      searchPlaceholder: m.apis_search_gateways(),
       render: (searchQuery) => (
         <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
       ),

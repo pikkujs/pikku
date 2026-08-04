@@ -13,15 +13,15 @@ import {
 } from '@pikku/mantine/core'
 import { AlertTriangle } from 'lucide-react'
 import { getServerUrl, setServerUrl } from '../../context/serverUrl'
-import { m, mKey } from '@/i18n/messages'
+import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { asI18n } from '@pikku/react'
+import { asI18n, type I18nString } from '@pikku/react'
 import { consoleLogoUrl } from '@/lib/assets'
 
 function getErrorGuidance(
   error: string,
   url: string
-): { titleKey: string; hint: string } {
+): { title: I18nString; hint: I18nString } {
   const lower = error.toLowerCase()
   if (
     lower.includes('fetch') ||
@@ -30,8 +30,8 @@ function getErrorGuidance(
     lower.includes('failed to fetch')
   ) {
     return {
-      titleKey: 'connection.errors.connection_refused',
-      hint: `Make sure your Pikku server is running at ${url}`,
+      title: m.connection_errors_connection_refused(),
+      hint: m.connection_hints_connection_refused({ url }),
     }
   }
   if (
@@ -40,25 +40,25 @@ function getErrorGuidance(
     lower.includes('rpc function')
   ) {
     return {
-      titleKey: 'connection.errors.addon_not_found',
-      hint: 'The @pikku/addon-console package may not be installed. Add it to your project and run pikku to generate the bootstrap.',
+      title: m.connection_errors_addon_not_found(),
+      hint: m.connection_hints_addon_not_found(),
     }
   }
   if (lower.includes('cors') || lower.includes('cross-origin')) {
     return {
-      titleKey: 'connection.errors.cors_error',
-      hint: 'Your Pikku server may need CORS configured to allow requests from the console origin.',
+      title: m.connection_errors_cors_error(),
+      hint: m.connection_hints_cors_error(),
     }
   }
   if (lower.includes('timeout')) {
     return {
-      titleKey: 'connection.errors.timeout',
-      hint: 'The server took too long to respond. Check if it is under heavy load or unreachable.',
+      title: m.connection_errors_timeout(),
+      hint: m.connection_hints_timeout(),
     }
   }
   return {
-    titleKey: 'connection.errors.connection_failed',
-    hint: error,
+    title: m.connection_errors_connection_failed(),
+    hint: asI18n(error),
   }
 }
 
@@ -94,10 +94,10 @@ export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
             icon={<AlertTriangle size={16} />}
             color="red"
             variant="light"
-            title={mKey(guidance.titleKey)}
+            title={guidance.title}
             w="100%"
           >
-            <Text size="sm">{asI18n(guidance.hint)}</Text>
+            <Text size="sm">{guidance.hint}</Text>
           </Alert>
 
           <TextInput

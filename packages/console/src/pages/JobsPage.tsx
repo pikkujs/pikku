@@ -4,7 +4,7 @@ import type { TabbedSurfaceTab } from '../components/console/TabbedSurface'
 import { SchedulersTab } from '../components/tabs/SchedulersTab'
 import { QueuesTab } from '../components/tabs/QueuesTab'
 import { TriggersTab } from '../components/tabs/TriggersTab'
-import { m, mKey } from '@/i18n/messages'
+import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
 interface JobsPageProps {
@@ -24,7 +24,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
     {
       value: 'schedulers',
       label: 'Schedulers',
-      searchPlaceholder: mKey('jobs.search.schedulers'),
+      searchPlaceholder: m.jobs_search_schedulers(),
       render: (searchQuery) => (
         <SchedulersTab searchQuery={searchQuery} emptyHero={schedulersHero} />
       ),
@@ -32,7 +32,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
     {
       value: 'queues',
       label: 'Queues',
-      searchPlaceholder: mKey('jobs.search.queues'),
+      searchPlaceholder: m.jobs_search_queues(),
       render: (searchQuery) => (
         <QueuesTab searchQuery={searchQuery} emptyHero={queuesHero} />
       ),
@@ -40,7 +40,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
     {
       value: 'triggers',
       label: 'Triggers',
-      searchPlaceholder: mKey('jobs.search.triggers'),
+      searchPlaceholder: m.jobs_search_triggers(),
       render: (searchQuery) => (
         <TriggersTab searchQuery={searchQuery} emptyHero={triggersHero} />
       ),
