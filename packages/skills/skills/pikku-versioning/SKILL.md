@@ -136,9 +136,6 @@ does **not** capture the hashes of the functions you already have. Run
 never overwrite an immutable record; it reports that as a diagnostic and leaves
 the manifest alone. Fix the contract or bump the version, then run it again.
 
-Some CLI hints print `npx pikku versions-update`. That command does not exist —
-the subcommand form (`pikku versions update`) is the one to run.
-
 **Workflow:**
 
 1. `pikku versions init` then `pikku versions update` — once, to create and
