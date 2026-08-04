@@ -1,5 +1,143 @@
 # @pikku/skills
 
+## 0.12.6
+
+### Patch Changes
+
+- 2ff07e0: Remove `pikku db seed`. Seeding is now a step of `pikku db reset`, which grew `--no-seed`.
+
+  `seed` read like something you might point at any environment. It never was. It exists
+  for one job: put enough test data into a **dev** database that the app isn't empty on
+  first run. Production and staging are provisioned, not seeded — accounts and their role
+  grants come from `pikku persona sync` or a migration, and always have.
+
+  A standalone seed command is also what made seed files unpleasant to write. Because it
+  could be run against a database in any state, every seed had to defend itself with
+  `INSERT OR IGNORE`, `ON CONFLICT DO NOTHING`, `IF NOT EXISTS`. Folding it into reset
+  removes that: `pikku db reset` wipes, migrates, then seeds, so the seed only ever meets
+  an empty database and **plain `INSERT`s are correct**. The guarantee is structural now
+  rather than a documented convention.
+
+  ```bash
+  pikku db reset             # wipe + migrate + test data
+  pikku db reset --no-seed   # wipe + migrate, empty — for empty-state and onboarding work
+  ```
+
+  Seeding also inherits reset's guards for free: it refuses `NODE_ENV=production`, and
+  refuses a database resolved outside the runtime directory.
+
+  The seed file keeps a name that says what it is:
+  - `db/postgres-seed.sql` → `db/postgres-dev-seed.sql`
+  - `db/sqlite-seed.sql` → `db/sqlite-dev-seed.sql`
+
+  **Migrating:** rename the file, and drop the idempotency guards from it if you like.
+  `pikku db seed` no longer exists — use `pikku db reset`. A project that keeps the old
+  filename gets no error: reset reports the database is empty, which is the one failure
+  mode worth knowing about up front. The Fabric validator's `seed-sql-missing` finding is
+  now `dev-seed-sql-missing` and looks for the new name.
+
+- 1e74b01: Remove `pikku db seed`. Seeding is now a step of `pikku db reset`, which grew `--no-seed`.
+
+  `seed` read like something you might point at any environment. It never was. It exists
+  for one job: put enough test data into a **dev** database that the app isn't empty on
+  first run. Production and staging are provisioned, not seeded — accounts and their role
+  grants come from `pikku persona sync` or a migration, and always have.
+
+  A standalone seed command is also what made seed files unpleasant to write. Because it
+  could be run against a database in any state, every seed had to defend itself with
+  `INSERT OR IGNORE`, `ON CONFLICT DO NOTHING`, `IF NOT EXISTS`. Folding it into reset
+  removes that: `pikku db reset` wipes, migrates, then seeds, so the seed only ever meets
+  an empty database and **plain `INSERT`s are correct**. The guarantee is structural now
+  rather than a documented convention.
+
+  ```bash
+  pikku db reset             # wipe + migrate + test data
+  pikku db reset --no-seed   # wipe + migrate, empty — for empty-state and onboarding work
+  ```
+
+  Seeding also inherits reset's guards for free: it refuses `NODE_ENV=production`, and
+  refuses a database resolved outside the runtime directory.
+
+  The seed file keeps a name that says what it is:
+  - `db/postgres-seed.sql` → `db/postgres-dev-seed.sql`
+  - `db/sqlite-seed.sql` → `db/sqlite-dev-seed.sql`
+
+  **Migrating:** rename the file, and drop the idempotency guards from it if you like.
+  `pikku db seed` no longer exists — use `pikku db reset`. A project that keeps the old
+  filename gets no error: reset reports the database is empty, which is the one failure
+  mode worth knowing about up front. The Fabric validator's `seed-sql-missing` finding is
+  now `dev-seed-sql-missing` and looks for the new name.
+
+- 95f6144: Audit the twelve core skills against the shipped APIs and correct the drift.
+  - pikku-ai-agent: `instructions` does not exist — the prompt is `role`/`personality`/`goal` (required); tools are `ref()` handles; import from `#pikku/agent/pikku-agent-types.gen.js`; invoke via `rpc.agent.*` rather than `runAIAgent(name, input, { singletonServices })`
+  - pikku-scenario: step bodies live under `default`/`browser`/`cli` bindings, not a `func`; `scaffold.scenarios` is a boolean, not the rejected `"auth"` string
+  - pikku-addon: there is no `addon()` helper — `ref()` covers local and addon functions
+  - pikku-realtime: SSE is `PikkuRealtime.subscribeToTopic`; `publish`'s channelId argument excludes rather than targets
+  - pikku-cli: factories come from `#pikku`; documents options parsing, permissions/middleware/auth and the generated websocket backend
+  - pikku-services, pikku-config, pikku-middleware, pikku-rpc, pikku-workflow, pikku-queue, pikku-cron, pikku-websocket: corrected option names, wire objects, scopes/secrets coverage and cross-skill routing
+
+- facd61f: Audit the remaining skills against the shipped APIs and correct the drift.
+  - pikku-mcp: there is no `wireMCPTool` — a tool _is_ the function (`mcp: true` or `pikkuMCPToolFunc`), while `uri`/`title`/`name` belong on `wireMCPResource`/`wireMCPPrompt` rather than on the `pikkuMCP*Func` factories; resources return `{ uri, text }` only; `PikkuMCPServer` takes `(config, logger)`
+  - pikku-http: `channel` is on the wire, not services; `sse` is `get`-only and `query` is `post`-only; `docs` was never a `wireHTTP` option; factories come from `#pikku`
+  - pikku-security: documents `authBearer`'s static-token mode, `authCookie`'s merged defaults and re-issue rule, and that every strategy is a no-op without an HTTP request or with a session already set
+  - pikku-better-auth: the `admin:users:*` scope tree gained create/ban/remove/sessions/password, and `syncProjectedAdminRole` projects them onto `user.role` for better-auth's own `admin()` endpoints; documents dev quick login
+  - pikku-react / pikku-react-query / pikku-workflows-client: `createPikku` options are flat `CorePikkuFetchOptions` with `authHeaders` and the `setAuthorizationJWT`/`setAPIKey`/`setHeader` setters (no request interceptor); `useWorkflowStatus` never stops polling on its own
+  - pikku-trigger: a source function runs once at startup with singleton services only; documents `InMemoryTriggerService` startup and the skipped-metadata warning
+  - pikku-schedule: the singleton is `schedulerService` and `start()` is what registers the cron jobs; documents `scheduleRPC` and the one-off task API
+  - pikku-ws: there is no `PikkuWSServer` — `pikkuWebsocketHandler({ server, wss, logger })` over a `noServer: true` `WebSocketServer` is the real API
+  - pikku-info: there are only four subcommands, and `--silent` works despite the spurious "Unknown option" warning
+  - pikku-versioning: `override` is not required — a matching `V<n>` export suffix is stripped automatically — and the live function must be bumped explicitly; `versions init` writes an empty manifest, so `versions update` has to follow it
+  - pikku-audit: documents `audit: { durability }`, the `Safe<>` guard on `auditLog.write`, `createInvocationAudit`'s logger argument, and `createAuditedKysely`'s options
+  - pikku-kysely: six packages, not four — `@pikku/kysely-node-sqlite` / `-bun-sqlite` build the instance functions query, while `createSQLiteKysely` is typed to `KyselyPikkuDB` and wires `SerializePlugin`; the secret service config is `{ key, keyVersion, previousKey, audit }`, not `{ kekSecret, salt }`, and `getSecret` returns a `SecretValue`
+  - pikku-emails: template variables are always optional and never required-able; unresolved placeholders render blank rather than failing; documents `pikku emails init`
+  - pikku-rtl: rewritten off i18next — there is no `t()` or `i18n.changeLanguage` anywhere in the repo; Arabic is a `messages/ar.json` listed in `project.inlang/settings.json`
+  - pikku-i18n: enum labels use the singular `enum__<group>__<member>` namespace `@pikku/paraglide` generates from, not hand-written `enums__` maps; notes the console's wrapped `m` as a leftover rather than a pattern, and that the `mKey`/`mList` runtime resolvers have been removed for good
+  - pikku-deps: the summary has `totalIssues`/`totalUpdates` and no `info` bucket, issue `url`/`cvssScore`/`recommendedVersion` are nullable rather than optional, lockfile detection covers pnpm and npm too, and a non-zero `bun audit` exit only counts as data when it produced output
+  - pikku-feature: stage changed files by path — `git add -A` sweeps up regenerated artifacts and, on a shared checkout, another agent's work
+  - pikku-jose: `decode` verifies the signature and expiry (it is not an unchecked read), keys resolve by the token's `kid` rather than being tried in turn, and the algorithm is fixed HS256
+  - pikku-machine-auth: documents restricting a key below its owner via `scopes` on the mapped session, the deliberate verify-vs-scope failure split, and that `betterAuthStatelessSession` has no api-key path
+  - pikku-redis / pikku-mongodb: the secret-service config is `{ key, keyVersion, previousKey, … }`, not the fabricated `{ kekSecret, salt }`; both packages also ship a `SessionStore`
+  - pikku-pino: log methods take trailing meta varargs and are `Safe<>`-guarded against secrets; `debug` takes a string only
+  - pikku-aws / pikku-backblaze: every `ContentService` method takes an args object with a logical `bucket` stored as a path prefix, not positional arguments; `S3ContentConfig` is `{ bucketName, region, endpoint }` and `B2ContentConfig` has no `cdnUrl`; documents `signURL` failing open, the fixed 3600s presign, SQS's 900s delay ceiling and throwing `getJob`, and that `AWSSecrets.getSecret` returns a `SecretValue` and reports every failure as the same fatal error
+  - pikku-gateway-slack: `SlackGatewayAdapter` takes `{ signingSecret, tokenResolver }` — there is no `botToken`, one adapter serves every workspace; `verifySlackSignature` is `(secret, signature, timestamp, body)` and returns a boolean; `parseSlashCommand` returns camelCase fields with the raw payload on `raw`; the generic `send()` is a no-op, so replies must go through `createBoundSend`/`SlackGatewayHelper`
+  - pikku-ai-vercel: model strings are `provider/model`, not `provider:model`; documents the `'*'` catch-all, `withApiKey`, the transcribe/speech/image/embed methods, and that the service key must be `aiAgentRunner`
+  - pikku-ai-voice: rewritten — `@pikku/ai-voice` is a deprecated empty package with no `STTService`/`TTSService`; `voiceInput`/`voiceOutput` come from `@pikku/core/ai-agent` and attach via `aiMiddleware`, with per-script voices, `NoSpeechDetectedError`, and speak-only-when-spoken-to
+  - both above: there is no `wireAIAgent` — agents are declared with `pikkuAIAgent` from the generated agent types
+  - pikku-schema-ajv / pikku-schema-cfworker: the two validators are not drop-in equivalents — AJV caches by name forever and fills defaults in place, cfworker recompiles on a changed schema and applies no defaults; a missing schema throws a bare string rather than an `Error`
+  - pikku-n8n-import: the output directory is `--out/-o`, not a positional argument, and `pikku import n8n` already accepts a directory and flattens array/`{workflows:[]}` exports — an un-importable workflow is skipped while the rest of a batch still imports
+  - pikku-template-clone: `create-pikku` keeps only the chosen package manager's lockfile and may have written an empty `yarn.lock`, so commit it after the first install rather than as scaffolded
+  - pikku-fabric: the wirings file comment claimed a `wireMCPTool` that has never existed, and the conversion checklist named `fabric.config.json` with a `production.branch` — the real file is `pikkufabric.config.json` with `production.domain`; notes that several CLI messages print the shorter name anyway
+  - pikku-fabric-debug: `metrics` also requires `--branch`, and `--follow`'s own help text advertises SSE for what is a 2-second client poll
+  - pikku-deploy-express: documents `getHttpServer`/`enableReaper`, that the health check is registered in the constructor (before any middleware, so it cannot be wrapped in auth), what `init()` installs and in what order, and that Express buffers the body so the parser limit is the only place `maxBodySize` can stop an oversized request
+  - pikku-deploy-fastify: `enableCors` throws `Method not implemented.`; the health check lives in `init()`, not the constructor; the plugin registers a catch-all `fastify.all('/*')` and only sets `bodyLimit` when `maxBodySize` is supplied, so Fastify's stricter 1MB default otherwise stands
+  - pikku-deploy-uws: `PikkuUWSServer` has no `enableCors`, static assets or `content`; `init()` registers the health check plus catch-all HTTP and websocket handlers, `httpOptions` never reaches the websocket one and `loadSchemas` is never passed; `stop()` throws a bare string and waits a fixed 2s; documents the byte-counting `maxBodySize` 413 and why `@pikku/ws` needs `noServer: true`
+  - pikku-deploy-lambda: `runFetch` is payload v1 and `runFetchV2` v2 — only v2 echoes an origin or returns a 500; scheduled handlers should use `runLambdaScheduled`, which runs every task in the bundle and swallows per-task failures; the SQS worker's `batchItemFailures` needs `ReportBatchItemFailures` to mean anything; websocket handlers return a real `APIGatewayProxyResult` that must not be replaced with a hardcoded 200; documents the handler factories, `SQS_QUEUE_URL_*` resolution and the binary-unsupported/stale-connection eventhub behaviour
+  - pikku-deploy-cloudflare: the hand-rolled `setup-services.ts` never called `setSingletonServices`, so every request would have thrown a CF 1101 — use the exported `setupServices(env, factories)` and the handler factories; documents `runFetch`'s 426 upgrade path, `cf-ray` traceId and `exposeErrors: false` default, that `runScheduled` stops after the first cron match, and the `WEBSOCKET_HIBERNATION_SERVER` binding plus the 1008/403 connect-denial path
+  - pikku-deploy-nextjs: `pikkuAPIRequest` strips a leading `/api` (toggle with `removeAPIPrefix`) and passes no wiring options; the helper set includes `patch` and has no `staticPatch`/`staticDel`; the static variants differ by `skipUserSession`, not just where they run, and both bubble errors; documents `PikkuNextJSWorkerRPC` and `toNextJsAuthHandler`
+  - pikku-deploy-azure: the exports are `AzInvocationLogger` and `PikkuAZTimerRequest` — `PikkuAzFunctionsLogger` never existed; real deployments go through `createAzureHandler(factories, handlerTypes)` returning `{ http, queue, timer }`; `createAzureWebSocketHandler` is a 501 stub; documents the text-flattened HTTP response, `AZURE_QUEUE_NAME_*` resolution, the 7-day visibility cap, the timer running every task without per-task error handling, and `setLevel` being a no-op
+  - pikku-product-second-opinion: stop asserting a fixed TanStack Start release stage — `@tanstack/react-start`'s major tracks the Router line, so the version says nothing about maturity; check the vendor at write-up time
+
+- 2f72189: Point the `versions check` hints at a command that exists.
+
+  Three different failures told you to run `npx pikku versions-update`. There is
+  no such command — `update` is a subcommand of `versions` — so anyone following
+  the hint hit "unknown command" at the moment they were trying to repair a
+  contract manifest. It now prints `npx pikku versions update`.
+
+  The pikku-versioning skill carried a paragraph warning agents the hint was
+  wrong; with the hint fixed, that warning is gone.
+
+- 7b0da5e: Point `versions check` at a command that exists.
+
+  Three of its diagnostics told you to run `npx pikku versions-update`. There is
+  no such command — `update` is a subcommand of `versions`, so following the hint
+  gets an unknown-command error at the exact moment you have a failing check to
+  clear. They now print `npx pikku versions update`.
+
+  The pikku-versioning skill carried a paragraph warning agents off the bad hint.
+  With the hint corrected the warning is the only thing left naming a command that
+  does not exist, so it goes too.
+
 ## 0.12.5
 
 ### Patch Changes
