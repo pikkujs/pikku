@@ -59,7 +59,7 @@ export const auditRecordsWhatHappenedScenario = pikkuScenario<
   void,
   { recorded: true }
 >({
-  title: 'An audited function’s event reaches the trail with its actor',
+  title: 'An audited function’s event reaches the trail with its user',
   description:
     'The event is persisted with the type, the metadata and the caller who caused it',
   tags: ['scenario', 'audit', 'console'],

@@ -1,13 +1,13 @@
 import type { AuditEvent } from '@pikku/core'
 import { pikkuFunc } from '#pikku'
 import {
-  resolveAuditActors,
-  type AuditActorDirectory,
-} from '../lib/resolve-audit-actors.js'
+  resolveAuditUsers,
+  type AuditUserDirectory,
+} from '../lib/resolve-audit-users.js'
 
 export type GetAuditsInput = {
-  /** Restrict to these actors. An empty array matches nothing. */
-  actorUserIds?: string[]
+  /** Restrict to these users. An empty array matches nothing. */
+  userIds?: string[]
   /** Restrict to these event types. An empty array matches nothing. */
   types?: string[]
   /** Inclusive lower bound on `occurredAt` (ISO 8601). */
@@ -21,11 +21,11 @@ export type GetAuditsInput = {
 export type GetAuditsOutput = {
   events: AuditEvent[]
   /**
-   * Who the actor ids on this page belong to. Empty when no auth is wired, and
+   * Who the user ids on this page belong to. Empty when no auth is wired, and
    * missing an id whose account has since been deleted — the reader falls back
    * to the id, which is what the trail actually recorded.
    */
-  actors: AuditActorDirectory
+  users: AuditUserDirectory
   /** Offset of the next page, or `null` at the end. */
   nextCursor: number | null
   /**
@@ -40,26 +40,26 @@ export type GetAuditsOutput = {
 export const getAudits = pikkuFunc<GetAuditsInput, GetAuditsOutput>({
   title: 'Get Audits',
   description:
-    'Returns a page of the audit trail, newest first, optionally filtered by actor, event type, and time range. Reports readable: false when the configured audit sink is write-only.',
+    'Returns a page of the audit trail, newest first, optionally filtered by user, event type, and time range. Reports readable: false when the configured audit sink is write-only.',
   expose: true,
   scopes: ['pikku:audit:read'],
   func: async ({ audit, auth, logger }, input) => {
     if (!audit?.query) {
-      return { events: [], actors: {}, nextCursor: null, readable: false }
+      return { events: [], users: {}, nextCursor: null, readable: false }
     }
     const { events, nextCursor } = await audit.query({
-      actorUserIds: input?.actorUserIds,
+      userIds: input?.userIds,
       types: input?.types,
       from: input?.from,
       to: input?.to,
       limit: input?.limit,
       offset: input?.offset,
     })
-    const actors = await resolveAuditActors(
+    const users = await resolveAuditUsers(
       auth,
-      events.map((event) => event.actor?.userId),
+      events.map((event) => event.userIdentity?.userId),
       logger
     )
-    return { events, actors, nextCursor, readable: true }
+    return { events, users, nextCursor, readable: true }
   },
 })

@@ -1,9 +1,9 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  actorIdentity,
-  actorLabel,
-  actorName,
+  auditIdentity,
+  userLabel,
+  userName,
   auditRowKey,
   formatOccurredAt,
   summariseMetadata,
@@ -32,55 +32,55 @@ describe('auditRowKey', () => {
   })
 })
 
-describe('actorName', () => {
+describe('userName', () => {
   test('prefers a name, then an email', () => {
-    assert.equal(actorName({ name: 'Ada', email: 'ada@example.com' }), 'Ada')
-    assert.equal(actorName({ email: 'ada@example.com' }), 'ada@example.com')
+    assert.equal(userName({ name: 'Ada', email: 'ada@example.com' }), 'Ada')
+    assert.equal(userName({ email: 'ada@example.com' }), 'ada@example.com')
   })
 
   test('has nothing to say about an account with neither', () => {
-    assert.equal(actorName({}), undefined)
-    assert.equal(actorName(undefined), undefined)
+    assert.equal(userName({}), undefined)
+    assert.equal(userName(undefined), undefined)
   })
 
   // A row written by a since-deleted account is not an error, and rendering it
   // nameless would make the event look like nobody did it.
   test('falls back to the id the event was recorded under', () => {
-    assert.equal(actorLabel('usr_1', { usr_2: { name: 'Ada' } }), 'usr_1')
-    assert.equal(actorLabel('usr_1', undefined), 'usr_1')
+    assert.equal(userLabel('usr_1', { usr_2: { name: 'Ada' } }), 'usr_1')
+    assert.equal(userLabel('usr_1', undefined), 'usr_1')
   })
 })
 
-describe('actorIdentity', () => {
+describe('auditIdentity', () => {
   test('names the account that acted', () => {
     assert.deepEqual(
-      actorIdentity({ userId: 'usr_1' }, { usr_1: { name: 'Ada' } }),
-      { kind: 'user', label: 'Ada', synthetic: false }
+      auditIdentity({ userId: 'usr_1' }, { usr_1: { name: 'Ada' } }),
+      { kind: 'user', label: 'Ada', actor: false }
     )
   })
 
   test('marks a scenario actor so synthetic traffic is not read as real', () => {
     assert.deepEqual(
-      actorIdentity(
+      auditIdentity(
         { userId: 'usr_1' },
-        { usr_1: { name: 'Admin', synthetic: true } }
+        { usr_1: { name: 'Admin', actor: true } }
       ),
-      { kind: 'user', label: 'Admin', synthetic: true }
+      { kind: 'user', label: 'Admin', actor: true }
     )
   })
 
   // Crediting a signed-out caller to the platform would hide that a stranger
   // did it, so the wire identity is shown instead.
   test('shows the wire identity when nobody was signed in', () => {
-    assert.deepEqual(actorIdentity({ pikkuUserId: 'pk_9' }, {}), {
+    assert.deepEqual(auditIdentity({ pikkuUserId: 'pk_9' }, {}), {
       kind: 'anonymous',
       label: 'pk_9',
     })
   })
 
   test('is the system only when the event carries no identity at all', () => {
-    assert.deepEqual(actorIdentity(undefined, {}), { kind: 'system' })
-    assert.deepEqual(actorIdentity({}, {}), { kind: 'system' })
+    assert.deepEqual(auditIdentity(undefined, {}), { kind: 'system' })
+    assert.deepEqual(auditIdentity({}, {}), { kind: 'system' })
   })
 })
 

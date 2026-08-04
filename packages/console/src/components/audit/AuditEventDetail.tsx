@@ -5,13 +5,13 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { DataViewer } from '../ui/DataViewer'
 import { AuditDetailField } from './AuditDetailField'
-import type { AuditActorDirectory, AuditRow } from './audit-row'
-import { OUTCOME_COLOUR, actorIdentity, formatOccurredAt } from './audit-row'
+import type { AuditUserDirectory, AuditRow } from './audit-row'
+import { OUTCOME_COLOUR, auditIdentity, formatOccurredAt } from './audit-row'
 
 export interface AuditEventDetailProps {
   event: AuditRow
-  /** Names for the actor ids on the page this event came from. */
-  actors?: AuditActorDirectory
+  /** Names for the user ids on the page this event came from. */
+  users?: AuditUserDirectory
 }
 
 /**
@@ -23,14 +23,14 @@ export interface AuditEventDetailProps {
  */
 export const AuditEventDetail: React.FC<AuditEventDetailProps> = ({
   event,
-  actors,
+  users,
 }) => {
   useLocale()
-  const identity = actorIdentity(event.actor, actors)
+  const identity = auditIdentity(event.userIdentity, users)
   // The name, when one was found — an unresolved actor's label is its own id,
   // which is worth showing once rather than twice.
   const named =
-    identity.kind === 'user' && identity.label !== event.actor?.userId
+    identity.kind === 'user' && identity.label !== event.userIdentity?.userId
       ? identity.label
       : undefined
   return (
@@ -43,9 +43,9 @@ export const AuditEventDetail: React.FC<AuditEventDetailProps> = ({
               ? m.audit_source_explicit()
               : m.audit_source_auto()}
           </Badge>
-          {identity.kind === 'user' && identity.synthetic && (
+          {identity.kind === 'user' && identity.actor && (
             <Badge size="xs" variant="light" color="grape">
-              {m.audit_actor_synthetic()}
+              {m.audit_user_actor()}
             </Badge>
           )}
           {event.outcome && (
@@ -65,26 +65,26 @@ export const AuditEventDetail: React.FC<AuditEventDetailProps> = ({
 
       <Stack gap={4}>
         <AuditDetailField
-          label={m.audit_col_actor()}
+          label={m.audit_col_user()}
           value={identity.kind === 'system' ? undefined : identity.label}
-          fallback={m.audit_actor_system()}
+          fallback={m.audit_user_system()}
           monospace={!named}
         />
         {/* The id stays visible whenever a name was put in front of it: the
             name is today's, the id is what the event was recorded against, and
             an investigation needs the one that cannot have changed since. */}
         <AuditDetailField
-          label={m.audit_detail_actor_id()}
-          value={named ? event.actor?.userId : undefined}
+          label={m.audit_detail_user_id()}
+          value={named ? event.userIdentity?.userId : undefined}
         />
         <AuditDetailField
-          label={m.audit_detail_actor_org()}
-          value={event.actor?.orgId}
+          label={m.audit_detail_user_org()}
+          value={event.userIdentity?.orgId}
         />
         {identity.kind === 'user' && (
           <AuditDetailField
-            label={m.audit_detail_actor_session()}
-            value={event.actor?.pikkuUserId}
+            label={m.audit_detail_user_session()}
+            value={event.userIdentity?.pikkuUserId}
           />
         )}
         <AuditDetailField

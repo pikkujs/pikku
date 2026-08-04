@@ -22,8 +22,9 @@ const CREATE_AUDIT_TABLE = `
     trace_id       TEXT,
     transaction_id TEXT,
     query_id       TEXT,
-    actor_user_id  TEXT,
-    actor_org_id   TEXT,
+    user_id        TEXT,
+    org_id         TEXT,
+    pikku_user_id  TEXT,
     tables         TEXT,
     changed_cols   TEXT,
     event          TEXT,
@@ -56,20 +57,20 @@ const seed = () =>
       eventId: 'e1',
       type: 'invoice.update',
       occurredAt: '2026-01-01T00:00:00.000Z',
-      actor: { userId: 'alice', orgId: 'org-a' },
+      userIdentity: { userId: 'alice', orgId: 'org-a' },
       metadata: { entity: 'invoice', entityId: 'inv-1' },
     }),
     event({
       eventId: 'e2',
       type: 'invoice.delete',
       occurredAt: '2026-01-02T00:00:00.000Z',
-      actor: { userId: 'bob', orgId: 'org-a' },
+      userIdentity: { userId: 'bob', orgId: 'org-a' },
     }),
     event({
       eventId: 'e3',
       type: 'invoice.update',
       occurredAt: '2026-01-03T00:00:00.000Z',
-      actor: { userId: 'alice', orgId: 'org-b' },
+      userIdentity: { userId: 'alice', orgId: 'org-b' },
     }),
   ])
 
@@ -90,13 +91,34 @@ describe('KyselyAuditService.query', () => {
     const first = events.find((e) => e.eventId === 'e1')!
     assert.equal(first.type, 'invoice.update')
     assert.equal(first.source, 'explicit')
-    assert.deepEqual(first.actor, { userId: 'alice', orgId: 'org-a' })
+    assert.deepEqual(first.userIdentity, {
+      userId: 'alice',
+      orgId: 'org-a',
+      pikkuUserId: undefined,
+    })
     assert.deepEqual(first.metadata, { entity: 'invoice', entityId: 'inv-1' })
   })
 
-  test('filters by actor', async () => {
+  test('keeps the wire identity of a caller who never signed in', async () => {
+    await service.write([
+      event({
+        eventId: 'e4',
+        type: 'invoice.view',
+        occurredAt: '2026-01-04T00:00:00.000Z',
+        userIdentity: { pikkuUserId: 'pk_9' },
+      }),
+    ])
+    const { events } = await service.query({ types: ['invoice.view'] })
+    assert.deepEqual(events[0]!.userIdentity, {
+      userId: undefined,
+      orgId: undefined,
+      pikkuUserId: 'pk_9',
+    })
+  })
+
+  test('filters by user', async () => {
     await seed()
-    const { events } = await service.query({ actorUserIds: ['alice'] })
+    const { events } = await service.query({ userIds: ['alice'] })
     assert.deepEqual(
       events.map((e) => e.eventId),
       ['e3', 'e1']
@@ -115,9 +137,9 @@ describe('KyselyAuditService.query', () => {
   test('combines filters as a conjunction', async () => {
     await seed()
     const { events } = await service.query({
-      actorUserIds: ['alice'],
+      userIds: ['alice'],
       types: ['invoice.update'],
-      actorOrgId: 'org-b',
+      orgId: 'org-b',
     })
     assert.deepEqual(
       events.map((e) => e.eventId),
@@ -127,8 +149,8 @@ describe('KyselyAuditService.query', () => {
 
   test('an empty filter array matches nothing rather than everything', async () => {
     await seed()
-    const byActor = await service.query({ actorUserIds: [] })
-    assert.deepEqual(byActor.events, [])
+    const byUser = await service.query({ userIds: [] })
+    assert.deepEqual(byUser.events, [])
     const byType = await service.query({ types: [] })
     assert.deepEqual(byType.events, [])
   })
@@ -235,7 +257,7 @@ describe('KyselyAuditService against a CamelCasePlugin connection', () => {
         functionId: 'cancelInvoice',
         wireType: 'http',
         traceId: 'trace-1',
-        actor: { userId: 'alice', orgId: 'org-a' },
+        userIdentity: { userId: 'alice', orgId: 'org-a' },
         metadata: { entity: 'invoice' },
       }),
     ])
@@ -252,33 +274,37 @@ describe('KyselyAuditService against a CamelCasePlugin connection', () => {
       traceId: 'trace-1',
       transactionId: undefined,
       queryId: undefined,
-      actor: { userId: 'alice', orgId: 'org-a' },
+      userIdentity: {
+        userId: 'alice',
+        orgId: 'org-a',
+        pikkuUserId: undefined,
+      },
       metadata: { entity: 'invoice' },
     })
   })
 
-  test('still filters and facets by actor', async () => {
+  test('still filters and facets by user', async () => {
     await camelService.write([
       event({
         eventId: 'e1',
         type: 'a',
         occurredAt: '2026-01-01T00:00:00.000Z',
-        actor: { userId: 'alice' },
+        userIdentity: { userId: 'alice' },
       }),
       event({
         eventId: 'e2',
         type: 'b',
         occurredAt: '2026-01-02T00:00:00.000Z',
-        actor: { userId: 'bob' },
+        userIdentity: { userId: 'bob' },
       }),
     ])
-    const { events } = await camelService.query({ actorUserIds: ['bob'] })
+    const { events } = await camelService.query({ userIds: ['bob'] })
     assert.deepEqual(
       events.map((e) => e.eventId),
       ['e2']
     )
     const facets = await camelService.facets()
-    assert.deepEqual(facets.actorUserIds, ['alice', 'bob'])
+    assert.deepEqual(facets.userIds, ['alice', 'bob'])
   })
 })
 
@@ -316,19 +342,19 @@ describe('KyselyAuditService.init', () => {
 })
 
 describe('KyselyAuditService.facets', () => {
-  test('lists the distinct actors and types across the whole trail', async () => {
+  test('lists the distinct users and types across the whole trail', async () => {
     await seed()
     const facets = await service.facets()
-    assert.deepEqual(facets.actorUserIds, ['alice', 'bob'])
+    assert.deepEqual(facets.userIds, ['alice', 'bob'])
     assert.deepEqual(facets.types, ['invoice.delete', 'invoice.update'])
   })
 
-  test('omits actorless events from the actor list', async () => {
+  test('omits userless events from the user list', async () => {
     await service.write([
       event({ eventId: 'cron', type: 'cleanup.ran', occurredAt: '2026-05-01' }),
     ])
     const facets = await service.facets()
-    assert.deepEqual(facets.actorUserIds, [])
+    assert.deepEqual(facets.userIds, [])
     assert.deepEqual(facets.types, ['cleanup.ran'])
   })
 })

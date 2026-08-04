@@ -13,36 +13,36 @@ export type AuditPage = FlattenedRPCMap['console:getAudits']['output']
  */
 export type AuditRow = AuditPage['events'][number]
 
-/** Who the actor ids on a page belong to, keyed by id. */
-export type AuditActorDirectory = AuditPage['actors']
+/** Who the user ids on a page belong to, keyed by id. */
+export type AuditUserDirectory = AuditPage['users']
 
-/** One entry of the actor filter's vocabulary. */
-export type AuditActor =
-  FlattenedRPCMap['console:getAuditFilters']['output']['actors'][number]
+/** One entry of the user filter's vocabulary. */
+export type AuditFilterUser =
+  FlattenedRPCMap['console:getAuditFilters']['output']['users'][number]
 
 /**
- * What to call an actor.
+ * What to call a user.
  *
  * A name if the account has one, else the email, else nothing — the caller
- * decides what an unnamed actor looks like, because the table falls back to the
- * id while a filter option falls back to its own label.
+ * decides what an unnamed account looks like, because the table falls back to
+ * the id while a filter option falls back to its own label.
  */
-export const actorName = (actor?: {
+export const userName = (user?: {
   name?: string
   email?: string
-}): string | undefined => actor?.name || actor?.email
+}): string | undefined => user?.name || user?.email
 
 /**
- * The label for an actor id, given the directory that came with the page.
+ * The label for a user id, given the directory that came with the page.
  *
  * Falls back to the id: an account deleted since the event still has its
  * actions in the trail, and showing the id it was recorded under is the honest
  * answer — the alternative is an event that appears to have no author.
  */
-export const actorLabel = (
+export const userLabel = (
   userId: string,
-  directory: AuditActorDirectory | undefined
-): string => actorName(directory?.[userId]) ?? userId
+  directory: AuditUserDirectory | undefined
+): string => userName(directory?.[userId]) ?? userId
 
 /**
  * Who a row says acted, in the order the trail can actually vouch for.
@@ -53,24 +53,24 @@ export const actorLabel = (
  * platform itself. Only an event with neither is genuinely the system acting:
  * a cron or a queue worker, which have no session by design.
  */
-export type ActorIdentity =
-  | { kind: 'user'; label: string; synthetic: boolean }
+export type AuditIdentity =
+  | { kind: 'user'; label: string; actor: boolean }
   | { kind: 'anonymous'; label: string }
   | { kind: 'system' }
 
-export const actorIdentity = (
-  actor: AuditRow['actor'],
-  directory: AuditActorDirectory | undefined
-): ActorIdentity => {
-  if (actor?.userId) {
+export const auditIdentity = (
+  userIdentity: AuditRow['userIdentity'],
+  directory: AuditUserDirectory | undefined
+): AuditIdentity => {
+  if (userIdentity?.userId) {
     return {
       kind: 'user',
-      label: actorLabel(actor.userId, directory),
-      synthetic: directory?.[actor.userId]?.synthetic === true,
+      label: userLabel(userIdentity.userId, directory),
+      actor: directory?.[userIdentity.userId]?.actor === true,
     }
   }
-  if (actor?.pikkuUserId) {
-    return { kind: 'anonymous', label: actor.pikkuUserId }
+  if (userIdentity?.pikkuUserId) {
+    return { kind: 'anonymous', label: userIdentity.pikkuUserId }
   }
   return { kind: 'system' }
 }

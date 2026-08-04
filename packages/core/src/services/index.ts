@@ -141,11 +141,10 @@ export type { IsSystemRole } from './system-role-guard.js'
 export {
   NoopAuditService,
   createInvocationAudit,
-  resolveAuditActorFromWire,
   resolveAuditConfig,
+  resolveAuditUserIdentityFromWire,
 } from './audit-service.js'
 export type {
-  AuditActor,
   AuditConfig,
   AuditDurability,
   AuditEvent,
@@ -155,6 +154,7 @@ export type {
   AuditOutcome,
   AuditService,
   AuditSource,
+  AuditUserIdentity,
   ResolvedAuditConfig,
 } from './audit-service.js'
 export { InMemorySessionStore } from './in-memory-session-store.js'

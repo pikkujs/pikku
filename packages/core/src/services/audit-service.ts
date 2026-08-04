@@ -20,7 +20,19 @@ export type ResolvedAuditConfig = {
   durability: AuditDurability
 }
 
-export type AuditActor = {
+/**
+ * Who an event happened under.
+ *
+ * A user, not an "actor": in pikku an actor is a synthetic person a scenario
+ * drives, flagged `actor` on the user row, and the overwhelming majority of
+ * audited events are caused by ordinary customers. Naming this `actor` made the
+ * synthetic case unsayable — `actor.actor === true` — and implied every
+ * recorded action was a test.
+ *
+ * `pikkuUserId` is the identity pikku resolves for every wire, so it is the one
+ * field a signed-out caller still leaves behind.
+ */
+export type AuditUserIdentity = {
   userId?: string
   orgId?: string
   pikkuUserId?: string
@@ -38,7 +50,7 @@ export type AuditEvent = {
   traceId?: string
   transactionId?: string | null
   queryId?: string | null
-  actor?: AuditActor
+  userIdentity?: AuditUserIdentity
   input?: unknown
   metadata?: Record<string, unknown>
 }
@@ -53,12 +65,12 @@ export type AuditEventBatch = AuditEvent[]
  * widen a scoped query.
  */
 export type AuditQuery = {
-  /** Restrict to these actors. */
-  actorUserIds?: string[]
+  /** Restrict to these users. */
+  userIds?: string[]
   /** Restrict to these `AuditEvent['type']` values. */
   types?: string[]
-  /** Restrict to one actor org. */
-  actorOrgId?: string
+  /** Restrict to one organisation. */
+  orgId?: string
   /** Inclusive lower bound on `occurredAt` (ISO 8601). */
   from?: string
   /** Exclusive upper bound on `occurredAt` (ISO 8601). */
@@ -75,7 +87,7 @@ export type AuditQuery = {
  * to reach anything else.
  */
 export type AuditFacets = {
-  actorUserIds: string[]
+  userIds: string[]
   types: string[]
 }
 
@@ -97,7 +109,7 @@ export interface AuditService {
    * here rather than that it is empty; the two are very different answers.
    */
   query?(query: AuditQuery): Promise<AuditQueryResult>
-  /** Distinct actors and types across the whole trail. Paired with {@link query}. */
+  /** Distinct users and types across the whole trail. Paired with {@link query}. */
   facets?(): Promise<AuditFacets>
 }
 
@@ -210,7 +222,8 @@ class InvocationAuditLog implements AuditLog {
       wireType: this.wire.wireType,
       wireId: this.wire.wireId,
       traceId: this.wire.traceId,
-      actor: event.actor ?? resolveAuditActorFromWire(this.wire),
+      userIdentity:
+        event.userIdentity ?? resolveAuditUserIdentityFromWire(this.wire),
       ...event,
       occurredAt: new Date().toISOString(),
     }
@@ -245,19 +258,23 @@ export const createInvocationAudit = (
   return new InvocationAuditLog(wire.audit, service, wire, logger)
 }
 
-export const resolveAuditActorFromWire = (
+export const resolveAuditUserIdentityFromWire = (
   wire: PikkuWire<any, any, any, CoreUserSession>
-): AuditActor | undefined => {
+): AuditUserIdentity | undefined => {
   const session = wire.session as CoreUserSession | undefined
-  const actor: AuditActor = {
+  const userIdentity: AuditUserIdentity = {
     userId: session?.userId,
     orgId: session?.orgId,
     pikkuUserId: wire.pikkuUserId,
   }
 
-  if (!actor.userId && !actor.orgId && !actor.pikkuUserId) {
+  if (
+    !userIdentity.userId &&
+    !userIdentity.orgId &&
+    !userIdentity.pikkuUserId
+  ) {
     return undefined
   }
 
-  return actor
+  return userIdentity
 }

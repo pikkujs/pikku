@@ -1,8 +1,8 @@
 import type { BetterAuthInstance } from '@pikku/better-auth'
 import type { CoreSingletonServices } from '@pikku/core'
 
-/** Who an actor id belongs to. */
-export type AuditActorIdentity = {
+/** Who a user id belongs to. */
+export type AuditUserProfile = {
   name?: string
   email?: string
   /**
@@ -10,14 +10,14 @@ export type AuditActorIdentity = {
    * plugin sets and `CoreUserSession.actor` mirrors. Absent in an app that does
    * not run scenarios, so absence means "an ordinary user", not "unknown".
    */
-  synthetic?: boolean
+  actor?: boolean
 }
 
-/** Who each actor id on a page belongs to, keyed by that id. */
-export type AuditActorDirectory = Record<string, AuditActorIdentity>
+/** Who each user id on a page belongs to, keyed by that id. */
+export type AuditUserDirectory = Record<string, AuditUserProfile>
 
 /**
- * Resolves audit actor ids to the people behind them.
+ * Resolves the user ids on a page of the trail to the people behind them.
  *
  * The trail stores an id because that is the only thing stable enough to record
  * — a name can change after the event, and an audit row must not. The join
@@ -28,16 +28,19 @@ export type AuditActorDirectory = Record<string, AuditActorIdentity>
  * Read through better-auth's own adapter as the server, not as the caller.
  * `pikku:audit:read` already grants "every recorded action, and which user took
  * it", so a reader who may see the id may see the name — an opaque id would be
- * the same disclosure, just unreadable.
+ * the same disclosure, just unreadable. Reading the adapter directly also
+ * reaches actor rows, which the admin user list deliberately hides: nobody
+ * picks a scenario actor out of a people-picker, but a trail that cannot say an
+ * actor did it is worse than one that names them.
  *
  * An id missing from the result is not an error: a deleted account leaves its
  * events behind on purpose, and the caller falls back to showing the id.
  */
-export const resolveAuditActors = async (
+export const resolveAuditUsers = async (
   auth: (() => Promise<BetterAuthInstance>) | undefined,
   userIds: Array<string | undefined>,
   logger?: CoreSingletonServices['logger']
-): Promise<AuditActorDirectory> => {
+): Promise<AuditUserDirectory> => {
   const ids = [...new Set(userIds.filter((id): id is string => !!id))]
   if (!auth || ids.length === 0) {
     return {}
@@ -48,7 +51,7 @@ export const resolveAuditActors = async (
     adapter = (await (await auth()).$context)?.internalAdapter
   } catch (error) {
     logger?.warn(
-      `Audit actors could not be resolved, showing ids instead: ${error}`
+      `Audit users could not be resolved, showing ids instead: ${error}`
     )
     return {}
   }
@@ -56,7 +59,7 @@ export const resolveAuditActors = async (
     return {}
   }
 
-  const directory: AuditActorDirectory = {}
+  const directory: AuditUserDirectory = {}
   await Promise.all(
     ids.map(async (id) => {
       try {
@@ -65,12 +68,12 @@ export const resolveAuditActors = async (
           directory[id] = {
             name: user.name || undefined,
             email: user.email || undefined,
-            synthetic: user.actor === true ? true : undefined,
+            actor: user.actor === true ? true : undefined,
           }
         }
       } catch (error) {
         // One unreadable row must not cost the whole page its names.
-        logger?.debug?.(`Audit actor '${id}' could not be resolved: ${error}`)
+        logger?.debug?.(`Audit user '${id}' could not be resolved: ${error}`)
       }
     })
   )

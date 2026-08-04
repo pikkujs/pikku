@@ -1,16 +1,16 @@
 import { pikkuFunc } from '#pikku'
 import {
-  resolveAuditActors,
-  type AuditActorIdentity,
-} from '../lib/resolve-audit-actors.js'
+  resolveAuditUsers,
+  type AuditUserProfile,
+} from '../lib/resolve-audit-users.js'
 
 export type GetAuditFiltersOutput = {
   /**
-   * Every actor that appears in the trail, sorted, named where the account
-   * still exists. The id remains the value to filter by — a name is not unique
-   * and can change after the event it is shown against.
+   * Every user that appears in the trail, sorted, named where the account still
+   * exists. The id remains the value to filter by — a name is not unique and
+   * can change after the event it is shown against.
    */
-  actors: Array<{ userId: string } & AuditActorIdentity>
+  users: Array<{ userId: string } & AuditUserProfile>
   /** Every event type that appears in the trail, sorted. */
   types: string[]
 }
@@ -26,17 +26,17 @@ export type GetAuditFiltersOutput = {
 export const getAuditFilters = pikkuFunc<null, GetAuditFiltersOutput>({
   title: 'Get Audit Filters',
   description:
-    'Returns the distinct actors and event types present in the audit trail, for populating the audit screen filters.',
+    'Returns the distinct users and event types present in the audit trail, for populating the audit screen filters.',
   expose: true,
   scopes: ['pikku:audit:read'],
   func: async ({ audit, auth, logger }) => {
     if (!audit?.facets) {
-      return { actors: [], types: [] }
+      return { users: [], types: [] }
     }
-    const { actorUserIds, types } = await audit.facets()
-    const directory = await resolveAuditActors(auth, actorUserIds, logger)
+    const { userIds, types } = await audit.facets()
+    const directory = await resolveAuditUsers(auth, userIds, logger)
     return {
-      actors: actorUserIds.map((userId) => ({
+      users: userIds.map((userId) => ({
         userId,
         ...directory[userId],
       })),

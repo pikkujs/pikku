@@ -30,8 +30,9 @@ export const auditSchema: PikkuSchema = {
         .addColumn('traceId', 'text')
         .addColumn('transactionId', 'text')
         .addColumn('queryId', 'text')
-        .addColumn('actorUserId', 'text')
-        .addColumn('actorOrgId', 'text')
+        .addColumn('userId', 'text')
+        .addColumn('orgId', 'text')
+        .addColumn('pikkuUserId', 'text')
         .addColumn('tables', 'text')
         .addColumn('changedCols', 'text')
         .addColumn('event', 'text')
@@ -39,7 +40,7 @@ export const auditSchema: PikkuSchema = {
         .addColumn('data', 'text'),
 
     // The trail is only ever read newest-first, and the two filters the console
-    // offers are actor and type.
+    // offers are user and type.
     (db) =>
       db.schema
         .createIndex('idx_audit_occurred_at')
@@ -47,10 +48,7 @@ export const auditSchema: PikkuSchema = {
         .column('occurredAt'),
 
     (db) =>
-      db.schema
-        .createIndex('idx_audit_actor_user_id')
-        .on('audit')
-        .column('actorUserId'),
+      db.schema.createIndex('idx_audit_user_id').on('audit').column('userId'),
 
     (db) => db.schema.createIndex('idx_audit_type').on('audit').column('type'),
   ],

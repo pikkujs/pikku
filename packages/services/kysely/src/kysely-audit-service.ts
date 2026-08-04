@@ -43,8 +43,9 @@ const column = (row: Record<string, any>, name: string): any => {
 
 /** Rows are TEXT on every engine, so the shape is whatever the driver returned. */
 const rowToEvent = (row: Record<string, any>): AuditEvent => {
-  const userId = column(row, 'actor_user_id')
-  const orgId = column(row, 'actor_org_id')
+  const userId = column(row, 'user_id')
+  const orgId = column(row, 'org_id')
+  const pikkuUserId = column(row, 'pikku_user_id')
   return {
     eventId: column(row, 'audit_id') ?? undefined,
     occurredAt: column(row, 'occurred_at'),
@@ -56,9 +57,13 @@ const rowToEvent = (row: Record<string, any>): AuditEvent => {
     traceId: column(row, 'trace_id') ?? undefined,
     transactionId: column(row, 'transaction_id') ?? undefined,
     queryId: column(row, 'query_id') ?? undefined,
-    actor:
-      userId || orgId
-        ? { userId: userId ?? undefined, orgId: orgId ?? undefined }
+    userIdentity:
+      userId || orgId || pikkuUserId
+        ? {
+            userId: userId ?? undefined,
+            orgId: orgId ?? undefined,
+            pikkuUserId: pikkuUserId ?? undefined,
+          }
         : undefined,
     metadata: parseJson(row.data),
   }
@@ -79,7 +84,7 @@ const fallbackId = (): string =>
  *
  * The column mapping matches a platform audit-queue consumer, so a locally-run
  * project and a deployed stage write identical rows (the read side relies only
- * on `type`, `occurred_at`, `actor_user_id`, and the `data` JSON that holds
+ * on `type`, `occurred_at`, `user_id`, and the `data` JSON that holds
  * `metadata`). The `audit` table is an optional per-project migration (not in
  * the generated schema), so rows are inserted untyped; all columns are TEXT on
  * every engine and ON CONFLICT DO NOTHING keeps writes idempotent on retries.
@@ -124,8 +129,9 @@ export class KyselyAuditService implements AuditService {
         trace_id: e.traceId ?? null,
         transaction_id: e.transactionId ?? null,
         query_id: e.queryId ?? null,
-        actor_user_id: e.actor?.userId ?? null,
-        actor_org_id: e.actor?.orgId ?? null,
+        user_id: e.userIdentity?.userId ?? null,
+        org_id: e.userIdentity?.orgId ?? null,
+        pikku_user_id: e.userIdentity?.pikkuUserId ?? null,
         tables: jsonOrNull(metadata?.tables),
         changed_cols: jsonOrNull(metadata?.changedColumns),
         event: e.eventId ?? null,
@@ -178,13 +184,13 @@ export class KyselyAuditService implements AuditService {
   }
 
   async facets(): Promise<AuditFacets> {
-    const [actors, types] = await Promise.all([
+    const [users, types] = await Promise.all([
       (this.db as any)
         .selectFrom('audit')
-        .select('actor_user_id')
+        .select('user_id')
         .distinct()
-        .where('actor_user_id', 'is not', null)
-        .orderBy('actor_user_id', 'asc')
+        .where('user_id', 'is not', null)
+        .orderBy('user_id', 'asc')
         .execute(),
       (this.db as any)
         .selectFrom('audit')
@@ -194,7 +200,7 @@ export class KyselyAuditService implements AuditService {
         .execute(),
     ])
     return {
-      actorUserIds: actors.map((r: any) => column(r, 'actor_user_id')),
+      userIds: users.map((r: any) => column(r, 'user_id')),
       types: types.map((r: any) => r.type).filter(Boolean),
     }
   }
@@ -209,9 +215,9 @@ export class KyselyAuditService implements AuditService {
     // selection is expressed as a predicate that cannot hold.
     const matchNothing = (b: any) => b.where('audit_id', 'is', null)
 
-    if (query.actorUserIds) {
-      builder = query.actorUserIds.length
-        ? builder.where('actor_user_id', 'in', query.actorUserIds)
+    if (query.userIds) {
+      builder = query.userIds.length
+        ? builder.where('user_id', 'in', query.userIds)
         : matchNothing(builder)
     }
     if (query.types) {
@@ -219,8 +225,8 @@ export class KyselyAuditService implements AuditService {
         ? builder.where('type', 'in', query.types)
         : matchNothing(builder)
     }
-    if (query.actorOrgId) {
-      builder = builder.where('actor_org_id', '=', query.actorOrgId)
+    if (query.orgId) {
+      builder = builder.where('org_id', '=', query.orgId)
     }
     if (query.from) {
       builder = builder.where('occurred_at', '>=', query.from)

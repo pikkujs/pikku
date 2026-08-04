@@ -487,11 +487,11 @@ CLI, and `personaEnvironmentRefusal` already takes `undefined` for that caller.
 ### Accountability is already built
 
 `accountable` promises attribution, and core already delivers it. `AuditService` writes an
-`AuditActor { userId, orgId, pikkuUserId }` per invocation through `function-runner.ts`,
+`AuditUserIdentity { userId, orgId, pikkuUserId }` per invocation through `function-runner.ts`,
 with `outcome: 'success' | 'failed' | 'denied'`. A persona signs in for real, so its calls
 land in the same log as any human's, and three things follow for free:
 
-- A persona timeline is not a new artifact — it is the audit log filtered by actor.
+- A persona timeline is not a new artifact — it is the audit log filtered by user.
 - An adversarial run's probes are already `denied` rows attributed to that persona, which
   is exactly the evidence the run exists to produce.
 - No `persona audit` command is needed. The log answers *what it did*; `persona list` and

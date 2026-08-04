@@ -17,11 +17,11 @@ import { TableListPage } from '../layout/TableListPage'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { AuditEventDetail } from './AuditEventDetail'
 import { isForbiddenScopeError } from '../scopes/scope-error'
-import type { AuditActorDirectory, AuditRow } from './audit-row'
+import type { AuditUserDirectory, AuditRow } from './audit-row'
 import {
   OUTCOME_COLOUR,
-  actorIdentity,
-  actorName,
+  auditIdentity,
+  userName,
   auditRowKey,
   formatOccurredAt,
   summariseMetadata,
@@ -36,7 +36,7 @@ export interface AuditLogPanelProps {
 
 /**
  * The audit log body: the trail newest first, paged as the reader scrolls, and
- * narrowed by actor and action.
+ * narrowed by user and action.
  *
  * Both filters are applied server-side rather than over the loaded pages — a
  * client-side filter over an infinite list can only match what has already been
@@ -45,7 +45,7 @@ export interface AuditLogPanelProps {
 export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
   useLocale()
   const rpc = usePikkuRPC()
-  const [actorUserIds, setActorUserIds] = useState<string[]>([])
+  const [userIds, setUserIds] = useState<string[]>([])
   const [types, setTypes] = useState<string[]>([])
   // The row itself, not an id: the page already holds the whole event, so a
   // second read to open a drawer would only be a chance for the two to disagree.
@@ -66,7 +66,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['audits', { actorUserIds, types }],
+    queryKey: ['audits', { userIds, types }],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) =>
       await rpc.invoke('console:getAudits', {
@@ -74,7 +74,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
         offset: pageParam,
         // Omitted rather than sent empty: an empty array is a real filter that
         // matches nothing, which is not what "no selection" means here.
-        ...(actorUserIds.length ? { actorUserIds } : {}),
+        ...(userIds.length ? { userIds } : {}),
         ...(types.length ? { types } : {}),
       }),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
@@ -84,12 +84,12 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
   const pages = data?.pages ?? []
   const rows = useMemo(() => pages.flatMap((page) => page.events), [pages])
   // One directory across every page loaded so far: each page names only its own
-  // actors, and a row must keep its name once a later page has been fetched.
-  const actors = useMemo<AuditActorDirectory>(
-    () => Object.assign({}, ...pages.map((page) => page.actors)),
+  // users, and a row must keep its name once a later page has been fetched.
+  const users = useMemo<AuditUserDirectory>(
+    () => Object.assign({}, ...pages.map((page) => page.users)),
     [pages]
   )
-  const filtered = actorUserIds.length > 0 || types.length > 0
+  const filtered = userIds.length > 0 || types.length > 0
 
   const loadError = error ?? filtersQuery.error
   if (loadError) {
@@ -161,18 +161,18 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
         headerRight={
           <Group gap="xs" wrap="nowrap" style={{ flex: 1 }}>
             <MultiSelect
-              data-testid="audit-filter-actor"
-              aria-label={m.audit_filter_actor()}
-              placeholder={m.audit_filter_actor_placeholder()}
+              data-testid="audit-filter-user"
+              aria-label={m.audit_filter_user()}
+              placeholder={m.audit_filter_user_placeholder()}
               // Filtered by id, chosen by name: the id is what the trail
               // recorded and the only thing that stays unique, but nobody
               // recognises their colleague by it.
-              data={(filtersQuery.data?.actors ?? []).map((actor) => ({
-                value: actor.userId,
-                label: actorName(actor) ?? actor.userId,
+              data={(filtersQuery.data?.users ?? []).map((user) => ({
+                value: user.userId,
+                label: userName(user) ?? user.userId,
               }))}
-              value={actorUserIds}
-              onChange={setActorUserIds}
+              value={userIds}
+              onChange={setUserIds}
               size="sm"
               searchable
               clearable
@@ -228,15 +228,15 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
             ),
           },
           {
-            key: 'actor',
-            header: m.audit_col_actor(),
+            key: 'user',
+            header: m.audit_col_user(),
             width: 220,
             render: (row) => {
-              const identity = actorIdentity(row.actor, actors)
+              const identity = auditIdentity(row.userIdentity, users)
               if (identity.kind === 'system') {
                 return (
                   <Text size="sm" c="dimmed">
-                    {m.audit_actor_system()}
+                    {m.audit_user_system()}
                   </Text>
                 )
               }
@@ -258,17 +258,17 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
                       color="gray"
                       style={{ flexShrink: 0 }}
                     >
-                      {m.audit_actor_anonymous()}
+                      {m.audit_user_anonymous()}
                     </Badge>
                   )}
-                  {identity.kind === 'user' && identity.synthetic && (
+                  {identity.kind === 'user' && identity.actor && (
                     <Badge
                       size="xs"
                       variant="light"
                       color="grape"
                       style={{ flexShrink: 0 }}
                     >
-                      {m.audit_actor_synthetic()}
+                      {m.audit_user_actor()}
                     </Badge>
                   )}
                 </Group>
@@ -310,7 +310,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
         size="lg"
         title={m.audit_detail_title()}
       >
-        {selected && <AuditEventDetail event={selected} actors={actors} />}
+        {selected && <AuditEventDetail event={selected} users={users} />}
       </Drawer>
     </>
   )
