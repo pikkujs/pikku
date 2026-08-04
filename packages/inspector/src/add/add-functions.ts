@@ -1259,7 +1259,7 @@ export const addFunctions: AddWiring = (
             `Sessionless function '${name}' exposes private-classified field(s) in its return type: ` +
             privatePaths.map((p) => `'${p}'`).join(', ') +
             `.\n  Private fields are only safe to return from authenticated (sessioned) functions. ` +
-            `Either require a session (use pikkuFunc) or mark the column @public if it is safe to expose publicly.`,
+            `Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly.`,
         })
       }
     }
