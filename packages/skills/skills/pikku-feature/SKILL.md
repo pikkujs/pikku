@@ -218,9 +218,14 @@ branch.
 ## Stage 6 — Commit
 
 ```bash
-git add -A
+git add <the files you changed>
 git commit -m "feat: <short title>"
 ```
+
+Stage the files you actually touched, by path. `git add -A` / `git add .` also
+sweeps up regenerated artifacts you didn't mean to commit and, where more than
+one agent shares the checkout, another agent's in-progress work — which lands in
+your branch and silently breaks theirs.
 
 ## Stage 7 — Hand off
 

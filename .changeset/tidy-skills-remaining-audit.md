@@ -19,3 +19,5 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-emails: template variables are always optional and never required-able; unresolved placeholders render blank rather than failing; documents `pikku emails init`
 - pikku-rtl: rewritten off i18next — there is no `t()` or `i18n.changeLanguage` anywhere in the repo; Arabic is a `messages/ar.json` listed in `project.inlang/settings.json`
 - pikku-i18n: enum labels use the singular `enum__<group>__<member>` namespace `@pikku/paraglide` generates from, not hand-written `enums__` maps; notes the console's wrapped `m`/`mKey` as the one documented exception
+- pikku-deps: the summary has `totalIssues`/`totalUpdates` and no `info` bucket, issue `url`/`cvssScore`/`recommendedVersion` are nullable rather than optional, lockfile detection covers pnpm and npm too, and a non-zero `bun audit` exit only counts as data when it produced output
+- pikku-feature: stage changed files by path — `git add -A` sweeps up regenerated artifacts and, on a shared checkout, another agent's work
