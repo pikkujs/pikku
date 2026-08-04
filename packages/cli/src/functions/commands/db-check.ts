@@ -24,7 +24,7 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
       config.rootDir,
       config.outDir,
       config.runtimeDir,
-      config.db?.schema
+      config.db
     )
     if (!resolved) {
       logger.error(

@@ -59,7 +59,7 @@ test('loadAnnotations maps the authored `security` level to classification', () 
   assert.deepEqual(result.organization?.name, { classification: 'public' })
 })
 
-test('loadAnnotations maps pii and treats encrypted as secret', () => {
+test('loadAnnotations maps pii and expands legacy encrypted into both axes', () => {
   writeSidecar({
     person: {
       ssn: { security: 'pii' },
@@ -69,8 +69,48 @@ test('loadAnnotations maps pii and treats encrypted as secret', () => {
 
   const result = loadAnnotations(root)
   assert.deepEqual(result.person?.ssn, { classification: 'pii' })
-  // `encrypted` is secret-grade for branding purposes.
-  assert.deepEqual(result.person?.card, { classification: 'secret' })
+  // `encrypted` predates the form axis and always meant both halves at once.
+  assert.deepEqual(result.person?.card, {
+    classification: 'secret',
+    form: 'wrapped',
+  })
+})
+
+test('loadAnnotations reads an explicit form', () => {
+  writeSidecar({
+    api_token: {
+      token_hash: { security: 'secret', form: 'hashed' },
+      value_sealed: { security: 'secret', form: 'sealed' },
+      note: { security: 'private' },
+    },
+  })
+
+  const result = loadAnnotations(root)
+  assert.equal(result.api_token?.token_hash?.form, 'hashed')
+  assert.equal(result.api_token?.value_sealed?.form, 'sealed')
+  // Absent means plain, and stays absent so an audit can tell "held in the
+  // clear, stated" from "nobody has said".
+  assert.equal(result.api_token?.note?.form, undefined)
+})
+
+test('an explicit form wins over the one legacy encrypted implies', () => {
+  writeSidecar({
+    person: { card: { security: 'encrypted', form: 'sealed' } },
+  })
+
+  const result = loadAnnotations(root)
+  assert.deepEqual(result.person?.card, {
+    classification: 'secret',
+    form: 'sealed',
+  })
+})
+
+test('an unrecognised form is dropped rather than trusted', () => {
+  writeSidecar({
+    person: { card: { security: 'secret', form: 'rot13' } },
+  })
+
+  assert.equal(loadAnnotations(root).person?.card?.form, undefined)
 })
 
 test('loadAnnotations maps kind and tsType', () => {
@@ -142,4 +182,50 @@ test('nameSuggestsKind returns null for ordinary names', () => {
   assert.equal(nameSuggestsKind('email'), null)
   assert.equal(nameSuggestsKind('name'), null)
   assert.equal(nameSuggestsKind('status'), null)
+})
+
+// ── Schema-qualified maps ────────────────────────────────────────────────────
+// `DbClassificationMap` nests tables under their schema whenever the project
+// declares one, so the sidecar has one more level than a bare project's.
+
+test('flattens a schema-qualified map down to bare table names', () => {
+  writeSidecar({
+    app: {
+      user: { email: { security: 'pii' } },
+      api_token: { token_hash: { security: 'secret', form: 'hashed' } },
+    },
+  })
+  assert.deepEqual(loadAnnotations(root), {
+    user: { email: { classification: 'pii' } },
+    api_token: { token_hash: { classification: 'secret', form: 'hashed' } },
+  })
+})
+
+test('a schema level is detected, not assumed — a bare map still loads', () => {
+  writeSidecar({ user: { email: { security: 'pii' } } })
+  assert.deepEqual(loadAnnotations(root), {
+    user: { email: { classification: 'pii' } },
+  })
+})
+
+test('reading a schema-qualified map flat would lose every annotation', () => {
+  // The regression this guards: treating `app` as the table and `user` as a
+  // column yields an entry with no recognised fields, so every column in the
+  // project silently falls back to the default level. A column authored
+  // `secret` generating as `private` is exactly the failure that hides an
+  // unencrypted credential.
+  writeSidecar({ app: { stage: { host_token_secret: { security: 'secret' } } } })
+  const loaded = loadAnnotations(root)
+  assert.equal(loaded['app'], undefined)
+  assert.equal(loaded['stage']?.['host_token_secret']?.classification, 'secret')
+})
+
+test('merges tables across several schemas', () => {
+  writeSidecar({
+    app: { user: { email: { security: 'pii' } } },
+    audit: { entry: { actor: { security: 'private' } } },
+  })
+  const loaded = loadAnnotations(root)
+  assert.equal(loaded['user']?.['email']?.classification, 'pii')
+  assert.equal(loaded['entry']?.['actor']?.classification, 'private')
 })

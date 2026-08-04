@@ -25,7 +25,7 @@ export const dbBaseline = pikkuSessionlessFunc<{}, void>({
       config.rootDir,
       config.outDir,
       config.runtimeDir,
-      config.db?.schema
+      config.db
     )
     if (!resolved) {
       logger.error(

@@ -18,6 +18,7 @@ import { ErrorCode, type CodedDiagnostic } from '@pikku/inspector'
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
 type Classification = 'public' | 'private' | 'pii' | 'secret'
+type ColumnForm = 'plain' | 'hashed' | 'wrapped' | 'sealed'
 type Dialect = 'sqlite' | 'postgres'
 
 /**
@@ -45,6 +46,19 @@ function snakeToPascal(name: string): string {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join('')
+}
+
+/**
+ * Drop `defaultSchema`'s qualifier from a table name, leaving every other
+ * schema qualified. `app.user` → `user` when the default schema is `app`.
+ */
+function stripDefaultSchema(
+  name: string,
+  defaultSchema: string | undefined
+): string {
+  if (!defaultSchema) return name
+  const prefix = `${defaultSchema}.`
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name
 }
 
 function tableToInterfaceName(name: string): string {
@@ -120,15 +134,66 @@ function insertBase(
   return mapType(col.type)
 }
 
+/**
+ * The brand a `form` puts on a column's INSERT and UPDATE types.
+ *
+ * `plain` maps to null rather than to an identity wrapper: an unbranded column
+ * is the default every existing project already has, and emitting a wrapper for
+ * it would churn every generated file to say nothing.
+ */
+/** The erasable sensitivity brand on a column's SELECT type. */
+function classificationBrand(
+  classification: Exclude<Classification, 'public'>
+): string {
+  return classification === 'secret'
+    ? 'Secret'
+    : classification === 'pii'
+      ? 'Pii'
+      : 'Private'
+}
+
+function formBrand(form: ColumnForm | undefined): string | null {
+  switch (form) {
+    case 'wrapped':
+      return 'WrappedValue'
+    case 'sealed':
+      return 'SealedValue'
+    case 'hashed':
+      return 'HashedValue'
+    default:
+      return null
+  }
+}
+
 function columnTypeExpression(
   col: ColumnInfo,
   annotation: { kind?: ColumnKind; tsType?: string } | null,
-  classification: Classification
+  classification: Classification,
+  form?: ColumnForm
 ): string {
   const nullable = !col.notNull && !col.pk
   const isAutoInt = col.pk && mapType(col.type) === 'number'
   const isOptionalInsert =
     col.defaultValue !== null || isAutoInt || Boolean(col.generated)
+
+  // A declared `form` supersedes both branches below, because it constrains the
+  // side neither of them touches: what may be WRITTEN. The caller only reaches
+  // here with a form once it has confirmed the column resolves to `string`.
+  const brand = formBrand(form)
+  if (brand) {
+    // The two brands compose — `Secret<WrappedValue>` is still structurally
+    // `{ __classification__?: 'secret' }`, so the inspector's PKU910 output
+    // check keeps working, while a row read back is already a `WrappedValue`
+    // and flows into rewrap/re-seal calls without a cast.
+    const selectT =
+      classification === 'public'
+        ? brand
+        : `${classificationBrand(classification)}<${brand}>`
+    const insertT = `${brand}${isOptionalInsert ? ' | undefined' : ''}`
+    return nullable
+      ? `ColumnType<${selectT} | null, ${insertT} | null, ${brand} | null>`
+      : `ColumnType<${selectT}, ${insertT}, ${brand}>`
+  }
 
   if (classification === 'public') {
     const wrap = (inner: string) =>
@@ -162,12 +227,7 @@ function columnTypeExpression(
     return nullable ? `${base} | null` : base
   }
 
-  const B =
-    classification === 'secret'
-      ? 'Secret'
-      : classification === 'pii'
-        ? 'Pii'
-        : 'Private'
+  const B = classificationBrand(classification)
   const sBase = selectBase(annotation, col)
   const iBase = insertBase(annotation, col)
 
@@ -194,7 +254,7 @@ function bareTableName(name: string): string {
 }
 
 function emitInterface(
-  table: TableSchema,
+  table: TableSchema & { displayName?: string },
   camelCase: boolean,
   explicitAnnotations: AnnotationMap,
   dialect: Dialect,
@@ -202,7 +262,7 @@ function emitInterface(
   formatHints: Record<string, Record<string, ZodFormat>>,
   warnings: CodedDiagnostic[]
 ): string {
-  const ifaceName = tableToInterfaceName(table.name)
+  const ifaceName = tableToInterfaceName(table.displayName ?? table.name)
   const bare = bareTableName(table.name)
   const tableCols = explicitAnnotations[bare] ?? {}
 
@@ -301,7 +361,49 @@ function emitInterface(
       }
 
       const classification: Classification = ann?.classification ?? 'private'
-      const type = columnTypeExpression(col, typeAnn, classification)
+
+      // A form brands the column with a nominal string subtype, so it only
+      // means anything where the resolved type IS a string. On a bytea/blob or
+      // a coerced column the brand would not compile, so skip it and say why —
+      // a secret that needs wrapping in a non-text column needs the column
+      // migrated to text first, which is a schema decision, not a codegen one.
+      let form = ann?.form
+      if (form && form !== 'plain') {
+        const base = selectBase(typeAnn, col)
+        if (base !== 'string') {
+          warnings.push({
+            severity: 'warn',
+            code: ErrorCode.DB_FORM_ON_NON_STRING,
+            message:
+              `Column "${bare}.${col.name}": form '${form}' ignored — its resolved ` +
+              `type is ${base}, not string. Ciphertext and digests are text; ` +
+              `migrate the column or drop the form.`,
+          })
+          form = undefined
+        }
+      }
+
+      // The point of the axis: a credential the application can replay is one
+      // that a database read alone hands to whoever has it. Warn rather than
+      // fail, because every project predating `form` has such columns and a
+      // hard error would break them all on the next migrate — `pikku db
+      // --fail-on-warn` is how a project opts into the ratchet.
+      // Checks what was DECLARED, not what survived the string test above, so a
+      // form rejected for a non-text column reports that one reason rather than
+      // two, and an explicit `form: 'plain'` is the acknowledgement that ends it.
+      if (classification === 'secret' && ann?.form === undefined) {
+        warnings.push({
+          severity: 'warn',
+          code: ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN,
+          message:
+            `Column "${bare}.${col.name}" is classified secret but stored in the clear. ` +
+            `Declare how it is held in db/annotations.ts — form: 'hashed' | 'wrapped' | ` +
+            `'sealed' — or form: 'plain' to state that reading the row is meant to ` +
+            `yield a usable credential.`,
+        })
+      }
+
+      const type = columnTypeExpression(col, typeAnn, classification, form)
       const safeName = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)
         ? fieldName
         : JSON.stringify(fieldName)
@@ -328,9 +430,13 @@ function emitManifest(
             ann?.classification ?? 'private'
           const strategy = ann?.anonymize ?? null
           const strategyLiteral = strategy === null ? 'null' : `'${strategy}'`
+          // Emitted only when declared. An audit reading this manifest needs to
+          // tell "held in the clear, stated" from "nobody has said yet", and a
+          // defaulted 'plain' would erase exactly that difference.
+          const formLiteral = ann?.form ? `, form: '${ann.form}'` : ''
           return (
             `      ${JSON.stringify(col.name)}: ` +
-            `{ classification: '${classification}', anonymize_strategy: ${strategyLiteral} }`
+            `{ classification: '${classification}', anonymize_strategy: ${strategyLiteral}${formLiteral} }`
           )
         })
         .join(',\n')
@@ -362,8 +468,14 @@ function emitManifest(
  */
 function emitClassificationMap(tables: TableSchema[]): string {
   const colEntry = [
-    `  /** Privacy level. Defaults to 'private' when omitted. */`,
+    `  /** Privacy level — can the value leave the process? Defaults to 'private'.`,
+    `   *  'encrypted' is the legacy spelling of \`security: 'secret', form: 'wrapped'\`. */`,
     `  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'`,
+    `  /** How the value is held at rest, independent of \`security\`. A form other`,
+    `   *  than 'plain' makes the column's INSERT/UPDATE type nominal, so only a`,
+    `   *  real encrypt/seal/hash result can be written to it. Defaults to 'plain',`,
+    `   *  which on a \`secret\` column is warned about (PKU483) until stated here. */`,
+    `  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'`,
     `  /** Anonymize strategy used by \`pikku db anonymize\`. */`,
     `  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'`,
     `  /** Column kind override for codegen coercion + typing. */`,
@@ -446,6 +558,18 @@ export interface CodegenOptions {
    */
   enumsFile?: string
   camelCase?: boolean
+  /**
+   * Schema whose qualifier is dropped from the `DB` keys and the interface
+   * names, so `app.user` reads as `user`/`User` rather than `app.user`/
+   * `AppUser`. Tables in any other schema stay fully qualified. Omitting it
+   * qualifies everything, which is the safe default for a project spanning
+   * schemas.
+   *
+   * The key IS what Kysely puts in the SQL, so only set this for a schema the
+   * connection's `search_path` resolves — otherwise every query compiles and
+   * then fails to find the table at runtime.
+   */
+  defaultSchema?: string
   rootDir?: string
   /** DB dialect — drives real-type-aware date typing. Defaults to 'sqlite'. */
   dialect?: Dialect
@@ -558,11 +682,38 @@ export async function generateSchemaTypes(
 
   // ── schema.gen.ts ────────────────────────────────────────────────────────────
   const warnings: CodedDiagnostic[] = []
+
+  // The name each table is known by in the generated types. With a
+  // `defaultSchema` that is the unqualified name — unless dropping the
+  // qualifier would make two tables share one name, in which case the table
+  // keeps its qualifier rather than silently shadowing the other.
+  const displayNames = new Map<string, string>()
+  const claimedBy = new Map<string, string>()
+  for (const t of tables) {
+    const stripped = stripDefaultSchema(t.name, options.defaultSchema)
+    const owner = claimedBy.get(stripped)
+    if (owner !== undefined && owner !== t.name) {
+      warnings.push({
+        severity: 'warn',
+        code: ErrorCode.DB_DEFAULT_SCHEMA_NAME_COLLISION,
+        message:
+          `Dropping the "${options.defaultSchema}" qualifier would make "${t.name}" and ` +
+          `"${owner}" both "${stripped}". "${t.name}" keeps its qualifier.`,
+      })
+      displayNames.set(t.name, t.name)
+      continue
+    }
+    claimedBy.set(stripped, t.name)
+    displayNames.set(t.name, stripped)
+  }
+  const displayName = (name: string): string =>
+    displayNames.get(name) ?? name
+
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables
     .map((t) =>
       emitInterface(
-        t,
+        { ...t, displayName: displayName(t.name) },
         camelCase,
         explicitAnnotations,
         dialect,
@@ -575,19 +726,32 @@ export async function generateSchemaTypes(
 
   const dbEntries = tables
     .map((t) => {
-      const tableKey = camelCase ? snakeToCamel(t.name) : t.name
+      const name = displayName(t.name)
+      const tableKey = camelCase ? snakeToCamel(name) : name
       const safe = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableKey)
         ? tableKey
         : JSON.stringify(tableKey)
-      return `  ${safe}: ${tableToInterfaceName(t.name)}`
+      return `  ${safe}: ${tableToInterfaceName(name)}`
     })
     .join('\n')
+
+  // The form brands are nominal (`unique symbol`), so unlike the structural
+  // `Private`/`Secret` aliases they CANNOT be re-declared here: a local
+  // declaration would be a distinct type, and the ciphertext `@pikku/core`
+  // hands back would not be assignable to the column it belongs in. Import the
+  // one true declaration, and only when a column actually uses it.
+  const usedFormBrands = (
+    ['WrappedValue', 'SealedValue', 'HashedValue'] as const
+  ).filter((brand) => new RegExp(`\\b${brand}\\b`).test(interfaces))
 
   const schemaBody = [
     `// Generated by @pikku/cli — do not edit by hand.`,
     `// Run \`pikku db migrate\` to refresh.`,
     ``,
     `import type { ColumnType } from 'kysely'`,
+    ...(usedFormBrands.length > 0
+      ? [`import type { ${usedFormBrands.join(', ')} } from '@pikku/core'`]
+      : []),
     ``,
     `export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>`,
     `  ? ColumnType<S, I | undefined, U>`,
@@ -622,9 +786,11 @@ export async function generateSchemaTypes(
       // is a string in both dialects, so it needs no runtime coercion.
       const kind: ColumnKind | undefined = tableCols[col.name]?.kind
       if (kind && kind !== 'uuid') {
-        if (!coercionMap[table.name])
-          coercionMap[table.name] = {} as Record<string, ColumnKind>
-        coercionMap[table.name]![col.name] = kind
+        // Keyed by the name the query is written against, since that is what
+        // the runtime plugin sees on the Kysely node.
+        const key = displayName(table.name)
+        if (!coercionMap[key]) coercionMap[key] = {} as Record<string, ColumnKind>
+        coercionMap[key]![col.name] = kind
       }
     }
   }

@@ -367,6 +367,19 @@ export type PikkuCLIInput = {
      * takes a bare table name, so qualified DDL does not compile there.
      */
     schema?: string
+
+    /**
+     * Schema whose qualifier is dropped from the generated Kysely types, so
+     * `app.user` is queried as `selectFrom('user')` and typed as `User` rather
+     * than `AppUser`. Usually the same value as `schema`. Tables in any other
+     * schema stay fully qualified; where dropping the qualifier would collide
+     * with another table, that table keeps it and the codegen warns (PKU485).
+     *
+     * Not implied by `schema`, because the key is what Kysely puts in the SQL:
+     * set this only for a schema the connection's `search_path` resolves, or
+     * every query compiles and then fails to find its table at runtime.
+     */
+    defaultSchema?: string
   }
 
   cli?: {

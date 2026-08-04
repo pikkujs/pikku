@@ -234,3 +234,194 @@ test('a project with no generated migrations owns every table', async () => {
     [['public.widget', 'app']]
   )
 })
+
+// ─── Column form (at-rest representation) ────────────────────────────────────
+
+test('a wrapped column can only be written with ciphertext, and reads back as both brands', async () => {
+  const result = await run([col({ name: 'kek_wrapped', type: 'text' })], {
+    widget: { kek_wrapped: { security: 'secret', form: 'wrapped' } },
+  })
+  const schema = readFileSync(result.outFile, 'utf8')
+  // Select keeps the erasable sensitivity brand (the inspector reads it) while
+  // carrying the nominal one, so a row read flows straight back into a rewrap.
+  assert.match(
+    schema,
+    /kekWrapped: ColumnType<Secret<WrappedValue>, WrappedValue, WrappedValue>/,
+    `expected a wrapped column type, got:\n${schema}`
+  )
+})
+
+test('the nominal brands are imported from core, never redeclared', async () => {
+  const result = await run([col({ name: 'kek_wrapped', type: 'text' })], {
+    widget: { kek_wrapped: { security: 'secret', form: 'wrapped' } },
+  })
+  const schema = readFileSync(result.outFile, 'utf8')
+  // A locally declared `unique symbol` would be a DIFFERENT nominal type, so
+  // core's own ciphertext would not be assignable to the column it belongs in.
+  assert.match(schema, /import type \{ WrappedValue \} from '@pikku\/core'/)
+  assert.doesNotMatch(schema, /declare const wrappedBrand/)
+})
+
+test('no form means no import — the brands cost nothing to a project not using them', async () => {
+  const result = await run([col({ name: 'name', type: 'text' })])
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.doesNotMatch(schema, /@pikku\/core/)
+})
+
+test('sealed and hashed brand separately, so one cannot be written where the other belongs', async () => {
+  const result = await run(
+    [
+      col({ name: 'token_hash', type: 'text' }),
+      col({ name: 'value_sealed', type: 'text' }),
+    ],
+    {
+      widget: {
+        token_hash: { security: 'secret', form: 'hashed' },
+        value_sealed: { security: 'secret', form: 'sealed' },
+      },
+    }
+  )
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.match(schema, /tokenHash: ColumnType<Secret<HashedValue>/)
+  assert.match(schema, /valueSealed: ColumnType<Secret<SealedValue>/)
+})
+
+test('a nullable wrapped column stays nullable on every side', async () => {
+  const result = await run(
+    [col({ name: 'kek_wrapped', type: 'text', notNull: false })],
+    { widget: { kek_wrapped: { security: 'secret', form: 'wrapped' } } }
+  )
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.match(
+    schema,
+    /kekWrapped: ColumnType<Secret<WrappedValue> \| null, WrappedValue \| null, WrappedValue \| null>/,
+    `got:\n${schema}`
+  )
+})
+
+test('a public column can still declare a form', async () => {
+  const result = await run([col({ name: 'email_hash', type: 'text' })], {
+    widget: { email_hash: { security: 'public', form: 'hashed' } },
+  })
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.match(
+    schema,
+    /emailHash: ColumnType<HashedValue, HashedValue, HashedValue>/,
+    `got:\n${schema}`
+  )
+})
+
+test('legacy security: encrypted still brands as wrapped', async () => {
+  const result = await run([col({ name: 'card', type: 'text' })], {
+    widget: { card: { security: 'encrypted' } },
+  })
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.match(schema, /card: ColumnType<Secret<WrappedValue>/)
+})
+
+test('warns when a secret column has not said how it is held', async () => {
+  const result = await run([col({ name: 'host_token', type: 'text' })], {
+    widget: { host_token: { security: 'secret' } },
+  })
+  const diagnostic = result.warnings.find(
+    (w) => w.code === ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN
+  )
+  assert.ok(diagnostic, `expected a plain-secret warning: ${JSON.stringify(result.warnings)}`)
+  assert.equal(diagnostic!.severity, 'warn')
+  assert.match(diagnostic!.message, /host_token/)
+})
+
+test("an explicit form: 'plain' is the acknowledgement that silences the warning", async () => {
+  const result = await run([col({ name: 'host_token', type: 'text' })], {
+    widget: { host_token: { security: 'secret', form: 'plain' } },
+  })
+  assert.equal(
+    result.warnings.find(
+      (w) => w.code === ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN
+    ),
+    undefined
+  )
+})
+
+test('a non-secret column is never asked how it is held', async () => {
+  const result = await run([col({ name: 'name', type: 'text' })], {
+    widget: { name: { security: 'private' } },
+  })
+  assert.equal(
+    result.warnings.find(
+      (w) => w.code === ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN
+    ),
+    undefined
+  )
+})
+
+test('a form on a non-text column is reported once and dropped, not compiled into a broken type', async () => {
+  const result = await run([col({ name: 'invoker_secret', type: 'bytea' })], {
+    widget: { invoker_secret: { security: 'secret', form: 'wrapped' } },
+  })
+  const schema = readFileSync(result.outFile, 'utf8')
+  assert.doesNotMatch(schema, /WrappedValue/)
+
+  const codes = result.warnings.map((w) => w.code)
+  assert.ok(codes.includes(ErrorCode.DB_FORM_ON_NON_STRING))
+  // The column DID declare a form, so it is not also nagged for staying silent.
+  assert.ok(!codes.includes(ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN))
+})
+
+// ── defaultSchema ────────────────────────────────────────────────────────────
+
+async function runTables(tables: string[], defaultSchema?: string) {
+  const dir = mkdtempSync(join(tmpdir(), 'db-codegen-schema-'))
+  const result = await generateSchemaTypes(multiTableIntrospector(tables), {
+    outFile: join(dir, 'schema.gen.ts'),
+    coercionFile: join(dir, 'coercion.gen.ts'),
+    dialect: 'postgres',
+    defaultSchema,
+    rootDir: dir,
+  })
+  return { result, schema: readFileSync(join(dir, 'schema.gen.ts'), 'utf8') }
+}
+
+test('without defaultSchema a table stays schema-qualified', async () => {
+  const { schema } = await runTables(['app.widget'])
+  assert.match(schema, /export interface AppWidget \{/)
+  assert.match(schema, /"app\.widget": AppWidget/)
+})
+
+test('defaultSchema drops the qualifier from the DB key and the interface', async () => {
+  const { schema } = await runTables(['app.widget'], 'app')
+  assert.match(schema, /export interface Widget \{/)
+  assert.match(schema, /^ {2}widget: Widget$/m)
+  assert.doesNotMatch(schema, /AppWidget/)
+})
+
+test('a table in another schema keeps its qualifier', async () => {
+  const { schema } = await runTables(['app.widget', 'audit.entry'], 'app')
+  assert.match(schema, /^ {2}widget: Widget$/m)
+  assert.match(schema, /"audit\.entry": AuditEntry/)
+})
+
+test('a name collision keeps the qualifier and warns rather than shadowing', async () => {
+  // Two tables that would both become `widget` is a generated type where one
+  // silently wins; the queries against the loser then typecheck against the
+  // wrong columns.
+  const { result, schema } = await runTables(['widget', 'app.widget'], 'app')
+  assert.equal(
+    result.warnings.filter(
+      (w) => w.code === ErrorCode.DB_DEFAULT_SCHEMA_NAME_COLLISION
+    ).length,
+    1
+  )
+  assert.match(schema, /"app\.widget": AppWidget/)
+  assert.match(schema, /^ {2}widget: Widget$/m)
+})
+
+test('no collision warning when nothing collides', async () => {
+  const { result } = await runTables(['app.widget'], 'app')
+  assert.equal(
+    result.warnings.some(
+      (w) => w.code === ErrorCode.DB_DEFAULT_SCHEMA_NAME_COLLISION
+    ),
+    false
+  )
+})
