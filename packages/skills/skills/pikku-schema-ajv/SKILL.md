@@ -40,10 +40,32 @@ const schema = new AjvSchemaService(logger: Logger)
 
 **Methods:**
 
-- `compileSchema(schema: string, value: any): void` — Compile and register a JSON schema
+- `compileSchema(name: string, schema: any): void` — Compile and register a JSON schema under `name`
 - `validateSchema(schemaName: string, json: any): void` — Validate data against a compiled schema (throws on failure)
 - `getSchemaNames(): Set<string>` — Get all registered schema names
-- `getSchemaKeys(schemaName: string): string[]` — Get property keys for a schema
+- `getSchemaKeys(schemaName: string): string[]` — Top-level property keys, or `[]` if the schema has no `properties`
+
+The first argument is the **name**, the second the schema — the parameter is
+called `schema` in the source, which reads backwards.
+
+### Behaviour that matters
+
+- **Registration is name-keyed and never re-compiles.** A second
+  `compileSchema('X', …)` with a different schema is a no-op; the first one wins
+  for the process lifetime. `@pikku/schema-cfworker` *does* recompile on a
+  changed value, so a dev hot-reload after codegen picks up a changed schema
+  there but not here — restart the process instead.
+- **AJV is a module-level singleton**, shared by every `AjvSchemaService` you
+  construct, so compiled schema names are global to the process.
+- **`useDefaults: true` mutates the validated object**, filling in schema
+  defaults in place. `coerceTypes: false`, so a query-string `"1"` will not
+  become `1` — the wiring layer is what coerces, not this service.
+- `ajv-formats` is registered, so `format` keywords (`email`, `uuid`, `date-time`)
+  are enforced.
+- A failed validation throws `UnprocessableContentError` (a 422). A *missing*
+  schema throws a bare string, `Missing validator for <name>` — not an `Error`,
+  so `catch (e) { e.message }` reads `undefined`. That normally means codegen
+  didn't run.
 
 ## Usage Patterns
 
