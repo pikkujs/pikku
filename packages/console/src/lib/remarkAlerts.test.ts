@@ -100,9 +100,7 @@ describe('remarkAlerts', () => {
   test('a nested quote is found too', () => {
     const tree = transform({
       type: 'root',
-      children: [
-        { type: 'listItem', children: [quote('[!CAUTION]')] },
-      ],
+      children: [{ type: 'listItem', children: [quote('[!CAUTION]')] }],
     })
     const nested = tree.children![0]!.children![0]!
     assert.equal(alertKindOf(classOf(nested)), 'caution')
