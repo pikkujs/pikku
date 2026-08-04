@@ -69,9 +69,17 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     if (!existsSync(config.outDir)) {
       logger.debug(`• .pikku directory not found, running bootstrap first...`)
-      await workflow.do('Bootstrap inspect', async () =>
-        getInspectorState(false, true, true)
-      )
+      // Every `getInspectorState` step below discards its result on purpose. A
+      // step's return value is stored as the step result and stays reachable for
+      // the life of the run, and an InspectorState holds a whole ts.Program — so
+      // returning it pins one TypeScript program per inspection instead of
+      // letting the previous one be collected. On a large project that is the
+      // difference between ~1.7GB and ~2.6GB peak RSS, i.e. between fitting in a
+      // 2GB CI heap and dying in it. Callers that need the state call
+      // `getInspectorState()` directly (it caches), never through a step.
+      await workflow.do('Bootstrap inspect', async () => {
+        await getInspectorState(false, true, true)
+      })
       // Both before function types: pikku-types.gen.ts re-exports the scope
       // definition types and imports ScopeId from the scopes codegen, so any
       // later import of '#pikku' — the inspector reading a project's zod
@@ -127,9 +135,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           bootstrap: true,
         })
       }
-      await workflow.do('Bootstrap re-inspect', async () =>
-        getInspectorState(true, true)
-      )
+      await workflow.do('Bootstrap re-inspect', async () => {
+        await getInspectorState(true, true)
+      })
     }
 
     if (!existsSync(config.typesDeclarationFile)) {
@@ -151,9 +159,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       logger.debug(
         `• Type file or scaffolds first created, inspecting again...`
       )
-      await workflow.do('Re-inspect after types', async () =>
-        getInspectorState(true)
-      )
+      await workflow.do('Re-inspect after types', async () => {
+        await getInspectorState(true)
+      })
     }
 
     // Type generators are independent of each other
@@ -245,9 +253,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     }
 
     if (agents || !config.addon) {
-      await workflow.do('Re-inspect after agents', async () =>
-        getInspectorState(true)
-      )
+      await workflow.do('Re-inspect after agents', async () => {
+        await getInspectorState(true)
+      })
     }
 
     // pikkuAuth generates auth-secrets.gen.ts and pikkuPersonas generates
@@ -298,9 +306,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     }
 
     if (workflows || remoteRPC || webhook || workflowRoutes) {
-      await workflow.do('Re-inspect after workflows', async () =>
-        getInspectorState(true)
-      )
+      await workflow.do('Re-inspect after workflows', async () => {
+        await getInspectorState(true)
+      })
       const regeneratedSchemas = await workflow.do(
         'Re-generate schemas',
         'pikkuSchemas',
@@ -419,9 +427,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
 
         if (cliChannelGenerated) {
-          await workflow.do('Re-inspect after CLI channel', async () =>
-            getInspectorState(true)
-          )
+          await workflow.do('Re-inspect after CLI channel', async () => {
+            await getInspectorState(true)
+          })
           const cliChannels = await workflow.do(
             'Channels after CLI',
             'pikkuCommandChannels',
@@ -459,9 +467,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       logger.debug(
         `• OpenAPI requires a reinspection to pickup new generated types..`
       )
-      await workflow.do('OpenAPI re-inspect', async () =>
-        getInspectorState(true)
-      )
+      await workflow.do('OpenAPI re-inspect', async () => {
+        await getInspectorState(true)
+      })
       await workflow.do('OpenAPI', 'pikkuOpenAPI', null)
     }
 
