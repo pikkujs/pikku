@@ -1,3 +1,73 @@
+## 0.12.99
+
+### Patch Changes
+
+- d468b16: Give the console bearer token the scopes the console gates itself on.
+
+  `scaffold.console` emits two things that contradicted each other. The console
+  wiring gates the whole addon — `wireAddon({ name: 'console', package:
+'@pikku/addon-console', scopes: ['admin'] })` — while the auth scaffold minted
+  the bearer session as `userSession: { userId: 'pikku-console-token' }`, holding
+  no scopes at all. `verifyScopes` fails closed, so a console authenticating with
+  `PIKKU_CONSOLE_TOKEN` was admitted and then refused on every `console:*` RPC,
+  reads included, with `MissingScopeError: Missing required scope: admin`.
+
+  An external console could therefore reach a deployment while being unable to do
+  a single thing in it, and `console:installAddon` — which carries its own
+  `scopes: ['admin']` — could never run. The failure reads as a broken console
+  rather than a missing grant, because nothing in the surface names the scope.
+
+  The token session now carries `scopes: ['admin', 'pikku']`: the two roots the
+  console addon's own functions sit under. Roots rather than a wildcard, since a
+  parent grant already satisfies its children (`admin` covers `admin:*`, `pikku`
+  covers `pikku:scopes:*` and `pikku:audit:*`) while `*` would additionally hand
+  the token every scope the host application declares.
+
+- 3df4f95: Scaffold virtual user runs as RPCs, backed by a run store.
+
+  `pikku persona run` could already turn a declared persona loose on a running
+  stage, but only from a terminal, and the result only existed in that terminal's
+  output. There was no way for CI, a console, or a scheduled job to start a run —
+  and nothing kept what a run found, so this week's findings could not be compared
+  against last week's.
+
+  `scaffold.virtualUser` now generates two RPCs and the function behind them:
+  - `runVirtualUser({ persona, goals?, memory?, disposition?, budget?, seed? })
+-> { runId }`
+  - `getVirtualUserRun({ runId }) -> { status, findings, tally, memory, … }`
+
+  They are gated on separate scopes — `virtualUser:run` and `virtualUser:read` —
+  because an adversarial run's findings are working exploits carrying live ids,
+  which makes reading them the more sensitive of the two. Production refuses every
+  disposition but `accountable`, checked against the effective one so the
+  per-run override cannot smuggle another in.
+
+  **A run is not a workflow and not a queued job.** It explores, so no two
+  attempts take the same steps and there is nothing to replay; and the record
+  already carries the progress a queue would only be holding on the way to the
+  same place. `runVirtualUser` writes the record, dispatches without awaiting, and
+  returns the id. The cost is stated on the type: a restart mid-run strands a
+  record at `running`, so a run older than its budget window and still `running`
+  is dead rather than working.
+
+  `@pikku/core` gains `VirtualUserRunStore` (with `virtualUserRunStore` on
+  `CoreSingletonServices`), and `@pikku/kysely` ships
+  `KyselyVirtualUserRunStore`, which creates its own table on first use like the
+  audit sink — the runtime never needs it, so it arrives with the feature that
+  fills it rather than in every database.
+
+  Also in core: `prepareVirtualUserRun`, which derives the catalogue, intents,
+  scopes and reachable agents in one place. `pikku persona run` reads the
+  inspector state and the generated RPC reads `metaService`, and the two have to
+  agree — otherwise the same persona and seed explore a different API depending on
+  how the run was started. `personaScopes` moved here from the CLI for the same
+  reason and is still re-exported from its old home. `PRODUCTION_DISPOSITION` is
+  now exported from `@pikku/core/virtual-user`, which it should always have been.
+
+- Updated dependencies [3df4f95]
+  - @pikku/core@0.12.77
+  - @pikku/kysely@0.13.10
+
 ## 0.12.98
 
 ### Patch Changes
