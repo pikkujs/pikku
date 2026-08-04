@@ -100,6 +100,11 @@ export interface PikkuCLICoreOutputFiles {
   // Optional: left undefined when scaffold.userAdmin is not enabled, so consumers must guard.
   userAdminFunctionsFile?: string
   userAdminSchemasFile?: string
+
+  // Virtual user run/read RPCs (derived from scaffold.pikkuDir when scaffold.virtualUser is enabled).
+  // Optional: left undefined when scaffold.virtualUser is not enabled, so consumers must guard.
+  virtualUserFunctionsFile?: string
+  virtualUserSchemasFile?: string
   workflowRoutesFile: string
   workflowRoutesSchemasFile?: string
   eventsChannelFile: string
@@ -487,6 +492,13 @@ export type PikkuCLIInput = {
      * codegen fails if it is not.
      */
     userAdmin?: PikkuScaffoldFeature
+    /**
+     * Start a virtual user against this application over RPC and read back what
+     * it found — the same run `pikku persona run` does from a terminal, kept in
+     * a `VirtualUserRunStore`. Requires at least one declared persona, since a
+     * virtual user runs AS one; codegen fails if there are none.
+     */
+    virtualUser?: PikkuScaffoldFeature
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature

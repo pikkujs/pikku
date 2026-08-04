@@ -44,6 +44,7 @@ import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.j
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
+import type { VirtualUserRunStore } from '../wirings/virtual-user/virtual-user-run-store.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
@@ -337,6 +338,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    */
   webhookService?: WebhookService
   metaService?: MetaService
+  /**
+   * Where virtual-user runs are recorded. A run is dispatched and answered for
+   * later, so this store is the only trace it leaves — see
+   * {@link VirtualUserRunStore}.
+   */
+  virtualUserRunStore?: VirtualUserRunStore
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
   audit?: AuditService

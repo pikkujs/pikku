@@ -5,7 +5,15 @@ import { join } from 'node:path'
 import { Kysely, SqliteDialect } from 'kysely'
 import Database from 'better-sqlite3'
 
-import { applyPikkuSchemas } from './schema/index.js'
+import { applyPikkuSchemas, ensurePikkuSchema } from './schema/index.js'
+import { virtualUserSchema } from './schema/virtual-user.schema.js'
+
+/**
+ * Opt-in schemas that still have an interface in `KyselyPikkuDB`, so the drift
+ * check covers them too. A table being opt-in says when it is created, not
+ * whether its type is allowed to disagree with its DDL.
+ */
+const OPTIONAL_SCHEMAS = [virtualUserSchema]
 
 /**
  * `KyselyPikkuDB` and the schema declaration describe the same tables, and
@@ -65,6 +73,9 @@ const declaredSchema = async (): Promise<Map<string, Set<string>>> => {
       .addColumn('id', 'text', (col) => col.primaryKey())
       .execute()
     await applyPikkuSchemas(db)
+    for (const schema of OPTIONAL_SCHEMAS) {
+      await ensurePikkuSchema(db, schema)
+    }
 
     const tables = await db.introspection.getTables()
     return new Map(

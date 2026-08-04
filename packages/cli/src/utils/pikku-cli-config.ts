@@ -359,6 +359,7 @@ const _getPikkuCLIConfig = async (
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
       userAdmin: 'userAdminFunctionsFile',
+      virtualUser: 'virtualUserFunctionsFile',
       workflow: 'workflowRoutesFile',
       events: 'eventsChannelFile',
       remoteRpc: 'remoteRpcWorkersFile',
@@ -481,6 +482,20 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'admin',
         'user-admin.schemas.gen.ts'
+      )
+    }
+    if (result.scaffold?.virtualUser && !result.virtualUserFunctionsFile) {
+      result.virtualUserFunctionsFile = join(
+        resolvedScaffoldDir,
+        'virtual-user',
+        'virtual-user.gen.ts'
+      )
+    }
+    if (result.scaffold?.virtualUser && !result.virtualUserSchemasFile) {
+      result.virtualUserSchemasFile = join(
+        resolvedScaffoldDir,
+        'virtual-user',
+        'virtual-user.schemas.gen.ts'
       )
     }
     if (result.scaffold?.scenarios && !result.scenariosFunctionsFile) {
@@ -667,10 +682,7 @@ const _getPikkuCLIConfig = async (
       result.workflowMetaDir = join(workflowDir, 'meta')
     }
     if (!result.personasWiringFile) {
-      result.personasWiringFile = join(
-        workflowDir,
-        'pikku-personas.gen.ts'
-      )
+      result.personasWiringFile = join(workflowDir, 'pikku-personas.gen.ts')
     }
 
     // Scenarios

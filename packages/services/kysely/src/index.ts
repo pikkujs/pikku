@@ -19,6 +19,7 @@ export {
   type CreateAuditedKyselyOptions,
 } from './create-audited-kysely.js'
 export { KyselyAuditService } from './kysely-audit-service.js'
+export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
 
 export {
   SerializePlugin,
@@ -34,6 +35,7 @@ export {
   type SerializePluginOptions,
 } from './serialize-plugin.js'
 
+export { virtualUserSchema } from './schema/virtual-user.schema.js'
 export {
   auditSchema,
   pikkuSchemas,
@@ -56,3 +58,7 @@ export {
 export type { KyselyPikkuDB } from './kysely-tables.js'
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'
+export type {
+  VirtualUserRunStore,
+  VirtualUserRunRecord,
+} from '@pikku/core/virtual-user'
