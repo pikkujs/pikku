@@ -45,22 +45,8 @@ export const resolvePersonas = (
 }
 
 /**
- * The scopes a persona holds, resolved through its roles.
- *
- * Roles are the only thing a persona declares; scopes are what a function
- * checks. Narrowing a virtual user's catalogue needs the second, so the
- * expansion happens once, here, against the same `defineSystemRole` definitions
- * the seed grants from.
+ * Re-exported rather than declared here: the scaffolded `runVirtualUser` RPC
+ * needs the same expansion at runtime, so it lives in core beside
+ * `prepareVirtualUserRun` and this keeps the CLI's existing import sites.
  */
-export const personaScopes = (
-  persona: { roles?: readonly string[] },
-  roleScopes: Record<string, readonly string[]>
-): string[] => {
-  const scopes = new Set<string>()
-  for (const role of persona.roles ?? []) {
-    for (const scope of roleScopes[role] ?? []) {
-      scopes.add(scope)
-    }
-  }
-  return [...scopes].sort()
-}
+export { personaScopes } from '@pikku/core/virtual-user'

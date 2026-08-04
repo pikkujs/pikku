@@ -281,6 +281,37 @@ export interface WebhookDeliveryAttemptTable {
   createdAt: Generated<Date>
 }
 
+/**
+ * One virtual-user run. The JSON columns (`goals`, `memory`, `findings`,
+ * `tally`) are text the store serialises itself, so the row is byte-identical
+ * on every engine.
+ */
+export interface VirtualUserRunTable {
+  runId: string
+  persona: string
+  disposition: string
+  /**
+   * Read back as a string by some drivers — a BIGINT does not always fit a JS
+   * number — so the store narrows it rather than trusting the column type.
+   */
+  seed: string | number | bigint
+  status: Generated<'running' | 'completed' | 'failed'>
+  goals: Generated<string>
+  memory: Generated<string>
+  findings: Generated<string>
+  tally: string | null
+  stoppedBy: string | null
+  error: string | null
+  startedBy: string | null
+  /**
+   * Written as an ISO string and read back as whatever the driver returns — a
+   * bare SQLite driver cannot bind a `Date` at all, and the store normalises
+   * both ends.
+   */
+  createdAt: Generated<Date | string>
+  finishedAt: Date | string | null
+}
+
 export interface KyselyPikkuDB {
   pikkuScopes: PikkuScopesTable
   pikkuRoles: PikkuRolesTable
@@ -309,4 +340,5 @@ export interface KyselyPikkuDB {
   pikkuUserSessions: UserSessionsTable
   webhookDelivery: WebhookDeliveryTable
   webhookDeliveryAttempt: WebhookDeliveryAttemptTable
+  virtualUserRun: VirtualUserRunTable
 }

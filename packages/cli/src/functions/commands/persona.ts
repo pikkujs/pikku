@@ -8,19 +8,16 @@ import {
   roleMismatchMessage,
   verifyPersonaRoles,
 } from '@pikku/core/persona'
-import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   personaVirtualUserTarget,
   catalogueClassification,
-  deriveCatalogue,
-  deriveIntents,
   DISPOSITIONS,
-  reachableAgents,
+  prepareVirtualUserRun,
   runVirtualUser,
   type VirtualUserDisposition,
 } from '@pikku/core/virtual-user'
 
-import { personaScopes, resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolveEnvironment } from './environment.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
@@ -180,32 +177,23 @@ export const personaRun = pikkuSessionlessFunc<
       )
     }
 
-    const functionsMeta = state.functions?.meta ?? {}
-    const catalogue = deriveCatalogue(
-      functionsMeta,
-      (state.schemas ?? {}) as Record<string, Record<string, unknown>>
-    )
+    // Shared with the scaffolded `runVirtualUser` RPC, which does the same
+    // derivation from `metaService` at runtime — the two have to agree, or the
+    // same persona and seed explore a different API depending on how it was
+    // started.
+    const { catalogue, intents, scopes, agents } = prepareVirtualUserRun({
+      persona,
+      functionsMeta: state.functions?.meta ?? {},
+      schemas: (state.schemas ?? {}) as Record<string, Record<string, unknown>>,
+      workflowsMeta: state.workflows?.meta ?? {},
+      systemRoles: state.systemRoles?.definitions ?? [],
+      agentsMeta: state.agents?.agentsMeta ?? {},
+    })
     if (catalogue.length === 0) {
       throw new Error(
         'This project exposes no RPCs, so there is nothing for a virtual user to do.'
       )
     }
-    const intents = deriveIntents(state.workflows?.meta ?? {}, functionsMeta)
-
-    // Roles are what a persona declares; scopes are what a function checks.
-    // Expanded once, here, from the same definitions the seed grants from.
-    const roleScopes: Record<string, string[]> = {}
-    for (const role of flattenSystemRoleDefinitions(
-      state.systemRoles?.definitions ?? []
-    )) {
-      roleScopes[role.name] = role.scopes
-    }
-    const scopes = personaScopes(persona, roleScopes)
-
-    // Gated by the same scopes as the RPCs, because an agent is reached rather
-    // than declared: `CoreAIAgent.scopes` is checked against the session, so a
-    // persona finds the specialists its roles unlock and no others.
-    const agents = reachableAgents(state.agents?.agentsMeta ?? {}, scopes)
 
     const signedIn = createHttpPersonas({
       apiUrl: env.apiUrl,

@@ -31,12 +31,24 @@ export type {
   VirtualUserTally,
   VirtualUserTarget,
 } from './virtual-user.types.js'
+export { PRODUCTION_DISPOSITION } from './virtual-user.types.js'
 export {
   runVirtualUser,
   rememberIds,
   type RunVirtualUserParams,
   type VirtualUserCallContext,
 } from './run-virtual-user.js'
+export {
+  personaScopes,
+  prepareVirtualUserRun,
+  type VirtualUserPreparation,
+} from './prepare-virtual-user-run.js'
+export type {
+  VirtualUserRunOutcome,
+  VirtualUserRunRecord,
+  VirtualUserRunStart,
+  VirtualUserRunStore,
+} from './virtual-user-run-store.js'
 export {
   DISPOSITIONS,
   dispositionProfile,
