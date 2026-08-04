@@ -17,7 +17,7 @@ Use this skill as an execution checklist, not reference material.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Pikku generates a typed React Query layer from your backend `expose: true`
-functions. You don''t write `useQuery`/`useMutation` against `fetch`
+functions. You don't write `useQuery`/`useMutation` against `fetch`
 yourself — you call hooks named after RPCs and get full type inference for
 input + output.
 
@@ -184,25 +184,29 @@ refetch.
 
 ### `usePikkuInfiniteQuery(name, data, options?)`
 
-Only available for RPCs whose output has a `nextCursor?: string | null`
-field — typically a list endpoint with pagination. The hook auto-feeds
-`nextCursor` into the next page's request.
+The hook's `name` parameter is narrowed to RPCs whose **output** has a
+`nextCursor?: string | null` field, so calling it with anything else is a type
+error rather than a missing hook. That output field is read after each page and
+sent back as the **input** field `cursor` — which is why the `data` you pass is
+`Omit<input, 'cursor'>`: the hook owns that key.
 
 ```tsx
 const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
   usePikkuInfiniteQuery('listTodos', { limit: 20 })
 
-const todos = data?.pages.flatMap((p) => p.rows) ?? []
+const todos = data?.pages.flatMap((p) => p.todos) ?? []
 ```
 
-If the hook isn't generated for an RPC, the RPC's output doesn't include
-`nextCursor` — paginate it on the backend or use `usePikkuQuery` with
-manual cursor state.
+So the backend contract is a pair: output `nextCursor`, input `cursor`. An RPC
+missing either one paginates with `usePikkuQuery` and manual cursor state
+instead.
 
 ## Workflow hooks
 
-When the project has workflows (`capabilities.workflow: true`), three
-extra hooks are generated. See the **pikku-workflows-client** skill.
+When the project defines any workflow, the same file also gains
+`useStartWorkflow(name)` (mutation → `{ runId }`), `useRunWorkflow(name)`
+(mutation → the workflow's output) and `useWorkflowStatus(name, runId?)` (query,
+disabled until `runId` is set). See the **pikku-workflows-client** skill.
 
 ## Calling RPCs without React Query
 

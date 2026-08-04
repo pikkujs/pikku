@@ -30,11 +30,16 @@ import {
   usePikkuFetch,
   usePikkuRPC,
   usePikkuRealtime,
+  usePikkuAgent,
+  usePikkuWorkflow,
+  asI18n,
 } from '@pikku/react'
 ```
 
-Five exports. `usePikkuRealtime` is only valid when you wired a
-`PikkuRealtime` class via `createPikku` — see step 3 below.
+`usePikkuRealtime` is only valid when you wired a `PikkuRealtime` class via
+`createPikku` — see the setup section. `usePikkuAgent` and `usePikkuWorkflow`
+are thin bindings over the RPC client that pin one agent/workflow name, so a
+component never repeats it. `asI18n` is the i18n brand (see **pikku-i18n**).
 
 ## Resolving the server URL
 
@@ -175,31 +180,53 @@ helpers live in **pikku-realtime**.
 | Paginate                            | **usePikkuInfiniteQuery** (react-query)       |
 | One-off call from an event handler  | `usePikkuRPC()` direct                        |
 | Hit a REST endpoint (not RPC)       | `usePikkuFetch()`                             |
-| Run a workflow                      | **pikku-workflows-client**                    |
+| Run one named workflow              | `usePikkuWorkflow('name')` → `.start/.run/.status` |
+| Talk to one named AI agent          | `usePikkuAgent('name')` → `.run/.stream/.approve`  |
+| Longer-running workflow UX          | **pikku-workflows-client**                    |
 | Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-realtime**) |
 
 The first three live in your generated `api.gen.ts` (see the
-**pikku-react-query** skill). This skill covers the bottom four rows.
+**pikku-react-query** skill). This skill covers the rest.
+
+`usePikkuAgent` and `usePikkuWorkflow` bind the name once and hand back the
+call methods with it already applied:
+
+```tsx
+const agent = usePikkuAgent('todo-agent')
+const { text } = await agent.run({ message, threadId })
+
+const workflow = usePikkuWorkflow('onboardUser')
+const { runId } = await workflow.start({ email })
+const state = await workflow.status(runId)
+```
 
 ## Authentication
 
-Auth is handled at the `PikkuFetch` layer — pass options to `createPikku`
-or set headers on the fetch instance after creation. Common pattern:
+Auth is handled at the `PikkuFetch` layer, and `createPikku`'s options object
+*is* `CorePikkuFetchOptions` plus `serverUrl` — flat, not nested under a
+`fetchOptions` key:
 
 ```tsx
 const pikku = createPikku(PikkuFetch, PikkuRPC, {
   serverUrl: apiUrl(),
-  fetchOptions: {
-    onRequest: (req) => {
-      const token = localStorage.getItem('token')
-      if (token) req.headers.set('Authorization', `Bearer ${token}`)
-    },
-  },
+  credentials: 'include', // cookie sessions
+  authHeaders: { jwt: token }, // or { apiKey }
+  transformDate: true,
 })
 ```
 
-Exact option names depend on the `@pikku/fetch` version — read
-`PikkuFetch`'s constructor type if unsure.
+There is no request-interceptor hook. For a token that changes after startup,
+call the setter on the shared instance — RPC and realtime pick it up because
+they hold the same fetch:
+
+```tsx
+pikku.fetch.setAuthorizationJWT(token) // null clears it
+pikku.fetch.setAPIKey(key)
+pikku.fetch.setHeader('x-tenant', tenantId)
+```
+
+`authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
+becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
 ## What NOT to do
 

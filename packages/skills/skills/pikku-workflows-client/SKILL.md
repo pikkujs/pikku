@@ -16,8 +16,8 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-When a project has `pikkuWorkflowGraph` workflows, three React Query
-hooks are auto-generated alongside the standard RPC hooks. They handle
+When a project defines any workflow — DSL or `pikkuWorkflowGraph` — three
+React Query hooks are auto-generated alongside the standard RPC hooks. They handle
 the two common shapes: **run-and-wait** (short workflows where the
 client waits for the result) and **fire-and-poll** (long workflows where
 the client gets a `runId` and polls status).
@@ -103,8 +103,14 @@ function VideoStatus({ runId }: { runId: string }) {
 
 Status values: `'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'`.
 
-The hook stops auto-polling when the run reaches a terminal state (set
-`refetchInterval` to false in those cases — pattern shown above).
+**Stopping the poll is your job.** The hook adds no terminal-state logic of its
+own — the `refetchInterval` callback above is what ends it, by returning `false`
+once `status` is no longer `running`. Leave that out and a finished run keeps
+being polled forever.
+
+The hook is disabled until `runId` is set, so passing `undefined` while the run
+has not started yet is the intended shape rather than something to guard around.
+That `enabled` is owned by the hook and cannot be overridden through `options`.
 
 ## Putting it together — start + observe
 
@@ -140,8 +146,9 @@ docs).
 
 ## What NOT to do
 
-- Don't poll status manually — use `useWorkflowStatus` with
-  `refetchInterval`. It dedupes and stops on terminal states.
+- Don't poll status manually with `setInterval` — use `useWorkflowStatus`
+  with a `refetchInterval` callback, which dedupes across components and
+  lets you stop on a terminal state in one place.
 - Don't call `useRunWorkflow` for workflows that take more than a few
   seconds. The user-facing component will hold a long-running pending
   state with no progress indication; use start + status instead.
