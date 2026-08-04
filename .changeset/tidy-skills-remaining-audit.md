@@ -8,3 +8,10 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-http: `channel` is on the wire, not services; `sse` is `get`-only and `query` is `post`-only; `docs` was never a `wireHTTP` option; factories come from `#pikku`
 - pikku-security: documents `authBearer`'s static-token mode, `authCookie`'s merged defaults and re-issue rule, and that every strategy is a no-op without an HTTP request or with a session already set
 - pikku-better-auth: the `admin:users:*` scope tree gained create/ban/remove/sessions/password, and `syncProjectedAdminRole` projects them onto `user.role` for better-auth's own `admin()` endpoints; documents dev quick login
+- pikku-react / pikku-react-query / pikku-workflows-client: `createPikku` options are flat `CorePikkuFetchOptions` with `authHeaders` and the `setAuthorizationJWT`/`setAPIKey`/`setHeader` setters (no request interceptor); `useWorkflowStatus` never stops polling on its own
+- pikku-trigger: a source function runs once at startup with singleton services only; documents `InMemoryTriggerService` startup and the skipped-metadata warning
+- pikku-schedule: the singleton is `schedulerService` and `start()` is what registers the cron jobs; documents `scheduleRPC` and the one-off task API
+- pikku-ws: there is no `PikkuWSServer` — `pikkuWebsocketHandler({ server, wss, logger })` over a `noServer: true` `WebSocketServer` is the real API
+- pikku-info: there are only four subcommands, and `--silent` works despite the spurious "Unknown option" warning
+- pikku-versioning: `override` is not required — a matching `V<n>` export suffix is stripped automatically — and the live function must be bumped explicitly; `versions init` writes an empty manifest, so `versions update` has to follow it
+- pikku-audit: documents `audit: { durability }`, the `Safe<>` guard on `auditLog.write`, `createInvocationAudit`'s logger argument, and `createAuditedKysely`'s options

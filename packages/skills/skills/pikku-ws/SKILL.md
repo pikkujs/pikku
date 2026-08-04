@@ -31,17 +31,53 @@ yarn add @pikku/ws ws
 
 ### Basic Setup
 
-```typescript
-import { PikkuWSServer } from '@pikku/ws'
+The package exports one function, `pikkuWebsocketHandler` — there is no server
+class. You own the `http.Server` and the `WebSocketServer`; the handler attaches
+the upgrade and message plumbing to them.
 
-const wsServer = new PikkuWSServer({
-  server: httpServer, // Node.js HTTP server
-  singletonServices,
-  createWireServices,
-  channelStore,
+```typescript
+import { pikkuWebsocketHandler } from '@pikku/ws'
+import { stopSingletonServices } from '@pikku/core'
+import { Server } from 'http'
+import { WebSocketServer } from 'ws'
+
+import '../.pikku/pikku-bootstrap.gen.js'
+import { createConfig, createSingletonServices } from './services.js'
+
+const config = await createConfig()
+const singletonServices = await createSingletonServices(config)
+
+const server = new Server()
+const wss = new WebSocketServer({ noServer: true })
+
+pikkuWebsocketHandler({
+  server,
+  wss,
+  logger: singletonServices.logger,
+  logRoutes: true, // print the wired channels at startup
+  loadSchemas: true, // compile input schemas up front
 })
 
-await wsServer.init()
+server.listen(4002, 'localhost')
 ```
 
-This runtime bridges the `ws` WebSocket library with Pikku's channel wiring. See `pikku-websocket` for channel wiring details and `pikku-deploy-fastify`/`pikku-deploy-express` for integrating with HTTP servers.
+`noServer: true` is not optional decoration — the handler performs the upgrade
+itself so it can run pikku's HTTP middleware chain (auth, cors) against the
+upgrade request before a channel exists. Letting `ws` bind the server directly
+would skip that.
+
+Services come from the bootstrap import and the global singleton registry, which
+is why nothing is passed in. The event hub is taken from
+`singletonServices.eventHub` when it is a `LocalEventHubService`, and a local one
+is created otherwise — so a single-process app gets pub/sub for free, while a
+multi-instance deployment must register a distributed hub (see `pikku-realtime`).
+
+The options type also extends `RunHTTPWiringOptions`, so per-request settings
+such as `respondWith404`, `coerceDataFromSchema` and `bubbleErrors` are accepted
+here too.
+
+On shutdown, call `stopSingletonServices()` then close `wss` and `server`.
+
+See `pikku-websocket` for channel wiring details, and
+`pikku-deploy-fastify`/`pikku-deploy-express` when the WebSocket server shares a
+port with an HTTP app.
