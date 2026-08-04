@@ -20,7 +20,9 @@ const MARKER = /^\[!(note|tip|important|warning|caution)\]\s*/i
 const CLASS_PREFIX = 'md-alert-'
 
 /** The kind a transformed blockquote carries, or null for an ordinary quote. */
-export const alertKindOf = (className: string | undefined): AlertKind | null => {
+export const alertKindOf = (
+  className: string | undefined
+): AlertKind | null => {
   if (!className) return null
   for (const kind of ALERT_KINDS) {
     if (className.split(/\s+/).includes(`${CLASS_PREFIX}${kind}`)) return kind

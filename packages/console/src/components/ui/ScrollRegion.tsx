@@ -78,7 +78,9 @@ export const ScrollRegion: React.FC<ScrollRegionProps> = ({
         else if (forwardedRef) forwardedRef.current = node
       }}
       className={
-        className ? `${classes.scrollRegion} ${className}` : classes.scrollRegion
+        className
+          ? `${classes.scrollRegion} ${className}`
+          : classes.scrollRegion
       }
       onScroll={measure}
       data-scrollable={scrollable || undefined}

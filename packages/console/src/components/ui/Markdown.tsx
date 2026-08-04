@@ -238,13 +238,16 @@ export const Markdown: React.FC<MarkdownProps> = ({
   // new component type per render, and react-markdown remounts the document
   // under it — which is why the callers memoize theirs.
   const merged = useMemo(
-    () => (components ? { ...RICH_COMPONENTS, ...components } : RICH_COMPONENTS),
+    () =>
+      components ? { ...RICH_COMPONENTS, ...components } : RICH_COMPONENTS,
     [components]
   )
   return (
     <Typography
       className={
-        className ? `${classes.markdownBody} ${className}` : classes.markdownBody
+        className
+          ? `${classes.markdownBody} ${className}`
+          : classes.markdownBody
       }
       {...typographyProps}
     >
