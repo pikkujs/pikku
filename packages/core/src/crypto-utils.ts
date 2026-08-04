@@ -1,3 +1,4 @@
+import type { WrappedValue } from './data-classification.js'
 import { WeakKeyMaterialError } from './errors/errors.js'
 
 const encoder = new TextEncoder()
@@ -373,11 +374,19 @@ export const deriveKEK = async (
   return deriveKey(passphrase, fromBase64Url(salt))
 }
 
+/**
+ * The one place a `WrappedValue` is minted. Every branded return below routes
+ * through here, so the assertion "these bytes really are ciphertext" is made
+ * once and audited once instead of at each call site.
+ */
+const asWrapped = (ciphertext: string): WrappedValue =>
+  ciphertext as WrappedValue
+
 export const wrapDEK = async (
   kek: CryptoKey,
   plaintextDEK: string
-): Promise<string> => {
-  return encryptWithCryptoKey(kek, plaintextDEK)
+): Promise<WrappedValue> => {
+  return asWrapped(await encryptWithCryptoKey(kek, plaintextDEK))
 }
 
 export const unwrapDEK = async (
@@ -408,8 +417,8 @@ const decryptWithDEK = async <T>(
 }
 
 export interface EnvelopeEncryptResult {
-  ciphertext: string
-  wrappedDEK: string
+  ciphertext: WrappedValue
+  wrappedDEK: WrappedValue
 }
 
 export const envelopeEncrypt = async (
@@ -417,11 +426,21 @@ export const envelopeEncrypt = async (
   value: unknown
 ): Promise<EnvelopeEncryptResult> => {
   const dek = await generateDEK()
-  const ciphertext = await encryptWithDEK(dek, value)
+  const ciphertext = asWrapped(await encryptWithDEK(dek, value))
   const wrappedDEK = await wrapDEK(kek, dek)
   return { ciphertext, wrappedDEK }
 }
 
+/**
+ * Note the inputs are plain `string`, not `WrappedValue`.
+ *
+ * The brand exists to stop plaintext being *written* to a wrapped column, and
+ * a `WrappedValue` is assignable to `string`, so a branded caller still passes
+ * without a cast. Demanding the brand here would buy nothing — feeding the
+ * wrong string in already fails at the AEAD tag — while forcing a cast into
+ * every path that reads ciphertext back out of a row, a parsed envelope, or the
+ * wire, which is exactly where casts are least reviewable.
+ */
 export const envelopeDecrypt = async <T>(
   kek: CryptoKey,
   ciphertext: string,
@@ -435,7 +454,7 @@ export const envelopeRewrap = async (
   oldKEK: CryptoKey,
   newKEK: CryptoKey,
   wrappedDEK: string
-): Promise<string> => {
+): Promise<WrappedValue> => {
   const dek = await unwrapDEK(oldKEK, wrappedDEK)
   return wrapDEK(newKEK, dek)
 }

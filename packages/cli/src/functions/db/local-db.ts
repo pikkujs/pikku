@@ -57,6 +57,12 @@ interface ResolvedDbBase {
   enumsFile: string
   zodFile: string
   camelCase: boolean
+  /**
+   * Schema whose qualifier the generated types drop, from `db.defaultSchema`.
+   * Unlike `schema` this applies to both dialects — sqlite has no schemas to
+   * qualify with, so it is simply inert there.
+   */
+  defaultSchema?: string
 }
 
 export interface ResolvedSqliteDb extends ResolvedDbBase {
@@ -120,8 +126,13 @@ export function resolveDb(
   rootDir: string,
   outDir: string,
   runtimeDir?: string,
-  schema?: string
+  dbConfig?: { schema?: string; defaultSchema?: string } | string
 ): ResolvedDb | null {
+  // The parameter took a bare schema string before `defaultSchema` existed;
+  // both forms are accepted so callers outside this repo keep working.
+  const schema = typeof dbConfig === 'string' ? dbConfig : dbConfig?.schema
+  const defaultSchema =
+    typeof dbConfig === 'string' ? undefined : dbConfig?.defaultSchema
   const resolvedRuntimeDir = runtimeDir
     ? resolveAgainst(rootDir, runtimeDir)
     : join(rootDir, '.pikku-runtime')
@@ -142,6 +153,7 @@ export function resolveDb(
     classificationsGenJsonFile: join(rootDir, 'db', 'annotations.gen.json'),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
     camelCase: true,
+    defaultSchema,
   })
 
   if (userConfig.postgresUrl && userConfig.sqliteDb) {
@@ -557,6 +569,7 @@ export async function migrateAndCodegen(
         schemaJsonFile: resolved.schemaJsonFile,
         enumsFile: resolved.enumsFile,
         camelCase: resolved.camelCase,
+        defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'sqlite',
         migrationsDir: resolved.migrationsDir,
@@ -585,6 +598,7 @@ export async function migrateAndCodegen(
           schemaJsonFile: resolved.schemaJsonFile,
           enumsFile: resolved.enumsFile,
           camelCase: resolved.camelCase,
+          defaultSchema: resolved.defaultSchema,
           rootDir: resolved.rootDir,
           dialect: 'postgres',
           migrationsDir: resolved.migrationsDir,

@@ -26,6 +26,13 @@ type. The brands are populated from the hand-authored `db/annotations.ts`
 (`DbClassificationMap`) via `pikku db migrate`, which regenerates
 `outDir/db/schema.d.ts` and `outDir/db/classification.gen.ts`.
 
+A column's **at-rest form** is a separate axis making the opposite trade — see
+[form is an axis of its own](core-column-form-is-an-axis-of-its-own.md). Its
+brands are nominal and required, which is safe precisely because they land on
+the INSERT/UPDATE side of the columns that opt in, rather than on the SELECT
+side of every classified column. That is not an exception to the rule below; it
+is a different rule about a different side.
+
 **What this rules out:** making `__classification__` required to get stronger
 guarantees, or replacing the optional property with a unique symbol / nominal
 brand that behaves like a required one. Either change compiles here and then

@@ -92,7 +92,7 @@ export const openScopeService = async (
       outDir: string
       runtimeDir?: string
       srcDirectories: string[]
-      db?: { schema?: string }
+      db?: { schema?: string; defaultSchema?: string }
     }
     logger: Logger
   },
@@ -112,7 +112,7 @@ export const openScopeService = async (
     config.rootDir,
     config.outDir,
     config.runtimeDir,
-    config.db?.schema
+    config.db
   )
   if (!resolved) {
     logger.error(

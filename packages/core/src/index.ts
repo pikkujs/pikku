@@ -287,7 +287,18 @@ export type {
   AnonymizeStrategy,
   ColumnClassification,
   ClassificationManifest,
+  ColumnForm,
+  WrappedValue,
+  SealedValue,
+  HashedValue,
 } from './data-classification.js'
+
+export {
+  hashToken,
+  unsafeAsWrapped,
+  unsafeAsSealed,
+  unsafeAsHashed,
+} from './column-form.js'
 
 export type { SecretValue, Safe } from './secret-value.js'
 export {
