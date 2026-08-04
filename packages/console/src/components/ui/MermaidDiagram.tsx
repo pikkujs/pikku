@@ -1,6 +1,9 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
 import { Box, Text, useComputedColorScheme } from '@pikku/mantine/core'
 import type { I18nString } from '@pikku/react'
+// Type-only, so it is erased at compile time and the dynamic import below stays
+// the only thing that pulls mermaid into a chunk.
+import type { Mermaid } from 'mermaid'
 import { TriangleAlert } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { ScrollRegion } from './ScrollRegion'
@@ -12,7 +15,7 @@ import classes from './console.module.css'
  * module-level promise, so a note with six diagrams loads it once and a note with
  * none never pays for it at all.
  */
-let mermaidModule: Promise<typeof import('mermaid').default> | null = null
+let mermaidModule: Promise<Mermaid> | null = null
 
 const loadMermaid = () => {
   mermaidModule ??= import('mermaid').then((module) => module.default)
