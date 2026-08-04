@@ -46,10 +46,18 @@ No constructor parameters. Creates a Pino logger instance.
 **Methods:**
 
 - `setLevel(level: LogLevel): void` — Set minimum log level.
-- `info(messageOrObj: string | Record<string, any> | Error): void`
-- `warn(messageOrObj: string | Record<string, any> | Error): void`
-- `error(messageOrObj: string | Record<string, any> | Error): void`
-- `debug(messageOrObj: string | Record<string, any>): void`
+- `info(messageOrObj: string | Record<string, any> | Error, ...meta): void`
+- `warn(messageOrObj: string | Record<string, any> | Error, ...meta): void`
+- `error(messageOrObj: string | Record<string, any> | Error, ...meta): void`
+- `debug(message: string, ...meta): void` — string only; the object form is not accepted here
+
+Every argument, first and trailing, is `Safe<>`-guarded. A `SecretValue` nested
+anywhere in what you log collapses the call to `never` and it stops compiling.
+An unrevealed secret would print as `[secret]` regardless — the guard is what
+makes logging one a deliberate act rather than an accident.
+
+`setLevel` maps Pikku's `LogLevel` enum onto Pino's own level strings, so pass
+the enum (or its name) rather than a raw Pino level.
 
 ## Usage Patterns
 

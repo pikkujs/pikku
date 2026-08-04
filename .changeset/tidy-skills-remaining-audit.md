@@ -23,3 +23,5 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-feature: stage changed files by path — `git add -A` sweeps up regenerated artifacts and, on a shared checkout, another agent's work
 - pikku-jose: `decode` verifies the signature and expiry (it is not an unchecked read), keys resolve by the token's `kid` rather than being tried in turn, and the algorithm is fixed HS256
 - pikku-machine-auth: documents restricting a key below its owner via `scopes` on the mapped session, the deliberate verify-vs-scope failure split, and that `betterAuthStatelessSession` has no api-key path
+- pikku-redis / pikku-mongodb: the secret-service config is `{ key, keyVersion, previousKey, … }`, not the fabricated `{ kekSecret, salt }`; both packages also ship a `SessionStore`
+- pikku-pino: log methods take trailing meta varargs and are `Safe<>`-guarded against secrets; `debug` takes a string only

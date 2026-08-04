@@ -59,17 +59,25 @@ await mongo.close()
 | `MongoDBAIStorageService`   | `AIStorageService, AIRunStateService` | AI conversation/run storage                    |
 | `MongoDBAgentRunService`    | `AgentRunService`                     | Agent execution tracking                       |
 | `MongoDBSecretService`      | `SecretService`                       | Encrypted secret storage (envelope encryption) |
+| `MongoDBSessionStore`       | `SessionStore`                        | Persisted user sessions                        |
 
 All services take a `Db` instance in their constructor and have an `init()` method that creates collections/indexes.
 
 ### Secret Service
 
+Envelope encryption: `key` derives the KEK that wraps each secret's own DEK.
+Keeping `previousKey` set is what makes `rotateKEK()` possible — it re-wraps
+every secret onto the current key and returns the new version.
+
 ```typescript
 import { MongoDBSecretService } from '@pikku/mongodb'
 
 const secrets = new MongoDBSecretService(mongo.db, {
-  kekSecret: 'your-key-encryption-key',
-  salt: 'your-salt',
+  key: 'your-key-encryption-passphrase',
+  keyVersion: 2, // defaults to 1
+  previousKey: 'the-passphrase-you-are-rotating-away-from',
+  audit: true, // log write/delete/rotate through the audit sink
+  auditReads: false, // reads too — noisy, off by default
 })
 await secrets.init()
 

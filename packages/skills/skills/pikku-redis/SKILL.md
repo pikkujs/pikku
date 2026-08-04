@@ -43,15 +43,25 @@ All services accept a Redis connection (ioredis `Redis` instance, `RedisOptions`
 | `RedisDeploymentService`  | `DeploymentService`    | Deployment state management                    |
 | `RedisAgentRunService`    | `AgentRunService`      | Agent execution tracking                       |
 | `RedisSecretService`      | `SecretService`        | Encrypted secret storage (envelope encryption) |
+| `RedisSessionStore`       | `SessionStore`         | Persisted user sessions                        |
 
 ### Secret Service
+
+Envelope encryption: `key` derives the KEK that wraps each secret's own DEK.
+Keeping `previousKey` set is what makes `rotateKEK()` possible — it re-wraps
+every secret onto the current key and returns the new version.
 
 ```typescript
 import { RedisSecretService } from '@pikku/redis'
 
 const secrets = new RedisSecretService(
   connectionOrConfig: Redis | RedisOptions | string,
-  config: { kekSecret: string; salt: string }
+  config: {
+    key: string          // the KEK passphrase
+    keyVersion?: number  // defaults to 1
+    previousKey?: string // required to rotate
+    keyPrefix?: string   // namespaces the redis keys
+  }
 )
 
 await secrets.getSecret<T = string>(key: string): Promise<T>
@@ -81,8 +91,7 @@ const createSingletonServices = pikkuServices(async (config) => {
   const workflowService = new RedisWorkflowService(config.redisUrl)
 
   const secrets = new RedisSecretService(config.redisUrl, {
-    kekSecret: config.kekSecret,
-    salt: config.salt,
+    key: config.kekPassphrase,
   })
 
   return { config, logger, channelStore, workflowService, secrets }
