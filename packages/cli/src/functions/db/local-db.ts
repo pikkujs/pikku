@@ -624,10 +624,18 @@ export async function migrateAndCodegen(
 
 // ─── SQLite-only operations ───────────────────────────────────────────────────
 
+/**
+ * Apply the dev seed file. Only {@link reset} calls this, immediately after
+ * migrating a database it has just wiped, which is what lets a seed file be
+ * plain `INSERT`s rather than idempotent ones.
+ *
+ * `reset` refuses production before it gets here, so this guard is unreachable
+ * through the CLI. It stays because the export is reachable without it.
+ */
 export async function devSeed(resolved: ResolvedDb): Promise<DevSeedResult> {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
-      `pikku db dev-seed refused: NODE_ENV=production. Seed data is test data — this command only runs in dev.`
+      `pikku dev seed refused: NODE_ENV=production. Seed data is test data — it only runs in dev.`
     )
   }
 

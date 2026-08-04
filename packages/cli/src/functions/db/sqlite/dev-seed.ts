@@ -7,9 +7,10 @@ export interface DevSeedResult {
 }
 
 /**
- * Apply db/<engine>-dev-seed.sql to the open db. Idempotency is the user's
- * responsibility (e.g. `INSERT OR IGNORE`, upserts). Returns `applied: false`
- * if the file doesn't exist; throws on SQL errors.
+ * Apply db/<engine>-dev-seed.sql to the open db. Only `pikku db reset` reaches
+ * here, against a database it has just wiped and migrated, so the file may be
+ * plain `INSERT`s — it is never applied twice. Returns `applied: false` if the
+ * file doesn't exist; throws on SQL errors.
  */
 export function devSeed(
   db: SyncSqliteDatabase,
