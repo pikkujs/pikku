@@ -35,5 +35,7 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-template-clone: `create-pikku` keeps only the chosen package manager's lockfile and may have written an empty `yarn.lock`, so commit it after the first install rather than as scaffolded
 - pikku-fabric: the wirings file comment claimed a `wireMCPTool` that has never existed, and the conversion checklist named `fabric.config.json` with a `production.branch` — the real file is `pikkufabric.config.json` with `production.domain`; notes that several CLI messages print the shorter name anyway
 - pikku-fabric-debug: `metrics` also requires `--branch`, and `--follow`'s own help text advertises SSE for what is a 2-second client poll
+- pikku-deploy-express: documents `getHttpServer`/`enableReaper`, that the health check is registered in the constructor (before any middleware, so it cannot be wrapped in auth), what `init()` installs and in what order, and that Express buffers the body so the parser limit is the only place `maxBodySize` can stop an oversized request
+- pikku-deploy-fastify: `enableCors` throws `Method not implemented.`; the health check lives in `init()`, not the constructor; the plugin registers a catch-all `fastify.all('/*')` and only sets `bodyLimit` when `maxBodySize` is supplied, so Fastify's stricter 1MB default otherwise stands
 - pikku-product-second-opinion: stop asserting a fixed TanStack Start release stage — `@tanstack/react-start`'s major tracks the Router line, so the version says nothing about maturity; check the vendor at write-up time
 
