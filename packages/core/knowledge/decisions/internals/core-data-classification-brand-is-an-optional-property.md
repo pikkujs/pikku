@@ -22,8 +22,8 @@ goes into one.
 
 The consumer is `@pikku/inspector`, whose `findPiiPaths` reads the level union
 directly and whose PKU910 output check detects the brand on a function's return
-type. The brands are populated from `-- @private` / `-- @secret` / `-- @public`
-SQL comment annotations via `pikku db migrate`, which regenerates
+type. The brands are populated from the hand-authored `db/annotations.ts`
+(`DbClassificationMap`) via `pikku db migrate`, which regenerates
 `outDir/db/schema.d.ts` and `outDir/db/classification.gen.ts`.
 
 **What this rules out:** making `__classification__` required to get stronger
