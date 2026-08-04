@@ -2,9 +2,17 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { resolveDb, reset, migrateAndCodegen, devSeed } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
-export const dbReset = pikkuSessionlessFunc<{}, void>({
+/**
+ * Wipe the dev database, replay every migration, then apply the dev seed.
+ *
+ * Seeding lives here rather than in a command of its own so it only ever meets
+ * a freshly migrated, empty database. That is what lets a seed file be plain
+ * `INSERT`s: there is no path that applies it twice, so it never has to defend
+ * itself with `INSERT OR IGNORE` or `ON CONFLICT DO NOTHING`.
+ */
+export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
   remote: true,
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config }, { noSeed }) => {
     if (process.env.NODE_ENV === 'production') {
       logger.error(
         'pikku db reset refused: NODE_ENV=production. This command only runs in dev.'
@@ -56,11 +64,16 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
         : `db reset: ${zod.outFile} unchanged`
     )
 
-    const devSeedResult = await devSeed(resolved)
-    if (devSeedResult.applied) {
-      logger.info(
-        `db reset: seeded ${resolved.devSeedFile} (${devSeedResult.bytes} bytes)`
-      )
+    if (noSeed) {
+      logger.info('db reset: --no-seed, leaving the database empty')
+      return
     }
+
+    const devSeedResult = await devSeed(resolved)
+    logger.info(
+      devSeedResult.applied
+        ? `db reset: seeded ${resolved.devSeedFile} (${devSeedResult.bytes} bytes)`
+        : `db reset: no ${resolved.devSeedFile} found, database is empty`
+    )
   },
 })

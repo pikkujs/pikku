@@ -306,7 +306,7 @@ test('dev-seed applies db/sqlite-dev-seed.sql once migrate has run', async () =>
   }
 })
 
-test('dev-seed refuses to run under NODE_ENV=production', async () => {
+test('the dev seed refuses to run under NODE_ENV=production', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
   await migrateAndCodegen(resolved)
 
@@ -315,7 +315,7 @@ test('dev-seed refuses to run under NODE_ENV=production', async () => {
   try {
     await assert.rejects(
       () => runDevSeed(resolved),
-      /pikku db dev-seed refused: NODE_ENV=production/
+      /pikku dev seed refused: NODE_ENV=production/
     )
   } finally {
     if (previous === undefined) {

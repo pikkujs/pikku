@@ -22,7 +22,6 @@ import { dbCodegen } from './functions/commands/db-codegen.js'
 import { dbCheck } from './functions/commands/db-check.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
-import { dbDevSeed } from './functions/commands/db-dev-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
 import { scopesAudit } from './functions/commands/scopes-audit.js'
@@ -429,15 +428,17 @@ wireCLI({
           description:
             "Publish this package's schema so projects consuming it as an addon can create its tables",
         }),
-        'dev-seed': pikkuCLICommand({
-          func: dbDevSeed,
-          description:
-            'Apply db/<engine>-dev-seed.sql to the dev database. Test data only — it refuses to run in production',
-        }),
         reset: pikkuCLICommand({
           func: dbReset,
           description:
-            'Wipe and recreate the dev database (migrate + dev-seed)',
+            'Wipe and recreate the dev database: migrate, then apply db/<engine>-dev-seed.sql. Dev only — it refuses to run in production',
+          options: {
+            noSeed: {
+              description:
+                'Stop after migrating, leaving the database empty. For working on an empty-state or onboarding flow the test data would hide',
+              default: false,
+            },
+          },
         }),
         audit: pikkuCLICommand({
           func: dbAudit,

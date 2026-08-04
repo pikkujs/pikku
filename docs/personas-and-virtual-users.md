@@ -509,7 +509,7 @@ Two engine changes, and they are the only two:
 
 Provisioning is the third piece and is not engine work: `pikku persona sync` mirrors
 `syncSystemRoles` — additive, creates the row, applies the declared grants, never deletes.
-Seeding is test data; this is deployment, and `db dev-seed` does not run in production.
+Seeding is test data; this is deployment, and the dev seed does not run in production.
 
 ## Non-person subjects
 
@@ -713,7 +713,7 @@ reach production before the check that stops it exists:
    `accountable`) and the fail-closed `PIKKU_ENV` check at sign-in. Before the disposition
    exists, so the disposition cannot land without its guard.
 7. **`disposition: 'accountable'`**, and agents in the computed catalogue.
-8. **`pikku persona sync`** — the row and the grants, additively, outside `db dev-seed`.
+8. **`pikku persona sync`** — the row and the grants, additively, outside the dev seed.
 
 Steps 5–8 are done. `sync` needs both halves of an environment — its API to sign the
 person in, its database to write the grants — because the account is created by the actor
