@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.52",
+  "version": "1.0.0",
   "description": "Pikku Console — the web UI for inspecting and running Pikku projects",
   "type": "module",
   "main": "./src/index.ts",
@@ -76,14 +76,14 @@
     "remark-gfm": "^4.0.1"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.75"
+    "@pikku/core": "^0.13.0"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.20.0",
     "@mantine/colors-generator": "^9.2.1",
-    "@pikku/addon-console": "^0.12.37",
-    "@pikku/cli": "^0.12.97",
-    "@pikku/core": "^0.12.75",
+    "@pikku/addon-console": "^1.0.0",
+    "@pikku/cli": "^1.0.0",
+    "@pikku/core": "^0.13.0",
     "@pikku/websocket": "^0.12.2",
     "@types/chroma-js": "^3",
     "@types/lodash": "^4",

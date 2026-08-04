@@ -1,5 +1,14 @@
 # @pikku/kysely-bun-sqlite
 
+## 0.12.4
+
+### Patch Changes
+
+- Updated dependencies [62ea4cc]
+- Updated dependencies [78b29f0]
+  - @pikku/kysely@1.0.0
+  - @pikku/kysely-sqlite@1.0.0
+
 ## 0.12.3
 
 ### Patch Changes

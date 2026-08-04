@@ -1,3 +1,14 @@
+## 0.12.3
+
+### Patch Changes
+
+- Updated dependencies [62ea4cc]
+- Updated dependencies [9dddff8]
+- Updated dependencies [78b29f0]
+  - @pikku/core@0.13.0
+  - @pikku/jose@1.0.0
+  - @pikku/schema-ajv@1.0.0
+
 ## 0.12.2
 
 ### Patch Changes

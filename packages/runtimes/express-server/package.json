@@ -1,6 +1,6 @@
 {
   "name": "@pikku/express",
-  "version": "0.12.8",
+  "version": "1.0.0",
   "description": "Express server for Pikku, with CORS, cookie and body parsing wired up",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,10 +18,10 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.74"
+    "@pikku/core": "^0.13.0"
   },
   "dependencies": {
-    "@pikku/express-middleware": "^0.12.5",
+    "@pikku/express-middleware": "^1.0.0",
     "@types/content-type": "^1.1.9",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",

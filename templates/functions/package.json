@@ -5,11 +5,11 @@
   "dependencies": {
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
-    "@pikku/better-auth": "^0.12.20",
-    "@pikku/core": "^0.12.75",
+    "@pikku/better-auth": "^1.0.0",
+    "@pikku/core": "^0.13.0",
     "@pikku/jose": "workspace:^",
     "@pikku/kysely": "workspace:^",
-    "@pikku/schema-cfworker": "^0.12.5",
+    "@pikku/schema-cfworker": "^1.0.0",
     "@pikku/templates-function-addon": "workspace:*",
     "better-auth": "^1.6.19",
     "eventsource": "^4.1.0",
@@ -20,7 +20,7 @@
   "devDependencies": {
     "@aws-sdk/client-sqs": "^3.1000.0",
     "@modelcontextprotocol/sdk": "1.27.1",
-    "@pikku/cli": "^0.12.97",
+    "@pikku/cli": "^1.0.0",
     "@pikku/cloudflare": "workspace:*",
     "@pikku/deploy-cloudflare": "workspace:*",
     "@pikku/deploy-serverless": "workspace:*",

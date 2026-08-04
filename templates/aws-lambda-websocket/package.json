@@ -15,10 +15,10 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
   "dependencies": {
-    "@pikku/aws-services": "^0.12.8",
-    "@pikku/core": "^0.12.75",
-    "@pikku/kysely-postgres": "^0.12.15",
-    "@pikku/lambda": "^0.12.6",
+    "@pikku/aws-services": "^1.0.0",
+    "@pikku/core": "^0.13.0",
+    "@pikku/kysely-postgres": "^1.0.0",
+    "@pikku/lambda": "^1.0.0",
     "kysely": "^0.29.0",
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.8",

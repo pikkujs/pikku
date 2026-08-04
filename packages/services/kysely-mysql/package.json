@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-mysql",
-  "version": "0.12.21",
+  "version": "1.0.0",
   "description": "MySQL dialect services for Pikku, backed by Kysely",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -14,14 +14,14 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.6",
+    "@pikku/kysely": "^1.0.0",
     "kysely": "^0.29.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.71"
+    "@pikku/core": "^0.13.0"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.71",
+    "@pikku/core": "^0.13.0",
     "typescript": "^6.0.3"
   },
   "exports": {

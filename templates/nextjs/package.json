@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@next/swc-darwin-arm64": "^16.2.6",
-    "@pikku/better-auth": "^0.12.20",
-    "@pikku/core": "^0.12.75",
+    "@pikku/better-auth": "^1.0.0",
+    "@pikku/core": "^0.13.0",
     "@pikku/fetch": "^0.12.8",
-    "@pikku/jose": "^0.12.4",
-    "@pikku/next": "^0.12.8",
+    "@pikku/jose": "^1.0.0",
+    "@pikku/next": "^1.0.0",
     "better-auth": "^1.6.19",
     "next": "15.5.12",
     "react": "^19",
@@ -28,7 +28,7 @@
     "tsx": "^4.21.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.97",
+    "@pikku/cli": "^1.0.0",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",

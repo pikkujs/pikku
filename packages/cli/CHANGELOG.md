@@ -1,3 +1,182 @@
+## 1.0.0
+
+### Minor Changes
+
+- 9dddff8: Split a column's at-rest form out of its classification.
+
+  `security: 'encrypted'` sat beside `'secret'` as though the two were
+  alternatives, which made the field unanswerable: a token hash and a live bearer
+  token are both secret, one must never be encrypted — the digest _is_ the lookup
+  key — and the other must always be. A column now carries a second, independent
+  `form: 'plain' | 'hashed' | 'wrapped' | 'sealed'` saying how the bytes are held.
+
+  Declaring a form other than `plain` makes the column's INSERT/UPDATE type
+  nominal — `WrappedValue`, `SealedValue`, `HashedValue` — so a plain string no
+  longer compiles there and the only way to write the column is with something an
+  encrypt, seal or hash call produced. `envelopeEncrypt`, `envelopeRewrap` and
+  `wrapDEK` now return the brand, and a new `hashToken` produces `HashedValue`, so
+  the round trip needs no casts; `column-form.ts` exports deliberately-named
+  `unsafeAs*` assertions for backfills, fixtures and values sealed elsewhere.
+  Reads are unaffected — the brands widen to `string` and compose with the
+  classification brand as `Secret<WrappedValue>`.
+
+  `wrapped` and `sealed` stay distinct because a sealed value is one the
+  application cannot read back; storing one where the other belongs is a row
+  nobody can open.
+
+  A `secret` column that has not declared a form now warns (PKU483), and a form on
+  a non-text column warns and is dropped (PKU484). Both are warnings, so existing
+  projects keep migrating — `pikku db --fail-on-warn` opts into the ratchet, and
+  an explicit `form: 'plain'` is the acknowledgement that silences it. The legacy
+  `security: 'encrypted'` keeps working and now expands to the pair it always
+  meant, `secret` + `wrapped`.
+
+- 9dddff8: Read schema-qualified annotations, and let a project name its default schema.
+
+  `DbClassificationMap` nests tables under their schema whenever a project sets
+  `db.schema`, but `loadAnnotations` read the sidecar as a flat table→column map.
+  It therefore took the schema for a table and each table for a column, found no
+  recognised fields, and dropped every annotation on the floor — so a project
+  could mark a column `secret` and watch it generate as `private`, with no error
+  anywhere. The parser now detects the extra level (a column entry's values are
+  primitives; a table's are objects) and flattens it, so both shapes load.
+
+  New `db.defaultSchema` drops one schema's qualifier from the generated types:
+  with `defaultSchema: 'app'`, `app.user` is queried as `selectFrom('user')` and
+  typed as `User` rather than `AppUser`, matching what a project whose
+  `search_path` already resolves the schema actually writes. Tables in other
+  schemas stay qualified. Where dropping the qualifier would make two tables
+  share a name, the table keeps its qualifier and the codegen warns (PKU485)
+  rather than letting one silently shadow the other — queries against the loser
+  would have typechecked against the wrong columns.
+
+  The generated key is what Kysely puts in the SQL, so this is opt-in and
+  separate from `db.schema`: setting it for a schema the connection does not
+  resolve gives you queries that compile and then fail to find their table.
+
+### Patch Changes
+
+- 2ff07e0: Remove `pikku db seed`. Seeding is now a step of `pikku db reset`, which grew `--no-seed`.
+
+  `seed` read like something you might point at any environment. It never was. It exists
+  for one job: put enough test data into a **dev** database that the app isn't empty on
+  first run. Production and staging are provisioned, not seeded — accounts and their role
+  grants come from `pikku persona sync` or a migration, and always have.
+
+  A standalone seed command is also what made seed files unpleasant to write. Because it
+  could be run against a database in any state, every seed had to defend itself with
+  `INSERT OR IGNORE`, `ON CONFLICT DO NOTHING`, `IF NOT EXISTS`. Folding it into reset
+  removes that: `pikku db reset` wipes, migrates, then seeds, so the seed only ever meets
+  an empty database and **plain `INSERT`s are correct**. The guarantee is structural now
+  rather than a documented convention.
+
+  ```bash
+  pikku db reset             # wipe + migrate + test data
+  pikku db reset --no-seed   # wipe + migrate, empty — for empty-state and onboarding work
+  ```
+
+  Seeding also inherits reset's guards for free: it refuses `NODE_ENV=production`, and
+  refuses a database resolved outside the runtime directory.
+
+  The seed file keeps a name that says what it is:
+  - `db/postgres-seed.sql` → `db/postgres-dev-seed.sql`
+  - `db/sqlite-seed.sql` → `db/sqlite-dev-seed.sql`
+
+  **Migrating:** rename the file, and drop the idempotency guards from it if you like.
+  `pikku db seed` no longer exists — use `pikku db reset`. A project that keeps the old
+  filename gets no error: reset reports the database is empty, which is the one failure
+  mode worth knowing about up front. The Fabric validator's `seed-sql-missing` finding is
+  now `dev-seed-sql-missing` and looks for the new name.
+
+- 1e74b01: Remove `pikku db seed`. Seeding is now a step of `pikku db reset`, which grew `--no-seed`.
+
+  `seed` read like something you might point at any environment. It never was. It exists
+  for one job: put enough test data into a **dev** database that the app isn't empty on
+  first run. Production and staging are provisioned, not seeded — accounts and their role
+  grants come from `pikku persona sync` or a migration, and always have.
+
+  A standalone seed command is also what made seed files unpleasant to write. Because it
+  could be run against a database in any state, every seed had to defend itself with
+  `INSERT OR IGNORE`, `ON CONFLICT DO NOTHING`, `IF NOT EXISTS`. Folding it into reset
+  removes that: `pikku db reset` wipes, migrates, then seeds, so the seed only ever meets
+  an empty database and **plain `INSERT`s are correct**. The guarantee is structural now
+  rather than a documented convention.
+
+  ```bash
+  pikku db reset             # wipe + migrate + test data
+  pikku db reset --no-seed   # wipe + migrate, empty — for empty-state and onboarding work
+  ```
+
+  Seeding also inherits reset's guards for free: it refuses `NODE_ENV=production`, and
+  refuses a database resolved outside the runtime directory.
+
+  The seed file keeps a name that says what it is:
+  - `db/postgres-seed.sql` → `db/postgres-dev-seed.sql`
+  - `db/sqlite-seed.sql` → `db/sqlite-dev-seed.sql`
+
+  **Migrating:** rename the file, and drop the idempotency guards from it if you like.
+  `pikku db seed` no longer exists — use `pikku db reset`. A project that keeps the old
+  filename gets no error: reset reports the database is empty, which is the one failure
+  mode worth knowing about up front. The Fabric validator's `seed-sql-missing` finding is
+  now `dev-seed-sql-missing` and looks for the new name.
+
+- 78b29f0: `SecretService` now returns a `SecretValue<T>` rather than the bare value, so a
+  vault secret cannot reach a sink by accident.
+
+  `SecretValue` is nominally typed, which means it is not assignable to `string`
+  (or to any other concretely-typed field). Every sink with a real type — a
+  database column, an email body, a session payload — rejects it with no lint
+  rule involved. The sinks typed `any`, `unknown`, or a free generic — the logger,
+  queue payloads, webhook and email inputs, and a function's own output — are
+  guarded with `Safe<T>`, which collapses a `SecretValue` found anywhere inside
+  `T`, however deeply nested, to `never`.
+
+  Unwrap deliberately at the point the secret reaches the wire:
+
+  ```ts
+  const secret = await secrets.getSecret('BETTER_AUTH_SECRET')
+  betterAuth({ secret: secret.reveal() })
+  ```
+
+  Two behaviours cover what types cannot see. Structured serialization redacts —
+  `JSON.stringify` and node's inspect both yield `[secret]`, so an audit or log
+  write stays honest without crashing the request. String coercion throws
+  `SecretCoercionError`, because a template literal is always a leak.
+
+  `AuditLog.write` is guarded the same way as the logger, since an audit event
+  carries `input` and `metadata` as `unknown` and nominality alone cannot stop a
+  secret landing in one.
+
+  `.reveal()` is the deliberate escape hatch, and what it hands back is an
+  ordinary string as far as every sink signature is concerned. **PKU953** closes
+  that gap: under `pikku all --security` the inspector reports a revealed secret
+  that flows into a logger, an audit, a queue, an email or a webhook — `console` included.
+
+  This also fixed a real one: `remote-addon-auth.ts` called `String(token)` on an
+  `unknown` and wrote the result straight into an `Authorization` header.
+
+- Updated dependencies [62ea4cc]
+- Updated dependencies [9dddff8]
+- Updated dependencies [2ff07e0]
+- Updated dependencies [9dddff8]
+- Updated dependencies [155528a]
+- Updated dependencies [1065b80]
+- Updated dependencies [1e74b01]
+- Updated dependencies [78b29f0]
+  - @pikku/core@0.13.0
+  - @pikku/inspector@1.0.0
+  - @pikku/kysely@1.0.0
+  - @pikku/skills@0.12.6
+  - @pikku/knowledge@0.12.4
+  - @pikku/better-auth@1.0.0
+  - @pikku/playwright@1.0.0
+  - @pikku/bun-server@1.0.0
+  - @pikku/node-http-server@1.0.0
+  - @pikku/ws@1.0.0
+  - @pikku/schedule@1.0.0
+  - @pikku/ai-vercel@1.0.0
+  - @pikku/kysely-node-sqlite@1.0.0
+
 ## 0.12.97
 
 ### Patch Changes

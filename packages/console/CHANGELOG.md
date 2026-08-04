@@ -1,3 +1,112 @@
+## 1.0.0
+
+### Patch Changes
+
+- 62ea4cc: The audit trail is now readable — in the generated meta, through an RPC, and as
+  a page in the console.
+
+  `audit: true` reaches `FunctionRuntimeMeta.audit` as its resolved form
+  (`{ durability }`), so which functions record anything is answerable without
+  running them. It is informational: the runner still resolves audit from the live
+  function config, so meta and runtime cannot disagree.
+
+  `AuditService` grows an optional read side — `query(AuditQuery)` and `facets()`.
+  Optional because a sink can legitimately be write-only: a queue producer that
+  hands events to another system has nothing to read back, and a reader that finds
+  these absent should say the trail is not readable here rather than that it is
+  empty. The two are very different answers to give someone auditing a system.
+
+  `KyselyAuditService` implements both, newest first with offset paging, filtered
+  by user, action and time window. Two things it now gets right that are easy to
+  get wrong: an empty filter array means "match nothing" rather than "no filter",
+  and results are read by physical _and_ camelCase key, because `CamelCasePlugin`
+  is on most pikku Kysely instances and renames result keys on the way out — the
+  mismatch does not throw, it returns a page of `undefined`. `init()` creates the
+  `audit` table for projects that do not migrate it themselves, from a new
+  exported `auditSchema` that stays out of `pikkuSchemas` because the runtime does
+  not need it.
+
+  The console addon exposes `console:getAudits` and `console:getAuditFilters`
+  behind a new `pikku:audit:read` scope, and forwards the application's `audit`
+  service into the addon's own services — without that last part every install
+  reported the trail as unreadable, whatever sink it had configured.
+
+  The console gets an Audit trail page: an infinite list filtered server-side by
+  user and action, and a row that opens the whole event, metadata rendered as a
+  JSON tree. Refused, unreadable and empty are three different screens, because
+  "you may not read this", "nobody can read this" and "nothing happened" are three
+  different facts.
+
+  Events name the person who caused them. The trail records a user id — the only
+  thing stable enough to record, since a name can change after the event — so
+  `getAudits` resolves those ids against better-auth's user directory at read
+  time, and the page shows the name while keeping the recorded id on the event.
+  The filter follows: pick a colleague by name, filter by the id. A scenario
+  actor is labelled as one, so synthetic traffic is not mistaken for real, and a
+  caller who was signed out shows the wire identity pikku resolved for them
+  rather than being credited to the system.
+
+  **Breaking, for anyone already reading `AuditEvent`:** `actor` is now
+  `userIdentity`, and its type `AuditActor` is `AuditUserIdentity`; `AuditQuery`
+  takes `userIds`/`orgId` in place of `actorUserIds`/`actorOrgId`, and
+  `AuditFacets` returns `userIds`. In pikku an _actor_ is a synthetic person a
+  scenario drives, flagged on the user row — so naming the causer of an event
+  `actor` made the synthetic case unsayable (`actor.actor === true`) and implied
+  every recorded action was a test. The overwhelming majority are ordinary
+  customers. The `audit` table follows: `actor_user_id` / `actor_org_id`
+  are now `user_id` / `org_id`, and a `pikku_user_id` column joins them so the
+  wire identity of a caller who never signed in survives the round trip — the
+  sink was dropping it, which left the console's Session field permanently
+  blank. A project that already migrated the table needs to rename the two
+  columns and add the third; `KyselyAuditService.init()` creates the new shape
+  for anyone who did not.
+
+- 1065b80: A knowledge note now renders as a document rather than as a wall of markdown,
+  and the things it names are links into the app.
+
+  The console's markdown renderer gains the parts of markdown that carry structure
+  rather than prose. ```mermaid fences are drawn as diagrams, lazily — mermaid is
+  ~1MB of parser and layout engine, imported on the first fence that needs one, so
+  a note without a diagram never pays for it. The diagram is themed from the
+  console's own CSS variables read off the live element, which is what makes one
+  diagram look native in both colour schemes and inside a host console that
+  supplies its own values for the same tokens. Only diagrams of STRUCTURE are
+  drawn — flowchart, sequence, state, ER, class, journey, timeline, mindmap,
+  gitGraph. Mermaid also renders charts, and those deliberately degrade to their
+  own source: a chart spends the reader's screen on a handful of numbers a sentence
+  carries better, and puts the loudest typography on the page around the least
+  important content. A fence that does not parse degrades the same way, with a line
+  saying so — notes are written by agents and by people, and a diagram that fails
+  silently is worse than one that shows its working.
+
+  `> [!NOTE]`-style callouts (note, tip, important, warning, caution) render as
+  callouts, fenced code is syntax-highlighted and copyable in one action, headings
+  carry ids so a note can be linked to below its title, and both wide tables and
+  wide diagrams keep their intrinsic size inside a focusable, labelled region that
+  fades at whichever edge still has content behind it. Scrolling rather than
+  scaling, because a fitted diagram keeps its aspect ratio by shrinking its type
+  with it, and a flowchart in a narrow pane arrives as an unreadable strip.
+
+  `resource:` URIs are now links. A note that says `func:createEntry` renders it as
+  a chip that opens the function, and the same scheme works inline, so a sentence
+  can name `[getReport](func:getReport)` and have the reader arrive at it. Standing
+  alone the chip shows the whole URI — the kind is half of what it says; inline it
+  shows the author's words and drops the box, because a boxed word every few words
+  stops a sentence dead. The screens those links land on (functions, workflows,
+  wires, jobs, scopes) now seed their search box from `?search=`, which is what
+  turns a link into a landing.
+
+  Two prefixes join the scheme in `@pikku/knowledge`: `scope:`, which resolves
+  against the permission a function gates itself with and the roles that confer it,
+  and `persona:`, against `definePersonas()`. Both are declarations the generated
+  meta can check, which is the whole bar for a prefix — a reference nothing
+  validates rots into fiction exactly where it looks most authoritative.
+
+- Updated dependencies [62ea4cc]
+- Updated dependencies [9dddff8]
+- Updated dependencies [78b29f0]
+  - @pikku/core@0.13.0
+
 ## 0.12.52
 
 ### Patch Changes
@@ -800,8 +909,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                            "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                            "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                              "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                              "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core

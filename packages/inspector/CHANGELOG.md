@@ -1,3 +1,162 @@
+## 1.0.0
+
+### Patch Changes
+
+- 62ea4cc: The audit trail is now readable — in the generated meta, through an RPC, and as
+  a page in the console.
+
+  `audit: true` reaches `FunctionRuntimeMeta.audit` as its resolved form
+  (`{ durability }`), so which functions record anything is answerable without
+  running them. It is informational: the runner still resolves audit from the live
+  function config, so meta and runtime cannot disagree.
+
+  `AuditService` grows an optional read side — `query(AuditQuery)` and `facets()`.
+  Optional because a sink can legitimately be write-only: a queue producer that
+  hands events to another system has nothing to read back, and a reader that finds
+  these absent should say the trail is not readable here rather than that it is
+  empty. The two are very different answers to give someone auditing a system.
+
+  `KyselyAuditService` implements both, newest first with offset paging, filtered
+  by user, action and time window. Two things it now gets right that are easy to
+  get wrong: an empty filter array means "match nothing" rather than "no filter",
+  and results are read by physical _and_ camelCase key, because `CamelCasePlugin`
+  is on most pikku Kysely instances and renames result keys on the way out — the
+  mismatch does not throw, it returns a page of `undefined`. `init()` creates the
+  `audit` table for projects that do not migrate it themselves, from a new
+  exported `auditSchema` that stays out of `pikkuSchemas` because the runtime does
+  not need it.
+
+  The console addon exposes `console:getAudits` and `console:getAuditFilters`
+  behind a new `pikku:audit:read` scope, and forwards the application's `audit`
+  service into the addon's own services — without that last part every install
+  reported the trail as unreadable, whatever sink it had configured.
+
+  The console gets an Audit trail page: an infinite list filtered server-side by
+  user and action, and a row that opens the whole event, metadata rendered as a
+  JSON tree. Refused, unreadable and empty are three different screens, because
+  "you may not read this", "nobody can read this" and "nothing happened" are three
+  different facts.
+
+  Events name the person who caused them. The trail records a user id — the only
+  thing stable enough to record, since a name can change after the event — so
+  `getAudits` resolves those ids against better-auth's user directory at read
+  time, and the page shows the name while keeping the recorded id on the event.
+  The filter follows: pick a colleague by name, filter by the id. A scenario
+  actor is labelled as one, so synthetic traffic is not mistaken for real, and a
+  caller who was signed out shows the wire identity pikku resolved for them
+  rather than being credited to the system.
+
+  **Breaking, for anyone already reading `AuditEvent`:** `actor` is now
+  `userIdentity`, and its type `AuditActor` is `AuditUserIdentity`; `AuditQuery`
+  takes `userIds`/`orgId` in place of `actorUserIds`/`actorOrgId`, and
+  `AuditFacets` returns `userIds`. In pikku an _actor_ is a synthetic person a
+  scenario drives, flagged on the user row — so naming the causer of an event
+  `actor` made the synthetic case unsayable (`actor.actor === true`) and implied
+  every recorded action was a test. The overwhelming majority are ordinary
+  customers. The `audit` table follows: `actor_user_id` / `actor_org_id`
+  are now `user_id` / `org_id`, and a `pikku_user_id` column joins them so the
+  wire identity of a caller who never signed in survives the round trip — the
+  sink was dropping it, which left the console's Session field permanently
+  blank. A project that already migrated the table needs to rename the two
+  columns and add the third; `KyselyAuditService.init()` creates the new shape
+  for anyone who did not.
+
+- 9dddff8: Split a column's at-rest form out of its classification.
+
+  `security: 'encrypted'` sat beside `'secret'` as though the two were
+  alternatives, which made the field unanswerable: a token hash and a live bearer
+  token are both secret, one must never be encrypted — the digest _is_ the lookup
+  key — and the other must always be. A column now carries a second, independent
+  `form: 'plain' | 'hashed' | 'wrapped' | 'sealed'` saying how the bytes are held.
+
+  Declaring a form other than `plain` makes the column's INSERT/UPDATE type
+  nominal — `WrappedValue`, `SealedValue`, `HashedValue` — so a plain string no
+  longer compiles there and the only way to write the column is with something an
+  encrypt, seal or hash call produced. `envelopeEncrypt`, `envelopeRewrap` and
+  `wrapDEK` now return the brand, and a new `hashToken` produces `HashedValue`, so
+  the round trip needs no casts; `column-form.ts` exports deliberately-named
+  `unsafeAs*` assertions for backfills, fixtures and values sealed elsewhere.
+  Reads are unaffected — the brands widen to `string` and compose with the
+  classification brand as `Secret<WrappedValue>`.
+
+  `wrapped` and `sealed` stay distinct because a sealed value is one the
+  application cannot read back; storing one where the other belongs is a row
+  nobody can open.
+
+  A `secret` column that has not declared a form now warns (PKU483), and a form on
+  a non-text column warns and is dropped (PKU484). Both are warnings, so existing
+  projects keep migrating — `pikku db --fail-on-warn` opts into the ratchet, and
+  an explicit `form: 'plain'` is the acknowledgement that silences it. The legacy
+  `security: 'encrypted'` keeps working and now expands to the pair it always
+  meant, `secret` + `wrapped`.
+
+- 9dddff8: Read schema-qualified annotations, and let a project name its default schema.
+
+  `DbClassificationMap` nests tables under their schema whenever a project sets
+  `db.schema`, but `loadAnnotations` read the sidecar as a flat table→column map.
+  It therefore took the schema for a table and each table for a column, found no
+  recognised fields, and dropped every annotation on the floor — so a project
+  could mark a column `secret` and watch it generate as `private`, with no error
+  anywhere. The parser now detects the extra level (a column entry's values are
+  primitives; a table's are objects) and flattens it, so both shapes load.
+
+  New `db.defaultSchema` drops one schema's qualifier from the generated types:
+  with `defaultSchema: 'app'`, `app.user` is queried as `selectFrom('user')` and
+  typed as `User` rather than `AppUser`, matching what a project whose
+  `search_path` already resolves the schema actually writes. Tables in other
+  schemas stay qualified. Where dropping the qualifier would make two tables
+  share a name, the table keeps its qualifier and the codegen warns (PKU485)
+  rather than letting one silently shadow the other — queries against the loser
+  would have typechecked against the wrong columns.
+
+  The generated key is what Kysely puts in the SQL, so this is opt-in and
+  separate from `db.schema`: setting it for a schema the connection does not
+  resolve gives you queries that compile and then fail to find their table.
+
+- 155528a: The PKU910 sessionless-output diagnostic advised marking a column `@public`, a
+  SQL-comment annotation syntax that no longer exists. Column classification is
+  sourced solely from the hand-authored `db/annotations.ts`, so the message now
+  points there.
+- 78b29f0: `SecretService` now returns a `SecretValue<T>` rather than the bare value, so a
+  vault secret cannot reach a sink by accident.
+
+  `SecretValue` is nominally typed, which means it is not assignable to `string`
+  (or to any other concretely-typed field). Every sink with a real type — a
+  database column, an email body, a session payload — rejects it with no lint
+  rule involved. The sinks typed `any`, `unknown`, or a free generic — the logger,
+  queue payloads, webhook and email inputs, and a function's own output — are
+  guarded with `Safe<T>`, which collapses a `SecretValue` found anywhere inside
+  `T`, however deeply nested, to `never`.
+
+  Unwrap deliberately at the point the secret reaches the wire:
+
+  ```ts
+  const secret = await secrets.getSecret('BETTER_AUTH_SECRET')
+  betterAuth({ secret: secret.reveal() })
+  ```
+
+  Two behaviours cover what types cannot see. Structured serialization redacts —
+  `JSON.stringify` and node's inspect both yield `[secret]`, so an audit or log
+  write stays honest without crashing the request. String coercion throws
+  `SecretCoercionError`, because a template literal is always a leak.
+
+  `AuditLog.write` is guarded the same way as the logger, since an audit event
+  carries `input` and `metadata` as `unknown` and nominality alone cannot stop a
+  secret landing in one.
+
+  `.reveal()` is the deliberate escape hatch, and what it hands back is an
+  ordinary string as far as every sink signature is concerned. **PKU953** closes
+  that gap: under `pikku all --security` the inspector reports a revealed secret
+  that flows into a logger, an audit, a queue, an email or a webhook — `console` included.
+
+  This also fixed a real one: `remote-addon-auth.ts` called `String(token)` on an
+  `unknown` and wrote the result straight into an `Authorization` header.
+
+- Updated dependencies [62ea4cc]
+- Updated dependencies [9dddff8]
+- Updated dependencies [78b29f0]
+  - @pikku/core@0.13.0
+
 ## 0.12.53
 
 ### Patch Changes
