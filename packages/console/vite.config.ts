@@ -20,7 +20,7 @@ export default defineConfig({
         }
       },
     },
-    // Compile messages/*.json → src/paraglide so `m`/`mKey` resolve, with HMR
+    // Compile messages/*.json → src/paraglide so `m` resolves, with HMR
     // on message edits. Must run first.
     paraglideVitePlugin({
       project: './project.inlang',

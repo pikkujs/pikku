@@ -190,6 +190,6 @@ Props with more than one or two fields get a named `Props` type rather than an i
 
 - Fixed UI copy lives in `messages/en.json` and is referenced through the typed `m` namespace: add the key, then call `m.scopes_create_role()`.
 - A fixed label containing a variable is a **parameterized message** — `m.scopes_delete_confirm({ name })` with `"scopes_delete_confirm": "Delete {name} for everyone — confirm"` — rather than English concatenated around an `asI18n(...)`.
-- Computed keys use `mKey(...)`.
+- **There is no runtime key resolver.** A key assembled at runtime cannot be type-checked, so a renamed or deleted message degrades to a browser console warning instead of a build failure. Where the key is genuinely dynamic, map the discriminant to a message *function* — `const TITLE = { cors: m.connection_errors_cors_error, timeout: m.connection_errors_timeout }` — or return the message from the branch that already discriminates. The map is checked; a string is not.
 
 Typing `asI18n('` followed by a letter rather than a variable is the signal you want `m.<key>()` instead.

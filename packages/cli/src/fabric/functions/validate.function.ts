@@ -1279,7 +1279,7 @@ export async function runValidate(
           const rel = file.slice(appPath.length + 1)
           const norm = rel.replace(/\\/g, '/')
           // Paraglide usage: the reactive useLocale() hook or an import from the
-          // local `@/i18n` scaffold (messages `m`, mKey/mList) — either means
+          // local `@/i18n` scaffold (the typed `m` namespace) — either means
           // strings flow through compiled messages.
           if (
             /\buseLocale\s*\(/.test(text) ||
