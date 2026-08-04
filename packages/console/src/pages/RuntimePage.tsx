@@ -4,7 +4,7 @@ import type { TabbedSurfaceTab } from '../components/console/TabbedSurface'
 import { ServicesTab } from '../components/tabs/ServicesTab'
 import { MiddlewareTab } from '../components/tabs/MiddlewareTab'
 import { PermissionsTab } from '../components/tabs/PermissionsTab'
-import { m, mKey } from '@/i18n/messages'
+import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
 export const RuntimePage: React.FC = () => {
@@ -14,19 +14,19 @@ export const RuntimePage: React.FC = () => {
     {
       value: 'services',
       label: 'Services',
-      searchPlaceholder: mKey('runtime.search.services'),
+      searchPlaceholder: m.runtime_search_services(),
       render: (searchQuery) => <ServicesTab searchQuery={searchQuery} />,
     },
     {
       value: 'middleware',
       label: 'Middleware',
-      searchPlaceholder: mKey('runtime.search.middleware'),
+      searchPlaceholder: m.runtime_search_middleware(),
       render: (searchQuery) => <MiddlewareTab searchQuery={searchQuery} />,
     },
     {
       value: 'permissions',
       label: 'Permissions',
-      searchPlaceholder: mKey('runtime.search.permissions'),
+      searchPlaceholder: m.runtime_search_permissions(),
       render: (searchQuery) => <PermissionsTab searchQuery={searchQuery} />,
     },
   ]
