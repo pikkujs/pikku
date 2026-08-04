@@ -5,6 +5,7 @@ import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { RolesTab } from '../components/scopes/RolesTab'
 import { ScopesVocabularyTab } from '../components/scopes/ScopesVocabularyTab'
 import type { EditableRole } from '../components/scopes/RoleEditorDrawer'
+import { useSearchParams } from '../router'
 import { useLocale } from '@/i18n/config'
 import { m } from '@/i18n/messages'
 
@@ -13,7 +14,11 @@ type Tab = 'roles' | 'scopes'
 export const ScopesPage: React.FC = () => {
   useLocale()
   const [tab, setTab] = useState<Tab>('roles')
-  const [search, setSearch] = useState('')
+  // Seeded from `?search=` so one scope is linkable from elsewhere — a knowledge
+  // note naming `scope:entry:write` opens this list on it. Initial value only;
+  // from then on the box belongs to the reader.
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
   const [editing, setEditing] = useState<EditableRole | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 

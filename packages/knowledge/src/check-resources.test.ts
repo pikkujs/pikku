@@ -129,3 +129,71 @@ describe('checkKnowledgeResources', () => {
     )
   })
 })
+
+describe('resource URIs in the prose', () => {
+  test('an inline link is checked like a resource field', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/slices/01-a.md':
+        '---\ntype: slice\n---\nWritten by [createEntry](func:createEntry).',
+    })
+    const result = await check(root)
+    assert.deepEqual(result.problems, [])
+    assert.equal(result.checked, 1)
+  })
+
+  test('an inline link to a function nobody exports is drift', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/slices/01-a.md':
+        '---\ntype: slice\n---\nWritten by [saveEntry](func:saveEntry).',
+    })
+    const result = await check(root)
+    assert.equal(result.problems.length, 1)
+    assert.equal(result.problems[0]?.reason, 'dangling')
+    assert.equal(result.problems[0]?.uri, 'func:saveEntry')
+  })
+
+  test('a mistyped kind is reported rather than passed over', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/slices/01-a.md':
+        '---\ntype: slice\n---\nWritten by [createEntry](fun:createEntry).',
+    })
+    const result = await check(root)
+    assert.equal(result.problems[0]?.reason, 'unknown-prefix')
+  })
+
+  test('ordinary links are left alone', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/slices/01-a.md': [
+        '---',
+        'type: slice',
+        '---',
+        'See [the docs](https://pikku.dev/docs), the [decision](../decisions/why.md),',
+        'the [section](#how-it-works) and [us](mailto:hi@example.com).',
+      ].join('\n'),
+    })
+    const result = await check(root)
+    assert.deepEqual(result.problems, [])
+  })
+
+  test('an example inside code is an example, not a claim', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/slices/01-a.md': [
+        '---',
+        'type: slice',
+        '---',
+        'Write it as `[label](func:someFunction)`, like this:',
+        '',
+        '```md',
+        '[deleteEntry](func:deleteEntry)',
+        '```',
+      ].join('\n'),
+    })
+    const result = await check(root)
+    assert.deepEqual(result.problems, [])
+  })
+})

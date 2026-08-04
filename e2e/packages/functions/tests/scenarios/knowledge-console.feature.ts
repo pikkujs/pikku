@@ -272,6 +272,54 @@ export const knowledgeOpensTheDetailsScenario = pikkuScenario<
   },
 })
 
+export const knowledgeDrawsADiagramScenario = pikkuScenario<
+  void,
+  { drawn: true }
+>({
+  title: 'A diagram in a note is drawn',
+  description:
+    'A ```mermaid fence renders as a diagram rather than as the source somebody typed',
+  tags: ['scenario', 'knowledge-console', 'console'],
+  func: async (_services, _data, { scenario, actors }) => {
+    if (!actors?.admin) {
+      throw new Error(
+        'knowledgeDrawsADiagramScenario needs the admin actor — run via `pikku scenario run <environment>`'
+      )
+    }
+
+    await scenario.given(
+      'opens the knowledge page',
+      'opensConsolePage',
+      { path: KNOWLEDGE_PAGE, waitFor: NAVIGATOR_READY },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the slice with a diagram in it',
+      'clicksTestId',
+      navRow(SLICE),
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the gate as a drawing',
+      'seesTestId',
+      { testId: 'mermaid-diagram' },
+      { actor: actors.admin }
+    )
+    // Text out of the fence, which exists on the page only once mermaid has laid
+    // the diagram out — the source is a decision node reading `reports:read?`.
+    // Mermaid is loaded on demand, so this is also what proves the lazy import
+    // arrives.
+    await scenario.then(
+      'sees the question the gate asks',
+      'seesText',
+      { text: 'reports:read?' },
+      { actor: actors.admin }
+    )
+
+    return { drawn: true }
+  },
+})
+
 export const knowledgeConsoleFeature = pikkuFeature({
   name: 'Knowledge Console',
   description: "Reading the project's knowledge notes in the console",
@@ -282,5 +330,6 @@ export const knowledgeConsoleFeature = pikkuFeature({
     knowledgeFollowsALinkScenario,
     knowledgeReportsNoIssuesScenario,
     knowledgeOpensTheDetailsScenario,
+    knowledgeDrawsADiagramScenario,
   ],
 })

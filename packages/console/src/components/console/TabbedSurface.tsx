@@ -80,7 +80,13 @@ export const TabbedSurface: React.FC<TabbedSurfaceProps> = (props) => {
   } = props
   useLocale()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState('')
+  // `?search=` makes one row of a tab linkable from elsewhere — a knowledge note
+  // naming `http:/entries` sends the reader to the endpoint it is about. Only the
+  // initial value: from then on the box is theirs, and rewriting the URL as they
+  // type would put every keystroke in the back button.
+  const [searchQuery, setSearchQuery] = useState(
+    () => searchParams.get('search') ?? ''
+  )
 
   const requested = activeTab ?? searchParams.get(searchParamKey)
   const active = tabs.find((tab) => tab.value === requested) ?? tabs[0]!

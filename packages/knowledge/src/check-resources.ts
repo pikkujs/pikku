@@ -29,7 +29,58 @@ export const ResourceCheckSchema = z.object({
 export type ResourceCheck = z.infer<typeof ResourceCheckSchema>
 
 /**
- * Verify every `resource:` in the bundle against what the code actually offers.
+ * Schemes a markdown link may carry that are somebody else's to resolve. A
+ * target starting with one of these is a link out of the project, not a mistyped
+ * resource URI.
+ */
+const WEB_SCHEMES = new Set([
+  'http',
+  'https',
+  'mailto',
+  'tel',
+  'ftp',
+  'file',
+  'data',
+])
+
+const MARKDOWN_LINK = /\]\(\s*([^)\s]+)/g
+
+const CODE = /```[\s\S]*?```|`[^`\n]*`/g
+
+/**
+ * The resource URIs a note's PROSE points at — `[createEntry](func:createEntry)`
+ * — which is how a note names a thing in the code mid-sentence instead of in a
+ * field at the top.
+ *
+ * Held to the same standard as `resource:`, for the reason the scheme exists at
+ * all: a reference nothing checks rots into fiction exactly where it looks most
+ * authoritative, and an inline link is MORE authoritative to a reader than a
+ * frontmatter field they may never expand.
+ *
+ * Code is skipped. A note explaining the scheme quotes `func:createEntry` inside
+ * a fence on purpose, and that example must not have to name a function that
+ * really exists.
+ */
+export const bodyResourceUris = (note: KnowledgeNote): string[] => {
+  const prose = note.body.replace(CODE, '')
+  const uris: string[] = []
+  for (const match of prose.matchAll(MARKDOWN_LINK)) {
+    const href = match[1]!.split(/[?#]/)[0]!
+    const colon = href.indexOf(':')
+    if (colon <= 0) continue
+    const scheme = href.slice(0, colon).toLowerCase()
+    // `//` after the scheme is a URL authority — a host, not a resource id.
+    if (WEB_SCHEMES.has(scheme) || href.slice(colon + 1).startsWith('//')) {
+      continue
+    }
+    uris.push(href)
+  }
+  return uris
+}
+
+/**
+ * Verify every `resource:` in the bundle against what the code actually offers,
+ * in the frontmatter field and in the prose alike.
  *
  * The two failure modes are deliberately different: an unrecognised prefix is the
  * note's fault (it invented a kind), while a recognised prefix with an id nobody
@@ -53,7 +104,7 @@ export const checkKnowledgeResources = async (
   let skipped = 0
 
   for (const note of all) {
-    const ids = resourceIds(note)
+    const ids = [...resourceIds(note), ...bodyResourceUris(note)]
     if (ids.length === 0) continue
     withResource++
     for (const uri of ids) {
