@@ -2,25 +2,30 @@
 
 ## `wireHTTP(config)`
 
-Wire a single function to an HTTP endpoint. Import from `@pikku/core/http`.
+Wire a single function to an HTTP endpoint. Import from `#pikku`.
 
 | Option | Type | Notes |
 | --- | --- | --- |
-| `method` | `'get' \| 'post' \| 'put' \| 'patch' \| 'delete' \| 'head'` | HTTP verb |
+| `method` | `'get' \| 'post' \| 'put' \| 'patch' \| 'delete' \| 'head' \| 'options'` | HTTP verb |
 | `route` | `string` | e.g. `/books/:bookId` — `:params` become `data` fields |
 | `func` | `PikkuFunc` | The function to call |
 | `auth?` | `boolean` | Override default auth (`true` = require session) |
 | `tags?` | `string[]` | For grouping, middleware targeting |
 | `middleware?` | `PikkuMiddleware[]` | Per-route middleware |
-| `sse?` | `boolean` | Enable Server-Sent Events |
+| `sse?` | `boolean` | Enable Server-Sent Events — **`method: 'get'` only** |
+| `query?` | `Array<keyof In>` | **`method: 'post'` only** — input fields also read from the query string |
 | `contentType?` | `'xml' \| 'json'` | Response content type |
 | `timeout?` | `number` | Request timeout in ms |
 | `headers?` | `HTTPHeadersSchema` | Expected headers schema |
-| `docs?` | `HTTPRouteDocsConfig` | OpenAPI docs config |
+
+`sse` and `query` are constrained by the config union rather than by a runtime
+check, so a `sse: true` on a `post` fails to typecheck rather than silently
+serving a normal response. OpenAPI metadata is not declared here — it is derived
+from the function's `description`/`summary` and its input/output schemas.
 
 ## `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)`
 
-Group routes with shared configuration. Groups are composable and nestable. Import from `.pikku/pikku-types.gen.js`.
+Group routes with shared configuration. Groups are composable and nestable. Import from `#pikku`.
 
 ```typescript
 const routes = defineHTTPRoutes({
