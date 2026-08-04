@@ -41,10 +41,30 @@ const schema = new CFWorkerSchemaService(logger: Logger)
 
 **Methods:**
 
-- `compileSchema(schema: string, value: any): void` — Compile and register a JSON schema
+- `compileSchema(name: string, schema: any): void` — Compile and register a JSON schema under `name`
 - `validateSchema(schemaName: string, json: any): void` — Validate data against a compiled schema (throws on failure)
 - `getSchemaNames(): Set<string>` — Get all registered schema names
-- `getSchemaKeys(schemaName: string): string[]` — Get property keys for a schema
+- `getSchemaKeys(schemaName: string): string[]` — Top-level property keys, or `[]` if the schema has no `properties`
+
+### Where it differs from AJV
+
+These two are not drop-in equivalents, and the differences are the kind that
+surface as behaviour changes rather than compile errors:
+
+- **No `useDefaults`.** AJV fills schema defaults into the validated object in
+  place; this validator does not. A field you relied on being defaulted arrives
+  `undefined` on Workers.
+- **It re-compiles when the schema value changes.** AJV caches by name forever;
+  here a `compileSchema` with a different value for the same name replaces the
+  validator, which is what lets a dev hot-reload pick up regenerated schemas.
+- **Each validator gets a deep clone of the schema** (`@cfworker/json-schema`
+  mutates what it is given, which throws on a frozen generated object).
+- A compile failure throws `Error('Failed to compile schema: <name>')` with the
+  underlying cause swallowed — check the schema by hand when you see it.
+
+A failed validation throws `UnprocessableContentError` (422) with the validator
+errors joined; a *missing* schema throws a bare string, `Missing validator for
+<name>`, not an `Error`.
 
 ## Usage Patterns
 
