@@ -34,7 +34,19 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_BETTER_AUTH_VERSION:=0.12.20}"
 # core is a *peer* of both the CLI and the inspector, which is why it has to be
 # named here to exist at all once peer resolution is off.
-: "${PIKKU_CORE_VERSION:=0.12.74}"
+: "${PIKKU_CORE_VERSION:=0.12.77}"
+# @pikku/kysely is an ordinary *dependency* of the CLI, so unlike the peers above
+# it installs whether or not it is named — and left unnamed it floats on the
+# CLI's `^0.13.7`, which means the newest release wave, not the wave this pin
+# describes. That is not a hypothetical: publishing @pikku/kysely@0.13.10 (the
+# first version to import `createSecretValue`) alongside core 0.12.77 broke every
+# build within the hour, because the floating kysely landed next to the pinned
+# core 0.12.74 that predates the symbol. Every build since had failed with an
+# error naming a package the change never touched.
+#
+# So it is pinned like the rest: 0.13.10 peers on core ^0.12.77, which is why
+# core moved up with it. The whole set moves together or none of it does.
+: "${PIKKU_KYSELY_VERSION:=0.13.10}"
 # The other peer that has to be named: @pikku/better-auth peers on the upstream
 # `better-auth` library and imports it at module load, so without it the
 # bootstrap CLI dies on "Cannot find package 'better-auth'".
@@ -62,12 +74,14 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
     "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
   "overrides": {
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
     "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
 }
