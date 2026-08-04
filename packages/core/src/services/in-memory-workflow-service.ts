@@ -301,6 +301,35 @@ export class InMemoryWorkflowService
     return newStep
   }
 
+  protected async findStalledRunIds(
+    before: Date,
+    limit: number
+  ): Promise<string[]> {
+    const stalled: string[] = []
+    for (const [runId, run] of this.runs) {
+      if (run.status !== 'running') continue
+      const steps = this.stepHistory.get(runId) ?? []
+      if (
+        steps.some(
+          (step) =>
+            step.status === 'running' ||
+            step.status === 'scheduled' ||
+            step.status === 'suspended'
+        )
+      ) {
+        continue
+      }
+      const lastActivity = steps.reduce(
+        (latest, step) => (step.updatedAt > latest ? step.updatedAt : latest),
+        run.updatedAt
+      )
+      if (lastActivity >= before) continue
+      stalled.push(runId)
+      if (stalled.length >= limit) break
+    }
+    return stalled
+  }
+
   async listRuns(options?: {
     workflowName?: string
     status?: string

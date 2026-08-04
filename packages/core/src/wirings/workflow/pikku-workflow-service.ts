@@ -275,6 +275,12 @@ const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'cancelled',
 ])
 
+/** Idle window before a `running` run with nothing in flight is treated as stalled. */
+const DEFAULT_STALLED_RUN_MS = 5 * 60_000
+
+/** Runs re-driven per `recoverStalledRuns` call, so one sweep is bounded. */
+const DEFAULT_STALLED_RUN_LIMIT = 100
+
 const WORKFLOW_POLL_MIN_MS = 10
 
 const WORKFLOW_POLL_FACTOR = 1.6
@@ -906,6 +912,67 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         group: this.getJobGroup(workflowName),
       }
     )
+  }
+
+  /**
+   * Ids of runs that are stalled: still `running`, with no step in a state that
+   * something is expected to complete (`running`, `scheduled`, `suspended`),
+   * and no step activity since `before`.
+   *
+   * Returns nothing by default so a store that cannot express the query keeps
+   * working unchanged; a store that overrides it gains crash recovery through
+   * `recoverStalledRuns`.
+   */
+  protected async findStalledRunIds(
+    _before: Date,
+    _limit: number
+  ): Promise<string[]> {
+    return []
+  }
+
+  /**
+   * Re-drive runs whose next move was lost, and report which were resumed.
+   *
+   * Arming a step is two writes to two systems — the step row, then the queue
+   * or scheduler job — so a process that dies between them leaves a run that is
+   * `running` with nothing in flight. Nothing notices: the run parks on a step
+   * that will never complete and never error, so it neither finishes nor fails.
+   * (Seen on a `workflow.sleep()`: a deploy restart landed between the sleep
+   * step's insert and its timer, parking the run permanently.)
+   *
+   * Replay is the recovery — `resumeWorkflow` re-orchestrates from persisted
+   * step state, and every settled step is memoized, so resuming a run that was
+   * not actually stuck costs an orchestration pass and changes nothing. That
+   * idempotence is what makes an idle-time heuristic safe here; a run that is
+   * legitimately mid-sleep is excluded anyway, since its step is `scheduled`.
+   *
+   * This is not self-starting. Call it from a scheduled task at whatever
+   * interval suits the workload.
+   */
+  public async recoverStalledRuns(options?: {
+    stalledAfterMs?: number
+    limit?: number
+  }): Promise<{ resumed: string[] }> {
+    const before = new Date(
+      Date.now() - (options?.stalledAfterMs ?? DEFAULT_STALLED_RUN_MS)
+    )
+    const runIds = await this.findStalledRunIds(
+      before,
+      options?.limit ?? DEFAULT_STALLED_RUN_LIMIT
+    )
+    const resumed: string[] = []
+    for (const runId of runIds) {
+      try {
+        await this.resumeWorkflow(runId)
+        resumed.push(runId)
+      } catch (err) {
+        // One unresumable run must not stop the sweep from recovering the rest.
+        getSingletonServices()?.logger?.error(
+          `Failed to resume stalled workflow run ${runId}: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+    }
+    return { resumed }
   }
 
   protected resolveStepJobOptions(

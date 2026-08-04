@@ -600,6 +600,45 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .execute()
   }
 
+  protected async findStalledRunIds(
+    before: Date,
+    limit: number
+  ): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom('workflowRuns as r')
+      .select('r.workflowRunId')
+      .where('r.status', '=', 'running')
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('workflowStep as s')
+              .select('s.workflowStepId')
+              .whereRef('s.workflowRunId', '=', 'r.workflowRunId')
+              .where('s.status', 'in', ['running', 'scheduled', 'suspended'])
+          )
+        )
+      )
+      // The run row only moves on a status change, so idleness has to hold for
+      // the steps too — expressed as "no step touched since `before`" rather
+      // than max(updated_at) so it stays one index-friendly NOT EXISTS.
+      .where('r.updatedAt', '<', before)
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('workflowStep as s')
+              .select('s.workflowStepId')
+              .whereRef('s.workflowRunId', '=', 'r.workflowRunId')
+              .where('s.updatedAt', '>=', before)
+          )
+        )
+      )
+      .orderBy('r.updatedAt', 'asc')
+      .limit(limit)
+      .execute()
+
+    return rows.map((row) => row.workflowRunId)
+  }
+
   async getRunState(runId: string): Promise<Record<string, unknown>> {
     const row = await this.db
       .selectFrom('workflowRuns')
