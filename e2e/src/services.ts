@@ -201,6 +201,20 @@ export const createSingletonServices = pikkuServices(
     const webhookService = new KyselyWebhookService(queueService, webhookDb)
     await webhookService.init()
 
+    // A durable audit sink, on its own database for the same reason the webhook
+    // one is: the suite must be able to read the trail back, and a Noop sink
+    // would make every audit assertion pass by recording nothing. `init()`
+    // creates the `audit` table, which is not part of the runtime schema.
+    const { KyselyAuditService } = await import('@pikku/kysely')
+    const auditDb = new WebhookKysely<KyselyPikkuDB>({
+      dialect: new WebhookSqliteDialect({
+        database: new WebhookDatabase(':memory:'),
+      }),
+      plugins: [new WebhookCamelCasePlugin(), new WebhookSerializePlugin()],
+    })
+    const audit = new KyselyAuditService(auditDb)
+    await audit.init()
+
     // OAuth2 credentials resolve through better-auth's account table (linked via
     // authClient.oauth2.link), everything else stays local. getAuth must be lazy
     // and singletonServices assigned late: the auth factory is built FROM these
@@ -279,6 +293,7 @@ export const createSingletonServices = pikkuServices(
       workflowRunService,
       queueService,
       webhookService,
+      audit,
     }
     return singletonServices
   }

@@ -8,7 +8,7 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
-import type { FunctionServicesMeta } from '@pikku/core'
+import type { AuditDurability, FunctionServicesMeta } from '@pikku/core'
 import type { ScenarioStepKind, ScenarioSurface } from '@pikku/core/workflow'
 import { formatVersionedId, parseVersionedId } from '@pikku/core'
 
@@ -582,6 +582,8 @@ export const addFunctions: AddWiring = (
   let auth: boolean | undefined
   /** The author's claim that the body authorizes its own callers. */
   let permissionsInBody: boolean | undefined
+  /** The function's `audit` config, resolved to its object form. */
+  let audit: { durability: AuditDurability } | undefined
   let readonly_: boolean | undefined
   let deploy: 'serverless' | 'server' | 'auto' | undefined
   let approvalRequired: boolean | undefined
@@ -694,6 +696,28 @@ export const addFunctions: AddWiring = (
           `callable from outside.`
       )
       return
+    }
+    // `audit` is either `true` or `{ durability }`, so it needs the nested read:
+    // getPropertyValue stringifies an object initializer rather than parsing it.
+    // Mirrors core's `resolveAuditConfig` — the two must agree, or meta would
+    // claim a durability the runner does not use.
+    const auditProp = firstArg.properties.find(
+      (p) =>
+        ts.isPropertyAssignment(p) &&
+        ts.isIdentifier(p.name) &&
+        p.name.text === 'audit'
+    )
+    if (auditProp && ts.isPropertyAssignment(auditProp)) {
+      const auditInit = auditProp.initializer
+      if (auditInit.kind === ts.SyntaxKind.TrueKeyword) {
+        audit = { durability: 'best-effort' }
+      } else if (ts.isObjectLiteralExpression(auditInit)) {
+        const durability = getPropertyValue(
+          auditInit,
+          'durability'
+        ) as AuditDurability | null
+        audit = { durability: durability ?? 'best-effort' }
+      }
     }
     readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
     deploy = getPropertyValue(firstArg, 'deploy') as
@@ -1339,6 +1363,7 @@ export const addFunctions: AddWiring = (
     expose: expose || undefined,
     auth: auth || undefined,
     permissionsInBody: permissionsInBody || undefined,
+    audit,
     remote: remote || undefined,
     scenarioStep: isScenarioStep || undefined,
     scenario: isScenario || undefined,

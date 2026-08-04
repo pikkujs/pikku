@@ -74,7 +74,9 @@ definePersonas({
 
   /**
    * The one person who holds both halves of administration, and therefore the
-   * only one for whom the console's Scopes UI returns 200 throughout.
+   * only one for whom the console's Scopes UI returns 200 throughout. Also the
+   * only holder of `audit-reader`, which is what leaves `staff` as the audit
+   * page's refused case.
    */
   admin: {
     name: 'Admin',
@@ -88,7 +90,7 @@ definePersonas({
     personality:
       'Careful operator who edits code through the console and always restores it',
     account: {},
-    roles: ['platform-admin', 'console-admin'],
+    roles: ['platform-admin', 'console-admin', 'audit-reader'],
     goals: [
       'Keep the console doing what it says it does, and change nothing I cannot undo',
     ],

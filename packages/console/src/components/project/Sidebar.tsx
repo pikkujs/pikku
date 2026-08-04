@@ -43,6 +43,7 @@ import {
   UserCog,
   ShieldCheck,
   Shield,
+  ScrollText,
   Webhook,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -232,6 +233,12 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/credentials',
           icon: KeyRound,
           matchPrefix: '/credentials',
+        },
+        {
+          label: m.nav_audit(),
+          href: '/audit',
+          icon: ScrollText,
+          matchPrefix: '/audit',
         },
       ],
     },

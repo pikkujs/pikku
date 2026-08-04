@@ -1,26 +1,272 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
+import {
+  Alert,
+  Badge,
+  Drawer,
+  Group,
+  MultiSelect,
+  Text,
+} from '@pikku/mantine/core'
 import { ShieldCheck } from 'lucide-react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { TableListPage } from '../layout/TableListPage'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { AuditEventDetail } from './AuditEventDetail'
+import { isForbiddenScopeError } from '../scopes/scope-error'
+import type { AuditRow } from './audit-row'
+import {
+  OUTCOME_COLOUR,
+  auditRowKey,
+  formatOccurredAt,
+  summariseMetadata,
+} from './audit-row'
+
+const DOCS_HREF = 'https://pikku.dev/docs'
+const PAGE_SIZE = 50
 
 export interface AuditLogPanelProps {
   emptyHero?: React.ReactNode
 }
 
+type AuditEventsPage = {
+  events: AuditRow[]
+  nextCursor: number | null
+  readable: boolean
+}
+
 /**
- * The audit log body. There is no OSS audit trail yet, so it is the empty
- * state — hosts pass their own hero to point at whatever they offer instead.
+ * The audit log body: the trail newest first, paged as the reader scrolls, and
+ * narrowed by actor and action.
+ *
+ * Both filters are applied server-side rather than over the loaded pages — a
+ * client-side filter over an infinite list can only match what has already been
+ * scrolled past, which for an audit trail is a wrong answer given confidently.
  */
 export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
   useLocale()
+  const rpc = usePikkuRPC()
+  const [actorUserIds, setActorUserIds] = useState<string[]>([])
+  const [types, setTypes] = useState<string[]>([])
+  // The row itself, not an id: the page already holds the whole event, so a
+  // second read to open a drawer would only be a chance for the two to disagree.
+  const [selected, setSelected] = useState<AuditRow | null>(null)
+
+  const filtersQuery = useQuery({
+    queryKey: ['audit-filters'],
+    queryFn: async () =>
+      (await rpc.invoke('console:getAuditFilters')) as {
+        actorUserIds: string[]
+        types: string[]
+      },
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+
+  const {
+    data,
+    isPending,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['audits', { actorUserIds, types }],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      (await rpc.invoke('console:getAudits', {
+        limit: PAGE_SIZE,
+        offset: pageParam,
+        // Omitted rather than sent empty: an empty array is a real filter that
+        // matches nothing, which is not what "no selection" means here.
+        ...(actorUserIds.length ? { actorUserIds } : {}),
+        ...(types.length ? { types } : {}),
+      })) as AuditEventsPage,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    retry: false,
+  })
+
+  const pages = data?.pages ?? []
+  const rows = useMemo(() => pages.flatMap((page) => page.events), [pages])
+  const filtered = actorUserIds.length > 0 || types.length > 0
+
+  const loadError = error ?? filtersQuery.error
+  if (loadError) {
+    if (isForbiddenScopeError(loadError)) {
+      return (
+        <Alert
+          color="yellow"
+          title={m.audit_forbidden_title()}
+          data-testid="audit-forbidden"
+        >
+          {m.audit_forbidden_body()}
+        </Alert>
+      )
+    }
+    return (
+      <Alert color="red" title={m.audit_load_error()} data-testid="audit-error">
+        {loadError instanceof Error ? asI18n(loadError.message) : null}
+      </Alert>
+    )
+  }
+
+  // A write-only sink is not an empty trail, and conflating them would tell an
+  // auditor that nothing happened when the truth is that nobody can see.
+  if (pages.length > 0 && !pages[0]!.readable) {
+    return (
+      <EmptyStatePlaceholder
+        icon={ShieldCheck}
+        hero={emptyHero}
+        title={m.audit_unreadable_title()}
+        description={m.audit_unreadable_description()}
+        docsHref={DOCS_HREF}
+      />
+    )
+  }
+
+  if (!isPending && rows.length === 0 && !filtered) {
+    return (
+      <EmptyStatePlaceholder
+        icon={ShieldCheck}
+        hero={emptyHero}
+        title={m.audit_empty_title()}
+        description={m.audit_empty_description()}
+        docsHref={DOCS_HREF}
+      />
+    )
+  }
+
   return (
-    <EmptyStatePlaceholder
-      icon={ShieldCheck}
-      hero={emptyHero}
-      title={m.audit_empty_title()}
-      description={m.audit_empty_description()}
-      docsHref="https://pikku.dev/docs"
-    />
+    <>
+      <TableListPage<AuditRow>
+        icon={ShieldCheck}
+        title={m.audit_title()}
+        docsHref={DOCS_HREF}
+        data={rows}
+        getKey={auditRowKey}
+        onRowClick={setSelected}
+        getRowProps={(row) => ({
+          'data-testid': 'audit-row',
+          'data-audit-type': row.type,
+        })}
+        loading={isPending}
+        emptyMessage={m.audit_no_matches()}
+        emptyTitle={m.audit_empty_title()}
+        emptyDescription={m.audit_empty_description()}
+        emptyHero={emptyHero}
+        onLoadMore={fetchNextPage}
+        hasMore={hasNextPage}
+        loadingMore={isFetchingNextPage}
+        headerRight={
+          <Group gap="xs" wrap="nowrap" style={{ flex: 1 }}>
+            <MultiSelect
+              data-testid="audit-filter-actor"
+              aria-label={m.audit_filter_actor()}
+              placeholder={m.audit_filter_actor_placeholder()}
+              data={filtersQuery.data?.actorUserIds ?? []}
+              value={actorUserIds}
+              onChange={setActorUserIds}
+              size="sm"
+              searchable
+              clearable
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <MultiSelect
+              data-testid="audit-filter-type"
+              aria-label={m.audit_filter_type()}
+              placeholder={m.audit_filter_type_placeholder()}
+              data={filtersQuery.data?.types ?? []}
+              value={types}
+              onChange={setTypes}
+              size="sm"
+              searchable
+              clearable
+              style={{ flex: 1, minWidth: 0 }}
+            />
+          </Group>
+        }
+        columns={[
+          {
+            key: 'when',
+            header: m.audit_col_when(),
+            width: 190,
+            render: (row) => (
+              <Text size="sm" c="dimmed">
+                {asI18n(formatOccurredAt(row.occurredAt))}
+              </Text>
+            ),
+          },
+          {
+            key: 'action',
+            header: m.audit_col_action(),
+            render: (row) => (
+              <Group gap="xs" wrap="nowrap">
+                <Text size="sm" fw={500} truncate>
+                  {asI18n(row.type)}
+                </Text>
+                <Badge size="xs" variant="light" color="gray">
+                  {row.source === 'explicit'
+                    ? m.audit_source_explicit()
+                    : m.audit_source_auto()}
+                </Badge>
+              </Group>
+            ),
+          },
+          {
+            key: 'actor',
+            header: m.audit_col_actor(),
+            width: 200,
+            render: (row) =>
+              row.actor?.userId ? (
+                <Text size="sm" truncate>
+                  {asI18n(row.actor.userId)}
+                </Text>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  {m.audit_actor_system()}
+                </Text>
+              ),
+          },
+          {
+            key: 'outcome',
+            header: m.audit_col_outcome(),
+            width: 120,
+            render: (row) =>
+              row.outcome ? (
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color={OUTCOME_COLOUR[row.outcome] ?? 'gray'}
+                >
+                  {asI18n(row.outcome)}
+                </Badge>
+              ) : null,
+          },
+          {
+            key: 'details',
+            header: m.audit_col_details(),
+            maxWidth: 320,
+            render: (row) => (
+              <Text size="xs" c="dimmed" truncate>
+                {asI18n(summariseMetadata(row.metadata))}
+              </Text>
+            ),
+          },
+        ]}
+      />
+
+      <Drawer
+        opened={!!selected}
+        onClose={() => setSelected(null)}
+        position="right"
+        size="lg"
+        title={m.audit_detail_title()}
+      >
+        {selected && <AuditEventDetail event={selected} />}
+      </Drawer>
+    </>
   )
 }

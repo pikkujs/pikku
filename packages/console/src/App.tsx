@@ -29,6 +29,7 @@ import { KnowledgePage } from './pages/KnowledgePage'
 import { DatabasePage } from './pages/DatabasePage'
 import { AuthProvidersPage } from './pages/AuthProvidersPage'
 import { SecurityPage } from './pages/SecurityPage'
+import { AuditPage } from './pages/AuditPage'
 
 export const App: React.FC = () => {
   return (
@@ -68,6 +69,7 @@ export const App: React.FC = () => {
         <Route path="/credentials" element={<CredentialsPage />} />
         <Route path="/users" element={<AdminUsersPage />} />
         <Route path="/scopes" element={<ScopesPage />} />
+        <Route path="/audit" element={<AuditPage />} />
         <Route path="/auth-providers" element={<AuthProvidersPage />} />
         <Route path="/addons" element={<PackagesPage />} />
         <Route path="*" element={<NotFoundTitle />} />

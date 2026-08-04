@@ -32,6 +32,13 @@ export {
 } from './pikku-schema.types.js'
 
 /**
+ * Opt-in, so it is named here rather than folded into `pikkuSchemas` — the
+ * runtime works without an audit table, and `KyselyAuditService.init()` applies
+ * this for the projects that wire the sink.
+ */
+export { auditSchema } from './audit.schema.js'
+
+/**
  * Every table the pikku runtime needs, in dependency order.
  *
  * Order is load-bearing, not cosmetic: `scope` has foreign keys onto Better

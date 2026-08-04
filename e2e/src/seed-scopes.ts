@@ -10,6 +10,8 @@ export const CONSOLE_ADMIN_ROLE = 'console-admin'
 export const REPORT_VIEWER_ROLE = 'report-viewer'
 /** Role granting the umbrella `admin` scope and everything beneath it. */
 export const PLATFORM_ADMIN_ROLE = 'platform-admin'
+/** Role granting `pikku:audit:read`, used by the audit console suite. */
+export const AUDIT_READER_ROLE = 'audit-reader'
 
 const userIdByEmail = async (
   services: SingletonServices,
@@ -41,6 +43,9 @@ const userIdByEmail = async (
  *   200. It deliberately does NOT get `reports:read`.
  * - `guest@e2e.test` gets `report-viewer` so the scope-gate suite can show a 200
  *   for a scoped caller against the admin's 403.
+ * - `admin@e2e.test` also gets `audit-reader`, the only grant of
+ *   `pikku:audit:read`. That leaves `staff@e2e.test` — an admin holding no
+ *   `pikku` scope — as the audit console suite's refused case.
  * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is the
  *   umbrella `admin` scope and nothing else. That is what passes the console's
  *   global admin gate, what lets them impersonate (`admin:impersonate`) and what
@@ -59,8 +64,9 @@ const userIdByEmail = async (
  *   and "a caller holding nothing" through the persona registry rather than by
  *   signing in with a fixture password. The `admin` persona mirrors
  *   `admin@e2e.test` exactly — `platform-admin` to pass the console's global
- *   admin gate, plus `console-admin` to drive the scope-admin RPCs, which the
- *   `admin` root does not reach. `target` declares nothing.
+ *   admin gate, plus `console-admin` to drive the scope-admin RPCs and
+ *   `audit-reader` to read the trail, neither of which the `admin` root
+ *   reaches. `target` declares nothing.
  *
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
@@ -76,6 +82,7 @@ export const seedScopes = async (services: SingletonServices) => {
   await scopeService.addUserToRole(adminId, CONSOLE_ADMIN_ROLE)
   await scopeService.addUserToRole(guestId, REPORT_VIEWER_ROLE)
   await scopeService.addUserToRole(adminId, PLATFORM_ADMIN_ROLE)
+  await scopeService.addUserToRole(adminId, AUDIT_READER_ROLE)
   await scopeService.addUserToRole(staffId, PLATFORM_ADMIN_ROLE)
 
   const granted: string[] = []
@@ -91,6 +98,6 @@ export const seedScopes = async (services: SingletonServices) => {
   }
 
   services.logger.info(
-    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${PLATFORM_ADMIN_ROLE}, ${STAFF_USER.email} -> ${PLATFORM_ADMIN_ROLE}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${granted.join(', ')}`
+    `seeded scopes: ${ADMIN_USER.email} -> ${CONSOLE_ADMIN_ROLE} + ${PLATFORM_ADMIN_ROLE} + ${AUDIT_READER_ROLE}, ${STAFF_USER.email} -> ${PLATFORM_ADMIN_ROLE}, ${GUEST_USER.email} -> ${REPORT_VIEWER_ROLE}, ${granted.join(', ')}`
   )
 }

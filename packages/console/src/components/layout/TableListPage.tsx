@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Box,
   Stack,
@@ -52,6 +52,20 @@ interface TableListPageProps<T> {
   loading?: boolean
   headerRight?: React.ReactNode
   description?: React.ReactNode
+  /**
+   * Fetch the next page. Called when the sentinel below the last row scrolls
+   * into view, so a list that pages server-side keeps one table render path
+   * rather than growing a second one.
+   *
+   * `searchFilter` still filters only what has been loaded — it is a client-side
+   * narrowing, so a paged list should filter server-side instead of relying on
+   * it, or a match on an unloaded page will not be found.
+   */
+  onLoadMore?: () => void
+  /** Whether another page exists. No sentinel is rendered when false. */
+  hasMore?: boolean
+  /** A fetch is already in flight; suppresses re-triggering and shows a spinner. */
+  loadingMore?: boolean
 }
 
 export const TableListPage = <T,>({
@@ -73,11 +87,34 @@ export const TableListPage = <T,>({
   loading = false,
   description,
   headerRight,
+  onLoadMore,
+  hasMore = false,
+  loadingMore = false,
 }: TableListPageProps<T>) => {
   const gate = usePageGate()
   const surfaceClass = useListSurfaceClass()
   useLocale()
   const [internalSearch, setInternalSearch] = useState('')
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  // Read through a ref so the observer is not torn down and rebuilt on every
+  // render — re-observing mid-scroll fires an immediate intersection and would
+  // request the same page twice.
+  const loadMoreRef = useRef<(() => void) | undefined>(onLoadMore)
+  loadMoreRef.current =
+    onLoadMore && hasMore && !loadingMore ? onLoadMore : undefined
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        loadMoreRef.current?.()
+      }
+    })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore])
   const searchQuery =
     externalSearch !== undefined ? externalSearch : internalSearch
 
@@ -233,6 +270,15 @@ export const TableListPage = <T,>({
                 ))}
               </Table.Tbody>
             </Table>
+            {hasMore && (
+              <Box ref={sentinelRef} py="md">
+                {loadingMore && (
+                  <Center>
+                    <Loader size="sm" />
+                  </Center>
+                )}
+              </Box>
+            )}
           </Box>
         )}
       </Stack>

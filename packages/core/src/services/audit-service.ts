@@ -45,9 +45,60 @@ export type AuditEvent = {
 
 export type AuditEventBatch = AuditEvent[]
 
+/**
+ * A page of the trail, newest first, narrowed by the filters a reader picked.
+ *
+ * Every field is a conjunction, and an empty array is not a filter — it is
+ * "match nothing", which would otherwise read as "match everything" and quietly
+ * widen a scoped query.
+ */
+export type AuditQuery = {
+  /** Restrict to these actors. */
+  actorUserIds?: string[]
+  /** Restrict to these `AuditEvent['type']` values. */
+  types?: string[]
+  /** Restrict to one actor org. */
+  actorOrgId?: string
+  /** Inclusive lower bound on `occurredAt` (ISO 8601). */
+  from?: string
+  /** Exclusive upper bound on `occurredAt` (ISO 8601). */
+  to?: string
+  limit?: number
+  offset?: number
+}
+
+/**
+ * The distinct values present in the trail, for populating filter controls.
+ *
+ * Computed over the whole trail rather than the current page — a filter list
+ * that only offered what the current page happens to show could never be used
+ * to reach anything else.
+ */
+export type AuditFacets = {
+  actorUserIds: string[]
+  types: string[]
+}
+
+export type AuditQueryResult = {
+  events: AuditEvent[]
+  /** Offset of the next page, or `null` at the end. */
+  nextCursor: number | null
+  /** Present only when the caller asked for it — it costs two extra scans. */
+  facets?: AuditFacets
+}
+
 export interface AuditService {
   audit(event: AuditEvent): Promise<void>
   write?(batch: AuditEventBatch): Promise<void>
+  /**
+   * The read side. Optional because a sink can legitimately be write-only — a
+   * queue producer that hands events to another system has nothing to read
+   * back. A reader that finds this absent should say the trail is not readable
+   * here rather than that it is empty; the two are very different answers.
+   */
+  query?(query: AuditQuery): Promise<AuditQueryResult>
+  /** Distinct actors and types across the whole trail. Paired with {@link query}. */
+  facets?(): Promise<AuditFacets>
 }
 
 export class NoopAuditService implements AuditService {
