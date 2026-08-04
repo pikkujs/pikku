@@ -36,19 +36,29 @@ installGroups: [core]
 
 - `pikku audit` — reports **security advisories** only.
 - `pikku audit --outdated` — also reports **available dependency updates**.
-- Package-manager detection is by **lockfile** (walks up: `bun.lock`/`bun.lockb`,
-  then `yarn.lock`). Only **bun** runs a real audit (`bun audit --json` +
+- Package-manager detection is by **lockfile**, walking up to 12 levels to the
+  workspace root, checking in this order: `bun.lock`/`bun.lockb`,
+  `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`. A project with several
+  lockfiles resolves as bun. Only **bun** runs a real audit (`bun audit --json` +
   `bun outdated`, normalised into one `SecurityAuditReport` with per-severity /
   per-update-level counts). Other PMs are detected but **stubbed** with a `note`
   field until their shapes are normalised — issues/updates come back empty.
-- `bun audit` exits non-zero when it *finds* advisories but still writes a valid
-  report — treat any non-zero exit as data, not failure.
+- `bun audit` exits non-zero when it *finds* advisories but still writes the
+  payload to stdout, so a non-zero exit **with output** is data. A non-zero exit
+  with **no** output — or a launch failure, timeout, or a blown 32MB buffer —
+  throws, precisely so a failed run can't masquerade as "0 advisories".
 
 ## Console integration (@pikku/addon-console)
 
 Three RPCs, all reading/writing the same artifact via the meta service. Shared
 spawn/read helpers live in `lib/audit-exec.ts` (`readAuditReport`,
-`runPikkuAudit`, `spawnProcess`, `findBin`) — reuse them, don't re-implement.
+`runPikkuAudit`, `spawnProcess`, `findBin`), alongside `lib/find-project-root.ts`
+and `lib/resolve-package-manager.ts` (`resolvePackageManager`, `installArgs`,
+`execPrefix`) — reuse them, don't re-implement. `resolvePackageManager` reads
+package.json's corepack `packageManager` field first and only falls back to
+lockfiles, because that field states intent before a lockfile exists and a
+project can carry a stale one from another tool. Guessing wrong is not a soft
+failure: the spawn dies with `Executable not found in $PATH`.
 Like every console RPC these require an **authenticated session** (the console
 is admin-only), so the host must have Better Auth wired — see `pikku-better-auth`.
 
@@ -84,15 +94,26 @@ is admin-only), so the host must have Better Auth wired — see `pikku-better-au
 
 ```ts
 {
+  schemaVersion: number
   tool: string                 // e.g. 'bun'
+  generatedAt: string          // ISO timestamp
   note?: string                // set when the audit could NOT run (unsupported PM);
                                // render ONLY the note — never a reassuring "no vulnerabilities"
-  summary: { critical, high, moderate, low, info: number }
-  issues: SecurityAuditIssue[] // package, severity, title, advisoryId, cwe[], cvssScore?,
-                               // url?, vulnerableVersions, recommendedVersion?
+  summary: {
+    totalIssues, critical, high, moderate, low: number   // no `info` bucket
+    totalUpdates, major, minor, patch: number
+  }
+  issues: SecurityAuditIssue[] // package, severity, title, advisoryId, url,
+                               // vulnerableVersions, cwe[], cvssScore, recommendedVersion
   updates: SecurityAuditUpdate[] // package, current, latest, level (major|minor|patch|unknown)
 }
 ```
+
+`severity` is one of `critical | high | moderate | low | info`, but `summary`
+has no `info` count — an informational advisory raises `totalIssues` without
+landing in a severity bucket, so don't sum the four to get the total. On an
+issue, `url`, `cvssScore` and `recommendedVersion` are always present and
+**nullable** rather than optional: check for `null`, not `undefined`.
 
 When `note` is present the audit did not run — show only the note (an "Audit not
 run" state), never the "no known vulnerabilities / up to date" copy.
