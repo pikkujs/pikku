@@ -6,10 +6,11 @@ installGroups: [core]
 
 # Pikku RTL (Arabic + English)
 
-This skill sits **on top of** `pikku-i18n`. That skill maps a locale to `t()`
-tokens; this one adds the second axis: a locale also has a **direction**.
-Arabic is not special-cased — it is just another locale file (`ar.json`,
-registered `satisfies typeof en`) plus the document being told it is `rtl`.
+This skill sits **on top of** `pikku-i18n`. That skill compiles a locale's
+messages into typed `m.*()` functions; this one adds the second axis: a locale
+also has a **direction**. Arabic is not special-cased — it is just another
+`messages/ar.json` listed in `project.inlang/settings.json`, plus the document
+being told it is `rtl`.
 
 ## The one idea
 
@@ -21,9 +22,9 @@ things right and Arabic, Hebrew, Farsi and Urdu all work with zero per-component
 
 ## Agent Operating Procedure
 
-1. **Tokens first.** Every visible string is already a `t()` token via
-   `pikku-i18n`. Arabic copy goes in `i18n/ar.json`, mirroring `en.json`'s keys,
-   registered with `satisfies typeof en` so a missing key is a compile error.
+1. **Messages first.** Every visible string is already an `m.*()` message via
+   `pikku-i18n`. Arabic copy goes in `messages/ar.json`, mirroring `en.json`'s
+   keys with the `{param}` names kept identical.
 2. **Add the direction helper** to the i18n config (one home for locale→dir):
    ```ts
    const RTL_LOCALES = new Set(['ar', 'he', 'fa', 'ur'])
@@ -82,7 +83,7 @@ matching `dir` on `<html>`.
 
 ```tsx
 import { DirectionProvider, MantineProvider } from '@mantine/core'
-import i18n, { detectLocale, localeDir } from './i18n/config'
+import { detectLocale, localeDir } from './i18n/config'
 
 const locale =
   typeof window !== 'undefined' ? detectLocale(window.location.pathname) : 'en'
@@ -137,8 +138,9 @@ const html = `<!doctype html>
 </html>`
 ```
 
-i18next's active language must match: call `i18n.changeLanguage(locale)` before
-`renderToString` so the SSR'd text and `dir` agree.
+Paraglide's active locale must match: set it (via the i18n config's
+`setActiveLocale` / `overwriteGetLocale` bridge) before `renderToString`, so the
+SSR'd text and `dir` agree.
 
 ### Next.js app-router (test-harness next-ssr / next-static)
 
@@ -188,16 +190,17 @@ Prefer logical icon components if your icon set ships them.
   which is inconsistent. Add an Arabic-capable family (e.g. _Noto Sans Arabic_,
   _IBM Plex Sans Arabic_) to `font-family` so both scripts look intentional.
 - **Numerals:** don't hardcode digits. Format numbers/dates with
-  `Intl.NumberFormat`/`Intl.DateTimeFormat` (or i18next formatters) given the
-  active locale, so Western vs Arabic-Indic digits follow the locale choice.
+  `Intl.NumberFormat`/`Intl.DateTimeFormat` given the active locale, so Western
+  vs Arabic-Indic digits follow the locale choice.
 - **Line height:** Arabic diacritics sit tall — a slightly larger `line-height`
   on Arabic body text avoids clipping. Keep it locale-scoped, not global.
 
 ## Adding Arabic to an existing app — checklist
 
-1. `i18n/ar.json` mirroring `en.json`; register
-   `ar: { translation: ar satisfies typeof en }` and add `'ar'` to
-   `supportedLocales`. (Type-complete or it won't compile — the deploy blocks.)
+1. `messages/ar.json` mirroring `en.json`; add `"ar"` to `locales` in
+   `project.inlang/settings.json` and recompile. Keys missing from `ar.json`
+   fall back to the base locale per message rather than failing the build, so
+   diff the two files rather than trusting `tsc` to catch a gap here.
 2. Confirm the `localeDir` helper includes `ar` (it does by default).
 3. Confirm the root sets `dir` from the locale (recipe above).
 4. Sweep the app's styles: replace every `left/right`, `ml/mr`, `text-align:
@@ -215,5 +218,6 @@ left` with the flow-relative equivalent; revert any manual `row-reverse`.
   per-locale `if (rtl)` layout branches. Set `dir` once; let layout follow.
 - Don't set `dir` on individual components — it belongs on `<html>` so the whole
   document (and Mantine) agrees.
-- Don't translate Arabic copy outside the `t()` token system; an RTL language is
-  a normal locale, governed by `pikku-i18n`.
+- Don't translate Arabic copy outside the message system; an RTL language is a
+  normal locale, governed by `pikku-i18n`. There is no `t()` and no i18next in a
+  Pikku frontend — the string comes from `m.some__key()`.

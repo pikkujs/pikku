@@ -17,3 +17,5 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-audit: documents `audit: { durability }`, the `Safe<>` guard on `auditLog.write`, `createInvocationAudit`'s logger argument, and `createAuditedKysely`'s options
 - pikku-kysely: six packages, not four — `@pikku/kysely-node-sqlite` / `-bun-sqlite` build the instance functions query, while `createSQLiteKysely` is typed to `KyselyPikkuDB` and wires `SerializePlugin`; the secret service config is `{ key, keyVersion, previousKey, audit }`, not `{ kekSecret, salt }`, and `getSecret` returns a `SecretValue`
 - pikku-emails: template variables are always optional and never required-able; unresolved placeholders render blank rather than failing; documents `pikku emails init`
+- pikku-rtl: rewritten off i18next — there is no `t()` or `i18n.changeLanguage` anywhere in the repo; Arabic is a `messages/ar.json` listed in `project.inlang/settings.json`
+- pikku-i18n: enum labels use the singular `enum__<group>__<member>` namespace `@pikku/paraglide` generates from, not hand-written `enums__` maps; notes the console's wrapped `m`/`mKey` as the one documented exception

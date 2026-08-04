@@ -56,18 +56,18 @@ function LoginPage() {
 
 ## Keys only known at runtime (enum labels, status maps)
 
-A DB value picking a label (`enums__document_status__${status}`) is the one case a
-generated message can't express. Paraglide's README (§ "What about dynamic or
-CMS-driven keys?") is explicit: use an **explicit mapping from value to message
-function**. Key it on the enum type, never `string`:
+A DB value picking a label is the one case a generated message can't express.
+Paraglide's README (§ "What about dynamic or CMS-driven keys?") is explicit: use
+an **explicit mapping from value to message function**. Key it on the enum type,
+never `string`:
 
 ```ts
 import { m } from '../paraglide/messages.js'
 
 const DOCUMENT_STATUS_LABEL: Record<DocumentStatus, () => string> = {
-  completed: m.enums__document_status__completed,
-  in_progress: m.enums__document_status__in_progress,
-  required: m.enums__document_status__required,
+  completed: m.enum__document_status__completed,
+  in_progress: m.enum__document_status__in_progress,
+  required: m.enum__document_status__required,
 }
 
 // call site — no fallback, because there is no missing case
@@ -76,6 +76,13 @@ DOCUMENT_STATUS_LABEL[status]()
 
 `Record<DocumentStatus, …>` is exhaustive: add a value to the enum without a
 label and the build fails. That is the entire point.
+
+**Don't write these maps by hand.** `@pikku/paraglide` generates them from the
+`enum__<group>__<member>` keys in the catalog and types each one against the DB
+enum it mirrors, so a migration adding a status is a compile error rather than a
+map someone forgot. Use the namespace above (singular `enum`, `__` between
+segments) so the generator picks the group up, and read `pikku-paraglide` before
+adding one.
 
 Do NOT write `Record<string, () => string>` with a `?? status` fallback, and do
 NOT index the namespace with a computed key (`m[\`enums__${name}__${value}\`]`).
@@ -132,6 +139,8 @@ The wrapper alternative — a module that walks the namespace and pipes each mes
 - Don't hardcode display strings "just for now" — the message is the work.
 - Don't edit or commit anything under `src/paraglide/` — it's regenerated; change `messages/*.json` instead.
 - **Don't wrap `m`.** No re-export module, no branding layer, no resolver. Components import `m` from `../paraglide/messages.js` and call it. `@pikku/react`'s `I18nString` is declared as `string & { readonly __brand: 'LocalizedString' }` — deliberately identical to Paraglide's own `LocalizedString` — so `m.some__key()` satisfies the `@pikku/mantine` `I18nNode` gate natively. A wrapper adds nothing and costs per-message tree-shaking.
+
+  `packages/console` is the one place in this repo that does wrap it, in `src/i18n/messages.ts`, along with `mKey`/`mList` resolvers. That is a deliberate, documented artifact of its i18next migration — indexed `prefix.0` keys and a debug mask that predate the generated-locale approach above. Work within it when editing the console (see the repo's `CLAUDE.md`); don't copy the pattern into a new app, and don't "fix" the console by deleting it.
 - Don't re-resolve messages by string key or re-implement `{param}` interpolation. A key-string resolver turns a missing key back into silent runtime text, surrendering the type safety that is the entire reason to use Paraglide.
 - Don't reach for i18next/react-i18next or a runtime-fetch translation loader — Paraglide's compiled functions are the whole delivery mechanism.
 - Don't tokenize backend error messages or logs here — those are not frontend display strings.
