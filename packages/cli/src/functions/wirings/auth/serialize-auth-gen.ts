@@ -67,11 +67,26 @@ export interface AuthGenOutput {
 // addHTTPMiddleware('*') call as the session middleware: the inspector keys
 // route-middleware groups by pattern, so a second '*' registration from another
 // file would silently displace this one in deployed units.
+//
+// The session carries the two scope roots the console addon gates itself on.
+// Without them this token authenticates but authorizes nothing: `wireAddon`
+// gates the whole addon on `admin`, so every console:* RPC — reads included —
+// answers MissingScopeError, and an external console can reach the deployment
+// while being unable to do a single thing in it.
+//
+// Roots rather than a wildcard: a parent grant satisfies its children, so
+// `admin` covers `admin:*` and `pikku` covers `pikku:scopes:*`/`pikku:audit:*`,
+// which is every scope the console's own functions require. A `*` would also
+// hand the token every scope the HOST app declares, which is authority the
+// console never asks for.
 const consoleTokenMiddlewareLines = (): string[] => [
   `  authBearer({`,
   `    token: {`,
   `      secretId: 'PIKKU_CONSOLE_TOKEN',`,
-  `      userSession: { userId: 'pikku-console-token' },`,
+  `      userSession: {`,
+  `        userId: 'pikku-console-token',`,
+  `        scopes: ['admin', 'pikku'],`,
+  `      },`,
   `    },`,
   `  }),`,
 ]

@@ -267,6 +267,20 @@ describe('serializeAuthGen', () => {
       )
     })
 
+    // `wireAddon({ name: 'console', ..., scopes: ['admin'] })` gates every
+    // console:* RPC, and the console's own functions additionally sit under the
+    // `pikku` root. A token session without both authenticates but authorizes
+    // nothing, which reads as a broken console rather than a missing grant.
+    test('the token session holds the scope roots the console addon gates on', () => {
+      for (const emitted of [
+        genConsole(statelessDef).middleware!,
+        genConsole().wiring,
+      ]) {
+        assert.match(emitted, /userId: 'pikku-console-token'/)
+        assert.match(emitted, /scopes: \['admin', 'pikku'\]/)
+      }
+    })
+
     test('without scaffold.console no authBearer is emitted', () => {
       const stateful = gen(['github'])
       const stateless = gen(['github'], statelessDef)
