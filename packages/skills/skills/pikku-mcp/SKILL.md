@@ -2,11 +2,11 @@
 name: pikku-mcp
 description: >-
   Use when exposing Pikku functions as MCP tools, resources, or prompts for AI assistants. Covers
-  mcp: true flag, pikkuMCPResourceFunc, pikkuMCPPromptFunc, and MCP wire object. TRIGGER when:
-  code uses mcp: true or pikkuMCPResourceFunc/pikkuMCPPromptFunc, user asks about MCP, Model
-  Context Protocol, AI tool integration, or exposing functions to Claude/ChatGPT. DO NOT TRIGGER
-  when: user asks about AI agents (use pikku-ai-agent) or general function definitions (use
-  pikku-concepts).
+  mcp: true, pikkuMCPToolFunc, pikkuMCPResourceFunc, pikkuMCPPromptFunc, wireMCPResource,
+  wireMCPPrompt, the MCP wire object and PikkuMCPServer. TRIGGER when: code uses mcp: true or any
+  pikkuMCP*Func/wireMCP* helper, user asks about MCP, Model Context Protocol, AI tool integration,
+  or exposing functions to Claude/ChatGPT. DO NOT TRIGGER when: user asks about AI agents (use
+  pikku-ai-agent) or general function definitions (use pikku-concepts).
 installGroups: [core]
 ---
 
@@ -33,209 +33,219 @@ pikku info tags --verbose        # Understand project organization
 
 See `pikku-concepts` for the core mental model.
 
+## The shape of MCP in Pikku
+
+MCP has three surfaces, and Pikku wires them differently:
+
+| Surface | Function factory | Wiring | Return type |
+| --- | --- | --- | --- |
+| **Tool** | `mcp: true` on a `pikkuFunc`, or `pikkuMCPToolFunc` | none — the function *is* the registration | the func's own output, or MCP content blocks |
+| **Resource** | `pikkuMCPResourceFunc` | `wireMCPResource({ uri, title, … })` | `Array<{ uri, text }>` |
+| **Prompt** | `pikkuMCPPromptFunc` | `wireMCPPrompt({ name, description, … })` | `Array<MCPPromptMessage>` |
+
+Tools are the odd one out — there is no `wireMCPTool`. Resources and prompts
+carry protocol metadata (a URI template, a prompt name) that belongs to the
+endpoint rather than the implementation, so that metadata lives on the wiring and
+the `pikkuMCP*Func` factory stays a plain function.
+
+Import every factory and wiring from `#pikku`.
+
 ## API Reference
 
-### MCP Tools (simplest approach)
+### Tools
 
-Add `mcp: true` to any existing `pikkuFunc` to expose it as an MCP tool:
+Add `mcp: true` to any existing function:
 
 ```typescript
-const myFunc = pikkuFunc({
-  description: string,      // Used as MCP tool description
-  input: ZodSchema,         // Becomes MCP tool input schema
-  output: ZodSchema,        // Return type
-  mcp: true,                // ← Expose as MCP tool
-  func: async (services, data) => { ... },
+export const createTodo = pikkuFunc({
+  description: 'Create a new todo item',   // becomes the MCP tool description
+  input: CreateTodoInput,                  // becomes the MCP tool input schema
+  output: CreateTodoOutput,
+  mcp: true,
+  func: async ({ db }, { text, priority }) => db.createTodo({ text, priority }),
 })
 ```
 
-### MCP Resources (`pikkuMCPResourceFunc`)
+A missing `description` is all an assistant has to go on, so codegen warns about
+it rather than failing — treat the warning as a bug.
+
+Use `pikkuMCPToolFunc` when the tool should control its own presentation. It
+returns MCP content blocks (`{ type: 'text', text }` or `{ type: 'image', data }`
+with base64), so the assistant reads prose rather than raw JSON:
+
+```typescript
+import { pikkuMCPToolFunc } from '#pikku'
+
+export const createTodoTool = pikkuMCPToolFunc({
+  description: 'Create a todo item with title, priority, due date and tags',
+  input: CreateTodoWithUserInputSchema,
+  func: async (_services, input, { rpc }) => {
+    const { todo } = await rpc.invoke('createTodo', input)
+    return [
+      { type: 'text' as const, text: `Created "${todo.title}" (${todo.id})` },
+    ]
+  },
+})
+```
+
+It also accepts `name`, `title`, `summary`, `tags`, `middleware` and
+`permissions`. The function is sessionless and gets `mcp` and `rpc` on its wire —
+calling existing business functions through `rpc.invoke` keeps the tool a thin
+presentation layer over logic that is already tested and reachable over HTTP.
+
+### Resources
 
 ```typescript
 import { pikkuMCPResourceFunc } from '#pikku'
 
-const resource = pikkuMCPResourceFunc({
-  uri: string,              // URI template, e.g. 'todos/{id}'
-  title: string,            // Human-readable title
-  description?: string,
-  func: async (services, data, { mcp }) => {
-    // Must return array of { uri, text } or { uri, blob, mimeType }
-    return [{ uri: mcp.uri!, text: JSON.stringify(result) }]
-  },
-})
-```
-
-### MCP Prompts (`pikkuMCPPromptFunc`)
-
-```typescript
-import { pikkuMCPPromptFunc } from '#pikku'
-
-const prompt = pikkuMCPPromptFunc({
-  name: string,
-  description: string,
-  func: async (services, data) => {
-    // Must return array of MCP messages
+export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
+  async (_services, { id }, { rpc, mcp }) => {
+    const { todo } = await rpc.invoke('getTodo', { id })
     return [
       {
-        role: 'user',
-        content: { type: 'text', text: '...' },
+        uri: mcp.uri!,
+        text: todo ? formatTodo(todo) : `Todo "${id}" not found.`,
       },
     ]
-  },
-})
+  }
+)
 ```
 
-### MCP Wire Object
-
-Inside MCP-enabled functions, `wire.mcp` provides:
-
-```typescript
-mcp.uri // Current resource URI (for resources)
-mcp.sendResourceUpdated(uri) // Notify clients a resource changed
-mcp.enableTools({ toolName: true }) // Dynamically enable/disable tools
-```
-
-## Usage Patterns
-
-### Expose Existing Functions as MCP Tools
-
-The simplest path — add `mcp: true` to any function:
+The factory takes either a bare function (as above) or a config object — `{ func, name }`,
+or `{ func, input }` with a schema. A resource returns `Array<{ uri, text }>`;
+it is text only, with no blob variant. `mcp.uri` is the concrete URI the client
+asked for, which is why each entry echoes it back.
 
 ```typescript
-export const createTodo = pikkuFunc({
-  description: 'Create a new todo item',
-  input: CreateTodoInput,
-  output: CreateTodoOutput,
-  mcp: true,
-  func: async ({ db }, { text, priority }) => {
-    return await db.createTodo({ text, priority })
-  },
-})
-```
+import { wireMCPResource } from '#pikku'
 
-### MCP Resources with URI Templates
-
-```typescript
-export const getTodo = pikkuMCPResourceFunc({
-  uri: 'todos/{id}',
+wireMCPResource({
+  uri: 'todos/{id}', // URI template
   title: 'Todo Details',
-  description: 'Get a todo by ID',
-  func: async ({ db }, { id }, { mcp }) => {
-    const todo = await db.getTodo(id)
-    return [{ uri: mcp.uri!, text: JSON.stringify(todo) }]
-  },
+  description: 'Get details of a specific todo by ID',
+  func: getTodoResource,
+  tags: ['todos'],
+  // also: summary?, mimeType?, size?, streaming?, errors?, middleware?
 })
 ```
 
-### MCP Prompts
+Every `{param}` in `uri` is checked against the function's input at compile time,
+so `todos/{id}` wired to a function whose input has no `id` fails to build rather
+than handing the function an `undefined`.
+
+### Prompts
 
 ```typescript
-export const codeReview = pikkuMCPPromptFunc({
-  name: 'codeReview',
-  description: 'Generate a code review prompt',
-  func: async ({}, { filePath, context }) => {
+import { pikkuMCPPromptFunc, wireMCPPrompt } from '#pikku'
+
+export const planDayPrompt = pikkuMCPPromptFunc({
+  input: UserIdInputSchema,
+  func: async (_services, { userId }, { rpc }) => {
+    const { todos } = await rpc.invoke('listTodos', { userId, completed: false })
     return [
       {
-        role: 'user',
+        role: 'user' as const,
         content: {
-          type: 'text',
-          text: `Review ${filePath}. Context: ${context}`,
+          type: 'text' as const,
+          text: `Plan my day:\n${todos.map(formatTodo).join('\n')}`,
         },
       },
     ]
   },
 })
+
+wireMCPPrompt({
+  name: 'planDay',
+  description: 'Generate a daily plan based on pending todos',
+  func: planDayPrompt,
+  tags: ['productivity'],
+})
 ```
 
-### Dynamic Tool Control
+A message's `role` is `'user' | 'assistant' | 'system'` and its `content.type` is
+`'text' | 'image'`. The prompt arguments the client sees are derived from the
+input schema at codegen time: each property becomes a named argument, and
+schema-required properties become required arguments.
+
+### MCP Wire Object
+
+Available as `wire.mcp` inside any MCP function:
 
 ```typescript
-export const manageTodos = pikkuFunc({
-  description: 'Manage todo items',
-  input: ManageTodosInput,
-  output: ManageTodosOutput,
+mcp.uri // the resolved resource URI (resources only)
+mcp.sendResourceUpdated(uri) // notify clients a resource changed
+await mcp.enableTools({ archiveTodos: true })
+await mcp.enableResources({ todoDetails: false })
+await mcp.enablePrompts({ planDay: true })
+```
+
+The `enable*` calls are how a server presents a changing surface — hiding tools
+that are meaningless in the current state beats letting the assistant call them
+and fail. Each returns a boolean, and each name is typechecked against your
+generated endpoint names.
+
+```typescript
+export const deleteTodo = pikkuFunc({
+  description: 'Delete a todo item',
   mcp: true,
-  func: async ({ db }, { action, id }, { mcp }) => {
-    if (action === 'delete') {
-      await db.deleteTodo(id)
-      mcp.sendResourceUpdated(`todos/${id}`)
-      await mcp.enableTools({ archiveTodos: true })
-      return { deleted: true }
-    }
+  func: async ({ db }, { id }, { mcp }) => {
+    await db.deleteTodo(id)
+    mcp.sendResourceUpdated(`todos/${id}`)
+    return { deleted: true }
   },
 })
 ```
 
-### MCP Server Setup
+## MCP Server Setup
+
+`PikkuMCPServer` takes the server config and a logger — not your services. It
+loads the generated `mcp.gen.json`, and the bootstrap import is what registers
+your functions.
 
 ```typescript
 // start.ts
 import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
+import { createConfig, createSingletonServices } from './services.js'
+import mcpJSON from '../.pikku/mcp/mcp.gen.json' with { type: 'json' }
+import '../.pikku/pikku-bootstrap.gen.js'
 
-const server = new PikkuMCPServer(config, singletonServices, createWireServices)
+const config = await createConfig()
+const singletonServices = await createSingletonServices(config)
+
+const server = new PikkuMCPServer(
+  {
+    name: 'pikku-mcp-server',
+    version: '1.0.0',
+    mcpJSON,
+    capabilities: { logging: {}, tools: {}, resources: {}, prompts: {} },
+  },
+  singletonServices.logger
+)
+
 await server.init()
-await server.start()
+
+// stdio — the transport desktop MCP clients spawn
+await server.connectStdio()
+singletonServices.logger = server.createMCPLogger()
+
+// …or streamable HTTP, for a hosted server
+const { close } = await server.connectHTTP({ port: 3000, host: '127.0.0.1' })
 ```
 
-## Complete Example
+`capabilities` is a filter, not documentation: a surface you leave out is not
+advertised and its endpoints are never loaded, which is how you ship a tools-only
+server.
 
-```typescript
-// functions/todos.functions.ts
-export const listTodos = pikkuSessionlessFunc({
-  description: 'List all todo items',
-  input: ListTodosInput,
-  output: ListTodosOutput,
-  mcp: true,
-  func: async ({ db }, { status }) => {
-    return { todos: await db.listTodos(status) }
-  },
-})
+Over stdio the protocol owns stdout, so an ordinary console logger corrupts the
+frames — that is what `createMCPLogger()` is for. Swap the logger before
+anything logs.
 
-export const createTodo = pikkuFunc({
-  description: 'Create a new todo item',
-  input: CreateTodoInput,
-  output: CreateTodoOutput,
-  mcp: true,
-  func: async ({ db }, { text, priority }) => {
-    return await db.createTodo({ text, priority })
-  },
-})
+## Red flags
 
-export const completeTodo = pikkuFunc({
-  description: 'Mark a todo as complete',
-  input: CompleteTodoInput,
-  output: CompleteTodoOutput,
-  mcp: true,
-  func: async ({ db }, { todoId }) => {
-    return await db.completeTodo(todoId)
-  },
-})
-
-// functions/todos.mcp.ts
-export const getTodoResource = pikkuMCPResourceFunc({
-  uri: 'todos/{id}',
-  title: 'Todo Details',
-  description: 'Get details of a specific todo',
-  func: async ({ db }, { id }, { mcp }) => {
-    const todo = await db.getTodo(id)
-    return [{ uri: mcp.uri!, text: JSON.stringify(todo) }]
-  },
-})
-
-export const planDayPrompt = pikkuMCPPromptFunc({
-  name: 'planDay',
-  description: 'Create a daily plan based on pending todos',
-  func: async ({ db }, {}) => {
-    const { todos } = await db.listTodos('pending')
-    return [
-      {
-        role: 'user',
-        content: {
-          type: 'text',
-          text: `Plan my day. Here are my pending todos:\n${todos.map((t) => `- ${t.text} (${t.priority})`).join('\n')}`,
-        },
-      },
-    ]
-  },
-})
-```
+| Symptom | Cause |
+| --- | --- |
+| `wireMCPTool` is not exported | There is no tool wiring — use `mcp: true` or `pikkuMCPToolFunc` |
+| `uri`/`title` rejected on `pikkuMCPResourceFunc` | Those belong on `wireMCPResource` |
+| Resource returning `{ uri, blob, mimeType }` | Resources are text only: `{ uri, text }` |
+| Client sees a tool with no description | `mcp: true` without a `description` — check the codegen warning |
+| stdio client disconnects on the first log line | Logger still writing to stdout; use `createMCPLogger()` |

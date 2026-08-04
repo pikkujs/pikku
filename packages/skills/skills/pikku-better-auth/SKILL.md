@@ -128,18 +128,24 @@ In both cases a **route-scoped** registration (`addHTTPMiddleware('/some/path', 
 
 ### Admin capabilities are scopes, not a role
 
-Pikku does **not** use better-auth's `admin()` plugin, and nothing in this
-package reads a `role` column. A role is not a permission: "who may impersonate"
-and "who may rebind a shared credential" are different capabilities one user can
-hold independently, which a single `role` string cannot express. Every gate the
-package owns therefore resolves the caller's scopes through the registered
-`ScopeService` and checks the `admin:*` tree:
+Scopes are the source of truth for what an admin may do; nothing in pikku reads
+a `role`. A role is not a permission: "who may impersonate" and "who may rebind a
+shared credential" are different capabilities one user can hold independently,
+which a single `role` string cannot express. Every gate the package owns
+resolves the caller's scopes through the registered `ScopeService` and checks the
+`admin:*` tree (`ADMIN_SCOPES` exports the ids so you never spell them as bare
+strings):
 
 | Gate                                                                 | Scope required           |
 | -------------------------------------------------------------------- | ------------------------ |
 | `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate`      |
 | `credentialOAuth`'s `canLinkSingleton`                               | `admin:credentials:link` |
 | the console's user directory                                         | `admin:users:list`       |
+| create a user out of band                                            | `admin:users:create`     |
+| ban / unban                                                          | `admin:users:ban`        |
+| delete a user and their data                                         | `admin:users:remove`     |
+| revoke a user's sessions                                             | `admin:users:sessions`   |
+| set a user's password                                                | `admin:users:password`   |
 
 Holding the bare `admin` scope satisfies all of them — a parent grant covers
 everything nested beneath it — so `admin` is the direct replacement for the old
@@ -164,7 +170,14 @@ defineScope({
       },
       users: {
         description: 'The user directory',
-        scopes: { list: { description: 'List and search users' } },
+        scopes: {
+          list: { description: 'List and search users' },
+          create: { description: 'Create users out of band' },
+          ban: { description: 'Ban and unban users' },
+          remove: { description: 'Delete users and all their data' },
+          sessions: { description: "Revoke a user's sessions" },
+          password: { description: "Set a user's password" },
+        },
       },
     },
   },
@@ -178,9 +191,22 @@ a scope, so nothing is authorized, and the denial is logged at `warn` because
 that is a configuration bug rather than a permissions decision. Pass your own
 `canImpersonate` / `canLinkSingleton` to override the default entirely.
 
-Sibling concerns — banning a user, listing users from your own screens — are
-actions your app _invokes_, not things pikku gates. Put them on your own
-functions with `scopes: ['admin:users:ban']` and friends.
+### If you do wire better-auth's `admin()` plugin
+
+The last five capabilities in the table are implemented by better-auth's own
+`admin()` endpoints, which authorize against `user.role` — a column pikku
+otherwise ignores. Rather than making you maintain two grant systems,
+`syncProjectedAdminRole` keeps that column as a *projection* of the scope set:
+at the session boundary it writes `role = 'admin'` when the user holds any of
+`admin:users:{create,ban,remove,sessions,password}`, and the plugin's
+`defaultRole` otherwise. `projectedAdminRole(scopes, defaultRole)` computes the
+value if you need it yourself.
+
+The projection is deliberately not "any `admin:*` scope": `impersonate` and
+`users:list` are pikku's own gates, and rolling them in would hand ban and delete
+rights to someone granted only the ability to look. The plugin is auto-detected
+from the live instance, so an app without it never writes to a column that does
+not exist.
 
 ### 2. Production database adapter
 
@@ -280,6 +306,15 @@ Better Auth serves everything under `basePath` (default `/api/auth`). Call these
 **`Origin` header on state-changing POSTs:** better-auth enforces an `Origin` header matching `baseURL` on POSTs such as sign-out — omit it and you get `403`. Browsers send it automatically; server-to-server callers must set it.
 
 The session cookie is `better-auth.session_token` (dev) / `__Secure-better-auth.session_token` (prod).
+
+### Dev quick login
+
+Set `PIKKU_DEV_QUICK_LOGIN=true` and `${basePath}/dev/quick-login` signs in a
+fixed dev admin (`admin@pikku.dev`), creating the user idempotently and granting
+it the bare `admin` scope. It is guarded twice — the env var *and* a localhost
+hostname check — because a one-request path to an admin session is exactly the
+thing that must not survive a deploy. An app that has not declared the `admin`
+scope still gets a session, with a warning, since a scopeless dev user is useful.
 
 ---
 

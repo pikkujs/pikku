@@ -38,8 +38,13 @@ Follow existing patterns you find (naming, tag usage, file organization). See `p
 
 ## API Reference
 
-- `wireHTTP(config)` (from `@pikku/core/http`) — wire one function to one endpoint.
-- `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)` (from `.pikku/pikku-types.gen.js`) — group routes with shared config; composable/nestable.
+All three come from `#pikku` (the generated `.pikku/pikku-types.gen.js`), which
+binds them to your project's service, session and middleware types. The
+`@pikku/core/http` versions are the unbound generics — they compile, but you
+lose the typing that makes the wiring worth having.
+
+- `wireHTTP(config)` — wire one function to one endpoint.
+- `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)` — group routes with shared config; composable/nestable.
 
 Function input/output types come from the function's own `input:`/`output:` zod schemas — never declared in the wiring. Route `:params`, query params, and body are merged into the function's `data` arg (see Data Flow).
 
@@ -144,6 +149,9 @@ wireHTTP({
 
 ### SSE (Server-Sent Events)
 
+`sse: true` is only accepted on `method: 'get'` — the wiring union offers it on
+no other verb.
+
 ```typescript
 wireHTTP({
   method: 'get',
@@ -154,7 +162,7 @@ wireHTTP({
 
 const getTodos = pikkuFunc({
   title: 'Get Todos',
-  func: async ({ db, channel }, {}) => {
+  func: async ({ db }, {}, { channel }) => {
     const todos = await db.getTodos()
 
     if (channel) {
@@ -170,12 +178,17 @@ const getTodos = pikkuFunc({
 })
 ```
 
+`channel` is on the **wire** — the func's third argument — not on services, and
+it is optional because the same function can be reached over plain HTTP or RPC,
+where there is no stream to send on. The `if (channel)` guard is what lets one
+function serve both; the return value is the non-streaming answer.
+
 ### Generated Fetch Client
 
 After `npx pikku all`, a type-safe client is generated:
 
 ```typescript
-import { pikkuFetch } from '.pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
 
 pikkuFetch.setServerUrl('http://localhost:4002')
 
@@ -213,7 +226,7 @@ export const getBook = pikkuFunc({
 })
 
 // wirings/books.http.ts — same defineHTTPRoutes/wireHTTPRoutes shape as the Route Groups example above
-import { addHTTPMiddleware } from '@pikku/core/http'
+import { addHTTPMiddleware } from '#pikku'
 import { cors, authBearer } from '@pikku/core/middleware'
 
 addHTTPMiddleware('*', [cors(), authBearer()])

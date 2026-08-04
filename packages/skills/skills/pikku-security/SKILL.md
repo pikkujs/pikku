@@ -23,6 +23,10 @@ For **permissions** (pikkuPermission, pikkuAuth, per-function authorization) see
 
 ## Session Management
 
+`session`, `setSession` and `clearSession` live on the **wire** — the function's
+third argument — not on services. `setSession`/`clearSession` may be async
+(cookie and session-store backends write on the way out), so await them.
+
 ```typescript
 // Read session in pikkuFunc (session guaranteed to exist)
 const getProfile = pikkuFunc({
@@ -36,7 +40,7 @@ const login = pikkuFunc({
   auth: false,
   func: async ({ jwt, db }, { email, password }, { setSession }) => {
     const user = await db.verifyCredentials(email, password)
-    setSession({ userId: user.id })
+    await setSession({ userId: user.id })
     return { token: jwt.sign({ userId: user.id }) }
   },
 })
@@ -44,10 +48,13 @@ const login = pikkuFunc({
 // Clear session (logout)
 const logout = pikkuFunc({
   func: async ({}, _data, { clearSession }) => {
-    clearSession()
+    await clearSession()
   },
 })
 ```
+
+`login` is `auth: false` because the caller has no session yet — a `pikkuFunc`
+with the default `auth` would be rejected before its body ever ran.
 
 ## Built-in Auth Strategies
 
@@ -55,23 +62,57 @@ Apply these via `addHTTPMiddleware` in a wirings file:
 
 ```typescript
 import { authBearer, authCookie, authAPIKey } from '@pikku/core/middleware'
-import { addHTTPMiddleware } from '@pikku/core/http'
+import { addHTTPMiddleware } from '#pikku'
 
 // JWT bearer token — reads Authorization header
 addHTTPMiddleware('*', [authBearer()])
 
-// Cookie-based sessions — auto-refreshes JWT
+// Cookie-based sessions — re-issues the cookie when the session changes
 addHTTPMiddleware('*', [
   authCookie({
     name: 'session',
     expiresIn: { value: 30, unit: 'day' },
-    options: { httpOnly: true, secure: true },
+    options: { sameSite: 'strict' },
   }),
 ])
 
 // API key — from x-api-key header or ?apiKey= query param
 addHTTPMiddleware('*', [authAPIKey({ source: 'all' })])
 ```
+
+All three share the same escape hatch: they do nothing when there is no HTTP
+request, or when a session is already set. That is what lets you stack several —
+whichever runs first and finds a credential wins, and the rest step aside — and
+it is also why none of them authenticate a queue job, a scheduled task or a
+channel message. Those need a session set another way.
+
+Each decodes its credential with the `jwt` service; without one registered, they
+silently authenticate nobody.
+
+**`authBearer` in static-token mode.** Passing `token` switches it from decoding
+a JWT to comparing (in constant time) against a fixed value — the shape to use
+for a service-to-service caller or a demo:
+
+```typescript
+authBearer({
+  token: {
+    secretId: 'AGENT_DEMO_TOKEN', // or: value: 'literal-token'
+    userSession: { userId: 'demo-user' },
+  },
+})
+```
+
+An unset secret leaves the middleware inert rather than erroring, so a template
+that ships this is safe until someone provides the secret. A malformed
+`Authorization` header (no `Bearer ` scheme) throws `InvalidSessionError` in
+either mode.
+
+**`authCookie` options.** `name`, `expiresIn` and `options` are all part of the
+config; `options` merges over the defaults `{ httpOnly: true, secure: true,
+sameSite: 'lax', path: '/' }`, so only override what you need. The cookie is
+re-issued after the request only when the session actually changed, which is how
+a rolling session extends itself without writing a `Set-Cookie` on every
+response.
 
 ## Complete Example
 
@@ -84,10 +125,14 @@ export const isVerified = pikkuAuth(async (_services, session) => !!session?.ema
 
 // wirings/auth.wiring.ts
 import { authCookie } from '@pikku/core/middleware'
-import { addHTTPMiddleware } from '@pikku/core/http'
+import { addHTTPMiddleware } from '#pikku'
 
 addHTTPMiddleware('*', [
-  authCookie({ name: 'session', expiresIn: { value: 30, unit: 'day' } }),
+  authCookie({
+    name: 'session',
+    expiresIn: { value: 30, unit: 'day' },
+    options: {},
+  }),
 ])
 
 // functions/auth.functions.ts
@@ -95,14 +140,14 @@ export const login = pikkuFunc({
   auth: false,
   func: async ({ jwt, db }, { email, password }, { setSession }) => {
     const user = await db.verifyCredentials(email, password)
-    setSession({ userId: user.id })
+    await setSession({ userId: user.id })
     return { token: jwt.sign({ userId: user.id }) }
   },
 })
 
 export const logout = pikkuFunc({
   func: async ({}, _data, { clearSession }) => {
-    clearSession()
+    await clearSession()
   },
 })
 ```
