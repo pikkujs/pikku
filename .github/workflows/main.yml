@@ -42,6 +42,8 @@ jobs:
         run: yarn prettier
       - name: Lint
         run: yarn lint
+      - name: Check no runtime i18n key resolvers
+        run: node scripts/check-no-i18n-key-resolver.mjs
 
   build:
     name: Build
