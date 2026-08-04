@@ -157,7 +157,42 @@ addHTTPMiddleware([
 
 When the api-key header is present it is authoritative — the middleware never
 falls through to `getSession` (a bare mock session would shadow the scoped one).
-When it is absent, the human `getSession` path runs as normal.
+When it is absent, the human `getSession` path runs as normal. Either way the
+middleware bails out entirely if a session is already set, and it checks the
+*live* session rather than the wire's construction-time snapshot, so it can't
+clobber one an earlier middleware resolved.
+
+### Restricting a key below its owner
+
+Set `scopes` on the session `mapKey` returns and that set is **authoritative** —
+including an empty one. It is never widened back out to everything the owning
+service user holds:
+
+```typescript
+mapKey: async (key) => ({
+  userId: 'sandbox-runtime',
+  scopes: ['sandbox:read'], // this key can do only this
+})
+```
+
+Leave `scopes` unset for a key that acts with its owner's full rights. This is
+what makes one stable service user safely able to own keys of very different
+power — the restriction lives on the key, not on a proliferation of identities.
+
+### Failure handling is deliberately split
+
+A key that fails to verify is logged and treated as an ordinary "not
+authenticated" — an unusable credential is not an outage. A failure *inside*
+`mapKey` (your scope store is down) propagates as a real error instead. That
+asymmetry is on purpose: a scope lookup that silently failed would serve the
+request anonymously, which is exactly the wrong direction to fail in.
+
+### `betterAuthStatelessSession` has no machine path
+
+The lean cookie-cache middleware (`betterAuthStatelessSession` — no
+`services.auth()`, no DB) handles only the human path. Machine auth needs
+`betterAuthSession`, because `verifyApiKey` is a server call there is no
+stateless equivalent of. Both accept an `impersonation` option.
 
 ### WebSocket channels authenticate on the upgrade handshake
 
