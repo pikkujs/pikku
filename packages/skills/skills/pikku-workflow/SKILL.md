@@ -121,7 +121,41 @@ await workflow.sleep('Wait 5 minutes', '5min')
 
 // Suspend — pause until externally resumed (e.g. awaiting approval), then continue
 await workflow.suspend('Awaiting approval')
+
+// Approval — suspend for a human decision and resume with the answer
+await workflow.approval('Manager sign-off', { ... })
 ```
+
+`workflow.name`, `workflow.runId` and `await workflow.getRun()` identify the
+current run if a step needs to reference it.
+
+### Error handling: `onError`, never try/catch
+
+**Do not wrap steps in try/catch.** The DSL extractor serialises the body into a
+step graph, and a `catch` block is control flow it cannot represent — so the
+graph would no longer describe what actually runs, which is the whole point of
+the DSL mode. This is a settled design decision, not a temporary limitation.
+
+Use the `onError` step option instead: it names an RPC to invoke when the step
+has failed *after* exhausting its retries.
+
+```typescript
+await workflow.do('Charge', 'chargePayment', { orderId }, {
+  retries: 3,
+  retryDelay: '1s',
+  onError: 'refundReservation',   // compensation RPC
+})
+```
+
+The handler receives `{ error: { message } }`, and the original error is still
+thrown afterwards — so the workflow still fails. `onError` is **compensation, not
+recovery**: it exists to undo work, not to swallow the failure and carry on. If
+you genuinely need to branch on a failure, have the step return a result object
+(`{ success: false, reason }`) and branch on that, the way the `processOrder`
+example branches on `payment.success`.
+
+Full step options: `description`, `retries`, `retryDelay`, `onError` (plus
+`actor`, which is scenario-only — see `pikku-scenario`).
 
 ### Parallel fan-out
 
@@ -161,7 +195,7 @@ export const userOnboarding = pikkuWorkflowGraph({
 
 ## Step dispatch & HTTP wiring
 
-For per-step inline-vs-queue dispatch (`inline: false` and the `dispatchStep` rules), the manual `workflowStart`/`workflow`/`workflowStatus` HTTP wirings, and a suspend/resume example, read `references/workflow-reference.md`.
+For per-step inline-vs-queue dispatch (`workflowQueued: true` and the `dispatchStep` rules), the manual `workflowStart`/`workflow`/`workflowStatus` HTTP wirings, and a suspend/resume example, read `references/workflow-reference.md`.
 
 ## After writing
 

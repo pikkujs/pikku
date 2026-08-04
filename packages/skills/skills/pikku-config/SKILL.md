@@ -4,9 +4,10 @@ description: >-
   Use when managing secrets, environment variables, config, or OAuth2 credentials in a Pikku app.
   Covers defineSecret, defineVariable, defineCredential, and typed config access. TRIGGER when:
   code uses defineSecret/defineVariable/defineCredential, user asks about env vars, secrets,
-  config, OAuth2, or "how do I access environment variables". DO NOT TRIGGER when: user asks about
-  API versioning/breaking changes (use pikku-versioning), service factories (use pikku-services),
-  or auth middleware (use pikku-security).
+  config, OAuth2, SecretValue/.reveal(), SecretCoercionError, or "how do I access environment
+  variables". DO NOT TRIGGER when: user asks about API versioning/breaking changes (use
+  pikku-versioning), service factories (use pikku-services), middleware (use pikku-middleware), or
+  auth strategies and sessions (use pikku-security).
 installGroups: [core]
 ---
 
@@ -64,10 +65,17 @@ or any wire** — it is removed from their services type and throws at runtime i
 reached through a cast. Read it where you wire the app and hand the value to a
 service:
 
+`getSecret` returns a `SecretValue<T>`, not the bare value. It is nominal — not
+assignable to `string`, so every concretely-typed sink rejects it — it serializes
+to `[secret]` in logs and audits, and coercing it to a string (a template
+literal, a concatenation) throws `SecretCoercionError`, because that is always a
+leak. `.reveal()` is the one way out, which makes every disclosure deliberate and
+greppable. Call it at the point the value reaches the thing that needs it:
+
 ```typescript
 // services.ts — allowed
 const createSingletonServices = pikkuServices(async (config, { secrets }) => ({
-  stripe: new StripeService(await secrets.getSecret('STRIPE_CONFIG')),
+  stripe: new StripeService((await secrets.getSecret('STRIPE_CONFIG')).reveal()),
 }))
 
 // functions/*.ts — ask the service, never the secret store
@@ -113,7 +121,7 @@ defineSecret({
 })
 
 // In your services factory — fully typed
-const config = await secrets.getSecret('STRIPE_CONFIG')
+const config = (await secrets.getSecret('STRIPE_CONFIG')).reveal()
 // config.apiKey       → string (autocompleted)
 // config.webhookSecret → string (autocompleted)
 
@@ -178,16 +186,33 @@ defineCredential({
   },
 })
 
-// In your function — tokens refresh automatically
-const response = await slackOAuth.request(
-  'https://slack.com/api/chat.postMessage',
-  {
-    method: 'POST',
-    body: JSON.stringify({ channel, text }),
+### Reading a Credential
+
+A declared credential is resolved per invocation through `wire.getCredential(name)`,
+so the natural place to read it is a wire service factory: build the client there
+once and let functions ask the client, the same way they ask a service for a
+secret-derived value. Tokens refresh automatically, so what arrives is already
+valid.
+
+```typescript
+export const createWireServices = pikkuWireServices(async (_services, wire) => {
+  const cred = await wire.getCredential?.<{ accessToken: string }>('slack')
+  if (!cred?.accessToken) {
+    // Tells the caller which credential to connect, and where.
+    throw new MissingCredentialError('slack', 'oauth2', '/credentials/slack/connect')
   }
-)
-const data = await response.json()
+  return { slack: new SlackClient(cred.accessToken) }
+})
+
+// functions/*.ts — ask the client, never the credential store
+export const postMessage = pikkuFunc({
+  func: async ({ slack }, { channel, text }) => slack.postMessage(channel, text),
+})
 ```
+
+A `wire` credential resolves per user, so an unconnected user hits
+`MissingCredentialError` rather than silently acting as someone else; a
+`singleton` credential is platform-level and identical for every caller.
 
 ## Key Rule
 

@@ -36,19 +36,23 @@ See `pikku-concepts` for the core mental model.
 
 ### `wireCLI(config)`
 
+All three factories come from `#pikku` (the generated types re-export
+`cli/pikku-cli-types.gen.js`). Importing them from `@pikku/core/cli` compiles but
+loses your project's service and middleware types.
+
 ```typescript
-import { wireCLI } from '@pikku/core/cli'
+import { wireCLI } from '#pikku'
 
 wireCLI({
   program: string,              // Program name (e.g. 'todos')
-  options?: {                   // Global options
-    [key: string]: {
-      description: string,
-      short?: string,           // Single char alias (e.g. 'v')
-      default?: any,
-    }
-  },
+  description?: string,
+  summary?: string,
+  options?: CLIOptions,         // Global options — see below
   render?: PikkuCLIRender,      // Default renderer for all commands
+  middleware?: PikkuMiddleware[],
+  tags?: string[],              // Targets tag middleware
+  errors?: string[],
+  auth?: boolean,               // Only affects the websocket backend, not local runs
   commands: {
     [name: string]: PikkuCLICommand | {
       description: string,
@@ -65,29 +69,63 @@ import { pikkuCLICommand } from '#pikku'
 
 pikkuCLICommand({
   parameters?: string,          // Positional args (e.g. '<text>', '<username> <email>')
-  func: PikkuFunc,              // Business logic function
+  func?: PikkuFunc,             // Business logic function — omit on a pure command group
+  title?: string,
   description?: string,
   render?: PikkuCLIRender,      // Custom output renderer
-  options?: {
-    [key: string]: {
-      description: string,
-      short?: string,
-      default?: any,
-      choices?: string[],       // Restrict to values
-    }
-  },
+  options?: CLIOptions,
+  subcommands?: { [name: string]: PikkuCLICommand },  // nests to any depth
+  middleware?: PikkuMiddleware[],
+  permissions?: PermissionGroup,
+  auth?: boolean,
+  isDefault?: boolean,          // Runs when the group is invoked with no subcommand
 })
 ```
+
+`parameters` is checked against the func's input at compile time — a name that is
+not a key of the input makes the type `never`, so a typo'd positional fails to
+build rather than arriving as `undefined`.
+
+### Options
+
+```typescript
+{
+  description: string,
+  short?: string,        // Single char alias (e.g. 'v')
+  default?: any,
+  choices?: any[],       // Restrict to these values
+  array?: boolean,       // Collect every value up to the next flag
+  required?: boolean,
+}
+```
+
+How the parser reads them, which is worth knowing before you name one:
+
+- **Flag names are camel-cased**, so `--api-url` and `--apiUrl` both fill `apiUrl`.
+- **`--no-x` negation only works when `x` has a boolean `default`.** Without one,
+  `--no-x` parses as an option literally named `noX` — which is why boolean flags
+  should always declare their default.
+- Short flags cluster (`-abc`), and only the last in a cluster may take a value.
+- An unknown `--flag` warns rather than throwing.
 
 ### `pikkuCLIRender(fn)`
 
 ```typescript
-import { pikkuCLIRender } from '@pikku/core/cli'
+import { pikkuCLIRender } from '#pikku'
 
 const renderer = pikkuCLIRender<OutputType>((services, data) => {
   // Format and print output to terminal
   console.log(data)
 })
+```
+
+### Wire object (`wire.cli`)
+
+```typescript
+wire.cli.program   // program name
+wire.cli.command   // string[] — the resolved command path
+wire.cli.data      // all positionals and options, merged
+wire.cli.channel   // the channel when served remotely (see below)
 ```
 
 ## Usage Patterns
@@ -192,6 +230,17 @@ wireCLI({
 ```
 
 The func's input is the positional `parameters` plus `options`, merged (e.g. `parameters: '<username> <email>'` + an `admin` option → func input `{ username, email, admin }`).
+
+A renderer's full signature is `(services, data, session?)`. It returns nothing —
+printing is its job.
+
+### Running the program over a websocket
+
+Codegen emits a `<program>-channel.gen.ts` beside your wiring: a `wireChannel`
+that serves the same commands remotely, so a local binary and a hosted session
+run identical code. `auth` on `wireCLI` guards **that channel only** — a locally
+executed CLI has no connection to authenticate, so it is not a way to require a
+session for local runs. Don't hand-write or edit the generated channel file.
 
 ## Complete Example
 

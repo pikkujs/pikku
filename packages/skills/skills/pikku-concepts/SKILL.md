@@ -28,7 +28,8 @@ Pikku is a TypeScript framework that separates business logic from transport mec
 For deep-dive on each topic, see the dedicated skills:
 
 - **Wiring**: `pikku-http`, `pikku-websocket`, `pikku-rpc`, `pikku-mcp`, `pikku-queue`, `pikku-cron`, `pikku-trigger`, `pikku-cli`, `pikku-ai-agent`, `pikku-workflow`
-- **Infrastructure**: `pikku-services`, `pikku-security`, `pikku-config`
+- **Authorization**: `pikku-security` (authentication/sessions), `pikku-permissions` (permission checks, scopes), `pikku-middleware` (global/tag/route middleware)
+- **Infrastructure**: `pikku-services`, `pikku-config`
 - **Project introspection**: `pikku-info`
 
 ## Core Mental Model
@@ -58,7 +59,7 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 
 ## Concept Mapping: Generic Backend → Pikku
 
-Controllers/routes → `pikkuFunc`; middleware/auth/permissions → `pikku-security`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
+Controllers/routes → `pikkuFunc`; auth/sessions → `pikku-security`; authorization checks → `pikku-permissions`; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
 
 ## Functions
 
@@ -95,21 +96,52 @@ Services can be destructured inline in the `func` signature (e.g. `async ({ logg
 
 ```typescript
 pikkuFunc({
+  // Identity and documentation
   title?: string,           // Human-readable name
   description?: string,     // What the function does
-  version?: number,         // Contract version (see pikku-config for versioning)
+  version?: number,         // Contract version (see pikku-versioning)
+  override?: string,        // Logical name override, so several exports share a versioned base
   tags?: string[],          // For grouping and middleware targeting
+
+  // Contract
+  input?: ZodSchema,        // Input validation schema
+  output?: ZodSchema,       // Output validation schema
+  errors?: Array<typeof PikkuError>,  // Errors this function may throw
+
+  // Reachability
   expose?: boolean,         // Allow external RPC calls (see pikku-rpc)
   remote?: boolean,         // Allow remote RPC calls
   mcp?: boolean,            // Expose as MCP tool (see pikku-mcp)
+  readonly?: boolean,       // Declares the function performs no writes
+  deploy?: 'serverless' | 'server' | 'auto',
+
+  // Authorization — see pikku-permissions
   auth?: boolean,           // Override default auth requirement
-  input?: ZodSchema,        // Input validation schema
-  output?: ZodSchema,       // Output validation schema
-  permissions?: PermissionGroup,  // See pikku-security
-  middleware?: PikkuMiddleware[], // See pikku-security
+  scopes?: ScopeId[],       // AND-ed, checked before permissions; session required
+  permissions?: PermissionGroup,  // OR-ed pool
+  permissionsInBody?: boolean,    // Last resort; needs allow.permissionsInBody in config
+  middleware?: PikkuMiddleware[], // See pikku-middleware
+
+  // Agent tooling — see pikku-ai-agent
+  approvalRequired?: boolean,
+  approvalDescription?: (services, data) => Promise<string>,
+
+  // Workflow step behavior — see pikku-workflow
+  workflowQueued?: boolean, // Dispatch via queue instead of inline
+  workflowRetries?: number,
+  workflowTimeout?: string, // e.g. '30s', '5m'
+
+  audit?: boolean | { durability?: 'best-effort' | 'transactional' },
+
   func: async (services, data, wire) => { ... },
 })
 ```
+
+`scopes` is the one option `pikkuSessionlessFunc` does not accept, and the
+omission is deliberate: scopes are AND-ed and fail closed, so an anonymous
+caller holds none and satisfies none — a sessionless function with scopes would
+reject every caller it exists to serve. Gate those with `permissions`, which
+receive the optional session and may pass anonymous.
 
 **Generics XOR `input`/`output` — never both.** A function's data and return
 types come from *one* source: either the `input`/`output` schemas (preferred —
@@ -207,7 +239,7 @@ Run `npx pikku all` to generate:
 - `pikku-types.gen.ts` — Typed function factories and wiring functions
 - `pikku-fetch.gen.ts` — Type-safe HTTP client
 - `pikku-websocket.gen.ts` — Type-safe WebSocket client
-- `pikku-bootstrap.gen.js` — Runtime initialization (auto-imports all wirings)
+- `pikku-bootstrap.gen.ts` — Runtime initialization (auto-imports all wirings)
 - `pikku-services.gen.ts` — Service factory types
 
 Config lives in `pikku.config.json`:
@@ -241,7 +273,7 @@ src/
 └── .pikku/              # Generated (gitignored)
     ├── pikku-types.gen.ts
     ├── pikku-fetch.gen.ts
-    └── pikku-bootstrap.gen.js
+    └── pikku-bootstrap.gen.ts
 ```
 
 ## Environment Variables

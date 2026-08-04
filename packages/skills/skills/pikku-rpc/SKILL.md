@@ -36,14 +36,24 @@ See `pikku-concepts` for the core mental model.
 
 ### RPC Methods (on `wire.rpc`)
 
-Four ways to call functions via RPC:
-
 | Method                           | Purpose                                   |
 | -------------------------------- | ----------------------------------------- |
 | `rpc.invoke(name, data)`         | Internal call to any wired function       |
 | `rpc.remote(name, data)`         | Remote call via DeploymentService         |
 | `rpc.exposed(name, data)`        | Call functions marked with `expose: true` |
-| `rpc.startWorkflow(name, input)` | Start a workflow                          |
+| `rpc.startWorkflow(name, input)` | Start a workflow (see `pikku-workflow`)   |
+| `rpc.agent.run/stream(...)`      | Run an AI agent (see `pikku-ai-agent`)    |
+| `rpc.agent.resume/approve(...)`  | Answer a tool-approval interrupt          |
+| `rpc.agent.interrupt(runId)`     | Stop an in-flight run                     |
+
+`rpc.invoke`, `rpc.remote` and `rpc.startWorkflow` are typed off the generated
+RPC map, so the name and the payload are checked. `rpc.exposed` is deliberately
+`(name: string, data: any) => Promise<any>` — it exists to dispatch a name that
+arrived from outside, which by definition cannot be checked at compile time.
+Reach for `rpc.invoke` whenever the name is known statically.
+
+`rpc` also carries `depth` (how deep the current RPC chain is, so runaway
+recursion is visible) and `global`.
 
 ### Exposed Functions
 
@@ -61,16 +71,17 @@ const greet = pikkuSessionlessFunc({
 
 ### HTTP RPC Endpoint
 
-Expose all `expose: true` functions over HTTP:
+The `POST /rpc/:rpcName` endpoint that dispatches every `expose: true` function
+is **generated, not hand-written**. Turn it on and let codegen own it:
 
-```typescript
-wireHTTP({
-  route: '/rpc/:rpcName',
-  method: 'post',
-  auth: false,
-  func: rpcCaller,
-})
+```bash
+pikku enable rpc            # sets scaffold.rpc = true (auth required)
+pikku enable rpc --noAuth   # sets scaffold.rpc = { auth: false } (public)
 ```
+
+This writes `rpc-public.gen.ts` with an `rpcCaller` function and its `wireHTTP`
+call already wired. Do not write that wiring yourself — a hand-rolled copy
+collides with the generated route on the same path.
 
 ## Usage Patterns
 
@@ -114,7 +125,7 @@ RPC calls go through Pikku's middleware and permission pipeline. Direct imports 
 After `npx pikku all`:
 
 ```typescript
-import { pikkuRPC } from '.pikku/pikku-rpc.gen.js'
+import { pikkuRPC } from '#pikku/pikku-rpc.gen.js'
 
 pikkuRPC.setServerUrl('http://localhost:4002')
 

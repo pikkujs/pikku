@@ -6,6 +6,7 @@ description: >-
   when: code uses wireScheduler, user asks about cron, scheduled tasks, recurring jobs, or "run
   every X minutes/hours". DO NOT TRIGGER when: user asks about background jobs with retries (use
   pikku-queue) or event-driven triggers (use pikku-trigger).
+installGroups: [core]
 ---
 
 # Pikku Cron/Scheduler Wiring
@@ -42,6 +43,7 @@ wireScheduler({
   name: string,            // Unique scheduler name
   schedule: string,        // Cron expression
   func: PikkuVoidFunc,     // Must be pikkuVoidFunc (no input/output)
+  tags?: string[],         // Targets tag middleware — see pikku-middleware
   middleware?: PikkuMiddleware[],
 })
 ```
@@ -53,9 +55,16 @@ Inside scheduled functions:
 ```typescript
 wire.scheduledTask.name // Scheduler name
 wire.scheduledTask.schedule // Cron expression string
-wire.scheduledTask.executionTime // When this execution was triggered
-wire.scheduledTask.skip(reason) // Skip this execution (no error)
+wire.scheduledTask.executionTime // Date this execution was triggered
+wire.scheduledTask.skip(reason?) // Abort this execution — THROWS, never returns
 ```
+
+**`skip()` aborts by throwing.** It reads like an early return but it is not:
+nothing after the call runs, so there is no need to `return` afterwards. The
+consequence that bites is in middleware — a `try/catch` around `await next()`
+will catch a skip and report it as a failure. If your middleware distinguishes
+success from failure, let the skip pass through rather than logging it as an
+error.
 
 ### Cron Expression Reference
 
@@ -113,8 +122,7 @@ const weeklyCleanup = pikkuVoidFunc({
 
     const staleCount = await db.countStaleTodos()
     if (staleCount === 0) {
-      wire.scheduledTask.skip('No stale todos found')
-      return
+      wire.scheduledTask.skip('No stale todos found') // throws — nothing below runs
     }
 
     await db.deleteCompletedTodos({ olderThan: '30d' })
@@ -178,8 +186,7 @@ export const cleanupExpired = pikkuVoidFunc({
   func: async ({ db, logger }, _input, wire) => {
     const count = await db.countExpiredSessions()
     if (count === 0) {
-      wire.scheduledTask.skip('No expired sessions')
-      return
+      wire.scheduledTask.skip('No expired sessions') // throws — nothing below runs
     }
     await db.deleteExpiredSessions()
     logger.info(`Cleaned ${count} expired sessions`)

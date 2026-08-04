@@ -32,6 +32,8 @@ export const deleteUser = pikkuFunc({
 })
 
 // wirings/cli.wiring.ts
+import { wireCLI, pikkuCLICommand, pikkuCLIRender } from '#pikku'
+
 const userRenderer = pikkuCLIRender<{ user: User }>((_services, { user }) => {
   console.log(`Created user: ${user.username} (${user.email}) [${user.role}]`)
 })

@@ -92,6 +92,7 @@ A scenario takes the same config fields as a workflow (`title`, `description`, `
 | `scenario.expectError(step, rpc, data, { actor, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
 | `scenario.expectService(step, 'service.method', { actor, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
 | `scenario.given(stepName, step, data, { actor })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
+| `scenario.runScheduledTask(name)`                                                    | Fire a wired scheduler on the target now, rather than waiting for its cron.                                            |
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
@@ -264,7 +265,7 @@ export const buysTheItem = pikkuScenarioStep<
 })
 ```
 
-The two bindings are **alternatives**: `pikku scenario run --run browser` clicks through the shop, `--run default` (the fast suite) takes the server-side path, and both report the same sentence.
+The bindings are **alternatives**: `pikku scenario run --run browser` clicks through the shop, `--run cli` drives it over the websocket, `--run default` (the fast suite, and the default) takes the server-side path — and all of them report the same sentence.
 
 ```typescript
 await scenario.when(
@@ -378,11 +379,15 @@ export const buysAnApple = pikkuScenarioStep<
   name: 'buysAnApple',
   description: 'buys an apple',
   template: 'buys {qty} apples',
-  func: async (_services, { qty }, { scenarioStep }) => {
+  default: async (_services, { qty }, { scenarioStep }) => {
     return await requireActor(scenarioStep).invoke('placeOrder', { qty })
   },
 })
 ```
+
+A step's body always lives under a **surface binding** — `default`, `browser` or
+`cli` — never under a `func`. Declaring none throws at load time: at minimum give
+it a `default`.
 
 ```typescript
 await scenario.given(
@@ -407,26 +412,24 @@ Rules that bite:
 
 ### Browser steps
 
-`browser` is a boolean on the step, and it is the whole switch: `browser: true` and a browser is guaranteed present on the wire, `browser: false` (the default) and there is none. There is no third state and nothing to null-check — `wire.browser` is optional in the type only for the steps that did not ask for one.
+Declaring a `browser` binding is the whole switch: inside that binding `wire.browser` is guaranteed present and non-optional, and a step without one never sees a browser at all. There is nothing to null-check.
 
-A step declaring `browser: true` gets `wire.browser` — a session bound to **its actor**, signed in through the same `signInPath` + `SCENARIO_ACTOR_SECRET` path the HTTP actors use, so the browser and the RPC calls are one identity. Calling such a step without an actor is a critical error (`PKU677`).
+A `browser` binding gets a session bound to **its actor**, signed in through the same `signInPath` + `SCENARIO_ACTOR_SECRET` path the HTTP actors use, so the browser and the RPC calls are one identity. Calling such a step without an actor is a critical error (`PKU677`).
 
 Browser steps are where **intent, not actions** earns its keep: the step is one intent, the clicking lives in shared utilities, and the step arrives before it acts. Write the mechanics below into utilities and keep the step body to three or four calls that read as a sentence.
 
 ```typescript
-export const opensTheCart = pikkuScenarioStep<
-  { path: string },
-  { url: string },
-  true
->({
-  name: 'opensTheCart',
-  description: 'opens the cart',
-  browser: true,
-  func: async (_services, { path }, { browser }) => {
-    await browser.goto(path)
-    return { url: browser.page.url() }
-  },
-})
+export const opensTheCart = pikkuScenarioStep<{ path: string }, { url: string }>(
+  {
+    name: 'opensTheCart',
+    description: 'opens the cart',
+    browser: async (_services, { path }, { browser }) => {
+      await browser.goto(path)
+      return { url: browser.page.url() }
+    },
+    default: async ({ rpc }) => ({ url: (await rpc.invoke('getCart', {})).url }),
+  }
+)
 ```
 
 - Install `@pikku/playwright` and `@playwright/test`, and import `@pikku/playwright` once (`import type {} from '@pikku/playwright'`) so `browser.page` is a typed Playwright `Page`. Without it you still get the structural `goto`/`screenshot` handle.
@@ -495,9 +498,24 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --flows orderSupportScenario
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --features credentialFeature
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --tags smoke,scenario
+SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --no-browser --exclude-tags ai-live
 ```
 
-`run` takes the environment as a **required positional** — the key from `environments`. `--flows`/`-f` filters by scenario name, `--features` by feature id, `--tags`/`-t` by tag (match-any). Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
+`run` takes the environment as a **required positional** — the key from `environments`. Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
+
+| Flag                    | Effect                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `--flows` / `-f`        | Comma-separated scenario names                                                          |
+| `--features`            | Comma-separated feature ids                                                             |
+| `--tags` / `-t`         | Match-any tag filter                                                                    |
+| `--exclude-tags`        | Hold tags back — unless the flow is named directly with `--flows`                       |
+| `--run <surface>`       | `default` (the default), `browser`, or `cli`                                            |
+| `--no-browser`          | Shorthand for `--run default`; scenarios with browser steps report as **skipped**       |
+| `--strict`              | Fail, rather than pass, a `then` with no witness on the run's surface                   |
+| `--spawn` / `--keep-alive` | Start `pikku dev` on the environment's apiUrl for the run; optionally leave it up     |
+| `--api-url` / `--app-url` | Override the environment's URLs — for a target that only exists at run time            |
+| `--trace`               | Keep every stack frame on failure (default shows only the project's own)                |
+| `--coverage`            | Reset/snapshot server coverage per scenario                                             |
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`. A scenario inside a feature is named `<Feature> › <scenario> <data>`.
 
@@ -509,9 +527,15 @@ Coverage is attributed by running scenarios against a server that is collecting 
 
 Prerequisite in `pikku.config.json`:
 
-```json
-{ "scaffold": { "scenarios": "auth" } }
+```bash
+pikku enable scenarios            # sets scaffold.scenarios = true (session required)
+pikku enable scenarios --noAuth   # sets scaffold.scenarios = { "auth": false }
 ```
+
+`scaffold.scenarios` is a boolean or `{ auth?, path? }`. The legacy string forms
+(`"auth"` / `"no-auth"`) are **rejected by the config loader**, not reinterpreted —
+under a shape where a string could be a path, silently reading one as a flag
+would be worse than failing.
 
 `scaffold.scenarios` generates the coverage and stub RPCs into your project (`pikkuScenarioTakeLiveCoverage`, `pikkuScenarioResetLiveCoverage`, `pikkuScenarioResetStubs`, `pikkuScenarioGetStubCalls`), so scenario runs work against any server. The coverage RPC reads `<outDir>/function/pikku-functions-meta-verbose.gen.json` off disk at request time — codegen always writes it, but it has to be deployed alongside the app or the RPC returns `null`.
 
@@ -583,7 +607,8 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | `sleep()` before asserting                          | Use `expectEventually`.                                                                                                     |
 | A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
 | A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
-| A `browser: true` step guarding `if (!browser)`     | `browser: true` guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                         |
+| A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                             |
+| A step with a `func:` instead of a surface binding   | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.             |
 | `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                   |
 | Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
 

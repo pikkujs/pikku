@@ -2,31 +2,36 @@
 
 ## Step execution: inline vs queue dispatch
 
-Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call `inline` flag. `workflow.do(...)` options are only `retries`/`retryDelay`/`description`.
+Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`onError`.
 
 - **Steps default to inline.** Most steps don't need their own worker; running them inline avoids a queue round-trip per step, so a normally-started workflow executes its whole chain in one orchestrator pass.
-- **`inline: false` opts a function out.** Set `inline: false` on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits.
+- **`workflowQueued: true` opts a function out.** Set it on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits. `workflowRetries` and `workflowTimeout` sit alongside it.
 - **Run-level `inline` is separate** and only controls whether the *whole run* executes in-process without queue infrastructure (set automatically when there is no `queueService`, or via `startWorkflow(..., { inline: true })`). It governs sleep handling, not per-step dispatch.
 
 The rule (`dispatchStep`):
 
-| Function `inline` | `queueService` present? | Result |
+| Function `workflowQueued` | `queueService` present? | Result |
 |---|---|---|
-| default / `true` | any | **inline** |
-| `false` | yes | **queued** (own worker) |
-| `false` | no | **inline + a `logger.warn`** (misconfiguration: can't dispatch) |
+| default / `false` | any | **inline** |
+| `true` | yes | **queued** (own worker) |
+| `true` | no | **throws** |
 
 ```typescript
 // Push this one expensive step onto the queue; every other step stays inline:
 export const renderLargeReport = pikkuSessionlessFunc({
-  inline: false, // dispatch via queue instead of running inline
+  workflowQueued: true, // dispatch via queue instead of running inline
+  workflowRetries: 3,
+  workflowTimeout: '5m',
   input: ReportInput,
   output: ReportOutput,
   func: async (services, data) => { /* ... */ },
 })
 ```
 
-`inline: false` requires a `queueService`; without one the step still runs (so the workflow progresses) but emits a `logger.warn` so the misconfiguration is visible.
+`workflowQueued: true` **requires** a `queueService`. Without one the step throws
+rather than quietly running inline — a step marked for its own worker usually
+carries timeout and concurrency expectations that inline execution would silently
+violate, so failing loudly is safer than proceeding.
 
 ## HTTP workflow wiring (manual)
 

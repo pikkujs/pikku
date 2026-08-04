@@ -1,11 +1,12 @@
 ---
 name: pikku-permissions
 description: >-
-  Use when adding authorization checks to Pikku functions — pikkuPermission, pikkuAuth,
-  per-function permissions, global permissions, or understanding OR/AND permission logic.
-  TRIGGER when: user wants to restrict who can call a function, check resource ownership, add
-  role-based access, or understand where permission checks belong. DO NOT TRIGGER when: user asks
-  about middleware or request interception (use pikku-middleware), authentication strategies (use
+  Use when adding authorization checks to Pikku functions — pikkuPermission, pikkuAuth, scopes and
+  defineScope, per-function permissions, global permissions, or understanding the scope/OR/AND
+  gating logic. TRIGGER when: user wants to restrict who can call a function, check resource
+  ownership, add role-based or scope-based access, declares or grants scopes, hits
+  MissingScopeError, or asks where permission checks belong. DO NOT TRIGGER when: user asks about
+  middleware or request interception (use pikku-middleware), authentication strategies (use
   pikku-security), or session management.
 installGroups: [core]
 ---
@@ -16,7 +17,7 @@ installGroups: [core]
 
 **ALWAYS put authorization checks in the `permissions` field of `pikkuFunc` or `pikkuSessionlessFunc` — NEVER inside the `func` body.**
 
-This includes: org access checks, repo access checks, role checks, resource ownership, and any other authorization logic. The `permissions` field runs before `func`, is visible to the inspector, and is the only place Pikku enforces authorization.
+This includes: org access checks, repo access checks, role checks, resource ownership, and any other authorization logic. The `permissions` field runs before `func` and is visible to the inspector, so the gate is declared rather than buried — which is what lets `pikku info permissions` and an audit see it at all. Alongside it sits `scopes` (see below) for grant-based gating; between them they are where Pikku enforces authorization. The one sanctioned exception is `permissionsInBody`, covered at the end.
 
 ```typescript
 // CORRECT
@@ -104,11 +105,11 @@ export const hasBookAccess = pikkuPermission(
 
 ```typescript
 permissions: {
-  verified: isVerified,                        // OR: verified users can access
-  owner: isBookOwner,                          // OR: owners can access
-  reviewer: [isAuthenticated, hasBookAccess],  // AND: both must pass
+  verified: isVerified,                    // OR: verified users can access
+  owner: isBookOwner,                      // OR: owners can access
+  reviewer: [isVerified, hasBookAccess],   // AND: both must pass
 }
-// Logic: verified OR owner OR (isAuthenticated AND hasBookAccess)
+// Logic: verified OR owner OR (isVerified AND hasBookAccess)
 ```
 
 Groups are OR'd. Entries within a group array are AND'd.
@@ -134,33 +135,112 @@ export const deleteBook = pikkuFunc({
 A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever *narrow* access — it never grants access a function's own `permissions` would deny.
 
 ```typescript
-import { addGlobalPermission } from '.pikku/pikku-types.gen.js'
+import { addGlobalPermission } from '#pikku'
 
-addGlobalPermission([signedInUser]) // every function now also requires a session
+addGlobalPermission([isEmployee]) // every function now also requires an employee session
 ```
 
 Multiple `addGlobalPermission` calls accumulate and are AND'd together.
 
 > Wire-, tag-, and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, and a `permissions` field on HTTP/channel/MCP wirings) were **removed in #972**. Permissions now live only on the function definition, plus the optional global gate. Tags are organizational only — use tag/HTTP *middleware* (`addTagMiddleware`, `addHTTPMiddleware`) for cross-cutting request handling, not authorization.
 
-## The Two Gates
+## Scopes — the AND Gate Above Permissions
 
-Authorization is two independent gates, both of which must pass:
+Scopes answer "what was this session granted?" before permissions ask "may this
+user do this to this resource?". They are AND-ed: every scope listed must be
+held. Because they are checked first and fail closed, a scope can only ever
+*narrow* access — it never grants what `permissions` would deny.
 
-1. **Global permissions** (`addGlobalPermission`) — AND'd together. A broad baseline that can only narrow access.
-2. **The function's own `permissions`** — OR'd groups (OR-of-ANDs), as above.
+Declare the scope tree once with `defineScope`. The body is a no-op that
+tree-shakes away; the CLI reads the call by AST and generates a `ScopeId` union,
+so a function naming an undeclared scope fails the build rather than silently
+gating on nothing.
 
-The gates are independent: a broad global (e.g. `signedInUser`) can **never** satisfy an admin-only function's own requirement. Each function still enforces its own `permissions` in full.
+```typescript
+// src/scopes.ts
+import { defineScope } from '#pikku'
+
+defineScope({
+  admin: {
+    displayName: 'Administration',
+    description: 'Administrative access',
+    scopes: {
+      invoices: {
+        description: 'Invoice management',
+        scopes: {
+          create: { description: 'Create invoices' },
+          void: { description: 'Void invoices' },
+        },
+      },
+    },
+  },
+  billing: {},
+})
+```
+
+Every node is grantable, keyed by segment: the above yields `admin`,
+`admin:invoices`, `admin:invoices:create`, `admin:invoices:void` and `billing`.
+Scopes may be declared across more than one file — the declarations merge.
+
+```typescript
+export const voidInvoice = pikkuFunc({
+  scopes: ['admin:invoices:void'],
+  permissions: { owner: isInvoiceOwner },
+  func: async ({ db }, { invoiceId }) => { ... },
+})
+```
+
+A grant satisfies a required scope if it is the scope itself, an ancestor of it,
+or a wildcard at any level — so a session holding `admin` satisfies
+`admin:invoices:void`, and `admin:*` does too. A missing scope throws
+`MissingScopeError` naming the first one that failed.
+
+`scopes` requires a session and so is unavailable on `pikkuSessionlessFunc`:
+scopes fail closed, an anonymous caller holds none, and a sessionless function
+with scopes would reject every caller it exists to serve. Gate those with
+`permissions`, which receive the optional session and may pass anonymous.
+
+## The Three Gates
+
+Authorization is three independent gates, evaluated in this order, all of which must pass:
+
+1. **Scopes** (`scopes`) — AND'd, checked before input validation. Fails closed.
+2. **Global permissions** (`addGlobalPermission`) — AND'd together. A broad baseline that can only narrow access.
+3. **The function's own `permissions`** — OR'd groups (OR-of-ANDs), as above.
+
+The gates are independent: a broad global (e.g. `isEmployee`) can **never** satisfy an admin-only function's own requirement. Each function still enforces its own `scopes` and `permissions` in full.
+
+## The Sanctioned Exception: `permissionsInBody`
+
+A few checks genuinely cannot be expressed as a permission — verifying a webhook
+signature, a signed token, or an invite code, where the "identity" arrives in the
+payload and there is no session to check. For those, declare
+`permissionsInBody: true` on the function and keep the check in the body.
+
+```typescript
+export const handleStripeWebhook = pikkuSessionlessFunc({
+  permissionsInBody: true,
+  auth: false,
+  func: async ({ stripe }, data, { http }) => {
+    stripe.webhooks.constructEvent(data.raw, http.request.header('stripe-signature'), secret)
+    // ...
+  },
+})
+```
+
+This is a last resort, and it is purely declarative — it grants nothing and
+enforces nothing. Its only job is to tell the auditor that this function's
+apparent openness is deliberate, so asserting it falsely disables the very check
+that would have caught the mistake. It requires `"allow": { "permissionsInBody": true }`
+in `pikku.config.json`, which keeps the decision visible at the project level.
+Prefer `permissions` whenever the check can be expressed as one — they are
+declared, inspectable, and reusable.
 
 ## Complete Example
 
 ```typescript
 // src/permissions.ts
 import { pikkuAuth, pikkuPermission } from '#pikku'
-
-export const isAuthenticated = pikkuAuth(
-  async (_services, session) => !!session
-)
 
 export const isVerified = pikkuAuth(
   async (_services, session) => !!session?.emailVerified
@@ -179,7 +259,7 @@ export const deleteOrg = pikkuFunc({
   },
   permissions: {
     verified: isVerified,
-    owner: [isAuthenticated, isOrgMember],
+    owner: [isVerified, isOrgMember],
   },
 })
 ```

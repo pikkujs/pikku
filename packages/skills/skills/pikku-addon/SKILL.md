@@ -2,8 +2,8 @@
 name: pikku-addon
 description: >-
   Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon,
-  addon(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, and cross-project
-  function sharing. TRIGGER when: code uses wireAddon/addon()/pikkuAddonServices, user asks about
+  ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, and cross-project
+  function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user asks about
   addons, reusable function packages, cross-project sharing, or addon package structure. DO NOT
   TRIGGER when: user asks about internal function composition (use pikku-rpc) or general function
   definitions (use pikku-concepts).
@@ -46,40 +46,64 @@ wireAddon({
   name: string,                    // Namespace for addon functions (e.g. 'todos')
   package: string,                 // NPM package name (e.g. '@pikku/addon-todos')
   rpcEndpoint?: string,            // Optional remote RPC endpoint for distributed execution
-  auth?: boolean,                  // Whether addon functions require authentication
+  auth?: boolean,                  // Require a session for every function in the addon
+  mcp?: boolean,
   tags?: string[],                 // Tags applied to all addon functions
-  secretOverrides?: Record<string, string>,    // Remap secret names
-  variableOverrides?: Record<string, string>,  // Remap variable names
+  scopes?: string[],               // Required of every function, on top of its own
+  secretOverrides?: Record<string, string>,      // Remap secret names
+  variableOverrides?: Record<string, string>,    // Remap variable names
+  credentialOverrides?: Record<string, string>,  // Remap credential names
 })
 ```
 
-### `addon(name)`
+**`auth`, `tags` and `scopes` only ever tighten.** `auth: false` is not honoured —
+it would weaken the wiring's own gate — so the addon-level setting can require a
+session but never waive one. The same package wired twice under two namespaces is
+governed by the union of both instances' scopes and tags.
 
-Type-safe reference to an addon function — use when wiring to HTTP, agents, etc.:
+### `ref(name)`
+
+Type-safe reference to a function — local or addon — for use in any wiring. It
+returns a function config that proxies the call via RPC at runtime:
 
 ```typescript
-import { addon } from '#pikku'
+import { ref } from '#pikku'
 
-addon('todos:addTodo') // Returns a typed function config
-addon('emails:sendEmail') // Namespace:functionName format
+ref('todos:addTodo') // namespace:functionName for an addon function
+ref('myLocalFunc') // a local function by name
+```
+
+There is no `addon()` helper; `ref()` covers both. For an addon that publishes
+**wiring contracts** rather than bare functions, codegen also emits `refHTTP`,
+`refChannel` and `refCLI`, which carry the addon's own route/config metadata:
+
+```typescript
+import { refHTTP } from '#pikku'
+
+wireHTTP(refHTTP('todos:listTodos', { basePath: '/api' }))
 ```
 
 ### `pikkuAddonServices(factory)`
 
-Define singleton services for an addon package (created once at startup):
+Define singleton services for an addon package (created once at startup). The
+second argument is always present — an addon never falls back to its own logger,
+variables or secrets; the consuming app supplies them:
 
 ```typescript
 import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(
-  async (config, parentServices?) => {
-    // parentServices: logger, variables, secrets from the consuming app
-    return {
-      myStore: new MyStore(),
-    }
+  async (config, { secrets, logger }) => {
+    const creds = await secrets.getSecret<GithubCredentials>('GITHUB_CREDENTIALS')
+    return { github: new GithubService(creds.reveal()) }
   }
 )
 ```
+
+`secrets` and `variables` arrive **typed against the addon's own declarations**,
+and a secret is a `SecretValue` — `.reveal()` is the only way to the plaintext
+(see `pikku-config`). `pikkuAddonConfig` is the matching factory for the addon's
+config object.
 
 ### `pikkuAddonWireServices(factory)`
 
@@ -104,7 +128,8 @@ export const createWireServices = pikkuAddonWireServices(
 ### Scaffold
 
 ```bash
-npx pikku new addon
+npx pikku new addon <name>          # name is a required positional
+npx pikku new addon stripe --display-name Stripe --category Payments --dir addons
 ```
 
 This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, and `types/application-types.d.ts`. For the full file contents/exports you rarely hand-edit, read `references/addon-package-manifest.md`.
@@ -195,12 +220,12 @@ export const myFunc = pikkuFunc({
 ### Wire to HTTP
 
 ```typescript
-import { wireHTTP, addon } from '#pikku'
+import { wireHTTP, ref } from '#pikku'
 
 wireHTTP({
   method: 'get',
   route: '/todos',
-  func: addon('todos:listTodos'),
+  func: ref('todos:listTodos'),
   auth: false,
 })
 ```
@@ -208,14 +233,14 @@ wireHTTP({
 Or batch multiple addon routes with `defineHTTPRoutes` + `wireHTTPRoutes`:
 
 ```typescript
-import { wireHTTPRoutes, defineHTTPRoutes, addon } from '#pikku'
+import { wireHTTPRoutes, defineHTTPRoutes, ref } from '#pikku'
 
 const todoRoutes = defineHTTPRoutes({
   tags: ['todos'],
   auth: false,
   routes: {
-    list: { method: 'get', route: '/todos', func: addon('todos:listTodos') },
-    add: { method: 'post', route: '/todos', func: addon('todos:addTodo') },
+    list: { method: 'get', route: '/todos', func: ref('todos:listTodos') },
+    add: { method: 'post', route: '/todos', func: ref('todos:addTodo') },
   },
 })
 
@@ -225,19 +250,21 @@ wireHTTPRoutes({ basePath: '/api', routes: { todos: todoRoutes } })
 ### Use in AI Agents
 
 ```typescript
-import { pikkuAIAgent } from '#pikku'
-import { addon } from '#pikku'
+import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { ref } from '#pikku'
 
 export const todoAgent = pikkuAIAgent({
   name: 'todo-agent',
   description: 'Manages a todo list',
-  instructions: 'You help users manage their todos.',
-  model: 'openai/gpt-4o',
+  goal: 'You help users manage their todos.',
+  model: 'openai/gpt-5-mini',
   tools: [
-    addon('todos:listTodos'),
-    addon('todos:addTodo'),
-    addon('todos:deleteTodo'),
+    ref('todos:listTodos'),
+    ref('todos:addTodo'),
+    ref('todos:deleteTodo'),
   ],
   maxSteps: 5,
 })
 ```
+
+See `pikku-ai-agent` — an addon function is just another `ref()` in `tools`.
