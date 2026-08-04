@@ -1,0 +1,57 @@
+# Publishes the E2E runner image to GHCR, which is free for public packages.
+#
+# Deliberately NOT part of Release: the E2E jobs consume this image, so building
+# it inside the pipeline that needs it would be a cycle. It runs only when the
+# Dockerfile (or this workflow) changes, plus on demand — which for a pinned
+# base image is a handful of times a year.
+name: E2E Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/docker/e2e/Dockerfile
+      - .github/workflows/e2e-image.yml
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  build:
+    name: Build and push E2E image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # The Dockerfile's ARG default is the single source of truth for the base
+      # version, so the published tag can never drift from what it was built on.
+      - name: Resolve base version
+        id: version
+        run: |
+          version=$(sed -n 's/^ARG PLAYWRIGHT_VERSION=//p' .github/docker/e2e/Dockerfile)
+          if [ -z "$version" ]; then
+            echo "No ARG PLAYWRIGHT_VERSION default in .github/docker/e2e/Dockerfile" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .github/docker/e2e
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/pikku-e2e:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
