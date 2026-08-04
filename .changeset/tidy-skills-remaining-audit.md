@@ -15,3 +15,5 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-info: there are only four subcommands, and `--silent` works despite the spurious "Unknown option" warning
 - pikku-versioning: `override` is not required — a matching `V<n>` export suffix is stripped automatically — and the live function must be bumped explicitly; `versions init` writes an empty manifest, so `versions update` has to follow it
 - pikku-audit: documents `audit: { durability }`, the `Safe<>` guard on `auditLog.write`, `createInvocationAudit`'s logger argument, and `createAuditedKysely`'s options
+- pikku-kysely: six packages, not four — `@pikku/kysely-node-sqlite` / `-bun-sqlite` build the instance functions query, while `createSQLiteKysely` is typed to `KyselyPikkuDB` and wires `SerializePlugin`; the secret service config is `{ key, keyVersion, previousKey, audit }`, not `{ kekSecret, salt }`, and `getSecret` returns a `SecretValue`
+- pikku-emails: template variables are always optional and never required-able; unresolved placeholders render blank rather than failing; documents `pikku emails init`

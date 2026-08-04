@@ -28,7 +28,7 @@ Use this skill as an execution checklist, not reference material.
 
 ## Writing Queries — the Kysely query builder
 
-In a Pikku function body the injected `kysely` IS the `Kysely<DB>` instance — query it directly. Pikku wires the **CamelCasePlugin**, so you write **camelCase everywhere in TS** (columns, aliases) and raw **snake_case ONLY inside a `` sql`` `` literal**. Kysely is a query builder, NOT an ORM — there are no relations; shape nested data with the JSON helpers below. Never hand-roll SQL strings; never annotate the return type (in Pikku the output zod schema IS the type).
+In a Pikku function body the injected `kysely` IS the `Kysely<DB>` instance — query it directly. Every connection factory below wires the **CamelCasePlugin** by default, so you write **camelCase everywhere in TS** (columns, aliases) and raw **snake_case ONLY inside a `` sql`` `` literal**. If a project opted out (`createNodeSqliteKysely({ camelCase: false })`), that inverts — check how the instance was built before assuming. Kysely is a query builder, NOT an ORM — there are no relations; shape nested data with the JSON helpers below. Never hand-roll SQL strings; never annotate the return type (in Pikku the output zod schema IS the type).
 
 ```typescript
 import { sql } from 'kysely'
@@ -92,12 +92,19 @@ await kysely.transaction().execute(async (trx) => {
 })
 ```
 
-Pikku provides SQL database services through four packages:
+Pikku provides SQL database services through six packages:
 
-- `@pikku/kysely` — Base service implementations (database-agnostic)
-- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + `PikkuKysely` connection wrapper
+- `@pikku/kysely` — Base service implementations (database-agnostic), the serialize plugins, `createAuditedKysely` and the `pikkuSchemas` helpers
+- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper and `PgEventHubService` (LISTEN/NOTIFY-backed)
 - `@pikku/kysely-mysql` — MySQL-specific implementations
-- `@pikku/kysely-sqlite` — SQLite-specific implementations + `createSQLiteKysely` factory
+- `@pikku/kysely-sqlite` — SQLite-specific implementations, `createSQLiteKysely`, and the `LibsqlWebDialect`
+- `@pikku/kysely-node-sqlite` — `createNodeSqliteKysely` over `node:sqlite`, plus user-defined SQL functions and the coercion plugin
+- `@pikku/kysely-bun-sqlite` — the same over `bun:sqlite`
+
+The last two are runtime adapters rather than service sets: they build the
+`Kysely<DB>` you inject into functions, while the dialect packages above supply
+Pikku's own stores. They differ in one place — `bun:sqlite` cannot register
+scalar functions, so `createBunSqliteKysely` throws if you pass `functions`.
 
 All implement standard Pikku interfaces from `@pikku/core`.
 
@@ -105,9 +112,11 @@ All implement standard Pikku interfaces from `@pikku/core`.
 
 ```bash
 # Pick your database
-yarn add @pikku/kysely @pikku/kysely-postgres   # PostgreSQL
-yarn add @pikku/kysely @pikku/kysely-mysql      # MySQL
-yarn add @pikku/kysely @pikku/kysely-sqlite     # SQLite
+yarn add @pikku/kysely @pikku/kysely-postgres     # PostgreSQL
+yarn add @pikku/kysely @pikku/kysely-mysql        # MySQL
+yarn add @pikku/kysely @pikku/kysely-sqlite       # SQLite (stores)
+yarn add @pikku/kysely-node-sqlite                # SQLite on Node
+yarn add @pikku/kysely-bun-sqlite                 # SQLite on Bun
 ```
 
 ## API Reference
@@ -120,7 +129,8 @@ import { PikkuKysely } from '@pikku/kysely-postgres'
 const db = new PikkuKysely<DB>(
   logger: Logger,
   connectionOrConfig: postgres.Sql | postgres.Options | string,
-  defaultSchemaName?: string
+  defaultSchemaName?: string,
+  poolConfig?: PostgresConfig   // maxPool, connectTimeout, idleTimeout, maxLifetime, prepare, statementTimeout
 )
 
 await db.init()
@@ -128,13 +138,38 @@ db.kysely  // Kysely<DB> instance for queries
 await db.close()
 ```
 
-### SQLite Factory — `createSQLiteKysely`
+It builds a postgres.js-backed Kysely with the CamelCasePlugin. Pass an existing
+`postgres.Sql` when something else owns the pool — the wrapper then leaves it
+open on `close()`. `poolConfig` keys are only forwarded when set, so postgres.js
+keeps its own defaults for the rest, and it is ignored entirely when you hand in
+an already-constructed connection.
+
+### SQLite factories
+
+```typescript
+import { createNodeSqliteKysely } from '@pikku/kysely-node-sqlite'
+
+// Your application DB — CamelCasePlugin on by default
+const kysely = createNodeSqliteKysely<DB>({
+  filename: 'app.db',       // or ':memory:'
+  camelCase: true,
+  plugins: [],              // layered on top
+  functions: {},            // scalar UDFs, registered as deterministic (Node only)
+})
+```
 
 ```typescript
 import { createSQLiteKysely } from '@pikku/kysely-sqlite'
 
-const kysely = createSQLiteKysely(database: SqliteDatabase | (() => Promise<SqliteDatabase>))
+// Pikku's own tables — returns Kysely<KyselyPikkuDB>, not your DB
+const pikkuDb = createSQLiteKysely(database: SqliteDatabase | (() => Promise<SqliteDatabase>))
 ```
+
+These two are not interchangeable. `createSQLiteKysely` is typed to
+`KyselyPikkuDB` and wires the `SerializePlugin` (JSON columns in and out) rather
+than the CamelCasePlugin, because it exists to back the stores below. Reach for
+`createNodeSqliteKysely` / `createBunSqliteKysely` for the instance your
+functions query.
 
 ### Available Services
 
@@ -151,23 +186,51 @@ Each database variant exports these services with a prefix (`Pg`, `MySQL`, `SQLi
 | `*AgentRunService`    | `AgentRunService`                     | Agent execution tracking                       |
 | `*SecretService`      | `SecretService`                       | Encrypted secret storage (envelope encryption) |
 
+A handful more live only on the base package — there is no `Pg`/`MySQL`/`SQLite`
+variant to reach for, you import them from `@pikku/kysely` whatever the engine:
+
+| Service                    | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `KyselySessionStore`        | Persisted user sessions                       |
+| `KyselyScopeService`        | Scope and role storage                        |
+| `KyselyWebhookService`      | Webhook registrations and deliveries          |
+| `KyselyCredentialService`   | Encrypted third-party credentials             |
+| `KyselyAIRunStateService`   | AI run state (also implemented by AIStorage)  |
+| `KyselyWorkflowMirror`      | Mirrors workflow runs into queryable tables   |
+| `KyselyAuditService`        | Durable audit sink (see `pikku-audit`)        |
+
 All services take a `Kysely<KyselyPikkuDB>` instance in their constructor and have an `init()` method that creates tables if needed.
 
 ### Secret Service
+
+Envelope encryption: each secret gets its own DEK, wrapped by a KEK derived from
+`key` plus a stored per-version salt. Keeping `previousKey` around is what makes
+rotation possible — `rotateKEK` re-wraps every secret from the old key to the
+current one and returns the new version, and it throws if no `previousKey` is
+configured.
 
 ```typescript
 import { PgKyselySecretService } from '@pikku/kysely-postgres'
 
 const secrets = new PgKyselySecretService(db.kysely, {
-  kekSecret: 'your-key-encryption-key',
-  salt: 'your-salt',
+  key: 'your-key-encryption-passphrase',
+  keyVersion: 2, // defaults to 1
+  previousKey: 'the-passphrase-you-are-rotating-away-from',
+  audit: true, // log write/delete/rotate through the audit sink
+  auditReads: false, // reads too — noisy, off by default
 })
 await secrets.init()
 
 await secrets.setSecret('api-key', { key: 'sk-...' })
-const value = await secrets.getSecret<{ key: string }>('api-key')
-await secrets.rotateKEK() // Re-encrypt all secrets with new KEK
+const secret = await secrets.getSecret<{ key: string }>('api-key')
+await secrets.hasSecret('api-key')
+await secrets.deleteSecret('api-key')
+const newVersion = await secrets.rotateKEK()
 ```
+
+`getSecret` hands back a `SecretValue<T>`, not the bare value — it serializes as
+`[secret]` until something reveals it, which is what stops a secret drifting into
+a log line or an audit row. See `pikku-config` for the reveal rules.
 
 ## Usage Patterns
 
