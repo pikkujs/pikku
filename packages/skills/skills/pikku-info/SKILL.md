@@ -1,10 +1,10 @@
 ---
 name: pikku-info
 description: >-
-  Discover what exists in a Pikku project — functions, tags, middleware, permissions, HTTP routes,
-  channels, schedulers, queues, and more. Use when you need to understand the project structure,
-  find existing functions, or check what middleware and permissions are defined. TRIGGER when:
-  user asks "what functions exist?", "show me the project structure", "list
+  Discover what exists in a Pikku project — functions (with their transport, middleware and
+  permissions), tags, middleware and permission definitions. Use when you need to understand the
+  project structure, find existing functions, or check what middleware and permissions are
+  defined. TRIGGER when: user asks "what functions exist?", "show me the project structure", "list
   routes/middleware/permissions", or needs to understand an existing Pikku codebase. DO NOT
   TRIGGER when: user is writing new code (use the specific wiring skill) or asking about Pikku
   concepts (use pikku-concepts).
@@ -27,9 +27,19 @@ Use this skill as an execution checklist, not reference material.
 
 Use the `pikku info` CLI commands to inspect this Pikku project. Run the commands below and present the results to the user in a clear summary.
 
+There are exactly four subcommands — `functions`, `tags`, `middleware`,
+`permissions`. Routes, channels, schedulers and queues are not separate
+subcommands; they show up as the *transport* column of `info functions --verbose`.
+
 ## Available Commands
 
-Always use `--silent` to suppress the banner and inspector logs.
+`--silent` suppresses the banner and the inspector's diagnostics, which is what
+you want when parsing the table. It is read by the CLI but not declared as an
+option, so every run also prints `Warning: Unknown option: --silent (ignored)` —
+the warning is wrong, the flag works. Ignore that one line.
+
+For anything you intend to parse rather than read, prefer `--json` (alias
+`-j`, or `--output json`), which emits NDJSON instead of a formatted table.
 
 ### Functions
 
@@ -91,9 +101,9 @@ yarn pikku info permissions --verbose --silent
 
 1. If the user specifies a subcommand (e.g., `/pikku-info functions`), run only that command.
 2. If no subcommand is specified, run all four commands to give a complete project overview.
-3. Always use `--silent` to suppress the Pikku banner and inspector logs.
-4. Use `--verbose` when the user asks for details, file paths, or "more info".
-5. Use `--limit N` to control output size (default is 50 rows).
+3. Always use `--silent` to suppress the Pikku banner and inspector logs, and disregard the spurious "Unknown option" warning it prints.
+4. Use `--verbose` when the user asks for details, file paths, or "more info". On `tags` it swaps counts for names; elsewhere it adds columns.
+5. Use `--limit N` to control output size (default is 50 rows) — the footer tells you how many were withheld.
 6. After running the commands, summarize the findings concisely:
    - Total count of functions, tags, middleware, and permissions
    - Notable patterns (e.g., which transport types are in use, which tags group the most functions)

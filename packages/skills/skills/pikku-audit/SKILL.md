@@ -29,7 +29,9 @@ Use this skill as an execution checklist, not reference material.
 - **`audit` (singleton `AuditService`)** — the durable **sink**. Write-only: `audit(event)` + optional `write(batch)`. Defaults to `NoopAuditService` (discards). Swap in a real sink to persist (see Sinks).
 - **`auditLog` (wire service `AuditLog`)** — a per-invocation **buffer** built from the sink via `createInvocationAudit(audit, wire)`. `auditLog.write(input)` enriches each event with `functionId`, `wireType`, `traceId`, `occurredAt`, and `userIdentity` (from the wire session) automatically, then flushes to the sink when the invocation ends.
 
-An event only persists when the function opts in with **`audit: true`** — otherwise `auditLog` is a no-op that warns.
+An event only persists when the function opts in with **`audit: true`** — otherwise `auditLog` is a no-op that warns once per invocation, naming the function that dropped the write.
+
+`audit` also takes a config object, `{ durability: 'best-effort' | 'transactional' }`, and `audit: true` is shorthand for `'best-effort'`. Best-effort buffers events and flushes them when the invocation closes, swallowing sink failures with a warning — the function's result is never held hostage to the audit sink. `'transactional'` awaits the sink on every `write()` instead, so a sink failure fails the invocation. Reach for it only when losing the record is worse than failing the call.
 
 ## Wiring (services.ts)
 
@@ -46,9 +48,16 @@ export const createSingletonServices = pikkuServices(async (config, existing) =>
 // a write from a function that forgot `audit: true` warns instead of vanishing.
 export const createWireServices = pikkuWireServices(async (services, wire) => {
   if (!services.audit) return {}
-  return { auditLog: createInvocationAudit(services.audit, wire) }
+  return {
+    auditLog: createInvocationAudit(services.audit, wire, services.logger),
+  }
 })
 ```
+
+The optional third argument is the fallback logger for the dropped-write warning
+and for best-effort flush failures. Without it those messages only surface when
+the wire happens to carry a logger, which is how a missing `audit: true` goes
+unnoticed.
 
 `audit` and `auditLog` are already declared on `CoreSingletonServices` / `CoreServices`, so no type change is needed to inject them.
 
@@ -88,6 +97,8 @@ Helper functions (in `lib/`) that record audit take `auditLog?: AuditLog` in the
 
 Note: events buffer and flush on invocation close. For a write inside a DB transaction, call `auditLog.write()` **after** the transaction commits — the sink is not part of your `trx`, so only record committed state.
 
+`write` is `Safe<>`-guarded the way the logger is: `input` and `metadata` are `unknown`, so a `SecretValue` nested anywhere in the event collapses the call to `never` and it stops compiling. An unrevealed secret would serialize as `[secret]` regardless — the guard just makes putting one in an audit row a decision rather than an accident. Reveal it explicitly if you genuinely mean to record it.
+
 ## Recording events — automatic query capture (optional)
 
 To audit every DB mutation without explicit calls, wrap kysely so each query emits an event. Note this captures table/column changes only — it cannot see semantic events that do no DB write (e.g. "email sent"), so combine with explicit writes when you need those.
@@ -100,6 +111,11 @@ export const createWireServices = pikkuWireServices(async (services, wire) => {
   return { auditLog, kysely: createAuditedKysely(services.kysely, { audit: auditLog }) }
 })
 ```
+
+It is a Kysely plugin, so it wraps the instance rather than replacing it. Only
+mutations are captured by default; `auditReads: true` adds selects, which is
+usually far more volume than it is worth. `eventType`, `transactionId` and
+`queryIdPrefix` are also accepted for labelling the emitted events.
 
 ## Sinks
 
@@ -132,6 +148,8 @@ CREATE TABLE IF NOT EXISTS audit (
 );
 ```
 
+The defaults above are SQLite; on Postgres swap them for `gen_random_uuid()::text` and `now()::text`. Every column stays TEXT on every engine so a locally-run project and a deployed stage write identical rows, and the sink inserts with `ON CONFLICT DO NOTHING` so a retried flush is idempotent.
+
 `auditLog.write({ metadata })` lands in the `data` column. Read history back by filtering it (SQLite `json_extract`, Postgres `->>`):
 
 ```typescript
@@ -157,7 +175,8 @@ type AuditEvent = {
   type: string                          // e.g. 'invoice.update'
   source: 'auto' | 'explicit'
   occurredAt: string                    // auto-filled by auditLog
-  outcome?: string
+  eventId?: string
+  outcome?: 'success' | 'failed' | 'denied'
   functionId?; wireType?; wireId?; traceId?; transactionId?; queryId?  // auto
   userIdentity?: { userId?; orgId?; pikkuUserId? } // auto from wire session
   input?: unknown
@@ -166,6 +185,8 @@ type AuditEvent = {
 ```
 
 `auditLog.write()` takes `Omit<AuditEvent, 'occurredAt'>` — you only supply `type`, `source`, and `metadata` (and `userIdentity` if overriding the session default).
+
+`userIdentity` is filled from the wire's session plus its `pikkuUserId`, and is left off entirely when all three are absent — which is what makes a cron or system invocation land with a null actor rather than an empty object.
 
 ## Do / Don't
 

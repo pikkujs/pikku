@@ -34,20 +34,22 @@ See `pikku-concepts` for the core mental model.
 
 ## Function Versioning
 
-When you need to introduce a breaking change, keep the old function as a pinned version and let the new one become the latest.
+A function with `version: N` is registered under the id `name@vN`. The bare
+name still resolves to it, so callers that don't care about versions keep
+working while a pinned `getBook@v1` stays addressable for the ones that do.
 
-**The pattern:**
+**The pattern:** when you need to introduce a breaking change, copy the current
+function into a pinned `v1` and bump the live one to `version: 2`.
 
-1. Create a new file `my-function-v1.function.ts` — export a variable with the `V1` suffix
-2. Set `override: 'myFunction'` — this is the contract key the manifest groups under
-3. Set `version: 1` — pins this as version 1 of the contract
-4. The existing `my-function.function.ts` (no `version:` field) automatically becomes the latest version
+1. Create `my-function-v1.function.ts` exporting `getBookV1` with `version: 1` —
+   the trailing `V1` matching the version is stripped automatically, so the id
+   becomes `getBook@v1`
+2. Add `version: 2` to the existing `getBook`
 
 ```typescript
 // my-function-v1.function.ts — old contract, kept for running workflows/agents
 export const getBookV1 = pikkuFunc({
-  override: 'getBook', // REQUIRED — links this to the 'getBook' contract family
-  version: 1,
+  version: 1, // id becomes getBook@v1 — the V1 suffix is stripped
   input: z.object({ bookId: z.string() }),
   output: z.object({ title: z.string() }),
   func: async ({ db }, { bookId }) => {
@@ -55,8 +57,9 @@ export const getBookV1 = pikkuFunc({
   },
 })
 
-// my-function.function.ts — latest contract, no version: field
+// my-function.function.ts — latest contract, id becomes getBook@v2
 export const getBook = pikkuFunc({
+  version: 2,
   input: z.object({
     bookId: z.string(),
     format: z.enum(['full', 'summary']),
@@ -72,7 +75,17 @@ export const getBook = pikkuFunc({
 })
 ```
 
-**Why `override` is required:** The manifest groups functions by a shared contract key. Without `override: 'getBook'`, `getBookV1` is stored internally as `getBookV1@v1` (key: `getBookV1`), which is a different contract family from `getBook`. With `override: 'getBook'`, it becomes `getBook@v1` (key: `getBook`), which groups with the unversioned `getBook` — and the unversioned one is automatically promoted to `getBook@v2`.
+**Bump the live function explicitly.** Nothing promotes an unversioned function
+to the next version for you — without `version: 2` it is treated as version 1 of
+the `getBook` contract, colliding with the pinned `getBook@v1` and making
+`versions check` report the published contract as modified.
+
+**`override` is the escape hatch, not the requirement.** The contract key comes
+from the exported name with a matching `V<n>` suffix removed, so
+`getBookV1` + `version: 1` already lands on `getBook`. Use
+`override: 'getBook'` only when the export can't follow that convention — for
+instance `legacyGetBook` with `version: 1`, which would otherwise key under
+`legacyGetBook`.
 
 ## Version Manifest (`versions.pikku.json`)
 
@@ -99,22 +112,41 @@ Pikku tracks contract hashes to detect breaking changes:
 }
 ```
 
-Each hash is derived from the function's input and output schemas plus the contract key. If a schema changes without a version bump, `pikku versions check` will fail.
+Each hash is derived from the function's input and output schemas plus the
+contract key. If a schema changes without a version bump, `pikku versions check`
+will fail.
+
+The manifest lives at `versions.pikku.json` in the project's `rootDir`, and its
+presence is what switches versioning on — with no manifest, nothing is checked.
 
 ## CLI Commands
 
 ```bash
-npx pikku versions init     # Initialize versioning manifest (run once)
+npx pikku versions init     # Create an empty versioning manifest (run once)
 npx pikku versions check    # Detect contract changes (use in CI)
-npx pikku versions update   # Update contract hashes after version bump
+npx pikku versions update   # Record current contract hashes
 ```
+
+`init` writes `{ "manifestVersion": 1, "contracts": {} }` and nothing more — it
+does **not** capture the hashes of the functions you already have. Run
+`versions update` straight after it to record the current state, otherwise
+`check` has nothing to compare against and silently passes.
+
+`update` refuses to save when a published version's hash changed, so it can
+never overwrite an immutable record; it reports that as a diagnostic and leaves
+the manifest alone. Fix the contract or bump the version, then run it again.
+
+Some CLI hints print `npx pikku versions-update`. That command does not exist —
+the subcommand form (`pikku versions update`) is the one to run.
 
 **Workflow:**
 
-1. `pikku versions init` — run once to create `versions.pikku.json`
+1. `pikku versions init` then `pikku versions update` — once, to create and
+   populate `versions.pikku.json`
 2. Develop normally — add/modify functions
 3. `pikku versions check` — CI catches unversioned breaking changes
-4. If intentional: create `my-function-v1.function.ts` with `override` + `version: 1`, then `pikku versions update`
+4. If intentional: pin the old contract as `…V1` with `version: 1`, bump the
+   live function to `version: 2`, then `pikku versions update`
 
 ## CI Integration
 
@@ -135,9 +167,8 @@ jobs:
 ## Complete Example
 
 ```typescript
-// create-todo-v1.function.ts — v1 locked contract
+// create-todo-v1.function.ts — v1 locked contract, id: createTodo@v1
 export const createTodoV1 = pikkuSessionlessFunc({
-  override: 'createTodo', // groups under 'createTodo' contract family
   version: 1,
   input: z.object({ title: z.string() }),
   output: z.object({ id: z.string(), title: z.string() }),
@@ -146,6 +177,7 @@ export const createTodoV1 = pikkuSessionlessFunc({
 
 // create-todo.function.ts — v2 (latest), called by default
 export const createTodo = pikkuSessionlessFunc({
+  version: 2,
   input: z.object({
     title: z.string(),
     priority: z.enum(['low', 'medium', 'high']),
