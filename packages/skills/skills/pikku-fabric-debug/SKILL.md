@@ -63,6 +63,8 @@ pikku fabric metrics -b main                       # last 24h
 pikku fabric metrics -b main --hours 2 --function createOrder
 ```
 
+`--branch` is **required** here too; `--hours` defaults to 24.
+
 Rows are `reqs= err= (rate%) avg= min= max=` per bucket. A single bad request
 with a healthy error rate is a data problem; a climbing error rate is a
 deployment or dependency problem. `--json` additionally returns a `wireTypes`
@@ -95,7 +97,9 @@ deploy stuck in flight, explains a whole class of "my fix did nothing".
   `--since 15m` silently returns the same default window as no flag at all. Do
   not conclude "nothing happened in the last 15 minutes" from it. Narrow by
   `--level`, or by `--function` via `errors`, instead.
-- **`--follow` is a 2-second client-side poll, not a server stream.** It
+- **`--follow` is a 2-second client-side poll, not a server stream** — despite
+  its own help text reading "Stream new logs (SSE)". Server-side SSE is planned;
+  the backend doesn't push natively today. It
   dedups against what it already printed, so it behaves like `tail -f`, but new
   entries can appear up to ~2s late and it holds the process open until killed.
 

@@ -33,3 +33,7 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-schema-ajv / pikku-schema-cfworker: the two validators are not drop-in equivalents — AJV caches by name forever and fills defaults in place, cfworker recompiles on a changed schema and applies no defaults; a missing schema throws a bare string rather than an `Error`
 - pikku-n8n-import: the output directory is `--out/-o`, not a positional argument, and `pikku import n8n` already accepts a directory and flattens array/`{workflows:[]}` exports — an un-importable workflow is skipped while the rest of a batch still imports
 - pikku-template-clone: `create-pikku` keeps only the chosen package manager's lockfile and may have written an empty `yarn.lock`, so commit it after the first install rather than as scaffolded
+- pikku-fabric: the wirings file comment claimed a `wireMCPTool` that has never existed, and the conversion checklist named `fabric.config.json` with a `production.branch` — the real file is `pikkufabric.config.json` with `production.domain`; notes that several CLI messages print the shorter name anyway
+- pikku-fabric-debug: `metrics` also requires `--branch`, and `--follow`'s own help text advertises SSE for what is a 2-second client poll
+- pikku-product-second-opinion: stop asserting a fixed TanStack Start release stage — `@tanstack/react-start`'s major tracks the Router line, so the version says nothing about maturity; check the vendor at write-up time
+
