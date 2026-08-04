@@ -35,16 +35,24 @@ missing dependency).
 ### 1 — Run the importer (do as much as possible, cheaply)
 
 ```bash
-pikku import n8n <export.json> [outDir]
+pikku import n8n <file> [--out <dir>]   # -o for short
 ```
+
+The output directory is an **option**, not a positional argument; omitted, it
+falls back to `scaffold.functionDir` from `pikku.config.json`, then cwd.
+
+`<file>` is one export, **or a directory** — the command reads every `.json` in
+it — and either form may hold a single workflow object, a bare array (`n8n
+export:workflow --all`), or a `{ workflows: [...] }` wrapper. All of those are
+flattened into one import per workflow, so there is no need to loop yourself.
 
 It writes `<slug>.graph.ts` (+ `.agent.ts` for AI workflows), `<slug>.addons.gen.ts`,
 a `<slug>.integrations.json` manifest, and one stub function per node it could not
-map. It **exits 1** on an un-importable input (a cross-workflow sub-workflow
-reference, a dynamic workflow target, a mid-flow `respondToWebhook`) with a
-`[reason] message` — relay that to the user; do not fake a partial scaffold.
-
-For a directory of exports, run it per file.
+map. An un-importable workflow (a cross-workflow sub-workflow reference, a dynamic
+workflow target, a mid-flow `respondToWebhook`) is reported as `[reason] message`
+and **skipped** — nothing partial is written for it. Across a batch the others
+still import; the command exits 1 at the end if any failed, so read the log rather
+than the exit code to know what landed. Relay every skipped workflow to the user.
 
 ### 2 — Triage what it left
 
