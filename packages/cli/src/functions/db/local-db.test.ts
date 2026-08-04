@@ -24,7 +24,7 @@ import {
   generateMigrations,
   parseDatabaseUrl,
   migrateAndCodegen,
-  seed as runSeed,
+  devSeed as runDevSeed,
   reset as runReset,
   createKysely,
 } from './local-db.js'
@@ -53,7 +53,7 @@ const baselineOf = (resolved: Parameters<typeof baseline>[0]) =>
 
 function usePostgresProject(options?: {
   migrationSql?: string
-  seedSql?: string
+  devSeedSql?: string
 }) {
   rmSync(join(root, 'db', 'sqlite'), { recursive: true, force: true })
   mkdirSync(join(root, 'db', 'postgres'), { recursive: true })
@@ -67,11 +67,11 @@ function usePostgresProject(options?: {
 );
 `
   )
-  if (options?.seedSql !== undefined) {
-    writeFileSync(join(root, 'db', 'postgres-seed.sql'), options.seedSql)
+  if (options?.devSeedSql !== undefined) {
+    writeFileSync(join(root, 'db', 'postgres-dev-seed.sql'), options.devSeedSql)
   } else {
     writeFileSync(
-      join(root, 'db', 'postgres-seed.sql'),
+      join(root, 'db', 'postgres-dev-seed.sql'),
       `INSERT INTO todos (title, done) VALUES ('walk dog', FALSE);
 INSERT INTO todos (title, done) VALUES ('buy milk', TRUE);
 `
@@ -93,7 +93,7 @@ beforeEach(() => {
 `
   )
   writeFileSync(
-    join(root, 'db', 'sqlite-seed.sql'),
+    join(root, 'db', 'sqlite-dev-seed.sql'),
     `INSERT INTO todos (title, done) VALUES ('walk dog', 0);
 INSERT INTO todos (title, done) VALUES ('buy milk', 1);
 `
@@ -285,12 +285,12 @@ test('migrateAndCodegen throws MigrationDriftError when applied file changes', a
   )
 })
 
-test('seed applies db/seed.sql once migrate has run', async () => {
+test('dev-seed applies db/sqlite-dev-seed.sql once migrate has run', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
   assert.equal(resolved.dialect, 'sqlite')
   await migrateAndCodegen(resolved)
 
-  const result = await runSeed(resolved)
+  const result = await runDevSeed(resolved)
   assert.equal(result.applied, true)
   assert.ok(result.bytes > 0)
 
@@ -306,11 +306,42 @@ test('seed applies db/seed.sql once migrate has run', async () => {
   }
 })
 
+test('dev-seed refuses to run under NODE_ENV=production', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const previous = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+  try {
+    await assert.rejects(
+      () => runDevSeed(resolved),
+      /pikku db dev-seed refused: NODE_ENV=production/
+    )
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NODE_ENV
+    } else {
+      process.env.NODE_ENV = previous
+    }
+  }
+
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(resolved.dbFile)
+  try {
+    const count = db.prepare('SELECT COUNT(*) AS c FROM todos').get() as {
+      c: number
+    }
+    assert.equal(count.c, 0)
+  } finally {
+    db.close()
+  }
+})
+
 test('reset wipes the dev DB so a follow-up migrate replays from scratch', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
   assert.equal(resolved.dialect, 'sqlite')
   await migrateAndCodegen(resolved)
-  await runSeed(resolved)
+  await runDevSeed(resolved)
 
   await runReset(resolved, root)
 
@@ -381,24 +412,24 @@ test('reset refuses when resolved PGlite dir lives outside the runtime directory
   rmSync(outside, { recursive: true, force: true })
 })
 
-test('postgres PGlite seed is a no-op when the seed file is missing', async () => {
+test('postgres PGlite dev-seed is a no-op when the dev-seed file is missing', async () => {
   usePostgresProject()
-  rmSync(join(root, 'db', 'postgres-seed.sql'), { force: true })
+  rmSync(join(root, 'db', 'postgres-dev-seed.sql'), { force: true })
 
   const resolved = resolveDb({}, root, root)!
   assert.equal(resolved.dialect, 'postgres')
 
-  const result = await runSeed(resolved)
+  const result = await runDevSeed(resolved)
   assert.deepEqual(result, { applied: false, bytes: 0 })
 })
 
-test('postgres PGlite seed is a no-op when the seed file is blank', async () => {
-  usePostgresProject({ seedSql: '   \n\t  ' })
+test('postgres PGlite dev-seed is a no-op when the dev-seed file is blank', async () => {
+  usePostgresProject({ devSeedSql: '   \n\t  ' })
 
   const resolved = resolveDb({}, root, root)!
   assert.equal(resolved.dialect, 'postgres')
 
-  const result = await runSeed(resolved)
+  const result = await runDevSeed(resolved)
   assert.deepEqual(result, { applied: false, bytes: 0 })
 })
 
@@ -412,7 +443,7 @@ test('postgres PGlite migrations support multi-statement SQL files', async () =>
 CREATE INDEX todos_title_idx ON todos (title);
 INSERT INTO todos (title, done) VALUES ('seed from migration', FALSE);
 `,
-    seedSql: '',
+    devSeedSql: '',
   })
 
   const resolved = resolveDb({}, root, root)!
@@ -480,7 +511,7 @@ CREATE TABLE docs (
   meta hstore
 );
 `,
-    seedSql: '',
+    devSeedSql: '',
   })
 
   const resolved = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
@@ -497,7 +528,7 @@ CREATE TABLE docs (
   meta hstore
 );
 `,
-    seedSql: '',
+    devSeedSql: '',
   })
 
   const resolved = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
@@ -515,7 +546,7 @@ CREATE TABLE docs (
 test('an undeclared extension fails with guidance rather than a bare Postgres error', async () => {
   usePostgresProject({
     migrationSql: `CREATE EXTENSION IF NOT EXISTS hstore;\n`,
-    seedSql: '',
+    devSeedSql: '',
   })
 
   const resolved = resolveDb({}, root, root)!
@@ -749,8 +780,8 @@ test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', a
   assert.equal(first.codegen.written, true)
   assert.equal(first.zod.written, true)
 
-  const seedResult = await runSeed(resolved)
-  assert.equal(seedResult.applied, true)
+  const devSeedResult = await runDevSeed(resolved)
+  assert.equal(devSeedResult.applied, true)
 
   const kysely = await createKysely<{
     todos: { title: string; done: boolean }

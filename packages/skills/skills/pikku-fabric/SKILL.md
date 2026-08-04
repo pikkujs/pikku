@@ -96,6 +96,21 @@ Run migrations: `pikku db migrate`. It also regenerates `.pikku/db/schema.gen.ts
 
 **NEVER hand-edit the generated schema** — write a migration and re-run.
 
+### Dev seed data
+
+Alongside the migrations sits `db/<engine>-dev-seed.sql` — `db/sqlite-dev-seed.sql`
+or `db/postgres-dev-seed.sql`. `pikku db dev-seed` applies it, and `pikku db reset`
+applies it after migrating.
+
+This is **test data only**: enough rows that a freshly created dev database isn't
+an empty app. It is never applied to staging or production, and the command
+refuses to run under `NODE_ENV=production`. Anything a real environment needs —
+accounts, role grants — is provisioning, not seeding, and belongs in
+`pikku persona sync` or a migration.
+
+Write it to be safe to re-run: `INSERT OR IGNORE` on SQLite, `ON CONFLICT DO NOTHING`
+on Postgres.
+
 A Better Auth app has a second constraint: the plugins you enable (`admin()`,
 `actor()`, …) each declare columns, and `pikku db migrate` refuses to run while
 the applied schema is missing any of them. `pikku db generate` writes the
@@ -152,6 +167,7 @@ packages/functions/
     db/schema.gen.ts   # Kysely types, written by `pikku db migrate` — NEVER hand-edit
 apps/app/              # Frontend(s)
 db/sqlite/             # Plain .sql migrations, numbered, gap-free (project root)
+db/sqlite-dev-seed.sql # Dev-only test data, applied by `pikku db dev-seed`
 pikku.config.json      # Pikku + deploy config (project root)
 pikkufabric.config.json # Fabric project link + frontends (project root)
 ```

@@ -46,7 +46,7 @@ class BunSqliteDatabase implements SyncSqliteDatabase {
 
   exec(sql: string): void {
     // bun:sqlite throws "no valid SQL statement" on comment-only/empty input
-    // (e.g. a placeholder seed.sql); node:sqlite silently no-ops. Match node's
+    // (e.g. a placeholder dev-seed.sql); node:sqlite silently no-ops. Match node's
     // tolerance by skipping when nothing executable remains after stripping
     // comments. The original `sql` is still exec'd verbatim when non-empty.
     const executable = sql

@@ -1035,26 +1035,26 @@ export async function runValidate(
       }
     }
 
-    const seedPath = join(
+    const devSeedPath = join(
       root,
       'db',
-      dbEngine === 'postgres' ? 'postgres-seed.sql' : 'sqlite-seed.sql'
+      dbEngine === 'postgres' ? 'postgres-dev-seed.sql' : 'sqlite-dev-seed.sql'
     )
-    if (!existsSync(seedPath)) {
+    if (!existsSync(devSeedPath)) {
       e(
-        'seed-sql-missing',
+        'dev-seed-sql-missing',
         dbEngine === 'postgres'
-          ? 'db/postgres-seed.sql not found'
-          : 'db/sqlite-seed.sql not found',
-        seedPath,
+          ? 'db/postgres-dev-seed.sql not found'
+          : 'db/sqlite-dev-seed.sql not found',
+        devSeedPath,
         dbEngine === 'postgres'
           ? lines(
-              'Create `db/postgres-seed.sql`.',
+              'Create `db/postgres-dev-seed.sql`.',
               'Use idempotent INSERT statements suitable for local/dev/test setup.',
               'Keep it safe to re-run.'
             )
           : lines(
-              'Create `db/sqlite-seed.sql`.',
+              'Create `db/sqlite-dev-seed.sql`.',
               'Use idempotent `INSERT OR IGNORE` statements for local/dev/test data.',
               'Keep it safe to re-run.'
             )

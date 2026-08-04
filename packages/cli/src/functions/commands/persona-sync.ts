@@ -35,7 +35,7 @@ const userIdByEmail = async (
  * Provision the declared personas into an environment: their accounts, and the
  * roles they declare.
  *
- * This is deployment, not seeding. `pikku db seed` applies a project's test
+ * This is deployment, not seeding. `pikku db dev-seed` applies a project's test
  * fixtures and does not run in production; an accountable persona doing a real
  * job in production still needs an account and its grants, and this is where
  * they come from.

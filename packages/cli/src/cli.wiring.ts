@@ -22,7 +22,7 @@ import { dbCodegen } from './functions/commands/db-codegen.js'
 import { dbCheck } from './functions/commands/db-check.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
-import { dbSeed } from './functions/commands/db-seed.js'
+import { dbDevSeed } from './functions/commands/db-dev-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
 import { scopesAudit } from './functions/commands/scopes-audit.js'
@@ -43,10 +43,7 @@ import {
   renderKnowledgeIndex,
 } from './functions/commands/knowledge-index.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
-import {
-  personaList,
-  personaRun,
-} from './functions/commands/persona.js'
+import { personaList, personaRun } from './functions/commands/persona.js'
 import { personaSync } from './functions/commands/persona-sync.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
@@ -432,13 +429,15 @@ wireCLI({
           description:
             "Publish this package's schema so projects consuming it as an addon can create its tables",
         }),
-        seed: pikkuCLICommand({
-          func: dbSeed,
-          description: 'Apply db/seed.sql to the dev database',
+        'dev-seed': pikkuCLICommand({
+          func: dbDevSeed,
+          description:
+            'Apply db/<engine>-dev-seed.sql to the dev database. Test data only — it refuses to run in production',
         }),
         reset: pikkuCLICommand({
           func: dbReset,
-          description: 'Wipe and recreate the dev database (migrate + seed)',
+          description:
+            'Wipe and recreate the dev database (migrate + dev-seed)',
         }),
         audit: pikkuCLICommand({
           func: dbAudit,
@@ -471,7 +470,8 @@ wireCLI({
       },
     },
     roles: {
-      description: 'Inspect and maintain the roles declared with defineSystemRole',
+      description:
+        'Inspect and maintain the roles declared with defineSystemRole',
       subcommands: {
         audit: pikkuCLICommand({
           func: rolesAudit,
