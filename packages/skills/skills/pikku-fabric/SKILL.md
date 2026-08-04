@@ -99,17 +99,21 @@ Run migrations: `pikku db migrate`. It also regenerates `.pikku/db/schema.gen.ts
 ### Dev seed data
 
 Alongside the migrations sits `db/<engine>-dev-seed.sql` — `db/sqlite-dev-seed.sql`
-or `db/postgres-dev-seed.sql`. `pikku db dev-seed` applies it, and `pikku db reset`
-applies it after migrating.
+or `db/postgres-dev-seed.sql`. There is no seed command. `pikku db reset` is the
+only thing that applies it: wipe, migrate, seed. `--no-seed` stops after the
+migration, for working on an empty-state or onboarding flow the test data hides.
 
-This is **test data only**: enough rows that a freshly created dev database isn't
-an empty app. It is never applied to staging or production, and the command
-refuses to run under `NODE_ENV=production`. Anything a real environment needs —
-accounts, role grants — is provisioning, not seeding, and belongs in
+Because reset always arrives at a database it has just wiped, **the seed file is
+plain `INSERT`s** — no `INSERT OR IGNORE`, no `ON CONFLICT DO NOTHING`, no
+`IF NOT EXISTS`. Nothing applies it twice, so it never has to defend itself. If
+you find yourself reaching for an idempotent form, that's a sign the data wants
+to be a migration instead.
+
+This is **test data only**: enough rows that a fresh dev database isn't an empty
+app. It never reaches staging or production — reset refuses `NODE_ENV=production`
+and refuses a database outside the runtime directory. Anything a real environment
+needs — accounts, role grants — is provisioning, not seeding, and belongs in
 `pikku persona sync` or a migration.
-
-Write it to be safe to re-run: `INSERT OR IGNORE` on SQLite, `ON CONFLICT DO NOTHING`
-on Postgres.
 
 A Better Auth app has a second constraint: the plugins you enable (`admin()`,
 `actor()`, …) each declare columns, and `pikku db migrate` refuses to run while
@@ -167,7 +171,7 @@ packages/functions/
     db/schema.gen.ts   # Kysely types, written by `pikku db migrate` — NEVER hand-edit
 apps/app/              # Frontend(s)
 db/sqlite/             # Plain .sql migrations, numbered, gap-free (project root)
-db/sqlite-dev-seed.sql # Dev-only test data, applied by `pikku db dev-seed`
+db/sqlite-dev-seed.sql # Dev-only test data, applied by `pikku db reset`
 pikku.config.json      # Pikku + deploy config (project root)
 pikkufabric.config.json # Fabric project link + frontends (project root)
 ```
