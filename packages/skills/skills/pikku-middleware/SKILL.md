@@ -136,7 +136,7 @@ Tags from the function definition and the wire object are merged — middleware 
 ### Registering Tag Middleware
 
 ```typescript
-import { addTagMiddleware } from '.pikku/pikku-types.gen.js'
+import { addTagMiddleware } from '#pikku'
 
 addTagMiddleware('machine-agent', [machineAgentBearerAuth])
 ```
@@ -145,17 +145,29 @@ Call at module load time — typically in the same `wirings/*.ts` file as the `w
 
 ## Middleware Execution Order
 
-**Scope resolution order (broadest → narrowest):**
+Resolution happens in two steps, and the order matters more than it looks.
+
+**Step 1 — collect, broadest → narrowest:**
 
 ```text
 global → httpGroup/* → httpGroup/prefix → wiringTags → wiringMiddleware → funcTags → funcMiddleware → function body
 ```
 
-**Within each scope, sorted by priority:**
+**Step 2 — sort that whole flat list by priority:**
 
 ```text
 highest → high → medium (default) → low → lowest
 ```
+
+**Priority is the primary key across every scope, not within one.** The collected
+list is flattened first and sorted once, so a `priority: 'lowest'` global
+middleware runs *after* an inline per-route middleware of default priority — the
+narrower scope does not win. Scope order survives only as the tiebreaker between
+middleware of equal priority, because the sort is stable.
+
+This is what makes `telemetryOuter`/`telemetryInner` work: they pin themselves to
+`highest`/`lowest` so they bracket every other middleware no matter where those
+were registered.
 
 Set priority using the config-object form of `pikkuMiddleware`:
 
@@ -167,7 +179,7 @@ const earlyMiddleware = pikkuMiddleware({
 })
 ```
 
-Priority is the primary sort key; within the same level, registration order is preserved. Use priority when a middleware must run before/after others regardless of registration order (e.g. telemetry wrapping everything, session extraction before auth checks).
+Within the same priority level, the collection order above is preserved. Use priority when a middleware must run before/after others regardless of where it was registered (e.g. telemetry wrapping everything, session extraction before auth checks).
 
 ## Service-to-Service Bearer Auth (canonical pattern)
 
@@ -185,7 +197,7 @@ export const getToken = () => _token
 ```typescript
 // wirings/http.wiring.ts
 import { timingSafeEqual } from 'node:crypto'
-import { addTagMiddleware, pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
+import { addTagMiddleware, pikkuMiddleware } from '#pikku'
 import { UnauthorizedError } from '@pikku/core/errors'
 import { getToken } from '../lib/host-token.js'
 

@@ -7,7 +7,8 @@ description: >-
   tree-shaking. TRIGGER when: code uses pikkuServices/pikkuWireServices/pikkuServerLifecycle, user
   asks about services.ts, lifecycle.ts, dependency injection, service factories, startup or
   shutdown work, or built-in services (ConsoleLogger, JoseJWTService). DO NOT TRIGGER when: user asks
-  about auth middleware (use pikku-security) or secrets/variables (use pikku-config).
+  about middleware (use pikku-middleware), auth strategies or sessions (use pikku-security),
+  permissions (use pikku-permissions), or secrets/variables (use pikku-config).
 installGroups: [core]
 ---
 
@@ -131,7 +132,7 @@ export type RequiredSingletonServices = Pick<
 
 ### Using Services in Functions
 
-**Every service must be declared in `SingletonServices` (or `Services`) in `application-types.d.ts`.** Never access a service via a body-level cast (`services as typeof services & { myService: MyService }`) — that means the type is missing. Add the import and the field to `SingletonServices`, then destructure inline in the function signature. The inspector emits `SERVICES_NOT_DESTRUCTURED` and tree-shaking breaks when the first param is a plain identifier rather than an object pattern. Never `new` a service inside a function — services arrive only via injection.
+**Every service must be declared in `SingletonServices` (or `Services`) in `application-types.d.ts`.** Never access a service via a body-level cast (`services as typeof services & { myService: MyService }`) — that means the type is missing. Add the import and the field to `SingletonServices`, then destructure inline in the function signature. The inspector emits `SERVICES_NOT_DESTRUCTURED` (`PKU410`) and tree-shaking breaks when the first param is a plain identifier rather than an object pattern. Never `new` a service inside a function — services arrive only via injection.
 
 ```typescript
 // ✅ Correct — inline destructure, no cast
@@ -156,14 +157,19 @@ const getUser = pikkuFunc({
 
 **Never write a `if (!service) throw ...` existence guard in a function body.** It is dead code, and it defeats the platform.
 
-Optionality lives in exactly one place — `services.ts` / the `SingletonServices` declaration — and it means *"this may not be created"*, not *"this may be missing at call time"*. A service is optional precisely because **nothing destructures it**, and `requireSingletonServices` therefore never creates it. The moment any wired function destructures it, Pikku creates it and guarantees it is there.
+Optionality lives in exactly one place — `services.ts` / the `SingletonServices` declaration — and it means *"this may not be created"*, not *"this may be missing at call time"*. A service is optional precisely because **nothing destructures it**, and the generated `requiredSingletonServices` manifest therefore never marks it for creation. The moment any wired function destructures it, Pikku creates it and guarantees it is there.
 
 The types enforce this rather than merely documenting it. The inspector records the services destructured by every wired `func`, `permissions` **and** `middleware`, and emits them as `RequiredSingletonServices`. The generated function types then default their service parameter to:
 
 ```typescript
 export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
-export type WiredServices = RequiredSingletonServices & Services
+export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
 ```
+
+The `SecretlessServices<...>` wrapper is why `secrets` never appears in a
+function's services: it is stripped at the type level, not merely omitted by
+convention. Read secrets in a service factory or middleware and hand the value
+to a service instead.
 
 so a service that is `foo?: Foo` in `SingletonServices` arrives as a non-optional `Foo` in every function, permission and middleware that uses it. There is nothing to guard against.
 
@@ -266,7 +272,7 @@ export const createSingletonServices = pikkuServices(async (config) => {
 
 export const createWireServices = pikkuWireServices(
   async (singletonServices, wire) => ({
-    scopedLogger: new ScopedLogger(wire.session?.initial?.userId),
+    scopedLogger: new ScopedLogger(wire.session?.userId),
   })
 )
 

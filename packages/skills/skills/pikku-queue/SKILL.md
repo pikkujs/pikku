@@ -43,10 +43,32 @@ wireQueueWorker({
   name: string,            // Queue name (unique identifier)
   func: PikkuFunc,         // Worker function
   config?: {
-    batchSize?: number,    // Process N jobs at once
-    removeOnComplete?: number | boolean,  // Clean up completed jobs
+    batchSize?: number,           // Total worker concurrency
+    prefetch?: number,
+    pollInterval?: number,        // ms
+    visibilityTimeout?: number,   // seconds
+    lockDuration?: number,        // ms
+    drainDelay?: number,          // seconds
+    removeOnComplete?: number,    // how many completed jobs to RETAIN (a count, not an age)
+    removeOnFail?: number,        // how many failed jobs to RETAIN
+    maxStalledCount?: number,
+    autorun?: boolean,
+    groupConcurrency?: number | GroupConcurrencyConfig,  // must not exceed batchSize
   },
 })
+```
+
+Not every adapter supports every option. Each adapter declares a
+`QueueConfigMapping`, and unsupported keys are dropped with a warning rather than
+silently ignored — so check the startup logs if a setting appears to have no
+effect.
+
+`groupConcurrency` limits how many jobs run concurrently *per group* (jobs
+carrying a `JobGroup` with an `id` and optional `tier`), so one noisy tenant
+cannot consume the whole worker:
+
+```typescript
+groupConcurrency: { default: 2, tiers: { enterprise: 10 } }
 ```
 
 ### Wire Object (`wire.queue`)
@@ -54,10 +76,14 @@ wireQueueWorker({
 Inside queue worker functions:
 
 ```typescript
-wire.queue.updateProgress(percent: number)  // Report progress (0-100)
-wire.queue.discard(reason: string)          // Silently discard job
-wire.queue.fail(reason: string)             // Mark job as failed
+wire.queue.updateProgress(progress: number | string | object)  // Report progress
+wire.queue.discard(reason?: string)   // Silently discard job (throws QueueJobDiscardedError)
+wire.queue.fail(reason?: string)      // Mark job as failed
 ```
+
+`updateProgress` is not limited to a 0-100 percentage — a string or an object
+lets a long job report a stage ("rendering page 4/20") that a dashboard can show
+directly.
 
 ### Job Publishing
 
@@ -69,13 +95,15 @@ Options:
 
 ```typescript
 {
-  priority?: number,       // Higher = processed first
-  delay?: number,          // Delay in ms before processing
-  attempts?: number,       // Max retry attempts
-  backoff?: {
-    type: 'exponential' | 'fixed',
-    delay: number,         // Base delay in ms
-  },
+  retryAttempts?: number,   // Max retry attempts
+  retryDelay?: number,      // Base delay in ms
+  retryBackoff?: 'linear' | 'exponential' | 'fixed',
+  deadLetterQueue?: string, // Where exhausted jobs land
+  messageRetention?: number,// Seconds
+  priority?: number,        // Higher numbers run first
+  fifo?: boolean,
+  timeout?: number,         // ms
+  delay?: number,           // ms before the job becomes eligible
 }
 ```
 
@@ -146,8 +174,9 @@ const jobId = await queue.add(
   {
     priority: 10,
     delay: 5000,
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 1000 },
+    retryAttempts: 3,
+    retryBackoff: 'exponential',
+    retryDelay: 1000,
   }
 )
 ```
@@ -157,7 +186,7 @@ const jobId = await queue.add(
 After `npx pikku all`:
 
 ```typescript
-import { PikkuQueue } from '.pikku/pikku-queue.gen.js'
+import { PikkuQueue } from '#pikku/pikku-queue.gen.js'
 
 const queue = new PikkuQueue(queueService)
 
@@ -167,7 +196,7 @@ const jobId = await queue.add('todo-reminders', {
 })
 
 const job = await queue.getJob('todo-reminders', jobId)
-const status = await job.status() // 'waiting' | 'active' | 'completed' | 'failed'
+const status = await job.status() // 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 const result = await job.waitForCompletion(30_000)
 ```
 

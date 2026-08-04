@@ -2,9 +2,10 @@
 name: pikku-ai-agent
 description: >-
   Use when building AI agents, chatbots, or LLM-powered assistants with Pikku. Covers
-  pikkuAIAgent, tool registration, memory, streaming, and agent invocation. TRIGGER when: code
-  uses pikkuAIAgent/runAIAgent/streamAIAgent, user asks about AI agents, chatbots, LLM assistants,
-  tool-calling agents, or agent memory/streaming. DO NOT TRIGGER when: user asks about MCP tool
+  pikkuAIAgent, ref() tool registration, memory, streaming, tool approval, thread ownership, and
+  invocation via rpc.agent. TRIGGER when: code uses pikkuAIAgent/rpc.agent/runAIAgent/
+  streamAIAgent, user asks about AI agents, chatbots, LLM assistants, tool-calling agents, agent
+  memory/streaming, or `pikku enable agent`. DO NOT TRIGGER when: user asks about MCP tool
   exposure (use pikku-mcp) or general function definitions (use pikku-concepts).
 installGroups: [core]
 ---
@@ -36,16 +37,35 @@ See `pikku-concepts` for the core mental model.
 
 ### `pikkuAIAgent(config)`
 
+Import it from the generated agent types file — `#pikku` does not re-export it:
+
 ```typescript
-import { pikkuAIAgent } from '#pikku'
+import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 pikkuAIAgent({
   name: string,                  // Unique agent identifier
-  description: string,           // What the agent does
-  instructions: string | string[],  // System prompt / behavior instructions
-  model: string,                 // LLM model (e.g. 'openai/gpt-5-mini')
-  tools?: PikkuFunc[],           // Pikku functions the agent can call
-  agents?: AIAgentConfig[],      // Sub-agents this agent can delegate to
+  description: string,           // What the agent does (shown in agent listings)
+  summary?: string,
+  errors?: string[],
+
+  // --- system prompt: three fields, joined role → personality → goal ---
+  role?: string,                 // Who it is: 'You are a support engineer triaging bugs.'
+  personality?: string,          // How it sounds: tone, verbosity
+  goal: string,                  // REQUIRED — what it is for
+
+  model: string,                 // e.g. 'openai/gpt-5-mini'
+  temperature?: number,
+  providerOptions?: {            // passed through untouched, keyed by provider
+    openai?: { reasoningEffort?: 'minimal' | ... },
+  },
+
+  // --- capabilities: all three take ref() handles, not imported values ---
+  tools?: unknown[],             // ref('todos:addTodo'), ref('graph:sleep'), …
+  agents?: unknown[],            // sub-agents to delegate to
+  workflows?: unknown[],         // workflows callable as a tool
+  agentMode?: 'delegate' | 'supervise',
+
   memory?: {
     storage?: string,            // Service name for persistence (e.g. 'aiStorage')
     vector?: string,             // Vector store service name
@@ -53,117 +73,188 @@ pikkuAIAgent({
     lastMessages?: number,       // How many messages to retain in context
     workingMemory?: ZodSchema,   // Schema for structured working memory
   },
+
   maxSteps?: number,             // Max tool-call rounds per invocation
-  temperature?: number,          // LLM temperature (0-1)
   toolChoice?: 'auto' | 'required' | 'none',
-  input?: ZodSchema,             // Input validation schema
-  output?: ZodSchema,            // Output validation schema
-  tags?: string[],               // For grouping and middleware targeting
-  aiMiddleware?: PikkuAIMiddlewareHooks[],  // AI-specific middleware
-  middleware?: PikkuMiddleware[],
+  prepareStep?: (ctx) => void,   // See "Narrowing tools per step"
+  input?: ZodSchema,
+  output?: ZodSchema,            // Structured output — only honoured with NO tools
+  tags?: string[],
+
+  sessionScope?: 'user' | 'org', // Who owns this agent's threads. Default 'user'
+  auth?: boolean,                // Default false — see below
+  scopes?: ScopeId[],            // AND gate, checked before permissions
   permissions?: PermissionGroup,
+
+  middleware?: PikkuMiddleware[],
+  channelMiddleware?: PikkuChannelMiddleware[],
+  aiMiddleware?: PikkuAIMiddlewareHooks[],
 })
 ```
 
-### `runAIAgent(name, input, options)` — Non-streaming
+**`goal` is the required prompt field, not `instructions`** — there is no
+`instructions` key. `role`/`personality`/`goal` are concatenated in that order,
+and nothing validates which text lands in which, so the split is purely for
+legibility: prose in the "wrong" one still reaches the model.
+
+**Tools are `ref('domain:funcName')` handles, not imported function values.** The
+inspector resolves the ref against the generated function map, which is what lets
+an agent reach a function in another package (or a `graph:*` builtin) without an
+import cycle.
+
+`auth` defaults to `false` because agents are usually invoked from an
+already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced either
+way — see `pikku-permissions`.
+
+### Invoking an agent
+
+From inside a Pikku function, go through `wire.rpc.agent` — it carries the
+session, credentials, and RPC depth for you:
 
 ```typescript
-const result = await runAIAgent(
-  agentName,
-  {
-    message: string, // User message
-    threadId: string, // Conversation thread ID
-    resourceId: string, // User/resource identifier
-  },
-  { singletonServices }
-)
+const result = await rpc.agent.run('todo-agent', {
+  message, threadId, resourceId,     // required
+  attachments?, model?, temperature?, context?,
+})
 
-result.text // Agent's text response
-result.steps // Array of tool calls made
-result.usage // Token usage { inputTokens, outputTokens }
+await rpc.agent.stream('todo-agent', input)              // writes to the wire's channel
+await rpc.agent.approve(runId, [{ toolCallId, approved }], expectedAgentName?)
+await rpc.agent.resume(runId, { toolCallId, approved })
+await rpc.agent.interrupt(runId, 'user' | 'speech' | 'timeout')
 ```
 
-### `streamAIAgent(name, input, channel, options)` — Streaming
+`context` is a string injected into the system prompt for this request only —
+use it for upfront state (current org, project, deployment) so the agent stops
+asking the user for identifiers it could have been handed.
+
+`run` resolves to:
 
 ```typescript
-await streamAIAgent(
-  agentName,
-  {
-    message: string,
-    threadId: string,
-    resourceId: string,
-  },
-  channel,
-  { singletonServices }
-)
+{
+  runId, threadId, text,
+  object?,                              // set when the agent has an `output` schema
+  steps,                                // tool calls made
+  usage: { inputTokens, outputTokens },
+  status?: 'completed' | 'suspended',
+  pendingApprovals?: [{ toolCallId, toolName, args, reason?, runId }],
+}
+```
 
-// Channel receives events:
-// { type: 'step-start', stepNumber: 1 }
-// { type: 'text-delta', text: '...' }
-// { type: 'reasoning-delta', text: '...' }
+`runAIAgent` / `streamAIAgent` from `@pikku/core/ai-agent` are the layer beneath
+this. Their third argument is `RunAIAgentParams` (`{ sessionService?,
+getCredential?, anonymousOwnerResourceId? }`) — **not** `{ singletonServices }`.
+Reach for them only outside a wired function; inside one, `rpc.agent` is the
+supported path.
+
+### Stream events
+
+`rpc.agent.stream` pushes `AIStreamEvent`s onto the channel:
+
+```typescript
+// { type: 'step-start', stepNumber }
+// { type: 'text-delta' | 'reasoning-delta', text }
 // { type: 'tool-call', toolCallId, toolName, args }
 // { type: 'tool-result', toolCallId, toolName, result }
-// { type: 'agent-call', agentName, session, input }
-// { type: 'agent-result', agentName, session, result }
-// { type: 'approval-request', toolCallId, toolName, args, reason? }
+// { type: 'agent-call' | 'agent-result', agentName, session, input | result }
+// { type: 'approval-request', toolCallId, toolName, args, reason?, runId? }
+// { type: 'credential-request', toolCallId, toolName, credentialName,
+//   credentialType: 'oauth2' | 'apikey', connectUrl?, runId }
 // { type: 'usage', tokens: { input, output }, model }
+// { type: 'transcript', text }                    // what the user was heard to say
+// { type: 'audio-delta', data, format, text? } | { type: 'audio-done' }
+// { type: 'data', name, data } | { type: 'generative-ui', spec }
+// { type: 'suspended', reason: 'rpc-missing', missingRpcs }
+// { type: 'interrupted', runId, text, reason }
 // { type: 'error', message }
 // { type: 'done' }
 ```
+
+Every event except `agent-call`/`agent-result`/`suspended` also carries optional
+`agent` and `session` fields, so a UI can attribute output to a sub-agent rather
+than folding it into the parent's transcript.
 
 ## Usage Patterns
 
 ### Define an Agent
 
 ```typescript
-const todoAssistant = pikkuAIAgent({
-  name: 'todo-assistant',
-  description: 'A helpful assistant that manages todos',
-  instructions:
-    'You help users manage their todo lists. Be concise and helpful.',
+import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
+
+export const todoAgent = pikkuAIAgent({
+  name: 'todo-agent',
+  description: 'Manages a todo list',
+  goal: 'You help users manage their todos. You can list, add, complete and delete them.',
   model: 'openai/gpt-5-mini',
-  tools: [listTodos, createTodo, completeTodo],
-  memory: {
-    storage: 'aiStorage',
-    lastMessages: 20,
-  },
-  maxSteps: 5,
-  temperature: 0.7,
+  tools: [
+    ref('todos:listTodos'),
+    ref('todos:addTodo'),
+    ref('todos:completeTodo'),
+    ref('graph:sleep'),
+  ],
+  memory: { storage: 'aiStorage', lastMessages: 20 },
+  maxSteps: 10,
+  toolChoice: 'auto',
 })
 ```
 
-### Invoke Non-Streaming
+### Scaffold the HTTP surface
 
-```typescript
-const result = await runAIAgent(
-  'todo-assistant',
-  {
-    message: 'Create a task for tomorrow: buy groceries',
-    threadId: 'thread-123',
-    resourceId: 'user-456',
-  },
-  { singletonServices }
-)
-
-console.log(result.text) // "I've created a task 'buy groceries' for tomorrow."
-console.log(result.steps) // [{ tool: 'createTodo', args: {...}, result: {...} }]
-console.log(result.usage) // { inputTokens: 150, outputTokens: 42 }
+```bash
+pikku enable agent            # session required
+pikku enable agent --noAuth   # public
 ```
 
-### Stream Responses
+The next `pikku all` generates `agent.gen.ts` — run/stream/approve/resume
+callers plus thread listing endpoints, with thread ownership already enforced
+against the session. Don't hand-write these routes.
+
+### Structured output
+
+An `output` schema fills `result.object`, but **only when the agent exposes no
+tools** — with a tool present the runner falls back to free text, silently. If
+you need both, split the classification into its own tool-free agent.
 
 ```typescript
-await streamAIAgent(
-  'todo-assistant',
-  {
-    message: 'Create a task for tomorrow',
-    threadId: 'thread-123',
-    resourceId: 'user-456',
-  },
-  channel,
-  { singletonServices }
-)
+export const structuredAgent = pikkuAIAgent({
+  name: 'structured-agent',
+  description: 'Classifies a message and returns a structured verdict',
+  goal: 'You classify the sentiment of the user message.',
+  model: 'openai/gpt-5-mini',
+  output: z.object({ sentiment: z.string(), score: z.number() }),
+})
 ```
+
+### Narrowing tools per step
+
+`prepareStep` runs before each step with the live tool array for that step, so
+mutating it in place changes what the model is offered from there on. `stop()`
+ends the loop — called before step 0 the run completes with an empty result
+rather than signalling that it was short-circuited.
+
+```typescript
+prepareStep: ({ stepNumber, tools }) => {
+  if (stepNumber >= 1) tools.length = 0   // withdraw tools after the first step
+}
+```
+
+### Tool approval
+
+A tool that should pause for a human sets `approvalRequired: true` (with an
+optional `approvalDescription`) on the *function*, not on the agent. The run then
+resolves with `status: 'suspended'` and `pendingApprovals`, and streaming emits
+`approval-request`. Answer with `rpc.agent.approve(runId, approvals)`.
+
+Authorization around tools is two-layer: an agent only sees tools its session can
+reach, and the function's own `permissions` still guard the call when the model
+picks one.
+
+### Thread ownership
+
+`resourceId` is caller-supplied but never trusted as an owner. The session's
+principal (`userId`, or `orgId` when `sessionScope: 'org'`) is prefixed onto it,
+so a client can sub-partition inside its own boundary and cannot read across one.
+A sessionless run gets an ephemeral anonymous owner instead.
 
 ## Complete Example
 
@@ -190,41 +281,42 @@ export const completeTodo = pikkuFunc({
   },
 })
 
-// agents/todo-assistant.ts
-const todoAssistant = pikkuAIAgent({
+// agents/todo-assistant.agent.ts
+import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
+
+export const todoAssistant = pikkuAIAgent({
   name: 'todo-assistant',
   description: 'A helpful assistant that manages todos',
-  instructions: `You help users manage their todo lists.
-    - Be concise and helpful
+  role: 'You are an assistant that manages a user’s todo list.',
+  personality: 'Concise. One short paragraph unless asked for detail.',
+  goal: `Keep the user's todos accurate.
     - When creating todos, infer priority if not specified
     - When listing todos, summarize the results`,
   model: 'openai/gpt-5-mini',
-  tools: [listTodos, createTodo, completeTodo],
-  memory: {
-    storage: 'aiStorage',
-    lastMessages: 20,
-  },
+  tools: [
+    ref('todos:listTodos'),
+    ref('todos:createTodo'),
+    ref('todos:completeTodo'),
+  ],
+  memory: { storage: 'aiStorage', lastMessages: 20 },
   maxSteps: 5,
   temperature: 0.7,
 })
 
-// Wire to HTTP for chat endpoint
+// Wire to HTTP for a chat endpoint — or skip this entirely and run
+// `pikku enable agent`, which scaffolds run/stream/approve/resume for you.
 wireHTTP({
   method: 'post',
   route: '/chat',
   func: pikkuFunc({
     title: 'Chat',
-    func: async (services, { message, threadId }, wire) => {
-      const { session } = wire
-      return await runAIAgent(
-        'todo-assistant',
-        {
-          message,
-          threadId,
-          resourceId: session.userId,
-        },
-        { singletonServices: services }
-      )
+    func: async (_services, { message, threadId }, { session, rpc }) => {
+      return await rpc.agent.run('todo-assistant', {
+        message,
+        threadId,
+        resourceId: session.userId,
+      })
     },
   }),
 })

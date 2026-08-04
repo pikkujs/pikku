@@ -6,7 +6,8 @@ description: >-
   generated WebSocket client. TRIGGER when: code uses wireChannel, user asks about WebSocket,
   real-time, live updates, chat, pub/sub, or the generated WebSocket client. DO NOT TRIGGER when:
   user asks about HTTP/REST (use pikku-http), SSE (use pikku-http with sse: true), or WebSocket
-  deployment specifics (use pikku-deploy-uws).
+  deployment specifics (use pikku-deploy-uws), or typed pub/sub events (use pikku-realtime).
+installGroups: [core]
 ---
 
 # Pikku WebSocket Wiring
@@ -41,18 +42,31 @@ import { wireChannel } from '@pikku/core/channel'
 
 wireChannel({
   name: string,                      // Channel name (e.g. 'todos')
-  onConnect: async () => {},         // Called when client connects
-  onDisconnect: async () => {},      // Called when client disconnects
-  onMessageWiring: {                 // Action → function mapping
-    [actionName: string]: {
-      func: PikkuFunc,
-      auth?: boolean,                // Override channel-level auth
-      permissions?: Record<string, PikkuPermission | PikkuPermission[]>,
+  route: string,                     // REQUIRED — the URL path (e.g. '/todos')
+  auth?: boolean,                    // Channel-level auth default
+  onConnect?: PikkuFunc,             // Called when client connects
+  onDisconnect?: PikkuFunc,          // Called when client disconnects
+  onMessage?: PikkuFunc,             // Catch-all for unrouted messages
+  onMessageWiring?: {                // TWO levels — see below
+    [messageField: string]: {
+      [fieldValue: string]: {
+        func: PikkuFunc,
+        auth?: boolean,              // Override channel-level auth
+        middleware?: PikkuMiddleware[],
+      }
     }
   },
+  middleware?: PikkuMiddleware[],
   channelMiddleware?: PikkuChannelMiddleware[],
+  binary?: boolean | null,
+  onBinaryMessage?: (services, data, channel) => ...,
+  tags?: string[],                   // Targets tag middleware
 })
 ```
+
+Note there is **no `permissions` key on a message wiring** — wire-level
+permissions were removed in #972. Authorization lives on the function's own
+`permissions` field (see `pikku-permissions`).
 
 ### `pikkuChannelMiddleware(fn)`
 
@@ -78,37 +92,46 @@ addChannelMiddleware('todos', [addTimestamp, filterSensitive])
 ```typescript
 wireChannel({
   name: 'todos',
-  onConnect: async () => {},
-  onDisconnect: async () => {},
+  route: '/todos',
   onMessageWiring: {
-    create: { func: createTodo },
-    list: { func: listTodos, auth: false },
+    action: {                                  // ← the field to route on
+      create: { func: createTodo },            // ← its possible values
+      list: { func: listTodos, auth: false },
+    },
   },
 })
 ```
 
 ### Action Routing with Auth
 
-Clients send `{ action: 'create', data: {...} }`. Pikku routes to the matching function.
+`onMessageWiring` nests two levels because the routing key is configurable. The
+**outer** key names the field in the incoming message to dispatch on; the
+**inner** keys are the values that field can take. With the conventional outer
+key `action`, a client sending `{ action: 'create', data: {...} }` reaches
+`createTodo` — but a CLI channel might route on `command` instead, which is why
+the field is not hardcoded.
 
 ```typescript
-const authenticate = pikkuFunc({
+const authenticate = pikkuSessionlessFunc({
   title: 'Authenticate',
-  func: async ({ setSession }, { token }) => {
+  // setSession lives on the WIRE (third param), not on services
+  func: async (services, { token }, { setSession }) => {
     const session = await verifyJWT(token)
-    setSession(session)
+    await setSession(session)
     return { success: true }
   },
 })
 
 wireChannel({
   name: 'todos',
-  onConnect: async () => {},
-  onDisconnect: async () => {},
+  route: '/todos',
+  auth: true,
   onMessageWiring: {
-    auth: { func: authenticate, auth: false }, // No session required
-    subscribe: { func: subscribeTodos }, // Session required
-    create: { func: createTodo },
+    action: {
+      authenticate: { func: authenticate, auth: false }, // No session required
+      subscribe: { func: subscribeTodos },               // Session required
+      create: { func: createTodo },
+    },
   },
 })
 ```
@@ -120,25 +143,28 @@ Use EventHub for real-time broadcasting across connections:
 ```typescript
 wireChannel({
   name: 'todos',
-  onConnect: async ({ eventHub, channel }) => {
+  route: '/todos',
+  // eventHub is a service (1st param); channel lives on the wire (3rd)
+  onConnect: async ({ eventHub }, _data, { channel }) => {
     eventHub.subscribe('todos:updated', (data) => {
       channel.send(data)
     })
   },
-  onDisconnect: async () => {},
   onMessageWiring: {
-    create: {
-      func: pikkuFunc({
-        title: 'Create Todo',
-        func: async ({ db, eventHub }, { text }) => {
-          const todo = await db.createTodo({ text })
-          eventHub.publish('todos:updated', {
-            event: 'created',
-            todo,
-          })
-          return { todo }
-        },
-      }),
+    action: {
+      create: {
+        func: pikkuFunc({
+          title: 'Create Todo',
+          func: async ({ db, eventHub }, { text }) => {
+            const todo = await db.createTodo({ text })
+            eventHub.publish('todos:updated', {
+              event: 'created',
+              todo,
+            })
+            return { todo }
+          },
+        }),
+      },
     },
   },
 })
@@ -167,9 +193,8 @@ addChannelMiddleware('todos', [addTimestamp, filterSensitive])
 // Or inline on wiring
 wireChannel({
   name: 'todos',
+  route: '/todos',
   channelMiddleware: [addTimestamp],
-  onConnect: async () => {},
-  onDisconnect: async () => {},
   onMessageWiring: { ... },
 })
 ```
@@ -179,7 +204,7 @@ wireChannel({
 After `npx pikku all`:
 
 ```typescript
-import { PikkuWebSocket } from '.pikku/pikku-websocket.gen.js'
+import { PikkuWebSocket } from '#pikku/pikku-websocket.gen.js'
 
 const pikku = new PikkuWebSocket(ws)
 const todosRoute = pikku.getRoute('todos')
@@ -197,7 +222,7 @@ todosRoute.subscribe('todos:updated', (data) => {
 
 ```typescript
 // functions/chat.functions.ts
-export const authenticate = pikkuFunc({
+export const authenticate = pikkuSessionlessFunc({
   title: 'Authenticate',
   func: async ({ jwt }, { token }, { setSession }) => {
     const payload = await jwt.verify(token)
@@ -228,16 +253,19 @@ export const listMessages = pikkuSessionlessFunc({
 // wirings/chat.channel.ts
 wireChannel({
   name: 'chat',
-  onConnect: async ({ eventHub, channel }) => {
+  route: '/chat',
+  auth: true,
+  onConnect: async ({ eventHub }, _data, { channel }) => {
     eventHub.subscribe('chat:message', (data) => {
       channel.send(data)
     })
   },
-  onDisconnect: async () => {},
   onMessageWiring: {
-    auth: { func: authenticate, auth: false },
-    send: { func: sendMessage },
-    history: { func: listMessages, auth: false },
+    action: {
+      authenticate: { func: authenticate, auth: false },
+      send: { func: sendMessage },
+      history: { func: listMessages, auth: false },
+    },
   },
 })
 ```

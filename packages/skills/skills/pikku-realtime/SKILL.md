@@ -46,7 +46,9 @@ import type { EventHubService } from '@pikku/core/channel'
 import type { EventHubTopics } from './eventhub-topics.js'
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
-  eventHub?: EventHubService<EventHubTopics>
+  // `CoreSingletonServices` declares eventHub optional; re-declare it required
+  // so functions can use it without a `if (eventHub)` guard on every publish.
+  eventHub: EventHubService<EventHubTopics>
 }
 
 // services.ts
@@ -56,6 +58,10 @@ const eventHub = new LocalEventHubService<EventHubTopics>()
 
 For multi-instance deployments use `CloudflareEventHubService` /
 `LambdaEventHubService` / `UWSEventHubService` instead — same interface.
+
+If a deployment genuinely has no eventHub, that belongs in `services.ts` (don't
+create the service there), not as an optional type every function has to guard —
+see `pikku-services`.
 
 ## 2. Enable the server side
 
@@ -85,20 +91,28 @@ Add to `pikku.config.json`:
 }
 ```
 
-Run `pikku all` (or `pikku realtime` to regenerate just this file). The generated
-file exports two surfaces:
+Run `pikku all` (or `pikku realtime` to regenerate just this file). Everything is
+on one class — both transports are methods, so switching from WebSocket to SSE is
+a one-word change, not a different import:
 
 ```ts
 export class PikkuRealtime {
-  constructor(options: { url: string; reconnect?: boolean; ... })
+  constructor(options?: { reconnect?: boolean; reconnectDelayMs?: number; reconnectMaxDelayMs?: number })
+  setPikkuFetch(fetch: PikkuFetch): void   // server URL + auth come from here, not the constructor
+
+  // WebSocket at /events — many topics on one connection
   subscribe<K extends keyof EventHubTopics>(topic: K, handler: (data: EventHubTopics[K]) => void): () => void
-  unsubscribe<K extends keyof EventHubTopics>(topic: K, handler?: ...): void
+  unsubscribe<K extends keyof EventHubTopics>(topic: K, handler?: (data: EventHubTopics[K]) => void): void
+
+  // SSE at GET /events/:topic — one EventSource per topic
+  subscribeToTopic<K extends keyof EventHubTopics>(topic: K, handler: (data: EventHubTopics[K]) => void): { close: () => void }
+
+  // generic escape hatches — see references/other-routes.md
+  subscribeToSSE<T>(path: string, handler: (data: T) => void): { close: () => void }
+  connectToChannel(channelRoute: string, protocols?: string | string[]): WebSocket
+
   close(): void
 }
-
-export function subscribeToTopicViaSSE<K extends keyof EventHubTopics>(
-  baseUrl: string, topic: K, handler: (data: EventHubTopics[K]) => void
-): { close: () => void }
 ```
 
 Without `realtimeEventHubTopicsImport`, the client falls back to
@@ -108,9 +122,19 @@ subscribe/unsubscribe.
 ## 4. Publish events from a function
 
 The `/events` channel listens for client subscriptions; the eventHub fans out
-publishes. Envelope the payload with `topic` so the client dispatcher works; the
-`null` channelId means "broadcast to all subscribers" (pass a specific channel id
-to exclude/include a single connection):
+publishes:
+
+```ts
+publish(topic, channelId: string | null, data, isBinary?)
+```
+
+The middle argument is the channel to **skip**, not the one to send to — pass
+`null` to reach every subscriber, or the current `channel.channelId` when the
+originating connection has already applied the change locally and would otherwise
+render it twice.
+
+Envelope the payload as `{ topic, data }`: the generated client dispatches on the
+`topic` field, so a bare payload arrives but no handler fires.
 
 ```ts
 import { pikkuFunc } from '#pikku'
@@ -123,12 +147,10 @@ export const createTodo = pikkuFunc({
       .insertInto('todos').values(data).returningAll()
       .executeTakeFirstOrThrow()
 
-    if (eventHub) {
-      await eventHub.publish('todo-created', null, {
-        topic: 'todo-created',
-        data: { todo },
-      })
-    }
+    await eventHub.publish('todo-created', null, {
+      topic: 'todo-created',
+      data: { todo },
+    })
     return { id: todo.id }
   },
 })
@@ -215,10 +237,10 @@ sockets (`subscribeToSSE`, `connectToChannel`). See
 
 | Need                                       | Use                           |
 | ------------------------------------------ | ----------------------------- |
-| Many topics in one connection              | **PikkuRealtime** (WebSocket) |
-| Single live stream, simple cleanup         | **subscribeToTopicViaSSE**    |
-| Bidirectional (client also sends messages) | **PikkuRealtime**             |
-| WebSockets blocked by infra                | **subscribeToTopicViaSSE**    |
+| Many topics in one connection              | `realtime.subscribe`          |
+| Single live stream, simple cleanup         | `realtime.subscribeToTopic`   |
+| Bidirectional (client also sends messages) | `realtime.subscribe`          |
+| WebSockets blocked by infra                | `realtime.subscribeToTopic`   |
 
 Both auto-clean on the server (the eventHub's `onChannelClosed` hook unsubscribes
 all topics for the dead channel id). Don't write manual cleanup unless you're
