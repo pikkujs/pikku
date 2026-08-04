@@ -831,17 +831,17 @@ export function defineServiceTests(config: ServiceTestConfig): void {
           token: string
           endpoint: string
         }>('api-key')
-        assert.deepEqual(result, {
+        assert.deepEqual(result.reveal(), {
           token: 'sk-123',
           endpoint: 'https://api.example.com',
         })
       })
 
-      test('getSecret returns raw string', async () => {
+      test('getSecret wraps the raw string rather than returning it', async () => {
         const service = await factory({ key: kek })
         await service.setSecret('string-secret', 'plain-value')
         const result = await service.getSecret('string-secret')
-        assert.strictEqual(result, 'plain-value')
+        assert.strictEqual(result.reveal(), 'plain-value')
       })
 
       test('hasSecret returns true/false', async () => {
@@ -862,7 +862,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         await service.setSecret('upsert-key', { v: 1 })
         await service.setSecret('upsert-key', { v: 2 })
         const result = await service.getSecret<{ v: number }>('upsert-key')
-        assert.deepEqual(result, { v: 2 })
+        assert.deepEqual(result.reveal(), { v: 2 })
       })
 
       test('deleteSecret removes the key', async () => {
@@ -887,7 +887,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         const before = await rotatedService.getSecret<{
           important: string
         }>('rotate-test')
-        assert.deepEqual(before, { important: 'data' })
+        assert.deepEqual(before.reveal(), { important: 'data' })
 
         assert.ok(rotatedService.rotateKEK)
         const count = await rotatedService.rotateKEK!()
@@ -900,7 +900,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         const after = await newOnlyService.getSecret<{
           important: string
         }>('rotate-test')
-        assert.deepEqual(after, { important: 'data' })
+        assert.deepEqual(after.reveal(), { important: 'data' })
       })
 
       test('rotateKEK throws without previousKey', async () => {

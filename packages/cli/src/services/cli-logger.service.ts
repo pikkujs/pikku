@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
+import type { Safe } from '@pikku/core'
 import { LogLevel } from '@pikku/core/services'
 import { isExpectedError } from '@pikku/core'
 import type {
@@ -16,6 +17,15 @@ const logo = `${chalk.cyan('◇◆')} ${chalk.bold('pikku')} ${chalk.cyan.bold('
 const BASE_ERROR_URL = 'https://pikku.dev/docs/pikku-cli/errors'
 const ANSI_ESCAPE_REGEX = /\x1B\[[0-?]*[ -/]*[@-~]/g
 export type CLIOutputMode = 'text' | 'json'
+
+/**
+ * The structured form a CLI log line may take. The `Record<string, any>` arm
+ * mirrors the `Logger` interface, which admits any object as a message.
+ */
+export type CLILogMessage =
+  | string
+  | { message: string; type?: string; data?: Record<string, unknown> }
+  | Record<string, any>
 
 export class CLILogger implements Logger {
   private silent: boolean
@@ -145,24 +155,37 @@ export class CLILogger implements Logger {
     console.log(c(normalizedMessage))
   }
 
-  info(
-    message:
-      | string
-      | { message: string; type?: string; data?: Record<string, unknown> }
+  /**
+   * Splits a log line into the parts `emit` needs.
+   *
+   * The public methods declare their message as `Safe<M>`, which distributes
+   * over the `CLILogMessage` union and cannot be narrowed by `typeof`. The
+   * guard's job is done once the call site has been checked, so the message is
+   * converted back to its domain type here — in one place rather than in each
+   * method.
+   */
+  private messageParts(message: Safe<CLILogMessage>) {
+    const value = message as CLILogMessage
+    return {
+      msg: typeof value === 'string' ? value : value.message,
+      type: typeof value === 'string' ? undefined : value.type,
+      data: typeof value === 'string' ? undefined : value.data,
+    }
+  }
+
+  info<M extends CLILogMessage, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.info || this.silent) return
 
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('info', msg, type, undefined, data)
   }
 
-  error(
-    message:
-      | string
-      | Error
-      | { message: string; type?: string; data?: Record<string, unknown> }
+  error<M extends CLILogMessage | Error, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.error) return
     if (message instanceof Error) {
@@ -177,34 +200,26 @@ export class CLILogger implements Logger {
       )
       return
     }
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('error', msg, type, undefined, data)
   }
 
-  warn(
-    message:
-      | string
-      | { message: string; type?: string; data?: Record<string, unknown> }
+  warn<M extends CLILogMessage, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.warn) return
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('warn', msg, type, undefined, data)
   }
 
-  debug(
-    message:
-      | string
-      | { message: string; type?: string; data?: Record<string, unknown> }
+  debug<M extends CLILogMessage, A extends unknown[]>(
+    message: Safe<M>,
+    ...__meta: { [K in keyof A]: Safe<A[K]> }
   ) {
     if (this.level > LogLevel.debug || this.silent) return
 
-    const msg = typeof message === 'string' ? message : message.message
-    const type = typeof message === 'string' ? undefined : message.type
-    const data = typeof message === 'string' ? undefined : message.data
+    const { msg, type, data } = this.messageParts(message)
     this.emit('debug', msg, type, undefined, data)
   }
 

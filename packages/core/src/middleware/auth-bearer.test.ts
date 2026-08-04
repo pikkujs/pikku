@@ -8,6 +8,7 @@ import {
   createMiddlewareSessionWireProps,
 } from '../services/user-session-service.js'
 import { InvalidSessionError } from '../errors/errors.js'
+import { createSecretValue } from '../secret-value.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -429,7 +430,7 @@ describe('authBearer middleware', () => {
     const secrets = {
       getSecret: async (secretId: string) => {
         assert.equal(secretId, 'PIKKU_CONSOLE_TOKEN')
-        return 'secret-token-value'
+        return createSecretValue('secret-token-value')
       },
     }
 
@@ -500,7 +501,7 @@ describe('authBearer middleware', () => {
   test('should not set session when secret-resolved token does not match', async () => {
     const SessionService = new PikkuSessionService<CoreUserSession>()
     const secrets = {
-      getSecret: async () => 'expected-token',
+      getSecret: async () => createSecretValue('expected-token'),
     }
 
     const middleware = authBearer({

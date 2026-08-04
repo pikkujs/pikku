@@ -199,7 +199,7 @@ function registerTests(
 
       const second = new KyselySecretService(getDb(), { key: kek })
       await second.init()
-      assert.equal(await second.getSecret('shared-salt'), 'value')
+      assert.equal((await second.getSecret('shared-salt')).reveal(), 'value')
 
       const rows = await getDb()
         .selectFrom('secretKekSalts')
@@ -227,7 +227,7 @@ function registerTests(
       const elapsed = performance.now() - start
 
       assert.equal(Object.keys(out).length, 50)
-      assert.equal(out['bulk-7'], 'value-7')
+      assert.equal(out['bulk-7']!.reveal(), 'value-7')
       assert.ok(
         elapsed < 400,
         `getSecrets over 50 secrets took ${elapsed.toFixed(0)}ms; one derivation per secret would cost seconds`
@@ -258,7 +258,7 @@ function registerTests(
       const elapsed = performance.now() - start
 
       assert.equal(rotated, 50)
-      assert.equal(await rotator.getSecret('rotate-7'), 'value-7')
+      assert.equal((await rotator.getSecret('rotate-7')).reveal(), 'value-7')
       assert.ok(
         elapsed < 700,
         `rotating 50 secrets took ${elapsed.toFixed(0)}ms; two derivations per secret would cost seconds`

@@ -1,4 +1,5 @@
-import type { SecretService } from '@pikku/core/services'
+import { createSecretValue, isSecretValue, type SecretValue } from '@pikku/core'
+import type { SecretService, SecretValues } from '@pikku/core/services'
 import { Redis, type RedisOptions } from 'ioredis'
 import {
   deriveKEK,
@@ -92,12 +93,14 @@ export class RedisSecretService implements SecretService {
     return kek
   }
 
-  async getSecret<T = string>(key: string): Promise<T> {
+  async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     const data = await this.redis.hgetall(this.secretKey(key))
     if (!data.ciphertext) throw new Error('Requested secret not found')
 
     const kek = await this.getKEK(Number(data.key_version))
-    return envelopeDecrypt<T>(kek, data.ciphertext!, data.wrapped_dek!)
+    return createSecretValue(
+      await envelopeDecrypt<T>(kek, data.ciphertext!, data.wrapped_dek!)
+    )
   }
 
   async hasSecret(key: string): Promise<boolean> {
@@ -106,9 +109,11 @@ export class RedisSecretService implements SecretService {
   }
 
   async setSecret(key: string, value: unknown): Promise<void> {
+    // Encrypting the wrapper would store its redaction, not the secret —
+    // writing a secret back to the vault is exactly what this method is for.
     const { ciphertext, wrappedDEK } = await envelopeEncrypt(
       await this.getKEK(this.keyVersion),
-      value
+      isSecretValue(value) ? value.reveal() : value
     )
 
     await this.redis.hset(this.secretKey(key), {
@@ -124,7 +129,7 @@ export class RedisSecretService implements SecretService {
 
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
-  ): Promise<T> {
+  ): Promise<Partial<SecretValues<T>>> {
     const rows = await Promise.all(
       keys.map(async (key) => ({
         key,
@@ -139,7 +144,9 @@ export class RedisSecretService implements SecretService {
       const keyVersion = Number(data.key_version)
       try {
         const kek = await this.getKEK(keyVersion)
-        out[key] = await envelopeDecrypt(kek, data.ciphertext, data.wrapped_dek!)
+        out[key] = createSecretValue(
+          await envelopeDecrypt(kek, data.ciphertext, data.wrapped_dek!)
+        )
       } catch (cause) {
         throw new Error(
           `Failed to decrypt secret "${key}" (key_version ${keyVersion}): ` +
@@ -148,7 +155,7 @@ export class RedisSecretService implements SecretService {
         )
       }
     }
-    return out as T
+    return out as Partial<SecretValues<T>>
   }
 
   async rotateKEK(): Promise<number> {

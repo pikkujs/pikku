@@ -7,14 +7,14 @@ describe('LocalSecretService', () => {
   test('should get secret from local storage', async () => {
     const service = new LocalSecretService()
     await service.setSecret('MY_KEY', { token: 'abc' })
-    const result = await service.getSecret('MY_KEY')
+    const result = (await service.getSecret('MY_KEY')).reveal()
     assert.deepStrictEqual(result, { token: 'abc' })
   })
 
   test('should get secret from environment variables', async () => {
     const vars = new LocalVariablesService({ MY_SECRET: 'secret-value' })
     const service = new LocalSecretService(vars)
-    const result = await service.getSecret('MY_SECRET')
+    const result = (await service.getSecret('MY_SECRET')).reveal()
     assert.strictEqual(result, 'secret-value')
   })
 
@@ -29,14 +29,14 @@ describe('LocalSecretService', () => {
   test('should get JSON secret from local storage', async () => {
     const service = new LocalSecretService()
     await service.setSecret('JSON_KEY', { data: 42 })
-    const result = await service.getSecret('JSON_KEY')
+    const result = (await service.getSecret('JSON_KEY')).reveal()
     assert.deepStrictEqual(result, { data: 42 })
   })
 
   test('should get JSON secret from environment variables', async () => {
     const vars = new LocalVariablesService({ CONFIG: '{"port":3000}' })
     const service = new LocalSecretService(vars)
-    const result = await service.getSecret('CONFIG')
+    const result = (await service.getSecret('CONFIG')).reveal()
     assert.deepStrictEqual(result, { port: 3000 })
   })
 
@@ -52,7 +52,7 @@ describe('LocalSecretService', () => {
     const vars = new LocalVariablesService({ KEY: 'env-value' })
     const service = new LocalSecretService(vars)
     await service.setSecret('KEY', 'local-value')
-    const result = await service.getSecret('KEY')
+    const result = (await service.getSecret('KEY')).reveal()
     assert.strictEqual(result, 'local-value')
   })
 
@@ -76,5 +76,20 @@ describe('LocalSecretService', () => {
     assert.strictEqual(await service.hasSecret('DEL_KEY'), true)
     await service.deleteSecret('DEL_KEY')
     assert.strictEqual(await service.hasSecret('DEL_KEY'), false)
+  })
+})
+
+describe('LocalSecretService round-trips a wrapped secret', () => {
+  test('setSecret unwraps rather than storing the redaction', async () => {
+    const service = new LocalSecretService()
+    await service.setSecret('SOURCE', 'sk-live-DEADBEEF')
+    const read = await service.getSecret('SOURCE')
+
+    await service.setSecret('COPY', read)
+
+    assert.strictEqual(
+      (await service.getSecret('COPY')).reveal(),
+      'sk-live-DEADBEEF'
+    )
   })
 })

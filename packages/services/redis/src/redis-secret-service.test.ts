@@ -41,8 +41,8 @@ describe('RedisSecretService', () => {
     const r1 = await s1.getSecret<{ from: string }>('shared-name')
     const r2 = await s2.getSecret<{ from: string }>('shared-name')
 
-    assert.deepEqual(r1, { from: 'app1' })
-    assert.deepEqual(r2, { from: 'app2' })
+    assert.deepEqual(r1.reveal(), { from: 'app1' })
+    assert.deepEqual(r2.reveal(), { from: 'app2' })
     prefixRedis.disconnect()
   })
 
@@ -105,7 +105,8 @@ describe('RedisSecretService', () => {
         'batch-b': string
       }>(['batch-a', 'batch-b'])
 
-      assert.deepEqual(out, { 'batch-a': { v: 1 }, 'batch-b': 'two' })
+      assert.deepEqual(out['batch-a']!.reveal(), { v: 1 })
+      assert.equal(out['batch-b']!.reveal(), 'two')
     })
 
     test('getSecrets omits keys that were never stored', async () => {
@@ -114,7 +115,8 @@ describe('RedisSecretService', () => {
 
       const out = await service.getSecrets(['present', 'never-stored'])
 
-      assert.deepEqual(out, { present: 'here' })
+      assert.deepEqual(Object.keys(out), ['present'])
+      assert.equal(out.present!.reveal(), 'here')
     })
   })
 })

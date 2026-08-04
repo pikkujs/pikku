@@ -1,6 +1,7 @@
 import * as pino from 'pino'
 
 import type { Logger } from '@pikku/core/services'
+import type { Safe } from '@pikku/core'
 import { LogLevel } from '@pikku/core/services'
 
 export class PinoLogger implements Logger {
@@ -15,19 +16,31 @@ export class PinoLogger implements Logger {
     this.pino.level = LogLevel[level]
   }
 
-  info(messageOrObj: string | Record<string, any> | Error): void {
-    this.pino.info(messageOrObj)
+  info<M extends string | Record<string, any> | Error, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void {
+    this.pino.info(messageOrObj as any, ...(meta as any[]))
   }
 
-  warn(messageOrObj: string | Record<string, any> | Error): void {
-    this.pino.warn(messageOrObj)
+  warn<M extends string | Record<string, any> | Error, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void {
+    this.pino.warn(messageOrObj as any, ...(meta as any[]))
   }
 
-  error(messageOrObj: string | Record<string, any> | Error): void {
-    this.pino.error(messageOrObj)
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void {
+    this.pino.error(messageOrObj as any, ...(meta as any[]))
   }
 
-  debug(messageOrObj: string | Record<string, any>): void {
-    this.pino.debug(messageOrObj)
+  debug<A extends unknown[]>(
+    message: string,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void {
+    this.pino.debug(message as any, ...(meta as any[]))
   }
 }

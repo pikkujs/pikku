@@ -18,7 +18,9 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
  * them at runtime — the same treatment addon services get from
  * `pikkuAddonServices`. That gives the factory typed, map-aware access:
  *
- *   socialProviders: { github: await secrets.getSecret('GITHUB_OAUTH') }
+ *   socialProviders: {
+ *     github: (await secrets.getSecret('GITHUB_OAUTH')).reveal(),
+ *   }
  *
  * with no inline `getSecrets<{ ... }>()` generic, because the secret types flow
  * from the generated `CredentialsMap`.

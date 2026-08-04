@@ -59,7 +59,10 @@ export const getQueueIdentitySecret = async (
   secrets?: SecretService
 ): Promise<string | undefined> => {
   try {
-    return (await secrets?.getSecret(QUEUE_IDENTITY_SECRET_NAME)) || undefined
+    return (
+      (await secrets?.getSecret(QUEUE_IDENTITY_SECRET_NAME))?.reveal() ||
+      undefined
+    )
   } catch {
     return undefined
   }

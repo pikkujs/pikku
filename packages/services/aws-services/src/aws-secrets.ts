@@ -2,7 +2,8 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager'
-import type { SecretService } from '@pikku/core/services'
+import { createSecretValue, type SecretValue } from '@pikku/core'
+import type { SecretService, SecretValues } from '@pikku/core/services'
 
 import type { AWSConfig } from './aws-config.js'
 
@@ -13,16 +14,18 @@ export class AWSSecrets implements SecretService {
     this.client = new SecretsManagerClient({ region: config.awsRegion })
   }
 
-  public async getSecret<T = string>(SecretId: string): Promise<T> {
+  public async getSecret<T = string>(
+    SecretId: string
+  ): Promise<SecretValue<T>> {
     try {
       const result = await this.client.send(
         new GetSecretValueCommand({ SecretId })
       )
       if (result.SecretString) {
         try {
-          return JSON.parse(result.SecretString) as T
+          return createSecretValue(JSON.parse(result.SecretString) as T)
         } catch {
-          return result.SecretString as unknown as T
+          return createSecretValue(result.SecretString as unknown as T)
         }
       }
       throw new Error(`Secret '${SecretId}' has no string value`)
@@ -54,13 +57,13 @@ export class AWSSecrets implements SecretService {
 
   public async getSecrets<
     T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<Partial<T>> {
+  >(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>> {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
       if (results[i].status === 'fulfilled')
         out[key] = (results[i] as PromiseFulfilledResult<unknown>).value
     })
-    return out as Partial<T>
+    return out as Partial<SecretValues<T>>
   }
 }

@@ -1,4 +1,4 @@
-import { runPikkuFunc } from '@pikku/core'
+import { runPikkuFunc, type Safe } from '@pikku/core'
 import {
   createConfig,
   createSingletonServices,
@@ -16,17 +16,38 @@ interface LogEntry {
 class CapturingLogger {
   public logs: LogEntry[] = []
 
-  info(message: string | object) {
-    this.logs.push({ level: 'info', message })
+  // `Logger` guards every parameter with `Safe<>` so a vault secret cannot be
+  // logged. A test double has to carry the same signature to be usable as one:
+  // a plainer `(message: string | object)` no longer satisfies it, since
+  // `Safe<M>` is a deferred conditional type and the rest parameter makes the
+  // arity check strict.
+  private capture(level: string, message: unknown) {
+    this.logs.push({ level, message: message as string | object })
   }
-  warn(message: string | object) {
-    this.logs.push({ level: 'warn', message })
+
+  info<M extends string | Record<string, any>, A extends unknown[]>(
+    message: Safe<M>,
+    ..._meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
+    this.capture('info', message)
   }
-  error(message: string | object) {
-    this.logs.push({ level: 'error', message })
+  warn<M extends string | Record<string, any>, A extends unknown[]>(
+    message: Safe<M>,
+    ..._meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
+    this.capture('warn', message)
   }
-  debug(message: string | object) {
-    this.logs.push({ level: 'debug', message })
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(
+    message: Safe<M>,
+    ..._meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
+    this.capture('error', message)
+  }
+  debug<A extends unknown[]>(
+    message: string,
+    ..._meta: { [K in keyof A]: Safe<A[K]> }
+  ) {
+    this.capture('debug', message)
   }
   setLevel() {
     // no-op for capturing logger

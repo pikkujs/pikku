@@ -104,7 +104,7 @@ export class PikkuHttpRequesterService implements HttpRequesterService {
     }
 
     try {
-      return await this.secrets.getSecret(auth.credential)
+      return (await this.secrets.getSecret(auth.credential)).reveal()
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : String(cause)
       throw new Error(

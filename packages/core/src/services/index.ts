@@ -75,7 +75,7 @@ export {
   type WebhookServiceConfig,
 } from './webhook-service.js'
 export type { Logger } from './logger.js'
-export type { SecretService } from './secret-service.js'
+export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'
 export type { SchemaService } from './schema-service.js'
 export type { SessionService } from './user-session-service.js'

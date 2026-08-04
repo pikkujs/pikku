@@ -98,7 +98,7 @@ export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
       return { exists: false, value: null }
     }
     const value = await secrets.getSecret(secretId)
-    return { exists: true, value }
+    return { exists: true, value: value.reveal() }
   },
 })
 

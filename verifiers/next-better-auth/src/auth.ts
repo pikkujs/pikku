@@ -6,7 +6,7 @@ let migrated: Promise<void> | undefined
 
 export const auth = pikkuBetterAuth(async ({ secrets, kysely }) => {
   const instance = betterAuth({
-    secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
+    secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
     baseURL: 'http://127.0.0.1:3110',
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: { enabled: true },

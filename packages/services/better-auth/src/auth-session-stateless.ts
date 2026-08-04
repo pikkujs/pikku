@@ -65,7 +65,9 @@ export const betterAuthStatelessSession = (
 
       let secret: string | undefined
       try {
-        secret = await (services as any).secrets?.getSecret(secretId)
+        secret = (
+          await (services as any).secrets?.getSecret(secretId)
+        )?.reveal()
       } catch (e: any) {
         if (e?.message !== 'Requested secret not found') throw e
         services.logger?.error(

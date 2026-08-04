@@ -41,7 +41,7 @@ const oauth = (key: string, displayName: string): AuthProviderDef => ({
  *
  * Convention: the user reads `secretId` off `services.secrets` and spreads it
  * into the provider config, e.g.
- * `github: await services.secrets.getSecret('GITHUB_OAUTH')`.
+ * `github: (await services.secrets.getSecret('GITHUB_OAUTH')).reveal()`.
  */
 export const PROVIDER_REGISTRY = {
   apple: oauth('apple', 'Apple OAuth'),

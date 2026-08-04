@@ -1,4 +1,5 @@
-import type { SecretService } from './secret-service.js'
+import type { SecretValue } from '../secret-value.js'
+import type { SecretService, SecretValues } from './secret-service.js'
 
 export class ScopedSecretService implements SecretService {
   constructor(
@@ -12,7 +13,7 @@ export class ScopedSecretService implements SecretService {
     }
   }
 
-  async getSecret<T = string>(key: string): Promise<T> {
+  async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     this.assertAllowed(key)
     return this.secrets.getSecret<T>(key)
   }
@@ -32,7 +33,7 @@ export class ScopedSecretService implements SecretService {
 
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
-  ): Promise<Partial<T>> {
+  ): Promise<Partial<SecretValues<T>>> {
     keys.forEach((k) => this.assertAllowed(k))
     return this.secrets.getSecrets<T>(keys)
   }

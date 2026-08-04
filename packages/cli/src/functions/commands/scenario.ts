@@ -672,7 +672,8 @@ export const scenarioRun = pikkuSessionlessFunc<
       trace,
       projectRoot: config.rootDir,
     })) {
-      logger[level](text)
+      const write: (message: string) => void = logger[level].bind(logger)
+      write(text)
     }
 
     // How much of the run actually happened on the surface it targeted. Every
@@ -696,7 +697,9 @@ export const scenarioRun = pikkuSessionlessFunc<
       if (unwitnessed.size === 0) {
         logger.info(line)
       } else {
-        logger[strict ? 'error' : 'warn'](
+        const write: (message: string) => void =
+          logger[strict ? 'error' : 'warn'].bind(logger)
+        write(
           `${line} — asserted server-side only: ${[...unwitnessed].join(', ')}`
         )
       }

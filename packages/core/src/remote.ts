@@ -25,7 +25,7 @@ export async function buildRemoteHeaders(
 
   let secret: string | undefined
   try {
-    secret = await secrets?.getSecret('PIKKU_REMOTE_SECRET')
+    secret = (await secrets?.getSecret('PIKKU_REMOTE_SECRET'))?.reveal()
   } catch {}
 
   if (secret && jwt) {

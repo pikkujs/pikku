@@ -1,3 +1,5 @@
+import type { Safe } from '../secret-value.js'
+
 export enum LogLevel {
   'trace',
   'debug',
@@ -7,19 +9,37 @@ export enum LogLevel {
   'critical',
 }
 
+/**
+ * A log line is the easiest place to leak a vault secret, so every parameter is
+ * `Safe<>`-guarded: a `SecretValue` anywhere in the message or the metadata,
+ * however deeply nested, collapses to `never` and fails the build. Reveal it
+ * first if you genuinely mean to log it.
+ */
 export interface Logger {
-  info(messageOrObj: string | Record<string, any>, ...meta: any[]): void
-
-  warn(messageOrObj: string | Record<string, any>, ...meta: any[]): void
-
-  error(
-    messageOrObj: string | Record<string, any> | Error,
-    ...meta: any[]
+  info<M extends string | Record<string, any>, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
   ): void
 
-  debug(message: string, ...meta: any[]): void
+  warn<M extends string | Record<string, any>, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void
 
-  trace?(message: string, ...meta: any[]): void
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(
+    messageOrObj: Safe<M>,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void
+
+  debug<A extends unknown[]>(
+    message: string,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void
+
+  trace?<A extends unknown[]>(
+    message: string,
+    ...meta: { [K in keyof A]: Safe<A[K]> }
+  ): void
 
   setLevel(level: LogLevel): void
 

@@ -1,3 +1,4 @@
+import type { Safe } from '../../secret-value.js'
 import type { Logger } from '../../services/logger.js'
 import type { SecretService } from '../../services/secret-service.js'
 import {
@@ -24,7 +25,7 @@ export class SignedQueueService implements QueueService {
 
   public async add<T>(
     queueName: string,
-    data: T,
+    data: Safe<T>,
     options?: JobOptions
   ): Promise<string> {
     const pikkuUserId = options?.pikkuUserId

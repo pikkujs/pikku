@@ -177,7 +177,10 @@ for f in src/scaffold/workflow-routes.gen.ts; do
   sed 's/data ?? {}/\(data ?? {}) as any/g' "$f" > "$tmp" && mv "$tmp" "$f"
 done
 
-yarn tsc -b
+# `npx`, not `yarn tsc -b`: the package's `tsc` script chains a second pass over
+# tsconfig.type-tests.json, and yarn appends `-b` to the end of the whole chain,
+# where it lands on the `-p` invocation and fails as an unknown option.
+npx tsc -b
 
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.

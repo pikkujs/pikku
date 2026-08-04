@@ -12,6 +12,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
+import type { Safe } from '../secret-value.js'
 
 /**
  * @deprecated Use StandardSchemaV1 from @standard-schema/spec instead.
@@ -31,7 +32,9 @@ export type CorePikkuFunction<
   services: Services,
   data: In,
   wire: Wire
-) => Wire['channel'] extends null ? Promise<Out> : Promise<Out> | Promise<void>
+) => Wire['channel'] extends null
+  ? Promise<Safe<Out>>
+  : Promise<Safe<Out>> | Promise<void>
 
 export type CorePikkuFunctionSessionless<
   In,
@@ -45,7 +48,9 @@ export type CorePikkuFunctionSessionless<
   services: Services,
   data: In,
   wire: Wire
-) => Wire['channel'] extends null ? Promise<Out> : Promise<Out> | Promise<void>
+) => Wire['channel'] extends null
+  ? Promise<Safe<Out>>
+  : Promise<Safe<Out>> | Promise<void>
 
 export type CorePikkuPermission<
   In = any,

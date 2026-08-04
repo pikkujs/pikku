@@ -61,7 +61,7 @@ export const pikkuAddonConfig = <ExistingServices extends Omit<Partial<Singleton
  *   { secrets }
  * ) => {
  *   const creds = await secrets.getSecret<GithubCredentials>('GITHUB_CREDENTIALS')
- *   const github = new GithubService(creds)
+ *   const github = new GithubService(creds.reveal())
  *   return { github }
  * })
  * \`\`\`

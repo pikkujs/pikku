@@ -1,4 +1,5 @@
-import type { SecretService } from '@pikku/core/services'
+import { createSecretValue, isSecretValue, type SecretValue } from '@pikku/core'
+import type { SecretService, SecretValues } from '@pikku/core/services'
 import type { Db, Collection } from 'mongodb'
 import {
   deriveKEK,
@@ -124,14 +125,14 @@ export class MongoDBSecretService implements SecretService {
     return kek
   }
 
-  async getSecret<T = string>(key: string): Promise<T> {
+  async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     const row = await this.secrets.findOne({ _id: key })
     if (!row) throw new Error('Requested secret not found')
 
     const kek = await this.getKEK(row.keyVersion)
     const result = await envelopeDecrypt<T>(kek, row.ciphertext, row.wrappedDek)
     await this.logAudit(key, 'read')
-    return result
+    return createSecretValue(result)
   }
 
   async hasSecret(key: string): Promise<boolean> {
@@ -140,9 +141,11 @@ export class MongoDBSecretService implements SecretService {
   }
 
   async setSecret(key: string, value: unknown): Promise<void> {
+    // Encrypting the wrapper would store its redaction, not the secret —
+    // writing a secret back to the vault is exactly what this method is for.
     const { ciphertext, wrappedDEK } = await envelopeEncrypt(
       await this.getKEK(this.keyVersion),
-      value
+      isSecretValue(value) ? value.reveal() : value
     )
     const now = new Date()
 
@@ -173,7 +176,7 @@ export class MongoDBSecretService implements SecretService {
 
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
     keys: (keyof T & string)[]
-  ): Promise<T> {
+  ): Promise<Partial<SecretValues<T>>> {
     const rows = await this.secrets
       .find({ _id: { $in: keys } } as any)
       .toArray()
@@ -181,10 +184,8 @@ export class MongoDBSecretService implements SecretService {
     for (const row of rows) {
       try {
         const kek = await this.getKEK(row.keyVersion)
-        out[row._id] = await envelopeDecrypt(
-          kek,
-          row.ciphertext,
-          row.wrappedDek
+        out[row._id] = createSecretValue(
+          await envelopeDecrypt(kek, row.ciphertext, row.wrappedDek)
         )
       } catch (cause) {
         throw new Error(
@@ -194,7 +195,7 @@ export class MongoDBSecretService implements SecretService {
         )
       }
     }
-    return out as T
+    return out as Partial<SecretValues<T>>
   }
 
   async rotateKEK(): Promise<number> {

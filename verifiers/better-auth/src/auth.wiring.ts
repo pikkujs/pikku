@@ -20,22 +20,22 @@ let migrated: Promise<void> | undefined
 
 export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
   const instance = betterAuth({
-    secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
+    secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
     baseURL: 'http://localhost',
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: { enabled: true },
     // Drives the CLI to wire the stateless session middleware (see start.ts).
     session: { cookieCache: { enabled: true } },
     socialProviders: {
-      github: await secrets.getSecret('GITHUB_OAUTH'),
-      google: await secrets.getSecret('GOOGLE_OAUTH'),
-      discord: await secrets.getSecret('DISCORD_OAUTH'),
+      github: (await secrets.getSecret('GITHUB_OAUTH')).reveal(),
+      google: (await secrets.getSecret('GOOGLE_OAUTH')).reveal(),
+      discord: (await secrets.getSecret('DISCORD_OAUTH')).reveal(),
       microsoft: {
-        ...(await secrets.getSecret('MICROSOFT_OAUTH')),
+        ...(await secrets.getSecret('MICROSOFT_OAUTH')).reveal(),
         tenantId: await variables.get('MICROSOFT_TENANT_ID'),
       },
       cognito: {
-        ...(await secrets.getSecret('COGNITO_OAUTH')),
+        ...(await secrets.getSecret('COGNITO_OAUTH')).reveal(),
         // services.ts seeds every provider variable, so these are present.
         domain: (await variables.get('COGNITO_DOMAIN'))!,
         region: (await variables.get('COGNITO_REGION'))!,

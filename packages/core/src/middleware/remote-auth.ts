@@ -14,7 +14,7 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
 
     let secret: string
     try {
-      secret = await secrets.getSecret('PIKKU_REMOTE_SECRET')
+      secret = (await secrets.getSecret('PIKKU_REMOTE_SECRET')).reveal()
     } catch {
       if (http.request.path().startsWith('/remote/rpc/')) {
         throw new UnauthorizedError()

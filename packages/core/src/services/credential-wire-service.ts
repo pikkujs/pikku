@@ -1,3 +1,4 @@
+import { isSecretValue } from '../secret-value.js'
 import type { CredentialService } from './credential-service.js'
 import { defaultPikkuUserIdResolver } from './pikku-user-id.js'
 import type { PikkuRawWire } from '../types/core.types.js'
@@ -17,8 +18,15 @@ export class PikkuCredentialWireService {
     return this.aliases?.[name] ?? name
   }
 
+  /**
+   * A credential is one of the few places vault material is meant to end up, so
+   * a `SecretValue` is unwrapped here rather than rejected — `get` promises the
+   * raw material, and storing the wrapper would make that a lie.
+   */
   set(name: string, value: unknown): void {
-    this.credentials[this.resolveName(name)] = value
+    this.credentials[this.resolveName(name)] = isSecretValue(value)
+      ? value.reveal()
+      : value
   }
 
   get<T = unknown>(name: string): T | null | Promise<T | null> {

@@ -171,7 +171,8 @@ function registerTests(name: string, getDb: () => Db) {
         'batch-b': string
       }>(['batch-a', 'batch-b'])
 
-      assert.deepEqual(out, { 'batch-a': { v: 1 }, 'batch-b': 'two' })
+      assert.deepEqual(out['batch-a']!.reveal(), { v: 1 })
+      assert.equal(out['batch-b']!.reveal(), 'two')
     })
 
     test('getSecrets omits keys that were never stored', async () => {
@@ -181,7 +182,8 @@ function registerTests(name: string, getDb: () => Db) {
 
       const out = await service.getSecrets(['present', 'never-stored'])
 
-      assert.deepEqual(out, { present: 'here' })
+      assert.deepEqual(Object.keys(out), ['present'])
+      assert.equal(out.present!.reveal(), 'here')
     })
   })
 }
