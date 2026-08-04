@@ -23,7 +23,8 @@ generated output is never edited by hand.
 
 ## Agent Operating Procedure
 
-1. Edit source files under `emailTemplatesDir` only. Never edit `.pikku/email/*`.
+1. Edit source files under `emailTemplatesDir` only. Never edit `.pikku/email/*`. If the
+   directory does not exist yet, run `pikku emails init` rather than creating it by hand.
 2. After any change run `pikku emails generate` (it is also part of `prebuild`, usually
    `pikku bootstrap; pikku all; pikku emails generate`).
 3. Validate by importing `renderEmailTemplate` and rendering with sample data, or run the
@@ -40,7 +41,14 @@ generated output is never edited by hand.
 }
 ```
 
-If `emailTemplatesDir` is unset the command is a no-op.
+If `emailTemplatesDir` is unset the command is a no-op — it logs
+`Skipping emails (set emailTemplatesDir in pikku.config.json to enable).` and exits
+cleanly, so a silent generate is a config problem, not a template problem.
+
+`pikku emails init` scaffolds the directory (starter locales, theme, partials and a
+hello-world template) **and** writes `emailTemplatesDir` into `pikku.config.json` for
+you. Use it rather than hand-creating the tree; `--force` overwrites an existing
+scaffold.
 
 ## Directory layout
 
@@ -97,8 +105,17 @@ import {
 //   { appName?: ...; inviteUrl?: ...; inviterName?: ...; organizationName?: ... }
 ```
 
-To make a variable required-and-typed, reference it directly in the template body (not
-only in a locale string), so it shows up as that template's variable.
+Every extracted variable is emitted **optional** and typed `EmailTemplateValue`
+(`string | number | boolean | null | undefined | object | array`). The type tells you
+which variables a template can consume, not which ones it needs — there is no way to
+mark one required, and a template that references none types as `Record<string, never>`.
+Referencing a variable in the template body (rather than only in a locale string) is
+what gets it into the type at all.
+
+That matters because a placeholder with nothing behind it renders as the **empty
+string** — no error, no leftover `{{…}}`. A typo'd variable name, a missing `data` key
+and a value that isn't a string or number all produce the same silently blank output, so
+render with sample data and read the result rather than trusting that it compiled.
 
 ## Rendering
 
@@ -111,7 +128,17 @@ const rendered = renderEmailTemplate({
 // rendered: { name, locale, subject, html, text?, variables, hash }
 ```
 
+It is synchronous, and it throws on an unknown template name or an unknown locale —
+those are the only two failure modes; everything else degrades to blank output.
+
 `hash` is a stable content hash (useful as an idempotency / dedupe key on outgoing mail).
+The meta file also carries per-locale `htmlHash` / `subjectHash` / `textHash` if you need
+to tell which part changed.
+
+`{{locale}}` is in scope alongside `{{appName}}`, and placeholders are resolved by
+repeated passes so a locale string containing `{{verifyUrl}}` expands. The loop stops
+after 5 passes, which only becomes visible with placeholders nested more deeply than
+that — a shape worth avoiding rather than working around.
 
 ## Sending through an EmailService
 
@@ -160,4 +187,8 @@ async send(input: SendEmailInput) {
   reference it in this template to scope it in.
 - Editing a locale string changes that template's content hash — expected; the hash covers
   the strings the template uses.
-- `layout.html` must contain `{{content}}` or the body is dropped.
+- `layout.html` must contain `{{content}}` or the body is dropped. It is matched by the
+  partial name `layout`, so renaming the file opts every template out of the wrapper.
+- A blank spot where a value should be is an unresolved placeholder, not a render
+  failure — check the key's spelling and that the value is a string or number (objects
+  and arrays resolve to empty).
