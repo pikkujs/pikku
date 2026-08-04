@@ -162,7 +162,7 @@ packages/functions/
       *.channel.ts     # wireChannel
       *.queue.ts       # wireQueueWorker
       *.schedule.ts    # wireScheduler
-      *.mcp.ts         # wireMCPTool
+      *.mcp.ts         # wireMCPResource / wireMCPPrompt (an MCP tool is just a function with `mcp: true`)
       *.cli.ts         # wireCLI
     services.ts        # pikkuServices factory (singleton)
     middleware.ts      # Shared middleware
@@ -208,6 +208,11 @@ Links the repo to a Fabric project and declares its frontends:
 - `production.domain`: optional custom domain. Production always maps to `main`;
   without a domain it lives on the platform `*.pikkufabric.app` hostnames.
 - `frontends`: each entry declares a frontend app with its dev command and port
+
+Several CLI messages call this file `fabric.config.json` — `fabric init --force`,
+`fabric link --apiUrl`, and the `domains` commands' "No fabric.config.json found".
+The file the CLI actually reads and writes is `pikkufabric.config.json`; don't
+create the shorter name to satisfy an error message.
 
 ## RPC is the default transport
 
@@ -333,6 +338,6 @@ Fix every `error` and `warn` in the output before continuing. Then:
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
 4. **Replace `process.env` calls**: plain config becomes `defineVariable` + `variables.get()`, anything sensitive becomes `defineSecret` + `secrets.getSecret()`.
 5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles`.
-6. **Add `fabric.config.json`** at project root with `projectId`, `production.branch`, and `frontends`.
+6. **Add `pikkufabric.config.json`** at project root with `projectId`, `production.domain`, and `frontends` (production is always `main`, so there is no `production.branch`).
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
 8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.
