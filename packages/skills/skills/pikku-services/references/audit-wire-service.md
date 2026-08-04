@@ -23,7 +23,8 @@ The `audit` wire service is typed as `AuditLog` (from `@pikku/core`). Functions 
 ```typescript
 const deleteUser = pikkuFunc({
   func: async ({ audit }, { userId }) => {
-    await audit.audit({ type: 'user.deleted', actor_user_id: userId })
+    // The user identity comes from the wire session — the payload is metadata.
+    await audit.write({ type: 'user.deleted', source: 'explicit', metadata: { userId } })
     // ...
   },
 })

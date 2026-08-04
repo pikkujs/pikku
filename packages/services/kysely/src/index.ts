@@ -35,6 +35,7 @@ export {
 } from './serialize-plugin.js'
 
 export {
+  auditSchema,
   pikkuSchemas,
   applyPikkuSchemas,
   compilePikkuSchemas,

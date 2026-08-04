@@ -20,14 +20,14 @@ installGroups: [core]
 Use this skill as an execution checklist, not reference material.
 
 1. Discover before editing. Check how services are wired (`services.ts`) and whether an `audit` table migration exists before adding audit calls.
-2. NEVER hand-roll a custom `audit_log` / history table with direct `insertInto('audit_log')` calls. The framework owns audit. A bespoke table drifts from the runtime (missing actor/trace/wire context, hand-written CHECK constraints that reject valid events, no prod sink). Use the built-in path below.
+2. NEVER hand-roll a custom `audit_log` / history table with direct `insertInto('audit_log')` calls. The framework owns audit. A bespoke table drifts from the runtime (missing user/trace/wire context, hand-written CHECK constraints that reject valid events, no prod sink). Use the built-in path below.
 3. Make the smallest source change: mark the function `audit: true`, inject `auditLog`, call `auditLog.write(...)`. Do not invent a new service.
 4. Validate with `pikku all` (regenerates the service flags) then run the app / e2e.
 
 ## Mental model — two layers
 
 - **`audit` (singleton `AuditService`)** — the durable **sink**. Write-only: `audit(event)` + optional `write(batch)`. Defaults to `NoopAuditService` (discards). Swap in a real sink to persist (see Sinks).
-- **`auditLog` (wire service `AuditLog`)** — a per-invocation **buffer** built from the sink via `createInvocationAudit(audit, wire)`. `auditLog.write(input)` enriches each event with `functionId`, `wireType`, `traceId`, `occurredAt`, and `actor` (from the wire session) automatically, then flushes to the sink when the invocation ends.
+- **`auditLog` (wire service `AuditLog`)** — a per-invocation **buffer** built from the sink via `createInvocationAudit(audit, wire)`. `auditLog.write(input)` enriches each event with `functionId`, `wireType`, `traceId`, `occurredAt`, and `userIdentity` (from the wire session) automatically, then flushes to the sink when the invocation ends.
 
 An event only persists when the function opts in with **`audit: true`** — otherwise `auditLog` is a no-op that warns.
 
@@ -54,7 +54,7 @@ export const createWireServices = pikkuWireServices(async (services, wire) => {
 
 ## Recording events — explicit domain events (default)
 
-Mark the function `audit: true` and call `auditLog?.write(...)`. Domain history goes in `metadata`; the actor is derived from the session, so do NOT pass it manually.
+Mark the function `audit: true` and call `auditLog?.write(...)`. Domain history goes in `metadata`; the user identity is derived from the session, so do NOT pass it manually.
 
 ```typescript
 export const cancelInvoice = pikkuFunc({
@@ -82,7 +82,7 @@ export const cancelInvoice = pikkuFunc({
 })
 ```
 
-For a **system/cron** function there is no session, so `actor` is simply absent (nulls out `actor_user_id`). Use `pikkuVoidFunc({ audit: true, func: async ({ auditLog }) => { ... } })` — the void/config form accepts `audit`.
+For a **system/cron** function there is no session, so `userIdentity` is simply absent (nulls out `user_id`). Use `pikkuVoidFunc({ audit: true, func: async ({ auditLog }) => { ... } })` — the void/config form accepts `audit`.
 
 Helper functions (in `lib/`) that record audit take `auditLog?: AuditLog` in their services arg and are passed it from a `audit: true` caller — never import a service.
 
@@ -121,8 +121,9 @@ CREATE TABLE IF NOT EXISTS audit (
   trace_id       TEXT,
   transaction_id TEXT,
   query_id       TEXT,
-  actor_user_id  TEXT,
-  actor_org_id   TEXT,
+  user_id        TEXT,
+  org_id         TEXT,
+  pikku_user_id  TEXT,
   tables         TEXT,  -- JSON: table names touched (auto capture)
   changed_cols   TEXT,  -- JSON: changed column names (auto capture)
   event          TEXT,  -- custom event label
@@ -136,7 +137,7 @@ CREATE TABLE IF NOT EXISTS audit (
 ```typescript
 const rows = await kysely
   .selectFrom('audit')
-  .leftJoin('user', 'user.id', 'audit.actorUserId')
+  .leftJoin('user', 'user.id', 'audit.userId')
   .where(sql<boolean>`json_extract(audit.data, '$.entity') = 'invoice'`)
   .where(sql<boolean>`json_extract(audit.data, '$.entityId') = ${invoiceId}`)
   .orderBy('audit.occurredAt', 'desc')
@@ -158,18 +159,18 @@ type AuditEvent = {
   occurredAt: string                    // auto-filled by auditLog
   outcome?: string
   functionId?; wireType?; wireId?; traceId?; transactionId?; queryId?  // auto
-  actor?: { userId?; orgId? }           // auto from wire session
+  userIdentity?: { userId?; orgId?; pikkuUserId? } // auto from wire session
   input?: unknown
   metadata?: Record<string, unknown>    // your domain payload
 }
 ```
 
-`auditLog.write()` takes `Omit<AuditEvent, 'occurredAt'>` — you only supply `type`, `source`, and `metadata` (and `actor` if overriding the session default).
+`auditLog.write()` takes `Omit<AuditEvent, 'occurredAt'>` — you only supply `type`, `source`, and `metadata` (and `userIdentity` if overriding the session default).
 
 ## Do / Don't
 
 - DO mark recording functions `audit: true`, inject `auditLog`, and call `auditLog.write({ type, source: 'explicit', metadata })`.
-- DO let the actor come from the session — don't thread `userId` into metadata for the actor.
+- DO let the user identity come from the session — don't thread `userId` into metadata for it.
 - DON'T create a custom `audit_log`/history table or `insertInto('audit_log')` by hand.
 - DON'T annotate the function's I/O from audit; audit is a side channel, not part of `input`/`output`.
 - DON'T write audit inside a DB transaction expecting rollback — record after commit.

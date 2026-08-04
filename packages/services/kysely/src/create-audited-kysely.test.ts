@@ -33,8 +33,8 @@ interface AuditEventTable {
   traceId: string | null
   transactionId: string | null
   queryId: string | null
-  actorUserId: string | null
-  actorOrgId: string | null
+  userId: string | null
+  orgId: string | null
   actorPikkuUserId: string | null
   metadataJson: string | null
 }
@@ -76,8 +76,8 @@ async function createAuditEventsTable(
     .addColumn('traceId', 'text')
     .addColumn('transactionId', 'text')
     .addColumn('queryId', 'text')
-    .addColumn('actorUserId', 'text')
-    .addColumn('actorOrgId', 'text')
+    .addColumn('userId', 'text')
+    .addColumn('orgId', 'text')
     .addColumn('actorPikkuUserId', 'text')
     .addColumn('metadataJson', 'text')
     .execute()
@@ -113,9 +113,9 @@ class ImmediateAuditService implements AuditService {
         traceId: event.traceId ?? null,
         transactionId: event.transactionId ?? null,
         queryId: event.queryId ?? null,
-        actorUserId: event.actor?.userId ?? null,
-        actorOrgId: event.actor?.orgId ?? null,
-        actorPikkuUserId: event.actor?.pikkuUserId ?? null,
+        userId: event.userIdentity?.userId ?? null,
+        orgId: event.userIdentity?.orgId ?? null,
+        actorPikkuUserId: event.userIdentity?.pikkuUserId ?? null,
         metadataJson: event.metadata ? JSON.stringify(event.metadata) : null,
       })
       .execute()
@@ -207,7 +207,7 @@ describe('createAuditedKysely', () => {
       changes: { title: 'write tests', done: 0 },
       rowCount: 1,
     })
-    assert.deepEqual(events[0]?.actor, {
+    assert.deepEqual(events[0]?.userIdentity, {
       userId: 'user-1',
       orgId: 'org-1',
       pikkuUserId: 'user-1',
@@ -257,7 +257,7 @@ describe('createAuditedKysely', () => {
       title: 'after',
       done: 1,
     })
-    assert.deepEqual(events[0]?.actor, {
+    assert.deepEqual(events[0]?.userIdentity, {
       userId: 'user-2',
       orgId: undefined,
       pikkuUserId: 'user-2',
@@ -455,7 +455,7 @@ describe('createAuditedKysely', () => {
       ['todos:best-effort', 'todos:best-effort']
     )
     assert.deepEqual(
-      persisted.map((event) => event.actorUserId),
+      persisted.map((event) => event.userId),
       ['user-best-effort', 'user-best-effort']
     )
     assert.equal(persisted[0]?.queryId, 'q-1')

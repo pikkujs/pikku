@@ -57,6 +57,15 @@ defineScope({
           },
         },
       },
+      audit: {
+        description: 'The audit trail',
+        scopes: {
+          read: {
+            description:
+              'Read the audit trail — every recorded action, and which user took it',
+          },
+        },
+      },
     },
   },
 })

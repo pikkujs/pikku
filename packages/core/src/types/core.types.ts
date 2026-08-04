@@ -174,6 +174,19 @@ export type FunctionRuntimeMeta = {
   scenarioStepAddon?: string
   /** Scenario steps only: the prose a reporter renders, with `{placeholders}` filled from the step's recorded input. */
   scenarioStepTemplate?: string
+  /**
+   * The function's `audit` config, resolved — `audit: true` reads as
+   * `{ durability: 'best-effort' }`. Absent means the function records nothing:
+   * `auditLog.write()` from an unmarked function is dropped with a warning, so
+   * this is the only place a reader can see which functions have a trail at all
+   * without running them.
+   *
+   * Informational. The runner resolves audit from the live function config, not
+   * from here, so meta and runtime cannot disagree about whether audit is on.
+   */
+  audit?: {
+    durability: AuditDurability
+  }
   /** Keeps the full `SecretService`. Set by the inspector, read by the runner. */
   secretBroker?: boolean
   version?: number

@@ -197,20 +197,23 @@ export type { SessionService } from './services/user-session-service.js'
 export {
   NoopAuditService,
   createInvocationAudit,
-  resolveAuditActorFromWire,
   resolveAuditConfig,
+  resolveAuditUserIdentityFromWire,
 } from './services/audit-service.js'
 export type {
-  AuditActor,
   AuditConfig,
   AuditDurability,
   AuditEvent,
   AuditEventBatch,
+  AuditFacets,
   AuditLog,
   AuditLogWriteInput,
   AuditOutcome,
+  AuditQuery,
+  AuditQueryResult,
   AuditService,
   AuditSource,
+  AuditUserIdentity,
   ResolvedAuditConfig,
 } from './services/audit-service.js'
 export type {
