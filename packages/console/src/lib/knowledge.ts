@@ -197,6 +197,92 @@ export const resolveNoteLink = (
   return resolved.join('/')
 }
 
+/**
+ * The `<kind>:<id>` scheme a note's `resource:` uses to point at the thing in the
+ * code it is about. Mirrors `RESOURCE_PREFIXES` in @pikku/knowledge, which is a
+ * node module the console cannot import — the same hand-kept arrangement as the
+ * bundle types above.
+ */
+export const RESOURCE_PREFIXES = [
+  'func',
+  'workflow',
+  'schema',
+  'http',
+  'queue',
+  'cron',
+  'channel',
+  'table',
+  'addon',
+  'scope',
+  'persona',
+] as const
+
+export type ResourcePrefix = (typeof RESOURCE_PREFIXES)[number]
+
+export interface ResourceUri {
+  prefix: ResourcePrefix
+  id: string
+}
+
+/** `func:createEntry` → `{ prefix: 'func', id: 'createEntry' }`; null if it isn't one. */
+export const parseResourceUri = (uri: string): ResourceUri | null => {
+  const at = uri.indexOf(':')
+  if (at <= 0) return null
+  const prefix = uri.slice(0, at)
+  const id = uri.slice(at + 1).trim()
+  if (!id) return null
+  if (!(RESOURCE_PREFIXES as readonly string[]).includes(prefix)) return null
+  return { prefix: prefix as ResourcePrefix, id }
+}
+
+/**
+ * Where in the console a resource URI leads, or null when nothing here shows
+ * that kind of thing.
+ *
+ * Null rather than a page that ignores the id: a `resource:` is a claim about
+ * one function, one table, one persona, and a link that lands on a list with the
+ * subject nowhere on screen teaches the reader that these links do not work. A
+ * `schema:` has no screen at all, so it stays plain text.
+ *
+ * The paths are the console's own routes. In an embedded console they are
+ * rewritten by the host's `Link` — which is the reason this returns a path
+ * rather than navigating itself.
+ */
+export const resourceHref = (uri: string): string | null => {
+  const parsed = parseResourceUri(uri)
+  if (!parsed) return null
+  const { prefix, id } = parsed
+  const search = encodeURIComponent(id)
+  switch (prefix) {
+    case 'func':
+      return `/functions?search=${search}`
+    case 'workflow':
+      return `/workflow?search=${search}`
+    case 'http':
+      return `/apis?tab=http&search=${search}`
+    case 'channel':
+      return `/apis?tab=channels&search=${search}`
+    case 'queue':
+      return `/jobs?tab=queues&search=${search}`
+    case 'cron':
+      return `/jobs?tab=schedulers&search=${search}`
+    case 'scope':
+      return `/scopes?search=${search}`
+    // Both screens select from their own tree rather than from a query, so the
+    // link opens the screen and the reader picks up from there. Better than
+    // nothing, and it stops being a half-link the moment either grows a `?search=`.
+    case 'persona':
+      return '/personas'
+    case 'table':
+      return '/database'
+    case 'addon':
+      return '/addons'
+    // A generated JSON schema is not a screen in this console.
+    case 'schema':
+      return null
+  }
+}
+
 export interface KnowledgeGroup {
   /** `''` for the notes at the root of knowledge/. */
   section: string

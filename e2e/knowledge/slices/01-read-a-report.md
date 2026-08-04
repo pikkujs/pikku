@@ -19,6 +19,16 @@ The refusal has to name the missing scope. A 403 that says only "forbidden"
 cannot be told apart from a bug in the caller, which is the failure this slice
 exists to rule out.
 
+```mermaid
+flowchart LR
+  caller([Authenticated caller]) --> gate{Session holds<br/>reports:read?}
+  gate -- yes --> report[[The quarterly numbers]]
+  gate -- no --> refusal[/403 naming the missing scope/]
+```
+
+[getReport](func:getReport) is the only function behind the gate, and
+[reports:read](scope:reports:read) the only scope in front of it.
+
 ```gherkin
 Scenario: The holder reads the report
   Given 'guest' holds the report-viewer role

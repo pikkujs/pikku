@@ -304,19 +304,35 @@
   line-height: 1.35;
 }
 
+/* Sized in `em` off the body rather than off the theme's size tokens: those run
+   16 / 14 / 12px, which puts an `h3` BELOW the paragraph under it and leaves a
+   whole document inside one and a half steps. A note is mostly structure, and
+   the reader finds their place by size. */
 .markdownBody h1 {
-  font-size: var(--mantine-font-size-lg);
+  font-size: 1.5em;
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .markdownBody h2 {
-  font-size: var(--mantine-font-size-md);
+  font-size: 1.25em;
+  font-weight: 650;
+}
+
+.markdownBody h3 {
+  font-size: 1.1em;
   font-weight: 600;
 }
 
-.markdownBody :is(h3, h4, h5, h6) {
-  font-size: var(--mantine-font-size-sm);
+.markdownBody :is(h4, h5, h6) {
+  font-size: 1em;
   font-weight: 600;
+}
+
+/* More space above a heading than below it: the gap is what says the heading
+   belongs to what follows. */
+.markdownBody :is(h2, h3) {
+  margin-top: 1.6em;
 }
 /* The console's primary colour is gray, so an anchor styled from the theme is
    the same colour as the sentence around it. The accent is what the rest of the
@@ -330,6 +346,14 @@
   text-decoration: underline;
 }
 
+/* The light theme's accent is a mid cyan — right for a filled button, 3.4:1 as
+   text on the page, which is a fail at prose size. Links in a document are read,
+   not glanced at. */
+:global(html[data-mantine-color-scheme='light']) .markdownBody a,
+:global(html[data-mantine-color-scheme='light']) .resourceChip[data-linked] {
+  color: #0e7490;
+}
+
 /* The same accent for the links in a note's details table, which are the same
    graph edges shown as a list. */
 .knowledgeLink {
@@ -338,7 +362,9 @@
 
 .markdownBody pre {
   background: var(--app-surface, var(--mantine-color-default));
-  border: 1px solid var(--app-row-border);
+  /* `--app-row-border` is transparent in the light theme, which leaves a white
+     slab on a near-white page with no edge at all. The fallback is the edge. */
+  border: 1px solid var(--app-row-border, rgba(128, 128, 128, 0.22));
   border-radius: 8px;
   padding: 12px 14px;
   overflow-x: auto;
@@ -347,8 +373,337 @@
 .markdownBody pre code {
   background: transparent;
   padding: 0;
-  font-size: var(--mantine-font-size-xs);
+  /* Code is the thing on this page a developer will read character by
+     character; it does not get the smallest type in the document. */
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.6;
+}
+
+/* A fence, as the console draws code everywhere else: highlighted, on the panel
+   surface, with the copy control that makes a snippet something you can take. */
+.markdownCode {
+  margin: 0.9em 0;
+  border: 1px solid var(--app-row-border, rgba(128, 128, 128, 0.22));
+  border-radius: 8px;
+  font-size: var(--mantine-font-size-sm);
+}
+
+/* ── Tables ──
+   Typography styles a table as prose. A table in a note is a comparison the
+   author chose to draw as a grid, so it is read column-wise: a sticky-weight
+   header, rules between rows, and no vertical lines, which is the console's own
+   table language. */
+/* ── Scrolling regions ──
+   A box whose content is allowed to be wider than it is: a table with more
+   columns than the pane, a diagram at full size. The fade is the only thing that
+   says so — a column that simply ends at the edge reads as the last column — and
+   it is drawn on the side that still has content behind it, so a reader who has
+   scrolled to the end sees a clean edge and knows they are done. */
+.scrollRegion {
+  overflow-x: auto;
+}
+
+.scrollRegion[data-fade-end] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
+.scrollRegion[data-fade-start] {
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
+.scrollRegion[data-fade-start][data-fade-end] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 24px,
+    #000 calc(100% - 24px),
+    transparent
+  );
+}
+
+.scrollRegion:focus-visible {
+  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.markdownTableScroll {
+  margin: 0.9em 0;
+}
+
+.markdownBody table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--mantine-font-size-sm);
+}
+
+.markdownBody :is(th, td) {
+  padding: 7px 12px;
+  text-align: start;
+  vertical-align: top;
+  border: none;
+  border-bottom: 1px solid var(--app-row-border, rgba(128, 128, 128, 0.18));
+}
+
+.markdownBody th {
+  font-weight: 600;
+  /* 11px is the floor for uppercase, letter-spaced label text; the theme's `xs`
+     lands under it once the console's root size is applied. */
+  font-size: max(11px, var(--mantine-font-size-xs));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-meta-label);
+  white-space: nowrap;
+}
+
+.markdownBody tbody tr:last-child :is(th, td) {
+  border-bottom: none;
+}
+
+.markdownBody tbody tr:hover {
+  background: var(--app-panel-bg-soft, transparent);
+}
+
+/* ── Callouts (`> [!NOTE]`) ──
+   The kind is the whole point of the syntax, so it is carried by colour AND a
+   label: colour alone is not a distinction every reader can make. */
+.markdownAlert {
+  margin: 0.9em 0;
+  padding: 10px 14px;
+  /* One hairline the whole way round rather than a heavy rule down one side:
+     three callouts in a row read as three panels instead of as one striped
+     band, and the kind is carried by the label and the tint — which is where a
+     reader looks — rather than by a bar in the margin.
+     `border` in full also overwrites Typography's own blockquote rule, which
+     would otherwise show through underneath in a colour that belongs to
+     neither. */
+  border: 1px solid var(--md-alert-border);
+  border-radius: 6px;
+  background: var(--md-alert-bg);
+  font-style: normal;
+  color: inherit;
+}
+
+.markdownAlert > :first-child {
+  margin-top: 0;
+}
+
+.markdownAlert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdownAlertLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: max(11px, var(--mantine-font-size-xs));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--md-alert-label, var(--md-alert-color));
+}
+
+.markdownAlert[data-alert='note'] {
+  --md-alert-color: var(--app-blue, #2563eb);
+  --md-alert-bg: var(--app-surface-info, rgba(37, 99, 235, 0.06));
+  --md-alert-border: rgba(37, 99, 235, 0.28);
+}
+
+.markdownAlert[data-alert='tip'] {
+  --md-alert-color: var(--app-green, #16a34a);
+  --md-alert-bg: var(--app-surface-success, rgba(22, 163, 74, 0.06));
+  --md-alert-border: rgba(22, 163, 74, 0.28);
+}
+
+.markdownAlert[data-alert='important'] {
+  --md-alert-color: var(--app-service-color, #7c3aed);
+  --md-alert-bg: var(--app-service-bg, rgba(124, 58, 237, 0.08));
+  --md-alert-border: rgba(124, 58, 237, 0.3);
+}
+
+.markdownAlert[data-alert='warning'] {
+  --md-alert-color: var(--app-amber, #d97706);
+  --md-alert-bg: var(--app-surface-warning, rgba(217, 119, 6, 0.06));
+  --md-alert-border: rgba(217, 119, 6, 0.3);
+}
+
+.markdownAlert[data-alert='caution'] {
+  --md-alert-color: var(--app-red, #dc2626);
+  --md-alert-bg: var(--app-surface-danger-soft, rgba(220, 38, 38, 0.06));
+  --md-alert-border: rgba(220, 38, 38, 0.3);
+}
+
+/* The theme's status hues are tuned for badges and bars on a dark ground. In
+   light they sit on a near-white panel as small uppercase text, where amber
+   reaches 2.8:1 and green 3.0:1 — a contrast failure on the one word whose job
+   is to say "warning". The label, and only the label, gets a darker shade. */
+:global(html[data-mantine-color-scheme='light']) .markdownAlert {
+  --md-alert-label: var(--md-alert-color);
+}
+
+:global(html[data-mantine-color-scheme='light'])
+  .markdownAlert[data-alert='warning'] {
+  --md-alert-label: #a16207;
+}
+
+:global(html[data-mantine-color-scheme='light'])
+  .markdownAlert[data-alert='tip'] {
+  --md-alert-label: #15803d;
+}
+
+:global(html[data-mantine-color-scheme='light'])
+  .markdownAlert[data-alert='caution'] {
+  --md-alert-label: #b91c1c;
+}
+
+/* ── Diagrams (```mermaid) ──
+   A figure rather than a paragraph, so it is centred in the measure — until it
+   is wider than the measure, at which point it scrolls at full size and starts
+   from the left, where the reader starts. Fitting it to the column instead would
+   keep the whole diagram on screen by scaling its labels to 5px, which is not
+   the same as keeping it readable. */
+.mermaidDiagram {
+  margin: 1.2em 0;
+  text-align: center;
+}
+
+/* Left-aligned once it scrolls: a centred diagram that overflows starts the
+   reader in the middle of it. */
+.mermaidDiagram[data-scrollable] {
+  text-align: start;
+}
+
+.mermaidDiagram svg {
+  height: auto;
+}
+
+/* Mermaid sizes each renderer's labels from a different config key, and draws
+   some of them as HTML inside a `foreignObject` where those keys never reach —
+   an actor box comes out at 16px against a 14px paragraph. The scale is settled
+   here instead, once, for every diagram type: a figure reads at or below the
+   prose it illustrates, and only its title is allowed to be bigger. */
+/* `!important` because mermaid writes these sizes as inline `style` attributes
+   on the `<text>` elements it emits, from a different config key per renderer —
+   an actor label comes out at 16px whatever `sequence.actorFontSize` says.
+   Overriding a third-party's inline style is the one case the keyword is for. */
+.mermaidDiagram :is(text, tspan, foreignObject div, foreignObject span) {
+  font-size: 13px !important;
+}
+
+.mermaidDiagram :is(text.titleText, .titleText) {
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
+/* Roughly a small flowchart, held until the first draw measures the real one. */
+.mermaidPending {
+  min-height: 120px;
+  border-radius: 8px;
+  background: var(--app-panel-bg-soft, rgba(128, 128, 128, 0.06));
+}
+
+/* A fence shown as source: a diagram that did not parse, or a chart, which this
+   renderer does not draw. Either way the source is the note's content, and the
+   line above it says which of the two happened. */
+.mermaidFallback {
+  margin: 1.2em 0;
+}
+
+.mermaidFallbackLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: max(11px, var(--mantine-font-size-xs));
+  color: var(--app-text-dim, #64748b);
+}
+
+/* ── Resource chips (`func:createEntry`) ──
+   The one kind of reference in a note that points OUT of the knowledge base and
+   into the app, so it is drawn as an object rather than as prose: a kind icon,
+   a monospace id, and a surface that separates it from the sentence carrying it.
+   Inline-flex with a baseline shift so a chip mid-sentence does not push the
+   line height around. */
+.resourceChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  /* The base chip is the one that goes nowhere — a generated schema, a kind with
+     no screen. It is a label: neutral ground, dimmed text, no border. The accent
+     is what the console uses to mean "this responds to you", so spending it on
+     an inert chip teaches the reader that a chip may or may not do anything. */
+  background: rgba(128, 128, 128, 0.1);
+  color: var(--app-text-dim, inherit);
+  border: 1px solid transparent;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.85em;
+  line-height: 1.45;
+  /* 24px of hit area for a 17px chip, taken symmetrically out of the line box so
+     the sentence carrying it keeps its rhythm. */
+  padding-block: max(2px, calc((24px - 1.45em) / 2));
+  vertical-align: baseline;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.resourceChip[data-linked] {
+  background: var(--app-tag-bg, rgba(6, 182, 212, 0.12));
+  color: var(--app-tag-color, inherit);
+  border-color: var(--app-accent-soft, rgba(6, 182, 212, 0.25));
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.resourceChip[data-linked]:hover {
+  background: var(--app-accent-soft, rgba(128, 128, 128, 0.2));
+  border-color: var(--app-accent, currentColor);
+  text-decoration: none;
+}
+
+.resourceChip[data-linked]:focus-visible {
+  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
+  outline-offset: 1px;
+}
+
+/* A chip standing alone — in a note's details, a row of resources — is a
+   control: a box, a surface, something to click. The same chip inside a sentence
+   is not; there it is a word the author chose, and boxing it stops the sentence
+   dead every few words. Inline it keeps only what it needs to be a reference:
+   the kind icon and the link colour. The invisible padding stays, because the
+   tap target has to survive the box going away. */
+.markdownBody :is(p, li, td, th, blockquote) a.resourceChip {
+  background: none;
+  border-color: transparent;
+  padding-inline: 1px;
+}
+
+.markdownBody :is(p, li, td, th, blockquote) a.resourceChip:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+/* Elsewhere the chip is a surface of its own, and the document's
+   underline-on-hover would draw a second line under the icon. */
+.markdownBody a.resourceChip:hover {
+  text-decoration: none;
+}
+
+/* ── Task lists ──
+   GFM renders `- [x]` as a disabled checkbox in a bulleted item; the bullet
+   beside a checkbox is one marker too many. */
+.markdownBody li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-inline-start: -1.1em;
+}
+
+.markdownBody input[type='checkbox'] {
+  margin-inline-end: 6px;
+  accent-color: var(--app-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {

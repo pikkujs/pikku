@@ -9,7 +9,9 @@ import {
   maxSeverity,
   noteFileName,
   noteMatches,
+  parseResourceUri,
   readableBody,
+  resourceHref,
   resolveNoteLink,
   toNavSections,
   type KnowledgeFinding,
@@ -364,5 +366,52 @@ describe('entryPointNote', () => {
 
   test('an empty list has no entry point', () => {
     assert.equal(entryPointNote([]), undefined)
+  })
+})
+
+describe('resource URIs', () => {
+  test('splits a URI at the first colon', () => {
+    assert.deepEqual(parseResourceUri('func:createEntry'), {
+      prefix: 'func',
+      id: 'createEntry',
+    })
+  })
+
+  test('a scope id keeps the colons inside it', () => {
+    assert.deepEqual(parseResourceUri('scope:entry:write'), {
+      prefix: 'scope',
+      id: 'entry:write',
+    })
+  })
+
+  test('an unknown prefix is not a resource', () => {
+    assert.equal(parseResourceUri('https://pikku.dev'), null)
+    assert.equal(parseResourceUri('mailto:hi@example.com'), null)
+    assert.equal(parseResourceUri('entities/entry.md'), null)
+    assert.equal(parseResourceUri('func:'), null)
+  })
+
+  test('a function leads to the functions screen, filtered to it', () => {
+    assert.equal(
+      resourceHref('func:createEntry'),
+      '/functions?search=createEntry'
+    )
+  })
+
+  test('an id that is not URL-safe survives the trip', () => {
+    assert.equal(
+      resourceHref('http:/entries/:id'),
+      '/apis?tab=http&search=%2Fentries%2F%3Aid'
+    )
+  })
+
+  test('a kind with no screen has no link', () => {
+    assert.equal(resourceHref('schema:CreateEntryInput'), null)
+    assert.equal(resourceHref('nonsense:whatever'), null)
+  })
+
+  test('a kind whose screen has no query still opens the screen', () => {
+    assert.equal(resourceHref('persona:owner'), '/personas')
+    assert.equal(resourceHref('table:entry'), '/database')
   })
 })

@@ -2,7 +2,6 @@ import React, { useId, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
-  Code,
   Collapse,
   Divider,
   Group,
@@ -17,12 +16,14 @@ import type { Components } from 'react-markdown'
 import type { KnowledgeFinding, KnowledgeNote } from '../../lib/knowledge'
 import {
   bodyWithoutTitle,
+  parseResourceUri,
   readableBody,
   resolveNoteLink,
 } from '../../lib/knowledge'
 import { Markdown, asMarkdownContent } from '../ui/Markdown'
 import { MetaRow } from '../ui/MetaRow'
 import { KnowledgeNoteLinks } from './KnowledgeNoteLinks'
+import { KnowledgeResourceLink } from './KnowledgeResourceLink'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
 import { KnowledgeTypeIcon } from './KnowledgeTypeIcon'
@@ -65,6 +66,16 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
   const linkRenderer = useMemo<Components>(
     () => ({
       a: ({ href, children }) => {
+        // Checked before anything else: a resource URI has a scheme, so every
+        // other branch here would read `func:createEntry` as an external link
+        // and hand it to the browser, which has nowhere to take it.
+        if (href && parseResourceUri(href)) {
+          return (
+            <KnowledgeResourceLink uri={href}>
+              {asMarkdownContent(children)}
+            </KnowledgeResourceLink>
+          )
+        }
         const target = href ? resolveNoteLink(note.path, href) : null
         // Not a note: an http(s) link, an anchor, a source file. The one kind of
         // link the browser can follow on its own.
@@ -224,7 +235,7 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
                   <MetaRow label={m.knowledge_resources()} labelWidth={110}>
                     <Group gap={6} wrap="wrap">
                       {note.resource.map((uri) => (
-                        <Code key={uri}>{uri}</Code>
+                        <KnowledgeResourceLink key={uri} uri={uri} />
                       ))}
                     </Group>
                   </MetaRow>

@@ -4,6 +4,7 @@ import { Group, TextInput, Center, Loader } from '@pikku/mantine/core'
 import { GitBranch, Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { useSearchParams } from '../router'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -34,7 +35,13 @@ const WorkflowPageInner: React.FC<{
 }) => {
   useLocale()
   const { workflowId, navigateTo } = useConsoleNavigator()
-  const [searchQuery, setSearchQuery] = useState('')
+  // Seeded from `?search=` so one workflow is linkable from elsewhere — a
+  // knowledge note naming `workflow:onboarding` opens this list on it. Initial
+  // value only; from then on the box belongs to the reader.
+  const [searchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(
+    () => searchParams.get('search') ?? ''
+  )
 
   if (!onOpen && workflowId) {
     return <WorkflowTabContent immersiveDetail={immersiveDetail} />
