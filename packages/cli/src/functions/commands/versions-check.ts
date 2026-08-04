@@ -48,7 +48,7 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
               `  Set \`version: ${error.nextVersion}\` on the function, then run:`
             )
           }
-          logger.info(`  npx pikku versions-update`)
+          logger.info(`  npx pikku versions update`)
         } else if (
           error.code === ErrorCode.FUNCTION_VERSION_MODIFIED &&
           error.functionKey
@@ -90,7 +90,7 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
             `  This usually means a merge conflict in versions.pikku.json.`
           )
           logger.info(`  Resolve the conflict, then run:`)
-          logger.info(`  npx pikku versions-update`)
+          logger.info(`  npx pikku versions update`)
         } else if (
           error.code === ErrorCode.VERSION_GAP_NOT_ALLOWED &&
           error.functionKey
@@ -129,7 +129,7 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
           }
           logger.info(``)
           logger.info(`  The manifest is corrupted. Run:`)
-          logger.info(`  npx pikku versions-update`)
+          logger.info(`  npx pikku versions update`)
         } else {
           logger.info(`[${error.code}] ${error.message}`)
         }
