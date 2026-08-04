@@ -107,7 +107,11 @@ async function makeValidProject(root: string) {
     'CREATE TABLE audit (eventId TEXT PRIMARY KEY);\n',
     'utf8'
   )
-  await writeFile(join(root, 'db', 'sqlite-seed.sql'), '-- seed data\n', 'utf8')
+  await writeFile(
+    join(root, 'db', 'sqlite-dev-seed.sql'),
+    '-- seed data\n',
+    'utf8'
+  )
   await mkdir(join(root, 'packages', 'mantine-theme', 'themes'), {
     recursive: true,
   })
@@ -1016,17 +1020,19 @@ describe('pikku fabric validate', () => {
     })
   })
 
-  describe('db/sqlite-seed.sql', () => {
-    test('missing db/sqlite-seed.sql → error', async () => {
+  describe('db/sqlite-dev-seed.sql', () => {
+    test('missing db/sqlite-dev-seed.sql → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'db', 'sqlite-seed.sql'), {
+        await rm(join(tmp, 'db', 'sqlite-dev-seed.sql'), {
           force: true,
         })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
-        const finding = result.findings.find((f) => f.id === 'seed-sql-missing')
+        const finding = result.findings.find(
+          (f) => f.id === 'dev-seed-sql-missing'
+        )
         assert.ok(finding)
         assert.strictEqual(finding!.severity, 'error')
       } finally {

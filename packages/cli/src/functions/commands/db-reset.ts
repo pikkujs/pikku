@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { resolveDb, reset, migrateAndCodegen, seed } from '../db/local-db.js'
+import { resolveDb, reset, migrateAndCodegen, devSeed } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbReset = pikkuSessionlessFunc<{}, void>({
@@ -56,10 +56,10 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
         : `db reset: ${zod.outFile} unchanged`
     )
 
-    const seedResult = await seed(resolved)
-    if (seedResult.applied) {
+    const devSeedResult = await devSeed(resolved)
+    if (devSeedResult.applied) {
       logger.info(
-        `db reset: seeded ${resolved.seedFile} (${seedResult.bytes} bytes)`
+        `db reset: seeded ${resolved.devSeedFile} (${devSeedResult.bytes} bytes)`
       )
     }
   },

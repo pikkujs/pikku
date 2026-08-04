@@ -36,7 +36,7 @@ import { SqliteMigrationExecutor } from './sqlite/sqlite-migrator.js'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
-import { seed as runSeed, type SeedResult } from './sqlite/seed.js'
+import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from './postgres/postgres-migrator.js'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { PostgresIntrospector } from './postgres/postgres-introspector.js'
@@ -63,7 +63,7 @@ export interface ResolvedSqliteDb extends ResolvedDbBase {
   dialect: 'sqlite'
   dbFile: string
   runtimeDir: string
-  seedFile: string
+  devSeedFile: string
 }
 
 export interface ResolvedPostgresDb extends ResolvedDbBase {
@@ -72,7 +72,7 @@ export interface ResolvedPostgresDb extends ResolvedDbBase {
   connectionString?: string
   pgliteDir?: string
   runtimeDir: string
-  seedFile: string
+  devSeedFile: string
   /**
    * Postgres extensions the embedded PGlite databases must load, as declared by
    * `pgliteExtensions` in the project's config. See
@@ -158,7 +158,7 @@ export function resolveDb(
       mode: 'url',
       connectionString: userConfig.postgresUrl,
       runtimeDir: resolvedRuntimeDir,
-      seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
+      devSeedFile: resolveAgainst(rootDir, 'db/postgres-dev-seed.sql'),
       pgliteExtensions,
       schema,
       ...base('db/postgres'),
@@ -184,7 +184,7 @@ export function resolveDb(
       dialect: 'sqlite',
       dbFile: resolveAgainst(rootDir, sqliteDb),
       runtimeDir: resolvedRuntimeDir,
-      seedFile: resolveAgainst(rootDir, 'db/sqlite-seed.sql'),
+      devSeedFile: resolveAgainst(rootDir, 'db/sqlite-dev-seed.sql'),
       ...base('db/sqlite'),
     }
   }
@@ -195,7 +195,7 @@ export function resolveDb(
       mode: 'pglite',
       pgliteDir: join(resolvedRuntimeDir, 'dev-postgres'),
       runtimeDir: resolvedRuntimeDir,
-      seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
+      devSeedFile: resolveAgainst(rootDir, 'db/postgres-dev-seed.sql'),
       pgliteExtensions,
       schema,
       ...base('db/postgres'),
@@ -624,22 +624,28 @@ export async function migrateAndCodegen(
 
 // ─── SQLite-only operations ───────────────────────────────────────────────────
 
-export async function seed(resolved: ResolvedDb): Promise<SeedResult> {
+export async function devSeed(resolved: ResolvedDb): Promise<DevSeedResult> {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `pikku db dev-seed refused: NODE_ENV=production. Seed data is test data — this command only runs in dev.`
+    )
+  }
+
   if (resolved.dialect === 'sqlite') {
     const runtime = await loadSqliteRuntime()
     const db = runtime.open(resolved.dbFile)
     try {
-      return runSeed(db, resolved.seedFile)
+      return runDevSeed(db, resolved.devSeedFile)
     } finally {
       db.close()
     }
   }
 
-  if (!existsSync(resolved.seedFile)) {
+  if (!existsSync(resolved.devSeedFile)) {
     return { applied: false, bytes: 0 }
   }
 
-  const sql = readFileSync(resolved.seedFile, 'utf8')
+  const sql = readFileSync(resolved.devSeedFile, 'utf8')
   if (sql.trim().length === 0) {
     return { applied: false, bytes: 0 }
   }
