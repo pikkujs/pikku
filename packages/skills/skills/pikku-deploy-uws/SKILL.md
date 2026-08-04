@@ -47,9 +47,51 @@ await appServer.start()
 
 **Config extends CoreConfig with:** `port`, `hostname`, `healthCheckPath?`
 
-**Methods:** `init(httpOptions?)`, `start()`, `stop()`, `enableExitOnSigInt()`
+**Methods:** `init(httpOptions?: RunHTTPWiringOptions)`, `start()`, `stop()`, `enableExitOnSigInt()`
 
 **Property:** `app: uWS.App` — Direct access to uWebSockets app instance.
+
+### What the server does and does not give you
+
+`init()` registers three things in order: the health check (`healthCheckPath`,
+default `/health-check`), a catch-all `app.any('/*')` HTTP handler, and a
+catch-all `app.ws('/*')` websocket handler. Nothing is registered by the
+constructor, so nothing answers before `init` runs.
+
+**There is no `enableCors`, no static assets and no `content` support** — unlike
+the Express server. The class is explicitly a prototyping convenience; for
+anything that needs extra handlers, use `@pikku/uws-handler` directly and treat
+`pikku-uws-server.ts` as the template (that is what its own JSDoc says).
+
+`httpOptions` reaches the HTTP handler only. The websocket handler is
+constructed with a fixed `{ logger, logRoutes: true }`, so per-request options
+do not apply to the upgrade path. `loadSchemas` is also never passed by the
+server, so schemas compile lazily on first use rather than at startup — pass
+`loadSchemas: true` in `httpOptions` if you want the startup cost paid up front.
+
+`stop()` closes the listen socket and then waits a fixed 2 seconds for
+connections to drain. Called before `start()`, it throws a bare **string**, not
+an `Error`, so `catch (e) { e.message }` reads `undefined`.
+
+### Body limits
+
+uWS hands over raw chunks with no limit of its own, so the handler counts the
+bytes itself. A request over `maxBodySize` (default `DEFAULT_MAX_BODY_SIZE`) is
+answered `413` with a `PayloadTooLargeError` body, and the chunks are dropped
+rather than concatenated — an oversized request never accumulates in memory. A
+`content-length` header that already exceeds the limit short-circuits before any
+data arrives.
+
+### Handlers directly (own uWS app)
+
+```typescript
+import { pikkuHTTPHandler, pikkuWebsocketHandler } from '@pikku/uws-handler'
+
+app.any('/*', pikkuHTTPHandler({ logger, logRoutes: true, loadSchemas: true }))
+app.ws('/*', pikkuWebsocketHandler({ logger, logRoutes: true }))
+```
+
+Both take `{ logger, logRoutes?, loadSchemas? } & RunHTTPWiringOptions`.
 
 ## WebSocket Standalone (ws library)
 
@@ -86,3 +128,14 @@ process.on('SIGINT', async () => {
   process.exit(0)
 })
 ```
+
+`pikkuWebsocketHandler` takes `{ server, wss, logger, logRoutes?, loadSchemas? }`
+plus `RunHTTPWiringOptions`, and there is no server class in `@pikku/ws` — the
+handler attaches to a `Server` you own.
+
+`noServer: true` is required, not stylistic: the handler listens for the HTTP
+server's own `upgrade` event, opens the channel (running middleware and auth
+first), and only then calls `wss.handleUpgrade`. A `WebSocketServer` bound to
+the server would take the socket before any of that ran. An upgrade the channel
+rejects gets the socket destroyed, and an auth failure is written as a real HTTP
+response on the raw socket rather than a silent drop.
