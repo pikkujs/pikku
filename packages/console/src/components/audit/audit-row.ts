@@ -1,15 +1,79 @@
-import type { AuditEvent } from '@pikku/core'
+import type { FlattenedRPCMap } from '../../pikku/rpc-map.gen.d'
+
+/** A page of the trail exactly as `console:getAudits` returns it. */
+export type AuditPage = FlattenedRPCMap['console:getAudits']['output']
 
 /**
  * One row of the audit trail.
  *
- * `AuditEvent` is the shape the whole chain already agrees on — the sink writes
- * it, `AuditService.query` returns it, and `console:getAudits` passes it
- * through. Re-declaring it here would be a second source of truth that compiles
- * happily while the backend moves on, so the alias is deliberate: the console
- * renders whatever core says an event is.
+ * Read off the generated RPC map rather than re-declared, so the row type is
+ * the wire contract itself: the sink writes an `AuditEvent`, `getAudits`
+ * returns it, and the console renders whatever that says. A local copy would
+ * compile happily while the backend moved on.
  */
-export type AuditRow = AuditEvent
+export type AuditRow = AuditPage['events'][number]
+
+/** Who the actor ids on a page belong to, keyed by id. */
+export type AuditActorDirectory = AuditPage['actors']
+
+/** One entry of the actor filter's vocabulary. */
+export type AuditActor =
+  FlattenedRPCMap['console:getAuditFilters']['output']['actors'][number]
+
+/**
+ * What to call an actor.
+ *
+ * A name if the account has one, else the email, else nothing — the caller
+ * decides what an unnamed actor looks like, because the table falls back to the
+ * id while a filter option falls back to its own label.
+ */
+export const actorName = (actor?: {
+  name?: string
+  email?: string
+}): string | undefined => actor?.name || actor?.email
+
+/**
+ * The label for an actor id, given the directory that came with the page.
+ *
+ * Falls back to the id: an account deleted since the event still has its
+ * actions in the trail, and showing the id it was recorded under is the honest
+ * answer — the alternative is an event that appears to have no author.
+ */
+export const actorLabel = (
+  userId: string,
+  directory: AuditActorDirectory | undefined
+): string => actorName(directory?.[userId]) ?? userId
+
+/**
+ * Who a row says acted, in the order the trail can actually vouch for.
+ *
+ * A signed-in account first. Failing that, `pikkuUserId` — the identity pikku
+ * resolves for every wire, which is all an unauthenticated caller leaves
+ * behind; showing it as `system` would credit a stranger's action to the
+ * platform itself. Only an event with neither is genuinely the system acting:
+ * a cron or a queue worker, which have no session by design.
+ */
+export type ActorIdentity =
+  | { kind: 'user'; label: string; synthetic: boolean }
+  | { kind: 'anonymous'; label: string }
+  | { kind: 'system' }
+
+export const actorIdentity = (
+  actor: AuditRow['actor'],
+  directory: AuditActorDirectory | undefined
+): ActorIdentity => {
+  if (actor?.userId) {
+    return {
+      kind: 'user',
+      label: actorLabel(actor.userId, directory),
+      synthetic: directory?.[actor.userId]?.synthetic === true,
+    }
+  }
+  if (actor?.pikkuUserId) {
+    return { kind: 'anonymous', label: actor.pikkuUserId }
+  }
+  return { kind: 'system' }
+}
 
 /**
  * Outcome badge colours. Anything an application invents beyond these three

@@ -83,7 +83,7 @@ export const auditRecordsWhatHappenedScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the event, its metadata and the function that recorded it',
+      'sees the event, its metadata and who it was that acted',
       'expectsRpcResponse',
       {
         call,
@@ -93,6 +93,9 @@ export const auditRecordsWhatHappenedScenario = pikkuScenario<
           'inv-recorded',
           'recordAuditEvent',
           '"readable":true',
+          // The trail stores an id; the address proves the read resolved it
+          // against the user directory, which is what makes the page legible.
+          'admin@actors.local',
         ],
       },
       { actor: actors.admin }
@@ -242,6 +245,15 @@ export const auditPageShowsTheEventScenario = pikkuScenario<
       'sees what the action changed',
       'seesText',
       { text: 'inv-browsed' },
+      { actor: actors.admin }
+    )
+    // The persona's own name, not the id the event was recorded against: this
+    // is the whole difference between a readable trail and a wall of opaque
+    // identifiers, and it only holds if the read resolved the actor.
+    await scenario.then(
+      'sees who did it by name',
+      'seesText',
+      { text: 'Admin' },
       { actor: actors.admin }
     )
 

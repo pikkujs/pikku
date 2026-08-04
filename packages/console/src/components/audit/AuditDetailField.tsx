@@ -9,6 +9,11 @@ export interface AuditDetailFieldProps {
   value?: string | null
   /** Shown when there is no value; without one the whole line is omitted. */
   fallback?: I18nNode
+  /**
+   * Identifiers read in monospace, which is what most of these lines are. A
+   * person's name is not an identifier and is set false.
+   */
+  monospace?: boolean
 }
 
 /**
@@ -23,6 +28,7 @@ export const AuditDetailField: React.FC<AuditDetailFieldProps> = ({
   label,
   value,
   fallback,
+  monospace = true,
 }) => {
   if (!value && !fallback) {
     return null
@@ -33,7 +39,7 @@ export const AuditDetailField: React.FC<AuditDetailFieldProps> = ({
         {label}
       </Text>
       {value ? (
-        <Text size="sm" ff="monospace" truncate>
+        <Text size="sm" ff={monospace ? 'monospace' : undefined} truncate>
           {asI18n(value)}
         </Text>
       ) : (

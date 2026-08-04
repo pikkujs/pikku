@@ -23,7 +23,7 @@ empty. The two are very different answers to give someone auditing a system.
 `KyselyAuditService` implements both, newest first with offset paging, filtered
 by actor, action and time window. Two things it now gets right that are easy to
 get wrong: an empty filter array means "match nothing" rather than "no filter",
-and results are read by physical *and* camelCase key, because `CamelCasePlugin`
+and results are read by physical _and_ camelCase key, because `CamelCasePlugin`
 is on most pikku Kysely instances and renames result keys on the way out — the
 mismatch does not throw, it returns a page of `undefined`. `init()` creates the
 `audit` table for projects that do not migrate it themselves, from a new
@@ -40,3 +40,12 @@ actor and action, and a row that opens the whole event, metadata rendered as a
 JSON tree. Refused, unreadable and empty are three different screens, because
 "you may not read this", "nobody can read this" and "nothing happened" are three
 different facts.
+
+Events name the person who caused them. The trail records a user id — the only
+thing stable enough to record, since a name can change after the event — so
+`getAudits` resolves those ids against better-auth's user directory at read
+time, and the page shows the name while keeping the recorded id on the event.
+The filter follows: pick a colleague by name, filter by the id. A scenario
+actor is labelled as one, so synthetic traffic is not mistaken for real, and a
+caller who was signed out shows the wire identity pikku resolved for them
+rather than being credited to the system.

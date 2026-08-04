@@ -17,9 +17,11 @@ import { TableListPage } from '../layout/TableListPage'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { AuditEventDetail } from './AuditEventDetail'
 import { isForbiddenScopeError } from '../scopes/scope-error'
-import type { AuditRow } from './audit-row'
+import type { AuditActorDirectory, AuditRow } from './audit-row'
 import {
   OUTCOME_COLOUR,
+  actorIdentity,
+  actorName,
   auditRowKey,
   formatOccurredAt,
   summariseMetadata,
@@ -30,12 +32,6 @@ const PAGE_SIZE = 50
 
 export interface AuditLogPanelProps {
   emptyHero?: React.ReactNode
-}
-
-type AuditEventsPage = {
-  events: AuditRow[]
-  nextCursor: number | null
-  readable: boolean
 }
 
 /**
@@ -57,11 +53,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
 
   const filtersQuery = useQuery({
     queryKey: ['audit-filters'],
-    queryFn: async () =>
-      (await rpc.invoke('console:getAuditFilters')) as {
-        actorUserIds: string[]
-        types: string[]
-      },
+    queryFn: async () => await rpc.invoke('console:getAuditFilters'),
     staleTime: 60 * 1000,
     retry: false,
   })
@@ -77,20 +69,26 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
     queryKey: ['audits', { actorUserIds, types }],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) =>
-      (await rpc.invoke('console:getAudits', {
+      await rpc.invoke('console:getAudits', {
         limit: PAGE_SIZE,
         offset: pageParam,
         // Omitted rather than sent empty: an empty array is a real filter that
         // matches nothing, which is not what "no selection" means here.
         ...(actorUserIds.length ? { actorUserIds } : {}),
         ...(types.length ? { types } : {}),
-      })) as AuditEventsPage,
+      }),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     retry: false,
   })
 
   const pages = data?.pages ?? []
   const rows = useMemo(() => pages.flatMap((page) => page.events), [pages])
+  // One directory across every page loaded so far: each page names only its own
+  // actors, and a row must keep its name once a later page has been fetched.
+  const actors = useMemo<AuditActorDirectory>(
+    () => Object.assign({}, ...pages.map((page) => page.actors)),
+    [pages]
+  )
   const filtered = actorUserIds.length > 0 || types.length > 0
 
   const loadError = error ?? filtersQuery.error
@@ -166,7 +164,13 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
               data-testid="audit-filter-actor"
               aria-label={m.audit_filter_actor()}
               placeholder={m.audit_filter_actor_placeholder()}
-              data={filtersQuery.data?.actorUserIds ?? []}
+              // Filtered by id, chosen by name: the id is what the trail
+              // recorded and the only thing that stays unique, but nobody
+              // recognises their colleague by it.
+              data={(filtersQuery.data?.actors ?? []).map((actor) => ({
+                value: actor.userId,
+                label: actorName(actor) ?? actor.userId,
+              }))}
               value={actorUserIds}
               onChange={setActorUserIds}
               size="sm"
@@ -202,12 +206,20 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
           {
             key: 'action',
             header: m.audit_col_action(),
+            width: 300,
             render: (row) => (
               <Group gap="xs" wrap="nowrap">
-                <Text size="sm" fw={500} truncate>
+                <Text size="sm" fw={500} truncate style={{ minWidth: 0 }}>
                   {asI18n(row.type)}
                 </Text>
-                <Badge size="xs" variant="light" color="gray">
+                {/* Never squeezed: a badge reading "Reco…" says less than no
+                    badge at all, so the action name gives way instead. */}
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color="gray"
+                  style={{ flexShrink: 0 }}
+                >
                   {row.source === 'explicit'
                     ? m.audit_source_explicit()
                     : m.audit_source_auto()}
@@ -218,17 +230,50 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
           {
             key: 'actor',
             header: m.audit_col_actor(),
-            width: 200,
-            render: (row) =>
-              row.actor?.userId ? (
-                <Text size="sm" truncate>
-                  {asI18n(row.actor.userId)}
-                </Text>
-              ) : (
-                <Text size="sm" c="dimmed">
-                  {m.audit_actor_system()}
-                </Text>
-              ),
+            width: 220,
+            render: (row) => {
+              const identity = actorIdentity(row.actor, actors)
+              if (identity.kind === 'system') {
+                return (
+                  <Text size="sm" c="dimmed">
+                    {m.audit_actor_system()}
+                  </Text>
+                )
+              }
+              return (
+                <Group gap={6} wrap="nowrap">
+                  <Text
+                    size="sm"
+                    truncate
+                    style={{ minWidth: 0 }}
+                    c={identity.kind === 'anonymous' ? 'dimmed' : undefined}
+                    ff={identity.kind === 'anonymous' ? 'monospace' : undefined}
+                  >
+                    {asI18n(identity.label)}
+                  </Text>
+                  {identity.kind === 'anonymous' && (
+                    <Badge
+                      size="xs"
+                      variant="light"
+                      color="gray"
+                      style={{ flexShrink: 0 }}
+                    >
+                      {m.audit_actor_anonymous()}
+                    </Badge>
+                  )}
+                  {identity.kind === 'user' && identity.synthetic && (
+                    <Badge
+                      size="xs"
+                      variant="light"
+                      color="grape"
+                      style={{ flexShrink: 0 }}
+                    >
+                      {m.audit_actor_synthetic()}
+                    </Badge>
+                  )}
+                </Group>
+              )
+            },
           },
           {
             key: 'outcome',
@@ -265,7 +310,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
         size="lg"
         title={m.audit_detail_title()}
       >
-        {selected && <AuditEventDetail event={selected} />}
+        {selected && <AuditEventDetail event={selected} actors={actors} />}
       </Drawer>
     </>
   )

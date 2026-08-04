@@ -1,5 +1,9 @@
 import type { AuditEvent } from '@pikku/core'
 import { pikkuFunc } from '#pikku'
+import {
+  resolveAuditActors,
+  type AuditActorDirectory,
+} from '../lib/resolve-audit-actors.js'
 
 export type GetAuditsInput = {
   /** Restrict to these actors. An empty array matches nothing. */
@@ -16,6 +20,12 @@ export type GetAuditsInput = {
 
 export type GetAuditsOutput = {
   events: AuditEvent[]
+  /**
+   * Who the actor ids on this page belong to. Empty when no auth is wired, and
+   * missing an id whose account has since been deleted — the reader falls back
+   * to the id, which is what the trail actually recorded.
+   */
+  actors: AuditActorDirectory
   /** Offset of the next page, or `null` at the end. */
   nextCursor: number | null
   /**
@@ -33,9 +43,9 @@ export const getAudits = pikkuFunc<GetAuditsInput, GetAuditsOutput>({
     'Returns a page of the audit trail, newest first, optionally filtered by actor, event type, and time range. Reports readable: false when the configured audit sink is write-only.',
   expose: true,
   scopes: ['pikku:audit:read'],
-  func: async ({ audit }, input) => {
+  func: async ({ audit, auth, logger }, input) => {
     if (!audit?.query) {
-      return { events: [], nextCursor: null, readable: false }
+      return { events: [], actors: {}, nextCursor: null, readable: false }
     }
     const { events, nextCursor } = await audit.query({
       actorUserIds: input?.actorUserIds,
@@ -45,6 +55,11 @@ export const getAudits = pikkuFunc<GetAuditsInput, GetAuditsOutput>({
       limit: input?.limit,
       offset: input?.offset,
     })
-    return { events, nextCursor, readable: true }
+    const actors = await resolveAuditActors(
+      auth,
+      events.map((event) => event.actor?.userId),
+      logger
+    )
+    return { events, actors, nextCursor, readable: true }
   },
 })
