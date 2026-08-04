@@ -21,3 +21,5 @@ Audit the remaining skills against the shipped APIs and correct the drift.
 - pikku-i18n: enum labels use the singular `enum__<group>__<member>` namespace `@pikku/paraglide` generates from, not hand-written `enums__` maps; notes the console's wrapped `m`/`mKey` as the one documented exception
 - pikku-deps: the summary has `totalIssues`/`totalUpdates` and no `info` bucket, issue `url`/`cvssScore`/`recommendedVersion` are nullable rather than optional, lockfile detection covers pnpm and npm too, and a non-zero `bun audit` exit only counts as data when it produced output
 - pikku-feature: stage changed files by path — `git add -A` sweeps up regenerated artifacts and, on a shared checkout, another agent's work
+- pikku-jose: `decode` verifies the signature and expiry (it is not an unchecked read), keys resolve by the token's `kid` rather than being tried in turn, and the algorithm is fixed HS256
+- pikku-machine-auth: documents restricting a key below its owner via `scopes` on the mapped session, the deliberate verify-vs-scope failure split, and that `betterAuthStatelessSession` has no api-key path
