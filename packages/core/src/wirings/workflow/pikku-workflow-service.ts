@@ -1000,10 +1000,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    *
    * Returns nothing by default so a store that cannot express the query keeps
    * working unchanged — and, because it does not opt in, gains no re-dispatches
-   * either. A store must have an atomic `withStepLock` (or an atomic claim)
-   * before overriding this: the relay makes duplicate dispatch routine, and the
-   * claim in `executeWorkflowStepInner` is what keeps a duplicate from becoming
-   * a second execution.
+   * either. A store must have an atomic `withStepLock` before overriding this,
+   * or no concurrency for one to exclude: the relay makes duplicate dispatch
+   * routine, and the claim in `executeWorkflowStepInner` is what keeps a
+   * duplicate from becoming a second execution. `kysely-postgres` and
+   * `kysely-mysql` qualify on the lock, `in-memory` on being inline and
+   * single-process; `mongodb` and `kysely-sqlite` qualify on neither.
    */
   protected async findUndispatchedSteps(
     _before: Date,
@@ -1050,14 +1052,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       options?.limit ?? DEFAULT_UNDISPATCHED_STEP_LIMIT
     )
 
+    // Backoff is keyed by run, not step, because the run is the unit of
+    // re-drive: `resumeWorkflow` replays the whole run and re-dispatches every
+    // step still owed a job. Holding off a single step while resuming its run
+    // would not suppress anything.
     const now = Date.now()
     const runIds = new Set<string>()
-    for (const { runId, stepId } of steps) {
-      const eligibleAt = this.redispatchBackoff.get(stepId)
+    for (const { runId } of steps) {
+      const eligibleAt = this.redispatchBackoff.get(runId)
       if (eligibleAt !== undefined && eligibleAt > now) {
         continue
       }
-      this.noteRedispatch(stepId, now)
+      this.noteRedispatch(runId, now)
       runIds.add(runId)
     }
 
@@ -1076,17 +1082,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return { redispatched }
   }
 
-  /** Advisory, per-process record of when a step may next be re-dispatched. */
+  /** Advisory, per-process record of when a run may next be re-dispatched. */
   private readonly redispatchBackoff = new Map<string, number>()
 
-  private noteRedispatch(stepId: string, now: number): void {
-    const previous = this.redispatchDelays.get(stepId)
+  private readonly redispatchDelays = new Map<string, number>()
+
+  private noteRedispatch(runId: string, now: number): void {
+    const previous = this.redispatchDelays.get(runId)
     const delay = Math.min(
       previous === undefined ? REDISPATCH_BACKOFF_MS : previous * 2,
       REDISPATCH_BACKOFF_MAX_MS
     )
-    // A step that settles is never returned again, so entries are only evicted
-    // by this bound — oldest first, which is also least recently re-dispatched.
+    // A run that settles is never returned again, so entries are only evicted by
+    // this bound — oldest first, which is also least recently re-dispatched.
     if (this.redispatchBackoff.size >= REDISPATCH_BACKOFF_MAX_ENTRIES) {
       const oldest = this.redispatchBackoff.keys().next()
       if (!oldest.done) {
@@ -1094,11 +1102,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         this.redispatchDelays.delete(oldest.value)
       }
     }
-    this.redispatchDelays.set(stepId, delay)
-    this.redispatchBackoff.set(stepId, now + delay)
+    this.redispatchDelays.set(runId, delay)
+    this.redispatchBackoff.set(runId, now + delay)
   }
-
-  private readonly redispatchDelays = new Map<string, number>()
 
   protected resolveStepJobOptions(
     stepOptions?: WorkflowStepOptions
