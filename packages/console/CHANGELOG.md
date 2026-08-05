@@ -1,3 +1,23 @@
+## 0.12.54
+
+### Patch Changes
+
+- 4486b9a: `FunctionsPage` and `VirtualUserDocument` imported `useSearchParams` and `Link`
+  straight from `react-router` instead of the console's own router shim. The
+  console is router-agnostic — every other page goes through `../router`, which
+  the host fills via an adapter — so in a host running anything else (TanStack
+  Router, for one) those two components threw `useLocation() may be used only in
+the context of a <Router>` and took the whole shell down with them, since the
+  host's error boundary catches the render, not just the route.
+- 4486b9a: `ShellHeader` dropped the title before the count when the text stack did not
+  fit. The count slot carries a description on some pages, so a header with a
+  52px page name and a 657px description would shed the name and keep the
+  sentence, leaving the page anonymous. The text stack still collapses ahead of
+  any control, but within it the title now outlives the count: full stack →
+  title only → count only → neither.
+- Updated dependencies [f5ce870]
+  - @pikku/core@0.12.78
+
 ## 0.12.53
 
 ### Patch Changes
@@ -909,8 +929,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                              "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                              "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                                "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                                "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
