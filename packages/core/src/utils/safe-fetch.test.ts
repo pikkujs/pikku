@@ -41,15 +41,54 @@ describe('isPrivateHost', () => {
     }
   })
 
+  test('flags reserved IPv4 blocks that are not routable public space', () => {
+    for (const host of [
+      '100.64.0.1', // carrier-grade NAT
+      '100.100.100.200', // Alibaba Cloud metadata endpoint
+      '100.127.255.255', // top of 100.64.0.0/10
+      '192.0.0.192', // IETF protocol assignments
+      '198.18.0.1', // benchmarking
+      '198.19.255.255', // top of 198.18.0.0/15
+      '192.88.99.1', // 6to4 anycast
+      '192.0.2.1', // TEST-NET-1
+      '198.51.100.1', // TEST-NET-2
+      '203.0.113.1', // TEST-NET-3
+      '224.0.0.1', // multicast
+      '240.0.0.1', // reserved
+      '255.255.255.255', // broadcast
+    ]) {
+      assert.equal(isPrivateHost(host), true, `${host} should be private`)
+    }
+  })
+
+  test('flags IPv6 forms that tunnel to an internal IPv4 address', () => {
+    for (const host of [
+      '64:ff9b::a9fe:a9fe', // NAT64 wrapping 169.254.169.254
+      '[64:ff9b::169.254.169.254]', // same, dotted-quad tail
+      '2002:a9fe:a9fe::', // 6to4 wrapping 169.254.169.254
+      '2002:6464:64c8::', // 6to4 wrapping 100.100.100.200
+      'fec0::1', // deprecated site-local
+      'ff02::1', // multicast
+      '100::1', // discard-only
+    ]) {
+      assert.equal(isPrivateHost(host), true, `${host} should be private`)
+    }
+  })
+
   test('allows public hosts', () => {
     for (const host of [
       'example.com',
       '8.8.8.8',
       '172.32.0.1',
       '11.0.0.1',
+      '100.63.255.255', // just below the CGNAT block
+      '100.128.0.0', // just above the CGNAT block
+      '198.17.255.255', // just below the benchmarking block
+      '198.20.0.0', // just above the benchmarking block
       '134744072', // decimal-encoded 8.8.8.8 — public
       '2001:db8::1', // documentation range — public
-      'fec0::1', // deprecated site-local, outside fe80::/10 — treated public
+      '2002:808:808::', // 6to4 wrapping public 8.8.8.8
+      '64:ff9b::808:808', // NAT64 wrapping public 8.8.8.8
     ]) {
       assert.equal(isPrivateHost(host), false, `${host} should be public`)
     }
@@ -134,6 +173,109 @@ describe('safeFetch', () => {
         )
         assert.equal(calls.length, 1)
         assert.ok(calls[0]!.includes('example.com'))
+      }
+    )
+  })
+
+  test('refuses a public hostname that resolves to a private address', async () => {
+    await withStubbedFetch(
+      () => new Response('ok', { status: 200 }),
+      async (calls) => {
+        // The shape the literal-only check misses: a name that parses as public
+        // but whose A record points at the cloud metadata endpoint.
+        await assert.rejects(
+          safeFetch(
+            'https://169-254-169-254.nip.io/latest/meta-data/',
+            {},
+            {
+              resolveHost: async () => ['169.254.169.254'],
+            }
+          ),
+          /resolves to 169\.254\.169\.254/
+        )
+        assert.equal(calls.length, 0)
+      }
+    )
+  })
+
+  test('refuses when any one resolved address is private', async () => {
+    await withStubbedFetch(
+      () => new Response('ok', { status: 200 }),
+      async (calls) => {
+        await assert.rejects(
+          safeFetch(
+            'https://split-horizon.example.com/',
+            {},
+            {
+              resolveHost: async () => ['93.184.216.34', '10.0.0.5'],
+            }
+          ),
+          /resolves to 10\.0\.0\.5/
+        )
+        assert.equal(calls.length, 0)
+      }
+    )
+  })
+
+  test('re-resolves the host of a redirect hop', async () => {
+    await withStubbedFetch(
+      (url) =>
+        url.includes('start.com')
+          ? new Response(null, {
+              status: 302,
+              headers: { location: 'https://rebound.example.com/next' },
+            })
+          : new Response('ok', { status: 200 }),
+      async (calls) => {
+        await assert.rejects(
+          safeFetch(
+            'https://start.com',
+            {},
+            {
+              resolveHost: async (hostname) =>
+                hostname === 'start.com' ? ['93.184.216.34'] : ['127.0.0.1'],
+            }
+          ),
+          /resolves to 127\.0\.0\.1/
+        )
+        assert.equal(calls.length, 1)
+      }
+    )
+  })
+
+  test('allows a public hostname that resolves to public addresses', async () => {
+    await withStubbedFetch(
+      () => new Response('ok', { status: 200 }),
+      async (calls) => {
+        const res = await safeFetch(
+          'https://example.com/',
+          {},
+          {
+            resolveHost: async () => ['93.184.216.34'],
+          }
+        )
+        assert.equal(res.status, 200)
+        assert.equal(calls.length, 1)
+      }
+    )
+  })
+
+  test('does not resolve an IP literal or an allowlisted host', async () => {
+    await withStubbedFetch(
+      () => new Response('ok', { status: 200 }),
+      async () => {
+        let resolverCalls = 0
+        const resolveHost = async () => {
+          resolverCalls++
+          return ['10.0.0.1']
+        }
+        await safeFetch('https://93.184.216.34/', {}, { resolveHost })
+        await safeFetch(
+          'https://internal.example.com/',
+          {},
+          { resolveHost, allowedHosts: ['internal.example.com'] }
+        )
+        assert.equal(resolverCalls, 0)
       }
     )
   })

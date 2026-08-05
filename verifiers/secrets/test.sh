@@ -23,5 +23,10 @@ echo ""
 echo "=== Testing SecretValue at the sinks ==="
 npx tsx src/test-secret-value.ts
 
+# Test 5: allowedHosts survives code generation
+echo ""
+echo "=== Testing allowedHosts reaches the generated meta ==="
+npx tsx src/test-secret-allowed-hosts.ts
+
 echo ""
 echo "=== All tests passed ==="

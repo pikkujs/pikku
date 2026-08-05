@@ -11,6 +11,7 @@ import { resolve, normalize } from 'path'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
+import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import type { Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
@@ -97,6 +98,8 @@ export class PikkuExpressServer {
   }
 
   public async init(httpOptions: RunHTTPWiringOptions = {}) {
+    installNodeHostResolver()
+
     // Express buffers the body before Pikku ever sees it, so the parser limit
     // is the only place an oversized request can be stopped. Pikku's
     // `maxBodySize` therefore feeds express's own limit, with an explicit

@@ -11,6 +11,7 @@ import { randomUUID, timingSafeEqual } from 'node:crypto'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
+import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/internal'
 import {
   signedContentPath,
@@ -194,6 +195,7 @@ export class PikkuNodeHTTPServer {
   }
 
   public async init(): Promise<void> {
+    installNodeHostResolver()
     compileAllSchemas(this.logger)
     if (this.options.configureServer) {
       await this.options.configureServer(this.server)

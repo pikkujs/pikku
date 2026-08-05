@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
+  getArrayPropertyValue,
   assertStringLiteralProperty,
 } from '../utils/get-property-value.js'
 import type { AddWiring, InspectorState } from '../types.js'
@@ -57,6 +58,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         | string
         | null
       const docsUrlValue = getPropertyValue(obj, 'docsUrl') as string | null
+      const allowedHostsValue = getArrayPropertyValue(obj, 'allowedHosts')
       const idValue = getPropertyValue(obj, config.idField) as string | null
 
       let schemaVariableName: string | null = null
@@ -167,6 +169,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         description: descriptionValue || undefined,
         rotationPeriod: rotationPeriodValue || undefined,
         docsUrl: docsUrlValue || undefined,
+        allowedHosts: allowedHostsValue || undefined,
         [config.idField]: idValue,
         schema: schemaLookupName,
         sourceFile,
