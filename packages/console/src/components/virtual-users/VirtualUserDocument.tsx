@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router'
+import { useLink } from '../../router'
 import {
   Anchor,
   Badge,
@@ -102,25 +102,28 @@ const Figure: React.FC<{
  * The functions list filters on text, so the link carries the name as its
  * search — the same thing you would have typed, without having to remember it.
  */
-const EndpointNames: React.FC<{ names: string[] }> = ({ names }) => (
-  <Box className={styles.nameList} data-testid="reach-names">
-    <Group gap={6}>
-      {names.map((name) => (
-        <Anchor
-          key={name}
-          component={Link}
-          to={`/functions?search=${encodeURIComponent(name)}`}
-          size="xs"
-          ff="monospace"
-          underline="hover"
-          c="dimmed"
-        >
-          {asI18n(name)}
-        </Anchor>
-      ))}
-    </Group>
-  </Box>
-)
+const EndpointNames: React.FC<{ names: string[] }> = ({ names }) => {
+  const Link = useLink()
+  return (
+    <Box className={styles.nameList} data-testid="reach-names">
+      <Group gap={6}>
+        {names.map((name) => (
+          <Anchor
+            key={name}
+            component={Link}
+            to={`/functions?search=${encodeURIComponent(name)}`}
+            size="xs"
+            ff="monospace"
+            underline="hover"
+            c="dimmed"
+          >
+            {asI18n(name)}
+          </Anchor>
+        ))}
+      </Group>
+    </Box>
+  )
+}
 
 /**
  * A feature is named by a sentence often enough that a legend of six of them

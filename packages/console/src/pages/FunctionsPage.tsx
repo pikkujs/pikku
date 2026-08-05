@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useSearchParams } from '../router'
 import { Group, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { m } from '@/i18n/messages'

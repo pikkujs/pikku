@@ -96,11 +96,16 @@ export const ShellHeader = <T extends string = string>({
     actMode: 'label',
     ...over,
   })
-  // The whole text stack collapses first, as a unit: title goes, then the
-  // count/description, leaving no text at all before any control degrades.
+  // The whole text stack still collapses before any control degrades, but
+  // WITHIN that stack the title is the last thing to go, not the first. The
+  // count slot carries a description on some pages — the secrets page's is a
+  // 657px sentence — so dropping the title first spent a 52px page name to keep
+  // it, and the page rendered anonymous. Title-only sits between the full stack
+  // and the empty one.
   const candidates: Candidate[] = []
   if (title != null)
     candidates.push(base({ showTitle: true, showCount: count != null }))
+  if (title != null && count != null) candidates.push(base({ showTitle: true }))
   if (count != null) candidates.push(base({ showCount: true }))
   candidates.push(base({ actMode: 'label' }))
   candidates.push(base({ actMode: 'icon' }))
