@@ -667,3 +667,125 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     )
   })
 })
+
+describe('PikkuNodeHTTPServer dispatch routes', { concurrency: false }, () => {
+  let server: PikkuNodeHTTPServer | undefined
+
+  beforeEach(() => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      schema: {
+        compileSchema: async () => {},
+        getSchemaNames: () => new Set<string>(),
+      },
+    } as any)
+  })
+
+  afterEach(async () => {
+    if (server) {
+      await server.stop()
+      server = undefined
+    }
+  })
+
+  const startServer = async (
+    options?: ConstructorParameters<typeof PikkuNodeHTTPServer>[2],
+    logger = createMockLogger()
+  ) => {
+    server = new PikkuNodeHTTPServer(
+      { hostname: '127.0.0.1', port: 0 } as any,
+      logger as any,
+      options
+    )
+    await server.init()
+    await server.start()
+    const address = server.server.address()
+    assert.ok(address && typeof address === 'object')
+    return `http://127.0.0.1:${address.port}`
+  }
+
+  const dispatch = (
+    origin: string,
+    path: string,
+    headers: Record<string, string> = {}
+  ) =>
+    fetch(`${origin}${path}`, {
+      method: 'POST',
+      headers: { connection: 'close', ...headers },
+      body: JSON.stringify({ taskName: 'anything', queueName: 'anything' }),
+    })
+
+  test('rejects a dispatch request when no dispatchSecret is configured', async () => {
+    const origin = await startServer({ dispatchJobs: true })
+
+    for (const path of ['/__pikku/scheduler-job', '/__pikku/queue-job']) {
+      const response = await dispatch(origin, path)
+      assert.equal(
+        response.status,
+        401,
+        `${path} must fail closed when dispatchSecret is unset`
+      )
+    }
+  })
+
+  test('warns at startup that the dispatch routes will reject every caller', async () => {
+    const { logger, warnings } = createCapturingLogger()
+    await startServer({ dispatchJobs: true }, logger as any)
+
+    assert.ok(
+      warnings.some((msg) => msg.includes('dispatchSecret')),
+      'expected a startup warning naming dispatchSecret'
+    )
+  })
+
+  test('rejects a wrong dispatch secret, and one of the wrong length alike', async () => {
+    const origin = await startServer({
+      dispatchJobs: true,
+      dispatchSecret: 'the-expected-dispatch-secret',
+    })
+
+    const wrong = await dispatch(origin, '/__pikku/scheduler-job', {
+      'x-pikku-dispatch': 'the-provided-dispatch-secret',
+    })
+    assert.equal(wrong.status, 401)
+
+    const short = await dispatch(origin, '/__pikku/scheduler-job', {
+      'x-pikku-dispatch': 'short',
+    })
+    assert.equal(short.status, 401)
+
+    const missing = await dispatch(origin, '/__pikku/scheduler-job')
+    assert.equal(missing.status, 401)
+  })
+
+  test('lets the correct dispatch secret through to the job handler', async () => {
+    const secret = 'the-expected-dispatch-secret'
+    const origin = await startServer({
+      dispatchJobs: true,
+      dispatchSecret: secret,
+    })
+
+    const response = await dispatch(origin, '/__pikku/scheduler-job', {
+      'x-pikku-dispatch': secret,
+    })
+    // No scheduled task is registered, so the handler answers 422
+    // (ack-no-retry) — reaching it at all is what proves auth passed.
+    assert.notEqual(
+      response.status,
+      401,
+      'a matching secret must not be rejected'
+    )
+  })
+
+  test('does not mount the dispatch routes when dispatchJobs is off', async () => {
+    const origin = await startServer({ dispatchSecret: 'a-secret' })
+
+    const response = await dispatch(origin, '/__pikku/scheduler-job')
+    assert.notEqual(
+      response.status,
+      401,
+      'an unmounted dispatch path must fall through to the normal pipeline'
+    )
+    assert.notEqual(response.status, 204)
+  })
+})
