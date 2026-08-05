@@ -301,6 +301,23 @@ export class InMemoryWorkflowService
     return newStep
   }
 
+  protected async findUndispatchedSteps(
+    before: Date,
+    limit: number
+  ): Promise<Array<{ runId: string; stepId: string }>> {
+    const undispatched: Array<{ runId: string; stepId: string }> = []
+    for (const [runId, run] of this.runs) {
+      if (run.status !== 'running') continue
+      for (const step of this.stepHistory.get(runId) ?? []) {
+        if (step.status !== 'pending') continue
+        if (step.updatedAt >= before) continue
+        undispatched.push({ runId, stepId: step.stepId })
+        if (undispatched.length >= limit) return undispatched
+      }
+    }
+    return undispatched
+  }
+
   protected async findStalledRunIds(
     before: Date,
     limit: number
