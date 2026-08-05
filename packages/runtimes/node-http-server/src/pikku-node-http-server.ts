@@ -7,7 +7,12 @@ import {
 import { createReadStream } from 'node:fs'
 import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { normalize, resolve } from 'node:path'
-import { randomUUID, timingSafeEqual } from 'node:crypto'
+import {
+  createHmac,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
@@ -103,16 +108,16 @@ export type PikkuNodeHTTPServerOptions = {
    * `httpQueueJobs`. Off by default.
    *
    * Unlike a CF WfP namespace script, a container usually HAS a public
-   * hostname — so set `dispatchSecret` to require the shared secret on these
-   * routes. Without it they are unauthenticated and anyone who can reach the
-   * server could trigger queue/scheduled work.
+   * hostname — so `dispatchSecret` is required for these routes to serve
+   * anyone at all. Without it every dispatch request is rejected.
    */
   dispatchJobs?: boolean
   /**
    * Shared secret required in the `x-pikku-dispatch` header on the dispatch
    * routes (when `dispatchJobs` is on). The dispatcher attaches it; public
-   * callers don't have it. When unset, the routes accept any caller and a
-   * warning is logged at startup.
+   * callers don't have it. When unset, the routes reject every caller and a
+   * warning is logged at startup — the same fail-closed contract the
+   * cloudflare runtime's `PIKKU_DISPATCH_SECRET` already has.
    */
   dispatchSecret?: string
   /**
@@ -203,7 +208,7 @@ export class PikkuNodeHTTPServer {
     logRegisterRoutes(this.logger)
     if (this.options.dispatchJobs && !this.options.dispatchSecret) {
       this.logger.warn(
-        'pikku-node-http-server: dispatch routes (/__pikku/queue-job, /__pikku/scheduler-job) are mounted WITHOUT a dispatchSecret — any caller that can reach this server can trigger queue/scheduled work.'
+        'pikku-node-http-server: dispatch routes (/__pikku/queue-job, /__pikku/scheduler-job) are mounted WITHOUT a dispatchSecret — every dispatch request will be rejected. Set dispatchSecret to the value the dispatcher sends in the x-pikku-dispatch header.'
       )
     }
     await this.initMCP()
@@ -256,6 +261,30 @@ export class PikkuNodeHTTPServer {
   }
 
   /**
+   * Fails closed: an unset `dispatchSecret` rejects every caller, matching
+   * `@pikku/cloudflare`'s `isDispatchAuthorized`. The comparison runs over
+   * HMACs taken under a key generated freshly per call, so the digests that
+   * actually get compared are fixed-width and unpredictable — that leaks
+   * neither the secret's bytes nor its length, which a length check before
+   * `timingSafeEqual` would.
+   */
+  private isDispatchAuthorized(req: IncomingMessage): boolean {
+    const expected = this.options.dispatchSecret
+    if (!expected) {
+      return false
+    }
+    const provided = req.headers['x-pikku-dispatch']
+    if (typeof provided !== 'string') {
+      return false
+    }
+    const key = randomBytes(32)
+    return timingSafeEqual(
+      createHmac('sha256', key).update(provided).digest(),
+      createHmac('sha256', key).update(expected).digest()
+    )
+  }
+
+  /**
    * Handle the in-stack dispatch routes. Mirrors the CF handler's
    * `/__pikku/queue-job` + `/__pikku/scheduler-job` contract so the same
    * fabric dispatcher path reaches a container target. Status codes match the
@@ -266,18 +295,10 @@ export class PikkuNodeHTTPServer {
     req: IncomingMessage,
     res: ServerResponse
   ): Promise<void> {
-    const expected = this.options.dispatchSecret
-    if (expected) {
-      const provided = req.headers['x-pikku-dispatch']
-      const ok =
-        typeof provided === 'string' &&
-        provided.length === expected.length &&
-        timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
-      if (!ok) {
-        res.writeHead(401, { 'content-type': 'application/json' })
-        res.end('{"ok":false,"error":"bad dispatch secret"}')
-        return
-      }
+    if (!this.isDispatchAuthorized(req)) {
+      res.writeHead(401, { 'content-type': 'application/json' })
+      res.end('{"ok":false,"error":"unauthorized"}')
+      return
     }
 
     let body: any

@@ -37,6 +37,18 @@ Default connection string:
 postgres://postgres:password@localhost:5432/pikku_remote_rpc
 ```
 
+## Environment
+
+| Variable              | Required              | Purpose                                                                                             |
+| --------------------- | --------------------- | --------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | no                    | PostgreSQL connection string. Defaults to the one above.                                            |
+| `PIKKU_REMOTE_SECRET` | **yes in production** | Encrypts the session claim in the remote-RPC token. Anyone holding it can mint a token as any user. |
+
+`yarn start` generates an ephemeral `PIKKU_REMOTE_SECRET` when the variable is
+unset, so the template runs with no setup. That value is different on every run
+and is not shared with servers you start separately — set the variable yourself
+whenever tokens need to outlive a restart, and always before deploying.
+
 ## Setup
 
 ```bash
@@ -86,16 +98,19 @@ yarn test
 
 You can run multiple servers to see true distributed RPC:
 
+Both terminals need the _same_ `PIKKU_REMOTE_SECRET`, or each run generates its
+own and the servers cannot verify each other's tokens.
+
 Terminal 1:
 
 ```bash
-PORT=3001 DEPLOYMENT_ID=server-a yarn start
+PIKKU_REMOTE_SECRET=<shared-secret> PORT=3001 DEPLOYMENT_ID=server-a yarn start
 ```
 
 Terminal 2:
 
 ```bash
-PORT=3002 DEPLOYMENT_ID=server-b yarn start
+PIKKU_REMOTE_SECRET=<shared-secret> PORT=3002 DEPLOYMENT_ID=server-b yarn start
 ```
 
 Both servers register with DeploymentService. Calling `/remote-greet` on either server will discover and call `greet` on one of the registered servers.
