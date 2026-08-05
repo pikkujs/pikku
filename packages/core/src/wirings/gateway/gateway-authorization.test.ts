@@ -8,6 +8,7 @@ import {
   addGlobalPermission,
   clearPermissionsCache,
 } from '../../permissions.js'
+import { addTagMiddleware } from '../../middleware-runner.js'
 import type {
   GatewayAdapter,
   GatewayInboundMessage,
@@ -81,6 +82,31 @@ const seedCompiledMeta = () => {
         sessionless: true,
       }
     }
+  }
+}
+
+/**
+ * What the inspector records for a gateway and the function it was wired with.
+ * These tests wire gateways by hand, so nothing populates it otherwise — and it
+ * has to be in place before `wireGateway`, exactly as the generated bootstrap
+ * loads every meta file before any wiring file.
+ */
+const seedDeclaredHandler = (
+  gatewayName: string,
+  funcId: string,
+  funcMeta: Record<string, any>,
+  gatewayMeta: Record<string, any> = {}
+) => {
+  ;(pikkuState(null, 'function', 'meta') as any)[funcId] = {
+    pikkuFuncId: funcId,
+    inputSchemaName: null,
+    outputSchemaName: null,
+    ...funcMeta,
+  }
+  ;(pikkuState(null, 'gateway', 'meta') as any)[gatewayName] = {
+    pikkuFuncId: funcId,
+    name: gatewayName,
+    ...gatewayMeta,
   }
 }
 
@@ -229,6 +255,68 @@ describe('gateway handler authorization', () => {
       assert.deepEqual(calls, ['ran'])
     })
 
+    test('a handler declared with pikkuFunc keeps its session requirement', async () => {
+      const calls: string[] = []
+
+      seedDeclaredHandler('declared-session', 'myHandler', {
+        sessionless: false,
+      })
+
+      wireGateway({
+        name: 'declared-session',
+        type: 'webhook',
+        route: '/webhooks/declared-session',
+        adapter: createMockAdapter(),
+        func: {
+          func: async () => {
+            calls.push('ran')
+            return { text: 'reply' }
+          },
+        } as any,
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      const response = await postMessage('/webhooks/declared-session')
+
+      assert.equal(response.status, 403)
+      assert.deepEqual(
+        calls,
+        [],
+        'a session-required pikkuFunc must not be silently made sessionless'
+      )
+    })
+
+    test('a handler declared sessionless keeps running without a session', async () => {
+      const calls: string[] = []
+
+      seedDeclaredHandler('declared-sessionless', 'mySessionlessHandler', {
+        sessionless: true,
+      })
+
+      wireGateway({
+        name: 'declared-sessionless',
+        type: 'webhook',
+        route: '/webhooks/declared-sessionless',
+        adapter: createMockAdapter(),
+        func: {
+          func: async () => {
+            calls.push('ran')
+            return { text: 'reply' }
+          },
+        } as any,
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      const response = await postMessage('/webhooks/declared-sessionless')
+
+      assert.equal(response.status, 200)
+      assert.deepEqual(calls, ['ran'])
+    })
+
     test('gateway-level auth: true requires a session', async () => {
       const calls: string[] = []
 
@@ -279,6 +367,49 @@ describe('gateway handler authorization', () => {
 
       assert.equal(response.status, 403)
       assert.deepEqual(calls, [], 'auth: true must require a session')
+    })
+
+    test('tag middleware declared for the gateway actually runs', async () => {
+      const order: string[] = []
+
+      addTagMiddleware('audited', [
+        async (_s: any, _wire: any, next: any) => {
+          order.push('middleware')
+          await next()
+        },
+      ] as any)
+
+      seedDeclaredHandler(
+        'tagged',
+        'myTaggedHandler',
+        { sessionless: true },
+        { tags: ['audited'], middleware: [{ type: 'tag', tag: 'audited' }] }
+      )
+
+      wireGateway({
+        name: 'tagged',
+        type: 'webhook',
+        route: '/webhooks/tagged',
+        adapter: createMockAdapter(),
+        func: {
+          func: async () => {
+            order.push('handler')
+            return { text: 'reply' }
+          },
+        } as any,
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      const response = await postMessage('/webhooks/tagged')
+
+      assert.equal(response.status, 200)
+      assert.deepEqual(
+        order,
+        ['middleware', 'handler'],
+        'addTagMiddleware must gate a gateway carrying the tag'
+      )
     })
 
     test('the adapter still auto-sends the handler reply', async () => {

@@ -23,19 +23,45 @@ const bridgeMiddlewareSession = async (wire: PikkuRawWire): Promise<void> => {
   }
 }
 
+/**
+ * Metadata the inspector recorded for the function the gateway was wired with.
+ * The bootstrap loads every meta file before any wiring file, so this is
+ * already populated by the time a gateway wires itself. A gateway wired by
+ * hand rather than through codegen has no entry, and falls back to the
+ * sessionless default below.
+ */
+const declaredHandlerMeta = (config: CoreGateway) => {
+  const declaredFuncId = pikkuState(null, 'gateway', 'meta')[config.name]
+    ?.pikkuFuncId
+  return declaredFuncId
+    ? pikkuState(null, 'function', 'meta')[declaredFuncId]
+    : undefined
+}
+
 // knowledge: decisions/security/gateway-handlers-run-through-the-function-runner-gate.md
 const registerGatewayHandler = (config: CoreGateway): string => {
   const funcId = gatewayHandlerFuncId(config.name)
   const funcMeta = pikkuState(null, 'function', 'meta')
+  const declared = declaredHandlerMeta(config)
   funcMeta[funcId] = {
+    ...declared,
     pikkuFuncId: funcId,
-    inputSchemaName: null,
-    outputSchemaName: null,
-    sessionless: true,
+    inputSchemaName: declared?.inputSchemaName ?? null,
+    outputSchemaName: declared?.outputSchemaName ?? null,
+    sessionless: declared?.sessionless ?? true,
   }
   addFunction(funcId, config.func as any)
   return funcId
 }
+
+/**
+ * Tag middleware the inspector resolved for this gateway. It is keyed by
+ * gateway name rather than reachable from `config`, because `tags` is a
+ * compile-time input everywhere — nothing at runtime maps a tag to its
+ * middleware group.
+ */
+const gatewayInheritedMiddleware = (config: CoreGateway) =>
+  pikkuState(null, 'gateway', 'meta')[config.name]?.middleware
 
 export const resolveGatewayAdapter = (
   config: CoreGateway,
@@ -134,6 +160,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
 const createWebhookPostHandler = (config: CoreGateway) => {
   const { name, middleware: userMiddleware } = config
   const handlerFuncId = registerGatewayHandler(config)
+  const inheritedMiddleware = gatewayInheritedMiddleware(config)
 
   return async (
     services: CoreSingletonServices,
@@ -169,6 +196,7 @@ const createWebhookPostHandler = (config: CoreGateway) => {
         singletonServices: services,
         data: () => parsed,
         auth: config.auth,
+        inheritedMiddleware,
         wire: wire as any,
       })
     }
@@ -253,6 +281,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
 
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
   const handlerFuncId = registerGatewayHandler(config)
+  const inheritedMiddleware = gatewayInheritedMiddleware(config)
 
   addFunction(connectFuncId, {
     auth: false,
@@ -292,6 +321,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
           singletonServices: services,
           data: () => parsed,
           auth: config.auth,
+          inheritedMiddleware,
           wire: wire as any,
         })
       }
@@ -333,6 +363,7 @@ export const createListenerMessageHandler = (
 ): ((rawData: unknown) => Promise<void>) => {
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
   const handlerFuncId = registerGatewayHandler(config)
+  const inheritedMiddleware = gatewayInheritedMiddleware(config)
 
   return async (rawData: unknown): Promise<void> => {
     const adapter = await resolveGatewayAdapter(config, singletonServices)
@@ -354,6 +385,7 @@ export const createListenerMessageHandler = (
         singletonServices,
         data: () => parsed,
         auth: config.auth,
+        inheritedMiddleware,
         wire,
       })
     }
