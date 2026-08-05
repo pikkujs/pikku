@@ -1,4 +1,5 @@
 import { assertSecretAllowedForHost, type SecretService } from '@pikku/core'
+import { safeFetch } from '@pikku/core/safe-fetch'
 import type { CredentialService, MetaService } from '@pikku/core/services'
 
 /** How a credential is applied to a request. Carries names only, never values. */
@@ -78,7 +79,11 @@ export class PikkuHttpRequesterService implements HttpRequesterService {
       }
     }
 
-    return await fetch(url, { method, headers: requestHeaders, body })
+    return await safeFetch(url.toString(), {
+      method,
+      headers: requestHeaders,
+      body,
+    })
   }
 
   private async resolveCredential(

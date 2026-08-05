@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
+import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import type { Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
@@ -49,6 +50,8 @@ export class PikkuFastifyServer {
    * Initializes the server by setting up health check and registering the Pikku Fastify plugin.
    */
   public async init(httpOptions: RunHTTPWiringOptions = {}) {
+    installNodeHostResolver()
+
     this.app.get(this.config.healthCheckPath || '/health-check', async () => {
       return { status: 'ok' }
     })

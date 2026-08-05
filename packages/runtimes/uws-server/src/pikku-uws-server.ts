@@ -2,6 +2,7 @@ import * as uWS from 'uWebSockets.js'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
+import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import type { Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 
@@ -42,6 +43,8 @@ export class PikkuUWSServer {
    * Initializes the server by setting up health check and request handling routes.
    */
   public async init(httpOptions: RunHTTPWiringOptions = {}) {
+    installNodeHostResolver()
+
     this.app.get(
       this.config.healthCheckPath || '/health-check',
       async (res) => {

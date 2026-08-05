@@ -108,6 +108,53 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
     )
   })
 
+  test('should carry allowedHosts into the meta', () => {
+    const definitions = [
+      {
+        name: 'example-api',
+        displayName: 'Example API',
+        secretId: 'EXAMPLE_API_CREDENTIALS',
+        allowedHosts: ['api.example.com', '*.example.com'],
+        sourceFile: 'a.ts',
+      },
+    ]
+    const result = validateAndBuildSecretDefinitionsMeta(
+      definitions as any,
+      new Map()
+    )
+    assert.deepStrictEqual(result['example-api']!.allowedHosts, [
+      'api.example.com',
+      '*.example.com',
+    ])
+  })
+
+  test('should carry allowedHosts into the meta for a shared secretId', () => {
+    const definitions = [
+      {
+        name: 'cred1',
+        displayName: 'Cred 1',
+        secretId: 'SHARED',
+        allowedHosts: ['first.example.com'],
+        sourceFile: 'a.ts',
+      },
+      {
+        name: 'cred2',
+        displayName: 'Cred 2',
+        secretId: 'SHARED',
+        allowedHosts: ['second.example.com'],
+        sourceFile: 'b.ts',
+      },
+    ]
+    const result = validateAndBuildSecretDefinitionsMeta(
+      definitions as any,
+      new Map()
+    )
+    assert.deepStrictEqual(result['cred1']!.allowedHosts, ['first.example.com'])
+    assert.deepStrictEqual(result['cred2']!.allowedHosts, [
+      'second.example.com',
+    ])
+  })
+
   test('should handle empty definitions', () => {
     const result = validateAndBuildSecretDefinitionsMeta([], new Map())
     assert.deepStrictEqual(result, {})
