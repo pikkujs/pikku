@@ -600,7 +600,17 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .execute()
   }
 
-  protected async findUndispatchedSteps(
+  /**
+   * The undispatched-step query, shared by the dialects that can safely relay.
+   *
+   * Deliberately NOT an override of `findUndispatchedSteps`: this class's
+   * `withStepLock` is a pass-through, so a subclass inheriting it (kysely-sqlite)
+   * has no atomic claim, and the relay's redundant dispatches would become
+   * double executions. A dialect opts in by overriding `findUndispatchedSteps`
+   * to call this — which `kysely-postgres` and `kysely-mysql` do, having real
+   * locks.
+   */
+  protected async queryUndispatchedSteps(
     before: Date,
     limit: number
   ): Promise<Array<{ runId: string; stepId: string }>> {

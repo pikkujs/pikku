@@ -301,6 +301,12 @@ export class InMemoryWorkflowService
     return newStep
   }
 
+  /**
+   * Safe to opt in despite the pass-through `withStepLock`: this service wires
+   * no queues and runs every step inline in one process, so the relay's
+   * redundant dispatch has no second holder to race with. See
+   * knowledge: decisions/internals/the-in-memory-workflow-service-is-inline-only-and-single-process.md
+   */
   protected async findUndispatchedSteps(
     before: Date,
     limit: number

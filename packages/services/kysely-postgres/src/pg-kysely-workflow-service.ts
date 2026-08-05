@@ -27,6 +27,17 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
     return sql<string>`(coalesce(state, '{}')::jsonb || jsonb_build_object(${key}::text, (${json}::text)::jsonb))::text`
   }
 
+  /**
+   * Safe to opt in: `withStepLock` below takes a real advisory lock, so the
+   * relay's redundant dispatches lose the claim instead of executing twice.
+   */
+  protected override async findUndispatchedSteps(
+    before: Date,
+    limit: number
+  ): Promise<Array<{ runId: string; stepId: string }>> {
+    return this.queryUndispatchedSteps(before, limit)
+  }
+
   private hashStringToInt(str: string): number {
     let hash = 0
     for (let i = 0; i < str.length; i++) {
