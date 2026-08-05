@@ -600,6 +600,29 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .execute()
   }
 
+  protected async findUndispatchedSteps(
+    before: Date,
+    limit: number
+  ): Promise<Array<{ runId: string; stepId: string }>> {
+    const rows = await this.db
+      .selectFrom('workflowStep as s')
+      .innerJoin('workflowRuns as r', 'r.workflowRunId', 's.workflowRunId')
+      .select(['s.workflowStepId', 's.workflowRunId'])
+      .where('s.status', '=', 'pending')
+      .where('s.updatedAt', '<', before)
+      // Leftover `pending` steps on a settled run are not work; only a live run
+      // still has anything to dispatch.
+      .where('r.status', '=', 'running')
+      .orderBy('s.updatedAt', 'asc')
+      .limit(limit)
+      .execute()
+
+    return rows.map((row) => ({
+      runId: row.workflowRunId,
+      stepId: row.workflowStepId,
+    }))
+  }
+
   protected async findStalledRunIds(
     before: Date,
     limit: number

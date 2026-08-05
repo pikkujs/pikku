@@ -281,6 +281,25 @@ const DEFAULT_STALLED_RUN_MS = 5 * 60_000
 /** Runs re-driven per `recoverStalledRuns` call, so one sweep is bounded. */
 const DEFAULT_STALLED_RUN_LIMIT = 100
 
+/**
+ * How long a step may sit `pending` before the relay assumes its dispatch was
+ * lost. This is a bet that no healthy queue takes this long to move a job from
+ * `pending` to `running`; set it above the observed p99 of that latency.
+ */
+const DEFAULT_UNDISPATCHED_STEP_MS = 30_000
+
+/** Steps re-driven per `relayUndispatchedSteps` call, so one tick is bounded. */
+const DEFAULT_UNDISPATCHED_STEP_LIMIT = 100
+
+/** First wait before a step already re-dispatched once is re-dispatched again. */
+const REDISPATCH_BACKOFF_MS = 30_000
+
+/** Ceiling on the doubling backoff, so a permanently stuck step still gets swept. */
+const REDISPATCH_BACKOFF_MAX_MS = 10 * 60_000
+
+/** Bound on the in-process backoff map, so a long-lived process cannot grow it without bound. */
+const REDISPATCH_BACKOFF_MAX_ENTRIES = 10_000
+
 const WORKFLOW_POLL_MIN_MS = 10
 
 const WORKFLOW_POLL_FACTOR = 1.6
@@ -974,6 +993,112 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
     return { resumed }
   }
+
+  /**
+   * Runs holding a step that has sat `pending` since before `before`, paired
+   * with the step that flagged them.
+   *
+   * Returns nothing by default so a store that cannot express the query keeps
+   * working unchanged — and, because it does not opt in, gains no re-dispatches
+   * either. A store must have an atomic `withStepLock` (or an atomic claim)
+   * before overriding this: the relay makes duplicate dispatch routine, and the
+   * claim in `executeWorkflowStepInner` is what keeps a duplicate from becoming
+   * a second execution.
+   */
+  protected async findUndispatchedSteps(
+    _before: Date,
+    _limit: number
+  ): Promise<Array<{ runId: string; stepId: string }>> {
+    return []
+  }
+
+  /**
+   * Re-drive steps whose dispatch was lost, and report which runs were nudged.
+   *
+   * Arming a step is two writes to two systems: the step row lands `pending`,
+   * then a queue or scheduler job is published. Nothing spans both, so a crash
+   * in between leaves a durable row that nothing will ever pick up — the run
+   * neither finishes nor fails. (Seen on a `workflow.sleep()`: a deploy restart
+   * landed between the sleep step's insert and its timer.)
+   *
+   * The row is the outbox record and this is the relay. Age is the only signal
+   * available — a step `pending` because its dispatch was lost is
+   * indistinguishable from one whose job is merely still queued — so a step
+   * past `undispatchedAfterMs` is re-dispatched regardless, and correctness
+   * rests on the claim rather than on the guess being right. A redundant
+   * dispatch costs one queue message: the loser reads `running` and returns
+   * without invoking anything.
+   *
+   * Re-dispatches back off per step (doubling from 30s, capped at 10m) so a
+   * genuine queue backlog is not amplified by a tick that keeps firing at the
+   * steps the backlog is already delaying. The backoff is per process and
+   * advisory — losing it on restart costs extra dispatches, never correctness.
+   *
+   * This is not self-starting. Call it from a scheduled task; ~30s suits a
+   * queue whose `pending`→`running` latency is well under that.
+   */
+  public async relayUndispatchedSteps(options?: {
+    undispatchedAfterMs?: number
+    limit?: number
+  }): Promise<{ redispatched: string[] }> {
+    const before = new Date(
+      Date.now() -
+        (options?.undispatchedAfterMs ?? DEFAULT_UNDISPATCHED_STEP_MS)
+    )
+    const steps = await this.findUndispatchedSteps(
+      before,
+      options?.limit ?? DEFAULT_UNDISPATCHED_STEP_LIMIT
+    )
+
+    const now = Date.now()
+    const runIds = new Set<string>()
+    for (const { runId, stepId } of steps) {
+      const eligibleAt = this.redispatchBackoff.get(stepId)
+      if (eligibleAt !== undefined && eligibleAt > now) {
+        continue
+      }
+      this.noteRedispatch(stepId, now)
+      runIds.add(runId)
+    }
+
+    const redispatched: string[] = []
+    for (const runId of runIds) {
+      try {
+        await this.resumeWorkflow(runId)
+        redispatched.push(runId)
+      } catch (err) {
+        // One unresumable run must not stop the tick from relaying the rest.
+        getSingletonServices()?.logger?.error(
+          `Failed to re-dispatch workflow run ${runId}: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+    }
+    return { redispatched }
+  }
+
+  /** Advisory, per-process record of when a step may next be re-dispatched. */
+  private readonly redispatchBackoff = new Map<string, number>()
+
+  private noteRedispatch(stepId: string, now: number): void {
+    const previous = this.redispatchDelays.get(stepId)
+    const delay = Math.min(
+      previous === undefined ? REDISPATCH_BACKOFF_MS : previous * 2,
+      REDISPATCH_BACKOFF_MAX_MS
+    )
+    // A step that settles is never returned again, so entries are only evicted
+    // by this bound — oldest first, which is also least recently re-dispatched.
+    if (this.redispatchBackoff.size >= REDISPATCH_BACKOFF_MAX_ENTRIES) {
+      const oldest = this.redispatchBackoff.keys().next()
+      if (!oldest.done) {
+        this.redispatchBackoff.delete(oldest.value)
+        this.redispatchDelays.delete(oldest.value)
+      }
+    }
+    this.redispatchDelays.set(stepId, delay)
+    this.redispatchBackoff.set(stepId, now + delay)
+  }
+
+  private readonly redispatchDelays = new Map<string, number>()
 
   protected resolveStepJobOptions(
     stepOptions?: WorkflowStepOptions
