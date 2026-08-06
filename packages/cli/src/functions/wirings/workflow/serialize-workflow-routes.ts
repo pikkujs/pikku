@@ -23,12 +23,6 @@ export const WorkflowStart = z.object({
   data: z.unknown().optional(),
 })
 
-export const GraphStart = z.object({
-  workflowName: z.string(),
-  nodeId: z.string(),
-  data: z.unknown().optional(),
-})
-
 export const WorkflowRunRef = z.object({
   workflowName: z.string(),
   runId: z.string(),
@@ -52,9 +46,9 @@ export const Acknowledged = z.object({ ok: z.literal(true) })
  */
 import { pikkuSessionlessFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
 import { MissingServiceError } from '@pikku/core/errors'
+import { assertWorkflowRunOwner } from '@pikku/core/workflow'
 import {
   WorkflowStart,
-  GraphStart,
   WorkflowRunRef,
   WorkflowRunId,
   WorkflowApproval,
@@ -97,8 +91,11 @@ export const workflowStatusChecker = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
   input: WorkflowRunRef,
-  func: async ({ workflowService }, { runId }) => {
+  func: async ({ workflowService }, { runId }, { session }) => {
     assertWorkflowService(workflowService)
+    const run = await workflowService.getRun(runId)
+    if (!run) throw new Error(\`Run not found: \${runId}\`)
+    assertWorkflowRunOwner(run.wire, session)
     const status = await workflowService.getRunStatus(runId)
     if (!status) throw new Error(\`Run not found: \${runId}\`)
     return status
@@ -113,7 +110,7 @@ export const workflowStatusStream = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
   input: WorkflowRunRef,
-  func: async ({ workflowRunService }, { runId }, { channel }) => {
+  func: async ({ workflowRunService }, { runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
 
@@ -127,6 +124,7 @@ export const workflowStatusStream = pikkuSessionlessFunc({
         channel.close()
         return false
       }
+      assertWorkflowRunOwner(run.wire, session)
 
       const steps = await workflowRunService.getRunSteps(runId)
 
@@ -198,7 +196,7 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
   tags: ['pikku'],
   auth: ${authFlag},
   input: WorkflowRunRef,
-  func: async ({ workflowRunService }, { runId }, { channel }) => {
+  func: async ({ workflowRunService }, { runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
 
@@ -212,6 +210,7 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
         channel.close()
         return false
       }
+      assertWorkflowRunOwner(run.wire, session)
 
       const steps = await workflowRunService.getRunSteps(runId)
 
@@ -279,27 +278,16 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
   },
 })
 
-export const graphStarter = pikkuSessionlessFunc({
-  tags: ['pikku'],
-  auth: ${authFlag},
-  input: GraphStart,
-  output: WorkflowRunId,
-  // See workflowStarter — destructure workflowService so the analyzer
-  // assigns workflow-state capability to this unit.
-  func: async ({ workflowService }, { workflowName, nodeId, data }, { rpc }) => {
-    assertWorkflowService(workflowService)
-    return await rpc.startWorkflow(workflowName as any, (data ?? {}) as any, { startNode: nodeId })
-  },
-})
-
 /**
  * Record a human decision against a workflow.approval() gate and wake the run.
  *
  * The decision is validated on replay inside the workflow body — the only place
  * the approval's schema value is in scope — so this route deliberately accepts
  * an unknown payload. An invalid one re-closes the gate rather than failing the
- * run. Gate this route with your own auth/permissions to control WHO may
- * approve: the framework does not model approver identity.
+ * A run started through a session may only be approved by that session's user
+ * (\`assertWorkflowRunOwner\`). A run with no recorded owner has nobody to compare
+ * a caller against — gate this route with your own auth/permissions to control
+ * WHO may approve those.
  */
 export const workflowApprover = pikkuSessionlessFunc({
   tags: ['pikku'],
@@ -308,9 +296,9 @@ export const workflowApprover = pikkuSessionlessFunc({
   output: Acknowledged,
   // See workflowStarter — destructure workflowService so the analyzer
   // assigns workflow-state capability to this unit.
-  func: async ({ workflowService }, { runId, reason, decision }) => {
+  func: async ({ workflowService }, { runId, reason, decision }, { session }) => {
     assertWorkflowService(workflowService)
-    await workflowService.approveStep(runId, reason, decision)
+    await workflowService.approveStep(runId, reason, decision, session)
     return { ok: true as const }
   },
 })
@@ -350,11 +338,6 @@ wireHTTPRoutes({
       method: 'get',
       sse: true,
       func: workflowStatusStreamFull,
-    },
-    graphStart: {
-      route: '/workflow/:workflowName/graph/:nodeId',
-      method: 'post',
-      func: graphStarter,
     },
   },
 })

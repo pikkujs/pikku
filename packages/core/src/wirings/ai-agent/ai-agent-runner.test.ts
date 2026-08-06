@@ -707,7 +707,7 @@ describe('resumeAIAgentSync', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         }),
-        resolveApproval: async () => {},
+        resolveApproval: async () => true,
         updateRun: async () => {},
       },
     } as any)
@@ -784,6 +784,7 @@ describe('resumeAIAgentSync', () => {
         },
         resolveApproval: async (toolCallId: string, status: string) => {
           resolveCalls.push({ toolCallId, status })
+          return true
         },
       },
       aiStorage: {
@@ -814,6 +815,84 @@ describe('resumeAIAgentSync', () => {
         usage: { inputTokens: 5, outputTokens: 3, model: 'test/test-model' },
       },
     ])
+  })
+
+  test('an approver that loses the claim never runs the tool', async () => {
+    addTestAgent('claim-agent')
+    pikkuState(null, 'agent', 'agentsMeta')['claim-agent'].tools = ['refund']
+    pikkuState(null, 'rpc', 'meta').refund = 'refund'
+    pikkuState(null, 'function', 'meta').refund = {
+      description: 'Refund',
+      sessionless: true,
+    }
+
+    let executions = 0
+    pikkuState(null, 'function', 'functions').set('refund', {
+      func: async () => {
+        executions++
+        return { refunded: true }
+      },
+    })
+
+    const run: AgentRunState = {
+      runId: 'run-claim',
+      agentName: 'claim-agent',
+      threadId: 'thread-claim',
+      resourceId: 'resource-claim',
+      status: 'suspended',
+      suspendReason: 'approval',
+      pendingApprovals: [
+        {
+          type: 'tool-call',
+          toolCallId: 'tc-claim',
+          toolName: 'refund',
+          args: {},
+        },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    // Every concurrent approver reads the same `suspended` run with the same
+    // pending list; the store hands the claim to exactly one of them.
+    let claimsLeft = 1
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        run: async (): Promise<AIAgentStepResult> =>
+          makeStepResult({
+            text: 'Refunded',
+            usage: { inputTokens: 1, outputTokens: 1 },
+          }),
+      },
+      aiRunState: {
+        getRun: async () => run,
+        createRun: async () => 'unused',
+        updateRun: async () => {},
+        resolveApproval: async () => claimsLeft-- > 0,
+      },
+      aiStorage: {
+        saveMessages: async () => {},
+        getMessages: async () => [],
+      },
+    } as any)
+
+    const approvals = [{ toolCallId: 'tc-claim', approved: true }]
+    await resumeAIAgentSync('run-claim', approvals, asOwner('resource-claim'))
+    assert.equal(executions, 1, 'the winner ran the tool once')
+
+    await assert.rejects(
+      () =>
+        resumeAIAgentSync('run-claim', approvals, asOwner('resource-claim')),
+      /already resolved by another caller/
+    )
+    assert.equal(executions, 1, 'the loser did not run it a second time')
   })
 
   test('records denied approvals and rejects agent mismatches', async () => {
@@ -861,6 +940,7 @@ describe('resumeAIAgentSync', () => {
         updateRun: async () => {},
         resolveApproval: async (toolCallId: string, status: string) => {
           resolveCalls.push({ toolCallId, status })
+          return true
         },
       },
       aiStorage: {
@@ -959,7 +1039,7 @@ describe('resumeAIAgentSync', () => {
       },
       aiRunState: {
         getRun: async () => run,
-        resolveApproval: async () => {},
+        resolveApproval: async () => true,
         updateRun: async () => {},
       },
       aiStorage: {

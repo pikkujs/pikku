@@ -5,7 +5,11 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import type { PikkuRawWire, SerializedError } from '../../types/core.types.js'
+import type {
+  CoreUserSession,
+  PikkuRawWire,
+  SerializedError,
+} from '../../types/core.types.js'
 import type {
   GroupConcurrencyConfig,
   JobGroup,
@@ -43,6 +47,7 @@ import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
+import { assertWorkflowRunOwner } from './workflow-run-ownership.js'
 import {
   buildRunTimeline,
   reconstructStateAt,
@@ -65,6 +70,7 @@ import {
   WorkflowRunCancelledError,
   WorkflowRunFailedError,
   WorkflowRunNotFoundError,
+  WorkflowStepFunctionMismatchError,
   WorkflowStepNameNotString,
   WorkflowSuspendedException,
 } from './workflow-errors.js'
@@ -89,6 +95,7 @@ import {
   recordApprovalDecision,
   type ApprovalStore,
 } from './workflow-approval.js'
+import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import {
   RedispatchBackoff,
   sweepStalledRuns,
@@ -1287,6 +1294,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<void> {
     const claimed = await this.withStepLock(runId, stepName, async () => {
       const stepState = await this.getStepState(runId, stepName)
+      // knowledge: decisions/security/a-step-runs-the-function-the-workflow-dispatched-it-with.md
+      if (
+        stepState.rpcName !== undefined &&
+        stepState.rpcName !== (rpcName ?? null)
+      ) {
+        throw new WorkflowStepFunctionMismatchError(runId, stepName)
+      }
       if (stepState.status === 'succeeded' || stepState.status === 'running') {
         return null
       }
@@ -1333,7 +1347,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           runId,
           stepState.stepId,
           graphNodeId,
-          rpcName,
+          workflowMeta!.nodes![graphNodeId].rpcName,
           data,
           run.workflow
         )
@@ -1764,59 +1778,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.setStepResult(stepState.stepId, null)
   }
 
-  private getSuspendStepName(reason: string): string {
-    return `__workflow_suspend:${reason}`
-  }
-
   private async suspendStep(runId: string, reason: string): Promise<void> {
     const fromStepName = this.lastStepName(runId)
-    const suspendStepName = this.nextStepKey(
-      runId,
-      this.getSuspendStepName(reason)
-    )
-    await this.withStepLock(runId, suspendStepName, async () => {
-      let stepState: StepState
-      try {
-        stepState = await this.getStepState(runId, suspendStepName)
-      } catch {
-        stepState = await this.insertStepState(
-          runId,
-          suspendStepName,
-          'pikkuWorkflowSuspend',
-          {
-            reason,
-          },
-          undefined,
-          fromStepName
-        )
-      }
-      if (!stepState.stepId) {
-        stepState = await this.insertStepState(
-          runId,
-          suspendStepName,
-          'pikkuWorkflowSuspend',
-          {
-            reason,
-          },
-          undefined,
-          fromStepName
-        )
-      }
-
-      if (stepState.status === 'succeeded') {
-        return
-      }
-
-      if (stepState.status === 'pending') {
-        await this.setStepRunning(stepState.stepId)
-      }
-
-      await this.setStepResult(stepState.stepId, {
+    const suspendStepName = this.nextStepKey(runId, suspendStepNameFor(reason))
+    await this.withStepLock(runId, suspendStepName, () =>
+      recordSuspension(
+        this.approvalStore,
+        runId,
         reason,
-        suspendedAt: new Date().toISOString(),
-      })
-      throw new WorkflowSuspendedException(runId, reason)
-    })
+        suspendStepName,
+        fromStepName
+      )
+    )
   }
 
   private async scheduleRunWake(runId: string, delay: number): Promise<void> {
@@ -1873,8 +1846,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async approveStep(
     runId: string,
     reason: string,
-    decision: unknown
+    decision: unknown,
+    session?: CoreUserSession
   ): Promise<void> {
+    assertWorkflowRunOwner((await this.getRunIdentity(runId))?.wire, session)
+
     return recordApprovalDecision(this.approvalStore, runId, reason, decision)
   }
 

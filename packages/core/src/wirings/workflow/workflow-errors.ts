@@ -106,6 +106,21 @@ addError(WorkflowApprovalResolvedError, {
   message: 'Approval has already been resolved.',
 })
 
+export class WorkflowStepFunctionMismatchError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) was dispatched with a different function`
+    )
+  }
+}
+addError(WorkflowStepFunctionMismatchError, {
+  status: 409,
+  message: 'Workflow step was dispatched with a different function.',
+})
+
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: unknown) {
     super(`Workflow step name must be a string. Received: ${typeof stepName}`)

@@ -123,6 +123,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return {
       stepId,
       status: 'pending',
+      rpcName,
       result: undefined,
       error: undefined,
       attemptCount: 1,
@@ -140,6 +141,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .select([
         'workflowStepId',
         'status',
+        'rpcName',
         'result',
         'error',
         'retries',
@@ -165,6 +167,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return {
       stepId: row.workflowStepId,
       status: row.status as StepState['status'],
+      rpcName: row.rpcName ?? null,
       result: parseJson(row.result),
       error: parseJson(row.error),
       attemptCount: Number(row.currentAttempt ?? 1),
@@ -425,6 +428,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .select([
         'workflowStepId',
         'status',
+        'rpcName',
         'result',
         'error',
         'retries',
@@ -440,6 +444,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return {
       stepId: row.workflowStepId,
       status: row.status as StepState['status'],
+      rpcName: row.rpcName ?? null,
       result: parseJson(row.result),
       error: parseJson(row.error),
       attemptCount: Number(row.currentAttempt ?? 1),

@@ -1014,10 +1014,18 @@ export async function resumeAIAgent(
 
   await assertAgentAuthorized(agent, params, packageName)
 
-  await aiRunState.resolveApproval(
+  // The read above is not a claim — concurrent resumes all see the same pending
+  // approval. `resolveApproval` is the claim, and the loser must not go on to
+  // run the tool a second time.
+  const claimed = await aiRunState.resolveApproval(
     input.toolCallId,
     input.approved ? 'approved' : 'denied'
   )
+  if (!claimed) {
+    throw new Error(
+      `Approval for toolCallId ${input.toolCallId} was already resolved by another caller`
+    )
+  }
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
