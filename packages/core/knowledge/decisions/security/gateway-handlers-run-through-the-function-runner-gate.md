@@ -17,7 +17,16 @@ runner's gate is the only thing that evaluates a function's declared `auth`,
 `scopes` and `permissions`; a direct call runs the handler with none of them
 checked.
 
-The handler is registered with `sessionless: true`. Gateway inbound traffic is
+The synthetic registration **inherits the wired function's own metadata** —
+`sessionless`, input and output schema names, `scopes`, tag middleware — read
+back from `pikkuState(null, 'gateway', 'meta')[name].pikkuFuncId`, which the
+inspector already records. The synthetic id exists so the gate runs; it is not a
+licence to run the handler under metadata its author never wrote. A handler
+declared with `pikkuFunc` says session-required in meta rather than through an
+`auth` property, and that declaration is honoured.
+
+When nothing was declared — no inspector entry, as when a gateway is wired by
+hand — the handler falls back to `sessionless: true`. Gateway inbound traffic is
 authenticated by the platform adapter (webhook signature verification, platform
 tokens), not by a user session, so defaulting to session-required would reject
 every legitimate webhook. `CoreGateway.auth` and the handler's own `auth: true`
@@ -26,6 +35,7 @@ whenever declared, session or not.
 
 **What this rules out:** invoking `config.func` directly from any gateway
 transport as an optimisation, and "simplifying" the synthetic function
-registration away. It also rules out flipping the sessionless default to
-session-required as a hardening measure — that breaks every webhook rather than
+registration away. It also rules out fabricating the handler's metadata rather
+than inheriting it, and flipping the _fallback_ to session-required as a
+hardening measure — that breaks every webhook that declared nothing, rather than
 securing it; require auth per gateway via `CoreGateway.auth` instead.
