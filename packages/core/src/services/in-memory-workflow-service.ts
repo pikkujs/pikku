@@ -142,6 +142,7 @@ export class InMemoryWorkflowService
     const step: StepState & { stepName: string } = {
       stepId,
       status: 'pending',
+      rpcName,
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
@@ -273,6 +274,7 @@ export class InMemoryWorkflowService
     const newStep: StepState & { stepName: string } = {
       stepId: newStepId,
       status,
+      rpcName: failedStep.rpcName,
       attemptCount: failedStep.attemptCount + 1,
       retries: failedStep.retries,
       retryDelay: failedStep.retryDelay,

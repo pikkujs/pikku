@@ -1,4 +1,4 @@
-import type { SerializedError } from '../types/core.types.js'
+import type { CoreUserSession, SerializedError } from '../types/core.types.js'
 import type {
   WorkflowRun,
   WorkflowPlannedStep,
@@ -47,8 +47,15 @@ export interface WorkflowService {
   /**
    * The payload is stored as given and validated on replay inside the workflow
    * body, so an invalid one re-closes the gate rather than failing the run.
+   *
+   * The session must belong to the run's owner — see `assertWorkflowRunOwner`.
    */
-  approveStep(runId: string, reason: string, decision: unknown): Promise<void>
+  approveStep(
+    runId: string,
+    reason: string,
+    decision: unknown,
+    session?: CoreUserSession
+  ): Promise<void>
   startWorkflow<I>(
     name: string,
     input: I,

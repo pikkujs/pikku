@@ -66,7 +66,9 @@ class MockAIRunState implements AIRunStateService {
   async resolveApproval(
     _toolCallId: string,
     _status: 'approved' | 'denied'
-  ): Promise<void> {}
+  ): Promise<boolean> {
+    return true
+  }
   async findRunByToolCallId(_toolCallId: string): Promise<null> {
     return null
   }

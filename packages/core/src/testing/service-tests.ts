@@ -769,11 +769,19 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         assert.ok(run.pendingApprovals)
         assert.equal(run.pendingApprovals.length, 1)
 
-        await storage.resolveApproval('approval-tc', 'approved')
+        const claimed = await storage.resolveApproval('approval-tc', 'approved')
+        assert.equal(claimed, true, 'the first approver claims the approval')
 
         run = await storage.getRun(runId)
         assert.ok(run)
         assert.equal(run.pendingApprovals, undefined)
+
+        const second = await storage.resolveApproval('approval-tc', 'approved')
+        assert.equal(
+          second,
+          false,
+          'a second approver of the same tool call claims nothing'
+        )
       })
 
       test('deleteThread cascades', async () => {

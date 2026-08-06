@@ -114,7 +114,7 @@ const createHarness = (
         ],
         messages: [],
       }),
-      resolveApproval: async () => {},
+      resolveApproval: async () => true,
     },
   } as any)
 

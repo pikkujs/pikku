@@ -43,7 +43,11 @@ const resolveWorkflowMeta = (
 
 const toKebab = (s: string) =>
   s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-import type { PikkuWire, SerializedError } from '../../types/core.types.js'
+import type {
+  CoreUserSession,
+  PikkuWire,
+  SerializedError,
+} from '../../types/core.types.js'
 import type { QueueService } from '../queue/queue.types.js'
 import type {
   ApprovalOutcome,
@@ -79,6 +83,7 @@ import {
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import { ChildWorkflowStartedException } from './graph/graph-runner.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
+import { assertWorkflowRunOwner } from './workflow-run-ownership.js'
 import {
   buildRunTimeline,
   reconstructStateAt,
@@ -193,6 +198,21 @@ export class WorkflowApprovalResolvedError extends PikkuError {
 addError(WorkflowApprovalResolvedError, {
   status: 409,
   message: 'Approval has already been resolved.',
+})
+
+export class WorkflowStepFunctionMismatchError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) was dispatched with a different function`
+    )
+  }
+}
+addError(WorkflowStepFunctionMismatchError, {
+  status: 409,
+  message: 'Workflow step was dispatched with a different function.',
 })
 
 export class WorkflowServiceNotInitialized extends Error {}
@@ -1705,6 +1725,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<void> {
     const claimed = await this.withStepLock(runId, stepName, async () => {
       const stepState = await this.getStepState(runId, stepName)
+      // knowledge: decisions/security/a-step-runs-the-function-the-workflow-dispatched-it-with.md
+      if (
+        stepState.rpcName !== undefined &&
+        stepState.rpcName !== (rpcName ?? null)
+      ) {
+        throw new WorkflowStepFunctionMismatchError(runId, stepName)
+      }
       if (stepState.status === 'succeeded' || stepState.status === 'running') {
         return null
       }
@@ -1751,7 +1778,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           runId,
           stepState.stepId,
           graphNodeId,
-          rpcName,
+          workflowMeta!.nodes![graphNodeId].rpcName,
           data,
           run.workflow
         )
@@ -2274,8 +2301,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async approveStep(
     runId: string,
     reason: string,
-    decision: unknown
+    decision: unknown,
+    session?: CoreUserSession
   ): Promise<void> {
+    assertWorkflowRunOwner((await this.getRunIdentity(runId))?.wire, session)
+
     const stepName = this.getApprovalStepName(reason)
     const stateKey = this.approvalStateKey(stepName)
 

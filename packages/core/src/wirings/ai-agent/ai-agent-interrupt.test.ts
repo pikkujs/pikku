@@ -574,7 +574,7 @@ describe('non-streaming agent interruption', () => {
         updateRun: async (_runId: string, patch: unknown) => {
           updates.push(patch)
         },
-        resolveApproval: async () => {},
+        resolveApproval: async () => true,
       },
     } as any)
 
@@ -648,6 +648,7 @@ describe('streaming resume interruption', () => {
         // for approvals that have already been given.
         resolveApproval: async () => {
           run.pendingApprovals = []
+          return true
         },
       },
     } as any)

@@ -1629,6 +1629,7 @@ describe('resumeAIAgent', () => {
         getRun: async () => remainingRun,
         resolveApproval: async (toolCallId: string, status: string) => {
           resolveCalls.push({ toolCallId, status })
+          return true
         },
         updateRun: async (_runId: string, patch: any) => {
           updates.push(patch)
@@ -1750,6 +1751,7 @@ describe('resumeAIAgent', () => {
         },
         resolveApproval: async (toolCallId: string, status: string) => {
           resolveCalls.push({ toolCallId, status })
+          return true
         },
         updateRun: async (_runId: string, patch: any) => {
           updates.push(patch)

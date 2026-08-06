@@ -565,11 +565,13 @@ export class MongoDBAIStorageService
   async resolveApproval(
     toolCallId: string,
     status: 'approved' | 'denied'
-  ): Promise<void> {
-    await this.toolCalls.updateOne(
-      { _id: toolCallId },
+  ): Promise<boolean> {
+    // Only the caller that moves the tool call off 'pending' has claimed it.
+    const result = await this.toolCalls.updateOne(
+      { _id: toolCallId, approvalStatus: 'pending' },
       { $set: { approvalStatus: status } }
     )
+    return result.modifiedCount > 0
   }
 
   public async close(): Promise<void> {}

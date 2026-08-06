@@ -596,12 +596,15 @@ export class KyselyAIStorageService
   async resolveApproval(
     toolCallId: string,
     status: 'approved' | 'denied'
-  ): Promise<void> {
-    await this.db
+  ): Promise<boolean> {
+    // Only the caller that moves the tool call off 'pending' has claimed it.
+    const result = await this.db
       .updateTable('aiToolCall')
       .set({ approvalStatus: status })
       .where('id', '=', toolCallId)
-      .execute()
+      .where('approvalStatus', '=', 'pending')
+      .executeTakeFirst()
+    return Number(result?.numUpdatedRows ?? 0) > 0
   }
 
   public async close(): Promise<void> {}
