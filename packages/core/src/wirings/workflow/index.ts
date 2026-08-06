@@ -6,8 +6,13 @@ export {
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowApprovalResolvedError,
+  WorkflowStepFunctionMismatchError,
   DEFAULT_STEP_RETRIES,
 } from './pikku-workflow-service.js'
+export {
+  assertWorkflowRunOwner,
+  WorkflowRunForbiddenError,
+} from './workflow-run-ownership.js'
 export type {
   RunLifecycleContext,
   WorkflowRunEngine,

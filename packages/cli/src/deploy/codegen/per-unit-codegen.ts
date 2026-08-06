@@ -197,17 +197,14 @@ function collectFilterNames(
         names.add('workflowRunner')
         names.add('workflowStatusChecker')
         names.add('workflowStatusStream')
-        names.add('graphStarter')
         names.add('/workflow/:workflowName/start')
         names.add('/workflow/:workflowName/run')
         names.add('/workflow/:workflowName/status/:runId')
         names.add('/workflow/:workflowName/status/:runId/stream')
-        names.add('/workflow/:workflowName/graph/:nodeId')
         names.add('http:post:/workflow/:workflowName/start')
         names.add('http:post:/workflow/:workflowName/run')
         names.add('http:get:/workflow/:workflowName/status/:runId')
         names.add('http:get:/workflow/:workflowName/status/:runId/stream')
-        names.add('http:post:/workflow/:workflowName/graph/:nodeId')
         // Queue names for orchestrator and step workers — only when the
         // provider's workflow runtime fans out via queues.
         if (workflowQueues) {

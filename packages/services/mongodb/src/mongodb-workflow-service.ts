@@ -203,6 +203,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return {
       stepId,
       status: 'pending',
+      rpcName,
       result: undefined,
       error: undefined,
       attemptCount: 1,
@@ -233,6 +234,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return {
       stepId: row._id,
       status: row.status as StepState['status'],
+      rpcName: row.rpcName ?? null,
       result: row.result ?? undefined,
       error: row.error ?? undefined,
       attemptCount,
@@ -426,6 +428,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return {
       stepId: row._id,
       status: row.status as StepState['status'],
+      rpcName: row.rpcName ?? null,
       result: row.result ?? undefined,
       error: row.error ?? undefined,
       attemptCount,

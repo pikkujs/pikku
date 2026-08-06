@@ -43,6 +43,7 @@ const setup = (agentName: string, resourceId = 'u1') => {
       getRun: async () => suspendedRun(agentName, resourceId),
       resolveApproval: async (toolCallId: string) => {
         resolved.push(toolCallId)
+        return true
       },
     },
   } as any)

@@ -468,7 +468,6 @@ export function analyzeDeployment(
     'workflowStatusChecker',
     'workflowStatusStream',
     'workflowStatusStreamFull',
-    'graphStarter',
   ])
   for (const unit of units) {
     if (unit.role !== 'function') continue
@@ -607,11 +606,6 @@ function buildWorkflows(
         method: 'post',
         route: `/workflow/${graph.name}/approve/:runId`,
         pikkuFuncId: `workflowApprove:${graph.name}`,
-      },
-      {
-        method: 'post',
-        route: `/workflow/${graph.name}/graph/:nodeId`,
-        pikkuFuncId: `graphStart:${graph.name}`,
       },
     ]
 

@@ -928,9 +928,14 @@ export async function runWorkflowGraph(
   }
 
   const nodes = meta.nodes
-  const entryNodes: string[] = startNode
-    ? [startNode]
-    : (meta.entryNodeIds ?? [])
+  const declaredEntryNodes = meta.entryNodeIds ?? []
+  // knowledge: decisions/security/a-graph-run-starts-at-an-entry-node-the-graph-declared.md
+  if (startNode && !declaredEntryNodes.includes(startNode)) {
+    throw new Error(
+      `Workflow graph '${graphName}': '${startNode}' is not an entry node`
+    )
+  }
+  const entryNodes: string[] = startNode ? [startNode] : declaredEntryNodes
   validateGraphReferences(graphName, nodes, entryNodes)
 
   if (entryNodes.length === 0) {

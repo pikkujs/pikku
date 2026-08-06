@@ -38,7 +38,7 @@ export class InMemoryAIRunStateService implements AIRunStateService {
   async resolveApproval(
     toolCallId: string,
     status: 'approved' | 'denied'
-  ): Promise<void> {
+  ): Promise<boolean> {
     for (const run of this.runs.values()) {
       if (run.pendingApprovals) {
         const approval = run.pendingApprovals.find(
@@ -49,10 +49,11 @@ export class InMemoryAIRunStateService implements AIRunStateService {
             (a) => a.toolCallId !== toolCallId
           )
           run.updatedAt = new Date()
-          return
+          return true
         }
       }
     }
+    return false
   }
 
   async findRunByToolCallId(

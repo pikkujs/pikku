@@ -315,7 +315,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
   protected async insertStepStateImpl(
     runId: string,
     stepName: string,
-    rpcName: string,
+    rpcName: string | null,
     data: any,
     stepOptions?: { retries?: number; retryDelay?: string | number },
     fromStepName?: string
@@ -326,12 +326,15 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
     const fields: Record<string, string> = {
       stepId,
-      rpcName,
       data: JSON.stringify(data),
       status: 'pending',
       attemptCount: '1',
       createdAt: now.toString(),
       updatedAt: now.toString(),
+    }
+
+    if (rpcName !== null) {
+      fields.rpcName = rpcName
     }
 
     if (stepOptions?.retries !== undefined) {
@@ -363,6 +366,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return {
       stepId,
       status: 'pending',
+      rpcName,
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay:
@@ -388,6 +392,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return {
       stepId: data.stepId,
       status: data.status as any,
+      rpcName: data.rpcName ?? null,
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
       attemptCount: Number(data.attemptCount || 1),
@@ -758,6 +763,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return {
       stepId: data.stepId!,
       status: 'pending',
+      rpcName: data.rpcName ?? null,
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
       attemptCount: newAttemptCount,
