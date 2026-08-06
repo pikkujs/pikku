@@ -1,3 +1,76 @@
+## 0.12.79
+
+### Patch Changes
+
+- e848eb2: Add `relayUndispatchedSteps()`, which re-drives steps whose queue or scheduler
+  dispatch was lost.
+
+  Arming a step is two writes to two systems — the step row lands `pending`, then
+  a job is published — and nothing spans both, so a crash in between leaves a
+  durable row nothing will ever pick up. The run then neither finishes nor fails.
+
+  The step row is the outbox record and this is the relay. It is safe to
+  re-dispatch a step that already has a live job because `executeWorkflowStepInner`
+  claims the step under `withStepLock` before invoking anything: the loser reads
+  `running` and returns. Stores opt in by overriding `findUndispatchedSteps`; the
+  default returns nothing, so a store without an atomic step lock gains no
+  re-dispatches. Opted in: `kysely-postgres` and `kysely-mysql` (real locks) and
+  in-memory (inline, single-process, no queues). Not opted in: `mongodb` and
+  `kysely-sqlite`, whose `withStepLock` is a pass-through.
+
+  Not self-starting — call it from a scheduled task.
+
+- b170489: Gateway handlers now run under the metadata their author actually wrote, instead
+  of a fabricated meta object.
+
+  `registerGatewayHandler` used to synthesize `{ sessionless: true,
+inputSchemaName: null, outputSchemaName: null }` for every gateway handler, so a
+  function declared with `pikkuFunc` — which records "session required" in meta
+  rather than through an `auth` property — was silently made sessionless, and its
+  input schema was never validated. It now inherits `sessionless`, the schema
+  names, `scopes` and tag middleware from the function the gateway was wired with,
+  falling back to the old sessionless default only when nothing was declared (a
+  gateway wired by hand rather than through codegen).
+
+  Tag middleware also reaches gateways for the first time. `addTagMiddleware('x',
+…)` combined with `wireGateway({ tags: ['x'] })` previously resolved to nothing
+  at all — the inspector computed the middleware and no runtime path read it — so
+  a tag that read like a gate applied none.
+
+  **Both are tightening changes.** A gateway whose handler declared a session
+  requirement, or whose tags name registered middleware, now enforces what it
+  already said it enforced.
+
+- ae4e898: Carry a secret's `allowedHosts` through code generation, and close three gaps in
+  the SSRF guard.
+
+  `allowedHosts` was declared and enforced but never survived codegen: the
+  inspector did not read the property off the `defineSecret` literal, and the meta
+  builder rebuilt its objects without it. Enforcement in `assertSecretAllowedForHost`
+  then always saw `undefined`, so the egress restriction was a no-op by default —
+  and, with `secrets.requireAllowedHosts` set, threw for every secret including the
+  ones that correctly declared hosts. Both stages now carry the field, and the
+  secrets verifier asserts it against the generated JSON rather than a hand-written
+  meta literal, which is why the existing tests stayed green.
+
+  `isPrivateHost` now checks an explicit CIDR table instead of ad-hoc octet
+  comparisons. It previously missed `100.64.0.0/10` — which contains Alibaba
+  Cloud's `100.100.100.200` metadata endpoint — along with `192.0.0.0/24`,
+  `198.18.0.0/15`, `192.88.99.0/24`, the TEST-NETs, multicast and reserved space.
+  IPv6 gains a real parser, so `fec0::/10`, `ff00::/8`, and NAT64 (`64:ff9b::/96`)
+  and 6to4 (`2002::/16`) forms wrapping an internal IPv4 address are caught.
+
+  `safeFetch` takes an optional `resolveHost`, checked on the initial URL and every
+  redirect hop, so a _public_ hostname pointing at a private address is refused —
+  the `169-254-169-254.nip.io` shape a literal-only check cannot see. Core cannot
+  resolve DNS itself (Workers has no DNS API), so the Node resolver ships as
+  `@pikku/core/node-host-resolver` and the Node server runtimes install it during
+  `init()`. The connection is not pinned to the address that was checked, so a
+  rebind between check and connect is still possible.
+
+  The graph addon's `httpRequest` node called bare `fetch`, bypassing the guard
+  entirely; it now goes through `safeFetch`.
+
 ## 0.12.78
 
 ### Patch Changes
