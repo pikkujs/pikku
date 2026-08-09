@@ -45,6 +45,7 @@ export enum ErrorCode {
 
   // Configuration errors
   SCHEMA_GENERATION_ERROR = 'PKU456',
+  SCHEMA_REFERENCE_UNRESOLVED = 'PKU463',
   INLINE_SCHEMA = 'PKU489',
 
   // Function errors

@@ -689,6 +689,63 @@ export function computeRequiredSchemas(
   ])
 }
 
+/**
+ * Every schema a function's contract names has to exist once codegen is done.
+ *
+ * The way it stops existing is quiet. `generateCustomTypes` hands the schema
+ * generator a virtual source file that *imports* each named contract type, so a
+ * type that is declared but never exported resolves to nothing and yields no
+ * schema — while the function's meta still carries the name. Nothing downstream
+ * reads that name until the first call, which fails with a runtime
+ * `MissingSchemaError` in a deployment rather than in the build that caused it.
+ *
+ * Reported rather than critical: the reference is only *guaranteed* to break
+ * the functions that are actually invoked, so this blocks CI through
+ * `--fail-on-error` without failing a dev server over a function nobody calls.
+ */
+export function validateSchemaReferences(
+  logger: InspectorLogger,
+  state: InspectorState
+): void {
+  const { functions, schemas } = state
+  const available = new Set(Object.keys(schemas ?? {}))
+  const unresolved: string[] = []
+
+  const resolve = (typeName: string): string => {
+    try {
+      return functions.typesMap.getUniqueName(typeName)
+    } catch {
+      return typeName
+    }
+  }
+
+  for (const [funcName, meta] of Object.entries(functions.meta)) {
+    for (const [role, declared] of [
+      ['input', meta.inputs?.[0]],
+      ['output', meta.outputs?.[0]],
+    ] as const) {
+      if (!declared || PRIMITIVE_TYPES.has(declared)) continue
+      const resolved = resolve(declared)
+      if (PRIMITIVE_TYPES.has(resolved) || available.has(resolved)) continue
+      unresolved.push(`${funcName}.${role} → '${resolved}'`)
+    }
+  }
+
+  if (unresolved.length === 0) return
+
+  logger.diagnostic({
+    severity: 'error',
+    code: ErrorCode.SCHEMA_REFERENCE_UNRESOLVED,
+    message:
+      `${unresolved.length} function contract${unresolved.length === 1 ? '' : 's'} ` +
+      `name${unresolved.length === 1 ? 's' : ''} a schema that was never generated, so ` +
+      `calling ${unresolved.length === 1 ? 'it' : 'them'} fails at runtime with ` +
+      `MissingSchemaError: ${unresolved.join(', ')}. ` +
+      `The usual cause is a named type used as the function's input/output that ` +
+      `is declared but not exported — export it, or inline the type at the call site.`,
+  })
+}
+
 export function validateAgentModels(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>
