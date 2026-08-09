@@ -3,7 +3,24 @@ import type {
   CoreUserSession,
   PikkuWire,
 } from './types/core.types.js'
+import type { PikkuRPC } from './wirings/rpc/rpc-types.js'
+
+/**
+ * The wire a permission function sees. `Out = never` denies it `channel.send`.
+ *
+ * knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
+ */
+export type PermissionWire = PikkuWire<
+  any,
+  never,
+  false,
+  any,
+  PikkuRPC,
+  never,
+  never
+>
 import type {
+  AuthBranded,
   CorePermissionGroup,
   CorePikkuPermission,
 } from './function/functions.types.js'
@@ -14,7 +31,7 @@ const verifyPermissions = async (
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
-  wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
+  wire: PermissionWire
 ): Promise<boolean> => {
   if (!permissions) {
     return true
@@ -34,14 +51,13 @@ const verifyPermissions = async (
         return true
       }
     } else {
-      if (await funcs(services, data, wire as any)) {
+      if (await funcs(services, data, wire)) {
         return true
       }
     }
   }
   return false
 }
-
 
 const globalPermissionsCache: Record<
   string,
@@ -69,24 +85,6 @@ export const addGlobalPermission = (
   }
   clearPermissionsCache()
   return permissions
-}
-
-/**
- * @deprecated Tag-level permissions were removed in #972 — permissions are now
- * function-scoped only (declare them on the function via `pikkuFunc({ permissions })`).
- * This throwing stub exists solely so the pinned bootstrap CLI (which still
- * generates an `addTagPermission` wrapper) can resolve the import at build time;
- * it is never called. Delete once `PIKKU_CLI_VERSION` in the CLI build is bumped
- * past the release that removes tag permissions.
- */
-export const addTagPermission = (
-  _tag: string,
-  _permissions: CorePermissionGroup | CorePikkuPermission[],
-  _packageName: string | null = null
-): never => {
-  throw new Error(
-    'addTagPermission was removed in #972 — tag-level permissions no longer exist. Declare permissions on the function definition instead: pikkuFunc({ permissions }).'
-  )
 }
 
 const bucket = (
@@ -141,7 +139,7 @@ export const runPermissions = async ({
 }: {
   funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
   services: CoreServices
-  wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
+  wire: PermissionWire
   data: any
   packageName?: string | null
   /** What the non-global gate is called in debug logs, e.g. 'function', 'agent'. */
@@ -188,14 +186,14 @@ export const checkAuthPermissions = async (
 
   const collect = (perm: CorePermissionGroup | CorePikkuPermission) => {
     if (typeof perm === 'function') {
-      if ((perm as any).__pikkuAuth) {
+      if ((perm as AuthBranded).__pikkuAuth) {
         authPerms.push(perm)
       }
     } else if (perm && typeof perm === 'object') {
       for (const funcs of Object.values(perm)) {
         const arr = Array.isArray(funcs) ? funcs : [funcs]
         for (const fn of arr) {
-          if (typeof fn === 'function' && (fn as any).__pikkuAuth) {
+          if (typeof fn === 'function' && (fn as AuthBranded).__pikkuAuth) {
             authPerms.push(fn)
           }
         }

@@ -6,13 +6,7 @@ export type { PikkuFetchHTTPRequestOptions } from './pikku-fetch-http-request.js
 export { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 export { logRoutes } from './log-http-routes.js'
 
-export {
-  fetch,
-  fetchData,
-  wireHTTP,
-  addHTTPMiddleware,
-  addHTTPPermission,
-} from './http-runner.js'
+export { fetch, fetchData, wireHTTP, addHTTPMiddleware } from './http-runner.js'
 
 export { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
 export { toWebRequest, applyWebResponse } from './web-request.js'
