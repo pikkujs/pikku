@@ -5,8 +5,9 @@ import type {
   ScheduledTaskSummary,
 } from '@pikku/core'
 import { SchedulerService, parseDurationString } from '@pikku/core'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState, getSingletonServices } from '@pikku/core/ecosystem'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { rpcService } from '@pikku/core/rpc'
 
 interface DelayedTask {
   taskId: string
@@ -49,7 +50,27 @@ export class InMemorySchedulerService extends SchedulerService {
     const timer = setTimeout(async () => {
       this.delayedTasks.delete(taskId)
       try {
-        await runScheduledTask({ name: rpcName, session })
+        // An RPC, not a cron task. `runScheduledTask` looks the name up in the
+        // scheduler's task registry, which only ever holds wired cron tasks —
+        // so every internally-scheduled RPC died here as
+        // ScheduledTaskNotFoundError. The one that matters most is
+        // `pikkuWorkflowSleeper`: it is registered by the workflow service as a
+        // function, and it is what wakes a run from `workflow.sleep`. With the
+        // wake-up lost to a swallowed log line, an async workflow run stopped
+        // at its first sleep and stayed `running` forever.
+        //
+        // `data` has to be forwarded for the same reason. The sleeper is called
+        // with `{ runId, stepId }` and cannot identify the sleeping step
+        // without it — it was captured in `delayedTasks` but never passed on.
+        // This matches what the BullMQ and pg-boss schedulers already do:
+        // enqueue `{ rpcName, data, session }` and invoke the RPC with it.
+        const services = getSingletonServices()
+        const rpc = rpcService.getContextRPCService(
+          services as any,
+          {},
+          false
+        ) as { invoke: (name: string, data: unknown) => Promise<unknown> }
+        await rpc.invoke(rpcName, data)
       } catch (err: unknown) {
         getLogger().error(`Failed to execute delayed RPC '${rpcName}': ${err}`)
       }
