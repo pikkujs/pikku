@@ -90,7 +90,9 @@ export async function executeCLIViaChannel({
         return
       }
 
-      renderer(null as any, response, undefined)
+      // A CLI channel response is rendered off-process: there are no services
+      // to hand the renderer, and every CLI renderer ignores the argument.
+      renderer(null as never, response, undefined)
     }
 
     commandRoute.subscribe(commandId, responseHandler)

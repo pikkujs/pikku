@@ -64,6 +64,8 @@ export interface ChannelMeta {
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
   binary?: boolean | null
+  /** Set when the channel was wired by a gateway rather than declared directly. */
+  gateway?: boolean
   summary?: string
   description?: string
   errors?: string[]

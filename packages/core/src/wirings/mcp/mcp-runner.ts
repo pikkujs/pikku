@@ -54,7 +54,7 @@ export const wireMCPResource = <
     )
     return
   }
-  addFunction(mcpResourceMeta.pikkuFuncId, mcpResource.func as any)
+  addFunction(mcpResourceMeta.pikkuFuncId, mcpResource.func)
   const resources = pikkuState(null, 'mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
@@ -77,7 +77,7 @@ export const wireMCPPrompt = <
     )
     return
   }
-  addFunction(mcpPromptMeta.pikkuFuncId, mcpPrompt.func as any)
+  addFunction(mcpPromptMeta.pikkuFuncId, mcpPrompt.func)
   const prompts = pikkuState(null, 'mcp', 'prompts')
   if (prompts.has(mcpPrompt.name)) {
     throw new Error(`MCP prompt already exists: ${mcpPrompt.name}`)

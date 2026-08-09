@@ -248,7 +248,7 @@ function valuesAreEquivalent(a: unknown, b: unknown): boolean {
   return coerce(a) === coerce(b)
 }
 
-function coerce(value: unknown): string | number | boolean {
+function coerce(value: unknown): unknown {
   if (typeof value === 'boolean' || typeof value === 'number') return value
   if (typeof value === 'string') {
     if (value === 'true') return true
@@ -256,5 +256,5 @@ function coerce(value: unknown): string | number | boolean {
     const num = Number(value)
     return isNaN(num) ? value : num
   }
-  return value as any
+  return value
 }

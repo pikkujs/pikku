@@ -117,7 +117,8 @@ export const runChannelConnect = async ({
       channelName: channelConfig.name,
     })
     channel.setState = (state) => channelStore.setState(channelId, state)
-    channel.getState = () => channelStore.getState(channelId) as any
+    // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
+    channel.getState = () => channelStore.getState(channelId) as never
     channel.clearState = () => channelStore.clearState(channelId)
 
     const wire: PikkuRawWire = {
@@ -198,7 +199,8 @@ export const runChannelDisconnect = async ({
     channelName,
   })
   channel.setState = (state) => channelStore.setState(channelId, state)
-  channel.getState = () => channelStore.getState(channelId) as any
+  // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
+  channel.getState = () => channelStore.getState(channelId) as never
   channel.clearState = () => channelStore.clearState(channelId)
 
   const userSession = new PikkuSessionService<CoreUserSession>(
@@ -271,7 +273,8 @@ export const runChannelMessage = async (
     channelName,
   })
   channel.setState = (state) => channelStore.setState(channelId, state)
-  channel.getState = () => channelStore.getState(channelId) as any
+  // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
+  channel.getState = () => channelStore.getState(channelId) as never
   channel.clearState = () => channelStore.clearState(channelId)
 
   const userSession = new PikkuSessionService<CoreUserSession>(

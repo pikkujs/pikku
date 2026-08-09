@@ -692,22 +692,13 @@ export async function streamAIAgent(
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
 
-  // Sent on the raw channel, ahead of the run. A voice client sent audio and so
-  // has no idea what it said; until this arrives its own message is a blank
-  // bubble. Ahead of the run rather than alongside it because the answer starts
-  // streaming within a few hundred milliseconds, and a question that appears
-  // after its answer reads as the wrong question.
+  // knowledge: decisions/internals/the-transcript-event-is-sent-ahead-of-the-run.md
   const transcript = sharedNotes[SPOKEN_TRANSCRIPT]
   if (typeof transcript === 'string') {
     channel.send({ type: 'transcript', text: transcript })
   }
 
-  // What goes into thread history is what the model was actually asked. For a
-  // spoken turn that is not what arrived over the wire: the wire carried a
-  // base64 audio blob, and persisting it would write megabytes of unreadable
-  // data into the history while losing the only readable record of the turn.
-  // Identity-checked rather than assumed — a middleware is free to rewrite the
-  // message list into something with no relation to the turn.
+  // knowledge: decisions/internals/thread-history-records-the-transcript-not-the-audio.md
   const lastModified = modifiedMessages[modifiedMessages.length - 1]
   const persistedUserMessage =
     lastModified?.id === userMessage.id ? lastModified : userMessage
@@ -768,7 +759,7 @@ export async function streamAIAgent(
     {
       wireInheritedChannelMiddleware: meta?.channelMiddleware,
       wireChannelMiddleware: [
-        ...((agent.channelMiddleware as any[]) ?? []),
+        ...(agent.channelMiddleware ?? []),
         ...streamMiddleware,
       ],
     }
@@ -792,10 +783,7 @@ export async function streamAIAgent(
 
   const credentialFilteredChannel: AIStreamChannel = {
     ...wrappedChannel,
-    // Returns what the inner send returns. Middleware runs asynchronously, so
-    // swallowing the promise here makes every `await channel.send(...)` upstream
-    // a no-op — including the one that waits for a buffering hook to flush
-    // before the channel closes.
+    // knowledge: decisions/internals/an-agent-stream-send-must-return-the-inner-sends-promise.md
     send: (event: AIStreamEvent) => {
       if (
         event.type === 'tool-result' &&
@@ -872,11 +860,7 @@ export async function streamAIAgent(
       runId
     )
 
-    // Through the middleware rather than straight at the channel, and awaited.
-    // `done` is the only signal a stream hook gets that the reply is over, and
-    // the ones that buffer need it: `voiceOutput` speaks a trailing fragment
-    // that never reached a full stop, and waits for audio it has already paid
-    // to synthesize. Sent raw, that work is discarded by the `close()` below.
+    // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await outputChannel.send({ type: 'done' })
     channel.close()
     return persistingChannel.fullText
@@ -979,12 +963,7 @@ export async function interruptAIAgent(
     reason: input.reason ?? 'user',
   })
 
-  // A run still marked `running` that this process cannot abort is executing on
-  // another instance. Returning a bare `false` there is indistinguishable from
-  // "it already finished", so the one deployment shape this registry does not
-  // cover fails silently — an agent that simply refuses to shut up, with nothing
-  // in the logs. Say so instead. See `signalRunInterrupt` for the fix (fan the
-  // interrupt out over eventHub so every instance tries locally).
+  // knowledge: decisions/internals/an-agent-run-owned-by-another-instance-says-so.md
   if (!stopped && run.status === 'running') {
     logger?.warn(
       `Could not interrupt run ${input.runId}: it is running in another process. ` +
@@ -1331,10 +1310,7 @@ async function continueAfterToolResult(
     }
   }
 
-  // Resuming is as interruptible as the first turn. It is the same person
-  // listening to the same voice, and after an approval it is where most of the
-  // reply actually gets spoken — an approved delete is followed by the agent
-  // talking about it, and that is a normal thing to talk over.
+  // knowledge: decisions/internals/a-resumed-agent-turn-is-as-interruptible-as-the-first.md
   const interruptHandle = registerInterruptibleRun(run.runId)
 
   const streamMiddleware = aiMiddlewares
@@ -1369,7 +1345,7 @@ async function continueAfterToolResult(
     {
       wireInheritedChannelMiddleware: meta?.channelMiddleware,
       wireChannelMiddleware: [
-        ...((agent.channelMiddleware as any[]) ?? []),
+        ...(agent.channelMiddleware ?? []),
         ...streamMiddleware,
       ],
     }
@@ -1467,10 +1443,7 @@ async function continueAfterToolResult(
       run.runId
     )
 
-    // Through the middleware, for the same reason as the first turn — and it
-    // matters more here. After an approval, most of what gets spoken is the
-    // agent talking about what it just did, so this is the half of the reply a
-    // dropped flush would silence.
+    // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await wrappedChannel.send({ type: 'done' })
     channel.close()
   } catch (err) {

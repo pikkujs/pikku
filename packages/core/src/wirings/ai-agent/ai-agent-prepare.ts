@@ -12,7 +12,11 @@ import type {
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
-import { checkAuthPermissions, runPermissions } from '../../permissions.js'
+import {
+  checkAuthPermissions,
+  runPermissions,
+  type PermissionWire,
+} from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { verifyScopes } from '../../scopes.js'
@@ -319,8 +323,8 @@ export async function assertAgentAuthorized(
 
   await runPermissions({
     funcPermissions: agent.permissions,
-    services: singletonServices as any,
-    wire: wire as any,
+    services: singletonServices,
+    wire: wire as PermissionWire,
     data: {},
     packageName,
     label: 'agent',
@@ -395,7 +399,7 @@ export function createScopedChannel(
           toolName: event.toolName,
           args: event.args,
           ...(event.reason !== undefined ? { reason: event.reason } : {}),
-          runId: (event as any).runId,
+          runId: event.runId,
         })
         return
       }
@@ -940,10 +944,7 @@ export async function prepareAgentRun(
 
   let messages: AIMessage[] = []
   if (storage) {
-    // A tool whose run was interrupted may still be writing its result to this
-    // thread. In voice the next turn lands within a second or two, so without
-    // this the model would load context that is missing the very thing it is
-    // about to be asked about.
+    // knowledge: decisions/internals/agent-context-waits-for-a-tool-result-still-being-written.md
     await awaitPendingInterruptNote(threadId)
     messages = await storage.getMessages(threadId, {
       lastN: memoryConfig?.lastMessages ?? 20,
@@ -959,10 +960,7 @@ export async function prepareAgentRun(
 
   const userContent: AIMessage['content'] = input.attachments?.length
     ? [
-        // Omitted when there is nothing to say. An attachment on its own is a
-        // real turn — a spoken one carries audio and no text at all — and an
-        // empty text part alongside it is a part providers are entitled to
-        // reject, for a caller who never wrote one.
+        // knowledge: decisions/internals/an-empty-text-part-is-omitted-from-an-agent-message.md
         ...(input.message
           ? [{ type: 'text' as const, text: input.message }]
           : []),

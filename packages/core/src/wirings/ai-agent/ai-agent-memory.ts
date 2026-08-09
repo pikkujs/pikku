@@ -19,7 +19,14 @@ export function resolveMemoryServices(
 } {
   const memoryConfig = agent.memory
   const storage = memoryConfig?.storage
-    ? (singletonServices as any)[memoryConfig.storage]
+    ? // The service is named by string in agent config, so the lookup cannot be
+      // checked — only the shape it is required to have.
+      (
+        singletonServices as unknown as Record<
+          string,
+          AIStorageService | undefined
+        >
+      )[memoryConfig.storage]
     : singletonServices.aiStorage
   return { storage }
 }

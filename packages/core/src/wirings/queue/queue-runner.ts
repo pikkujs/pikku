@@ -58,7 +58,7 @@ export const wireQueueWorker = <
     func: queueWorker.func.func,
     auth: queueWorker.func.auth,
     permissions: queueWorker.func.permissions,
-    middleware: queueWorker.func.middleware as any,
+    middleware: queueWorker.func.middleware,
     tags: queueWorker.func.tags,
   })
 

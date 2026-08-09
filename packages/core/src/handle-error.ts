@@ -33,7 +33,7 @@ export const handleHTTPError = (
         e.message !== 'An error occurred'
           ? e.message
           : errorResponse.message,
-      payload: clientFacing ? (e as any).payload : undefined,
+      payload: clientFacing ? (e as { payload?: unknown }).payload : undefined,
       errorId: traceId,
     })
 

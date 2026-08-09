@@ -72,7 +72,8 @@ export const cors = pikkuMiddlewareFactory<{
 
         if (request.method() === 'options') {
           response.header('Access-Control-Max-Age', String(maxAge))
-          response.status(204).json(undefined as any)
+          // 204 carries no body, and `json` has no no-content overload.
+          response.status(204).json(undefined as never)
           return
         }
 

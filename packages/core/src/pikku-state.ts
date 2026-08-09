@@ -16,11 +16,22 @@ import type { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
 const PIKKU_STATE_KEY = Symbol.for('@pikku/core/state')
 
+/**
+ * State is parked on `globalThis` under a registered symbol so separate copies
+ * of @pikku/core in one process share it. Typed once here rather than at each
+ * access.
+ */
+const stateHost = globalThis as unknown as {
+  [key: symbol]: Map<string, PikkuPackageState> | undefined
+}
+
 export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
-  if (!(globalThis as any)[PIKKU_STATE_KEY]) {
-    ;(globalThis as any)[PIKKU_STATE_KEY] = new Map<string, PikkuPackageState>()
+  let states = stateHost[PIKKU_STATE_KEY]
+  if (!states) {
+    states = new Map<string, PikkuPackageState>()
+    stateHost[PIKKU_STATE_KEY] = states
   }
-  return (globalThis as any)[PIKKU_STATE_KEY] as Map<string, PikkuPackageState>
+  return states
 }
 
 export const pikkuState = <
@@ -119,13 +130,13 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   middleware: {
     tagGroup: {},
     httpGroup: {},
-    global: [] as any,
+    global: [],
   },
   channelMiddleware: {
     tagGroup: {},
   },
   permissions: {
-    global: [] as any,
+    global: [],
   },
   misc: {
     errors: new Map(),
@@ -153,7 +164,7 @@ export const resetPikkuState = () => {
   // Error definitions come from module-import side effects that never re-run.
   const existingErrors = getAllPackageStates().get('__main__')?.misc.errors
 
-  ;(globalThis as any)[PIKKU_STATE_KEY] = new Map<string, PikkuPackageState>()
+  stateHost[PIKKU_STATE_KEY] = new Map<string, PikkuPackageState>()
   initializePikkuState('__main__')
 
   if (existingErrors) {

@@ -10,6 +10,7 @@ import {
   getCreateWireServices,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 
 export const wireTrigger = (trigger: CoreTrigger) => {
@@ -22,10 +23,10 @@ export const wireTrigger = (trigger: CoreTrigger) => {
     return
   }
 
-  addFunction(triggerMeta.pikkuFuncId, trigger.func as any)
+  addFunction(triggerMeta.pikkuFuncId, trigger.func)
 
   const triggers = pikkuState(null, 'trigger', 'triggers')
-  triggers.set(trigger.name, trigger as any)
+  triggers.set(trigger.name, trigger)
 }
 
 // knowledge: decisions/internals/trigger-declaration-is-split-from-trigger-source.md
@@ -45,11 +46,12 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   if (triggerSources.has(source.name)) {
     throw new Error(`Trigger source already exists: ${source.name}`)
   }
-  triggerSources.set(source.name, source as any)
+  // knowledge: decisions/internals/wiring-registries-erase-the-generics-their-wire-functions-capture.md
+  triggerSources.set(source.name, source as CoreTriggerSource)
 
   addFunction(
     triggerSourceMeta.pikkuFuncId,
-    source.func as any,
+    source.func as CorePikkuFunctionConfig<any, any>,
     triggerSourceMeta.packageName
   )
 }
@@ -94,7 +96,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     singletonServices,
     createWireServices,
     auth: false,
-    data: () => input as any,
+    data: () => input,
     wire,
     packageName: sourceMeta.packageName || null,
   })

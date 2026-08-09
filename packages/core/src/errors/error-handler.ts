@@ -15,7 +15,8 @@ export class PikkuError extends Error {
  * everything else.
  */
 export const isExpectedError = (error: unknown): boolean =>
-  error instanceof PikkuError || (error as any)?.expected === true
+  error instanceof PikkuError ||
+  (error as { expected?: unknown } | null)?.expected === true
 
 export interface ErrorDetails {
   status: number
@@ -48,7 +49,7 @@ export const getErrorResponse = (
 ): { status: number; message: string; mcpCode?: number } | undefined => {
   const errors = pikkuState(null, 'misc', 'errors')
 
-  let ctor: unknown = (error as any)?.constructor
+  let ctor: unknown = (error as { constructor?: unknown } | null)?.constructor
   while (typeof ctor === 'function' && ctor !== Object) {
     const details = errors.get(ctor as PikkuErrorConstructor)
     if (details) {
@@ -57,7 +58,8 @@ export const getErrorResponse = (
     ctor = Object.getPrototypeOf(ctor)
   }
 
-  const name = (error as any)?.constructor?.name
+  const name = (error as { constructor?: { name?: string } } | null)
+    ?.constructor?.name
   return name
     ? Array.from(errors.entries()).find(([e]) => e.name === name)?.[1]
     : undefined

@@ -1,3 +1,4 @@
+import type { CorePikkuChannelMiddleware } from './channel.types.js'
 import type {
   CoreSingletonServices,
   CorePikkuMiddleware,
@@ -61,7 +62,9 @@ export const runChannelLifecycleWithMiddleware = async ({
     `${channelConfig.name}:${lifecycleType}:cm`,
     {
       wireInheritedChannelMiddleware: channelMiddlewareMeta,
-      wireChannelMiddleware: channelConfig.channelMiddleware as any,
+      // knowledge: questions/channel-middleware-accepts-bare-factories-that-nothing-resolves.md
+      wireChannelMiddleware:
+        channelConfig.channelMiddleware as CorePikkuChannelMiddleware[],
     }
   )
 
@@ -76,7 +79,7 @@ export const runChannelLifecycleWithMiddleware = async ({
   const runLifecycle = async () => {
     return await runPikkuFunc('channel', channelConfig.name, meta.pikkuFuncId, {
       singletonServices: services,
-      data: () => data as any,
+      data: () => data,
       wire,
       sessionService: userSession,
       tags: meta.tags ?? [],

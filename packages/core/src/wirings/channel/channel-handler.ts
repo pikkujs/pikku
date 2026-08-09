@@ -4,6 +4,7 @@ import type {
   CoreUserSession,
 } from '../../types/core.types.js'
 import type {
+  CorePikkuChannelMiddleware,
   BinaryData,
   ChannelMessageMeta,
   CoreChannel,
@@ -94,7 +95,7 @@ export const processMessageHandlers = (
       logger.error(
         `Channel ${channelConfig.name} with id ${channelHandler.getChannel().channelId} requires a session for ${routeMessage}. No session is attached to this websocket connection. Ensure auth middleware establishes a session during websocket upgrade, and configure sessionStore when the runtime needs persisted sessions.`
       )
-      // TODO: Send error message back breaks typescript, but should be implemented somehow
+      // knowledge: questions/unauthorized-channel-replies-escape-the-declared-out-type.md
       channelHandler.getChannel().send(`Unauthorized for ${routeMessage}`)
       return
     }
@@ -111,10 +112,7 @@ export const processMessageHandlers = (
     // Get wire middleware: channel-level middleware + message-specific middleware
     const channelWireMiddleware = channelConfig.middleware || []
 
-    // Check if onMessage is a wrapper object vs direct function config:
-    // - Direct config: onMessage.func is a plain Function
-    // - Wrapper: onMessage.func is a CorePikkuFunctionConfig (has onMessage.func.func)
-    // - Simple wrapper: onMessage has both func (plain Function) and middleware properties
+    // knowledge: decisions/internals/channel-message-handlers-accept-three-config-shapes.md
     const isWrapper =
       onMessage &&
       typeof onMessage === 'object' &&
@@ -145,7 +143,9 @@ export const processMessageHandlers = (
       inheritedMiddleware,
       wireMiddleware,
       inheritedChannelMiddleware: channelMeta?.channelMiddleware,
-      wireChannelMiddleware: wireChannelMiddleware as any,
+      // knowledge: questions/channel-middleware-accepts-bare-factories-that-nothing-resolves.md
+      wireChannelMiddleware:
+        wireChannelMiddleware as CorePikkuChannelMiddleware[],
       coerceDataFromSchema: true,
       tags: channelConfig.tags,
       sessionService: userSession,
@@ -191,7 +191,7 @@ export const processMessageHandlers = (
 
             processed = true
             const routeResult = await processMessage(
-              data as any,
+              data,
               routes[routerValue],
               routingProperty,
               routerValue

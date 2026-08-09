@@ -119,7 +119,7 @@ export interface PikkuPackageState {
     meta: HTTPWiringsMeta
   }
   channel: {
-    channels: Map<string, CoreChannel<any, any>>
+    channels: Map<string, CoreChannel<any, any, any, any, any>>
     meta: ChannelsMeta
   }
   scheduler: {
