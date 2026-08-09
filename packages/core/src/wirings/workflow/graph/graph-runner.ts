@@ -1,9 +1,9 @@
+import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import {
-  type PikkuWorkflowService,
   WorkflowAsyncException,
   WorkflowSuspendedException,
-  DEFAULT_STEP_RETRIES,
-} from '../pikku-workflow-service.js'
+} from '../workflow-errors.js'
+import { DEFAULT_STEP_RETRIES } from '../workflow-constants.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'

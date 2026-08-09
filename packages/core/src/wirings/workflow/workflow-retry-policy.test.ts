@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
-import { DEFAULT_STEP_RETRIES } from './pikku-workflow-service.js'
+import { DEFAULT_STEP_RETRIES } from './workflow-constants.js'
 import type { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
 import type { WorkflowStepOptions } from './workflow.types.js'

@@ -1,3 +1,4 @@
+import type { PikkuRawWire } from '../../types/core.types.js'
 import type { AgentInterruptResult } from '../ai-agent/ai-agent-interrupt.js'
 
 export type PikkuRPC<
@@ -12,6 +13,12 @@ export type PikkuRPC<
   invoke: Invoke
   remote: Remote
   exposed: (name: string, data: any) => Promise<any>
+  /** Invoke an RPC with explicit wire fields merged over the caller's. */
+  rpcWithWire: <In = any, Out = any>(
+    rpcName: string,
+    data: In,
+    wire: PikkuRawWire
+  ) => Promise<Out>
   startWorkflow: startWorkflow
   agent: {
     run: AgentRun

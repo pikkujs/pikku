@@ -1,0 +1,85 @@
+import { getSingletonServices, pikkuState } from '../../pikku-state.js'
+import { getDurationInMilliseconds } from '../../time-utils.js'
+import type { JobGroup, JobOptions } from '../queue/queue.types.js'
+import type {
+  WorkflowServiceConfig,
+  WorkflowStepOptions,
+} from './workflow.types.js'
+import { DEFAULT_STEP_RETRIES } from './workflow-constants.js'
+
+export type WorkflowQueueStrategy = 'per-workflow' | 'shared-groups'
+
+const toKebab = (s: string) =>
+  s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+
+export const resolveWorkflowConfig = (): WorkflowServiceConfig => {
+  const workflow = getSingletonServices().config?.workflow
+  return {
+    retries: workflow?.retries ?? DEFAULT_STEP_RETRIES,
+    retryDelay: workflow?.retryDelay ?? 0,
+    orchestratorQueueName:
+      workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
+    stepWorkerQueueName:
+      workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
+    sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
+  }
+}
+
+/**
+ * Falls back to the shared queue whenever the dedicated one was not generated
+ * into queue meta, so a workflow added without a rebuild still runs.
+ */
+const dedicatedQueueName = (
+  prefix: string,
+  name: string | undefined,
+  strategy: WorkflowQueueStrategy,
+  fallback: string
+): string => {
+  if (!name || strategy === 'shared-groups') {
+    return fallback
+  }
+  const dedicated = `${prefix}${toKebab(name)}`
+  return pikkuState(null, 'queue', 'meta')[dedicated] ? dedicated : fallback
+}
+
+export const orchestratorQueueName = (
+  strategy: WorkflowQueueStrategy,
+  workflowName?: string
+): string =>
+  dedicatedQueueName(
+    'wf-orchestrator-',
+    workflowName,
+    strategy,
+    resolveWorkflowConfig().orchestratorQueueName
+  )
+
+export const stepWorkerQueueName = (
+  strategy: WorkflowQueueStrategy,
+  rpcName?: string
+): string =>
+  dedicatedQueueName(
+    'wf-step-',
+    rpcName,
+    strategy,
+    resolveWorkflowConfig().stepWorkerQueueName
+  )
+
+export const jobGroupFor = (
+  strategy: WorkflowQueueStrategy,
+  id?: string
+): JobGroup | undefined =>
+  id && strategy === 'shared-groups' ? { id, tier: id } : undefined
+
+export const stepJobOptions = (
+  stepOptions?: WorkflowStepOptions
+): JobOptions => {
+  const retries = stepOptions?.retries ?? DEFAULT_STEP_RETRIES
+  const retryDelay = stepOptions?.retryDelay
+  const backoff =
+    retryDelay !== undefined && retryDelay !== 'exponential'
+      ? { type: 'fixed', delay: getDurationInMilliseconds(retryDelay) }
+      : retries > 0 || retryDelay === 'exponential'
+        ? 'exponential'
+        : undefined
+  return { attempts: retries + 1, ...(backoff ? { backoff } : {}) }
+}

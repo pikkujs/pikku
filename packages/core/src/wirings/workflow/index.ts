@@ -1,18 +1,18 @@
+export { PikkuWorkflowService } from './pikku-workflow-service.js'
 export {
-  PikkuWorkflowService,
   WorkflowCancelledException,
   WorkflowSuspendedException,
   WorkflowDispatchException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowApprovalResolvedError,
-  DEFAULT_STEP_RETRIES,
-} from './pikku-workflow-service.js'
+} from './workflow-errors.js'
+export { DEFAULT_STEP_RETRIES } from './workflow-constants.js'
 export type {
   RunLifecycleContext,
   WorkflowRunEngine,
   WorkflowRunExtension,
-} from './pikku-workflow-service.js'
+} from './workflow-run-engine.types.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
 
 export { isRef } from './graph/workflow-graph.types.js'

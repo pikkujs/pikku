@@ -1,53 +1,19 @@
-import { runPikkuFunc, addFunction } from '../../function/function-runner.js'
-import {
-  pikkuWorkflowWorkerFunc,
-  pikkuWorkflowOrchestratorFunc,
-  pikkuWorkflowSleeperFunc,
-} from './workflow-queue-workers.js'
-import { wireQueueWorker } from '../queue/queue-runner.js'
+import { runPikkuFunc } from '../../function/function-runner.js'
 import {
   getSingletonServices,
   getCreateWireServices,
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-
-const resolveWorkflowMeta = (
-  name: string
-): { meta: any; packageName: string | null; resolvedName: string } | null => {
-  const rootMeta = pikkuState(null, 'workflows', 'meta')
-  if (rootMeta[name]) {
-    return { meta: rootMeta[name], packageName: null, resolvedName: name }
-  }
-
-  const colonIndex = name.indexOf(':')
-  if (colonIndex !== -1) {
-    const namespace = name.substring(0, colonIndex)
-    const localName = name.substring(colonIndex + 1)
-    const addons = pikkuState(null, 'addons', 'packages')
-    const pkgConfig = addons?.get(namespace)
-    if (pkgConfig) {
-      const addonMeta = pikkuState(pkgConfig.package, 'workflows', 'meta')
-      if (addonMeta?.[localName]) {
-        return {
-          meta: addonMeta[localName],
-          packageName: pkgConfig.package,
-          resolvedName: localName,
-        }
-      }
-    }
-  }
-
-  return null
-}
-
-const toKebab = (s: string) =>
-  s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-import type { PikkuWire, SerializedError } from '../../types/core.types.js'
-import type { QueueService } from '../queue/queue.types.js'
+import type { PikkuRawWire, SerializedError } from '../../types/core.types.js'
+import type {
+  GroupConcurrencyConfig,
+  JobGroup,
+  JobOptions,
+  QueueService,
+} from '../queue/queue.types.js'
 import type {
   ApprovalOutcome,
-  CoreWorkflow,
   PikkuWorkflowWire,
   StepState,
   StepStatus,
@@ -64,6 +30,7 @@ import type {
   WorkflowStepOptions,
 } from './workflow.types.js'
 import {
+  ChildWorkflowStartedException,
   continueGraph,
   executeGraphStep,
   runWorkflowGraph,
@@ -71,13 +38,10 @@ import {
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
 import type { ScenarioPersonas } from '../../services/personas-service.js'
-import {
-  PikkuError,
-  addError,
-  isExpectedError,
-} from '../../errors/error-handler.js'
+import { isExpectedError } from '../../errors/error-handler.js'
+import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
-import { ChildWorkflowStartedException } from './graph/graph-runner.js'
+import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
 import {
   buildRunTimeline,
@@ -85,237 +49,51 @@ import {
   type RunTimeline,
   type ReconstructedRunState,
 } from './run-timeline.js'
+import {
+  DEFAULT_STEP_RETRIES,
+  WORKFLOW_CHILD_POLL_MAX_MS,
+  WORKFLOW_END_STATES,
+  WORKFLOW_POLL_FACTOR,
+  WORKFLOW_POLL_MIN_MS,
+  WORKFLOW_TERMINAL_STATES,
+} from './workflow-constants.js'
+import {
+  WorkflowAsyncException,
+  WorkflowCancelledException,
+  WorkflowDispatchException,
+  WorkflowNotFoundError,
+  WorkflowRunCancelledError,
+  WorkflowRunFailedError,
+  WorkflowRunNotFoundError,
+  WorkflowStepNameNotString,
+  WorkflowSuspendedException,
+} from './workflow-errors.js'
 import type {
-  GroupConcurrencyConfig,
-  JobGroup,
-  JobOptions,
-  PikkuWorkerConfig,
-} from '../queue/queue.types.js'
-
-export const DEFAULT_STEP_RETRIES = 5
-
-export class WorkflowAsyncException extends Error {
-  constructor(
-    public readonly runId: string,
-    public readonly stepName: string
-  ) {
-    super(`Workflow paused at step: ${stepName}`)
-    this.name = 'WorkflowAsyncException'
-  }
-}
-
-export class WorkflowCancelledException extends Error {
-  constructor(
-    public readonly runId: string,
-    public readonly reason?: string
-  ) {
-    super(reason || 'Workflow cancelled')
-    this.name = 'WorkflowCancelledException'
-  }
-}
-
-export class WorkflowSuspendedException extends Error {
-  constructor(
-    public readonly runId: string,
-    public readonly reason: string
-  ) {
-    super(reason || 'Workflow suspended')
-    this.name = 'WorkflowSuspendedException'
-  }
-}
-
-export class WorkflowDispatchException extends Error {
-  constructor(
-    public readonly runId: string,
-    public readonly stepName: string,
-    options?: { cause?: unknown }
-  ) {
-    super(
-      `Failed to dispatch workflow step '${stepName}' (run ${runId})`,
-      options
-    )
-    this.name = 'WorkflowDispatchException'
-  }
-}
-
-export class WorkflowNotFoundError extends PikkuError {
-  constructor(name: string) {
-    super(`Workflow not found: ${name}`)
-  }
-}
-addError(WorkflowNotFoundError, {
-  status: 404,
-  message: 'Workflow not found.',
-})
-
-export class WorkflowRunNotFoundError extends PikkuError {
-  constructor(runId: string) {
-    super(`Workflow run not found: ${runId}`)
-  }
-}
-addError(WorkflowRunNotFoundError, {
-  status: 404,
-  message: 'Workflow run not found.',
-})
-
-export class WorkflowRunFailedError extends PikkuError {
-  public payload: { message?: string }
-  constructor(message?: string) {
-    super(`Workflow run failed: ${message ?? 'unknown'}`)
-    this.payload = { message }
-  }
-}
-addError(WorkflowRunFailedError, {
-  status: 422,
-  message: 'Workflow run failed.',
-})
-
-export class WorkflowRunCancelledError extends PikkuError {
-  constructor() {
-    super('Workflow was cancelled')
-  }
-}
-addError(WorkflowRunCancelledError, {
-  status: 409,
-  message: 'Workflow was cancelled.',
-})
-
-export class WorkflowApprovalResolvedError extends PikkuError {
-  public payload: {
-    reason: string
-    outcome: ApprovalOutcome<unknown>['status']
-  }
-  constructor(reason: string, outcome: ApprovalOutcome<unknown>['status']) {
-    super(`Approval already ${outcome}: ${reason}`)
-    this.payload = { reason, outcome }
-  }
-}
-addError(WorkflowApprovalResolvedError, {
-  status: 409,
-  message: 'Approval has already been resolved.',
-})
-
-export class WorkflowServiceNotInitialized extends Error {}
-export class WorkflowStepNameNotString extends Error {
-  constructor(stepName: any) {
-    super(`Workflow step name must be a string. Received: ${typeof stepName}`)
-  }
-}
-
-const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
-  'suspended',
-])
-
-export interface RunLifecycleContext {
-  runId: string
-  run: WorkflowRun
-  workflowMeta: any
-  workflow: CoreWorkflow
-  wire: PikkuWire
-  packageName: string | null
-}
-
-export interface WorkflowRunEngine {
-  inlineStep(
-    runId: string,
-    logicalStepName: string,
-    fn: Function,
-    stepOptions?: WorkflowStepOptions,
-    data?: any,
-    funcName?: string
-  ): Promise<any>
-  updateRunStatus(
-    runId: string,
-    status: WorkflowStatus,
-    output?: any,
-    error?: SerializedError
-  ): Promise<void>
-  onChildWorkflowFailed(run: WorkflowRun, error: unknown): Promise<void>
-  verifyStepName(stepName: unknown): void
-}
-
-export interface WorkflowRunExtension {
-  attachRunContext(
-    runId: string,
-    workflowMeta: any,
-    options?: Record<string, any>
-  ): Promise<void>
-  detachRunContext(runId: string): void
-  decorateRunWire(
-    wire: PikkuWire,
-    context: {
-      runId: string
-      workflowMeta: any
-      workflowWire: PikkuWorkflowWire
-    }
-  ): void
-  decorateWorkflowWire(
-    workflowWire: PikkuWorkflowWire,
-    context: {
-      name: string
-      runId: string
-      rpcService: any
-      addonNamespace?: string | null
-    }
-  ): void
-  onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
-  onAfterRunFunc(
-    context: RunLifecycleContext,
-    outcome: 'completed' | 'failed' | 'interrupted',
-    failure: unknown
-  ): Promise<void>
-}
-
-const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
-])
-
-/** Idle window before a `running` run with nothing in flight is treated as stalled. */
-const DEFAULT_STALLED_RUN_MS = 5 * 60_000
-
-/** Runs re-driven per `recoverStalledRuns` call, so one sweep is bounded. */
-const DEFAULT_STALLED_RUN_LIMIT = 100
-
-/**
- * How long a step may sit `pending` before the relay assumes its dispatch was
- * lost. This is a bet that no healthy queue takes this long to move a job from
- * `pending` to `running`; set it above the observed p99 of that latency.
- */
-const DEFAULT_UNDISPATCHED_STEP_MS = 30_000
-
-/** Steps re-driven per `relayUndispatchedSteps` call, so one tick is bounded. */
-const DEFAULT_UNDISPATCHED_STEP_LIMIT = 100
-
-/** First wait before a step already re-dispatched once is re-dispatched again. */
-const REDISPATCH_BACKOFF_MS = 30_000
-
-/** Ceiling on the doubling backoff, so a permanently stuck step still gets swept. */
-const REDISPATCH_BACKOFF_MAX_MS = 10 * 60_000
-
-/** Bound on the in-process backoff map, so a long-lived process cannot grow it without bound. */
-const REDISPATCH_BACKOFF_MAX_ENTRIES = 10_000
-
-const WORKFLOW_POLL_MIN_MS = 10
-
-const WORKFLOW_POLL_FACTOR = 1.6
-
-const WORKFLOW_CHILD_POLL_MAX_MS = 500
-
-type RunContext = {
-  activeExecutions: number
-  inline?: boolean
-  ordinals: Map<string, number>
-  lastStep?: string
-  replay?: {
-    steps?: Map<string, StepState>
-    run?: WorkflowRun
-  }
-}
+  RunContext,
+  RunLifecycleContext,
+  WorkflowRunEngine,
+  WorkflowRunExtension,
+} from './workflow-run-engine.types.js'
+import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
+import {
+  jobGroupFor,
+  orchestratorQueueName,
+  resolveWorkflowConfig,
+  stepJobOptions,
+  stepWorkerQueueName,
+} from './workflow-queue-routing.js'
+import { wireWorkflowQueueWorkers } from './workflow-queue-wiring.js'
+import {
+  approvalStepNameFor,
+  evaluateApprovalStep,
+  recordApprovalDecision,
+  type ApprovalStore,
+} from './workflow-approval.js'
+import {
+  RedispatchBackoff,
+  sweepStalledRuns,
+  sweepUndispatchedSteps,
+} from './workflow-recovery.js'
 
 export abstract class PikkuWorkflowService implements WorkflowService {
   private runExtension?: WorkflowRunExtension
@@ -406,112 +184,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   public wireQueueWorkers(): void {
-    const functions = pikkuState(null, 'function', 'functions')
-    const functionsMeta = pikkuState(null, 'function', 'meta')
-
-    const mkMeta = (funcId: string) => ({
-      pikkuFuncId: funcId,
-      sessionless: true,
-      functionType: 'helper' as const,
-      inputSchemaName: null,
-      outputSchemaName: null,
+    wireWorkflowQueueWorkers({
+      strategy: this.queueStrategy,
+      concurrency: this.queueConcurrency,
+      groupConcurrency: this.queueGroupConcurrency,
+      getLogger: () => this.logger,
     })
-
-    const queueMeta = pikkuState(null, 'queue', 'meta')
-
-    const registerWorkflowFunc = (
-      funcId: string,
-      func: { func: unknown },
-      queueName: string,
-      config?: PikkuWorkerConfig
-    ) => {
-      if (functions.has(funcId)) return
-      addFunction(funcId, func as never)
-      if (!queueMeta[queueName]) {
-        queueMeta[queueName] = { pikkuFuncId: funcId, name: queueName }
-      }
-      wireQueueWorker({ name: queueName, func, config } as never)
-      if (!functionsMeta[funcId]) {
-        functionsMeta[funcId] = mkMeta(funcId)
-      }
-    }
-
-    const sharedGroups = this.queueStrategy === 'shared-groups'
-    const sharedQueueConfig: PikkuWorkerConfig | undefined = sharedGroups
-      ? {
-          batchSize: this.queueConcurrency,
-          groupConcurrency: this.queueGroupConcurrency,
-        }
-      : undefined
-
-    registerWorkflowFunc(
-      'pikkuWorkflowOrchestrator',
-      { func: pikkuWorkflowOrchestratorFunc },
-      'pikku-workflow-orchestrator',
-      sharedQueueConfig
-    )
-    registerWorkflowFunc(
-      'pikkuWorkflowStepWorker',
-      { func: pikkuWorkflowWorkerFunc },
-      'pikku-workflow-step-worker',
-      sharedQueueConfig
-    )
-
-    const registerQueueWorkers = (queueMeta: Record<string, any>) => {
-      for (const [queueName, meta] of Object.entries(queueMeta)) {
-        if (functions.has(meta.pikkuFuncId)) continue
-        if (queueName.startsWith('wf-orchestrator-')) {
-          registerWorkflowFunc(
-            meta.pikkuFuncId,
-            { func: pikkuWorkflowOrchestratorFunc },
-            queueName
-          )
-        } else if (queueName.startsWith('wf-step-')) {
-          registerWorkflowFunc(
-            meta.pikkuFuncId,
-            { func: pikkuWorkflowWorkerFunc },
-            queueName
-          )
-        }
-      }
-    }
-
-    if (!sharedGroups) {
-      registerQueueWorkers(pikkuState(null, 'queue', 'meta'))
-
-      const addons = pikkuState(null, 'addons', 'packages')
-      if (addons) {
-        for (const [, addon] of addons) {
-          const addonQueueMeta = pikkuState(addon.package, 'queue', 'meta')
-          if (addonQueueMeta) {
-            registerQueueWorkers(addonQueueMeta)
-          }
-        }
-      }
-    }
-
-    const workflowCount = Object.keys(
-      pikkuState(null, 'workflows', 'meta') ?? {}
-    ).length
-    const perWorkflowQueues = Object.keys(queueMeta).filter((name) =>
-      name.startsWith('wf-orchestrator-')
-    ).length
-    if (workflowCount > 0 && perWorkflowQueues === 0) {
-      this.logger?.warn?.(
-        `[pikku] ${workflowCount} workflow(s) registered but no per-workflow orchestrator queues were found in queue meta. ` +
-          `All workflows will share a single orchestrator queue, where one slow step blocks every other workflow behind it. ` +
-          `Check that the generated bootstrap imports the queue-workers meta (pikku-queue-workers-wirings-meta.gen.js).`
-      )
-    }
-
-    if (!functions.has('pikkuWorkflowSleeper')) {
-      addFunction('pikkuWorkflowSleeper', {
-        func: pikkuWorkflowSleeperFunc,
-      })
-    }
-    if (!functionsMeta.pikkuWorkflowSleeper) {
-      functionsMeta.pikkuWorkflowSleeper = mkMeta('pikkuWorkflowSleeper')
-    }
   }
 
   protected async isInline(runId: string): Promise<boolean> {
@@ -950,51 +628,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   /**
-   * Re-drive runs whose next move was lost, and report which were resumed.
-   *
-   * Arming a step is two writes to two systems — the step row, then the queue
-   * or scheduler job — so a process that dies between them leaves a run that is
-   * `running` with nothing in flight. Nothing notices: the run parks on a step
-   * that will never complete and never error, so it neither finishes nor fails.
-   * (Seen on a `workflow.sleep()`: a deploy restart landed between the sleep
-   * step's insert and its timer, parking the run permanently.)
-   *
-   * Replay is the recovery — `resumeWorkflow` re-orchestrates from persisted
-   * step state, and every settled step is memoized, so resuming a run that was
-   * not actually stuck costs an orchestration pass and changes nothing. That
-   * idempotence is what makes an idle-time heuristic safe here; a run that is
-   * legitimately mid-sleep is excluded anyway, since its step is `scheduled`.
-   *
-   * This is not self-starting. Call it from a scheduled task at whatever
-   * interval suits the workload.
-   */
-  public async recoverStalledRuns(options?: {
-    stalledAfterMs?: number
-    limit?: number
-  }): Promise<{ resumed: string[] }> {
-    const before = new Date(
-      Date.now() - (options?.stalledAfterMs ?? DEFAULT_STALLED_RUN_MS)
-    )
-    const runIds = await this.findStalledRunIds(
-      before,
-      options?.limit ?? DEFAULT_STALLED_RUN_LIMIT
-    )
-    const resumed: string[] = []
-    for (const runId of runIds) {
-      try {
-        await this.resumeWorkflow(runId)
-        resumed.push(runId)
-      } catch (err) {
-        // One unresumable run must not stop the sweep from recovering the rest.
-        getSingletonServices()?.logger?.error(
-          `Failed to resume stalled workflow run ${runId}: ${err instanceof Error ? err.message : String(err)}`
-        )
-      }
-    }
-    return { resumed }
-  }
-
-  /**
    * Runs holding a step that has sat `pending` since before `before`, paired
    * with the step that flagged them.
    *
@@ -1014,110 +647,51 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return []
   }
 
+  private readonly redispatchBackoff = new RedispatchBackoff()
+
+  private get sweepDeps() {
+    return {
+      resume: (runId: string) => this.resumeWorkflow(runId),
+      logger: getSingletonServices()?.logger,
+    }
+  }
+
   /**
-   * Re-drive steps whose dispatch was lost, and report which runs were nudged.
-   *
-   * Arming a step is two writes to two systems: the step row lands `pending`,
-   * then a queue or scheduler job is published. Nothing spans both, so a crash
-   * in between leaves a durable row that nothing will ever pick up — the run
-   * neither finishes nor fails. (Seen on a `workflow.sleep()`: a deploy restart
-   * landed between the sleep step's insert and its timer.)
-   *
-   * The row is the outbox record and this is the relay. Age is the only signal
-   * available — a step `pending` because its dispatch was lost is
-   * indistinguishable from one whose job is merely still queued — so a step
-   * past `undispatchedAfterMs` is re-dispatched regardless, and correctness
-   * rests on the claim rather than on the guess being right. A redundant
-   * dispatch costs one queue message: the loser reads `running` and returns
-   * without invoking anything.
-   *
-   * Re-dispatches back off per step (doubling from 30s, capped at 10m) so a
-   * genuine queue backlog is not amplified by a tick that keeps firing at the
-   * steps the backlog is already delaying. The backoff is per process and
-   * advisory — losing it on restart costs extra dispatches, never correctness.
-   *
-   * This is not self-starting. Call it from a scheduled task; ~30s suits a
-   * queue whose `pending`→`running` latency is well under that.
+   * Re-drive runs whose next move was lost. Not self-starting — call it from a
+   * scheduled task at whatever interval suits the workload.
+   */
+  public async recoverStalledRuns(options?: {
+    stalledAfterMs?: number
+    limit?: number
+  }): Promise<{ resumed: string[] }> {
+    return sweepStalledRuns(
+      (before, limit) => this.findStalledRunIds(before, limit),
+      options,
+      this.sweepDeps
+    )
+  }
+
+  /**
+   * Re-drive steps whose dispatch was lost. Not self-starting — call it from a
+   * scheduled task; ~30s suits a queue whose `pending`→`running` latency is
+   * well under that.
    */
   public async relayUndispatchedSteps(options?: {
     undispatchedAfterMs?: number
     limit?: number
   }): Promise<{ redispatched: string[] }> {
-    const before = new Date(
-      Date.now() -
-        (options?.undispatchedAfterMs ?? DEFAULT_UNDISPATCHED_STEP_MS)
+    return sweepUndispatchedSteps(
+      (before, limit) => this.findUndispatchedSteps(before, limit),
+      this.redispatchBackoff,
+      options,
+      this.sweepDeps
     )
-    const steps = await this.findUndispatchedSteps(
-      before,
-      options?.limit ?? DEFAULT_UNDISPATCHED_STEP_LIMIT
-    )
-
-    // Backoff is keyed by run, not step, because the run is the unit of
-    // re-drive: `resumeWorkflow` replays the whole run and re-dispatches every
-    // step still owed a job. Holding off a single step while resuming its run
-    // would not suppress anything.
-    const now = Date.now()
-    const runIds = new Set<string>()
-    for (const { runId } of steps) {
-      const eligibleAt = this.redispatchBackoff.get(runId)
-      if (eligibleAt !== undefined && eligibleAt > now) {
-        continue
-      }
-      this.noteRedispatch(runId, now)
-      runIds.add(runId)
-    }
-
-    const redispatched: string[] = []
-    for (const runId of runIds) {
-      try {
-        await this.resumeWorkflow(runId)
-        redispatched.push(runId)
-      } catch (err) {
-        // One unresumable run must not stop the tick from relaying the rest.
-        getSingletonServices()?.logger?.error(
-          `Failed to re-dispatch workflow run ${runId}: ${err instanceof Error ? err.message : String(err)}`
-        )
-      }
-    }
-    return { redispatched }
-  }
-
-  /** Advisory, per-process record of when a run may next be re-dispatched. */
-  private readonly redispatchBackoff = new Map<string, number>()
-
-  private readonly redispatchDelays = new Map<string, number>()
-
-  private noteRedispatch(runId: string, now: number): void {
-    const previous = this.redispatchDelays.get(runId)
-    const delay = Math.min(
-      previous === undefined ? REDISPATCH_BACKOFF_MS : previous * 2,
-      REDISPATCH_BACKOFF_MAX_MS
-    )
-    // A run that settles is never returned again, so entries are only evicted by
-    // this bound — oldest first, which is also least recently re-dispatched.
-    if (this.redispatchBackoff.size >= REDISPATCH_BACKOFF_MAX_ENTRIES) {
-      const oldest = this.redispatchBackoff.keys().next()
-      if (!oldest.done) {
-        this.redispatchBackoff.delete(oldest.value)
-        this.redispatchDelays.delete(oldest.value)
-      }
-    }
-    this.redispatchDelays.set(runId, delay)
-    this.redispatchBackoff.set(runId, now + delay)
   }
 
   protected resolveStepJobOptions(
     stepOptions?: WorkflowStepOptions
   ): JobOptions {
-    const retries = stepOptions?.retries ?? DEFAULT_STEP_RETRIES
-    const retryDelay = stepOptions?.retryDelay
-    const backoff =
-      retryDelay !== undefined && retryDelay !== 'exponential'
-        ? { type: 'fixed', delay: getDurationInMilliseconds(retryDelay) }
-        : retries > 0 || retryDelay === 'exponential'
-          ? 'exponential'
-          : undefined
-    return { attempts: retries + 1, ...(backoff ? { backoff } : {}) }
+    return stepJobOptions(stepOptions)
   }
 
   public async queueStepWorker(
@@ -1246,7 +820,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     name: string,
     input: I,
     wire: WorkflowRunWire,
-    rpcService: any,
+    rpcService: PikkuRPC,
     options?: {
       inline?: boolean
       startNode?: string
@@ -1346,7 +920,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async runToCompletion<I>(
     name: string,
     input: I,
-    rpcService: any,
+    rpcService: PikkuRPC,
     options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
   ): Promise<any> {
     const { runId } = await this.startWorkflow(
@@ -1468,7 +1042,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return stepName
   }
 
-  public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
+  public async runWorkflowJob(
+    runId: string,
+    rpcService: PikkuRPC
+  ): Promise<void> {
     await this.beginReplay(runId)
     try {
       await this.runWorkflowJobInner(runId, rpcService)
@@ -1479,7 +1056,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   private async runWorkflowJobInner(
     runId: string,
-    rpcService: any
+    rpcService: PikkuRPC
   ): Promise<void> {
     const run = await this.getRunIdentity(runId)
     if (!run) {
@@ -1517,6 +1094,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     const registrations = pikkuState(pkgName, 'workflows', 'registrations')
+    if (!workflowMeta) {
+      throw new PikkuMissingMetaError(
+        `Missing generated metadata for workflow '${run.workflow}'`
+      )
+    }
+
     const workflow = registrations.get(resolved?.resolvedName ?? run.workflow)
     if (!workflow) {
       throw new WorkflowNotFoundError(run.workflow)
@@ -1533,11 +1116,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         addonNs
       )
       workflowWire.pikkuUserId = run.wire?.pikkuUserId
-      const wire: PikkuWire = {
+      // No `rpc` yet — runPikkuFunc attaches it lazily for the invocation.
+      const wire: PikkuRawWire = {
         workflow: workflowWire,
         pikkuUserId: run.wire?.pikkuUserId,
-        session: rpcService?.wire?.session,
-        rpc: rpcService?.wire?.rpc,
       }
       this.runExtension?.decorateRunWire(wire, {
         runId,
@@ -1649,7 +1231,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   private async runVersionMismatchFallback(
     run: WorkflowRun,
     currentMeta: { source: string },
-    rpcService: any
+    rpcService: PikkuRPC
   ): Promise<void> {
     const source = currentMeta.source
 
@@ -1680,7 +1262,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string,
     data: any,
-    rpcService: any
+    rpcService: PikkuRPC
   ): Promise<void> {
     this.enterExecution(runId)
     try {
@@ -1701,7 +1283,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string,
     data: any,
-    rpcService: any
+    rpcService: PikkuRPC
   ): Promise<void> {
     const claimed = await this.withStepLock(runId, stepName, async () => {
       const stepState = await this.getStepState(runId, stepName)
@@ -1763,7 +1345,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             id: rpcName,
             parentRunId: runId,
             parentStepId: stepState.stepId,
-            pikkuUserId: rpcService.wire?.pikkuUserId,
+            pikkuUserId: run.wire?.pikkuUserId,
           }
           const shouldInline = !getSingletonServices()?.queueService
           const { runId: childRunId } = await this.startWorkflow(
@@ -1838,7 +1420,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   public async orchestrateWorkflow(
     runId: string,
-    rpcService: any
+    rpcService: PikkuRPC
   ): Promise<void> {
     try {
       await this.runWorkflowJob(runId, rpcService)
@@ -1885,7 +1467,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepState: StepState,
     rpcName: string,
     data: any,
-    rpcService: any,
+    rpcService: PikkuRPC,
     knownRun?: WorkflowRun | null
   ): Promise<any> {
     const run = knownRun ?? (await this.getRunIdentity(runId))
@@ -1943,7 +1525,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     stepName: string,
     onErrorRpcName: string,
-    rpcService: any,
+    rpcService: PikkuRPC,
     error: Error
   ): Promise<void> {
     await this.rpcStep(
@@ -1961,7 +1543,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     logicalStepName: string,
     rpcName: string,
     data: any,
-    rpcService: any,
+    rpcService: PikkuRPC,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
     const fromStepName = this.lastStepName(runId)
@@ -2043,7 +1625,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             type: 'workflow',
             id: rpcName,
             parentRunId: runId,
-            pikkuUserId: rpcService.wire?.pikkuUserId,
+            pikkuUserId: (await this.getRunIdentity(runId))?.wire?.pikkuUserId,
           }
           const { runId: childRunId } = await this.startWorkflow(
             rpcName,
@@ -2259,16 +1841,33 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private getApprovalStepName(reason: string): string {
-    return `__workflow_approval:${reason}`
-  }
-
-  private approvalStateKey(stepName: string): string {
-    let hex = ''
-    for (const byte of new TextEncoder().encode(stepName)) {
-      hex += byte.toString(16).padStart(2, '0')
+  private get approvalStore(): ApprovalStore {
+    return {
+      getStepState: (runId, stepName) => this.getStepState(runId, stepName),
+      insertStepState: (
+        runId,
+        stepName,
+        rpcName,
+        input,
+        output,
+        fromStepName
+      ) =>
+        this.insertStepState(
+          runId,
+          stepName,
+          rpcName,
+          input,
+          output,
+          fromStepName
+        ),
+      setStepRunning: (stepId) => this.setStepRunning(stepId),
+      setStepResult: (stepId, result) => this.setStepResult(stepId, result),
+      getRunState: (runId) => this.getRunState(runId),
+      updateRunState: (runId, key, value) =>
+        this.updateRunState(runId, key, value),
+      resumeWorkflow: (runId) => this.resumeWorkflow(runId),
+      scheduleRunWake: (runId, delay) => this.scheduleRunWake(runId, delay),
     }
-    return `__approval_${hex}`
   }
 
   public async approveStep(
@@ -2276,32 +1875,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     reason: string,
     decision: unknown
   ): Promise<void> {
-    const stepName = this.getApprovalStepName(reason)
-    const stateKey = this.approvalStateKey(stepName)
-
-    let resolved: StepState | undefined
-    try {
-      resolved = await this.getStepState(runId, stepName)
-    } catch {
-      // knowledge: decisions/security/workflow-approval-payloads-are-validated-on-replay-inside-the-workflow.md
-    }
-    if (resolved?.stepId && resolved.status === 'succeeded') {
-      const outcome = resolved.result as ApprovalOutcome<unknown> | undefined
-      throw new WorkflowApprovalResolvedError(
-        reason,
-        outcome?.status ?? 'decided'
-      )
-    }
-
-    const state = await this.getRunState(runId)
-    const record = (state[stateKey] ?? {}) as Record<string, unknown>
-    await this.updateRunState(runId, stateKey, {
-      ...record,
-      decision,
-      decidedAt: new Date().toISOString(),
-      error: undefined,
-    })
-    await this.resumeWorkflow(runId)
+    return recordApprovalDecision(this.approvalStore, runId, reason, decision)
   }
 
   private async approvalStep(
@@ -2312,100 +1886,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const fromStepName = this.lastStepName(runId)
     const approvalStepName = this.nextStepKey(
       runId,
-      this.getApprovalStepName(reason)
+      approvalStepNameFor(reason)
     )
-    return await this.withStepLock(runId, approvalStepName, async () => {
-      let stepState: StepState
-      try {
-        stepState = await this.getStepState(runId, approvalStepName)
-      } catch {
-        stepState = await this.insertStepState(
-          runId,
-          approvalStepName,
-          'pikkuWorkflowApproval',
-          { reason, expiry: options.expiry },
-          undefined,
-          fromStepName
-        )
-      }
-      if (!stepState.stepId) {
-        stepState = await this.insertStepState(
-          runId,
-          approvalStepName,
-          'pikkuWorkflowApproval',
-          { reason, expiry: options.expiry },
-          undefined,
-          fromStepName
-        )
-      }
-
-      if (stepState.status === 'succeeded') {
-        return stepState.result as ApprovalOutcome<unknown>
-      }
-
-      const stateKey = this.approvalStateKey(approvalStepName)
-      let record = ((await this.getRunState(runId))[stateKey] ?? {}) as {
-        decision?: unknown
-        decidedAt?: string
-        expiresAt?: string
-        error?: unknown
-      }
-
-      if (stepState.status === 'pending') {
-        await this.setStepRunning(stepState.stepId)
-        if (options.expiry !== undefined && !record.expiresAt) {
-          const expiresAt = new Date(
-            Date.now() + getDurationInMilliseconds(options.expiry)
-          ).toISOString()
-          record = { ...record, expiresAt }
-          await this.updateRunState(runId, stateKey, record)
-          await this.scheduleRunWake(
-            runId,
-            getDurationInMilliseconds(options.expiry)
-          )
-        }
-      }
-
-      if (record.decision !== undefined) {
-        const validation = await options.schema['~standard'].validate(
-          record.decision
-        )
-        if (validation.issues) {
-          await this.updateRunState(runId, stateKey, {
-            ...record,
-            decision: undefined,
-            decidedAt: undefined,
-            error: validation.issues.map((issue) => ({
-              message: issue.message,
-              path: issue.path?.map((segment) =>
-                typeof segment === 'object' ? segment.key : segment
-              ),
-            })),
-          })
-          throw new WorkflowSuspendedException(runId, reason)
-        }
-        const outcome: ApprovalOutcome<unknown> = {
-          status: 'decided',
-          data: validation.value,
-        }
-        await this.setStepResult(stepState.stepId, outcome)
-        return outcome
-      }
-
-      if (record.expiresAt && Date.now() >= Date.parse(record.expiresAt)) {
-        const outcome: ApprovalOutcome<unknown> = { status: 'expired' }
-        await this.setStepResult(stepState.stepId, outcome)
-        return outcome
-      }
-
-      throw new WorkflowSuspendedException(runId, reason)
-    })
+    return await this.withStepLock(runId, approvalStepName, () =>
+      evaluateApprovalStep(
+        this.approvalStore,
+        runId,
+        reason,
+        approvalStepName,
+        fromStepName,
+        options
+      )
+    )
   }
 
   public createWorkflowWire(
     name: string,
     runId: string,
-    rpcService: any,
+    rpcService: PikkuRPC,
     addonNamespace?: string | null
   ): PikkuWorkflowWire {
     const workflowWire: PikkuWorkflowWire = {
@@ -2478,45 +1976,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private getConfig(): WorkflowServiceConfig {
-    const singletonServices = getSingletonServices()
-    const workflow = singletonServices.config?.workflow
-    return {
-      retries: workflow?.retries ?? DEFAULT_STEP_RETRIES,
-      retryDelay: workflow?.retryDelay ?? 0,
-      orchestratorQueueName:
-        workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
-      stepWorkerQueueName:
-        workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
-      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
-    }
+    return resolveWorkflowConfig()
   }
 
   protected getOrchestratorQueueName(workflowName?: string): string {
-    if (workflowName && this.queueStrategy !== 'shared-groups') {
-      const perWorkflow = `wf-orchestrator-${toKebab(workflowName)}`
-      const meta = pikkuState(null, 'queue', 'meta')
-      if (meta[perWorkflow]) {
-        return perWorkflow
-      }
-    }
-    return this.getConfig().orchestratorQueueName
+    return orchestratorQueueName(this.queueStrategy, workflowName)
   }
 
   protected getStepWorkerQueueName(rpcName?: string): string {
-    if (rpcName && this.queueStrategy !== 'shared-groups') {
-      const perStep = `wf-step-${toKebab(rpcName)}`
-      const meta = pikkuState(null, 'queue', 'meta')
-      if (meta[perStep]) {
-        return perStep
-      }
-    }
-    return this.getConfig().stepWorkerQueueName
+    return stepWorkerQueueName(this.queueStrategy, rpcName)
   }
 
   protected getJobGroup(id?: string): JobGroup | undefined {
-    if (!id || this.queueStrategy !== 'shared-groups') {
-      return undefined
-    }
-    return { id, tier: id }
+    return jobGroupFor(this.queueStrategy, id)
   }
 }

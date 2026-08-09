@@ -10,7 +10,7 @@ import {
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
-import { DEFAULT_STEP_RETRIES } from '../pikku-workflow-service.js'
+import { DEFAULT_STEP_RETRIES } from '../workflow-constants.js'
 
 describe('graph-runner bugs', () => {
   test('continueGraph should NOT mark workflow completed while nodes are still running', async () => {
