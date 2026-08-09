@@ -1,0 +1,25 @@
+`public-surface.json` pins every runtime export reachable through a
+`package.json` `exports` subpath. `public-surface.test.ts` fails when the two
+disagree, so widening the API is a visible diff rather than a side effect of an
+`export *`.
+
+Types are not pinned: they are erased before the test can enumerate them.
+
+Regenerate after an intentional change, from `packages/core`:
+
+```bash
+cat > src/__gen-surface.mts <<'EOF'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+const pkg = JSON.parse(readFileSync('package.json', 'utf-8'))
+const surface: Record<string, string[]> = {}
+for (const [sub, dist] of Object.entries(pkg.exports as Record<string, string>)) {
+  const src = pathToFileURL(resolve(dist.replace('./dist/', './src/'))).href
+  surface[sub] = Object.keys(await import(src)).sort()
+}
+writeFileSync('src/public-surface.json', JSON.stringify(surface, null, 2) + '\n')
+EOF
+npx tsx src/__gen-surface.mts && rm src/__gen-surface.mts
+```
