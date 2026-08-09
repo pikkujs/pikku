@@ -41,7 +41,11 @@ const CATALOGUE: ApiCatalogueEntry[] = [
 ]
 
 const INTENTS: IntentSource[] = [
-  { id: 'onboard', title: 'set up your first project', steps: ['sign in', 'make a project'] },
+  {
+    id: 'onboard',
+    title: 'set up your first project',
+    steps: ['sign in', 'make a project'],
+  },
 ]
 
 const PERSONA = {
@@ -84,10 +88,7 @@ const scripted = (
   return { llm, turns: () => turn }
 }
 
-const respond = <T>(
-  status: number,
-  body: T
-): ScenarioHttpResponse<T> => ({
+const respond = <T>(status: number, body: T): ScenarioHttpResponse<T> => ({
   status,
   ok: status >= 200 && status < 300,
   body,
@@ -126,7 +127,12 @@ describe('running a virtual user', () => {
       { kind: 'complete', summary: 'done' },
     ])
 
-    const result = await runVirtualUser({ ...base, target, llm, budget: { steps: 3 } })
+    const result = await runVirtualUser({
+      ...base,
+      target,
+      llm,
+      budget: { steps: 3 },
+    })
 
     // The first attempt cost a step and bought the schema; only the second
     // reached the server.
@@ -355,7 +361,9 @@ describe('what a virtual user reports', () => {
   })
 
   test('an app-specific oracle can add what the engine cannot know', async () => {
-    const target = recordingTarget(() => respond(200, { orgId: 'someone-else' }))
+    const target = recordingTarget(() =>
+      respond(200, { orgId: 'someone-else' })
+    )
     const { llm } = scripted(walkTo('listProjects'))
 
     const result = await runVirtualUser({
@@ -595,8 +603,9 @@ describe('goals and persona', () => {
   test('goals in the user’s own words become intents alongside the derived ones', async () => {
     const seen: string[] = []
     const target = recordingTarget(() => respond(200, {}))
-    const { llm } = scripted([{ kind: 'complete' }, { kind: 'complete' }], (_i, m) =>
-      seen.push(...m)
+    const { llm } = scripted(
+      [{ kind: 'complete' }, { kind: 'complete' }],
+      (_i, m) => seen.push(...m)
     )
 
     const result = await runVirtualUser({

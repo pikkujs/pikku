@@ -11,7 +11,10 @@ import {
   SystemRoleShadowedError,
 } from '../errors/errors.js'
 
-const system = (...names: string[]) => (name: string) => names.includes(name)
+const system =
+  (...names: string[]) =>
+  (name: string) =>
+    names.includes(name)
 
 describe('mutating a role', () => {
   test('a declared role refuses to be deleted or re-scoped', async () => {

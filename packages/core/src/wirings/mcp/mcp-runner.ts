@@ -39,12 +39,6 @@ export type RunMCPEndpointParams<Tools extends string = any> = {
   exposeErrors?: boolean
 }
 
-export type JsonRpcError = {
-  code: number
-  message: string
-  data?: any
-}
-
 export const wireMCPResource = <
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
@@ -293,20 +287,12 @@ async function runMCPPikkuFunc(
   }
 }
 
-export const getMCPResources = () => {
-  return pikkuState(null, 'mcp', 'resources')
-}
-
 export const getMCPResourcesMeta = () => {
   return pikkuState(null, 'mcp', 'resourcesMeta')
 }
 
 export const getMCPToolsMeta = () => {
   return pikkuState(null, 'mcp', 'toolsMeta')
-}
-
-export const getMCPPrompts = () => {
-  return pikkuState(null, 'mcp', 'prompts')
 }
 
 export const getMCPPromptsMeta = () => {

@@ -15,6 +15,9 @@ export type {
 } from './pikku-workflow-service.js'
 export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
 
+export { isRef } from './graph/workflow-graph.types.js'
+export type { RefValue } from './graph/workflow-graph.types.js'
+
 export {
   buildRunTimeline,
   reconstructStateAt,

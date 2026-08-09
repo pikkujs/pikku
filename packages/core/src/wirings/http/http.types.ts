@@ -73,10 +73,6 @@ export interface PikkuHTTP<In = unknown> {
   response?: PikkuHTTPResponse
 }
 
-export type RequestHeaders =
-  | Record<string, string | string[] | undefined>
-  | ((headerName: string) => string | string[] | undefined)
-
 export type PikkuQuery<T = Record<string, string | undefined>> = Record<
   string,
   string | T | null | Array<T | null>
@@ -206,17 +202,6 @@ export type HTTPWiringMeta = CommonWireMeta & {
   groupBasePath?: string
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
-
-export type HTTPFunctionsMeta = Array<{
-  name: string
-  inputs: string[] | null
-  outputs: string[] | null
-}>
-
-export type HTTPWiringMiddleware = {
-  route: string
-  middleware: CorePikkuMiddleware[]
-}
 
 export interface PikkuHTTPRequest<In = unknown> {
   method(): HTTPMethod

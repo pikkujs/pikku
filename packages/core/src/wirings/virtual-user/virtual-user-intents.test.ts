@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 
 import { IntentStack, intentsForPersona } from './virtual-user-intents.js'
 import { createRng } from './virtual-user-rng.js'
-import { DISPOSITIONS, type DispositionProfile } from './virtual-user-dispositions.js'
+import {
+  DISPOSITIONS,
+  type DispositionProfile,
+} from './virtual-user-dispositions.js'
 import type { IntentSource } from './virtual-user.types.js'
 
 const profileWith = (
@@ -182,7 +185,11 @@ describe('intents for an actor', () => {
   const catalogue: IntentSource[] = [
     { id: 'a', title: 'invite a teammate', personas: ['orgAdmin'] },
     { id: 'b', title: 'read the dashboard' },
-    { id: 'c', title: 'deploy a stage', personas: ['platformAdmin', 'orgAdmin'] },
+    {
+      id: 'c',
+      title: 'deploy a stage',
+      personas: ['platformAdmin', 'orgAdmin'],
+    },
   ]
 
   test('an actor gets what names it, plus anything that names nobody', () => {
@@ -201,7 +208,10 @@ describe('intents for an actor', () => {
 
   test('an empty actor list means everyone', () => {
     assert.deepEqual(
-      intentsForPersona([{ id: 'x', title: 'anything', personas: [] }], 'nobody'),
+      intentsForPersona(
+        [{ id: 'x', title: 'anything', personas: [] }],
+        'nobody'
+      ),
       [{ id: 'x', title: 'anything', personas: [] }]
     )
   })

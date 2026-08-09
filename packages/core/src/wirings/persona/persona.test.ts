@@ -23,7 +23,10 @@ describe('computed addresses', () => {
   })
 
   test('without a run id the address is the stable, seedable form', () => {
-    assert.equal(personaEmail('susan', 'mail.example.com'), 'susan@mail.example.com')
+    assert.equal(
+      personaEmail('susan', 'mail.example.com'),
+      'susan@mail.example.com'
+    )
   })
 
   test('an id that is not address-shaped is reduced to one', () => {
@@ -34,7 +37,10 @@ describe('computed addresses', () => {
   })
 
   test('an id with nothing usable in it is refused rather than guessed at', () => {
-    assert.throws(() => personaEmail('...', 'example.com'), /no usable email label/)
+    assert.throws(
+      () => personaEmail('...', 'example.com'),
+      /no usable email label/
+    )
   })
 
   // A synthetic domain was rejected precisely because it makes every
@@ -97,7 +103,11 @@ describe('verifying roles at sign-in', () => {
   })
 
   test('order and duplication are not drift', () => {
-    const v = verifyPersonaRoles('yasser', ['admin', 'buyer'], ['buyer', 'admin', 'buyer'])
+    const v = verifyPersonaRoles(
+      'yasser',
+      ['admin', 'buyer'],
+      ['buyer', 'admin', 'buyer']
+    )
     assert.equal(v.ok, true)
   })
 

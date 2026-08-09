@@ -1,4 +1,8 @@
-import type { PersonaDefinitions, PersonaMeta, PersonasMeta } from './persona.types.js'
+import type {
+  PersonaDefinitions,
+  PersonaMeta,
+  PersonasMeta,
+} from './persona.types.js'
 
 /**
  * Whether a persona can actually be driven by a virtual user.

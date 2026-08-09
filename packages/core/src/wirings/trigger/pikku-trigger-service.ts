@@ -14,11 +14,6 @@ export type TriggerTarget = {
   startNode?: string
 }
 
-export type TriggerSourceInfo = {
-  name: string
-  input: unknown
-}
-
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers = new Map<string, TriggerInstance>()
 
