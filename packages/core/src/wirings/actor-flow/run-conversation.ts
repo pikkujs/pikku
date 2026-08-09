@@ -119,12 +119,7 @@ function actorInstructions(persona: ResolvedPersona, task: string): string {
       : '',
     `Your goal in this conversation: ${task}.`,
     `Send one message at a time. Set "done" to true only once your goal is clearly accomplished, or clearly impossible.`,
-    // Every call the actor makes wants a schema'd object back, and a gateway
-    // that cannot take a JSON *schema* degrades to OpenAI's `json_object`
-    // mode — which refuses the request outright unless the word "json" appears
-    // somewhere in the prompt. Saying it once here covers all three call sites
-    // (turn, approvals, verdict), since each builds on these instructions, and
-    // it costs nothing on providers that never needed telling.
+    // knowledge: decisions/internals/the-actor-prompt-says-json-because-of-json-object-mode.md
     `Reply with json matching the schema you are given, and nothing else.`,
   ]
     .filter(Boolean)

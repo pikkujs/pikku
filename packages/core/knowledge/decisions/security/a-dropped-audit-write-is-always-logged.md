@@ -13,8 +13,10 @@ Its `write` discards the event — but before it does, it warns once, and it loo
 for a logger in two places: the wire's own, then the singleton passed to the
 constructor.
 
-The fallback is the point. Wires frequently do not carry a logger, and with only
-`this.wire.logger` the warning would itself be dropped whenever the wire is bare.
+The fallback is the point. `wire.logger` is an optional hook for a host that
+wants invocation-scoped logging — core never sets it, so on every path core
+itself drives, the singleton is the only source there is. With only
+`this.wire.logger` the warning would be dropped every time.
 An audit call that silently does nothing is the worst available outcome: the
 function believes it is producing an audit trail, the trail does not exist, and
 nothing anywhere says so. The warning names the function and the fix, and fires

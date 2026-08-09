@@ -206,11 +206,7 @@ export const voiceOutput = (config?: {
       }
       if (!aiAgentRunner?.generateSpeech) return event
 
-      // Only an explicit `false` silences the reply. `voiceInput` sets this on
-      // every turn it handles, so `false` means a real user really typed; the
-      // key being absent means nothing reported either way — no voice input is
-      // wired — and that caller's replies are spoken exactly as they were before
-      // this option existed.
+      // knowledge: decisions/internals/voice-output-speaks-unless-voice-input-explicitly-says-otherwise.md
       if (!config?.always && shared[SPOKEN_TURN] === false) return event
 
       /**
@@ -228,13 +224,7 @@ export const voiceOutput = (config?: {
           )
         }
 
-        // Checked per sentence but announced once per reply: a bilingual answer
-        // should still speak the half it can, and repeating the notice for
-        // every sentence of a long one would bury the reply itself.
-        //
-        // Per sentence is also what makes the voice right. A reply that answers
-        // in English and then quotes a Chinese title is two sentences in two
-        // scripts, and each is synthesized in the voice its own script needs.
+        // knowledge: decisions/internals/speech-synthesis-picks-a-voice-per-sentence-and-warns-once.md
         let voice = config.voice
         if (config.speakableScripts) {
           const unspeakable = unspeakableScripts(text, config.speakableScripts)

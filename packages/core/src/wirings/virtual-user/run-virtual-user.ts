@@ -143,8 +143,12 @@ const msg = (role: AIMessage['role'], content: string): AIMessage => ({
 })
 
 /** Read a structured result, falling back to parsing JSON out of the text. */
-const readObject = <T>(result: { object?: unknown; text?: string }): T | null => {
-  if (result.object && typeof result.object === 'object') return result.object as T
+const readObject = <T>(result: {
+  object?: unknown
+  text?: string
+}): T | null => {
+  if (result.object && typeof result.object === 'object')
+    return result.object as T
   if (result.text) {
     try {
       return JSON.parse(result.text) as T
@@ -201,7 +205,11 @@ export const rememberIds = (
     return into
   }
   for (const [key, value] of Object.entries(body)) {
-    if (typeof value === 'string' && MEMORABLE.test(key) && value.length < 200) {
+    if (
+      typeof value === 'string' &&
+      MEMORABLE.test(key) &&
+      value.length < 200
+    ) {
       into[key] = value
     } else if (typeof value === 'object') {
       rememberIds(value, into, depth + 1)
@@ -237,7 +245,10 @@ const personaInstructions = (
     '',
     agents.length
       ? `Assistants you can talk to:\n${agents
-          .map((agent) => `- ${agent.name}${agent.description ? `: ${agent.description}` : ''}`)
+          .map(
+            (agent) =>
+              `- ${agent.name}${agent.description ? `: ${agent.description}` : ''}`
+          )
           .join('\n')}`
       : '',
     fixtures.length ? `Files you have: ${fixtures.join(', ')}` : '',
@@ -351,7 +362,10 @@ export const runVirtualUser = async (
       stoppedBy = 'budget-duration'
       break
     }
-    if (budget?.mutations !== undefined && tally.mutations >= budget.mutations) {
+    if (
+      budget?.mutations !== undefined &&
+      tally.mutations >= budget.mutations
+    ) {
       stoppedBy = 'budget-mutations'
       break
     }
@@ -402,10 +416,7 @@ export const runVirtualUser = async (
         )
       )
     }
-    // Whether this user trusts its notes this turn or goes and looks again.
-    // `stale` almost always trusts them, a newcomer has none to trust, and an
-    // auditor checks nearly everything — which is the whole difference between
-    // those runs, expressed as one roll rather than as prose.
+    // knowledge: decisions/internals/a-virtual-user-decides-whether-to-trust-memory-once-per-turn.md
     if (Object.keys(memory).length && !rng.chance(profile.reReadRate)) {
       messages.push(
         msg(
@@ -448,7 +459,9 @@ export const runVirtualUser = async (
 
     if (!raw || typeof raw.kind !== 'string') {
       steps.push(record)
-      messages.push(msg('user', 'That was not a valid action. Choose one action.'))
+      messages.push(
+        msg('user', 'That was not a valid action. Choose one action.')
+      )
       continue
     }
 
@@ -550,10 +563,7 @@ export const runVirtualUser = async (
       continue
     }
 
-    // What may be called is decided once, when the catalogue is narrowed: a
-    // read-only disposition is never offered a mutation and an approval-gated
-    // endpoint is never offered at all, so `index` is the gate and there is no
-    // second one here to drift out of step with it.
+    // knowledge: decisions/internals/the-virtual-user-catalogue-is-the-only-gate-on-what-may-be-called.md
     const mutating = !isReadOnly(entry)
 
     const args = readArgs((action as { args?: unknown }).args)
@@ -566,7 +576,10 @@ export const runVirtualUser = async (
       try {
         response = await target.call(entry.name, args)
       } catch (error) {
-        record.findingKinds = [...(record.findingKinds ?? []), 'transport-error']
+        record.findingKinds = [
+          ...(record.findingKinds ?? []),
+          'transport-error',
+        ]
         addFinding({
           kind: 'transport-error',
           detail: `${entry.name} threw: ${(error as Error).message}`,

@@ -11,5 +11,6 @@ currently makes a choice that nobody has defended — the choice stays, the doub
 gets recorded.
 
 <!-- pikku:knowledge-index -->
-_Nothing here yet._
+- [A channel's middleware list accepts bare factories that nothing ever resolves](channel-middleware-accepts-bare-factories-that-nothing-resolves.md) — CoreChannel.channelMiddleware admits CorePikkuChannelMiddlewareFactory, but no runner calls one, so a bare factory would stall the chain
+- [An unauthorized channel reply is sent outside the channel's declared Out type](unauthorized-channel-replies-escape-the-declared-out-type.md) — processMessageHandlers sends a bare string on auth failure that no generated client type admits, and the alternatives were never worked through
 <!-- /pikku:knowledge-index -->
