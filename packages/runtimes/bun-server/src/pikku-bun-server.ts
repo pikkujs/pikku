@@ -3,7 +3,7 @@ import type { Server as BunServer, ServerWebSocket } from 'bun'
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import type { JWTService, Logger } from '@pikku/core/services'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
 import {
   createLocalContentRequestHandler,

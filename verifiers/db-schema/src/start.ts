@@ -10,7 +10,7 @@
  *      is the fallback now, not the intent — once the migration exists, the
  *      runtime stops being an author of the schema.
  */
-import { runPikkuFunc } from '@pikku/core'
+import { runPikkuFunc } from '@pikku/core/ecosystem'
 import { ensurePikkuSchema, pikkuSchemas } from '@pikku/kysely'
 import { createConfig } from './config.js'
 import { createSingletonServices, createWireServices } from './services.js'

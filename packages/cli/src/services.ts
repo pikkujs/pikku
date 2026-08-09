@@ -8,7 +8,7 @@ import type { CreateConfig } from '@pikku/core'
 import type {
   CreateWireServices,
   CreateSingletonServices,
-} from '@pikku/core/internal'
+} from '@pikku/core/ecosystem'
 import { pikkuCLIRender } from '@pikku/core/cli'
 import {
   LocalVariablesService,

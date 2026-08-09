@@ -3,7 +3,7 @@ import {
   PostToConnectionCommand,
 } from '@aws-sdk/client-apigatewaymanagementapi'
 import type { Logger } from '@pikku/core/services'
-import { getSingletonServices } from '@pikku/core'
+import { getSingletonServices } from '@pikku/core/ecosystem'
 import type { APIGatewayEvent } from 'aws-lambda'
 import { createLambdaChannelHandlerFactory } from './lambda-channel-handler.js'
 import type { ChannelStore } from '@pikku/core/channel'

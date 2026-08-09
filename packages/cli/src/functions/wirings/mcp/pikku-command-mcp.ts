@@ -160,7 +160,7 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       mcpWiringsMetaFile,
-      `import { pikkuState } from '@pikku/core/internal'
+      `import { pikkuState } from '@pikku/core/ecosystem'
 import type { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 ${importStatement}
 pikkuState(null, 'mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)

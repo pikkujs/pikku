@@ -9,6 +9,6 @@
     "moduleResolution": "node16",
     "tsBuildInfoFile": null
   },
-  "exclude": ["**/*.test.ts", "node_modules", "dist"],
+  "exclude": ["**/*.test.ts", "node_modules", "dist", "scripts"],
   "references": []
 }

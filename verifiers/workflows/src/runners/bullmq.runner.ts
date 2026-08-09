@@ -9,7 +9,7 @@
 
 import { RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 
 import { createConfig, createSingletonServices } from '../services.js'
 import { workflowTestData } from './workflow-test-data.js'

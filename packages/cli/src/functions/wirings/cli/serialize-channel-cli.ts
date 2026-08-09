@@ -110,7 +110,7 @@ import { wireChannel } from '${channelTypesPath}'
 import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 ${imports}
 
 // Middleware to close the channel after CLI command completes

@@ -3,7 +3,10 @@ import { createServer, type Server } from 'node:http'
 import { connect, type Socket } from 'node:net'
 import { after, before, describe, test } from 'node:test'
 import { WebSocketServer } from 'ws'
-import { getSingletonServices, setSingletonServices } from '@pikku/core'
+import {
+  getSingletonServices,
+  setSingletonServices,
+} from '@pikku/core/ecosystem'
 
 import { pikkuWebsocketHandler } from './pikku-ws-server.js'
 

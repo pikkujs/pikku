@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { runQueueJob } from '@pikku/core'
-import { pikkuState } from '@pikku/core/internal'
+import { runQueueJob } from '@pikku/core/queue'
+import { pikkuState } from '@pikku/core/ecosystem'
 import '../.pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,

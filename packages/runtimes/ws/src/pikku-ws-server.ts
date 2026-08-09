@@ -1,6 +1,6 @@
 import type { Server } from 'http'
 import type { WebSocket, WebSocketServer } from 'ws'
-import { getSingletonServices } from '@pikku/core'
+import { getSingletonServices } from '@pikku/core/ecosystem'
 import { logChannels } from '@pikku/core/channel'
 import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
 import {

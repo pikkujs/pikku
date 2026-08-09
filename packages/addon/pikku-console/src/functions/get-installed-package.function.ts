@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 
 import type { AddonPackageInfo } from '../services/addon.service.js'
 

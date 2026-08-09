@@ -11,7 +11,7 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import type { Logger } from '@pikku/core/services'
 import { mapPgBossJobToQueueJob } from './utils.js'
 

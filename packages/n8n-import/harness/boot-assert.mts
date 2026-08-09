@@ -19,7 +19,7 @@ async function main() {
   await import(abs('.pikku/pikku-bootstrap.gen.ts'))
 
   const core: any = await import('@pikku/core')
-  const internal: any = await import('@pikku/core/internal')
+  const internal: any = await import('@pikku/core/ecosystem')
   const ai: any = await import('@pikku/core/ai-agent')
   const rpc: any = await import('@pikku/core/rpc')
   const svc: any = await import(abs('src/services.ts'))

@@ -9,7 +9,7 @@ import {
 } from '@pikku/core/services'
 import type { EmailService } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import { BetterAuthCredentialService } from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
