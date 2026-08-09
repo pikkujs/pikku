@@ -34,7 +34,17 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_BETTER_AUTH_VERSION:=0.12.20}"
 # core is a *peer* of both the CLI and the inspector, which is why it has to be
 # named here to exist at all once peer resolution is off.
-: "${PIKKU_CORE_VERSION:=0.12.77}"
+: "${PIKKU_CORE_VERSION:=0.12.79}"
+# @pikku/node-http-server is the third member of this family to need naming, and
+# it arrives the same way @pikku/kysely did: transitively, through the CLI's
+# `^0.12.7`, so it floats to the newest release while `overrides` holds core
+# still. The 2026-08-06 09:08 wave published node-http-server 0.12.8 — which
+# imports `@pikku/core/node-host-resolver` — one second before core 0.12.79, the
+# first core to export that subpath. The pin held core at 0.12.77, so the new
+# server landed on the old core and every bootstrap died on a missing export, in
+# a package the pin never mentioned. main went red without a commit to blame:
+# its last green run had started twenty-one minutes before the wave.
+: "${PIKKU_NODE_HTTP_SERVER_VERSION:=0.12.8}"
 # @pikku/kysely is an ordinary *dependency* of the CLI, so unlike the peers above
 # it installs whether or not it is named — and left unnamed it floats on the
 # CLI's `^0.13.7`, which means the newest release wave, not the wave this pin
@@ -74,6 +84,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
     "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
@@ -81,6 +92,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
     "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
