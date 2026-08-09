@@ -135,6 +135,41 @@ export const coerceTopLevelDataFromSchema = (
   }
 }
 
+/**
+ * Drops object properties whose value is literally `undefined`.
+ *
+ * JSON Schema has no way to describe such a property, and the validator refuses
+ * the whole instance rather than reporting it — `{ a: undefined }` throws
+ * "Instances of \"undefined\" type are not supported" instead of validating.
+ *
+ * That matters because whether a payload can contain one depends on how the
+ * call travelled. Over HTTP `JSON.stringify` drops these keys before the
+ * request is built, so they never arrive. Dispatched in-process — an inline
+ * workflow step calling an RPC — the object is handed over as-is, and
+ * `{ retries: data.maybeRetries }` with the field omitted by the caller is
+ * enough to kill the step. Normalising here makes the two paths agree, and an
+ * explicitly-undefined *required* field now reports as the missing property it
+ * is rather than as an internal error.
+ *
+ * Deliberately not a JSON round-trip: `coerceTopLevelDataFromSchema` puts real
+ * `Date` instances on the data first, and stringifying would flatten them back
+ * to strings the validator has never been given.
+ */
+const stripUndefinedValues = <T>(value: T): T => {
+  if (Array.isArray(value)) return value.map(stripUndefinedValues) as T
+  if (value === null || typeof value !== 'object') return value
+  // Only plain objects: a Date, Map or class instance is data, not a bag of
+  // properties to be rewritten.
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) return value
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .map(([key, entry]) => [key, stripUndefinedValues(entry)])
+  ) as T
+}
+
 export const validateSchema = async (
   logger: Logger,
   schemaService: SchemaService | undefined,
@@ -164,6 +199,6 @@ export const validateSchema = async (
       )
     }
     await schemaService.compileSchema(key, schema)
-    await schemaService.validateSchema(key, data ?? {})
+    await schemaService.validateSchema(key, stripUndefinedValues(data ?? {}))
   }
 }

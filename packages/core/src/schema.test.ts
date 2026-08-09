@@ -265,6 +265,84 @@ describe('Schema', () => {
       await validateSchema(logger, schemaService, null, {})
     })
 
+    test('strips undefined-valued properties before validating', async () => {
+      addSchema('undefinedProps', {
+        properties: { name: { type: 'string' }, count: { type: 'number' } },
+      })
+      const logger = {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      } as any
+      let seen: any
+      const schemaService = {
+        compileSchema: async () => {},
+        validateSchema: async (_name: string, data: any) => {
+          seen = data
+        },
+        getSchemaNames: () => new Set<string>(),
+      }
+      await validateSchema(logger, schemaService, 'undefinedProps', {
+        name: 'ada',
+        count: undefined,
+      })
+      assert.deepStrictEqual(seen, { name: 'ada' })
+      assert.ok(!('count' in seen))
+    })
+
+    test('strips undefined nested in objects and arrays', async () => {
+      addSchema('nestedUndefined', { properties: {} })
+      const logger = {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      } as any
+      let seen: any
+      const schemaService = {
+        compileSchema: async () => {},
+        validateSchema: async (_name: string, data: any) => {
+          seen = data
+        },
+        getSchemaNames: () => new Set<string>(),
+      }
+      await validateSchema(logger, schemaService, 'nestedUndefined', {
+        nested: { keep: 1, drop: undefined },
+        list: [{ keep: 2, drop: undefined }],
+      })
+      assert.deepStrictEqual(seen, {
+        nested: { keep: 1 },
+        list: [{ keep: 2 }],
+      })
+    })
+
+    test('leaves Date instances intact while stripping', async () => {
+      addSchema('withDate', { properties: {} })
+      const logger = {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      } as any
+      const when = new Date('2020-01-01T00:00:00.000Z')
+      let seen: any
+      const schemaService = {
+        compileSchema: async () => {},
+        validateSchema: async (_name: string, data: any) => {
+          seen = data
+        },
+        getSchemaNames: () => new Set<string>(),
+      }
+      await validateSchema(logger, schemaService, 'withDate', {
+        when,
+        drop: undefined,
+      })
+      assert.ok(seen.when instanceof Date)
+      assert.equal(seen.when.getTime(), when.getTime())
+      assert.ok(!('drop' in seen))
+    })
+
     test('should throw MissingSchemaError when schema not found', async () => {
       const logger = {
         info: () => {},
