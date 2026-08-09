@@ -8,11 +8,7 @@ import {
   clearMiddlewareCache,
 } from '../../middleware-runner.js'
 import { ForbiddenError } from '../../errors/errors.js'
-import {
-  resolveAddonAuth,
-  resolveAddonTags,
-  wireAddon,
-} from './wire-addon.js'
+import { resolveAddonAuth, resolveAddonTags, wireAddon } from './wire-addon.js'
 
 const ADDON_PACKAGE = '@addon/console'
 

@@ -148,3 +148,17 @@ export type ChannelRPCValidator = (
   funcName: string,
   value: unknown
 ) => Promise<void> | void
+
+/**
+ * `remote` for wires with no peer that answers — a server-sent stream, an
+ * agent's output, a local CLI. Nothing is listening for a request on them, so
+ * the call is refused rather than waiting out a timeout.
+ */
+export const unsupportedChannelRemote = async (
+  funcName: string
+): Promise<never> => {
+  throw new ChannelRPCError(
+    `Cannot call "${funcName}" remotely: this channel has no peer that answers`,
+    'unsupported'
+  )
+}

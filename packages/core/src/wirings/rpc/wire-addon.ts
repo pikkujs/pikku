@@ -61,7 +61,9 @@ const governingAddonConfigs = (
     }
   }
 
-  return [...addons.values()].filter((config) => config?.package === packageName)
+  return [...addons.values()].filter(
+    (config) => config?.package === packageName
+  )
 }
 
 const unionOf = (

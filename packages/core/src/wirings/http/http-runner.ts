@@ -34,7 +34,9 @@ import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import type { BinaryData, PikkuChannel } from '../channel/channel.types.js'
-import { unsupportedChannelRemote } from '../channel/channel-rpc.js'
+// The leaf module, not the channel-rpc barrel: http needs one refusal
+// function, and the barrel drags in 4,932 lines of channel RPC runtime.
+import { unsupportedChannelRemote } from '../channel/channel-rpc.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { applyWebResponse } from './web-request.js'
 import { httpRouter } from './routers/http-router.js'

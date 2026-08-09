@@ -13,6 +13,7 @@ import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { resolveRemoteAddonToken } from './remote-addon-auth.js'
+import { createAgentRPC } from '../ai-agent/agent-rpc.js'
 
 /**
  * The session for a wire: read through `getSession` when a runner attached one,
@@ -62,16 +63,6 @@ addError(RemoteAddonRequestError, {
   status: 502,
   message: 'Remote addon request failed.',
 })
-import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
-import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
-import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
-import { runAIAgent, resumeAIAgentSync } from '../ai-agent/ai-agent-runner.js'
-import {
-  streamAIAgent,
-  resumeAIAgent,
-  interruptAIAgent,
-} from '../ai-agent/ai-agent-stream.js'
-import { wrapChannelWithAGUI } from '../ai-agent/ai-agent-agui.js'
 
 export const resolveNamespace = (
   namespacedFunction: string
@@ -463,108 +454,15 @@ export class ContextAwareRPCService {
     )
   }
 
-  public get agent() {
-    return {
-      run: async (agentName: string, input: AIAgentInput) => {
-        const result = await runAIAgent(agentName, input, {
-          sessionService: this.options.sessionService,
-          getCredential: this.wire.getCredential?.bind(this.wire),
-        })
-        return {
-          runId: result.runId,
-          result: result.object ?? result.text,
-          usage: result.usage,
-          ...(result.status === 'suspended' && {
-            status: 'suspended' as const,
-            pendingApprovals: result.pendingApprovals,
-          }),
-        }
-      },
-      stream: async (
-        agentName: string,
-        input: {
-          message: string
-          threadId: string
-          resourceId: string
-          model?: string
-          temperature?: number
-        },
-        options?: StreamAIAgentOptions
-      ) => {
-        const channel = this.wire.channel as unknown as AIStreamChannel
-        if (!channel) throw new Error('No channel available for streaming')
-        let currentRunId: string | undefined
-        await streamAIAgent(
-          agentName,
-          input,
-          wrapChannelWithAGUI(channel, {
-            threadId: input.threadId,
-            getRunId: () => currentRunId,
-          }),
-          {
-            sessionService: this.options.sessionService,
-            getCredential: this.wire.getCredential?.bind(this.wire),
-          },
-          undefined,
-          {
-            ...options,
-            onRunCreated: (runId) => {
-              currentRunId = runId
-              options?.onRunCreated?.(runId)
-            },
-          }
-        )
-      },
-      resume: async (
-        runId: string,
-        input: { toolCallId: string; approved: boolean },
-        options?: StreamAIAgentOptions
-      ) => {
-        const channel = this.wire.channel as unknown as AIStreamChannel
-        if (!channel) throw new Error('No channel available for streaming')
-        await resumeAIAgent(
-          { runId, ...input },
-          wrapChannelWithAGUI(channel, { runId }),
-          {
-            sessionService: this.options.sessionService,
-            getCredential: this.wire.getCredential?.bind(this.wire),
-          },
-          options
-        )
-      },
-      interrupt: async (
-        runId: string,
-        reason?: 'speech' | 'user' | 'timeout'
-      ) => {
-        return interruptAIAgent(
-          { runId, ...(reason ? { reason } : {}) },
-          { sessionService: this.options.sessionService }
-        )
-      },
-      approve: async (
-        runId: string,
-        approvals: { toolCallId: string; approved: boolean }[],
-        expectedAgentName?: string
-      ) => {
-        const result = await resumeAIAgentSync(
-          runId,
-          approvals,
-          {
-            sessionService: this.options.sessionService,
-          },
-          expectedAgentName
-        )
-        return {
-          runId: result.runId,
-          result: result.object ?? result.text,
-          usage: result.usage,
-          ...(result.status === 'suspended' && {
-            status: 'suspended' as const,
-            pendingApprovals: result.pendingApprovals,
-          }),
-        }
-      },
-    }
+  /**
+   * The agent facade, built on access.
+   *
+   * The implementation lives in `ai-agent/agent-rpc.ts` so the agent surface is
+   * one file rather than a wing of this one; a getter rather than a field so a
+   * request that never touches an agent never builds it.
+   */
+  public get agent(): PikkuRPC['agent'] {
+    return createAgentRPC(this.wire, this.options)
   }
 
   public async remote<In = any, Out = any>(
@@ -617,20 +515,44 @@ export class PikkuRPCService<
       options,
       packageName
     )
-    return {
-      depth,
-      global: false,
-      invoke: serviceRPC.rpc.bind(serviceRPC),
-      remote: serviceRPC.remote.bind(serviceRPC),
-      exposed: serviceRPC.rpcExposed.bind(serviceRPC),
-      startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
-      get agent() {
-        return serviceRPC.agent
-      },
-      rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
-      // `TypedRPC` is named by the caller from its generated RPC map. Nothing
-      // concrete can satisfy a type the caller has not chosen yet.
-    } as TypedRPC
+    // `TypedRPC` is named by the caller from its generated RPC map. Nothing
+    // concrete can satisfy a type the caller has not chosen yet.
+    return new ContextRPCView(serviceRPC, depth) as TypedRPC
+  }
+}
+
+/**
+ * The per-invocation `wire.rpc`.
+ *
+ * A class rather than an object literal because `agent` has to stay lazy — most
+ * requests never touch it — and an accessor declared on an object literal is
+ * defined per instance, which drops the literal off V8's fast construction
+ * path. Measured at ~1.15µs per request as a literal against ~0.47µs here, on
+ * the hot path every request takes.
+ *
+ * knowledge: decisions/internals/the-per-invocation-rpc-view-is-a-class.md
+ */
+class ContextRPCView {
+  public readonly global = false
+  public readonly invoke: ContextAwareRPCService['rpc']
+  public readonly remote: ContextAwareRPCService['remote']
+  public readonly exposed: ContextAwareRPCService['rpcExposed']
+  public readonly startWorkflow: ContextAwareRPCService['startWorkflow']
+  public readonly rpcWithWire: ContextAwareRPCService['rpcWithWire']
+
+  constructor(
+    private readonly serviceRPC: ContextAwareRPCService,
+    public readonly depth: number
+  ) {
+    this.invoke = serviceRPC.rpc.bind(serviceRPC)
+    this.remote = serviceRPC.remote.bind(serviceRPC)
+    this.exposed = serviceRPC.rpcExposed.bind(serviceRPC)
+    this.startWorkflow = serviceRPC.startWorkflow.bind(serviceRPC)
+    this.rpcWithWire = serviceRPC.rpcWithWire.bind(serviceRPC)
+  }
+
+  get agent() {
+    return this.serviceRPC.agent
   }
 }
 

@@ -11,20 +11,6 @@ import {
 } from './channel-rpc.types.js'
 
 /**
- * `remote` for channels that only ever flow one way — a server-sent stream, an
- * agent's output, a local CLI. Nothing is listening for a request on them, so
- * the call is refused rather than waiting out a timeout.
- */
-export const unsupportedChannelRemote = async (
-  funcName: string
-): Promise<never> => {
-  throw new ChannelRPCError(
-    `Cannot call "${funcName}" remotely: this channel has no peer that answers`,
-    'unsupported'
-  )
-}
-
-/**
  * A `DeploymentService` whose transport is an open channel rather than an
  * address, so a server-side function can call back into a peer that has no
  * inbound route of its own.

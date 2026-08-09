@@ -25,7 +25,7 @@ import type {
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
-import { unsupportedChannelRemote } from '../channel/channel-rpc.js'
+import { unsupportedChannelRemote } from '../channel/channel-rpc.types.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
