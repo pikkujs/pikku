@@ -193,7 +193,7 @@ export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
 })
 
 ${
-  programMeta.auth === true
+  programMeta.auth !== false
     ? `/**
  * Refuses a connection that arrives without a session.
  *
@@ -219,8 +219,8 @@ export const cliRequireSession = pikkuSessionlessFunc<void, RawCLIFrame | void>(
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
-  auth: ${programMeta.auth === true},
-${programMeta.auth === true ? '  onConnect: cliRequireSession,\n' : ''}  onMessageWiring: {
+  auth: ${programMeta.auth !== false},
+${programMeta.auth !== false ? '  onConnect: cliRequireSession,\n' : ''}  onMessageWiring: {
     command: {
       '__help': {
         func: cliHelp,
