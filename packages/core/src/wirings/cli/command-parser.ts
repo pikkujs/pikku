@@ -86,6 +86,15 @@ export interface ParsedCommand {
   warnings: string[]
 }
 
+/**
+ * A real short-flag cluster is a handful of characters (`-abc`). Anything past
+ * this is treated as a single malformed token rather than scanned per
+ * character — the parser runs over untrusted CLI-channel frames, and a
+ * multi-megabyte `-aaaa…` would otherwise be O(length) work that also pushed
+ * one error per character.
+ */
+const MAX_SHORT_FLAG_CLUSTER = 64
+
 export function parseCLIArguments(
   args: string[],
   programName: string,
@@ -238,6 +247,13 @@ export function parseCLIArguments(
         }
       }
     } else if (arg.startsWith('-') && arg.length > 1) {
+      if (arg.length > MAX_SHORT_FLAG_CLUSTER) {
+        result.errors.push(
+          `Unknown option: ${arg.slice(0, MAX_SHORT_FLAG_CLUSTER)}… (too long)`
+        )
+        currentIndex++
+        continue
+      }
       for (let i = 1; i < arg.length; i++) {
         const shortFlag = arg[i]
 

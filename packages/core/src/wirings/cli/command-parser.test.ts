@@ -710,5 +710,24 @@ describe('Command Parser', () => {
       assert.ok(result.errors.some((e) => e.includes('Unknown option: -x')))
       assert.deepStrictEqual(result.warnings, [])
     })
+    describe('short-flag cluster is bounded (DoS)', () => {
+      test('a huge short-flag cluster yields a single error, not one per char', () => {
+        const huge = '-' + 'a'.repeat(200_000)
+        const result = parseCLIArguments(
+          ['greet', 'Alice', huge],
+          'test-cli',
+          testMeta
+        )
+        const clusterErrors = result.errors.filter((e) =>
+          e.includes('Unknown option')
+        )
+        // Without the cap this would be ~200k errors (one per character).
+        assert.ok(
+          clusterErrors.length <= 2,
+          `expected the oversized cluster to collapse to a single error, got ${clusterErrors.length}`
+        )
+        assert.ok(result.errors.some((e) => e.includes('too long')))
+      })
+    })
   })
 })

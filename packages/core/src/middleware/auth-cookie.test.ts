@@ -131,6 +131,56 @@ describe('authCookie middleware', () => {
     assert(setCookies[0].options.expires instanceof Date)
   })
 
+  test('clears the cookie on logout instead of re-minting a credential', async () => {
+    const SessionService = new PikkuSessionService<CoreUserSession>()
+    let encodeCalled = false
+    const jwtService = {
+      // A JWT of an absent session still decodes to a truthy {iat,exp} the
+      // runner accepts — so encode must never be called on logout.
+      encode: async () => {
+        encodeCalled = true
+        return 'reminted-jwt'
+      },
+      decode: async () => ({ userId: 'user123' }),
+    }
+
+    const middleware = authCookie({
+      name: 'session',
+      expiresIn: { value: 30, unit: 'day' },
+      options: { httpOnly: true },
+    })
+
+    const mockResponse = createMockHTTPResponse()
+
+    await middleware(
+      { jwt: jwtService, logger: createMockLogger() } as any,
+      {
+        ...createMiddlewareSessionWireProps(SessionService),
+        http: {
+          request: createMockHTTPRequest({ session: 'existing-jwt' }),
+          response: mockResponse,
+        },
+      } as any,
+      async () => {
+        // The logout handler clears the session.
+        SessionService.clear()
+      }
+    )
+
+    const setCookies = mockResponse.getCookies()
+    assert.equal(setCookies.length, 1, 'a clearing cookie must be written')
+    const cleared = setCookies[0]!
+    assert.equal(cleared.name, 'session')
+    assert.equal(cleared.value, '', 'the cookie value must be empty')
+    assert.equal(cleared.options.maxAge, 0)
+    assert.ok(
+      cleared.options.expires instanceof Date &&
+        cleared.options.expires.getTime() === 0,
+      'the cookie must expire at the epoch'
+    )
+    assert.equal(encodeCalled, false, 'must not sign an absent session')
+  })
+
   test('should not set cookie when session does not change', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user789' }
     const SessionService = new PikkuSessionService<CoreUserSession>()

@@ -48,6 +48,9 @@ export const signedContentPath = (urlOrPath: string): string => {
   }
 }
 
+/** How long a presigned upload URL stays valid. Short, like an S3 PUT URL. */
+const UPLOAD_URL_TTL_MS = 15 * 60 * 1000
+
 export class LocalContent implements ContentService {
   constructor(
     private config: LocalContentConfig,
@@ -137,13 +140,24 @@ export class LocalContent implements ContentService {
     })
   }
 
+  /**
+   * Presigned upload, mirroring the read side: the URL carries a short-lived,
+   * path-bound signature that {@link createLocalContentRequestHandler} verifies
+   * before writing. An unsigned upload URL cannot be verified, and the handler
+   * now refuses one — so this must sign, or every upload 403s.
+   */
   public async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
     void args.visibility
     const fullKey = this.joinKey(args.bucket, args.fileKey)
     this.logger.debug(`Going to upload with key: ${fullKey}`)
+    const uploadUrl = await this.signURL({
+      url: `${this.config.uploadUrlPrefix}/${fullKey}`,
+      dateLessThan: new Date(Date.now() + UPLOAD_URL_TTL_MS),
+    })
     return {
-      uploadUrl: `${this.config.uploadUrlPrefix}/${fullKey}`,
+      uploadUrl,
       assetKey: fullKey,
+      uploadMethod: 'PUT',
     }
   }
 

@@ -444,7 +444,7 @@ export class PikkuNodeHTTPServer {
       req.method === 'PUT' &&
       this.matchesPrefix(pathname, content.uploadUrlPrefix)
     ) {
-      await this.handleContentUpload(req, res, content, pathname)
+      await this.handleContentUpload(req, res, content, requestUrl, pathname)
       return true
     }
 
@@ -575,8 +575,22 @@ export class PikkuNodeHTTPServer {
     req: IncomingMessage,
     res: ServerResponse,
     content: LocalContentConfig,
+    requestUrl: URL,
     pathname: string
   ): Promise<void> {
+    // Presigned like a read: refuse an upload that is not signed, or an
+    // unauthenticated PUT could write arbitrary bytes anywhere under the
+    // content root. The read path here has always verified; the write path did
+    // not.
+    const signedUpload = await this.validateSignedAssetRequest(requestUrl)
+    if (!signedUpload.ok) {
+      res.writeHead(signedUpload.status, {
+        'content-type': 'text/plain; charset=utf-8',
+      })
+      res.end(signedUpload.body)
+      return
+    }
+
     const key = this.contentKey(pathname, content.uploadUrlPrefix)
     const targetPath = this.toTargetPath(content.localFileUploadPath, key)
 

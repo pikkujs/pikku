@@ -81,11 +81,17 @@ describe('createLocalContentRequestHandler', () => {
   test('refuses an upload whose key escapes the content directory', async () => {
     writeFileSync(join(tmpDir, '..', 'pikku-handler-secret.txt'), 'secret')
     try {
+      // Signed for the escaping path itself, so it clears the signature gate
+      // and the path-escape guard is what rejects it.
+      const signed = await content.signURL({
+        url: '/upload/bucket/..%2f..%2fpikku-handler-secret.txt',
+        dateLessThan: new Date(Date.now() + 60_000),
+      } as any)
       const response = await handler(
-        new Request(
-          'http://localhost/upload/bucket/..%2f..%2fpikku-handler-secret.txt',
-          { method: 'PUT', body: 'overwritten' }
-        )
+        new Request(`http://localhost${signed}`, {
+          method: 'PUT',
+          body: 'overwritten',
+        })
       )
       assert.equal(response?.status, 400)
       assert.equal(
@@ -102,6 +108,33 @@ describe('createLocalContentRequestHandler', () => {
       new Request('http://localhost/assets/bucket/..%2f..%2fanything.txt')
     )
     assert.equal(response?.status, 400)
+  })
+
+  test('refuses an unsigned PUT to the upload prefix', async () => {
+    const put = await handler(
+      new Request('http://localhost/upload/bucket/evil.bin', {
+        method: 'PUT',
+        body: 'attacker-controlled',
+      })
+    )
+    assert.equal(put?.status, 403, 'an upload URL must be signed like a read')
+  })
+
+  test('refuses a PUT whose signature was minted for a different key', async () => {
+    const { uploadUrl } = await content.getUploadURL({
+      bucket: 'bucket',
+      fileKey: 'legit/one.bin',
+      contentType: 'application/octet-stream',
+    } as any)
+    const query = uploadUrl.slice(uploadUrl.indexOf('?'))
+    // Same signature, a different target path.
+    const put = await handler(
+      new Request(`http://localhost/upload/bucket/other.bin${query}`, {
+        method: 'PUT',
+        body: 'payload',
+      })
+    )
+    assert.equal(put?.status, 403)
   })
 
   test('round-trips an upload and a signed read', async () => {
@@ -188,8 +221,13 @@ describe('createLocalContentRequestHandler', () => {
   })
 
   test('rejects a body over the size limit without writing it', async () => {
+    const { uploadUrl } = await content.getUploadURL({
+      bucket: 'bucket',
+      fileKey: 'big.bin',
+      contentType: 'application/octet-stream',
+    } as any)
     const response = await handler(
-      new Request('http://localhost/upload/bucket/big.bin', {
+      new Request(`http://localhost${uploadUrl}`, {
         method: 'PUT',
         body: Buffer.alloc(1024 * 1024 + 1),
       })

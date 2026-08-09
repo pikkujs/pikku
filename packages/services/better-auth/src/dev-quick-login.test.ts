@@ -58,10 +58,14 @@ function fakeHttpRequest(opts: {
   method: string
   path: string
   host?: string
+  xForwardedHost?: string
+  xForwardedFor?: string
 }) {
   const headers: Record<string, string> = {
     host: opts.host ?? 'localhost:7071',
   }
+  if (opts.xForwardedHost) headers['x-forwarded-host'] = opts.xForwardedHost
+  if (opts.xForwardedFor) headers['x-forwarded-for'] = opts.xForwardedFor
   return {
     header: (name: string) => headers[name.toLowerCase()],
     headers: () => headers,
@@ -91,6 +95,8 @@ async function run(opts: {
   method: string
   path?: string
   host?: string
+  xForwardedHost?: string
+  xForwardedFor?: string
   auth: any
   scopeService?: any
   warnings?: string[]
@@ -111,6 +117,8 @@ async function run(opts: {
     method: opts.method,
     path: opts.path ?? '/api/auth/dev/quick-login',
     host: opts.host,
+    xForwardedHost: opts.xForwardedHost,
+    xForwardedFor: opts.xForwardedFor,
   })
   return (await func(services, {}, { http: { request } } as any)) as Response
 }
@@ -118,6 +126,16 @@ async function run(opts: {
 describe('dev quick login', () => {
   afterEach(() => {
     delete process.env[FLAG]
+    delete process.env.NODE_ENV
+  })
+
+  test('is inert in production even when the flag is set', async () => {
+    process.env[FLAG] = 'true'
+    process.env.NODE_ENV = 'production'
+    const { auth, calls } = createFakeAuth({})
+    const response = await run({ method: 'POST', auth })
+    assert.equal(response.status, 404, 'must fall through to better-auth')
+    assert.equal(calls.signIn.length, 0, 'must not mint a dev-admin session')
   })
 
   test('falls through to better-auth when the flag is not set', async () => {
@@ -219,5 +237,34 @@ describe('dev quick login', () => {
       auth,
     })
     assert.equal(response.status, 200)
+  })
+
+  test('a spoofed X-Forwarded-Host does not make a remote request local', async () => {
+    process.env[FLAG] = 'true'
+    const { auth, calls } = createFakeAuth({})
+    const { granted, scopeService } = createFakeScopeService()
+    const response = await run({
+      method: 'POST',
+      host: 'app.example.com',
+      xForwardedHost: 'localhost',
+      auth,
+      scopeService,
+    })
+    assert.equal(response.status, 404, 'must fall through to better-auth')
+    assert.equal(calls.signIn.length, 0, 'must not mint a dev-admin session')
+    assert.deepEqual(granted, [], 'must not grant the admin scope')
+  })
+
+  test('a proxied request (X-Forwarded-For present) is refused even with a loopback Host', async () => {
+    process.env[FLAG] = 'true'
+    const { auth, calls } = createFakeAuth({})
+    const response = await run({
+      method: 'POST',
+      host: 'localhost:7071',
+      xForwardedFor: '203.0.113.7',
+      auth,
+    })
+    assert.equal(response.status, 404)
+    assert.equal(calls.signIn.length, 0)
   })
 })

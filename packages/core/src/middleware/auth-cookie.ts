@@ -7,6 +7,27 @@ import { getRelativeTimeOffsetFromNow } from '../time-utils.js'
  * Reads a JWT session from a cookie, and re-issues the cookie after the
  * request whenever the session changed (e.g. after login).
  */
+/** Standard JWT registered claims — present on a token even with no session. */
+const JWT_REGISTERED_CLAIMS = new Set([
+  'iat',
+  'exp',
+  'nbf',
+  'iss',
+  'aud',
+  'sub',
+  'jti',
+])
+
+/**
+ * Whether a decoded payload carries an actual session, as opposed to being
+ * absent or a bare JWT envelope of `{ iat, exp }`. True only for a non-null
+ * object with at least one key that is not a registered JWT claim.
+ */
+const hasSessionIdentity = (session: unknown): boolean => {
+  if (!session || typeof session !== 'object') return false
+  return Object.keys(session).some((key) => !JWT_REGISTERED_CLAIMS.has(key))
+}
+
 export const authCookie = pikkuMiddlewareFactory<{
   name: string
   options: SerializeOptions
@@ -32,7 +53,12 @@ export const authCookie = pikkuMiddlewareFactory<{
       const cookieValue = http.request.cookie(name)
       if (cookieValue && jwtService) {
         const userSession = await jwtService.decode(cookieValue)
-        if (userSession) {
+        // Not just truthy: a JWT of an absent session still decodes to a
+        // `{ iat, exp }` object, which is truthy and which the function runner
+        // would accept as a session. Require at least one claim that is not a
+        // standard JWT timestamp, so an identity-less token is treated as no
+        // session rather than as an authenticated one.
+        if (userSession && hasSessionIdentity(userSession)) {
           setSession?.(userSession)
         }
       }
@@ -45,7 +71,17 @@ export const authCookie = pikkuMiddlewareFactory<{
 
       if (hasSessionChanged?.()) {
         const currentSession = await getSession?.()
-        if (jwtService) {
+        // Logout path: `clearSession()` marks the session changed while leaving
+        // it absent. Re-signing that into a fresh, unexpired cookie would hand
+        // the browser a credential on the way out — so clear the cookie instead
+        // of minting one, and never call `encode` with an absent session.
+        if (!hasSessionIdentity(currentSession)) {
+          http.response.cookie(name, '', {
+            ...mergedOptions,
+            expires: new Date(0),
+            maxAge: 0,
+          })
+        } else if (jwtService) {
           http.response.cookie(
             name,
             await jwtService.encode(expiresIn, currentSession),
