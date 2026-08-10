@@ -9,13 +9,13 @@ import { closeWireServices } from '../../utils.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { runScheduledTask } from '../scheduler/scheduler-runner.js'
-import {
-  WorkflowStepNameNotString,
-  type RunLifecycleContext,
-  type WorkflowRunEngine,
-  type WorkflowRunExtension,
-} from './pikku-workflow-service.js'
-import type { PikkuWire } from '../../types/core.types.js'
+import { WorkflowStepNameNotString } from './workflow-errors.js'
+import type {
+  RunLifecycleContext,
+  WorkflowRunEngine,
+  WorkflowRunExtension,
+} from './workflow-run-engine.types.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
 import type { ScenarioPersonas } from '../../services/personas-service.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type {
@@ -66,7 +66,7 @@ export const createScenarioRunner = (
 type ScenarioHook = (
   services: any,
   data: any,
-  wire: PikkuWire
+  wire: PikkuRawWire
 ) => Promise<void> | void
 
 /**
@@ -311,7 +311,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   }
 
   public decorateRunWire(
-    wire: PikkuWire,
+    wire: PikkuRawWire,
     context: {
       runId: string
       workflowMeta: any
@@ -409,7 +409,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     phase: 'before' | 'after',
     scenarioName: string,
     hook: ScenarioHook,
-    wire: PikkuWire,
+    wire: PikkuRawWire,
     data: unknown,
     packageName: string | null
   ): Promise<void> {
@@ -647,12 +647,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         )
       },
 
-      // Scenario steps: a named `pikkuScenarioStep` run as one durable step.
-      // `given`/`when` are sugar for each other, differing only in the
-      // prose a reporter renders. `then` is not: the phase is what decides
-      // whether the step's bindings are alternatives or witnesses, so the same
-      // step function called two ways runs differently. See
-      // {@link resolveScenarioSurfaces}.
+      // knowledge: decisions/internals/scenario-given-and-when-are-sugar-but-then-is-not.md
       given: (stepName, stepFunc, data, options) =>
         this.scenarioStep(
           'given',
@@ -695,8 +690,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     data?: any,
     options?: ScenarioStepOptions
   ): Promise<any> {
-    const { runId, workflowName, addonNamespace, workflowWire, rpcService } =
-      context
+    const { runId, workflowName, addonNamespace, workflowWire } = context
     // Also the guard for `then` being a wire member: an accidental
     // `await scenario` calls it with a resolve function, which lands here as a
     // loud, named error instead of a silent hang.
@@ -726,11 +720,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       stepName,
       async () => {
         const runOnSurface = async (surface: ScenarioSurface) => {
-          const wire: PikkuWire = {
+          // No `rpc` yet — runPikkuFunc attaches it lazily for the invocation.
+          const wire: PikkuRawWire = {
             workflow: workflowWire,
             scenario: workflowWire,
-            rpc: rpcService?.wire?.rpc,
-            session: rpcService?.wire?.session,
             pikkuUserId: workflowWire.pikkuUserId,
             actors: this.runActors.get(runId),
             scenarioStep: {

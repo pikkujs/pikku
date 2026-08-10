@@ -11,6 +11,7 @@ caller is entitled to assume.
 
 <!-- pikku:knowledge-index -->
 - [A secret that fails to decrypt fails the whole read](a-secret-that-fails-to-decrypt-fails-the-whole-read.md) — getSecrets throws naming the key and its key_version rather than omitting the row, because a silent omission surfaces as an unrelated failure much later
+- [A workflow's wire is built from the run record, not from the RPC service](a-workflow-wire-is-built-from-the-run-not-from-the-rpc-service.md) — The RPC service exposes no wire, so every rpcService.wire read was undefined; the run record is the only thing that carries the caller across a step boundary
 - [An actor conversation starts from a seeded kickoff message](actor-flow-conversations-seed-a-hidden-kickoff-message.md) — The actor's first turn needs a non-empty message list because providers reject an empty prompt; the seed is an instruction and stays out of the transcript
 - [The actor-flow conversation engine only sees a transport-agnostic target driver](actor-flow-drives-the-target-through-a-transport-seam.md) — The engine never imports the agent runner; the target is injected as run/approve, so scenarios exercise the real wire path
 - [An actor-flow verdict is the persona's self-evaluation, not an assertion](actor-flow-verdicts-are-llm-self-evaluations.md) — The engine returns what the actor judged plus the transcript; deterministic checks stay with the caller

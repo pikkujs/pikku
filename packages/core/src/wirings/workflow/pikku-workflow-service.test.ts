@@ -8,8 +8,8 @@ import { addWorkflow } from './dsl/workflow-runner.js'
 import {
   WorkflowApprovalResolvedError,
   WorkflowSuspendedException,
-  type PikkuWorkflowWire,
-} from './pikku-workflow-service.js'
+} from './workflow-errors.js'
+import type { PikkuWorkflowWire } from './workflow.types.js'
 
 describe('pikku-workflow-service worker registration', () => {
   test('registers sleeper function metadata after wireQueueWorkers', () => {
