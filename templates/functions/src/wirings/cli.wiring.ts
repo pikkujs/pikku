@@ -15,6 +15,7 @@ import {
 
 wireCLI({
   program: 'todo-cli',
+  auth: false,
   commands: {
     list: pikkuCLICommand({
       func: listTodos,
