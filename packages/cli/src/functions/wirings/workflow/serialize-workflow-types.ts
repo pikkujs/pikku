@@ -17,7 +17,7 @@ import {
 import type { PikkuWorkflowWire, PikkuScenarioWire, WorkflowStepOptions, ScenarioStepOptions } from '@pikku/core/workflow'
 
 export { WorkflowCancelledException }
-import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices } from '${functionTypesImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
@@ -79,8 +79,12 @@ export interface TypedScenarioSteps {
   ): Promise<FlattenedScenarioStepMap[K]['output']>
 }
 
-export type TypedScenario = TypedWorkflow &
-  Omit<PikkuScenarioWire, keyof PikkuWorkflowWire | keyof TypedScenarioSteps> &
+/**
+ * \`Out\` types \`scenario.context\` — the scratch the body shares with its
+ * \`before\`/\`after\` hooks — as a partial of what a completed run produces.
+ */
+export type TypedScenario<Out = unknown> = TypedWorkflow &
+  Omit<PikkuScenarioWire<Out>, keyof PikkuWorkflowWire | keyof TypedScenarioSteps> &
   TypedScenarioSteps
 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -94,10 +98,16 @@ export type PikkuFunctionWorkflow<
   Out = never
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
+/**
+ * \`Ctx\` types \`scenario.context\` and defaults to the function's own output,
+ * which is what a scenario body wants. A hook returns void but shares the
+ * scenario's context, so it passes the scenario's output here instead.
+ */
 export type PikkuFunctionScenario<
   In = unknown,
-  Out = never
-> = PikkuFunctionSessionless<In, Out, 'scenario' | 'actors'>
+  Out = never,
+  Ctx = Out
+> = PikkuFunctionSessionless<In, Out, 'scenario' | 'actors', WiredServices, Ctx>
 
 export type PikkuWorkflowConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -178,14 +188,17 @@ export type PikkuScenarioConfigWithSchema<
    * on the ladder. Throwing skips the body and fails the run; \`after\` still
    * runs.
    */
-  before?: PikkuScenarioHook<InputSchema>
+  before?: PikkuScenarioHook<InputSchema, OutputSchema>
   /**
    * Always runs after the scenario body, in a \`finally\`, whether it passed or
    * failed. Throwing fails a run that would otherwise have passed; on an
    * already-failed run it attaches as the \`cause\` and never replaces the
    * original error.
+   *
+   * Reads \`scenario.context\` for whatever the body managed to record before it
+   * stopped — that is how teardown learns the ids a failed run created.
    */
-  after?: PikkuScenarioHook<InputSchema>
+  after?: PikkuScenarioHook<InputSchema, OutputSchema>
   /**
    * Why this scenario is held out of a default run, stated where the scenario
    * is. The scenario still appears in the plan and is reported as skipped
@@ -198,12 +211,18 @@ export type PikkuScenarioConfigWithSchema<
 /**
  * A scenario lifecycle hook: the scenario's own \`(services, data, wire)\`
  * signature with its result discarded.
+ *
+ * The hook returns void but shares the scenario's \`context\`, so the output
+ * schema types \`scenario.context\` while the return type stays \`void\` — a hook
+ * is setup and teardown, never a step, and nothing it returns is recorded.
  */
 export type PikkuScenarioHook<
-  InputSchema extends StandardSchemaV1 | undefined = undefined
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = PikkuFunctionScenario<
   InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
-  void
+  void,
+  OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
 >
 
 /**
@@ -211,9 +230,9 @@ export type PikkuScenarioHook<
  * registered, so this exists purely to give an inline hook a call site to be
  * contextually typed from, the way every other pikku primitive is.
  */
-export function pikkuScenarioHook<In = unknown>(
-  hook: PikkuFunctionScenario<In, void>
-): PikkuFunctionScenario<In, void> {
+export function pikkuScenarioHook<In = unknown, Ctx = unknown>(
+  hook: PikkuFunctionScenario<In, void, Ctx>
+): PikkuFunctionScenario<In, void, Ctx> {
   return hook
 }
 

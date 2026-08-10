@@ -383,7 +383,11 @@ export type PikkuWire<
   MCPTools extends string | never = never,
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
-  TypedScenario extends PikkuScenarioWire | never = PikkuScenarioWire,
+  // Defaulted to `any` rather than to `Out`: the emitted `TypedScenario<Out>`
+  // supplies the real context, while `PikkuWire`'s own defaults are what other
+  // generics constrain against — and a constraint that pinned the context to
+  // `Out` would reject every wire whose scenario output is anything else.
+  TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
   TypedActors extends ScenarioPersonas = ScenarioPersonas,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */

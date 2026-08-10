@@ -513,12 +513,21 @@ export const scenarioRun = pikkuSessionlessFunc<
      * grouping, not something durable. It gets the same three arguments a
      * scenario body gets, the CLI's own singletons included, and its result is
      * discarded.
+     *
+     * The context is *feature*-scoped: `before` and `after` of one feature share
+     * it, so setup can hand teardown the ids it created. It is deliberately not
+     * the context the scenarios in the group see — sharing one bag across a
+     * group is the invisible coupling a Cucumber world had.
      */
     const singletonServices = pikkuState(null, 'package', 'singletonServices')
     const runFeatureHook = async (
-      hook: NonNullable<ScenarioPlanGroup['before']>
+      hook: NonNullable<ScenarioPlanGroup['before']>,
+      context: Record<string, unknown>
     ) => {
-      await hook(singletonServices as any, undefined, { actors } as any)
+      await hook(singletonServices as any, undefined, {
+        actors,
+        scenario: { context },
+      } as any)
     }
 
     const hookFailures: string[] = []
@@ -625,10 +634,12 @@ export const scenarioRun = pikkuSessionlessFunc<
           : entry.scenarioName
       }
 
+      const featureContext: Record<string, unknown> = {}
+
       let beforeError: any
       if (group.before) {
         try {
-          await runFeatureHook(group.before)
+          await runFeatureHook(group.before, featureContext)
         } catch (e: any) {
           beforeError = e
         }
@@ -654,7 +665,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       } finally {
         if (group.after) {
           try {
-            await runFeatureHook(group.after)
+            await runFeatureHook(group.after, featureContext)
           } catch (e: any) {
             hookFailures.push(
               `feature '${groupName}' after hook failed: ${e?.message ?? e}`

@@ -317,18 +317,28 @@ export const pikkuApprovalDescription = <In = unknown, RequiredServices extends 
  * @template In - The input type
  * @template Out - The output type that the function returns
  * @template RequiredServices - Services required by this function
+ * @template ScenarioOut - Types \`scenario.context\`. Only scenarios set it:
+ *   \`PikkuFunctionScenario\` passes the scenario's own output, and a *hook*
+ *   passes the output of the scenario it belongs to (it returns void itself).
+ *
+ *   It deliberately does NOT default to \`Out\`. That would make every ordinary
+ *   function's wire type vary with its return type, and a \`func\` written
+ *   against the \`PikkuFunction | PikkuFunctionSessionless\` union then loses
+ *   contextual typing — its parameters fall back to \`any\` and the assignment
+ *   fails with no hint as to why.
  */
 export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
   RequiredWires extends keyof PikkuWire = never,
-  RequiredServices extends SecretlessServices<Services> = WiredServices
+  RequiredServices extends SecretlessServices<Services> = WiredServices,
+  ScenarioOut = unknown
 > = CorePikkuFunctionSessionless<
     In,
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario, TypedPersonas>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario<ScenarioOut>, TypedPersonas>, RequiredWires>
   >
 
 /**
@@ -369,7 +379,11 @@ export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
   RequiredWires extends keyof PikkuWire = never,
-  PikkuFunc extends PikkuFunction<In, Out, RequiredWires, any> | PikkuFunctionSessionless<In, Out, RequiredWires, any> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
+  // \`any\` in the ScenarioOut slot, not \`unknown\`: a scenario body types its
+  // context as its own output, and a constraint pinned to one context type
+  // would refuse it. \`ScenarioContext<any>\` collapses to \`any\`, so the
+  // constraint stays open on that axis alone.
+  PikkuFunc extends PikkuFunction<In, Out, RequiredWires, any> | PikkuFunctionSessionless<In, Out, RequiredWires, any, any> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>
