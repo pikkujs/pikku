@@ -1,3 +1,104 @@
+## 0.12.100
+
+### Patch Changes
+
+- dad539c: **The generated CLI channel defaults to session-required.** It was emitted with
+  `auth: ${auth === true}`, so it was public unless the program explicitly opted
+  in — inverting `wireChannel`'s own `auth !== false` default. A CLI program that
+  declared no auth got an unauthenticated channel exposing every command. It now
+  emits `auth: ${auth !== false}` and the connect-time session guard under the
+  same condition, so a channel is public only when the program explicitly sets
+  `auth: false`. CWE-306.
+- ba422cd: Pin `@pikku/node-http-server` in the CLI bootstrap
+
+  The bootstrap installs published `@pikku/*` packages into a temp directory to run
+  codegen, and pinned only `@pikku/core`. `@pikku/node-http-server` arrived
+  transitively through the CLI's `^0.12.7`, so it floated to the newest release
+  while the pin held core still. When a release wave published node-http-server
+  0.12.8 — which imports `@pikku/core/node-host-resolver` — one second before core
+  0.12.79, the first core to export that subpath, every bootstrap died on a missing
+  export in a package the pin never named.
+
+- 6512384: feat: give scenarios a `scenario.context` their `before`/`after` hooks can read
+
+  A hook only ever received the run's _input_, so teardown could not reach an id
+  the scenario body minted — which is exactly what a failing run needs to clean
+  up. `wire.scenario.context` is a per-run scratch object shared by `before`, the
+  body and `after`. It is typed as a `Partial` of the scenario's output, because a
+  run that failed early has none of it.
+
+  ```ts
+  pikkuScenario<void, { projectId: string }>({
+    func: async (_services, _data, { scenario }) => {
+      const { projectId } = await scenario.when('creates a project', 'createsProject', …)
+      scenario.context.projectId = projectId
+      …
+    },
+    after: pikkuScenarioHook<void, { projectId: string }>(
+      async (_services, _data, { scenario, actors }) => {
+        if (scenario.context.projectId) {
+          await actors.admin.invoke('deleteProject', { projectId: scenario.context.projectId })
+        }
+      }
+    ),
+  })
+  ```
+
+  Deliberately not a world: it is scoped to a single run, and scenario _steps_
+  cannot reach it — state still flows between steps as return values.
+
+  Feature-level `before`/`after` get the same member, scoped to their feature, so
+  group setup can hand group teardown what it created. It is a separate object
+  from the scenarios' contexts: one bag shared across a group is the invisible
+  coupling a Cucumber world had.
+
+- 6dada45: fix(workflow,ai-agent): make a run's owner, entry node and step function authoritative
+
+  A graph run may only start at a node the graph declared in `meta.entryNodeIds`, and
+  the generated `POST /workflow/:workflowName/graph/:nodeId` route that let an HTTP
+  caller pick the entry node is gone. `startNode` stays for `PikkuTriggerService`,
+  which names a declared entry node anyway.
+
+  `StepState` now records the `rpcName` the workflow dispatched a step with, and the
+  step claim rejects a queue message naming a different function with
+  `WorkflowStepFunctionMismatchError` before mutating any status — a step runs under
+  the run owner's identity and without the `expose` gate, so the message must not
+  choose what runs.
+
+  `approveStep` takes the caller's session, and the generated status routes and
+  streams assert the same `assertWorkflowRunOwner` check: a run started through a
+  session may only be read and approved by that session's user. A run with no
+  recorded owner (trigger, scheduler, unauthenticated route) has nobody to compare
+  against and is still gated by the entrypoint's own `auth`/`permissions`.
+
+  `AIRunStateService.resolveApproval` is now a compare-and-swap returning whether
+  _this_ caller made the claim, and both agent resume paths run a tool only for the
+  approvals they claimed — concurrent approvals of one tool call no longer all
+  execute it.
+
+- Updated dependencies [41c1a95]
+- Updated dependencies [ce96383]
+- Updated dependencies [7e60867]
+- Updated dependencies [f8f1244]
+- Updated dependencies [a879ab3]
+- Updated dependencies [dcf20cb]
+- Updated dependencies [6512384]
+- Updated dependencies [e3b4c14]
+- Updated dependencies [dbff6ae]
+- Updated dependencies [efd0ed1]
+- Updated dependencies [cba98fb]
+- Updated dependencies [ce96383]
+- Updated dependencies [f8f1244]
+- Updated dependencies [f8f1244]
+- Updated dependencies [6e93a35]
+- Updated dependencies [6dada45]
+  - @pikku/core@0.12.80
+  - @pikku/inspector@0.12.56
+  - @pikku/schedule@0.12.5
+  - @pikku/better-auth@0.12.22
+  - @pikku/node-http-server@0.12.9
+  - @pikku/kysely@0.13.13
+
 ## 0.12.99
 
 ### Patch Changes
