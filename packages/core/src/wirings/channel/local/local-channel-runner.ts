@@ -213,7 +213,14 @@ export const runLocalChannel = async ({
       channelHandler.registerOnMessage(async (data) => {
         try {
           const result = await onMessage(data)
-          await channel.send(result)
+          // Guarded exactly as the connect path above is. A handler with nothing
+          // to say is normal — a gateway websocket's generated message handler
+          // always returns undefined — and sending that raised `send requires a
+          // non-empty message`, which surfaced as a channel that accepted a
+          // connection and then silently delivered nothing.
+          if (result !== undefined) {
+            await channel.send(result)
+          }
         } catch (e: any) {
           singletonServices.logger.error(e)
           const errorResponse = getErrorResponse(e)
