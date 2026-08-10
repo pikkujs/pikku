@@ -32,6 +32,7 @@ import {
   validateNoSecretAliasServices,
   validateSecretUsage,
   computeDiagnostics,
+  validateSchemaReferences,
   validateSchemaWiringSeparation,
   validateScenarioServices,
   validateScenarioSteps,
@@ -443,6 +444,12 @@ export const inspect = async (
 
     // Re-load addon schemas (generateAllSchemas replaces state.schemas)
     await loadAddonSchemas(logger, state)
+
+    // After the addon merge, not before: an addon supplies its own schemas here,
+    // and checking earlier would report every one of them as unresolved.
+    if (options.schemaConfig) {
+      validateSchemaReferences(logger, state)
+    }
 
     state.manifest.initial = options.manifest ?? null
     const contracts = extractContractsFromMeta(state.functions.meta)
