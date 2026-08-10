@@ -12,6 +12,15 @@ import type { SecretService } from '../services/secret-service.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
 import type { SessionStore } from '../services/session-store.js'
+import type { CoreUserSession } from '../types/core.types.js'
+
+/**
+ * A session as an application defines it: core's fields plus whatever else that
+ * application puts on its own session. `CoreUserSession` is deliberately
+ * minimal, so a conformance test that only ever stored its fields would not
+ * exercise what a real store has to round-trip.
+ */
+type AppSession = CoreUserSession & Record<string, unknown>
 
 export interface ServiceTestConfig {
   name: string
@@ -1141,7 +1150,10 @@ export function defineServiceTests(config: ServiceTestConfig): void {
       })
 
       test('set and get round-trip', async () => {
-        const session = { userId: 'user-1', organizationId: 'org-1' } as any
+        const session: AppSession = {
+          userId: 'user-1',
+          organizationId: 'org-1',
+        }
         await store.set('user-1', session)
 
         const result = await store.get('user-1')
@@ -1149,15 +1161,17 @@ export function defineServiceTests(config: ServiceTestConfig): void {
       })
 
       test('set overwrites previous session', async () => {
-        await store.set('user-2', { userId: 'user-2', role: 'admin' } as any)
-        await store.set('user-2', { userId: 'user-2', role: 'member' } as any)
+        const asAdmin: AppSession = { userId: 'user-2', role: 'admin' }
+        const asMember: AppSession = { userId: 'user-2', role: 'member' }
+        await store.set('user-2', asAdmin)
+        await store.set('user-2', asMember)
 
         const result = await store.get('user-2')
         assert.deepEqual(result, { userId: 'user-2', role: 'member' })
       })
 
       test('clear removes session', async () => {
-        await store.set('user-3', { userId: 'user-3' } as any)
+        await store.set('user-3', { userId: 'user-3' })
         assert.ok(await store.get('user-3'))
 
         await store.clear('user-3')

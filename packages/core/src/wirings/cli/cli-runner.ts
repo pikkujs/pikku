@@ -16,6 +16,7 @@ import type {
   CLIMeta,
 } from './cli.types.js'
 import type {
+  CoreConfig,
   CoreSingletonServices,
   CoreServices,
   CreateWireServices,
@@ -321,7 +322,8 @@ export async function runCLICommand({
     setState: (s) => {
       cliState = s
     },
-    getState: () => cliState as any,
+    // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
+    getState: () => cliState as never,
     clearState: () => {
       cliState = undefined
     },
@@ -372,7 +374,8 @@ export async function runCLICommand({
     if (result !== undefined && !onOutput) {
       const commandRenderer = programData?.renderers[commandId]
       const jsonMode =
-        (data as any).json === true || (data as any).output === 'json'
+        (data as { json?: unknown; output?: unknown }).json === true ||
+        (data as { json?: unknown; output?: unknown }).output === 'json'
       const finalRenderer: CorePikkuCLIRender<any> | undefined =
         jsonMode && commandRenderer !== undefined
           ? defaultJSONRenderer
@@ -491,7 +494,7 @@ export async function executeCLI({
 
     const config = createConfig
       ? await createConfig(new LocalVariablesService(), data)
-      : ({} as any)
+      : ({} as CoreConfig)
 
     const singletonServices = await createSingletonServices(config)
     pikkuState(null, 'package', 'singletonServices', singletonServices)

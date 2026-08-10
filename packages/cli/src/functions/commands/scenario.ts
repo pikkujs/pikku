@@ -6,6 +6,7 @@ import { InMemoryWorkflowService } from '@pikku/core/services'
 import { createHttpPersonas } from '@pikku/core/persona'
 import { PikkuScenarioService } from '@pikku/core/scenario'
 import { pikkuState, getAllPackageStates } from '@pikku/core/internal'
+import type { PikkuRPC } from '@pikku/core/rpc'
 import { resolveFeatureScenarios } from '@pikku/core/workflow'
 import type { CoreFeature, CoreWorkflow } from '@pikku/core/workflow'
 
@@ -378,13 +379,33 @@ export const scenarioRun = pikkuSessionlessFunc<
       workflowRunService: workflowService,
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
     } as any)
-    const guardRpc = {
-      rpcWithWire: async (rpcName: string) => {
-        throw new Error(
-          `Scenario tried to run '${rpcName}' as an internal step. Every workflow.do ` +
-            `in a scenario must carry { actor: actors.x } so it executes against ` +
-            `'${environment}' (${env.apiUrl}), not local services.`
-        )
+    const refuseInternal = (rpcName: string): never => {
+      throw new Error(
+        `Scenario tried to run '${rpcName}' as an internal step. Every workflow.do ` +
+          `in a scenario must carry { actor: actors.x } so it executes against ` +
+          `'${environment}' (${env.apiUrl}), not local services.`
+      )
+    }
+    // `rpcWithWire` is named alongside `PikkuRPC` rather than left to it: the
+    // workflow runner reaches for that member through an internally untyped
+    // path, so it is the one the guard actually has to answer, and the type
+    // that declares it publicly arrives later in this stack.
+    const guardRpc: PikkuRPC & {
+      rpcWithWire: (rpcName: string) => Promise<never>
+    } = {
+      depth: 0,
+      global: false,
+      invoke: async (rpcName: string) => refuseInternal(rpcName),
+      remote: async (rpcName: string) => refuseInternal(rpcName),
+      exposed: async (rpcName: string) => refuseInternal(rpcName),
+      rpcWithWire: async (rpcName: string) => refuseInternal(rpcName),
+      startWorkflow: async (name: string) => refuseInternal(name),
+      agent: {
+        run: async (name: string) => refuseInternal(name),
+        stream: async (name: string) => refuseInternal(name),
+        resume: async (runId: string) => refuseInternal(runId),
+        approve: async (runId: string) => refuseInternal(runId),
+        interrupt: async (runId: string) => refuseInternal(runId),
       },
     }
 

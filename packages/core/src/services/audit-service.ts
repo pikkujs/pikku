@@ -150,7 +150,7 @@ class DisabledInvocationAudit implements AuditLog {
     if (!this.warned) {
       this.warned = true
       // knowledge: decisions/security/a-dropped-audit-write-is-always-logged.md
-      const logger = (this.wire as any).logger ?? this.logger
+      const logger = this.wire.logger ?? this.logger
       logger?.warn?.(
         `audit.write() dropped for '${this.wire.functionId ?? 'unknown function'}' — the function has no audit config (set audit: true on it)`
       )
@@ -207,7 +207,7 @@ class InvocationAuditLog implements AuditLog {
         await this.service.audit(event)
       }
     } catch (error) {
-      const logger = (this.wire as any).logger ?? this.logger
+      const logger = this.wire.logger ?? this.logger
       logger?.warn?.('best-effort audit flush failed', error)
     }
   }

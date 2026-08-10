@@ -14,6 +14,13 @@ import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { resolveRemoteAddonToken } from './remote-addon-auth.js'
 
+/**
+ * The session for a wire: read through `getSession` when a runner attached one,
+ * otherwise whatever was placed on the wire directly.
+ */
+const resolveWireSession = async (wire: PikkuRawWire) =>
+  typeof wire.getSession === 'function' ? await wire.getSession() : wire.session
+
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
   constructor(rpcName: string) {
@@ -209,10 +216,7 @@ export class ContextAwareRPCService {
     } catch (e) {
       if (e instanceof RPCNotFoundError) {
         if (this.services.deploymentService) {
-          const session =
-            this.wire.getSession && typeof this.wire.getSession === 'function'
-              ? await this.wire.getSession()
-              : (this.wire as any).session
+          const session = await resolveWireSession(this.wire)
           return this.services.deploymentService.invoke(
             funcName,
             data,
@@ -405,10 +409,7 @@ export class ContextAwareRPCService {
       resolved = resolvePikkuFunction(rpcName, this.packageName)
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {
-        const session =
-          this.wire.getSession && typeof this.wire.getSession === 'function'
-            ? await this.wire.getSession()
-            : (this.wire as any).session
+        const session = await resolveWireSession(this.wire)
         return this.services.deploymentService.invoke(
           rpcName,
           data,
@@ -577,10 +578,7 @@ export class ContextAwareRPCService {
       )
     }
 
-    const session =
-      this.wire.getSession && typeof this.wire.getSession === 'function'
-        ? await this.wire.getSession()
-        : (this.wire as any).session
+    const session = await resolveWireSession(this.wire)
 
     return this.services.deploymentService.invoke(
       funcName,
@@ -630,7 +628,9 @@ export class PikkuRPCService<
         return serviceRPC.agent
       },
       rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
-    } as any
+      // `TypedRPC` is named by the caller from its generated RPC map. Nothing
+      // concrete can satisfy a type the caller has not chosen yet.
+    } as TypedRPC
   }
 }
 

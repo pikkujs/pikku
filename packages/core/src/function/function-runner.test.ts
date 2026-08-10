@@ -637,7 +637,7 @@ describe('runPikkuFunc - Integration Tests', () => {
           singletonServices: mockSingletonServices,
           data: () => ({}),
           auth: false,
-          wire: { session: { readonly: true } as any },
+          wire: { session: { readonly: true } },
         }),
       ReadonlySessionError
     )

@@ -354,7 +354,7 @@ function parseOptionValue(value: string, optionDef?: CLIOption): any {
     return parseFloat(value)
   }
 
-  if (optionDef.choices && !optionDef.choices.includes(value as any)) {
+  if (optionDef.choices && !optionDef.choices.includes(value as never)) {
     // Deliberately not an error here — applyOptionDefaults reports bad choices.
     return value
   }

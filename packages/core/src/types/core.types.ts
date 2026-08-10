@@ -298,6 +298,11 @@ export interface CoreUserSession {
    * Populated by whoever builds the session — core reads them, never fetches.
    */
   scopes?: string[]
+  /**
+   * Restricts the session to functions declared `readonly`. The function runner
+   * throws `ReadonlySessionError` for anything else.
+   */
+  readonly?: boolean
 }
 
 /**
@@ -386,6 +391,11 @@ export type PikkuWire<
 } & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
+  /**
+   * A logger scoped to this invocation, when a host attaches one. Core never
+   * sets it; services that log fall back to the singleton logger.
+   */
+  logger: Logger
   /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
   traceId: string
   functionId: string

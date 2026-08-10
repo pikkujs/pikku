@@ -32,9 +32,11 @@ export const resolveFeatureScenarios = (
     const scenarios = feature.scenarios ?? []
     for (let index = 0; index < scenarios.length; index++) {
       const entry = scenarios[index]!
-      const paired =
+      const pairing =
         typeof entry === 'object' && entry !== null && 'scenario' in entry
-      const config = paired ? (entry as any).scenario : entry
+          ? (entry as { scenario: unknown; data?: unknown })
+          : undefined
+      const config = pairing ? pairing.scenario : entry
       const scenarioName = nameByConfig.get(config)
       if (!scenarioName) {
         unresolved.push({ featureId, index })
@@ -44,10 +46,11 @@ export const resolveFeatureScenarios = (
         featureId,
         featureName: feature.name ?? featureId,
         scenarioName,
-        data: paired ? (entry as any).data : undefined,
+        data: pairing?.data,
         tags: [
           ...new Set([
-            ...((registrations.get(scenarioName)?.func as any)?.tags ?? []),
+            ...((registrations.get(scenarioName)?.func as { tags?: string[] })
+              ?.tags ?? []),
             ...(feature.tags ?? []),
           ]),
         ],

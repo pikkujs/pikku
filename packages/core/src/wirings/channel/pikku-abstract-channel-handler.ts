@@ -34,7 +34,8 @@ export abstract class PikkuAbstractChannelHandler<
         setState: (s) => {
           channelState = s
         },
-        getState: () => channelState as any,
+        // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
+        getState: () => channelState as never,
         clearState: () => {
           channelState = undefined
         },

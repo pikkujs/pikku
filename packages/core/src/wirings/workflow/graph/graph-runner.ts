@@ -211,7 +211,7 @@ function isDataRef(value: unknown): value is { $ref: string; path?: string } {
     typeof value === 'object' &&
     value !== null &&
     '$ref' in value &&
-    typeof (value as any).$ref === 'string'
+    typeof (value as { $ref?: unknown }).$ref === 'string'
   )
 }
 
@@ -227,7 +227,7 @@ function isTemplate(value: unknown): value is TemplateValue {
     typeof value === 'object' &&
     value !== null &&
     '$template' in value &&
-    typeof (value as any).$template === 'object'
+    typeof (value as { $template?: unknown }).$template === 'object'
   )
 }
 

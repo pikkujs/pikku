@@ -206,7 +206,7 @@ export const runLocalChannel = async ({
 
       const { onMessage, onBinaryMessage } = processMessageHandlers(
         services,
-        channelConfig as any,
+        channelConfig,
         channelHandler,
         userSession
       )

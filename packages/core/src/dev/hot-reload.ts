@@ -26,7 +26,7 @@ const isFunctionConfig = (
     typeof value === 'object' &&
     value !== null &&
     'func' in value &&
-    typeof (value as any).func === 'function'
+    typeof (value as { func?: unknown }).func === 'function'
   )
 }
 
@@ -104,12 +104,7 @@ export async function pikkuDevReloader(
       return
     }
 
-    // Register every function-config export, replacing known functions and
-    // adding new ones. Write into the map captured at startup, NOT pikkuState's
-    // current one: a dev-server watcher may have temporarily swapped in a
-    // codegen-scoped map, whose writes are discarded when it restores.
-    // Schemas are NOT touched here: `input`/`output` hold raw zod schemas while
-    // the schema map carries codegen JSON schemas; mixing them crashed reloads.
+    // knowledge: decisions/internals/hot-reload-writes-into-the-function-map-captured-at-startup.md
     for (const [exportName, exportValue] of Object.entries(mod)) {
       if (!isFunctionConfig(exportValue)) continue
       const isNew = !functionsMap.has(exportName)

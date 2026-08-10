@@ -3,6 +3,7 @@ import { NotFoundError, UnauthorizedError } from '../../errors/errors.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { httpRouter } from '../http/routers/http-router.js'
+import type { CoreHTTPFunctionWiring } from '../http/http.types.js'
 import type {
   CoreGateway,
   GatewayAdapter,
@@ -50,7 +51,7 @@ const registerGatewayHandler = (config: CoreGateway): string => {
     outputSchemaName: declared?.outputSchemaName ?? null,
     sessionless: declared?.sessionless ?? true,
   }
-  addFunction(funcId, config.func as any)
+  addFunction(funcId, config.func)
   return funcId
 }
 
@@ -99,7 +100,7 @@ export const wireGateway = (config: CoreGateway): void => {
       break
     default:
       throw new Error(
-        `Unknown gateway type '${(config as any).type}' for gateway '${config.name}'`
+        `Unknown gateway type '${config.type}' for gateway '${config.name}'`
       )
   }
 }
@@ -118,7 +119,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
     func: createWebhookPostHandler(config),
   }
 
-  addFunction(postFuncId, postHandler as any)
+  addFunction(postFuncId, postHandler)
 
   if (!routes.has('post')) {
     routes.set('post', new Map())
@@ -128,7 +129,10 @@ const wireWebhookGateway = (config: CoreGateway): void => {
     route,
     func: postHandler,
     auth: false,
-  } as any)
+    // A gateway handler takes (services, data, wire) rather than a pikku
+    // function's shape, so it never matches CorePikkuFunctionConfig. It is only
+    // ever invoked through runPikkuFunc, which is what makes that safe.
+  } as unknown as CoreHTTPFunctionWiring<unknown, unknown, string>)
 
   // knowledge: decisions/internals/gateway-adapters-resolve-lazily-and-are-promise-cached.md
   if (typeof adapter === 'function' || adapter.verifyWebhook) {
@@ -139,7 +143,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
       func: createWebhookVerifyHandler(config),
     }
 
-    addFunction(verifyFuncId, verifyHandler as any)
+    addFunction(verifyFuncId, verifyHandler)
 
     if (!routes.has('get')) {
       routes.set('get', new Map())
@@ -151,7 +155,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
       auth: false,
       // knowledge: decisions/internals/gateway-webhook-challenges-echo-bytes-not-json.md
       returnsJSON: false,
-    } as any)
+    } as unknown as CoreHTTPFunctionWiring<unknown, unknown, string>)
   }
 
   httpRouter.reset()
@@ -187,17 +191,17 @@ const createWebhookPostHandler = (config: CoreGateway) => {
       platform: adapter.name,
       send: (msg: GatewayOutboundMessage) => adapter.send(parsed.senderId, msg),
     }
-    ;(wire as any).gateway = gateway
+    wire.gateway = gateway
 
     // Gateway middleware runs outside the gate so it can establish the session the gate checks.
     const invoke = async () => {
-      await bridgeMiddlewareSession(wire as any)
+      await bridgeMiddlewareSession(wire)
       return await runPikkuFunc('gateway', name, handlerFuncId, {
         singletonServices: services,
         data: () => parsed,
         auth: config.auth,
         inheritedMiddleware,
-        wire: wire as any,
+        wire,
       })
     }
 
@@ -275,9 +279,12 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
     name,
     route,
     gateway: true,
+    input: null,
     connect: { pikkuFuncId: connectFuncId },
+    disconnect: null,
     message: { pikkuFuncId: messageFuncId },
-  } as any
+    messageWirings: {},
+  }
 
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
   const handlerFuncId = registerGatewayHandler(config)
@@ -287,7 +294,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
     auth: false,
     func: async (services: any, _data: unknown, wire: PikkuWire) => {
       const adapter = await resolveGatewayAdapter(config, services)
-      ;(wire as any).gateway = {
+      wire.gateway = {
         gatewayName: name,
         senderId: '',
         platform: adapter.name,
@@ -296,7 +303,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
         },
       } satisfies PikkuGateway
     },
-  } as any)
+  })
 
   addFunction(messageFuncId, {
     auth: false,
@@ -313,16 +320,16 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
           wire.channel?.send(msg)
         },
       }
-      ;(wire as any).gateway = gateway
+      wire.gateway = gateway
 
       const invoke = async () => {
-        await bridgeMiddlewareSession(wire as any)
+        await bridgeMiddlewareSession(wire)
         return await runPikkuFunc('gateway', name, handlerFuncId, {
           singletonServices: services,
           data: () => parsed,
           auth: config.auth,
           inheritedMiddleware,
-          wire: wire as any,
+          wire,
         })
       }
 
@@ -337,7 +344,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
         wire.channel?.send(result)
       }
     },
-  } as any)
+  })
 
   // knowledge: decisions/internals/gateway-wiring-is-a-meta-wiring-over-http-and-channels.md
   channels.set(name, {
@@ -346,7 +353,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
     auth: false,
     onConnect: { func: async () => {} },
     onMessage: { func: async () => {} },
-  } as any)
+  })
 
   httpRouter.reset()
 }
@@ -377,7 +384,7 @@ export const createListenerMessageHandler = (
       platform: adapter.name,
       send: (msg: GatewayOutboundMessage) => adapter.send(parsed.senderId, msg),
     }
-    ;(wire as any).gateway = gateway
+    wire.gateway = gateway
 
     const invoke = async () => {
       await bridgeMiddlewareSession(wire)
@@ -390,10 +397,11 @@ export const createListenerMessageHandler = (
       })
     }
 
+    // knowledge: decisions/internals/gateway-listener-middleware-runs-without-an-rpc-on-the-wire.md
     const result: any = userMiddleware?.length
       ? await runMiddleware(
           singletonServices,
-          wire as any,
+          wire as PikkuWire,
           userMiddleware,
           invoke
         )

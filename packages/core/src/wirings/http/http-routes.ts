@@ -1,4 +1,5 @@
 import type {
+  CoreHTTPFunctionWiring,
   HTTPRouteConfig,
   HTTPRouteMap,
   HTTPRouteContract,
@@ -84,7 +85,9 @@ function registerRoute(
     timeout: route.timeout,
     headers: route.headers,
     sse: route.sse,
-  } as any)
+    // `CoreHTTPFunctionWiring` is discriminated by `method`, and a group builds
+    // its routes from a method chosen at runtime — no arm can be narrowed to.
+  } as CoreHTTPFunctionWiring<unknown, unknown, string>)
 }
 
 function isRouteConfig(value: unknown): value is HTTPRouteConfig {

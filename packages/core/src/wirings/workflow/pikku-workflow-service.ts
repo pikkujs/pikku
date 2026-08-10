@@ -774,7 +774,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         const serialized: SerializedError = {
           message: error.message,
           stack: error.stack,
-          code: (error as any).code,
+          code: (error as { code?: string }).code,
           expected: isExpectedError(error),
         }
         return mirror.setStepError(stepId, serialized)
@@ -796,7 +796,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       (mirror, newStep) =>
         mirror.createRetryAttempt(failedStepId, {
           ...newStep,
-          stepName: (newStep as any).stepName ?? '',
+          stepName: (newStep as { stepName?: string }).stepName ?? '',
         })
     )
   }

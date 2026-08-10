@@ -163,10 +163,7 @@ export async function runAIAgent(
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
 
-  // History records what the model was asked, which for a spoken turn is the
-  // transcript rather than the base64 audio that arrived — see the same note on
-  // the streaming path. Identity-checked, because a middleware may legitimately
-  // replace the message list with something unrelated to this turn.
+  // knowledge: decisions/internals/thread-history-records-the-transcript-not-the-audio.md
   const lastModified = modifiedMessages[modifiedMessages.length - 1]
   const persistedUserMessage =
     lastModified?.id === userMessage.id ? lastModified : userMessage
@@ -181,10 +178,7 @@ export async function runAIAgent(
     updatedAt: new Date(),
   })
 
-  // Registered on the same terms as `streamAIAgent`. A run created here is
-  // visible to `interruptAIAgent` through `aiRunState` either way, so skipping
-  // this would leave that call finding the run, passing the ownership check and
-  // then failing to stop it — reported as if it were running on another host.
+  // knowledge: decisions/internals/a-non-streaming-agent-run-registers-with-airunstate-too.md
   const interruptHandle = registerInterruptibleRun(runId)
   runnerParams.abortSignal = interruptHandle.signal
   runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
@@ -385,10 +379,7 @@ export async function runAIAgent(
       usage: totalUsage,
     }
   } catch (error) {
-    // An interrupt is not a failure, so it skips the `onError` hooks and never
-    // becomes an `errorMessage`. Unlike the streaming path there is no partial
-    // reply to hand back — nothing was delivered — so the caller gets a typed
-    // throw it can tell apart from a provider outage instead of a result.
+    // knowledge: decisions/internals/an-agent-interrupt-is-not-a-failure.md
     const interruption = interruptHandle.interruption
     if (interruption || isAbortError(error)) {
       await aiRunState.updateRun(runId, { status: 'interrupted' })
@@ -832,7 +823,7 @@ async function continueAfterToolResultSync(
       run.threadId,
       run.resourceId,
       memoryConfig,
-      null as any,
+      null,
       {
         ...result,
         text: outputText,

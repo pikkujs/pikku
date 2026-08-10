@@ -47,8 +47,10 @@ export const runMiddleware = async <
   let result: any
   const dispatch = async (index: number): Promise<any> => {
     if (sorted && index < sorted.length) {
-      return await sorted[index]!(services as any, wire, () =>
-        dispatch(index + 1)
+      return await sorted[index]!(
+        services as Parameters<Middleware>[0],
+        wire,
+        () => dispatch(index + 1)
       )
     } else if (main) {
       result = await main()

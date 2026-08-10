@@ -65,7 +65,7 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
     for (const [nodeId, def] of Object.entries(nodes) as [string, any][]) {
       result[nodeId] = {
         func: funcMap[nodeId] as string,
-        input: def?.input as any,
+        input: def?.input,
         next: def?.next,
         onError: def?.onError,
         retries: def?.retries,

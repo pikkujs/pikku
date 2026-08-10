@@ -40,7 +40,7 @@ export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
             if (
               parsed &&
               typeof parsed === 'object' &&
-              Object.keys(parsed as any).length > 0
+              Object.keys(parsed as object).length > 0
             ) {
               let reconstructed: string
               if (contentType.includes('application/x-www-form-urlencoded')) {

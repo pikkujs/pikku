@@ -4,7 +4,7 @@ import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
 } from '../wirings/channel/channel-middleware-runner.js'
-import { runPermissions } from '../permissions.js'
+import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
 import { pikkuState } from '../pikku-state.js'
 import {
@@ -248,6 +248,28 @@ export const runPikkuFunc = async <In = any, Out = any>(
     invocationWire,
     'rpc'
   )
+
+  // knowledge: decisions/internals/core-function-runner-restores-the-wire-fields-it-overwrites.md
+  const restoreInvocationWire = () => {
+    if (previousRpcDescriptor) {
+      Object.defineProperty(invocationWire, 'rpc', previousRpcDescriptor)
+    }
+    restoreField('functionId', previousFunctionId)
+    restoreField('audit', previousAudit)
+    restoreField('addonNamespace', previousAddonNamespace)
+  }
+
+  function restoreField<K extends 'functionId' | 'audit' | 'addonNamespace'>(
+    key: K,
+    previous: PikkuWire[K]
+  ) {
+    if (previous === undefined) {
+      delete invocationWire[key]
+    } else {
+      invocationWire[key] = previous
+    }
+  }
+
   invocationWire.functionId = resolvedFunctionId
   invocationWire.audit = resolvedAuditConfig
   // Track which addon instance is executing so intra-addon sibling calls
@@ -294,7 +316,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
-    if ((session as any)?.readonly && !funcMeta.readonly) {
+    if (session?.readonly && !funcMeta.readonly) {
       throw new ReadonlySessionError()
     }
 
@@ -347,7 +369,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
             resolvedSingletonServices,
             'a permission'
           ) as CoreSingletonServices),
-      wire: invocationWire as any,
+      // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
+      wire: invocationWire as PermissionWire,
       data: actualData,
       packageName,
     })
@@ -435,47 +458,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
         executeFunction
       )) as Out
     } finally {
-      if (previousRpcDescriptor) {
-        Object.defineProperty(invocationWire, 'rpc', previousRpcDescriptor)
-      }
-      if (previousFunctionId === undefined) {
-        delete (invocationWire as any).functionId
-      } else {
-        invocationWire.functionId = previousFunctionId
-      }
-      if (previousAudit === undefined) {
-        delete (invocationWire as any).audit
-      } else {
-        invocationWire.audit = previousAudit
-      }
-      if (previousAddonNamespace === undefined) {
-        delete (invocationWire as any).addonNamespace
-      } else {
-        invocationWire.addonNamespace = previousAddonNamespace
-      }
+      restoreInvocationWire()
     }
   }
 
   try {
     return (await executeFunction()) as Out
   } finally {
-    if (previousRpcDescriptor) {
-      Object.defineProperty(invocationWire, 'rpc', previousRpcDescriptor)
-    }
-    if (previousFunctionId === undefined) {
-      delete (invocationWire as any).functionId
-    } else {
-      invocationWire.functionId = previousFunctionId
-    }
-    if (previousAudit === undefined) {
-      delete (invocationWire as any).audit
-    } else {
-      invocationWire.audit = previousAudit
-    }
-    if (previousAddonNamespace === undefined) {
-      delete (invocationWire as any).addonNamespace
-    } else {
-      invocationWire.addonNamespace = previousAddonNamespace
-    }
+    restoreInvocationWire()
   }
 }

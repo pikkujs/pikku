@@ -1,10 +1,9 @@
 import { NotFoundError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
-import type { CorePikkuPermission } from '../../function/functions.types.js'
+import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
 import type { SessionService } from '../../services/user-session-service.js'
-import type { CorePikkuMiddleware } from '../../types/core.types.js'
 import { httpRouter } from '../http/routers/http-router.js'
 import type {
   ChannelMeta,
@@ -13,19 +12,34 @@ import type {
   RunChannelParams,
 } from './channel.types.js'
 
+type HandlerConfig = CorePikkuFunctionConfig<any, any>
+
+/**
+ * The config to register for a channel handler: the handler itself when it is a
+ * direct function config, or its inner `func` when it is a wrapper.
+ *
+ * knowledge: decisions/internals/channel-message-handlers-accept-three-config-shapes.md
+ */
+const registeredHandler = (handler: unknown): HandlerConfig => {
+  const candidate = handler as { func?: unknown }
+  return typeof candidate.func === 'function'
+    ? (handler as HandlerConfig)
+    : (candidate.func as HandlerConfig)
+}
+
 export const wireChannel = <
   In,
   Channel extends string,
-  PikkuPermission extends CorePikkuPermission<In>,
-  PikkuMiddleware extends CorePikkuMiddleware,
-  ChannelFunction,
+  ChannelConnect,
+  ChannelDisconnect,
+  ChannelFunctionMessage,
 >(
   channel: CoreChannel<
     In,
     Channel,
-    PikkuPermission,
-    PikkuMiddleware,
-    ChannelFunction
+    ChannelConnect,
+    ChannelDisconnect,
+    ChannelFunctionMessage
   >
 ) => {
   const channelsMeta = pikkuState(null, 'channel', 'meta')
@@ -38,19 +52,23 @@ export const wireChannel = <
   }
 
   if (channel.onConnect && channelMeta.connect) {
-    addFunction(channelMeta.connect.pikkuFuncId, channel.onConnect as any)
+    addFunction(
+      channelMeta.connect.pikkuFuncId,
+      registeredHandler(channel.onConnect)
+    )
   }
 
   if (channel.onDisconnect && channelMeta.disconnect) {
-    addFunction(channelMeta.disconnect.pikkuFuncId, channel.onDisconnect as any)
+    addFunction(
+      channelMeta.disconnect.pikkuFuncId,
+      registeredHandler(channel.onDisconnect)
+    )
   }
 
   if (channel.onMessage && channelMeta.message?.pikkuFuncId) {
     addFunction(
       channelMeta.message.pikkuFuncId,
-      (channel.onMessage as any).func instanceof Function
-        ? channel.onMessage
-        : (channel.onMessage as any).func
+      registeredHandler(channel.onMessage)
     )
   }
 
@@ -63,17 +81,12 @@ export const wireChannel = <
         const wiringMeta = channelWirings[wiringKey]
         if (!wiringMeta) return
 
-        addFunction(
-          wiringMeta.pikkuFuncId,
-          (handler as any).func instanceof Function
-            ? handler
-            : (handler as any).func
-        )
+        addFunction(wiringMeta.pikkuFuncId, registeredHandler(handler))
       })
     })
   }
 
-  pikkuState(null, 'channel', 'channels').set(channel.name, channel as any)
+  pikkuState(null, 'channel', 'channels').set(channel.name, channel)
 }
 
 const getMatchingChannelConfig = (path: string) => {
