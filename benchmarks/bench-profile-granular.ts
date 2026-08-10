@@ -1,16 +1,18 @@
 import { setupBenchmarkRoutes } from './bench-shared.js'
 import { fetchData } from '@pikku/core/http'
 import { pikkuState, httpRouter } from '@pikku/core/ecosystem'
-import { UWSPikkuHTTPRequest } from '@pikku/uws-handler/src/uws-pikku-http-request.js'
-import { UWSPikkuHTTPResponse } from '@pikku/uws-handler/src/uws-pikku-http-response.js'
+import { UWSPikkuHTTPRequest } from '../packages/runtimes/uws-handler/src/uws-pikku-http-request.js'
+import { UWSPikkuHTTPResponse } from '../packages/runtimes/uws-handler/src/uws-pikku-http-response.js'
 
-// Direct imports from source for profiling (not normally exported)
-import { createWeakUID, closeWireServices } from '@pikku/core/src/utils.js'
-import { combineChannelMiddleware } from '@pikku/core/src/wirings/channel/channel-middleware-runner.js'
-import { combineMiddleware } from '@pikku/core/src/middleware-runner.js'
-import { runPermissions } from '@pikku/core/src/permissions.js'
-import { rpcService } from '@pikku/core/src/wirings/rpc/rpc-runner.js'
-import { PikkuSessionService } from '@pikku/core/src/services/user-session-service.js'
+// Profiling reaches past the package entry points on purpose: these are the hot
+// paths, and none of them is public API. Relative paths rather than
+// `@pikku/core/src/...`, which the package's `exports` map correctly refuses.
+import { createWeakUID, closeWireServices } from '../packages/core/src/utils.js'
+import { combineChannelMiddleware } from '../packages/core/src/wirings/channel/channel-middleware-runner.js'
+import { combineMiddleware } from '../packages/core/src/middleware-runner.js'
+import { runPermissions } from '../packages/core/src/permissions.js'
+import { rpcService } from '../packages/core/src/wirings/rpc/rpc-runner.js'
+import { PikkuSessionService } from '../packages/core/src/services/user-session-service.js'
 
 const ITERATIONS = 100_000
 
