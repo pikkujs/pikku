@@ -15,8 +15,16 @@
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "yarn build",
+    "api-report": "tsx scripts/generate-api-report.mts"
   },
+  "sideEffects": [
+    "./dist/errors/errors.js",
+    "./dist/wirings/rpc/rpc-runner.js",
+    "./dist/wirings/rpc/remote-addon-auth.js",
+    "./dist/wirings/workflow/workflow-errors.js",
+    "./dist/wirings/workflow/pikku-scenario-service.js"
+  ],
   "exports": {
     ".": "./dist/index.js",
     "./middleware": "./dist/middleware/index.js",
