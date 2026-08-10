@@ -22,6 +22,28 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
     assert.strictEqual(result['stripe'].displayName, 'Stripe')
   })
 
+  test('carries allowedHosts into the meta so the egress binding is enforced', () => {
+    const definitions = [
+      {
+        name: 'notion',
+        displayName: 'Notion',
+        secretId: 'NOTION_KEY',
+        allowedHosts: ['api.notion.com', '*.notion.com'],
+        sourceFile: 'a.ts',
+      },
+    ]
+    const result = validateAndBuildSecretDefinitionsMeta(
+      definitions as any,
+      new Map()
+    )
+    // assertSecretAllowedForHost reads allowedHosts off this meta; if it is
+    // dropped here the host binding silently permits every host.
+    assert.deepStrictEqual(result['notion']!.allowedHosts, [
+      'api.notion.com',
+      '*.notion.com',
+    ])
+  })
+
   test('should allow duplicate secretId with same schema', () => {
     const schemaLookup = new Map([
       ['schema1', { variableName: 'Schema', sourceFile: 'types.ts' }],

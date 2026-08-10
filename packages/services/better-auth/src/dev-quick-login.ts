@@ -14,8 +14,38 @@ const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 
 export const devQuickLoginEnabled = (): boolean => {
   if (typeof process === 'undefined') return false
+  // Never in production, whatever the flag says. Quick login provisions a
+  // fixed-credential root-admin account; `pikku serve`/`pikku dev` default the
+  // flag on, so a deploy that inherits that env must not carry the account with
+  // it. This is the last line behind the loopback gate, not a replacement for
+  // it.
+  if (process.env?.NODE_ENV === 'production') return false
   const v = process.env?.PIKKU_DEV_QUICK_LOGIN
   return v === 'true' || v === '1'
+}
+
+/**
+ * Headers a reverse proxy adds when it forwards a request. Their presence means
+ * the request did not arrive on a direct local connection, so quick login —
+ * which auto-provisions a root-admin session — must refuse regardless of what
+ * they claim. `forwarded` is the RFC 7239 form; the `x-forwarded-*` pair is the
+ * de-facto one nginx/Caddy/ELB emit.
+ */
+const PROXY_MARKERS = [
+  'forwarded',
+  'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-proto',
+]
+
+const hostnameOf = (hostHeader: string): string => {
+  try {
+    // Parse through URL so a port is stripped and an IPv6 `[::1]` authority
+    // normalises to `::1`, matching LOCAL_HOSTNAMES.
+    return new URL(`http://${hostHeader}`).hostname
+  } catch {
+    return ''
+  }
 }
 
 export const isDevQuickLoginRequest = (
@@ -24,10 +54,25 @@ export const isDevQuickLoginRequest = (
 ): boolean => {
   if (!devQuickLoginEnabled()) return false
   const url = new URL(request.url)
-  return (
-    url.pathname === `${basePath}${DEV_QUICK_LOGIN_SUBPATH}` &&
-    LOCAL_HOSTNAMES.has(url.hostname)
-  )
+  if (url.pathname !== `${basePath}${DEV_QUICK_LOGIN_SUBPATH}`) return false
+
+  // The trust decision must not come from a forgeable header. `url.hostname` is
+  // derived with X-Forwarded-Host taking precedence over Host (see
+  // toWebRequest), so a remote caller behind a proxy — or one simply setting
+  // the header — could present `localhost` and pass. Two rules replace it:
+  //
+  //   1. If any proxy-forwarding header is present, the request was relayed and
+  //      is not a direct local connection. Refuse.
+  //   2. Otherwise judge locality from the raw Host header alone, never the
+  //      forwarded one.
+  //
+  // A direct `curl http://127.0.0.1:port` sets neither forwarding header and a
+  // loopback Host, so the local-dev path is unaffected; a proxied request sets
+  // at least one and is turned away.
+  for (const marker of PROXY_MARKERS) {
+    if (request.headers.get(marker)) return false
+  }
+  return LOCAL_HOSTNAMES.has(hostnameOf(request.headers.get('host') ?? ''))
 }
 
 /**

@@ -6,6 +6,18 @@ import {
   REMOTE_SESSION_INFO,
 } from '../crypto-utils.js'
 
+const REMOTE_RPC_PREFIX = '/remote/rpc/'
+
+/**
+ * Whether this request targets the remote-RPC surface. Compared case-insensitively
+ * because the router matches routes that way (path-to-regexp defaults to
+ * `sensitive: false`), so `/Remote/RPC/fn` reaches the same handler as
+ * `/remote/rpc/fn`. A case-sensitive check here let a case-varied path slip
+ * past the trust gate and the token's `fn` binding while still being dispatched.
+ */
+const isRemoteRpcPath = (path: string): boolean =>
+  path.toLowerCase().startsWith(REMOTE_RPC_PREFIX)
+
 export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
   async ({ secrets, jwt }, { http, setSession }, next) => {
     if (!http?.request || !secrets) {
@@ -16,7 +28,7 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
     try {
       secret = (await secrets.getSecret('PIKKU_REMOTE_SECRET')).reveal()
     } catch {
-      if (http.request.path().startsWith('/remote/rpc/')) {
+      if (isRemoteRpcPath(http.request.path())) {
         throw new UnauthorizedError()
       }
       return next()
@@ -51,9 +63,11 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
       throw new UnauthorizedError()
     }
 
-    if (payload?.fn && http.request.path().startsWith('/remote/rpc/')) {
+    if (payload?.fn && isRemoteRpcPath(http.request.path())) {
+      // The prefix length is the same in any case, so slicing the raw path
+      // keeps the requested function name in its original case for the compare.
       const fn = decodeURIComponent(
-        http.request.path().slice('/remote/rpc/'.length)
+        http.request.path().slice(REMOTE_RPC_PREFIX.length)
       )
       if (fn && payload.fn !== fn) {
         throw new UnauthorizedError()

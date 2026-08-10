@@ -263,6 +263,49 @@ describe('pikkuRemoteAuthMiddleware', () => {
       )
     })
 
+    test('enforces the fn binding even when the path prefix varies in case', async () => {
+      // The router matches /remote/rpc/ case-insensitively, so /Remote/RPC/
+      // reaches the same handler. The fn-binding check must run for it too, or
+      // a token scoped to one function invokes any other by varying the case.
+      await assert.rejects(
+        () =>
+          pikkuRemoteAuthMiddleware(
+            {
+              secrets: createMockSecrets(TEST_SECRET),
+              jwt: createMockJWT({ aud: 'pikku-remote', fn: 'allowedFunc' }),
+            } as any,
+            {
+              http: {
+                request: createMockRequest(
+                  { authorization: 'Bearer valid-token' },
+                  '/Remote/RPC/otherFunc'
+                ),
+              },
+            } as any,
+            async () => {}
+          ),
+        (err: any) => err instanceof UnauthorizedError
+      )
+    })
+
+    test('requires authorization for a case-varied remote path when no secret is set', async () => {
+      // The no-secret branch must also treat /REMOTE/RPC/ as remote, or a
+      // misconfigured mesh silently serves it unauthenticated.
+      await assert.rejects(
+        () =>
+          pikkuRemoteAuthMiddleware(
+            { secrets: createMockSecrets(undefined) } as any,
+            {
+              http: {
+                request: createMockRequest({}, '/REMOTE/RPC/anyFunc'),
+              },
+            } as any,
+            async () => {}
+          ),
+        (err: any) => err instanceof UnauthorizedError
+      )
+    })
+
     test('should allow when token fn matches requested function', async () => {
       let nextCalled = false
       await pikkuRemoteAuthMiddleware(

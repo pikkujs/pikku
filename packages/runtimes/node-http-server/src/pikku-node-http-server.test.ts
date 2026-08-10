@@ -151,7 +151,12 @@ describe(
       assert.ok(address && typeof address === 'object')
       const origin = `http://127.0.0.1:${address.port}`
 
-      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+      const signedUpload = await createSignedAssetUrl({
+        origin,
+        path: '/reaper/uploads/hello.txt',
+        jwt,
+      })
+      const uploadResponse = await fetch(signedUpload, {
         method: 'PUT',
         headers: {
           connection: 'close',
@@ -176,6 +181,12 @@ describe(
     })
 
     test('rejects upload path traversal outside the configured directory', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
+
       server = new PikkuNodeHTTPServer(
         {
           hostname: '127.0.0.1',
@@ -196,7 +207,14 @@ describe(
       assert.ok(address && typeof address === 'object')
       const origin = `http://127.0.0.1:${address.port}`
 
-      const response = await fetch(`${origin}/reaper/..%2Fevil.txt`, {
+      // Signed for the escaping path itself, so the signature gate passes and
+      // the path-traversal guard is what rejects it — not the signature check.
+      const signedUpload = await createSignedAssetUrl({
+        origin,
+        path: '/reaper/..%2Fevil.txt',
+        jwt,
+      })
+      const response = await fetch(signedUpload, {
         method: 'PUT',
         headers: {
           connection: 'close',
@@ -208,7 +226,13 @@ describe(
       assert.equal(await response.text(), 'Invalid path')
     })
 
-    test('rejects unsigned asset reads', async () => {
+    test('rejects an unsigned upload (no signature on the PUT)', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
+
       server = new PikkuNodeHTTPServer(
         {
           hostname: '127.0.0.1',
@@ -229,7 +253,48 @@ describe(
       assert.ok(address && typeof address === 'object')
       const origin = `http://127.0.0.1:${address.port}`
 
-      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+      const response = await fetch(`${origin}/reaper/uploads/evil.txt`, {
+        method: 'PUT',
+        headers: { connection: 'close' },
+        body: Buffer.from('attacker-controlled'),
+      })
+
+      assert.equal(response.status, 403)
+    })
+
+    test('rejects unsigned asset reads', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
+
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: tmpDir,
+            uploadUrlPrefix: '/reaper',
+            assetUrlPrefix: '/assets',
+          },
+        } as any,
+        createMockLogger() as any
+      )
+
+      await server.init()
+      await server.start()
+
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      const origin = `http://127.0.0.1:${address.port}`
+
+      const signedUpload = await createSignedAssetUrl({
+        origin,
+        path: '/reaper/uploads/hello.txt',
+        jwt,
+      })
+      const uploadResponse = await fetch(signedUpload, {
         method: 'PUT',
         headers: {
           connection: 'close',
@@ -276,7 +341,12 @@ describe(
       assert.ok(address && typeof address === 'object')
       const origin = `http://127.0.0.1:${address.port}`
 
-      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+      const signedUpload = await createSignedAssetUrl({
+        origin,
+        path: '/reaper/uploads/hello.txt',
+        jwt,
+      })
+      const uploadResponse = await fetch(signedUpload, {
         method: 'PUT',
         headers: {
           connection: 'close',
@@ -329,7 +399,12 @@ describe(
       assert.ok(address && typeof address === 'object')
       const origin = `http://127.0.0.1:${address.port}`
 
-      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+      const signedUpload = await createSignedAssetUrl({
+        origin,
+        path: '/reaper/uploads/hello.txt',
+        jwt,
+      })
+      const uploadResponse = await fetch(signedUpload, {
         method: 'PUT',
         headers: {
           connection: 'close',

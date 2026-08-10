@@ -77,6 +77,88 @@ const text = (status: number, body: string) =>
     headers: { 'content-type': 'text/plain; charset=utf-8' },
   })
 
+export type SignedContentVerification =
+  | { ok: true }
+  | { ok: false; status: number; body: string }
+
+/**
+ * Verifies a signed content URL — the one function that decides whether a
+ * signed read or a signed upload is genuine.
+ *
+ * Exported and shared so the runtimes that serve content (the core handler here,
+ * the node server, the express adapter) verify identically. They used to each
+ * carry their own copy, which is how the express upload path ended up with no
+ * check at all: one copy can rot or be forgotten in isolation.
+ *
+ * `onMissingJWT` is called at most where the caller wants to log the
+ * misconfiguration once; a signed request with no verifier is treated as
+ * invalid, never as trusted.
+ */
+export const verifySignedContentRequest = async (
+  requestUrl: URL,
+  jwt: JWTService | undefined,
+  onMissingJWT?: () => void
+): Promise<SignedContentVerification> => {
+  const signedAtValue = requestUrl.searchParams.get('signedAt')
+  const expiresAtValue = requestUrl.searchParams.get('expiresAt')
+  const notBeforeValue = requestUrl.searchParams.get('notBefore')
+  const signature = requestUrl.searchParams.get('signature')
+
+  if (!signedAtValue || !expiresAtValue) {
+    return { ok: false, status: 403, body: 'Signed URL required' }
+  }
+
+  const signedAt = Number(signedAtValue)
+  const expiresAt = Number(expiresAtValue)
+  const notBefore = notBeforeValue == null ? undefined : Number(notBeforeValue)
+
+  if (
+    !Number.isFinite(signedAt) ||
+    !Number.isFinite(expiresAt) ||
+    (notBefore != null && !Number.isFinite(notBefore))
+  ) {
+    return { ok: false, status: 403, body: 'Invalid signed URL' }
+  }
+
+  const now = Date.now()
+  if (now > expiresAt || (notBefore != null && now < notBefore)) {
+    return { ok: false, status: 403, body: 'Signed URL expired' }
+  }
+
+  if (!jwt) {
+    onMissingJWT?.()
+    return { ok: false, status: 403, body: 'Invalid signed URL' }
+  }
+
+  if (!signature) {
+    return { ok: false, status: 403, body: 'Signed URL signature required' }
+  }
+
+  try {
+    const payload = await jwt.decode<{
+      signedAt?: number
+      expiresAt?: number
+      notBefore?: number
+      path?: string
+    }>(signature)
+
+    // Every claim is compared, the path included: without it a signature
+    // minted for one asset would read any other.
+    if (
+      payload.signedAt !== signedAt ||
+      payload.expiresAt !== expiresAt ||
+      payload.notBefore !== notBefore ||
+      payload.path !== signedContentPath(requestUrl.pathname)
+    ) {
+      return { ok: false, status: 403, body: 'Invalid signed URL' }
+    }
+  } catch {
+    return { ok: false, status: 403, body: 'Invalid signed URL' }
+  }
+
+  return { ok: true }
+}
+
 export const createLocalContentRequestHandler = ({
   content,
   logger,
@@ -86,80 +168,31 @@ export const createLocalContentRequestHandler = ({
   // this reports a startup misconfiguration rather than per-request news.
   let loggedMissingJWT = false
 
-  const validateSignedAssetRequest = async (
+  const validateSignedAssetRequest = (
     requestUrl: URL
-  ): Promise<{ ok: true } | { ok: false; status: number; body: string }> => {
-    const signedAtValue = requestUrl.searchParams.get('signedAt')
-    const expiresAtValue = requestUrl.searchParams.get('expiresAt')
-    const notBeforeValue = requestUrl.searchParams.get('notBefore')
-    const signature = requestUrl.searchParams.get('signature')
-
-    if (!signedAtValue || !expiresAtValue) {
-      return { ok: false, status: 403, body: 'Signed URL required' }
-    }
-
-    const signedAt = Number(signedAtValue)
-    const expiresAt = Number(expiresAtValue)
-    const notBefore =
-      notBeforeValue == null ? undefined : Number(notBeforeValue)
-
-    if (
-      !Number.isFinite(signedAt) ||
-      !Number.isFinite(expiresAt) ||
-      (notBefore != null && !Number.isFinite(notBefore))
-    ) {
-      return { ok: false, status: 403, body: 'Invalid signed URL' }
-    }
-
-    const now = Date.now()
-    if (now > expiresAt || (notBefore != null && now < notBefore)) {
-      return { ok: false, status: 403, body: 'Signed URL expired' }
-    }
-
-    const jwt = getJWT()
-    if (!jwt) {
-      if (!loggedMissingJWT) {
-        loggedMissingJWT = true
-        logger.error(
-          'pikku: refusing signed asset reads — no JWTService is available to verify them. Pass `contentSigningJWT` (the same service LocalContent signs with) or expose it as `singletonServices.jwt`.'
-        )
-      }
-      return { ok: false, status: 403, body: 'Invalid signed URL' }
-    }
-
-    if (!signature) {
-      return { ok: false, status: 403, body: 'Signed URL signature required' }
-    }
-
-    try {
-      const payload = await jwt.decode<{
-        signedAt?: number
-        expiresAt?: number
-        notBefore?: number
-        path?: string
-      }>(signature)
-
-      // Every claim is compared, the path included: without it a signature
-      // minted for one asset would read any other.
-      if (
-        payload.signedAt !== signedAt ||
-        payload.expiresAt !== expiresAt ||
-        payload.notBefore !== notBefore ||
-        payload.path !== signedContentPath(requestUrl.pathname)
-      ) {
-        return { ok: false, status: 403, body: 'Invalid signed URL' }
-      }
-    } catch {
-      return { ok: false, status: 403, body: 'Invalid signed URL' }
-    }
-
-    return { ok: true }
-  }
+  ): Promise<SignedContentVerification> =>
+    verifySignedContentRequest(requestUrl, getJWT(), () => {
+      if (loggedMissingJWT) return
+      loggedMissingJWT = true
+      logger.error(
+        'pikku: refusing signed asset reads — no JWTService is available to verify them. Pass `contentSigningJWT` (the same service LocalContent signs with) or expose it as `singletonServices.jwt`.'
+      )
+    })
 
   const handleUpload = async (
     request: Request,
+    requestUrl: URL,
     pathname: string
   ): Promise<Response> => {
+    // Uploads are presigned exactly like reads: getUploadURL mints a signed URL
+    // and this verifies it before writing. Without this an unauthenticated PUT
+    // could write arbitrary bytes to any key under the content root — the write
+    // side had none of the signature checking the read side has always had.
+    const signed = await validateSignedAssetRequest(requestUrl)
+    if (!signed.ok) {
+      return text(signed.status, signed.body)
+    }
+
     const key = contentKey(pathname, content.uploadUrlPrefix)
     const targetPath = toTargetPath(content.localFileUploadPath, key)
     if (!targetPath) {
@@ -248,7 +281,7 @@ export const createLocalContentRequestHandler = ({
       request.method === 'PUT' &&
       matchesPrefix(pathname, content.uploadUrlPrefix)
     ) {
-      return handleUpload(request, pathname)
+      return handleUpload(request, requestUrl, pathname)
     }
 
     if (

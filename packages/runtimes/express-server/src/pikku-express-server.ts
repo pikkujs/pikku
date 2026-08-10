@@ -12,10 +12,12 @@ import { resolve, normalize } from 'path'
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
-import type { Logger } from '@pikku/core/services'
+import { pikkuState } from '@pikku/core/internal'
+import type { JWTService, Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import { verifySignedContentRequest } from '@pikku/core/services/local-content-request-handler'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.
@@ -53,6 +55,16 @@ export class PikkuExpressServer {
     this.app.use(cors(options))
   }
 
+  /**
+   * The content JWT LocalContent signs URLs with. Read from singleton services
+   * at request time — the express adapter is constructed with only config and a
+   * logger, so it has no other handle on it. A missing service means signed
+   * requests cannot be verified and are refused, never trusted.
+   */
+  private getContentSigningJWT(): JWTService | undefined {
+    return pikkuState(null, 'package', 'singletonServices')?.jwt
+  }
+
   public enableStaticAssets() {
     const configContent = this.config.content
     if (!configContent) {
@@ -60,10 +72,32 @@ export class PikkuExpressServer {
         'Content config is not set, needed to enable asset serving'
       )
     }
-    this.app.use(
-      configContent.assetUrlPrefix,
-      express.static(configContent.localFileUploadPath)
-    )
+    const basePath = resolve(configContent.localFileUploadPath)
+
+    // Not express.static: that serves the upload directory to anyone, bypassing
+    // the signed-URL check every other read of this content goes through.
+    // Verify the signature first, then serve.
+    this.app.get(`${configContent.assetUrlPrefix}/*path`, async (req, res) => {
+      const requestUrl = new URL(req.originalUrl, 'http://localhost')
+      const signed = await verifySignedContentRequest(
+        requestUrl,
+        this.getContentSigningJWT()
+      )
+      if (!signed.ok) {
+        res.status(signed.status).end(signed.body)
+        return
+      }
+
+      const key = (req.params as any).path.join('/')
+      const targetPath = resolve(basePath, normalize(key))
+      if (!targetPath.startsWith(basePath + '/')) {
+        res.status(400).end('Invalid path')
+        return
+      }
+      res.sendFile(targetPath, (err) => {
+        if (err && !res.headersSent) res.status(404).end()
+      })
+    })
   }
 
   public enableReaper() {
@@ -77,6 +111,18 @@ export class PikkuExpressServer {
     const basePath = resolve(configContent.localFileUploadPath)
 
     this.app.put('/reaper/*path', async (req, res) => {
+      // Presigned like a read: an unsigned PUT could write arbitrary bytes
+      // anywhere under the content root. Verify before touching disk.
+      const requestUrl = new URL(req.originalUrl, 'http://localhost')
+      const signed = await verifySignedContentRequest(
+        requestUrl,
+        this.getContentSigningJWT()
+      )
+      if (!signed.ok) {
+        res.status(signed.status).end(signed.body)
+        return
+      }
+
       const key = (req.params as any).path.join('/')
       const targetPath = resolve(basePath, normalize(key))
       if (!targetPath.startsWith(basePath + '/')) {
