@@ -43,6 +43,9 @@ export class BunServerRunner implements DevServerRunner {
       // every Bun project: `config.content` arrived, but the service that
       // verifies its signatures did not.
       contentSigningJWT: options.contentSigningJWT,
+      // Read off this options object by the transport, not off `config` — so it
+      // has to be forwarded here explicitly, exactly like the JWT above.
+      mcpJson: options.mcpJson,
     })
   }
 }
