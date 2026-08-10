@@ -33,7 +33,7 @@ import { isProduction } from '../../env.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
-import type { PikkuChannel } from '../channel/channel.types.js'
+import type { BinaryData, PikkuChannel } from '../channel/channel.types.js'
 import { unsupportedChannelRemote } from '../channel/channel-rpc.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { applyWebResponse } from './web-request.js'
@@ -66,26 +66,6 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
     ? [...existing, ...(middleware as CorePikkuMiddleware[])]
     : middleware
   return middleware
-}
-
-/**
- * @deprecated HTTP-route-level permissions were removed in #972 — permissions
- * are now function-scoped only (declare them on the function via
- * `pikkuFunc({ permissions })`). This throwing stub exists solely so the pinned
- * bootstrap CLI (which still generates an `addHTTPPermission` wrapper) can
- * resolve the import at build time; it is never called. Delete once
- * `PIKKU_CLI_VERSION` in the CLI build is bumped past the release that removes
- * HTTP-route permissions.
- */
-export const addHTTPPermission = (
-  _pattern: string,
-  _permissions:
-    | Record<string, CorePikkuPermission | CorePikkuPermission[]>
-    | CorePikkuPermission[]
-): never => {
-  throw new Error(
-    'addHTTPPermission was removed in #972 — HTTP-route-level permissions no longer exist. Declare permissions on the function definition instead: pikkuFunc({ permissions }).'
-  )
 }
 
 export const wireHTTP = <
@@ -126,7 +106,8 @@ export const wireHTTP = <
   }
   pikkuState(null, 'http', 'routes')
     .get(httpWiring.method)
-    ?.set(httpWiring.route, httpWiring as any)
+    // knowledge: decisions/internals/wiring-registries-erase-the-generics-their-wire-functions-capture.md
+    ?.set(httpWiring.route, httpWiring as CoreHTTPFunctionWiring<any, any, any>)
 }
 
 const getMatchingRoute = (requestType: string, requestPath: string) => {
@@ -261,7 +242,8 @@ const executeRoute = async (
       setState: (s) => {
         sseState = s
       },
-      getState: () => sseState as any,
+      // knowledge: decisions/internals/channel-state-accessors-are-unsound-generics-that-every-implementation-asserts.md
+      getState: () => sseState as never,
       clearState: () => {
         sseState = undefined
       },
@@ -275,7 +257,7 @@ const executeRoute = async (
       const channelHandler = {
         getChannel: () => channelRef,
         send: (data: unknown, isBinary?: boolean) => {
-          if (isBinary) channelRef.sendBinary(data as any)
+          if (isBinary) channelRef.sendBinary(data as BinaryData)
           else channelRef.send(data)
         },
         sendBinary: (data: any) => channelRef.sendBinary(data),
@@ -424,7 +406,8 @@ export const fetchData = async <In, Out>(
             globalMiddleware as CorePikkuMiddleware[]
           )
         }
-        response.status(204).json(undefined as any)
+        // 204 carries no body, and `json` has no no-content overload.
+        response.status(204).json(undefined as never)
         return
       }
       scopedLogger.info({

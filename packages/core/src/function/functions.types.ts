@@ -14,12 +14,6 @@ import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
 import type { Safe } from '../secret-value.js'
 
-/**
- * @deprecated Use StandardSchemaV1 from @standard-schema/spec instead.
- * This alias exists only for backward compatibility with generated code.
- */
-export type ZodLike<T = any> = StandardSchemaV1<T, T>
-
 export type CorePikkuFunction<
   In,
   Out,
@@ -141,6 +135,14 @@ export type CorePikkuAuthConfig<
   description?: string
 }
 
+/**
+ * Marks a permission produced by `pikkuAuth`, so agent tool filtering can tell a
+ * session check apart from an ordinary permission.
+ *
+ * knowledge: decisions/security/permission-auth-filtering-requires-live-permission-functions.md
+ */
+export type AuthBranded = { __pikkuAuth?: true }
+
 export const pikkuAuth = <
   Services extends CoreSecretlessSingletonServices =
     SecretlessServices<CoreServices>,
@@ -151,13 +153,17 @@ export const pikkuAuth = <
     | CorePikkuAuthConfig<Services, Session>
 ): CorePikkuPermission<any, Services, any> => {
   const fn = typeof auth === 'function' ? auth : auth.func
-  const wrapper = async (services: Services, _data: any, wire: any) => {
+  const wrapper: CorePikkuPermission<any, Services, any> & AuthBranded = async (
+    services: Services,
+    _data: any,
+    wire: any
+  ) => {
     const session = wire.session
     if (!session) return false
     return fn(services, session as Session)
   }
-  ;(wrapper as any).__pikkuAuth = true
-  return wrapper as any
+  wrapper.__pikkuAuth = true
+  return wrapper
 }
 
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =

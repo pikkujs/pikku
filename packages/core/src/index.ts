@@ -63,7 +63,6 @@ export type {
   CorePikkuPermissionFactory,
   CorePikkuApprovalDescription,
   CorePermissionGroup,
-  ZodLike,
 } from './function/functions.types.js'
 export {
   pikkuAuth,
