@@ -427,10 +427,23 @@ export async function resumeAIAgentSync(
 
   const savedPendingApprovals = [...(run.pendingApprovals ?? [])]
 
+  // The read above is not a claim — concurrent resumes all see the same pending
+  // list. `resolveApproval` is the claim, and only the caller it returns true
+  // for may run the tool.
+  const claimedIds = new Set<string>()
   for (const { toolCallId, approved } of approvals) {
-    await aiRunState.resolveApproval(
+    const claimed = await aiRunState.resolveApproval(
       toolCallId,
       approved ? 'approved' : 'denied'
+    )
+    if (claimed) {
+      claimedIds.add(toolCallId)
+    }
+  }
+
+  if (approvals.length > 0 && claimedIds.size === 0) {
+    throw new Error(
+      `Approvals for run ${runId} were already resolved by another caller`
     )
   }
 
@@ -455,6 +468,8 @@ export async function resumeAIAgentSync(
     if (pending.type !== 'tool-call') continue
 
     const toolCallId = pending.toolCallId
+    if (!claimedIds.has(toolCallId)) continue
+
     let resultStr: string
 
     if (rejectedIds.has(toolCallId)) {

@@ -41,19 +41,46 @@ describe('serializeWorkflowRoutes', () => {
     assert.match(result, /func: workflowApprover/)
     assert.match(
       result,
-      /await workflowService\.approveStep\(runId, reason, decision\)/
+      /await workflowService\.approveStep\(runId, reason, decision, session\)/
     )
+  })
+
+  test('every run entrypoint is gated on run ownership', () => {
+    const { functions: result } = serializeWorkflowRoutes('#pikku', true)
+
+    assert.match(
+      result,
+      /import \{ assertWorkflowRunOwner \} from '@pikku\/core\/workflow'/
+    )
+    const ownershipChecks =
+      result.match(/assertWorkflowRunOwner\(run\.wire, session\)/g) ?? []
+    assert.equal(
+      ownershipChecks.length,
+      3,
+      'the status checker and both streams own the run before returning it'
+    )
+  })
+
+  test('no route lets a caller pick the graph entry node', () => {
+    const { schemas, functions } = serializeWorkflowRoutes('#pikku', true)
+
+    assert.ok(
+      !functions.includes('startNode'),
+      'entry-node choice is internal — a trigger names one, a caller does not'
+    )
+    assert.ok(!functions.includes('/graph/:nodeId'))
+    assert.ok(!schemas.includes('GraphStart'))
   })
 
   test('the approver destructures workflowService so the analyzer grants workflow-state', () => {
     const { functions: result } = serializeWorkflowRoutes('#pikku', true)
 
-    // Mirrors workflowStarter/graphStarter: the analyzer infers the
-    // workflow-state capability from this destructure, so losing it silently
-    // strips the route's access rather than failing the build.
+    // Mirrors workflowStarter: the analyzer infers the workflow-state
+    // capability from this destructure, so losing it silently strips the
+    // route's access rather than failing the build.
     assert.match(
       result,
-      /func: async \(\{ workflowService \}, \{ runId, reason, decision \}\)/
+      /func: async \(\{ workflowService \}, \{ runId, reason, decision \}, \{ session \}\)/
     )
   })
 

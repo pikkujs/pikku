@@ -6,8 +6,13 @@ export {
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowApprovalResolvedError,
+  WorkflowStepFunctionMismatchError,
 } from './workflow-errors.js'
 export { DEFAULT_STEP_RETRIES } from './workflow-constants.js'
+export {
+  assertWorkflowRunOwner,
+  WorkflowRunForbiddenError,
+} from './workflow-run-ownership.js'
 export type {
   RunLifecycleContext,
   WorkflowRunEngine,

@@ -89,7 +89,7 @@ export class KyselyAIRunStateService implements AIRunStateService {
   async resolveApproval(
     toolCallId: string,
     status: 'approved' | 'denied'
-  ): Promise<void> {
+  ): Promise<boolean> {
     const rows = await this.db
       .selectFrom('aiRun')
       .select(['runId', 'pendingApprovals'])
@@ -117,14 +117,19 @@ export class KyselyAIRunStateService implements AIRunStateService {
         if (filtered.length === 0) {
           updates.status = status
         }
-        await this.db
+        // Compare-and-swap on the list we read: a concurrent approver that got
+        // there first has already rewritten it, and this update matches no row.
+        const result = await this.db
           .updateTable('aiRun')
           .set(updates as any)
           .where('runId', '=', row.runId)
-          .execute()
-        return
+          .where('status', '=', 'suspended')
+          .where('pendingApprovals', '=', row.pendingApprovals)
+          .executeTakeFirst()
+        return Number(result?.numUpdatedRows ?? 0) > 0
       }
     }
+    return false
   }
 
   async findRunByToolCallId(

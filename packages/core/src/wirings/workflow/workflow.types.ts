@@ -120,6 +120,13 @@ export interface WorkflowRun {
 export interface StepState {
   stepId: string
   status: StepStatus
+  /**
+   * The function the workflow dispatched this step with, recorded so a worker
+   * can reject a queue message naming anything else. `null` is a step with no
+   * function of its own (inline work); `undefined` is a store that never
+   * recorded one, and cannot be compared against.
+   */
+  rpcName?: string | null
   result?: any
   error?: SerializedError
   attemptCount: number

@@ -828,7 +828,9 @@ describe('graph-runner bugs', () => {
       name: 'testRetries',
       pikkuFuncId: 'testRetries',
       source: 'graph',
-      entryNodeIds: ['a'],
+      // All three are dependency-free, so all three are entry nodes — a
+      // `startNode` may only name one the graph declared.
+      entryNodeIds: ['a', 'b', 'c'],
       graphHash: 'retries-hash',
       nodes: {
         a: {
