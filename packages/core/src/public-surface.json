@@ -510,7 +510,8 @@
   "./services/istanbul-coverage": ["IstanbulCoverageService"],
   "./services/local-content": ["LocalContent", "signedContentPath"],
   "./services/local-content-request-handler": [
-    "createLocalContentRequestHandler"
+    "createLocalContentRequestHandler",
+    "verifySignedContentRequest"
   ],
   "./services/temporary-file-service": [
     "TemporaryFileInstance",
