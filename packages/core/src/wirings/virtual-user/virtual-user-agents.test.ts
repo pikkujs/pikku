@@ -45,7 +45,10 @@ describe('reachableAgents', () => {
 
   test('carries the description through, which is what the model chooses on', () => {
     const [router] = reachableAgents(AGENTS, ['content:write'])
-    assert.equal(router!.description, 'Routes requests to the right domain agent')
+    assert.equal(
+      router!.description,
+      'Routes requests to the right domain agent'
+    )
   })
 
   test('omits description rather than passing undefined', () => {

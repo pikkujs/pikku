@@ -1,6 +1,9 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { DISPOSITIONS, dispositionProfile } from './virtual-user-dispositions.js'
+import {
+  DISPOSITIONS,
+  dispositionProfile,
+} from './virtual-user-dispositions.js'
 
 describe('resolving a disposition profile', () => {
   test('an unknown disposition falls back to realistic rather than throwing', () => {
@@ -46,7 +49,9 @@ describe('resolving a disposition profile', () => {
     const profile = dispositionProfile('careless', {
       instructions: 'Paste ids from other tabs.',
     })
-    assert.ok(profile.instructions.startsWith(DISPOSITIONS.careless.instructions))
+    assert.ok(
+      profile.instructions.startsWith(DISPOSITIONS.careless.instructions)
+    )
     assert.ok(profile.instructions.endsWith('Paste ids from other tabs.'))
   })
 

@@ -16,11 +16,6 @@ export const isRef = (value: unknown): value is RefValue =>
   '__isRef' in value &&
   (value as RefValue).__isRef === true
 
-export interface InputRef {
-  nodeId: string
-  path?: string
-}
-
 export type RefFn<NodeIds extends string = string> = (
   nodeId: NodeIds,
   path?: string

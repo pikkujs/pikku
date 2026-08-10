@@ -72,7 +72,9 @@ describe('runPermissions — function permissions (OR gate)', () => {
       run({ funcPermissions: { grp: [async () => true, async () => false] } }),
       { message: 'Permission denied' }
     )
-    await run({ funcPermissions: { grp: [async () => true, async () => true] } })
+    await run({
+      funcPermissions: { grp: [async () => true, async () => true] },
+    })
   })
 
   test('accepts a bare permission array as a single AND branch', async () => {

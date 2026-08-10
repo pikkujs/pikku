@@ -199,7 +199,10 @@ describe('getErrorResponse resolution order', () => {
   test('a subclass of a registered error inherits its registered status', () => {
     class TenantNotFoundError extends NotFoundError {}
     const expected = getErrorResponse(new NotFoundError())
-    assert.deepStrictEqual(getErrorResponse(new TenantNotFoundError()), expected)
+    assert.deepStrictEqual(
+      getErrorResponse(new TenantNotFoundError()),
+      expected
+    )
   })
 
   test('an unregistered, non-colliding error class resolves to undefined', () => {

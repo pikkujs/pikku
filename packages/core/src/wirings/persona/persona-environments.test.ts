@@ -44,7 +44,11 @@ describe('resolvePersonaEnvironments', () => {
 describe('personaEnvironmentErrors', () => {
   test('a persona that declares nothing cannot be wrong', () => {
     assert.deepEqual(
-      personaEnvironmentErrors('shopper', { disposition: 'careless' }, ENVIRONMENTS),
+      personaEnvironmentErrors(
+        'shopper',
+        { disposition: 'careless' },
+        ENVIRONMENTS
+      ),
       []
     )
   })
@@ -106,8 +110,15 @@ describe('personaEnvironmentErrors', () => {
   })
 
   test('with nothing configured it says where environments go', () => {
-    const [error] = personaEnvironmentErrors('shopper', { environments: ['x'] }, {})
-    assert.match(error!, /Declare it under 'environments' in pikku\.config\.json/)
+    const [error] = personaEnvironmentErrors(
+      'shopper',
+      { environments: ['x'] },
+      {}
+    )
+    assert.match(
+      error!,
+      /Declare it under 'environments' in pikku\.config\.json/
+    )
   })
 })
 

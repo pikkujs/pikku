@@ -1,4 +1,8 @@
-import type { EmailService, SendEmailInput, SendEmailResult } from './email-service.js'
+import type {
+  EmailService,
+  SendEmailInput,
+  SendEmailResult,
+} from './email-service.js'
 
 export class LocalEmailService implements EmailService {
   async send(input: SendEmailInput): Promise<SendEmailResult> {

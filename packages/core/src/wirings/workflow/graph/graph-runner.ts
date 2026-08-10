@@ -695,14 +695,6 @@ export async function executeGraphStep(
   }
 }
 
-export async function onGraphNodeComplete(
-  workflowService: PikkuWorkflowService,
-  runId: string,
-  graphName: string
-): Promise<void> {
-  await continueGraph(workflowService, runId, graphName)
-}
-
 export async function runFromMeta(
   workflowService: PikkuWorkflowService,
   runId: string,

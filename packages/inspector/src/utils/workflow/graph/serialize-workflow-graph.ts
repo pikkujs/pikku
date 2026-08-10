@@ -1,3 +1,4 @@
+import { isRef } from '@pikku/core/workflow'
 import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,
@@ -17,20 +18,6 @@ function convertRef(ref: { nodeId: string; path?: string }): DataRef {
 }
 
 /**
- * Check if a value is a runtime RefValue
- */
-function isRefValue(
-  value: unknown
-): value is { __isRef: true; nodeId: string; path?: string } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '__isRef' in value &&
-    (value as any).__isRef === true
-  )
-}
-
-/**
  * Convert input mapping from runtime format to serialized format
  */
 function serializeInputMapping(
@@ -39,7 +26,7 @@ function serializeInputMapping(
   const result: Record<string, unknown | DataRef> = {}
 
   for (const [key, value] of Object.entries(input)) {
-    if (isRefValue(value)) {
+    if (isRef(value)) {
       result[key] = convertRef(value)
     } else {
       result[key] = value

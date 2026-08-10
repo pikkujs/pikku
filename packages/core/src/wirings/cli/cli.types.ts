@@ -198,18 +198,6 @@ export type ValidateParameters<Params extends string, Input> =
     : never
 
 /**
- * Extract output type from a Pikku function config type
- */
-export type ExtractFunctionOutput<Func> =
-  Func extends CorePikkuFunctionConfig<infer FuncType, any, any>
-    ? FuncType extends
-        | CorePikkuFunction<any, infer Output, any, any, any>
-        | CorePikkuFunctionSessionless<any, infer Output, any, any, any>
-      ? Output
-      : never
-    : never
-
-/**
  * CLI command configuration that infers options from function input type.
  * This is a helper type for creating type-safe CLI commands.
  */
@@ -289,33 +277,6 @@ export type CLICommandShorthand<
     | CorePikkuFunctionSessionless<In, Out, any, any, any>
   >,
 > = PikkuFunctionConfig
-
-/**
- * Command definition (either full or shorthand)
- */
-export type CLICommandDefinition<
-  In,
-  Out,
-  PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>
-  >,
-  PikkuPermission extends CorePikkuPermission<any, any, any>,
-  PikkuMiddleware extends CorePikkuMiddleware,
-  Options = any,
-  Subcommands extends Record<string, CoreCLICommandConfig<any, any, any>> =
-    Record<string, CoreCLICommandConfig<any, any, any>>,
-> =
-  | CoreCLICommand<
-      In,
-      Out,
-      PikkuFunctionConfig,
-      PikkuPermission,
-      PikkuMiddleware,
-      Options,
-      Subcommands
-    >
-  | CLICommandShorthand<In, Out, PikkuFunctionConfig>
 
 /**
  * CLI wiring configuration

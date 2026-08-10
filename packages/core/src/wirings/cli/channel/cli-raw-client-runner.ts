@@ -32,7 +32,10 @@ export type CorePikkuCLIClientRender<Data> = (
 ) => void | Promise<void>
 
 /** The normal case once the server owns the command tree. */
-const defaultJSONRenderer: CorePikkuCLIClientRender<any> = (_services, data) => {
+const defaultJSONRenderer: CorePikkuCLIClientRender<any> = (
+  _services,
+  data
+) => {
   console.log(JSON.stringify(data))
 }
 

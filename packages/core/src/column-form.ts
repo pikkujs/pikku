@@ -23,10 +23,7 @@ export const hashToken = async (raw: string): Promise<HashedValue> => {
   if (!subtle) {
     throw new Error('WebCrypto not available')
   }
-  const digest = await subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(raw)
-  )
+  const digest = await subtle.digest('SHA-256', new TextEncoder().encode(raw))
   let hex = ''
   for (const byte of new Uint8Array(digest)) {
     hex += byte.toString(16).padStart(2, '0')
