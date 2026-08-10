@@ -86,8 +86,15 @@ export const createSingletonServices = pikkuServices(
         SQLiteKyselyWorkflowRunService,
       } = await import('@pikku/kysely-sqlite')
       const { SerializePlugin } = await import('@pikku/kysely')
+      // `:memory:` by default so the standard suite stays isolated and fast.
+      // SQLITE_PATH points the same backend at a file, which is what makes
+      // durability observable at all: an in-memory store loses every run when
+      // the process dies, so a crash-recovery test against it can only ever
+      // report "Run not found" and never distinguishes a framework that
+      // resumes correctly from one that does not.
+      const sqlitePath = process.env.SQLITE_PATH ?? ':memory:'
       const db = new Kysely<KyselyPikkuDB>({
-        dialect: new SqliteDialect({ database: new Database(':memory:') }),
+        dialect: new SqliteDialect({ database: new Database(sqlitePath) }),
         plugins: [new CamelCasePlugin(), new SerializePlugin()],
       })
       aiStorage = new SQLiteKyselyAIStorageService(db)
