@@ -1,5 +1,33 @@
 # @pikku/better-auth
 
+## 0.12.22
+
+### Patch Changes
+
+- cba98fb: Security hardening sweep
+  - **Content uploads require a signature**, matching reads. `handleUpload` previously validated the path and the size limit and then wrote the file, so an unauthenticated `PUT` to the upload prefix landed on disk. The express server, which verified nothing at all, now verifies both uploads and reads.
+  - **The remote-RPC prefix is matched case-insensitively.** The router matches routes case-insensitively, so `/Remote/RPC/fn` reached the same handler while a case-sensitive `startsWith('/remote/rpc/')` let it past the mesh trust gate and the token's `fn` binding.
+  - **Dev quick-login refuses proxied requests.** The gate checked the hostname only, so a request forwarded with `Host: localhost` was auto-provisioned a root-admin session. Proxy markers (`forwarded`, `x-forwarded-*`) now refuse regardless of what they claim, and dev login is inert in production.
+  - **Logout clears the session cookie** instead of re-signing an absent session into a fresh, unexpired one.
+  - **Short-flag cluster parsing is bounded**, closing a CLI-over-channel denial of service.
+  - `allowedHosts` is carried into secret definition meta.
+
+- Updated dependencies [41c1a95]
+- Updated dependencies [ce96383]
+- Updated dependencies [7e60867]
+- Updated dependencies [f8f1244]
+- Updated dependencies [dcf20cb]
+- Updated dependencies [6512384]
+- Updated dependencies [e3b4c14]
+- Updated dependencies [efd0ed1]
+- Updated dependencies [cba98fb]
+- Updated dependencies [ce96383]
+- Updated dependencies [f8f1244]
+- Updated dependencies [f8f1244]
+- Updated dependencies [6e93a35]
+- Updated dependencies [6dada45]
+  - @pikku/core@0.12.80
+
 ## 0.12.21
 
 ### Patch Changes

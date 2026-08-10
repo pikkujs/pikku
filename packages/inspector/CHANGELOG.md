@@ -1,3 +1,41 @@
+## 0.12.56
+
+### Patch Changes
+
+- 7e60867: Delete exports nothing references
+
+  A sweep of the `@pikku/core` surface for exports with no consumer anywhere in the repo — no package, template, verifier or e2e project imports them: `ExtractFunctionOutput`, `CLICommandDefinition`, `RequestHeaders`, `HTTPFunctionsMeta`, `HTTPWiringMiddleware`, `JsonRpcError`, `TriggerSourceInfo`, `getMCPResources`, `getMCPPrompts`, `onGraphNodeComplete` and `InputRef`.
+
+  Every one was a compatibility promise with nothing on the other end of it. Removing them narrows what 0.13 has to keep stable.
+
+  `isRef` looked like the twelfth, and isn't. It is the type guard that reads what `createRef` writes — the `__isRef` brand marking a graph node input as "substitute another node's output here". Nothing imported it because neither it nor `RefValue` was reachable from any entry point, so the one consumer that needed it, the inspector's graph serializer, had reimplemented the same four conditions privately as `isRefValue` along with its own structural copy of `RefValue`. Deleting `isRef` would have made that duplicate permanent, with the brand's shape asserted in two places free to drift apart.
+
+  So `isRef` and `RefValue` are exported from `@pikku/core/workflow` instead, and the inspector imports them rather than keeping its own copy.
+
+- a879ab3: **Codegen reports a schema it named but never generated (PKU463).** A named
+  contract type that is declared but not exported is imported by the virtual
+  source file the schema generator compiles, resolves to nothing, and yields no
+  schema — while the function meta still carries the name. `pikku all` exited 0
+  and the first call to that function failed in a deployment with
+  `MissingSchemaError`. The reference is now checked once addon schemas are
+  merged, since an addon supplies its own and checking earlier would report every
+  one of them as unresolved.
+- Updated dependencies [41c1a95]
+- Updated dependencies [ce96383]
+- Updated dependencies [7e60867]
+- Updated dependencies [f8f1244]
+- Updated dependencies [dcf20cb]
+- Updated dependencies [6512384]
+- Updated dependencies [e3b4c14]
+- Updated dependencies [efd0ed1]
+- Updated dependencies [cba98fb]
+- Updated dependencies [ce96383]
+- Updated dependencies [f8f1244]
+- Updated dependencies [f8f1244]
+- Updated dependencies [6e93a35]
+- Updated dependencies [6dada45]
+  - @pikku/core@0.12.80
+
 ## 0.12.55
 
 ### Patch Changes

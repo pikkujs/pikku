@@ -1,3 +1,32 @@
+## 0.12.5
+
+### Patch Changes
+
+- dbff6ae: **A delayed RPC now actually runs.** `InMemorySchedulerService.scheduleRPC`
+  dispatched through `runScheduledTask`, which resolves names against the wired
+  _cron task_ registry — a registry no internally scheduled RPC is ever in. Every
+  such call died as `ScheduledTaskNotFoundError` and was swallowed into a log
+  line, and the payload captured alongside it was never forwarded. The one that
+  mattered was `pikkuWorkflowSleeper`: it is what wakes a run from
+  `workflow.sleep`, so an async workflow containing a sleep stopped at the first
+  one and stayed `running` forever. It now invokes the RPC with its data, matching
+  what the BullMQ and pg-boss schedulers already do.
+- Updated dependencies [41c1a95]
+- Updated dependencies [ce96383]
+- Updated dependencies [7e60867]
+- Updated dependencies [f8f1244]
+- Updated dependencies [dcf20cb]
+- Updated dependencies [6512384]
+- Updated dependencies [e3b4c14]
+- Updated dependencies [efd0ed1]
+- Updated dependencies [cba98fb]
+- Updated dependencies [ce96383]
+- Updated dependencies [f8f1244]
+- Updated dependencies [f8f1244]
+- Updated dependencies [6e93a35]
+- Updated dependencies [6dada45]
+  - @pikku/core@0.12.80
+
 ## 0.12.4
 
 ### Patch Changes

@@ -1,3 +1,164 @@
+## 0.12.80
+
+### Patch Changes
+
+- 41c1a95: Move the adapter surface to `@pikku/core/ecosystem` so the root can promise stability
+
+  The types and helpers a runtime adapter, a service package, the code generator and the CLI implement against sat on the package root, mixed in with the API application code uses. That made the root impossible to commit to: `runPikkuFunc` was reshaped repeatedly over the last year while every field on `PikkuWire` survived untouched, and promising stability on both would mean promising the weaker of the two.
+
+  They now live on `@pikku/core/ecosystem`. The root is what 0.13's compatibility promise covers.
+
+  Not `/internal`: generated bootstrap files import from here, so the specifier lands in the user's own `.pikku` directory — telling someone they are touching internals when the code generator put it there is both wrong and self-defeating. Not `/runtime` either: that reads as runtime-versus-compile-time, `packages/runtimes/*` already claims the word, and the CLI is the largest consumer.
+
+  `./internal` remains as an alias to the same module, because the pinned bootstrap CLI still emits it.
+
+  Breaking for adapter authors; appropriate pre-0.13.
+
+- ce96383: A child workflow now inherits the `pikkuUserId` its parent was running as
+
+  `PikkuWorkflowService` filled parts of the wire it builds for a workflow body and for a child run from the RPC service it had been handed — `rpcService.wire?.session`, `rpcService.wire?.rpc`, `rpcService.wire?.pikkuUserId`. `PikkuRPC` has no `wire`, and neither does the object the RPC service actually returns, so every one of those reads was `undefined`; the `rpcService: any` parameter type is what kept it quiet. The visible consequence was that a child workflow started from a step ran as nobody.
+
+  Those reads now come from the run record, which is durable and survives the process boundary a queued step crosses. `session` and `rpc` are not copied at all: `runPikkuFunc` attaches `rpc` lazily per invocation and resolves the session from the session store, so both were overwritten moments later regardless. The wires these paths build are typed `PikkuRawWire`, which is what they have always been.
+
+  `PikkuRPC` also now declares `rpcWithWire`, which the RPC service has always returned and the workflow service has always called.
+
+- 7e60867: Delete exports nothing references
+
+  A sweep of the `@pikku/core` surface for exports with no consumer anywhere in the repo — no package, template, verifier or e2e project imports them: `ExtractFunctionOutput`, `CLICommandDefinition`, `RequestHeaders`, `HTTPFunctionsMeta`, `HTTPWiringMiddleware`, `JsonRpcError`, `TriggerSourceInfo`, `getMCPResources`, `getMCPPrompts`, `onGraphNodeComplete` and `InputRef`.
+
+  Every one was a compatibility promise with nothing on the other end of it. Removing them narrows what 0.13 has to keep stable.
+
+  `isRef` looked like the twelfth, and isn't. It is the type guard that reads what `createRef` writes — the `__isRef` brand marking a graph node input as "substitute another node's output here". Nothing imported it because neither it nor `RefValue` was reachable from any entry point, so the one consumer that needed it, the inspector's graph serializer, had reimplemented the same four conditions privately as `isRefValue` along with its own structural copy of `RefValue`. Deleting `isRef` would have made that duplicate permanent, with the brand's shape asserted in two places free to drift apart.
+
+  So `isRef` and `RefValue` are exported from `@pikku/core/workflow` instead, and the inspector imports them rather than keeping its own copy.
+
+- f8f1244: Fix `onConnect`/`onDisconnect` wrapper handlers, and correct `wireChannel`'s generic arguments
+
+  `CoreChannel` accepts three shapes for a handler: a function config, a simple wrapper (`{ func, middleware }`), and a wrapper around a function config (`{ func: { func }, middleware }`). `wireChannel` unwrapped the third shape for `onMessage` and `onMessageWiring`, but registered `onConnect` and `onDisconnect` as-is — so the registered config's `func` was an object, and the function runner threw when it tried to call it. All three shapes now register a callable config on every handler.
+
+  `wireChannel`'s type arguments were also misaligned with `CoreChannel`'s parameter list: `PikkuPermission` was being passed into the `ChannelConnect` slot and `PikkuMiddleware` into `ChannelDisconnect`, which made `wireChannel({ onConnect: { func } })` fail to typecheck with "not assignable to `CorePikkuPermission`". End users did not see this — the CLI's generated `wireChannel` wrapper casts before calling core — but anyone importing `wireChannel` from `@pikku/core/channel` directly did. The signature is now `wireChannel<In, Channel>(channel: CoreChannel<In, Channel>)`; the three surplus type parameters were never used for anything correct and are gone.
+
+- dcf20cb: Pin the public API, and declare which modules have import-time side effects
+
+  Nothing caught a change to what `@pikku/core` publishes. An export could appear, vanish, or have a member's signature change, and the only signal was a downstream break after release.
+
+  `public-surface.json` now pins every runtime export reachable through a `package.json` `exports` subpath, and `api-report.md` pins the API at **member** level — a method added to an interface is the change that breaks a consumer's build, and an export list cannot see it. Both regenerate from the code and are asserted against it, so widening the API is a visible diff rather than a side effect of an `export *`.
+
+  The report is written to state what the API _is_ rather than merely list identifiers, so the diff is readable by a reviewer.
+
+  `sideEffects` is declared as an allowlist rather than `false`: core genuinely has some. The error registry is built by `addError` calls that run on import, so claiming `sideEffects: false` would let a bundler drop it and leave `getErrorResponse` unable to find any error. A test detects the modules that actually have side effects and fails if the allowlist disagrees.
+
+- 6512384: feat: give scenarios a `scenario.context` their `before`/`after` hooks can read
+
+  A hook only ever received the run's _input_, so teardown could not reach an id
+  the scenario body minted — which is exactly what a failing run needs to clean
+  up. `wire.scenario.context` is a per-run scratch object shared by `before`, the
+  body and `after`. It is typed as a `Partial` of the scenario's output, because a
+  run that failed early has none of it.
+
+  ```ts
+  pikkuScenario<void, { projectId: string }>({
+    func: async (_services, _data, { scenario }) => {
+      const { projectId } = await scenario.when('creates a project', 'createsProject', …)
+      scenario.context.projectId = projectId
+      …
+    },
+    after: pikkuScenarioHook<void, { projectId: string }>(
+      async (_services, _data, { scenario, actors }) => {
+        if (scenario.context.projectId) {
+          await actors.admin.invoke('deleteProject', { projectId: scenario.context.projectId })
+        }
+      }
+    ),
+  })
+  ```
+
+  Deliberately not a world: it is scoped to a single run, and scenario _steps_
+  cannot reach it — state still flows between steps as return values.
+
+  Feature-level `before`/`after` get the same member, scoped to their feature, so
+  group setup can hand group teardown what it created. It is a separate object
+  from the scenarios' contexts: one bag shared across a group is the invisible
+  coupling a Cucumber world had.
+
+- e3b4c14: Remove the `addTagPermission`, `addHTTPPermission` and `ZodLike` compatibility stubs
+
+  Tag- and HTTP-route-level permissions were removed in #972; `addTagPermission` and `addHTTPPermission` survived only as throwing stubs so the pinned bootstrap CLI could resolve their imports at build time. `@pikku/cli@0.12.96` — the currently pinned bootstrap version — emits neither name, so the stubs and the `packages/cli/build.sh` rewrite rules that fed them are gone.
+
+  Declare permissions on the function instead: `pikkuFunc({ permissions })`, or app-wide with `addGlobalPermission`.
+
+  `ZodLike` was an alias for `StandardSchemaV1<T, T>` kept for generated code that no longer references it. Import `StandardSchemaV1` from `@standard-schema/spec` directly.
+
+- efd0ed1: **An explicitly-`undefined` property no longer kills a step.** JSON Schema
+  cannot describe such a property, so the validator rejected the whole instance
+  rather than the field — `{ a: undefined }` threw
+  `Instances of "undefined" type are not supported`. Whether a payload could
+  contain one depended on how the call travelled: `JSON.stringify` drops those
+  keys over HTTP, while an in-process dispatch hands the object over intact, so
+  `workflow.do('step', 'rpc', { retries: data.maybeRetries })` failed only when
+  the step ran inline. `validateSchema` now strips them first, and an
+  explicitly-undefined _required_ field reports as the missing property it is.
+- cba98fb: Security hardening sweep
+  - **Content uploads require a signature**, matching reads. `handleUpload` previously validated the path and the size limit and then wrote the file, so an unauthenticated `PUT` to the upload prefix landed on disk. The express server, which verified nothing at all, now verifies both uploads and reads.
+  - **The remote-RPC prefix is matched case-insensitively.** The router matches routes case-insensitively, so `/Remote/RPC/fn` reached the same handler while a case-sensitive `startsWith('/remote/rpc/')` let it past the mesh trust gate and the token's `fn` binding.
+  - **Dev quick-login refuses proxied requests.** The gate checked the hostname only, so a request forwarded with `Host: localhost` was auto-provisioned a root-admin session. Proxy markers (`forwarded`, `x-forwarded-*`) now refuse regardless of what they claim, and dev login is inert in production.
+  - **Logout clears the session cookie** instead of re-signing an absent session into a fresh, unexpired one.
+  - **Short-flag cluster parsing is bounded**, closing a CLI-over-channel denial of service.
+  - `allowedHosts` is carried into secret definition meta.
+
+- ce96383: Split `pikku-workflow-service.ts` into composable modules and report missing workflow metadata as such
+
+  `PikkuWorkflowService`'s module carried its error catalog, run-engine interfaces, queue routing and queue wiring alongside the class. Those now live in `workflow-errors.ts`, `workflow-run-engine.types.ts`, `workflow-constants.ts`, `workflow-meta-resolver.ts`, `workflow-queue-routing.ts` and `workflow-queue-wiring.ts`, with the approval and recovery paths in `workflow-approval.ts` and `workflow-recovery.ts`. The `@pikku/core/workflow` entry point exports the same names as before.
+
+  Typing the workflow meta resolver surfaced a crash: a run whose workflow had no generated metadata threw `TypeError: Cannot read properties of undefined` from deep inside the runner, or `WorkflowNotFoundError` — neither of which points at the actual cause. It now throws `PikkuMissingMetaError`, matching how the queue and trigger runners already report the same condition.
+
+- f8f1244: Tighten several public types that `as any` was masking
+  - `AIStreamEvent`'s `approval-request` variant now declares `runId: string` rather than `runId?: string`. Every emitter already set it, and `AIAgentResult['pendingApprovals']` has always required it — the optional let `undefined` reach a field consumers rely on to resume a suspended run.
+  - `PikkuWire` gains an optional `logger`. The no-op audit service already read `wire.logger` before falling back to the singleton, but nothing declared it, so a host had no typed way to attach an invocation-scoped logger.
+  - `pikkuAuth`'s marker is now the exported `AuthBranded` type instead of an untyped property, so the brand that agent tool filtering depends on is visible to the type system at both the site that sets it and the sites that read it.
+
+  Internally this takes core's non-test modules from 108 `as any` casts to none. Each is replaced by an assertion to the type actually wanted, or by a change to the surrounding types that makes the assertion unnecessary. A test holds the count at zero.
+
+- f8f1244: Declare `CoreUserSession.readonly` and `ChannelMeta.gateway`, which the runtime already used
+
+  The function runner throws `ReadonlySessionError` when a session is marked `readonly` and the function is not, but `CoreUserSession` never declared the field — so there was no typed way to build a readonly session, and even core's own test had to cast. Likewise `wireGateway` writes `gateway: true` onto a websocket channel's meta, which `ChannelMeta` did not admit. Both are now declared.
+
+  The gateway websocket path also wrote channel meta without `input`, `disconnect` or `messageWirings`, all of which `ChannelMeta` requires and `channel-handler` indexes without a guard. It now writes a complete record.
+
+- 6e93a35: Give each wire an explicit set of crossovers
+
+  `wire.rpc.agent` was implemented inline in `rpc-runner.ts`, which put the agent turn logic — run, stream, resume, interrupt, approve — inside the RPC primitive. It moves to `ai-agent/agent-rpc.ts`, next to the runner and stream code it delegates to; `rpc-runner` imports it and the getter stays, so a request that never touches an agent never builds the facade.
+
+  The wires (`http`, `channel`, `queue`, `scheduler`, `cli`, `rpc`, `ai-agent`, `workflow`) previously imported each other ad hoc, so an accidental edge was indistinguishable from a designed one. Each wire now declares the crossovers it is allowed, and a test walks the import graph to hold it — failing both on an undeclared edge and on a declared crossover that no longer exists, so the declaration cannot rot into a rubber stamp.
+
+  `unsupportedChannelRemote` moves from `channel-rpc-service.ts` to `channel-rpc.types.ts`, alongside the error it throws.
+
+  The shared storage conformance suite splits from one 1216-line module into one module per service, so a backend author can read the contract for the service they implement. `defineServiceTests` is unchanged for callers.
+
+- 6dada45: fix(workflow,ai-agent): make a run's owner, entry node and step function authoritative
+
+  A graph run may only start at a node the graph declared in `meta.entryNodeIds`, and
+  the generated `POST /workflow/:workflowName/graph/:nodeId` route that let an HTTP
+  caller pick the entry node is gone. `startNode` stays for `PikkuTriggerService`,
+  which names a declared entry node anyway.
+
+  `StepState` now records the `rpcName` the workflow dispatched a step with, and the
+  step claim rejects a queue message naming a different function with
+  `WorkflowStepFunctionMismatchError` before mutating any status — a step runs under
+  the run owner's identity and without the `expose` gate, so the message must not
+  choose what runs.
+
+  `approveStep` takes the caller's session, and the generated status routes and
+  streams assert the same `assertWorkflowRunOwner` check: a run started through a
+  session may only be read and approved by that session's user. A run with no
+  recorded owner (trigger, scheduler, unauthenticated route) has nobody to compare
+  against and is still gated by the entrypoint's own `auth`/`permissions`.
+
+  `AIRunStateService.resolveApproval` is now a compare-and-swap returning whether
+  _this_ caller made the claim, and both agent resume paths run a tool only for the
+  approvals they claimed — concurrent approvals of one tool call no longer all
+  execute it.
+
 ## 0.12.79
 
 ### Patch Changes
