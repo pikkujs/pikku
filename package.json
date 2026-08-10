@@ -33,7 +33,7 @@
     "build:console": "cd packages/console && yarn generate && yarn build && rm -rf ../cli/console-app && cp -r dist ../cli/console-app",
     "build:templates": "yarn workspaces foreach -p -A --include 'templates/**' run build",
     "build:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run build",
-    "build": "yarn build:packages && yarn pikku && yarn build:addons && yarn build:templates",
+    "build": "yarn build:packages && yarn build:addons && yarn pikku && yarn build:templates",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:workspace-protocol": "node scripts/check-no-workspace-protocol.mjs",
     "check:no-publish-rebuild": "node scripts/check-no-publish-time-cli-rebuild.mjs",
