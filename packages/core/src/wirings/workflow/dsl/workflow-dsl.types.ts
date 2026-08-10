@@ -311,7 +311,7 @@ export interface ReturnStepMeta {
 }
 
 /**
- * Inline step metadata (legacy support)
+ * Inline step metadata
  */
 export interface InlineStepMeta {
   /** Inline form - local execution */

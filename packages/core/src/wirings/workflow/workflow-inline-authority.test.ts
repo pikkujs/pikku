@@ -153,12 +153,18 @@ describe('a run that stops executing here leaves no per-run state behind', () =>
     })
     await ws.insertStepState(runId, 'a', 'someRpc', {})
 
-    await ws.executeWorkflowStep(runId, 'a', 'someRpc', {}, {
-      rpcWithWire: async () => {
-        await ws.inlineStep(runId, 'nested', async () => 'ok')
-        return 'ok'
-      },
-    })
+    await ws.executeWorkflowStep(
+      runId,
+      'a',
+      'someRpc',
+      {},
+      {
+        rpcWithWire: async () => {
+          await ws.inlineStep(runId, 'nested', async () => 'ok')
+          return 'ok'
+        },
+      }
+    )
 
     assert.equal(
       ws.runContexts.size,

@@ -31,23 +31,9 @@ export const deriveCatalogue = (
 ): ApiCatalogueEntry[] => {
   const entries: ApiCatalogueEntry[] = []
   for (const [name, meta] of Object.entries(functions ?? {})) {
-    // Scenario bodies and their steps are never network-callable — they are
-    // held out of every deployed unit — so offering one would only ever waste
-    // a turn on a 404.
-    //
-    // For a platform or addon step this is not an efficiency argument but the
-    // oracle: a virtual user's findings are worth something only because it
-    // cannot manufacture the outcomes it is meant to discover. One that could
-    // invoke "Stripe's webhook arrives" would forge its own payment success,
-    // and every finding downstream of that is worthless. Same class of argument
-    // as `allowApprovalRequired` defaulting to false — and enforced here, at
-    // derivation, rather than by convention.
+    // knowledge: decisions/security/a-virtual-user-is-never-offered-a-step-that-would-forge-its-own-oracle.md
     if (meta.scenario || meta.scenarioStep || meta.scenarioStepKind) continue
-    // `expose: true` is what puts a function on the rpc transport, and that is
-    // what the shipped target calls over. Absent is not permissive: an unexposed
-    // function 404s, and offering one spends a step to learn nothing about the
-    // product. Measured on the e2e app, 34 of its 72 functions are in exactly
-    // that state — nearly half a catalogue that cannot be called.
+    // knowledge: decisions/internals/only-exposed-functions-enter-a-virtual-user-catalogue.md
     if (meta.expose !== true) continue
 
     const inputSchema = meta.inputSchemaName
@@ -103,10 +89,7 @@ const scenarioSteps = (meta: {
     )
   }
 
-  // Insertion order is the order the CLI wrote the nodes in, which is the order
-  // the scenario declares them. Following `next` instead would buy an ordering
-  // that is already true and cost a traversal that has to decide what a branch
-  // means to a reader who will never take one.
+  // knowledge: decisions/internals/virtual-user-step-order-comes-from-insertion-order.md
   return Object.values(meta.nodes ?? {}).flatMap((node) => {
     const { rpcName, scenarioStepPhase, actor } = (node ?? {}) as {
       rpcName?: string
@@ -149,11 +132,7 @@ export const deriveIntents = (
       steps.push(
         composeStepProse({
           phase: step.phase,
-          // The template goes in unfilled, braces and all. A reporter fills its
-          // placeholders from a run that happened; there is no run yet, and
-          // "invites {email}" tells a user to pick someone where the filled-in
-          // form would have told it whom — which is the scenario's answer, not
-          // the user's own.
+          // knowledge: decisions/internals/a-scenario-step-template-is-offered-unfilled.md
           description: template ?? description ?? '',
           actor: step.actor,
         })

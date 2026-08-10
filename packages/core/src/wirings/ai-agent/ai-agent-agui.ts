@@ -372,11 +372,7 @@ export function wrapChannelWithAGUI(
           break
         }
 
-        // AG-UI has no event for speech, so it travels as CUSTOM like the other
-        // pikku-specific ones. Dropping it instead — which is what this did —
-        // means a voice agent reached over HTTP is inaudible: `voiceOutput`
-        // synthesizes every sentence, the provider bills for it, and nothing
-        // gets past the mapper.
+        // knowledge: decisions/internals/agent-speech-travels-as-a-custom-agui-event.md
         case 'audio-delta': {
           send({
             type: 'CUSTOM',

@@ -154,10 +154,7 @@ export const DISPOSITIONS: Readonly<
     invertedOracle: true,
   },
 
-  // The only disposition that is not testing anything. It is doing the job, so
-  // it abandons rarely, runs cool, and is told to stop and say so rather than
-  // guess — the failure mode here is a wrong action nobody asked for, not a
-  // missed bug.
+  // knowledge: decisions/internals/the-worker-disposition-is-the-one-that-is-not-testing.md
   accountable: {
     ...REALISTIC,
     instructions: [

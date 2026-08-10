@@ -168,11 +168,7 @@ export const createLocalContentRequestHandler = ({
 
     const maxBytes = parseSizeLimit(content.sizeLimit ?? '1mb')
 
-    // Counted as it arrives and abandoned the moment it goes over, so an
-    // oversized upload costs the limit rather than its own size — `arrayBuffer()`
-    // would have to hold all of it first, which hands an unauthenticated caller
-    // a way to spend the server's memory. Mirrors node-http-server's
-    // `readRequestBody`, which aborts the same way.
+    // knowledge: decisions/security/an-upload-is-counted-as-it-arrives-not-buffered-then-measured.md
     const chunks: Buffer[] = []
     let bytesRead = 0
     const reader = request.body?.getReader()
