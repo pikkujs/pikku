@@ -317,18 +317,22 @@ export const pikkuApprovalDescription = <In = unknown, RequiredServices extends 
  * @template In - The input type
  * @template Out - The output type that the function returns
  * @template RequiredServices - Services required by this function
+ * @template ScenarioOut - Types \`scenario.context\`. Defaults to \`Out\`, which is
+ *   right for a scenario body; a scenario *hook* returns void while sharing the
+ *   scenario's context, so it sets this to the scenario's output instead.
  */
 export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
   RequiredWires extends keyof PikkuWire = never,
-  RequiredServices extends SecretlessServices<Services> = WiredServices
+  RequiredServices extends SecretlessServices<Services> = WiredServices,
+  ScenarioOut = Out
 > = CorePikkuFunctionSessionless<
     In,
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario, TypedPersonas>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario<ScenarioOut>, TypedPersonas>, RequiredWires>
   >
 
 /**

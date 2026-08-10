@@ -383,7 +383,7 @@ export type PikkuWire<
   MCPTools extends string | never = never,
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
-  TypedScenario extends PikkuScenarioWire | never = PikkuScenarioWire,
+  TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<Out>,
   TypedActors extends ScenarioPersonas = ScenarioPersonas,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */

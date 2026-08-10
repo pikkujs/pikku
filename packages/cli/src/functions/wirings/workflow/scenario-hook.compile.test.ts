@@ -42,15 +42,22 @@ const PRELUDE = `
 type StandardSchemaV1 = { readonly '~standard': unknown }
 type InferSchemaOutput<S> = S extends { readonly __out?: infer O } ? O : unknown
 
-type ScenarioWire = {
-  scenario: { then: (label: string, step: string, data: unknown) => Promise<unknown> }
+type ScenarioContext<Out = unknown> = Out extends object
+  ? Partial<Out>
+  : Record<string, unknown>
+
+type ScenarioWire<Ctx = unknown> = {
+  scenario: {
+    then: (label: string, step: string, data: unknown) => Promise<unknown>
+    context: ScenarioContext<Ctx>
+  }
   actors: { admin: { invoke: (name: string, data: unknown) => Promise<unknown> } }
 }
 
-type PikkuFunctionScenario<In = unknown, Out = never> = (
+type PikkuFunctionScenario<In = unknown, Out = never, Ctx = Out> = (
   services: unknown,
   data: In,
-  wire: ScenarioWire
+  wire: ScenarioWire<Ctx>
 ) => Promise<Out>
 
 ${hookTypes()}
@@ -126,6 +133,50 @@ describe('pikkuScenarioHook', () => {
     assert.ok(
       errors.some((e) => e.includes('nmae')),
       `expected an error naming 'nmae', got: ${errors.join(' | ')}`
+    )
+  })
+
+  test('a hook reads the context as a partial of the scenario output', () => {
+    // The point of the context: teardown learns the ids the body minted, and
+    // `Partial` is what makes it honest — a run that failed before creating the
+    // project has no projectId, so the hook is forced to handle its absence.
+    assert.deepEqual(
+      typeErrors(`
+        export const tearsDown = pikkuScenarioHook<void, { projectId: string }>(
+          async (_services, _data, { scenario }) => {
+            const id: string | undefined = scenario.context.projectId
+            void id
+          }
+        )
+      `),
+      []
+    )
+  })
+
+  test('the context is not a bag — a field outside the output is an error', () => {
+    const errors = typeErrors(`
+      export const tearsDown = pikkuScenarioHook<void, { projectId: string }>(
+        async (_services, _data, { scenario }) => {
+          void scenario.context.sandboxId
+        }
+      )
+    `)
+    assert.ok(
+      errors.some((e) => e.includes('sandboxId')),
+      `expected an error naming 'sandboxId', got: ${errors.join(' | ')}`
+    )
+  })
+
+  test('a scenario declaring no object output still gets a usable context', () => {
+    assert.deepEqual(
+      typeErrors(`
+        export const tearsDown = pikkuScenarioHook(
+          async (_services, _data, { scenario }) => {
+            scenario.context.projectId = 'p_1'
+          }
+        )
+      `),
+      []
     )
   })
 })

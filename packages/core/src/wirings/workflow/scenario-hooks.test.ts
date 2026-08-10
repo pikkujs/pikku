@@ -184,6 +184,57 @@ describe('scenario before/after hooks', () => {
     ])
   })
 
+  test('after reads what the body wrote to the scenario context', async () => {
+    // The reason the context exists: teardown needs the ids the body minted,
+    // and a hook only ever receives the run's *input*.
+    let seen: any
+    await runScenario('contextHandover', {
+      after: async (_services, _data, wire) => {
+        seen = { ...wire.scenario.context }
+      },
+      func: async (_services, _data, wire) => {
+        wire.scenario.context.projectId = 'p_1'
+        return { projectId: 'p_1' }
+      },
+    })
+    assert.deepEqual(seen, { projectId: 'p_1' })
+  })
+
+  test('after sees the context of a body that threw after writing it', async () => {
+    // The failing path is the one that matters — a passing run could have
+    // returned the ids instead.
+    let seen: any
+    const { error } = await runScenario('contextOnFailure', {
+      after: async (_services, _data, wire) => {
+        seen = { ...wire.scenario.context }
+      },
+      func: async (_services, _data, wire) => {
+        wire.scenario.context.projectId = 'p_2'
+        throw new Error('body blew up')
+      },
+    })
+    assert.equal(error?.message, 'body blew up')
+    assert.deepEqual(seen, { projectId: 'p_2' })
+  })
+
+  test('before, the body and after all share one context object', async () => {
+    let seen: any
+    await runScenario('contextShared', {
+      before: async (_services, _data, wire) => {
+        wire.scenario.context.seededBy = 'before'
+      },
+      after: async (_services, _data, wire) => {
+        seen = { ...wire.scenario.context }
+      },
+      func: async (_services, _data, wire) => {
+        assert.equal(wire.scenario.context.seededBy, 'before')
+        wire.scenario.context.addedBy = 'func'
+        return { ok: true }
+      },
+    })
+    assert.deepEqual(seen, { seededBy: 'before', addedBy: 'func' })
+  })
+
   test('hooks are scenario-only — a plain DSL workflow never runs them', async () => {
     const order: string[] = []
     await runScenario(

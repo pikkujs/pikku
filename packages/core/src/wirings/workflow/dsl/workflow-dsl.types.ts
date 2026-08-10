@@ -528,7 +528,33 @@ export interface PikkuWorkflowWire {
   approval: WorkflowWireApproval
 }
 
-export interface PikkuScenarioWire extends PikkuWorkflowWire {
+/**
+ * What a scenario has accumulated so far, shared by its body and its hooks.
+ *
+ * Typed as a partial of the scenario's own output because a scenario can fail
+ * at any step: the shape describes what a *completed* run produces, and the
+ * context holds however much of it this run reached. A scenario declaring no
+ * object output gets an open record rather than `Partial<never>`.
+ */
+export type ScenarioContext<Out = unknown> = Out extends object
+  ? Partial<Out>
+  : Record<string, unknown>
+
+export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
+  /**
+   * Scratch the body writes and the `before`/`after` hooks read.
+   *
+   * A hook is a separate function, so it cannot see the body's locals — which
+   * is why teardown had nowhere to learn the ids the body minted. Assigning
+   * them here (`scenario.context.projectId = project.projectId`) hands them to
+   * `after`, which runs in a `finally` and so cleans up on a failed run too.
+   *
+   * Deliberately *not* a world: it is scoped to one run, and scenario steps
+   * cannot reach it. Steps stay pure functions of their declared inputs, so the
+   * ladder in the report remains a complete account of what a step saw.
+   */
+  context: ScenarioContext<Out>
+
   /**
    * Durable polling step: invoke `rpcName` (as an actor when `options.actor`
    * is set) until `predicate` passes or `options.within` elapses.
