@@ -109,21 +109,42 @@ describe('ChannelRPCRegistry', () => {
     })
   })
 
-  test('times out instead of hanging forever', async () => {
+  /**
+   * The registry unrefs its timeout timer so an in-flight call can never hold
+   * a process open. That makes the timeout unawaitable in a test: when the
+   * pending call is the only thing left, the loop drains before the timer
+   * fires, and node:test cancels the file — taking every later test with it.
+   *
+   * Driving the clock by hand removes the dependency on real time entirely.
+   * `t.mock.timers` is scoped to the test and resets itself, so the tests that
+   * do want a real clock are unaffected.
+   *
+   * knowledge: decisions/internals/an-unref-d-timer-cannot-be-awaited-under-node-test.md
+   */
+  test('times out instead of hanging forever', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+
     const registry = new ChannelRPCRegistry(10)
     const call = registry.register()
 
-    await assert.rejects(call.promise, (e: ChannelRPCError) => {
+    const rejected = assert.rejects(call.promise, (e: ChannelRPCError) => {
       assert.equal(e.reason, 'timeout')
       return true
     })
+    t.mock.timers.tick(10)
+    await rejected
+
     assert.equal(registry.inFlight, 0, 'a timed out call is not leaked')
   })
 
-  test('drops a late response for an already-timed-out call', async () => {
+  test('drops a late response for an already-timed-out call', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+
     const registry = new ChannelRPCRegistry(10)
     const call = registry.register()
-    await assert.rejects(call.promise)
+    const rejected = assert.rejects(call.promise)
+    t.mock.timers.tick(10)
+    await rejected
 
     const settled = registry.settle({
       action: CHANNEL_RPC_RESPONSE,

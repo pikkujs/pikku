@@ -627,8 +627,21 @@ describe('envelope encryption', () => {
     )
   })
 
+  /**
+   * Timed against a derivation measured here rather than a fixed millisecond
+   * budget. A constant threshold is a load test in disguise: this runs
+   * alongside two thousand other tests, and 50ms left barely 4x headroom over
+   * a 10ms window, so the suite went red roughly one run in five. Timing the
+   * derivation the test already needs costs nothing and makes both sides scale
+   * together, so the margin survives whatever else the machine is doing.
+   *
+   * knowledge: decisions/internals/a-wall-clock-threshold-is-a-load-test-in-disguise.md
+   */
   test('N secrets cost one KEK derivation, not N', async () => {
+    const derivationStart = performance.now()
     const kek = await deriveKEK(passphrase, salt)
+    const oneDerivation = performance.now() - derivationStart
+
     const count = 50
     const stored = []
     for (let i = 0; i < count; i++) {
@@ -648,8 +661,8 @@ describe('envelope encryption', () => {
     const elapsed = performance.now() - start
 
     assert.ok(
-      elapsed < 50,
-      `unwrapping ${count} DEKs took ${elapsed.toFixed(1)}ms; a re-derivation per secret would cost seconds`
+      elapsed < oneDerivation,
+      `unwrapping ${count} DEKs took ${elapsed.toFixed(1)}ms, longer than the ${oneDerivation.toFixed(1)}ms a single KEK derivation costs — re-deriving per secret would cost about ${(oneDerivation * count).toFixed(0)}ms`
     )
   })
 })
