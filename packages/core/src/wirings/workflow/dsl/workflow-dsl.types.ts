@@ -535,10 +535,17 @@ export interface PikkuWorkflowWire {
  * at any step: the shape describes what a *completed* run produces, and the
  * context holds however much of it this run reached. A scenario declaring no
  * object output gets an open record rather than `Partial<never>`.
+ *
+ * `any` collapses to `any`, not to the union of both branches. `PikkuWire`'s
+ * default depends on that: the wire type is also used as a generic *constraint*,
+ * and a constraint carrying a concrete context would reject every wire whose
+ * scenario output differs from it.
  */
-export type ScenarioContext<Out = unknown> = Out extends object
-  ? Partial<Out>
-  : Record<string, unknown>
+export type ScenarioContext<Out = unknown> = 0 extends 1 & Out
+  ? any
+  : Out extends object
+    ? Partial<Out>
+    : Record<string, unknown>
 
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   /**
