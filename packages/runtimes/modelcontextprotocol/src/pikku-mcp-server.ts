@@ -32,6 +32,9 @@ import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
+import type { PikkuHTTP } from '@pikku/core/http'
+import { PikkuFetchHTTPRequest } from '@pikku/core/http'
+
 import type { PikkuMCP } from '@pikku/core/mcp'
 import {
   MCPEndpointRegistry,
@@ -114,7 +117,14 @@ export class PikkuMCPServer {
     }
   }
 
-  private createConfiguredServer(): Server {
+  /**
+   * @param http the request this server instance is serving, when there is one.
+   * The fetch path builds a fresh server per request, so the dispatch handlers
+   * below can close over it and hand it to the runner — which is what lets the
+   * app's own auth middleware see a session on an MCP call. The stdio and
+   * long-lived paths have no request, and stay anonymous.
+   */
+  private createConfiguredServer(http?: PikkuHTTP): Server {
     const server = new Server(
       {
         name: this.config.name,
@@ -126,13 +136,13 @@ export class PikkuMCPServer {
     )
 
     if (this.config.capabilities.resources) {
-      this.setupResources(server)
+      this.setupResources(server, http)
     }
     if (this.config.capabilities.tools) {
-      this.setupTools(server)
+      this.setupTools(server, http)
     }
     if (this.config.capabilities.prompts) {
-      this.setupPrompts(server)
+      this.setupPrompts(server, http)
     }
 
     return server
@@ -234,7 +244,13 @@ export class PikkuMCPServer {
         return new Response(null, { status: 404 })
       }
       const transport = new WebStandardStreamableHTTPServerTransport()
-      const server = this.createConfiguredServer()
+      // The MCP body is read by the transport, so the request is cloned before
+      // being wrapped: both would otherwise compete for the same single-use
+      // body stream. Only headers and cookies are wanted here — a tool's input
+      // comes from the JSON-RPC params, not the HTTP body.
+      const server = this.createConfiguredServer({
+        request: new PikkuFetchHTTPRequest(request.clone()),
+      })
       await server.connect(transport)
       return transport.handleRequest(request)
     }
@@ -433,7 +449,7 @@ export class PikkuMCPServer {
     }
   }
 
-  private setupTools(server: Server): void {
+  private setupTools(server: Server, http?: PikkuHTTP): void {
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = Object.values(this.mcpEndpointRegistry.getTools())
       return {
@@ -458,7 +474,7 @@ export class PikkuMCPServer {
             id: Date.now().toString(),
             params: args || {},
           },
-          { mcp },
+          { mcp, http },
           name
         )
         return {
@@ -482,7 +498,7 @@ export class PikkuMCPServer {
     })
   }
 
-  private setupResources(server: Server): void {
+  private setupResources(server: Server, http?: PikkuHTTP): void {
     server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
       const resourceTemplates = Object.values(
         this.mcpEndpointRegistry.getResources()
@@ -524,7 +540,7 @@ export class PikkuMCPServer {
             id: Date.now().toString(),
             params: {},
           },
-          { mcp },
+          { mcp, http },
           uri
         )
         return {
@@ -549,7 +565,7 @@ export class PikkuMCPServer {
     })
   }
 
-  private setupPrompts(server: Server): void {
+  private setupPrompts(server: Server, http?: PikkuHTTP): void {
     server.setRequestHandler(ListPromptsRequestSchema, async () => {
       const promptsMeta = Object.values(getMCPPromptsMeta())
       return {
@@ -577,7 +593,7 @@ export class PikkuMCPServer {
           id: Date.now().toString(),
           params: args || {},
         },
-        { mcp },
+        { mcp, http },
         name
       )
 

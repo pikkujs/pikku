@@ -1,4 +1,5 @@
 import type { PikkuRawWire } from '../../types/core.types.js'
+import type { PikkuHTTP } from '../http/http.types.js'
 import type {
   CoreMCPResource,
   CoreMCPPrompt,
@@ -35,6 +36,20 @@ export class MCPError extends Error {
 
 export type RunMCPEndpointParams<Tools extends string = any> = {
   mcp?: PikkuMCP<Tools>
+  /**
+   * The HTTP request the MCP call arrived on, when it arrived over HTTP.
+   *
+   * Auth middleware reads the session off `wire.http.request` — every
+   * implementation opens with `if (!http?.request) return` — so without this an
+   * MCP call reaches the function unauthenticated no matter what middleware the
+   * app has registered, and a tool fronting a session-requiring function can
+   * only ever answer 'Authentication required'.
+   *
+   * Left undefined for transports that have no request to offer, such as stdio.
+   * Those remain anonymous, which is a property of the transport rather than a
+   * default chosen here.
+   */
+  http?: PikkuHTTP
   /** Defaults to enabled outside production. */
   exposeErrors?: boolean
 }
@@ -185,7 +200,7 @@ async function runMCPPikkuFunc(
   name: string,
   mcp: CoreMCPResource | CoreMCPPrompt | undefined,
   pikkuFuncId: string | undefined,
-  { mcp: mcpWire, exposeErrors = !isProduction() }: RunMCPEndpointParams,
+  { mcp: mcpWire, http, exposeErrors = !isProduction() }: RunMCPEndpointParams,
   // The key the endpoint's meta is stored under. Differs from `name` only for a
   // templated resource, where `name` is the concrete URI and the meta lives
   // under the template. Defaults to `name` for tools and prompts.
@@ -220,6 +235,9 @@ async function runMCPPikkuFunc(
     )
     const wire: PikkuRawWire = {
       mcp: mcpWire,
+      // Only when the transport supplied one. Setting `http: undefined`
+      // explicitly would be the same to a reader and different to a spread.
+      ...(http ? { http } : {}),
       ...createMiddlewareSessionWireProps(mcpSessionService),
     }
 

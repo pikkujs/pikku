@@ -19,6 +19,7 @@ export type {
   HTTPRouteContract,
   HTTPRouteMap,
   HTTPWiringsMeta,
+  PikkuHTTP,
   PikkuHTTPRequest,
   PikkuHTTPResponse,
   PikkuQuery,

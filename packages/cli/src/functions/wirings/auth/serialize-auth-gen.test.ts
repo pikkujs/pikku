@@ -38,11 +38,29 @@ describe('serializeAuthGen', () => {
     // package's imports map.
     assert.match(
       output,
-      /import { pikkuSessionlessFunc, wireHTTPRoutes, addHTTPMiddleware } from '\.\/pikku-types\.gen\.js'/
+      /import { pikkuSessionlessFunc, wireHTTPRoutes } from '\.\/pikku-types\.gen\.js'/
     )
     assert.match(
       output,
       /import { createAuthHandler, betterAuthSession } from '@pikku\/better-auth'/
+    )
+  })
+
+  test('session middleware is global, not HTTP-only, so MCP calls get a session', () => {
+    // These two resolve a session from whatever request the call arrived on.
+    // Registered with addHTTPMiddleware they ran for HTTP wirings alone, so an
+    // MCP tool fronting a session-requiring function answered 'Authentication
+    // required' no matter how the caller authenticated. Registered globally they
+    // run for any wiring; the ones with no request — queue, scheduler, cli —
+    // are unaffected, because every one of these middlewares opens with
+    // `if (!http?.request) return`.
+    const output = gen(['github'], def({ cookieCache: true })).middleware
+    assert.ok(output, 'stateless auth should emit a middleware file')
+    assert.match(output!, /addGlobalMiddleware\(\[/)
+    assert.doesNotMatch(output!, /addHTTPMiddleware/)
+    assert.match(
+      output!,
+      /import { addGlobalMiddleware } from '@pikku\/core\/middleware'/
     )
   })
 
@@ -106,7 +124,7 @@ describe('serializeAuthGen', () => {
 
   test('registers the better-auth session-bridge middleware globally', () => {
     const output = genWiring([])
-    assert.match(output, /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/)
+    assert.match(output, /addGlobalMiddleware\(\[betterAuthSession\(\)\]\)/)
   })
 
   test('wires a catch-all route per method to the shared handler', () => {
@@ -198,13 +216,13 @@ describe('serializeAuthGen', () => {
       assert.equal(out.middleware, undefined)
       assert.match(
         out.wiring,
-        /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/
+        /addGlobalMiddleware\(\[betterAuthSession\(\)\]\)/
       )
     })
 
     test('with cookieCache the wiring file drops the session middleware', () => {
       const out = gen(['github'], statelessDef)
-      assert.doesNotMatch(out.wiring, /addHTTPMiddleware/)
+      assert.doesNotMatch(out.wiring, /addGlobalMiddleware/)
       assert.doesNotMatch(out.wiring, /betterAuthSession/)
     })
 
@@ -230,7 +248,7 @@ describe('serializeAuthGen', () => {
       )
       assert.match(
         mw,
-        /addHTTPMiddleware\('\*', \[betterAuthStatelessSession\(\)\]\)/
+        /addGlobalMiddleware\(\[betterAuthStatelessSession\(\)\]\)/
       )
       // Critically: it must NOT pull the full better-auth server in.
       assert.doesNotMatch(mw, /import '\.\.\/src\/auth\.js'/)
@@ -250,7 +268,7 @@ describe('serializeAuthGen', () => {
       assert.match(mw, /import { authBearer } from '@pikku\/core\/middleware'/)
       assert.match(
         mw,
-        /addHTTPMiddleware\('\*', \[\s*betterAuthStatelessSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
+        /addGlobalMiddleware\(\[\s*betterAuthStatelessSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
       )
       assert.doesNotMatch(mw, /process\.env/)
     })
@@ -263,7 +281,7 @@ describe('serializeAuthGen', () => {
       )
       assert.match(
         out.wiring,
-        /addHTTPMiddleware\('\*', \[\s*betterAuthSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
+        /addGlobalMiddleware\(\[\s*betterAuthSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
       )
     })
 
@@ -295,6 +313,9 @@ describe('serializeAuthGen', () => {
 
     test('drops the generated stateful session middleware (no double-register)', () => {
       const out = genSkip(['github'])
+      // Both names: `addHTTPMiddleware` is no longer emitted anywhere, so
+      // asserting only its absence would pass whatever this branch did.
+      assert.doesNotMatch(out.wiring, /addGlobalMiddleware/)
       assert.doesNotMatch(out.wiring, /addHTTPMiddleware/)
       assert.doesNotMatch(out.wiring, /betterAuthSession/)
     })
@@ -312,7 +333,7 @@ describe('serializeAuthGen', () => {
     test('by default (no user registration) the middleware is still generated', () => {
       assert.match(
         genWiring(['github']),
-        /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/
+        /addGlobalMiddleware\(\[betterAuthSession\(\)\]\)/
       )
     })
   })
