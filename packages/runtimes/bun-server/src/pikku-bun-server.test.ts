@@ -1,7 +1,7 @@
 import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { setSingletonServices } from '@pikku/core'
-import { resetPikkuState } from '@pikku/core/internal'
+import { setSingletonServices } from '@pikku/core/ecosystem'
+import { resetPikkuState } from '@pikku/core/ecosystem'
 import type { Logger } from '@pikku/core/services'
 import { PikkuBunServer } from './pikku-bun-server.js'
 

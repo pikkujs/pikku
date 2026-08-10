@@ -5,7 +5,7 @@ import type {
   CoreUserSession,
 } from '@pikku/core'
 import { SchedulerService, parseDurationString } from '@pikku/core'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**

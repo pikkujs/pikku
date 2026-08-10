@@ -16,7 +16,7 @@ import {
   KyselyAgentRunService,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
   LocalContent,

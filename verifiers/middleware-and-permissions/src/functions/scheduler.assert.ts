@@ -1,4 +1,4 @@
-import { runScheduledTask } from '@pikku/core'
+import { runScheduledTask } from '@pikku/core/scheduler'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 

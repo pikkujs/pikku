@@ -39,7 +39,7 @@ export const serializeScenarioWorkflowMeta = (
     .map((name) => `  '${name}': ${sanitizeTypeName(name)}Meta,`)
     .join('\n')
 
-  return `import { pikkuState } from '@pikku/core/internal'
+  return `import { pikkuState } from '@pikku/core/ecosystem'
 import type { WorkflowsRuntimeMeta } from '@pikku/core/workflow/types'
 import '${appMetaImportPath}'
 ${imports ? `\n${imports}\n` : ''}
@@ -67,7 +67,7 @@ export const serializeScenarioFunctionMeta = (
     ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
     : `import metaData from '${jsonImportPath}'`
 
-  return `import { pikkuState } from '@pikku/core/internal'
+  return `import { pikkuState } from '@pikku/core/ecosystem'
 import type { FunctionsMeta } from '@pikku/core'
 import '${appMetaImportPath}'
 ${importStatement}

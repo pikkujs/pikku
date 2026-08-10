@@ -4,7 +4,7 @@ import {
   type Scenario,
 } from './bench-shared.js'
 import { fetchData } from '@pikku/core/http'
-import { pikkuState, httpRouter } from '@pikku/core/internal'
+import { pikkuState, httpRouter } from '@pikku/core/ecosystem'
 import { UWSPikkuHTTPRequest } from '@pikku/uws-handler/src/uws-pikku-http-request.js'
 import { UWSPikkuHTTPResponse } from '@pikku/uws-handler/src/uws-pikku-http-response.js'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'

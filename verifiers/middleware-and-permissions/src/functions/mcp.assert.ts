@@ -1,4 +1,4 @@
-import { runMCPTool, runMCPResource, runMCPPrompt } from '@pikku/core'
+import { runMCPTool, runMCPResource, runMCPPrompt } from '@pikku/core/mcp'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 

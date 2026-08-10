@@ -1,5 +1,5 @@
 import type { AuthInstance, CoreSingletonServices } from '@pikku/core'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 
 /**
  * better-auth's instance as pikku sees it. `$context` is what credential

@@ -13,7 +13,7 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToBull = (

@@ -70,7 +70,7 @@ export {
   pikkuPermissionFactory,
   pikkuApprovalDescription,
 } from './function/functions.types.js'
-export { addFunction, getAllFunctionNames } from './function/index.js'
+export { getAllFunctionNames } from './function/index.js'
 export type {
   ListInput,
   ListOutput,
@@ -78,6 +78,7 @@ export type {
   LeafFilter,
   LeafValue,
 } from './function/list.types.js'
+export { pikkuCLIRender } from './wirings/cli/cli-runner.js'
 export { PikkuRequest } from './pikku-request.js'
 export {
   getRelativeTimeOffsetFromNow,
@@ -89,7 +90,6 @@ export {
   isVersionedId,
   parseVersionedId,
 } from './version.js'
-export { runPikkuFunc } from './function/function-runner.js'
 export {
   AbandonedError,
   beginChanges,
@@ -97,20 +97,12 @@ export {
   runInAbortScope,
   type AbortScope,
 } from './function/abort-scope.js'
-export { runCLICommand, pikkuCLIRender } from './wirings/cli/cli-runner.js'
 export { fetch } from './wirings/http/http-runner.js'
-export {
-  runMCPTool,
-  runMCPResource,
-  runMCPPrompt,
-} from './wirings/mcp/mcp-runner.js'
 export type {
   MCPToolResponse,
   MCPResourceResponse,
   MCPPromptResponse,
 } from './wirings/mcp/mcp.types.js'
-export { runQueueJob } from './wirings/queue/queue-runner.js'
-export { runScheduledTask } from './wirings/scheduler/scheduler-runner.js'
 export {
   AIProviderAuthError,
   AIProviderNotConfiguredError,
@@ -253,12 +245,7 @@ export type {
   RemoteAddonAuth,
 } from './wirings/rpc/wire-remote-addon.js'
 export type { PikkuPackageState } from './types/state.types.js'
-export {
-  runMiddleware,
-  addTagMiddleware,
-  addTagMiddleware as addMiddleware,
-  addGlobalMiddleware,
-} from './middleware-runner.js'
+export { runMiddleware, addTagMiddleware } from './middleware-runner.js'
 export { addGlobalPermission, checkAuthPermissions } from './permissions.js'
 export { hasScopes, verifyScopes } from './scopes.js'
 export {
@@ -266,11 +253,6 @@ export {
   stopSingletonServices,
   pikkuServerLifecycle,
 } from './utils.js'
-export {
-  getSingletonServices,
-  getCreateWireServices,
-  setSingletonServices,
-} from './pikku-state.js'
 export { clearPikkuRuntimeState } from './test-utils.js'
 export {
   type ScheduledTaskInfo,

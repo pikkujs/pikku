@@ -23,7 +23,7 @@ export const serializePackageFactories = (
   requiredParentServices?: string[]
 ) => {
   const imports: string[] = [
-    `import { pikkuState } from '@pikku/core/internal'`,
+    `import { pikkuState } from '@pikku/core/ecosystem'`,
   ]
 
   const factoryEntries: string[] = []

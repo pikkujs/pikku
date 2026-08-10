@@ -107,7 +107,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       agentWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/internal'
+      `import { pikkuState } from '@pikku/core/ecosystem'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 ${importStatement}
 pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)`

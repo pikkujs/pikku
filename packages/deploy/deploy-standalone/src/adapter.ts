@@ -77,7 +77,7 @@ export class StandaloneProviderAdapter {
       `// Generated standalone entry — all functions in one process`,
       `import { LocalEventHubService } from '@pikku/core/channel/local'`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
-      `import { pikkuState } from '@pikku/core/internal'`,
+      `import { pikkuState } from '@pikku/core/ecosystem'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { pikkuWebsocketHandler } from '@pikku/ws'`,
@@ -141,7 +141,7 @@ export class StandaloneProviderAdapter {
     return [
       `// Generated standalone entry (bun runtime) — all functions in one process`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
-      `import { pikkuState } from '@pikku/core/internal'`,
+      `import { pikkuState } from '@pikku/core/ecosystem'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
       `import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'`,
       ``,

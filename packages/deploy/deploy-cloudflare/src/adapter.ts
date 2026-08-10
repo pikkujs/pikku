@@ -298,7 +298,7 @@ export class CloudflareProviderAdapter {
     const lines: string[] = [
       `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
-      `import { pikkuState } from '@pikku/core/internal'`,
+      `import { pikkuState } from '@pikku/core/ecosystem'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       ...this.contributorImports(platform),

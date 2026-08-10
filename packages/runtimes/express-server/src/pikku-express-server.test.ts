@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, test } from 'node:test'
-import { setSingletonServices } from '@pikku/core'
-import { resetPikkuState } from '@pikku/core/internal'
+import { setSingletonServices, resetPikkuState } from '@pikku/core/ecosystem'
 import type { Logger } from '@pikku/core/services'
 
 import { PikkuExpressServer } from './pikku-express-server.js'

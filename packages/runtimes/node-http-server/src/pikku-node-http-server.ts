@@ -17,7 +17,7 @@ import {
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import {
   signedContentPath,
   type LocalContentConfig,

@@ -39,7 +39,7 @@ import {
   addGlobalMiddleware as addGlobalMiddlewareCore,
   addGlobalPermission as addGlobalPermissionCore,
 } from '@pikku/core/middleware'
-import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
+import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/ecosystem'
 import type { NodeType } from '@pikku/core/node'
 ${scopesImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'

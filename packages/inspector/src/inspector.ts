@@ -41,7 +41,7 @@ import { validateExposedFunctionsGated } from './utils/validate-exposed-function
 import { validateTagsResolveToMiddleware } from './utils/validate-tags-resolve-to-middleware.js'
 import { annotateHttpRouteAuth } from './utils/annotate-http-route-auth.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
-import { pikkuState } from '@pikku/core/internal'
+import { pikkuState } from '@pikku/core/ecosystem'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
 import {
