@@ -79,10 +79,7 @@ export interface TypedScenarioSteps {
   ): Promise<FlattenedScenarioStepMap[K]['output']>
 }
 
-/**
- * \`Out\` types \`scenario.context\` — the scratch the body shares with its
- * \`before\`/\`after\` hooks — as a partial of what a completed run produces.
- */
+/** \`Out\` types \`scenario.context\`. */
 export type TypedScenario<Out = unknown> = TypedWorkflow &
   Omit<PikkuScenarioWire<Out>, keyof PikkuWorkflowWire | keyof TypedScenarioSteps> &
   TypedScenarioSteps
@@ -99,9 +96,9 @@ export type PikkuFunctionWorkflow<
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * \`Ctx\` types \`scenario.context\` and defaults to the function's own output,
- * which is what a scenario body wants. A hook returns void but shares the
- * scenario's context, so it passes the scenario's output here instead.
+ * \`Ctx\` types \`scenario.context\`, defaulting to the body's own output. A hook
+ * returns void but shares the scenario's context, so it passes that scenario's
+ * output here instead.
  */
 export type PikkuFunctionScenario<
   In = unknown,
@@ -193,10 +190,8 @@ export type PikkuScenarioConfigWithSchema<
    * Always runs after the scenario body, in a \`finally\`, whether it passed or
    * failed. Throwing fails a run that would otherwise have passed; on an
    * already-failed run it attaches as the \`cause\` and never replaces the
-   * original error.
-   *
-   * Reads \`scenario.context\` for whatever the body managed to record before it
-   * stopped — that is how teardown learns the ids a failed run created.
+   * original error. Reads \`scenario.context\` for whatever the body managed to
+   * record before it stopped.
    */
   after?: PikkuScenarioHook<InputSchema, OutputSchema>
   /**
@@ -210,11 +205,8 @@ export type PikkuScenarioConfigWithSchema<
 
 /**
  * A scenario lifecycle hook: the scenario's own \`(services, data, wire)\`
- * signature with its result discarded.
- *
- * The hook returns void but shares the scenario's \`context\`, so the output
- * schema types \`scenario.context\` while the return type stays \`void\` — a hook
- * is setup and teardown, never a step, and nothing it returns is recorded.
+ * signature with its result discarded. \`OutputSchema\` types
+ * \`scenario.context\` while the return type stays \`void\`.
  */
 export type PikkuScenarioHook<
   InputSchema extends StandardSchemaV1 | undefined = undefined,

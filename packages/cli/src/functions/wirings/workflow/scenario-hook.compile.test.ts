@@ -137,8 +137,7 @@ describe('pikkuScenarioHook', () => {
   })
 
   test('a hook reads the context as a partial of the scenario output', () => {
-    // The point of the context: teardown learns the ids the body minted, and
-    // `Partial` is what makes it honest — a run that failed before creating the
+    // `Partial` is what makes it honest: a run that failed before creating the
     // project has no projectId, so the hook is forced to handle its absence.
     assert.deepEqual(
       typeErrors(`

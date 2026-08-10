@@ -545,15 +545,14 @@ export interface PikkuWorkflowWire {
 /**
  * What a scenario has accumulated so far, shared by its body and its hooks.
  *
- * Typed as a partial of the scenario's own output because a scenario can fail
- * at any step: the shape describes what a *completed* run produces, and the
- * context holds however much of it this run reached. A scenario declaring no
- * object output gets an open record rather than `Partial<never>`.
+ * `Partial` because a scenario can fail at any step: `Out` describes what a
+ * *completed* run produces, and the context holds however much of it this run
+ * reached.
  *
- * `any` collapses to `any`, not to the union of both branches. `PikkuWire`'s
- * default depends on that: the wire type is also used as a generic *constraint*,
- * and a constraint carrying a concrete context would reject every wire whose
- * scenario output differs from it.
+ * The `0 extends 1 & Out` branch keeps `any` collapsing to `any` rather than to
+ * the union of the other two. `PikkuWire` and `PikkuFunctionConfig` both use
+ * this type as a generic *constraint*, and a constraint carrying a concrete
+ * context would reject every wire whose scenario output differs from it.
  */
 export type ScenarioContext<Out = unknown> = 0 extends 1 & Out
   ? any
@@ -563,12 +562,9 @@ export type ScenarioContext<Out = unknown> = 0 extends 1 & Out
 
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   /**
-   * Scratch the body writes and the `before`/`after` hooks read.
-   *
-   * A hook is a separate function, so it cannot see the body's locals — which
-   * is why teardown had nowhere to learn the ids the body minted. Assigning
-   * them here (`scenario.context.projectId = project.projectId`) hands them to
-   * `after`, which runs in a `finally` and so cleans up on a failed run too.
+   * Scratch the body writes and the `before`/`after` hooks read. A hook is a
+   * separate function and cannot see the body's locals, so this is how teardown
+   * learns the ids the body minted.
    *
    * Deliberately *not* a world: it is scoped to one run, and scenario steps
    * cannot reach it. Steps stay pure functions of their declared inputs, so the

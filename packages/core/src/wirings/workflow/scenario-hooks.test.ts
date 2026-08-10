@@ -185,8 +185,8 @@ describe('scenario before/after hooks', () => {
   })
 
   test('after reads what the body wrote to the scenario context', async () => {
-    // The reason the context exists: teardown needs the ids the body minted,
-    // and a hook only ever receives the run's *input*.
+    // The reason the context exists: a hook only ever receives the run's
+    // *input*, never what the body produced.
     let seen: any
     await runScenario('contextHandover', {
       after: async (_services, _data, wire) => {
