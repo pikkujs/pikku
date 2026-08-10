@@ -10,6 +10,7 @@ import type {
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
+import { applyInputMiddleware } from './ai-agent-turn.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { randomUUID } from './ai-agent-utils.js'
 import { SPOKEN_TRANSCRIPT } from './voice-input.js'
@@ -676,19 +677,16 @@ export async function streamAIAgent(
   // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
   const sharedNotes: Record<string, unknown> = {}
 
-  let modifiedMessages = runnerParams.messages
-  let modifiedInstructions = runnerParams.instructions
-  for (const mw of aiMiddlewares) {
-    if (mw.modifyInput) {
-      const result = await mw.modifyInput(singletonServices, {
-        messages: modifiedMessages,
-        instructions: modifiedInstructions,
-        shared: sharedNotes,
-      })
-      modifiedMessages = result.messages
-      modifiedInstructions = result.instructions
-    }
-  }
+  const { messages: modifiedMessages, instructions: modifiedInstructions } =
+    await applyInputMiddleware(
+      aiMiddlewares,
+      singletonServices,
+      {
+        messages: runnerParams.messages,
+        instructions: runnerParams.instructions,
+      },
+      sharedNotes
+    )
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
 
@@ -1296,19 +1294,13 @@ async function continueAfterToolResult(
   // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
   const sharedNotes: Record<string, unknown> = {}
 
-  let modifiedMessages = trimmedMessages
-  let modifiedInstructions = instructions
-  for (const mw of aiMiddlewares) {
-    if (mw.modifyInput) {
-      const result = await mw.modifyInput(singletonServices, {
-        messages: modifiedMessages,
-        instructions: modifiedInstructions,
-        shared: sharedNotes,
-      })
-      modifiedMessages = result.messages
-      modifiedInstructions = result.instructions
-    }
-  }
+  const { messages: modifiedMessages, instructions: modifiedInstructions } =
+    await applyInputMiddleware(
+      aiMiddlewares,
+      singletonServices,
+      { messages: trimmedMessages, instructions: instructions },
+      sharedNotes
+    )
 
   // knowledge: decisions/internals/a-resumed-agent-turn-is-as-interruptible-as-the-first.md
   const interruptHandle = registerInterruptibleRun(run.runId)

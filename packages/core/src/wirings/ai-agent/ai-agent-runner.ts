@@ -43,6 +43,12 @@ import {
   trackToolExecution,
 } from './ai-agent-interrupt.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
+import {
+  applyInputMiddleware,
+  describeApprovals,
+  notifyAfterStep,
+  toAccumulatedStep,
+} from './ai-agent-turn.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { randomUUID } from './ai-agent-utils.js'
@@ -147,19 +153,16 @@ export async function runAIAgent(
   // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
   const sharedNotes: Record<string, unknown> = {}
 
-  let modifiedMessages = runnerParams.messages
-  let modifiedInstructions = runnerParams.instructions
-  for (const mw of aiMiddlewares) {
-    if (mw.modifyInput) {
-      const result = await mw.modifyInput(singletonServices, {
-        messages: modifiedMessages,
-        instructions: modifiedInstructions,
-        shared: sharedNotes,
-      })
-      modifiedMessages = result.messages
-      modifiedInstructions = result.instructions
-    }
-  }
+  const { messages: modifiedMessages, instructions: modifiedInstructions } =
+    await applyInputMiddleware(
+      aiMiddlewares,
+      singletonServices,
+      {
+        messages: runnerParams.messages,
+        instructions: runnerParams.instructions,
+      },
+      sharedNotes
+    )
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
 
@@ -210,52 +213,15 @@ export async function runAIAgent(
       totalUsage.inputTokens += stepResult.usage.inputTokens
       totalUsage.outputTokens += stepResult.usage.outputTokens
 
-      for (const mw of aiMiddlewares) {
-        if (mw.afterStep) {
-          await mw.afterStep(singletonServices, {
-            stepNumber: step,
-            text: stepResult.text,
-            toolCalls: stepResult.toolCalls,
-            toolResults: stepResult.toolResults,
-            usage: stepResult.usage,
-            finishReason: stepResult.finishReason,
-          })
-        }
-      }
+      await notifyAfterStep(aiMiddlewares, singletonServices, step, stepResult)
 
-      accumulatedSteps.push({
-        usage: stepResult.usage,
-        toolCalls: stepResult.toolCalls.map((tc) => {
-          const tr = stepResult.toolResults.find(
-            (r) => r.toolCallId === tc.toolCallId
-          )
-          return {
-            name: tc.toolName,
-            args: tc.args as Record<string, unknown>,
-            result:
-              typeof tr?.result === 'string'
-                ? tr.result
-                : JSON.stringify(tr?.result ?? ''),
-          }
-        }),
-      })
+      accumulatedSteps.push(toAccumulatedStep(stepResult))
 
       if (stepResult.toolCalls.length === 0) break
 
       const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
       if (approvalsNeeded.length > 0) {
-        for (const approval of approvalsNeeded) {
-          const toolDef = runnerParams.tools.find(
-            (t) => t.name === approval.toolName
-          )
-          if (toolDef?.approvalDescriptionFn && !approval.reason) {
-            try {
-              approval.reason = await toolDef.approvalDescriptionFn(
-                approval.args
-              )
-            } catch {}
-          }
-        }
+        await describeApprovals(approvalsNeeded, runnerParams.tools)
 
         const pendingApprovals = approvalsNeeded.map((a) =>
           a.agentRunId
@@ -614,19 +580,13 @@ async function continueAfterToolResultSync(
   // One bag per run, shared by every middleware — see PikkuAIMiddlewareHooks.
   const sharedNotes: Record<string, unknown> = {}
 
-  let modifiedMessages = trimmedMessages
-  let modifiedInstructions = instructions
-  for (const mw of aiMiddlewares) {
-    if (mw.modifyInput) {
-      const result = await mw.modifyInput(singletonServices, {
-        messages: modifiedMessages,
-        instructions: modifiedInstructions,
-        shared: sharedNotes,
-      })
-      modifiedMessages = result.messages
-      modifiedInstructions = result.instructions
-    }
-  }
+  const { messages: modifiedMessages, instructions: modifiedInstructions } =
+    await applyInputMiddleware(
+      aiMiddlewares,
+      singletonServices,
+      { messages: trimmedMessages, instructions: instructions },
+      sharedNotes
+    )
 
   const { tools: resumeTools } = await buildToolDefs(
     params,
@@ -675,52 +635,15 @@ async function continueAfterToolResultSync(
       totalUsage.inputTokens += stepResult.usage.inputTokens
       totalUsage.outputTokens += stepResult.usage.outputTokens
 
-      for (const mw of aiMiddlewares) {
-        if (mw.afterStep) {
-          await mw.afterStep(singletonServices, {
-            stepNumber: step,
-            text: stepResult.text,
-            toolCalls: stepResult.toolCalls,
-            toolResults: stepResult.toolResults,
-            usage: stepResult.usage,
-            finishReason: stepResult.finishReason,
-          })
-        }
-      }
+      await notifyAfterStep(aiMiddlewares, singletonServices, step, stepResult)
 
-      accumulatedSteps.push({
-        usage: stepResult.usage,
-        toolCalls: stepResult.toolCalls.map((tc) => {
-          const tr = stepResult.toolResults.find(
-            (r) => r.toolCallId === tc.toolCallId
-          )
-          return {
-            name: tc.toolName,
-            args: tc.args as Record<string, unknown>,
-            result:
-              typeof tr?.result === 'string'
-                ? tr.result
-                : JSON.stringify(tr?.result ?? ''),
-          }
-        }),
-      })
+      accumulatedSteps.push(toAccumulatedStep(stepResult))
 
       if (stepResult.toolCalls.length === 0) break
 
       const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
       if (approvalsNeeded.length > 0) {
-        for (const approval of approvalsNeeded) {
-          const toolDef = runnerParams.tools.find(
-            (t) => t.name === approval.toolName
-          )
-          if (toolDef?.approvalDescriptionFn && !approval.reason) {
-            try {
-              approval.reason = await toolDef.approvalDescriptionFn(
-                approval.args
-              )
-            } catch {}
-          }
-        }
+        await describeApprovals(approvalsNeeded, runnerParams.tools)
 
         const pendingApprovals = approvalsNeeded.map((a) =>
           a.agentRunId
