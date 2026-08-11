@@ -57,6 +57,21 @@ echo "Bootstrapping with published @pikku/cli..."
 # So it is pinned like the rest: 0.13.10 peers on core ^0.12.77, which is why
 # core moved up with it. The whole set moves together or none of it does.
 : "${PIKKU_KYSELY_VERSION:=0.13.10}"
+# @pikku/schedule is the fourth to arrive this way, and it is worth naming what
+# these four have in common: a package the CLI reaches transitively, on a range,
+# that is free to land on a *later* release wave than the one this pin describes.
+# Unpinned it floats on the CLI's `^0.12.4`. Then 0.12.5 moved to
+# `@pikku/core/ecosystem` — the subpath the adapter surface moved to — and core
+# 0.12.80 is the first release to define it. Landing beside the pinned 0.12.79 it
+# does not fail on a missing *symbol* but on a missing *subpath*, which node
+# reports before any of this file's patch passes get to run:
+#
+#   Package subpath './ecosystem' is not defined by "exports" in
+#   @pikku/core/package.json imported from @pikku/schedule/dist/...
+#
+# Held at the 0.12.79 wave's own version. Moving the wave forward means moving
+# this with it.
+: "${PIKKU_SCHEDULE_VERSION:=0.12.4}"
 # The other peer that has to be named: @pikku/better-auth peers on the upstream
 # `better-auth` library and imports it at module load, so without it the
 # bootstrap CLI dies on "Cannot find package 'better-auth'".
@@ -86,6 +101,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/core": "${PIKKU_CORE_VERSION}",
     "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
+    "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
   "overrides": {
@@ -94,6 +110,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/core": "${PIKKU_CORE_VERSION}",
     "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
+    "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
 }
