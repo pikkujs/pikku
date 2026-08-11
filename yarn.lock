@@ -7123,7 +7123,7 @@ __metadata:
   resolution: "@pikku/templates-ws-server@workspace:templates/ws"
   dependencies:
     "@pikku/core": "npm:^0.12.80"
-    "@pikku/ws": "npm:^0.12.5"
+    "@pikku/ws": "npm:^0.12.6"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
     tslib: "npm:^2.8.1"
@@ -7578,7 +7578,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/ws@npm:^0.12.5, @pikku/ws@workspace:packages/runtimes/ws":
+"@pikku/ws@npm:^0.12.5, @pikku/ws@npm:^0.12.6, @pikku/ws@workspace:packages/runtimes/ws":
   version: 0.0.0-use.local
   resolution: "@pikku/ws@workspace:packages/runtimes/ws"
   dependencies:
