@@ -396,6 +396,74 @@ describe('CLI Runner', () => {
       const programs = pikkuState(null, 'cli', 'programs')
       assert.strictEqual(programs['nonexistent'], undefined)
     })
+
+    test('enforces command-level permissions declared on a CLI command', async () => {
+      let functionRan = false
+
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'sec-cli': {
+            program: 'sec-cli',
+            commands: {
+              secret: {
+                command: 'secret',
+                pikkuFuncId: 'secretFunc',
+                positionals: [],
+                options: {},
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+      pikkuState(null, 'function', 'meta', {
+        secretFunc: {
+          pikkuFuncId: 'secretFunc',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+      })
+
+      wireCLI({
+        program: 'sec-cli',
+        commands: {
+          // command.func is a function-config object, so unwrapFunc reads the
+          // inner func's auth/permissions and previously dropped the
+          // command-level ones — the branch this fix restores.
+          secret: {
+            func: {
+              func: async () => {
+                functionRan = true
+                return {}
+              },
+            },
+            // A permission that always denies.
+            permissions: { deny: async () => false },
+          } as any,
+        },
+      })
+
+      const result = await runCLICommand({
+        program: 'sec-cli',
+        commandPath: ['secret'],
+        data: {},
+        singletonServices,
+        createWireServices,
+      }).catch((error) => ({ success: false, error }))
+
+      assert.equal(
+        functionRan,
+        false,
+        'the function must not run when a declared permission denies'
+      )
+      assert.notEqual(
+        (result as any).success,
+        true,
+        'the command must not report success when permission is denied'
+      )
+    })
   })
 
   describe('pikkuCLIRender', () => {

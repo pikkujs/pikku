@@ -103,6 +103,29 @@ describe('handleRawCLI', () => {
     assert.match(result.error!, /deploy plan is red/)
   })
 
+  test('masks the raw error message to the client in production', async () => {
+    const prior = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    try {
+      wireTestCLI(() => {
+        throw new Error('connection to internal-db:5432 failed: bad password')
+      })
+
+      const result = await handleRawCLI({
+        programName: 'fabric',
+        args: ['deploy'],
+        singletonServices,
+      })
+
+      assert.equal(result.exitCode, 1)
+      assert.equal(result.error, 'Command failed')
+      assert.doesNotMatch(result.error!, /internal-db|password/)
+    } finally {
+      if (prior === undefined) delete process.env.NODE_ENV
+      else process.env.NODE_ENV = prior
+    }
+  })
+
   test('exits 0 on help and 1 on an unknown command', async () => {
     wireTestCLI(() => ({}))
 

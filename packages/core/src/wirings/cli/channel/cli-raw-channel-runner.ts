@@ -1,4 +1,5 @@
 import { pikkuState } from '../../../pikku-state.js'
+import { isProduction } from '../../../env.js'
 import type { CLIMeta } from '../cli.types.js'
 import { parseCLIArguments, generateCommandHelp } from '../command-parser.js'
 import { runCLICommand } from '../cli-runner.js'
@@ -132,6 +133,16 @@ export async function handleRawCLI({
     // A command can throw anything; `.message` off a string is undefined, and
     // the run would then exit 1 saying nothing at all.
     const message = e instanceof Error ? e.message : String(e)
-    return { error: message || 'Command failed', exitCode: 1, commandId }
+    // The raw message can carry internals (a stack, a DB error, a path). This
+    // runs over a channel that may be remote, so return a generic error in
+    // production and keep the detail server-side. Dev keeps the message inline.
+    singletonServices.logger.error?.(
+      `CLI channel command failed: ${message}`,
+      e
+    )
+    const clientError = isProduction()
+      ? 'Command failed'
+      : message || 'Command failed'
+    return { error: clientError, exitCode: 1, commandId }
   }
 }

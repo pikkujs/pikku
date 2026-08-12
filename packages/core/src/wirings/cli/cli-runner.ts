@@ -169,7 +169,24 @@ function registerCLICommands(
       }
     }
 
-    addFunction(funcName, unwrapFunc(command), currentMeta?.packageName)
+    // Merge the command-level auth/permissions into the registered config so
+    // they are actually enforced by the function runner. They were accepted by
+    // the types but dropped here, making a command's declared access control a
+    // silent no-op. Command-level wins over the handler's own, then falls back
+    // to it.
+    const unwrapped = unwrapFunc(command)
+    const commandAuth = typeof command === 'object' ? command.auth : undefined
+    const commandPermissions =
+      typeof command === 'object' ? command.permissions : undefined
+    addFunction(
+      funcName,
+      {
+        ...unwrapped,
+        auth: commandAuth ?? unwrapped.auth,
+        permissions: commandPermissions ?? unwrapped.permissions,
+      },
+      currentMeta?.packageName
+    )
 
     if (typeof command === 'object' && command.render) {
       if (programs[program]) {
