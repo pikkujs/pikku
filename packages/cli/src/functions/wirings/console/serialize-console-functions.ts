@@ -51,6 +51,7 @@ import {
 
 export const pikkuConsoleSetSecret = pikkuFunc({
   secretBroker: true,
+  scopes: ['admin'],
   tags: ['pikku'],
   description: 'Set the value of a secret',
   expose: true,
@@ -64,6 +65,7 @@ export const pikkuConsoleSetSecret = pikkuFunc({
 
 export const pikkuConsoleGetVariable = pikkuFunc({
   tags: ['pikku'],
+  scopes: ['admin'],
   description: 'Get the current value of a variable',
   expose: true,
   input: VariableRef,
@@ -85,6 +87,7 @@ export const pikkuConsoleGetVariable = pikkuFunc({
 
 export const pikkuConsoleSetVariable = pikkuFunc({
   tags: ['pikku'],
+  scopes: ['admin'],
   description: 'Set the value of a variable',
   expose: true,
   input: SetVariable,
@@ -101,6 +104,7 @@ export const pikkuConsoleSetVariable = pikkuFunc({
 
 export const pikkuConsoleHasSecret = pikkuFunc({
   secretBroker: true,
+  scopes: ['admin'],
   tags: ['pikku'],
   description: 'Check if a secret exists without reading its value',
   expose: true,
@@ -114,6 +118,7 @@ export const pikkuConsoleHasSecret = pikkuFunc({
 
 export const pikkuConsoleGetSecret = pikkuFunc({
   secretBroker: true,
+  scopes: ['admin'],
   tags: ['pikku'],
   description: 'Get the current value of a secret',
   expose: true,
