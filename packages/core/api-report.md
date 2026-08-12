@@ -5,12 +5,12 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2780 observable things**: 946 exported names, plus
-1834 members on the classes and interfaces among them.
+**2781 observable things**: 946 exported names, plus
+1835 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 47 | 936 | 1834 |
+| stable | 47 | 936 | 1835 |
 | ecosystem | 2 | 10 | 0 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -476,7 +476,7 @@ export type RunTimeline = RunTimelineEvent[]
 export interface RunTimelineEvent { seq: number at: Date type: Extract< StepStatus, 'pending' | 'scheduled' | 'running' | 'succeeded' | 'failed' > stepName: string attemptCount: number fromStepName?: string result?: unknown error?: SerializedError }
 SCENARIO_SURFACES: readonly ScenarioSurface[]
 export interface ScenarioBrowserFailure { actor: string url?: string screenshot?: string consoleErrors: string[] pageErrors: string[] failedRequests: string[] apiErrors: string[] }
-export interface ScenarioBrowserProvider { sessionFor(actorName: string): Promise<PikkuBrowserWire> reset?(): Promise<void> captureFailure?(label: string): Promise<ScenarioBrowserFailure[]> close(): Promise<void> }
+export interface ScenarioBrowserProvider { sessionFor(actorName: string): Promise<PikkuBrowserWire> reset?(): Promise<void> beginScenario?(scenario: string): void captureFailure?(label: string): Promise<ScenarioBrowserFailure[]> close(): Promise<void> }
 export interface ScenarioCookieJar { fetch: typeof fetch clear(): void readonly empty: boolean }
 export interface ScenarioEnvironment { apiUrl: string appUrl?: string }
 export interface ScenarioHttpResponse<T = unknown> { status: number ok: boolean body: T serialized: string }
@@ -595,7 +595,7 @@ export interface PikkuWorkflow { start: <I>(input: I) => Promise<{ runId: string
 export interface PikkuWorkflowWire { name: string runId: string pikkuUserId?: string getRun: () => Promise<WorkflowRun> do: WorkflowWireDoRPC & WorkflowWireDoInline sleep: WorkflowWireSleep suspend: WorkflowWireSuspend approval: WorkflowWireApproval }
 export interface ReturnStepMeta { type: 'return' outputs: Record<string, OutputBinding> spread?: string[] }
 export interface RpcStepMeta { type: 'rpc' stepName: string rpcName: string outputVar?: string inputs?: Record<string, InputSource> | 'passthrough' options?: WorkflowStepOptions actor?: string expectEventually?: boolean }
-export interface ScenarioBrowserProvider { sessionFor(actorName: string): Promise<PikkuBrowserWire> reset?(): Promise<void> captureFailure?(label: string): Promise<ScenarioBrowserFailure[]> close(): Promise<void> }
+export interface ScenarioBrowserProvider { sessionFor(actorName: string): Promise<PikkuBrowserWire> reset?(): Promise<void> beginScenario?(scenario: string): void captureFailure?(label: string): Promise<ScenarioBrowserFailure[]> close(): Promise<void> }
 export type ScenarioStepInvocation = <TOutput = any, TInput = any>( stepName: string, stepFunc: string, data?: TInput, options?: ScenarioStepOptions ) => Promise<TOutput>
 export interface ScenarioStepMeta { type: 'scenarioStep' stepName: string stepFunc: string phase: ScenarioStepPhase outputVar?: string inputs?: Record<string, InputSource> | 'passthrough' options?: WorkflowStepOptions actor?: string surfaces?: ScenarioSurface[] }
 export interface ScenarioStepOptions { actor?: unknown description?: string retries?: number retryDelay?: number | string }
