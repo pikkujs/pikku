@@ -51,6 +51,13 @@ export interface AIToolResult {
   id: string
   name: string
   result: string
+  /**
+   * Set when the tool threw rather than returned. Carried separately from
+   * `result`, which is a rendered string by the time it is persisted — a tool
+   * may legitimately return text beginning `Error:`, so the prefix cannot be
+   * read as a failure signal.
+   */
+  error?: string
 }
 
 export interface AIMessage {
@@ -82,7 +89,13 @@ export interface AIMessage {
 
 export interface AIAgentStep {
   usage: { inputTokens: number; outputTokens: number }
-  toolCalls?: { name: string; args: Record<string, unknown>; result: string }[]
+  toolCalls?: {
+    name: string
+    args: Record<string, unknown>
+    result: string
+    /** The failure message, when the tool threw rather than returned. */
+    error?: string
+  }[]
 }
 
 export interface AIAgentInputAttachment {
@@ -233,16 +246,40 @@ export interface PikkuAIMiddlewareHooks<
     | AIStreamEvent[]
     | null
 
+  /**
+   * The last chance to rewrite what the run produced, before it is persisted
+   * and returned.
+   *
+   * It does **not** run on a streamed run: there the text has already reached
+   * the client and each step is flushed to storage as it goes, so nothing could
+   * act on what this returned. Use {@link modifyOutputStream} to rewrite a
+   * streamed reply — a middleware that implements only this one is warned about
+   * when an agent it is attached to streams.
+   *
+   * `toolCalls` is here so a redaction pass covers the whole run record rather
+   * than just the visible answer: the tool arguments and results are persisted
+   * and handed to anything that grades the run, and scrubbing the reply alone
+   * leaves them untouched.
+   */
   modifyOutput?: (
     services: Services,
     ctx: {
       text: string
       messages: AIMessage[]
       usage: { inputTokens: number; outputTokens: number }
+      toolCalls: NonNullable<AIAgentStep['toolCalls']>
     }
   ) =>
-    | Promise<{ text: string; messages: AIMessage[] }>
-    | { text: string; messages: AIMessage[] }
+    | Promise<{
+        text: string
+        messages: AIMessage[]
+        toolCalls?: NonNullable<AIAgentStep['toolCalls']>
+      }>
+    | {
+        text: string
+        messages: AIMessage[]
+        toolCalls?: NonNullable<AIAgentStep['toolCalls']>
+      }
 
   beforeToolCall?: (
     services: Services,
@@ -273,7 +310,13 @@ export interface PikkuAIMiddlewareHooks<
       stepNumber: number
       text: string
       toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
-      toolResults: { toolCallId: string; toolName: string; result: unknown }[]
+      toolResults: {
+        toolCallId: string
+        toolName: string
+        result: unknown
+        /** Set when the tool threw rather than returned. */
+        error?: string
+      }[]
       usage: { inputTokens: number; outputTokens: number }
       finishReason: string
     }
@@ -392,6 +435,12 @@ export type AIStreamEvent =
       toolCallId: string
       toolName: string
       result: unknown
+      /**
+       * The failure message, set when the tool threw rather than returned.
+       * Carried explicitly because a tool may legitimately return text that
+       * reads like an error, so `result` cannot be matched on to tell.
+       */
+      error?: string
       agent?: string
       session?: string
     }

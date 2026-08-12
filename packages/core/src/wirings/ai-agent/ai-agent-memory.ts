@@ -4,6 +4,7 @@ import type {
   CoreAIAgent,
   AIAgentMemoryConfig,
   AIAgentInput,
+  AIAgentStep,
   AIMessage,
 } from './ai-agent.types.js'
 import type { AIStorageService } from '../../services/ai-storage-service.js'
@@ -143,13 +144,7 @@ export async function saveMessages(
   result: {
     text: string
     uiSpec?: unknown
-    steps: {
-      toolCalls?: {
-        name: string
-        args: Record<string, unknown>
-        result: string
-      }[]
-    }[]
+    steps: Pick<AIAgentStep, 'toolCalls'>[]
   }
 ): Promise<string> {
   const responseText = memoryConfig?.workingMemory
@@ -179,6 +174,7 @@ export async function saveMessages(
             id: toolCallIds[i],
             name: tc.name,
             result: tc.result,
+            ...(tc.error ? { error: tc.error } : {}),
           })),
           createdAt: new Date(),
         })

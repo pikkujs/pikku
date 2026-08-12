@@ -198,6 +198,93 @@ describe('streamAIAgent output hooks', () => {
     ])
   })
 
+  test('a failing tool on a streamed run is persisted as a failure, not as text that reads like one', async () => {
+    addTestAgent('stream-tool-error-agent')
+
+    const savedMessages: any[] = []
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (_params: any, channel: any) => {
+          channel.send({
+            type: 'tool-call',
+            toolCallId: 'call-1',
+            toolName: 'lookup',
+            args: { city: 'Berlin' },
+          })
+          channel.send({
+            type: 'tool-result',
+            toolCallId: 'call-1',
+            toolName: 'lookup',
+            result: 'Error: upstream refused',
+            error: 'upstream refused',
+          })
+          channel.send({
+            type: 'tool-call',
+            toolCallId: 'call-2',
+            toolName: 'echo',
+            args: {},
+          })
+          channel.send({
+            type: 'tool-result',
+            toolCallId: 'call-2',
+            toolName: 'echo',
+            result: 'Error: this is just what the tool said',
+          })
+          return makeStepResult({ text: 'done', finishReason: 'stop' })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-tool-error',
+        updateRun: async () => {},
+      },
+      aiStorage: {
+        createThread: async () => {},
+        getMessages: async () => [],
+        saveMessages: async (_threadId: string, messages: any[]) => {
+          savedMessages.push(...messages)
+        },
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await streamAIAgent(
+      'stream-tool-error-agent',
+      {
+        message: 'look it up',
+        threadId: 'thread-tool-error',
+        resourceId: 'resource-tool-error',
+      },
+      {
+        channelId: 'channel-tool-error',
+        openingData: undefined,
+        state: 'open',
+        send: () => {},
+        close: () => {},
+      },
+      {}
+    )
+
+    const toolResults = savedMessages
+      .filter((message) => message.role === 'tool')
+      .flatMap((message) => message.toolResults ?? [])
+
+    assert.deepEqual(
+      toolResults.map((r: any) => [r.name, r.error]),
+      [
+        ['lookup', 'upstream refused'],
+        ['echo', undefined],
+      ]
+    )
+  })
+
   test('does not warn about modifyOutput when the middleware also handles the stream', async () => {
     addTestAgent('stream-both-hooks-agent')
 

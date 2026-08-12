@@ -523,19 +523,24 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             })
             break
           case 'tool-error': {
-            const errorText = `Error: ${(part as any).error instanceof Error ? (part as any).error.message : String((part as any).error)}`
+            const errorMessage =
+              (part as any).error instanceof Error
+                ? (part as any).error.message
+                : String((part as any).error)
+            const errorText = `Error: ${errorMessage}`
             stepResult.toolResults.push({
               toolCallId: (part as any).toolCallId,
               toolName: (part as any).toolName,
               result: errorText,
+              error: errorMessage,
             })
             channel.send({
               type: 'tool-result',
               toolCallId: (part as any).toolCallId,
               toolName: (part as any).toolName,
               result: errorText,
-              isError: true,
-            } as any)
+              error: errorMessage,
+            })
             break
           }
           case 'finish-step':
@@ -619,7 +624,20 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         args: tc.input,
       })) ?? []
 
-    const toolResults =
+    // A tool that threw is absent from `toolResults` entirely and appears in
+    // `content` as a `tool-error` part, so the real message is only reachable
+    // from there. Without this, every failure below degrades to the generic
+    // fallback and the specific error is lost.
+    const toolErrors = new Map<string, string>(
+      ((step?.content as any[]) ?? [])
+        .filter((part: any) => part?.type === 'tool-error')
+        .map((part: any) => [
+          part.toolCallId,
+          part.error instanceof Error ? part.error.message : String(part.error),
+        ])
+    )
+
+    const toolResults: AIAgentStepResult['toolResults'] =
       step?.toolResults?.map((tr: any) => ({
         toolCallId: tr.toolCallId,
         toolName: tr.toolName,
@@ -628,10 +646,12 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
     for (const tc of toolCalls) {
       if (!toolResults.find((tr) => tr.toolCallId === tc.toolCallId)) {
+        const error = toolErrors.get(tc.toolCallId) ?? 'Tool execution failed'
         toolResults.push({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          result: `Error: Tool execution failed`,
+          result: `Error: ${error}`,
+          error,
         })
       }
     }

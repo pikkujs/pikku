@@ -1,6 +1,7 @@
 import type {
   AIStreamChannel,
   AIStreamEvent,
+  AIAgentStep,
   AIMessage,
   AIToolCall,
   AIToolResult,
@@ -9,6 +10,7 @@ import type {
   CoreAIAgent,
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
+import { finalizeAgentRun } from './ai-agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware } from './ai-agent-turn.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
@@ -68,6 +70,8 @@ type PersistingChannel = AIStreamChannel & {
   fullText: string
   flush: (opts?: { interrupted?: boolean }) => Promise<void>
   totalUsage: { inputTokens: number; outputTokens: number; model?: string }
+  /** Every tool the run called, kept for the whole run rather than per step. */
+  runToolCalls: NonNullable<AIAgentStep['toolCalls']>
 }
 
 function createPersistingChannel(
@@ -89,6 +93,9 @@ function createPersistingChannel(
     inputTokens: 0,
     outputTokens: 0,
   }
+  // Survives the per-step flush below, which clears its own buffers: the run
+  // record needs every call the run made, not just the last step's.
+  const runToolCalls: NonNullable<AIAgentStep['toolCalls']> = []
 
   const flushStep = async (opts?: { interrupted?: boolean }) => {
     if (!storage) return
@@ -137,6 +144,8 @@ function createPersistingChannel(
     })
   }
 
+  const runToolCallIndex = new Map<string, number>()
+
   const channel: PersistingChannel = {
     channelId: parent.channelId,
     openingData: parent.openingData,
@@ -149,6 +158,9 @@ function createPersistingChannel(
     get totalUsage() {
       return totalUsage
     },
+    get runToolCalls() {
+      return runToolCalls
+    },
     flush: flushStep,
     close: () => parent.close(),
     sendBinary: (data) => parent.sendBinary(data),
@@ -157,6 +169,26 @@ function createPersistingChannel(
       // the client was streamed, and an interrupted run has to be able to
       // report the fragment it got through even with persistence turned off.
       if (event.type === 'text-delta') fullText += event.text
+      if (event.type === 'tool-call') {
+        runToolCallIndex.set(event.toolCallId, runToolCalls.length)
+        runToolCalls.push({
+          name: event.toolName,
+          args: event.args as Record<string, unknown>,
+          result: '',
+        })
+      }
+      if (event.type === 'tool-result') {
+        const index = runToolCallIndex.get(event.toolCallId)
+        const result =
+          typeof event.result === 'string'
+            ? event.result
+            : JSON.stringify(event.result)
+        const call = index === undefined ? undefined : runToolCalls[index]
+        if (call) {
+          call.result = result
+          if (event.error) call.error = event.error
+        }
+      }
       if (storage) {
         switch (event.type) {
           case 'text-delta':
@@ -177,6 +209,7 @@ function createPersistingChannel(
                 typeof event.result === 'string'
                   ? event.result
                   : JSON.stringify(event.result),
+              ...(event.error ? { error: event.error } : {}),
             })
             break
           case 'generative-ui':
@@ -240,21 +273,24 @@ const warnUnstreamedOutputHooks = (
 async function postStreamCleanup(
   persistingChannel: PersistingChannel,
   aiRunState: AIRunStateService,
-  runId: string
+  runId: string,
+  run: { agentName: string; threadId: string; resourceId?: string }
 ): Promise<void> {
-  const usage = persistingChannel.totalUsage
-
-  await aiRunState.updateRun(runId, {
-    status: 'completed',
-    ...(usage.model
-      ? {
-          usage: {
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
-            model: usage.model,
-          },
-        }
-      : {}),
+  await finalizeAgentRun(aiRunState, {
+    runId,
+    agentName: run.agentName,
+    threadId: run.threadId,
+    resourceId: run.resourceId,
+    // Already what the client received: the stream middleware wraps the
+    // persisting channel, so both were accumulated post-rewrite.
+    text: persistingChannel.fullText,
+    steps: [
+      {
+        usage: persistingChannel.totalUsage,
+        toolCalls: persistingChannel.runToolCalls,
+      },
+    ],
+    usage: persistingChannel.totalUsage,
   })
 }
 
@@ -865,7 +901,11 @@ export async function streamAIAgent(
       return persistingChannel.fullText
     }
 
-    await postStreamCleanup(persistingChannel, aiRunState, runId)
+    await postStreamCleanup(persistingChannel, aiRunState, runId, {
+      agentName,
+      threadId,
+      resourceId: input.resourceId,
+    })
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await outputChannel.send({ type: 'done' })
@@ -1193,16 +1233,17 @@ export async function resumeAIAgent(
       typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
 
     let toolResult: unknown
-    let isError = false
+    let toolError: string | undefined
     try {
       toolResult = await matchingTool.execute(toolArgs)
     } catch (execErr: any) {
       if (execErr?.payload?.error === 'missing_credential') {
         toolResult = execErr.payload
+        toolError = 'missing_credential'
       } else {
-        toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+        toolError = execErr instanceof Error ? execErr.message : String(execErr)
+        toolResult = `Error: ${toolError}`
       }
-      isError = true
     }
 
     const resultStr =
@@ -1229,7 +1270,7 @@ export async function resumeAIAgent(
       toolCallId: input.toolCallId,
       toolName: pending.toolName,
       result: toolResult,
-      ...(isError ? { isError: true } : {}),
+      ...(toolError ? { error: toolError } : {}),
     })
   }
 
@@ -1449,7 +1490,7 @@ async function continueAfterToolResult(
       return
     }
 
-    await postStreamCleanup(persistingChannel, aiRunState, run.runId)
+    await postStreamCleanup(persistingChannel, aiRunState, run.runId, run)
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await wrappedChannel.send({ type: 'done' })
