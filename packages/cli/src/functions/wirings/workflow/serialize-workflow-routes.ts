@@ -287,7 +287,13 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
  * request.
  *
  * WHO may approve is likewise the gate's own business, declared with
- * \`approvers\`/\`approverScope\` on \`workflow.approval()\` and enforced on replay.
+ * \`approvers\`/\`approverScope\` on \`workflow.approval()\`, and enforced in two
+ * places. Once the run has reached the gate it has published its policy, so this
+ * route judges the caller against it and refuses with a 403. A decision arriving
+ * before the gate has no policy to judge against yet, so it is accepted here and
+ * judged on replay instead, where failing discards the decision and leaves the
+ * gate closed. A caller sees either outcome depending on that timing.
+ *
  * A gate that declares neither accepts a decision from anyone this route lets
  * through — gate the route with your own auth/permissions to narrow that.
  */
