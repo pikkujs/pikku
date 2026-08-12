@@ -354,6 +354,7 @@ export const createSingletonServices: CreateSingletonServices<
         // cost. Never runs during a plain `pikku all`.
         classificationCheck: !setupOnly && !!config.security,
         strictMeta: !!(config as any).strictMeta,
+        modelAliases: config.models ?? {},
         allow: config.allow ?? {},
         schemaConfig: !setupOnly
           ? {

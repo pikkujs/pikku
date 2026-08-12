@@ -516,7 +516,7 @@ export const inspect = async (
       )
     }
 
-    validateAgentModels(logger, state)
+    validateAgentModels(logger, state, options.modelAliases)
     validateAgentToolReferences(logger, state, options)
     validateAgentScorerReferences(logger, state)
     validateSecretOverrides(logger, state)

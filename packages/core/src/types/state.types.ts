@@ -159,6 +159,13 @@ export interface PikkuPackageState {
     agentsMeta: AIAgentMeta
     scorers: Map<string, PikkuAIScorer>
     scorersMeta: ScorerMeta
+    /**
+     * Alias -> provider-qualified model, baked in by codegen from the `models`
+     * table in pikku.config.json. Lets a project name models by what they are
+     * for (`cheap`, `tool`, `icon`) and repoint every use at once rather than
+     * editing each declaration.
+     */
+    modelAliases: Record<string, string>
   }
   gateway: {
     gateways: Map<string, CoreGateway>

@@ -45,6 +45,7 @@ import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { resolveScaffoldFeature } from '../../utils/resolve-scaffold-feature.js'
+import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -53,6 +54,7 @@ export const dev = pikkuSessionlessFunc<
     hmr?: boolean
     coverage?: boolean
     test?: boolean
+    model?: string
   },
   void
 >({
@@ -66,10 +68,11 @@ export const dev = pikkuSessionlessFunc<
       variables,
       devServerRunner,
     },
-    { port, watch, hmr, coverage, test },
+    { port, watch, hmr, coverage, test, model },
     { rpc }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    applyModelAliasOverride(logger, model, config.models)
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
     }

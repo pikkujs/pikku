@@ -11,6 +11,7 @@ import {
   validateRemoteAddonDependencies,
   validateRemoteAddonAuth,
   validateAgentToolReferences,
+  validateAgentModels,
 } from './post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorState, InspectorLogger } from '../types.js'
@@ -711,5 +712,62 @@ describe('validateAgentToolReferences (ref() resolved at build time)', () => {
       { strictMeta: true }
     )
     assert.deepEqual(criticals, [])
+  })
+})
+
+const makeModelState = (
+  models: Record<string, string>
+): Omit<InspectorState, 'typesLookup'> =>
+  ({
+    agents: {
+      agentsMeta: Object.fromEntries(
+        Object.entries(models).map(([name, model]) => [
+          name,
+          { name, model, sourceFile: `src/${name}.agent.ts` },
+        ])
+      ),
+    },
+  }) as unknown as Omit<InspectorState, 'typesLookup'>
+
+describe('validateAgentModels (aliases resolve against pikku.config.json)', () => {
+  test('a provider-qualified model needs no alias', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentModels(logger, makeModelState({ triage: 'openai/gpt-5-mini' }))
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a missing model is still reported', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentModels(logger, makeModelState({ triage: '' }))
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.MISSING_MODEL)
+  })
+
+  test('a bare name that the models table defines is accepted', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentModels(logger, makeModelState({ triage: 'cheap' }), {
+      cheap: 'openai/gpt-5-mini',
+    })
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a bare name with no alias is an error naming the ones that exist', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentModels(logger, makeModelState({ triage: 'exspensive' }), {
+      cheap: 'openai/gpt-5-mini',
+      expensive: 'openai/gpt-5',
+    })
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.INVALID_MODEL)
+    assert.match(criticals[0]!.message, /cheap, expensive/)
+  })
+
+  test('with no models table a bare name still fails, as it always has', () => {
+    // The alias table is opt-in; without one the old rule is unchanged, so
+    // this stays a build error rather than becoming a silent passthrough.
+    const { logger, criticals } = makeCriticalLogger()
+    validateAgentModels(logger, makeModelState({ triage: 'gpt-5-mini' }))
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, ErrorCode.INVALID_MODEL)
   })
 })

@@ -803,6 +803,9 @@ const _getPikkuCLIConfig = async (
         'pikku-agent-wirings-meta.gen.json'
       )
     }
+    if (!result.modelAliasesFile) {
+      result.modelAliasesFile = join(agentDir, 'pikku-model-aliases.gen.ts')
+    }
     if (!result.agentTypesFile) {
       result.agentTypesFile = join(agentDir, 'pikku-agent-types.gen.ts')
     }
