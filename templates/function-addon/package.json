@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts"
+    "#pikku": "./dist/.pikku/pikku-types.gen.js"
   },
   "exports": {
     "./types": {
@@ -15,19 +15,18 @@
       "types": "./dist/src/functions/hello.contracts.d.ts",
       "import": "./dist/src/functions/hello.contracts.js"
     },
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [
-    "dist",
-    ".pikku"
+    "dist"
   ],
   "scripts": {
     "prebuild": "pikku all",
-    "build": "tsc && cp -r .pikku dist/ && cp -r types dist/",
+    "build": "tsc && cp -r .pikku types dist/",
     "pikku": "pikku all"
   },
   "peerDependencies": {

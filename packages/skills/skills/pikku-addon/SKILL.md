@@ -94,7 +94,8 @@ import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, { secrets, logger }) => {
-    const creds = await secrets.getSecret<GithubCredentials>('GITHUB_CREDENTIALS')
+    const creds =
+      await secrets.getSecret<GithubCredentials>('GITHUB_CREDENTIALS')
     return { github: new GithubService(creds.reveal()) }
   }
 )
@@ -184,10 +185,23 @@ approvalDescription: async (_services, { title }) => `Add a todo called "${title
 ### Build
 
 ```bash
-npx pikku all    # Generate types
-yarn tsc         # Compile TypeScript
-cp -r .pikku dist/  # Include generated files in dist
+yarn pikku all          # Generate types
+yarn tsc                # Compile TypeScript
+cp -r .pikku types dist/  # Ship the generated files and the types they import
+yarn pikku validate     # Check the published file set holds together
 ```
+
+`yarn pikku`, not `npx pikku`: a scaffolded addon carries `@pikku/cli` as a
+devDependency, and building it against a different CLI than it declares is how
+generated output ends up disagreeing with the packaged one. `npx pikku new
+addon` above is the exception — it runs before the addon, and its CLI, exist.
+
+`types/` has to be copied alongside `.pikku`: the generated files import
+`SingletonServices`, `Services`, `Config` and `UserSession` from
+`../../types/application-types.d.js`, and `tsc` never emits a hand-written
+`.d.ts` to `outDir`, so nothing else puts it in `dist`. Leave it out and the
+addon installs fine and fails to typecheck in every app that depends on it —
+which is what `pikku validate` is there to catch before you publish.
 
 ## Consuming an Addon
 
@@ -204,7 +218,7 @@ import { wireAddon } from '#pikku'
 wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 ```
 
-After registration, run `npx pikku all` to generate types for the addon's functions.
+After registration, run `yarn pikku all` to generate types for the addon's functions.
 
 ### Call via RPC
 

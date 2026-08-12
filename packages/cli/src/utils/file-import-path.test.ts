@@ -227,6 +227,38 @@ describe('getFileImportRelativePath', () => {
     )
   })
 
+  /**
+   * A workspace sibling is not under node_modules, so the generated map reaches
+   * it by climbing out of the package — `../../../../core/dist/services/…`, a
+   * path that exists in the checkout and in no tarball. The public subpath that
+   * re-exports the symbol is not derivable from the internal one, so the mapping
+   * key is the file itself and the value is the specifier to emit.
+   */
+  test('should map a workspace sibling file onto the subpath that re-exports it', () => {
+    const from = '/project/packages/addon/pikku-console/.pikku/rpc/map.gen.d.ts'
+    const packageMappings = {
+      'core/dist/services/audit-service.d.ts': '@pikku/core/services',
+      'core/dist/types/core.types.d.ts': '@pikku/core',
+    }
+
+    assert.strictEqual(
+      getFileImportRelativePath(
+        from,
+        '/project/packages/core/dist/services/audit-service.d.ts',
+        packageMappings
+      ),
+      '@pikku/core/services'
+    )
+    assert.strictEqual(
+      getFileImportRelativePath(
+        from,
+        '/project/packages/core/dist/types/core.types.d.ts',
+        packageMappings
+      ),
+      '@pikku/core'
+    )
+  })
+
   test('should still relativise a path that merely lacks a leading dot', () => {
     const from = '/project/src/file1.ts'
     const to = '/project/src/nested/file2.ts'

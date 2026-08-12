@@ -32,7 +32,7 @@ export const useWebhookDeliveries = () => {
       (await rpc.invoke(
         'console:listWebhookDeliveries',
         {}
-      )) as WebhookDelivery[],
+      )) as unknown as WebhookDelivery[],
   })
 }
 
@@ -44,6 +44,9 @@ export const useWebhookDelivery = (deliveryId: string | null) => {
     queryFn: async () =>
       (await rpc.invoke('console:getWebhookDelivery', {
         deliveryId: deliveryId!,
-      })) as { delivery: WebhookDelivery; attempts: WebhookAttempt[] } | null,
+      })) as unknown as {
+        delivery: WebhookDelivery
+        attempts: WebhookAttempt[]
+      } | null,
   })
 }

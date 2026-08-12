@@ -230,7 +230,7 @@ await server.start()
 
 **Lifecycle hooks do not run on this path** — only `pikku dev` and `pikku serve` invoke them. Do your startup work directly in the entrypoint instead.
 
-`pikku workspace validate` warns when a project starts a server by hand *and* depends on no runtime adapter, since that combination means path 1 was available and unused. Silence it with `"lint": { "customServerBootstrap": "off" }` in `pikku.config.json`.
+`pikku validate` warns when a project starts a server by hand *and* depends on no runtime adapter, since that combination means path 1 was available and unused. Silence it with `"lint": { "customServerBootstrap": "off" }` in `pikku.config.json`.
 
 ## Code Generation
 

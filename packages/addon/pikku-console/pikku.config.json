@@ -3,6 +3,15 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
+  "packageMappings": {
+    "core/dist/types/core.types.d.ts": "@pikku/core",
+    "core/dist/wirings/workflow/workflow.types.d.ts": "@pikku/core/workflow/types",
+    "core/dist/wirings/workflow/scenario-step.types.d.ts": "@pikku/core/workflow",
+    "core/dist/wirings/workflow/dsl/workflow-dsl.types.d.ts": "@pikku/core/workflow",
+    "core/dist/services/audit-service.d.ts": "@pikku/core/services",
+    "core/dist/services/webhook-service.d.ts": "@pikku/core/services",
+    "core/dist/services/scope-service.d.ts": "@pikku/core/services"
+  },
   "addon": {
     "displayName": "Pikku Console",
     "description": "Console management and monitoring",

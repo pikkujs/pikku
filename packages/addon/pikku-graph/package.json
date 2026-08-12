@@ -5,7 +5,7 @@
   "type": "module",
   "imports": {
     "#pikku": {
-      "types": "./.pikku/pikku-types.gen.ts",
+      "types": "./dist/.pikku/pikku-types.gen.d.ts",
       "import": "./dist/.pikku/pikku-types.gen.js"
     }
   },

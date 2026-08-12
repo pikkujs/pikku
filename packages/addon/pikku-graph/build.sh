@@ -17,6 +17,15 @@ copy_generated_types() {
   cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true
   cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true
   copy_verbose_meta
+  copy_application_types
+}
+
+# The generated files under dist/.pikku import ../../types/application-types.d.js,
+# and a hand-written .d.ts is an input to tsc rather than something it emits, so
+# nothing else puts it under dist.
+copy_application_types() {
+  mkdir -p dist/types
+  cp types/*.d.ts dist/types/
 }
 
 # tsc only emits the JSON it sees imported, and nothing imports the verbose meta

@@ -182,9 +182,12 @@ export function getAddonFiles(
       name: `@pikku/addon-${name}`,
       version: '0.0.1',
       type: 'module',
+      // Everything an installed package reaches for lives under dist. The
+      // addon's own build resolves #pikku through tsconfig `paths` instead, so
+      // these never have to point at the source tree.
       imports: {
-        '#pikku': './.pikku/pikku-types.gen.ts',
-        '#pikku/*': './.pikku/*',
+        '#pikku': './dist/.pikku/pikku-types.gen.js',
+        '#pikku/*': './dist/.pikku/*',
       },
       exports: {
         '.': {
@@ -202,7 +205,7 @@ export function getAddonFiles(
       scripts: {
         prepublishOnly: 'yarn build',
         prebuild: 'pikku all',
-        build: 'tsc && cp -r .pikku dist/',
+        build: 'tsc && cp -r .pikku types dist/',
         pikku: 'pikku all',
       },
       peerDependencies: {
