@@ -6,7 +6,7 @@
  */
 
 import type { StreamWorkflowRunInput } from '@pikku/addon-console/dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen'
-import type { WorkflowRunStatus } from '@pikku/core/dist/wirings/workflow/workflow.types'
+import type { WorkflowRunStatus } from '@pikku/core/workflow'
 
 export type AddStageCustomHostnameInput = {
   stageId: string
