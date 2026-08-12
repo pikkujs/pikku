@@ -33,9 +33,14 @@ initiator may answer" the one available rule. That is right for "confirm your ow
 action" and exactly wrong for four-eyes sign-off, where the initiator is the one
 person who must not sign. Which applies is a property of the decision, so it is
 declared on the gate — `approvers` (`'any' | 'owner' | 'not-initiator'`) and
-`approverScope` on `WorkflowApprovalOptions` — and enforced on replay alongside
-payload validation, because the policy is a value on the workflow and a decision
-can legitimately be recorded before the run has reached the gate.
+`approverScope` on `WorkflowApprovalOptions`.
+
+It is enforced wherever the policy is known. Reaching the gate publishes the
+policy into the run state, so a decision submitted after that is judged by the
+approve entrypoint and refused with a 403. A decision can legitimately be
+recorded before the run has reached the gate, and that one has no policy to be
+judged against yet — it is judged on replay instead, alongside payload
+validation, and discarded if it fails.
 
 The default is therefore `any`: a gate is a pause for a decision, not an
 authorization boundary, and a route that needs one has `auth`/`permissions`.
