@@ -129,11 +129,43 @@ export type WorkflowWireSleep = (
 export type WorkflowWireSuspend = (reason: string) => Promise<void>
 
 /**
+ * Who is allowed to answer an approval gate, relative to the user who started
+ * the run.
+ *
+ * - `any` — anyone the approve entrypoint lets through. The gate is a pause for
+ *   a decision, not an authorization boundary.
+ * - `owner` — only the user who started the run, so a gate can be used to
+ *   confirm an action against the same person who requested it.
+ * - `not-initiator` — anyone *except* the user who started the run: four-eyes.
+ *   A run with no recorded initiator has nobody to exclude, so this degrades to
+ *   requiring a signed-in decider.
+ */
+export type WorkflowApprovalApprovers = 'any' | 'owner' | 'not-initiator'
+
+/**
+ * Who may answer an approval gate. Declared on the gate rather than the
+ * entrypoint because it is a property of the decision being made, and because
+ * one workflow can hold several gates with different requirements.
+ */
+export interface WorkflowApprovalPolicy {
+  /**
+   * Defaults to `any`. See {@link WorkflowApprovalApprovers}.
+   */
+  approvers?: WorkflowApprovalApprovers
+  /**
+   * Additionally require the decider's session to hold this scope, so
+   * "a second pair of eyes" can be narrowed to "a second pair of *senior*
+   * eyes". Combines with `approvers` — both must pass.
+   */
+  approverScope?: string
+}
+
+/**
  * Options for workflow.approval().
  */
 export interface WorkflowApprovalOptions<
   TSchema extends StandardSchemaV1 = StandardSchemaV1,
-> {
+> extends WorkflowApprovalPolicy {
   /**
    * Schema the decision payload is validated against. This is a VALUE, not a
    * type generic: the payload arrives from an untrusted caller over the approve
@@ -430,6 +462,10 @@ export interface ApprovalStepMeta {
   outputVar?: string
   /** Expiry duration, when one was given */
   expiry?: string | number
+  /** Who may answer the gate, when the default was not used */
+  approvers?: WorkflowApprovalApprovers
+  /** Scope the decider must hold, when one was required */
+  approverScope?: string
 }
 
 /**

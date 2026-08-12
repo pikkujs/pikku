@@ -284,10 +284,12 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
  * The decision is validated on replay inside the workflow body — the only place
  * the approval's schema value is in scope — so this route deliberately accepts
  * an unknown payload. An invalid one re-closes the gate rather than failing the
- * A run started through a session may only be approved by that session's user
- * (\`assertWorkflowRunOwner\`). A run with no recorded owner has nobody to compare
- * a caller against — gate this route with your own auth/permissions to control
- * WHO may approve those.
+ * request.
+ *
+ * WHO may approve is likewise the gate's own business, declared with
+ * \`approvers\`/\`approverScope\` on \`workflow.approval()\` and enforced on replay.
+ * A gate that declares neither accepts a decision from anyone this route lets
+ * through — gate the route with your own auth/permissions to narrow that.
  */
 export const workflowApprover = pikkuSessionlessFunc({
   tags: ['pikku'],

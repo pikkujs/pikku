@@ -1051,20 +1051,28 @@ function extractApprovalStep(
       step.outputVar = outputVar
     }
     // The `schema` option is a runtime value validated inside the workflow body,
-    // so it is deliberately not serialized here — only `expiry`, which the graph
-    // and planned-step ladder need in order to describe the gate.
+    // so it is deliberately not serialized here — only the literal options the
+    // graph and planned-step ladder need in order to describe the gate.
     const options = args[1]
     if (options && ts.isObjectLiteralExpression(options)) {
       for (const prop of options.properties) {
+        if (!ts.isPropertyAssignment(prop)) continue
+        const name = prop.name.getText()
         if (
-          ts.isPropertyAssignment(prop) &&
-          prop.name.getText() === 'expiry' &&
+          name === 'expiry' &&
           (ts.isStringLiteral(prop.initializer) ||
             ts.isNumericLiteral(prop.initializer))
         ) {
           step.expiry = ts.isNumericLiteral(prop.initializer)
             ? Number(prop.initializer.text)
             : prop.initializer.text
+        }
+        if (name === 'approvers' && ts.isStringLiteral(prop.initializer)) {
+          step.approvers = prop.initializer
+            .text as ApprovalStepMeta['approvers']
+        }
+        if (name === 'approverScope' && ts.isStringLiteral(prop.initializer)) {
+          step.approverScope = prop.initializer.text
         }
       }
     }

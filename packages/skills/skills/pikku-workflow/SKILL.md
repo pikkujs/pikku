@@ -129,6 +129,39 @@ await workflow.approval('Manager sign-off', { ... })
 `workflow.name`, `workflow.runId` and `await workflow.getRun()` identify the
 current run if a step needs to reference it.
 
+### Approval gates: who may answer
+
+`workflow.approval(reason, options)` takes a `schema` (a runtime value — the
+payload arrives from an untrusted caller, so a type generic would validate
+nothing), an optional `expiry`, and an optional policy for **who** may answer:
+
+```typescript
+const signOff = await workflow.approval('Manager sign-off', {
+  schema: SignOffSchema,
+  expiry: '3d',
+  approvers: 'not-initiator',      // four-eyes: anyone but whoever started the run
+  approverScope: 'payments:approve', // and they must hold this scope
+})
+if (signOff.status === 'expired') { ... }
+```
+
+`approvers` is one of:
+
+| value | who may answer |
+| --- | --- |
+| `any` *(default)* | anyone the approve entrypoint admits — the gate is a pause for a decision, not an authorization boundary |
+| `owner` | only the user who started the run |
+| `not-initiator` | anyone **except** the user who started the run |
+
+Both options are enforced when the workflow replays the gate, not when the
+decision is submitted — a decision can legitimately arrive before the run has
+reached the gate, and only the workflow holds the policy. A decision that fails
+the policy is discarded and the gate stays closed, exactly as a decision that
+fails the schema does.
+
+A gate declaring neither option accepts a decision from anyone the approve
+route lets through; gate the route with `auth`/`permissions` to narrow that.
+
 ### Error handling: `onError`, never try/catch
 
 **Do not wrap steps in try/catch.** The DSL extractor serialises the body into a

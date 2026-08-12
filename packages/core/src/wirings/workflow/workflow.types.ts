@@ -19,6 +19,8 @@ export type {
   WorkflowWireSuspend,
   WorkflowWireApproval,
   WorkflowApprovalOptions,
+  WorkflowApprovalApprovers,
+  WorkflowApprovalPolicy,
   ApprovalOutcome,
   InputSource,
   OutputBinding,

@@ -47,7 +47,7 @@ import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
-import { assertWorkflowRunOwner } from './workflow-run-ownership.js'
+import { approvalDeciderFrom } from './workflow-approval-policy.js'
 import {
   buildRunTimeline,
   reconstructStateAt,
@@ -1856,6 +1856,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         this.updateRunState(runId, key, value),
       resumeWorkflow: (runId) => this.resumeWorkflow(runId),
       scheduleRunWake: (runId, delay) => this.scheduleRunWake(runId, delay),
+      getRunOwner: async (runId) =>
+        (await this.getRunIdentity(runId))?.wire?.pikkuUserId,
     }
   }
 
@@ -1865,9 +1867,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     decision: unknown,
     session?: CoreUserSession
   ): Promise<void> {
-    assertWorkflowRunOwner((await this.getRunIdentity(runId))?.wire, session)
-
-    return recordApprovalDecision(this.approvalStore, runId, reason, decision)
+    return recordApprovalDecision(
+      this.approvalStore,
+      runId,
+      reason,
+      decision,
+      approvalDeciderFrom(session)
+    )
   }
 
   private async approvalStep(

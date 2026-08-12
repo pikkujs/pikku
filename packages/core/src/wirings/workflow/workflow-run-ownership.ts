@@ -15,7 +15,8 @@ addError(WorkflowRunForbiddenError, {
 
 /**
  * A run started through a session records that session's user as its owner, and
- * only that user may read it or answer its approval gates.
+ * only that user may read it. Who may *answer* a run's approval gates is the
+ * gate's own declaration — see `approvers` on `workflow.approval()`.
  *
  * A run with no recorded owner — started by a trigger, a scheduler, or a route
  * wired without auth — has nobody to compare a caller against, so ownership is
