@@ -214,6 +214,8 @@ describe('addon packaging', () => {
     const tmp = await makeTmp()
     try {
       await writeBuiltAddon(tmp)
+      await write(tmp, 'dist/.pikku/pikku-types.gen.d.ts', GENERATED)
+      await write(tmp, 'dist/.pikku/pikku-types.gen.js', 'export {}\n')
       await write(
         tmp,
         'package.json',
@@ -227,6 +229,41 @@ describe('addon packaging', () => {
           },
           exports: { './.pikku/*': './dist/.pikku/*' },
         })
+      )
+      assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an entry point inside dist that was never built is an error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          ...PKG,
+          exports: { './missing': './dist/missing.js' },
+        })
+      )
+      const findings = await runAddonPackageChecks(tmp)
+      assert.deepStrictEqual(ids(findings), ['addon-entry-point-missing'])
+      assert.match(findings[0]!.message, /does not exist/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a files entry written as a glob still publishes its directory', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({ ...PKG, files: ['dist/**', '.pikku', 'types'] })
       )
       assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [])
     } finally {

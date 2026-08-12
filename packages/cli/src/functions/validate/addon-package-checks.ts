@@ -85,6 +85,13 @@ function resolveCandidates(specifier: string, fromDir: string): string[] {
     const stem = base.slice(0, -3)
     return [base, stem + '.ts', stem + '.d.ts', stem + '.tsx']
   }
+  // `.mjs` and `.cjs` are scanned as generated files, so they are also imported
+  // as one, and each has its own TypeScript twin rather than sharing `.ts`.
+  if (base.endsWith('.mjs') || base.endsWith('.cjs')) {
+    const stem = base.slice(0, -4)
+    const kind = base.slice(-3, -2)
+    return [base, `${stem}.${kind}ts`, `${stem}.d.${kind}ts`]
+  }
   if (/\.(ts|tsx|json)$/.test(base)) return [base]
   return [
     base + '.ts',
@@ -94,6 +101,21 @@ function resolveCandidates(specifier: string, fromDir: string): string[] {
     join(base, 'index.d.ts'),
     join(base, 'index.js'),
   ]
+}
+
+/**
+ * The directory a `files` entry is rooted at.
+ *
+ * `dist`, `dist/`, `dist/**` and `dist/*` all publish the same tree, so the
+ * root is what decides both whether a path ships and whether the entry has
+ * anything behind it. Anything more elaborate than a trailing wildcard is left
+ * to npm.
+ */
+function packedRoot(entry: string): string {
+  return entry
+    .replace(/^\.\//, '')
+    .replace(/\/\*+$/, '')
+    .replace(/\/$/, '')
 }
 
 /**
@@ -111,7 +133,7 @@ function isPacked(
   const rel = relative(pkgDir, absPath)
   if (rel.startsWith('..')) return false
   return files.some((entry) => {
-    const normalized = entry.replace(/^\.\//, '').replace(/\/$/, '')
+    const normalized = packedRoot(entry)
     return rel === normalized || rel.startsWith(normalized + sep)
   })
 }
@@ -157,7 +179,7 @@ export async function runAddonPackageChecks(
   // with nothing behind it means the build has not run — and validating the
   // published file set of a package that has not been built proves nothing.
   const absent = (pkg.files ?? []).filter(
-    (entry) => !existsSync(join(pkgDir, entry.replace(/^\.\//, '')))
+    (entry) => !existsSync(join(pkgDir, packedRoot(entry)))
   )
   if (absent.length > 0) {
     findings.push({
@@ -179,14 +201,31 @@ export async function runAddonPackageChecks(
     ...entryPointTargets(pkg.exports),
   ]) {
     const withoutWildcard = target.slice(2).split('*')[0]!
-    if (isPacked(join(pkgDir, withoutWildcard), pkgDir, pkg.files)) continue
-    findings.push({
-      id: 'addon-entry-point-not-packed',
-      severity: 'error',
-      message: `"${name}" resolves to ${target}, which "files" does not publish — the entry point exists here and not for anyone who installs ${pkg.name ?? 'this addon'}`,
-      path: join(pkgDir, withoutWildcard),
-      fixHint: `Point it at the built copy under dist, or add ${withoutWildcard.split('/')[0]} to "files".`,
-    })
+
+    if (!isPacked(join(pkgDir, withoutWildcard), pkgDir, pkg.files)) {
+      findings.push({
+        id: 'addon-entry-point-not-packed',
+        severity: 'error',
+        message: `"${name}" resolves to ${target}, which "files" does not publish — the entry point exists here and not for anyone who installs ${pkg.name ?? 'this addon'}`,
+        path: join(pkgDir, withoutWildcard),
+        fixHint: `Point it at the built copy under dist, or add ${withoutWildcard.split('/')[0]} to "files".`,
+      })
+      continue
+    }
+
+    // Shipping the directory is not the same as producing the file. A wildcard
+    // names a directory whose contents are the point, so only a concrete
+    // target can be held to existing.
+    if (!target.includes('*') && !existsSync(join(pkgDir, withoutWildcard))) {
+      findings.push({
+        id: 'addon-entry-point-missing',
+        severity: 'error',
+        message: `"${name}" resolves to ${target}, which does not exist — importing it fails for anyone who installs ${pkg.name ?? 'this addon'}`,
+        path: join(pkgDir, withoutWildcard),
+        fixHint:
+          'Point the entry point at a file the build produces, or drop it from "exports".',
+      })
+    }
   }
 
   // Both generated directories ship, and they are not the same check twice.

@@ -32,10 +32,21 @@ export const ValidateOutput = z.object({
   findings: z.array(FindingSchema),
 })
 
+/**
+ * The workspace root, or failing that the package the caller is standing in.
+ *
+ * A standalone publishable addon has no `workspaces` anywhere above it, and
+ * running from its `src/` would otherwise validate `src/` — a directory with no
+ * package.json, where every check's precondition is false and the run reports
+ * that nothing applied. The addon author is exactly who the addon checks are
+ * for, so the nearest package.json is the answer when no workspace claims it.
+ */
 export async function findProjectRoot(startDir: string): Promise<string> {
   let dir = startDir
+  let nearestPackage: string | undefined
   while (true) {
     if (existsSync(join(dir, 'package.json'))) {
+      nearestPackage ??= dir
       try {
         const pkg = JSON.parse(
           await readFile(join(dir, 'package.json'), 'utf8')
@@ -46,7 +57,7 @@ export async function findProjectRoot(startDir: string): Promise<string> {
       }
     }
     const parent = dirname(dir)
-    if (parent === dir) return startDir
+    if (parent === dir) return nearestPackage ?? startDir
     dir = parent
   }
 }

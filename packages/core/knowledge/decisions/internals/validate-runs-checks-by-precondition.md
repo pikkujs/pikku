@@ -64,14 +64,17 @@ inside `node_modules`, for merely depending on an addon. The scaffold template
 had been right the whole time — `templates/function-addon` copies `types/` —
 and the published packages had drifted from it with nothing watching.
 
-## Both generated directories ship, and they are not the same check twice
+## The check walks whichever generated directory a package ships
 
-`files` carries `.pikku` as well as `dist`, and `exports` maps `./.pikku/*` to
-the root one, so it is a public entry point rather than build input for the copy
-under `dist`. Its imports climb one level fewer — to `<pkg>/src` and
-`<pkg>/types` — where the copy under `dist` reaches `<pkg>/dist/src` and
-`<pkg>/dist/types`. Two roots, two ways to fall outside the tarball, so the
-check walks both.
+`dist/.pikku` is the target shape (below), but the check cannot assume it: the
+shape is what this work moved addons *to*, and a package that has not moved —
+or was published before it did — still carries `.pikku` at the root, listed in
+`files` and mapped by `exports` as `./.pikku/*`. There it is a public entry
+point rather than build input, and its imports climb one level fewer — to
+`<pkg>/src` and `<pkg>/types` — where the copy under `dist` reaches
+`<pkg>/dist/src` and `<pkg>/dist/types`. Two roots, two ways to fall outside
+the tarball, so the check walks whichever ones are actually shipped rather than
+the one it would prefer to find.
 
 `exports` and `imports` get the same treatment one level up: a target outside
 the published file set is the same defect, and the one the import walk cannot

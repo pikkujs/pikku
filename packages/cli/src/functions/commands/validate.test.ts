@@ -483,6 +483,23 @@ describe('pikku validate', () => {
       await rm(tmp, { recursive: true, force: true })
     }
   })
+
+  test('a standalone addon validates from inside its own source tree', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeJson(join(tmp, 'package.json'), {
+        name: '@scope/addon-standalone',
+        version: '1.0.0',
+      })
+      await mkdir(join(tmp, 'src'), { recursive: true })
+
+      const result = await runProjectValidate(join(tmp, 'src'))
+
+      assert.strictEqual(result.root, tmp)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('custom-server-bootstrap', () => {
