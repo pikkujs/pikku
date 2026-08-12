@@ -152,7 +152,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
             `${slugify(label)}-${slugify(actorName)}.png`
           )
           await mkdir(this.options.failureDir, { recursive: true })
-          await session.screenshot(file)
+          await session.writeScreenshot(file)
           failure.screenshot = file
         } catch {}
       }

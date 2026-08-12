@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
 import { pollUntil } from '@pikku/core/workflow'
 import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
@@ -182,6 +182,22 @@ export class ActorSession implements PikkuBrowserWire {
       bytes
     )
     return bytes
+  }
+
+  /**
+   * Photograph the page to a path the caller chose.
+   *
+   * Separate from `screenshot(description)` because the two have different
+   * owners: a failure capture already knows where the file belongs and what to
+   * call it, whereas a scenario author knows only what the moment *is* and
+   * should not have to construct a path or remember that the extension decides
+   * the encoder.
+   */
+  async writeScreenshot(file: string): Promise<Uint8Array> {
+    mkdirSync(dirname(file), { recursive: true })
+    // Playwright writes it: the caller owns the path, including the extension
+    // that decides the encoder, so there is nothing for this to second-guess.
+    return this.page.screenshot({ path: file })
   }
 
   /**
