@@ -319,7 +319,13 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     this.runContexts.delete(runId)
   }
 
-  /** What the run has accumulated. Undefined for a plain workflow. */
+  /**
+   * What the run has accumulated.
+   *
+   * Undefined only for a run whose wire was never decorated — decoration calls
+   * `contextForRun` unconditionally, so a plain workflow that has reached a
+   * step holds an empty context rather than none.
+   */
   public getRunContext(runId: string): Record<string, unknown> | undefined {
     return this.runContexts.get(runId)
   }
