@@ -64,11 +64,13 @@ export const ScorersPage: React.FC = () => {
         <Text size="sm" ff="monospace" c={item.requiresReference ? 'dimmed' : undefined}>
           {item.requiresReference
             ? m.scorers_reference_only()
-            : item.sampleRate >= 1
-              ? m.scorers_sample_all()
-              : m.scorers_sample_fraction({
-                  percent: Math.round(item.sampleRate * 100),
-                })}
+            : item.sampleRate <= 0
+              ? m.scorers_sample_never()
+              : item.sampleRate >= 1
+                ? m.scorers_sample_all()
+                : m.scorers_sample_fraction({
+                    percent: Math.round(item.sampleRate * 100),
+                  })}
         </Text>
       ),
     },

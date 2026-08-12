@@ -335,6 +335,7 @@
   "scorers_sample_all": "every run",
   "scorers_sample_fraction": "{percent}% of runs",
   "scorers_reference_only": "answer key only",
+  "scorers_sample_never": "on request only",
   "scorers_unused": "no agent",
   "common_no_results": "No results",
   "http_description_heading": "See every route at a glance",

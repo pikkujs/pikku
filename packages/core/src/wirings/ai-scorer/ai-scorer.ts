@@ -23,6 +23,11 @@ export const pikkuAIScorer = <Services = any>(config: {
   description: string
   /** 0..1 fraction of live runs to grade. Defaults to all of them. */
   sampleRate?: number
+  /**
+   * Grades against a known-correct answer. Such a scorer is test-only — live
+   * traffic has no answer key, so the runtime never samples it.
+   */
+  requiresReference?: boolean
   score: (
     input: ScorerInput,
     services: Services
@@ -32,7 +37,7 @@ export const pikkuAIScorer = <Services = any>(config: {
   description: config.description,
   lane: 'fast',
   sampleRate: assertSampleRate(config.name, config.sampleRate),
-  requiresReference: false,
+  requiresReference: config.requiresReference ?? false,
   score: config.score,
 })
 

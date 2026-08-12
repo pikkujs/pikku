@@ -49,10 +49,17 @@ export const matchesAnswerKey = pikkuAIScorer({
   }),
 })
 
+/**
+ * Never sampled on live traffic. A sampled judge fires asynchronously some time
+ * after the run it grades, so its model call lands in whichever scenario's
+ * window happens to be open — a deterministic suite then fails at random on an
+ * unrelated agent's model-call count. `pikkuScenarioGradeRun` ignores the
+ * sample rate, so the `ai-live` scenario that wants this judge still reaches it.
+ */
 export const helpfulness = pikkuAIJudge({
   name: 'helpfulness',
   description: 'Does the answer actually help the person who asked',
   model: 'openai/o4-mini',
   goal: 'Grade how well the answer addresses what was asked. A correct but unusable answer scores low.',
-  sampleRate: 0.1,
+  sampleRate: 0,
 })
