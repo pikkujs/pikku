@@ -203,32 +203,46 @@ function createPersistingChannel(
   return channel
 }
 
+/**
+ * Agents already warned about, so a per-request hook does not become a
+ * per-request log line.
+ */
+const warnedUnstreamedOutputHooks = new Set<string>()
+
+/**
+ * `modifyOutput` does not run on a streamed run at all. Nothing here could act
+ * on what it returns — the text has already reached the client, and
+ * `createPersistingChannel` flushes each step to storage as it goes, so by the
+ * time the run ends the transcript is already written.
+ *
+ * Rewriting on this path belongs to `modifyOutputStream`, which genuinely
+ * works: the stream middleware wraps the persisting channel, so what is stored
+ * and accumulated is already what the client was sent. A middleware that
+ * rewrites in `modifyOutput` only — a redaction hook, typically — is therefore
+ * silently ineffective when the agent is streamed, and is told so once.
+ */
+const warnUnstreamedOutputHooks = (
+  agentName: string,
+  aiMiddlewares: PikkuAIMiddlewareHooks[],
+  logger?: { warn: (...args: any[]) => void }
+) => {
+  if (warnedUnstreamedOutputHooks.has(agentName)) return
+  const unstreamed = aiMiddlewares.some(
+    (mw) => mw.modifyOutput && !mw.modifyOutputStream
+  )
+  if (!unstreamed) return
+  warnedUnstreamedOutputHooks.add(agentName)
+  logger?.warn(
+    `Agent '${agentName}' has AI middleware with modifyOutput but no modifyOutputStream — modifyOutput does not apply to streamed runs. Implement modifyOutputStream to affect a streamed reply.`
+  )
+}
+
 async function postStreamCleanup(
   persistingChannel: PersistingChannel,
-  aiMiddlewares: PikkuAIMiddlewareHooks[],
-  singletonServices: any,
-  messages: AIMessage[],
   aiRunState: AIRunStateService,
   runId: string
 ): Promise<void> {
   const usage = persistingChannel.totalUsage
-  let outputText = persistingChannel.fullText
-  let outputMessages = messages
-  for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
-    const mw = aiMiddlewares[i]
-    if (mw.modifyOutput) {
-      const result = await mw.modifyOutput(singletonServices, {
-        text: outputText,
-        messages: outputMessages,
-        usage: {
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-        },
-      })
-      outputText = result.text
-      outputMessages = result.messages
-    }
-  }
 
   await aiRunState.updateRun(runId, {
     status: 'completed',
@@ -723,6 +737,8 @@ export async function streamAIAgent(
     await storage.saveMessages(threadId, [persistedUserMessage])
   }
 
+  warnUnstreamedOutputHooks(agentName, aiMiddlewares, singletonServices.logger)
+
   const streamMiddleware = aiMiddlewares
     .filter((mw) => mw.modifyOutputStream)
     .map((mw) => {
@@ -849,14 +865,7 @@ export async function streamAIAgent(
       return persistingChannel.fullText
     }
 
-    await postStreamCleanup(
-      persistingChannel,
-      aiMiddlewares,
-      singletonServices,
-      runnerParams.messages,
-      aiRunState,
-      runId
-    )
+    await postStreamCleanup(persistingChannel, aiRunState, runId)
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await outputChannel.send({ type: 'done' })
@@ -1313,6 +1322,12 @@ async function continueAfterToolResult(
   // knowledge: decisions/internals/a-resumed-agent-turn-is-as-interruptible-as-the-first.md
   const interruptHandle = registerInterruptibleRun(run.runId)
 
+  warnUnstreamedOutputHooks(
+    run.agentName,
+    aiMiddlewares,
+    singletonServices.logger
+  )
+
   const streamMiddleware = aiMiddlewares
     .filter((mw) => mw.modifyOutputStream)
     .map((mw) => {
@@ -1434,14 +1449,7 @@ async function continueAfterToolResult(
       return
     }
 
-    await postStreamCleanup(
-      persistingChannel,
-      aiMiddlewares,
-      singletonServices,
-      runnerParams.messages,
-      aiRunState,
-      run.runId
-    )
+    await postStreamCleanup(persistingChannel, aiRunState, run.runId)
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await wrappedChannel.send({ type: 'done' })

@@ -370,6 +370,39 @@ export function stripWorkingMemoryForStreaming(text: string): string {
   return output
 }
 
+async function persistWorkingMemory(
+  options: {
+    storage?: AIStorageService
+    threadId: string
+    workingMemorySchemaName?: string | null
+    logger?: Logger
+    schemaService?: SchemaService
+  },
+  workingMemory: Record<string, unknown>
+): Promise<void> {
+  if (!options.storage) return
+
+  const existing =
+    (await options.storage.getWorkingMemory(options.threadId, 'thread')) ?? {}
+  const merged = deepMergeWorkingMemory(existing, workingMemory)
+
+  if (options.schemaService && options.workingMemorySchemaName) {
+    try {
+      await options.schemaService.validateSchema(
+        options.workingMemorySchemaName,
+        merged
+      )
+    } catch (err) {
+      options.logger?.warn(
+        `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+      return
+    }
+  }
+
+  await options.storage.saveWorkingMemory(options.threadId, 'thread', merged)
+}
+
 export function createWorkingMemoryMiddleware(options: {
   storage?: AIStorageService
   threadId: string
@@ -382,6 +415,21 @@ export function createWorkingMemoryMiddleware(options: {
 }> {
   return {
     modifyOutputStream: async (_services, { event, state }) => {
+      // A streamed step ends at its `usage` event, or at `done` for a model
+      // that reports no usage. That is the last moment the unstripped text is
+      // still reachable: it lives only in `state.rawText`, because the strip
+      // below runs before anything downstream — including the channel that
+      // accumulates what `modifyOutput` would later be handed.
+      if (event.type === 'usage' || event.type === 'done') {
+        const { workingMemory } = extractWorkingMemory(state.rawText ?? '')
+        state.rawText = ''
+        state.emittedVisibleText = ''
+        if (workingMemory) {
+          await persistWorkingMemory(options, workingMemory)
+        }
+        return event
+      }
+
       if (event.type !== 'text-delta') return event
 
       const rawText = `${state.rawText ?? ''}${event.text}`
@@ -400,38 +448,10 @@ export function createWorkingMemoryMiddleware(options: {
       if (!delta) return null
       return { ...event, text: delta }
     },
-    modifyOutput: async (_services, { text, messages, usage }) => {
+    modifyOutput: async (_services, { text, messages }) => {
       const { workingMemory, cleanedText } = extractWorkingMemory(text)
-      if (workingMemory && options.storage) {
-        const existing =
-          (await options.storage.getWorkingMemory(
-            options.threadId,
-            'thread'
-          )) ?? {}
-        const merged = deepMergeWorkingMemory(existing, workingMemory)
-
-        let valid = true
-        if (options.schemaService && options.workingMemorySchemaName) {
-          try {
-            await options.schemaService.validateSchema(
-              options.workingMemorySchemaName,
-              merged
-            )
-          } catch (err) {
-            valid = false
-            options.logger?.warn(
-              `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
-            )
-          }
-        }
-
-        if (valid) {
-          await options.storage.saveWorkingMemory(
-            options.threadId,
-            'thread',
-            merged
-          )
-        }
+      if (workingMemory) {
+        await persistWorkingMemory(options, workingMemory)
       }
 
       return {
