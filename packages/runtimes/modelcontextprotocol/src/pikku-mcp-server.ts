@@ -4,10 +4,11 @@ import {
   type Server as HttpServer,
   type ServerResponse,
 } from 'node:http'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import type {
@@ -25,7 +26,6 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
   McpError,
-  isInitializeRequest,
 } from '@modelcontextprotocol/sdk/types.js'
 
 import type { CoreConfig } from '@pikku/core'
@@ -65,13 +65,57 @@ export interface MCPHttpOptions {
   path?: string
 }
 
+/**
+ * A node `IncomingMessage` as the web-standard `Request` the MCP transport and
+ * the pikku runner both speak.
+ *
+ * The body is streamed rather than buffered so a large `tools/call` payload does
+ * not have to be held whole before the transport sees any of it. GET and DELETE
+ * carry no body, and giving `Request` one for those methods is an error.
+ */
+const nodeRequestAsWebRequest = (req: IncomingMessage): Request => {
+  const headers = new Headers()
+  for (const [name, value] of Object.entries(req.headers)) {
+    if (Array.isArray(value)) {
+      for (const entry of value) headers.append(name, entry)
+    } else if (value !== undefined) {
+      headers.set(name, value)
+    }
+  }
+  const method = req.method ?? 'POST'
+  const host = req.headers.host ?? 'localhost'
+  const hasBody = method !== 'GET' && method !== 'HEAD'
+  return new Request(new URL(req.url ?? '/', `http://${host}`), {
+    method,
+    headers,
+    body: hasBody ? (Readable.toWeb(req) as ReadableStream) : undefined,
+    // Required by undici whenever a body is present on a streamed request.
+    ...(hasBody ? { duplex: 'half' } : {}),
+  } as RequestInit)
+}
+
+/**
+ * Write a web-standard `Response` back out over a node `ServerResponse`.
+ *
+ * The body is piped rather than awaited so an SSE stream reaches the client as
+ * it is produced — buffering it would hold the whole MCP response until the
+ * stream closed, which for a streaming transport is never.
+ */
+const writeWebResponse = async (
+  res: ServerResponse,
+  response: Response
+): Promise<void> => {
+  res.writeHead(response.status, Object.fromEntries(response.headers))
+  if (!response.body) {
+    res.end()
+    return
+  }
+  await pipeline(Readable.fromWeb(response.body as any), res)
+}
+
 export class PikkuMCPServer {
   private server!: Server
   private mcpEndpointRegistry: MCPEndpointRegistry
-  private sessions = new Map<
-    string,
-    { server: Server; transport: StreamableHTTPServerTransport }
-  >()
   private connected = false
 
   constructor(
@@ -107,11 +151,6 @@ export class PikkuMCPServer {
 
   public async stop(): Promise<void> {
     await stopSingletonServices()
-    for (const { server, transport } of this.sessions.values()) {
-      await transport.close()
-      await server.close()
-    }
-    this.sessions.clear()
     if (this.server) {
       await this.server.close()
     }
@@ -119,10 +158,11 @@ export class PikkuMCPServer {
 
   /**
    * @param http the request this server instance is serving, when there is one.
-   * The fetch path builds a fresh server per request, so the dispatch handlers
-   * below can close over it and hand it to the runner — which is what lets the
-   * app's own auth middleware see a session on an MCP call. The stdio and
-   * long-lived paths have no request, and stay anonymous.
+   * Every HTTP call gets a fresh server built around its own request, and that
+   * request is what the runner hands the app's auth middleware — so an MCP tool
+   * can see who is calling it. Node reaches this through the same fetch handler,
+   * so both runtimes authenticate identically. Stdio has no request and stays
+   * anonymous.
    */
   private createConfiguredServer(http?: PikkuHTTP): Server {
     const server = new Server(
@@ -162,54 +202,28 @@ export class PikkuMCPServer {
     await this.connect(transport)
   }
 
+  /**
+   * The node HTTP entry point, as an adapter over {@link createFetchHandler}.
+   *
+   * The MCP SDK's own node transport is a wrapper around its web-standard one,
+   * so a second dispatch path here would only be a second place for the two
+   * runtimes to disagree — which is how node MCP calls ended up running without
+   * the caller's request while fetch ones carried it. Node is stateless for the
+   * same reason fetch is: each request brings its own credentials rather than
+   * inheriting them from whoever opened a session id.
+   */
   public createHTTPRequestHandler(options?: { path?: string }): {
     handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>
   } {
-    const mcpPath = options?.path ?? '/mcp'
-
+    const { handler: fetchHandler } = this.createFetchHandler(options)
     const processLogger = this.logger
 
     const handler = async (req: IncomingMessage, res: ServerResponse) => {
       try {
-        const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
-        if (url.pathname !== mcpPath) {
-          res.writeHead(404).end()
-          return
-        }
-
-        if (req.method === 'POST') {
-          await this.handleHTTPPost(req, res)
-        } else if (req.method === 'GET') {
-          const sessionId = req.headers['mcp-session-id'] as string | undefined
-          if (sessionId && this.sessions.has(sessionId)) {
-            const session = this.sessions.get(sessionId)!
-            await session.transport.handleRequest(req, res)
-          } else {
-            res.writeHead(400).end(
-              JSON.stringify({
-                jsonrpc: '2.0',
-                error: {
-                  code: -32000,
-                  message: 'Invalid or missing session ID',
-                },
-                id: null,
-              })
-            )
-          }
-        } else if (req.method === 'DELETE') {
-          const sessionId = req.headers['mcp-session-id'] as string | undefined
-          if (sessionId && this.sessions.has(sessionId)) {
-            const session = this.sessions.get(sessionId)!
-            await session.transport.close()
-            await session.server.close()
-            this.sessions.delete(sessionId)
-            res.writeHead(200).end()
-          } else {
-            res.writeHead(405).end()
-          }
-        } else {
-          res.writeHead(405).end()
-        }
+        await writeWebResponse(
+          res,
+          await fetchHandler(nodeRequestAsWebRequest(req))
+        )
       } catch (err) {
         processLogger?.error('mcp handler error', err)
         if (!res.headersSent) {
@@ -228,9 +242,9 @@ export class PikkuMCPServer {
   }
 
   /**
-   * Fetch-native MCP handler for Web-Standard runtimes (bun, workers, deno).
-   * Mirrors `createHTTPRequestHandler` but takes a `Request` and returns a
-   * `Response` via the SDK's WebStandard transport — no `node:http` req/res.
+   * The one MCP dispatch path, taking a `Request` and returning a `Response`
+   * via the SDK's WebStandard transport. It serves the web-standard runtimes
+   * (bun, workers, deno) directly and node through `createHTTPRequestHandler`.
    * Stateless: a fresh transport + configured server per request (the
    * recommended web-standard pattern; no session map to leak across requests).
    */
@@ -255,71 +269,6 @@ export class PikkuMCPServer {
       return transport.handleRequest(request)
     }
     return { handler }
-  }
-
-  private async handleHTTPPost(
-    req: IncomingMessage,
-    res: ServerResponse
-  ): Promise<void> {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined
-
-    if (sessionId && this.sessions.has(sessionId)) {
-      const session = this.sessions.get(sessionId)!
-      await session.transport.handleRequest(req, res)
-      return
-    }
-
-    const body = await new Promise<string>((resolve) => {
-      let data = ''
-      req.on('data', (chunk: Buffer) => (data += chunk.toString()))
-      req.on('end', () => resolve(data))
-    })
-
-    let parsedBody: unknown
-    try {
-      parsedBody = JSON.parse(body)
-    } catch {
-      res.writeHead(400).end(
-        JSON.stringify({
-          jsonrpc: '2.0',
-          error: { code: -32700, message: 'Parse error' },
-          id: null,
-        })
-      )
-      return
-    }
-
-    if (!isInitializeRequest(parsedBody)) {
-      res.writeHead(400).end(
-        JSON.stringify({
-          jsonrpc: '2.0',
-          error: {
-            code: -32000,
-            message: 'Bad Request: No valid session ID provided',
-          },
-          id: null,
-        })
-      )
-      return
-    }
-
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => crypto.randomUUID(),
-      onsessioninitialized: (newSessionId) => {
-        this.sessions.set(newSessionId, { server, transport })
-      },
-    })
-
-    transport.onclose = () => {
-      const sid = transport.sessionId
-      if (sid) {
-        this.sessions.delete(sid)
-      }
-    }
-
-    const server = this.createConfiguredServer()
-    await server.connect(transport)
-    await transport.handleRequest(req, res, parsedBody)
   }
 
   public async connectHTTP(options?: MCPHttpOptions): Promise<{

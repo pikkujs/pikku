@@ -28,10 +28,15 @@ generated type union offers their names, but the runtime serves only
 `expose: true` functions — so before this change an MCP tool could not be
 invoked by a scenario, a browser or an MCP client without a deploy.
 
-**Note on auth.** MCP tools run with no user session. `runMCPTool` is called
-with `{ mcp }` alone, so no cookie, header or session reaches the tool, and
-every declared tool is callable by anything that can reach the mount — a
-mutating tool included. That was equally true of a deployed app before this
-change; mounting the endpoint in dev makes it visible rather than making it so.
-Treat `/mcp` as an unauthenticated surface and protect it at the transport, and
-prefer read-only tools until per-tool auth exists.
+**Note on auth.** An MCP call over HTTP carries the caller's request, so the
+app's own session middleware runs and a tool fronting a session-requiring
+function is authenticated like any other wiring. Two cases still reach a
+function anonymously, and mounting `/mcp` in dev makes them visible rather than
+introducing them:
+
+- **A requestless transport.** Stdio has no request to derive a session from, so
+  everything it serves runs anonymous.
+- **A tool fronting a sessionless function.** It requires no session by
+  construction, so it is callable by anything that can reach the mount — a
+  mutating one included. Give it the scope its HTTP sibling has, and protect the
+  mount at the transport where the surface is not meant to be public.
