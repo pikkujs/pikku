@@ -93,3 +93,20 @@ ships `.gen.ts` files importing a `../../src/` and `../types/` that the tarball
 does not contain, and the `pikku-bootstrap.gen.js` that consumers import through
 that subpath exists only under `dist`. Everything resolved locally through the
 workspace link and none of it resolved on install.
+
+## Only a package that publishes gets the dist shape
+
+The shape describes a tarball, so it means nothing for a `private` package —
+and applying it there actively breaks: `exports` *is* enforced across a
+workspace link, so repointing a private fixture at `dist` makes every consumer
+demand a directory that only a build produces. The three `verifiers/db-schema`
+and `verifiers/addon-registry` fixtures have no build script at all, so `dist`
+never exists for them; the five `e2e/packages` addons build, but their metadata
+is read straight from the source tree before any build has run. Repointing all
+eight left the db-schema verifier unable to resolve
+`dist/.pikku/db/pikku-db-meta.gen.json` and every e2e addon reporting "no
+function metadata".
+
+`isAddonPackage` already draws this line — it returns false for `private` — so
+the checks and the shape agree: a package the registry never sees is consumed
+from source.

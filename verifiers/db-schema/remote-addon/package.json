@@ -5,24 +5,25 @@
   "private": true,
   "description": "An addon that ships a table and is consumed remotely. Its schema is published exactly like a local addon's — the consumer must still leave it alone, because it belongs to the host's database.",
   "imports": {
-    "#pikku": "./dist/.pikku/pikku-types.gen.js",
-    "#pikku/*": "./dist/.pikku/*"
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
   },
   "exports": {
     "./types": {
       "types": "./types/application-types.d.ts"
     },
-    "./.pikku/*": "./dist/.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
-    "./.pikku/db/pikku-db-meta.gen.json": "./dist/.pikku/db/pikku-db-meta.gen.json",
+    "./.pikku/*": "./.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/db/pikku-db-meta.gen.json": "./.pikku/db/pikku-db-meta.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.remote.gen.js": {
-      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.remote.gen.d.ts"
+      "types": "./.pikku/rpc/pikku-rpc-wirings-map.remote.gen.d.ts"
     }
   },
   "files": [
     "src",
     "types",
-    "db"
+    "db",
+    ".pikku"
   ],
   "scripts": {
     "prebuild": "pikku all && pikku db export",
