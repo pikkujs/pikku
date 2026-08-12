@@ -9,7 +9,8 @@ description: >-
   code it is about, the shapes that are NOT a knowledge base, and the `pikku knowledge
   validate|index` commands. TRIGGER when: user asks to write down a decision, a requirement, an
   entity or an open question; asks what the app does or is; asks about knowledge/, notes, slices,
-  or an index.md; or hands over a product brief to record. DO NOT TRIGGER when: user asks what
+  or an index.md; asks for a diagram, callout or decision block in a note; or hands over a product
+  brief to record. DO NOT TRIGGER when: user asks what
   functions, routes, tables or permissions exist (that is `pikku meta` / `pikku info`, never a
   note), or asks to write a scenario test (use pikku-scenario).
 installGroups: [core]
@@ -142,7 +143,49 @@ And writing again replaces it rather than adding a second
 
 - **`status`** is `proposed` → `dispatched` → `built`. Nothing else. Every gate compares it literally.
 - **`entities`** lists what the slice touches, **at most three**. Past three it is not one buildable piece — split it.
-- **The scenario is a fenced `gherkin` block, in the third person.** `Given 'owner' has no entry` — never `Given I have no entry`. A quoted word _means a persona_, which is what lets a reader (and a test) tell who is acting. First person hides that, so it is rejected.
+- **The scenario is a fenced `gherkin` block, in the third person.** `Given 'owner' has no entry` — never `Given I have no entry`. A quoted word _means a persona_, which is what lets a reader (and a test) tell who is acting. First person hides that, so it is rejected. The console draws the keywords as a column and each quoted persona as a chip, so a first-person scenario is visibly a block with no personas in it.
+
+## Showing it
+
+A note is markdown, and four kinds of block are **drawn** rather than printed. Every one of them degrades to something readable — a diagram falls back to its source, a callout to a blockquote, a decision to a code block — so writing one costs nothing where it is not rendered.
+
+None of this changes the governing rule. A diagram of the schema is still a copy of `pikku meta` that drifts, and it drifts while looking more authoritative than prose would. These are for the part no generator can derive.
+
+**```mermaid — when the relationship is the point.** Prose is bad at graphs: "an entry belongs to a day, a day belongs to an owner, and a grant lets another owner read a day" is a sentence a reader has to re-read twice and draw themselves. Reach for one when a note is about how several things relate, an order of steps across time, or a state machine. Do not draw one thing, or two things and an arrow — that is a sentence.
+
+````markdown
+```mermaid
+flowchart LR
+  owner -->|writes| entry
+  entry -->|belongs to| day
+  owner -->|grants read on| day
+```
+````
+
+**`> [!NOTE]` — when a line must survive skimming.** Five kinds: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`. Use one for the thing a reader who skips the paragraph must still not miss — a trap, a constraint that is easy to violate, an assumption the rest of the note rests on. Two callouts in a note is normal; six means the note has no prose left and nothing stands out.
+
+```markdown
+> [!WARNING]
+> A grant is checked on every request, not cached. A permission change is
+> immediate everywhere, and there is no invalidation step to forget.
+```
+
+**```decision — the answer a decision note owes.** `decisions/` answers "what was chosen, and what does that rule out?", and the second half is the half that gets dropped. The fence makes it checkable: `pikku knowledge validate` warns when a fence says what was chosen and never says what it closes off.
+
+````markdown
+```decision
+chosen: A revoked grant stops working immediately, everywhere.
+rules-out:
+  - A "revoked but valid until midnight" state
+  - A scheduled cleanup job
+because: Two people disagreeing about who can see today is worse than one of
+  them losing access mid-session.
+```
+````
+
+It is a **summary, not the note** — the argument continues in prose underneath. `rules-out:` takes one line or a `- item` block. A decision genuinely argued in prose needs no fence, and validate never asks for one; what it does ask is that a fence you did write is complete.
+
+**Fences of any other language are code** — highlighted and copyable, which is right for a snippet and wrong for a scenario or a decision, so do not put either in a bare fence.
 
 ## `resource:` — tying a note to the code
 
@@ -196,7 +239,7 @@ pikku knowledge index           # refresh every index.md
 pikku knowledge index --check   # report stale indexes without writing (CI gate)
 ```
 
-`validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, slices with a bad or missing `status`, slices over three entities, slices with no gherkin block or a first-person one, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
+`validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, slices with a bad or missing `status`, slices over three entities, slices with no gherkin block or a first-person one, `decision` fences that state no `chosen:` or rule nothing out, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
 
 `index` rewrites only the block between `<!-- pikku:knowledge-index -->` markers, creating a scaffolded `index.md` for a section that has none. It is idempotent — running it twice changes nothing.
 

@@ -1,6 +1,7 @@
 import { basename, posix } from 'node:path'
 import { z } from 'zod'
 import { checkKnowledgeResources } from './check-resources.js'
+import { decisionFences } from './decision-fence.js'
 import {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
@@ -64,7 +65,7 @@ export const KNOWLEDGE_SECTIONS: Record<string, string> = {
  * always a copy that will drift. The value is where the truth actually lives.
  */
 const FORBIDDEN_SECTIONS: Record<string, string> = {
-  personas: '`definePersonas()` in the project\'s own code',
+  personas: "`definePersonas()` in the project's own code",
   scenarios: 'the gherkin block inside the slice the scenario belongs to',
   permissions: 'a decision note under decisions/security/',
   schemas: '`pikku meta` — the generated schema is the schema',
@@ -203,6 +204,33 @@ export const runKnowledgeValidate = async (
           .filter((s) => !s.includes('/'))
           .join(', ')}), splitting it if it covers several`
       )
+    }
+
+    // Every note, not only `type: decision`: a slice states a decision about as
+    // often, and a fence that does not parse renders as a code block wherever it
+    // sits. Nothing here requires a fence — a decision argued in prose is a
+    // decision, and demanding one per note would be a finding against every
+    // note already written.
+    for (const fence of decisionFences(note.body)) {
+      if (!fence.decision) {
+        add(
+          'warn',
+          `knowledge-decision-fence-unparsed-${note.path}`,
+          `${note.path} has a \`\`\`decision fence with no \`chosen:\`, so it renders as a code block rather than the decision it states`,
+          note.path,
+          'Give the fence a `chosen:` line — with `rules-out:` and `because:` under it'
+        )
+        continue
+      }
+      if (fence.decision.rulesOut.length === 0) {
+        add(
+          'warn',
+          `knowledge-decision-nothing-ruled-out-${note.path}`,
+          `${note.path} says what was chosen but not what that rules out, which is the half that stops it being reopened`,
+          note.path,
+          'Add `rules-out:` naming the alternative that was considered and rejected'
+        )
+      }
     }
 
     if (note.type !== 'slice') continue

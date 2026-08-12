@@ -21,7 +21,10 @@ import {
   type AlertKind,
 } from '../../lib/remarkAlerts'
 import { parseResourceUri } from '../../lib/knowledge'
+import { parseDecisionFence } from '../../lib/decisionFence'
 import { KnowledgeResourceLink } from '../knowledge/KnowledgeResourceLink'
+import { DecisionCard } from './DecisionCard'
+import { GherkinBlock } from './GherkinBlock'
 import { MermaidDiagram } from './MermaidDiagram'
 import { ScrollRegion } from './ScrollRegion'
 import classes from './console.module.css'
@@ -111,16 +114,30 @@ const RICH_COMPONENTS: Components = {
   h3: heading(3),
   h4: heading(4),
 
-  // A fence is a diagram or it is code, and code in a developer console is
-  // something the reader means to take: highlighted, and copyable in one action.
-  // Overridden at `pre` rather than at `code` because both replacements are
-  // block elements, and rendering one from the `code` renderer would nest it
+  // A fence is a diagram, a scenario, a decision, or it is code — and code in a
+  // developer console is something the reader means to take: highlighted, and
+  // copyable in one action. The first three are prose in a structured shape, so
+  // each is drawn as the thing it states rather than as source.
+  //
+  // Overridden at `pre` rather than at `code` because every replacement is a
+  // block element, and rendering one from the `code` renderer would nest it
   // inside the `<pre>` it is meant to replace.
   pre: ({ children, node: _node, ...props }) => {
     const child = Array.isArray(children) ? children[0] : children
     const language = fenceLanguage(child)
     if (language === 'mermaid') {
       return <MermaidDiagram code={fenceText(child)} />
+    }
+    if (language === 'gherkin') {
+      return <GherkinBlock code={fenceText(child)} />
+    }
+    if (language === 'decision') {
+      // Falls through to the code surface when the fence states no decision:
+      // drawing a card around it would assert a structure nobody wrote, and
+      // showing the author their own unparsed text is what makes the typo
+      // findable.
+      const decision = parseDecisionFence(fenceText(child))
+      if (decision) return <DecisionCard decision={decision} />
     }
     const code = fenceText(child)
     if (!code) return <pre {...props}>{children}</pre>

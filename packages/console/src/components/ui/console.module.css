@@ -619,6 +619,147 @@
   color: var(--app-text-dim, #64748b);
 }
 
+/* ── Scenarios (```gherkin) ──
+   A slice's acceptance criteria. Monospace for the step text, because the steps
+   are meant to line up under each other and a proportional font breaks the
+   column the keywords form; everything else about it is prose, not a code
+   surface. */
+.gherkinScroll {
+  margin: 0.9em 0;
+  border: 1px solid var(--app-border, rgba(128, 128, 128, 0.25));
+  border-radius: 6px;
+  background: var(--app-panel-bg-soft, rgba(128, 128, 128, 0.04));
+}
+
+.gherkin {
+  padding: 10px 14px;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: max(12px, calc(var(--mantine-font-size-sm) - 1px));
+  line-height: 1.7;
+}
+
+.gherkinLine {
+  display: flex;
+  gap: 8px;
+  /* Wraps as a hanging indent rather than under the keyword: a long Then that
+     wraps to the keyword column reads as a second step. */
+  white-space: pre-wrap;
+}
+
+/* `Scenario:` / `Feature:` head a block, so they sit clear of the steps under
+   them. Not on the first line, which would leave a gap above the box. */
+.gherkinLine[data-heading] {
+  font-weight: 600;
+  margin-top: 0.6em;
+}
+
+.gherkinLine[data-heading]:first-child {
+  margin-top: 0;
+}
+
+/* A fixed column so Given/When/Then line up and the shape of the scenario —
+   how many of each — is readable before a word of it is. `ch` because the
+   text is monospace, and 6 is `Given` plus a space. */
+.gherkinKeyword {
+  flex: 0 0 auto;
+  min-width: 6ch;
+  font-weight: 600;
+  color: var(--app-accent, #6366f1);
+}
+
+.gherkinLine[data-heading] .gherkinKeyword {
+  color: inherit;
+}
+
+/* A quoted word in a step means a persona. Drawn as one so the answer to "who
+   is acting?" is visible without reading the sentence — and so a first-person
+   scenario, which the format rejects, is visibly a block with no personas in
+   it. Padding without a border: several chips in one step should read as words
+   with emphasis, not as a row of buttons. */
+.gherkinPersona {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--app-surface-info, rgba(99, 102, 241, 0.1));
+  color: var(--app-accent, #6366f1);
+  font-weight: 600;
+}
+
+:global(html[data-mantine-color-scheme='light']) .gherkinPersona {
+  /* The accent is tuned for a dark ground; at chip size on near-white it lands
+     under 4.5:1, and this is the one word in the step carrying who acts. */
+  color: #4338ca;
+}
+
+/* ── Decisions (```decision) ──
+   The three parts of a decision, each labelled, because they are read at
+   different moments — what was chosen, what that closes off, and why. A card
+   rather than a callout: a callout is an aside to the prose around it, and this
+   is the note's actual answer. */
+.decisionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 1em 0;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border, rgba(128, 128, 128, 0.25));
+  border-radius: 8px;
+  background: var(--app-panel-bg-soft, rgba(128, 128, 128, 0.04));
+}
+
+.decisionRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+/* The icon sits on the label's line, not the row's box. */
+.decisionRow > svg {
+  margin-top: 2px;
+  color: var(--decision-color);
+}
+
+.decisionRow[data-part='chosen'] {
+  --decision-color: var(--app-green, #16a34a);
+}
+
+.decisionRow[data-part='rules-out'] {
+  --decision-color: var(--app-red, #dc2626);
+}
+
+.decisionRow[data-part='because'] {
+  --decision-color: var(--app-text-dim, #64748b);
+}
+
+.decisionLabel {
+  margin-bottom: 2px;
+  font-size: max(11px, var(--mantine-font-size-xs));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--decision-color);
+}
+
+/* The card sits inside `.markdownBody`, which gives every `p`/`ul` a prose
+   margin — three of those inside a 12px card is all gap and no content. */
+.decisionCard :is(p, ul) {
+  margin: 0;
+}
+
+.decisionCard ul {
+  padding-inline-start: 1.1em;
+}
+
+:global(html[data-mantine-color-scheme='light'])
+  .decisionRow[data-part='chosen'] {
+  --decision-color: #15803d;
+}
+
+:global(html[data-mantine-color-scheme='light'])
+  .decisionRow[data-part='rules-out'] {
+  --decision-color: #b91c1c;
+}
+
 /* ── Resource chips (`func:createEntry`) ──
    The one kind of reference in a note that points OUT of the knowledge base and
    into the app, so it is drawn as an object rather than as prose: a kind icon,
