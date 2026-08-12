@@ -72,6 +72,12 @@ echo "Bootstrapping with published @pikku/cli..."
 # Held at the 0.12.79 wave's own version. Moving the wave forward means moving
 # this with it.
 : "${PIKKU_SCHEDULE_VERSION:=0.12.4}"
+# @pikku/ws is the fifth, and it failed the same way one wave later: 0.12.6
+# moved to `@pikku/core/ecosystem` too, so an unpinned ws landing beside the
+# pinned core 0.12.79 reproduces the missing-subpath error verbatim, this time
+# through pikku-ws-server.js. 0.12.5 is the 0.12.79 wave's own version and peers
+# on core ^0.12.73.
+: "${PIKKU_WS_VERSION:=0.12.5}"
 # The other peer that has to be named: @pikku/better-auth peers on the upstream
 # `better-auth` library and imports it at module load, so without it the
 # bootstrap CLI dies on "Cannot find package 'better-auth'".
@@ -102,6 +108,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
+    "@pikku/ws": "${PIKKU_WS_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
   "overrides": {
@@ -111,6 +118,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
+    "@pikku/ws": "${PIKKU_WS_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
 }
