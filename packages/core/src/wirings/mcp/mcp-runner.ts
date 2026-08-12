@@ -97,6 +97,12 @@ export async function runMCPResource(
   const metas = pikkuState(null, 'mcp', 'resourcesMeta')
   const endpoints = pikkuState(null, 'mcp', 'resources')
 
+  // The key the resource's meta (and its middleware) is stored under. For a
+  // templated resource this is the template, not the concrete request URI — so
+  // it must be carried forward, or the meta lookup downstream misses and the
+  // resource's declared middleware (including auth) is silently skipped.
+  let metaKey = uri
+
   if (endpoints.has(uri)) {
     endpoint = endpoints.get(uri)
     pikkuFuncId = metas[uri]?.pikkuFuncId
@@ -113,6 +119,7 @@ export async function runMCPResource(
 
       if (match) {
         endpoint = value
+        metaKey = uriTemplate
         pikkuFuncId = metas[uriTemplate]?.pikkuFuncId
 
         for (let i = 0; i < paramNames.length; i++) {
@@ -134,7 +141,8 @@ export async function runMCPResource(
     pikkuFuncId,
     { ...params, mcp: { ...params.mcp, uri } } as RunMCPEndpointParams<
       keyof CoreMCPResource
-    >
+    >,
+    metaKey
   )
 }
 
@@ -177,7 +185,11 @@ async function runMCPPikkuFunc(
   name: string,
   mcp: CoreMCPResource | CoreMCPPrompt | undefined,
   pikkuFuncId: string | undefined,
-  { mcp: mcpWire, exposeErrors = !isProduction() }: RunMCPEndpointParams
+  { mcp: mcpWire, exposeErrors = !isProduction() }: RunMCPEndpointParams,
+  // The key the endpoint's meta is stored under. Differs from `name` only for a
+  // templated resource, where `name` is the concrete URI and the meta lives
+  // under the template. Defaults to `name` for tools and prompts.
+  metaKey: string = name
 ): Promise<JsonRpcResponse> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
@@ -213,11 +225,11 @@ async function runMCPPikkuFunc(
 
     let meta: any
     if (type === 'resource') {
-      meta = pikkuState(null, 'mcp', 'resourcesMeta')[name]
+      meta = pikkuState(null, 'mcp', 'resourcesMeta')[metaKey]
     } else if (type === 'tool') {
-      meta = pikkuState(null, 'mcp', 'toolsMeta')[name]
+      meta = pikkuState(null, 'mcp', 'toolsMeta')[metaKey]
     } else if (type === 'prompt') {
-      meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
+      meta = pikkuState(null, 'mcp', 'promptsMeta')[metaKey]
     }
 
     let resolvedFuncName = pikkuFuncId

@@ -11,6 +11,8 @@ import {
 } from './mcp-runner.js'
 import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
+import { pikkuMiddleware } from '../../types/core.types.js'
+import { addTagMiddleware } from '../../middleware-runner.js'
 
 const logger = {
   debug: () => {},
@@ -165,6 +167,49 @@ describe('runMCPResource', () => {
         uri: 'resource://todos/42',
       },
     })
+  })
+
+  test('runs a templated resource middleware when invoked by concrete uri', async () => {
+    let middlewareRan = false
+    // A tag-derived middleware group (this is where a tag-based auth gate lands).
+    addTagMiddleware('secure', [
+      pikkuMiddleware(async (_services, _wire, next) => {
+        middlewareRan = true
+        await next()
+      }),
+    ])
+    pikkuState(null, 'mcp', 'resourcesMeta')['resource://secure/{id}'] = {
+      uri: 'resource://secure/{id}',
+      title: 'Secure',
+      description: 'Secure',
+      pikkuFuncId: 'secureResourceFunc',
+      inputSchema: null,
+      outputSchema: null,
+      // The resource's merged middleware metadata. It must resolve for a concrete
+      // request against the template, or the resource is reachable with its gate
+      // skipped.
+      middleware: [{ type: 'tag', tag: 'secure' }],
+    } as never
+    registerFunction('secureResourceFunc', async () => ({ ok: true }))
+
+    wireMCPResource({
+      uri: 'resource://secure/{id}',
+      title: 'Secure',
+      description: 'Secure',
+      func: { func: async () => ({ ok: true }) } as never,
+    })
+
+    await runMCPResource(
+      { jsonrpc: '2.0', id: 'req-2', params: {} },
+      { mcp: mcpWire as never },
+      'resource://secure/99'
+    )
+
+    assert.equal(
+      middlewareRan,
+      true,
+      'the templated resource middleware must run for a concrete uri'
+    )
   })
 })
 
