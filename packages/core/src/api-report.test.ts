@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
 
@@ -39,7 +39,7 @@ describe('the API report matches the code', () => {
       const firstDiff = regeneratedLines.findIndex(
         (line, i) => line !== committedLines[i]
       )
-      require('node:fs').writeFileSync(reportPath, committed)
+      writeFileSync(reportPath, committed)
 
       assert.fail(
         'the public API changed but api-report.md was not regenerated.\n' +

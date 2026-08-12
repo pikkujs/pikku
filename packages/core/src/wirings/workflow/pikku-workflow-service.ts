@@ -844,6 +844,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     if (workflowMeta.source === 'graph') {
+      // A caller-supplied startNode must be one of the graph's declared entry
+      // nodes. startWorkflow is the boundary the public
+      // `/workflow/:name/graph/:nodeId` route and triggers enter through, so
+      // without this a request could name any dependency-free node — one whose
+      // input reads only `trigger` — and fire its RPC directly with
+      // attacker-chosen data, skipping every upstream eligibility, validation or
+      // approval node. (Internal resume/replay drives runWorkflowGraph directly
+      // and is unaffected.)
+      if (
+        options?.startNode &&
+        !(workflowMeta.entryNodeIds ?? []).includes(options.startNode)
+      ) {
+        throw new Error(
+          `Workflow graph '${name}': '${options.startNode}' is not a declared entry node`
+        )
+      }
       const shouldInline =
         options?.inline || !getSingletonServices()?.queueService
       return runWorkflowGraph(

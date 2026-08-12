@@ -54,6 +54,78 @@ describe('graph-runner bugs', () => {
     assert.equal(run?.status, 'running')
   })
 
+  test('startWorkflow rejects a startNode that is not a declared entry node', async () => {
+    const ws = new InMemoryWorkflowService()
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testStartNodeGate'] = {
+      name: 'testStartNodeGate',
+      pikkuFuncId: 'testStartNodeGate',
+      source: 'graph',
+      entryNodeIds: ['gate'],
+      graphHash: 'startnode-hash',
+      nodes: {
+        // 'charge' reads only trigger input, so it is dependency-free and would
+        // otherwise be directly startable — skipping the 'gate' entry node.
+        gate: { nodeId: 'gate', rpcName: 'checkEligibility', next: 'charge' },
+        charge: { nodeId: 'charge', rpcName: 'capturePayment' },
+      },
+    }
+
+    await assert.rejects(
+      () =>
+        ws.startWorkflow(
+          'testStartNodeGate',
+          {},
+          { type: 'test' },
+          { rpcWithWire: async () => ({}) },
+          { startNode: 'charge', inline: true }
+        ),
+      /not a declared entry node/
+    )
+    assert.equal(
+      [...(ws as any).runs.keys()].length,
+      0,
+      'no run should be created for a non-entry startNode'
+    )
+    delete metaState['testStartNodeGate']
+  })
+
+  test('startWorkflow accepts a startNode that is a declared entry node', async () => {
+    const ws = new InMemoryWorkflowService()
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    // 'b' is a declared entry but carries an unknown input ref, so it clears the
+    // startNode gate and then throws at reference validation — proving the gate
+    // admitted it, without dispatching real work.
+    metaState['testStartNodeAllowed'] = {
+      name: 'testStartNodeAllowed',
+      pikkuFuncId: 'testStartNodeAllowed',
+      source: 'graph',
+      entryNodeIds: ['a', 'b'],
+      graphHash: 'startnode-ok-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'doA' },
+        b: {
+          nodeId: 'b',
+          rpcName: 'doB',
+          input: { dep: { $ref: 'missingNode', path: 'value' } },
+        },
+      },
+    }
+    await assert.rejects(
+      () =>
+        ws.startWorkflow(
+          'testStartNodeAllowed',
+          {},
+          { type: 'test' },
+          { rpcWithWire: async () => ({}) },
+          { startNode: 'b', inline: true }
+        ),
+      /references unknown node 'missingNode'/,
+      'a declared entry node must pass the startNode gate (reaching ref validation)'
+    )
+    delete metaState['testStartNodeAllowed']
+  })
+
   test('runWorkflowGraph should throw and not create a run for unknown input refs', async () => {
     const ws = new InMemoryWorkflowService()
 
