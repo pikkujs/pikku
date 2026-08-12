@@ -1285,6 +1285,32 @@ export function validateAgentToolReferences(
 }
 
 /**
+ * Validates that every scorer an agent asks to be graded by exists.
+ *
+ * The runtime warns and skips an unresolvable name rather than failing a run
+ * that has already answered the user — which means a typo would otherwise cost
+ * nothing visible and simply grade nothing, forever.
+ */
+export function validateAgentScorerReferences(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const known = Object.keys(state.scorers.scorersMeta)
+
+  for (const [agentKey, agent] of Object.entries(state.agents.agentsMeta)) {
+    const where = agent.sourceFile ? ` (${agent.sourceFile})` : ''
+    for (const scorer of agent.scorers ?? []) {
+      if (known.includes(scorer)) continue
+      logger.critical(
+        ErrorCode.AGENT_SCORER_NOT_FOUND,
+        `AI agent '${agentKey}'${where} asks to be graded by scorer '${scorer}', which is not declared in this project. ` +
+          `Declared scorers: ${known.join(', ') || 'none'}.`
+      )
+    }
+  }
+}
+
+/**
  * Validates that every scope granted by a system role is declared via
  * `defineScope`. Runs after all visitors, so declaration order does not matter.
  *

@@ -419,6 +419,14 @@ export function filterInspectorState(
       agentsMeta: JSON.parse(JSON.stringify(state.agents?.agentsMeta ?? {})),
       files: new Map(),
     },
+    // Scorers carry through every filter. They are named by the agents that
+    // survive it, and a deployment that quietly stopped grading would look
+    // exactly like one whose scorers all returned nothing.
+    scorers: {
+      ...state.scorers,
+      scorersMeta: JSON.parse(JSON.stringify(state.scorers?.scorersMeta ?? {})),
+      files: new Map(state.scorers?.files ?? []),
+    },
     rpc: {
       ...state.rpc,
       internalMeta: { ...state.rpc.internalMeta }, // Clone to avoid mutating original

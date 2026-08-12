@@ -34,6 +34,7 @@ import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addFeature } from './add/add-feature.js'
 import { addAIAgent } from './add/add-ai-agent.js'
+import { addAIScorer } from './add/add-ai-scorer.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 
 export const visitSetup = (
@@ -172,6 +173,7 @@ export const visitRoutes = (
   addWorkflowGraph(logger, node, checker, state, nextOptions)
   addFeature(logger, node, checker, state, nextOptions)
   addAIAgent(logger, node, checker, state, nextOptions)
+  addAIScorer(logger, node, checker, state, nextOptions)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, nextOptions)

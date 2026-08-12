@@ -813,6 +813,29 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // AI Scorer — the same directory as agents: a scorer exists to grade one.
+    if (!result.scorerWiringsFile) {
+      result.scorerWiringsFile = join(agentDir, 'pikku-scorer-wirings.gen.ts')
+    }
+    if (!result.scorerWiringMetaFile) {
+      result.scorerWiringMetaFile = join(
+        agentDir,
+        'pikku-scorer-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.scorerWiringMetaJsonFile) {
+      result.scorerWiringMetaJsonFile = join(
+        agentDir,
+        'pikku-scorer-wirings-meta.gen.json'
+      )
+    }
+    if (!result.scorerNamesDeclarationFile) {
+      result.scorerNamesDeclarationFile = join(
+        agentDir,
+        'pikku-scorer-names.gen.d.ts'
+      )
+    }
+
     // CLI
     if (!result.cliWiringsFile) {
       result.cliWiringsFile = join(cliDir, 'pikku-cli-wirings.gen.ts')
