@@ -20,6 +20,16 @@ export interface CaptureContext {
   runId: string
   /** The scenario currently executing, set by the provider as each one starts. */
   scenario?: string
+  /**
+   * Captures taken so far in the current scenario, across every actor.
+   *
+   * One object is shared by reference between the actors' sessions rather than
+   * counted per session, because the number leads the filename and is there to
+   * give a directory listing the order the run happened in. Counted per actor
+   * it restarts at 01 for the second window, and describes an order that never
+   * occurred.
+   */
+  taken: number
 }
 
 /** Runtime problems collected for one page navigation. */
@@ -49,8 +59,6 @@ export class ActorSession implements PikkuBrowserWire {
   private inflightApi = 0
   /** Set by the provider when captures are enabled; absent means no captures. */
   capture?: CaptureContext
-  /** Orders captures within a scenario, so the filenames read as a sequence. */
-  private captureIndex = 0
 
   constructor(
     readonly actor: string,
@@ -176,7 +184,7 @@ export class ActorSession implements PikkuBrowserWire {
 
     // The index leads so a directory listing reads in the order the run
     // happened, which is the order somebody reviewing it wants.
-    const index = String(++this.captureIndex).padStart(2, '0')
+    const index = String(++this.capture.taken).padStart(2, '0')
     writeFileSync(
       join(dir, `${index}-${slug(description)}-${slug(this.actor)}.png`),
       bytes

@@ -6,7 +6,7 @@ import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
 } from '@pikku/core/workflow'
-import { ActorSession } from './actor-session.js'
+import { ActorSession, type CaptureContext } from './actor-session.js'
 import { compressVideosIn, type CaptureOptions } from './capture.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'
 import { browserConfigFromEnv, type BrowserConfig } from './config.js'
@@ -67,8 +67,12 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   private readonly config: BrowserConfig
   private sessions = new Map<string, Promise<ActorSession>>()
   private connection?: Promise<BrowserConnection>
-  /** The scenario currently running, stamped onto every capture it takes. */
-  private scenario?: string
+  /**
+   * The capture state for the scenario currently running, handed to every
+   * session by reference so the scenario name and the capture count are shared
+   * rather than copied per actor.
+   */
+  private captureContext?: CaptureContext
 
   constructor(
     private readonly options: PlaywrightScenarioBrowserProviderOptions
@@ -84,14 +88,16 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * worse to read and never wrong.
    */
   beginScenario(scenario: string): void {
-    this.scenario = scenario
-    for (const pending of this.sessions.values()) {
-      pending
-        .then((s) => {
-          if (s.capture) s.capture.scenario = scenario
-        })
-        .catch(() => {})
+    const capture = this.options.capture
+    if (!capture) {
+      return
     }
+    // Mutated in place rather than replaced, so sessions opened by the previous
+    // scenario — which hold this object by reference — follow the new name and
+    // count instead of going on writing under the old one.
+    this.captureContext ??= { dir: capture.dir, runId: capture.runId, taken: 0 }
+    this.captureContext.scenario = scenario
+    this.captureContext.taken = 0
   }
 
   async sessionFor(actorName: string): Promise<ActorSession> {
@@ -191,11 +197,12 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       capture?.video ? join(capture.dir, capture.runId, 'video') : undefined
     )
     if (capture) {
-      session.capture = {
+      this.captureContext ??= {
         dir: capture.dir,
         runId: capture.runId,
-        scenario: this.scenario,
+        taken: 0,
       }
+      session.capture = this.captureContext
     }
     const signIn = this.options.signIn ?? defaultActorSignIn
     await signIn(
