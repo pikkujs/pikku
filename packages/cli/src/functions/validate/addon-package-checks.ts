@@ -8,6 +8,7 @@ type AddonPkg = {
   name?: string
   private?: boolean
   files?: string[]
+  imports?: unknown
   exports?: unknown
 }
 
