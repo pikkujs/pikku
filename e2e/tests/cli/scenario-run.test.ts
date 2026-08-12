@@ -14,11 +14,15 @@
 import { after, before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { resolve, dirname } from 'node:path'
+import { existsSync, readdirSync } from 'node:fs'
+import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { startBackend } from '../../bin/backend-harness.js'
 
 const PROJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+
+/** Where `pikku scenario run` files a run's artifacts, one folder per run. */
+const CAPTURE_ROOT = join(PROJECT_DIR, '.pikku', 'scenario-runs')
 
 interface ScenarioRunResult {
   code: number | null
@@ -154,6 +158,72 @@ describe('pikku scenario run', () => {
 
   test('a browser step drives the console as its actor', async () => {
     assertAllPassed(await runScenario('codeEditorConsoleScenario'))
+  })
+
+  /**
+   * Captures, end to end.
+   *
+   * `@pikku/playwright` unit-tests the naming and the ffmpeg fallback, but
+   * nothing there proves `--screenshots` survives the trip from the CLI flag
+   * through the driver to the actor session and onto disk. That is only
+   * answerable by running it.
+   *
+   * The assertion is exact rather than "some png exists": every part of the
+   * filename is derived — the index from call order, the stem from the
+   * description the scenario passes, the suffix from the actor — so a run that
+   * captured the right number of images under the wrong names is a regression,
+   * not a variation. The run directory is a uuid, so it is read back from the
+   * line the CLI prints rather than guessed.
+   */
+  test('--screenshots writes the run’s images under names it chose', async () => {
+    const run = await runScenario('captureScenario', [
+      '--screenshots',
+      '--run',
+      'browser',
+    ])
+    assertAllPassed(run)
+
+    const reported = run.output.match(/Captures → (.+)$/m)
+    assert.ok(
+      reported,
+      `expected the run to report its capture dir:\n${run.output}`
+    )
+
+    // The scenario's folder is its run label — "<feature> › <scenario>" — made
+    // filename-safe, which is what `beginScenario` stamps onto every capture.
+    const scenarioDir = join(
+      reported[1]!.trim(),
+      'run-captures-capturescenario'
+    )
+    assert.ok(
+      existsSync(scenarioDir),
+      `expected captures under ${scenarioDir}:\n${run.output}`
+    )
+    assert.deepEqual(readdirSync(scenarioDir).sort(), [
+      '01-addons-gallery-admin.png',
+      '02-functions-list-admin.png',
+    ])
+  })
+
+  /**
+   * The flag is opt-in, so a scenario that photographs the page has to survive
+   * being run without it — `browser.screenshot()` returns the bytes and writes
+   * nothing. Without this, taking a picture would silently become a dependency
+   * on a flag, and every plain run of the suite would fail.
+   */
+  test('the same scenario passes with capture off, writing nothing', async () => {
+    const before = existsSync(CAPTURE_ROOT)
+      ? readdirSync(CAPTURE_ROOT).length
+      : 0
+    assertAllPassed(await runScenario('captureScenario', ['--run', 'browser']))
+    const after = existsSync(CAPTURE_ROOT)
+      ? readdirSync(CAPTURE_ROOT).length
+      : 0
+    assert.equal(
+      after,
+      before,
+      'a run without --screenshots must write no captures'
+    )
   })
 
   /**

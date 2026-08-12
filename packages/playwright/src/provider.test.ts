@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
+import { readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -369,5 +370,75 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     })
 
     assert.deepEqual(await provider.captureFailure('someScenario'), [])
+  })
+
+  /**
+   * The number leading a capture's filename is there so a directory listing
+   * reads in the order the run happened. A scenario with two actors is where
+   * that claim is testable: counted per session both windows start at 01, and
+   * the listing describes an order that never occurred.
+   */
+  test('actors in one scenario share a single capture sequence', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: {
+        admin: { email: 'admin@test' },
+        shopper: { email: 'shopper@test' },
+      },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1' },
+    })
+
+    provider.beginScenario('Checkout › two people')
+    await (await provider.sessionFor('admin')).screenshot('opens the order')
+    await (await provider.sessionFor('shopper')).screenshot('sees it arrive')
+    await (await provider.sessionFor('admin')).screenshot('marks it shipped')
+
+    assert.deepEqual(
+      readdirSync(join(dir, 'run-1', 'checkout-two-people')).sort(),
+      [
+        '01-opens-the-order-admin.png',
+        '02-sees-it-arrive-shopper.png',
+        '03-marks-it-shipped-admin.png',
+      ]
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  /**
+   * The counter is per scenario, not per run: each scenario's folder is read on
+   * its own, so a second scenario starting at 03 would be describing captures
+   * that are not in it.
+   */
+  test('the next scenario files under its own name, counting from one', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: 's',
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1' },
+    })
+
+    provider.beginScenario('First')
+    await (await provider.sessionFor('admin')).screenshot('one')
+    // Without a reset in between, so the session opened by the first scenario
+    // is the one that has to follow the new name.
+    provider.beginScenario('Second')
+    await (await provider.sessionFor('admin')).screenshot('two')
+
+    assert.deepEqual(readdirSync(join(dir, 'run-1', 'first')), [
+      '01-one-admin.png',
+    ])
+    assert.deepEqual(readdirSync(join(dir, 'run-1', 'second')), [
+      '01-two-admin.png',
+    ])
+    await rm(dir, { recursive: true, force: true })
   })
 })
