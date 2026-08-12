@@ -7,6 +7,7 @@ import type {
   ScenarioBrowserProvider,
 } from '@pikku/core/workflow'
 import { ActorSession } from './actor-session.js'
+import { compressVideosIn, type CaptureOptions } from './capture.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'
 import { browserConfigFromEnv, type BrowserConfig } from './config.js'
 
@@ -44,6 +45,12 @@ export interface PlaywrightScenarioBrowserProviderOptions {
   signInPath?: string
   /** Where `captureFailure` writes screenshots. Without it, none are taken. */
   failureDir?: string
+  /**
+   * Artifacts for this run — screenshots taken by name, and optionally a video
+   * per scenario. Absent means a step's `screenshot()` still returns bytes and
+   * writes nothing, so scenarios do not have to know whether the flag is on.
+   */
+  capture?: CaptureOptions
   connectBrowser?: () => Promise<BrowserConnection>
   signIn?: ActorSignIn
 }
@@ -60,11 +67,31 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   private readonly config: BrowserConfig
   private sessions = new Map<string, Promise<ActorSession>>()
   private connection?: Promise<BrowserConnection>
+  /** The scenario currently running, stamped onto every capture it takes. */
+  private scenario?: string
 
   constructor(
     private readonly options: PlaywrightScenarioBrowserProviderOptions
   ) {
     this.config = options.config ?? browserConfigFromEnv()
+  }
+
+  /**
+   * Name the scenario about to run.
+   *
+   * Called by the runner as each scenario starts so captures are filed under
+   * it. A provider that is never told simply files under 'scenario', which is
+   * worse to read and never wrong.
+   */
+  beginScenario(scenario: string): void {
+    this.scenario = scenario
+    for (const pending of this.sessions.values()) {
+      pending
+        .then((s) => {
+          if (s.capture) s.capture.scenario = scenario
+        })
+        .catch(() => {})
+    }
   }
 
   async sessionFor(actorName: string): Promise<ActorSession> {
@@ -136,6 +163,14 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
 
   async close(): Promise<void> {
     await this.reset()
+    // Only after reset(): Playwright finalises a video when its context closes,
+    // so compressing before this point would re-encode files still being written.
+    const capture = this.options.capture
+    if (capture?.video && capture.compress !== false) {
+      await compressVideosIn(join(capture.dir, capture.runId, 'video')).catch(
+        () => 0
+      )
+    }
     const connection = this.connection
     this.connection = undefined
     if (connection) {
@@ -150,7 +185,18 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   ): Promise<ActorSession> {
     const { browser } = await this.browser()
     const session = new ActorSession(actorName, this.config)
-    await session.open(browser)
+    const capture = this.options.capture
+    await session.open(
+      browser,
+      capture?.video ? join(capture.dir, capture.runId, 'video') : undefined
+    )
+    if (capture) {
+      session.capture = {
+        dir: capture.dir,
+        runId: capture.runId,
+        scenario: this.scenario,
+      }
+    }
     const signIn = this.options.signIn ?? defaultActorSignIn
     await signIn(
       session.context,

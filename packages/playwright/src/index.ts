@@ -39,7 +39,18 @@ export {
   type ElementKind,
   type ElementMap,
 } from './elements.js'
-export { ActorSession, type PageIssues } from './actor-session.js'
+export {
+  ActorSession,
+  type PageIssues,
+  type CaptureContext,
+} from './actor-session.js'
+export {
+  compressVideo,
+  compressVideosIn,
+  hasFfmpeg,
+  slug,
+  type CaptureOptions,
+} from './capture.js'
 export {
   connectOrLaunch,
   resolveCdpWsUrl,

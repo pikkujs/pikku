@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { resolve, join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
@@ -139,6 +140,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     spawn?: boolean
     keepAlive?: boolean
     trace?: boolean
+    screenshots?: boolean
+    video?: boolean
     apiUrl?: string
     appUrl?: string
   },
@@ -159,6 +162,8 @@ export const scenarioRun = pikkuSessionlessFunc<
       spawn = false,
       keepAlive = false,
       trace = false,
+      screenshots = false,
+      video = false,
       apiUrl,
       appUrl,
     }
@@ -423,6 +428,21 @@ export const scenarioRun = pikkuSessionlessFunc<
       resolve(config.rootDir, config.outDir),
       'scenario-failures'
     )
+    // Artifacts are filed under the run, not the scenario, so one run's output
+    // is one folder to open, keep or delete. `--video` implies capture is on:
+    // recording without somewhere to put it is not a thing anyone wants.
+    const captureDir = join(
+      resolve(config.rootDir, config.outDir),
+      'scenario-runs'
+    )
+    // One id for the whole invocation, distinct from a scenario's own runId:
+    // reviewing artifacts means opening what `pikku scenario run` just produced,
+    // not hunting for one scenario's folder among many.
+    const captureRunId = randomUUID()
+    const capture =
+      screenshots || video
+        ? { dir: captureDir, runId: captureRunId, video, compress: true }
+        : undefined
     const browserLifecycle = scenarioBrowserLifecycle(
       needsBrowser
         ? await (async () => {
@@ -434,6 +454,7 @@ export const scenarioRun = pikkuSessionlessFunc<
               actors: scenarioActors,
               signInPath: env.signInPath,
               failureDir,
+              capture,
               browserScenarios: [...browserStepsByFlow.keys()],
               driver: config.scenarios?.browserDriver,
             })

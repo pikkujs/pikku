@@ -21,6 +21,7 @@ export interface ScenarioBrowserDriverOptions {
   actors: Record<string, ResolvedPersona>
   signInPath?: string
   failureDir?: string
+  capture?: ScenarioCaptureOptions
   config: unknown
 }
 
@@ -54,6 +55,22 @@ export interface ScenarioBrowserDriver {
   }) => unknown
 }
 
+/**
+ * Artifacts a run may produce. Mirrors the driver's own CaptureOptions rather
+ * than importing it: the CLI must not depend on a driver package it resolves
+ * dynamically, and this shape is the contract between them.
+ */
+export interface ScenarioCaptureOptions {
+  /** Root directory for the run's artifacts. */
+  dir: string
+  /** The invocation these artifacts belong to. */
+  runId: string
+  /** Record a video per scenario. */
+  video?: boolean
+  /** Re-encode with ffmpeg when available. Defaults on — the footage is nearly static. */
+  compress?: boolean
+}
+
 export interface ResolveScenarioBrowserProviderOptions {
   /** The environment name, for error messages that tell the user what to edit. */
   environment: string
@@ -64,6 +81,12 @@ export interface ResolveScenarioBrowserProviderOptions {
   signInPath?: string
   /** Where failure screenshots are written. */
   failureDir: string
+  /**
+   * Artifacts for this run — named screenshots, and optionally a video per
+   * scenario. Undefined leaves capture off, which is the default: most runs
+   * ask a pass/fail question and writing video to answer it is waste.
+   */
+  capture?: ScenarioCaptureOptions
   /** The scenarios that declared browser steps, named in the missing-driver error. */
   browserScenarios: string[]
   /** Package to drive the browser. Defaults to `@pikku/playwright`. */
@@ -101,6 +124,7 @@ export const resolveScenarioBrowserProvider = async ({
   actors,
   signInPath,
   failureDir,
+  capture,
   browserScenarios,
   driver = DEFAULT_BROWSER_DRIVER,
   importDriver = (specifier) =>
@@ -131,6 +155,7 @@ export const resolveScenarioBrowserProvider = async ({
     actors,
     signInPath,
     failureDir,
+    capture,
     config,
   }
   if (module.createScenarioBrowserProvider) {

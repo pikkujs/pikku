@@ -1,8 +1,26 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
 import { pollUntil } from '@pikku/core/workflow'
 import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
 import type { BrowserConfig } from './config.js'
 import { locateTestId, type LocateTestIdOptions } from './testid.js'
+
+/**
+ * Where a capture is filed, and what it is filed under.
+ *
+ * Stamped rather than derived: a screenshot is only useful later if you can say
+ * which run and which scenario produced it, and neither is knowable from inside
+ * a step.
+ */
+export interface CaptureContext {
+  /** Root directory for this run's captures. */
+  dir: string
+  /** The run these captures belong to. */
+  runId: string
+  /** The scenario currently executing, set by the provider as each one starts. */
+  scenario?: string
+}
 
 /** Runtime problems collected for one page navigation. */
 export interface PageIssues {
@@ -29,16 +47,24 @@ export class ActorSession implements PikkuBrowserWire {
   context!: BrowserContext
   private issues: PageIssues = blankIssues()
   private inflightApi = 0
+  /** Set by the provider when captures are enabled; absent means no captures. */
+  capture?: CaptureContext
+  /** Orders captures within a scenario, so the filenames read as a sequence. */
+  private captureIndex = 0
 
   constructor(
     readonly actor: string,
     private readonly config: BrowserConfig
   ) {}
 
-  async open(browser: Browser) {
+  async open(browser: Browser, recordVideoDir?: string) {
     this.context = await browser.newContext({
       ignoreHTTPSErrors: this.config.ignoreHTTPSErrors,
       locale: this.config.locale,
+      // Playwright records per context and only finalises the file on
+      // context.close(), which is why `reset()` between scenarios is what makes
+      // one video per scenario rather than one enormous file per run.
+      ...(recordVideoDir ? { recordVideo: { dir: recordVideoDir } } : {}),
     })
     await this.context.addInitScript((apiUrl) => {
       ;(window as typeof window & { __E2E_API_URL?: string }).__E2E_API_URL =
@@ -120,8 +146,42 @@ export class ActorSession implements PikkuBrowserWire {
     await this.gotoApp(path)
   }
 
-  async screenshot(name?: string): Promise<Uint8Array> {
-    return this.page.screenshot(name ? { path: name } : undefined)
+  /**
+   * Photograph the page, on purpose, at a moment the author chose.
+   *
+   * Taken explicitly rather than automatically after every step: a run
+   * captures dozens of steps and only a handful are worth looking at, and
+   * "after each step" photographs the moment a step *finished* rather than the
+   * moment that mattered. `description` is what you would tell a colleague to
+   * look for — it becomes the filename and the caption.
+   *
+   * Writes into the run's capture directory when one is configured, so every
+   * image is stamped with the run and scenario that produced it. Without a
+   * capture context — a plain `pikku scenario run` with no `--screenshots` —
+   * this still returns the bytes and writes nothing, so a scenario that calls
+   * it is not broken by the flag being off.
+   */
+  async screenshot(description?: string): Promise<Uint8Array> {
+    const bytes = await this.page.screenshot()
+    if (!this.capture || !description) {
+      return bytes
+    }
+
+    const dir = join(
+      this.capture.dir,
+      this.capture.runId,
+      slug(this.capture.scenario ?? 'scenario')
+    )
+    mkdirSync(dir, { recursive: true })
+
+    // The index leads so a directory listing reads in the order the run
+    // happened, which is the order somebody reviewing it wants.
+    const index = String(++this.captureIndex).padStart(2, '0')
+    writeFileSync(
+      join(dir, `${index}-${slug(description)}-${slug(this.actor)}.png`),
+      bytes
+    )
+    return bytes
   }
 
   /**
@@ -253,3 +313,11 @@ function isApiPath(url: string): boolean {
     return false
   }
 }
+
+/** Filename-safe, readable, and stable for the same description. */
+const slug = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60) || 'capture'
