@@ -25,7 +25,7 @@ const ids = (findings: { id: string }[]): string[] => findings.map((f) => f.id)
 const PKG = {
   name: '@pikku/addon-example',
   version: '0.1.0',
-  files: ['dist', '.pikku'],
+  files: ['dist', '.pikku', 'types'],
   scripts: { build: 'tsc && cp -r .pikku types dist/' },
 }
 
@@ -150,6 +150,30 @@ describe('addon packaging', () => {
       const findings = await runAddonPackageChecks(tmp)
       assert.deepStrictEqual(ids(findings), ['addon-shipped-import-not-packed'])
       assert.strictEqual(findings[0]!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  /**
+   * `exports` maps `./.pikku/*` to the root `.pikku`, and `files` ships it, so
+   * that directory is a public entry point in its own right — not just build
+   * input for the copy under dist. Its imports climb one level fewer, to
+   * `<pkg>/types`, and land outside the published file set unless `files` says
+   * otherwise. Every published @pikku/addon-* got this wrong.
+   */
+  test('the root .pikku is shipped too, and is held to the same property', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({ ...PKG, files: ['dist', '.pikku'] })
+      )
+      const findings = await runAddonPackageChecks(tmp)
+      assert.deepStrictEqual(ids(findings), ['addon-shipped-import-not-packed'])
+      assert.match(findings[0]!.message, /application-types/)
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

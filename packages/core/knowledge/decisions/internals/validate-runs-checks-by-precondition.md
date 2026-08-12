@@ -63,3 +63,19 @@ put it in `dist`. Consumers got 8 unresolved-module errors plus 6
 inside `node_modules`, for merely depending on an addon. The scaffold template
 had been right the whole time — `templates/function-addon` copies `types/` —
 and the published packages had drifted from it with nothing watching.
+
+## Both generated directories ship, and they are not the same check twice
+
+`files` carries `.pikku` as well as `dist`, and `exports` maps `./.pikku/*` to
+the root one, so it is a public entry point rather than build input for the copy
+under `dist`. Its imports climb one level fewer — to `<pkg>/src` and
+`<pkg>/types` — where the copy under `dist` reaches `<pkg>/dist/src` and
+`<pkg>/dist/types`. Two roots, two ways to fall outside the tarball, so the
+check walks both.
+
+Checking only `dist` is what let the root `.pikku` stay broken through the first
+round of fixes: in the published `@pikku/addon-assemblyai@0.1.4` tarball, `.pikku`
+ships `.gen.ts` files importing a `../../src/` and `../types/` that the tarball
+does not contain, and the `pikku-bootstrap.gen.js` that consumers import through
+that subpath exists only under `dist`. Everything resolved locally through the
+workspace link and none of it resolved on install.

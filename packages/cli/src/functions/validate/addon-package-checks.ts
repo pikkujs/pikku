@@ -131,18 +131,32 @@ export async function runAddonPackageChecks(
   const pkg = await readJsonSafe<AddonPkg>(join(pkgDir, 'package.json'))
   if (!pkg) return findings
 
-  const distGenerated = join(pkgDir, 'dist', '.pikku')
-  if (!existsSync(distGenerated)) {
+  // `files` is the package's own statement of what it publishes, so an entry
+  // with nothing behind it means the build has not run — and validating the
+  // published file set of a package that has not been built proves nothing.
+  const absent = (pkg.files ?? []).filter(
+    (entry) => !existsSync(join(pkgDir, entry.replace(/^\.\//, '')))
+  )
+  if (absent.length > 0) {
     findings.push({
       id: 'addon-not-built',
       severity: 'info',
-      message: `${pkg.name ?? relative(dirname(pkgDir), pkgDir)} has no dist/.pikku — packaging was not verified because the package is not built`,
-      path: distGenerated,
+      message: `${pkg.name ?? relative(dirname(pkgDir), pkgDir)} lists ${absent.join(', ')} in "files" with nothing on disk — packaging was not verified because the package is not built`,
+      path: join(pkgDir, absent[0]!),
       fixHint:
         'Run the package build first, then validate. In CI, `build && pikku validate` is the order that checks what actually publishes.',
     })
     return findings
   }
+
+  // Both generated directories ship, and they are not the same check twice.
+  // `exports` maps `./.pikku/*` to the root one, making it a public entry
+  // point whose imports climb to `<pkg>/types`, while the copy under dist
+  // reaches `<pkg>/dist/types` — two roots, two ways to fall outside the
+  // tarball.
+  const generatedRoots = GENERATED_DIRS.map((dir) => join(pkgDir, dir)).filter(
+    (dir) => existsSync(dir) && isPacked(dir, pkgDir, pkg.files)
+  )
 
   // One missing file is imported by every generated file that needs its types,
   // so reporting per import turns a single packaging mistake into a page of
@@ -150,7 +164,11 @@ export async function runAddonPackageChecks(
   const unresolved = new Map<string, { specifier: string; files: string[] }>()
   const unpacked = new Map<string, { target: string; files: string[] }>()
 
-  for (const file of await walk(distGenerated)) {
+  const shippedFiles = (
+    await Promise.all(generatedRoots.map((root) => walk(root)))
+  ).flat()
+
+  for (const file of shippedFiles) {
     if (!/\.(ts|tsx|js|mjs|cjs)$/.test(file)) continue
     const source = await readTextSafe(file)
     if (!source) continue
