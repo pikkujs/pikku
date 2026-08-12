@@ -54,7 +54,7 @@ import {
 import { GatewayConfiguration } from '../project/panels/GatewayConfiguration'
 import { MiddlewareConfiguration } from '../project/panels/MiddlewarePanels'
 import { PermissionConfiguration } from '../project/panels/PermissionsPanels'
-import { AgentConfiguration } from '../project/panels/AgentPanels'
+import { AgentTabbedPanel } from '../project/panels/AgentTabbedPanel'
 import {
   SecretConfiguration,
   VariableConfiguration,
@@ -482,15 +482,13 @@ export const createPanelChildren = (
     case 'agent':
       return [
         {
-          id: 'configuration',
-          title: 'Configuration',
+          id: 'agent',
+          title: 'Agent',
           content: (
-            <Box px="md">
-              <AgentConfiguration
-                wireId={panelData.id}
-                metadata={panelData.metadata}
-              />
-            </Box>
+            <AgentTabbedPanel
+              wireId={panelData.id}
+              metadata={panelData.metadata}
+            />
           ),
         },
       ]

@@ -62,6 +62,17 @@ export function useAgentRunScores(runId: string | null) {
   })
 }
 
+export function useScorers() {
+  const rpc = usePikkuRPC()
+
+  return useQuery({
+    queryKey: ['scorers'],
+    queryFn: async () => {
+      return await rpc.invoke('console:getScorers')
+    },
+  })
+}
+
 export function useDeleteAgentThread() {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()

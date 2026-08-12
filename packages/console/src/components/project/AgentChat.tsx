@@ -537,8 +537,15 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
 
 export const AgentChat: React.FC = () => {
   useLocale()
-  const { agentId, threadId, refetchThreads, model, temperature, dbMessages } =
-    useAgentPlayground()
+  const {
+    agentId,
+    threadId,
+    draftThreadId,
+    refetchThreads,
+    model,
+    temperature,
+    dbMessages,
+  } = useAgentPlayground()
 
   const initialMessages = useMemo(
     () =>
@@ -564,8 +571,7 @@ export const AgentChat: React.FC = () => {
     [impersonation?.target]
   )
 
-  const fallbackThreadId = useMemo(() => crypto.randomUUID(), [])
-  const effectiveThreadId = threadId ?? fallbackThreadId
+  const effectiveThreadId = threadId ?? draftThreadId
 
   const runtimeOptions = {
     api,
