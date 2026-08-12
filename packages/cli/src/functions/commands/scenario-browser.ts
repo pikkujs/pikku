@@ -177,6 +177,7 @@ export const resolveScenarioBrowserProvider = async ({
  */
 export interface ScenarioBrowserLifecycle {
   reset(): Promise<void>
+  beginScenario(scenario: string): void
   captureFailure(label: string): Promise<ScenarioBrowserFailure[]>
   close(): Promise<void>
 }
@@ -189,6 +190,9 @@ export const scenarioBrowserLifecycle = (
   // its reset is far easier to diagnose than one failing on stale state.
   reset: async () => {
     await provider?.reset?.()
+  },
+  beginScenario: (scenario) => {
+    provider?.beginScenario?.(scenario)
   },
   captureFailure: async (label) => {
     try {

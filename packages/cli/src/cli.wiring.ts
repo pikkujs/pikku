@@ -590,6 +590,16 @@ wireCLI({
                 'Keep every stack frame on a failure. Without it, only the project’s own frames are shown',
               default: false,
             },
+            screenshots: {
+              description:
+                'Write the screenshots scenarios ask for to disk, under .pikku/scenario-runs/<run>/<scenario>. Without it `browser.screenshot()` still returns the bytes and nothing is written',
+              default: false,
+            },
+            video: {
+              description:
+                'Record a video per scenario alongside the screenshots (implies --screenshots)',
+              default: false,
+            },
             apiUrl: {
               description:
                 "Override the environment's apiUrl for this run — for a target that only exists at run time, such as a freshly deployed sandbox",

@@ -542,3 +542,24 @@ export const navigatesInConsole = pikkuScenarioStep<
     return { href }
   },
 })
+
+/**
+ * Photograph the page, so a run can be reviewed rather than only counted.
+ *
+ * The description is the subject: it becomes the filename, which is how the
+ * artifact is found again. Without `--screenshots` the SDK returns the bytes
+ * and writes nothing, so this step is a no-op rather than a failure — which is
+ * exactly the property `captureScenario` exists to hold onto.
+ */
+export const capturesTheScreen = pikkuScenarioStep<
+  { description: string },
+  { captured: true }
+>({
+  name: 'capturesTheScreen',
+  description: 'photographs the page for review',
+  template: 'photographs the page as {description}',
+  browser: async (_services, { description }, { browser }) => {
+    await browser.screenshot(description)
+    return { captured: true }
+  },
+})

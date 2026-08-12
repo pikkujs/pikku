@@ -230,6 +230,14 @@ export interface ScenarioBrowserProvider {
    */
   reset?(): Promise<void>
   /**
+   * Name the scenario about to run, so anything it captures is filed under it.
+   *
+   * Called before each scenario. A provider that is never told has to fall
+   * back to one shared label, which puts every run's artifacts in a single
+   * folder — findable only by timestamp.
+   */
+  beginScenario?(scenario: string): void
+  /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must
    * not replace the failure being captured.

@@ -562,6 +562,9 @@ export const scenarioRun = pikkuSessionlessFunc<
       // Before the scenario, not after it: the last scenario's window is left
       // open for headed debugging, while this one still starts clean.
       await browserLifecycle.reset()
+      // After the reset, which is what closes the previous scenario's context
+      // and finalises its video.
+      browserLifecycle.beginScenario(label)
       if (coverageActive) {
         const reset = await invokeCoverage('pikkuScenarioResetLiveCoverage')
         if (reset && reset.enabled === false) {
@@ -697,6 +700,13 @@ export const scenarioRun = pikkuSessionlessFunc<
     }
 
     await browserLifecycle.close()
+
+    // Reported after the browser has closed, because video is only finalised
+    // when its context is. A capture nobody can find is a capture nobody
+    // looks at, and looking at them is the entire point of the flags.
+    if (capture) {
+      logger.info(`Captures → ${join(capture.dir, capture.runId)}`)
+    }
 
     if (coverage && Object.keys(scenarioCoverage).length > 0) {
       const coverageDir = join(
