@@ -299,13 +299,7 @@ export type InspectorOptions = Partial<{
    * tool's own name, so this is a quality gate rather than a correctness one.
    */
   strictMeta: boolean
-  /**
-   * The `models` table from pikku.config.json, alias -> `provider/model`.
-   *
-   * A declared model containing `/` is concrete; anything else is an alias and
-   * must appear here, so a mistyped alias fails the build rather than reaching
-   * a provider as an unknown model name.
-   */
+  /** The `models` table from pikku.config.json, alias -> `provider/model`. */
   modelAliases: Record<string, string>
   sourceFile: ts.SourceFile
   /**

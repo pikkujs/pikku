@@ -1,11 +1,6 @@
 /**
- * Applies `--model cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5`
- * to a `pikku dev` / `pikku serve` run.
- *
- * The flag repoints an ALIAS, not one agent: that is what makes "run the whole
- * app on a cheap model" a single argument. It is handed to the runtime through
- * `PIKKU_MODEL_ALIASES` rather than codegen because it is meant to last for
- * one run and leave no trace in the generated output.
+ * Applies `--model cheap:openai/gpt-5-nano` to a `pikku dev` / `pikku serve`
+ * run, via PIKKU_MODEL_ALIASES so it leaves no trace in generated output.
  */
 export const applyModelAliasOverride = (
   logger: { warn: (message: string) => void },
@@ -27,8 +22,8 @@ export const applyModelAliasOverride = (
         `--model repoints an alias, and '${alias}' is not an alias but a provider-qualified model. Name the alias whose model you want to change, e.g. 'cheap:${entry.slice(separator + 1).trim()}'.`
       )
     }
-    // Only a warning: the alias table can legitimately come from an addon or
-    // a config this run has not loaded, and refusing would block a debug knob.
+    // A warning, not an error: the table may come from an addon config this
+    // run has not loaded.
     if (
       Object.keys(configuredAliases).length > 0 &&
       !configuredAliases[alias]

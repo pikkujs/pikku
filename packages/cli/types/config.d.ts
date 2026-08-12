@@ -536,24 +536,10 @@ export type PikkuCLIInput = {
   }
 
   /**
-   * Model aliases, mapping a name to a provider-qualified `provider/model`.
-   *
-   * ```jsonc
-   * "models": {
-   *   "cheap": "openai/gpt-5-mini",
-   *   "tool": "anthropic/claude-sonnet-5",
-   *   "icon": "openai/gpt-image-1"
-   * }
-   * ```
-   *
-   * An agent (or any runner call) names a model by what it is FOR rather than
-   * which vendor serves it today, so switching a whole tier is one edit here
-   * instead of one per declaration. The table is baked into codegen, so it
-   * applies to deployed runtimes and not just local `dev`/`serve`.
-   *
-   * Aliases are optional: a model containing `/` is used exactly as written,
-   * which is how an agent that must have one specific model pins it. A bare
-   * name that is not in this table fails codegen.
+   * Model aliases, e.g. `{ "cheap": "openai/gpt-5-mini" }`, so a declaration
+   * can name a model by what it is for and one edit repoints every use.
+   * Optional — a model containing `/` is used as written. A bare name that is
+   * not in this table fails codegen.
    */
   models?: Record<string, string>
 

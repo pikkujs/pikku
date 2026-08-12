@@ -747,12 +747,8 @@ export function validateSchemaReferences(
 }
 
 /**
- * A model is either concrete (`provider/model`, told apart by the slash) or an
- * alias, which must appear in the `models` table from pikku.config.json.
- *
- * Aliases are resolved at build time because the inspector already holds every
- * agent's model literal — so a mistyped alias is a build error rather than an
- * unknown-model failure the first time that agent runs in production.
+ * A model is either concrete (`provider/model`) or an alias, which must appear
+ * in the `models` table from pikku.config.json.
  */
 export function validateAgentModels(
   logger: InspectorLogger,

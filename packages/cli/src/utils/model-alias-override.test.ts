@@ -35,8 +35,6 @@ describe('applyModelAliasOverride', () => {
   })
 
   test('an entry with no colon is rejected rather than silently ignored', () => {
-    // Getting this wrong looks identical to the override working, so it has
-    // to be loud — the run would otherwise quietly use the declared models.
     assert.throws(
       () => applyModelAliasOverride(noopLogger, 'openai/gpt-5-nano'),
       /alias:provider\/model/
@@ -44,8 +42,6 @@ describe('applyModelAliasOverride', () => {
   })
 
   test('the alias side may not itself be provider-qualified', () => {
-    // `--model openai/gpt-4:openai/gpt-5` reads as a model swap, which this
-    // flag does not do — it repoints an alias.
     assert.throws(
       () => applyModelAliasOverride(noopLogger, 'openai/gpt-4:openai/gpt-5'),
       /is not an alias/

@@ -763,8 +763,6 @@ describe('validateAgentModels (aliases resolve against pikku.config.json)', () =
   })
 
   test('with no models table a bare name still fails, as it always has', () => {
-    // The alias table is opt-in; without one the old rule is unchanged, so
-    // this stays a build error rather than becoming a silent passthrough.
     const { logger, criticals } = makeCriticalLogger()
     validateAgentModels(logger, makeModelState({ triage: 'gpt-5-mini' }))
     assert.equal(criticals.length, 1)

@@ -1,34 +1,15 @@
 // knowledge: decisions/internals/ai-agent-model-config-stays-a-single-resolution-seam.md
 import { pikkuState } from '../../pikku-state.js'
 
-/**
- * Models are written in one of two forms, told apart by the slash:
- *
- * - `provider/model` — concrete, used exactly as written.
- * - `alias` — a name from the `models` table in pikku.config.json, resolved
- *   here to a concrete model.
- *
- * Aliases name a model by what it is *for* (`cheap`, `tool`, `icon`) so a
- * project can repoint every use of a tier at once. They are optional: an agent
- * that must have one specific model still names it outright.
- */
 const isProviderQualified = (model: string) => model.includes('/')
 
-/**
- * `PIKKU_MODEL_ALIASES=cheap:openai/gpt-5-mini,tool:anthropic/claude-sonnet-5`
- *
- * Set by `pikku dev`/`pikku serve` from `--model`, so a local run can move a
- * whole tier without editing the config. Parsed per call rather than cached:
- * this runs once per agent turn, and caching would mean a stale table for the
- * dev server's own in-process reloads.
- */
+/** `PIKKU_MODEL_ALIASES=cheap:openai/gpt-5-mini,tool:anthropic/claude-sonnet-5` */
 const envAliases = (): Record<string, string> => {
   const raw = process.env.PIKKU_MODEL_ALIASES
   if (!raw) return {}
   const aliases: Record<string, string> = {}
   for (const entry of raw.split(',')) {
-    // Split on the FIRST colon only — the model on the right may contain its
-    // own (bedrock-style ids do).
+    // First colon only — a model id may contain its own.
     const separator = entry.indexOf(':')
     if (separator === -1) continue
     const alias = entry.slice(0, separator).trim()
@@ -39,11 +20,10 @@ const envAliases = (): Record<string, string> => {
 }
 
 /**
- * Resolves a model name to a concrete `provider/model`.
- *
- * The alias table is read from the main package rather than the calling
- * addon's: which model a tier points at is the hosting app's decision, so an
- * addon's agents follow the app they are installed into.
+ * Resolves a model name to a concrete `provider/model`. Aliases come from the
+ * `models` table in pikku.config.json; a name containing `/` is already
+ * concrete. Read from the main package, not the calling addon's — which model
+ * a tier points at is the hosting app's decision.
  */
 export const resolveModelAlias = (model: string): string => {
   if (isProviderQualified(model)) return model

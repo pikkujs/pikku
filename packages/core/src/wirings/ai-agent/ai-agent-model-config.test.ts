@@ -53,15 +53,12 @@ describe('resolveModelConfig', () => {
       temperature: 0.2,
     })
     assert.strictEqual(result.model, 'openai/gpt-5-mini')
-    // The alias only swaps the model — everything else is still the agent's.
     assert.strictEqual(result.temperature, 0.2)
   })
 })
 
 describe('resolveModelAlias', () => {
   test('a provider-qualified model is never treated as an alias', () => {
-    // Even when something in the table shadows it, a `provider/model` is
-    // already concrete — the slash is what distinguishes the two forms.
     setAliases({ 'openai/gpt-4': 'anthropic/claude-3' })
     assert.strictEqual(resolveModelAlias('openai/gpt-4'), 'openai/gpt-4')
   })
@@ -82,8 +79,7 @@ describe('resolveModelAlias', () => {
   })
 
   test('an env override splits on the first colon only', () => {
-    // A provider-qualified model may itself contain a colon (bedrock-style
-    // ids do); splitting on every colon would truncate it.
+    // A model id may itself contain a colon.
     process.env.PIKKU_MODEL_ALIASES = 'cheap:bedrock:nova-lite:1'
     assert.strictEqual(resolveModelAlias('cheap'), 'bedrock:nova-lite:1')
   })

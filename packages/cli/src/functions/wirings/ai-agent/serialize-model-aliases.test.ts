@@ -23,8 +23,6 @@ describe('serializeModelAliases', () => {
   })
 
   test('no configured models still emits an empty table', () => {
-    // The file is always imported by the bootstrap, so it has to exist even
-    // when a project names every model outright.
     const result = serializeModelAliases(undefined, null)
     assert.match(result, /pikkuState\(null, 'agent', 'modelAliases', \{\}\)/)
   })

@@ -1,12 +1,6 @@
 /**
- * Bakes the `models` alias table into pikku state at import time.
- *
- * Generated rather than read from pikku.config.json at runtime because a
- * deployed unit never sees that file — it ships the generated code.
- *
- * Whether each agent's declared model actually resolves is checked by the
- * inspector's `validateAgentModels`, which already holds every model literal.
- * This only carries the table across to the runtime.
+ * Bakes the `models` alias table into pikku state. Generated rather than read
+ * at runtime: a deployed unit never sees pikku.config.json.
  */
 export const serializeModelAliases = (
   models: Record<string, string> | undefined,

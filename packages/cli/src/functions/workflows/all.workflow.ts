@@ -219,8 +219,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('AI scorer', 'pikkuAIScorer', null),
     ])
 
-    // Unconditional: the alias table serves the non-text runner methods too,
-    // which a project can use without declaring a single agent.
     allImports.push(config.modelAliasesFile)
 
     if (agents) {

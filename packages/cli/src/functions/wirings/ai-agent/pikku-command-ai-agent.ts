@@ -29,9 +29,8 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       { path: string; exportedName: string }
     >
 
-    // Written whether or not the project declares an agent: the non-text
-    // runner methods (image, speech, transcription, embedding) take a model
-    // too, and resolve their aliases through the same table.
+    // Written even with no agents: the image/speech/embedding runner methods
+    // take a model too.
     await writeFileInDir(
       logger,
       modelAliasesFile,
