@@ -146,3 +146,78 @@ describe('workflow.expectService', () => {
     )
   })
 })
+
+describe('workflow.expectScore', () => {
+  beforeEach(() => resetPikkuState())
+
+  const grades = (grade: { score: number; reason?: string }) => ({
+    rpcWithWire: async (rpcName: string, data: any) => {
+      assert.equal(rpcName, 'pikkuScenarioGradeRun')
+      assert.equal(data.runId, 'run-1')
+      return grade
+    },
+  })
+
+  test('returns the grade when the score clears the bound', async () => {
+    const { wire } = await scenarioWire(grades({ score: 0.9 }))
+
+    const grade = await wire.expectScore('was brief', 'run-1', 'brevity', {
+      atLeast: 0.8,
+    })
+
+    assert.equal(grade.score, 0.9)
+  })
+
+  test('a scorer that graded zero fails without a bound being stated', async () => {
+    const { wire } = await scenarioWire(grades({ score: 0 }))
+
+    await assert.rejects(
+      wire.expectScore('was brief', 'run-1', 'brevity', { retries: 0 }),
+      /expected 'brevity' to grade run run-1 at least 0\.5, got 0/
+    )
+  })
+
+  test('the failure carries the reason the judge gave', async () => {
+    const { wire } = await scenarioWire(
+      grades({ score: 0.2, reason: 'It rambled for four paragraphs' })
+    )
+
+    await assert.rejects(
+      wire.expectScore('was brief', 'run-1', 'brevity', {
+        atLeast: 0.8,
+        retries: 0,
+      }),
+      /It rambled for four paragraphs/
+    )
+  })
+
+  test('atMost fails a score that is too high', async () => {
+    const { wire } = await scenarioWire(grades({ score: 0.95 }))
+
+    await assert.rejects(
+      wire.expectScore('was not sycophantic', 'run-1', 'sycophancy', {
+        atLeast: 0,
+        atMost: 0.3,
+        retries: 0,
+      }),
+      /between 0 and 0\.3, got 0\.95/
+    )
+  })
+
+  test('a reference answer reaches the grader', async () => {
+    let seen: any
+    const { wire } = await scenarioWire({
+      rpcWithWire: async (_rpcName: string, data: any) => {
+        seen = data
+        return { score: 1 }
+      },
+    })
+
+    await wire.expectScore('matched the answer key', 'run-1', 'correctness', {
+      reference: 'Paris',
+    })
+
+    assert.equal(seen.reference, 'Paris')
+    assert.equal(seen.scorer, 'correctness')
+  })
+})

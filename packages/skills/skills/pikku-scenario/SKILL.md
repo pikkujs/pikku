@@ -5,7 +5,7 @@ description: >-
   test coverage. A scenario (pikkuScenario) drives the app the way users do — steps run as actors
   over the real transport against a running server — so a flow doubles as an e2e test and a
   staged/production health check. Covers scenario.do / expectEventually / expectError /
-  expectService, declared steps via pikkuScenarioStep (including browser steps driven by
+  expectService / expectScore, declared steps via pikkuScenarioStep (including browser steps driven by
   @pikku/playwright) written as intent rather than as clicks, with the actions factored into
   shared browser utilities, actors and environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
   `pikku scenario list|run` commands, live function coverage via `pikku dev --coverage`, and
@@ -91,12 +91,44 @@ A scenario takes the same config fields as a workflow (`title`, `description`, `
 | `scenario.expectEventually(step, rpc, data, predicate, { actor, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state.   |
 | `scenario.expectError(step, rpc, data, { actor, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
 | `scenario.expectService(step, 'service.method', { actor, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
+| `scenario.expectScore(step, runId, scorer, { atLeast, atMost, reference })`          | Grade a finished agent run with a declared scorer and assert the score. See below.                                     |
 | `scenario.given(stepName, step, data, { actor })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
 | `scenario.runScheduledTask(name)`                                                    | Fire a wired scheduler on the target now, rather than waiting for its cron.                                            |
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
 Prefer `expectEventually` over sleeping.
+
+### Asserting on an agent's answer (`expectScore`)
+
+An agent's output is not comparable to a fixed string, so it is graded rather
+than matched. Declare the rubric with `pikkuAIScorer` (grades in code) or
+`pikkuAIJudge` (grades with a model) in a `*.scorer.ts` file, name it on the
+agent's `scorers`, then assert on the run the scenario just triggered:
+
+```typescript
+const { runId } = await scenario.when('asks for a summary', 'runAssistant', {
+  prompt: data.prompt,
+}, { actor: actors.user })
+
+await scenario.expectScore('answered briefly', runId, 'brevity', { atLeast: 0.8 })
+```
+
+The default bound is `atLeast: 0.5`, so an unqualified `expectScore` still fails
+a run the scorer graded zero. `atMost` is for a rubric where high is the failure
+(sycophancy, verbosity). `reference` supplies the answer key a
+`requiresReference` judge grades against — live traffic has none, so such a
+judge is only ever reachable from a scenario.
+
+Grading goes through the `pikkuScenarioGradeRun` instrumentation RPC on the
+server under test, which grades from the snapshot the runtime kept at the end of
+the run. Two consequences: the run must have happened on **that** server and be
+recent, and the grade is returned to the scenario rather than recorded — a
+test's score never lands among the production figures. Sampling is ignored, so a
+scorer set to grade 1% of live traffic still grades every scenario run.
+
+Tag any scenario whose scorer is a judge `ai-live`: it costs a model call, and
+the default suite excludes it.
 
 ### Setup and teardown (`before` / `after`)
 

@@ -243,6 +243,25 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
+  test('a graded agent run is a witness too', async () => {
+    // An agent's answer cannot be matched against a fixed string, so a scenario
+    // that grades one is asserting — even though `expectScore`, like the other
+    // helpers, is an inline step that reaches PKU680 as nothing at all.
+    const { criticals, cleanup } = await run([
+      "const answer = await scenario.when('asks for a summary', 'runAssistant', { prompt: 'hi' }, { actor: actors.shopper })",
+      "await scenario.expectScore('answered briefly', answer.runId, 'brevity', { atLeast: 0.8 })",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU680').length,
+        0,
+        `got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
   test('an expectation parked in an uncalled helper is still no assertion', async () => {
     const { criticals, cleanup } = await run([
       'const neverCalled = async () => {',

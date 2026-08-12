@@ -6,6 +6,7 @@ import type {
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 import { pikkuState } from '../../pikku-state.js'
 import { scoreFinishedRun } from '../ai-scorer/ai-scorer-live.js'
+import { recordScoreSnapshot } from '../ai-scorer/ai-scorer-snapshots.js'
 
 export type RunUsage = {
   inputTokens: number
@@ -157,33 +158,36 @@ export const finalizeAgentRun = async (
   const services = pikkuState(null, 'package', 'singletonServices')
   if (!services) return
 
+  const snapshot = {
+    runId: run.runId,
+    agentName: run.agentName,
+    threadId: run.threadId,
+    ...(run.resourceId !== undefined ? { resourceId: run.resourceId } : {}),
+    input: run.input,
+    output: run.text,
+    toolCalls: run.steps.flatMap((step) =>
+      (step.toolCalls ?? []).map((call) => ({
+        name: call.name,
+        args: call.args,
+        result: call.result,
+        ...(call.error !== undefined ? { error: call.error } : {}),
+      }))
+    ),
+    usage: {
+      inputTokens: run.usage.inputTokens,
+      outputTokens: run.usage.outputTokens,
+      ...(run.usage.model !== undefined ? { model: run.usage.model } : {}),
+    },
+  }
+
+  // The same object a scenario grades, so an asserted score and a sampled one
+  // are the same measurement. A no-op unless a dev server turned retention on.
+  recordScoreSnapshot(snapshot)
+
   // Best-effort and last: the client already has its answer, so a grading
   // failure must not surface as a failed run.
   try {
-    await scoreFinishedRun(
-      {
-        runId: run.runId,
-        agentName: run.agentName,
-        threadId: run.threadId,
-        ...(run.resourceId !== undefined ? { resourceId: run.resourceId } : {}),
-        input: run.input,
-        output: run.text,
-        toolCalls: run.steps.flatMap((step) =>
-          (step.toolCalls ?? []).map((call) => ({
-            name: call.name,
-            args: call.args,
-            result: call.result,
-            ...(call.error !== undefined ? { error: call.error } : {}),
-          }))
-        ),
-        usage: {
-          inputTokens: run.usage.inputTokens,
-          outputTokens: run.usage.outputTokens,
-          ...(run.usage.model !== undefined ? { model: run.usage.model } : {}),
-        },
-      },
-      services
-    )
+    await scoreFinishedRun(snapshot, services)
   } catch (error) {
     services.logger?.error(
       `[pikku] Live scoring failed for run ${run.runId}`,

@@ -1,8 +1,7 @@
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import { wireQueueWorker } from '../queue/queue-runner.js'
-import { runJudge } from './ai-scorer-judge.js'
-import { resolveAIScorer } from './ai-scorer-registry.js'
+import { gradeRun } from './ai-scorer-grade.js'
 import { SCORER_LANE_QUEUES, type ScoreJob } from './ai-scorer.types.js'
 
 /**
@@ -14,26 +13,13 @@ export async function pikkuAIScoreWorkerFunc(
   job: ScoreJob
 ): Promise<void> {
   const services = pikkuState(null, 'package', 'singletonServices')
-  if (!services?.aiRunState) {
+  if (!services) {
     throw new Error(
-      `AI run state service not initialized: cannot record the '${job.scorerName}' grade of run ${job.runId}`
+      `Singleton services not initialized: cannot run the '${job.scorerName}' grade of run ${job.runId}`
     )
   }
 
-  const { scorerName, ...input } = job
-  const scorer = resolveAIScorer(scorerName)
-
-  const result = scorer.score
-    ? await scorer.score(input, services)
-    : await runJudge(scorer, input, services.aiAgentRunner)
-
-  await services.aiRunState.saveScore({
-    runId: job.runId,
-    scorerName,
-    score: result.score,
-    ...(result.reason !== undefined ? { reason: result.reason } : {}),
-    ...(result.metadata !== undefined ? { metadata: result.metadata } : {}),
-  })
+  await gradeRun(job, services, { persist: true })
 }
 
 const SCORE_WORKER_FUNC_ID = 'pikkuAIScoreWorker'

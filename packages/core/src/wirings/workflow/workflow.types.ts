@@ -12,6 +12,7 @@ export type {
   WorkflowExpectEventuallyOptions,
   WorkflowExpectErrorOptions,
   WorkflowExpectServiceOptions,
+  WorkflowExpectScoreOptions,
   WorkflowWireDoRPC,
   WorkflowWireDoInline,
   WorkflowWireSleep,
