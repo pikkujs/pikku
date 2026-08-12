@@ -158,7 +158,7 @@ export const dynamicDefs: Record<string, DynamicBadgeDef> = {
     pluralSuffix: ' actions',
   },
   tool: { color: 'blue', variant: 'outline' },
-  /* Which lane a scorer grades on. One neutral tone for both: code and judge
+  /* Which lane a scorer grades on. One neutral tone for both: code and ai
      are two ways of grading, not two levels of it. */
   lane: { color: 'gray', variant: 'light' },
   agent: { color: 'grape', variant: 'outline' },
