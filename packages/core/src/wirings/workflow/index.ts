@@ -97,6 +97,7 @@ export type {
   WorkflowApprovalOptions,
   WorkflowApprovalApprovers,
   WorkflowApprovalPolicy,
+  ApprovalDecider,
   ApprovalOutcome,
   InputSource,
   OutputBinding,

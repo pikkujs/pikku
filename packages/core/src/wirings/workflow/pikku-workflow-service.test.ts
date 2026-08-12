@@ -661,12 +661,9 @@ describe('pikku-workflow-service approval', () => {
 
     const run = await ws.getRun(runId)
     assert.equal(run?.status, 'completed')
-    assert.deepEqual(run?.output, {
-      decision: {
-        status: 'decided',
-        data: { approved: true, comment: 'lgtm' },
-      },
-    })
+    const decision = (run?.output as any)?.decision
+    assert.equal(decision.status, 'decided')
+    assert.deepEqual(decision.data, { approved: true, comment: 'lgtm' })
 
     cleanup()
   })
@@ -714,9 +711,9 @@ describe('pikku-workflow-service approval', () => {
     await ws.runWorkflowJob(runId, {})
     const run = await ws.getRun(runId)
     assert.equal(run?.status, 'completed')
-    assert.deepEqual(run?.output, {
-      decision: { status: 'decided', data: { approved: false } },
-    })
+    const decision = (run?.output as any)?.decision
+    assert.equal(decision.status, 'decided')
+    assert.deepEqual(decision.data, { approved: false })
 
     cleanup()
   })
@@ -834,9 +831,13 @@ describe('pikku-workflow-service approval', () => {
 
     const run = await ws.getRun(runId)
     assert.equal(run?.status, 'completed')
-    assert.deepEqual(run?.output, {
-      decision: { status: 'decided', data: { approved: true } },
-    })
+    const decision = (run?.output as any)?.decision
+    assert.equal(decision.status, 'decided')
+    assert.deepEqual(decision.data, { approved: true })
+    // Answered with no session, so there is nobody to name — but when the
+    // answer arrived is recorded either way.
+    assert.equal(decision.decidedBy, undefined)
+    assert.ok(!Number.isNaN(Date.parse(decision.decidedAt)))
 
     cleanup()
   })

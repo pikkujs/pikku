@@ -95,6 +95,7 @@ import {
   recordApprovalDecision,
   type ApprovalStore,
 } from './workflow-approval.js'
+import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import {
   RedispatchBackoff,
@@ -1858,6 +1859,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       scheduleRunWake: (runId, delay) => this.scheduleRunWake(runId, delay),
       getRunOwner: async (runId) =>
         (await this.getRunIdentity(runId))?.wire?.pikkuUserId,
+      auditApproval: (event) => auditApprovalDecision(event),
     }
   }
 

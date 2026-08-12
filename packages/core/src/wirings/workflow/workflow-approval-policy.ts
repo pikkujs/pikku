@@ -1,7 +1,10 @@
 import { ForbiddenError } from '../../errors/errors.js'
 import { addError } from '../../errors/error-handler.js'
 import type { CoreUserSession } from '../../types/core.types.js'
-import type { WorkflowApprovalPolicy } from './workflow.types.js'
+import type {
+  ApprovalDecider,
+  WorkflowApprovalPolicy,
+} from './workflow.types.js'
 
 export class WorkflowApprovalForbiddenError extends ForbiddenError {
   public payload: { reason: string; detail: string }
@@ -14,16 +17,6 @@ addError(WorkflowApprovalForbiddenError, {
   status: 403,
   message: 'Not authorized to answer this approval.',
 })
-
-/**
- * The decider, reduced to the two facts a policy can be expressed in terms of.
- * Recorded alongside the decision so the gate can be judged on replay — the
- * session itself is long gone by then.
- */
-export interface ApprovalDecider {
-  userId?: string
-  scopes?: string[]
-}
 
 export const approvalDeciderFrom = (
   session: CoreUserSession | undefined

@@ -161,6 +161,17 @@ export interface WorkflowApprovalPolicy {
 }
 
 /**
+ * The decider, reduced to the two facts a policy can be expressed in terms of.
+ * Recorded alongside the decision so the gate can be judged on replay — the
+ * session itself is long gone by then — and carried into the settled outcome so
+ * the answer keeps its provenance.
+ */
+export interface ApprovalDecider {
+  userId?: string
+  scopes?: string[]
+}
+
+/**
  * Options for workflow.approval().
  */
 export interface WorkflowApprovalOptions<
@@ -188,7 +199,18 @@ export interface WorkflowApprovalOptions<
  * carried in `data` and is the application's business, not the framework's.
  */
 export type ApprovalOutcome<T> =
-  | { status: 'decided'; data: T }
+  | {
+      status: 'decided'
+      data: T
+      /**
+       * Who answered, and when. Run state holds the decision only while the gate
+       * is open — it is overwritten by the next write and cleared outright when a
+       * decision is refused — so the settled answer carries its own provenance
+       * into the step result, which is append-only.
+       */
+      decidedBy?: ApprovalDecider
+      decidedAt?: string
+    }
   | { status: 'expired' }
 
 /**

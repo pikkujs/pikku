@@ -27,11 +27,13 @@ const anySchema: StandardSchemaV1<unknown, unknown> = {
 const registerApprovalWorkflow = (
   workflowName: string,
   graphHash: string,
-  options: Omit<WorkflowApprovalOptions, 'schema'>
+  options: Omit<WorkflowApprovalOptions, 'schema'>,
+  audit?: { audit: (event: unknown) => Promise<void> }
 ) => {
   pikkuState(null, 'package', 'singletonServices', {
     logger: { error() {}, info() {}, warn() {}, debug() {} },
     queueService: { add: async () => {} },
+    audit,
   } as any)
 
   const metaState = pikkuState(null, 'workflows', 'meta')
@@ -259,6 +261,75 @@ describe('approval policy enforcement', () => {
     cleanup()
   })
 
+  /**
+   * Run state is where a decision waits, not where it is kept: the record is
+   * overwritten by the next write to that key and cleared outright whenever a
+   * decision is refused. Four-eyes exists to be audited, so who signed and when
+   * has to reach the step result, which is append-only and carried into
+   * workflowStepHistory.
+   */
+  test('the decider and the moment reach the step result, not just run state', async () => {
+    const ws = new InMemoryWorkflowService()
+    const cleanup = registerApprovalWorkflow('signedGate', 'signed-gate', {
+      approvers: 'not-initiator',
+    })
+
+    const runId = await ws.createRun('signedGate', {}, false, 'signed-gate', {
+      type: 'http',
+      pikkuUserId: 'initiator',
+    })
+    await runToGate(ws, runId)
+
+    await ws.approveStep(runId, 'Release funds', { ok: true }, {
+      userId: 'reviewer',
+      scopes: ['payments:approve'],
+    })
+    await ws.runWorkflowJob(runId, {})
+
+    const step = await ws.getStepState(
+      runId,
+      approvalStepNameFor('Release funds')
+    )
+    const outcome = step.result as {
+      status: string
+      decidedBy?: { userId?: string; scopes?: string[] }
+      decidedAt?: string
+    }
+
+    assert.equal(outcome.status, 'decided')
+    assert.equal(outcome.decidedBy?.userId, 'reviewer')
+    assert.deepEqual(outcome.decidedBy?.scopes, ['payments:approve'])
+    assert.ok(
+      outcome.decidedAt && !Number.isNaN(Date.parse(outcome.decidedAt)),
+      'decidedAt is an ISO timestamp'
+    )
+
+    cleanup()
+  })
+
+  test('an expired gate has nobody to record', async () => {
+    const ws = new InMemoryWorkflowService()
+    const cleanup = registerApprovalWorkflow('expiredGate', 'expired-gate', {
+      expiry: 100,
+    })
+
+    const runId = await ws.createRun('expiredGate', {}, false, 'expired-gate', {
+      type: 'http',
+      pikkuUserId: 'initiator',
+    })
+    await runToGate(ws, runId)
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await ws.runWorkflowJob(runId, {})
+
+    const step = await ws.getStepState(
+      runId,
+      approvalStepNameFor('Release funds')
+    )
+    assert.deepEqual(step.result, { status: 'expired' })
+
+    cleanup()
+  })
+
   test('a decision recorded before the run reaches the gate is still judged', async () => {
     const ws = new InMemoryWorkflowService()
     const cleanup = registerApprovalWorkflow('earlyGate', 'early-gate', {
@@ -287,6 +358,167 @@ describe('approval policy enforcement', () => {
     assert.match(record.error?.[0]?.message ?? '', /may not answer/)
     assert.equal((await ws.getRun(runId))?.status, 'suspended')
 
+    cleanup()
+  })
+})
+
+/**
+ * The step result is deleted with the run — `deleteRun` cascades to steps and
+ * to history — and a refused attempt never reaches a step at all. An approval
+ * is asked for so it can be answered for afterwards, so it also goes to the
+ * audit sink, which holds no foreign key to the run.
+ */
+describe('approval audit trail', () => {
+  const collectingAudit = () => {
+    const events: any[] = []
+    return {
+      events,
+      sink: { audit: async (event: any) => void events.push(event) },
+    }
+  }
+
+  test('an accepted decision is recorded against the user who made it', async () => {
+    const ws = new InMemoryWorkflowService()
+    const { events, sink } = collectingAudit()
+    const cleanup = registerApprovalWorkflow(
+      'auditedGate',
+      'audited-gate',
+      { approvers: 'not-initiator' },
+      sink
+    )
+
+    const runId = await ws.createRun('auditedGate', {}, false, 'audited-gate', {
+      type: 'http',
+      pikkuUserId: 'initiator',
+    })
+    await runToGate(ws, runId)
+    await ws.approveStep(runId, 'Release funds', { ok: true }, {
+      userId: 'reviewer',
+      scopes: ['payments:approve'],
+    })
+    await ws.runWorkflowJob(runId, {})
+
+    assert.equal(events.length, 1)
+    assert.equal(events[0].type, 'workflow.approval.decided')
+    assert.equal(events[0].outcome, 'success')
+    assert.equal(events[0].wireType, 'workflow')
+    assert.equal(events[0].userIdentity.pikkuUserId, 'reviewer')
+    assert.equal(events[0].metadata.runId, runId)
+    assert.equal(events[0].metadata.reason, 'Release funds')
+    assert.deepEqual(events[0].metadata.scopes, ['payments:approve'])
+    assert.ok(!Number.isNaN(Date.parse(events[0].occurredAt)))
+
+    cleanup()
+  })
+
+  test('a refused attempt is recorded too — that is the one worth keeping', async () => {
+    const ws = new InMemoryWorkflowService()
+    const { events, sink } = collectingAudit()
+    const cleanup = registerApprovalWorkflow(
+      'refusedGate',
+      'refused-gate',
+      { approvers: 'not-initiator' },
+      sink
+    )
+
+    const runId = await ws.createRun('refusedGate', {}, false, 'refused-gate', {
+      type: 'http',
+      pikkuUserId: 'initiator',
+    })
+    await runToGate(ws, runId)
+
+    await assert.rejects(
+      ws.approveStep(runId, 'Release funds', { ok: true }, {
+        userId: 'initiator',
+      }),
+      WorkflowApprovalForbiddenError
+    )
+
+    assert.equal(events.length, 1)
+    assert.equal(events[0].outcome, 'denied')
+    assert.equal(events[0].userIdentity.pikkuUserId, 'initiator')
+    assert.match(events[0].metadata.refusal, /may not answer/)
+
+    cleanup()
+  })
+
+  test('a decision refused on replay is recorded, having been refused nowhere else', async () => {
+    const ws = new InMemoryWorkflowService()
+    const { events, sink } = collectingAudit()
+    const cleanup = registerApprovalWorkflow(
+      'replayRefused',
+      'replay-refused',
+      { approvers: 'not-initiator' },
+      sink
+    )
+
+    const runId = await ws.createRun(
+      'replayRefused',
+      {},
+      false,
+      'replay-refused',
+      { type: 'http', pikkuUserId: 'initiator' }
+    )
+
+    // Submitted before the gate published its policy, so it is accepted here
+    // and only refused on replay.
+    await ws.approveStep(runId, 'Release funds', { ok: true }, {
+      userId: 'initiator',
+    })
+    assert.equal(events[0].outcome, 'success')
+
+    await runToGate(ws, runId)
+
+    assert.equal(events.length, 2)
+    assert.equal(events[1].outcome, 'denied')
+    assert.equal(events[1].userIdentity.pikkuUserId, 'initiator')
+    assert.match(events[1].metadata.refusal, /may not answer/)
+
+    cleanup()
+  })
+
+  test('a failing sink does not cost the decision', async () => {
+    const ws = new InMemoryWorkflowService()
+    const cleanup = registerApprovalWorkflow(
+      'brokenSink',
+      'broken-sink',
+      {},
+      {
+        audit: async () => {
+          throw new Error('sink is down')
+        },
+      }
+    )
+
+    const runId = await ws.createRun('brokenSink', {}, false, 'broken-sink', {
+      type: 'http',
+      pikkuUserId: 'initiator',
+    })
+    await runToGate(ws, runId)
+    await ws.approveStep(runId, 'Release funds', { ok: true }, {
+      userId: 'reviewer',
+    })
+    await ws.runWorkflowJob(runId, {})
+
+    assert.equal((await ws.getRun(runId))?.status, 'completed')
+    cleanup()
+  })
+
+  test('a project with no audit sink wired is unaffected', async () => {
+    const ws = new InMemoryWorkflowService()
+    const cleanup = registerApprovalWorkflow('noSink', 'no-sink', {})
+
+    const runId = await ws.createRun('noSink', {}, false, 'no-sink', {
+      type: 'http',
+      pikkuUserId: 'initiator',
+    })
+    await runToGate(ws, runId)
+    await ws.approveStep(runId, 'Release funds', { ok: true }, {
+      userId: 'reviewer',
+    })
+    await ws.runWorkflowJob(runId, {})
+
+    assert.equal((await ws.getRun(runId))?.status, 'completed')
     cleanup()
   })
 })

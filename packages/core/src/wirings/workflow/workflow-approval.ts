@@ -4,6 +4,7 @@ import {
   WorkflowSuspendedException,
 } from './workflow-errors.js'
 import type {
+  ApprovalDecider,
   ApprovalOutcome,
   StepState,
   WorkflowApprovalOptions,
@@ -12,7 +13,6 @@ import type {
 import {
   approvalPolicyRefusal,
   WorkflowApprovalForbiddenError,
-  type ApprovalDecider,
 } from './workflow-approval-policy.js'
 
 /** The durable step name an approval point is recorded under. */
@@ -34,6 +34,21 @@ export const approvalStateKey = (stepName: string): string => {
   return `__approval_${hex}`
 }
 
+/**
+ * An answer to an approval gate, as the audit trail sees it.
+ *
+ * `denied` covers both a submission refused at the door and a decision cleared
+ * on replay — from the trail's point of view they are the same event, someone
+ * tried to answer a gate they could not.
+ */
+export type ApprovalAuditEvent = {
+  runId: string
+  reason: string
+  outcome: 'success' | 'denied'
+  decidedBy?: ApprovalDecider
+  refusal?: string
+}
+
 /** What the approval gate needs from the workflow service. */
 export type ApprovalStore = {
   getStepState: (runId: string, stepName: string) => Promise<StepState>
@@ -52,6 +67,7 @@ export type ApprovalStore = {
   resumeWorkflow: (runId: string) => Promise<void>
   scheduleRunWake: (runId: string, delay: number) => Promise<void>
   getRunOwner: (runId: string) => Promise<string | undefined>
+  auditApproval: (event: ApprovalAuditEvent) => Promise<void>
 }
 
 /** What run state holds for an approval point between suspension and replay. */
@@ -111,6 +127,13 @@ export const recordApprovalDecision = async (
       decidedBy
     )
     if (refusal) {
+      await store.auditApproval({
+        runId,
+        reason,
+        outcome: 'denied',
+        decidedBy,
+        refusal,
+      })
       throw new WorkflowApprovalForbiddenError(reason, refusal)
     }
   }
@@ -122,6 +145,7 @@ export const recordApprovalDecision = async (
     decidedBy,
     error: undefined,
   } satisfies ApprovalRecord)
+  await store.auditApproval({ runId, reason, outcome: 'success', decidedBy })
   await store.resumeWorkflow(runId)
 }
 
@@ -213,6 +237,13 @@ export const evaluateApprovalStep = async (
         decidedBy: undefined,
         error: [{ message: refusal }],
       } satisfies ApprovalRecord)
+      await store.auditApproval({
+        runId,
+        reason,
+        outcome: 'denied',
+        decidedBy: record.decidedBy,
+        refusal,
+      })
       throw new WorkflowSuspendedException(runId, reason)
     }
 
@@ -234,9 +265,13 @@ export const evaluateApprovalStep = async (
       })
       throw new WorkflowSuspendedException(runId, reason)
     }
+    // Spread rather than assigned, so a gate answered without a session keeps
+    // the shape it had before there was anything to record.
     const outcome: ApprovalOutcome<unknown> = {
       status: 'decided',
       data: validation.value,
+      ...(record.decidedBy ? { decidedBy: record.decidedBy } : {}),
+      ...(record.decidedAt ? { decidedAt: record.decidedAt } : {}),
     }
     await store.setStepResult(stepState.stepId, outcome)
     return outcome

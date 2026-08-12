@@ -162,6 +162,24 @@ fails the schema does.
 A gate declaring neither option accepts a decision from anyone the approve
 route lets through; gate the route with `auth`/`permissions` to narrow that.
 
+#### What survives the run
+
+A settled decision carries `decidedBy` and `decidedAt`, so the answer keeps its
+provenance in the step result:
+
+```typescript
+if (signOff.status === 'decided') {
+  logger.info(`signed by ${signOff.decidedBy?.userId} at ${signOff.decidedAt}`)
+}
+```
+
+That record is deleted with the run, though — `deleteRun` cascades to steps and
+history — and an attempt that was *refused* never reaches a step at all. So
+every answer is also written to the audit sink as `workflow.approval.decided`,
+with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the
+run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a
+project without one records nothing and is otherwise unaffected.
+
 ### Error handling: `onError`, never try/catch
 
 **Do not wrap steps in try/catch.** The DSL extractor serialises the body into a
