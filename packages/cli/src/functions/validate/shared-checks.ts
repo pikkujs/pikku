@@ -146,7 +146,7 @@ const REQUIRED_SCAFFOLD: Array<{
 /**
  * Every check that is true of any pikku project, regardless of where it deploys.
  *
- * `pikku workspace validate` is exactly this; `pikku fabric validate` is this
+ * `pikku validate`'s app-project check is exactly this; `pikku fabric validate` is this
  * plus the deploy-shaped checks (themes, frontends, the Cloudflare adapter, the
  * .gitignore contract). Before this module the two were separate walks over the
  * same project that duplicated sixteen findings verbatim, and each carried

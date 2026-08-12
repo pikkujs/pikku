@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
-import { runSharedProjectChecks } from './shared-checks.js'
+import { runValidate } from './validate-registry.js'
 
 export { readJsonSafe, readTextSafe } from './shared-checks.js'
 
@@ -17,11 +17,18 @@ export const FindingSchema = z.object({
 
 export type Finding = z.infer<typeof FindingSchema>
 
-export const WorkspaceValidateInput = z.object({})
+export const ValidateInput = z.object({})
 
-export const WorkspaceValidateOutput = z.object({
+export const ValidateOutput = z.object({
   ok: z.boolean(),
   root: z.string(),
+  ran: z.array(
+    z.object({
+      checkId: z.string(),
+      subject: z.string(),
+      target: z.string(),
+    })
+  ),
   findings: z.array(FindingSchema),
 })
 
@@ -44,21 +51,45 @@ export async function findProjectRoot(startDir: string): Promise<string> {
   }
 }
 
-export async function runWorkspaceValidate(
+export async function runProjectValidate(
   startDir = process.cwd()
-): Promise<z.infer<typeof WorkspaceValidateOutput>> {
+): Promise<z.infer<typeof ValidateOutput>> {
   const root = await findProjectRoot(startDir)
-  const { findings } = await runSharedProjectChecks(root)
-  const ok = !findings.some((f) => f.severity === 'error')
-  return { ok, root, findings }
+  return runValidate(root)
 }
 
-export const renderWorkspaceValidate = (
+/** "2 addons, 1 app project" — what the run actually looked at. */
+function describeRan(ran: z.infer<typeof ValidateOutput>['ran']): string {
+  const bySubject = new Map<string, number>()
+  for (const entry of ran) {
+    bySubject.set(entry.subject, (bySubject.get(entry.subject) ?? 0) + 1)
+  }
+  return [...bySubject]
+    .map(([subject, count]) => `${count} ${subject}${count === 1 ? '' : 's'}`)
+    .join(', ')
+}
+
+export const renderValidate = (
   _s: unknown,
-  { ok, root, findings }: z.infer<typeof WorkspaceValidateOutput>
+  { ok, root, ran, findings }: z.infer<typeof ValidateOutput>
 ): void => {
+  // A green tick for a run that checked nothing is the one outcome worth
+  // guarding against: auto-detection that finds nothing looks identical to
+  // auto-detection that found everything and liked it.
+  if (ran.length === 0) {
+    console.log(
+      changed('⚠') +
+        '  ' +
+        'Nothing to validate here — no app project and no publishable addon found'
+    )
+    console.log(
+      `   ${dim('fix:')}    Run from a directory with a pikku.config.json, or from a package that publishes generated pikku output.`
+    )
+    return
+  }
+
   if (findings.length === 0) {
-    console.log(added('✓  All checks passed — workspace is Pikku-compatible'))
+    console.log(added(`✓  All checks passed — checked ${describeRan(ran)}`))
     return
   }
 
@@ -100,11 +131,9 @@ export const renderWorkspaceValidate = (
   }
 
   console.log('─'.repeat(40))
-  console.log(counts.join('  '))
+  console.log(`${counts.join('  ')}  ${dim(`across ${describeRan(ran)}`)}`)
   if (ok) {
     console.log()
-    console.log(
-      added('✓') + '  ' + dim('no errors — workspace is structurally sound')
-    )
+    console.log(added('✓') + '  ' + dim('no errors'))
   }
 }

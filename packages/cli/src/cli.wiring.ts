@@ -29,10 +29,7 @@ import { scopesPrune } from './functions/commands/scopes-prune.js'
 import { rolesAudit } from './functions/commands/roles-audit.js'
 import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
-import {
-  workspaceValidate,
-  renderWorkspaceValidate,
-} from './functions/commands/workspace-validate.js'
+import { validate, renderValidate } from './functions/commands/validate.js'
 import {
   knowledgeValidate,
   renderKnowledgeValidate,
@@ -519,17 +516,12 @@ wireCLI({
         }),
       },
     },
-    workspace: {
-      description: 'Workspace-level validation and maintenance commands',
-      subcommands: {
-        validate: pikkuCLICommand({
-          func: workspaceValidate,
-          render: renderWorkspaceValidate,
-          description:
-            'Check the project structure for Pikku workspace compatibility',
-        }),
-      },
-    },
+    validate: pikkuCLICommand({
+      func: validate,
+      render: renderValidate,
+      description:
+        'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+    }),
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',
       subcommands: {

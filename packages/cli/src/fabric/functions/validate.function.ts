@@ -248,7 +248,7 @@ export async function runValidate(
   const lines = (...parts: string[]): string => parts.join('\n')
 
   // ── everything true of any pikku project ───────────────────────────────
-  // Fabric validate is workspace validate plus the deploy-shaped checks. The
+  // Fabric validate is the app-project check plus the deploy-shaped checks. The
   // two used to be separate walks over the same project that duplicated sixteen
   // findings verbatim, and each carried checks the other lacked for no reason
   // anyone could name.

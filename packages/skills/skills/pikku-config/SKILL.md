@@ -243,7 +243,7 @@ const apiKey = services.variables.get('API_KEY')
 }
 ```
 
-`customServerBootstrap` is the one evaluated by `pikku workspace validate` rather than codegen: it warns when the root `start`/`dev` script boots a server without `pikku dev` / `pikku serve` and no runtime adapter is installed. Set it to `"off"` to keep a hand-rolled entrypoint, or `"error"` to enforce the hooks.
+`customServerBootstrap` is the one evaluated by `pikku validate` rather than codegen: it warns when the root `start`/`dev` script boots a server without `pikku dev` / `pikku serve` and no runtime adapter is installed. Set it to `"off"` to keep a hand-rolled entrypoint, or `"error"` to enforce the hooks.
 
 ## Complete Example
 

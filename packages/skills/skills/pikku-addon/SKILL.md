@@ -184,10 +184,18 @@ approvalDescription: async (_services, { title }) => `Add a todo called "${title
 ### Build
 
 ```bash
-npx pikku all    # Generate types
-yarn tsc         # Compile TypeScript
-cp -r .pikku dist/  # Include generated files in dist
+npx pikku all           # Generate types
+yarn tsc                # Compile TypeScript
+cp -r .pikku types dist/  # Ship the generated files and the types they import
+npx pikku validate      # Check the published file set holds together
 ```
+
+`types/` has to be copied alongside `.pikku`: the generated files import
+`SingletonServices`, `Services`, `Config` and `UserSession` from
+`../../types/application-types.d.js`, and `tsc` never emits a hand-written
+`.d.ts` to `outDir`, so nothing else puts it in `dist`. Leave it out and the
+addon installs fine and fails to typecheck in every app that depends on it —
+which is what `pikku validate` is there to catch before you publish.
 
 ## Consuming an Addon
 
