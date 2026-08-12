@@ -73,6 +73,20 @@ under `dist`. Its imports climb one level fewer — to `<pkg>/src` and
 `<pkg>/dist/types`. Two roots, two ways to fall outside the tarball, so the
 check walks both.
 
+`exports` and `imports` get the same treatment one level up: a target outside
+the published file set is the same defect, and the one the import walk cannot
+see, because nothing inside `dist/.pikku` mentions it. That is how a `#pikku`
+still pointing at `./.pikku/pikku-types.gen.ts` hides.
+
+## An addon's entry points all resolve under dist
+
+Everything an installed package reaches for lives under `dist`; the addon's own
+build resolves `#pikku` through tsconfig `paths`, so nothing in `exports` or
+`imports` has to point into the source tree, and `files` is just `["dist"]`.
+The alternative — shipping `src/` and `types/` at the root so the existing paths
+resolve as written — publishes TypeScript source and a second copy of
+everything `dist` already has.
+
 Checking only `dist` is what let the root `.pikku` stay broken through the first
 round of fixes: in the published `@pikku/addon-assemblyai@0.1.4` tarball, `.pikku`
 ships `.gen.ts` files importing a `../../src/` and `../types/` that the tarball

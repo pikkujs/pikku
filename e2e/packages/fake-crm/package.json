@@ -3,23 +3,22 @@
   "version": "0.0.1",
   "type": "module",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku": "./dist/.pikku/pikku-types.gen.js",
+    "#pikku/*": "./dist/.pikku/*"
   },
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
     },
-    "./.pikku/*": "./.pikku/*"
+    "./.pikku/*": "./dist/.pikku/*"
   },
   "files": [
-    "dist",
-    ".pikku"
+    "dist"
   ],
   "scripts": {
     "prebuild": "pikku all",
-    "build": "tsc && cp -r .pikku dist/",
+    "build": "tsc && cp -r .pikku types dist/",
     "pikku": "pikku all"
   },
   "peerDependencies": {

@@ -4,20 +4,19 @@
   "type": "module",
   "private": true,
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku": "./dist/.pikku/pikku-types.gen.js",
+    "#pikku/*": "./dist/.pikku/*"
   },
   "exports": {
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [
     "src",
-    "types",
-    ".pikku"
+    "types"
   ],
   "scripts": {
     "prebuild": "pikku all",

@@ -5,7 +5,7 @@
   "type": "module",
   "imports": {
     "#pikku": {
-      "types": "./.pikku/pikku-types.gen.ts",
+      "types": "./dist/.pikku/pikku-types.gen.d.ts",
       "import": "./dist/.pikku/pikku-types.gen.js",
       "default": "./dist/.pikku/pikku-types.gen.js"
     }
@@ -32,7 +32,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && (cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null || true) && (cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true) && (cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/function && cp .pikku/function/*-verbose.gen.json dist/.pikku/function/ 2>/dev/null || true)",
+    "build": "pikku all && tsc && (cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null || true) && (cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true) && (cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/function && cp .pikku/function/*-verbose.gen.json dist/.pikku/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/)",
     "pikku": "pikku all",
     "pretest": "pikku all",
     "test": "tsc --noEmit",

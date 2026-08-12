@@ -11,8 +11,18 @@ wherever that condition holds, so a repo that is an app, a pile of publishable
 addons, or both gets exactly the checks that apply — and a run that found
 nothing to check says so instead of printing a tick.
 
-The new check is for addons: every relative import in a shipped generated file
-must resolve to a file that is itself shipped. That property was false in all
-217 published `@pikku/addon-*` packages, which shipped `dist/.pikku` without the
-`types/application-types.d.ts` those files import — worth 14 typecheck errors
-inside `node_modules` for any app that depended on one.
+The new checks are for addons, and both state the same property at a different
+level: every relative import in a shipped generated file, and every `exports` or
+`imports` target, must resolve to a file the package actually publishes.
+
+That property was false in every published `@pikku/addon-*`. They shipped
+`dist/.pikku` without the `types/application-types.d.ts` those files import —
+14 typecheck errors inside `node_modules` for any app depending on one — and
+they published a second, dead copy of `.pikku` at the root whose imports reached
+for a `src/` and `types/` the tarball did not contain, behind the very subpath
+consumers import their bootstrap through.
+
+Addons now point every entry point at the built copy under `dist`; the addon's
+own build resolves `#pikku` through tsconfig `paths`, so nothing has to reach
+into the source tree. `pikku new-addon` scaffolds that shape, and the addon
+skill teaches it.

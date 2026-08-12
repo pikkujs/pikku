@@ -5,25 +5,24 @@
   "private": true,
   "description": "An addon that ships a table. Publishes its schema via `pikku db export` so the consumer can fold it into its own migration history.",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku": "./dist/.pikku/pikku-types.gen.js",
+    "#pikku/*": "./dist/.pikku/*"
   },
   "exports": {
     "./types": {
       "types": "./types/application-types.d.ts"
     },
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
-    "./.pikku/db/pikku-db-meta.gen.json": "./.pikku/db/pikku-db-meta.gen.json",
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
+    "./.pikku/db/pikku-db-meta.gen.json": "./dist/.pikku/db/pikku-db-meta.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [
     "src",
     "types",
-    "db",
-    ".pikku"
+    "db"
   ],
   "scripts": {
     "prebuild": "pikku all && pikku db export",

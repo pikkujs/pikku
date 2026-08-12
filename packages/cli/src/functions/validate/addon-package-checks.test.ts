@@ -179,6 +179,61 @@ describe('addon packaging', () => {
     }
   })
 
+  /**
+   * `exports` and `imports` are the package's entry points, so a target outside
+   * the published file set is the same defect one level up — and the one the
+   * import walk cannot see, because nothing in `dist/.pikku` mentions it.
+   */
+  test('an entry point pointing outside the published file set is an error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          ...PKG,
+          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
+          exports: { './.pikku/*': './.pikku/*' },
+          files: ['dist'],
+        })
+      )
+      const findings = await runAddonPackageChecks(tmp)
+      assert.deepStrictEqual(ids(findings), [
+        'addon-entry-point-not-packed',
+        'addon-entry-point-not-packed',
+      ])
+      assert.match(findings[0]!.message, /#pikku/)
+      assert.match(findings[1]!.message, /\.\/\.pikku\/\*/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an entry point under a packed directory is fine, wildcards included', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          ...PKG,
+          imports: {
+            '#pikku': {
+              types: './dist/.pikku/pikku-types.gen.d.ts',
+              default: './dist/.pikku/pikku-types.gen.js',
+            },
+          },
+          exports: { './.pikku/*': './dist/.pikku/*' },
+        })
+      )
+      assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('an unbuilt package says so rather than passing silently', async () => {
     const tmp = await makeTmp()
     try {

@@ -116,6 +116,27 @@ function isPacked(
 }
 
 /**
+ * Every `./…` target reachable through an `exports` or `imports` map, paired
+ * with the entry-point name that leads to it.
+ *
+ * Both fields nest arbitrarily deep — a subpath holds a condition object, which
+ * may hold another — so the walk collects strings rather than assuming a shape.
+ * A `*` is left in place: the wildcard's own directory is what has to ship.
+ */
+function entryPointTargets(
+  map: unknown,
+  name = ''
+): Array<{ name: string; target: string }> {
+  if (typeof map === 'string') {
+    return map.startsWith('./') ? [{ name, target: map }] : []
+  }
+  if (!map || typeof map !== 'object') return []
+  return Object.entries(map).flatMap(([key, value]) =>
+    entryPointTargets(value, name || key)
+  )
+}
+
+/**
  * Every relative import in a shipped generated file must resolve to a file
  * that is itself shipped.
  *
@@ -147,6 +168,24 @@ export async function runAddonPackageChecks(
         'Run the package build first, then validate. In CI, `build && pikku validate` is the order that checks what actually publishes.',
     })
     return findings
+  }
+
+  // The entry points are the package's promise about what can be reached from
+  // outside it, and nothing inside dist/.pikku mentions them — so the import
+  // walk below cannot see a `#pikku` that still points at the source tree.
+  for (const { name, target } of [
+    ...entryPointTargets(pkg.imports),
+    ...entryPointTargets(pkg.exports),
+  ]) {
+    const withoutWildcard = target.slice(2).split('*')[0]!
+    if (isPacked(join(pkgDir, withoutWildcard), pkgDir, pkg.files)) continue
+    findings.push({
+      id: 'addon-entry-point-not-packed',
+      severity: 'error',
+      message: `"${name}" resolves to ${target}, which "files" does not publish — the entry point exists here and not for anyone who installs ${pkg.name ?? 'this addon'}`,
+      path: join(pkgDir, withoutWildcard),
+      fixHint: `Point it at the built copy under dist, or add ${withoutWildcard.split('/')[0]} to "files".`,
+    })
   }
 
   // Both generated directories ship, and they are not the same check twice.
