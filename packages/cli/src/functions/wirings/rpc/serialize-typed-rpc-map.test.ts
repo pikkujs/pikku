@@ -78,4 +78,23 @@ describe('serializeTypedRPCMap', () => {
       /import type \{ RPCMap as SlackRPCMap \} from '@pikku\/addon-slack\/\.pikku\/rpc\/pikku-rpc-wirings-map\.internal\.gen\.js'/
     )
   })
+
+  test('the agent input comes from core rather than a local copy of it', () => {
+    const result = serializeTypedRPCMap(
+      logger,
+      '/tmp/pikku-rpc-map.gen.d.ts',
+      {},
+      emptyTypesMap,
+      {},
+      {}
+    )
+
+    assert.match(
+      result,
+      /import type \{ AIAgentInput \} from '@pikku\/core\/ai-agent'/
+    )
+    // A second declaration drops every optional field the runner honours —
+    // model, temperature, attachments, context — from the call site.
+    assert.doesNotMatch(result, /interface AIAgentInput/)
+  })
 })

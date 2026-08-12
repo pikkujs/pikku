@@ -93,12 +93,7 @@ ${generateAddonAgentImports(wireAddonDeclarations)}
 ${generateMergedAgentMap(wireAddonDeclarations)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
-
-interface AIAgentInput {
-  message: string
-  threadId: string
-  resourceId: string
-}
+import type { AIAgentInput } from '@pikku/core/ai-agent'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
