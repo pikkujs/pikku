@@ -626,8 +626,9 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
     // A tool that threw is absent from `toolResults` entirely and appears in
     // `content` as a `tool-error` part, so the real message is only reachable
-    // from there. Without this, every failure below degrades to the generic
-    // fallback and the specific error is lost.
+    // from there. It goes to `error`, which the run record keeps, and never to
+    // `result`, which is replayed to the model: what a tool threw is ours to
+    // read, not the model's.
     const toolErrors = new Map<string, string>(
       ((step?.content as any[]) ?? [])
         .filter((part: any) => part?.type === 'tool-error')
@@ -650,7 +651,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         toolResults.push({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          result: `Error: ${error}`,
+          result: 'Error: Tool execution failed',
           error,
         })
       }

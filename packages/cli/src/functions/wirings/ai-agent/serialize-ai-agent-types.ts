@@ -14,6 +14,10 @@ import {
   agentResume as coreAgentResume,
   agentApprove as coreAgentApprove,
 } from '@pikku/core/ai-agent'
+import {
+  pikkuAIScorer as corePikkuAIScorer,
+  pikkuAIJudge as corePikkuAIJudge,
+} from '@pikku/core/ai-scorer'
 import type { PikkuPermission, PikkuMiddleware, Services, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { AIAgentMemoryConfig, AIAgentInput } from '@pikku/core/ai-agent'
@@ -41,6 +45,14 @@ export const pikkuAIAgent = <
 ) => {
   return agent
 }
+
+export const pikkuAIScorer = (
+  config: Parameters<typeof corePikkuAIScorer<Services>>[0]
+) => corePikkuAIScorer<Services>(config)
+
+export const pikkuAIJudge = (
+  config: Parameters<typeof corePikkuAIJudge<Services>>[0]
+) => corePikkuAIJudge<Services>(config)
 
 export const pikkuAIMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,

@@ -16,4 +16,7 @@ export const todoReadAgent = pikkuAIAgent({
   ],
   maxSteps: 10,
   toolChoice: 'auto',
+  scorers: ['brevity', 'restraint', 'helpfulness'],
+
+  instructions: 'You help users manage their todos. You can list all todos, get details of a specific todo, add new todos, and delete todos.',
 })
