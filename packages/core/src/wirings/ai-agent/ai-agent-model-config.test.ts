@@ -79,9 +79,13 @@ describe('resolveModelAlias', () => {
   })
 
   test('an env override splits on the first colon only', () => {
-    // A model id may itself contain a colon.
-    process.env.PIKKU_MODEL_ALIASES = 'cheap:bedrock:nova-lite:1'
-    assert.strictEqual(resolveModelAlias('cheap'), 'bedrock:nova-lite:1')
+    // A model id may itself contain a colon — `ollama/qwen2.5:7b` is the shape
+    // the runner's own error message cites. It stays provider-qualified so the
+    // resolved value is one `VercelAIAgentRunner.parseModel` would accept; a
+    // bare `bedrock:nova-lite:1` would pass here and fail the moment anything
+    // tried to use it.
+    process.env.PIKKU_MODEL_ALIASES = 'cheap:ollama/qwen2.5:7b'
+    assert.strictEqual(resolveModelAlias('cheap'), 'ollama/qwen2.5:7b')
   })
 
   test('an env override leaves aliases it does not name alone', () => {

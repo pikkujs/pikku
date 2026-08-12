@@ -764,7 +764,10 @@ export function validateAgentModels(
       )
       continue
     }
-    if (!model.includes('/') && !modelAliases[model]) {
+    // `hasOwn`, not a truthy lookup: every object literal inherits `toString`,
+    // `constructor` and `__proto__`, so a bare model named after one of them
+    // would read as a configured alias and pass a check nothing else repeats.
+    if (!model.includes('/') && !Object.hasOwn(modelAliases, model)) {
       const known = Object.keys(modelAliases).sort()
       logger.critical(
         ErrorCode.INVALID_MODEL,

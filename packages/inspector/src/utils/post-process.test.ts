@@ -768,4 +768,19 @@ describe('validateAgentModels (aliases resolve against pikku.config.json)', () =
     assert.equal(criticals.length, 1)
     assert.equal(criticals[0]!.code, ErrorCode.INVALID_MODEL)
   })
+
+  for (const inherited of ['toString', 'constructor', '__proto__']) {
+    test(`a bare '${inherited}' is not an alias just because Object has one`, () => {
+      const { logger, criticals } = makeCriticalLogger()
+      validateAgentModels(logger, makeModelState({ triage: inherited }), {
+        cheap: 'openai/gpt-5-mini',
+      })
+      assert.equal(
+        criticals.length,
+        1,
+        'an inherited property name must not read as a configured alias'
+      )
+      assert.equal(criticals[0]!.code, ErrorCode.INVALID_MODEL)
+    })
+  }
 })

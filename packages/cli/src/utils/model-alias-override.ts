@@ -17,9 +17,19 @@ export const applyModelAliasOverride = (
       )
     }
     const alias = entry.slice(0, separator).trim()
+    const target = entry.slice(separator + 1).trim()
+    // An empty half still contains the separator, so it survives the check
+    // above. `cheap:` is the damaging one: the core resolver prefers the
+    // environment override, finds nothing behind the alias, and fails later
+    // with an unknown-alias error naming a model the user never typed.
+    if (!alias || !target) {
+      throw new Error(
+        `--model expects alias:provider/model (e.g. 'cheap:openai/gpt-5-nano'), got '${entry}' with ${alias ? 'no model' : 'no alias'}.`
+      )
+    }
     if (alias.includes('/')) {
       throw new Error(
-        `--model repoints an alias, and '${alias}' is not an alias but a provider-qualified model. Name the alias whose model you want to change, e.g. 'cheap:${entry.slice(separator + 1).trim()}'.`
+        `--model repoints an alias, and '${alias}' is not an alias but a provider-qualified model. Name the alias whose model you want to change, e.g. 'cheap:${target}'.`
       )
     }
     // A warning, not an error: the table may come from an addon config this

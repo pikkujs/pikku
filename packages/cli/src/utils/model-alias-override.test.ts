@@ -41,6 +41,32 @@ describe('applyModelAliasOverride', () => {
     )
   })
 
+  test('an entry naming no model is rejected before it reaches the runtime', () => {
+    // The failure this prevents is remote from its cause: the resolver prefers
+    // the environment override, so `cheap:` shadows the configured alias and
+    // the run dies on an unknown alias the user never typed.
+    assert.throws(
+      () => applyModelAliasOverride(noopLogger, 'cheap:'),
+      /no model/
+    )
+    assert.equal(process.env.PIKKU_MODEL_ALIASES, undefined)
+  })
+
+  test('an entry naming no alias is rejected', () => {
+    assert.throws(
+      () => applyModelAliasOverride(noopLogger, ':openai/gpt-5-nano'),
+      /no alias/
+    )
+    assert.equal(process.env.PIKKU_MODEL_ALIASES, undefined)
+  })
+
+  test('one malformed entry rejects the whole flag, publishing none of it', () => {
+    assert.throws(() =>
+      applyModelAliasOverride(noopLogger, 'cheap:openai/gpt-5-nano,tool:')
+    )
+    assert.equal(process.env.PIKKU_MODEL_ALIASES, undefined)
+  })
+
   test('the alias side may not itself be provider-qualified', () => {
     assert.throws(
       () => applyModelAliasOverride(noopLogger, 'openai/gpt-4:openai/gpt-5'),
