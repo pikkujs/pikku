@@ -17,6 +17,7 @@ import {
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/ecosystem'
+import { wireAIScorerQueueWorkers } from '@pikku/core/ai-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
   LocalContent,
@@ -168,6 +169,7 @@ export const serve = pikkuSessionlessFunc<
     }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()
+    wireAIScorerQueueWorkers()
 
     const { serverLifecycleFactory } = inspectorState.filesAndMethods
     const loadLifecycle = async () => {

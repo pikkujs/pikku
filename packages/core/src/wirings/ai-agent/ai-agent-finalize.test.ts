@@ -144,6 +144,7 @@ describe('finalizeAgentRun', () => {
     runId: 'run-1',
     agentName: 'assistant',
     threadId: 'thread-1',
+    input: 'what is the capital of France?',
     text: 'done',
     steps: [],
     usage,

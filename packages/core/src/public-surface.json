@@ -346,6 +346,22 @@
     "voiceOutput",
     "wrapChannelWithAGUI"
   ],
+  "./ai-scorer": [
+    "SCORER_LANE_QUEUES",
+    "addAIScorer",
+    "buildJudgePrompt",
+    "getAIScorers",
+    "getAIScorersMeta",
+    "isSampled",
+    "pikkuAIJudge",
+    "pikkuAIScoreWorkerFunc",
+    "pikkuAIScorer",
+    "resolveAIScorer",
+    "runJudge",
+    "scoreFinishedRun",
+    "scorersForAgent",
+    "wireAIScorerQueueWorkers"
+  ],
   "./gateway": [
     "createListenerMessageHandler",
     "resolveGatewayAdapter",

@@ -49,7 +49,11 @@ import {
   notifyAfterStep,
   toAccumulatedStep,
 } from './ai-agent-turn.js'
-import { applyOutputMiddleware, finalizeAgentRun } from './ai-agent-finalize.js'
+import {
+  applyOutputMiddleware,
+  finalizeAgentRun,
+  lastUserMessageText,
+} from './ai-agent-finalize.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { randomUUID } from './ai-agent-utils.js'
@@ -330,6 +334,7 @@ export async function runAIAgent(
       agentName,
       threadId,
       resourceId: input.resourceId,
+      input: lastUserMessageText(runnerParams.messages),
       text: outputText,
       steps: outputSteps,
       usage: { ...totalUsage, model: agent.model },
@@ -793,6 +798,7 @@ async function continueAfterToolResultSync(
       agentName: resolvedName,
       threadId: run.threadId,
       resourceId: run.resourceId,
+      input: lastUserMessageText(runnerParams.messages),
       text: outputText,
       steps: outputSteps,
       usage: { ...totalUsage, model: agent.model },

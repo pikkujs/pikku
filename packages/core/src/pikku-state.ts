@@ -10,6 +10,7 @@ import type {
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
 import type { AIAgentMeta } from './wirings/ai-agent/ai-agent.types.js'
+import type { ScorerMeta } from './wirings/ai-scorer/ai-scorer.types.js'
 import type { GatewaysMeta } from './wirings/gateway/gateway.types.js'
 import type { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 import type { TriggerMeta } from './wirings/trigger/trigger.types.js'
@@ -118,6 +119,8 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   agent: {
     agents: new Map(),
     agentsMeta: {} as AIAgentMeta,
+    scorers: new Map(),
+    scorersMeta: {} as ScorerMeta,
   },
   gateway: {
     gateways: new Map(),

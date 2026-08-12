@@ -30,6 +30,10 @@ import type {
   AIAgentMeta,
 } from '../wirings/ai-agent/ai-agent.types.js'
 import type {
+  PikkuAIScorer,
+  ScorerMeta,
+} from '../wirings/ai-scorer/ai-scorer.types.js'
+import type {
   CoreGateway,
   GatewaysMeta,
 } from '../wirings/gateway/gateway.types.js'
@@ -153,6 +157,8 @@ export interface PikkuPackageState {
   agent: {
     agents: Map<string, CoreAIAgent>
     agentsMeta: AIAgentMeta
+    scorers: Map<string, PikkuAIScorer>
+    scorersMeta: ScorerMeta
   }
   gateway: {
     gateways: Map<string, CoreGateway>

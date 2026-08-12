@@ -344,6 +344,7 @@ export type CoreAIAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
   Scope extends string = string,
+  Scorer extends string = string,
 > = {
   name: string
   description: string
@@ -370,6 +371,16 @@ export type CoreAIAgent<
   tools?: unknown[]
   agents?: unknown[]
   workflows?: unknown[]
+  /**
+   * Grades this agent's finished runs on live traffic, named by the generated
+   * `ScorerName` union rather than by `ref()` — a scorer is not a function, so
+   * there is nothing in the function map for a ref to resolve against.
+   *
+   * A reference-based judge listed here is never sampled: live traffic has no
+   * answer key. Scenarios name scorers directly and may grade with scorers an
+   * agent does not ship with.
+   */
+  scorers?: Scorer[]
   agentMode?: 'delegate' | 'supervise'
   memory?: AIAgentMemoryConfig
   maxSteps?: number

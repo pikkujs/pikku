@@ -4,6 +4,8 @@ import type {
   PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
+import { pikkuState } from '../../pikku-state.js'
+import { scoreFinishedRun } from '../ai-scorer/ai-scorer-live.js'
 
 export type RunUsage = {
   inputTokens: number
@@ -22,9 +24,30 @@ export type FinalizedRun = {
   agentName: string
   threadId: string
   resourceId?: string
+  /** The prompt the run answered — what a scorer grades the answer against. */
+  input: string
   text: string
   steps: AIAgentStep[]
   usage: RunUsage
+}
+
+/**
+ * The prompt a run answered: the most recent user turn, which is what the model
+ * was last asked. On a resumed run the earlier turns are context, not the ask.
+ */
+export const lastUserMessageText = (messages: AIMessage[]): string => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]
+    if (message?.role !== 'user') continue
+    if (typeof message.content === 'string') return message.content
+    if (Array.isArray(message.content)) {
+      return message.content
+        .filter((part) => part.type === 'text')
+        .map((part) => (part as { text: string }).text)
+        .join('\n')
+    }
+  }
+  return ''
 }
 
 const flattenToolCalls = (
@@ -127,4 +150,44 @@ export const finalizeAgentRun = async (
         }
       : {}),
   })
+
+  // Read rather than `getSingletonServices()`: a process that never registered
+  // them grades nothing, which is not an error at the point a run has already
+  // succeeded.
+  const services = pikkuState(null, 'package', 'singletonServices')
+  if (!services) return
+
+  // Best-effort and last: the client already has its answer, so a grading
+  // failure must not surface as a failed run.
+  try {
+    await scoreFinishedRun(
+      {
+        runId: run.runId,
+        agentName: run.agentName,
+        threadId: run.threadId,
+        ...(run.resourceId !== undefined ? { resourceId: run.resourceId } : {}),
+        input: run.input,
+        output: run.text,
+        toolCalls: run.steps.flatMap((step) =>
+          (step.toolCalls ?? []).map((call) => ({
+            name: call.name,
+            args: call.args,
+            result: call.result,
+            ...(call.error !== undefined ? { error: call.error } : {}),
+          }))
+        ),
+        usage: {
+          inputTokens: run.usage.inputTokens,
+          outputTokens: run.usage.outputTokens,
+          ...(run.usage.model !== undefined ? { model: run.usage.model } : {}),
+        },
+      },
+      services
+    )
+  } catch (error) {
+    services.logger?.error(
+      `[pikku] Live scoring failed for run ${run.runId}`,
+      error
+    )
+  }
 }

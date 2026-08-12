@@ -10,7 +10,10 @@ import type {
   CoreAIAgent,
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
-import { finalizeAgentRun } from './ai-agent-finalize.js'
+import {
+  finalizeAgentRun,
+  lastUserMessageText,
+} from './ai-agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware } from './ai-agent-turn.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
@@ -274,13 +277,19 @@ async function postStreamCleanup(
   persistingChannel: PersistingChannel,
   aiRunState: AIRunStateService,
   runId: string,
-  run: { agentName: string; threadId: string; resourceId?: string }
+  run: {
+    agentName: string
+    threadId: string
+    resourceId?: string
+    input: string
+  }
 ): Promise<void> {
   await finalizeAgentRun(aiRunState, {
     runId,
     agentName: run.agentName,
     threadId: run.threadId,
     resourceId: run.resourceId,
+    input: run.input,
     // Already what the client received: the stream middleware wraps the
     // persisting channel, so both were accumulated post-rewrite.
     text: persistingChannel.fullText,
@@ -905,6 +914,7 @@ export async function streamAIAgent(
       agentName,
       threadId,
       resourceId: input.resourceId,
+      input: lastUserMessageText(runnerParams.messages),
     })
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
@@ -1490,7 +1500,10 @@ async function continueAfterToolResult(
       return
     }
 
-    await postStreamCleanup(persistingChannel, aiRunState, run.runId, run)
+    await postStreamCleanup(persistingChannel, aiRunState, run.runId, {
+      ...run,
+      input: lastUserMessageText(runnerParams.messages),
+    })
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await wrappedChannel.send({ type: 'done' })
