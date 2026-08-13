@@ -598,7 +598,12 @@ describe(
   }
 )
 
-const MCP_SESSION_ERROR = 'Invalid or missing session ID'
+// A GET with no `accept` header is refused by the MCP transport before it
+// considers sessions at all, so this marker holds whatever the session
+// configuration is. The normal pikku pipeline never emits it, which is what
+// makes it usable as proof that a path did — or did not — reach the handler.
+const MCP_HANDLER_MARKER =
+  'Not Acceptable: Client must accept text/event-stream'
 
 describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
   let server: PikkuNodeHTTPServer | undefined
@@ -643,7 +648,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     const origin = await startServer()
     const response = await getMcp(origin)
     assert.equal(
-      (await response.text()).includes(MCP_SESSION_ERROR),
+      (await response.text()).includes(MCP_HANDLER_MARKER),
       false,
       '/mcp should not be handled by the MCP server when mcpJson is absent'
     )
@@ -655,7 +660,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     })
     const response = await getMcp(origin)
     assert.equal(
-      (await response.text()).includes(MCP_SESSION_ERROR),
+      (await response.text()).includes(MCP_HANDLER_MARKER),
       false,
       'empty mcpJson should not mount the MCP server'
     )
@@ -669,11 +674,11 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     )
 
     const response = await getMcp(origin)
-    // A GET to /mcp with no session is handled by the MCP server, which
-    // responds with a JSON-RPC "missing session" error — proving the request
-    // was routed to the mounted handler rather than the normal pikku pipeline.
-    assert.equal(response.status, 400)
-    assert.equal((await response.text()).includes(MCP_SESSION_ERROR), true)
+    // A GET to /mcp without an `accept` header is handled by the MCP server,
+    // which refuses it as not acceptable — proving the request was routed to
+    // the mounted handler rather than the normal pikku pipeline.
+    assert.equal(response.status, 406)
+    assert.equal((await response.text()).includes(MCP_HANDLER_MARKER), true)
     assert.ok(
       infos.some((msg) => msg.includes('MCP mounted at /mcp')),
       'expected a log line confirming the mount'
@@ -690,8 +695,8 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     const mounted = await fetch(`${origin}/api/mcp`, {
       headers: { connection: 'close' },
     })
-    assert.equal(mounted.status, 400)
-    assert.equal((await mounted.text()).includes(MCP_SESSION_ERROR), true)
+    assert.equal(mounted.status, 406)
+    assert.equal((await mounted.text()).includes(MCP_HANDLER_MARKER), true)
     assert.ok(
       infos.some((msg) => msg.includes('MCP mounted at /api/mcp')),
       'expected a log line confirming the configured mount path'
@@ -701,7 +706,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
       headers: { connection: 'close' },
     })
     assert.equal(
-      (await defaultPath.text()).includes(MCP_SESSION_ERROR),
+      (await defaultPath.text()).includes(MCP_HANDLER_MARKER),
       false,
       'the default /mcp path must not be served when a custom path is set'
     )
@@ -716,7 +721,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     // The MCP handler answers an unmatched path with an empty-body 404; the
     // normal pikku pipeline always returns a JSON body. A non-empty body proves
     // /mcpfoo was NOT diverted to the MCP handler.
-    assert.equal(body.includes(MCP_SESSION_ERROR), false)
+    assert.equal(body.includes(MCP_HANDLER_MARKER), false)
     assert.notEqual(body, '', '/mcpfoo must not be routed to the MCP handler')
   })
 
@@ -736,7 +741,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
 
     const response = await getMcp(origin)
     assert.equal(
-      (await response.text()).includes(MCP_SESSION_ERROR),
+      (await response.text()).includes(MCP_HANDLER_MARKER),
       false,
       'a failed mount must not leave a partial /mcp handler installed'
     )

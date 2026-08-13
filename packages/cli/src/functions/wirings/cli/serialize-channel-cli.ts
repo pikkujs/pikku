@@ -110,7 +110,7 @@ import { wireChannel } from '${channelTypesPath}'
 import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState, getSingletonServices, getCreateWireServices } from '@pikku/core/ecosystem'
 ${imports}
 
 // Middleware to close the channel after CLI command completes
@@ -157,12 +157,17 @@ export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string 
  */
 export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
   auth: false,
-  func: async (services, data: { args: string[] }, { channel, session }) => {
+  func: async (_services, data: { args: string[] }, { channel, session }) => {
     const { help, result, error, exitCode, commandId } = await handleRawCLI({
       programName: '${programName}',
       args: data.args,
-      singletonServices: services as any,
-      createWireServices: pikkuState(null, 'package', 'factories')?.createWireServices,
+      // The singletons, not this function's own view of them: a function body
+      // is handed \`secrets\` as a throwing accessor, and passing that down
+      // would strip every command run on this channel of a service its
+      // middleware is entitled to. Each command is stripped again by its own
+      // runner, so nothing gains access it would not have over HTTP.
+      singletonServices: getSingletonServices() as any,
+      createWireServices: getCreateWireServices(),
       // The connection authenticated during its upgrade — commands run as it.
       session,
       // The socket the command arrived on, so \`channel.remote(...)\` inside a
