@@ -1,7 +1,7 @@
 import { posix } from 'node:path'
 import { z } from 'zod'
 import { type KnowledgeNote, resourceIds, sectionOf, toPosix } from './notes.js'
-import { KNOWLEDGE_SECTIONS } from './validate.js'
+import { KNOWLEDGE_SECTIONS, canonicalSection } from './validate.js'
 
 /**
  * Declared rather than inferred, for the reason given on `KnowledgeFinding`:
@@ -101,7 +101,7 @@ export const KnowledgeGraphSchema = z.object({
 /**
  * Fenced and inline code, removed before links are read.
  *
- * A slice body is mostly a gherkin block and decisions quote paths; both contain
+ * A milestone body is mostly a gherkin block and decisions quote paths; both contain
  * bracket-and-paren text that reads as a markdown link. Counting those would put
  * edges in the graph that no reader can click.
  */
@@ -134,10 +134,10 @@ export const outboundLinks = (note: KnowledgeNote): string[] => {
 
 /**
  * Where a section sorts: the order the profile declares them in, which is the
- * order they are read in — a slice, the entities it is about, the decisions that
- * govern it, then what is still open. Alphabetical would lead with `decisions`
- * and bury `slices` at the end, and would separate `decisions` from
- * `decisions/security` by everything in between.
+ * order they are read in — a milestone, the entities it is about, the decisions
+ * that govern it, then what is still open. Alphabetical would lead with
+ * `decisions` and bury `milestones` in the middle, and would separate `decisions`
+ * from `decisions/security` by everything in between.
  *
  * A section the profile does not name sorts after all of them, alphabetically,
  * which puts a parent ahead of its own children for free.
@@ -147,7 +147,7 @@ const SECTION_RANK = new Map(
 )
 
 const sectionRank = (name: string): number =>
-  SECTION_RANK.get(name) ?? SECTION_RANK.size
+  SECTION_RANK.get(canonicalSection(name)) ?? SECTION_RANK.size
 
 /**
  * The notes, the links between them, and the counts a browser needs — derived in
@@ -236,7 +236,7 @@ export const buildKnowledgeGraph = (notes: KnowledgeNote[]): KnowledgeGraph => {
     .sort(([a], [b]) => sectionRank(a) - sectionRank(b) || a.localeCompare(b))
     .map(([name, count]) => ({
       name,
-      description: KNOWLEDGE_SECTIONS[name],
+      description: KNOWLEDGE_SECTIONS[canonicalSection(name)],
       count,
     }))
 

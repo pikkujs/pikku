@@ -5,6 +5,7 @@ import { decisionFences } from './decision-fence.js'
 import {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
+  isMilestone,
   readKnowledgeNotes,
   sectionOf,
   toPosix,
@@ -50,7 +51,8 @@ export type KnowledgeValidateResult = z.infer<typeof KnowledgeValidateOutput>
  * app, which is what keeps a note findable without an index of indexes.
  */
 export const KNOWLEDGE_SECTIONS: Record<string, string> = {
-  slices: 'one buildable piece of the app, with the scenario that proves it',
+  milestones:
+    'one buildable piece of the app, with the scenario that proves it',
   entities: 'a thing the app is about, in the language users use for it',
   decisions: 'a rule that was chosen, and what it rules out',
   'decisions/design': 'a rule about how the app looks and behaves',
@@ -66,7 +68,7 @@ export const KNOWLEDGE_SECTIONS: Record<string, string> = {
  */
 const FORBIDDEN_SECTIONS: Record<string, string> = {
   personas: "`definePersonas()` in the project's own code",
-  scenarios: 'the gherkin block inside the slice the scenario belongs to',
+  scenarios: 'the gherkin block inside the milestone the scenario belongs to',
   permissions: 'a decision note under decisions/security/',
   schemas: '`pikku meta` — the generated schema is the schema',
   tables: '`pikku meta` — the generated db schema is the schema',
@@ -74,22 +76,38 @@ const FORBIDDEN_SECTIONS: Record<string, string> = {
 }
 
 /**
- * `designing` sits before `proposed`: the slice is written down but is NOT to be
- * built yet, because whoever is being shown its looks has not picked one. Only
- * `proposed` is dispatchable, so the two cannot be one status without a slice
+ * `designing` sits before `proposed`: the milestone is written down but is NOT to
+ * be built yet, because whoever is being shown its looks has not picked one. Only
+ * `proposed` is dispatchable, so the two cannot be one status without a milestone
  * being built out from under the person still choosing how it should look.
  */
-export const SLICE_STATUSES = [
+export const MILESTONE_STATUSES = [
   'designing',
   'proposed',
   'dispatched',
   'built',
 ] as const
 
-export type SliceStatus = (typeof SLICE_STATUSES)[number]
+export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number]
 
-/** Max entities per slice: more than three and it is not one buildable piece. */
-const MAX_SLICE_ENTITIES = 3
+/** Max entities per milestone: more than three and it is not one buildable piece. */
+const MAX_MILESTONE_ENTITIES = 3
+
+/**
+ * The directory milestones live in, and the one they used to live in. A bundle
+ * written before the rename holds `knowledge/slices/`; those notes are still
+ * milestones, so the section keeps its description and its place in the reading
+ * order instead of sorting to the end as a section nothing declares.
+ */
+export const MILESTONE_SECTION = 'milestones'
+const LEGACY_SECTIONS: Record<string, string> = { slices: MILESTONE_SECTION }
+
+export const canonicalSection = (section: string): string => {
+  const parts = section.split(posix.sep)
+  const top = parts[0]
+  if (!top || !LEGACY_SECTIONS[top]) return section
+  return [LEGACY_SECTIONS[top], ...parts.slice(1)].join(posix.sep)
+}
 
 const isGherkinFirstPerson = (body: string): boolean =>
   /^\s*(given|when|then|and|but)\s+(i|we|my|our)\b/im.test(body)
@@ -171,7 +189,9 @@ export const runKnowledgeValidate = async (
         `${KNOWLEDGE_DIR}/${section}/ has no index.md, so nothing says what belongs in it`,
         `${KNOWLEDGE_DIR}/${section}/index.md`,
         `Add ${section}/index.md the same turn you create the section — one line on what it holds${
-          KNOWLEDGE_SECTIONS[section] ? `: ${KNOWLEDGE_SECTIONS[section]}` : ''
+          KNOWLEDGE_SECTIONS[canonicalSection(section)]
+            ? `: ${KNOWLEDGE_SECTIONS[canonicalSection(section)]}`
+            : ''
         }`
       )
     }
@@ -198,7 +218,7 @@ export const runKnowledgeValidate = async (
         `knowledge-no-type-${note.path}`,
         `${note.path} has no \`type\` — it is the one field OKF requires, and every reader groups on it`,
         note.path,
-        'Add frontmatter with a `type` (slice, entity, decision, note, overview)'
+        'Add frontmatter with a `type` (milestone, entity, decision, note, overview)'
       )
     }
 
@@ -219,7 +239,7 @@ export const runKnowledgeValidate = async (
       )
     }
 
-    // Every note, not only `type: decision`: a slice states a decision about as
+    // Every note, not only `type: decision`: a milestone states a decision about as
     // often, and a fence that does not parse renders as a code block wherever it
     // sits. Nothing here requires a fence — a decision argued in prose is a
     // decision, and demanding one per note would be a finding against every
@@ -251,23 +271,25 @@ export const runKnowledgeValidate = async (
       }
     }
 
-    if (note.type !== 'slice') continue
+    if (!isMilestone(note)) continue
 
     if (!note.status) {
       add(
         'error',
-        `knowledge-slice-no-status-${note.path}`,
-        `${note.path} is a slice with no \`status\`, so nothing can tell whether it is built`,
+        `knowledge-milestone-no-status-${note.path}`,
+        `${note.path} is a milestone with no \`status\`, so nothing can tell whether it is built`,
         note.path,
-        `Add \`status:\` — one of ${SLICE_STATUSES.join(', ')}`
+        `Add \`status:\` — one of ${MILESTONE_STATUSES.join(', ')}`
       )
-    } else if (!(SLICE_STATUSES as readonly string[]).includes(note.status)) {
+    } else if (
+      !(MILESTONE_STATUSES as readonly string[]).includes(note.status)
+    ) {
       add(
         'error',
-        `knowledge-slice-bad-status-${note.path}`,
+        `knowledge-milestone-bad-status-${note.path}`,
         `${note.path} has status "${note.status}", which no gate recognises`,
         note.path,
-        `Use one of ${SLICE_STATUSES.join(', ')}`
+        `Use one of ${MILESTONE_STATUSES.join(', ')}`
       )
     }
 
@@ -278,33 +300,33 @@ export const runKnowledgeValidate = async (
     if (entities.length === 0) {
       add(
         'warn',
-        `knowledge-slice-no-entities-${note.path}`,
-        `${note.path} is a slice that names no entities, so its size cannot be judged`,
+        `knowledge-milestone-no-entities-${note.path}`,
+        `${note.path} is a milestone that names no entities, so its size cannot be judged`,
         note.path,
         'Add `entities:` listing the entities it touches, comma-separated'
       )
-    } else if (entities.length > MAX_SLICE_ENTITIES) {
+    } else if (entities.length > MAX_MILESTONE_ENTITIES) {
       add(
         'error',
-        `knowledge-slice-too-big-${note.path}`,
-        `${note.path} touches ${entities.length} entities — past ${MAX_SLICE_ENTITIES} it is not one buildable piece`,
+        `knowledge-milestone-too-big-${note.path}`,
+        `${note.path} touches ${entities.length} entities — past ${MAX_MILESTONE_ENTITIES} it is not one buildable piece`,
         note.path,
-        `Split it into slices of at most ${MAX_SLICE_ENTITIES} entities each`
+        `Split it into milestones of at most ${MAX_MILESTONE_ENTITIES} entities each`
       )
     }
 
     if (!hasGherkinBlock(note.body)) {
       add(
         'error',
-        `knowledge-slice-no-scenario-${note.path}`,
-        `${note.path} is a slice with no \`\`\`gherkin scenario, so there is nothing to build against or verify`,
+        `knowledge-milestone-no-scenario-${note.path}`,
+        `${note.path} is a milestone with no \`\`\`gherkin scenario, so there is nothing to build against or verify`,
         note.path,
-        'Add a fenced ```gherkin block with the Given/When/Then that proves the slice'
+        'Add a fenced ```gherkin block with the Given/When/Then that proves the milestone'
       )
     } else if (isGherkinFirstPerson(note.body)) {
       add(
         'error',
-        `knowledge-slice-first-person-${note.path}`,
+        `knowledge-milestone-first-person-${note.path}`,
         `${note.path} writes its scenario in the first person, which hides who is acting`,
         note.path,
         `Write it in the third person, naming the persona in quotes: Given 'owner' has an entry for today`

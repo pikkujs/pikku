@@ -26,8 +26,8 @@ export const sectionOf = (path: string): string => {
  * bundle: a markdown file whose **path is its identity**, carrying YAML
  * frontmatter plus a body. Only `type` is required.
  *
- * `status`, `entities` and `statusAt` apply to `type: slice`, which is a piece of
- * work rather than a fact — so unlike every other note it has a state, a size,
+ * `status`, `entities` and `statusAt` apply to `type: milestone`, which is a piece
+ * of work rather than a fact — so unlike every other note it has a state, a size,
  * and a time its state last changed.
  */
 export const KnowledgeNoteSchema = z.object({
@@ -58,6 +58,18 @@ export type KnowledgeNote = z.infer<typeof KnowledgeNoteSchema>
  */
 export type ProfileNote<Key extends string = never> = KnowledgeNote &
   Partial<Record<Key, string>>
+
+/**
+ * The type a milestone note carries, and the name it used to carry. A bundle
+ * written before the rename says `slice`, and its notes are the same notes —
+ * reading only the new name would drop every milestone in every knowledge base
+ * that already exists. Writers emit `MILESTONE_TYPE`; readers ask this.
+ */
+export const MILESTONE_TYPE = 'milestone'
+const LEGACY_MILESTONE_TYPE = 'slice'
+
+export const isMilestone = (note: Pick<KnowledgeNote, 'type'>): boolean =>
+  note.type === MILESTONE_TYPE || note.type === LEGACY_MILESTONE_TYPE
 
 /**
  * The scalars this profile reads. A caller's own keys are passed to `parseNote`

@@ -8,7 +8,7 @@ import {
   sectionOf,
   toPosix,
 } from './notes.js'
-import { KNOWLEDGE_SECTIONS } from './validate.js'
+import { KNOWLEDGE_SECTIONS, canonicalSection } from './validate.js'
 
 /**
  * The listing in an `index.md` is generated; the prose around it is not.
@@ -173,7 +173,11 @@ export const runKnowledgeIndex = async (
     const entries = [
       ...childSections(section).map((name) => {
         const leaf = name.split(posix.sep).at(-1)!
-        return line(leaf, `${leaf}/index.md`, KNOWLEDGE_SECTIONS[name])
+        return line(
+          leaf,
+          `${leaf}/index.md`,
+          KNOWLEDGE_SECTIONS[canonicalSection(name)]
+        )
       }),
       ...sectionNotes.map((note) =>
         line(labelOf(note), basename(note.path), note.description)
@@ -189,7 +193,8 @@ export const runKnowledgeIndex = async (
       : scaffold(
           section ? section.split(posix.sep).at(-1)! : 'Knowledge',
           section
-            ? (KNOWLEDGE_SECTIONS[section] ?? `Notes in ${section}`)
+            ? (KNOWLEDGE_SECTIONS[canonicalSection(section)] ??
+                `Notes in ${section}`)
             : 'What this app is, in the language its users use'
         )
     const after = spliceListing(before, listing)
