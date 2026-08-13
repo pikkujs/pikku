@@ -159,6 +159,29 @@ describe('addon secrets are scoped to what the addon declared', () => {
     await assert.doesNotReject(() => secrets.setSecret('ADDON_KEY', 'x'))
   })
 
+  test('an addon with no singleton factory is still scoped', async () => {
+    pikkuState(ADDON_PACKAGE, 'package', 'declaredSecrets', ['ADDON_KEY'])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+    })
+
+    const services = await getOrCreatePackageSingletonServices(
+      ADDON_PACKAGE,
+      createParentServices(),
+      pikkuState(null, 'addons', 'packages').get('example') as never
+    )
+
+    assert.equal(
+      await services.secrets.getSecret('ADDON_KEY'),
+      'value-of-ADDON_KEY'
+    )
+    await assert.rejects(
+      () => services.secrets.getSecret('SOMEONE_ELSES_KEY'),
+      /denied/i
+    )
+  })
+
   test('scoping applies to the key the addon asks for, not the aliased one', async () => {
     registerAddon(['ADDON_KEY'])
     wireAddon({
@@ -202,6 +225,24 @@ describe('addon credentials are scoped to what the addon declared', () => {
     wireAddon({ name: 'example', package: ADDON_PACKAGE })
 
     const credentials = await credentialsHandedToAddon('example')
+    await assert.rejects(() => credentials.getAllUsers(), /denied/i)
+  })
+
+  test('an addon with no singleton factory is still scoped', async () => {
+    pikkuState(ADDON_PACKAGE, 'package', 'credentialsMeta', {
+      slack: { name: 'slack', displayName: 'slack', type: 'singleton' },
+    } as never)
+    wireAddon({ name: 'example', package: ADDON_PACKAGE })
+
+    const services = await getOrCreatePackageSingletonServices(
+      ADDON_PACKAGE,
+      createParentServices(),
+      pikkuState(null, 'addons', 'packages').get('example') as never
+    )
+    const credentials = services.credentialService as CredentialService
+
+    assert.equal(await credentials.get('slack'), 'credential-of-slack')
+    await assert.rejects(() => credentials.get('stripe'), /denied/i)
     await assert.rejects(() => credentials.getAllUsers(), /denied/i)
   })
 

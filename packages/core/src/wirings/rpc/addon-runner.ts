@@ -117,9 +117,6 @@ export const getOrCreatePackageSingletonServices = async (
   }
 
   const factories = pikkuState(packageName, 'package', 'factories')
-  if (!factories || !factories.createSingletonServices) {
-    return parentServices
-  }
 
   let existingServices = parentServices
   if (addonInstance?.secretOverrides && parentServices.secrets) {
@@ -161,6 +158,10 @@ export const getOrCreatePackageSingletonServices = async (
         )
       ),
     }
+  }
+
+  if (!factories || !factories.createSingletonServices) {
+    return existingServices
   }
 
   let config: CoreConfig = existingServices.config
