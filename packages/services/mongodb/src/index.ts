@@ -8,7 +8,6 @@ export { MongoDBDeploymentService } from './mongodb-deployment-service.js'
 export { MongoDBAIStorageService } from './mongodb-ai-storage-service.js'
 export { MongoDBAgentRunService } from './mongodb-agent-run-service.js'
 export { MongoDBSecretService } from './mongodb-secret-service.js'
-export type { MongoDBSecretServiceConfig } from './mongodb-secret-service.js'
 
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'

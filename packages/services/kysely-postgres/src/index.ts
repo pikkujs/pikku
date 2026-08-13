@@ -10,8 +10,6 @@ export { PgKyselySecretService } from './pg-kysely-secret-service.js'
 export { PikkuKysely } from './pikku-kysely.js'
 
 export { KyselyCredentialService } from '@pikku/kysely'
-export type { KyselyCredentialServiceConfig } from '@pikku/kysely'
 export type { KyselyPikkuDB } from '@pikku/kysely'
-export type { KyselySecretServiceConfig } from '@pikku/kysely'
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'

@@ -9,16 +9,13 @@
  */
 export {
   SlackGatewayAdapter,
-  type SlackGatewayAdapterOptions,
 } from './slack-gateway-adapter.js'
 export {
   SlackGatewayHelper,
-  type SlackMessageMetadata,
 } from './slack-gateway-helper.js'
 export {
   parseSlashCommand,
   respondToSlashCommand,
-  type SlackSlashCommand,
   type ParsedSlashCommand,
   type SlackCommandResponse,
 } from './slack-commands.js'

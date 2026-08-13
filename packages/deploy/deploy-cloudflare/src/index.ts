@@ -10,7 +10,6 @@ export { CloudflareClient, CloudflareApiError } from './client.js'
 
 // Workers
 export {
-  createWorker,
   updateWorker,
   deleteWorker,
   getWorker,
@@ -19,10 +18,6 @@ export {
 
 // Queues
 export {
-  createQueue,
-  deleteQueue,
-  listQueues,
-  createConsumer,
   deleteConsumer,
 } from './queues.js'
 
@@ -31,18 +26,17 @@ export {
   createDatabase,
   deleteDatabase,
   executeQuery,
-  listDatabases,
   getDatabase,
 } from './d1.js'
 
 // R2 Buckets
-export { createBucket, deleteBucket, listBuckets } from './r2.js'
+export { deleteBucket } from './r2.js'
 
 // Secrets
 export { setSecret, deleteSecret, listSecrets } from './secrets.js'
 
 // Cron Triggers
-export { setCronTriggers, getCronTriggers } from './cron.js'
+export { getCronTriggers } from './cron.js'
 
 // Deploy orchestrator (CF API direct)
 export { deploy } from './deploy.js'
@@ -55,41 +49,21 @@ export { CloudflareProviderAdapter }
 export type {
   DeploymentUnit,
   DeploymentManifest,
-  DeploymentHandler,
   EntryGenerationContext,
-  PlatformImports,
   PlatformServiceContributor,
   CloudflareProviderAdapterOptions,
 } from './adapter.js'
 export const createAdapter = (options: CloudflareProviderAdapterOptions = {}) =>
   new CloudflareProviderAdapter(options)
-
-// Wrangler TOML generator
-export { generateWranglerToml } from './wrangler-toml.js'
-
-// Infrastructure manifest
-export { generateInfraManifest } from './infra-manifest.js'
 export type {
   CloudflareInfraManifest,
-  CloudflareUnitManifest,
 } from './infra-manifest.js'
 
 // Types
 export type {
-  CloudflareApiResponse,
   CloudflareApiError as CloudflareApiErrorResponse,
-  CloudflareApiMessage,
-  CloudflareResultInfo,
-  CloudflareClientOptions,
   WorkerMetadata,
   WorkerBinding,
-  WorkerBindingD1,
-  WorkerBindingR2,
-  WorkerBindingQueue,
-  WorkerBindingService,
-  WorkerBindingSecretText,
-  WorkerBindingPlainText,
-  WorkerBindingSecretsStore,
   WorkerRoute,
   QueueMetadata,
   QueueConsumer,

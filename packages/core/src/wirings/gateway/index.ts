@@ -6,13 +6,10 @@ export {
 export type {
   GatewayAdapter,
   GatewayAdapterFactory,
-  GatewayAttachment,
   GatewayInboundMessage,
   GatewayOutboundMessage,
-  GatewayMeta,
   GatewaysMeta,
   GatewayTransportType,
   CoreGateway,
-  PikkuGateway,
   WebhookVerificationResult,
 } from './gateway.types.js'

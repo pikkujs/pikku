@@ -1,2 +1,2 @@
 export * from './errors.js'
-export { PikkuError, addError, addErrors } from './error-handler.js'
+export { PikkuError, addError } from './error-handler.js'

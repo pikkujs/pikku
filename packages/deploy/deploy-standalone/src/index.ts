@@ -18,7 +18,6 @@ import {
 export { StandaloneProviderAdapter }
 export type {
   StandaloneProviderAdapterOptions,
-  StandaloneRuntime,
 } from './adapter.js'
 
 export const createAdapter = (options?: StandaloneProviderAdapterOptions) =>
