@@ -874,14 +874,8 @@ export type MintConsoleTokenOutput = {
   apiUrl: string
   expiresAt: number
 }
-export type PikkuConsoleGetSecretInput = { secretId: string }
-export type PikkuConsoleGetSecretOutput = { exists: boolean; value: unknown }
 export type PikkuConsoleGetVariableInput = { variableId: string }
 export type PikkuConsoleGetVariableOutput = { exists: boolean; value: unknown }
-export type PikkuConsoleHasSecretInput = { secretId: string }
-export type PikkuConsoleHasSecretOutput = { exists: boolean }
-export type PikkuConsoleSetSecretInput = { secretId: string; value: unknown }
-export type PikkuConsoleSetSecretOutput = { success: boolean }
 export type PikkuConsoleSetVariableInput = {
   variableId: string
   value: unknown
