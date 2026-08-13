@@ -9,13 +9,10 @@ export { SQLiteKyselyEventHubStore } from './sqlite-kysely-eventhub-store.js'
 export { SQLiteKyselySecretService } from './sqlite-kysely-secret-service.js'
 export {
   SqliteFunctionsUnsupportedError,
-  type SqliteFunction,
   type SqliteFunctionMap,
 } from './sqlite-functions.js'
 export { LibsqlWebDialect } from './libsql-web-dialect.js'
-export type { LibsqlWebDialectConfig } from './libsql-web-dialect.js'
 
 export type { KyselyPikkuDB } from '@pikku/kysely'
-export type { KyselySecretServiceConfig } from '@pikku/kysely'
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'

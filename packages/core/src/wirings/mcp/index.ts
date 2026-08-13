@@ -16,7 +16,6 @@ export type {
   AssertMCPResourceURIParams,
   CoreMCPPrompt,
   CoreMCPResource,
-  CoreMCPTool,
   MCPPromptResponse,
   MCPResourceMeta,
   MCPResourceResponse,

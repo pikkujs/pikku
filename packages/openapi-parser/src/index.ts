@@ -2,26 +2,17 @@ export {
   parseOpenAPISpec,
   computeContractHash,
   type ParsedSpec,
-  type ParsedOperation,
-  type ParsedParam,
-  type ErrorResponse,
-  type SecuritySchemeInfo,
 } from './parse-openapi.js'
 
 export { generateAddonFromOpenAPI } from './codegen.js'
 
 export {
-  AuthConfigSchema,
-  DelegatedLoginSchema,
   loadAuthConfig,
-  authHeaderValue,
   type AuthConfig,
   type DelegatedLoginConfig,
 } from './auth-config.js'
 
 export {
-  generateOperationNames,
-  detectCommonPrefix,
   type NamedOperation,
 } from './naming.js'
 
@@ -32,5 +23,4 @@ export {
   schemaToZod,
   schemaVarName,
   sanitizeTypeName,
-  snakeToCamel,
 } from './openapi-to-zod-schema.js'

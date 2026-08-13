@@ -29,12 +29,14 @@ import { resolveScenarioSurfaces, witnessesAgree } from './scenario-surface.js'
 import type {
   PikkuScenarioWire,
   PikkuWorkflowWire,
+  WorkflowQueueOptions,
+} from './workflow.types.js'
+import type {
   WorkflowExpectEventuallyOptions,
   WorkflowExpectErrorOptions,
   WorkflowExpectScoreOptions,
   WorkflowExpectServiceOptions,
-  WorkflowQueueOptions,
-} from './workflow.types.js'
+} from './dsl/workflow-dsl.types.js'
 
 /**
  * A workflow service with the scenario capability attached — the two lines

@@ -32,40 +32,26 @@ declare module '@pikku/core/workflow' {
  */
 export { expect } from '@playwright/test'
 
-export { browserConfigFromEnv, type BrowserConfig } from './config.js'
+export { type BrowserConfig } from './config.js'
 export {
-  loadElementMap,
   registered,
   type ElementKind,
   type ElementMap,
 } from './elements.js'
 export {
   ActorSession,
-  type PageIssues,
-  type CaptureContext,
 } from './actor-session.js'
 export {
-  compressVideo,
-  compressVideosIn,
-  hasFfmpeg,
   slug,
-  type CaptureOptions,
 } from './capture.js'
 export {
-  connectOrLaunch,
-  resolveCdpWsUrl,
   type BrowserConnection,
 } from './browser-launch.js'
 export {
   PlaywrightScenarioBrowserProvider,
-  type ActorSignIn,
-  type ActorSignInRequest,
-  type ActorSignInTarget,
-  type PlaywrightScenarioBrowserProviderOptions,
 } from './provider.js'
 export { staticRoutes, sweepAllPages } from './pages-sweep.js'
 export {
-  locateTestId,
   testIdSelector,
   type LocateTestIdOptions,
 } from './testid.js'

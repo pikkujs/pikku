@@ -8,5 +8,4 @@
 import pikkuFastifyPlugin from './pikku-fastify-plugin.js'
 export default pikkuFastifyPlugin
 export { FastifyPikkuHTTPRequest } from './fastify-pikku-http-request.js'
-export type { FastifyPikkuHTTPRequestOptions } from './fastify-pikku-http-request.js'
 export { FastifyPikkuHTTPResponse } from './fastify-pikku-http-response.js'

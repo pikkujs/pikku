@@ -1,9 +1,6 @@
 export type {
-  ActorFlowApprovalPolicy,
   ActorFlowVerdict,
   ConverseOptions,
-  TargetAgentReply,
-  TargetPendingApproval,
   TargetAgentDriver,
 } from './actor-flow.types.js'
 export {

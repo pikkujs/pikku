@@ -17,12 +17,10 @@ export type {
   CreateConfig,
   ServerLifecycle,
   FunctionMeta,
-  FunctionRuntimeMeta,
   FunctionServicesMeta,
   FunctionWiresMeta,
   FunctionsMeta,
   FunctionsRuntimeMeta,
-  JSONPrimitive,
   JSONValue,
   MakeRequired,
   MiddlewareMetadata,
@@ -43,7 +41,6 @@ export type {
   SecuritySeverity,
   SecurityUpdateLevel,
   SerializedError,
-  WireServices,
 } from './types/core.types.js'
 export {
   pikkuAIMiddleware,
@@ -57,7 +54,6 @@ export type {
   CorePikkuAuthConfig,
   CorePikkuFunction,
   CorePikkuFunctionConfig,
-  CorePikkuFunctionHook,
   CorePikkuPermission,
   CorePikkuPermissionConfig,
   CorePikkuPermissionFactory,
@@ -75,8 +71,6 @@ export type {
   ListInput,
   ListOutput,
   Filter,
-  LeafFilter,
-  LeafValue,
 } from './function/list.types.js'
 export { pikkuCLIRender } from './wirings/cli/cli-runner.js'
 export { PikkuRequest } from './pikku-request.js'
@@ -92,9 +86,6 @@ export {
 } from './version.js'
 export {
   AbandonedError,
-  beginChanges,
-  getAbortScope,
-  runInAbortScope,
   type AbortScope,
 } from './function/abort-scope.js'
 export { fetch } from './wirings/http/http-runner.js'
@@ -152,7 +143,6 @@ export type { QueueService } from './wirings/queue/queue.types.js'
 export type { JWTService } from './services/jwt-service.js'
 export type {
   EmailService,
-  EmailTemplateReference,
   SendEmailInput,
   SendEmailResult,
   SendHTMLEmailInput,
@@ -188,8 +178,6 @@ export type { SessionService } from './services/user-session-service.js'
 export {
   NoopAuditService,
   createInvocationAudit,
-  resolveAuditConfig,
-  resolveAuditUserIdentityFromWire,
 } from './services/audit-service.js'
 export type {
   AuditConfig,
@@ -198,31 +186,14 @@ export type {
   AuditEventBatch,
   AuditFacets,
   AuditLog,
-  AuditLogWriteInput,
-  AuditOutcome,
   AuditQuery,
   AuditQueryResult,
   AuditService,
-  AuditSource,
   AuditUserIdentity,
   ResolvedAuditConfig,
 } from './services/audit-service.js'
 export type {
   AIAgentRunnerService,
-  AIEmbedManyParams,
-  AIEmbedManyResult,
-  AIEmbedParams,
-  AIEmbedResult,
-  AIGenerateImageParams,
-  AIGenerateImagePrompt,
-  AIGenerateImageResult,
-  AIGenerateSpeechParams,
-  AIGenerateSpeechResult,
-  AIProviderOptions,
-  AIRerankParams,
-  AIRerankResult,
-  AITranscriptionParams,
-  AITranscriptionResult,
 } from './services/ai-agent-runner-service.js'
 export type { AIEmbeddingService } from './services/ai-embedding-service.js'
 export type { AIRunStateService } from './services/ai-run-state-service.js'
@@ -230,8 +201,6 @@ export type { AIStorageService } from './services/ai-storage-service.js'
 export type {
   EmailsMeta,
   EmailTemplateMeta,
-  EmailTemplateLocaleMeta,
-  EmailTemplateAssets,
   MetaService,
 } from './services/meta-service.js'
 export type { HTTPMethod } from './wirings/http/http.types.js'
@@ -266,7 +235,6 @@ export type {
   Secret,
   Classification,
   AnonymizeStrategy,
-  ColumnClassification,
   ClassificationManifest,
   ColumnForm,
   WrappedValue,
@@ -276,9 +244,6 @@ export type {
 
 export {
   hashToken,
-  unsafeAsWrapped,
-  unsafeAsSealed,
-  unsafeAsHashed,
 } from './column-form.js'
 
 export type { SecretValue, Safe } from './secret-value.js'

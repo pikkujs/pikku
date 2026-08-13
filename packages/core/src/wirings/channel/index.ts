@@ -1,8 +1,7 @@
-export { wireChannel, openChannel } from './channel-runner.js'
+export { wireChannel } from './channel-runner.js'
 export {
   addChannelMiddleware,
   combineChannelMiddleware,
-  wrapChannelWithMiddleware,
 } from './channel-middleware-runner.js'
 export { logChannels } from './log-channels.js'
 export { PikkuAbstractChannelHandler } from './pikku-abstract-channel-handler.js'
@@ -18,25 +17,14 @@ export type {
   CorePikkuChannelMiddlewareFactory,
   ChannelMessageMeta,
   ChannelMeta,
-  ChannelRemote,
   PikkuChannel,
   PikkuChannelHandlerFactory,
 } from './channel.types.js'
 export { defineChannelRoutes } from './define-channel-routes.js'
 export {
-  CHANNEL_RPC_PENDING,
-  CHANNEL_RPC_REQUEST,
-  CHANNEL_RPC_RESPONSE,
   ChannelDeploymentService,
   ChannelRPCError,
   ChannelRPCRegistry,
-  createChannelRPCResponder,
-  createChannelRPCInputValidator,
-  createChannelRPCResultValidator,
-  isChannelRPCPending,
-  isChannelRPCRequest,
-  isChannelRPCResponse,
-  resolveCapability,
   unsupportedChannelRemote,
 } from './channel-rpc.js'
 export type {
@@ -44,16 +32,9 @@ export type {
   ApprovalRequester,
   Capabilities,
   Capability,
-  CapabilityDef,
   CapabilityHandler,
   ChannelRPCPending,
   ChannelRPCRequest,
   ChannelRPCResponse,
   ChannelRPCValidator,
 } from './channel-rpc.js'
-export {
-  channelRemote,
-  getChannelHostRPC,
-  handleChannelRPCResponse,
-  releaseChannelHostRPC,
-} from './channel-host-rpc.js'

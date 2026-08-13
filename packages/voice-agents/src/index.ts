@@ -3,27 +3,17 @@ export type {
   SilenceDetectorControl,
   SilenceDetectorHandlers,
 } from './silence-detector.js'
-
-export { detectSpeech } from './speech-detector.js'
 export type {
-  SpeechDetectorDiagnostics,
   SpeechDetectorHandlers,
   SpeechDetectorOptions,
-  VadInstance,
-  VadModule,
 } from './speech-detector.js'
 
-export { meterInput } from './input-level.js'
-
 export { VoiceSession } from './voice-session.js'
-export type { VoiceSessionOptions, VoiceTurn } from './voice-session.js'
 
 export { AudioPlaybackQueue } from './audio-playback-queue.js'
-export type { SpeechChunk, SpokenSoFar } from './audio-playback-queue.js'
 
 export {
   spokenApproval,
-  spokenApprovals,
   interpretConsent,
 } from './spoken-approval.js'
 export type {
