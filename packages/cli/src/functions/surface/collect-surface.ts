@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import ts from 'typescript'
@@ -35,13 +35,29 @@ type PackageJson = {
   exports?: Record<string, unknown> | string
 }
 
+/** Extensions a `ts.Program` can be rooted at. */
+const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
+
+/**
+ * Whether a subpath publishes code at all.
+ *
+ * An exports map is also how a package publishes a stylesheet or a JSON
+ * manifest, and those subpaths carry no exported names — feeding them to the
+ * compiler would only produce a program full of unresolvable roots.
+ */
+const publishesCode = (target: string): boolean =>
+  !/\.(css|scss|json|svg|png|woff2?|txt|md)$/.test(target)
+
 /**
  * The source file a published subpath was built from.
  *
- * An exports map points at build output, and where that output lands differs
- * per package: `./dist/index.js` and `./dist/src/index.js` are both in this
- * repo. Rather than model every layout, strip the output directory and try the
- * shapes that remain — the first that exists on disk is the answer.
+ * Two conventions have to work. A package that ships build output points at it
+ * (`./dist/index.js`, `./dist/src/index.js` — both are in this repo), and the
+ * source has to be recovered by stripping the output directory. A package
+ * consumed only inside its own workspace has no build step to point at and
+ * names the TypeScript source directly (`./src/index.ts`), which needs no
+ * recovery at all. Rather than model every layout, try the shapes each
+ * convention produces and take the first that exists on disk.
  */
 const sourceForTarget = (
   packageDir: string,
@@ -49,22 +65,66 @@ const sourceForTarget = (
   outDir: string
 ): string | null => {
   const withoutPrefix = target.replace(/^\.\//, '')
+
+  // Already source: the common case outside a published package.
+  if (
+    SOURCE_EXTENSIONS.some((extension) => withoutPrefix.endsWith(extension))
+  ) {
+    return existsSync(join(packageDir, withoutPrefix)) ? withoutPrefix : null
+  }
+
   const stripped = withoutPrefix.startsWith(`${outDir}/`)
     ? withoutPrefix.slice(outDir.length + 1)
     : withoutPrefix
   const base = stripped.replace(/\.(js|mjs|cjs)$/, '')
   const withoutSrc = base.startsWith('src/') ? base.slice(4) : base
 
-  for (const candidate of [
-    join('src', `${base}.ts`),
-    `${base}.ts`,
-    join('src', `${withoutSrc}.ts`),
-    join('src', base, 'index.ts'),
-    join(`${base}`, 'index.ts'),
-  ]) {
+  const candidates: string[] = []
+  for (const extension of SOURCE_EXTENSIONS) {
+    candidates.push(
+      join('src', `${base}${extension}`),
+      `${base}${extension}`,
+      join('src', `${withoutSrc}${extension}`),
+      join('src', base, `index${extension}`),
+      join(base, `index${extension}`)
+    )
+  }
+  for (const candidate of candidates) {
     if (existsSync(join(packageDir, candidate))) return candidate
   }
   return null
+}
+
+/**
+ * The concrete subpaths a wildcard pattern stands for.
+ *
+ * `"./parts/*": "./src/parts/*"` publishes whatever sits in that directory, so
+ * the surface it declares is only knowable by looking. A package can also map
+ * the same directory twice — once as `*.js` and once bare — and both patterns
+ * resolve to the same files, so the caller de-duplicates by entry file.
+ */
+const expandWildcard = (
+  packageDir: string,
+  subpath: string,
+  target: string
+): Array<{ subpath: string; target: string }> => {
+  const targetDir = target.replace(/^\.\//, '').split('*')[0] ?? ''
+  const suffix = target.slice(target.indexOf('*') + 1)
+  const absolute = join(packageDir, targetDir)
+  if (!existsSync(absolute)) return []
+
+  const expanded: Array<{ subpath: string; target: string }> = []
+  for (const entry of readdirSync(absolute, { withFileTypes: true })) {
+    if (!entry.isFile()) continue
+    if (suffix && !entry.name.endsWith(suffix)) continue
+    if (!SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext))) continue
+    const stem = entry.name.replace(/\.(ts|tsx|mts|cts)$/, '')
+    expanded.push({
+      subpath: subpath.replace('*', stem).replace(/\.js$/, ''),
+      target: `${targetDir}${entry.name}`,
+    })
+  }
+  return expanded
 }
 
 /** The `types` / `import` / `default` condition that names a real file. */
@@ -195,18 +255,30 @@ export const collectSurface = async (
     entryFile: string
   }> = []
 
+  const seenEntryFiles = new Set<string>()
+
   for (const [subpath, value] of Object.entries(packageJson.exports)) {
     if (!subpath.startsWith('.')) continue
     const target = targetOf(value)
-    if (!target) continue
-    const entryFile = sourceForTarget(root, target, outDir)
-    if (!entryFile) continue
-    entries.push({
-      subpath,
-      specifier:
-        subpath === '.' ? packageName : `${packageName}${subpath.slice(1)}`,
-      entryFile,
-    })
+    if (!target || !publishesCode(target)) continue
+
+    const declared = target.includes('*')
+      ? expandWildcard(root, subpath, target)
+      : [{ subpath, target }]
+
+    for (const each of declared) {
+      const entryFile = sourceForTarget(root, each.target, outDir)
+      if (!entryFile || seenEntryFiles.has(entryFile)) continue
+      seenEntryFiles.add(entryFile)
+      entries.push({
+        subpath: each.subpath,
+        specifier:
+          each.subpath === '.'
+            ? packageName
+            : `${packageName}${each.subpath.slice(1)}`,
+        entryFile,
+      })
+    }
   }
 
   if (entries.length === 0) return []

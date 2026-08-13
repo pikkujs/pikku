@@ -226,3 +226,135 @@ describe('collectSurface', () => {
     }
   })
 })
+
+/**
+ * A workspace package consumed only by its own repo has no build step to point
+ * at, so its exports map names the TypeScript source directly. Every package in
+ * the fabric repo is published this way.
+ */
+describe('collectSurface on a package published straight from source', () => {
+  test('resolves an exports map that points at a .ts file', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/from-source',
+          exports: { '.': './src/index.ts' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/index.ts', 'export const direct = 1\n')
+
+      assert.deepStrictEqual(namesOf(await collectSurface(tmp), '.'), [
+        'direct',
+      ])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('resolves a .tsx entry point', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/tsx',
+          exports: { './mark': './src/Mark.tsx' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/Mark.tsx', 'export const Mark = () => null\n')
+
+      assert.deepStrictEqual(namesOf(await collectSurface(tmp), './mark'), [
+        'Mark',
+      ])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('ignores a subpath that publishes an asset rather than code', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/assets',
+          exports: {
+            '.': './src/index.ts',
+            './tokens.css': './src/tokens.css',
+            './meta.json': './src/meta.json',
+          },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/index.ts', 'export const code = 1\n')
+      await write(tmp, 'src/tokens.css', ':root { --a: 1px }\n')
+      await write(tmp, 'src/meta.json', '{}\n')
+
+      const surface = await collectSurface(tmp)
+
+      assert.deepStrictEqual(
+        surface.map((e) => e.subpath),
+        ['.']
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('expands a wildcard subpath to the files it publishes', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/wild',
+          exports: { './parts/*': './src/parts/*' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/parts/one.ts', 'export const one = 1\n')
+      await write(tmp, 'src/parts/two.ts', 'export const two = 2\n')
+
+      const surface = await collectSurface(tmp)
+
+      assert.deepStrictEqual(surface.map((e) => e.subpath).sort(), [
+        './parts/one',
+        './parts/two',
+      ])
+      assert.deepStrictEqual(namesOf(surface, './parts/one'), ['one'])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a wildcard that maps .js onto .ts does not publish the subpath twice', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/wild-js',
+          exports: { './src/*.js': './src/*.ts', './src/*': './src/*' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/only.ts', 'export const only = 1\n')
+
+      const surface = await collectSurface(tmp)
+      const entryFiles = surface.map((e) => e.entryFile)
+
+      assert.deepStrictEqual(entryFiles, [join('src', 'only.ts')])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
