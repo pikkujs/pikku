@@ -160,7 +160,7 @@ describe('workflow run ownership', () => {
     )
   })
 
-  test('approveStep refuses a caller who does not own the run', async () => {
+  test('approveStep does not impose ownership on a gate that did not ask for it', async () => {
     seedSingletons()
     const ws = new InMemoryWorkflowService()
     const runId = await ws.createRun('flow', {}, false, 'hash', {
@@ -168,23 +168,20 @@ describe('workflow run ownership', () => {
       pikkuUserId: 'owner',
     })
 
-    await assert.rejects(
-      ws.approveStep(
-        runId,
-        'release-funds',
-        { ok: true },
-        {
-          userId: 'attacker',
-        }
-      ),
-      ForbiddenError
+    await ws.approveStep(
+      runId,
+      'release-funds',
+      { ok: true },
+      {
+        userId: 'not-the-owner',
+      }
     )
 
     const state = await ws.getRunState(runId)
-    assert.deepEqual(
-      Object.keys(state),
-      [],
-      'no decision was recorded for the run'
+    assert.equal(
+      Object.keys(state).length,
+      1,
+      'the decision was recorded, to be judged against the gate on replay'
     )
   })
 

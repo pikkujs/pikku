@@ -13,6 +13,7 @@ export {
   assertWorkflowRunOwner,
   WorkflowRunForbiddenError,
 } from './workflow-run-ownership.js'
+export { WorkflowApprovalForbiddenError } from './workflow-approval-policy.js'
 export type {
   RunLifecycleContext,
   WorkflowRunEngine,
@@ -94,6 +95,9 @@ export type {
   WorkflowWireSuspend,
   WorkflowWireApproval,
   WorkflowApprovalOptions,
+  WorkflowApprovalApprovers,
+  WorkflowApprovalPolicy,
+  ApprovalDecider,
   ApprovalOutcome,
   InputSource,
   OutputBinding,

@@ -29,11 +29,11 @@ Build durable, multi-step workflows with automatic retry, sleep, suspend/resume,
 
 ## Choosing the right factory
 
-| Factory | When to use | Step-graph view? |
-|---|---|---|
-| `pikkuWorkflowFunc` | **Default for all new workflows.** Sequential + conditional logic; DSL mode (serialisable, replay-safe). ALL `const`/`let` declarations must be at the top level of the function body (not inside blocks). | ✅ Yes |
-| `pikkuWorkflowGraph` | DAG / fan-out with nodes and typed refs between them. | ✅ Yes |
-| `pikkuWorkflowComplexFunc` | Escape hatch only — arbitrary TypeScript, no top-level restriction (e.g. dynamic inline functions the DSL extractor cannot handle). | ❌ No (loses step-graph view) |
+| Factory                    | When to use                                                                                                                                                                                                | Step-graph view?              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `pikkuWorkflowFunc`        | **Default for all new workflows.** Sequential + conditional logic; DSL mode (serialisable, replay-safe). ALL `const`/`let` declarations must be at the top level of the function body (not inside blocks). | ✅ Yes                        |
+| `pikkuWorkflowGraph`       | DAG / fan-out with nodes and typed refs between them.                                                                                                                                                      | ✅ Yes                        |
+| `pikkuWorkflowComplexFunc` | Escape hatch only — arbitrary TypeScript, no top-level restriction (e.g. dynamic inline functions the DSL extractor cannot handle).                                                                        | ❌ No (loses step-graph view) |
 
 **Default to `pikkuWorkflowFunc`.** Use `pikkuWorkflowGraph` ONLY with explicit user approval AND only for a genuine cyclic dependency or Node.js-only import DSL cannot express. Use `pikkuWorkflowComplexFunc` ONLY with explicit user approval — a last-resort escape hatch. Never switch to either just to dodge a PKU641 error; restructure the code instead.
 
@@ -58,7 +58,11 @@ if (priority === 'high') {
 
 ```typescript
 // CORRECT — workflow factories come from the generated types file
-import { pikkuWorkflowFunc, pikkuWorkflowGraph, pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  pikkuWorkflowGraph,
+  pikkuWorkflowComplexFunc,
+} from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 // WRONG — '#pikku' does not re-export them (TS2305)
 import { pikkuWorkflowFunc } from '#pikku'
@@ -73,7 +77,10 @@ import { z } from 'zod'
 import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const ProcessOrderInput = z.object({ orderId: z.string(), amount: z.number() })
-const ProcessOrderOutput = z.object({ status: z.string(), discount: z.number().optional() })
+const ProcessOrderOutput = z.object({
+  status: z.string(),
+  discount: z.number().optional(),
+})
 
 export const processOrder = pikkuWorkflowFunc({
   description: 'Process an order through payment and fulfillment',
@@ -86,7 +93,9 @@ export const processOrder = pikkuWorkflowFunc({
     let status: string
 
     if (data.amount > 1000) {
-      const d = await workflow.do('Apply bulk discount', 'calcDiscount', { amount: data.amount })
+      const d = await workflow.do('Apply bulk discount', 'calcDiscount', {
+        amount: data.amount,
+      })
       discount = d.discountPercent
     }
 
@@ -129,6 +138,65 @@ await workflow.approval('Manager sign-off', { ... })
 `workflow.name`, `workflow.runId` and `await workflow.getRun()` identify the
 current run if a step needs to reference it.
 
+### Approval gates: who may answer
+
+`workflow.approval(reason, options)` takes a `schema` (a runtime value — the
+payload arrives from an untrusted caller, so a type generic would validate
+nothing), an optional `expiry`, and an optional policy for **who** may answer:
+
+```typescript
+const signOff = await workflow.approval('Manager sign-off', {
+  schema: SignOffSchema,
+  expiry: '3d',
+  approvers: 'not-initiator',      // four-eyes: anyone but whoever started the run
+  approverScope: 'payments:approve', // and they must hold this scope
+})
+if (signOff.status === 'expired') { ... }
+```
+
+`approvers` is one of:
+
+| value             | who may answer                                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `any` _(default)_ | anyone the approve entrypoint admits — the gate is a pause for a decision, not an authorization boundary |
+| `owner`           | only the user who started the run                                                                        |
+| `not-initiator`   | anyone **except** the user who started the run                                                           |
+
+Both options are enforced in two phases, because a decision can legitimately
+arrive before the run has reached the gate:
+
+- **At submission**, if the run has already reached the gate. Reaching it
+  publishes the policy into the run state, so the approve entrypoint can judge
+  the caller against it and refuse with a **403**.
+- **On replay**, for a decision that arrived before the gate — there was no
+  policy to judge it against yet, so it is accepted and judged when the workflow
+  reaches the gate. Failing there discards the decision and leaves the gate
+  closed, exactly as a decision that fails the schema does.
+
+So the same rejected decision surfaces as an HTTP error or as a silently
+re-closed gate depending on timing. Both are audited.
+
+A gate declaring neither option accepts a decision from anyone the approve
+route lets through; gate the route with `auth`/`permissions` to narrow that.
+
+#### What survives the run
+
+A settled decision carries `decidedBy` and `decidedAt`, so the answer keeps its
+provenance in the step result:
+
+```typescript
+if (signOff.status === 'decided') {
+  logger.info(`signed by ${signOff.decidedBy?.userId} at ${signOff.decidedAt}`)
+}
+```
+
+That record is deleted with the run, though — `deleteRun` cascades to steps and
+history — and an attempt that was _refused_ never reaches a step at all. So
+every answer is also written to the audit sink as `workflow.approval.decided`,
+with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the
+run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a
+project without one records nothing and is otherwise unaffected.
+
 ### Error handling: `onError`, never try/catch
 
 **Do not wrap steps in try/catch.** The DSL extractor serialises the body into a
@@ -137,14 +205,19 @@ graph would no longer describe what actually runs, which is the whole point of
 the DSL mode. This is a settled design decision, not a temporary limitation.
 
 Use the `onError` step option instead: it names an RPC to invoke when the step
-has failed *after* exhausting its retries.
+has failed _after_ exhausting its retries.
 
 ```typescript
-await workflow.do('Charge', 'chargePayment', { orderId }, {
-  retries: 3,
-  retryDelay: '1s',
-  onError: 'refundReservation',   // compensation RPC
-})
+await workflow.do(
+  'Charge',
+  'chargePayment',
+  { orderId },
+  {
+    retries: 3,
+    retryDelay: '1s',
+    onError: 'refundReservation', // compensation RPC
+  }
+)
 ```
 
 The handler receives `{ error: { message } }`, and the original error is still
@@ -161,7 +234,9 @@ Full step options: `description`, `retries`, `retryDelay`, `onError` (plus
 
 ```typescript
 const users = await Promise.all(
-  data.userIds.map((userId) => workflow.do(`Fetch user ${userId}`, 'getUser', { userId }))
+  data.userIds.map((userId) =>
+    workflow.do(`Fetch user ${userId}`, 'getUser', { userId })
+  )
 )
 ```
 
@@ -182,7 +257,10 @@ export const userOnboarding = pikkuWorkflowGraph({
   config: {
     createProfile: { next: ['sendWelcome', 'setupDefaults'] }, // run in parallel
     sendWelcome: {
-      input: (ref) => ({ to: ref('createProfile', 'email'), subject: 'Welcome!' }),
+      input: (ref) => ({
+        to: ref('createProfile', 'email'),
+        subject: 'Welcome!',
+      }),
     },
   },
 })

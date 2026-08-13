@@ -152,6 +152,7 @@
     "DEFAULT_STEP_RETRIES",
     "PikkuWorkflowService",
     "SCENARIO_SURFACES",
+    "WorkflowApprovalForbiddenError",
     "WorkflowApprovalResolvedError",
     "WorkflowCancelledException",
     "WorkflowDispatchException",

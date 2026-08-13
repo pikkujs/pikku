@@ -5,12 +5,12 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2830 observable things**: 975 exported names, plus
-1855 members on the classes and interfaces among them.
+**2842 observable things**: 979 exported names, plus
+1863 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 965 | 1855 |
+| stable | 48 | 969 | 1863 |
 | ecosystem | 2 | 10 | 0 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,8 +20,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 168 | 74 | 277 |
 | `.` | 241 | 98 | 128 |
+| `./workflow` | 128 | 51 | 153 |
 | `./virtual-user` | 51 | 51 | 152 |
-| `./workflow` | 124 | 50 | 151 |
 | `./ai-agent` | 63 | 62 | 90 |
 | `./channel` | 50 | 49 | 82 |
 | `./queue` | 32 | 31 | 68 |
@@ -40,7 +40,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./rpc` | 15 | 10 | 8 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./cli/channel` | 12 | 12 | 5 |
-| `./workflow/types` | 69 | 4 | 8 |
+| `./workflow/types` | 72 | 4 | 8 |
 | `./scheduler` | 7 | 7 | 4 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./scope` | 10 | 10 | 0 |
@@ -1737,14 +1737,25 @@ wrapChannelWithMiddleware: <Out>(wire: PikkuRawWire, services: CoreSingletonServ
 ```ts
 addFeature: (featureId: string, feature: CoreFeature, packageName?: string | null) => void
 addWorkflow: (workflowName: string, workflowFunc: any, packageName?: string | null) => void
+export interface ApprovalDecider {
+  userId?: string
+  scopes?: string[]
+}
 export type ApprovalOutcome<T> =
-  | { status: 'decided'; data: T }
+  | {
+      status: 'decided'
+      data: T
+      decidedBy?: ApprovalDecider
+      decidedAt?: string
+    }
   | { status: 'expired' }
 export interface ApprovalStepMeta {
   type: 'approval'
   reason: string
   outputVar?: string
   expiry?: string | number
+  approvers?: WorkflowApprovalApprovers
+  approverScope?: string
 }
 export interface ArrayPredicateStepMeta {
   type: 'arrayPredicate'
@@ -2227,9 +2238,18 @@ export interface TestIdSelector {
 }
 uuidv5: (name: string, namespace?: string) => string
 witnessesAgree: (a: unknown, b: unknown) => boolean
-export interface WorkflowApprovalOptions< TSchema extends StandardSchemaV1 = StandardSchemaV1, > {
+export type WorkflowApprovalApprovers = 'any' | 'owner' | 'not-initiator'
+export class WorkflowApprovalForbiddenError extends ForbiddenError {
+  public payload: { reason: string; detail: string }
+  constructor(reason: string, detail: string)
+}
+export interface WorkflowApprovalOptions< TSchema extends StandardSchemaV1 = StandardSchemaV1, > extends WorkflowApprovalPolicy {
   schema: TSchema
   expiry?: string | number
+}
+export interface WorkflowApprovalPolicy {
+  approvers?: WorkflowApprovalApprovers
+  approverScope?: string
 }
 export class WorkflowApprovalResolvedError extends PikkuError {
   public payload: { reason: string; outcome: ApprovalOutcome<unknown>['status'] }
@@ -2549,14 +2569,25 @@ export interface RunTimelineEvent {
 ## ./workflow/types
 
 ```ts
+export interface ApprovalDecider {
+  userId?: string
+  scopes?: string[]
+}
 export type ApprovalOutcome<T> =
-  | { status: 'decided'; data: T }
+  | {
+      status: 'decided'
+      data: T
+      decidedBy?: ApprovalDecider
+      decidedAt?: string
+    }
   | { status: 'expired' }
 export interface ApprovalStepMeta {
   type: 'approval'
   reason: string
   outputVar?: string
   expiry?: string | number
+  approvers?: WorkflowApprovalApprovers
+  approverScope?: string
 }
 export interface ArrayPredicateStepMeta {
   type: 'arrayPredicate'
@@ -2810,9 +2841,14 @@ export interface SwitchStepMeta {
   cases: SwitchCaseMeta[]
   defaultSteps?: WorkflowStepMeta[]
 }
-export interface WorkflowApprovalOptions< TSchema extends StandardSchemaV1 = StandardSchemaV1, > {
+export type WorkflowApprovalApprovers = 'any' | 'owner' | 'not-initiator'
+export interface WorkflowApprovalOptions< TSchema extends StandardSchemaV1 = StandardSchemaV1, > extends WorkflowApprovalPolicy {
   schema: TSchema
   expiry?: string | number
+}
+export interface WorkflowApprovalPolicy {
+  approvers?: WorkflowApprovalApprovers
+  approverScope?: string
 }
 export type WorkflowContext = Record<string, ContextVariable>
 export interface WorkflowExpectErrorOptions extends WorkflowStepOptions {

@@ -1,11 +1,11 @@
 ---
 type: decision
-title: A workflow run is read and approved by its owner
-description: A run started through a session records that user and only that user may read it or answer its approval gates; a run with no recorded owner has no ownership to enforce
+title: A workflow run is read by its owner, and answered by whoever its gate declares
+description: A run started through a session records that user and only that user may read it; who may answer an approval gate is the gate's own declaration, and a run with no recorded owner has no ownership to enforce
 tags: workflow
 ---
 
-# A workflow run is read and approved by its owner
+# A workflow run is read by its owner, and answered by whoever its gate declares
 
 `WorkflowRunWire.pikkuUserId` has always been recorded on every run started
 through a session — `RPCService.startWorkflow` copies it off the wire — and
@@ -14,9 +14,9 @@ routes (which stream `output` and `error`) and `approveStep`, which took no
 session at all and rejected only an already-resolved gate.
 
 `assertWorkflowRunOwner`
-(`packages/core/src/wirings/workflow/workflow-run-ownership.ts`) is the one check
-both paths share. `approveStep` takes the caller's session and asserts it, and
-the generated status routes assert it against the run they were already reading.
+(`packages/core/src/wirings/workflow/workflow-run-ownership.ts`) is the check the
+**read** paths share: the generated status routes assert it against the run they
+were already reading.
 
 **A run with no recorded owner is not gated.** Triggers, schedulers and routes
 wired without auth start runs with no `pikkuUserId`; there is nobody to compare a
@@ -24,11 +24,27 @@ caller against, and inventing one would reject the framework's own callers rathe
 than secure anything. Gate those at the entrypoint with `auth` or `permissions`.
 
 This is ownership, not an approver model. It answers "is this your run", not "are
-you entitled to approve this particular gate" — `WorkflowApprovalOptions` still
-carries no approver, role or permission, and a second approver on someone else's
-run is still a matter for the route's own `permissions`.
+you entitled to approve this particular gate".
 
-**What this rules out:** treating a run id as a capability, and adding a new run
-read path that does not take a session. It does not rule out a richer approver
-model on `WorkflowApprovalOptions` later; that would narrow this gate, never
-replace it.
+## Approving is a separate question, and the gate answers it
+
+`approveStep` originally shared `assertWorkflowRunOwner`, which made "only the
+initiator may answer" the one available rule. That is right for "confirm your own
+action" and exactly wrong for four-eyes sign-off, where the initiator is the one
+person who must not sign. Which applies is a property of the decision, so it is
+declared on the gate — `approvers` (`'any' | 'owner' | 'not-initiator'`) and
+`approverScope` on `WorkflowApprovalOptions`.
+
+It is enforced wherever the policy is known. Reaching the gate publishes the
+policy into the run state, so a decision submitted after that is judged by the
+approve entrypoint and refused with a 403. A decision can legitimately be
+recorded before the run has reached the gate, and that one has no policy to be
+judged against yet — it is judged on replay instead, alongside payload
+validation, and discarded if it fails.
+
+The default is therefore `any`: a gate is a pause for a decision, not an
+authorization boundary, and a route that needs one has `auth`/`permissions`.
+
+**What this rules out:** treating a run id as a capability, adding a new run read
+path that does not take a session, and re-deriving who may approve from who
+started the run.
