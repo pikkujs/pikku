@@ -11,11 +11,8 @@
  * that a workflow failed or was cancelled.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import {
-  pollUntil,
-  requireScenarioEnv,
-  type ScenarioHttpResponse,
-} from '@pikku/core/workflow'
+import { pollUntil, requireScenarioEnv } from '@pikku/core/scenario'
+import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { postScenarioJson, readScenarioHttpResponse } from '@pikku/core/persona'
 import { readSseEvents } from './support.js'
 

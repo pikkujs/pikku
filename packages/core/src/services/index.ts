@@ -6,9 +6,7 @@ export {
   createMiddlewareSessionWireProps,
 } from './user-session-service.js'
 export { TypedSecretService } from './typed-secret-service.js'
-export {
-  PikkuCredentialWireService,
-} from './credential-wire-service.js'
+export { PikkuCredentialWireService } from './credential-wire-service.js'
 export { TypedVariablesService } from './typed-variables-service.js'
 export { LocalSecretService } from './local-secrets.js'
 export { LocalEmailService } from './local-email-service.js'
@@ -38,10 +36,11 @@ export type {
   ScenarioPersona,
   ResolvedPersona,
   ScenarioPersonas,
-  ScenarioHttpResponse,
 } from './personas-service.js'
 // knowledge: decisions/internals/the-persona-runtime-is-exported-from-the-persona-entry-point.md
-export type { HttpPersonasConfig } from './http-personas.js'
+// `HttpPersonasConfig` and `ScenarioHttpResponse` are published from
+// `@pikku/core/persona` and `@pikku/core/scenario`, the entry points that own
+// them, rather than from a second home here.
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailService,
@@ -94,23 +93,16 @@ export type {
   SaveScoreInput,
   AIRunStateService,
 } from './ai-run-state-service.js'
-export type {
-  CredentialMeta,
-} from './typed-secret-service.js'
+export type { CredentialMeta } from './typed-secret-service.js'
 export type { CredentialService } from './credential-service.js'
 export { TypedCredentialService } from './typed-credential-service.js'
-export type {
-  CredentialMetaInfo,
-} from './typed-credential-service.js'
+export type { CredentialMetaInfo } from './typed-credential-service.js'
 export type { VariableMeta } from './typed-variables-service.js'
 export type { MetaService } from './meta-service.js'
 export type { SessionStore } from './session-store.js'
 export type { ScopeService, Role } from './scope-service.js'
 export type { IsSystemRole } from './system-role-guard.js'
-export {
-  NoopAuditService,
-  createInvocationAudit,
-} from './audit-service.js'
+export { NoopAuditService, createInvocationAudit } from './audit-service.js'
 export type {
   AuditConfig,
   AuditDurability,

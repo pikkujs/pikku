@@ -16,7 +16,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { createAuthClient } from 'better-auth/client'
-import { createCookieJar, requireScenarioEnv } from '@pikku/core/workflow'
+import { createCookieJar, requireScenarioEnv } from '@pikku/core/scenario'
 
 const authClientFor = (apiUrl: string) =>
   createAuthClient({

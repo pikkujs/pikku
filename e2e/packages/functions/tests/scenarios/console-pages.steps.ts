@@ -14,7 +14,7 @@ import {
   pollUntil,
   requireActor,
   requireScenarioEnv,
-} from '@pikku/core/workflow'
+} from '@pikku/core/scenario'
 import type {} from '@pikku/playwright'
 import { rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'

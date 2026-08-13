@@ -10,7 +10,7 @@
 import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
-} from '@pikku/core/workflow'
+} from '@pikku/core/scenario'
 import type { ResolvedPersona } from '@pikku/core/services'
 
 /** The default driver, used when a project names no other. */

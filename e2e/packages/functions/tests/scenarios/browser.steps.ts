@@ -15,7 +15,7 @@
  *   is the subject of the assertion.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type { TestIdSelector } from '@pikku/core/workflow'
+import type { TestIdSelector } from '@pikku/core/scenario'
 import { expect } from '@pikku/playwright'
 
 /**

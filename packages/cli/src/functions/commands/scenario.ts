@@ -8,8 +8,9 @@ import { createHttpPersonas } from '@pikku/core/persona'
 import { PikkuScenarioService } from '@pikku/core/scenario'
 import { pikkuState, getAllPackageStates } from '@pikku/core/ecosystem'
 import type { PikkuRPC } from '@pikku/core/rpc'
-import { resolveFeatureScenarios } from '@pikku/core/workflow'
-import type { CoreFeature, CoreWorkflow } from '@pikku/core/workflow'
+import { resolveFeatureScenarios } from '@pikku/core/scenario'
+import type { CoreWorkflow } from '@pikku/core/workflow'
+import type { CoreFeature } from '@pikku/core/scenario'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
@@ -20,8 +21,8 @@ import {
   scenarioStepsWithoutBinding,
   scenarioSurfaceCoverage,
 } from './scenario-ladder.js'
-import { SCENARIO_SURFACES } from '@pikku/core/workflow'
-import type { ScenarioSurface } from '@pikku/core/workflow'
+import { SCENARIO_SURFACES } from '@pikku/core/scenario'
+import type { ScenarioSurface } from '@pikku/core/scenario'
 import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,

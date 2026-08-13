@@ -47,9 +47,9 @@ import type {
 } from '../wirings/scheduler/scheduler.types.js'
 import type {
   CoreWorkflow,
-  CoreFeature,
   WorkflowsRuntimeMeta,
 } from '../wirings/workflow/workflow.types.js'
+import type { CoreFeature } from '../wirings/workflow/scenario.types.js'
 import type {
   CoreTrigger,
   CoreTriggerSource,

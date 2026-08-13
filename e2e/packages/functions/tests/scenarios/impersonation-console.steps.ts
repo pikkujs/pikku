@@ -18,7 +18,7 @@
  * that cannot see a request passes for the wrong reason.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type { PikkuBrowserWire } from '@pikku/core/workflow'
+import type { PikkuBrowserWire } from '@pikku/core/scenario'
 import { expect } from '@pikku/playwright'
 
 const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
@@ -73,10 +73,7 @@ export const impersonatesUser = pikkuScenarioStep<
   },
 })
 
-export const stopsImpersonating = pikkuScenarioStep<
-  void,
-  { stopped: true }
->({
+export const stopsImpersonating = pikkuScenarioStep<void, { stopped: true }>({
   name: 'stopsImpersonating',
   description: 'ends the impersonation session from the banner',
   template: 'stops impersonating',

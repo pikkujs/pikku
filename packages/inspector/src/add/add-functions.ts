@@ -9,7 +9,7 @@ import {
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
 import type { AuditDurability, FunctionServicesMeta } from '@pikku/core'
-import type { ScenarioStepKind, ScenarioSurface } from '@pikku/core/workflow'
+import type { ScenarioStepKind, ScenarioSurface } from '@pikku/core/scenario'
 import { formatVersionedId, parseVersionedId } from '@pikku/core'
 
 /** Binding keys a `pikkuScenarioStep` may declare, in report order. */

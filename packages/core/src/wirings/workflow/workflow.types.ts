@@ -1,8 +1,5 @@
 import type { SerializedError, CommonWireMeta } from '../../types/core.types.js'
-import type {
-  CorePikkuFunctionConfig,
-  CorePikkuFunctionHook,
-} from '../../function/functions.types.js'
+import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
 
 export type { WorkflowService } from '../../services/workflow-service.js'
@@ -30,21 +27,10 @@ export type {
   SwitchStepMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
-  ScenarioStepInvocation,
-  ScenarioStepMeta,
   WorkflowStepMeta,
   WorkflowStepWire,
   PikkuWorkflowWire,
-  PikkuScenarioWire,
 } from './dsl/workflow-dsl.types.js'
-
-export type {
-  ScenarioStepPhase,
-  ScenarioStepOptions,
-  PikkuScenarioStepWire,
-  PikkuBrowserWire,
-  ScenarioBrowserProvider,
-} from './scenario-step.types.js'
 
 import type { WorkflowStepMeta } from './dsl/workflow-dsl.types.js'
 
@@ -236,45 +222,6 @@ export type CoreWorkflow<
   func: PikkuFunctionConfig
   middleware?: PikkuFunctionConfig['middleware']
   tags?: string[]
-}
-
-export type CoreFeatureScenario =
-  | CorePikkuFunctionConfig<any, any, any>
-  | { scenario: CorePikkuFunctionConfig<any, any, any>; data: unknown }
-
-export type CoreFeature = {
-  name: string
-  description?: string
-  tags?: string[]
-  scenarios: readonly CoreFeatureScenario[]
-  before?: CorePikkuFunctionHook
-  after?: CorePikkuFunctionHook
-}
-
-export type FeatureMetaEntry = {
-  scenario: string
-  data?: unknown
-}
-
-export type FeatureMeta = {
-  id: string
-  name: string
-  description?: string
-  tags: string[]
-  entries: FeatureMetaEntry[]
-  unresolvedEntries: number
-  hasBefore: boolean
-  hasAfter: boolean
-}
-
-export type FeaturesMeta = Record<string, FeatureMeta>
-
-export type FeaturePlanEntry = {
-  featureId: string
-  featureName: string
-  scenarioName: string
-  data?: unknown
-  tags: string[]
 }
 
 export interface PikkuWorkflow {

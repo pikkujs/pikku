@@ -7,7 +7,7 @@
  * because the interesting machinery lives on the actor, not in the test.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor } from '@pikku/core/workflow'
+import { requireActor } from '@pikku/core/scenario'
 
 /**
  * The part of an actor's verdict that survives being a step result.

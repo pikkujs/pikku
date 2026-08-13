@@ -13,10 +13,8 @@
  * the credentials were accepted or refused.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import {
-  requireScenarioEnv,
-  type ScenarioHttpResponse,
-} from '@pikku/core/workflow'
+import { requireScenarioEnv } from '@pikku/core/scenario'
+import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { postScenarioJson } from '@pikku/core/persona'
 
 export const attemptsSignIn = pikkuScenarioStep<

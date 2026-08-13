@@ -8,7 +8,7 @@
  * — and the ordering helpers become module-local functions here.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireScenarioEnv } from '@pikku/core/workflow'
+import { requireScenarioEnv } from '@pikku/core/scenario'
 import {
   AG_UI,
   postAgentStream,
