@@ -81,7 +81,7 @@ export interface ResolvedPostgresDb extends ResolvedDbBase {
   devSeedFile: string
   /**
    * Postgres extensions the embedded PGlite databases must load, as declared by
-   * `pgliteExtensions` in the project's config. See
+   * `db.pgliteExtensions` in the project's pikku.config.json. See
    * {@link loadPGliteExtensions}.
    *
    * Carried even in `url` mode: the shadow database the CLI migrates and
@@ -126,7 +126,9 @@ export function resolveDb(
   rootDir: string,
   outDir: string,
   runtimeDir?: string,
-  dbConfig?: { schema?: string; defaultSchema?: string } | string
+  dbConfig?:
+    | { schema?: string; defaultSchema?: string; pgliteExtensions?: string[] }
+    | string
 ): ResolvedDb | null {
   // The parameter took a bare schema string before `defaultSchema` existed;
   // both forms are accepted so callers outside this repo keep working.
@@ -162,7 +164,8 @@ export function resolveDb(
     )
   }
 
-  const pgliteExtensions = userConfig.pgliteExtensions ?? []
+  const pgliteExtensions =
+    (typeof dbConfig === 'string' ? undefined : dbConfig?.pgliteExtensions) ?? []
 
   if (userConfig.postgresUrl) {
     return {
@@ -456,7 +459,7 @@ function explainMissingExtension(error: unknown, declared: string[]): unknown {
     `The embedded PGlite database has no '${name}' extension. ` +
       `The CLI migrates a PGlite shadow database to type and diff your schema, ` +
       `so every extension your migrations use has to be declared as ` +
-      `pgliteExtensions in createConfig — e.g. pgliteExtensions: ['${name}'] ` +
+      `db.pgliteExtensions in pikku.config.json — e.g. "db": { "pgliteExtensions": ["${name}"] } ` +
       `for a PGlite contrib extension, or the package that publishes it ` +
       `('@electric-sql/pglite-pgvector' for pgvector).` +
       (declared.length > 0
