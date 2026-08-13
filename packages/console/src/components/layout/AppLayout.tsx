@@ -9,8 +9,8 @@ import type { SidebarProps } from '../project/Sidebar'
 import { PikkuMetaProvider, usePikkuMeta } from '../../context/PikkuMetaContext'
 import { SpotlightSearch } from '../search/SpotlightSearch'
 import { ConnectionScreen } from './ConnectionScreen'
-import { PanelCard } from './PageLayout'
-import { HostConsoleChrome } from '../../context/ConsoleChromeContext'
+import { ContentArea } from '../shell/ContentArea'
+import { ConsoleScreen } from '../shell/ConsoleScreen'
 
 export interface AppLayoutProps {
   children: React.ReactNode
@@ -53,9 +53,9 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
           transition: 'margin-left 200ms ease',
         }}
       >
-        <PanelCard>
-          <HostConsoleChrome>{children}</HostConsoleChrome>
-        </PanelCard>
+        <ContentArea>
+          <ConsoleScreen>{children}</ConsoleScreen>
+        </ContentArea>
       </Box>
     </>
   )

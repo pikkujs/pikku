@@ -20,7 +20,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
-import { PanelProvider } from '../context/PanelContext'
+import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { useListSurfaceClass } from '../context/ConsoleChromeContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -621,7 +621,7 @@ export const ChangesPage: React.FC = () => {
   }
 
   return (
-    <PanelProvider>
+    <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
         header={
@@ -706,6 +706,6 @@ export const ChangesPage: React.FC = () => {
           {activePath && diff && diff.baseExists && <DiffView diff={diff} />}
         </Box>
       </ResizablePanelLayout>
-    </PanelProvider>
+    </ConsoleSurface>
   )
 }

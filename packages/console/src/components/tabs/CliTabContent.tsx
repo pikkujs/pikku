@@ -13,7 +13,7 @@ import { ChevronDown, ChevronRight, Copy, Check, Terminal } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import type { CLIMeta } from '@pikku/core/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { PanelProvider } from '../../context/PanelContext'
+import { ConsoleSurface } from '../console/ConsoleSurface'
 import { CliHelpText } from '../cli/CliHelpText'
 import classes from '../ui/console.module.css'
 import { asI18n } from '@pikku/react'
@@ -311,12 +311,12 @@ export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => 
   }
 
   return (
-    <PanelProvider>
+    <ConsoleSurface>
       <CliPageInner
         programs={programs}
         cliRenderers={meta.cliRenderers || {}}
         searchQuery={searchQuery}
       />
-    </PanelProvider>
+    </ConsoleSurface>
   )
 }

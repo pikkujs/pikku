@@ -47,6 +47,25 @@ export {
   useCompact,
 } from './lib/breakpoints'
 
+// Shell — the end-edge panel system. A secondary surface is a sibling card, not
+// a column inside the page card and never a drawer: ConsolePanel pins itself to
+// the content area's end edge and the page card shrinks to make room.
+export { ContentArea } from './components/shell/ContentArea'
+export { ConsolePanel } from './components/shell/ConsolePanel'
+export type { ConsolePanelWidth } from './components/shell/ConsolePanel'
+export { CollapsiblePanel } from './components/shell/CollapsiblePanel'
+export { PanelHeaderBand } from './components/shell/PanelHeaderBand'
+export {
+  PanelInsetProvider,
+  usePanelInset,
+} from './context/PanelInsetProvider'
+export {
+  ConsoleScreen,
+  ConsolePanelHost,
+  ConsoleScreenCard,
+} from './components/shell/ConsoleScreen'
+export { ConsoleDetailPanel } from './components/shell/ConsoleDetailPanel'
+
 // Sidebar
 export {
   Sidebar,

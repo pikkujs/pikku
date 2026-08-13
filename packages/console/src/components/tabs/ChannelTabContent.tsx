@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { useSearchParams, useNavigate } from '../../router'
 import { Radio } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
-import { PanelProvider } from '../../context/PanelContext'
+import { ConsoleSurface } from '../console/ConsoleSurface'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import {
   ChannelNavTree,
@@ -83,13 +83,13 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
   }
 
   return (
-    <PanelProvider>
+    <ConsoleSurface>
       <ChannelTabInner
         channelName={resolvedName}
         channelMeta={channelMeta}
         allChannelsMeta={allChannelsMeta}
         searchQuery={searchQuery}
       />
-    </PanelProvider>
+    </ConsoleSurface>
   )
 }

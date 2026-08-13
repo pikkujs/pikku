@@ -29,4 +29,17 @@
 :global(:root) {
   --app-card-radius: 12px;
   --app-card-gutter: 8px;
+
+  /* Every header row on screen — the page card's ShellHeader bar, a panel's
+     header band, a nav head — sits at this height so they share one baseline
+     across the seam between cards. It MUST equal ShellHeader's own `h`; anything
+     else leaves a panel head a couple of px off the page header. */
+  --screen-header-height: 50px;
+
+  /* Collapsed-panel widths. The flat rail carries an expand button plus a glyph;
+     the floating slim rail is just the grab strip, so it can be much thinner
+     — unless it has to hold a real button (CollapsiblePanel's `topAction`). */
+  --panel-rail-width: 44px;
+  --panel-slim-rail-width: 26px;
+  --panel-slim-rail-width-wide: 40px;
 }
