@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { PanelProvider } from '../../context/PanelContext'
 import { HostConsoleChrome } from '../../context/ConsoleChromeContext'
 import { PanelCard } from '../layout/PageLayout'

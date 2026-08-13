@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
-import { Box, Container, Group, Stack } from '@pikku/mantine/core'
+import { Box, Container, Group } from '@pikku/mantine/core'
+import type { Stack } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { useLocale } from '@/i18n/config'
 import DocLink from '../ui/DocLink'
@@ -107,7 +108,8 @@ export function PageContainer({
   // keep winning: it is a flag read below, so px/py set here would silently
   // re-pad a page that asked for a bare body.
   const phone = usePhone()
-  const gutter = phone && !noPadding ? { px: 'md' as const, py: 'md' as const } : {}
+  const gutter =
+    phone && !noPadding ? { px: 'md' as const, py: 'md' as const } : {}
 
   // When a header is present it renders as a full-bleed bar above the body, and
   // the body runs full-width so both share one gutter (the ShellHeader pattern).
