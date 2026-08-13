@@ -8,6 +8,13 @@ export {
 } from './notes.js'
 
 export {
+  type Decision,
+  type DecisionFence,
+  decisionFences,
+  parseDecisionFence,
+} from './decision-fence.js'
+
+export {
   RESOURCE_PREFIXES,
   type ResourcePrefix,
   type ResourceUri,

@@ -106,6 +106,12 @@ export type { DetailHeaderProps } from './components/ui/DetailHeader'
 export { EmptyState } from './components/ui/EmptyState'
 export type { EmptyStateProps } from './components/ui/EmptyState'
 
+// A knowledge note is rendered outside this console too — the fabric console
+// draws the same notes on its own screen — and a second `<ReactMarkdown>` there
+// is a second vocabulary: the diagram, the callout, the scenario and the
+// decision either render in both or the format quietly means two things.
+export { Markdown, asMarkdownContent } from './components/ui/Markdown'
+
 export { SearchInput } from './components/ui/SearchInput'
 export type { SearchInputProps } from './components/ui/SearchInput'
 export { TagBadge, ServiceBadge } from './components/ui/TagBadge'

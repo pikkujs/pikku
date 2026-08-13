@@ -354,3 +354,95 @@ describe('runKnowledgeValidate on resources', () => {
     assert.deepEqual((await validate(root)).findings, [])
   })
 })
+
+describe('runKnowledgeValidate on decisions', () => {
+  const decisionNote = (body: string) =>
+    ['---', 'type: decision', '---', '', body].join('\n')
+
+  const withDecisions = (body: string) => ({
+    ...CLEAN,
+    'knowledge/decisions/index.md': '---\ntype: overview\n---\nRules chosen.',
+    'knowledge/decisions/revocation.md': decisionNote(body),
+  })
+
+  test('a decision argued in prose is not a finding', async () => {
+    // The fence is optional by design: requiring one would be a finding against
+    // every decision note written before it existed.
+    const root = await project(
+      withDecisions(
+        'Revoking ends the grant at once. We rejected a grace period.'
+      )
+    )
+    assert.deepEqual((await validate(root)).findings, [])
+  })
+
+  test('a complete decision fence is not a finding', async () => {
+    const root = await project(
+      withDecisions(
+        '```decision\nchosen: Revocation is immediate\nrules-out: A grace period until midnight\nbecause: Two people disagreeing about access is worse\n```'
+      )
+    )
+    assert.deepEqual((await validate(root)).findings, [])
+  })
+
+  test('a fence that rules nothing out warns', async () => {
+    const root = await project(
+      withDecisions('```decision\nchosen: Revocation is immediate\n```')
+    )
+    const result = await validate(root)
+    assert.deepEqual(ids(result.findings), [
+      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md-1',
+    ])
+    // A warning, not an error: the note is incomplete rather than wrong, and it
+    // must not fail the command a project gates CI on.
+    assert.equal(result.findings[0]!.severity, 'warn')
+    assert.equal(result.ok, true)
+  })
+
+  test('a fence with no chosen warns that it will render as code', async () => {
+    const root = await project(
+      withDecisions('```decision\nwe went with postgres\n```')
+    )
+    const result = await validate(root)
+    assert.deepEqual(ids(result.findings), [
+      'knowledge-decision-fence-unparsed-knowledge/decisions/revocation.md-1',
+    ])
+    assert.equal(result.ok, true)
+  })
+
+  test('two bad fences in one note are two findings, not one', async () => {
+    // Each finding is addressed by its id, so two sharing one would hide the
+    // second fence from anything that looks a finding up rather than counting.
+    const root = await project(
+      withDecisions(
+        [
+          '```decision',
+          'chosen: Revocation is immediate',
+          '```',
+          '',
+          'And later in the same note:',
+          '',
+          '```decision',
+          'chosen: Grants are checked per request',
+          '```',
+        ].join('\n')
+      )
+    )
+    const result = await validate(root)
+    assert.deepEqual(ids(result.findings), [
+      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md-1',
+      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md-2',
+    ])
+    assert.equal(new Set(ids(result.findings)).size, 2)
+  })
+
+  test('a slice may state a decision too', async () => {
+    const root = await project({
+      ...CLEAN,
+      'knowledge/slices/02-b.md': `${SLICE}\n\n\`\`\`decision\nchosen: One entry per day\n\`\`\``,
+    })
+    assert.deepEqual(ids((await validate(root)).findings), [
+      'knowledge-decision-nothing-ruled-out-knowledge/slices/02-b.md-1',
+    ])
+  })
+})
