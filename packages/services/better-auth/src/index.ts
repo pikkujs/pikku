@@ -42,6 +42,14 @@ export type {
 export { stampActorFlag } from './stamp-actor-flag.js'
 export { betterAuthStatelessSession } from './auth-session-stateless.js'
 export type { BetterAuthStatelessSessionOptions } from './auth-session-stateless.js'
+export { betterAuthStoreSession } from './auth-session-store.js'
+export type {
+  BetterAuthStoreSessionOptions,
+  SessionTransport,
+} from './auth-session-store.js'
+export { inMemorySessionStore, prefixedSessionStore } from './session-store.js'
+export type { SessionStore, InMemorySessionStore } from './session-store.js'
+export { verifySessionCredential } from './session-credential.js'
 export { pikkuBetterAuth, PIKKU_BETTER_AUTH } from './define-auth.js'
 export type {
   PikkuBetterAuthFactory,

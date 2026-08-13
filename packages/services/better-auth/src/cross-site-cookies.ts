@@ -30,6 +30,12 @@
  * would force those apps onto `betterAuthSession`, which is the bundle weight
  * serverless targets cannot take. Relaying the whole jar is what keeps preview
  * and production on the same middleware.
+ *
+ * That objection holds only while the session lives in the database. Under
+ * `secondaryStorage` the `session_token` IS the store key, so resolving it costs
+ * one `get` and no server — which is what {@link betterAuthStoreSession} does.
+ * An app on `secondaryStorage` should use that middleware with `bearer()`
+ * enabled and skip the relay entirely.
  */
 
 /** Request header carrying the relayed `name=value; name=value` cookie pairs. */
