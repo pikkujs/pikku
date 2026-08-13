@@ -151,10 +151,20 @@ export type { VirtualUserDoc } from './components/virtual-users/virtual-user-mod
 export { useVirtualUsers } from './hooks/useVirtualUsers'
 export { KnowledgePage } from './pages/KnowledgePage'
 export type { KnowledgePageProps } from './pages/KnowledgePage'
+export { KnowledgeWorkspace } from './components/knowledge/KnowledgeWorkspace'
+export type { KnowledgeWorkspaceProps } from './components/knowledge/KnowledgeWorkspace'
 export { KnowledgeBrowseRail } from './components/knowledge/KnowledgeBrowseRail'
 export type { KnowledgeBrowseRailProps } from './components/knowledge/KnowledgeBrowseRail'
 export { useKnowledgeBrowse } from './hooks/useKnowledgeBrowse'
 export type { KnowledgeBrowse } from './hooks/useKnowledgeBrowse'
+export { resolveNoteLink } from './lib/knowledge'
+export type {
+  KnowledgeBundle,
+  KnowledgeFinding,
+  KnowledgeNote,
+  KnowledgeSection,
+  KnowledgeSelection,
+} from './lib/knowledge'
 export { SecretsPage } from './pages/SecretsPage'
 export { VariablesPage } from './pages/VariablesPage'
 export { EmailsPage } from './pages/EmailsPage'
