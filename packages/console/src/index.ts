@@ -55,10 +55,7 @@ export { ConsolePanel } from './components/shell/ConsolePanel'
 export type { ConsolePanelWidth } from './components/shell/ConsolePanel'
 export { CollapsiblePanel } from './components/shell/CollapsiblePanel'
 export { PanelHeaderBand } from './components/shell/PanelHeaderBand'
-export {
-  PanelInsetProvider,
-  usePanelInset,
-} from './context/PanelInsetProvider'
+export { PanelInsetProvider, usePanelInset } from './context/PanelInsetProvider'
 export {
   ConsoleScreen,
   ConsolePanelHost,
@@ -66,7 +63,26 @@ export {
 } from './components/shell/ConsoleScreen'
 export { ConsoleDetailPanel } from './components/shell/ConsoleDetailPanel'
 
-// Sidebar
+// Nav dock — the console's navigation. `NavDock` is presentational: it draws the
+// zones it is handed, so an embedding app builds its own model from its routes
+// and gets the same row. `ConsoleNavDock` is the console's own model.
+export { NavDock } from './components/nav-dock/NavDock'
+export type { NavDockProps } from './components/nav-dock/NavDock'
+export { ConsoleNavDock } from './components/nav-dock/ConsoleNavDock'
+export { DockFlyout } from './components/nav-dock/DockFlyout'
+export { isSep } from './components/nav-dock/model'
+export type {
+  DockBadge,
+  DockEntry,
+  DockEnv,
+  DockMenu,
+  DockTile,
+  FlyoutRow,
+  FlyoutSection,
+  IconComponent,
+} from './components/nav-dock/model'
+
+// Sidebar — superseded by the dock, kept exported for one release.
 export {
   Sidebar,
   useDefaultNavSections,

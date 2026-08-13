@@ -46,16 +46,27 @@ import {
   Shield,
   ScrollText,
   Webhook,
+  Play,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
+import {
+  consoleLogoInvert,
+  consoleLogoSrc,
+  consoleTitle,
+} from '../../lib/branding'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
 
 export interface NavItem {
-  label: I18nNode
+  /** A string rather than a node: the dock reads a nav label into a tooltip, a
+   *  tile's `aria-label` and a flyout row's composed one, and an element cannot
+   *  be any of those. */
+  label: I18nString
   href: string
   icon: React.ComponentType<{ size?: number; color?: string }>
   matchPrefix: string
@@ -69,7 +80,12 @@ export interface NavSection {
    * rendered to the user. Falls back to the title for callers that predate it.
    */
   id?: string
-  title: I18nNode
+  title: I18nString
+  /** The section's own glyph, for surfaces that draw a section rather than list
+   *  it — the dock collapses each section to one tile. Falls back to the first
+   *  item's icon, which is a guess: two sections whose first items happen to
+   *  share a glyph become indistinguishable. */
+  icon?: React.ComponentType<{ size?: number; color?: string }>
   items: NavItem[]
 }
 
@@ -81,6 +97,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'run',
       title: m.nav_run(),
+      icon: Play,
       items: [
         {
           label: m.nav_functions(),
@@ -129,6 +146,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'data',
       title: m.nav_data(),
+      icon: Database,
       items: [
         {
           label: m.nav_database(),
@@ -171,6 +189,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'config',
       title: m.nav_config(),
+      icon: SlidersHorizontal,
       items: [
         {
           label: m.nav_secrets(),
@@ -204,6 +223,7 @@ export function useDefaultNavSections(): NavSection[] {
       // other is what let the two drift in the first place.
       id: 'people',
       title: m.nav_people(),
+      icon: Users,
       items: [
         {
           label: m.nav_personas(),
@@ -222,6 +242,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'auth',
       title: m.nav_auth(),
+      icon: Lock,
       items: [
         {
           label: m.nav_scopes(),
@@ -270,28 +291,20 @@ export interface SidebarBranding {
   homeHref: string
 }
 
-const consoleLogo = (
-  import.meta.env.VITE_CONSOLE_LOGO || 'pikku-console-logo.png'
-).replace(/^\//, '')
-
 const DEFAULT_BRANDING: SidebarBranding = {
   logo: (
     <img
-      src={import.meta.env.BASE_URL + consoleLogo}
-      alt={import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'}
+      src={consoleLogoSrc}
+      alt={consoleTitle}
       width={28}
       height={28}
       style={
-        import.meta.env.VITE_CONSOLE_LOGO_INVERT === 'true'
-          ? { filter: 'brightness(0) invert(1)' }
-          : undefined
+        consoleLogoInvert ? { filter: 'brightness(0) invert(1)' } : undefined
       }
     />
   ),
-  title: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'),
-  tooltipLabel: asI18n(
-    import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'
-  ),
+  title: asI18n(consoleTitle),
+  tooltipLabel: asI18n(consoleTitle),
   homeHref: '/',
 }
 
@@ -421,9 +434,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const key = sectionKey(section)
           const isRouteSection = !!section.title && key === routeSectionKey
           const sectionOpen =
-            collapsed ||
-            !section.title ||
-            key === openedSection
+            collapsed || !section.title || key === openedSection
           return (
             <Box key={sectionIndex}>
               {sectionIndex > 0 && <Divider my={4} mx="sm" />}

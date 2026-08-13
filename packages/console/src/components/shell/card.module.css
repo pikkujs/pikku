@@ -36,6 +36,11 @@
      else leaves a panel head a couple of px off the page header. */
   --screen-header-height: 50px;
 
+  /* The home-indicator strip on a phone. Anything that sits flush to the foot of
+     the window — the nav dock's trigger line, the mobile tab bar — adds this to
+     its own height, or the bottom few pixels of it are unhittable. */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   /* Collapsed-panel widths. The flat rail carries an expand button plus a glyph;
      the floating slim rail is just the grab strip, so it can be much thinner
      — unless it has to hold a real button (CollapsiblePanel's `topAction`). */

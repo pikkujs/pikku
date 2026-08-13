@@ -1,0 +1,837 @@
+/* The navigation dock.
+ *
+ * A fixed overlay that reserves NO layout: the page keeps its full height and
+ * the dock floats over it, the way the macOS dock floats over a window. Its
+ * resting height is one card gutter — the gutter that already exists between the
+ * page card and the foot of the window — so the trigger costs zero pixels, and
+ * because it is flush to the viewport edge the cursor cannot overshoot it.
+ * Slamming the pointer at the bottom of the window lands in it, which is the
+ * closest a browser gets to the OS trick of shoving the cursor off-screen.
+ *
+ * Feature-scoped colour lives here as --pf-* locals rather than in the theme, so
+ * nothing leaks into the app token namespace.
+ */
+.dockStrip,
+.flyout,
+.dockTip {
+  --pf-dock-fill: rgba(255, 255, 255, 0.86);
+  --pf-flyout-fill: rgba(255, 255, 255, 0.95);
+  --pf-tile-hover: rgba(17, 17, 17, 0.07);
+  --pf-dock-shadow:
+    0 10px 30px rgba(16, 24, 40, 0.16), 0 2px 5px rgba(16, 24, 40, 0.09);
+  /* 3.4:1 against the page ground. The sole affordance for the whole navigation
+     system cannot be a hairline nobody can see. */
+  --pf-hint: #8a8f98;
+  --pf-icon-fill: color-mix(in srgb, var(--app-accent) 16%, transparent);
+  --pf-status-ok: #16a34a;
+  --pf-status-warn: #b45309;
+  --pf-status-error: #dc2626;
+}
+
+:global([data-mantine-color-scheme='dark']) :is(.dockStrip, .flyout, .dockTip) {
+  --pf-dock-fill: rgba(41, 45, 55, 0.86);
+  --pf-flyout-fill: rgba(38, 42, 51, 0.94);
+  --pf-tile-hover: rgba(255, 255, 255, 0.08);
+  --pf-dock-shadow:
+    0 10px 34px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --pf-hint: #7c828e;
+  --pf-icon-fill: color-mix(in srgb, var(--app-accent) 20%, transparent);
+  --pf-status-ok: #4ade80;
+  --pf-status-warn: #fbbf24;
+  --pf-status-error: #f87171;
+}
+
+.dockStrip {
+  /* How far the capsule floats clear of the window's foot. One card gutter put
+     it level with the page card's own bottom edge, which read as the dock being
+     part of the footer rather than an object resting above it — the whole point
+     of a capsule instead of a bar. Two gutters is the smallest lift where the
+     page ground is legible underneath it.
+
+     The trigger line is unaffected: it stays flush at one gutter, because a
+     target the cursor can overshoot is not a target. */
+  --pf-dock-lift: calc(var(--app-card-gutter) * 2);
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 300;
+  height: calc(var(--app-card-gutter) + var(--safe-bottom));
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* No transition on height: the strip is fixed, the trigger inside it is
+     absolutely positioned and the capsule is transform-animated, so animating
+     this moves nothing visible — it only ran layout on a full-width overlay
+     holding every tile, once per reveal. */
+
+  /* Inert by default so the empty space either side of the capsule never eats a
+     click meant for the page underneath. Only the trigger line and the capsule
+     itself take the pointer. */
+  pointer-events: none;
+}
+
+.dockStrip[data-open='true'] {
+  height: var(--pf-dock-foot);
+}
+
+/* The capsule. A centred floating object, not a full-width bar — a bar reads as
+   chrome, an object reads as a dock, and the page's own edges stay visible on
+   both sides of it. */
+.dock {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-dock-gap);
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--pf-dock-fill);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--pf-dock-shadow);
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  margin-bottom: calc(var(--pf-dock-lift) + var(--safe-bottom));
+  pointer-events: auto;
+  transform: translateY(calc(100% + var(--pf-dock-lift) + 6px));
+  opacity: 0;
+  transition:
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease;
+  transform-origin: bottom center;
+}
+
+.dock::-webkit-scrollbar {
+  display: none;
+}
+
+.dockStrip[data-open='true'] .dock {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Scrolling chrome with the scrollbar suppressed is chrome that lies. The mask
+   only appears when there is genuinely more row than capsule. */
+.dock[data-overflow='true'] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 26px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 26px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+}
+
+/* The trigger line — the card gutter itself, full bleed. The hint is the only
+   thing drawn in it, and it stands down the moment the dock is up. */
+.dockTrigger {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: calc(var(--app-card-gutter) + var(--safe-bottom));
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-bottom));
+  background: none;
+  border: 0;
+  margin: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* On a touch device there is no hover, so this 8px line is the only way into the
+   navigation — and an 8px target fails WCAG 2.5.8 outright. Coarse pointers get
+   a 24px grab area; the hint stays drawn where it was. */
+@media (pointer: coarse) {
+  .dockTrigger {
+    height: calc(24px + var(--safe-bottom));
+  }
+}
+
+.dockHint {
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--pf-hint);
+  transition:
+    background-color 140ms ease,
+    opacity 140ms ease;
+}
+
+.dockTrigger:hover .dockHint {
+  background: var(--app-accent);
+}
+
+.dockStrip[data-open='true'] .dockHint {
+  opacity: 0;
+}
+
+.dockTrigger:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+/* Pinned: the dock stays up without the pointer, and the hint becomes the unpin
+   target — the same line doing both jobs. */
+.dockStrip[data-pinned='true'] .dockHint {
+  background: var(--app-accent);
+}
+
+.dockZone {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-dock-gap);
+}
+
+/* Grouping by space, not by rule. A 1px hairline on blurred glass measures
+   1.3:1 — it was doing hierarchy work it could not carry. */
+.dockSep {
+  flex: 0 0 auto;
+  width: calc(var(--pf-dock-gap) * 3.6);
+  height: 1px;
+  background: none;
+}
+
+/* A tile. Fixed box — deliberately no macOS magnification: magnification moves
+   neighbours out from under the cursor, which is the exact opposite of the
+   muscle memory this dock exists for. The lift is on the icon; the hit box never
+   moves. */
+.tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--pf-tile);
+  height: var(--pf-tile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border-radius: calc(var(--pf-tile) * 0.26);
+  color: var(--app-text-dim);
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+/* The contextual zone sits a hair smaller than identity and utility, so the row
+   has a silhouette rhythm and the pinned zone reads as the anchor it is. */
+.dockZone[data-zone='ctx'] .tile {
+  width: var(--pf-tile-ctx);
+  height: var(--pf-tile-ctx);
+  border-radius: calc(var(--pf-tile-ctx) * 0.26);
+}
+
+.tile svg {
+  width: var(--pf-icon);
+  height: var(--pf-icon);
+  display: block;
+  flex: 0 0 auto;
+  /* Stroke is owned here and driven from the tile size. Baked into the markup it
+     stayed at 2 while the icon shrank 28px → 19px, so the rendered stroke
+     drifted 2.33px → 1.56px: the glyphs got optically thinner exactly where they
+     needed to get heavier. */
+  stroke-width: calc(var(--pf-icon-stroke) * var(--pf-stitch-weight, 1));
+  fill: transparent;
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    fill 160ms ease;
+}
+
+.tile:hover {
+  background: var(--pf-tile-hover);
+  color: var(--app-text);
+}
+
+.tile:hover svg {
+  transform: translateY(-2px) scale(1.08);
+}
+
+.tile:active svg {
+  transform: translateY(0) scale(0.96);
+  transition-duration: 90ms;
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.tile[data-active='true'] {
+  background: var(--app-surface-info);
+  color: var(--app-accent);
+}
+
+/* Duotone is the state channel. A filled body gives the current tile real
+   optical weight in peripheral vision, which a 2.5px underbar never did — so one
+   signal now does the job three were splitting. Only icons whose shapes close
+   cleanly opt in: a fill on an open path renders as a smear. */
+.tile[data-fill='true'][data-active='true'] svg {
+  fill: var(--pf-icon-fill);
+}
+
+.tile[data-fill='true']:hover svg {
+  fill: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+/* The submenu marker, from the "Nav Icons — Fabric Set v3" design: a solid
+   corner wedge in the bottom-inline-end of the tile rather than a caret under
+   the glyph. It sits diagonally opposite the badge, so the two no longer
+   collide, and being flush in the corner it reads as part of the tile instead
+   of a mark hanging off it. Opacity stays at the measured .85/1 rather than the
+   design's .3/.6, which fell under 3:1. */
+.tile[data-group='true']::before {
+  content: '';
+  position: absolute;
+  bottom: calc(var(--pf-tile) * 0.115);
+  inset-inline-end: calc(var(--pf-tile) * 0.115);
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  opacity: 0.85;
+  transition: opacity 140ms ease;
+}
+
+.tile[data-group='true'][aria-expanded='true']::before {
+  opacity: 1;
+}
+
+.tile[aria-expanded='true'] {
+  background: var(--pf-tile-hover);
+  color: var(--app-text);
+}
+
+/* The dock's only channel for live state, fed by the same data the flyouts
+   carry. Three forms: a status dot, a count, and a busy ring. */
+.tileBadge {
+  position: absolute;
+  top: calc(var(--pf-tile) * 0.1);
+  inset-inline-end: calc(var(--pf-tile) * 0.09);
+  pointer-events: none;
+}
+
+.tileBadge[data-kind='dot'] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pf-badge-color);
+  box-shadow: 0 0 0 2px var(--pf-dock-fill);
+}
+
+.tileBadge[data-kind='count'] {
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pf-badge-color);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--pf-dock-fill);
+}
+
+.tileBadge[data-kind='busy'] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.6px solid var(--pf-badge-color);
+  animation: pfPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pfPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
+/* Identity grammar: a filled plate with no stroke, so the switcher never reads
+   as one more navigation item. */
+.mark {
+  width: calc(var(--pf-tile) * 0.5);
+  height: calc(var(--pf-tile) * 0.5);
+  border-radius: calc(var(--pf-tile) * 0.125);
+  display: block;
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 160ms ease;
+}
+
+/* The mark is a slot, not the image itself — the brand is handed in, so
+   whatever it turns out to be takes the plate's size and corner. */
+.mark > img,
+.mark > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+}
+
+.tile:hover .mark {
+  transform: translateY(-2px) scale(1.08);
+}
+
+/* The environment ring. Two rings, not one: the inner one is the dock's own
+   fill, so the outer colour reads as a ring rather than a glow at any tile size
+   and on either glass ground.
+
+   This stops being decoration the moment a deployment and a workspace share one
+   nav: "Operations → Database" is then the same three pixels in both, and one of
+   them is customer data. */
+.tile[data-env] .mark {
+  box-shadow:
+    0 0 0 2px var(--pf-dock-fill),
+    0 0 0 4px var(--pf-env);
+}
+
+.tile[data-env='prod'] {
+  --pf-env: var(--pf-status-error);
+}
+
+.tile[data-env='staging'] {
+  --pf-env: var(--pf-status-warn);
+}
+
+.tile[data-env='preview'] {
+  --pf-env: var(--app-accent);
+}
+
+/* The one primary action in the row, so the one filled tile. It carries a
+   heavier stroke so the category difference survives at 34px. */
+.tile[data-primary='true'] {
+  background: var(--app-accent-strong);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.24);
+}
+
+.tile[data-primary='true'] svg {
+  stroke-width: calc(var(--pf-icon-stroke) * 1.18 * var(--pf-stitch-weight, 1));
+}
+
+.tile[data-primary='true']:hover {
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.avatar {
+  width: calc(var(--pf-tile) * 0.56);
+  height: calc(var(--pf-tile) * 0.56);
+  border-radius: 50%;
+  background: linear-gradient(
+    140deg,
+    var(--app-accent),
+    var(--app-accent-strong)
+  );
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--pf-tile) * 0.26);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tile:hover .avatar {
+  transform: translateY(-2px) scale(1.08);
+}
+
+/* ---------- tooltip ---------- */
+
+/* The shortcut hint lives nowhere else, so the tooltip has to carry it — and it
+   has to fire on focus as well as hover or a keyboard user could never see it. */
+.dockTip {
+  display: flex;
+  align-items: center;
+}
+
+/* --app-text-faint measured 4.12:1 on the light tooltip ground. */
+.tipKey {
+  color: var(--app-text-dim);
+  margin-inline-start: 8px;
+  font-size: 11px;
+}
+
+/* ---------- flyout ---------- */
+
+.flyout {
+  min-width: 264px;
+  max-width: 340px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--pf-flyout-fill);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--pf-dock-shadow);
+  /* A menu allowed to fill the window stops reading as a menu and starts reading
+     as a page — and it buries the surface it belongs to. */
+  max-height: 62vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* A menu head carries the thing the menu is about, so the first row doesn't have
+   to. */
+.flyoutHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px 9px;
+}
+
+.flyoutHeadMark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex: 0 0 26px;
+  background: linear-gradient(
+    140deg,
+    var(--app-accent),
+    var(--app-accent-strong)
+  );
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.flyoutHeadText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.flyoutHeadTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flyoutHeadSub {
+  font-size: 11.5px;
+  color: var(--app-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 650;
+  background: var(--app-surface-info);
+  color: var(--app-accent);
+  letter-spacing: 0.02em;
+}
+
+.flyoutTitle {
+  padding: 7px 10px 5px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-text-faint);
+}
+
+.flyoutItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 10px;
+  min-height: 38px;
+  border: 0;
+  background: none;
+  border-radius: 7px;
+  color: var(--app-text-dim);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+/* Mantine's Menu.Item does not render its children into the button — it wraps
+   them all in one `itemLabel` div. That div was the button's only flex child, so
+   the row's whole layout collapsed: the icon, the label block and the end slot
+   stacked vertically instead of sitting in a row, and `> svg` matched nothing so
+   the glyph rendered at its natural size. `display: contents` dissolves the
+   wrapper so the row's own children are the flex items, which is what every rule
+   below is written against. */
+.flyoutItem > :global(.mantine-Menu-itemLabel) {
+  display: contents;
+}
+
+.flyoutItem > :global(.mantine-Menu-itemLabel) > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: calc(2 * var(--pf-stitch-weight, 1));
+  fill: transparent;
+}
+
+.fiMain {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fiLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fiMeta {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--app-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fiMeta[data-tone='error'] {
+  color: var(--pf-status-error);
+}
+
+.fiMeta[data-tone='warn'] {
+  color: var(--pf-status-warn);
+}
+
+.fiEnd {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--app-text-faint);
+}
+
+.fiHint {
+  font-size: 11px;
+  color: var(--app-text-faint);
+  letter-spacing: 0.02em;
+}
+
+.fiBadge {
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 650;
+  background: var(--app-panel-bg-soft);
+  color: var(--app-text-dim);
+}
+
+.fiBadge[data-tone='error'] {
+  background: color-mix(in srgb, var(--pf-status-error) 18%, transparent);
+  color: var(--pf-status-error);
+}
+
+.fiBadge[data-tone='warn'] {
+  background: color-mix(in srgb, var(--pf-status-warn) 20%, transparent);
+  color: var(--pf-status-warn);
+}
+
+.fiBadge[data-tone='accent'] {
+  background: var(--app-surface-info);
+  color: var(--app-accent);
+}
+
+.fiDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 7px;
+  background: var(--app-text-faint);
+}
+
+.fiDot[data-status='ok'] {
+  background: var(--pf-status-ok);
+}
+
+.fiDot[data-status='warn'] {
+  background: var(--pf-status-warn);
+}
+
+.fiDot[data-status='error'] {
+  background: var(--pf-status-error);
+}
+
+.fiDot[data-status='busy'] {
+  background: var(--app-accent);
+  animation: pfPulse 1.6s ease-in-out infinite;
+}
+
+/* Environment is never inferred from a name — `preview/142` and a deployment
+   someone called "prod-2" would both guess wrong. */
+.envChip {
+  flex: 0 0 auto;
+  font-style: normal;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: color-mix(in srgb, var(--pf-env) 20%, transparent);
+  color: var(--pf-env);
+}
+
+.envChip[data-env='prod'] {
+  --pf-env: var(--pf-status-error);
+}
+
+.envChip[data-env='staging'] {
+  --pf-env: var(--pf-status-warn);
+}
+
+.envChip[data-env='preview'] {
+  --pf-env: var(--app-accent);
+}
+
+.flyoutItem:hover,
+.flyoutItem[data-hovered] {
+  background: var(--pf-tile-hover);
+}
+
+.flyoutItem:hover .fiLabel,
+.flyoutItem[data-hovered] .fiLabel {
+  color: var(--app-text);
+}
+
+.flyoutItem[data-active='true'] {
+  background: var(--app-surface-info);
+}
+
+.flyoutItem[data-active='true'] .fiLabel,
+.flyoutItem[data-active='true'] svg {
+  color: var(--app-accent);
+}
+
+.flyoutItem[data-danger='true'] .fiLabel,
+.flyoutItem[data-danger='true'] svg {
+  color: var(--pf-status-error);
+}
+
+.flyoutItem:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: -2px;
+}
+
+.flyoutSep {
+  height: 1px;
+  background: var(--app-border);
+  margin: 5px 8px;
+  border: 0;
+}
+
+/* A menu that is waiting says so, rather than opening empty and filling in. */
+.fiSkeleton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  min-height: 38px;
+}
+
+.fiSkeleton i {
+  display: block;
+  height: 9px;
+  border-radius: 5px;
+  background: var(--app-panel-bg-soft);
+  animation: pfShimmer 1.2s ease-in-out infinite;
+}
+
+.fiSkeleton i:first-child {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  flex: 0 0 16px;
+}
+
+@keyframes pfShimmer {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fiEmpty {
+  padding: 8px 10px 10px;
+  font-size: 12px;
+  color: var(--app-text-faint);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock,
+  .tile,
+  .tile svg,
+  .mark,
+  .avatar,
+  .dockHint {
+    transition-duration: 1ms !important;
+  }
+
+  .tileBadge[data-kind='busy'],
+  .fiDot[data-status='busy'],
+  .fiSkeleton i {
+    animation-duration: 1ms !important;
+  }
+
+  .tile:hover svg,
+  .tile:hover .mark,
+  .tile:hover .avatar {
+    transform: none;
+  }
+}
