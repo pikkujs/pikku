@@ -23,11 +23,12 @@ export const serializeScenarioRegistration = (
 
   const lines: string[] = []
 
-  const registrars = [
-    ...(hasScenarios ? ['addWorkflow'] : []),
-    ...(hasFeatures ? ['addFeature'] : []),
-  ]
-  lines.push(`import { ${registrars.join(', ')} } from '@pikku/core/workflow'`)
+  if (hasScenarios) {
+    lines.push(`import { addWorkflow } from '@pikku/core/workflow'`)
+  }
+  if (hasFeatures) {
+    lines.push(`import { addFeature } from '@pikku/core/scenario'`)
+  }
   lines.push(`import '${metaImportPath}'`)
 
   const sortedScenarios = Array.from(scenarioFiles.entries()).sort((a, b) =>

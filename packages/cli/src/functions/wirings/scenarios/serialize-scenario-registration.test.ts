@@ -73,7 +73,7 @@ import { addFeature } from '@pikku/core/scenario'`
     )
     assert.match(
       output,
-      /^import \{ addFeature \} from '@pikku\/core\/workflow'/
+      /^import \{ addFeature \} from '@pikku\/core\/scenario'/
     )
   })
 
