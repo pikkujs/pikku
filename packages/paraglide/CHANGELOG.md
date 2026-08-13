@@ -1,5 +1,11 @@
 # @pikku/paraglide
 
+## 0.12.3
+
+### Patch Changes
+
+- fd9d834: Stop publishing internals that only their own package or file used. The declarations stay; only the entrypoint re-export is removed, so nothing that imported a name from where it is declared is affected.
+
 ## 0.12.2
 
 ### Patch Changes

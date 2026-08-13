@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy-azure",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Azure Functions deploy adapter for Pikku — generates entry points, host.json and the infra manifest",
   "type": "module",
   "main": "dist/index.js",

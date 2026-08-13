@@ -1,3 +1,83 @@
+## 0.12.58
+
+### Patch Changes
+
+- 3ad2131: Name models by what they are for, and switch them all in one place
+
+  A `models` table in pikku.config.json maps an alias to a provider-qualified
+  model, so a declaration can say `model: 'cheap'` and the project repoints every
+  use of that tier at once instead of editing each agent. A model containing `/`
+  is still concrete and used exactly as written, which is how an agent that needs
+  one specific model pins it — aliases are opt-in.
+
+  The table is baked into codegen rather than read at runtime, so it applies to
+  deployed units and not just local runs, and `pikku dev`/`pikku serve` take
+  `--model cheap:openai/gpt-5-nano` to repoint a tier for one run without editing
+  the config.
+
+  Because the inspector already holds every agent's model literal, a bare name
+  with no matching alias now fails the build (PKU146) naming the aliases that do
+  exist, rather than reaching a provider as an unknown model.
+
+  Aliases resolve for every modality, not just agents: image, speech,
+  transcription, embedding and reranking all reach a provider through the same
+  point in the Vercel runner.
+
+- b930dca: Remove the `secretBroker` escape hatch and scope addon secrets and credentials
+
+  `secretBroker` let three named console functions receive the real `SecretService`,
+  against the rule that a function never sees one. It is gone: the inspector allowlist,
+  the `FunctionRuntimeMeta` flag, the runner branches, and the `WiredSecretBrokerServices`
+  type. Console secret administration moved into the console addon, where a
+  `SecretAdminService` holds the `SecretService` and the functions hold none.
+
+  Addons are now scoped rather than trusted. The CLI emits each package's declared secret
+  keys, and the host wraps the `SecretService` in a `ScopedSecretService` and the
+  `CredentialService` in a new `ScopedCredentialService` before the addon's service factory
+  runs — so an addon reads only what it declared, cannot write secrets, and cannot enumerate
+  the app's users. `wireAddon({ globalSecrets, globalCredentials })` waives this, taking the
+  reason as its value; only the consuming app can grant it, and the deploy manifest reports
+  every grant under `unscopedSecretAddons` / `unscopedCredentialAddons`.
+
+- 8978fbd: feat(workflow): let an approval gate declare who may answer it
+
+  `workflow.approval()` gains `approvers` (`'any' | 'owner' | 'not-initiator'`)
+  and `approverScope`, so a gate can require four-eyes sign-off, restrict itself
+  to the run's initiator, or require the decider to hold a named scope.
+
+  Both are enforced when the workflow replays the gate — the same place, and for
+  the same reason, the decision payload is validated: the policy is a value on
+  the workflow, and a decision can be recorded before the run has ever reached
+  the gate. A decision that fails the policy is discarded and the gate stays
+  closed. Where the run has already published its policy, the check also runs at
+  submission time so the caller gets a 403 rather than silence.
+
+  An answer is now recorded where it can be answered for later. The settled
+  decision carries `decidedBy` and `decidedAt` in its `ApprovalOutcome`, so who
+  signed reaches `workflowStep.result` and `workflowStepHistory` rather than
+  living only in mutable run state. Every answer — accepted, refused at the door,
+  or cleared on replay — is also written to the audit sink as
+  `workflow.approval.decided`, which outlives the run: `deleteRun` cascades to
+  steps and history, and a refused attempt never reaches a step at all. Projects
+  with no audit service wired are unaffected.
+
+  **This loosens the default.** `approveStep` previously refused anyone but the
+  run's initiator, unconditionally. A gate that declares no `approvers` now
+  accepts a decision from anyone the approve entrypoint admits — restore the old
+  behaviour per-gate with `approvers: 'owner'`, or gate the approve route with
+  `auth`/`permissions`. Ownership still governs _reads_ of a run unchanged.
+
+- Updated dependencies [063f43a]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [d0307a8]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [3ad2131]
+- Updated dependencies [b930dca]
+- Updated dependencies [b95e77d]
+- Updated dependencies [fd9d834]
+- Updated dependencies [8978fbd]
+  - @pikku/core@0.12.82
+
 ## 0.12.57
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/lambda",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "description": "AWS Lambda runtime for Pikku — HTTP, WebSocket, SQS queue and scheduled handlers",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -28,7 +28,7 @@
     "@aws-sdk/client-apigatewaymanagementapi": "^3.713.0",
     "@aws-sdk/client-lambda": "^3.713.0",
     "@aws-sdk/client-sqs": "^3.713.0",
-    "@pikku/core": "^0.12.74",
+    "@pikku/core": "^0.12.82",
     "@types/aws-lambda": "^8.10.161"
   },
   "devDependencies": {
