@@ -1,3 +1,9 @@
 # The embedded skill manifest is one generated 500 KB object literal; formatting it
 # explodes it into tens of thousands of lines and makes every skill edit unreviewable.
 packages/skills/src/skills.gen.ts
+
+# The API report is generated and compared byte-for-byte by api-report.test.ts, so
+# formatting it puts prettier and the generator in a loop neither can win. It also
+# pads the summary tables to their widest cell, which turns one changed count into
+# a rewrite of all fifty rows — churn in the file the repo already fights over.
+packages/core/api-report.md
