@@ -14,6 +14,19 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  /**
+   * Hands this instance the whole `SecretService` instead of one scoped to the
+   * secrets it declared. The value is the reason, recorded in the deploy
+   * manifest — an addon that names secrets at runtime cannot be scoped, and
+   * only the consuming app, never the addon, can grant it.
+   */
+  globalSecrets?: string
+  /**
+   * Hands this instance the whole `CredentialService` instead of one narrowed
+   * to the credentials it declared. The value is the reason, recorded in the
+   * deploy manifest, and only the consuming app can grant it.
+   */
+  globalCredentials?: string
 }
 
 export const wireAddon = (config: WireAddonConfig): void => {
@@ -31,6 +44,10 @@ export const wireAddon = (config: WireAddonConfig): void => {
       : {}),
     ...(config.credentialOverrides
       ? { credentialOverrides: config.credentialOverrides }
+      : {}),
+    ...(config.globalSecrets ? { globalSecrets: config.globalSecrets } : {}),
+    ...(config.globalCredentials
+      ? { globalCredentials: config.globalCredentials }
       : {}),
   })
 }

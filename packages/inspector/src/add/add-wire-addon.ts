@@ -60,6 +60,8 @@ export function addWireAddon(
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
   let credentialOverrides: Record<string, string> | undefined
+  let globalSecrets: string | undefined
+  let globalCredentials: string | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -102,6 +104,16 @@ export function addWireAddon(
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
       credentialOverrides = parseStringRecord(prop.initializer)
+    } else if (key === 'globalSecrets') {
+      // The grant is real at runtime whatever the reason evaluates to, so a
+      // non-literal is recorded as its source text rather than dropped.
+      globalSecrets = ts.isStringLiteral(prop.initializer)
+        ? prop.initializer.text
+        : prop.initializer.getText()
+    } else if (key === 'globalCredentials') {
+      globalCredentials = ts.isStringLiteral(prop.initializer)
+        ? prop.initializer.text
+        : prop.initializer.getText()
     }
   }
 
@@ -118,6 +130,8 @@ export function addWireAddon(
     secretOverrides,
     variableOverrides,
     credentialOverrides,
+    globalSecrets,
+    globalCredentials,
   })
   state.rpc.usedAddons.add(name)
   state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)

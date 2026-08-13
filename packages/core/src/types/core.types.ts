@@ -188,8 +188,6 @@ export type FunctionRuntimeMeta = {
   audit?: {
     durability: AuditDurability
   }
-  /** Keeps the full `SecretService`. Set by the inspector, read by the runner. */
-  secretBroker?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string

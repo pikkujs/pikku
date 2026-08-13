@@ -445,6 +445,7 @@
     "PikkuCredentialWireService",
     "PikkuSessionService",
     "QueueWebhookService",
+    "ScopedCredentialService",
     "ScopedSecretService",
     "SecretHostNotAllowedError",
     "StubTracker",

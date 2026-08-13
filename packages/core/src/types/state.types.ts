@@ -102,6 +102,10 @@ export interface PikkuPackageState {
         variableOverrides?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project credential name */
         credentialOverrides?: Record<string, string>
+        /** Why this instance gets the whole `SecretService` rather than one scoped to its declared secrets */
+        globalSecrets?: string
+        /** Why this instance gets the whole `CredentialService` rather than one scoped to its declared credentials */
+        globalCredentials?: string
         /** Set by `wireRemoteAddon`: this namespace is consumed remotely over HTTP, not bundled */
         remote?: boolean
         /** Remote host base URL (wireRemoteAddon) — string or resolver over singleton services */
@@ -212,5 +216,9 @@ export interface PikkuPackageState {
       { name: string; displayName: string; type: string; oauth2?: boolean }
     > | null
     requiredParentServices: string[] | null
+    /** The secret keys this package is allowed to read, emitted by the CLI from
+     *  what the package declares and is seen to read. `null` when the package
+     *  was never analysed, which scopes it to nothing. */
+    declaredSecrets: string[] | null
   }
 }

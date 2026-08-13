@@ -177,8 +177,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const resolvedFunctionId = funcMeta.pikkuFuncId ?? funcName
 
-  const keepsSecrets = funcMeta.secretBroker === true
-
   const resolvedSingletonServices = packageName
     ? await getOrCreatePackageSingletonServices(
         packageName,
@@ -363,12 +361,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     await runPermissions({
       funcPermissions: funcConfig.permissions,
-      services: keepsSecrets
-        ? resolvedSingletonServices
-        : (withoutSecrets(
-            resolvedSingletonServices,
-            'a permission'
-          ) as CoreSingletonServices),
+      services: withoutSecrets(
+        resolvedSingletonServices,
+        'a permission'
+      ) as CoreSingletonServices,
       // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
       wire: invocationWire as PermissionWire,
       data: actualData,
@@ -420,7 +416,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         enumerable: true,
       })
       return await funcConfig.func(
-        keepsSecrets ? services : withoutSecrets(services, 'a pikku function'),
+        withoutSecrets(services, 'a pikku function'),
         actualData,
         invocationWire
       )

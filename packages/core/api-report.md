@@ -5,12 +5,12 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2567 observable things**: 822 exported names, plus
-1745 members on the classes and interfaces among them.
+**2576 observable things**: 823 exported names, plus
+1753 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 812 | 1745 |
+| stable | 48 | 813 | 1753 |
 | ecosystem | 2 | 10 | 0 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -18,7 +18,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 127 | 60 | 255 |
+| `./services` | 128 | 61 | 263 |
 | `.` | 206 | 87 | 124 |
 | `./workflow` | 108 | 46 | 147 |
 | `./virtual-user` | 34 | 34 | 115 |
@@ -682,7 +682,7 @@ export class PikkuMissingMetaError extends PikkuError {}
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -697,7 +697,7 @@ export interface PikkuPackageState {
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
-  package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory: | ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null }
+  package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory: | ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
 pikkuPermission: <In = any, Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Wire extends PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session"> = PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session">>(permission: CorePikkuPermission<In, Services, Wire> | CorePikkuPermissionConfig<In, Services, Wire>) => CorePikkuPermission<In, Services, Wire>
 pikkuPermissionFactory: <In = any>(factory: CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>) => CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>
@@ -1020,6 +1020,8 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  globalSecrets?: string
+  globalCredentials?: string
 }
 wireRemoteAddon: (config: WireRemoteAddonConfig) => void
 export type WireRemoteAddonConfig = {
@@ -3437,6 +3439,8 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  globalSecrets?: string
+  globalCredentials?: string
 }
 wireRemoteAddon: (config: WireRemoteAddonConfig) => void
 export type WireRemoteAddonConfig = {
@@ -5176,6 +5180,16 @@ export interface SchemaService {
   validateSchema: (schema: string, data: any) => Promise<void> | void
   getSchemaNames: () => Set<string>
   getSchemaKeys: (schemaName: string) => string[]
+}
+export class ScopedCredentialService implements CredentialService {
+  constructor(private credentials: CredentialService, private allowedNames: Set<string>)
+  async get<T = unknown>(name: string, userId?: string): Promise<T | null>
+  async set(name: string, value: unknown, userId?: string): Promise<void>
+  async delete(name: string, userId?: string): Promise<void>
+  async has(name: string, userId?: string): Promise<boolean>
+  async getAll(userId: string): Promise<Record<string, unknown>>
+  async getUsersWithCredential(name: string): Promise<string[]>
+  async getAllUsers(): Promise<string[]>
 }
 export class ScopedSecretService implements SecretService {
   constructor(private secrets: SecretService, private allowedKeys: Set<string>)

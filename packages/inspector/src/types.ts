@@ -588,6 +588,16 @@ export interface InspectorState {
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
         credentialOverrides?: Record<string, string>
+        /**
+         * The app's stated reason for handing this instance the whole
+         * `SecretService` instead of one scoped to its declared secrets.
+         */
+        globalSecrets?: string
+        /**
+         * The app's stated reason for handing this instance the whole
+         * `CredentialService` instead of one scoped to its declared credentials.
+         */
+        globalCredentials?: string
       }
     >
     wireAddonFiles: Set<string>

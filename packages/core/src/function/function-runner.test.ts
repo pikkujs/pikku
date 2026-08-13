@@ -14,6 +14,7 @@ import type { CorePermissionGroup } from './functions.types.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
 import { MissingScopeError, ReadonlySessionError } from '../errors/errors.js'
 import { createInvocationAudit } from '../services/audit-service.js'
+import { SecretAccessDeniedError } from '../services/secretless.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -1561,5 +1562,56 @@ describe('runPikkuFunc - scopes', () => {
       assert.equal(seen.data.page, 3)
       assert.equal(seen.data.limit, 50)
     })
+  })
+})
+
+describe('runPikkuFunc - secrets', () => {
+  const singletonServicesWithSecrets = {
+    ...mockSingletonServices,
+    secrets: { getSecret: async () => 'super-secret' },
+  } as any
+
+  const addSecretReadingFunction = (
+    funcName: string,
+    seen: { error?: unknown }
+  ) => {
+    addTestFunction(funcName, {
+      func: async (services: any) => {
+        try {
+          return services.secrets
+        } catch (error) {
+          seen.error = error
+          return 'denied'
+        }
+      },
+    })
+  }
+
+  const run = (funcName: string) =>
+    runPikkuFunc('rpc', Math.random().toString(), funcName, {
+      singletonServices: singletonServicesWithSecrets,
+      getAllServices: () => singletonServicesWithSecrets,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+  test('a function never receives the secrets service', async () => {
+    const seen: { error?: unknown } = {}
+    addSecretReadingFunction('readsSecrets', seen)
+
+    assert.equal(await run('readsSecrets'), 'denied')
+    assert.ok(seen.error instanceof SecretAccessDeniedError)
+  })
+
+  test('no metadata flag can restore the secrets service', async () => {
+    const seen: { error?: unknown } = {}
+    addSecretReadingFunction('claimsAnExemption', seen)
+    Object.assign(pikkuState(null, 'function', 'meta')['claimsAnExemption']!, {
+      secretBroker: true,
+    })
+
+    assert.equal(await run('claimsAnExemption'), 'denied')
+    assert.ok(seen.error instanceof SecretAccessDeniedError)
   })
 })

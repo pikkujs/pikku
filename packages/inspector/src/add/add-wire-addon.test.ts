@@ -61,7 +61,50 @@ describe('addWireAddon', () => {
       secretOverrides: undefined,
       variableOverrides: undefined,
       credentialOverrides: undefined,
+      globalSecrets: undefined,
+      globalCredentials: undefined,
     })
+  })
+
+  test('captures the reason an addon was exempted from credential scoping', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'console',
+        package: '@pikku/addon-console',
+        globalCredentials: 'links credentials an operator names at runtime',
+      })
+    `)
+
+    assert.equal(
+      declarations.get('console').globalCredentials,
+      'links credentials an operator names at runtime'
+    )
+  })
+
+  test('captures the reason an addon was exempted from secret scoping', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'console',
+        package: '@pikku/addon-console',
+        globalSecrets: 'administers secrets an operator names at runtime',
+      })
+    `)
+
+    assert.equal(
+      declarations.get('console').globalSecrets,
+      'administers secrets an operator names at runtime'
+    )
+  })
+
+  test('a globalSecrets reason that is not a literal still reports the grant', () => {
+    // Unlike `scopes`, dropping this would under-report: the grant is real at
+    // runtime whatever the reason evaluates to. The source text is recorded so
+    // the manifest names the addon and points at where the reason comes from.
+    const declarations = inspect(`
+      wireAddon({ name: 'console', package: '@x/y', globalSecrets: REASON })
+    `)
+
+    assert.equal(declarations.get('console').globalSecrets, 'REASON')
   })
 
   test('leaves the gates undefined when none are declared', () => {

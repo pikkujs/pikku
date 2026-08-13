@@ -565,6 +565,8 @@ export async function buildToolDefs(
                     variableOverrides: capturedAddonConfig?.variableOverrides,
                     credentialOverrides:
                       capturedAddonConfig?.credentialOverrides,
+                    globalSecrets: capturedAddonConfig?.globalSecrets,
+                    globalCredentials: capturedAddonConfig?.globalCredentials,
                   }
                 : undefined
               services = await getOrCreatePackageSingletonServices(

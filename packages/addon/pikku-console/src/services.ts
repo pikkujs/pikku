@@ -5,6 +5,7 @@ import type { CodeEditService } from './services/code-edit.service.js'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
 import { KnowledgeService } from './services/knowledge.service.js'
+import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 
 export const createSingletonServices = pikkuAddonServices(
@@ -12,6 +13,7 @@ export const createSingletonServices = pikkuAddonServices(
     _config,
     {
       variables,
+      secrets,
       metaService: existingMetaService,
       aiAgentRunner,
       schedulerService,
@@ -39,6 +41,7 @@ export const createSingletonServices = pikkuAddonServices(
       (await variables.get('FABRIC_API_URL')) ?? 'https://api.pikkufabric.com'
 
     const wiringService = new WiringService(metaService)
+    const secretAdminService = new SecretAdminService(secrets)
     const addonService = new AddonService(fabricApiUrl)
     await addonService.init()
 
@@ -69,6 +72,7 @@ export const createSingletonServices = pikkuAddonServices(
     return {
       metaService,
       wiringService,
+      secretAdminService,
       addonService,
       workflowService,
       workflowRunService,

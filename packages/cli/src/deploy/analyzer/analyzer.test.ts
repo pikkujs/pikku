@@ -221,6 +221,80 @@ describe('toSafeKebab', () => {
   })
 })
 
+/**
+ * A project wiring two instances of addon packages: one scoped to the secrets
+ * it declared, one handed the whole `SecretService` by the app.
+ */
+function stateWithWiredAddons(): InspectorState {
+  return {
+    functions: { meta: {} },
+    http: { meta: {} },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+    rpc: {
+      wireAddonDeclarations: new Map([
+        ['slack', { package: '@addon/slack' }],
+        [
+          'console',
+          {
+            package: '@pikku/addon-console',
+            globalSecrets: 'administers secrets an operator names at runtime',
+            globalCredentials: 'links credentials an operator names at runtime',
+          },
+        ],
+      ]),
+    },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - unscoped addon secrets', () => {
+  // An addon holding the whole SecretService is the one place the "an addon
+  // only reads what it declared" rule is waived, so a deployment has to be able
+  // to see it — and the app's stated reason — without reading source.
+  test('only an addon granted globalSecrets is reported, with its reason', () => {
+    const manifest = analyzeDeployment(stateWithWiredAddons(), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(manifest.unscopedSecretAddons, [
+      {
+        namespace: 'console',
+        package: '@pikku/addon-console',
+        reason: 'administers secrets an operator names at runtime',
+      },
+    ])
+  })
+
+  test('a credential exemption is reported separately from a secret one', () => {
+    const manifest = analyzeDeployment(stateWithWiredAddons(), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(manifest.unscopedCredentialAddons, [
+      {
+        namespace: 'console',
+        package: '@pikku/addon-console',
+        reason: 'links credentials an operator names at runtime',
+      },
+    ])
+  })
+
+  test('a project with no addons reports none', () => {
+    const manifest = analyzeDeployment(stateWithAgent('a', 'a'), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(manifest.unscopedSecretAddons, [])
+    assert.deepEqual(manifest.unscopedCredentialAddons, [])
+  })
+})
+
 describe('analyzeDeployment - agent identifier', () => {
   // Regression: the manifest agent `name` must be the registry KEY (export
   // name) — the identifier used by routes, addAIAgent(...), and the inspector

@@ -14,13 +14,6 @@ export const serializeConsoleFunctions = (
  */
 import { z } from 'zod'
 
-export const SecretRef = z.object({ secretId: z.string() })
-
-export const SetSecret = z.object({
-  secretId: z.string(),
-  value: z.unknown(),
-})
-
 export const VariableRef = z.object({ variableId: z.string() })
 
 export const SetVariable = z.object({
@@ -33,34 +26,16 @@ export const ValueResult = z.object({
   value: z.unknown().nullable(),
 })
 
-export const Exists = z.object({ exists: z.boolean() })
-
 export const Success = z.object({ success: z.boolean() })
 `
 
   const functions = `import { pikkuFunc, defineHTTPRoutes, wireHTTPRoutes, ref, wireAddon } from '${pathToPikkuTypes}'
 import {
-  SecretRef,
-  SetSecret,
   VariableRef,
   SetVariable,
   ValueResult,
-  Exists,
   Success,
 } from './console.schemas.gen.js'
-
-export const pikkuConsoleSetSecret = pikkuFunc({
-  secretBroker: true,
-  tags: ['pikku'],
-  description: 'Set the value of a secret',
-  expose: true,
-  input: SetSecret,
-  output: Success,
-  func: async ({ secrets }, { secretId, value }) => {
-    await secrets.setSecret(secretId, value)
-    return { success: true }
-  },
-})
 
 export const pikkuConsoleGetVariable = pikkuFunc({
   tags: ['pikku'],
@@ -99,36 +74,6 @@ export const pikkuConsoleSetVariable = pikkuFunc({
   },
 })
 
-export const pikkuConsoleHasSecret = pikkuFunc({
-  secretBroker: true,
-  tags: ['pikku'],
-  description: 'Check if a secret exists without reading its value',
-  expose: true,
-  input: SecretRef,
-  output: Exists,
-  func: async ({ secrets }, { secretId }) => {
-    const exists = await secrets.hasSecret(secretId)
-    return { exists }
-  },
-})
-
-export const pikkuConsoleGetSecret = pikkuFunc({
-  secretBroker: true,
-  tags: ['pikku'],
-  description: 'Get the current value of a secret',
-  expose: true,
-  input: SecretRef,
-  output: ValueResult,
-  func: async ({ secrets }, { secretId }) => {
-    const exists = await secrets.hasSecret(secretId)
-    if (!exists) {
-      return { exists: false, value: null }
-    }
-    const value = await secrets.getSecret(secretId)
-    return { exists: true, value: value.reveal() }
-  },
-})
-
 export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   tags: ['pikku'],
@@ -142,7 +87,15 @@ export const consoleRoutes = defineHTTPRoutes({
   },
 })
 
-wireAddon({ name: 'console', package: '@pikku/addon-console', scopes: ['admin'] })
+wireAddon({
+  name: 'console',
+  package: '@pikku/addon-console',
+  scopes: ['admin'],
+  globalSecrets:
+    'the console administers secrets an operator names at runtime, so no static declaration can cover them',
+  globalCredentials:
+    'the console lists and links credentials across every user, so it cannot be scoped to a declared set',
+})
 wireHTTPRoutes({ basePath: '${globalHTTPPrefix}', routes: { console: consoleRoutes } })
 `
 
