@@ -316,6 +316,13 @@ jobs:
         # Each package is also capped with `timeout`, because a package whose
         # test process never exits otherwise burns the whole job's 20 minutes
         # and every package sorted after it is never run at all.
+        #
+        # The cap is a hang detector, not a performance budget, so it sits well
+        # above the slowest suite rather than near it. packages/inspector runs
+        # 672 tests over real TypeScript programs — 141s plain, 338s under
+        # coverage instrumentation — and at 300s it began being killed on every
+        # branch at once. CI never runs on main, so a suite creeping past the
+        # cap first appears as every open PR going red together.
         env:
           NODE_OPTIONS: --enable-source-maps
         run: |
@@ -323,7 +330,7 @@ jobs:
           while IFS= read -r script; do
             dir=$(dirname "$script")
             echo "::group::coverage ${dir}"
-            (cd "$dir" && timeout --signal=KILL 300 bash run-tests.sh --coverage) || { status=$?; [ "$status" = 137 ] && echo "::error::unit tests timed out after 300s in ${dir}" || echo "::error::unit tests failed in ${dir}"; echo "$dir" >> unit-test-failures.txt; }
+            (cd "$dir" && timeout --signal=KILL 600 bash run-tests.sh --coverage) || { status=$?; [ "$status" = 137 ] && echo "::error::unit tests timed out after 600s in ${dir}" || echo "::error::unit tests failed in ${dir}"; echo "$dir" >> unit-test-failures.txt; }
             echo "::endgroup::"
           done < <(find packages -name run-tests.sh -not -path '*/node_modules/*' | sort)
       - name: Merge lcov reports and re-root paths to repo root
