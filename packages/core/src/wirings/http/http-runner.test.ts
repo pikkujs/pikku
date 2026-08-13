@@ -70,6 +70,11 @@ class TestResponse extends PikkuMockResponse {
     return this
   }
 
+  redirect(location: string, status: number = 302): this {
+    this.status(status)
+    return this.header('Location', location)
+  }
+
   setMode(mode: 'stream') {
     this.mode = mode
   }
@@ -363,6 +368,67 @@ describe('http-runner helpers', () => {
     await fetchData(request, response)
 
     assert.equal(response.statusCode, 204)
+  })
+
+  test('fetchData keeps a redirect status when the route returns undefined', async () => {
+    setRouteMeta('/redirect')
+    addFunction('pikku_func_name', {
+      func: async (_services: any, _data: any, { http }: any) => {
+        http?.response?.redirect('https://example.com/done', 302)
+      },
+    })
+    wireHTTP({
+      route: '/redirect',
+      method: 'get',
+      auth: false,
+      func: {
+        func: async (_services: any, _data: any, { http }: any) => {
+          http?.response?.redirect('https://example.com/done', 302)
+        },
+      },
+    })
+    httpRouter.initialize()
+
+    const request = new TestRequest('/redirect', 'get')
+    const response = new TestResponse()
+
+    await fetchData(request, response)
+
+    assert.equal(response.statusCode, 302)
+    assert.equal(
+      response.headersMap.get('Location'),
+      'https://example.com/done'
+    )
+  })
+
+  test('fetchData keeps a status the route set alongside a body', async () => {
+    setRouteMeta('/created')
+    addFunction('pikku_func_name', {
+      func: async (_services: any, _data: any, { http }: any) => {
+        http?.response?.status(201)
+        return { id: 'thing-1' }
+      },
+    })
+    wireHTTP({
+      route: '/created',
+      method: 'get',
+      auth: false,
+      func: {
+        func: async (_services: any, _data: any, { http }: any) => {
+          http?.response?.status(201)
+          return { id: 'thing-1' }
+        },
+      },
+    })
+    httpRouter.initialize()
+
+    const request = new TestRequest('/created', 'get')
+    const response = new TestResponse()
+
+    await fetchData(request, response)
+
+    assert.equal(response.statusCode, 201)
+    assert.deepEqual(response.jsonBody, { id: 'thing-1' })
   })
 
   test('fetchData writes binary responses when returnsJSON is false', async () => {

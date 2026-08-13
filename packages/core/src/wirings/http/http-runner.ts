@@ -283,6 +283,8 @@ const executeRoute = async (
     hasSessionChanged: () => userSession.sessionChanged,
   }
 
+  const statusBeforeRoute = http?.response?.statusCode
+
   try {
     result = await runPikkuFunc(
       'http',
@@ -323,14 +325,20 @@ const executeRoute = async (
   if (matchedRoute.route.sse) {
     http?.response?.flushHeaders?.()
   } else {
+    const statusSetByRoute = http?.response?.statusCode !== statusBeforeRoute
+
     if (result instanceof Response) {
       await applyWebResponse(http!.response!, result)
     } else if (result === undefined || result === null) {
-      http?.response?.status(204)
+      if (!statusSetByRoute) {
+        http?.response?.status(204)
+      }
     } else if (route.returnsJSON === false) {
       http?.response?.arrayBuffer(result)
     } else {
-      http?.response?.status(200)
+      if (!statusSetByRoute) {
+        http?.response?.status(200)
+      }
       http?.response?.json(result)
     }
   }
