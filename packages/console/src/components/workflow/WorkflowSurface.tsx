@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
-import { PanelProvider } from '../../context/PanelContext'
+import { ConsoleSurface } from '../console/ConsoleSurface'
 import { WorkflowProvider } from '../../context/WorkflowContext'
 import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
 import { CanvasDrawerProvider } from '../../context/DrawerContext'
@@ -82,7 +82,7 @@ export const WorkflowSurface: React.FC<WorkflowSurfaceProps> = ({
 
   return (
     <WorkflowSurfaceCtx.Provider value={value}>
-      <PanelProvider>
+      <ConsoleSurface>
         {readOnly ? (
           inner
         ) : (
@@ -94,7 +94,7 @@ export const WorkflowSurface: React.FC<WorkflowSurfaceProps> = ({
             {inner}
           </WorkflowRunProvider>
         )}
-      </PanelProvider>
+      </ConsoleSurface>
     </WorkflowSurfaceCtx.Provider>
   )
 }

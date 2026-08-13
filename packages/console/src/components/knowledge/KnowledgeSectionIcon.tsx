@@ -40,7 +40,7 @@ export const KnowledgeSectionIcon: React.FC<{
   size?: number
 }> = ({ section, size = 12 }) => {
   // The root of the bundle is the entry point, which is a book, not a folder.
-  if (!section) return <BookOpen size={size} color="var(--app-meta-label)" />
+  if (!section) return <BookOpen size={size} color="var(--app-text-dim)" />
   const segments = section.split('/')
   const Icon =
     segments
@@ -48,5 +48,5 @@ export const KnowledgeSectionIcon: React.FC<{
       .reverse()
       .map((segment) => SECTION_ICONS[segment])
       .find(Boolean) ?? FileText
-  return <Icon size={size} color="var(--app-meta-label)" />
+  return <Icon size={size} color="var(--app-text-dim)" />
 }

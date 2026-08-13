@@ -46,16 +46,28 @@ import {
   Shield,
   ScrollText,
   Webhook,
+  Play,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
+import {
+  consoleLogoInvert,
+  consoleLogoSrc,
+  consoleTitle,
+} from '../../lib/branding'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
+import { useSidebarMode } from '../../context/SidebarModeProvider'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
 
 export interface NavItem {
-  label: I18nNode
+  /** A string rather than a node: the dock reads a nav label into a tooltip, a
+   *  tile's `aria-label` and a flyout row's composed one, and an element cannot
+   *  be any of those. */
+  label: I18nString
   href: string
   icon: React.ComponentType<{ size?: number; color?: string }>
   matchPrefix: string
@@ -69,7 +81,12 @@ export interface NavSection {
    * rendered to the user. Falls back to the title for callers that predate it.
    */
   id?: string
-  title: I18nNode
+  title: I18nString
+  /** The section's own glyph, for surfaces that draw a section rather than list
+   *  it — the dock collapses each section to one tile. Falls back to the first
+   *  item's icon, which is a guess: two sections whose first items happen to
+   *  share a glyph become indistinguishable. */
+  icon?: React.ComponentType<{ size?: number; color?: string }>
   items: NavItem[]
 }
 
@@ -81,6 +98,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'run',
       title: m.nav_run(),
+      icon: Play,
       items: [
         {
           label: m.nav_functions(),
@@ -129,6 +147,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'data',
       title: m.nav_data(),
+      icon: Database,
       items: [
         {
           label: m.nav_database(),
@@ -171,6 +190,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'config',
       title: m.nav_config(),
+      icon: SlidersHorizontal,
       items: [
         {
           label: m.nav_secrets(),
@@ -204,6 +224,7 @@ export function useDefaultNavSections(): NavSection[] {
       // other is what let the two drift in the first place.
       id: 'people',
       title: m.nav_people(),
+      icon: Users,
       items: [
         {
           label: m.nav_personas(),
@@ -222,6 +243,7 @@ export function useDefaultNavSections(): NavSection[] {
     {
       id: 'auth',
       title: m.nav_auth(),
+      icon: Lock,
       items: [
         {
           label: m.nav_scopes(),
@@ -270,28 +292,20 @@ export interface SidebarBranding {
   homeHref: string
 }
 
-const consoleLogo = (
-  import.meta.env.VITE_CONSOLE_LOGO || 'pikku-console-logo.png'
-).replace(/^\//, '')
-
 const DEFAULT_BRANDING: SidebarBranding = {
   logo: (
     <img
-      src={import.meta.env.BASE_URL + consoleLogo}
-      alt={import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'}
+      src={consoleLogoSrc}
+      alt={consoleTitle}
       width={28}
       height={28}
       style={
-        import.meta.env.VITE_CONSOLE_LOGO_INVERT === 'true'
-          ? { filter: 'brightness(0) invert(1)' }
-          : undefined
+        consoleLogoInvert ? { filter: 'brightness(0) invert(1)' } : undefined
       }
     />
   ),
-  title: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'),
-  tooltipLabel: asI18n(
-    import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'
-  ),
+  title: asI18n(consoleTitle),
+  tooltipLabel: asI18n(consoleTitle),
   homeHref: '/',
 }
 
@@ -320,10 +334,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const theme = useMantineTheme()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()
-  const [collapsed, setCollapsed] = useLocalStorage({
+  const sheet = useSidebarMode() === 'sheet'
+  const [railCollapsed, setCollapsed] = useLocalStorage({
     key: 'sidebar-collapsed',
     defaultValue: false,
   })
+  // A 60px icon rail inside a bottom sheet is pointless, and the stored desktop
+  // preference must not follow the rail into a frame that has no room for it.
+  const collapsed = sheet ? false : railCollapsed
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
   const canImpersonate = auth?.can('admin:impersonate') ?? false
@@ -349,21 +367,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (routeSectionKey) setOpenedSection(routeSectionKey)
   }, [routeSectionKey])
 
+  // In a sheet the Drawer already owns the frame — position, width, surface and
+  // dismissal — so the rail only fills it. Restating any of that here is how a
+  // rail ends up floating over the sheet that is meant to contain it.
   return (
     <Box
-      pos="fixed"
-      left={0}
-      top={0}
-      w={sidebarWidth}
-      h="100vh"
-      className={css.railCollapseTransition}
+      pos={sheet ? undefined : 'fixed'}
+      left={sheet ? undefined : 0}
+      top={sheet ? undefined : 0}
+      w={sheet ? '100%' : sidebarWidth}
+      h={sheet ? undefined : '100vh'}
+      className={sheet ? undefined : css.railCollapseTransition}
       style={{
-        borderRight: `1px solid var(--app-rail-border)`,
-        backgroundColor: `var(--app-rail-bg)`,
+        borderRight: sheet ? undefined : `1px solid var(--app-border)`,
+        backgroundColor: sheet ? undefined : `var(--app-panel-bg-raised)`,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        zIndex: 100,
+        zIndex: sheet ? undefined : 100,
       }}
     >
       <Box
@@ -421,9 +442,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const key = sectionKey(section)
           const isRouteSection = !!section.title && key === routeSectionKey
           const sectionOpen =
-            collapsed ||
-            !section.title ||
-            key === openedSection
+            collapsed || !section.title || key === openedSection
           return (
             <Box key={sectionIndex}>
               {sectionIndex > 0 && <Divider my={4} mx="sm" />}
@@ -487,7 +506,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               justifyContent: 'center',
                               padding: '8px 0',
                               background: active
-                                ? 'var(--app-accent-soft)'
+                                ? 'var(--app-surface-accent)'
                                 : undefined,
                             }}
                             styles={{
@@ -521,9 +540,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           fontSize: 13,
                           // 2px accent bar is the primary "you are here" cue; the
                           // soft tint + accent label reinforce it.
-                          borderLeft: `2px solid ${active ? 'var(--app-accent-bar)' : 'transparent'}`,
+                          borderLeft: `2px solid ${active ? 'var(--app-accent-strong)' : 'transparent'}`,
                           background: active
-                            ? 'var(--app-accent-soft)'
+                            ? 'var(--app-surface-accent)'
                             : undefined,
                         }}
                         styles={{
@@ -644,45 +663,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Collapse control — mirrors the Fabric rail: a subtle rotating chevron
           pinned as the very last element, on its own footer below a divider,
-          distinct from the utility actions above. */}
-      <Box className={css.noShrink}>
-        <Divider mx="sm" />
-        <Box px={6} py={4}>
-          <Tooltip
-            label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
-            position="right"
-            disabled={!collapsed}
-          >
-            <UnstyledButton
-              onClick={() => setCollapsed(!collapsed)}
-              px={collapsed ? 0 : 10}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                gap: 10,
-                width: '100%',
-                height: 32,
-                borderRadius: 6,
-                color: 'var(--mantine-color-dimmed)',
-              }}
+          distinct from the utility actions above. A sheet is dismissed by its
+          own tab, and collapsing it would leave an icon rail floating in a
+          289px-wide surface, so the control is not offered there. */}
+      {!sheet && (
+        <Box className={css.noShrink}>
+          <Divider mx="sm" />
+          <Box px={6} py={4}>
+            <Tooltip
+              label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
+              position="right"
+              disabled={!collapsed}
             >
-              <ChevronLeft
-                size={16}
+              <UnstyledButton
+                onClick={() => setCollapsed(!collapsed)}
+                px={collapsed ? 0 : 10}
                 style={{
-                  transform: collapsed ? 'rotate(180deg)' : undefined,
-                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: 10,
+                  width: '100%',
+                  height: 32,
+                  borderRadius: 6,
+                  color: 'var(--mantine-color-dimmed)',
                 }}
-              />
-              {!collapsed && (
-                <Text size="sm" fw={500} style={{ fontSize: 12.5 }}>
-                  {m.sidebar_collapse()}
-                </Text>
-              )}
-            </UnstyledButton>
-          </Tooltip>
+              >
+                <ChevronLeft
+                  size={16}
+                  style={{
+                    transform: collapsed ? 'rotate(180deg)' : undefined,
+                    flexShrink: 0,
+                  }}
+                />
+                {!collapsed && (
+                  <Text size="sm" fw={500} style={{ fontSize: 12.5 }}>
+                    {m.sidebar_collapse()}
+                  </Text>
+                )}
+              </UnstyledButton>
+            </Tooltip>
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {canImpersonate && (
         <ImpersonateDrawer

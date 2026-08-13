@@ -29,7 +29,7 @@ export const MetaRow: React.FC<MetaRowProps> = ({
     <Text
       size="sm"
       ff="monospace"
-      c="var(--app-meta-label)"
+      c="var(--app-text-dim)"
       className={classes.metaRowLabel}
       style={{ minWidth: labelWidth }}
     >

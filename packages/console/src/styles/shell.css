@@ -1,0 +1,55 @@
+/* The shell's geometry, defined once.
+ *
+ * Sizes rather than colours: the colour contract is @pikku/mantine/theme, and
+ * its test treats an `--app-*` declared in a consuming stylesheet as defined for
+ * exactly this case.
+ *
+ * A plain stylesheet the app IMPORTS, not a module reached through `composes:`.
+ * These tokens have to exist for anything the shell draws — the tab bar sizes
+ * itself from --mobile-tabbar-foot, the layout reserves the same value — so
+ * their delivery cannot depend on which card happened to be composed first. An
+ * undefined custom property makes the whole `calc()` around it invalid, which
+ * shows up as an unstyled bar rather than an error.
+ */
+:root {
+  /* Card geometry. Every floating card on the canvas — the page card, the
+     collapsible panel expanded, and its collapsed slim rail — is the SAME card,
+     so its radius and the gutter between cards are set once rather than
+     restated per module. The gutter is what makes two neighbouring cards read
+     as one 8px seam: each card pads/margins by half-and-half, and the end-edge
+     panel subtracts it when reserving inset so the overlap doesn't double up. */
+  --app-card-radius: 12px;
+  --app-card-gutter: 8px;
+
+  /* Every header row on screen — the page card's ShellHeader bar, a panel's
+     header band, a nav head — sits at this height so they share one baseline
+     across the seam between cards. It MUST equal ShellHeader's own `h`; anything
+     else leaves a panel head a couple of px off the page header. */
+  --screen-header-height: 50px;
+
+  /* The display cutout / home-indicator insets, named once. `env()` only reports
+     a non-zero value when the document opts in with `viewport-fit=cover` (see
+     index.html), and it reads 0 in every desktop browser, so a layout may use
+     them unconditionally. Installed standalone there is no browser chrome to
+     absorb the cutout, which is why the shell pads by them rather than trusting
+     the platform. Anything sitting flush to the foot of the window — the nav
+     dock's trigger line, the mobile tab bar — adds --safe-bottom to its own
+     height, or its last few pixels are unhittable. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* The phone's bottom tab bar. Layouts reserve the FOOT — the bar plus the
+     inset it grows by — rather than the bar's own height, which left the last
+     row of every page under the home indicator. */
+  --mobile-tabbar-height: 56px;
+  --mobile-tabbar-foot: calc(var(--mobile-tabbar-height) + var(--safe-bottom));
+
+  /* Collapsed-panel widths. The flat rail carries an expand button plus a glyph;
+     the floating slim rail is just the grab strip, so it can be much thinner
+     — unless it has to hold a real button (CollapsiblePanel's `topAction`). */
+  --panel-rail-width: 44px;
+  --panel-slim-rail-width: 26px;
+  --panel-slim-rail-width-wide: 40px;
+}

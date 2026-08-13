@@ -61,14 +61,14 @@ const PropertyRow: React.FC<{
           <Box style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {isExpandable ? (
               expanded ? (
-                <ChevronDown size={12} color="var(--app-meta-label)" />
+                <ChevronDown size={12} color="var(--app-text-dim)" />
               ) : (
-                <ChevronRight size={12} color="var(--app-meta-label)" />
+                <ChevronRight size={12} color="var(--app-text-dim)" />
               )
             ) : (
               <Box w={12} />
             )}
-            <Text size="sm" ff="monospace" fw={500} c="var(--app-meta-value)">
+            <Text size="sm" ff="monospace" fw={500} c="var(--app-text)">
               {asI18n(name)}
               {required && (
                 <Text component="span" c="yellow" fw={700}>
@@ -85,7 +85,7 @@ const PropertyRow: React.FC<{
         </Table.Td>
         <Table.Td>
           {notes && (
-            <Text size="sm" c="var(--app-meta-label)">
+            <Text size="sm" c="var(--app-text-dim)">
               {asI18n(notes)}
             </Text>
           )}
@@ -169,16 +169,16 @@ export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
           tableLayout: 'fixed',
         },
         th: {
-          color: 'var(--app-section-label)',
+          color: 'var(--app-text-dim)',
           fontFamily: 'var(--mantine-font-family-monospace)',
           fontSize: 9,
           fontWeight: 600,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
-          borderBottom: '1px solid var(--app-row-border)',
+          borderBottom: '1px solid var(--app-border)',
         },
         td: {
-          borderBottom: '1px solid var(--app-row-border)',
+          borderBottom: '1px solid var(--app-border)',
         },
       }}
     >

@@ -6022,6 +6022,8 @@ __metadata:
     "@pikku/cli": "npm:^0.12.102"
     "@pikku/core": "npm:^0.12.82"
     "@pikku/fetch": "npm:^0.12.9"
+    "@pikku/mantine": "npm:^0.12.8"
+    "@pikku/react": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.2"
     "@rjsf/core": "npm:^6.3.1"
     "@rjsf/mantine": "npm:^6.3.1"
@@ -6422,7 +6424,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/mantine@workspace:packages/frontend/mantine":
+"@pikku/mantine@npm:^0.12.8, @pikku/mantine@workspace:packages/frontend/mantine":
   version: 0.0.0-use.local
   resolution: "@pikku/mantine@workspace:packages/frontend/mantine"
   dependencies:
@@ -6614,7 +6616,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/react@workspace:*, @pikku/react@workspace:^, @pikku/react@workspace:packages/frontend/react":
+"@pikku/react@npm:^0.12.5, @pikku/react@workspace:*, @pikku/react@workspace:^, @pikku/react@workspace:packages/frontend/react":
   version: 0.0.0-use.local
   resolution: "@pikku/react@workspace:packages/frontend/react"
   dependencies:

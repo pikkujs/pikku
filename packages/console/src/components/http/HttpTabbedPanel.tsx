@@ -87,7 +87,7 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
                 size="sm"
                 fw={600}
                 ff="monospace"
-                c="var(--app-meta-value)"
+                c="var(--app-text)"
                 className={classes.clickableText}
                 onClick={() =>
                   navigateInPanel('function', funcId, displayName, funcMeta)

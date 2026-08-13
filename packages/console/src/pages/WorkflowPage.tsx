@@ -6,7 +6,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useSearchParams } from '../router'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
-import { PanelProvider } from '../context/PanelContext'
+import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { WorkflowListPanel } from '../components/workflow/WorkflowListPanel'
@@ -56,7 +56,7 @@ const WorkflowPageInner: React.FC<{
   }
 
   return (
-    <PanelProvider>
+    <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
         header={
@@ -88,7 +88,7 @@ const WorkflowPageInner: React.FC<{
           metricSlot={metricSlot}
         />
       </ResizablePanelLayout>
-    </PanelProvider>
+    </ConsoleSurface>
   )
 }
 

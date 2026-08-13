@@ -6,7 +6,12 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
 import { createPanelChildren } from './PanelFactory'
-import { SidePanel, SidePanelContent, SidePanelHeader } from './SidePanel'
+import {
+  PanelChrome,
+  SidePanel,
+  SidePanelContent,
+  SidePanelHeader,
+} from './SidePanel'
 
 interface PanelContainerProps {
   emptyMessage?: I18nNode
@@ -52,29 +57,29 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
   }
 
   return (
-    <Box style={{ height: '100%' }}>
-      {children.map((child) =>
-        child.selfContained ? (
-          <Box key={child.id} style={{ height: '100%' }}>
-            {child.content}
-          </Box>
-        ) : (
-          <SidePanel key={child.id}>
-            {!(hideRootTitle && activePanelData.history.length === 0) && (
+    <PanelChrome hideRootTitle={hideRootTitle} hideClose={hideClose}>
+      <Box style={{ height: '100%' }}>
+        {children.map((child) =>
+          child.selfContained ? (
+            <Box key={child.id} style={{ height: '100%' }}>
+              {child.content}
+            </Box>
+          ) : (
+            <SidePanel key={child.id}>
               <SidePanelHeader
                 title={asI18n(activePanelData.title)}
                 onBack={activePanelData.history.length > 0 ? goBack : undefined}
-                onClose={hideClose ? undefined : () => closePanel(activePanel!)}
+                onClose={() => closePanel(activePanel!)}
               />
-            )}
-            <SidePanelContent>
-              <Stack gap="xl" px="md">
-                {child.content}
-              </Stack>
-            </SidePanelContent>
-          </SidePanel>
-        )
-      )}
-    </Box>
+              <SidePanelContent>
+                <Stack gap="xl" px="md">
+                  {child.content}
+                </Stack>
+              </SidePanelContent>
+            </SidePanel>
+          )
+        )}
+      </Box>
+    </PanelChrome>
   )
 }

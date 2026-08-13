@@ -23,7 +23,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     {(label || count != null) && (
       <Group justify="space-between" mb={6}>
         {label && (
-          <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-label)">
+          <Text size="sm" fw={600} ff="monospace" c="var(--app-text-dim)">
             {label}
           </Text>
         )}

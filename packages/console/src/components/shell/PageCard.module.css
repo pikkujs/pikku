@@ -1,0 +1,130 @@
+/* The general page shape: no fixed header anywhere. A page is ONE floating card
+   on the app canvas — the ShellHeader bar as a top band, the page body below it
+   inside the same card. Navigating between pages only swaps what's inside the
+   card, so the shell feels like one fluid screen rather than page loads. */
+.pageStack {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--app-card-gutter);
+}
+
+.card {
+  composes: cardChrome from './card.module.css';
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* A page that cards itself can end up INSIDE the card its shell already put it
+   in. Flatten the inner one so it reads as that card's content instead of a
+   second card with its own gutter, shadow and radius. */
+.card .pageStack {
+  padding: 0;
+}
+
+.card .card {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* On a phone the page card IS the screen. A card implies something beside or
+   behind it, and on a phone there is nothing — the rail and the panel are both
+   sheets — so the gutter, radius, border and shadow only inset the one thing on
+   screen and cost it 16px of a 390px viewport. Full-bleed below the phone
+   breakpoint, which is MOBILE_QUERY in lib/breakpoints.ts (CSS cannot import the
+   constant; the two must be changed together). */
+@media (max-width: 48em) {
+  .pageStack {
+    padding: 0;
+  }
+
+  .card {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Header band: content-height, divided from the body by a hairline. */
+.headerBand {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--app-border);
+  /* ShellHeader's hidden measurement row is `position: absolute; top: -99999px`
+     at its NATURAL width (~480px) with nothing clipping it, so on a phone every
+     page using this band was pushed into horizontal document scroll by a row the
+     user can't even see. Own its containing block and clip it — an off-screen
+     clipped box still measures, which is all that row is for. */
+  position: relative;
+  overflow: hidden;
+}
+
+/* ShellHeader renders its title/subtitle stack `nowrap` with an inline
+   `flex-shrink: 0`, so a title longer than the card at 390px pushed the whole
+   DOCUMENT into horizontal scroll. Let that one stack shrink and ellipsize
+   instead — the child chain is spelled out so this never reaches a Stack inside
+   a caller's `actions` node. */
+.headerBand
+  > :global(.mantine-Paper-root)
+  > :global(.mantine-Group-root)
+  > :global(.mantine-Stack-root) {
+  min-width: 0;
+  flex-shrink: 1 !important;
+}
+
+.headerBand
+  > :global(.mantine-Paper-root)
+  > :global(.mantine-Group-root)
+  > :global(.mantine-Stack-root)
+  > :global(.mantine-Text-root) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Optional band between header and body. */
+.extraBand {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--app-border);
+}
+
+/* Panel header: ShellHeader's page gutter (spacing-xl, 32px) is too wide for a
+   side panel, whose body sits on an 18px gutter — the title and the close X
+   would float away from the content under them. Pull the bar onto the panel's
+   gutter instead (the end inset is smaller because the close ActionIcon carries
+   its own icon padding). Inline style props, hence !important. */
+.panelHeader :global(.mantine-Paper-root) {
+  padding-inline: 18px 9px !important;
+}
+
+/* Body: takes the rest and scrolls its own content. The card is height-bound to
+   the viewport and clips (`overflow: hidden`), so without a scroller here any
+   page taller than the card was simply cut off with no way to reach the rest.
+   Pages that manage their own scrolling fill this box exactly and never trip
+   it. */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* PageContainer sizes its body with an inline `flex: 1` plus `min-height: 0` —
+   flex-basis 0 with the automatic min-content floor removed — so inside this
+   scroller the box is clamped to the VIEWPORT height and taller content spills
+   out of it. Its own `padding-bottom` (--console-body-gutter) then paints one
+   viewport down from the top of the scroll rather than after the content, so any
+   page long enough to scroll ends flush against the card's bottom edge.
+   Restoring the automatic minimum gives a long page its real height and its
+   closing gutter back, and costs the short ones nothing: `flex-grow` still fills
+   the box, and a child that scrolls itself has an automatic minimum of zero.
+   Inline style, hence !important. */
+.body > * {
+  min-height: auto !important;
+}

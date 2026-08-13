@@ -21,7 +21,7 @@ export const ValText: React.FC<ValTextProps> = ({
       <Text
         size="sm"
         ff="monospace"
-        c={value ? '#86efac' : 'var(--app-text-muted)'}
+        c={value ? '#86efac' : 'var(--app-text-dim)'}
       >
         {asI18n(String(value))}
       </Text>
@@ -32,7 +32,7 @@ export const ValText: React.FC<ValTextProps> = ({
     <Text
       size="sm"
       ff="monospace"
-      c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}
+      c={isDim ? 'var(--app-text-dim)' : 'var(--app-text)'}
     >
       {asI18n(display)}
     </Text>

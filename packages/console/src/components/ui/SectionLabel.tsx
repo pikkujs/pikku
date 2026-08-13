@@ -12,7 +12,7 @@ export const SectionLabel: React.FC<SectionLabelProps> = ({ children }) => (
     size="sm"
     fw={600}
     ff="monospace"
-    c="var(--app-section-label)"
+    c="var(--app-text-dim)"
     tt="uppercase"
     className={classes.sectionLabel}
   >

@@ -64,7 +64,7 @@ const FunctionValue: React.FC<{ pikkuFuncId: string }> = ({ pikkuFuncId }) => {
       size="sm"
       fw={600}
       ff="monospace"
-      c="var(--app-meta-value)"
+      c="var(--app-text)"
       className={classes.clickableText}
       onClick={() =>
         navigateInPanel('function', pikkuFuncId, displayName, funcMeta)
@@ -93,7 +93,7 @@ const WiredToSection: React.FC<{ functionName: string }> = ({
         <Table.Thead>
           <Table.Tr>
             <Table.Th
-              c="var(--app-section-label)"
+              c="var(--app-text-dim)"
               fw={500}
               fz="xs"
               ff="monospace"
@@ -101,7 +101,7 @@ const WiredToSection: React.FC<{ functionName: string }> = ({
               Name
             </Table.Th>
             <Table.Th
-              c="var(--app-section-label)"
+              c="var(--app-text-dim)"
               fw={500}
               fz="xs"
               ff="monospace"

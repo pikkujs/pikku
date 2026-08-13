@@ -13,6 +13,7 @@ import { useLocale } from '@/i18n/config'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
+import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
 import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
 import classes from '../ui/console.module.css'
 
@@ -70,10 +71,10 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
 
   const hasLeft = !!runsPanel && runsPanelVisible
   /**
-   * The details pane is this layout's own copy of `PanelContainer`, driven by
-   * the same panel context a host reads. A host that draws the chrome mounts
-   * that container itself (an end-edge panel, a sheet), so keeping the column
-   * would render the open panel twice at once.
+   * The details pane is this layout's own copy of `PanelContainer`, a third
+   * column in the page card. Under a host's chrome the same selection opens in
+   * the end-edge panel instead — a card of its own beside the page — so keeping
+   * the column would render the open panel twice at once.
    */
   const hasRight =
     ownsChrome &&
@@ -150,7 +151,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                borderBottom: '1px solid var(--app-row-border)',
+                borderBottom: '1px solid var(--app-border)',
               }}
             >
               <Box
@@ -171,6 +172,13 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
             {children}
           </Box>
         </Box>
+
+        {!ownsChrome && !hidePanel && (
+          <ConsoleDetailPanel
+            emptyMessage={emptyPanelMessage}
+            workflowGraph={false}
+          />
+        )}
 
         {hasRight && (
           <Box

@@ -4,6 +4,7 @@ import type { I18nNode } from '@pikku/react'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
+import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
 import classes from '../ui/console.module.css'
 
 const PANEL_WIDTH = 450
@@ -26,8 +27,9 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   hidePanel = false,
 }) => {
   const { panels } = usePanelContext()
-  // An embedded host renders the detail panel as its own card beside the page,
-  // so the inner column here would be a second panel for the same selection.
+  // Under a host's chrome the selection opens in the end-edge panel instead of
+  // a column welded into the list — same context, same content, a card of its
+  // own beside the page rather than inside it.
   const ownsChrome = useConsoleChrome() === 'self'
   const rightOpen = ownsChrome && !hidePanel && panels.size > 0
 
@@ -67,6 +69,9 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
           >
             {children}
           </Box>
+          {!ownsChrome && !hidePanel && (
+            <ConsoleDetailPanel emptyMessage={emptyPanelMessage} />
+          )}
           {ownsChrome && !hidePanel && (
             <Box
               style={{

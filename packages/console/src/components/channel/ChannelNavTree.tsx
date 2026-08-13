@@ -81,9 +81,9 @@ const ChannelTree: React.FC<{
           gap: 6,
           padding: '7px 12px',
           fontSize: 11,
-          color: isActive ? 'var(--app-meta-value)' : 'var(--app-text)',
+          color: isActive ? 'var(--app-text)' : 'var(--app-text)',
           borderLeft: isActive
-            ? '2px solid var(--app-accent-bar)'
+            ? '2px solid var(--app-accent-strong)'
             : '2px solid transparent',
           width: '100%',
           opacity: isActive ? 1 : 0.6,
@@ -91,9 +91,9 @@ const ChannelTree: React.FC<{
         }}
       >
         {isExpanded ? (
-          <ChevronDown size={9} color="var(--app-section-label)" />
+          <ChevronDown size={9} color="var(--app-text-dim)" />
         ) : (
-          <ChevronRight size={9} color="var(--app-section-label)" />
+          <ChevronRight size={9} color="var(--app-text-dim)" />
         )}
         <Text size="sm" ff="monospace" className={styles.flexGrow}>
           {asI18n(name)}
@@ -121,14 +121,14 @@ const ChannelTree: React.FC<{
                   padding: '5px 12px 5px 22px',
                   fontSize: 11,
                   color: active
-                    ? 'var(--app-meta-value)'
+                    ? 'var(--app-text)'
                     : exists
                       ? 'var(--app-text)'
-                      : 'var(--app-text-muted)',
+                      : 'var(--app-text-dim)',
                   borderLeft: active
-                    ? '2px solid var(--app-accent-bar)'
+                    ? '2px solid var(--app-accent-strong)'
                     : '2px solid transparent',
-                  background: active ? 'var(--app-accent-soft)' : undefined,
+                  background: active ? 'var(--app-surface-accent)' : undefined,
                   width: '100%',
                   cursor: exists ? 'pointer' : 'default',
                   transition: 'all 0.15s',
@@ -175,7 +175,7 @@ const ChannelTree: React.FC<{
                   ) : (
                     <ChevronRight size={8} />
                   )}
-                  <Text size="sm" ff="monospace" c="var(--app-meta-label)">
+                  <Text size="sm" ff="monospace" c="var(--app-text-dim)">
                     {asI18n(category)}
                   </Text>
                   <Badge
@@ -185,7 +185,7 @@ const ChannelTree: React.FC<{
                     style={{
                       background: 'var(--mantine-color-default)',
                       border: '0.5px solid transparent',
-                      color: 'var(--app-text-muted)',
+                      color: 'var(--app-text-dim)',
                     }}
                   >
                     {asI18n('routing')}
@@ -209,10 +209,10 @@ const ChannelTree: React.FC<{
                           gap: 7,
                           padding: '5px 12px 5px 32px',
                           borderLeft: active
-                            ? '2px solid var(--app-accent-bar)'
+                            ? '2px solid var(--app-accent-strong)'
                             : '2px solid transparent',
                           background: active
-                            ? 'var(--app-accent-soft)'
+                            ? 'var(--app-surface-accent)'
                             : undefined,
                           width: '100%',
                           cursor: 'pointer',
@@ -226,7 +226,7 @@ const ChannelTree: React.FC<{
                             fw={active ? 600 : 400}
                             c={
                               active
-                                ? 'var(--app-meta-value)'
+                                ? 'var(--app-text)'
                                 : 'var(--app-text)'
                             }
                             truncate
@@ -238,8 +238,8 @@ const ChannelTree: React.FC<{
                             ff="monospace"
                             c={
                               active
-                                ? 'var(--app-meta-label)'
-                                : 'var(--app-text-muted)'
+                                ? 'var(--app-text-dim)'
+                                : 'var(--app-text-dim)'
                             }
                             truncate
                             style={{ fontSize: 11 }}

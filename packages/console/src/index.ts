@@ -31,14 +31,76 @@ export { ConnectionScreen } from './components/layout/ConnectionScreen'
 export {
   PageContainer,
   PageHeader,
+  PanelCard,
+  StatePage,
+  ViewportStatePage,
   ListPageHeader,
   PageHeaderControls,
   PageToolbar,
   PageActionBar,
   PageRow,
 } from './components/layout/PageLayout'
+export {
+  MOBILE_QUERY,
+  COMPACT_QUERY,
+  usePhone,
+  useCompact,
+} from './lib/breakpoints'
 
-// Sidebar
+// Shell — the end-edge panel system. A secondary surface is a sibling card, not
+// a column inside the page card and never a drawer: ConsolePanel pins itself to
+// the content area's end edge and the page card shrinks to make room.
+export { ContentArea } from './components/shell/ContentArea'
+export { ConsolePanel } from './components/shell/ConsolePanel'
+export type { ConsolePanelWidth } from './components/shell/ConsolePanel'
+export { CollapsiblePanel } from './components/shell/CollapsiblePanel'
+export { PanelHeaderBand } from './components/shell/PanelHeaderBand'
+export { PanelInsetProvider, usePanelInset } from './context/PanelInsetProvider'
+export {
+  ConsoleScreen,
+  ConsolePanelHost,
+  ConsoleScreenCard,
+} from './components/shell/ConsoleScreen'
+export { ConsoleDetailPanel } from './components/shell/ConsoleDetailPanel'
+
+// Nav dock — the console's navigation. `NavDock` is presentational: it draws the
+// zones it is handed, so an embedding app builds its own model from its routes
+// and gets the same row. `ConsoleNavDock` is the console's own model.
+export { NavDock } from './components/nav-dock/NavDock'
+export type { NavDockProps } from './components/nav-dock/NavDock'
+export { ConsoleNavDock } from './components/nav-dock/ConsoleNavDock'
+export { DockFlyout } from './components/nav-dock/DockFlyout'
+export { isSep } from './components/nav-dock/model'
+export type {
+  DockBadge,
+  DockEntry,
+  DockEnv,
+  DockMenu,
+  DockTile,
+  FlyoutRow,
+  FlyoutSection,
+  IconComponent,
+} from './components/nav-dock/model'
+
+// Phone — one gesture for every surface the bottom bar opens. Below the phone
+// breakpoint a second column cannot exist, so a side panel becomes a MobileSheet
+// raised from MobileTabBar rather than a squeezed or hidden column.
+export { MobileSheet, closeMobileSheets } from './components/shell/MobileSheet'
+export { MobileTabBar } from './components/shell/MobileTabBar'
+export type { MobileTab } from './components/shell/MobileTabBar'
+export { PageOptionsPortal } from './components/shell/PageOptionsPortal'
+export {
+  PageOptionsProvider,
+  usePageOptions,
+} from './context/PageOptionsProvider'
+export {
+  SidebarModeProvider,
+  useSidebarMode,
+} from './context/SidebarModeProvider'
+export type { SidebarMode } from './context/SidebarModeProvider'
+
+// Sidebar — superseded by the dock on a pointer, and still the phone's nav
+// sheet, which a row of hover-raised tiles cannot be.
 export {
   Sidebar,
   useDefaultNavSections,
