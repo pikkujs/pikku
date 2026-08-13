@@ -27,7 +27,9 @@ const channel = (c: number) => {
   return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
 }
 const luminance = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) => channel(parseInt(hex.slice(i, i + 2), 16)))
+  const [r, g, b] = [1, 3, 5].map((i) =>
+    channel(parseInt(hex.slice(i, i + 2), 16))
+  )
   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
 }
 const contrast = (a: string, b: string) => {
@@ -46,11 +48,9 @@ const contrast = (a: string, b: string) => {
  * --app-sidebar-hover, and a luminance rule would call that a collapse.
  */
 const oklab = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) => channel(parseInt(hex.slice(i, i + 2), 16))) as [
-    number,
-    number,
-    number,
-  ]
+  const [r, g, b] = [1, 3, 5].map((i) =>
+    channel(parseInt(hex.slice(i, i + 2), 16))
+  ) as [number, number, number]
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
@@ -67,7 +67,11 @@ const deltaE = (a: string, b: string) => {
 }
 
 /** Resolves var() aliases so a rule cannot be dodged by pointing at a token. */
-const resolve = (block: Record<string, string>, name: string, depth = 0): string | null => {
+const resolve = (
+  block: Record<string, string>,
+  name: string,
+  depth = 0
+): string | null => {
   const raw = block[name] ?? shared[name]
   if (raw === undefined || depth > 10) return null
   const alias = /^var\((--[a-z0-9-]+)\)$/.exec(raw.trim())
@@ -119,7 +123,11 @@ const TEXT_TOKENS = [
  * 2.07:1 in light — found only because the token was audited on its way out of
  * this file, which is the argument for keeping component colour under a gate.
  */
-const CONTROL_BORDERS = ['--app-border-control', '--app-border-strong', '--app-sidebar-chevron']
+const CONTROL_BORDERS = [
+  '--app-border-control',
+  '--app-border-strong',
+  '--app-sidebar-chevron',
+]
 
 /**
  * Must stay mutually distinguishable — colour IS the scan affordance here.
@@ -172,16 +180,41 @@ const SEPARATIONS: Array<[a: string, b: string, min: number, why: string]> = [
   // 3.5, not 3: the light pair this was written for measured 3.22 and looked
   // like one grey. Dark sits at 3.89, so this floor is deliberately tight — a
   // change that lowers it is a change that makes two greys look like one.
-  ['--app-text-dim', '--app-text-faint', 3.5, 'secondary vs. de-emphasised text'],
-  ['--app-border', '--app-border-hover', 4, 'a hover boundary must read as a change'],
-  ['--app-border-control', '--app-border-strong', 4, 'resting vs. emphasised control edge'],
+  [
+    '--app-text-dim',
+    '--app-text-faint',
+    3.5,
+    'secondary vs. de-emphasised text',
+  ],
+  [
+    '--app-border',
+    '--app-border-hover',
+    4,
+    'a hover boundary must read as a change',
+  ],
+  [
+    '--app-border-control',
+    '--app-border-strong',
+    4,
+    'resting vs. emphasised control edge',
+  ],
   ['--app-panel-bg', '--app-panel-bg-raised', 1, 'elevation step'],
   ['--app-panel-bg-raised', '--app-panel-bg-soft', 1, 'elevation step'],
   ['--app-panel-bg-soft', '--app-panel-bg-strong', 1, 'elevation step'],
   ['--app-page-bg', '--app-page-bg-alt', 1, 'the two page grounds'],
   ['--app-sidebar-hover', '--app-sidebar-active', 1.5, 'hover vs. selection'],
-  ['--app-surface-info', '--app-surface-success', 1.5, 'two tints read side by side'],
-  ['--app-surface-danger', '--app-surface-warning', 1.5, 'two tints read side by side'],
+  [
+    '--app-surface-info',
+    '--app-surface-success',
+    1.5,
+    'two tints read side by side',
+  ],
+  [
+    '--app-surface-danger',
+    '--app-surface-warning',
+    1.5,
+    'two tints read side by side',
+  ],
 ]
 
 for (const [schemeName, block] of [
@@ -196,7 +229,8 @@ for (const [schemeName, block] of [
       for (const surface of SURFACES) {
         const bg = resolve(block, surface)!
         const ratio = contrast(fg, bg)
-        if (ratio < 4.5) failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}`)
+        if (ratio < 4.5)
+          failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}`)
       }
     }
     assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}\n`)
@@ -209,7 +243,8 @@ for (const [schemeName, block] of [
       assert.ok(fg, `${token} is not defined in ${schemeName}`)
       for (const surface of SURFACES) {
         const ratio = contrast(fg, resolve(block, surface)!)
-        if (ratio < 3) failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}`)
+        if (ratio < 3)
+          failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}`)
       }
     }
     assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}\n`)
@@ -222,7 +257,8 @@ for (const [schemeName, block] of [
       assert.ok(fg, `${token} is not defined in ${schemeName}`)
       for (const surface of SURFACES) {
         const ratio = contrast(fg, resolve(block, surface)!)
-        if (ratio < 3) failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}`)
+        if (ratio < 3)
+          failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}`)
       }
     }
     assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}\n`)
@@ -234,7 +270,8 @@ for (const [schemeName, block] of [
       const [ha, hb] = [resolve(block, a), resolve(block, b)]
       assert.ok(ha && hb, `${a}/${b} undefined in ${schemeName}`)
       const d = deltaE(ha, hb)
-      if (d < min) failures.push(`${a} vs ${b}: ΔE ${d.toFixed(2)} < ${min} — ${why}`)
+      if (d < min)
+        failures.push(`${a} vs ${b}: ΔE ${d.toFixed(2)} < ${min} — ${why}`)
     }
     assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}\n`)
   })
@@ -254,7 +291,10 @@ for (const [schemeName, block] of [
     ]
       .map((s) => ({ s, l: luminance(resolve(block, s)!) }))
       .filter(({ l }) => l <= ground)
-      .map(({ s, l }) => `${s} (${l.toFixed(4)}) sits below --app-page-bg (${ground.toFixed(4)})`)
+      .map(
+        ({ s, l }) =>
+          `${s} (${l.toFixed(4)}) sits below --app-page-bg (${ground.toFixed(4)})`
+      )
     assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}\n`)
   })
 
@@ -272,20 +312,25 @@ for (const [schemeName, block] of [
       const delta = ls[i]!.l - ls[i - 1]!.l
       assert.ok(
         rising ? delta > 0 : delta < 0,
-        `${ls[i]!.s} is not ${rising ? 'lighter' : 'darker'} than ${ls[i - 1]!.s}`,
+        `${ls[i]!.s} is not ${rising ? 'lighter' : 'darker'} than ${ls[i - 1]!.s}`
       )
     }
   })
 
   test(`${schemeName}: the text ramp dims monotonically`, () => {
     const bg = resolve(block, '--app-panel-bg')!
-    const [text, dim, faint] = ['--app-text', '--app-text-dim', '--app-text-faint'].map((t) =>
-      contrast(resolve(block, t)!, bg),
+    const [text, dim, faint] = [
+      '--app-text',
+      '--app-text-dim',
+      '--app-text-faint',
+    ].map((t) => contrast(resolve(block, t)!, bg))
+    assert.ok(
+      text! > dim!,
+      `--app-text (${text!.toFixed(2)}) must exceed dim (${dim!.toFixed(2)})`
     )
-    assert.ok(text! > dim!, `--app-text (${text!.toFixed(2)}) must exceed dim (${dim!.toFixed(2)})`)
     assert.ok(
       dim! > faint!,
-      `--app-text-dim (${dim!.toFixed(2)}) must exceed faint (${faint!.toFixed(2)})`,
+      `--app-text-dim (${dim!.toFixed(2)}) must exceed faint (${faint!.toFixed(2)})`
     )
   })
 
@@ -295,7 +340,10 @@ for (const [schemeName, block] of [
       for (const token of group) {
         const hex = resolve(block, token)!.toLowerCase()
         const clash = seen.get(hex)
-        assert.ok(!clash, `${token} and ${clash} are both ${hex} in ${schemeName}`)
+        assert.ok(
+          !clash,
+          `${token} and ${clash} are both ${hex} in ${schemeName}`
+        )
         seen.set(hex, token)
       }
     }
@@ -357,9 +405,12 @@ const INDEPENDENT_ROLES: Record<string, string> = {
   '--app-accent': 'the state/selection colour; bound by legibility on panels',
   '--app-sidebar-text-selected':
     'bound by legibility on --app-sidebar-active, which --app-accent is not',
-  '--app-gray-sidebar': 'a sidebar chip colour; already differs from sidebar-text in light',
-  '--app-sidebar-text': 'the sidebar body ramp, asserted against sidebar surfaces',
-  '--app-sidebar-text-strong': 'top of the sidebar ramp, asserted against sidebar surfaces',
+  '--app-gray-sidebar':
+    'a sidebar chip colour; already differs from sidebar-text in light',
+  '--app-sidebar-text':
+    'the sidebar body ramp, asserted against sidebar surfaces',
+  '--app-sidebar-text-strong':
+    'top of the sidebar ramp, asserted against sidebar surfaces',
   '--app-sidebar-text-parent': 'the sidebar parent-row step, same ramp',
   '--app-text': 'top of the panel text ramp, asserted against panels',
   '--app-text-dim': 'second step of the panel text ramp',
@@ -389,7 +440,11 @@ for (const [schemeName, block] of [
     for (const [token, raw] of Object.entries(block)) {
       if (!token.startsWith('--app-')) continue
       const hex = /^#[0-9a-f]{6}$/i.exec(raw.trim())?.[0]
-      if (hex) byHex.set(hex.toLowerCase(), [...(byHex.get(hex.toLowerCase()) ?? []), token])
+      if (hex)
+        byHex.set(hex.toLowerCase(), [
+          ...(byHex.get(hex.toLowerCase()) ?? []),
+          token,
+        ])
     }
     const unexplained: string[] = []
     for (const [hex, tokens] of byHex) {
@@ -397,12 +452,14 @@ for (const [schemeName, block] of [
       // Explained only when EVERY name in the clash justifies its own existence.
       const undeclared = tokens.filter((t) => !(t in INDEPENDENT_ROLES))
       if (undeclared.length === 0) continue
-      unexplained.push(`${hex}: ${tokens.join(', ')} — undeclared: ${undeclared.join(', ')}`)
+      unexplained.push(
+        `${hex}: ${tokens.join(', ')} — undeclared: ${undeclared.join(', ')}`
+      )
     }
     assert.deepEqual(
       unexplained,
       [],
-      `\n  Alias one to the other, or add it to INDEPENDENT_ROLES with a reason:\n  ${unexplained.join('\n  ')}\n`,
+      `\n  Alias one to the other, or add it to INDEPENDENT_ROLES with a reason:\n  ${unexplained.join('\n  ')}\n`
     )
   })
 }
@@ -413,7 +470,7 @@ test('Rule 3 — the exception list only shrinks', () => {
   // adding. Lower this number when you collapse a pair; never raise it.
   assert.ok(
     Object.keys(INDEPENDENT_ROLES).length <= 23,
-    `INDEPENDENT_ROLES grew to ${Object.keys(INDEPENDENT_ROLES).length}. Alias instead of adding.`,
+    `INDEPENDENT_ROLES grew to ${Object.keys(INDEPENDENT_ROLES).length}. Alias instead of adding.`
   )
 })
 
@@ -446,11 +503,13 @@ const ROLE_PREFIXES = [
 test('Rule 4 — no feature-scoped token prefixes', () => {
   const offenders = [...new Set([...Object.keys(dark), ...Object.keys(light)])]
     .filter((k) => k.startsWith('--app-'))
-    .filter((k) => !ROLE_PREFIXES.includes(k.slice('--app-'.length).split('-')[0]!))
+    .filter(
+      (k) => !ROLE_PREFIXES.includes(k.slice('--app-'.length).split('-')[0]!)
+    )
   assert.deepEqual(
     offenders,
     [],
-    `\n  These name a feature, not a role. Put them in that component's own CSS:\n  ${offenders.join('\n  ')}\n`,
+    `\n  These name a feature, not a role. Put them in that component's own CSS:\n  ${offenders.join('\n  ')}\n`
   )
 })
 
@@ -471,12 +530,17 @@ test('every --app-* token referenced anywhere is defined', () => {
     // no consumer tree, and the consoles set the variable in their test scripts.
     return
   }
-  const defined = new Set([...Object.keys(dark), ...Object.keys(light), ...Object.keys(shared)])
+  const defined = new Set([
+    ...Object.keys(dark),
+    ...Object.keys(light),
+    ...Object.keys(shared),
+  ])
   const referenced = new Map<string, string>()
 
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
-      if (entry === 'node_modules' || entry === 'dist' || entry === '.pikku') continue
+      if (entry === 'node_modules' || entry === 'dist' || entry === '.pikku')
+        continue
       const path = join(dir, entry)
       if (statSync(path).isDirectory()) {
         walk(path)
@@ -490,7 +554,8 @@ test('every --app-* token referenced anywhere is defined', () => {
       // Non-colour geometry (card radius, card gutter) is declared in the app's
       // own :root rather than the colour contract — a declaration there defines
       // the token just as much as one in this package does.
-      for (const [, token] of text.matchAll(/^\s*(--app-[a-z0-9-]+)\s*:/gm)) defined.add(token!)
+      for (const [, token] of text.matchAll(/^\s*(--app-[a-z0-9-]+)\s*:/gm))
+        defined.add(token!)
     }
   }
   roots.forEach(walk)
