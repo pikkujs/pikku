@@ -8,5 +8,4 @@
 
 export * from './pikku-express-middleware.js'
 export { ExpressPikkuHTTPRequest } from './express-pikku-http-request.js'
-export type { ExpressPikkuHTTPRequestOptions } from './express-pikku-http-request.js'
 export { ExpressPikkuHTTPResponse } from './express-pikku-http-response.js'

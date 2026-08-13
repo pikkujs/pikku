@@ -708,6 +708,7 @@ describe('multi-instance addons', () => {
         return svc
       },
     } as never)
+    pikkuState('@addon/slack', 'package', 'declaredSecrets', ['slackToken'])
     registerFunction(
       'send',
       async (services: any) => ({ token: services.token }),
@@ -753,6 +754,7 @@ describe('multi-instance addons', () => {
         }
       },
     } as never)
+    pikkuState('@addon/slack', 'package', 'declaredSecrets', ['slackToken'])
 
     registerFunction(
       'leaf',

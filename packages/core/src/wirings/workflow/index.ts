@@ -15,7 +15,6 @@ export {
 } from './workflow-run-ownership.js'
 export { WorkflowApprovalForbiddenError } from './workflow-approval-policy.js'
 export type {
-  RunLifecycleContext,
   WorkflowRunEngine,
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
@@ -31,10 +30,7 @@ export {
 } from './run-timeline.js'
 export type {
   RunTimeline,
-  RunTimelineEvent,
   ReconstructedRunState,
-  ReconstructedStep,
-  RunPhase,
 } from './run-timeline.js'
 
 export { addWorkflow } from './dsl/workflow-runner.js'
@@ -46,12 +42,6 @@ export {
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from './graph/wire-workflow-graph.js'
-
-export {
-  pikkuWorkflowWorkerFunc,
-  pikkuWorkflowOrchestratorFunc,
-  pikkuWorkflowSleeperFunc,
-} from './workflow-queue-workers.js'
 export type {
   WorkflowStepInput as WorkflowStepQueueInput,
   PikkuWorkflowOrchestratorInput,
@@ -74,37 +64,25 @@ export type {
   WorkflowRunMirror,
   CoreWorkflow,
   CoreFeature,
-  CoreFeatureScenario,
   FeatureMeta,
-  FeatureMetaEntry,
   FeaturesMeta,
   FeaturePlanEntry,
   PikkuWorkflow,
   ContextVariable,
   WorkflowContext,
   WorkflowsMeta,
-  WorkflowRuntimeMeta,
   WorkflowsRuntimeMeta,
 } from './workflow.types.js'
 
 export type {
   WorkflowStepOptions,
   WorkflowWireDoRPC,
-  WorkflowWireDoInline,
-  WorkflowWireSleep,
-  WorkflowWireSuspend,
-  WorkflowWireApproval,
   WorkflowApprovalOptions,
-  WorkflowApprovalApprovers,
-  WorkflowApprovalPolicy,
-  ApprovalDecider,
   ApprovalOutcome,
   InputSource,
   OutputBinding,
   RpcStepMeta,
-  SimpleCondition,
   Condition,
-  BranchCase,
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,
@@ -139,7 +117,7 @@ export type {
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
 
 // Which of a step's bindings run: one for an action, every witness for a `then`
-export { resolveScenarioSurfaces, witnessesAgree } from './scenario-surface.js'
+export { resolveScenarioSurfaces } from './scenario-surface.js'
 
 export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 

@@ -1,5 +1,14 @@
 # @pikku/kysely-bun-sqlite
 
+## 0.12.4
+
+### Patch Changes
+
+- fd9d834: Stop publishing internals that only their own package or file used. The declarations stay; only the entrypoint re-export is removed, so nothing that imported a name from where it is declared is affected.
+- Updated dependencies [fd9d834]
+  - @pikku/kysely@0.13.15
+  - @pikku/kysely-sqlite@0.12.11
+
 ## 0.12.3
 
 ### Patch Changes

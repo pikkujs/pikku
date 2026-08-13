@@ -23,6 +23,8 @@ export interface KnowledgeGraphNote {
   /** The `<kind>:<id>` URIs from `resource:`, already split. */
   resource: string[]
   status?: string
+  /** When `status` last changed, for a reader asking how long it has been there. */
+  statusAt?: string
   entities: string[]
   reserved?: 'index' | 'log'
   body: string
@@ -64,6 +66,8 @@ export const KnowledgeGraphNoteSchema = z.object({
   /** The `<kind>:<id>` URIs from `resource:`, already split. */
   resource: z.array(z.string()),
   status: z.string().optional(),
+  /** When `status` last changed, for a reader asking how long it has been there. */
+  statusAt: z.string().optional(),
   entities: z.array(z.string()),
   reserved: z.enum(['index', 'log']).optional(),
   body: z.string(),
@@ -200,6 +204,7 @@ export const buildKnowledgeGraph = (notes: KnowledgeNote[]): KnowledgeGraph => {
       tags: note.tags ?? [],
       resource: resourceIds(note),
       status: note.status,
+      statusAt: note.statusAt,
       entities: (note.entities ?? '')
         .split(',')
         .map((entity) => entity.trim())

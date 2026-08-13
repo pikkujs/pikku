@@ -4,12 +4,14 @@ import {
   WorkflowSuspendedException,
 } from './workflow-errors.js'
 import type {
-  ApprovalDecider,
   ApprovalOutcome,
   StepState,
   WorkflowApprovalOptions,
-  WorkflowApprovalPolicy,
 } from './workflow.types.js'
+import type {
+  ApprovalDecider,
+  WorkflowApprovalPolicy,
+} from './dsl/workflow-dsl.types.js'
 import {
   approvalPolicyRefusal,
   WorkflowApprovalForbiddenError,

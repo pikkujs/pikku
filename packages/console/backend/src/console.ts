@@ -14,27 +14,6 @@ import {
   ref,
   wireAddon,
 } from '../.pikku/pikku-types.gen.js'
-import type { WiredSecretBrokerServices } from '../.pikku/pikku-types.gen.js'
-
-export const pikkuConsoleSetSecret = pikkuSessionlessFunc<
-  {
-    secretId: string
-    value: unknown
-  },
-  {
-    success: boolean
-  },
-  WiredSecretBrokerServices
->({
-  tags: ['pikku'],
-  description: 'Set the value of a secret',
-  expose: true,
-  auth: false,
-  func: async ({ secrets }, { secretId, value }) => {
-    await secrets.setSecret(secretId, value)
-    return { success: true }
-  },
-})
 
 export const pikkuConsoleGetVariable = pikkuSessionlessFunc<
   { variableId: string },
@@ -68,40 +47,6 @@ export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
   },
 })
 
-export const pikkuConsoleHasSecret = pikkuSessionlessFunc<
-  { secretId: string },
-  { exists: boolean },
-  WiredSecretBrokerServices
->({
-  tags: ['pikku'],
-  description: 'Check if a secret exists without reading its value',
-  expose: true,
-  auth: false,
-  func: async ({ secrets }, { secretId }) => {
-    const exists = await secrets.hasSecret(secretId)
-    return { exists }
-  },
-})
-
-export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
-  { secretId: string },
-  { exists: boolean; value: unknown | null },
-  WiredSecretBrokerServices
->({
-  tags: ['pikku'],
-  description: 'Get the current value of a secret',
-  expose: true,
-  auth: false,
-  func: async ({ secrets }, { secretId }) => {
-    const exists = await secrets.hasSecret(secretId)
-    if (!exists) {
-      return { exists: false, value: null }
-    }
-    const value = await secrets.getSecret(secretId)
-    return { exists: true, value: value.reveal() }
-  },
-})
-
 export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   routes: {
@@ -114,5 +59,12 @@ export const consoleRoutes = defineHTTPRoutes({
   },
 })
 
-wireAddon({ name: 'console', package: '@pikku/addon-console' })
+wireAddon({
+  name: 'console',
+  package: '@pikku/addon-console',
+  globalSecrets:
+    'the console administers secrets an operator names at runtime, so no static declaration can cover them',
+  globalCredentials:
+    'the console lists and links credentials across every user, so it cannot be scoped to a declared set',
+})
 wireHTTPRoutes({ basePath: '', routes: { console: consoleRoutes } })

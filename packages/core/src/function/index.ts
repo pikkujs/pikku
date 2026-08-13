@@ -18,6 +18,4 @@ export type {
   ListInput,
   ListOutput,
   Filter,
-  LeafFilter,
-  LeafValue,
 } from './list.types.js'

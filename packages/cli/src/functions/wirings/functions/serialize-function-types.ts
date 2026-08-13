@@ -31,7 +31,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired, SecretlessServices, SecretService } from '@pikku/core'
+import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired, SecretlessServices } from '@pikku/core'
 import type { CorePikkuFunctionConfig, CorePikkuSessionlessFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import {
@@ -71,16 +71,6 @@ export type WiredServices = SecretlessServices<RequiredSingletonServices & Servi
 
 /** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */
 export type WiredAuthServices = SecretlessServices<WiredSingletonServices>
-
-/**
- * \`WiredServices\` with \`secrets\` restored, for the console's secret-admin
- * functions. Reached by declaring \`secretBroker: true\` on a \`pikkuFunc\` config.
- *
- * Declaring it does not grant the service. The runner hands out the real
- * \`SecretService\` only to the functions the inspector marks as secret brokers;
- * every other function still receives the throwing accessor.
- */
-export type WiredSecretBrokerServices = WiredServices & { secrets: SecretService }
 
 /**
  * Inline node configuration for function definitions.
@@ -463,12 +453,6 @@ export type PikkuFunctionConfigWithSchema<
  * })
  * \`\`\`
  */
-export function pikkuFunc<
-  InputSchema extends StandardSchemaV1 | undefined = undefined,
-  OutputSchema extends StandardSchemaV1 | undefined = undefined
->(
-  config: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc', WiredSecretBrokerServices> & { secretBroker: true }
-): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined

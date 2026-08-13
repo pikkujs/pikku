@@ -37,6 +37,7 @@ import type {
   WorkflowDefinition,
   WorkflowStepDefinition,
   SecretDeclaration,
+  UnscopedAddon,
   VariableDeclaration,
 } from './manifest.js'
 
@@ -503,6 +504,27 @@ export function analyzeDeployment(
     read: readSecretIds.has(s.secretId),
   }))
 
+  const unscopedSecretAddons: UnscopedAddon[] = []
+  const unscopedCredentialAddons: UnscopedAddon[] = []
+  for (const [namespace, addon] of state.rpc?.wireAddonDeclarations ?? []) {
+    if (addon.globalSecrets) {
+      unscopedSecretAddons.push({
+        namespace,
+        package: addon.package,
+        reason: addon.globalSecrets,
+      })
+    }
+    if (addon.globalCredentials) {
+      unscopedCredentialAddons.push({
+        namespace,
+        package: addon.package,
+        reason: addon.globalCredentials,
+      })
+    }
+  }
+  const byNamespace = (a: UnscopedAddon, b: UnscopedAddon) =>
+    a.namespace.localeCompare(b.namespace)
+
   const variables: VariableDeclaration[] = state.variables.definitions.map(
     (v) => ({
       variableId: v.variableId,
@@ -523,6 +545,8 @@ export function analyzeDeployment(
     workflows,
     secrets,
     unresolvedSecretReads: unresolvedSecretReads.sort(),
+    unscopedSecretAddons: unscopedSecretAddons.sort(byNamespace),
+    unscopedCredentialAddons: unscopedCredentialAddons.sort(byNamespace),
     variables,
   }
 }

@@ -1,3 +1,78 @@
+## 0.12.56
+
+### Patch Changes
+
+- 1a92f6e: Export the knowledge surface from the package barrel.
+
+  `KnowledgePage` was exported, but the workspace it renders, its bundle types and
+  `resolveNoteLink` were not — so a host embedding the knowledge browser into its
+  own shell could not mount the workspace, type the bundle it feeds in, or resolve
+  a note link the same way the graph does. Resolving links differently is the
+  subtle one: `inbound` and `dangling` are computed against this resolver, so a
+  host with its own copy renders cross-links that have no backlink on the other
+  side.
+
+  Adds `KnowledgeWorkspace`, `KnowledgeWorkspaceProps`, `resolveNoteLink`, and the
+  `KnowledgeBundle`, `KnowledgeFinding`, `KnowledgeNote`, `KnowledgeSection` and
+  `KnowledgeSelection` types. No behaviour change.
+
+- 3e139f4: Ship German, Arabic and Chinese alongside English.
+
+  The console has been message-complete since the Paraglide migration but shipped one catalogue, so every consumer that mounts a console surface fell back to English regardless of the locale it had already resolved. `messages/{de,ar,zh}.json` cover all 964 keys, and `project.inlang/settings.json` lists the three codes — nothing else changes, because `supportedLocales`, the `/<lang>` URL prefix and `localeDir()`'s RTL set all derive from that list. Arabic was the one that needed checking rather than adding: `ar` was already in `RTL_LOCALES`, so `<html dir>` and Mantine's mirroring were waiting on a catalogue, not on code.
+
+- 0ab1a88: feat(knowledge): draw a note's scenario and its decision, and say the vocabulary exists
+
+  The console already drew ```mermaid fences as diagrams and `> [!NOTE]` blocks as
+  callouts, and nothing told the librarian either existed — the skill that governs
+  what goes in a note never mentioned them, so notes were written as prose and
+  tables into a renderer that would happily have drawn the graph. The gap was the
+  guidance, not the format.
+
+  Two blocks join them. A slice's ```gherkin scenario is drawn rather than
+  highlighted: the keywords line up in a column so the shape of the scenario is
+  readable before a word of it is, and each quoted persona becomes a chip — which
+  also makes a first-person scenario, the form the format rejects, visibly a block
+  with no personas in it.
+
+  A new ```decision fence states what a decision note owes: `chosen`, `rules-out`,
+`because`. The middle one is the half that gets dropped, so `pikku knowledge
+  validate` now warns when a fence says what was chosen and never says what it
+  closes off. The fence is optional and a decision argued in prose is still a
+  decision — validate checks the fences that exist rather than asking every note
+  to be reformatted.
+
+  `Markdown` is exported from `@pikku/console` so the fabric console can render the
+  same notes through the same vocabulary instead of a second `<ReactMarkdown>`.
+
+- b930dca: Remove the `secretBroker` escape hatch and scope addon secrets and credentials
+
+  `secretBroker` let three named console functions receive the real `SecretService`,
+  against the rule that a function never sees one. It is gone: the inspector allowlist,
+  the `FunctionRuntimeMeta` flag, the runner branches, and the `WiredSecretBrokerServices`
+  type. Console secret administration moved into the console addon, where a
+  `SecretAdminService` holds the `SecretService` and the functions hold none.
+
+  Addons are now scoped rather than trusted. The CLI emits each package's declared secret
+  keys, and the host wraps the `SecretService` in a `ScopedSecretService` and the
+  `CredentialService` in a new `ScopedCredentialService` before the addon's service factory
+  runs — so an addon reads only what it declared, cannot write secrets, and cannot enumerate
+  the app's users. `wireAddon({ globalSecrets, globalCredentials })` waives this, taking the
+  reason as its value; only the consuming app can grant it, and the deploy manifest reports
+  every grant under `unscopedSecretAddons` / `unscopedCredentialAddons`.
+
+- Updated dependencies [063f43a]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [d0307a8]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [3ad2131]
+- Updated dependencies [b930dca]
+- Updated dependencies [b95e77d]
+- Updated dependencies [fd9d834]
+- Updated dependencies [8978fbd]
+  - @pikku/core@0.12.82
+  - @pikku/assistant-ui@0.12.10
+  - @pikku/fetch@0.12.9
+
 ## 0.12.55
 
 ### Patch Changes
@@ -959,8 +1034,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                                  "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                                  "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                                    "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                                    "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core

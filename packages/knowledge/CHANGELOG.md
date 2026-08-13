@@ -1,5 +1,63 @@
 # @pikku/knowledge
 
+## 0.12.5
+
+### Patch Changes
+
+- 0ab1a88: feat(knowledge): draw a note's scenario and its decision, and say the vocabulary exists
+
+  The console already drew ```mermaid fences as diagrams and `> [!NOTE]` blocks as
+  callouts, and nothing told the librarian either existed — the skill that governs
+  what goes in a note never mentioned them, so notes were written as prose and
+  tables into a renderer that would happily have drawn the graph. The gap was the
+  guidance, not the format.
+
+  Two blocks join them. A slice's ```gherkin scenario is drawn rather than
+  highlighted: the keywords line up in a column so the shape of the scenario is
+  readable before a word of it is, and each quoted persona becomes a chip — which
+  also makes a first-person scenario, the form the format rejects, visibly a block
+  with no personas in it.
+
+  A new ```decision fence states what a decision note owes: `chosen`, `rules-out`,
+`because`. The middle one is the half that gets dropped, so `pikku knowledge
+  validate` now warns when a fence says what was chosen and never says what it
+  closes off. The fence is optional and a decision argued in prose is still a
+  decision — validate checks the fences that exist rather than asking every note
+  to be reformatted.
+
+  `Markdown` is exported from `@pikku/console` so the fabric console can render the
+  same notes through the same vocabulary instead of a second `<ReactMarkdown>`.
+
+- 5599a27: feat(knowledge): a profile can read its own frontmatter keys, and `designing` joins the slice vocabulary
+
+  `readKnowledgeNotes` now takes the frontmatter keys a profile built on top of
+  this one adds — `readKnowledgeNotes(root, ['design', 'route'])` — and returns
+  them on the note, typed as `ProfileNote<'design' | 'route'>`. They
+  are still not read here: nothing in this package knows what they mean, and the
+  reader names them at the call. Without this the only way for a profile to keep
+  its own keys was to fork the parser, which is exactly what Fabric had done —
+  two copies of the same OKF reader, drifting.
+
+  `designing` is now a slice status. It sits before `proposed`: the slice is
+  written down but is NOT to be built yet, because whoever is being shown its
+  looks has not picked one. Only `proposed` is dispatchable, so the two cannot be
+  one status without a slice being built out from under the person still
+  choosing. It was already in use — validating such a project reported every
+  milestone under design as `knowledge-slice-bad-status`.
+
+  `checkKnowledgeResources` takes its third argument as an options bag —
+  `{ notes, known }` instead of a bare `notes` array — and `known` lets a profile
+  add ids it resolves from a source codegen meta does not describe: a live dev
+  database's tables, personas from a config file written before anything is
+  generated. It is unioned with the meta, never a replacement, so a resource is
+  only dangling when neither side has heard of it.
+
+  `buildKnowledgeGraph` carries `statusAt` onto the graph note. It is read off
+  frontmatter and typed here already; the graph was the one reader dropping it,
+  so a console showing a slice's status could not say how long it had held it.
+
+- fd9d834: Stop publishing internals that only their own package or file used. The declarations stay; only the entrypoint re-export is removed, so nothing that imported a name from where it is declared is affected.
+
 ## 0.12.4
 
 ### Patch Changes

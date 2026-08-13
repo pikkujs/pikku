@@ -227,6 +227,13 @@ describe('runKnowledgeValidate on slices', () => {
     )
   })
 
+  test('a slice still being designed passes — it is written down, not yet buildable', async () => {
+    const result = await withSlice(
+      SLICE.replace('status: proposed', 'status: designing')
+    )
+    assert.deepEqual(result.findings, [])
+  })
+
   test('a title-cased status still passes, because the parser lowercases it', async () => {
     const result = await withSlice(
       SLICE.replace('status: proposed', 'status: Built')

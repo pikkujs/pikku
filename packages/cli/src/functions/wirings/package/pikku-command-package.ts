@@ -55,6 +55,18 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
       }
     }
 
+    // A secret read the inspector could not resolve to a literal is absent by
+    // construction — such an addon needs `globalSecrets` on its `wireAddon`.
+    const declaredSecrets = new Set<string>()
+    for (const definition of state.secrets?.definitions ?? []) {
+      declaredSecrets.add(definition.secretId)
+    }
+    for (const usage of state.secrets?.usage?.values() ?? []) {
+      for (const key of usage.keys) {
+        declaredSecrets.add(key)
+      }
+    }
+
     const content = serializePackageFactories(
       packageFile,
       addonName,
@@ -78,7 +90,8 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
         : undefined,
       packageMappings,
       Object.keys(credentialsMeta).length > 0 ? credentialsMeta : undefined,
-      state.addonRequiredParentServices
+      state.addonRequiredParentServices,
+      [...declaredSecrets].sort()
     )
 
     if (!content) {

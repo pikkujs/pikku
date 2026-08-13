@@ -1,15 +1,13 @@
 export { LogLevel } from './logger.js'
 export { ScopedSecretService } from './scoped-secret-service.js'
+export { ScopedCredentialService } from './scoped-credential-service.js'
 export {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
-  createFunctionSessionWireProps,
 } from './user-session-service.js'
 export { TypedSecretService } from './typed-secret-service.js'
 export {
   PikkuCredentialWireService,
-  createMiddlewareCredentialWireProps,
-  createWireServicesCredentialWireProps,
 } from './credential-wire-service.js'
 export { TypedVariablesService } from './typed-variables-service.js'
 export { LocalSecretService } from './local-secrets.js'
@@ -39,10 +37,7 @@ export type {
 export type {
   ScenarioPersona,
   ResolvedPersona,
-  ScenarioPersonaOf,
   ScenarioPersonas,
-  ScenarioInvokeOptions,
-  ScenarioRpcMap,
   ScenarioHttpResponse,
 } from './personas-service.js'
 // knowledge: decisions/internals/the-persona-runtime-is-exported-from-the-persona-entry-point.md
@@ -50,7 +45,6 @@ export type { HttpPersonasConfig } from './http-personas.js'
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailService,
-  EmailTemplateReference,
   SendEmailInput,
   SendEmailResult,
   SendHTMLEmailInput,
@@ -59,12 +53,10 @@ export type {
 } from './email-service.js'
 export {
   DEFAULT_WEBHOOK_RETRIES,
-  DEFAULT_WEBHOOK_SIGNATURE_HEADER,
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   WebhookService,
   type SendWebhookInput,
   type SendWebhookResult,
-  type WebhookAttemptRecord,
   type WebhookAttemptResult,
   type WebhookDeliveryRecord,
   type WebhookDeliveryWithAttempts,
@@ -94,20 +86,6 @@ export type {
   AIAgentRunnerParams,
   AIAgentRunnerResult,
   AIAgentStepResult,
-  AIEmbedManyParams,
-  AIEmbedManyResult,
-  AIEmbedParams,
-  AIEmbedResult,
-  AIGenerateImageParams,
-  AIGenerateImagePrompt,
-  AIGenerateImageResult,
-  AIGenerateSpeechParams,
-  AIGenerateSpeechResult,
-  AIProviderOptions,
-  AIRerankParams,
-  AIRerankResult,
-  AITranscriptionParams,
-  AITranscriptionResult,
   AIAgentRunnerService,
 } from './ai-agent-runner-service.js'
 export type { AIEmbeddingService } from './ai-embedding-service.js'
@@ -117,30 +95,21 @@ export type {
   AIRunStateService,
 } from './ai-run-state-service.js'
 export type {
-  CredentialStatus,
   CredentialMeta,
 } from './typed-secret-service.js'
 export type { CredentialService } from './credential-service.js'
 export { TypedCredentialService } from './typed-credential-service.js'
 export type {
-  CredentialStatusInfo,
   CredentialMetaInfo,
 } from './typed-credential-service.js'
-export type { VariableStatus, VariableMeta } from './typed-variables-service.js'
+export type { VariableMeta } from './typed-variables-service.js'
 export type { MetaService } from './meta-service.js'
 export type { SessionStore } from './session-store.js'
 export type { ScopeService, Role } from './scope-service.js'
-export {
-  assertRoleIsMutable,
-  assertRoleNameAvailable,
-  roleLockReason,
-} from './system-role-guard.js'
 export type { IsSystemRole } from './system-role-guard.js'
 export {
   NoopAuditService,
   createInvocationAudit,
-  resolveAuditConfig,
-  resolveAuditUserIdentityFromWire,
 } from './audit-service.js'
 export type {
   AuditConfig,
@@ -148,10 +117,7 @@ export type {
   AuditEvent,
   AuditEventBatch,
   AuditLog,
-  AuditLogWriteInput,
-  AuditOutcome,
   AuditService,
-  AuditSource,
   AuditUserIdentity,
   ResolvedAuditConfig,
 } from './audit-service.js'
@@ -175,17 +141,10 @@ export type {
   AgentMeta,
   EmailsMeta,
   EmailTemplateMeta,
-  EmailTemplateLocaleMeta,
-  EmailTemplateAssets,
 } from './meta-service.js'
 export type {
   CoverageService,
-  CoverageSnapshot,
-  LineHits,
   ScriptCoverage,
-  FunctionCoverage,
-  CoverageRange,
-  CoverageStatus,
   FunctionCoverageEntry,
   FunctionCoverageReport,
   CoverageFunctionMeta,

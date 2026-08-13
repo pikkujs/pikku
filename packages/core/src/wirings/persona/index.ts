@@ -10,7 +10,6 @@ export type { RoleVerification } from './validate-personas.js'
 export {
   personaEnvironmentErrors,
   personaEnvironmentRefusal,
-  resolvePersonaEnvironments,
 } from './persona-environments.js'
 export type {
   PersonaEnvironment,
@@ -18,14 +17,8 @@ export type {
 } from './persona-environments.js'
 export {
   personaEmail,
-  personaEmailLabel,
   personaEmails,
 } from './persona-email.js'
-export {
-  allowedLinks,
-  applyMailboxAllowlist,
-  isAllowedSender,
-} from './persona-mailbox.js'
 export type {
   MailboxAllowlist,
   PersonaMailbox,
@@ -33,7 +26,6 @@ export type {
 } from './persona-mailbox.js'
 export type {
   CorePersona,
-  CorePersonaAccount,
   CorePersonas,
   PersonaAccountMeta,
   PersonaDefinitions,

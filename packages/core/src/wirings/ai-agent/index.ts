@@ -5,7 +5,7 @@ export {
   agentApprove,
   agentInterrupt,
 } from './ai-agent-helpers.js'
-export { wrapChannelWithAGUI, type AGUIEvent } from './ai-agent-agui.js'
+export { wrapChannelWithAGUI } from './ai-agent-agui.js'
 export { runAIAgent, resumeAIAgentSync } from './ai-agent-runner.js'
 export { resolveModelAlias } from './ai-agent-model-config.js'
 export {
@@ -15,7 +15,6 @@ export {
 } from './ai-agent-stream.js'
 export {
   voiceInput,
-  readsAsNonSpeech,
   NoSpeechDetectedError,
   SPOKEN_TURN,
   SPOKEN_TRANSCRIPT,
@@ -28,21 +27,12 @@ export {
 } from './voice-output.js'
 export {
   AgentInterruptedError,
-  awaitPendingInterruptNote,
-  getInFlightTools,
-  isAbortError,
-  isRunInterruptible,
-  persistOrphanedToolResults,
-  registerInterruptibleRun,
   signalRunInterrupt,
-  trackInterruptNote,
-  trackToolExecution,
 } from './ai-agent-interrupt.js'
 export type {
   AgentInterruption,
   AgentInterruptResult,
   InterruptibleRunHandle,
-  OrphanedToolResult,
 } from './ai-agent-interrupt.js'
 export {
   type RunAIAgentParams,
@@ -51,18 +41,13 @@ export {
   ToolCredentialRequired,
   canAccessThread,
   isOwnedByPrincipal,
-  sessionPrincipals,
   threadOwnerConstraint,
 } from './ai-agent-prepare.js'
 export {
   addAIAgent,
-  approveAIAgent,
-  getAIAgents,
-  getAIAgentsMeta,
 } from './ai-agent-registry.js'
 export type {
   AIAgentInput,
-  AIAgentInputAttachment,
   AIAgentMeta,
   AIAgentMemoryConfig,
   AIAgentStep,

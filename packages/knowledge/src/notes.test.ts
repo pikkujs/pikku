@@ -85,6 +85,35 @@ describe('parseNote', () => {
     assert.equal((parsed as Record<string, unknown>).design, undefined)
   })
 
+  test("reads a profile's own scalars when it names them", () => {
+    const parsed = parseNote(
+      'knowledge/slices/01-a.md',
+      '---\ntype: slice\ndesign: design/a.tsx#Option B\nroute: /entries\n---\nx',
+      ['design', 'route'] as const
+    )
+    assert.equal(parsed.design, 'design/a.tsx#Option B')
+    assert.equal(parsed.route, '/entries')
+  })
+
+  test("a profile's scalars keep their case — only this profile's vocabularies are closed", () => {
+    const parsed = parseNote(
+      'knowledge/slices/01-a.md',
+      '---\ntype: SLICE\nscreens: DailyEntry\n---\nx',
+      ['screens'] as const
+    )
+    assert.equal(parsed.type, 'slice')
+    assert.equal(parsed.screens, 'DailyEntry')
+  })
+
+  test('a named scalar this profile already owns is read by this profile, not overwritten', () => {
+    const parsed = parseNote(
+      'knowledge/slices/01-a.md',
+      '---\ntype: SLICE\n---\nx',
+      ['type'] as const
+    )
+    assert.equal(parsed.type, 'slice')
+  })
+
   test('tolerates CRLF frontmatter', () => {
     const parsed = parseNote(
       'knowledge/a.md',

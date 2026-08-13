@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { type KnowledgeNote, readKnowledgeNotes, resourceIds } from './notes.js'
 import {
   RESOURCE_PREFIXES,
+  type ResourcePrefix,
   collectKnownResources,
   parseResourceUri,
 } from './resource-uri.js'
@@ -90,13 +91,30 @@ export const bodyResourceUris = (note: KnowledgeNote): string[] => {
  * prefix that resolved is a problem, but a prefix with no meta at all is skipped.
  * A project without queues must not be told its queue references are broken.
  */
+export type ResourceCheckOptions = {
+  notes?: KnowledgeNote[]
+  /**
+   * Ids a profile resolves for itself, unioned with what codegen meta offers.
+   *
+   * A profile knows sources codegen does not — a live dev database, a config file
+   * read before anything is generated — and unioning rather than replacing keeps
+   * this open on ignorance: neither side knowing about an id is what makes it
+   * dangling, not one side missing it.
+   */
+  known?: Map<ResourcePrefix, Set<string>>
+}
+
 export const checkKnowledgeResources = async (
   root: string,
   outDir: string,
-  notes?: KnowledgeNote[]
+  { notes, known: extra }: ResourceCheckOptions = {}
 ): Promise<ResourceCheck> => {
   const all = notes ?? (await readKnowledgeNotes(root))
   const known = await collectKnownResources(root, outDir)
+  for (const [prefix, ids] of extra ?? []) {
+    const existing = known.get(prefix)
+    known.set(prefix, existing ? new Set([...existing, ...ids]) : ids)
+  }
 
   const problems: ResourceProblem[] = []
   let withResource = 0

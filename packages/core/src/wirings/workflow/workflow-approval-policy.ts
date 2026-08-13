@@ -4,7 +4,7 @@ import type { CoreUserSession } from '../../types/core.types.js'
 import type {
   ApprovalDecider,
   WorkflowApprovalPolicy,
-} from './workflow.types.js'
+} from './dsl/workflow-dsl.types.js'
 
 export class WorkflowApprovalForbiddenError extends ForbiddenError {
   public payload: { reason: string; detail: string }

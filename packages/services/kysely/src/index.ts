@@ -8,9 +8,7 @@ export { KyselyAIStorageService } from './kysely-ai-storage-service.js'
 export { KyselyAgentRunService } from './kysely-ai-agent-run-service.js'
 export { KyselyAIRunStateService } from './kysely-ai-run-state-service.js'
 export { KyselySecretService } from './kysely-secret-service.js'
-export type { KyselySecretServiceConfig } from './kysely-secret-service.js'
 export { KyselyCredentialService } from './kysely-credential-service.js'
-export type { KyselyCredentialServiceConfig } from './kysely-credential-service.js'
 export { KyselySessionStore } from './kysely-session-store.js'
 export { KyselyScopeService } from './kysely-scope-service.js'
 export { KyselyWebhookService } from './kysely-webhook-service.js'
@@ -25,17 +23,9 @@ export {
   SerializePlugin,
   SqliteSerializePlugin,
   BaseSerializePlugin,
-  defaultSerializer,
-  defaultDeserializer,
-  maybeJson,
-  skipTransform,
-  dateRegex,
   type Serializer,
   type Deserializer,
-  type SerializePluginOptions,
 } from './serialize-plugin.js'
-
-export { virtualUserSchema } from './schema/virtual-user.schema.js'
 export {
   auditSchema,
   pikkuSchemas,
@@ -44,14 +34,9 @@ export {
   ensurePikkuSchema,
   type EnsureOutcome,
   resolveRequirements,
-  unsatisfiedRequirements,
-  rawStatement,
-  requiredType,
   type PikkuSchema,
   type RequiredTypes,
-  type SchemaRequirement,
   type UnmetRequirement,
-  type SchemaStatement,
   type SchemaStatementFactory,
 } from './schema/index.js'
 

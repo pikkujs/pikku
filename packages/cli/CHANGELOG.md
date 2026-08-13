@@ -1,3 +1,232 @@
+## 0.12.102
+
+### Patch Changes
+
+- ce66bf8: Give a CLI channel command the real singleton services
+
+  The generated `cliRaw` is itself a pikku function, so its body receives
+  `secrets` as a throwing accessor — and it passed that same object down as the
+  **singleton** services for every command run on the channel. A command's
+  middleware is entitled to `secrets`, but inherited the strip from one level up
+  and failed with `'secrets' is not available inside a pikku function`.
+
+  It now reads the singletons through `getSingletonServices()`. Each command is
+  still stripped by its own runner, so nothing gains access it would not have
+  over HTTP.
+
+- ce66bf8: `pikku dev` now serves MCP.
+
+  The dev server has always logged how many MCP endpoints an app declares, and
+  both transports have always known how to mount them — but `dev` never handed
+  one the generated manifest, so `mcpJson` was undefined and `initMCP` returned
+  before mounting anything. Every app with MCP wirings announced a surface at
+  startup and answered 404 on `/mcp`, and the only way to exercise a tool was to
+  deploy. `deploy-apply` carries a comment describing the deployed bundle as
+  matching "the dev server", which had never served it either.
+
+  The manifest goes to the transport through the runner's _options_, not through
+  its config. `PikkuBunServer` and `PikkuNodeHTTPServer` both read `mcpJson` off
+  their third argument, and the runners forward a hand-picked set of fields — so
+  a value placed in `config` type-checks, arrives nowhere, and mounts nothing
+  without an error. `DevServerOptions` now carries `mcpJson` and both runners
+  forward it, which is the same shape `contentSigningJWT` already needed.
+
+  Reading the manifest is best-effort: an app with no MCP wirings has no
+  `mcp.gen.json` and mounts nothing, and an unparseable one warns rather than
+  failing the dev server.
+
+  This also makes MCP tools testable. They are not reachable over RPC — the
+  generated type union offers their names, but the runtime serves only
+  `expose: true` functions — so before this change an MCP tool could not be
+  invoked by a scenario, a browser or an MCP client without a deploy.
+
+  **Note on auth.** An MCP call over HTTP carries the caller's request, so the
+  app's own session middleware runs and a tool fronting a session-requiring
+  function is authenticated like any other wiring. Two cases still reach a
+  function anonymously, and mounting `/mcp` in dev makes them visible rather than
+  introducing them:
+  - **A requestless transport.** Stdio has no request to derive a session from, so
+    everything it serves runs anonymous.
+  - **A tool fronting a sessionless function.** It requires no session by
+    construction, so it is callable by anything that can reach the mount — a
+    mutating one included. Give it the scope its HTTP sibling has, and protect the
+    mount at the transport where the surface is not meant to be public.
+
+- ce66bf8: Import global middleware into deployed units when its entries are factory calls
+
+  Per-unit codegen emitted the side-effect import for an `addGlobalMiddleware`
+  source file only when the instance's `isFactoryCall` was false. That flag
+  distinguishes `mw()` from `mw` as an array element; it does not mark a
+  registration deferred behind an exported factory, and `addGlobalMiddleware`
+  registers at module evaluation under either form. A global registration written
+  in the ordinary way — `addGlobalMiddleware([sessionMiddleware()])` — was
+  therefore left out of every deployed unit and silently no-opped at runtime,
+  which for a session bridge or an auth gate fails open.
+
+  Every existing test for this path used the identifier form, so the guard was
+  never exercised.
+
+- ce66bf8: MCP calls now carry the caller's HTTP request, so an MCP tool can require a session.
+
+  Every auth middleware opens with `if (!http?.request) return`. The MCP runner
+  never put an `http` on the wire, so all of them bailed on their first line and
+  an MCP call reached the function with no session — no cookie, no bearer token,
+  no API key, whatever the app had registered. A tool fronting a session-requiring
+  `pikkuFunc` could therefore only ever answer `Authentication required`, and a
+  tool fronting a sessionless one was callable by anyone who could reach the mount.
+
+  Almost nothing was missing. Global middleware already ran for MCP wirings, and
+  the runner already built a `PikkuSessionService` and the middleware session wire
+  props. Only the request was being dropped — twice: `RunMCPEndpointParams` had
+  nowhere to put one, and `createFetchHandler` received the caller's `Request` and
+  discarded it.
+
+  `RunMCPEndpointParams` gains an optional `http`, which the runner places on the
+  wire, and the fetch handler wraps the incoming `Request` in a
+  `PikkuFetchHTTPRequest` and threads it through tools, resources and prompts. The
+  request is cloned before wrapping, because the MCP transport reads the body and
+  both would otherwise compete for one single-use stream; only headers and cookies
+  are wanted, since a tool's input arrives in the JSON-RPC params.
+
+  Transports with no request to offer — stdio, and the long-lived stdio/SSE server
+  paths — pass nothing and stay anonymous. That is a property of those transports
+  rather than a default chosen here, and it is now visible in the type.
+
+  The generated auth middleware moves from `addHTTPMiddleware('*')` to
+  `addGlobalMiddleware`. Carrying the request is necessary but not sufficient:
+  session middleware registered as HTTP middleware runs for HTTP wirings only, so
+  an MCP call still met no middleware and still had no session. Both entries —
+  the Better Auth session and the console bearer token — resolve a session from
+  whatever request the call arrived on, which is not an HTTP routing concern.
+  Wirings with no request are unaffected, since each middleware returns
+  immediately without one.
+
+  That move also retires a hazard the old shape carried: the two entries had to
+  share a single `addHTTPMiddleware('*')` call because the inspector keys
+  route-middleware groups by pattern, so a second `'*'` registration from another
+  file would silently displace the first. Global middleware is an append-only
+  list.
+
+  **Regenerate the auth scaffold after upgrading** — an app still carrying the
+  `addHTTPMiddleware('*')` form keeps anonymous MCP calls.
+
+  Two consequences worth planning for:
+  - **A tool fronting a session-requiring function starts working.** It previously
+    could not run at all.
+  - **A tool fronting a sessionless function is unchanged and still anonymous.**
+    Scopes and permissions now apply to MCP calls exactly as they do elsewhere, so
+    audit any tool that mutates state and give it the scope its HTTP sibling has.
+
+  `PikkuHTTP` is now exported from `@pikku/core/http`; it is part of this contract
+  and was previously only reachable as a type on other exported shapes.
+
+- 3ad2131: Name models by what they are for, and switch them all in one place
+
+  A `models` table in pikku.config.json maps an alias to a provider-qualified
+  model, so a declaration can say `model: 'cheap'` and the project repoints every
+  use of that tier at once instead of editing each agent. A model containing `/`
+  is still concrete and used exactly as written, which is how an agent that needs
+  one specific model pins it — aliases are opt-in.
+
+  The table is baked into codegen rather than read at runtime, so it applies to
+  deployed units and not just local runs, and `pikku dev`/`pikku serve` take
+  `--model cheap:openai/gpt-5-nano` to repoint a tier for one run without editing
+  the config.
+
+  Because the inspector already holds every agent's model literal, a bare name
+  with no matching alias now fails the build (PKU146) naming the aliases that do
+  exist, rather than reaching a provider as an unknown model.
+
+  Aliases resolve for every modality, not just agents: image, speech,
+  transcription, embedding and reranking all reach a provider through the same
+  point in the Vercel runner.
+
+- c247733: Declare `pgliteExtensions` in pikku.config.json's `db` block rather than in
+  `createConfig`. It only ever configured the CLI's embedded PGlite databases, and
+  reading it from the runtime config meant a project pointed at a server through
+  `DATABASE_URL` lost its declaration — the shadow database the CLI migrates is
+  PGlite either way, so the extensions went missing exactly where they were needed.
+  `pikku db export` now picks them up too.
+
+  ```json
+  {
+    "db": {
+      "pgliteExtensions": ["@electric-sql/pglite-pgvector", "hstore"]
+    }
+  }
+  ```
+
+- b930dca: Remove the `secretBroker` escape hatch and scope addon secrets and credentials
+
+  `secretBroker` let three named console functions receive the real `SecretService`,
+  against the rule that a function never sees one. It is gone: the inspector allowlist,
+  the `FunctionRuntimeMeta` flag, the runner branches, and the `WiredSecretBrokerServices`
+  type. Console secret administration moved into the console addon, where a
+  `SecretAdminService` holds the `SecretService` and the functions hold none.
+
+  Addons are now scoped rather than trusted. The CLI emits each package's declared secret
+  keys, and the host wraps the `SecretService` in a `ScopedSecretService` and the
+  `CredentialService` in a new `ScopedCredentialService` before the addon's service factory
+  runs — so an addon reads only what it declared, cannot write secrets, and cannot enumerate
+  the app's users. `wireAddon({ globalSecrets, globalCredentials })` waives this, taking the
+  reason as its value; only the consuming app can grant it, and the deploy manifest reports
+  every grant under `unscopedSecretAddons` / `unscopedCredentialAddons`.
+
+- 8978fbd: feat(workflow): let an approval gate declare who may answer it
+
+  `workflow.approval()` gains `approvers` (`'any' | 'owner' | 'not-initiator'`)
+  and `approverScope`, so a gate can require four-eyes sign-off, restrict itself
+  to the run's initiator, or require the decider to hold a named scope.
+
+  Both are enforced when the workflow replays the gate — the same place, and for
+  the same reason, the decision payload is validated: the policy is a value on
+  the workflow, and a decision can be recorded before the run has ever reached
+  the gate. A decision that fails the policy is discarded and the gate stays
+  closed. Where the run has already published its policy, the check also runs at
+  submission time so the caller gets a 403 rather than silence.
+
+  An answer is now recorded where it can be answered for later. The settled
+  decision carries `decidedBy` and `decidedAt` in its `ApprovalOutcome`, so who
+  signed reaches `workflowStep.result` and `workflowStepHistory` rather than
+  living only in mutable run state. Every answer — accepted, refused at the door,
+  or cleared on replay — is also written to the audit sink as
+  `workflow.approval.decided`, which outlives the run: `deleteRun` cascades to
+  steps and history, and a refused attempt never reaches a step at all. Projects
+  with no audit service wired are unaffected.
+
+  **This loosens the default.** `approveStep` previously refused anyone but the
+  run's initiator, unconditionally. A gate that declares no `approvers` now
+  accepts a decision from anyone the approve entrypoint admits — restore the old
+  behaviour per-gate with `approvers: 'owner'`, or gate the approve route with
+  `auth`/`permissions`. Ownership still governs _reads_ of a run unchanged.
+
+- Updated dependencies [063f43a]
+- Updated dependencies [8ad051c]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [d0307a8]
+- Updated dependencies [0ab1a88]
+- Updated dependencies [5599a27]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [3ad2131]
+- Updated dependencies [b930dca]
+- Updated dependencies [b95e77d]
+- Updated dependencies [fd9d834]
+- Updated dependencies [8978fbd]
+  - @pikku/core@0.12.82
+  - @pikku/better-auth@0.12.23
+  - @pikku/knowledge@0.12.5
+  - @pikku/skills@0.12.8
+  - @pikku/inspector@0.12.58
+  - @pikku/ai-vercel@0.12.10
+  - @pikku/bun-server@0.12.6
+  - @pikku/deploy-cloudflare@0.12.10
+  - @pikku/fetch@0.12.9
+  - @pikku/kysely@0.13.15
+  - @pikku/kysely-node-sqlite@0.12.5
+  - @pikku/n8n-import@0.0.5
+  - @pikku/openapi-parser@0.12.18
+  - @pikku/playwright@0.12.74
+
 ## 0.12.101
 
 ### Patch Changes

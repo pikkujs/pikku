@@ -7,7 +7,7 @@ export function useSecretValue(secretId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['secret-value', secretId],
     queryFn: async () => {
-      return await rpc.invoke('pikkuConsoleGetSecret', { secretId: secretId! })
+      return await rpc.invoke('console:secretGet', { secretId: secretId! })
     },
     enabled: !!secretId && enabled,
   })
@@ -19,7 +19,7 @@ export function useSetSecret() {
 
   return useMutation({
     mutationFn: ({ secretId, value }: { secretId: string; value: unknown }) =>
-      rpc.invoke('pikkuConsoleSetSecret', { secretId, value }),
+      rpc.invoke('console:secretSet', { secretId, value }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['secret-value', variables.secretId],

@@ -2,7 +2,6 @@ export {
   PikkuFetchHTTPRequest,
   DEFAULT_MAX_BODY_SIZE,
 } from './pikku-fetch-http-request.js'
-export type { PikkuFetchHTTPRequestOptions } from './pikku-fetch-http-request.js'
 export { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 export { logRoutes } from './log-http-routes.js'
 

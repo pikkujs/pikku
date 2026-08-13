@@ -48,9 +48,20 @@ export const KnowledgeNoteSchema = z.object({
 export type KnowledgeNote = z.infer<typeof KnowledgeNoteSchema>
 
 /**
- * The scalars this profile reads. Anything else in the frontmatter is left
- * alone: OKF permits extra fields, and a profile built on top of this one adds
- * its own — Fabric's `design:` is read by Fabric, not here.
+ * A note read with a profile's own scalars alongside this one's.
+ *
+ * OKF permits extra frontmatter, and a profile built on top of this one adds its
+ * own keys — Fabric's `design:`, `screens:` and `route:`. They are still not read
+ * HERE: nothing in this package knows what they mean, and the reader names them
+ * at the call. What this type buys is that a profile does not have to fork the
+ * parser to keep its own keys, which is the only way the two stay one profile.
+ */
+export type ProfileNote<Key extends string = never> = KnowledgeNote &
+  Partial<Record<Key, string>>
+
+/**
+ * The scalars this profile reads. A caller's own keys are passed to `parseNote`
+ * rather than added here.
  */
 const SCALARS = [
   'type',
@@ -100,8 +111,16 @@ const readList = (
 /**
  * Parse one note. The frontmatter is flat scalars plus list-valued `tags` and
  * `entities`, so a line parser covers it without a YAML dependency.
+ *
+ * @param extraScalars a profile's own frontmatter keys, kept verbatim. Never
+ * lower-cased: `type` and `status` are closed vocabularies this package compares
+ * literally, and a profile's key is a value only the profile can interpret.
  */
-export const parseNote = (path: string, raw: string): KnowledgeNote => {
+export const parseNote = <Key extends string = never>(
+  path: string,
+  raw: string,
+  extraScalars: readonly Key[] = []
+): ProfileNote<Key> => {
   const note: KnowledgeNote = { path, body: raw }
   const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(raw)
   if (frontmatter) {
@@ -131,41 +150,58 @@ export const parseNote = (path: string, raw: string): KnowledgeNote => {
         ;(note as Record<string, unknown>)[key] = LOWERCASED.has(key)
           ? value.toLowerCase()
           : value
+      } else if (
+        (extraScalars as readonly string[]).includes(key) &&
+        rawValue !== ''
+      ) {
+        ;(note as Record<string, unknown>)[key] = unquote(rawValue)
       }
     }
   }
   const base = basename(path).toLowerCase()
   if (base === 'index.md') note.reserved = 'index'
   else if (base === 'log.md') note.reserved = 'log'
-  return note
+  return note as ProfileNote<Key>
 }
 
-const collectMarkdown = async (
+const collectMarkdown = async <Key extends string>(
   dir: string,
   root: string,
-  out: KnowledgeNote[]
+  extraScalars: readonly Key[],
+  out: ProfileNote<Key>[]
 ): Promise<void> => {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.')) continue
     const full = join(dir, entry.name)
     if (entry.isDirectory()) {
-      await collectMarkdown(full, root, out)
+      await collectMarkdown(full, root, extraScalars, out)
       continue
     }
     if (!entry.isFile()) continue
     if (!/\.(md|markdown|txt)$/i.test(entry.name)) continue
-    out.push(parseNote(relative(root, full), await readFile(full, 'utf8')))
+    out.push(
+      parseNote(
+        relative(root, full),
+        await readFile(full, 'utf8'),
+        extraScalars
+      )
+    )
   }
 }
 
-/** Every note under `<root>/knowledge/`, path-sorted. Empty when there is none. */
-export const readKnowledgeNotes = async (
-  root: string
-): Promise<KnowledgeNote[]> => {
+/**
+ * Every note under `<root>/knowledge/`, path-sorted. Empty when there is none.
+ *
+ * @param extraScalars a profile's own frontmatter keys, as for `parseNote`.
+ */
+export const readKnowledgeNotes = async <Key extends string = never>(
+  root: string,
+  extraScalars: readonly Key[] = []
+): Promise<ProfileNote<Key>[]> => {
   const dir = join(root, KNOWLEDGE_DIR)
   if (!existsSync(dir) || !(await stat(dir)).isDirectory()) return []
-  const notes: KnowledgeNote[] = []
-  await collectMarkdown(dir, root, notes)
+  const notes: ProfileNote<Key>[] = []
+  await collectMarkdown(dir, root, extraScalars, notes)
   return notes.sort((a, b) => a.path.localeCompare(b.path))
 }
 

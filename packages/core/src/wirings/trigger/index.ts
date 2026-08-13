@@ -6,5 +6,4 @@ export type {
   CorePikkuTriggerFunction,
   CorePikkuTriggerFunctionConfig,
   CoreTrigger,
-  PikkuTrigger,
 } from './trigger.types.js'

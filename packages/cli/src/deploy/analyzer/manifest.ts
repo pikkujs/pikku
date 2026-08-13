@@ -132,6 +132,14 @@ export interface SecretDeclaration {
 /** Secret reads whose key the inspector could not resolve, as `file:line:source`. */
 export type UnresolvedSecretRead = string
 
+/** A `wireAddon` instance the app exempted from secret or credential scoping. */
+export interface UnscopedAddon {
+  namespace: string
+  package: string
+  /** The app's stated reason, from `wireAddon({ globalSecrets | globalCredentials })`. */
+  reason: string
+}
+
 export interface VariableDeclaration {
   variableId: string
   displayName: string
@@ -154,5 +162,16 @@ export interface DeploymentManifest {
    * scope to the declared set when this is empty.
    */
   unresolvedSecretReads: UnresolvedSecretRead[]
+  /**
+   * Addon instances exempted from secret scoping. Every other addon reads only
+   * the secrets it declared, so this is the full list of packages that can
+   * reach a secret the app never named for them.
+   */
+  unscopedSecretAddons: UnscopedAddon[]
+  /**
+   * Addon instances exempted from credential scoping. Every other addon reaches
+   * only the credentials it declared, and none can enumerate the app's users.
+   */
+  unscopedCredentialAddons: UnscopedAddon[]
   variables: VariableDeclaration[]
 }

@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "@pikku/aws-services": "^0.12.9",
-    "@pikku/core": "^0.12.81",
+    "@pikku/core": "^0.12.82",
     "@pikku/jose": "^0.12.4",
-    "@pikku/lambda": "^0.12.6",
+    "@pikku/lambda": "^0.12.7",
     "@pikku/schema-cfworker": "^0.12.5",
     "tslib": "^2.8.1"
   },

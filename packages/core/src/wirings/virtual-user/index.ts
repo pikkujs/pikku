@@ -18,25 +18,16 @@
  */
 export type {
   ApiCatalogueEntry,
-  IntentRecord,
   IntentSource,
-  IntentStatus,
-  StepRecord,
-  VirtualUserAction,
-  VirtualUserBudget,
   VirtualUserDisposition,
   VirtualUserFinding,
-  VirtualUserFindingKind,
   VirtualUserRunResult,
-  VirtualUserTally,
   VirtualUserTarget,
 } from './virtual-user.types.js'
 export { PRODUCTION_DISPOSITION } from './virtual-user.types.js'
 export {
   runVirtualUser,
-  rememberIds,
   type RunVirtualUserParams,
-  type VirtualUserCallContext,
 } from './run-virtual-user.js'
 export {
   personaScopes,
@@ -57,26 +48,19 @@ export {
 } from './virtual-user-dispositions.js'
 export {
   catalogueClassification,
-  catalogueIndex,
   catalogueLookup,
-  describeEntry,
   isReadOnly,
   reachableCatalogue,
-  renderCatalogue,
   unreachableCatalogue,
 } from './virtual-user-catalogue.js'
 export {
-  reachableAgents,
   type AgentReachability,
   type ReachableAgent,
 } from './virtual-user-agents.js'
 export {
   IntentStack,
   intentsForPersona,
-  type IntentMove,
-  type ScheduledTick,
 } from './virtual-user-intents.js'
-export { createRng, type VirtualUserRng } from './virtual-user-rng.js'
 export {
   deriveCatalogue,
   deriveIntents,

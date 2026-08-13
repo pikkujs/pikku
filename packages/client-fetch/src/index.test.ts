@@ -1,12 +1,22 @@
 import assert from 'node:assert/strict'
 import { describe, test, afterEach } from 'node:test'
 
-import { CorePikkuFetch, corePikkuFetch } from './index.js'
+import { CorePikkuFetch, PikkuFetchError } from './index.js'
+import { corePikkuFetch } from './pikku-fetch.js'
 
 describe('@pikku/fetch', () => {
   test('exports the public fetch client API', () => {
     assert.equal(typeof CorePikkuFetch, 'function')
+    assert.equal(typeof PikkuFetchError, 'function')
+  })
+
+  test('keeps corePikkuFetch off the entrypoint', async () => {
     assert.equal(typeof corePikkuFetch, 'function')
+    assert.equal(
+      'corePikkuFetch' in (await import('./index.js')),
+      false,
+      'corePikkuFetch is an internal helper and must not be re-exported'
+    )
   })
 })
 
