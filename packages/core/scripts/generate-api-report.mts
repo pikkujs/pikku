@@ -16,6 +16,10 @@
  * disagree — so a member-level change is a reviewable diff rather than a
  * surprise in someone else's CI.
  *
+ * A member per line, and no member bodies. Both are load-bearing rather than
+ * cosmetic: the report exists to be diffed, and a class emitted as one long
+ * line of its own source is neither reviewable nor mergeable.
+ *
  * Run: yarn api-report
  */
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -50,7 +54,132 @@ const program = ts.createProgram(
 )
 const checker = program.getTypeChecker()
 
-/** One line per symbol: how it is declared, flattened and stripped of noise. */
+/** Comments are noise in a report the diff is read for. */
+const stripComments = (text: string): string =>
+  text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+
+/**
+ * Punctuation that makes a line and its successor one thing.
+ *
+ * Read from both ends rather than one, because the closers are ambiguous from
+ * behind: `string[]`, `Promise<T>` and `= {}` all end in a closing bracket and
+ * none of them is a continuation. What the *next* line starts with is not.
+ */
+const CONTINUES = /(=>|[,;{([<|&=])$/
+const CLOSES = /^(=>|extends\b|[}\])>,;|&])/
+
+/**
+ * A member's own text on one line — long, but never long enough to matter.
+ *
+ * Inside an object type the author's newline *was* the separator, so collapsing
+ * without restoring it produces `{ a: string b: number }`, which is not the
+ * type it describes and does not parse in the ```ts fence it is printed into.
+ */
+const oneLine = (text: string): string => {
+  const lines = stripComments(text)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  let depth = 0
+  const joined = lines
+    .map((line, index) => {
+      const inObjectType = depth > 0
+      for (const character of line) {
+        if (character === '{') depth++
+        else if (character === '}') depth--
+      }
+      const next = lines[index + 1]
+      return inObjectType &&
+        next !== undefined &&
+        !CONTINUES.test(line) &&
+        !CLOSES.test(next)
+        ? `${line};`
+        : line
+    })
+    .join(' ')
+  return joined.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')')
+}
+
+/**
+ * A class member as a consumer sees it: the signature, and nothing after it.
+ *
+ * The body is where every character of this report used to come from — a class
+ * arrived as its own source, so the report promised implementation details and
+ * a one-word change to a method rewrote the whole declaration. Truncating at
+ * the body leaves exactly the part a compatibility promise covers.
+ */
+const memberSignature = (member: ts.ClassElement | ts.TypeElement): string => {
+  const source = member.getSourceFile().text
+  const start = member.getStart()
+
+  const body = (member as { body?: ts.Node }).body
+  if (body) {
+    const head = oneLine(source.slice(start, body.getStart())).replace(
+      /\s*$/,
+      ''
+    )
+    // An inferred return type is still a return type a consumer depends on, and
+    // truncating at the body is what threw the author's away.
+    if (ts.isMethodDeclaration(member) || ts.isGetAccessorDeclaration(member)) {
+      const signature = member.type
+        ? undefined
+        : checker.getSignatureFromDeclaration(member)
+      if (signature) {
+        const returns = checker.getReturnTypeOfSignature(signature)
+        return `${head}: ${checker.typeToString(returns, undefined, ts.TypeFormatFlags.NoTruncation)}`
+      }
+    }
+    return head
+  }
+
+  // A property's initializer is a body by another name. Its annotation stands in
+  // for it, and the checker supplies one when the author left it inferred.
+  if (ts.isPropertyDeclaration(member) && member.initializer) {
+    if (member.type) return oneLine(source.slice(start, member.type.end))
+    const type = checker.getTypeAtLocation(member)
+    return `${oneLine(source.slice(start, member.name.end))}: ${checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation)}`
+  }
+
+  return oneLine(member.getText())
+}
+
+/** Members a consumer can reach, so a private field is not a promise. */
+const isPublic = (member: ts.ClassElement | ts.TypeElement): boolean =>
+  !(ts.getModifiers(member as ts.HasModifiers) ?? []).some(
+    (modifier) => modifier.kind === ts.SyntaxKind.PrivateKeyword
+  ) && !(member.name && ts.isPrivateIdentifier(member.name))
+
+/**
+ * A declaration with members, one member per line.
+ *
+ * The line break is the point. Two branches that touch different methods of the
+ * same class are a textual conflict when the class is one line and an ordinary
+ * merge when it is not, which is a tax the whole repo was paying: every rebase
+ * over this file stopped to re-resolve a forty-thousand-character line by hand.
+ */
+const membered = (
+  declaration:
+    | ts.ClassDeclaration
+    | ts.InterfaceDeclaration
+    | ts.EnumDeclaration,
+  members: ts.NodeArray<ts.ClassElement | ts.TypeElement | ts.EnumMember>
+): string => {
+  if (members.length === 0) return oneLine(declaration.getText())
+  const source = declaration.getSourceFile().text
+  // `members.pos` is the offset just past the `{`, so the header comes with its
+  // own brace and needs no reassembling.
+  const header = oneLine(source.slice(declaration.getStart(), members.pos))
+  const lines = ts.isEnumDeclaration(declaration)
+    ? (members as readonly ts.EnumMember[]).map(
+        (member) => `${oneLine(member.getText())},`
+      )
+    : (members as readonly (ts.ClassElement | ts.TypeElement)[])
+        .filter(isPublic)
+        .map(memberSignature)
+  return [header, ...lines.map((line) => `  ${line}`), '}'].join('\n')
+}
+
+/** How a symbol is declared, in as many lines as its members need. */
 const signature = (exported: ts.Symbol): string => {
   // A re-export is an alias; the declaration that matters is the target's, so
   // an interface re-exported through a barrel still reports its members.
@@ -62,20 +191,21 @@ const signature = (exported: ts.Symbol): string => {
   if (!declaration) return exported.getName()
 
   if (
-    ts.isInterfaceDeclaration(declaration) ||
     ts.isClassDeclaration(declaration) ||
-    ts.isTypeAliasDeclaration(declaration) ||
+    ts.isInterfaceDeclaration(declaration) ||
     ts.isEnumDeclaration(declaration)
   ) {
-    // The declaration itself, so member changes show up in the diff.
-    return declaration
-      .getText()
-      .replace(/\/\*\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/[^\n]*/g, '')
+    return membered(declaration, declaration.members)
+  }
+
+  if (ts.isTypeAliasDeclaration(declaration)) {
+    // No members to walk, so the author's own line breaks are the ones that
+    // keep a long union reviewable.
+    return stripComments(declaration.getText())
       .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .join(' ')
+      .map((l) => l.trimEnd())
+      .filter((l) => l.trim())
+      .join('\n')
   }
 
   const type = checker.getTypeOfSymbolAtLocation(symbol, declaration)
@@ -92,17 +222,12 @@ const ECOSYSTEM_SUBPATHS = new Set(['./ecosystem', './internal'])
 
 type Exported = { name: string; members: number; signature: string }
 
-/** Members a consumer can reach, so a private field is not a promise. */
+/** The members the report lists, which is what the tally is counting. */
 const memberCount = (declaration: ts.Declaration): number => {
   if (ts.isInterfaceDeclaration(declaration)) return declaration.members.length
   if (ts.isEnumDeclaration(declaration)) return declaration.members.length
   if (!ts.isClassDeclaration(declaration)) return 0
-  return declaration.members.filter(
-    (member) =>
-      !(ts.getModifiers(member) ?? []).some(
-        (modifier) => modifier.kind === ts.SyntaxKind.PrivateKeyword
-      ) && !(member.name && ts.isPrivateIdentifier(member.name))
-  ).length
+  return declaration.members.filter(isPublic).length
 }
 
 const modules = new Map<string, Exported[]>()
