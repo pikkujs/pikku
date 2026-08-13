@@ -1,4 +1,5 @@
 import { join, resolve } from 'path'
+import { existsSync, readFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -356,6 +357,46 @@ export const dev = pikkuSessionlessFunc<
     }
 
     const consoleMount = await resolveConsoleMount()
+
+    /**
+     * Hand the server the generated MCP manifest so it actually serves MCP.
+     *
+     * Codegen reports "N MCP endpoints" and both transports mount them at
+     * `mcpPath` — but only when given `mcpJson`, and dev never passed it.
+     *
+     * It goes in the runner *options*, not in the config: the transport reads it
+     * off its third argument, and the runners forward a hand-picked list of
+     * fields. Putting it in `config` type-checks and is discarded in silence.
+     * So every pikku app announced an MCP surface at startup and served a 404,
+     * and the only way to exercise a tool was to deploy. `deploy-apply` even
+     * carries a comment saying the deployed bundle should match "the dev server"
+     * — which had never served it either.
+     *
+     * Absent or unparseable is not an error: an app with no MCP wirings has no
+     * manifest, and that is the common case.
+     */
+    const mcpJson = await (async () => {
+      const file = join(pikkuDir, 'mcp', 'mcp.gen.json')
+      if (!existsSync(file)) return undefined
+      try {
+        const parsed = JSON.parse(readFileSync(file, 'utf-8')) as {
+          tools?: unknown[]
+          resources?: unknown[]
+          prompts?: unknown[]
+        }
+        const count =
+          (parsed.tools?.length ?? 0) +
+          (parsed.resources?.length ?? 0) +
+          (parsed.prompts?.length ?? 0)
+        return count > 0 ? parsed : undefined
+      } catch (err) {
+        logger.warn(
+          `[pikku] could not parse ${file} — MCP will not be served: ${err instanceof Error ? err.message : String(err)}`
+        )
+        return undefined
+      }
+    })()
+
     const pikkuServer = devServerRunner.createServer(
       {
         ...userConfig,
@@ -365,7 +406,7 @@ export const dev = pikkuSessionlessFunc<
         ...(consoleMount ? { staticMounts: [consoleMount] } : {}),
       },
       logger,
-      { contentSigningJWT }
+      { contentSigningJWT, mcpJson }
     )
 
     const lifecycle = await loadLifecycle()

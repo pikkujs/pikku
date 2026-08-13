@@ -9,6 +9,7 @@ import {
   wireMCPPrompt,
   wireMCPResource,
 } from './mcp-runner.js'
+import { addGlobalMiddleware } from '../../middleware-runner.js'
 import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { pikkuMiddleware } from '../../types/core.types.js'
@@ -413,6 +414,141 @@ describe('runMCPTool', () => {
         process.env.NODE_ENV = originalNodeEnv
       }
     }
+  })
+})
+
+describe("MCP carries the caller's HTTP request", () => {
+  // Without this, every auth middleware bails on its first line — each one
+  // opens with `if (!http?.request) return`, so an MCP call arrived at the
+  // function with no session, and a tool fronting a session-requiring function
+  // answered 'Authentication required' to every caller. Nothing else was
+  // missing: global middleware already runs for MCP, and the runner already
+  // builds a session service. Only the request was being dropped.
+  test('exposes http on the wire so session middleware can read it', async () => {
+    pikkuState(null, 'mcp', 'toolsMeta').whoami = {
+      name: 'whoami',
+      title: 'Who am I',
+      description: 'Who am I',
+      pikkuFuncId: 'whoamiFunc',
+      inputSchema: null,
+      outputSchema: 'MCPToolResponse',
+    } as never
+
+    let seenAuthorization: string | undefined
+    registerFunction('whoamiFunc', async (_services, _data, wire) => {
+      seenAuthorization = wire.http?.request?.header('authorization')
+      return [{ type: 'text', text: seenAuthorization ?? 'anonymous' }]
+    })
+
+    const http = {
+      request: {
+        header: (name: string) =>
+          name.toLowerCase() === 'authorization'
+            ? 'Bearer token-abc'
+            : undefined,
+      },
+    }
+
+    const response = await runMCPTool(
+      { jsonrpc: '2.0', id: 'req-http', params: {} },
+      { mcp: mcpWire as never, http: http as never },
+      'whoami'
+    )
+
+    assert.equal(seenAuthorization, 'Bearer token-abc')
+    assert.deepEqual(response, {
+      id: 'req-http',
+      result: [{ type: 'text', text: 'Bearer token-abc' }],
+    })
+  })
+
+  test('omitting http leaves the wire without one rather than inventing it', async () => {
+    pikkuState(null, 'mcp', 'toolsMeta').anon = {
+      name: 'anon',
+      title: 'Anon',
+      description: 'Anon',
+      pikkuFuncId: 'anonFunc',
+      inputSchema: null,
+      outputSchema: 'MCPToolResponse',
+    } as never
+
+    let sawHttp: unknown = 'unset'
+    registerFunction('anonFunc', async (_services, _data, wire) => {
+      sawHttp = wire.http
+      return [{ type: 'text', text: 'ok' }]
+    })
+
+    await runMCPTool(
+      { jsonrpc: '2.0', id: 'req-anon', params: {} },
+      { mcp: mcpWire as never },
+      'anon'
+    )
+
+    assert.equal(sawHttp, undefined)
+  })
+})
+
+describe('MCP tools fronting a session-requiring function', () => {
+  // The whole point of carrying the request: this is the template failure,
+  // reproduced. `listRoomsTool` and five others front a `pikkuFunc`, which
+  // requires a session, and answered 'Authentication required' to every caller
+  // because no request ever reached the middleware that would have set one.
+  test('receive the session set by global middleware from the request', async () => {
+    addGlobalMiddleware([
+      async (_services, wire, next) => {
+        const header = wire.http?.request?.header('authorization')
+        if (header === 'Bearer token-abc') {
+          wire.setSession?.({ userId: 'usr_1', name: 'Rafa' } as never)
+        }
+        await next()
+      },
+    ] as never)
+
+    pikkuState(null, 'mcp', 'toolsMeta').listRooms = {
+      name: 'listRooms',
+      title: 'List rooms',
+      description: 'List rooms',
+      pikkuFuncId: 'listRoomsFunc',
+      inputSchema: null,
+      outputSchema: 'MCPToolResponse',
+    } as never
+
+    // sessionless: false — the distinction that made these tools fail.
+    addFunction(
+      'listRoomsFunc',
+      {
+        func: async (_services: any, _data: any, wire: any) => [
+          { type: 'text', text: wire.session?.userId ?? 'anonymous' },
+        ],
+      } as never,
+      null
+    )
+    pikkuState(null, 'function', 'meta').listRoomsFunc = {
+      name: 'listRoomsFunc',
+      sessionless: false,
+      permissions: [],
+    } as never
+
+    const response = await runMCPTool(
+      { jsonrpc: '2.0', id: 'req-session', params: {} },
+      {
+        mcp: mcpWire as never,
+        http: {
+          request: {
+            header: (name: string) =>
+              name.toLowerCase() === 'authorization'
+                ? 'Bearer token-abc'
+                : undefined,
+          },
+        } as never,
+      },
+      'listRooms'
+    )
+
+    assert.deepEqual(response, {
+      id: 'req-session',
+      result: [{ type: 'text', text: 'usr_1' }],
+    })
   })
 })
 

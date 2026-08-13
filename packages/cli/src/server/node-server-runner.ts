@@ -34,6 +34,9 @@ export class NodeServerRunner implements DevServerRunner {
         pikkuWebsocketHandler({ server: httpServer, wss, logger })
       },
       contentSigningJWT: options.contentSigningJWT,
+      // Read off this options object by the transport, not off `config` — so it
+      // has to be forwarded here explicitly, exactly like the JWT above.
+      mcpJson: options.mcpJson,
     })
     return {
       init: () => server.init(),

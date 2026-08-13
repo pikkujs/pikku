@@ -107,10 +107,14 @@ export const serializeMiddlewareImports = (
   // it here, into the always-bootstrap-imported pikku-middleware.gen.ts,
   // guarantees global middleware registers in every unit. A duplicate import
   // in full builds is harmless — module bodies evaluate once.
+  //
+  // `isFactoryCall` is not consulted: it distinguishes `mw()` from `mw` as an
+  // array element, not a deferred registration behind an exported factory, and
+  // addGlobalMiddleware registers at module evaluation under either form.
   for (const [instanceId, instance] of Object.entries(
     middlewareState.instances
   )) {
-    if (instanceId.startsWith('global:') && !instance.isFactoryCall) {
+    if (instanceId.startsWith('global:')) {
       directImports.add(
         getFileImportRelativePath(
           outputPath,

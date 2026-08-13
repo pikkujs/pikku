@@ -48,6 +48,30 @@ describe('serializeMiddlewareImports global middleware', () => {
     assert.match(output, /__fabric_telemetry__\/telemetry\.wiring/)
   })
 
+  // `isFactoryCall` describes the array element — `betterAuthStatelessSession()`
+  // rather than `betterAuthStatelessSession` — and says nothing about whether the
+  // registration is deferred behind an exported factory. addGlobalMiddleware runs
+  // at module evaluation either way, so both forms need the side-effect import.
+  test('emits the import when the global entry is a factory call', () => {
+    const state = emptyMiddlewareState({
+      'global:middleware:0': {
+        definitionId: 'betterAuthStatelessSession',
+        sourceFile: '/project/pikku/auth/auth-middleware.gen.ts',
+        position: 282,
+        isFactoryCall: true,
+      },
+    })
+
+    const output = serializeMiddlewareImports(
+      '/project/.pikku/middleware/pikku-middleware.gen.ts',
+      state,
+      emptyHttpState(),
+      {}
+    )
+
+    assert.match(output, /auth\/auth-middleware\.gen/)
+  })
+
   test('deduplicates a global middleware shared across two instances', () => {
     const state = emptyMiddlewareState({
       'global:middleware:0': {

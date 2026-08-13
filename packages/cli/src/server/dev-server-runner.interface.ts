@@ -30,6 +30,16 @@ export type DevServerOptions = {
    * instance — otherwise every signed URL is rejected.
    */
   contentSigningJWT?: JWTService
+  /**
+   * The generated MCP manifest. Handed straight to the transport, which mounts
+   * the MCP endpoint only when it is present — so a runner that forgets to
+   * forward this serves a 404 with no error anywhere.
+   */
+  mcpJson?: {
+    tools?: unknown[]
+    resources?: unknown[]
+    prompts?: unknown[]
+  }
 }
 
 export interface DevServerRunner {

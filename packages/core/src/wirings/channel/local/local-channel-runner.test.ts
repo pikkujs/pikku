@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict'
 import { runLocalChannel } from './local-channel-runner.js'
 import { pikkuState, resetPikkuState } from '../../../pikku-state.js'
 import { wireChannel } from '../channel-runner.js'
+import { addFunction } from '../../../function/function-runner.js'
 import { addHTTPMiddleware } from '../../http/http-runner.js'
 import type {
   HTTPMethod,
@@ -269,4 +270,71 @@ test('runChannel should run HTTP middleware on websocket upgrade and establish s
   })
   await result.message(JSON.stringify({ action: 'ping' }))
   assert.deepEqual(sent, { action: 'ping' })
+})
+
+test('a message handler that returns nothing does not attempt to send', async () => {
+  // The connect path already guards this; the message path did not, so a handler
+  // with nothing to say produced `send requires a non-empty message` on every
+  // message. Gateway websockets hit it every time — their generated message
+  // handler returns undefined by design — which is why a chat gateway could
+  // accept a connection and never deliver anything to its handler.
+  resetPikkuState()
+  pikkuState(null, 'package', 'singletonServices', mockSingletonServices as any)
+  pikkuState(null, 'package', 'factories', {
+    createWireServices: mockCreateWireServices,
+  } as any)
+
+  const sent: unknown[] = []
+  let handled = 0
+
+  pikkuState(null, 'channel', 'meta', {
+    quiet: {
+      name: 'quiet',
+      route: '/quiet-channel',
+      message: { pikkuFuncId: 'quietMessage' },
+      messageWirings: {},
+    },
+  } as any)
+  pikkuState(null, 'function', 'meta')['quietMessage'] = {
+    pikkuFuncId: 'quietMessage',
+    inputSchemaName: null,
+    outputSchemaName: null,
+    sessionless: true,
+  } as any
+  const quietMessage = {
+    auth: false,
+    func: async () => {
+      handled++
+      return undefined
+    },
+  }
+  wireChannel({
+    name: 'quiet',
+    route: '/quiet-channel',
+    auth: false,
+    onMessage: quietMessage as any,
+  } as any)
+
+  httpRouter.initialize()
+
+  const handler = await runLocalChannel({
+    channelId: 'quiet-channel-id',
+    request: new PikkuMockRequest('/quiet-channel', 'get'),
+    response: new PikkuMockResponse(),
+    route: '/quiet-channel',
+  })
+  assert.ok(handler)
+  handler.registerOnSend(async (message: unknown) => {
+    sent.push(message)
+  })
+  handler.open()
+
+  await handler.message(JSON.stringify({ text: 'hello' }))
+
+  assert.equal(handled, 1, 'the handler should have run')
+  assert.deepEqual(
+    sent,
+    [],
+    'nothing should have been sent for an empty result'
+  )
 })
