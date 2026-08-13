@@ -1,3 +1,122 @@
+## 0.12.81
+
+### Patch Changes
+
+- e110c55: Give a finished agent run one finalization seam, and make a failed tool call
+  distinguishable from a tool that returned text saying "Error:".
+  - Tool results carry `error` as its own field, from the runner through the
+    stream event and the run's step record into persisted messages.
+  - `modifyOutput` receives the run's tool calls and may return a rewritten list,
+    which is redistributed back onto the steps it came from.
+  - Streamed runs accumulate their tool calls across steps, and every completion
+    path — streamed, non-streamed, and resumed after a tool approval — now
+    finalizes through `finalizeAgentRun`. A tool that fails after being approved
+    leaves a record on the run instead of vanishing.
+
+- e110c55: Add `scenario.expectScore` — grade a finished agent run with a declared scorer and assert on it.
+
+  An agent's answer cannot be matched against a fixed string, so a scenario grades
+  it instead. `expectScore(step, runId, scorer, { atLeast, atMost, reference })`
+  runs one declared scorer against the run the scenario just triggered and fails
+  with the reason the judge gave. The default bound is `atLeast: 0.5`, so an
+  unqualified assertion still fails a run graded zero.
+
+  Grading goes over the new `pikkuScenarioGradeRun` instrumentation RPC, which the
+  dev server registers alongside the coverage and stub RPCs — so it exists only in
+  processes that should have it, and never in a deployed bundle. It grades from
+  the snapshot the runtime already took when the run finished, which is what makes
+  a scenario's grade the same measurement production's sampler makes rather than
+  an approximation of it: a run's prompt, answer and tool calls are spread across
+  a thread's messages, where the boundary of one run is not recoverable.
+
+  Two things differ deliberately from live scoring. The sample rate is ignored — a
+  scorer grading 1% of traffic still grades every scenario run — and the grade is
+  returned rather than recorded, so a test's score never lands among the
+  production figures. `reference` supplies the answer key a `requiresReference`
+  judge grades against, which is the only way such a judge is reachable at all.
+
+- e110c55: Add runtime scoring for AI agents: `pikkuAIScorer` for heuristic grades and
+  `pikkuAIJudge` for LLM-judged ones, graded off the request path on two queue
+  lanes so a slow judge cannot starve the cheap checks. Grades are sampled
+  deterministically per `(run, scorer)` and persisted to `ai_run_score`.
+- acc8077: Enforce a CLI command's declared `auth`/`permissions`, and mask CLI channel
+  errors in production.
+
+  A command's declared `auth`/`permissions` were accepted by the types but dropped
+  in `registerCLICommands`: when the command wrapped a function-config object,
+  `unwrapFunc` kept only the inner func's fields, so a command-level access-control
+  declaration was a silent no-op. They are now merged into the config passed to
+  `addFunction` — command-level winning, falling back to the handler's — so the
+  function runner enforces them.
+
+  The CLI raw channel runner returned the raw exception message to the remote
+  client. It can carry internals (a stack, a DB error, a path), so it is now logged
+  server-side and replaced with a generic `Command failed` in production; dev keeps
+  the message inline.
+
+  CWE-862 / CWE-209.
+
+- 905f737: Restrict a graph workflow's `startNode` to its declared entry nodes.
+
+  The scaffolded public route `POST /workflow/:name/graph/:nodeId` passes `:nodeId`
+  straight through as `startNode`, and `validateGraphReferences` only checked that
+  the node exists. A caller could name any dependency-free node — one whose input
+  reads only `trigger` — and fire its RPC directly with chosen data, skipping every
+  upstream eligibility, validation or approval node. These node RPCs are internal,
+  so the public `/rpc` endpoint refuses them; this route was the only outside path
+  to them.
+
+  `startWorkflow` — the boundary the public route and triggers enter through — now
+  rejects a `startNode` that is not in the graph's `entryNodeIds`. Internal
+  resume/replay drives `runWorkflowGraph` directly and keeps full node targeting,
+  so the check sits at the trust boundary rather than in the low-level runner.
+
+  CWE-20 / CWE-863.
+
+- 3cc6428: Run a templated MCP resource's middleware for concrete request URIs.
+
+  `runMCPResource` resolves a templated resource's `pikkuFuncId` via the template
+  key, but `runMCPPikkuFunc` then re-looked-up the resource meta by the concrete
+  request URI (`resource://users/123`), which no meta is stored under — so meta was
+  `undefined` and the resource's merged middleware, including any tag-derived auth
+  gate, was silently dropped. A templated MCP resource was reachable with its gate
+  skipped.
+
+  The meta key — the template for a templated match, the URI otherwise — is now
+  carried through to the meta lookup, so the declared middleware runs.
+
+  CWE-863 / CWE-306.
+
+- c524adf: fix(cli,core): make scenario captures reachable, filed per scenario, and findable
+
+  `--screenshots` and `--video` were read by `scenario run` but never declared as
+  options, so both flags were rejected as unknown and silently ignored — capture
+  could not be switched on from the command line at all.
+
+  A provider's `beginScenario` was never called, so every capture in a run was
+  filed under one shared label instead of the scenario that produced it. It is now
+  part of `ScenarioBrowserProvider` and called after the per-scenario reset, once
+  the previous scenario's context is closed and its video finalised.
+
+  The run also never said where it wrote anything. It now reports `Captures → …`
+  after the browser closes, which is the point at which a video exists.
+
+- e110c55: fix(core): persist working memory on streamed agent runs
+
+  Working memory was never persisted when an agent streamed. The working memory
+  middleware strips the `<working_memory>` block from the outgoing deltas, and the
+  channel that accumulates the reply sits downstream of that strip — so the text
+  later handed to `modifyOutput`, the only place that calls `saveWorkingMemory`,
+  had already had the block removed. It now persists from the stream hook, at the
+  step's `usage` (or `done`) event, where the raw text is still reachable.
+
+  With that dependency gone, `modifyOutput` no longer runs at all on a streamed
+  run: nothing on that path could act on what it returned, since the text has
+  already reached the client and each step is flushed to storage as it goes. A
+  middleware that rewrites in `modifyOutput` without a `modifyOutputStream` — a
+  redaction hook, typically — was silently ineffective while streaming, and is now
+  warned about once per agent.
+
 ## 0.12.80
 
 ### Patch Changes

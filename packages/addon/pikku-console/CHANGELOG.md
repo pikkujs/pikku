@@ -1,3 +1,44 @@
+## 0.12.39
+
+### Patch Changes
+
+- 2f15aad: Resolve every entry point under `dist`
+
+  `imports["#pikku"]` named `./.pikku/pikku-types.gen.ts` — a TypeScript file, at
+  runtime, inside `node_modules` — while `files` publishes only `dist`. The
+  generated output under `dist/.pikku` also imports a `types/application-types.d.js`
+  that nothing was copying there, since a hand-written `.d.ts` is an input to
+  `tsc` rather than something it emits.
+
+  Both now point at the built copy. The addon's own build resolves `#pikku`
+  through tsconfig `paths`, so no entry point has to reach into the source tree.
+
+- e110c55: Emit `pikkuAIScorer` and `pikkuAIJudge` from the generated agent types so a
+  project can declare scorers, and read a run's grades from the console.
+
+  A tool that threw now reports its reason only on the step record's `error`; the
+  result replayed to the model stays the generic `Error: Tool execution failed` it
+  was before scorers needed the reason.
+
+- e110c55: Show what the scorers declared and what they graded: a `/scorers` page listing
+  every declared scorer with its lane, sampling rate and the agents that named it,
+  and a Runs tab in the agent inspector listing the open conversation's runs with
+  the grades each one earned.
+
+  `console:getAgentThreadRuns` now answers under the same ownership as the thread
+  itself — a caller without the admin scope sees only its own runs, filtered
+  rather than refused, so the answer never confirms someone else's thread exists.
+
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [acc8077]
+- Updated dependencies [905f737]
+- Updated dependencies [3cc6428]
+- Updated dependencies [c524adf]
+- Updated dependencies [e110c55]
+  - @pikku/core@0.12.81
+
 ## 0.12.38
 
 ### Patch Changes

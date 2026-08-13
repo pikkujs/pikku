@@ -1,5 +1,55 @@
 # @pikku/skills
 
+## 0.12.7
+
+### Patch Changes
+
+- e110c55: Add `scenario.expectScore` — grade a finished agent run with a declared scorer and assert on it.
+
+  An agent's answer cannot be matched against a fixed string, so a scenario grades
+  it instead. `expectScore(step, runId, scorer, { atLeast, atMost, reference })`
+  runs one declared scorer against the run the scenario just triggered and fails
+  with the reason the judge gave. The default bound is `atLeast: 0.5`, so an
+  unqualified assertion still fails a run graded zero.
+
+  Grading goes over the new `pikkuScenarioGradeRun` instrumentation RPC, which the
+  dev server registers alongside the coverage and stub RPCs — so it exists only in
+  processes that should have it, and never in a deployed bundle. It grades from
+  the snapshot the runtime already took when the run finished, which is what makes
+  a scenario's grade the same measurement production's sampler makes rather than
+  an approximation of it: a run's prompt, answer and tool calls are spread across
+  a thread's messages, where the boundary of one run is not recoverable.
+
+  Two things differ deliberately from live scoring. The sample rate is ignored — a
+  scorer grading 1% of traffic still grades every scenario run — and the grade is
+  returned rather than recorded, so a test's score never lands among the
+  production figures. `reference` supplies the answer key a `requiresReference`
+  judge grades against, which is the only way such a judge is reachable at all.
+
+- 2f15aad: `pikku workspace validate` is now `pikku validate`, and it checks addon packaging
+
+  The command no longer needs to be told what kind of project it is looking at.
+  Each check declares the condition under which it means anything and runs
+  wherever that condition holds, so a repo that is an app, a pile of publishable
+  addons, or both gets exactly the checks that apply — and a run that found
+  nothing to check says so instead of printing a tick.
+
+  The new checks are for addons, and both state the same property at a different
+  level: every relative import in a shipped generated file, and every `exports` or
+  `imports` target, must resolve to a file the package actually publishes.
+
+  That property was false in every published `@pikku/addon-*`. They shipped
+  `dist/.pikku` without the `types/application-types.d.ts` those files import —
+  14 typecheck errors inside `node_modules` for any app depending on one — and
+  they published a second, dead copy of `.pikku` at the root whose imports reached
+  for a `src/` and `types/` the tarball did not contain, behind the very subpath
+  consumers import their bootstrap through.
+
+  Addons now point every entry point at the built copy under `dist`; the addon's
+  own build resolves `#pikku` through tsconfig `paths`, so nothing has to reach
+  into the source tree. `pikku new-addon` scaffolds that shape, and the addon
+  skill teaches it.
+
 ## 0.12.6
 
 ### Patch Changes

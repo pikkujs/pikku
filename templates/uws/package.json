@@ -12,7 +12,7 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.80",
+    "@pikku/core": "^0.12.81",
     "@pikku/uws": "^0.12.8",
     "@pikku/websocket": "^0.12.3",
     "tslib": "^2.8.1",

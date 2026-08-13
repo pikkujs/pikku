@@ -1,3 +1,53 @@
+## 0.12.57
+
+### Patch Changes
+
+- e110c55: Wire `pikkuAIScorer` / `pikkuAIJudge` through the inspector and codegen, and let an agent name the scorers that grade it.
+
+  The inspector reads a scorer's lane off which constructor was called rather than
+  off a field, so the two lanes cannot disagree with the code that produced them,
+  and refuses a scorer with no name or description — the meta is the only thing
+  that names it at runtime. An agent naming a scorer that was never declared is a
+  build error (`PKU155`) rather than an agent that quietly grades nothing forever.
+
+  Codegen emits a `ScorerName` union, so `scorers` on an agent is checked against
+  the scorers the project actually declares, plus the scorer wirings and meta.
+  `pikku validate` now also flags a scorer declared outside a `*.scorer.ts` file,
+  for the same reason scenarios have to live in files named for them: a rubric
+  buried in an agent definition is one nobody reviews as a rubric.
+
+- e110c55: Add `scenario.expectScore` — grade a finished agent run with a declared scorer and assert on it.
+
+  An agent's answer cannot be matched against a fixed string, so a scenario grades
+  it instead. `expectScore(step, runId, scorer, { atLeast, atMost, reference })`
+  runs one declared scorer against the run the scenario just triggered and fails
+  with the reason the judge gave. The default bound is `atLeast: 0.5`, so an
+  unqualified assertion still fails a run graded zero.
+
+  Grading goes over the new `pikkuScenarioGradeRun` instrumentation RPC, which the
+  dev server registers alongside the coverage and stub RPCs — so it exists only in
+  processes that should have it, and never in a deployed bundle. It grades from
+  the snapshot the runtime already took when the run finished, which is what makes
+  a scenario's grade the same measurement production's sampler makes rather than
+  an approximation of it: a run's prompt, answer and tool calls are spread across
+  a thread's messages, where the boundary of one run is not recoverable.
+
+  Two things differ deliberately from live scoring. The sample rate is ignored — a
+  scorer grading 1% of traffic still grades every scenario run — and the grade is
+  returned rather than recorded, so a test's score never lands among the
+  production figures. `reference` supplies the answer key a `requiresReference`
+  judge grades against, which is the only way such a judge is reachable at all.
+
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [acc8077]
+- Updated dependencies [905f737]
+- Updated dependencies [3cc6428]
+- Updated dependencies [c524adf]
+- Updated dependencies [e110c55]
+  - @pikku/core@0.12.81
+
 ## 0.12.56
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-console",
-  "version": "0.12.38",
+  "version": "0.12.39",
   "description": "Console addon for Pikku — functions powering the Pikku Console UI",
   "type": "module",
   "imports": {
@@ -40,7 +40,7 @@
   },
   "peerDependencies": {
     "@pikku/better-auth": "^0.12.21",
-    "@pikku/core": "^0.12.76"
+    "@pikku/core": "^0.12.81"
   },
   "peerDependenciesMeta": {
     "@pikku/better-auth": {
@@ -49,8 +49,8 @@
   },
   "devDependencies": {
     "@pikku/better-auth": "^0.12.21",
-    "@pikku/cli": "^0.12.98",
-    "@pikku/core": "^0.12.76",
+    "@pikku/cli": "^0.12.101",
+    "@pikku/core": "^0.12.81",
     "oauth2-mock-server": "^7.1.1",
     "typescript": "^6.0.3"
   },

@@ -1,5 +1,55 @@
 # @pikku/playwright
 
+## 0.12.73
+
+### Patch Changes
+
+- c524adf: fix(playwright): count a scenario's captures once, not once per actor
+
+  The index leading a capture's filename exists to give a directory listing the
+  order the run happened in. It was held on `ActorSession`, and the provider opens
+  one session per actor — so a scenario driving two people wrote `01` twice, and
+  the listing described an order that never occurred.
+
+  The scenario name and the count now live on one capture context the provider
+  hands to every session by reference, reset as each scenario begins. Sessions
+  opened by the previous scenario follow the new name rather than going on writing
+  under the old one.
+
+- c524adf: Capture screenshots and video from a scenario run.
+
+  `pikku scenario run` gains `--screenshots` and `--video`, so a run can produce
+  something a person looks at rather than only a pass or a fail.
+
+  Screenshots are taken explicitly — `browser.screenshot('description')` — rather
+  than automatically after every step. Only the scenario author knows which
+  moments are worth a picture, and "after each step" captures the moment a step
+  finished instead of the moment that mattered. The description becomes the
+  filename, and every capture is stamped with the run and scenario that produced
+  it under `.pikku/scenario-runs/<runId>/<scenario>/`. With the flag off, the same
+  call returns the bytes and writes nothing, so a scenario that takes pictures
+  still runs.
+
+  Video records per browser context, which yields one video per scenario because
+  contexts are already closed between them. ffmpeg re-encodes the result when it
+  is on PATH — this footage is a near-static page, so it compresses hard — and the
+  run warns and keeps the raw recordings when it is not.
+
+  `ActorSession.screenshot()` previously passed its argument to Playwright as a
+  file path, so a name without an extension failed with
+  `unsupported mime type "null"`. It now takes a description and the SDK owns the
+  filename; callers that own the path use `writeScreenshot(file)`.
+
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [acc8077]
+- Updated dependencies [905f737]
+- Updated dependencies [3cc6428]
+- Updated dependencies [c524adf]
+- Updated dependencies [e110c55]
+  - @pikku/core@0.12.81
+
 ## 0.12.72
 
 ### Patch Changes
