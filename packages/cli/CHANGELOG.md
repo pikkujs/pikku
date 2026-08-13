@@ -1,3 +1,145 @@
+## 0.12.101
+
+### Patch Changes
+
+- 8427cdb: `rpc.agent.run` and `rpc.agent.stream` rejected every optional field of
+  `AIAgentInput`. The generated RPC map declared its own local copy of the
+  interface carrying only `message`, `threadId` and `resourceId`, so `model`,
+  `temperature`, `attachments` and `context` — all of which the runner reads and
+  acts on — were type errors at the call site with no way to pass them from typed
+  code. The map now imports `AIAgentInput` from `@pikku/core/ai-agent` instead of
+  restating it, which also stops the two definitions drifting again the next time
+  the input grows a field.
+- e110c55: Wire `pikkuAIScorer` / `pikkuAIJudge` through the inspector and codegen, and let an agent name the scorers that grade it.
+
+  The inspector reads a scorer's lane off which constructor was called rather than
+  off a field, so the two lanes cannot disagree with the code that produced them,
+  and refuses a scorer with no name or description — the meta is the only thing
+  that names it at runtime. An agent naming a scorer that was never declared is a
+  build error (`PKU155`) rather than an agent that quietly grades nothing forever.
+
+  Codegen emits a `ScorerName` union, so `scorers` on an agent is checked against
+  the scorers the project actually declares, plus the scorer wirings and meta.
+  `pikku validate` now also flags a scorer declared outside a `*.scorer.ts` file,
+  for the same reason scenarios have to live in files named for them: a rubric
+  buried in an agent definition is one nobody reviews as a rubric.
+
+- e110c55: Emit `pikkuAIScorer` and `pikkuAIJudge` from the generated agent types so a
+  project can declare scorers, and read a run's grades from the console.
+
+  A tool that threw now reports its reason only on the step record's `error`; the
+  result replayed to the model stays the generic `Error: Tool execution failed` it
+  was before scorers needed the reason.
+
+- e110c55: Add `scenario.expectScore` — grade a finished agent run with a declared scorer and assert on it.
+
+  An agent's answer cannot be matched against a fixed string, so a scenario grades
+  it instead. `expectScore(step, runId, scorer, { atLeast, atMost, reference })`
+  runs one declared scorer against the run the scenario just triggered and fails
+  with the reason the judge gave. The default bound is `atLeast: 0.5`, so an
+  unqualified assertion still fails a run graded zero.
+
+  Grading goes over the new `pikkuScenarioGradeRun` instrumentation RPC, which the
+  dev server registers alongside the coverage and stub RPCs — so it exists only in
+  processes that should have it, and never in a deployed bundle. It grades from
+  the snapshot the runtime already took when the run finished, which is what makes
+  a scenario's grade the same measurement production's sampler makes rather than
+  an approximation of it: a run's prompt, answer and tool calls are spread across
+  a thread's messages, where the boundary of one run is not recoverable.
+
+  Two things differ deliberately from live scoring. The sample rate is ignored — a
+  scorer grading 1% of traffic still grades every scenario run — and the grade is
+  returned rather than recorded, so a test's score never lands among the
+  production figures. `reference` supplies the answer key a `requiresReference`
+  judge grades against, which is the only way such a judge is reachable at all.
+
+- e110c55: Add runtime scoring for AI agents: `pikkuAIScorer` for heuristic grades and
+  `pikkuAIJudge` for LLM-judged ones, graded off the request path on two queue
+  lanes so a slow judge cannot starve the cheap checks. Grades are sampled
+  deterministically per `(run, scorer)` and persisted to `ai_run_score`.
+- 2f15aad: `pikku workspace validate` is now `pikku validate`, and it checks addon packaging
+
+  The command no longer needs to be told what kind of project it is looking at.
+  Each check declares the condition under which it means anything and runs
+  wherever that condition holds, so a repo that is an app, a pile of publishable
+  addons, or both gets exactly the checks that apply — and a run that found
+  nothing to check says so instead of printing a tick.
+
+  The new checks are for addons, and both state the same property at a different
+  level: every relative import in a shipped generated file, and every `exports` or
+  `imports` target, must resolve to a file the package actually publishes.
+
+  That property was false in every published `@pikku/addon-*`. They shipped
+  `dist/.pikku` without the `types/application-types.d.ts` those files import —
+  14 typecheck errors inside `node_modules` for any app depending on one — and
+  they published a second, dead copy of `.pikku` at the root whose imports reached
+  for a `src/` and `types/` the tarball did not contain, behind the very subpath
+  consumers import their bootstrap through.
+
+  Addons now point every entry point at the built copy under `dist`; the addon's
+  own build resolves `#pikku` through tsconfig `paths`, so nothing has to reach
+  into the source tree. `pikku new-addon` scaffolds that shape, and the addon
+  skill teaches it.
+
+- c524adf: fix(cli,core): make scenario captures reachable, filed per scenario, and findable
+
+  `--screenshots` and `--video` were read by `scenario run` but never declared as
+  options, so both flags were rejected as unknown and silently ignored — capture
+  could not be switched on from the command line at all.
+
+  A provider's `beginScenario` was never called, so every capture in a run was
+  filed under one shared label instead of the scenario that produced it. It is now
+  part of `ScenarioBrowserProvider` and called after the per-scenario reset, once
+  the previous scenario's context is closed and its video finalised.
+
+  The run also never said where it wrote anything. It now reports `Captures → …`
+  after the browser closes, which is the point at which a video exists.
+
+- c524adf: Capture screenshots and video from a scenario run.
+
+  `pikku scenario run` gains `--screenshots` and `--video`, so a run can produce
+  something a person looks at rather than only a pass or a fail.
+
+  Screenshots are taken explicitly — `browser.screenshot('description')` — rather
+  than automatically after every step. Only the scenario author knows which
+  moments are worth a picture, and "after each step" captures the moment a step
+  finished instead of the moment that mattered. The description becomes the
+  filename, and every capture is stamped with the run and scenario that produced
+  it under `.pikku/scenario-runs/<runId>/<scenario>/`. With the flag off, the same
+  call returns the bytes and writes nothing, so a scenario that takes pictures
+  still runs.
+
+  Video records per browser context, which yields one video per scenario because
+  contexts are already closed between them. ffmpeg re-encodes the result when it
+  is on PATH — this footage is a near-static page, so it compresses hard — and the
+  run warns and keeps the raw recordings when it is not.
+
+  `ActorSession.screenshot()` previously passed its argument to Playwright as a
+  file path, so a name without an extension failed with
+  `unsupported mime type "null"`. It now takes a description and the SDK owns the
+  filename; callers that own the path use `writeScreenshot(file)`.
+
+- e110c55: Register the scenario instrumentation RPCs on `pikku serve` as well as `pikku dev`, so a scenario run can grade and collect coverage against either local server instead of failing with "RPC function not found: pikkuScenarioGradeRun".
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [c524adf]
+- Updated dependencies [acc8077]
+- Updated dependencies [905f737]
+- Updated dependencies [3cc6428]
+- Updated dependencies [2f15aad]
+- Updated dependencies [c524adf]
+- Updated dependencies [c524adf]
+- Updated dependencies [e110c55]
+  - @pikku/core@0.12.81
+  - @pikku/ai-vercel@0.12.9
+  - @pikku/inspector@0.12.57
+  - @pikku/skills@0.12.7
+  - @pikku/kysely@0.13.14
+  - @pikku/playwright@0.12.73
+
 ## 0.12.100
 
 ### Patch Changes

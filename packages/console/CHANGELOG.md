@@ -1,3 +1,33 @@
+## 0.12.55
+
+### Patch Changes
+
+- e110c55: Emit `pikkuAIScorer` and `pikkuAIJudge` from the generated agent types so a
+  project can declare scorers, and read a run's grades from the console.
+
+  A tool that threw now reports its reason only on the step record's `error`; the
+  result replayed to the model stays the generic `Error: Tool execution failed` it
+  was before scorers needed the reason.
+
+- e110c55: Show what the scorers declared and what they graded: a `/scorers` page listing
+  every declared scorer with its lane, sampling rate and the agents that named it,
+  and a Runs tab in the agent inspector listing the open conversation's runs with
+  the grades each one earned.
+
+  `console:getAgentThreadRuns` now answers under the same ownership as the thread
+  itself — a caller without the admin scope sees only its own runs, filtered
+  rather than refused, so the answer never confirms someone else's thread exists.
+
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [acc8077]
+- Updated dependencies [905f737]
+- Updated dependencies [3cc6428]
+- Updated dependencies [c524adf]
+- Updated dependencies [e110c55]
+  - @pikku/core@0.12.81
+
 ## 0.12.54
 
 ### Patch Changes
@@ -929,8 +959,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                                "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                                "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                                  "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                                  "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core

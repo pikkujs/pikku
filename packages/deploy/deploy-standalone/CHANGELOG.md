@@ -1,5 +1,14 @@
 # @pikku/deploy-standalone
 
+## 0.12.9
+
+### Patch Changes
+
+- e110c55: Add runtime scoring for AI agents: `pikkuAIScorer` for heuristic grades and
+  `pikkuAIJudge` for LLM-judged ones, graded off the request path on two queue
+  lanes so a slow judge cannot starve the cheap checks. Grades are sampled
+  deterministically per `(run, scorer)` and persisted to `ai_run_score`.
+
 ## 0.12.8
 
 ### Patch Changes

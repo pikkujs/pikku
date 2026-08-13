@@ -1,3 +1,21 @@
+## 0.13.14
+
+### Patch Changes
+
+- e110c55: Add runtime scoring for AI agents: `pikkuAIScorer` for heuristic grades and
+  `pikkuAIJudge` for LLM-judged ones, graded off the request path on two queue
+  lanes so a slow judge cannot starve the cheap checks. Grades are sampled
+  deterministically per `(run, scorer)` and persisted to `ai_run_score`.
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [e110c55]
+- Updated dependencies [acc8077]
+- Updated dependencies [905f737]
+- Updated dependencies [3cc6428]
+- Updated dependencies [c524adf]
+- Updated dependencies [e110c55]
+  - @pikku/core@0.12.81
+
 ## 0.13.13
 
 ### Patch Changes
