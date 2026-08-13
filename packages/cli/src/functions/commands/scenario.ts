@@ -535,10 +535,9 @@ export const scenarioRun = pikkuSessionlessFunc<
      * scenario body gets, the CLI's own singletons included, and its result is
      * discarded.
      *
-     * The context is *feature*-scoped: `before` and `after` of one feature share
-     * it, so setup can hand teardown the ids it created. It is deliberately not
-     * the context the scenarios in the group see — sharing one bag across a
-     * group is the invisible coupling a Cucumber world had.
+     * Its context is *feature*-scoped — shared by that feature's `before` and
+     * `after`, and deliberately not the context the group's scenarios see:
+     * one bag across a group is the invisible coupling a Cucumber world had.
      */
     const singletonServices = pikkuState(null, 'package', 'singletonServices')
     const runFeatureHook = async (

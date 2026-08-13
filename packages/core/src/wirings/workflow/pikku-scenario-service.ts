@@ -246,9 +246,9 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   // Scenario actors per run: live authenticated clients (cookie jars) are
   // process-local by nature, so they ride this map, never the persisted wire.
   private runActors = new Map<string, ScenarioPersonas>()
-  // What each run has accumulated so far. Process-local like the actors above:
-  // a scenario is a single in-process run, so the body and its hooks share one
-  // object rather than reading it back off the persisted wire.
+  // What each run has accumulated so far — process-local like the actors above,
+  // so the body and its hooks share one object rather than reading it back off
+  // the persisted wire.
   private runContexts = new Map<string, Record<string, unknown>>()
   private scenarioBrowserProvider?: ScenarioBrowserProvider
   private scenarioEnvironment?: ScenarioEnvironment
@@ -320,19 +320,19 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   }
 
   /**
-   * What the run has accumulated, for a reporter that wants to say what a
-   * failed scenario left behind. Undefined for a plain workflow.
+   * What the run has accumulated.
+   *
+   * Undefined only for a run whose wire was never decorated — decoration calls
+   * `contextForRun` unconditionally, so a plain workflow that has reached a
+   * step holds an empty context rather than none.
    */
   public getRunContext(runId: string): Record<string, unknown> | undefined {
     return this.runContexts.get(runId)
   }
 
   /**
-   * The run's context, created on demand.
-   *
-   * `attachRunContext` seeds it for an ordinary scenario run, but the wire is
-   * also built on paths that skip attach; without this the body would be
-   * writing to an `undefined` and teardown would read nothing.
+   * The run's context, created on demand because the wire is also built on
+   * paths that skip `attachRunContext`.
    */
   private contextForRun(runId: string): Record<string, unknown> {
     let runContext = this.runContexts.get(runId)
@@ -540,9 +540,6 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       rpcService,
     })
     Object.assign(workflowWire, {
-      // One object per run, resolved through the map rather than created here,
-      // so the body and its before/after hooks share the same scratch even
-      // though the hooks are separate functions that cannot see its locals.
       context: this.contextForRun(runId),
 
       // Durable polling step: invoke an RPC (as an actor when options.as is
