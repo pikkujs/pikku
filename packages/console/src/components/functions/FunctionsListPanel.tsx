@@ -112,7 +112,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
         header: 'VERSION',
         width: 80,
         render: (func: any) => (
-          <Text size="sm" ff="monospace" c="var(--app-text-muted)">
+          <Text size="sm" ff="monospace" c="var(--app-text-dim)">
             {asI18n(func.version != null ? `v${func.version}` : '—')}
           </Text>
         ),
@@ -140,7 +140,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
             <Text
               size="sm"
               ff="monospace"
-              c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}
+              c={hasAuth ? '#86efac' : 'var(--app-text-dim)'}
             >
               {asI18n(hasAuth ? 'Auth' : '—')}
             </Text>
@@ -162,7 +162,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
               size="sm"
               ff="monospace"
               c={
-                count > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'
+                count > 0 ? 'var(--app-violet)' : 'var(--app-text-dim)'
               }
             >
               {asI18n(count > 0 ? String(count) : '—')}

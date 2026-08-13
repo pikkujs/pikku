@@ -119,7 +119,7 @@ const PrimaryRow: React.FC<{
         <HttpMethodBadge method={method} />
         <Text
           size="sm"
-          c="var(--app-meta-value)"
+          c="var(--app-text)"
           ff="monospace"
           style={{ flex: 1, minWidth: 0 }}
           truncate
@@ -157,7 +157,7 @@ const PrimaryRow: React.FC<{
       <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
         <Text
           size="sm"
-          c="var(--app-meta-value)"
+          c="var(--app-text)"
           ff="monospace"
           fw={500}
           style={{ minWidth: 0 }}
@@ -194,7 +194,7 @@ const PrimaryRow: React.FC<{
     <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
       <Text
         size="sm"
-        c="var(--app-meta-value)"
+        c="var(--app-text)"
         ff="monospace"
         fw={500}
         style={{ minWidth: 0 }}
@@ -234,7 +234,7 @@ const FieldDiff: React.FC<{
     <Box
       style={{
         borderRadius: 4,
-        border: '1px solid var(--app-row-border)',
+        border: '1px solid var(--app-border)',
         background: 'var(--app-surface, var(--mantine-color-body))',
         overflow: 'hidden',
       }}
@@ -242,7 +242,7 @@ const FieldDiff: React.FC<{
       <Group
         gap={0}
         style={{
-          borderBottom: '1px solid var(--app-row-border)',
+          borderBottom: '1px solid var(--app-border)',
           background: 'var(--mantine-color-default-hover)',
         }}
       >
@@ -263,7 +263,7 @@ const FieldDiff: React.FC<{
           style={{
             flex: 1,
             padding: '6px 12px',
-            borderLeft: '1px solid var(--app-row-border)',
+            borderLeft: '1px solid var(--app-border)',
           }}
         >
           {m.changes_base()}
@@ -276,7 +276,7 @@ const FieldDiff: React.FC<{
           style={{
             flex: 1,
             padding: '6px 12px',
-            borderLeft: '1px solid var(--app-row-border)',
+            borderLeft: '1px solid var(--app-border)',
           }}
         >
           {m.changes_ours()}
@@ -292,7 +292,7 @@ const FieldDiff: React.FC<{
             gap={0}
             wrap="nowrap"
             style={{
-              borderBottom: '1px solid var(--app-row-border)',
+              borderBottom: '1px solid var(--app-border)',
               background: equal
                 ? 'transparent'
                 : 'var(--mantine-color-default-hover)',
@@ -310,7 +310,7 @@ const FieldDiff: React.FC<{
               style={{
                 flex: 1,
                 padding: '6px 12px',
-                borderLeft: '1px solid var(--app-row-border)',
+                borderLeft: '1px solid var(--app-border)',
                 background:
                   !equal && b !== undefined
                     ? 'rgba(255, 80, 80, 0.06)'
@@ -332,7 +332,7 @@ const FieldDiff: React.FC<{
               style={{
                 flex: 1,
                 padding: '6px 12px',
-                borderLeft: '1px solid var(--app-row-border)',
+                borderLeft: '1px solid var(--app-border)',
                 background:
                   !equal && o !== undefined
                     ? 'rgba(80, 200, 120, 0.06)'
@@ -365,7 +365,7 @@ const EntryCard: React.FC<{ entry: DiffEntry; category: string }> = ({
   return (
     <Box
       style={{
-        borderBottom: '1px solid var(--app-row-border)',
+        borderBottom: '1px solid var(--app-border)',
       }}
     >
       <Group
@@ -432,7 +432,7 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
       px="md"
       py={6}
       style={{
-        borderBottom: '1px solid var(--app-row-border)',
+        borderBottom: '1px solid var(--app-border)',
         background: 'var(--app-surface, var(--mantine-color-body))',
       }}
     >

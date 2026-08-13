@@ -49,7 +49,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
         header: 'PLATFORM',
         width: 130,
         render: (gateway: any) => (
-          <Text size="sm" c="var(--app-text-muted)" truncate>
+          <Text size="sm" c="var(--app-text-dim)" truncate>
             {asI18n(gateway.platform || '—')}
           </Text>
         ),
@@ -59,7 +59,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
         header: 'ENTRY',
         width: 190,
         render: (gateway: any) => (
-          <Text size="sm" ff="monospace" c="var(--app-text-muted)" truncate>
+          <Text size="sm" ff="monospace" c="var(--app-text-dim)" truncate>
             {asI18n(gateway.route || 'listener')}
           </Text>
         ),

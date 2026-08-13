@@ -150,7 +150,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                borderBottom: '1px solid var(--app-row-border)',
+                borderBottom: '1px solid var(--app-border)',
               }}
             >
               <Box

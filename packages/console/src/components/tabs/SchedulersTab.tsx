@@ -122,7 +122,7 @@ export const SchedulersTab: React.FC<{
           const lastRun = history[taskName]?.lastRun ?? null
           if (!lastRun) {
             return (
-              <Text size="xs" ff="monospace" c="var(--app-meta-label)">
+              <Text size="xs" ff="monospace" c="var(--app-text-dim)">
                 {asI18n('—')}
               </Text>
             )
@@ -140,7 +140,7 @@ export const SchedulersTab: React.FC<{
               >
                 {asI18n(lastRun.status)}
               </Text>
-              <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+              <Text size="xs" ff="monospace" c="var(--app-text-dim)">
                 {asI18n(fmtRelative(lastRun.timestamp))}
               </Text>
             </>

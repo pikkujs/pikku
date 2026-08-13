@@ -358,8 +358,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       h="100vh"
       className={css.railCollapseTransition}
       style={{
-        borderRight: `1px solid var(--app-rail-border)`,
-        backgroundColor: `var(--app-rail-bg)`,
+        borderRight: `1px solid var(--app-border)`,
+        backgroundColor: `var(--app-panel-bg-raised)`,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -487,7 +487,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               justifyContent: 'center',
                               padding: '8px 0',
                               background: active
-                                ? 'var(--app-accent-soft)'
+                                ? 'var(--app-surface-accent)'
                                 : undefined,
                             }}
                             styles={{
@@ -521,9 +521,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           fontSize: 13,
                           // 2px accent bar is the primary "you are here" cue; the
                           // soft tint + accent label reinforce it.
-                          borderLeft: `2px solid ${active ? 'var(--app-accent-bar)' : 'transparent'}`,
+                          borderLeft: `2px solid ${active ? 'var(--app-accent-strong)' : 'transparent'}`,
                           background: active
-                            ? 'var(--app-accent-soft)'
+                            ? 'var(--app-surface-accent)'
                             : undefined,
                         }}
                         styles={{

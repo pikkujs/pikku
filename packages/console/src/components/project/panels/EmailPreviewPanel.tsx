@@ -47,7 +47,7 @@ export const EmailPreviewPanel: React.FC<{
       {preview.data?.html ? (
         <Box
           style={{
-            border: '1px solid var(--app-row-border)',
+            border: '1px solid var(--app-border)',
             borderRadius: 8,
             overflow: 'hidden',
             background: '#fff',

@@ -28,6 +28,7 @@
     "preview": "vite preview",
     "generate": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide && cd backend && pikku all",
     "lint": "tsc --noEmit",
+    "test": "THEME_CONTRACT_ROOTS=src node --test ../../node_modules/@pikku/mantine/src/theme/theme-contract.test.ts",
     "prepublishOnly": "echo 'Source-only package — no build needed'"
   },
   "dependencies": {
@@ -45,6 +46,8 @@
     "@mantine/spotlight": "^9.2.1",
     "@pikku/assistant-ui": "^0.12.9",
     "@pikku/fetch": "^0.12.8",
+    "@pikku/mantine": "^0.12.8",
+    "@pikku/react": "^0.12.5",
     "@rjsf/core": "^6.3.1",
     "@rjsf/mantine": "^6.3.1",
     "@rjsf/utils": "^6.3.1",

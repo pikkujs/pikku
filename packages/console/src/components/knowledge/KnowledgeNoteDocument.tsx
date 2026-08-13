@@ -203,9 +203,9 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
               style={{ marginLeft: -10 }}
             >
               {detailsOpen ? (
-                <ChevronDown size={12} color="var(--app-meta-label)" />
+                <ChevronDown size={12} color="var(--app-text-dim)" />
               ) : (
-                <ChevronRight size={12} color="var(--app-meta-label)" />
+                <ChevronRight size={12} color="var(--app-text-dim)" />
               )}
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                 {m.knowledge_details()}

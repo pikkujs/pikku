@@ -92,7 +92,7 @@
 
 .gridHeader {
   padding: 7px 16px;
-  border-bottom: 1px solid var(--app-row-border);
+  border-bottom: 1px solid var(--app-border);
   background: var(--app-surface);
   flex-shrink: 0;
   column-gap: 12px;
@@ -113,14 +113,14 @@
 }
 
 .listItem[data-active='true'] {
-  border-left-color: var(--app-service-color);
-  background: var(--app-service-bg);
+  border-left-color: var(--app-violet);
+  background: var(--app-surface-violet);
 }
 
 .listItemPadded {
   composes: listItem;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--app-row-border);
+  border-bottom: 1px solid var(--app-border);
   align-items: center;
   column-gap: 12px;
 }
@@ -129,7 +129,7 @@
 
 .detailHeader {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--app-row-border);
+  border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
   display: flex;
   align-items: flex-start;
@@ -148,7 +148,7 @@
   align-items: center;
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--app-row-border);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .metaRowLabel {
@@ -179,12 +179,12 @@
   margin: 2px 6px;
   width: calc(100% - 12px);
   border-radius: 6px;
-  color: var(--app-section-label, var(--mantine-color-dimmed));
+  color: var(--app-text-dim, var(--mantine-color-dimmed));
   transition: background 120ms ease;
 }
 
 .navSectionHeader:hover {
-  background: var(--app-hover, rgba(128, 128, 128, 0.1));
+  background: var(--app-surface-interactive, rgba(128, 128, 128, 0.1));
 }
 
 /* The section holding the current page — carries the "you are here" signal at
@@ -218,7 +218,7 @@
    (icon + vertical label) so the panes never collapse to an unexplained void. */
 .paneStub {
   background: var(--app-surface, var(--mantine-color-body));
-  border: 1px solid var(--app-row-border);
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -228,14 +228,14 @@
   width: 100%;
   padding: 10px 0;
   cursor: pointer;
-  color: var(--app-section-label, var(--mantine-color-dimmed));
+  color: var(--app-text-dim, var(--mantine-color-dimmed));
   transition:
     background 120ms ease,
     color 120ms ease;
 }
 
 .paneStub:hover {
-  background: var(--app-hover, rgba(128, 128, 128, 0.08));
+  background: var(--app-surface-interactive, rgba(128, 128, 128, 0.08));
   color: var(--mantine-color-bright);
 }
 
@@ -271,7 +271,7 @@
 }
 
 .knowledgeRow:hover {
-  background: var(--app-hover, rgba(128, 128, 128, 0.1));
+  background: var(--app-surface-interactive, rgba(128, 128, 128, 0.1));
 }
 
 .knowledgeRow[data-selected] {
@@ -364,7 +364,7 @@
   background: var(--app-surface, var(--mantine-color-default));
   /* `--app-row-border` is transparent in the light theme, which leaves a white
      slab on a near-white page with no edge at all. The fallback is the edge. */
-  border: 1px solid var(--app-row-border, rgba(128, 128, 128, 0.22));
+  border: 1px solid var(--app-border, rgba(128, 128, 128, 0.22));
   border-radius: 8px;
   padding: 12px 14px;
   overflow-x: auto;
@@ -383,7 +383,7 @@
    surface, with the copy control that makes a snippet something you can take. */
 .markdownCode {
   margin: 0.9em 0;
-  border: 1px solid var(--app-row-border, rgba(128, 128, 128, 0.22));
+  border: 1px solid var(--app-border, rgba(128, 128, 128, 0.22));
   border-radius: 8px;
   font-size: var(--mantine-font-size-sm);
 }
@@ -442,7 +442,7 @@
   text-align: start;
   vertical-align: top;
   border: none;
-  border-bottom: 1px solid var(--app-row-border, rgba(128, 128, 128, 0.18));
+  border-bottom: 1px solid var(--app-border, rgba(128, 128, 128, 0.18));
 }
 
 .markdownBody th {
@@ -452,7 +452,7 @@
   font-size: max(11px, var(--mantine-font-size-xs));
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--app-meta-label);
+  color: var(--app-text-dim);
   white-space: nowrap;
 }
 
@@ -517,8 +517,8 @@
 }
 
 .markdownAlert[data-alert='important'] {
-  --md-alert-color: var(--app-service-color, #7c3aed);
-  --md-alert-bg: var(--app-service-bg, rgba(124, 58, 237, 0.08));
+  --md-alert-color: var(--app-violet, #7c3aed);
+  --md-alert-bg: var(--app-surface-violet, rgba(124, 58, 237, 0.08));
   --md-alert-border: rgba(124, 58, 237, 0.3);
 }
 
@@ -791,9 +791,9 @@
 }
 
 .resourceChip[data-linked] {
-  background: var(--app-tag-bg, rgba(6, 182, 212, 0.12));
-  color: var(--app-tag-color, inherit);
-  border-color: var(--app-accent-soft, rgba(6, 182, 212, 0.25));
+  background: var(--app-surface-accent, rgba(6, 182, 212, 0.12));
+  color: var(--app-accent, inherit);
+  border-color: var(--app-surface-accent, rgba(6, 182, 212, 0.25));
   cursor: pointer;
   transition:
     background 120ms ease,
@@ -801,7 +801,7 @@
 }
 
 .resourceChip[data-linked]:hover {
-  background: var(--app-accent-soft, rgba(128, 128, 128, 0.2));
+  background: var(--app-surface-accent, rgba(128, 128, 128, 0.2));
   border-color: var(--app-accent, currentColor);
   text-decoration: none;
 }
@@ -872,7 +872,7 @@
 
 .surfaceCard {
   background: var(--app-surface, var(--mantine-color-body));
-  border: 1px solid var(--app-row-border);
+  border: 1px solid var(--app-border);
   border-radius: 8px;
 }
 
@@ -905,15 +905,15 @@
 /* ── Badge variants ── */
 
 .tagBadge {
-  background: var(--app-tag-bg);
-  border: 1px solid var(--app-tag-border);
-  color: var(--app-tag-color);
+  background: var(--app-surface-accent);
+  border: 1px solid var(--app-border);
+  color: var(--app-accent);
 }
 
 .serviceBadge {
-  background: var(--app-service-bg);
-  border: 1px solid var(--app-service-border);
-  color: var(--app-service-color);
+  background: var(--app-surface-violet);
+  border: 1px solid var(--app-violet-border);
+  color: var(--app-violet);
 }
 
 /* ── Clickable text ── */
@@ -932,7 +932,7 @@
 .splitLeft {
   flex: 1;
   overflow: auto;
-  border-right: 1px solid var(--app-row-border);
+  border-right: 1px solid var(--app-border);
   padding: 16px;
 }
 
@@ -950,7 +950,7 @@
   align-items: center;
   gap: 8px;
   background: var(--app-input-bg);
-  border: 1px solid var(--app-row-border);
+  border: 1px solid var(--app-border);
   border-radius: 6px;
   padding: 7px 10px;
 }
@@ -960,7 +960,7 @@
 .separator {
   flex: 1;
   height: 1px;
-  background: var(--app-row-border);
+  background: var(--app-border);
 }
 
 /* ── Group label row (type header in lists) ── */

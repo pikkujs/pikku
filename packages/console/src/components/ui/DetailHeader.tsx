@@ -22,13 +22,13 @@ export const DetailHeader: React.FC<DetailHeaderProps> = ({
         size="sm"
         fw={600}
         ff="monospace"
-        c="var(--app-meta-value)"
+        c="var(--app-text)"
         mb={subtitle ? 4 : 0}
       >
         {title}
       </Text>
       {subtitle && (
-        <Text size="sm" ff="monospace" c="var(--app-text-muted)">
+        <Text size="sm" ff="monospace" c="var(--app-text-dim)">
           {subtitle}
         </Text>
       )}

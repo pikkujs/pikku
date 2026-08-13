@@ -78,14 +78,14 @@ const DataRow: React.FC<{ name: string; value: unknown; depth: number }> = ({
           <Box style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {isExpandable ? (
               expanded ? (
-                <ChevronDown size={12} color="var(--app-meta-label)" />
+                <ChevronDown size={12} color="var(--app-text-dim)" />
               ) : (
-                <ChevronRight size={12} color="var(--app-meta-label)" />
+                <ChevronRight size={12} color="var(--app-text-dim)" />
               )
             ) : (
               <Box w={12} />
             )}
-            <Text size="sm" ff="monospace" fw={500} c="var(--app-meta-value)">
+            <Text size="sm" ff="monospace" fw={500} c="var(--app-text)">
               {asI18n(name)}
             </Text>
           </Box>
@@ -130,16 +130,16 @@ export const DataViewer: React.FC<{ data: unknown }> = ({ data }) => {
       horizontalSpacing="sm"
       styles={{
         th: {
-          color: 'var(--app-section-label)',
+          color: 'var(--app-text-dim)',
           fontFamily: 'var(--mantine-font-family-monospace)',
           fontSize: 9,
           fontWeight: 600,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
-          borderBottom: '1px solid var(--app-row-border)',
+          borderBottom: '1px solid var(--app-border)',
         },
         td: {
-          borderBottom: '1px solid var(--app-row-border)',
+          borderBottom: '1px solid var(--app-border)',
         },
       }}
     >

@@ -104,16 +104,16 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
       EditorView.theme(
         {
           '&': {
-            backgroundColor: 'var(--app-code-bg)',
+            backgroundColor: 'var(--app-panel-bg)',
             color: 'var(--app-text)',
           },
           '.cm-content': {
             caretColor: 'var(--app-text)',
           },
           '.cm-gutters': {
-            backgroundColor: 'var(--app-code-bg)',
-            color: 'var(--app-text-muted)',
-            borderRight: '1px solid var(--app-row-border) !important',
+            backgroundColor: 'var(--app-panel-bg)',
+            color: 'var(--app-text-dim)',
+            borderRight: '1px solid var(--app-border) !important',
           },
           '.cm-activeLineGutter': {
             backgroundColor: 'var(--app-panel-bg-strong)',
@@ -379,7 +379,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
                     ) : null}
                     <Box
                       style={{
-                        border: '1px solid var(--app-row-border)',
+                        border: '1px solid var(--app-border)',
                         borderRadius: 8,
                         overflow: 'hidden',
                         width: '100%',

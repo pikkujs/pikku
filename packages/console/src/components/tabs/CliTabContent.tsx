@@ -136,7 +136,7 @@ const CliPageInner: React.FC<{
                     padding: '7px 12px',
                     fontSize: 11,
                     color: isActive
-                      ? 'var(--app-meta-value)'
+                      ? 'var(--app-text)'
                       : 'var(--app-text)',
                     borderLeft: isActive
                       ? '2px solid rgba(6,182,212,0.4)'
@@ -147,9 +147,9 @@ const CliPageInner: React.FC<{
                   }}
                 >
                   {isExpanded ? (
-                    <ChevronDown size={9} color="var(--app-section-label)" />
+                    <ChevronDown size={9} color="var(--app-text-dim)" />
                   ) : (
-                    <ChevronRight size={9} color="var(--app-section-label)" />
+                    <ChevronRight size={9} color="var(--app-text-dim)" />
                   )}
                   <Text size="sm" ff="monospace" style={{ flex: 1 }}>
                     {prog.wireId}
@@ -189,7 +189,7 @@ const CliPageInner: React.FC<{
                             fw={cmdActive ? 600 : 400}
                             c={
                               cmdActive
-                                ? 'var(--app-meta-value)'
+                                ? 'var(--app-text)'
                                 : 'var(--app-text)'
                             }
                             truncate
@@ -202,8 +202,8 @@ const CliPageInner: React.FC<{
                               ff="monospace"
                               c={
                                 cmdActive
-                                  ? 'var(--app-meta-label)'
-                                  : 'var(--app-text-muted)'
+                                  ? 'var(--app-text-dim)'
+                                  : 'var(--app-text-dim)'
                               }
                               truncate
                               style={{ fontSize: 9 }}
@@ -232,7 +232,7 @@ const CliPageInner: React.FC<{
           <Text
             size="sm"
             ff="monospace"
-            c="var(--app-text-muted)"
+            c="var(--app-text-dim)"
             style={{ flex: 1 }}
           >
             <Text component="span" c="violet" ff="monospace">

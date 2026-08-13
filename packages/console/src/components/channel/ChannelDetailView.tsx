@@ -101,11 +101,11 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
       {/* Header */}
       <Box className={classes.detailHeader} style={{ padding: '10px 16px' }}>
         <Box className={classes.flexGrow}>
-          <Text size="sm" ff="monospace" c="var(--app-section-label)">
+          <Text size="sm" ff="monospace" c="var(--app-text-dim)">
             {asI18n(breadcrumb)}
           </Text>
           {title && (
-            <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)">
+            <Text size="sm" fw={600} ff="monospace" c="var(--app-text)">
               {asI18n(title)}
             </Text>
           )}
@@ -142,7 +142,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                 size="sm"
                 fw={600}
                 ff="monospace"
-                c="var(--app-meta-value)"
+                c="var(--app-text)"
                 className={classes.clickableText}
                 onClick={() =>
                   navigateInPanel(
@@ -159,14 +159,14 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
           )}
 
           <MetaRow label={m.channel_meta_channel()}>
-            <Text size="sm" ff="monospace" c="var(--app-meta-value)">
+            <Text size="sm" ff="monospace" c="var(--app-text)">
               {asI18n(channelName)}
             </Text>
           </MetaRow>
 
           {selected?.type === 'handler' && (
             <MetaRow label={m.channel_meta_type()}>
-              <Text size="sm" ff="monospace" c="var(--app-meta-value)">
+              <Text size="sm" ff="monospace" c="var(--app-text)">
                 {selected.handler === 'connect'
                   ? m.channel_type_connect()
                   : selected.handler === 'disconnect'
@@ -180,8 +180,8 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
             <MetaRow label={m.channel_meta_routing()}>
               <Box
                 style={{
-                  background: 'var(--app-code-bg)',
-                  border: '1px solid var(--app-row-border)',
+                  background: 'var(--app-panel-bg)',
+                  border: '1px solid var(--app-border)',
                   borderRadius: 5,
                   padding: '5px 8px',
                   fontSize: 11,
