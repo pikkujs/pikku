@@ -121,6 +121,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     agentsMeta: {} as AIAgentMeta,
     scorers: new Map(),
     scorersMeta: {} as ScorerMeta,
+    modelAliases: {},
   },
   gateway: {
     gateways: new Map(),

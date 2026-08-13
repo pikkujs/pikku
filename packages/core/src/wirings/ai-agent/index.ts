@@ -7,6 +7,7 @@ export {
 } from './ai-agent-helpers.js'
 export { wrapChannelWithAGUI, type AGUIEvent } from './ai-agent-agui.js'
 export { runAIAgent, resumeAIAgentSync } from './ai-agent-runner.js'
+export { resolveModelAlias } from './ai-agent-model-config.js'
 export {
   streamAIAgent,
   resumeAIAgent,

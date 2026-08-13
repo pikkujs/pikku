@@ -219,6 +219,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('AI scorer', 'pikkuAIScorer', null),
     ])
 
+    allImports.push(config.modelAliasesFile)
+
     if (agents) {
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
       if (config.scaffold?.agent) {

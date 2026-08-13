@@ -37,17 +37,19 @@ import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
+import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 
 export const serve = pikkuSessionlessFunc<
-  { port?: string; console?: boolean },
+  { port?: string; console?: boolean; model?: string },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port, console: serveConsole }
+    { port, console: serveConsole, model }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    applyModelAliasOverride(logger, model, config.models)
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     const bindHostname = '127.0.0.1'

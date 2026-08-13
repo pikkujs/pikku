@@ -5,12 +5,12 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2842 observable things**: 979 exported names, plus
+**2843 observable things**: 980 exported names, plus
 1863 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 969 | 1863 |
+| stable | 48 | 970 | 1863 |
 | ecosystem | 2 | 10 | 0 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `.` | 241 | 98 | 128 |
 | `./workflow` | 128 | 51 | 153 |
 | `./virtual-user` | 51 | 51 | 152 |
-| `./ai-agent` | 63 | 62 | 90 |
+| `./ai-agent` | 64 | 63 | 90 |
 | `./channel` | 50 | 49 | 82 |
 | `./queue` | 32 | 31 | 68 |
 | `./http` | 24 | 22 | 47 |
@@ -918,7 +918,7 @@ export interface PikkuPackageState {
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
   trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAIAgent>; agentsMeta: AIAgentMeta; scorers: Map<string, PikkuAIScorer>; scorersMeta: ScorerMeta }
+  agent: { agents: Map<string, CoreAIAgent>; agentsMeta: AIAgentMeta; scorers: Map<string, PikkuAIScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
@@ -4518,6 +4518,7 @@ export interface PikkuAIMiddlewareHooks< State extends Record<string, unknown> =
 }
 readsAsNonSpeech: (result: { text?: string | undefined; }) => boolean
 registerInterruptibleRun: (runId: string) => InterruptibleRunHandle
+resolveModelAlias: (model: string) => string
 resumeAIAgent: (input: { runId: string; toolCallId: string; approved: boolean; }, channel: AIStreamChannel, params: RunAIAgentParams, options?: StreamAIAgentOptions | undefined) => Promise<void>
 resumeAIAgentSync: (runId: string, approvals: { toolCallId: string; approved: boolean; }[], params: RunAIAgentParams, expectedAgentName?: string | undefined) => Promise<AIAgentOutput>
 runAIAgent: (agentName: string, input: AIAgentInput, params: RunAIAgentParams, agentSessionMap?: Map<string, string> | undefined) => Promise<AIAgentOutput>

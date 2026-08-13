@@ -21,6 +21,7 @@ import type {
   AIAgentStepResult,
 } from '@pikku/core/services'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
+import { resolveModelAlias } from '@pikku/core/ai-agent'
 import { convertToSDKMessages } from './message-converter.js'
 
 type AIProviderOptions = Record<string, Record<string, unknown>>
@@ -283,12 +284,18 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     )
   }
 
-  private parseModel(model: string): { provider: string; modelName: string } {
-    if (!model) {
+  private parseModel(aliasOrModel: string): {
+    provider: string
+    modelName: string
+  } {
+    if (!aliasOrModel) {
       throw new Error(
         'Model is required but was not provided. This may be a resume call missing the model parameter.'
       )
     }
+    // Every modality resolves aliases here; idempotent for the agent path,
+    // which has already been through resolveModelConfig.
+    const model = resolveModelAlias(aliasOrModel)
     const slashIndex = model.indexOf('/')
     if (slashIndex === -1) {
       throw new Error(

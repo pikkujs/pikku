@@ -7,6 +7,7 @@ import {
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
 import { serializeAgentMap } from './serialize-agent-map.js'
+import { serializeModelAliases } from './serialize-model-aliases.js'
 
 export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -16,15 +17,25 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       agentWiringMetaFile,
       agentWiringMetaJsonFile,
       agentMapDeclarationFile,
+      modelAliasesFile,
       packageMappings,
       schema,
       addonName,
+      models,
     } = config
 
     const agentFiles = agents.files as Map<
       string,
       { path: string; exportedName: string }
     >
+
+    // Written even with no agents: the image/speech/embedding runner methods
+    // take a model too.
+    await writeFileInDir(
+      logger,
+      modelAliasesFile,
+      serializeModelAliases(models, addonName ?? null)
+    )
 
     if (agentFiles.size === 0 || Object.keys(agents.agentsMeta).length === 0) {
       // Still need to generate an empty agent map for the types import

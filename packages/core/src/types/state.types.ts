@@ -159,6 +159,8 @@ export interface PikkuPackageState {
     agentsMeta: AIAgentMeta
     scorers: Map<string, PikkuAIScorer>
     scorersMeta: ScorerMeta
+    /** Alias -> `provider/model`, from the `models` table in pikku.config.json. */
+    modelAliases: Record<string, string>
   }
   gateway: {
     gateways: Map<string, CoreGateway>

@@ -332,6 +332,7 @@
     "persistOrphanedToolResults",
     "readsAsNonSpeech",
     "registerInterruptibleRun",
+    "resolveModelAlias",
     "resumeAIAgent",
     "resumeAIAgentSync",
     "runAIAgent",

@@ -746,9 +746,14 @@ export function validateSchemaReferences(
   })
 }
 
+/**
+ * A model is either concrete (`provider/model`) or an alias, which must appear
+ * in the `models` table from pikku.config.json.
+ */
 export function validateAgentModels(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  modelAliases: Record<string, string> = {}
 ): void {
   for (const [, meta] of Object.entries(state.agents.agentsMeta)) {
     const model = meta.model
@@ -759,10 +764,17 @@ export function validateAgentModels(
       )
       continue
     }
-    if (!model.includes('/')) {
+    // `hasOwn`, not a truthy lookup: every object literal inherits `toString`,
+    // `constructor` and `__proto__`, so a bare model named after one of them
+    // would read as a configured alias and pass a check nothing else repeats.
+    if (!model.includes('/') && !Object.hasOwn(modelAliases, model)) {
+      const known = Object.keys(modelAliases).sort()
       logger.critical(
         ErrorCode.INVALID_MODEL,
-        `AI agent '${meta.name}' uses model '${model}', which must be provider-qualified as '<provider>/<model>' (e.g. 'openai/gpt-4').`
+        `AI agent '${meta.name}' uses model '${model}', which is neither provider-qualified as '<provider>/<model>' (e.g. 'openai/gpt-4') nor an alias in the "models" table of pikku.config.json. ` +
+          (known.length
+            ? `Known aliases: ${known.join(', ')}.`
+            : `No "models" aliases are configured.`)
       )
     }
   }

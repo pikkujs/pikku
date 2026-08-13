@@ -299,6 +299,8 @@ export type InspectorOptions = Partial<{
    * tool's own name, so this is a quality gate rather than a correctness one.
    */
   strictMeta: boolean
+  /** The `models` table from pikku.config.json, alias -> `provider/model`. */
+  modelAliases: Record<string, string>
   sourceFile: ts.SourceFile
   /**
    * The project's tsconfig, read for its path mappings only. The inspector's

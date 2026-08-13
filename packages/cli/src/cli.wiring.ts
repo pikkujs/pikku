@@ -306,6 +306,10 @@ wireCLI({
             'Test mode: record service calls for scenario assertions and set PIKKU_TEST_RUN for isTestRun()',
           default: false,
         },
+        model: {
+          description:
+            'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',
+        },
       },
     }),
     serve: pikkuCLICommand({
@@ -321,6 +325,10 @@ wireCLI({
         console: {
           description: 'Also serve the Pikku Console same-origin at /console',
           default: false,
+        },
+        model: {
+          description:
+            'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',
         },
       },
     }),

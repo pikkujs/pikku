@@ -166,6 +166,7 @@ export interface PikkuCLICoreOutputFiles {
   agentWiringMetaJsonFile: string
   agentTypesFile: string
   agentMapDeclarationFile: string
+  modelAliasesFile: string
 
   // AI Scorer
   scorerWiringsFile: string
@@ -533,6 +534,14 @@ export type PikkuCLIInput = {
   addons?: {
     addonDir?: string
   }
+
+  /**
+   * Model aliases, e.g. `{ "cheap": "openai/gpt-5-mini" }`, so a declaration
+   * can name a model by what it is for and one edit repoints every use.
+   * Optional — a model containing `/` is used as written. A bare name that is
+   * not in this table fails codegen.
+   */
+  models?: Record<string, string>
 
   tests?: {
     outputDir?: string
