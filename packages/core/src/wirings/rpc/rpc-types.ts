@@ -67,6 +67,10 @@ export interface ResolvedFunction {
     secretOverrides?: Record<string, string>
     variableOverrides?: Record<string, string>
     credentialOverrides?: Record<string, string>
+    /** Set by the consuming app: hand this instance the unscoped `SecretService` */
+    globalSecrets?: string
+    /** Set by the consuming app: hand this instance the unscoped `CredentialService` */
+    globalCredentials?: string
     /** Set by `wireRemoteAddon`: dispatch this namespace's RPCs over HTTP */
     remote?: boolean
     serverUrl?: string | ((services: any) => string | Promise<string>)

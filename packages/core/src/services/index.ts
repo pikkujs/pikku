@@ -1,5 +1,6 @@
 export { LogLevel } from './logger.js'
 export { ScopedSecretService } from './scoped-secret-service.js'
+export { ScopedCredentialService } from './scoped-credential-service.js'
 export {
   PikkuSessionService,
   createMiddlewareSessionWireProps,

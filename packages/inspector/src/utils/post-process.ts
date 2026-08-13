@@ -15,7 +15,6 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
-import { isSecretBrokerFunction } from './secret-brokers.js'
 import { findSecretAliasServices } from './secret-alias-services.js'
 import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
@@ -994,15 +993,6 @@ export function validateSchemaWiringSeparation(
   }
 }
 
-/** Marks the functions that keep the full `SecretService`. */
-export function computeSecretBrokers(state: InspectorState): void {
-  for (const [id, meta] of Object.entries(state.functions.meta)) {
-    if (isSecretBrokerFunction(meta.pikkuFuncId ?? id)) {
-      meta.secretBroker = true
-    }
-  }
-}
-
 /**
  * Refuses a singleton service that is a `SecretService` under another name.
  *
@@ -1041,9 +1031,6 @@ export function validateNoSecretAliasServices(
   }
 
   for (const [id, meta] of Object.entries(state.functions.meta)) {
-    if (meta.secretBroker) {
-      continue
-    }
     report('Function', id, meta.services?.services ?? [])
   }
   for (const [id, def] of Object.entries(state.permissions.definitions)) {

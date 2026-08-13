@@ -20,7 +20,8 @@ export const serializePackageFactories = (
   wireServicesFactory: PackageFactoryInfo | undefined,
   packageMappings: Record<string, string> = {},
   credentialsMeta?: Record<string, CredentialMetaForPackage>,
-  requiredParentServices?: string[]
+  requiredParentServices?: string[],
+  declaredSecrets?: string[]
 ) => {
   const imports: string[] = [
     `import { pikkuState } from '@pikku/core/ecosystem'`,
@@ -79,10 +80,14 @@ export const serializePackageFactories = (
       ? `\npikkuState('${packageName}', 'package', 'requiredParentServices', ${JSON.stringify(requiredParentServices)})\n`
       : ''
 
+  const declaredSecretsLine = declaredSecrets
+    ? `\npikkuState('${packageName}', 'package', 'declaredSecrets', ${JSON.stringify(declaredSecrets)})\n`
+    : ''
+
   return `${imports.join('\n')}
 
 pikkuState('${packageName}', 'package', 'factories', {
 ${factoryEntries.join('\n')}
 })
-${credentialsLine}${requiredParentServicesLine}`
+${credentialsLine}${requiredParentServicesLine}${declaredSecretsLine}`
 }

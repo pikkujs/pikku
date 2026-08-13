@@ -4,6 +4,8 @@ import type {
   CoreSingletonServices,
 } from '../../types/core.types.js'
 import type { SecretService } from '../../services/secret-service.js'
+import { ScopedSecretService } from '../../services/scoped-secret-service.js'
+import { ScopedCredentialService } from '../../services/scoped-credential-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 
 export type AddonInstance = {
@@ -11,6 +13,10 @@ export type AddonInstance = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  /** Set by the consuming app to opt this instance out of secret scoping. */
+  globalSecrets?: string
+  /** Set by the consuming app to opt this instance out of credential scoping. */
+  globalCredentials?: string
 }
 
 const aliasSecretService = (
@@ -134,6 +140,28 @@ export const getOrCreatePackageSingletonServices = async (
       ),
     }
   }
+  if (!addonInstance?.globalSecrets && existingServices.secrets) {
+    existingServices = {
+      ...existingServices,
+      secrets: new ScopedSecretService(
+        existingServices.secrets,
+        new Set(pikkuState(packageName, 'package', 'declaredSecrets') ?? [])
+      ),
+    }
+  }
+  if (!addonInstance?.globalCredentials && existingServices.credentialService) {
+    existingServices = {
+      ...existingServices,
+      credentialService: new ScopedCredentialService(
+        existingServices.credentialService,
+        new Set(
+          Object.keys(
+            pikkuState(packageName, 'package', 'credentialsMeta') ?? {}
+          )
+        )
+      ),
+    }
+  }
 
   let config: CoreConfig = existingServices.config
   if (factories.createConfig) {
@@ -173,5 +201,7 @@ export const addonInstanceForNamespace = (
     secretOverrides: cfg.secretOverrides,
     variableOverrides: cfg.variableOverrides,
     credentialOverrides: cfg.credentialOverrides,
+    globalSecrets: cfg.globalSecrets,
+    globalCredentials: cfg.globalCredentials,
   }
 }

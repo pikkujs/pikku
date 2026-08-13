@@ -28,9 +28,9 @@ test('serializeConsoleFunctions describes every payload with a zod schema', () =
   )
 
   assert.match(schemas, /import \{ z \} from 'zod'/)
-  assert.match(schemas, /export const SetSecret = z\.object\(\{/)
+  assert.match(schemas, /export const SetVariable = z\.object\(\{/)
   assert.match(functions, /from '\.\/console\.schemas\.gen\.js'/)
-  assert.match(functions, /input: SetSecret/)
+  assert.match(functions, /input: SetVariable/)
   assert.ok(
     !functions.includes('pikkuFunc<'),
     'schemas and generics are mutually exclusive'
