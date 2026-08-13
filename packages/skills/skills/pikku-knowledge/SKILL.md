@@ -5,14 +5,14 @@ description: >-
   notes that say what the app is, in the language its users use. Covers the Open Knowledge Format
   note (path-as-identity markdown, YAML frontmatter, only `type` required), the sections of the
   app-project profile (slices, entities, decisions, questions, wishlist) and the one question each
-  answers, slice status/entities/gherkin rules, the `resource:` URI scheme that ties a note to the
+  answers, slice status/entities/gherkin rules, the `resource:` URI scheme tying a note to the
   code it is about, the shapes that are NOT a knowledge base, and the `pikku knowledge
-  validate|index` commands. TRIGGER when: user asks to write down a decision, a requirement, an
-  entity or an open question; asks what the app does or is; asks about knowledge/, notes, slices,
-  or an index.md; asks for a diagram, callout or decision block in a note; or hands over a product
+  validate|index` commands. TRIGGER when: user asks to write down a decision, requirement, entity
+  or open question; asks what the app does or is; asks about knowledge/, notes, slices,
+  an index.md, or a diagram, callout or decision block; or hands over a product
   brief to record. DO NOT TRIGGER when: user asks what
   functions, routes, tables or permissions exist (that is `pikku meta` / `pikku info`, never a
-  note), or asks to write a scenario test (use pikku-scenario).
+  note), or to write a scenario test (use pikku-scenario).
 installGroups: [core]
 ---
 
