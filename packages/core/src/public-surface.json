@@ -522,19 +522,6 @@
     "runPikkuFunc",
     "setSingletonServices"
   ],
-  "./internal": [
-    "addFunction",
-    "addGlobalMiddleware",
-    "addMiddleware",
-    "getAllPackageStates",
-    "getCreateWireServices",
-    "getSingletonServices",
-    "httpRouter",
-    "pikkuState",
-    "resetPikkuState",
-    "runPikkuFunc",
-    "setSingletonServices"
-  ],
   "./schema": [
     "addSchema",
     "applyDefaultsFromSchema",
