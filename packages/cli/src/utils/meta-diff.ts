@@ -21,6 +21,7 @@ export type MetaDiffCategoryName =
   | 'trigger'
   | 'mcp'
   | 'agent'
+  | 'scorer'
 
 // Single-file categories: one JSON file whose top-level keys are the ids
 // (http is nested `{ method: { route: meta } }` and flattened to `method route`).
@@ -34,6 +35,7 @@ const SINGLE_FILE: Record<Exclude<MetaDiffCategoryName, 'workflow'>, string> = {
   trigger: 'trigger/pikku-trigger-meta.gen.json',
   mcp: 'mcp/pikku-mcp-wirings-meta.gen.json',
   agent: 'agent/pikku-agent-wirings-meta.gen.json',
+  scorer: 'agent/pikku-scorer-wirings-meta.gen.json',
 }
 
 // A few meta files wrap their real entities under a single key rather than
@@ -41,6 +43,7 @@ const SINGLE_FILE: Record<Exclude<MetaDiffCategoryName, 'workflow'>, string> = {
 const UNWRAP: Partial<Record<MetaDiffCategoryName, string>> = {
   email: 'templates',
   agent: 'agentsMeta',
+  scorer: 'scorersMeta',
 }
 
 // Workflows (incl. scenarios) are written one file per workflow under

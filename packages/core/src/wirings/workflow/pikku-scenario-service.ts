@@ -31,6 +31,7 @@ import type {
   PikkuWorkflowWire,
   WorkflowExpectEventuallyOptions,
   WorkflowExpectErrorOptions,
+  WorkflowExpectScoreOptions,
   WorkflowExpectServiceOptions,
   WorkflowQueueOptions,
 } from './workflow.types.js'
@@ -679,6 +680,51 @@ export class PikkuScenarioService implements WorkflowRunExtension {
                   `${options?.calledWith !== undefined ? ` with ${JSON.stringify(options.calledWith)}` : ''}, found ${matching.length}. Recorded:\n  ${seen}`
               )
             }
+          },
+          options
+        )
+      },
+
+      expectScore: async (
+        stepName: string,
+        agentRunId: string,
+        scorerName: string,
+        options?: WorkflowExpectScoreOptions
+      ) => {
+        this.engine.verifyStepName(stepName)
+        return await this.engine.inlineStep(
+          runId,
+          stepName,
+          async () => {
+            const rpcName = 'pikkuScenarioGradeRun'
+            const data = {
+              runId: agentRunId,
+              scorer: scorerName,
+              ...(options?.reference !== undefined
+                ? { reference: options.reference }
+                : {}),
+            }
+            const grade: { score: number; reason?: string } = options?.actor
+              ? await options.actor.invoke(rpcName, data)
+              : await rpcService.rpcWithWire(rpcName, data, {})
+
+            // A scorer that graded is a scorer that answered, so an unstated
+            // bound still fails a zero rather than passing anything at all.
+            const atLeast = options?.atLeast ?? 0.5
+            const failed =
+              grade.score < atLeast ||
+              (options?.atMost !== undefined && grade.score > options.atMost)
+            if (failed) {
+              const bound =
+                options?.atMost !== undefined
+                  ? `between ${atLeast} and ${options.atMost}`
+                  : `at least ${atLeast}`
+              throw new Error(
+                `[workflow] expectScore '${stepName}' expected '${scorerName}' to grade run ${agentRunId} ${bound}, got ${grade.score}` +
+                  `${grade.reason ? `: ${grade.reason}` : ''}`
+              )
+            }
+            return grade
           },
           options
         )

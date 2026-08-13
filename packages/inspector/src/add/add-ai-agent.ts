@@ -330,6 +330,39 @@ function resolveIdentifierToAgentName(
   return null
 }
 
+/**
+ * The scorers an agent asks to be graded by, which are plain names rather than
+ * references: a scorer is resolved out of the registry at grading time, not
+ * imported by the agent, so nothing here has a declaration to chase.
+ */
+function resolveScorerNames(
+  obj: ts.ObjectLiteralExpression,
+  agentName: string,
+  logger: InspectorLogger
+): string[] | null {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'scorers'
+  )
+  if (!property || !ts.isPropertyAssignment(property)) return null
+  if (!ts.isArrayLiteralExpression(property.initializer)) return null
+
+  const names: string[] = []
+  for (const element of property.initializer.elements) {
+    if (!ts.isStringLiteral(element)) {
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' lists a scorer that is not an inline string: \`${element.getText()}\`. A scorer is named, not imported, so the name has to be readable from source.`
+      )
+      continue
+    }
+    names.push(element.text)
+  }
+  return names.length > 0 ? names : null
+}
+
 export const addAIAgent: AddWiring = (
   logger,
   node,
@@ -377,6 +410,7 @@ export const addAIAgent: AddWiring = (
       | number
       | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
+    const scorersValue = resolveScorerNames(obj, nameValue || '', logger)
     const toolsValue = resolveToolReferences(
       obj,
       checker,
@@ -582,6 +616,7 @@ export const addAIAgent: AddWiring = (
       ...(toolsValue !== null && { tools: toolsValue }),
       ...(agentsValue !== null && { agents: agentsValue }),
       ...(workflowsValue !== null && { workflows: workflowsValue }),
+      ...(scorersValue !== null && { scorers: scorersValue }),
       tags,
       inputSchema,
       outputSchema,

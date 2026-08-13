@@ -13,6 +13,7 @@ import type {
   MCPPromptMeta,
 } from '@pikku/core/mcp'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
+import type { ScorerMeta } from '@pikku/core/ai-scorer'
 import type { CLIMeta } from '@pikku/core/cli'
 import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
@@ -597,6 +598,10 @@ export interface InspectorState {
   }
   agents: {
     agentsMeta: AIAgentMeta
+    files: Map<string, { path: string; exportedName: string }>
+  }
+  scorers: {
+    scorersMeta: ScorerMeta
     files: Map<string, { path: string; exportedName: string }>
   }
   cli: {

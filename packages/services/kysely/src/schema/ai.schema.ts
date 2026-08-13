@@ -136,5 +136,26 @@ export const aiSchema: PikkuSchema = {
         .createIndex('idx_ai_run_thread')
         .on('aiRun')
         .columns(['threadId', 'createdAt']),
+
+    (db) =>
+      db.schema
+        .createTable('aiRunScore')
+        .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
+        .addColumn('runId', 'varchar(36)', (col) =>
+          col.notNull().references('aiRun.runId').onDelete('cascade')
+        )
+        .addColumn('scorerName', 'varchar(255)', (col) => col.notNull())
+        .addColumn('score', 'real', (col) => col.notNull())
+        .addColumn('reason', 'text')
+        .addColumn('metadata', 'text')
+        .addColumn('createdAt', 'timestamp', (col) =>
+          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
+        ),
+
+    (db) =>
+      db.schema
+        .createIndex('idx_ai_run_score_run')
+        .on('aiRunScore')
+        .columns(['runId', 'createdAt']),
   ],
 }

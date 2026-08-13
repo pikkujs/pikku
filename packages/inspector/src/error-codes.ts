@@ -91,6 +91,9 @@ export enum ErrorCode {
   AGENT_TOOL_NOT_FOUND = 'PKU153',
   AGENT_TOOL_MISSING_DESCRIPTION = 'PKU154',
 
+  // Agent scorer reference errors
+  AGENT_SCORER_NOT_FOUND = 'PKU155',
+
   // File structure errors
   SCHEMA_AND_WIRING_COLOCATED = 'PKU490',
 

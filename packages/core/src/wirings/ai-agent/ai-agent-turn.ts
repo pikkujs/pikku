@@ -83,6 +83,7 @@ export const toAccumulatedStep = (stepResult: StepResult) => ({
         typeof tr?.result === 'string'
           ? tr.result
           : JSON.stringify(tr?.result ?? ''),
+      ...(tr?.error ? { error: tr.error } : {}),
     }
   }),
 })

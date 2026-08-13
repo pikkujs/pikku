@@ -1,14 +1,17 @@
 import type {
   AIRunStateService,
   CreateRunInput,
+  SaveScoreInput,
 } from './ai-run-state-service.js'
 import type {
   AgentRunState,
   PendingApproval,
 } from '../wirings/ai-agent/ai-agent.types.js'
+import type { AIRunScore } from '../wirings/ai-scorer/ai-scorer.types.js'
 
 export class InMemoryAIRunStateService implements AIRunStateService {
   private runs = new Map<string, AgentRunState>()
+  private scores = new Map<string, AIRunScore[]>()
   private counter = 0
 
   async createRun(run: CreateRunInput): Promise<string> {
@@ -70,5 +73,15 @@ export class InMemoryAIRunStateService implements AIRunStateService {
       }
     }
     return null
+  }
+
+  async saveScore(score: SaveScoreInput): Promise<void> {
+    const existing = this.scores.get(score.runId) ?? []
+    existing.push({ ...score, createdAt: new Date() })
+    this.scores.set(score.runId, existing)
+  }
+
+  async getScores(runId: string): Promise<AIRunScore[]> {
+    return [...(this.scores.get(runId) ?? [])]
   }
 }

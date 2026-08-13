@@ -381,6 +381,7 @@ export const persistOrphanedToolResults = async (
           : typeof entry.result === 'string'
             ? entry.result
             : JSON.stringify(entry.result),
+        ...(entry.error ? { error: entry.error } : {}),
       })),
       undelivered: true,
       createdAt: new Date(),

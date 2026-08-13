@@ -77,20 +77,23 @@ export function getScenarioStepPhase(
 /**
  * The expectation helpers that assert without being a `then`.
  *
- * `expectService` and `expectError` are inline steps rather than scenario
- * steps, so they carry no phase and never reach the step meta — but each one is
- * a witness: a recorded service call, or a refusal. PKU680 has to see them, or
- * a scenario whose only assertion is one of these reads as asserting nothing.
+ * `expectService`, `expectError` and `expectScore` are inline steps rather than
+ * scenario steps, so they carry no phase and never reach the step meta — but
+ * each one is a witness: a recorded service call, a refusal, or a graded run.
+ * PKU680 has to see them, or a scenario whose only assertion is one of these
+ * reads as asserting nothing.
  */
 const SCENARIO_EXPECTATION_CALLS = [
   'expectService',
   'expectError',
   'expectEventually',
+  'expectScore',
 ] as const
 
 /**
  * Check if a call expression is one of the scenario expectation helpers —
- * `scenario.expectService()`, `.expectError()` or `.expectEventually()`.
+ * `scenario.expectService()`, `.expectError()`, `.expectEventually()` or
+ * `.expectScore()`.
  */
 export function isScenarioExpectationCall(node: ts.CallExpression): boolean {
   return (

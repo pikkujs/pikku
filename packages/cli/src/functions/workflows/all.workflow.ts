@@ -213,9 +213,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       allImports.push(config.packageFile)
     }
 
-    const [hasInternalRPCs, agents] = await Promise.all([
+    const [hasInternalRPCs, agents, scorers] = await Promise.all([
       workflow.do('RPC', 'pikkuRPC', null),
       workflow.do('AI agent', 'pikkuAIAgent', null),
+      workflow.do('AI scorer', 'pikkuAIScorer', null),
     ])
 
     if (agents) {
@@ -223,6 +224,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       if (config.scaffold?.agent) {
         await workflow.do('Public agent scaffold', 'pikkuPublicAgent', null)
       }
+    }
+
+    if (scorers) {
+      allImports.push(config.scorerWiringMetaFile, config.scorerWiringsFile)
     }
 
     // Scaffold and definition generators are all independent

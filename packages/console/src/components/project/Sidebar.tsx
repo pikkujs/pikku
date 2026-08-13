@@ -33,6 +33,7 @@ import {
   GitCompare,
   Mail,
   Route,
+  Gauge,
   UserSearch,
   UserRound,
   BookOpen,
@@ -98,6 +99,12 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/agents',
           icon: Bot,
           matchPrefix: '/agents',
+        },
+        {
+          label: m.nav_scorers(),
+          href: '/scorers',
+          icon: Gauge,
+          matchPrefix: '/scorers',
         },
         {
           label: m.nav_scenarios(),

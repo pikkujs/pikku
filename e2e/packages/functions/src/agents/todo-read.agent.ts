@@ -16,4 +16,5 @@ export const todoReadAgent = pikkuAIAgent({
   ],
   maxSteps: 10,
   toolChoice: 'auto',
+  scorers: ['brevity', 'restraint', 'helpfulness'],
 })

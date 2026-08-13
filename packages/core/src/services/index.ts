@@ -113,6 +113,7 @@ export type {
 export type { AIEmbeddingService } from './ai-embedding-service.js'
 export type {
   CreateRunInput,
+  SaveScoreInput,
   AIRunStateService,
 } from './ai-run-state-service.js'
 export type {

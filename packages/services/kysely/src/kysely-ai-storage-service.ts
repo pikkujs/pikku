@@ -2,11 +2,14 @@ import type {
   AIStorageService,
   AIRunStateService,
   CreateRunInput,
+  SaveScoreInput,
 } from '@pikku/core/services'
 import type { AIThread, AIMessage, AgentRunState } from '@pikku/core/ai-agent'
+import type { AIRunScore } from '@pikku/core/ai-scorer'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
+import { getRunScores, saveRunScore } from './kysely-ai-run-scores.js'
 import { ensurePikkuSchema } from './schema/index.js'
 import { aiSchema } from './schema/ai.schema.js'
 
@@ -605,6 +608,14 @@ export class KyselyAIStorageService
       .where('approvalStatus', '=', 'pending')
       .executeTakeFirst()
     return Number(result?.numUpdatedRows ?? 0) > 0
+  }
+
+  async saveScore(score: SaveScoreInput): Promise<void> {
+    await saveRunScore(this.db, score)
+  }
+
+  async getScores(runId: string): Promise<AIRunScore[]> {
+    return getRunScores(this.db, runId)
   }
 
   public async close(): Promise<void> {}

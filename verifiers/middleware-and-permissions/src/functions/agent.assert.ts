@@ -6,9 +6,11 @@ import type {
   AIAgentStepResult,
   AIRunStateService,
   CreateRunInput,
+  SaveScoreInput,
   AIStorageService,
 } from '@pikku/core/services'
 import type { AgentRunState, AIThread, AIMessage } from '@pikku/core/ai-agent'
+import type { AIRunScore } from '@pikku/core/ai-scorer'
 import {
   assertMiddlewareAndPermissions,
   type ExpectedEvent,
@@ -71,6 +73,10 @@ class MockAIRunState implements AIRunStateService {
   }
   async findRunByToolCallId(_toolCallId: string): Promise<null> {
     return null
+  }
+  async saveScore(_score: SaveScoreInput): Promise<void> {}
+  async getScores(_runId: string): Promise<AIRunScore[]> {
+    return []
   }
 }
 

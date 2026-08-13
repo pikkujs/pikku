@@ -50,6 +50,29 @@ export function useAgentThreadRuns(threadId: string | null) {
   })
 }
 
+export function useAgentRunScores(runId: string | null) {
+  const rpc = usePikkuRPC()
+
+  return useQuery({
+    queryKey: ['agent-run-scores', runId],
+    queryFn: async () => {
+      return await rpc.invoke('console:getAgentRunScores', { runId: runId! })
+    },
+    enabled: !!runId,
+  })
+}
+
+export function useScorers() {
+  const rpc = usePikkuRPC()
+
+  return useQuery({
+    queryKey: ['scorers'],
+    queryFn: async () => {
+      return await rpc.invoke('console:getScorers')
+    },
+  })
+}
+
 export function useDeleteAgentThread() {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()

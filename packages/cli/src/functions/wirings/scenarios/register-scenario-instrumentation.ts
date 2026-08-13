@@ -7,6 +7,11 @@ import {
   isTestRun,
   type CoverageFunctionMeta,
 } from '@pikku/core/services'
+import {
+  enableScoreSnapshots,
+  getScoreSnapshot,
+  gradeRun as coreGradeRun,
+} from '@pikku/core/ai-scorer'
 import type { FunctionsMeta } from '@pikku/core'
 
 /**
@@ -68,6 +73,36 @@ const getStubCalls = {
     getStubTracker().getCalls(data?.service ?? undefined),
 }
 
+/**
+ * Grade a finished agent run on demand, from the snapshot the runtime kept.
+ *
+ * Deliberately not sampled and not persisted: a scenario asserting on a grade
+ * needs that grade every time, and the assertion is the outcome — writing a
+ * test's score alongside production's would make the live figures unreadable.
+ */
+const gradeRun = {
+  func: async (
+    services: any,
+    data: { runId: string; scorer: string; reference?: string }
+  ) => {
+    const run = getScoreSnapshot(data.runId)
+    if (!run) {
+      throw new Error(
+        `No finished run '${data.runId}' is available to grade. A run is gradeable only from the server that produced it, and only while it is among the most recent — check the scenario graded the run it just triggered.`
+      )
+    }
+    return await coreGradeRun(
+      {
+        ...run,
+        ...(data.reference !== undefined ? { reference: data.reference } : {}),
+        scorerName: data.scorer,
+      },
+      services,
+      { persist: false }
+    )
+  },
+}
+
 const instrumentation: Record<
   string,
   { func: (...args: any[]) => any; title: string; description: string }
@@ -96,6 +131,12 @@ const instrumentation: Record<
     description:
       'Returns calls recorded against stubbed/spied services (via the stub()/spy() core utils). Empty unless the server records service calls (pikku dev --test).',
   },
+  pikkuScenarioGradeRun: {
+    ...gradeRun,
+    title: 'Grade Run',
+    description:
+      "Runs one declared scorer against a finished agent run and returns the grade, ignoring the scorer's live sample rate. Accepts a reference answer, which is the only way a reference-based judge is reachable. The grade is returned, never recorded.",
+  },
 }
 
 /**
@@ -109,6 +150,11 @@ const instrumentation: Record<
  */
 export const registerScenarioInstrumentation = (requireAuth: boolean) => {
   const meta = pikkuState(null, 'function', 'meta') as FunctionsMeta
+
+  // Retaining finished runs is what makes them gradeable, and this is the only
+  // place that can grade one — so the buffer is turned on here rather than by a
+  // flag someone has to remember, and stays absent from every other process.
+  enableScoreSnapshots()
 
   for (const [name, { func, title, description }] of Object.entries(
     instrumentation

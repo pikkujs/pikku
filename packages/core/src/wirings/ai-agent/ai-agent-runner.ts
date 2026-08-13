@@ -49,6 +49,11 @@ import {
   notifyAfterStep,
   toAccumulatedStep,
 } from './ai-agent-turn.js'
+import {
+  applyOutputMiddleware,
+  finalizeAgentRun,
+  lastUserMessageText,
+} from './ai-agent-finalize.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { randomUUID } from './ai-agent-utils.js'
@@ -303,20 +308,13 @@ export async function runAIAgent(
       steps: accumulatedSteps,
     }
 
-    let outputText = finalText
-    let outputMessages = runnerParams.messages
-    for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
-      const mw = aiMiddlewares[i]
-      if (mw.modifyOutput) {
-        const modResult = await mw.modifyOutput(singletonServices, {
-          text: outputText,
-          messages: outputMessages,
-          usage: totalUsage,
-        })
-        outputText = modResult.text
-        outputMessages = modResult.messages
-      }
-    }
+    const { text: outputText, steps: outputSteps } =
+      await applyOutputMiddleware(aiMiddlewares, singletonServices, {
+        text: finalText,
+        messages: runnerParams.messages,
+        steps: result.steps,
+        usage: totalUsage,
+      })
 
     await saveMessages(
       storage,
@@ -325,14 +323,20 @@ export async function runAIAgent(
       memoryConfig,
       persistedUserMessage,
       {
-        ...result,
         text: outputText,
+        steps: outputSteps,
         uiSpec: structuredOutput.uiSpec,
       }
     )
 
-    await aiRunState.updateRun(runId, {
-      status: 'completed',
+    await finalizeAgentRun(aiRunState, {
+      runId,
+      agentName,
+      threadId,
+      resourceId: input.resourceId,
+      input: lastUserMessageText(runnerParams.messages),
+      text: outputText,
+      steps: outputSteps,
       usage: { ...totalUsage, model: agent.model },
     })
 
@@ -341,7 +345,7 @@ export async function runAIAgent(
       text: outputText,
       object: finalObject,
       threadId,
-      steps: accumulatedSteps,
+      steps: outputSteps,
       usage: totalUsage,
     }
   } catch (error) {
@@ -462,6 +466,7 @@ export async function resumeAIAgentSync(
     toolName: string
     args: any
     result: string
+    error?: string
   }[] = []
 
   for (const pending of savedPendingApprovals) {
@@ -471,6 +476,7 @@ export async function resumeAIAgentSync(
     if (!claimedIds.has(toolCallId)) continue
 
     let resultStr: string
+    let toolError: string | undefined
 
     if (rejectedIds.has(toolCallId)) {
       resultStr =
@@ -497,7 +503,8 @@ export async function resumeAIAgentSync(
         if (err?.payload?.error === 'missing_credential') {
           resultStr = JSON.stringify(err.payload)
         } else {
-          resultStr = `Error: ${err instanceof Error ? err.message : String(err)}`
+          toolError = err instanceof Error ? err.message : String(err)
+          resultStr = `Error: ${toolError}`
         }
       }
     } else {
@@ -512,6 +519,7 @@ export async function resumeAIAgentSync(
           ? JSON.parse(pending.args)
           : pending.args,
       result: resultStr,
+      ...(toolError ? { error: toolError } : {}),
     })
   }
 
@@ -541,7 +549,21 @@ export async function resumeAIAgentSync(
     memoryConfig,
     agentRunner,
     params,
-    aiRunState
+    aiRunState,
+    // The approved tools were executed here, before the model was re-entered,
+    // so they belong to the run's step record — otherwise a tool that failed
+    // after approval leaves no trace on the run at all.
+    toolCallMessages.length > 0
+      ? {
+          usage: { inputTokens: 0, outputTokens: 0 },
+          toolCalls: toolCallMessages.map((tc) => ({
+            name: tc.toolName,
+            args: (tc.args ?? {}) as Record<string, unknown>,
+            result: tc.result,
+            ...(tc.error ? { error: tc.error } : {}),
+          })),
+        }
+      : undefined
   )
 }
 
@@ -554,7 +576,8 @@ async function continueAfterToolResultSync(
   memoryConfig: AIAgentMemoryConfig | undefined,
   agentRunner: AIAgentRunnerService,
   params: RunAIAgentParams,
-  aiRunState: AIRunStateService
+  aiRunState: AIRunStateService,
+  resumedToolStep?: AIAgentStep
 ): Promise<AIAgentOutput> {
   const singletonServices = getSingletonServices()
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
@@ -639,6 +662,13 @@ async function continueAfterToolResultSync(
   runnerParams.tools = trackToolExecution(runnerParams.tools, interruptHandle)
 
   try {
+    // Kept out of `accumulatedSteps` deliberately: that array drives
+    // `saveMessages`, and the approved tool's messages were already written to
+    // the thread before the model was re-entered. It belongs to the run's step
+    // record, not to persistence.
+    const withResumedStep = (steps: AIAgentStep[]): AIAgentStep[] =>
+      resumedToolStep ? [resumedToolStep, ...steps] : steps
+
     const accumulatedSteps: AIAgentStep[] = []
     const totalUsage = { inputTokens: 0, outputTokens: 0 }
     let lastStepResult: AIAgentStepResult | null = null
@@ -717,7 +747,7 @@ async function continueAfterToolResultSync(
           runId: run.runId,
           text: suspendedText,
           threadId: run.threadId,
-          steps: accumulatedSteps,
+          steps: withResumedStep(accumulatedSteps),
           usage: totalUsage,
           status: 'suspended',
           pendingApprovals: approvalsNeeded.map((a) => ({
@@ -741,20 +771,13 @@ async function continueAfterToolResultSync(
       steps: accumulatedSteps,
     }
 
-    let outputText = finalText
-    let outputMessages = runnerParams.messages
-    for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
-      const mw = aiMiddlewares[i]
-      if (mw.modifyOutput) {
-        const modResult = await mw.modifyOutput(singletonServices, {
-          text: outputText,
-          messages: outputMessages,
-          usage: totalUsage,
-        })
-        outputText = modResult.text
-        outputMessages = modResult.messages
-      }
-    }
+    const { text: outputText, steps: outputSteps } =
+      await applyOutputMiddleware(aiMiddlewares, singletonServices, {
+        text: finalText,
+        messages: runnerParams.messages,
+        steps: withResumedStep(result.steps),
+        usage: totalUsage,
+      })
 
     await saveMessages(
       storage,
@@ -763,13 +786,21 @@ async function continueAfterToolResultSync(
       memoryConfig,
       null,
       {
-        ...result,
         text: outputText,
+        // The approved tool's messages were written before the model was
+        // re-entered, so only the steps this leg generated are persisted here.
+        steps: accumulatedSteps,
       }
     )
 
-    await aiRunState.updateRun(run.runId, {
-      status: 'completed',
+    await finalizeAgentRun(aiRunState, {
+      runId: run.runId,
+      agentName: resolvedName,
+      threadId: run.threadId,
+      resourceId: run.resourceId,
+      input: lastUserMessageText(runnerParams.messages),
+      text: outputText,
+      steps: outputSteps,
       usage: { ...totalUsage, model: agent.model },
     })
 
@@ -778,7 +809,7 @@ async function continueAfterToolResultSync(
       text: outputText,
       object: finalObject,
       threadId: run.threadId,
-      steps: accumulatedSteps,
+      steps: outputSteps,
       usage: totalUsage,
     }
   } catch (error) {

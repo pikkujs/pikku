@@ -42,6 +42,18 @@ const VIRTUAL_USER_DECLARATIONS = ['definePersonas', 'runVirtualUser'] as const
 
 const VIRTUAL_USER_FILE = /\.(virtual-user|vu)\.tsx?$/
 
+/**
+ * The declarations that grade an agent, and where they live.
+ *
+ * A scorer is a test of the agent that is also shipped, which is exactly why it
+ * needs its own file rather than sitting beside the agent it grades: the two
+ * are edited for opposite reasons, and a rubric buried in an agent definition
+ * is one nobody reviews as a rubric.
+ */
+const SCORER_DECLARATIONS = ['pikkuAIScorer', 'pikkuAIJudge'] as const
+
+const SCORER_FILE = /\.scorers?\.tsx?$/
+
 const isGenerated = (path: string): boolean =>
   path.includes('.gen.') || path.includes(`${'/'}.pikku${'/'}`)
 
@@ -136,6 +148,31 @@ export const runScenarioFileChecks = async (
         `  ${rel.replace(/[^/\\]+$/, 'personas.virtual-user.ts')}`,
         'A virtual user is derived from what the project already generates —',
         'the personas are the only part it authors, so they get their own file.',
+      ].join('\n'),
+    })
+  }
+
+  for (const file of files) {
+    if (SCORER_FILE.test(file) || isGenerated(file)) continue
+    const text = await readTextSafe(file)
+    if (!text) continue
+
+    const used = SCORER_DECLARATIONS.filter((name) =>
+      new RegExp(`\\b${name}\\s*\\(`).test(text)
+    )
+    if (used.length === 0) continue
+
+    const rel = relative(root, file)
+    findings.push({
+      id: 'scorer-declared-outside-scorer-file',
+      severity: 'error',
+      message: `${rel} declares ${used.join(', ')} — scorers and judges must live in a *.scorer.ts file, not mixed into application code`,
+      path: file,
+      fixHint: [
+        'Move the declaration into a dedicated file, e.g.:',
+        `  ${rel.replace(/[^/\\]+$/, 'grading.scorer.ts')}`,
+        'A scorer grades the agent it sits next to, and is edited for the',
+        'opposite reason — keeping it separate is what keeps it reviewable.',
       ].join('\n'),
     })
   }

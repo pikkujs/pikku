@@ -24,8 +24,12 @@ const ALLOWED: Record<string, string[]> = {
   // `remote` on a wire with no peer — one leaf module, not the channel runtime.
   http: ['channel'],
   cli: ['channel'],
-  // An agent streams over a channel and is invoked over rpc.
-  'ai-agent': ['channel', 'rpc'],
+  // An agent streams over a channel and is invoked over rpc, and grades itself
+  // as the last thing a finished run does.
+  'ai-agent': ['channel', 'rpc', 'ai-scorer'],
+  // A judge is a degenerate agent — it builds agent messages and runs them —
+  // and a grade is dispatched to a queue.
+  'ai-scorer': ['ai-agent', 'queue'],
   // `wire.rpc.agent` — the facade lives with the agent runtime it delegates to.
   rpc: ['ai-agent'],
   gateway: ['http'],

@@ -16,6 +16,7 @@ import { SecretsPage } from './pages/SecretsPage'
 import { VariablesPage } from './pages/VariablesPage'
 import { AgentsPage } from './pages/AgentsPage'
 import { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
+import { ScorersPage } from './pages/ScorersPage'
 import { PackagesPage } from './pages/PackagesPage'
 import { CredentialsPage } from './pages/CredentialsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
         <Route path="/workflow" element={<WorkflowsPage />} />
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/agents/playground" element={<AgentPlaygroundPage />} />
+        <Route path="/scorers" element={<ScorersPage />} />
         <Route path="/changes" element={<ChangesPage />} />
         <Route path="/scenarios" element={<ScenariosPage />} />
         <Route path="/personas" element={<PersonasPage />} />

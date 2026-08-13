@@ -1,10 +1,16 @@
 import { sql } from 'kysely'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import type { AIRunStateService, CreateRunInput } from '@pikku/core/services'
+import type {
+  AIRunStateService,
+  CreateRunInput,
+  SaveScoreInput,
+} from '@pikku/core/services'
 import type { AgentRunState, PendingApproval } from '@pikku/core/ai-agent'
+import type { AIRunScore } from '@pikku/core/ai-scorer'
 import { ensurePikkuSchema } from './schema/index.js'
 import { aiSchema } from './schema/ai.schema.js'
+import { getRunScores, saveRunScore } from './kysely-ai-run-scores.js'
 
 export class KyselyAIRunStateService implements AIRunStateService {
   private initialized = false
@@ -158,6 +164,14 @@ export class KyselyAIRunStateService implements AIRunStateService {
       }
     }
     return null
+  }
+
+  async saveScore(score: SaveScoreInput): Promise<void> {
+    await saveRunScore(this.db, score)
+  }
+
+  async getScores(runId: string): Promise<AIRunScore[]> {
+    return getRunScores(this.db, runId)
   }
 
   private toRunState(row: any): AgentRunState {

@@ -52,7 +52,18 @@ export type AIAgentStepResult = {
   text: string
   object?: unknown
   toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
-  toolResults: { toolCallId: string; toolName: string; result: unknown }[]
+  toolResults: {
+    toolCallId: string
+    toolName: string
+    result: unknown
+    /**
+     * Set when the tool threw rather than returned. Carried as its own field
+     * because `result` is a rendered string by the time anything downstream
+     * reads it, and "did this tool fail" is not answerable by looking for an
+     * `Error:` prefix in text a tool could legitimately have returned.
+     */
+    error?: string
+  }[]
   usage: { inputTokens: number; outputTokens: number }
   finishReason: 'stop' | 'tool-calls' | 'length' | 'error' | 'unknown'
   reasoningContent?: string

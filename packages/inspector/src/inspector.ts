@@ -16,6 +16,7 @@ import {
   stampAuthHandlerServices,
   validateAgentModels,
   validateAgentToolReferences,
+  validateAgentScorerReferences,
   validateSecretOverrides,
   validateVariableOverrides,
   validateCredentialOverrides,
@@ -158,6 +159,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     },
     agents: {
       agentsMeta: {},
+      files: new Map(),
+    },
+    scorers: {
+      scorersMeta: {},
       files: new Map(),
     },
     cli: {
@@ -513,6 +518,7 @@ export const inspect = async (
 
     validateAgentModels(logger, state)
     validateAgentToolReferences(logger, state, options)
+    validateAgentScorerReferences(logger, state)
     validateSecretOverrides(logger, state)
     validateVariableOverrides(logger, state)
     validateCredentialOverrides(logger, state)

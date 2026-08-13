@@ -2,8 +2,10 @@ import type {
   AIStorageService,
   AIRunStateService,
   CreateRunInput,
+  SaveScoreInput,
 } from '@pikku/core/services'
 import type { AIThread, AIMessage, AgentRunState } from '@pikku/core/ai-agent'
+import type { AIRunScore } from '@pikku/core/ai-scorer'
 import type { Db, Collection } from 'mongodb'
 
 interface AIThreadDoc {
@@ -46,6 +48,16 @@ interface AIWorkingMemoryDoc {
   updatedAt: Date
 }
 
+interface AIRunScoreDoc {
+  _id: string
+  runId: string
+  scorerName: string
+  score: number
+  reason: string | null
+  metadata: any | null
+  createdAt: Date
+}
+
 interface AIRunDoc {
   _id: string
   agentName: string
@@ -71,6 +83,7 @@ export class MongoDBAIStorageService
   private toolCalls!: Collection<AIToolCallDoc>
   private workingMemory!: Collection<AIWorkingMemoryDoc>
   private aiRuns!: Collection<AIRunDoc>
+  private aiRunScores!: Collection<AIRunScoreDoc>
 
   constructor(private db: Db) {}
 
@@ -83,6 +96,7 @@ export class MongoDBAIStorageService
     this.workingMemory =
       this.db.collection<AIWorkingMemoryDoc>('ai_working_memory')
     this.aiRuns = this.db.collection<AIRunDoc>('ai_run')
+    this.aiRunScores = this.db.collection<AIRunScoreDoc>('ai_run_score')
 
     await this.threads.createIndex({ resourceId: 1 })
 
@@ -94,6 +108,8 @@ export class MongoDBAIStorageService
     await this.workingMemory.createIndex({ id: 1, scope: 1 }, { unique: true })
 
     await this.aiRuns.createIndex({ threadId: 1, createdAt: 1 })
+
+    await this.aiRunScores.createIndex({ runId: 1, createdAt: 1 })
 
     this.initialized = true
   }
@@ -572,6 +588,33 @@ export class MongoDBAIStorageService
       { $set: { approvalStatus: status } }
     )
     return result.modifiedCount > 0
+  }
+
+  async saveScore(score: SaveScoreInput): Promise<void> {
+    await this.aiRunScores.insertOne({
+      _id: crypto.randomUUID(),
+      runId: score.runId,
+      scorerName: score.scorerName,
+      score: score.score,
+      reason: score.reason ?? null,
+      metadata: score.metadata ?? null,
+      createdAt: new Date(),
+    })
+  }
+
+  async getScores(runId: string): Promise<AIRunScore[]> {
+    const rows = await this.aiRunScores
+      .find({ runId })
+      .sort({ createdAt: 1 })
+      .toArray()
+    return rows.map((row) => ({
+      runId: row.runId,
+      scorerName: row.scorerName,
+      score: row.score,
+      reason: row.reason ?? undefined,
+      metadata: row.metadata ?? undefined,
+      createdAt: row.createdAt,
+    }))
   }
 
   public async close(): Promise<void> {}

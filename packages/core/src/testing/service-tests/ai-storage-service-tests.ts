@@ -216,6 +216,99 @@ export const defineAiStorageServiceTests = (
       assert.ok(runs.every((r) => r.threadId === thread.id))
     })
 
+    test('saveScore and getScores', async () => {
+      const thread = await storage.createThread('resource-score')
+      const now = new Date()
+
+      const runId = await storage.createRun({
+        agentName: 'scored-agent',
+        threadId: thread.id,
+        resourceId: 'resource-score',
+        status: 'completed',
+        usage: { inputTokens: 10, outputTokens: 5, model: 'test' },
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await storage.saveScore({
+        runId,
+        scorerName: 'tool-error-rate',
+        score: 1,
+      })
+      await storage.saveScore({
+        runId,
+        scorerName: 'helpfulness',
+        score: 0.75,
+        reason: 'answered the question but skipped the fee',
+        metadata: { subScores: { accuracy: 0.9 }, judgeTokens: 412 },
+      })
+
+      const scores = await storage.getScores(runId)
+      assert.equal(scores.length, 2)
+
+      const byName = new Map(scores.map((s) => [s.scorerName, s]))
+
+      const clean = byName.get('tool-error-rate')
+      assert.ok(clean)
+      assert.equal(clean.score, 1)
+      assert.equal(clean.reason, undefined)
+      assert.equal(clean.metadata, undefined)
+
+      const helpful = byName.get('helpfulness')
+      assert.ok(helpful)
+      // A fractional score has to survive the round trip: an integer column
+      // would quietly turn every grade into 0 or 1.
+      assert.equal(helpful.score, 0.75)
+      assert.equal(helpful.reason, 'answered the question but skipped the fee')
+      assert.deepEqual(helpful.metadata, {
+        subScores: { accuracy: 0.9 },
+        judgeTokens: 412,
+      })
+      assert.ok(helpful.createdAt instanceof Date)
+    })
+
+    test('a re-grade appends rather than replacing the grade that was acted on', async () => {
+      const thread = await storage.createThread('resource-regrade')
+      const now = new Date()
+
+      const runId = await storage.createRun({
+        agentName: 'regraded-agent',
+        threadId: thread.id,
+        resourceId: 'resource-regrade',
+        status: 'completed',
+        usage: { inputTokens: 1, outputTokens: 1, model: 'test' },
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await storage.saveScore({ runId, scorerName: 'helpfulness', score: 0.2 })
+      await storage.saveScore({ runId, scorerName: 'helpfulness', score: 0.8 })
+
+      const scores = await storage.getScores(runId)
+      assert.equal(scores.length, 2)
+      assert.deepEqual(
+        scores.map((s) => s.score),
+        [0.2, 0.8]
+      )
+    })
+
+    test('getScores is empty for a run nothing graded', async () => {
+      const thread = await storage.createThread('resource-ungraded')
+      const now = new Date()
+
+      const runId = await storage.createRun({
+        agentName: 'ungraded-agent',
+        threadId: thread.id,
+        resourceId: 'resource-ungraded',
+        status: 'completed',
+        usage: { inputTokens: 1, outputTokens: 1, model: 'test' },
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      assert.deepEqual(await storage.getScores(runId), [])
+    })
+
     test('resolveApproval', async () => {
       const thread = await storage.createThread('resource-8')
       const now = new Date()

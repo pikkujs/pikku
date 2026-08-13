@@ -2,8 +2,11 @@ import type {
   AgentRunState,
   PendingApproval,
 } from '../wirings/ai-agent/ai-agent.types.js'
+import type { AIRunScore } from '../wirings/ai-scorer/ai-scorer.types.js'
 
 export type CreateRunInput = Omit<AgentRunState, 'runId'>
+
+export type SaveScoreInput = Omit<AIRunScore, 'createdAt'>
 
 export interface AIRunStateService {
   createRun(run: CreateRunInput): Promise<string>
@@ -23,4 +26,12 @@ export interface AIRunStateService {
   findRunByToolCallId(
     toolCallId: string
   ): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
+  /**
+   * Record one scorer's grade of a finished run. A run accumulates one row per
+   * scorer, and a scorer may grade the same run more than once — a retried job
+   * appends rather than replaces, so a re-grade never silently overwrites the
+   * grade that was acted on.
+   */
+  saveScore(score: SaveScoreInput): Promise<void>
+  getScores(runId: string): Promise<AIRunScore[]>
 }

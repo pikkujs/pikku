@@ -1,6 +1,7 @@
 import type {
   AIStreamChannel,
   AIStreamEvent,
+  AIAgentStep,
   AIMessage,
   AIToolCall,
   AIToolResult,
@@ -9,6 +10,10 @@ import type {
   CoreAIAgent,
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
+import {
+  finalizeAgentRun,
+  lastUserMessageText,
+} from './ai-agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware } from './ai-agent-turn.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
@@ -68,6 +73,8 @@ type PersistingChannel = AIStreamChannel & {
   fullText: string
   flush: (opts?: { interrupted?: boolean }) => Promise<void>
   totalUsage: { inputTokens: number; outputTokens: number; model?: string }
+  /** Every tool the run called, kept for the whole run rather than per step. */
+  runToolCalls: NonNullable<AIAgentStep['toolCalls']>
 }
 
 function createPersistingChannel(
@@ -89,6 +96,9 @@ function createPersistingChannel(
     inputTokens: 0,
     outputTokens: 0,
   }
+  // Survives the per-step flush below, which clears its own buffers: the run
+  // record needs every call the run made, not just the last step's.
+  const runToolCalls: NonNullable<AIAgentStep['toolCalls']> = []
 
   const flushStep = async (opts?: { interrupted?: boolean }) => {
     if (!storage) return
@@ -137,6 +147,8 @@ function createPersistingChannel(
     })
   }
 
+  const runToolCallIndex = new Map<string, number>()
+
   const channel: PersistingChannel = {
     channelId: parent.channelId,
     openingData: parent.openingData,
@@ -149,6 +161,9 @@ function createPersistingChannel(
     get totalUsage() {
       return totalUsage
     },
+    get runToolCalls() {
+      return runToolCalls
+    },
     flush: flushStep,
     close: () => parent.close(),
     sendBinary: (data) => parent.sendBinary(data),
@@ -157,6 +172,26 @@ function createPersistingChannel(
       // the client was streamed, and an interrupted run has to be able to
       // report the fragment it got through even with persistence turned off.
       if (event.type === 'text-delta') fullText += event.text
+      if (event.type === 'tool-call') {
+        runToolCallIndex.set(event.toolCallId, runToolCalls.length)
+        runToolCalls.push({
+          name: event.toolName,
+          args: event.args as Record<string, unknown>,
+          result: '',
+        })
+      }
+      if (event.type === 'tool-result') {
+        const index = runToolCallIndex.get(event.toolCallId)
+        const result =
+          typeof event.result === 'string'
+            ? event.result
+            : JSON.stringify(event.result)
+        const call = index === undefined ? undefined : runToolCalls[index]
+        if (call) {
+          call.result = result
+          if (event.error) call.error = event.error
+        }
+      }
       if (storage) {
         switch (event.type) {
           case 'text-delta':
@@ -177,6 +212,7 @@ function createPersistingChannel(
                 typeof event.result === 'string'
                   ? event.result
                   : JSON.stringify(event.result),
+              ...(event.error ? { error: event.error } : {}),
             })
             break
           case 'generative-ui':
@@ -203,44 +239,67 @@ function createPersistingChannel(
   return channel
 }
 
+/**
+ * Agents already warned about, so a per-request hook does not become a
+ * per-request log line.
+ */
+const warnedUnstreamedOutputHooks = new Set<string>()
+
+/**
+ * `modifyOutput` does not run on a streamed run at all. Nothing here could act
+ * on what it returns — the text has already reached the client, and
+ * `createPersistingChannel` flushes each step to storage as it goes, so by the
+ * time the run ends the transcript is already written.
+ *
+ * Rewriting on this path belongs to `modifyOutputStream`, which genuinely
+ * works: the stream middleware wraps the persisting channel, so what is stored
+ * and accumulated is already what the client was sent. A middleware that
+ * rewrites in `modifyOutput` only — a redaction hook, typically — is therefore
+ * silently ineffective when the agent is streamed, and is told so once.
+ */
+const warnUnstreamedOutputHooks = (
+  agentName: string,
+  aiMiddlewares: PikkuAIMiddlewareHooks[],
+  logger?: { warn: (...args: any[]) => void }
+) => {
+  if (warnedUnstreamedOutputHooks.has(agentName)) return
+  const unstreamed = aiMiddlewares.some(
+    (mw) => mw.modifyOutput && !mw.modifyOutputStream
+  )
+  if (!unstreamed) return
+  warnedUnstreamedOutputHooks.add(agentName)
+  logger?.warn(
+    `Agent '${agentName}' has AI middleware with modifyOutput but no modifyOutputStream — modifyOutput does not apply to streamed runs. Implement modifyOutputStream to affect a streamed reply.`
+  )
+}
+
 async function postStreamCleanup(
   persistingChannel: PersistingChannel,
-  aiMiddlewares: PikkuAIMiddlewareHooks[],
-  singletonServices: any,
-  messages: AIMessage[],
   aiRunState: AIRunStateService,
-  runId: string
-): Promise<void> {
-  const usage = persistingChannel.totalUsage
-  let outputText = persistingChannel.fullText
-  let outputMessages = messages
-  for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
-    const mw = aiMiddlewares[i]
-    if (mw.modifyOutput) {
-      const result = await mw.modifyOutput(singletonServices, {
-        text: outputText,
-        messages: outputMessages,
-        usage: {
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-        },
-      })
-      outputText = result.text
-      outputMessages = result.messages
-    }
+  runId: string,
+  run: {
+    agentName: string
+    threadId: string
+    resourceId?: string
+    input: string
   }
-
-  await aiRunState.updateRun(runId, {
-    status: 'completed',
-    ...(usage.model
-      ? {
-          usage: {
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
-            model: usage.model,
-          },
-        }
-      : {}),
+): Promise<void> {
+  await finalizeAgentRun(aiRunState, {
+    runId,
+    agentName: run.agentName,
+    threadId: run.threadId,
+    resourceId: run.resourceId,
+    input: run.input,
+    // Already what the client received: the stream middleware wraps the
+    // persisting channel, so both were accumulated post-rewrite.
+    text: persistingChannel.fullText,
+    steps: [
+      {
+        usage: persistingChannel.totalUsage,
+        toolCalls: persistingChannel.runToolCalls,
+      },
+    ],
+    usage: persistingChannel.totalUsage,
   })
 }
 
@@ -723,6 +782,8 @@ export async function streamAIAgent(
     await storage.saveMessages(threadId, [persistedUserMessage])
   }
 
+  warnUnstreamedOutputHooks(agentName, aiMiddlewares, singletonServices.logger)
+
   const streamMiddleware = aiMiddlewares
     .filter((mw) => mw.modifyOutputStream)
     .map((mw) => {
@@ -849,14 +910,12 @@ export async function streamAIAgent(
       return persistingChannel.fullText
     }
 
-    await postStreamCleanup(
-      persistingChannel,
-      aiMiddlewares,
-      singletonServices,
-      runnerParams.messages,
-      aiRunState,
-      runId
-    )
+    await postStreamCleanup(persistingChannel, aiRunState, runId, {
+      agentName,
+      threadId,
+      resourceId: input.resourceId,
+      input: lastUserMessageText(runnerParams.messages),
+    })
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await outputChannel.send({ type: 'done' })
@@ -1184,16 +1243,17 @@ export async function resumeAIAgent(
       typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
 
     let toolResult: unknown
-    let isError = false
+    let toolError: string | undefined
     try {
       toolResult = await matchingTool.execute(toolArgs)
     } catch (execErr: any) {
       if (execErr?.payload?.error === 'missing_credential') {
         toolResult = execErr.payload
+        toolError = 'missing_credential'
       } else {
-        toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+        toolError = execErr instanceof Error ? execErr.message : String(execErr)
+        toolResult = `Error: ${toolError}`
       }
-      isError = true
     }
 
     const resultStr =
@@ -1220,7 +1280,7 @@ export async function resumeAIAgent(
       toolCallId: input.toolCallId,
       toolName: pending.toolName,
       result: toolResult,
-      ...(isError ? { isError: true } : {}),
+      ...(toolError ? { error: toolError } : {}),
     })
   }
 
@@ -1312,6 +1372,12 @@ async function continueAfterToolResult(
 
   // knowledge: decisions/internals/a-resumed-agent-turn-is-as-interruptible-as-the-first.md
   const interruptHandle = registerInterruptibleRun(run.runId)
+
+  warnUnstreamedOutputHooks(
+    run.agentName,
+    aiMiddlewares,
+    singletonServices.logger
+  )
 
   const streamMiddleware = aiMiddlewares
     .filter((mw) => mw.modifyOutputStream)
@@ -1434,14 +1500,10 @@ async function continueAfterToolResult(
       return
     }
 
-    await postStreamCleanup(
-      persistingChannel,
-      aiMiddlewares,
-      singletonServices,
-      runnerParams.messages,
-      aiRunState,
-      run.runId
-    )
+    await postStreamCleanup(persistingChannel, aiRunState, run.runId, {
+      ...run,
+      input: lastUserMessageText(runnerParams.messages),
+    })
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await wrappedChannel.send({ type: 'done' })

@@ -18,6 +18,8 @@ export interface AgentThread {
 interface AgentPlaygroundContextType {
   agentId: string
   threadId: string | null
+  /** The thread a conversation that has not been selected yet runs under. */
+  draftThreadId: string
   setThreadId: (id: string | null) => void
   threads: AgentThread[]
   createNewThread: () => void
@@ -102,11 +104,27 @@ export const AgentPlaygroundProvider: React.FC<
     setThreadId(newId)
   }, [setThreadId])
 
+  /**
+   * The id an unsaved conversation talks under. `threadId` stays null until one
+   * is picked — that is what tells the list nothing is selected — so the chat
+   * needs an id of its own before the first message, and anything watching that
+   * conversation needs the same one. Minted here rather than inside the chat so
+   * both look at the same thread; re-minted whenever the selection returns to
+   * null, which is what starting a new conversation does.
+   */
+  const [draftThreadId, setDraftThreadId] = useState(() => crypto.randomUUID())
+  useEffect(() => {
+    if (threadId === null) {
+      setDraftThreadId(crypto.randomUUID())
+    }
+  }, [threadId])
+
   return (
     <AgentPlaygroundContext.Provider
       value={{
         agentId,
         threadId,
+        draftThreadId,
         setThreadId,
         threads,
         createNewThread,

@@ -13,12 +13,18 @@
  * `pikku dev` registers the implementations itself. Ignoring by name (rather
  * than deleting the scaffold and requiring every project to regenerate) is what
  * keeps an existing project's checked-in `scenarios.gen.ts` from deploying.
+ *
+ * `pikkuScenarioGradeRun` was never scaffolded — it arrived after the split —
+ * but it belongs here for the same reason: grading a run on demand, ignoring the
+ * sample rate that governs live traffic, is a thing you do to a development
+ * server, and the name is reserved so an application cannot claim it.
  */
 export const SCENARIO_INSTRUMENTATION_FUNCTIONS = [
   'pikkuScenarioTakeLiveCoverage',
   'pikkuScenarioResetLiveCoverage',
   'pikkuScenarioResetStubs',
   'pikkuScenarioGetStubCalls',
+  'pikkuScenarioGradeRun',
 ] as const
 
 export type ScenarioInstrumentationFunction =

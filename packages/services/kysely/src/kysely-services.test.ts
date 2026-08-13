@@ -44,6 +44,7 @@ async function dropAllTables(db: Kysely<KyselyPikkuDB>): Promise<void> {
     'pikku_deployments',
     'ai_tool_call',
     'ai_message',
+    'ai_run_score',
     'ai_run',
     'ai_working_memory',
     'ai_threads',

@@ -65,6 +65,20 @@ export interface WorkflowExpectServiceOptions extends WorkflowStepOptions {
   times?: number
 }
 
+/** Options for workflow.expectScore() */
+export interface WorkflowExpectScoreOptions extends WorkflowStepOptions {
+  /** Fail below this score. Defaults to 0.5 — a scorer that answered at all. */
+  atLeast?: number
+  /** Fail above this score, for a scorer where high is the failure. */
+  atMost?: number
+  /**
+   * The known-correct answer, which is what a reference-based judge grades
+   * against. Live traffic has no answer key, so a judge declared
+   * `requiresReference` is only ever reachable from a scenario.
+   */
+  reference?: string
+}
+
 /**
  * Type signature for workflow.do() RPC form - used by inspector
  */
@@ -588,6 +602,18 @@ export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
     serviceMethod: string,
     options?: WorkflowExpectServiceOptions
   ) => Promise<void>
+
+  /**
+   * Grade-assertion step: runs one declared scorer against a finished agent run
+   * and asserts the score. Returns the grade, so a scenario can report the
+   * reason a judge gave rather than only that it fell short.
+   */
+  expectScore: (
+    stepName: string,
+    runId: string,
+    scorerName: string,
+    options?: WorkflowExpectScoreOptions
+  ) => Promise<{ score: number; reason?: string }>
 
   /**
    * Run a registered scenario step, as the setup the scenario starts from.

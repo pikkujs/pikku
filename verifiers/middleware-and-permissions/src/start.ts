@@ -403,8 +403,13 @@ async function main(): Promise<void> {
 
     // Test AI Agent stream with AI middleware
     // modifyInput runs left→right, then per stream event: wire channel middleware
-    // runs before modifyOutputStream (converted to channel middleware),
-    // modifyOutput runs right→left after stream completes
+    // runs before modifyOutputStream (converted to channel middleware).
+    //
+    // `modifyOutput` does not appear: nothing on the streaming path could act
+    // on what it returned — the text has already reached the client and each
+    // step is flushed to storage as it goes — so it no longer runs there at
+    // all (#1221). A middleware that rewrites in `modifyOutput` without a
+    // `modifyOutputStream` is warned about instead of silently ignored.
     //
     // The trailing pair is the `done` event. It goes through the middleware
     // like any other stream event rather than straight at the channel, because
@@ -412,8 +417,7 @@ async function main(): Promise<void> {
     // ones that buffer need it — `voiceOutput` speaks a trailing fragment that
     // never reached a full stop, and waits on audio it has already paid to
     // synthesize. Sent raw, that work is thrown away by the `close()` that
-    // follows. It lands after `modifyOutput` because `modifyOutput` is about
-    // the completed reply, and `done` is about the stream carrying it.
+    // follows.
     const agentStreamPassed = await testAgentStreamWiring(
       [
         { name: 'modifyInput', type: 'ai-middleware', phase: 'before' },
@@ -424,7 +428,6 @@ async function main(): Promise<void> {
         { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
-        { name: 'modifyOutput', type: 'ai-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
       ],

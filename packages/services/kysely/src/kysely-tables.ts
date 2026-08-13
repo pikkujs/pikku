@@ -151,6 +151,18 @@ export interface AIRunTable {
   updatedAt: Generated<Date>
 }
 
+export interface AIRunScoreTable {
+  id: string
+  runId: string
+  scorerName: string
+  /** 0..1, so grades are comparable across scorers. */
+  score: number
+  reason: string | null
+  /** JSON-serialized structured detail the scorer returned alongside the score. */
+  metadata: string | null
+  createdAt: Generated<Date>
+}
+
 export interface PikkuDeploymentsTable {
   deploymentId: string
   endpoint: string
@@ -329,6 +341,7 @@ export interface KyselyPikkuDB {
   aiToolCall: AIToolCallTable
   aiWorkingMemory: AIWorkingMemoryTable
   aiRun: AIRunTable
+  aiRunScore: AIRunScoreTable
   pikkuDeployments: PikkuDeploymentsTable
   pikkuDeploymentFunctions: PikkuDeploymentFunctionsTable
   secrets: SecretsTable

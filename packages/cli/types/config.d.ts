@@ -167,6 +167,18 @@ export interface PikkuCLICoreOutputFiles {
   agentTypesFile: string
   agentMapDeclarationFile: string
 
+  // AI Scorer
+  scorerWiringsFile: string
+  scorerWiringMetaFile: string
+  scorerWiringMetaJsonFile: string
+  scorerNamesDeclarationFile: string
+
+  // AI Scorer
+  scorerWiringsFile: string
+  scorerWiringMetaFile: string
+  scorerWiringMetaJsonFile: string
+  scorerNamesDeclarationFile: string
+
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string
