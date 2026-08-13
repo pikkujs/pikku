@@ -1,0 +1,32 @@
+/* The card language, defined once.
+ *
+ * Several surfaces are the same card and used to say so several times: the page
+ * card, the collapsible panel expanded, and that panel collapsed to a strip.
+ * They drifted — the strip's inner grab target was rounded 11px against the
+ * card's 12px — which is what happens when a shared look is three copies. They
+ * `composes:` from here now, so the card exists in one place.
+ *
+ * --app-border is transparent in some themes; depth is carried by the surface
+ * ladder plus the shadow, not by the hairline.
+ */
+.cardChrome {
+  background: var(--app-panel-bg-raised);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-card-radius);
+  box-shadow: var(--app-shadow-panel);
+}
+
+/* Card geometry. Every floating card on the canvas — the page card, the
+ * collapsible panel expanded, and its collapsed slim rail — is the SAME card, so
+ * its radius and the gutter between cards are set once here rather than restated
+ * per module. The gutter is what makes two neighbouring cards read as one 8px
+ * seam: each card pads/margins by half-and-half, and the end-edge panel
+ * subtracts it when reserving inset so the overlap doesn't double up.
+ *
+ * These are geometry, not colour, so they live here rather than in the colour
+ * contract (@pikku/mantine/theme) — its test treats a `--app-*` declared in a
+ * consuming stylesheet as defined for exactly this case. */
+:global(:root) {
+  --app-card-radius: 12px;
+  --app-card-gutter: 8px;
+}
