@@ -1,6 +1,13 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  writeFile,
+  rm,
+  symlink,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
@@ -2165,6 +2172,87 @@ describe('declared frontends + type-check (live validate.function)', () => {
       )
     } finally {
       await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('split type identity via a linked dependency (live validate.function)', () => {
+  // Mirrors the real shape: node_modules/@scope/linked is a genuine directory
+  // whose `dist` symlinks into a sibling checkout, so TypeScript resolves that
+  // package's imports from the other tree's node_modules.
+  const setup = async (
+    root: string,
+    external: string,
+    externalVersion: string
+  ) => {
+    await mkdir(join(root, 'node_modules', 'better-auth'), { recursive: true })
+    await writeJson(join(root, 'node_modules', 'better-auth', 'package.json'), {
+      name: 'better-auth',
+      version: '1.6.23',
+    })
+
+    const linkedPkg = join(external, 'packages', 'linked')
+    await mkdir(join(linkedPkg, 'dist'), { recursive: true })
+    await writeJson(join(linkedPkg, 'package.json'), {
+      name: '@scope/linked',
+      version: '1.0.0',
+    })
+    await mkdir(join(external, 'node_modules', 'better-auth'), {
+      recursive: true,
+    })
+    await writeJson(
+      join(external, 'node_modules', 'better-auth', 'package.json'),
+      { name: 'better-auth', version: externalVersion }
+    )
+
+    const inNodeModules = join(root, 'node_modules', '@scope', 'linked')
+    await mkdir(inNodeModules, { recursive: true })
+    await writeJson(join(inNodeModules, 'package.json'), {
+      name: '@scope/linked',
+      version: '1.0.0',
+    })
+    await symlink(join(linkedPkg, 'dist'), join(inNodeModules, 'dist'), 'dir')
+  }
+
+  test('linked dep resolving a different version → error', async () => {
+    const tmp = await makeTmp()
+    const external = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setup(tmp, external, '1.6.27')
+      const result = await runLiveValidate(tmp, { skipTypecheck: true })
+      const finding = result.findings.find((f) =>
+        f.id.startsWith('split-type-identity')
+      )
+      assert.ok(
+        finding,
+        `expected a split-type-identity finding, got: ${JSON.stringify(
+          result.findings.map((f) => f.id)
+        )}`
+      )
+      assert.equal(finding.severity, 'error')
+      assert.match(finding.message, /1\.6\.27/)
+      assert.match(finding.message, /1\.6\.23/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+      await rm(external, { recursive: true, force: true })
+    }
+  })
+
+  test('linked dep resolving the same version → no finding', async () => {
+    const tmp = await makeTmp()
+    const external = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await setup(tmp, external, '1.6.23')
+      const result = await runLiveValidate(tmp, { skipTypecheck: true })
+      const ids = result.findings
+        .map((f) => f.id)
+        .filter((id) => id.startsWith('split-type-identity'))
+      assert.deepEqual(ids, [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+      await rm(external, { recursive: true, force: true })
     }
   })
 })
