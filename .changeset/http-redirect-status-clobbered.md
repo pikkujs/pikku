@@ -2,7 +2,7 @@
 '@pikku/core': patch
 ---
 
-Stop a redirect being answered with 204
+Stop the runner overwriting a status the route set
 
 A function that calls `response.redirect()` has nothing left to return, so it
 returns `undefined` — and the HTTP runner read that as "no content" and
@@ -12,5 +12,8 @@ end: the user sits on the page that sent them, waiting for a hop that never
 comes. This is the whole OAuth/app-install callback shape, where the redirect
 back to the app is the last step of the flow.
 
-A void return now only becomes a 204 when the response is not already a
-redirect. Every other status the runner assigns is unchanged.
+The same clobber applied to a body: a route that set `201` and returned a
+value was answered `200`.
+
+The runner's 204 and 200 are now defaults rather than overrides — they apply
+only when the route left the status alone.
