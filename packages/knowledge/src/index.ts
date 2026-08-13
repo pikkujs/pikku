@@ -1,6 +1,7 @@
 export {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
+  type ProfileNote,
   readKnowledgeNotes,
   resourceIds,
 } from './notes.js'
@@ -20,10 +21,14 @@ export {
 export {
   type ResourceCheck,
   type ResourceProblem,
+  type ResourceCheckOptions,
+  bodyResourceUris,
   checkKnowledgeResources,
 } from './check-resources.js'
 
 export {
+  SLICE_STATUSES,
+  type SliceStatus,
   KnowledgeValidateInput,
   KnowledgeValidateOutput,
   type KnowledgeFinding,

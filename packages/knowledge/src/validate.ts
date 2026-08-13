@@ -73,7 +73,20 @@ const FORBIDDEN_SECTIONS: Record<string, string> = {
   routes: '`pikku meta` — the generated http meta is the routes',
 }
 
-const SLICE_STATUSES = ['proposed', 'dispatched', 'built'] as const
+/**
+ * `designing` sits before `proposed`: the slice is written down but is NOT to be
+ * built yet, because whoever is being shown its looks has not picked one. Only
+ * `proposed` is dispatchable, so the two cannot be one status without a slice
+ * being built out from under the person still choosing how it should look.
+ */
+export const SLICE_STATUSES = [
+  'designing',
+  'proposed',
+  'dispatched',
+  'built',
+] as const
+
+export type SliceStatus = (typeof SLICE_STATUSES)[number]
 
 /** Max entities per slice: more than three and it is not one buildable piece. */
 const MAX_SLICE_ENTITIES = 3
@@ -299,7 +312,7 @@ export const runKnowledgeValidate = async (
     }
   }
 
-  const resources = await checkKnowledgeResources(root, outDir, notes)
+  const resources = await checkKnowledgeResources(root, outDir, { notes })
   for (const problem of resources.problems) {
     add(
       'error',
