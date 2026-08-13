@@ -1,3 +1,19 @@
+## 0.13.15
+
+### Patch Changes
+
+- fd9d834: Stop publishing internals that only their own package or file used. The declarations stay; only the entrypoint re-export is removed, so nothing that imported a name from where it is declared is affected.
+- Updated dependencies [063f43a]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [d0307a8]
+- Updated dependencies [ce66bf8]
+- Updated dependencies [3ad2131]
+- Updated dependencies [b930dca]
+- Updated dependencies [b95e77d]
+- Updated dependencies [fd9d834]
+- Updated dependencies [8978fbd]
+  - @pikku/core@0.12.82
+
 ## 0.13.14
 
 ### Patch Changes

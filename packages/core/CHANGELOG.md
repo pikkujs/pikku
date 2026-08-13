@@ -1,3 +1,196 @@
+## 0.12.82
+
+### Patch Changes
+
+- 063f43a: api-report.md reports public signatures, one member per line
+
+  The report was built from `declaration.getText()`, so a class arrived as its own
+  source — private fields and method bodies included — flattened onto a single
+  line. `PikkuWorkflowService` was 40,603 characters of one line.
+
+  That made the file unmergeable. One line is one conflict hunk, so two branches
+  touching different methods of the same class conflicted on a line neither had
+  meaningfully changed, and the repo paid for it every rebase.
+
+  Now each member is its own line and stops at its signature, with private members
+  dropped and inferred return types filled in from the checker. The file is a
+  quarter smaller, and every declaration in it parses as TypeScript — 42 of its 50
+  code fences previously did not, because collapsing a multi-line object type threw
+  away the newline that was serving as the member separator.
+
+  Also adds the report to `.prettierignore`: prettier pads the summary tables to
+  their widest cell, so one changed count rewrote all fifty rows, and it reflowed a
+  file that `api-report.test.ts` compares byte-for-byte.
+
+- ce66bf8: A channel message handler that returns nothing no longer tries to send it.
+
+  `local-channel-runner` sent the message handler's result unconditionally, so a
+  handler with nothing to say produced `send requires a non-empty message` on every
+  inbound message. The connect path directly above it has always guarded this; the
+  message path did not.
+
+  Gateway websockets hit it every time — `wireGateway` generates a message handler
+  that returns `undefined` by design — which showed up as a chat gateway accepting
+  a connection and then erroring on each message rather than delivering it.
+
+  Found while testing a webchat gateway in a template. Note that fixing this is
+  necessary but not sufficient for that case: codegen does not emit the channel a
+  websocket gateway registers, so route resolution finds no handler and falls back
+  to the empty inline `onMessage` the gateway wires as a placeholder. That gap is
+  still open.
+
+- d0307a8: Stop the runner overwriting a status the route set
+
+  A function that calls `response.redirect()` has nothing left to return, so it
+  returns `undefined` — and the HTTP runner read that as "no content" and
+  overwrote the 3xx with a 204. The `Location` header survived, but a browser
+  does not follow `Location` on a 204, so the redirect silently became a dead
+  end: the user sits on the page that sent them, waiting for a hop that never
+  comes. This is the whole OAuth/app-install callback shape, where the redirect
+  back to the app is the last step of the flow.
+
+  The same clobber applied to a body: a route that set `201` and returned a
+  value was answered `200`.
+
+  The runner's 204 and 200 are now defaults rather than overrides — they apply
+  only when the route left the status alone.
+
+- ce66bf8: MCP calls now carry the caller's HTTP request, so an MCP tool can require a session.
+
+  Every auth middleware opens with `if (!http?.request) return`. The MCP runner
+  never put an `http` on the wire, so all of them bailed on their first line and
+  an MCP call reached the function with no session — no cookie, no bearer token,
+  no API key, whatever the app had registered. A tool fronting a session-requiring
+  `pikkuFunc` could therefore only ever answer `Authentication required`, and a
+  tool fronting a sessionless one was callable by anyone who could reach the mount.
+
+  Almost nothing was missing. Global middleware already ran for MCP wirings, and
+  the runner already built a `PikkuSessionService` and the middleware session wire
+  props. Only the request was being dropped — twice: `RunMCPEndpointParams` had
+  nowhere to put one, and `createFetchHandler` received the caller's `Request` and
+  discarded it.
+
+  `RunMCPEndpointParams` gains an optional `http`, which the runner places on the
+  wire, and the fetch handler wraps the incoming `Request` in a
+  `PikkuFetchHTTPRequest` and threads it through tools, resources and prompts. The
+  request is cloned before wrapping, because the MCP transport reads the body and
+  both would otherwise compete for one single-use stream; only headers and cookies
+  are wanted, since a tool's input arrives in the JSON-RPC params.
+
+  Transports with no request to offer — stdio, and the long-lived stdio/SSE server
+  paths — pass nothing and stay anonymous. That is a property of those transports
+  rather than a default chosen here, and it is now visible in the type.
+
+  The generated auth middleware moves from `addHTTPMiddleware('*')` to
+  `addGlobalMiddleware`. Carrying the request is necessary but not sufficient:
+  session middleware registered as HTTP middleware runs for HTTP wirings only, so
+  an MCP call still met no middleware and still had no session. Both entries —
+  the Better Auth session and the console bearer token — resolve a session from
+  whatever request the call arrived on, which is not an HTTP routing concern.
+  Wirings with no request are unaffected, since each middleware returns
+  immediately without one.
+
+  That move also retires a hazard the old shape carried: the two entries had to
+  share a single `addHTTPMiddleware('*')` call because the inspector keys
+  route-middleware groups by pattern, so a second `'*'` registration from another
+  file would silently displace the first. Global middleware is an append-only
+  list.
+
+  **Regenerate the auth scaffold after upgrading** — an app still carrying the
+  `addHTTPMiddleware('*')` form keeps anonymous MCP calls.
+
+  Two consequences worth planning for:
+  - **A tool fronting a session-requiring function starts working.** It previously
+    could not run at all.
+  - **A tool fronting a sessionless function is unchanged and still anonymous.**
+    Scopes and permissions now apply to MCP calls exactly as they do elsewhere, so
+    audit any tool that mutates state and give it the scope its HTTP sibling has.
+
+  `PikkuHTTP` is now exported from `@pikku/core/http`; it is part of this contract
+  and was previously only reachable as a type on other exported shapes.
+
+- 3ad2131: Name models by what they are for, and switch them all in one place
+
+  A `models` table in pikku.config.json maps an alias to a provider-qualified
+  model, so a declaration can say `model: 'cheap'` and the project repoints every
+  use of that tier at once instead of editing each agent. A model containing `/`
+  is still concrete and used exactly as written, which is how an agent that needs
+  one specific model pins it — aliases are opt-in.
+
+  The table is baked into codegen rather than read at runtime, so it applies to
+  deployed units and not just local runs, and `pikku dev`/`pikku serve` take
+  `--model cheap:openai/gpt-5-nano` to repoint a tier for one run without editing
+  the config.
+
+  Because the inspector already holds every agent's model literal, a bare name
+  with no matching alias now fails the build (PKU146) naming the aliases that do
+  exist, rather than reaching a provider as an unknown model.
+
+  Aliases resolve for every modality, not just agents: image, speech,
+  transcription, embedding and reranking all reach a provider through the same
+  point in the Vercel runner.
+
+- b930dca: Remove the `secretBroker` escape hatch and scope addon secrets and credentials
+
+  `secretBroker` let three named console functions receive the real `SecretService`,
+  against the rule that a function never sees one. It is gone: the inspector allowlist,
+  the `FunctionRuntimeMeta` flag, the runner branches, and the `WiredSecretBrokerServices`
+  type. Console secret administration moved into the console addon, where a
+  `SecretAdminService` holds the `SecretService` and the functions hold none.
+
+  Addons are now scoped rather than trusted. The CLI emits each package's declared secret
+  keys, and the host wraps the `SecretService` in a `ScopedSecretService` and the
+  `CredentialService` in a new `ScopedCredentialService` before the addon's service factory
+  runs — so an addon reads only what it declared, cannot write secrets, and cannot enumerate
+  the app's users. `wireAddon({ globalSecrets, globalCredentials })` waives this, taking the
+  reason as its value; only the consuming app can grant it, and the deploy manifest reports
+  every grant under `unscopedSecretAddons` / `unscopedCredentialAddons`.
+
+- b95e77d: fix(core): persist working memory on streamed agent runs
+
+  Working memory was never persisted when an agent streamed. The working memory
+  middleware strips the `<working_memory>` block from the outgoing deltas, and the
+  channel that accumulates the reply sits downstream of that strip — so the text
+  later handed to `modifyOutput`, the only place that calls `saveWorkingMemory`,
+  had already had the block removed. It now persists from the stream hook, at the
+  step's `usage` (or `done`) event, where the raw text is still reachable.
+
+  With that dependency gone, `modifyOutput` no longer runs at all on a streamed
+  run: nothing on that path could act on what it returned, since the text has
+  already reached the client and each step is flushed to storage as it goes. A
+  middleware that rewrites in `modifyOutput` without a `modifyOutputStream` — a
+  redaction hook, typically — was silently ineffective while streaming, and is now
+  warned about once per agent.
+
+- fd9d834: Stop publishing internals that only their own package or file used. The declarations stay; only the entrypoint re-export is removed, so nothing that imported a name from where it is declared is affected.
+- 8978fbd: feat(workflow): let an approval gate declare who may answer it
+
+  `workflow.approval()` gains `approvers` (`'any' | 'owner' | 'not-initiator'`)
+  and `approverScope`, so a gate can require four-eyes sign-off, restrict itself
+  to the run's initiator, or require the decider to hold a named scope.
+
+  Both are enforced when the workflow replays the gate — the same place, and for
+  the same reason, the decision payload is validated: the policy is a value on
+  the workflow, and a decision can be recorded before the run has ever reached
+  the gate. A decision that fails the policy is discarded and the gate stays
+  closed. Where the run has already published its policy, the check also runs at
+  submission time so the caller gets a 403 rather than silence.
+
+  An answer is now recorded where it can be answered for later. The settled
+  decision carries `decidedBy` and `decidedAt` in its `ApprovalOutcome`, so who
+  signed reaches `workflowStep.result` and `workflowStepHistory` rather than
+  living only in mutable run state. Every answer — accepted, refused at the door,
+  or cleared on replay — is also written to the audit sink as
+  `workflow.approval.decided`, which outlives the run: `deleteRun` cascades to
+  steps and history, and a refused attempt never reaches a step at all. Projects
+  with no audit service wired are unaffected.
+
+  **This loosens the default.** `approveStep` previously refused anyone but the
+  run's initiator, unconditionally. A gate that declares no `approvers` now
+  accepts a decision from anyone the approve entrypoint admits — restore the old
+  behaviour per-gate with `approvers: 'owner'`, or gate the approve route with
+  `auth`/`permissions`. Ownership still governs _reads_ of a run unchanged.
+
 ## 0.12.81
 
 ### Patch Changes

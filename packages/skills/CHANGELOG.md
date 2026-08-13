@@ -1,5 +1,61 @@
 # @pikku/skills
 
+## 0.12.8
+
+### Patch Changes
+
+- 0ab1a88: feat(knowledge): draw a note's scenario and its decision, and say the vocabulary exists
+
+  The console already drew ```mermaid fences as diagrams and `> [!NOTE]` blocks as
+  callouts, and nothing told the librarian either existed — the skill that governs
+  what goes in a note never mentioned them, so notes were written as prose and
+  tables into a renderer that would happily have drawn the graph. The gap was the
+  guidance, not the format.
+
+  Two blocks join them. A slice's ```gherkin scenario is drawn rather than
+  highlighted: the keywords line up in a column so the shape of the scenario is
+  readable before a word of it is, and each quoted persona becomes a chip — which
+  also makes a first-person scenario, the form the format rejects, visibly a block
+  with no personas in it.
+
+  A new ```decision fence states what a decision note owes: `chosen`, `rules-out`,
+`because`. The middle one is the half that gets dropped, so `pikku knowledge
+  validate` now warns when a fence says what was chosen and never says what it
+  closes off. The fence is optional and a decision argued in prose is still a
+  decision — validate checks the fences that exist rather than asking every note
+  to be reformatted.
+
+  `Markdown` is exported from `@pikku/console` so the fabric console can render the
+  same notes through the same vocabulary instead of a second `<ReactMarkdown>`.
+
+- 8978fbd: feat(workflow): let an approval gate declare who may answer it
+
+  `workflow.approval()` gains `approvers` (`'any' | 'owner' | 'not-initiator'`)
+  and `approverScope`, so a gate can require four-eyes sign-off, restrict itself
+  to the run's initiator, or require the decider to hold a named scope.
+
+  Both are enforced when the workflow replays the gate — the same place, and for
+  the same reason, the decision payload is validated: the policy is a value on
+  the workflow, and a decision can be recorded before the run has ever reached
+  the gate. A decision that fails the policy is discarded and the gate stays
+  closed. Where the run has already published its policy, the check also runs at
+  submission time so the caller gets a 403 rather than silence.
+
+  An answer is now recorded where it can be answered for later. The settled
+  decision carries `decidedBy` and `decidedAt` in its `ApprovalOutcome`, so who
+  signed reaches `workflowStep.result` and `workflowStepHistory` rather than
+  living only in mutable run state. Every answer — accepted, refused at the door,
+  or cleared on replay — is also written to the audit sink as
+  `workflow.approval.decided`, which outlives the run: `deleteRun` cascades to
+  steps and history, and a refused attempt never reaches a step at all. Projects
+  with no audit service wired are unaffected.
+
+  **This loosens the default.** `approveStep` previously refused anyone but the
+  run's initiator, unconditionally. A gate that declares no `approvers` now
+  accepts a decision from anyone the approve entrypoint admits — restore the old
+  behaviour per-gate with `approvers: 'owner'`, or gate the approve route with
+  `auth`/`permissions`. Ownership still governs _reads_ of a run unchanged.
+
 ## 0.12.7
 
 ### Patch Changes
