@@ -71,4 +71,48 @@ describe('parseDecisionFence', () => {
     const decision = parseDecisionFence('chosen: first\nchosen: second')
     assert.equal(decision?.chosen, 'first')
   })
+
+  // The grammar is kept in step with @pikku/knowledge by hand, so the cases that
+  // pin it are duplicated too — a card must draw what `validate` accepted.
+  test('joins a value wrapped onto indented lines', () => {
+    const decision = parseDecisionFence(
+      [
+        'chosen: A revoked grant stops working immediately,',
+        '  everywhere.',
+        'because: Two people disagreeing about who can see today is worse than',
+        '  one of them losing access mid-session.',
+      ].join('\n')
+    )
+    assert.equal(
+      decision?.chosen,
+      'A revoked grant stops working immediately, everywhere.'
+    )
+    assert.equal(
+      decision?.because,
+      'Two people disagreeing about who can see today is worse than one of them losing access mid-session.'
+    )
+  })
+
+  test('reads a value that starts on the line below its key', () => {
+    assert.equal(
+      parseDecisionFence('chosen:\n  One account is one person.')?.chosen,
+      'One account is one person.'
+    )
+  })
+
+  test('wrapping does not merge a list item into the one above it', () => {
+    const decision = parseDecisionFence(
+      [
+        'chosen: One account is one person.',
+        'rules-out:',
+        '  - Shared logins, which hide who',
+        '    actually acted',
+        '  - A seat that changes hands',
+      ].join('\n')
+    )
+    assert.deepEqual(decision?.rulesOut, [
+      'Shared logins, which hide who actually acted',
+      'A seat that changes hands',
+    ])
+  })
 })

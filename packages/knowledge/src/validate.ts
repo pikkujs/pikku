@@ -211,11 +211,16 @@ export const runKnowledgeValidate = async (
     // sits. Nothing here requires a fence — a decision argued in prose is a
     // decision, and demanding one per note would be a finding against every
     // note already written.
-    for (const fence of decisionFences(note.body)) {
+    // The ordinal, because a note may hold more than one fence and every other
+    // id here is one-per-note. Two of these sharing an id is a finding a caller
+    // cannot tell apart — `findings.find(byId)` returns the first and the second
+    // fence goes unreported.
+    for (const [index, fence] of decisionFences(note.body).entries()) {
+      const nth = `${note.path}-${index + 1}`
       if (!fence.decision) {
         add(
           'warn',
-          `knowledge-decision-fence-unparsed-${note.path}`,
+          `knowledge-decision-fence-unparsed-${nth}`,
           `${note.path} has a \`\`\`decision fence with no \`chosen:\`, so it renders as a code block rather than the decision it states`,
           note.path,
           'Give the fence a `chosen:` line — with `rules-out:` and `because:` under it'
@@ -225,7 +230,7 @@ export const runKnowledgeValidate = async (
       if (fence.decision.rulesOut.length === 0) {
         add(
           'warn',
-          `knowledge-decision-nothing-ruled-out-${note.path}`,
+          `knowledge-decision-nothing-ruled-out-${nth}`,
           `${note.path} says what was chosen but not what that rules out, which is the half that stops it being reopened`,
           note.path,
           'Add `rules-out:` naming the alternative that was considered and rejected'

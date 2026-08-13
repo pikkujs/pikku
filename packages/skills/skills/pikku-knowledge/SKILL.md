@@ -183,7 +183,7 @@ because: Two people disagreeing about who can see today is worse than one of
 ```
 ````
 
-It is a **summary, not the note** — the argument continues in prose underneath. `rules-out:` takes one line or a `- item` block. A decision genuinely argued in prose needs no fence, and validate never asks for one; what it does ask is that a fence you did write is complete.
+It is a **summary, not the note** — the argument continues in prose underneath. `rules-out:` takes one line or a `- item` block, and any value too long for one line wraps onto indented lines under it, as `because:` does above. A decision genuinely argued in prose needs no fence, and validate never asks for one; what it does ask is that a fence you did write is complete.
 
 **Fences of any other language are code** — highlighted and copyable, which is right for a snippet and wrong for a scenario or a decision, so do not put either in a bare fence.
 

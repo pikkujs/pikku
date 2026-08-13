@@ -43,6 +43,16 @@ const KEYS: Record<string, keyof Decision> = {
 const KEY_LINE = /^([A-Za-z_-]+):\s*(.*)$/
 const LIST_ITEM = /^\s*-\s+/
 
+/**
+ * An indented line under a key is the rest of that key's value.
+ *
+ * `because:` is a sentence, and a sentence wraps — the skill's own example wraps
+ * it. Reading only the key line silently truncated the rationale at whatever
+ * column the author's editor happened to break on. A key always sits at column
+ * zero, so indentation says "still the value above" unambiguously.
+ */
+const CONTINUATION = /^\s+\S/
+
 /** ```decision fences in a note body, in the order they appear. */
 const FENCE = /^[ \t]*```decision[ \t]*\r?\n([\s\S]*?)^[ \t]*```/gim
 
@@ -67,20 +77,35 @@ export const parseDecisionFence = (source: string): Decision | null => {
     const key = KEYS[match[1]!.toLowerCase()]
     if (!key) continue
 
-    const inline = unquote(match[2]!)
+    /** This key's value, plus the wrapped lines underneath it. */
+    const value = (raw: string): string => {
+      let text = raw
+      while (
+        i + 1 < lines.length &&
+        CONTINUATION.test(lines[i + 1]!) &&
+        !LIST_ITEM.test(lines[i + 1]!)
+      ) {
+        text += ` ${lines[++i]!.trim()}`
+      }
+      return unquote(text)
+    }
+
     if (key === 'rulesOut') {
       // Both shapes, because a decision rules out one thing about as often as
       // several and the author should not have to know which the parser wants.
+      const inline = value(match[2]!)
       if (inline) rulesOut.push(inline)
       while (i + 1 < lines.length && LIST_ITEM.test(lines[i + 1]!)) {
-        const item = unquote(lines[++i]!.replace(LIST_ITEM, ''))
+        const item = value(lines[++i]!.replace(LIST_ITEM, ''))
         if (item) rulesOut.push(item)
       }
       continue
     }
-    if (!inline) continue
-    if (key === 'chosen') chosen ??= inline
-    else because ??= inline
+
+    const text = value(match[2]!)
+    if (!text) continue
+    if (key === 'chosen') chosen ??= text
+    else because ??= text
   }
 
   if (!chosen) return null

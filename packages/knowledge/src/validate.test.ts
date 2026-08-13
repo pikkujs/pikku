@@ -391,7 +391,7 @@ describe('runKnowledgeValidate on decisions', () => {
     )
     const result = await validate(root)
     assert.deepEqual(ids(result.findings), [
-      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md',
+      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md-1',
     ])
     // A warning, not an error: the note is incomplete rather than wrong, and it
     // must not fail the command a project gates CI on.
@@ -405,9 +405,35 @@ describe('runKnowledgeValidate on decisions', () => {
     )
     const result = await validate(root)
     assert.deepEqual(ids(result.findings), [
-      'knowledge-decision-fence-unparsed-knowledge/decisions/revocation.md',
+      'knowledge-decision-fence-unparsed-knowledge/decisions/revocation.md-1',
     ])
     assert.equal(result.ok, true)
+  })
+
+  test('two bad fences in one note are two findings, not one', async () => {
+    // Each finding is addressed by its id, so two sharing one would hide the
+    // second fence from anything that looks a finding up rather than counting.
+    const root = await project(
+      withDecisions(
+        [
+          '```decision',
+          'chosen: Revocation is immediate',
+          '```',
+          '',
+          'And later in the same note:',
+          '',
+          '```decision',
+          'chosen: Grants are checked per request',
+          '```',
+        ].join('\n')
+      )
+    )
+    const result = await validate(root)
+    assert.deepEqual(ids(result.findings), [
+      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md-1',
+      'knowledge-decision-nothing-ruled-out-knowledge/decisions/revocation.md-2',
+    ])
+    assert.equal(new Set(ids(result.findings)).size, 2)
   })
 
   test('a slice may state a decision too', async () => {
@@ -416,7 +442,7 @@ describe('runKnowledgeValidate on decisions', () => {
       'knowledge/slices/02-b.md': `${SLICE}\n\n\`\`\`decision\nchosen: One entry per day\n\`\`\``,
     })
     assert.deepEqual(ids((await validate(root)).findings), [
-      'knowledge-decision-nothing-ruled-out-knowledge/slices/02-b.md',
+      'knowledge-decision-nothing-ruled-out-knowledge/slices/02-b.md-1',
     ])
   })
 })
