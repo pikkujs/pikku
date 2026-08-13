@@ -17,7 +17,10 @@ import { exportSchema } from '../db/local-db.js'
 export const dbExport = pikkuSessionlessFunc<{}, void>({
   remote: true,
   func: async ({ logger, config }) => {
-    const artifact = await exportSchema(config.rootDir)
+    const artifact = await exportSchema(
+      config.rootDir,
+      config.db?.pgliteExtensions
+    )
     const dialects = Object.keys(artifact)
 
     if (dialects.length === 0) {

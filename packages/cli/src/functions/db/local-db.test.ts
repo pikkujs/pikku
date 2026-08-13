@@ -480,7 +480,9 @@ test('scratch codegen types the postgres migrations without touching the configu
 test('resolveDb carries the declared PGlite extensions onto the postgres descriptor', () => {
   usePostgresProject()
 
-  const local = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
+  const local = resolveDb({}, root, root, undefined, {
+    pgliteExtensions: ['hstore'],
+  })!
   assert.equal(local.dialect, 'postgres')
   if (local.dialect !== 'postgres') throw new Error('expected postgres')
   assert.deepEqual(local.pgliteExtensions, ['hstore'])
@@ -488,12 +490,11 @@ test('resolveDb carries the declared PGlite extensions onto the postgres descrip
   // A project on a real Postgres server still needs them: the shadow database
   // the CLI diffs against is PGlite either way.
   const remote = resolveDb(
-    {
-      postgresUrl: 'postgres://user:pass@localhost:5432/mydb',
-      pgliteExtensions: ['hstore'],
-    },
+    { postgresUrl: 'postgres://user:pass@localhost:5432/mydb' },
     root,
-    root
+    root,
+    undefined,
+    { pgliteExtensions: ['hstore'] }
   )!
   if (remote.dialect !== 'postgres') throw new Error('expected postgres')
   assert.deepEqual(remote.pgliteExtensions, ['hstore'])
@@ -514,7 +515,9 @@ CREATE TABLE docs (
     devSeedSql: '',
   })
 
-  const resolved = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
+  const resolved = resolveDb({}, root, root, undefined, {
+    pgliteExtensions: ['hstore'],
+  })!
   const scratch = await migrateAndCodegen(resolved, { scratch: true })
   assert.deepEqual(scratch.migrate.applied, ['0001-init.sql'])
   assert.match(readFileSync(resolved.schemaFile, 'utf8'), /Docs/)
@@ -531,7 +534,9 @@ CREATE TABLE docs (
     devSeedSql: '',
   })
 
-  const resolved = resolveDb({ pgliteExtensions: ['hstore'] }, root, root)!
+  const resolved = resolveDb({}, root, root, undefined, {
+    pgliteExtensions: ['hstore'],
+  })!
   await migrateAndCodegen(resolved)
 
   const kysely = await createKysely<{ docs: { id: number } }>(resolved)
@@ -562,11 +567,9 @@ test('an undeclared extension fails with guidance rather than a bare Postgres er
 
 test('an unresolvable extension specifier says where it was looked for', async () => {
   usePostgresProject()
-  const resolved = resolveDb(
-    { pgliteExtensions: ['@not-installed/pglite-nothing'] },
-    root,
-    root
-  )!
+  const resolved = resolveDb({}, root, root, undefined, {
+    pgliteExtensions: ['@not-installed/pglite-nothing'],
+  })!
 
   await assert.rejects(
     () => migrateAndCodegen(resolved, { scratch: true }),
@@ -585,11 +588,9 @@ test('a module that exports no PGlite extension is rejected by name', async () =
     'export const nope = { hello: "world" }\n'
   )
 
-  const resolved = resolveDb(
-    { pgliteExtensions: ['./not-an-extension.mjs'] },
-    root,
-    root
-  )!
+  const resolved = resolveDb({}, root, root, undefined, {
+    pgliteExtensions: ['./not-an-extension.mjs'],
+  })!
 
   await assert.rejects(
     () => migrateAndCodegen(resolved, { scratch: true }),
