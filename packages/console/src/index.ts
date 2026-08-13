@@ -82,7 +82,25 @@ export type {
   IconComponent,
 } from './components/nav-dock/model'
 
-// Sidebar — superseded by the dock, kept exported for one release.
+// Phone — one gesture for every surface the bottom bar opens. Below the phone
+// breakpoint a second column cannot exist, so a side panel becomes a MobileSheet
+// raised from MobileTabBar rather than a squeezed or hidden column.
+export { MobileSheet, closeMobileSheets } from './components/shell/MobileSheet'
+export { MobileTabBar } from './components/shell/MobileTabBar'
+export type { MobileTab } from './components/shell/MobileTabBar'
+export { PageOptionsPortal } from './components/shell/PageOptionsPortal'
+export {
+  PageOptionsProvider,
+  usePageOptions,
+} from './context/PageOptionsProvider'
+export {
+  SidebarModeProvider,
+  useSidebarMode,
+} from './context/SidebarModeProvider'
+export type { SidebarMode } from './context/SidebarModeProvider'
+
+// Sidebar — superseded by the dock on a pointer, and still the phone's nav
+// sheet, which a row of hover-raised tiles cannot be.
 export {
   Sidebar,
   useDefaultNavSections,

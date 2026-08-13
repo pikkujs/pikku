@@ -59,6 +59,7 @@ import {
 } from '../../lib/branding'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
+import { useSidebarMode } from '../../context/SidebarModeProvider'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
 
@@ -333,10 +334,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const theme = useMantineTheme()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()
-  const [collapsed, setCollapsed] = useLocalStorage({
+  const sheet = useSidebarMode() === 'sheet'
+  const [railCollapsed, setCollapsed] = useLocalStorage({
     key: 'sidebar-collapsed',
     defaultValue: false,
   })
+  // A 60px icon rail inside a bottom sheet is pointless, and the stored desktop
+  // preference must not follow the rail into a frame that has no room for it.
+  const collapsed = sheet ? false : railCollapsed
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
   const canImpersonate = auth?.can('admin:impersonate') ?? false
@@ -362,21 +367,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (routeSectionKey) setOpenedSection(routeSectionKey)
   }, [routeSectionKey])
 
+  // In a sheet the Drawer already owns the frame — position, width, surface and
+  // dismissal — so the rail only fills it. Restating any of that here is how a
+  // rail ends up floating over the sheet that is meant to contain it.
   return (
     <Box
-      pos="fixed"
-      left={0}
-      top={0}
-      w={sidebarWidth}
-      h="100vh"
-      className={css.railCollapseTransition}
+      pos={sheet ? undefined : 'fixed'}
+      left={sheet ? undefined : 0}
+      top={sheet ? undefined : 0}
+      w={sheet ? '100%' : sidebarWidth}
+      h={sheet ? undefined : '100vh'}
+      className={sheet ? undefined : css.railCollapseTransition}
       style={{
-        borderRight: `1px solid var(--app-border)`,
-        backgroundColor: `var(--app-panel-bg-raised)`,
+        borderRight: sheet ? undefined : `1px solid var(--app-border)`,
+        backgroundColor: sheet ? undefined : `var(--app-panel-bg-raised)`,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        zIndex: 100,
+        zIndex: sheet ? undefined : 100,
       }}
     >
       <Box
@@ -655,45 +663,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Collapse control — mirrors the Fabric rail: a subtle rotating chevron
           pinned as the very last element, on its own footer below a divider,
-          distinct from the utility actions above. */}
-      <Box className={css.noShrink}>
-        <Divider mx="sm" />
-        <Box px={6} py={4}>
-          <Tooltip
-            label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
-            position="right"
-            disabled={!collapsed}
-          >
-            <UnstyledButton
-              onClick={() => setCollapsed(!collapsed)}
-              px={collapsed ? 0 : 10}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                gap: 10,
-                width: '100%',
-                height: 32,
-                borderRadius: 6,
-                color: 'var(--mantine-color-dimmed)',
-              }}
+          distinct from the utility actions above. A sheet is dismissed by its
+          own tab, and collapsing it would leave an icon rail floating in a
+          289px-wide surface, so the control is not offered there. */}
+      {!sheet && (
+        <Box className={css.noShrink}>
+          <Divider mx="sm" />
+          <Box px={6} py={4}>
+            <Tooltip
+              label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
+              position="right"
+              disabled={!collapsed}
             >
-              <ChevronLeft
-                size={16}
+              <UnstyledButton
+                onClick={() => setCollapsed(!collapsed)}
+                px={collapsed ? 0 : 10}
                 style={{
-                  transform: collapsed ? 'rotate(180deg)' : undefined,
-                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: 10,
+                  width: '100%',
+                  height: 32,
+                  borderRadius: 6,
+                  color: 'var(--mantine-color-dimmed)',
                 }}
-              />
-              {!collapsed && (
-                <Text size="sm" fw={500} style={{ fontSize: 12.5 }}>
-                  {m.sidebar_collapse()}
-                </Text>
-              )}
-            </UnstyledButton>
-          </Tooltip>
+              >
+                <ChevronLeft
+                  size={16}
+                  style={{
+                    transform: collapsed ? 'rotate(180deg)' : undefined,
+                    flexShrink: 0,
+                  }}
+                />
+                {!collapsed && (
+                  <Text size="sm" fw={500} style={{ fontSize: 12.5 }}>
+                    {m.sidebar_collapse()}
+                  </Text>
+                )}
+              </UnstyledButton>
+            </Tooltip>
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {canImpersonate && (
         <ImpersonateDrawer

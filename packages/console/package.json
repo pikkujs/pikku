@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./styles": "./src/styles.ts",
+    "./shell.css": "./src/styles/shell.css",
     "./adapters/react-router": "./src/adapters/react-router.tsx",
     "./app": "./src/App.tsx",
     "./main": "./src/main.tsx"

@@ -2,7 +2,14 @@
 <html lang="en" data-mantine-color-scheme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to
+         anything but 0, so the shell can pad by the display cutout and the home
+         indicator itself. Without it the phone's tab bar sits under the gesture
+         bar on every notched device. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <meta name="description" content="%VITE_CONSOLE_DESCRIPTION%" />
     <title>%VITE_CONSOLE_TITLE%</title>
     <style>
