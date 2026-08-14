@@ -70,14 +70,14 @@ export interface AuthGenOutput {
 // silently displace it; global middleware is an append-only list, so that
 // hazard is gone.
 //
-// The session carries the two scope roots the console addon gates itself on.
-// Without them this token authenticates but authorizes nothing: `wireAddon`
-// gates the whole addon on `admin`, so every console:* RPC — reads included —
-// answers MissingScopeError, and an external console can reach the deployment
-// while being unable to do a single thing in it.
+// The session carries the two scope roots the console's functions gate
+// themselves on. Without them this token authenticates but authorizes nothing:
+// every console:* RPC — reads included — answers MissingScopeError, and an
+// external console can reach the deployment while being unable to do a single
+// thing in it.
 //
 // Roots rather than a wildcard: a parent grant satisfies its children, so
-// `admin` covers `admin:*` and `pikku` covers `pikku:scopes:*`/`pikku:audit:*`,
+// `admin` covers `admin:*` and `pikku` covers every `pikku:console:*` area,
 // which is every scope the console's own functions require. A `*` would also
 // hand the token every scope the HOST app declares, which is authority the
 // console never asks for.

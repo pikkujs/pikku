@@ -23,6 +23,7 @@ export const getOpenapis = pikkuFunc<
   description:
     'Fetches one page of the OpenAPI catalogue from the fabric registry. Search and category are applied by the registry so they cover every entry, not just the loaded pages.',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ addonService }, { limit, offset, search, category }) => {
     return addonService.readOpenapis({ limit, offset, search, category })
   },

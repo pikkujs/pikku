@@ -9,6 +9,7 @@ export const readFunctionBody = pikkuFunc<
   description:
     'Reads the function body (the func: async (...) => { ... } part) from a pikku function definition.',
   expose: true,
+  scopes: ['pikku:console:wirings:read'],
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

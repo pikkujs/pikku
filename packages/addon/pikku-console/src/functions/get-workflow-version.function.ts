@@ -8,6 +8,7 @@ export const getWorkflowVersion = pikkuFunc<
   description:
     'Given a workflow name and graphHash, looks up the specific workflow version from the Postgres workflow database via workflowRunService.getWorkflowVersion() and returns the workflow graph definition and source code. Returns null if workflowRunService is not configured or the version is not found.',
   expose: true,
+  scopes: ['pikku:console:workflows:read'],
   func: async ({ workflowRunService }, input) => {
     return await workflowRunService.getWorkflowVersion(
       input.name,

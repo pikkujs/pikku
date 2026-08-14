@@ -30,9 +30,20 @@ for (const [name, installer] of installers) {
     )
   })
 
-  test(`${name} admits an admin`, () => {
+  test(`${name} admits a caller holding the console install scope`, () => {
     assert.doesNotThrow(() =>
-      verifyScopes(installer.scopes, { userId: 'root', scopes: ['admin'] })
+      verifyScopes(installer.scopes, {
+        userId: 'root',
+        scopes: ['pikku:console:addons:install'],
+      })
+    )
+  })
+
+  test(`${name} no longer admits a bare admin`, () => {
+    assert.throws(
+      () =>
+        verifyScopes(installer.scopes, { userId: 'root', scopes: ['admin'] }),
+      MissingScopeError
     )
   })
 

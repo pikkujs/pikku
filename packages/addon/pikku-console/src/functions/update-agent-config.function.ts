@@ -14,6 +14,7 @@ export const updateAgentConfig = pikkuFunc<
   description:
     'Updates the config properties of a pikku AI agent definition in source code and triggers a rebuild.',
   expose: true,
+  scopes: ['pikku:console:agents:manage'],
   func: async ({ codeEditService }, { sourceFile, exportedName, changes }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

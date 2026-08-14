@@ -9,6 +9,7 @@ export const getAgentThreadRuns = pikkuFunc<{ threadId: string }, any[]>({
   description:
     'Returns all runs for a given AI agent thread, ordered by creation time descending. A caller without the admin scope sees only the runs its own session owns.',
   expose: true,
+  scopes: ['pikku:console:agents:read'],
   func: async ({ agentRunService }, input, { session }) => {
     const runs = await agentRunService.getThreadRuns(input.threadId)
     if (hasScopes([ADMIN_SCOPE_ROOT], session?.scopes)) {

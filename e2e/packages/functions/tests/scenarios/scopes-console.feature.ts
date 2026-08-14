@@ -2,7 +2,7 @@
  * The console's Scopes page, and the roles drawer on the Users page.
  *
  * Everything here reads and writes through the addon-console scope RPCs, which
- * are themselves gated on `pikku:scopes:*` — the admin actor holds them via the
+ * are themselves gated on `pikku:console:scopes:*` — the admin actor holds them via the
  * seeded `console-admin` role, so the UI is reachable at all.
  *
  * Roles and scope ids are the vocabulary of the page and are safe to select on:
@@ -75,7 +75,7 @@ export const scopesVocabularyVisibleScenario = pikkuScenario<
     await scenario.then(
       'sees the scopes-manage scope declared',
       'seesTestId',
-      scopeRow('pikku:scopes:manage'),
+      scopeRow('pikku:console:scopes:manage'),
       { actor: actors.admin }
     )
     await scenario.then(
@@ -489,7 +489,7 @@ export const scopesUserRoleAssignmentScenario = pikkuScenario<
       'seesTestId',
       {
         testId: 'resolved-scope',
-        where: { 'data-scope-id': 'pikku:scopes:manage' },
+        where: { 'data-scope-id': 'pikku:console:scopes:manage' },
       },
       { actor: actors.admin }
     )
@@ -577,7 +577,7 @@ export const scopesDirectGrantScenario = pikkuScenario<void, { granted: true }>(
 
 /**
  * The scope RPCs are self-hosting: reading roles or the vocabulary at all
- * requires `pikku:scopes:read`. Staff passes the console's own AuthGate but
+ * requires `pikku:console:scopes:read`. Staff passes the console's own AuthGate but
  * holds no scope role, so the page must say the caller lacks permission rather
  * than the misleading "the scope service may be unavailable" a real outage
  * would produce — the two are different alerts, and only one is honest here.
@@ -586,7 +586,8 @@ export const scopesForbiddenIsNotAnOutageScenario = pikkuScenario<
   void,
   { refused: true }
 >({
-  title: 'A console admin without pikku:scopes:read sees a permission message',
+  title:
+    'A console admin without pikku:console:scopes:read sees a permission message',
   description:
     'A caller who passes the console gate but holds no scope role is told so, not shown an outage',
   tags: ['scenario', 'scopes-console', 'console'],

@@ -28,7 +28,7 @@ export const getAuditFilters = pikkuFunc<null, GetAuditFiltersOutput>({
   description:
     'Returns the distinct users and event types present in the audit trail, for populating the audit screen filters.',
   expose: true,
-  scopes: ['pikku:audit:read'],
+  scopes: ['pikku:console:audit:read'],
   func: async ({ audit, auth, logger }) => {
     if (!audit?.facets) {
       return { users: [], types: [] }

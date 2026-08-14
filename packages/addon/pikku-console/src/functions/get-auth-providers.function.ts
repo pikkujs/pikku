@@ -46,5 +46,6 @@ export const getAuthProviders = pikkuFunc<null, AuthProvidersMeta>({
   description:
     'Returns the social providers and plugins configured via pikkuBetterAuth(), read from the generated auth-meta.gen.json.',
   expose: true,
+  scopes: ['pikku:console:wirings:read'],
   func: async ({ metaService }) => readAuthMeta(metaService),
 })

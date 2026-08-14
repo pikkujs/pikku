@@ -9,6 +9,7 @@ export const getStateDiff = pikkuFunc<
   description:
     'Diff the current project state (ours) against a baseline `.pikku/` directory (typically a worktree at main). Returns added/removed/modified entries per category.',
   expose: true,
+  scopes: ['pikku:console:wirings:read'],
   func: async ({ stateDiffService }, { basePath, oursPath }) => {
     if (!stateDiffService) {
       throw new Error('stateDiffService is not configured (no project root)')

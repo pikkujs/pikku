@@ -9,6 +9,7 @@ export const readFunctionSource = pikkuFunc<
   description:
     'Reads the source code of a pikku function definition and returns its config properties and function body.',
   expose: true,
+  scopes: ['pikku:console:wirings:read'],
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

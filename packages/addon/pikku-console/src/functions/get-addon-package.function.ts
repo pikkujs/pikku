@@ -9,6 +9,7 @@ export const getAddonCommunityPackage = pikkuFunc<
   description:
     'Returns the full details of a community addon by ID from the registry',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ addonService }, { id }) => {
     return await addonService.readAddon(id)
   },

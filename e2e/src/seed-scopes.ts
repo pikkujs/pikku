@@ -10,7 +10,7 @@ export const CONSOLE_ADMIN_ROLE = 'console-admin'
 export const REPORT_VIEWER_ROLE = 'report-viewer'
 /** Role granting the umbrella `admin` scope and everything beneath it. */
 export const PLATFORM_ADMIN_ROLE = 'platform-admin'
-/** Role granting `pikku:audit:read`, used by the audit console suite. */
+/** Role granting `pikku:console:audit:read`, used by the audit console suite. */
 export const AUDIT_READER_ROLE = 'audit-reader'
 
 const userIdByEmail = async (
@@ -44,13 +44,13 @@ const userIdByEmail = async (
  * - `guest@e2e.test` gets `report-viewer` so the scope-gate suite can show a 200
  *   for a scoped caller against the admin's 403.
  * - `admin@e2e.test` also gets `audit-reader`, the only grant of
- *   `pikku:audit:read`. That leaves `staff@e2e.test` — an admin holding no
- *   `pikku` scope — as the audit console suite's refused case.
+ *   `pikku:console:audit:read`. That leaves `staff@e2e.test` — an admin holding
+ *   no audit scope — as the audit console suite's refused case.
  * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is the
- *   umbrella `admin` scope and nothing else. That is what passes the console's
- *   global admin gate, what lets them impersonate (`admin:impersonate`) and what
- *   lets them read the user directory (`admin:users:list`) — one parent grant
- *   covers all three. It is deliberately a *separate* role from `console-admin`
+ *   umbrella `admin` scope plus every console area except scope administration and
+ *   the audit trail. That is what lets them reach the console at all, what lets
+ *   them impersonate (`admin:impersonate`) and what lets them read the user
+ *   directory (`admin:users:list`). It is deliberately a *separate* role from `console-admin`
  *   so that staff stays what the scopes-console-permissions suite needs it to
  *   be: an admin holding no scope role, and therefore refused by the
  *   self-hosting scope RPCs. `guest@e2e.test` gets none of it.
@@ -63,8 +63,7 @@ const userIdByEmail = async (
  *   expresses "an admin without a scope role", "a caller holding reports:read"
  *   and "a caller holding nothing" through the persona registry rather than by
  *   signing in with a fixture password. The `admin` persona mirrors
- *   `admin@e2e.test` exactly — `platform-admin` to pass the console's global
- *   admin gate, plus `console-admin` to drive the scope-admin RPCs and
+ *   `admin@e2e.test` exactly — `platform-admin` to reach the console, plus `console-admin` to drive the scope-admin RPCs and
  *   `audit-reader` to read the trail, neither of which the `admin` root
  *   reaches. `target` declares nothing.
  *

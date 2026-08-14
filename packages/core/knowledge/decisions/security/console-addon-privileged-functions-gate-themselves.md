@@ -33,8 +33,12 @@ applies to every function at once. Nothing generated that call — the scaffold
 emitted only a comment recommending it, and `resolveGlobalPermissions` returns an
 empty list when the host registered none, which `runPermissions` treats as
 allow. An app that followed the scaffold and stopped there had a fully open
-console surface. The scaffold now emits `wireAddon({ …, scopes: ['admin'] })`
-instead, which the function runner enforces on every function in the package.
+console surface. Every console function now declares its own
+`pikku:console:<area>:<action>` scope instead, which the function runner
+enforces per call. A blanket `wireAddon({ …, scopes: ['admin'] })` stood in for
+that briefly; it is gone, because a single grant covering secrets, source
+editing and the audit trail alike is not something an operator can reason
+about.
 
 The two functions whose failure mode is worst still do not depend on any
 package-wide gate:
@@ -51,16 +55,19 @@ storage backend already treats as no rows.
 attacker-chosen package name and write a wiring file into the project. They were
 `pikkuSessionlessFunc` with `auth: false`, which — behind a `no-auth` RPC route
 and with no host global permission — meant an unauthenticated POST reached
-`execFileSync`. They now declare `auth: true` and `scopes: ['admin']`, enforced
-by `verifyScopes` in the function runner before the body runs. Both gates are
-checked whether or not the host registered a global permission, and whether or
-not the addon itself was wired with scopes — an app that hand-wires
-`wireAddon({ name: 'console', package: '@pikku/addon-console' })` without them
+`execFileSync`. They now declare `auth: true` and
+`scopes: ['pikku:console:addons:install']`, enforced by `verifyScopes` in the
+function runner before the body runs. Both gates are
+checked whether or not the host registered a global permission — an app that
+hand-wires `wireAddon({ name: 'console', package: '@pikku/addon-console' })`
 still cannot reach `execFileSync` unauthenticated.
 
-`admin` is spelled as a literal here because it is a scope id in the addon's own
-`wireScope` tree, the same tree the `pikku:scopes:*` gates on the scope-admin
-functions come from.
+The scopes are spelled as literals here because they are scope ids in the
+addon's own `wireScope` tree — the same tree the `pikku:console:scopes:*` gates
+on the scope-admin functions come from. The generated secret and variable
+brokers live in the app's own scaffold rather than the addon, so the addon
+boundary never covered them; they carry `pikku:console:secrets:*` and
+`pikku:console:variables:*` themselves.
 
 **What this rules out:** treating the host's `addGlobalPermission` as the only
 gate in front of an operation that installs code or reads another principal's

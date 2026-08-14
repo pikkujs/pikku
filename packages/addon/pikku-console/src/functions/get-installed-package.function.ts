@@ -11,6 +11,7 @@ export const getAddonInstalledPackage = pikkuFunc<
   description:
     'Returns the full details of a locally installed addon by reading from pikkuState and .pikku files',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ metaService }, { packageName }) => {
     const factories = pikkuState(packageName, 'package', 'factories')
     if (!factories) return null

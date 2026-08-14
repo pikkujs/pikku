@@ -5,6 +5,7 @@ export const getWorkflowRunNames = pikkuFunc<null, string[]>({
   description:
     'Returns an array of distinct workflow names that have at least one run in the Postgres workflow database via workflowRunService.getDistinctWorkflowNames().',
   expose: true,
+  scopes: ['pikku:console:workflows:read'],
   func: async ({ workflowRunService }) => {
     return await workflowRunService.getDistinctWorkflowNames()
   },

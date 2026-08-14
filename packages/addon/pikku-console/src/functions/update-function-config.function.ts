@@ -14,6 +14,7 @@ export const updateFunctionConfig = pikkuFunc<
   description:
     'Updates the config properties of a pikku function definition in source code and triggers a rebuild.',
   expose: true,
+  scopes: ['pikku:console:code:write'],
   func: async ({ codeEditService }, { sourceFile, exportedName, changes }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

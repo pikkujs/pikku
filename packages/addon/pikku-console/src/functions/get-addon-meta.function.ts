@@ -9,6 +9,7 @@ export const getAddonMeta = pikkuFunc<AddonMetaQuery | null, AddonMetaPage>({
   description:
     'Returns one page of the addon catalogue. Search, category and sort are applied by the registry rather than the caller, so they cover every package and not just the pages already loaded.',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ addonService }, input) => {
     return await addonService.readAddonsMeta(input ?? {})
   },

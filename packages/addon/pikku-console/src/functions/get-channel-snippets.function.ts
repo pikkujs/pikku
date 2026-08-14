@@ -10,6 +10,7 @@ export const getChannelSnippets = pikkuFunc<
   description:
     'Given a channelName, reads channel metadata from metaService, finds the matching channel, and generates code snippets (overview, handlers, actions) for that channel. Returns empty snippets if the channel is not found.',
   expose: true,
+  scopes: ['pikku:console:wirings:read'],
   func: async ({ metaService, wiringService }, { channelName }) => {
     const channels = await metaService.getChannelsMeta()
     const channel: ChannelMeta | undefined = channels[channelName]

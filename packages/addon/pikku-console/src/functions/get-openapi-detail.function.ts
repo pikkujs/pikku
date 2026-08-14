@@ -23,6 +23,7 @@ export const getOpenapiDetail = pikkuFunc<
   description:
     'Fetches a single OpenAPI spec detail from the fabric registry by name.',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ addonService }, { name }) => {
     return addonService.readOpenapiDetail(name)
   },

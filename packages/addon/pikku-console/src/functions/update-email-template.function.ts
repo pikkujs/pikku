@@ -13,6 +13,7 @@ export const updateEmailTemplate = pikkuFunc<
   description:
     'Overwrites an email template HTML source file (templates/<name>.html) so small edits can be made from the console.',
   expose: true,
+  scopes: ['pikku:console:emails:write'],
   func: async ({ metaService, codeEditService }, { templateName, source }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

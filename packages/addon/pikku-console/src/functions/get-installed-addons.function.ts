@@ -33,6 +33,7 @@ export const getInstalledAddons = pikkuFunc<null, InstalledAddon[]>({
   title: 'Get Installed Addons',
   description: 'Returns locally wired addons from pikkuState',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ metaService }) => {
     const addonsMap = pikkuState(null, 'addons', 'packages')
     const result: InstalledAddon[] = []
