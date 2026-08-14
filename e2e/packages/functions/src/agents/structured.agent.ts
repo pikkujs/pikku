@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 
 /**
  * Structured output is only enabled when the agent exposes no tools — with a
@@ -12,7 +12,7 @@ export const StructuredAgentOutput = z.object({
   summary: z.string(),
 })
 
-export const structuredAgent = pikkuAIAgent({
+export const structuredAgent = pikkuAgent({
   name: 'structured-agent',
   description: 'Classifies a message and returns a structured verdict',
   goal: 'You classify the sentiment of the user message and return a structured result.',

@@ -80,7 +80,7 @@ export type PlatformImports = {
   needsD1: boolean
   needsQueue: boolean
   needsWorkflow: boolean
-  needsAI: boolean
+  needsAgent: boolean
   /**
    * Wired service names required by this unit (from each unit-service's
    * `sourceServiceName`). Lets a contributor gate its imports on a custom,
@@ -232,25 +232,25 @@ export class CloudflareProviderAdapter {
     const needsWorkflow = unit.services.some(
       (s) => s.capability === 'workflow-state'
     )
-    const needsAI = unit.services.some(
+    const needsAgent = unit.services.some(
       (s) => s.capability === 'ai-storage' || s.capability === 'ai-model'
     )
 
     const cfImports = [...extraImports]
     if (needsQueue) cfImports.push('CloudflareQueueService')
-    if (needsAI)
+    if (needsAgent)
       cfImports.push(
-        'CloudflareAIStorageService',
+        'CloudflareAgentStorageService',
         'CloudflareAgentRunService',
-        'CloudflareAIRunStateService'
+        'CloudflareAgentRunStateService'
       )
 
     return {
       cfImports,
-      needsD1: needsAI,
+      needsD1: needsAgent,
       needsQueue,
       needsWorkflow,
-      needsAI,
+      needsAgent,
       serviceNames: unit.services.map((s) => s.sourceServiceName),
     }
   }
@@ -390,12 +390,12 @@ export class CloudflareProviderAdapter {
       ...(platform.needsD1
         ? [
             `import { ${[
-              ...(platform.needsAI
+              ...(platform.needsAgent
                 ? [
                     'createD1Kysely',
-                    'CloudflareAIStorageService',
+                    'CloudflareAgentStorageService',
                     'CloudflareAgentRunService',
-                    'CloudflareAIRunStateService',
+                    'CloudflareAgentRunStateService',
                   ]
                 : []),
             ].join(', ')} } from '@pikku/cloudflare/d1'`,
@@ -448,12 +448,12 @@ export class CloudflareProviderAdapter {
       ...(platform.needsD1
         ? [
             `import { ${[
-              ...(platform.needsAI
+              ...(platform.needsAgent
                 ? [
                     'createD1Kysely',
-                    'CloudflareAIStorageService',
+                    'CloudflareAgentStorageService',
                     'CloudflareAgentRunService',
-                    'CloudflareAIRunStateService',
+                    'CloudflareAgentRunStateService',
                   ]
                 : []),
             ].join(', ')} } from '@pikku/cloudflare/d1'`,
@@ -530,12 +530,12 @@ export class CloudflareProviderAdapter {
       ...(platform.needsD1
         ? [
             `import { ${[
-              ...(platform.needsAI
+              ...(platform.needsAgent
                 ? [
                     'createD1Kysely',
-                    'CloudflareAIStorageService',
+                    'CloudflareAgentStorageService',
                     'CloudflareAgentRunService',
-                    'CloudflareAIRunStateService',
+                    'CloudflareAgentRunStateService',
                   ]
                 : []),
             ].join(', ')} } from '@pikku/cloudflare/d1'`,
@@ -653,18 +653,18 @@ export class CloudflareProviderAdapter {
         `  }`
       )
     }
-    if (platform.needsAI) {
+    if (platform.needsAgent) {
       lines.push(
         `  if (env.DB) {`,
         `    const db = env.DB as D1Database`,
         `    const kysely = createD1Kysely(db)`,
-        `    const aiStorage = new CloudflareAIStorageService(kysely)`,
-        `    await aiStorage.init()`,
-        `    services.aiStorage = aiStorage`,
+        `    const agentStorage = new CloudflareAgentStorageService(kysely)`,
+        `    await agentStorage.init()`,
+        `    services.agentStorage = agentStorage`,
         `    services.agentRunService = new CloudflareAgentRunService(kysely)`,
-        `    const aiRunState = new CloudflareAIRunStateService(kysely)`,
-        `    await aiRunState.init()`,
-        `    services.aiRunState = aiRunState`,
+        `    const agentRunState = new CloudflareAgentRunStateService(kysely)`,
+        `    await agentRunState.init()`,
+        `    services.agentRunState = agentRunState`,
         `  }`
       )
     }
@@ -699,18 +699,18 @@ export class CloudflareProviderAdapter {
         `  }`
       )
     }
-    if (platform.needsAI) {
+    if (platform.needsAgent) {
       lines.push(
         `  if (env.DB) {`,
         `    const db = env.DB as D1Database`,
         `    const kysely = createD1Kysely(db)`,
-        `    const aiStorage = new CloudflareAIStorageService(kysely)`,
-        `    await aiStorage.init()`,
-        `    services.aiStorage = aiStorage`,
+        `    const agentStorage = new CloudflareAgentStorageService(kysely)`,
+        `    await agentStorage.init()`,
+        `    services.agentStorage = agentStorage`,
         `    services.agentRunService = new CloudflareAgentRunService(kysely)`,
-        `    const aiRunState = new CloudflareAIRunStateService(kysely)`,
-        `    await aiRunState.init()`,
-        `    services.aiRunState = aiRunState`,
+        `    const agentRunState = new CloudflareAgentRunStateService(kysely)`,
+        `    await agentRunState.init()`,
+        `    services.agentRunState = agentRunState`,
         `  }`
       )
     }

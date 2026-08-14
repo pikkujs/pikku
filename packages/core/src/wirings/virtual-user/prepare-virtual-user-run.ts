@@ -87,7 +87,7 @@ export const prepareVirtualUserRun = (input: {
   const scopes = personaScopes(input.persona, roleScopes)
 
   // Gated by the same scopes as the RPCs, because an agent is reached rather
-  // than declared: `CoreAIAgent.scopes` is checked against the session, so a
+  // than declared: `CoreAgent.scopes` is checked against the session, so a
   // persona finds the specialists its roles unlock and no others.
   const agents = reachableAgents(input.agentsMeta ?? {}, scopes)
 

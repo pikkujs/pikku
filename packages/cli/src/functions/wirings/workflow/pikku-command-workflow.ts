@@ -284,11 +284,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       await writeFileInDir(
         logger,
         config.personasWiringFile,
-        serializePersonas(
-          personas,
-          agentMapImportPath,
-          exposedRpcMapImportPath
-        )
+        serializePersonas(personas, agentMapImportPath, exposedRpcMapImportPath)
       )
       // Fixed path getPersonasMeta() reads; kept out of workflow/meta, which
       // getWorkflowMeta() globs as workflows.

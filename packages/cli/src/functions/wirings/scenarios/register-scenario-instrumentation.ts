@@ -11,7 +11,7 @@ import {
   enableScoreSnapshots,
   getScoreSnapshot,
   gradeRun as coreGradeRun,
-} from '@pikku/core/ecosystem/ai-scorer'
+} from '@pikku/core/ecosystem/agent-scorer'
 import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 
 /**

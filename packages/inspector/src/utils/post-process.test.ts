@@ -142,7 +142,7 @@ function makeState(
 
 const CONSOLE_PARENT_SERVICES = [
   'metaService',
-  'aiAgentRunner',
+  'agentRunner',
   'deploymentService',
   'credentialService',
 ]
@@ -187,7 +187,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
           runAgent: {
             services: {
               optimized: true,
-              services: ['aiAgentRunner', 'deploymentService'],
+              services: ['agentRunner', 'deploymentService'],
             },
           },
         },
@@ -197,7 +197,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     aggregateRequiredServices(state)
     const required = state.serviceAggregation.requiredServices
     assert.ok(required.has('metaService'))
-    assert.ok(!required.has('aiAgentRunner'))
+    assert.ok(!required.has('agentRunner'))
     assert.ok(!required.has('deploymentService'))
     assert.ok(!required.has('credentialService'))
   })
@@ -258,7 +258,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     const required = state.serviceAggregation.requiredServices
     assert.ok(required.has('kysely'))
     assert.ok(!required.has('metaService'))
-    assert.ok(!required.has('aiAgentRunner'))
+    assert.ok(!required.has('agentRunner'))
   })
 
   test('no used addon functions adds no parent services', () => {
@@ -279,7 +279,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     aggregateRequiredServices(state)
     const required = state.serviceAggregation.requiredServices
     assert.ok(!required.has('metaService'))
-    assert.ok(!required.has('aiAgentRunner'))
+    assert.ok(!required.has('agentRunner'))
   })
 
   test('internal services in addon function meta never force the blanket', () => {
@@ -300,7 +300,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     aggregateRequiredServices(state)
     const required = state.serviceAggregation.requiredServices
     assert.ok(required.has('metaService'))
-    assert.ok(!required.has('aiAgentRunner'))
+    assert.ok(!required.has('agentRunner'))
     assert.ok(!required.has('rpc'))
   })
 
@@ -345,7 +345,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     aggregateRequiredServices(state)
     const required = state.serviceAggregation.requiredServices
     assert.ok(required.has('metaService'))
-    assert.ok(!required.has('aiAgentRunner'))
+    assert.ok(!required.has('agentRunner'))
   })
 
   test('multiple used addon functions union their parent services', () => {
@@ -357,7 +357,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
             services: { optimized: true, services: ['metaService'] },
           },
           runAgent: {
-            services: { optimized: true, services: ['aiAgentRunner'] },
+            services: { optimized: true, services: ['agentRunner'] },
           },
         },
       },
@@ -366,7 +366,7 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     aggregateRequiredServices(state)
     const required = state.serviceAggregation.requiredServices
     assert.ok(required.has('metaService'))
-    assert.ok(required.has('aiAgentRunner'))
+    assert.ok(required.has('agentRunner'))
     assert.ok(!required.has('deploymentService'))
     assert.ok(!required.has('credentialService'))
   })

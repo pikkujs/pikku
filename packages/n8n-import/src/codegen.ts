@@ -1371,7 +1371,7 @@ function emitAgentFile(
   const workflowLines = workflowNames.map((n) => `    ref(${q(n)}),`)
 
   const imports = [
-    `import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
+    `import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
     `import { ref } from '#pikku/pikku-types.gen.js'`,
   ]
   if (outputZod) imports.push(`import { z } from 'zod'`)
@@ -1395,7 +1395,7 @@ function emitAgentFile(
     imports.join('\n'),
     ``,
     ...(outputZod ? [`export const ${outputConst} = ${outputZod}`, ``] : []),
-    `export const ${names.constName} = pikkuAIAgent({`,
+    `export const ${names.constName} = pikkuAgent({`,
     `  name: ${q(names.registeredName)},`,
     `  description: ${q(multiAgent ? agent.name : parsed.name)},`,
     `  goal: ${q(systemPrompt)},`,

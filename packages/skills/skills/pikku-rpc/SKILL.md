@@ -42,7 +42,7 @@ See `pikku-concepts` for the core mental model.
 | `rpc.remote(name, data)`         | Remote call via DeploymentService         |
 | `rpc.exposed(name, data)`        | Call functions marked with `expose: true` |
 | `rpc.startWorkflow(name, input)` | Start a workflow (see `pikku-workflow`)   |
-| `rpc.agent.run/stream(...)`      | Run an AI agent (see `pikku-ai-agent`)    |
+| `rpc.agent.run/stream(...)`      | Run an AI agent (see `pikku-agent`)       |
 | `rpc.agent.resume/approve(...)`  | Answer a tool-approval interrupt          |
 | `rpc.agent.interrupt(runId)`     | Stop an in-flight run                     |
 

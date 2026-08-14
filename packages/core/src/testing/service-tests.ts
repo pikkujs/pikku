@@ -3,11 +3,11 @@ import type { EventHubStore } from '../wirings/channel/eventhub-store.js'
 import type { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { DeploymentService } from '../services/deployment-service.js'
-import type { AIStorageService } from '../services/ai-storage-service.js'
-import type { AIRunStateService } from '../services/ai-run-state-service.js'
+import type { AgentStorageService } from '../services/agent-storage-service.js'
+import type { AgentRunStateService } from '../services/agent-run-state-service.js'
 import type { SecretService } from '../services/secret-service.js'
 import type { CredentialService } from '../services/credential-service.js'
-import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
+import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { SessionStore } from '../services/session-store.js'
 
 export interface ServiceTestConfig {
@@ -20,7 +20,9 @@ export interface ServiceTestConfig {
     deploymentService?: () => Promise<
       DeploymentService & { stop(): Promise<void> }
     >
-    aiStorageService?: () => Promise<AIStorageService & AIRunStateService>
+    agentStorageService?: () => Promise<
+      AgentStorageService & AgentRunStateService
+    >
     agentRunService?: () => Promise<AgentRunService>
     secretService?: (config: {
       key: string
@@ -40,7 +42,7 @@ import { defineChannelStoreTests } from './service-tests/channel-store-tests.js'
 import { defineEventHubStoreTests } from './service-tests/event-hub-store-tests.js'
 import { defineWorkflowServiceTests } from './service-tests/workflow-service-tests.js'
 import { defineWorkflowRunServiceTests } from './service-tests/workflow-run-service-tests.js'
-import { defineAiStorageServiceTests } from './service-tests/ai-storage-service-tests.js'
+import { defineAiStorageServiceTests } from './service-tests/agent-storage-service-tests.js'
 import { defineDeploymentServiceTests } from './service-tests/deployment-service-tests.js'
 import { defineSecretServiceTests } from './service-tests/secret-service-tests.js'
 import { defineCredentialServiceTests } from './service-tests/credential-service-tests.js'
@@ -68,8 +70,8 @@ export function defineServiceTests(config: ServiceTestConfig): void {
   if (services.workflowRunService) {
     defineWorkflowRunServiceTests(name, services.workflowRunService)
   }
-  if (services.aiStorageService) {
-    defineAiStorageServiceTests(name, services.aiStorageService)
+  if (services.agentStorageService) {
+    defineAiStorageServiceTests(name, services.agentStorageService)
   }
   if (services.deploymentService) {
     defineDeploymentServiceTests(name, services.deploymentService)
@@ -84,7 +86,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
     defineAgentRunServiceTests(
       name,
       services.agentRunService,
-      services.aiStorageService
+      services.agentStorageService
     )
   }
   if (services.sessionStore) {

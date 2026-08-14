@@ -133,7 +133,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           bootstrap: true,
         }),
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
-        workflow.do('Bootstrap AI agent types', 'pikkuAIAgentTypes', null),
+        workflow.do('Bootstrap AI agent types', 'pikkuAgentTypes', null),
       ])
       await workflow.do('Bootstrap Node types', 'pikkuNodeTypes', null)
       await workflow.do(
@@ -179,7 +179,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     const typeGenerators: Promise<any>[] = [
       workflow.do('Function types split', 'pikkuFunctionTypesSplit', {}),
       workflow.do('Trigger types', 'pikkuTriggerTypes', {}),
-      workflow.do('AI agent types', 'pikkuAIAgentTypes', null),
+      workflow.do('AI agent types', 'pikkuAgentTypes', null),
     ]
     if (!config.addon) {
       typeGenerators.push(
@@ -220,8 +220,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     const [hasInternalRPCs, agents, scorers] = await Promise.all([
       workflow.do('RPC', 'pikkuRPC', null),
-      workflow.do('AI agent', 'pikkuAIAgent', null),
-      workflow.do('AI scorer', 'pikkuAIScorer', null),
+      workflow.do('AI agent', 'pikkuAgent', null),
+      workflow.do('AI scorer', 'pikkuAgentScorer', null),
     ])
 
     allImports.push(config.modelAliasesFile)

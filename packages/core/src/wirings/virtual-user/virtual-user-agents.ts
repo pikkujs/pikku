@@ -4,7 +4,7 @@ import { hasScopes } from '../../scopes.js'
  * Which of the product's agents a persona can actually talk to.
  *
  * An agent is not something a persona declares. It is something a persona
- * *reaches*, under exactly the rule an RPC is reached by: `CoreAIAgent.scopes`
+ * *reaches*, under exactly the rule an RPC is reached by: `CoreAgent.scopes`
  * is checked against the session, so a persona holding the scopes an agent
  * requires finds it in front of them, and one that does not, does not.
  *

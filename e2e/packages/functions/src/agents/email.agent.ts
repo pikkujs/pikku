@@ -1,7 +1,7 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
 
-export const emailAgent = pikkuAIAgent({
+export const emailAgent = pikkuAgent({
   name: 'email-agent',
   description: 'Sends and lists emails',
   goal: 'You help users send and view emails.',

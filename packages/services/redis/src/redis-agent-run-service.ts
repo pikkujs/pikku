@@ -1,9 +1,9 @@
-import type { AIThread, AIMessage } from '@pikku/core/ai-agent'
+import type { AgentThread, AgentMessage } from '@pikku/core/agent'
 import type {
   AgentRunRow,
   AgentRunService,
-} from '@pikku/core/ecosystem/ai-agent'
-import { isOwnedByPrincipal } from '@pikku/core/ecosystem/ai-agent'
+} from '@pikku/core/ecosystem/agent'
+import { isOwnedByPrincipal } from '@pikku/core/ecosystem/agent'
 import type { Redis } from 'ioredis'
 
 export class RedisAgentRunService implements AgentRunService {
@@ -42,7 +42,7 @@ export class RedisAgentRunService implements AgentRunService {
     owners?: string[]
     limit?: number
     offset?: number
-  }): Promise<AIThread[]> {
+  }): Promise<AgentThread[]> {
     const {
       agentName,
       resourceId,
@@ -75,7 +75,7 @@ export class RedisAgentRunService implements AgentRunService {
     // Filter before paging: slicing first would let a page of another owner's
     // threads collapse to fewer results than requested (and, for `owners`, makes
     // the page size leak how many foreign threads exist).
-    const matched: AIThread[] = []
+    const matched: AgentThread[] = []
     for (const id of threadIds) {
       const thread = await this.getThread(id)
       if (!thread) continue
@@ -92,7 +92,7 @@ export class RedisAgentRunService implements AgentRunService {
     return matched.slice(offset, offset + limit)
   }
 
-  async getThread(threadId: string): Promise<AIThread | null> {
+  async getThread(threadId: string): Promise<AgentThread | null> {
     const data = await this.redis.hgetall(this.threadKey(threadId))
     if (!data.id) return null
     return {
@@ -105,7 +105,7 @@ export class RedisAgentRunService implements AgentRunService {
     }
   }
 
-  async getThreadMessages(threadId: string): Promise<AIMessage[]> {
+  async getThreadMessages(threadId: string): Promise<AgentMessage[]> {
     const entries = await this.redis.zrange(this.messagesKey(threadId), 0, -1)
     return entries.map((entry) => {
       const msg = JSON.parse(entry)

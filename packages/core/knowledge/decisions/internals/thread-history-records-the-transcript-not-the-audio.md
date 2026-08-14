@@ -2,7 +2,7 @@
 type: decision
 title: Thread history records what the model was asked, which for a spoken turn is the transcript
 description: The wire carried a base64 audio blob; persisting it writes megabytes of unreadable data and loses the only readable record of the turn
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # Thread history records the transcript, not the audio that arrived
@@ -13,7 +13,7 @@ carried a base64 audio blob, and `voiceInput` replaced it with a transcript
 before the model ever saw it.
 
 Persisting the blob would write megabytes of unreadable data into the history
-*and* discard the only readable record of what was said — the worst of both.
+_and_ discard the only readable record of what was said — the worst of both.
 
 Both the streaming and non-streaming paths do this, and both check identity
 rather than assuming: a middleware is free to rewrite the message list into

@@ -6,7 +6,7 @@ description: >-
   wireMCPPrompt, the MCP wire object and PikkuMCPServer. TRIGGER when: code uses mcp: true or any
   pikkuMCP*Func/wireMCP* helper, user asks about MCP, Model Context Protocol, AI tool integration,
   or exposing functions to Claude/ChatGPT. DO NOT TRIGGER when: user asks about AI agents (use
-  pikku-ai-agent) or general function definitions (use pikku-concepts).
+  pikku-agent) or general function definitions (use pikku-concepts).
 installGroups: [core]
 ---
 
@@ -37,11 +37,11 @@ See `pikku-concepts` for the core mental model.
 
 MCP has three surfaces, and Pikku wires them differently:
 
-| Surface | Function factory | Wiring | Return type |
-| --- | --- | --- | --- |
-| **Tool** | `mcp: true` on a `pikkuFunc`, or `pikkuMCPToolFunc` | none — the function *is* the registration | the func's own output, or MCP content blocks |
-| **Resource** | `pikkuMCPResourceFunc` | `wireMCPResource({ uri, title, … })` | `Array<{ uri, text }>` |
-| **Prompt** | `pikkuMCPPromptFunc` | `wireMCPPrompt({ name, description, … })` | `Array<MCPPromptMessage>` |
+| Surface      | Function factory                                    | Wiring                                    | Return type                                  |
+| ------------ | --------------------------------------------------- | ----------------------------------------- | -------------------------------------------- |
+| **Tool**     | `mcp: true` on a `pikkuFunc`, or `pikkuMCPToolFunc` | none — the function _is_ the registration | the func's own output, or MCP content blocks |
+| **Resource** | `pikkuMCPResourceFunc`                              | `wireMCPResource({ uri, title, … })`      | `Array<{ uri, text }>`                       |
+| **Prompt**   | `pikkuMCPPromptFunc`                                | `wireMCPPrompt({ name, description, … })` | `Array<MCPPromptMessage>`                    |
 
 Tools are the odd one out — there is no `wireMCPTool`. Resources and prompts
 carry protocol metadata (a URI template, a prompt name) that belongs to the
@@ -58,8 +58,8 @@ Add `mcp: true` to any existing function:
 
 ```typescript
 export const createTodo = pikkuFunc({
-  description: 'Create a new todo item',   // becomes the MCP tool description
-  input: CreateTodoInput,                  // becomes the MCP tool input schema
+  description: 'Create a new todo item', // becomes the MCP tool description
+  input: CreateTodoInput, // becomes the MCP tool input schema
   output: CreateTodoOutput,
   mcp: true,
   func: async ({ db }, { text, priority }) => db.createTodo({ text, priority }),
@@ -141,7 +141,10 @@ import { pikkuMCPPromptFunc, wireMCPPrompt } from '#pikku'
 export const planDayPrompt = pikkuMCPPromptFunc({
   input: UserIdInputSchema,
   func: async (_services, { userId }, { rpc }) => {
-    const { todos } = await rpc.invoke('listTodos', { userId, completed: false })
+    const { todos } = await rpc.invoke('listTodos', {
+      userId,
+      completed: false,
+    })
     return [
       {
         role: 'user' as const,
@@ -242,10 +245,10 @@ anything logs.
 
 ## Red flags
 
-| Symptom | Cause |
-| --- | --- |
-| `wireMCPTool` is not exported | There is no tool wiring — use `mcp: true` or `pikkuMCPToolFunc` |
-| `uri`/`title` rejected on `pikkuMCPResourceFunc` | Those belong on `wireMCPResource` |
-| Resource returning `{ uri, blob, mimeType }` | Resources are text only: `{ uri, text }` |
-| Client sees a tool with no description | `mcp: true` without a `description` — check the codegen warning |
-| stdio client disconnects on the first log line | Logger still writing to stdout; use `createMCPLogger()` |
+| Symptom                                          | Cause                                                           |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| `wireMCPTool` is not exported                    | There is no tool wiring — use `mcp: true` or `pikkuMCPToolFunc` |
+| `uri`/`title` rejected on `pikkuMCPResourceFunc` | Those belong on `wireMCPResource`                               |
+| Resource returning `{ uri, blob, mimeType }`     | Resources are text only: `{ uri, text }`                        |
+| Client sees a tool with no description           | `mcp: true` without a `description` — check the codegen warning |
+| stdio client disconnects on the first log line   | Logger still writing to stdout; use `createMCPLogger()`         |

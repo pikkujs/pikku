@@ -26,12 +26,12 @@ const ALLOWED: Record<string, string[]> = {
   cli: ['channel'],
   // An agent streams over a channel and is invoked over rpc, and grades itself
   // as the last thing a finished run does.
-  'ai-agent': ['channel', 'rpc', 'ai-scorer'],
+  agent: ['channel', 'rpc', 'agent-scorer'],
   // A judge is a degenerate agent — it builds agent messages and runs them —
   // and a grade is dispatched to a queue.
-  'ai-scorer': ['ai-agent', 'queue'],
+  'agent-scorer': ['agent', 'queue'],
   // `wire.rpc.agent` — the facade lives with the agent runtime it delegates to.
-  rpc: ['ai-agent'],
+  rpc: ['agent'],
   gateway: ['http'],
   mcp: ['rpc'],
   trigger: ['rpc'],

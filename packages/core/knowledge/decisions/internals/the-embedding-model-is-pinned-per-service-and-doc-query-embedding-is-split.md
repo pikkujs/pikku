@@ -24,6 +24,6 @@ same call.
 
 **What this rules out:** adding a per-call `model` parameter, collapsing
 `embedDocuments` and `embedQuery` into one `embed`, and pointing a vector store
-at `AIAgentRunnerService.embed` / `embedMany` instead — those take a per-call
+at `AgentRunnerService.embed` / `embedMany` instead — those take a per-call
 model on purpose and drag in the whole agent-runner tool loop, and they give back
 neither guarantee.

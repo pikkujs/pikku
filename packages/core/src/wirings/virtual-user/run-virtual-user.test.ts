@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import { rememberIds, runVirtualUser } from './run-virtual-user.js'
 import type { ActorLLM } from '../actor-flow/run-conversation.js'
-import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
+import type { AgentStepResult } from '../../services/agent-runner-service.js'
 import type { ScenarioHttpResponse } from '../../services/personas-service.js'
 import type {
   ApiCatalogueEntry,
@@ -83,7 +83,7 @@ const scripted = (
       toolResults: [],
       usage: { inputTokens: 10, outputTokens: 4 },
       finishReason: 'stop',
-    } satisfies AIAgentStepResult
+    } satisfies AgentStepResult
   }
   return { llm, turns: () => turn }
 }

@@ -1,6 +1,6 @@
 export { MySQLKyselyWorkflowService } from './mysql-kysely-workflow-service.js'
 export { MySQLKyselyDeploymentService } from './mysql-kysely-deployment-service.js'
-export { MySQLKyselyAIStorageService } from './mysql-kysely-ai-storage-service.js'
+export { MySQLKyselyAgentStorageService } from './mysql-kysely-agent-storage-service.js'
 export { MySQLKyselyAgentRunService } from './mysql-kysely-agent-run-service.js'
 export { MySQLKyselyWorkflowRunService } from './mysql-kysely-workflow-run-service.js'
 export { MySQLKyselyChannelStore } from './mysql-kysely-channel-store.js'
@@ -12,4 +12,4 @@ export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
 export type {
   AgentRunService,
   AgentRunRow,
-} from '@pikku/core/ecosystem/ai-agent'
+} from '@pikku/core/ecosystem/agent'

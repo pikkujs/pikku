@@ -1,8 +1,8 @@
-import type { AIThread, AIMessage } from '@pikku/core/ai-agent'
+import type { AgentThread, AgentMessage } from '@pikku/core/agent'
 import type {
   AgentRunRow,
   AgentRunService,
-} from '@pikku/core/ecosystem/ai-agent'
+} from '@pikku/core/ecosystem/agent'
 import type { Db, Collection } from 'mongodb'
 
 // Owner ids are untrusted input to the regex, so metacharacters must not be
@@ -10,7 +10,7 @@ import type { Db, Collection } from 'mongodb'
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-interface AIThreadDoc {
+interface AgentThreadDoc {
   _id: string
   resourceId: string
   title: string | null
@@ -19,7 +19,7 @@ interface AIThreadDoc {
   updatedAt: Date
 }
 
-interface AIMessageDoc {
+interface AgentMessageDoc {
   _id: string
   threadId: string
   role: string
@@ -27,7 +27,7 @@ interface AIMessageDoc {
   createdAt: Date
 }
 
-interface AIToolCallDoc {
+interface AgentToolCallDoc {
   _id: string
   threadId: string
   messageId: string
@@ -43,7 +43,7 @@ interface AIToolCallDoc {
   createdAt: Date
 }
 
-interface AIRunDoc {
+interface AgentRunDoc {
   _id: string
   agentName: string
   threadId: string
@@ -60,16 +60,16 @@ interface AIRunDoc {
 }
 
 export class MongoDBAgentRunService implements AgentRunService {
-  private threads: Collection<AIThreadDoc>
-  private messages: Collection<AIMessageDoc>
-  private toolCalls: Collection<AIToolCallDoc>
-  private runs: Collection<AIRunDoc>
+  private threads: Collection<AgentThreadDoc>
+  private messages: Collection<AgentMessageDoc>
+  private toolCalls: Collection<AgentToolCallDoc>
+  private runs: Collection<AgentRunDoc>
 
   constructor(db: Db) {
-    this.threads = db.collection<AIThreadDoc>('ai_threads')
-    this.messages = db.collection<AIMessageDoc>('ai_message')
-    this.toolCalls = db.collection<AIToolCallDoc>('ai_tool_call')
-    this.runs = db.collection<AIRunDoc>('ai_run')
+    this.threads = db.collection<AgentThreadDoc>('agent_threads')
+    this.messages = db.collection<AgentMessageDoc>('agent_message')
+    this.toolCalls = db.collection<AgentToolCallDoc>('agent_tool_call')
+    this.runs = db.collection<AgentRunDoc>('agent_run')
   }
 
   async listThreads(options?: {
@@ -78,7 +78,7 @@ export class MongoDBAgentRunService implements AgentRunService {
     owners?: string[]
     limit?: number
     offset?: number
-  }): Promise<AIThread[]> {
+  }): Promise<AgentThread[]> {
     const {
       agentName,
       resourceId,
@@ -121,13 +121,13 @@ export class MongoDBAgentRunService implements AgentRunService {
     return result.map((row) => this.mapThreadRow(row))
   }
 
-  async getThread(threadId: string): Promise<AIThread | null> {
+  async getThread(threadId: string): Promise<AgentThread | null> {
     const row = await this.threads.findOne({ _id: threadId })
     if (!row) return null
     return this.mapThreadRow(row)
   }
 
-  async getThreadMessages(threadId: string): Promise<AIMessage[]> {
+  async getThreadMessages(threadId: string): Promise<AgentMessage[]> {
     const [msgResult, tcResult] = await Promise.all([
       this.messages.find({ threadId }).sort({ createdAt: 1 }).toArray(),
       this.toolCalls.find({ threadId }).sort({ createdAt: 1 }).toArray(),
@@ -140,11 +140,11 @@ export class MongoDBAgentRunService implements AgentRunService {
       tcByMessage.get(msgId)!.push(tc)
     }
 
-    const messages: AIMessage[] = []
+    const messages: AgentMessage[] = []
     for (const row of msgResult) {
-      const msg: AIMessage = {
+      const msg: AgentMessage = {
         id: row._id,
-        role: row.role as AIMessage['role'],
+        role: row.role as AgentMessage['role'],
         content: row.content ?? undefined,
         createdAt: new Date(row.createdAt),
       }
@@ -202,7 +202,7 @@ export class MongoDBAgentRunService implements AgentRunService {
     return result.sort()
   }
 
-  private mapThreadRow(row: AIThreadDoc): AIThread {
+  private mapThreadRow(row: AgentThreadDoc): AgentThread {
     return {
       id: row._id,
       resourceId: row.resourceId,
@@ -213,7 +213,7 @@ export class MongoDBAgentRunService implements AgentRunService {
     }
   }
 
-  private mapRunRow(row: AIRunDoc): AgentRunRow {
+  private mapRunRow(row: AgentRunDoc): AgentRunRow {
     return {
       runId: row._id,
       agentName: row.agentName,

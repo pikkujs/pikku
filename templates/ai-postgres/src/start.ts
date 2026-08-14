@@ -1,8 +1,11 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { LocalSecretService, ConsoleLogger } from '@pikku/core/services'
-import { PikkuKysely, PgKyselyAIStorageService } from '@pikku/kysely-postgres'
+import {
+  PikkuKysely,
+  PgKyselyAgentStorageService,
+} from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { VercelAgentRunner } from '@pikku/ai-vercel'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import {
@@ -22,7 +25,7 @@ async function main(): Promise<void> {
         'postgres://postgres:password@localhost:5432/pikku_ai'
     )
     await pikkuKysely.init()
-    const pgAiStorage = new PgKyselyAIStorageService(pikkuKysely.kysely)
+    const pgAiStorage = new PgKyselyAgentStorageService(pikkuKysely.kysely)
     await pgAiStorage.init()
 
     const secrets = new LocalSecretService()
@@ -47,9 +50,9 @@ async function main(): Promise<void> {
 
     const singletonServices = await createSingletonServices(config, {
       logger,
-      aiStorage: pgAiStorage,
-      aiRunState: pgAiStorage,
-      aiAgentRunner: new VercelAIAgentRunner(providers),
+      agentStorage: pgAiStorage,
+      agentRunState: pgAiStorage,
+      agentRunner: new VercelAgentRunner(providers),
     })
 
     const appServer = new PikkuExpressServer(

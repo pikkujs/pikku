@@ -102,16 +102,23 @@ Prefer `expectEventually` over sleeping.
 ### Asserting on an agent's answer (`expectScore`)
 
 An agent's output is not comparable to a fixed string, so it is graded rather
-than matched. Declare the rubric with `pikkuAIScorer` (grades in code) or
-`pikkuAIJudge` (grades with a model) in a `*.scorer.ts` file, name it on the
+than matched. Declare the rubric with `pikkuAgentScorer` (grades in code) or
+`pikkuAgentJudge` (grades with a model) in a `*.scorer.ts` file, name it on the
 agent's `scorers`, then assert on the run the scenario just triggered:
 
 ```typescript
-const { runId } = await scenario.when('asks for a summary', 'runAssistant', {
-  prompt: data.prompt,
-}, { actor: actors.user })
+const { runId } = await scenario.when(
+  'asks for a summary',
+  'runAssistant',
+  {
+    prompt: data.prompt,
+  },
+  { actor: actors.user }
+)
 
-await scenario.expectScore('answered briefly', runId, 'brevity', { atLeast: 0.8 })
+await scenario.expectScore('answered briefly', runId, 'brevity', {
+  atLeast: 0.8,
+})
 ```
 
 The default bound is `atLeast: 0.5`, so an unqualified `expectScore` still fails
@@ -451,17 +458,18 @@ A `browser` binding gets a session bound to **its actor**, signed in through the
 Browser steps are where **intent, not actions** earns its keep: the step is one intent, the clicking lives in shared utilities, and the step arrives before it acts. Write the mechanics below into utilities and keep the step body to three or four calls that read as a sentence.
 
 ```typescript
-export const opensTheCart = pikkuScenarioStep<{ path: string }, { url: string }>(
-  {
-    name: 'opensTheCart',
-    description: 'opens the cart',
-    browser: async (_services, { path }, { browser }) => {
-      await browser.goto(path)
-      return { url: browser.page.url() }
-    },
-    default: async ({ rpc }) => ({ url: (await rpc.invoke('getCart', {})).url }),
-  }
-)
+export const opensTheCart = pikkuScenarioStep<
+  { path: string },
+  { url: string }
+>({
+  name: 'opensTheCart',
+  description: 'opens the cart',
+  browser: async (_services, { path }, { browser }) => {
+    await browser.goto(path)
+    return { url: browser.page.url() }
+  },
+  default: async ({ rpc }) => ({ url: (await rpc.invoke('getCart', {})).url }),
+})
 ```
 
 - Install `@pikku/playwright` and `@playwright/test`, and import `@pikku/playwright` once (`import type {} from '@pikku/playwright'`) so `browser.page` is a typed Playwright `Page`. Without it you still get the structural `goto`/`screenshot` handle.
@@ -535,19 +543,19 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --no-browser --exclud
 
 `run` takes the environment as a **required positional** — the key from `environments`. Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
 
-| Flag                    | Effect                                                                                  |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| `--flows` / `-f`        | Comma-separated scenario names                                                          |
-| `--features`            | Comma-separated feature ids                                                             |
-| `--tags` / `-t`         | Match-any tag filter                                                                    |
-| `--exclude-tags`        | Hold tags back — unless the flow is named directly with `--flows`                       |
-| `--run <surface>`       | `default` (the default), `browser`, or `cli`                                            |
-| `--no-browser`          | Shorthand for `--run default`; scenarios with browser steps report as **skipped**       |
-| `--strict`              | Fail, rather than pass, a `then` with no witness on the run's surface                   |
-| `--spawn` / `--keep-alive` | Start `pikku dev` on the environment's apiUrl for the run; optionally leave it up     |
-| `--api-url` / `--app-url` | Override the environment's URLs — for a target that only exists at run time            |
-| `--trace`               | Keep every stack frame on failure (default shows only the project's own)                |
-| `--coverage`            | Reset/snapshot server coverage per scenario                                             |
+| Flag                       | Effect                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `--flows` / `-f`           | Comma-separated scenario names                                                    |
+| `--features`               | Comma-separated feature ids                                                       |
+| `--tags` / `-t`            | Match-any tag filter                                                              |
+| `--exclude-tags`           | Hold tags back — unless the flow is named directly with `--flows`                 |
+| `--run <surface>`          | `default` (the default), `browser`, or `cli`                                      |
+| `--no-browser`             | Shorthand for `--run default`; scenarios with browser steps report as **skipped** |
+| `--strict`                 | Fail, rather than pass, a `then` with no witness on the run's surface             |
+| `--spawn` / `--keep-alive` | Start `pikku dev` on the environment's apiUrl for the run; optionally leave it up |
+| `--api-url` / `--app-url`  | Override the environment's URLs — for a target that only exists at run time       |
+| `--trace`                  | Keep every stack frame on failure (default shows only the project's own)          |
+| `--coverage`               | Reset/snapshot server coverage per scenario                                       |
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`. A scenario inside a feature is named `<Feature> › <scenario> <data>`.
 
@@ -640,7 +648,7 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
 | A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
 | A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                             |
-| A step with a `func:` instead of a surface binding   | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.             |
+| A step with a `func:` instead of a surface binding  | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.             |
 | `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                   |
 | Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
 

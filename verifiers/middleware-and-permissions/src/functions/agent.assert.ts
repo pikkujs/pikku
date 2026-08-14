@@ -1,16 +1,16 @@
-import { streamAIAgent, runAIAgent } from '@pikku/core/ai-agent'
-import type { AIStreamEvent, AIStreamChannel } from '@pikku/core/ai-agent'
+import { streamAgent, runAgent } from '@pikku/core/agent'
+import type { AgentStreamEvent, AgentStreamChannel } from '@pikku/core/agent'
 import type {
-  AIAgentRunnerService,
-  AIAgentRunnerParams,
-  AIAgentStepResult,
-  AIRunStateService,
+  AgentRunnerService,
+  AgentRunnerParams,
+  AgentStepResult,
+  AgentRunStateService,
   CreateRunInput,
   SaveScoreInput,
-  AIStorageService,
+  AgentStorageService,
 } from '@pikku/core/services'
-import type { AgentRunState, AIThread, AIMessage } from '@pikku/core/ai-agent'
-import type { AIRunScore } from '@pikku/core/ai-scorer'
+import type { AgentRunState, AgentThread, AgentMessage } from '@pikku/core/agent'
+import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import {
   assertMiddlewareAndPermissions,
   type ExpectedEvent,
@@ -19,11 +19,11 @@ import { randomUUID } from 'crypto'
 import { pikkuState } from '@pikku/core/ecosystem'
 import { unsupportedChannelRemote } from '@pikku/core/channel'
 
-class MockAIAgentRunner implements AIAgentRunnerService {
+class MockAgentRunner implements AgentRunnerService {
   async stream(
-    _params: AIAgentRunnerParams,
-    channel: AIStreamChannel
-  ): Promise<AIAgentStepResult> {
+    _params: AgentRunnerParams,
+    channel: AgentStreamChannel
+  ): Promise<AgentStepResult> {
     channel.send({ type: 'text-delta', text: 'Hello' })
     channel.send({ type: 'text-delta', text: ' world' })
     channel.send({
@@ -40,7 +40,7 @@ class MockAIAgentRunner implements AIAgentRunnerService {
     }
   }
 
-  async run(_params: AIAgentRunnerParams): Promise<AIAgentStepResult> {
+  async run(_params: AgentRunnerParams): Promise<AgentStepResult> {
     return {
       text: 'Hello world',
       toolCalls: [],
@@ -51,7 +51,7 @@ class MockAIAgentRunner implements AIAgentRunnerService {
   }
 }
 
-class MockAIRunState implements AIRunStateService {
+class MockAgentRunState implements AgentRunStateService {
   async createRun(_run: CreateRunInput): Promise<string> {
     return `run-${randomUUID()}`
   }
@@ -75,12 +75,12 @@ class MockAIRunState implements AIRunStateService {
     return null
   }
   async saveScore(_score: SaveScoreInput): Promise<void> {}
-  async getScores(_runId: string): Promise<AIRunScore[]> {
+  async getScores(_runId: string): Promise<AgentRunScore[]> {
     return []
   }
 }
 
-class MockAIStorage implements AIStorageService {
+class MockAgentStorage implements AgentStorageService {
   /**
    * Threads this double has actually been asked to create.
    *
@@ -89,13 +89,13 @@ class MockAIStorage implements AIStorageService {
    * forges an owner mismatch now that it is enforced. A double that reports an
    * owner nobody set cannot exercise an ownership rule.
    */
-  private readonly threads = new Map<string, AIThread>()
+  private readonly threads = new Map<string, AgentThread>()
 
   async createThread(
     resourceId: string,
     options?: { threadId?: string }
-  ): Promise<AIThread> {
-    const thread: AIThread = {
+  ): Promise<AgentThread> {
+    const thread: AgentThread = {
       id: options?.threadId ?? randomUUID(),
       resourceId,
       createdAt: new Date(),
@@ -104,27 +104,27 @@ class MockAIStorage implements AIStorageService {
     this.threads.set(thread.id, thread)
     return thread
   }
-  async getThread(threadId: string): Promise<AIThread> {
+  async getThread(threadId: string): Promise<AgentThread> {
     const stored = this.threads.get(threadId)
     if (!stored) {
       // How a real store signals "no such thread": the interface is not
-      // nullable, and the caller in ai-agent-prepare wraps this in a try/catch
+      // nullable, and the caller in agent-prepare wraps this in a try/catch
       // and creates the thread instead. Answering with an invented thread made
       // every first turn look like someone else's.
       throw new Error(`No thread found for ${threadId}`)
     }
     return stored
   }
-  async getThreads(_resourceId: string): Promise<AIThread[]> {
+  async getThreads(_resourceId: string): Promise<AgentThread[]> {
     return []
   }
   async deleteThread(_threadId: string): Promise<void> {}
-  async getMessages(_threadId: string): Promise<AIMessage[]> {
+  async getMessages(_threadId: string): Promise<AgentMessage[]> {
     return []
   }
   async saveMessages(
     _threadId: string,
-    _messages: AIMessage[]
+    _messages: AgentMessage[]
   ): Promise<void> {}
   async getWorkingMemory(): Promise<Record<string, unknown> | null> {
     return null
@@ -136,25 +136,25 @@ export async function testAgentStreamWiring(
   expected: ExpectedEvent[],
   singletonServices: any
 ): Promise<boolean> {
-  console.log('\n\nTest: Agent stream with AI middleware')
+  console.log('\n\nTest: Agent stream with agent middleware')
   console.log('─────────────────────────')
 
   const services = {
     ...singletonServices,
-    aiAgentRunner: new MockAIAgentRunner(),
-    aiRunState: new MockAIRunState(),
-    aiStorage: new MockAIStorage(),
+    agentRunner: new MockAgentRunner(),
+    agentRunState: new MockAgentRunState(),
+    agentStorage: new MockAgentStorage(),
   }
 
-  const events: AIStreamEvent[] = []
+  const events: AgentStreamEvent[] = []
   let agentChannelState: unknown
-  const channel: AIStreamChannel = {
+  const channel: AgentStreamChannel = {
     channelId: 'test-channel',
     openingData: undefined,
     state: 'open',
     close: () => {},
     sendBinary: () => {},
-    send: (event: AIStreamEvent) => {
+    send: (event: AgentStreamEvent) => {
       events.push(event)
     },
     setState: (s) => {
@@ -172,7 +172,7 @@ export async function testAgentStreamWiring(
   return await assertMiddlewareAndPermissions(
     expected,
     async () => {
-      await streamAIAgent(
+      await streamAgent(
         'testAgent',
         {
           message: 'hello',
@@ -196,9 +196,9 @@ export async function testAgentRunWiring(
 
   const services = {
     ...singletonServices,
-    aiAgentRunner: new MockAIAgentRunner(),
-    aiRunState: new MockAIRunState(),
-    aiStorage: new MockAIStorage(),
+    agentRunner: new MockAgentRunner(),
+    agentRunState: new MockAgentRunState(),
+    agentStorage: new MockAgentStorage(),
   }
 
   pikkuState(null, 'package', 'singletonServices', services)
@@ -206,7 +206,7 @@ export async function testAgentRunWiring(
   return await assertMiddlewareAndPermissions(
     expected,
     async () => {
-      await runAIAgent(
+      await runAgent(
         'testAgent',
         {
           message: 'hello',

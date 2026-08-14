@@ -329,7 +329,7 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
   input: ExecuteVirtualUserRunInput,
   output: ExecuteVirtualUserRunOutput,
   func: async (
-    { virtualUserRunStore, metaService, aiAgentRunner, variables, logger },
+    { virtualUserRunStore, metaService, agentRunner, variables, logger },
     { runId, persona: personaId, disposition, goals, memory, budget, seed }
   ) => {
     if (!virtualUserRunStore) {
@@ -339,8 +339,8 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
       if (!metaService) {
         throw new Error('metaService is not wired — there is no catalogue to derive')
       }
-      if (!aiAgentRunner) {
-        throw new Error('aiAgentRunner is not wired — there is nothing to think with')
+      if (!agentRunner) {
+        throw new Error('agentRunner is not wired — there is nothing to think with')
       }
 
       const apiUrl = await variables.get(API_URL_VARIABLE)
@@ -408,10 +408,10 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
           model,
           agents: agents.map((agent) => agent.name),
         }),
-        // \`AIAgentRunnerService.run\` IS the engine's \`ActorLLM\` — same params,
+        // \`AgentRunnerService.run\` IS the engine's \`ActorLLM\` — same params,
         // same result — so a virtual user thinks through the same runner every
         // agent in the app does, provider quirks and all.
-        llm: (params) => aiAgentRunner.run(params),
+        llm: (params) => agentRunner.run(params),
         model,
         budget: {
           steps: budget?.steps,

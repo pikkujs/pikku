@@ -1,1 +1,1 @@
-export { VercelAIAgentRunner } from './vercel-ai-agent-runner.js'
+export { VercelAgentRunner } from './vercel-agent-runner.js'

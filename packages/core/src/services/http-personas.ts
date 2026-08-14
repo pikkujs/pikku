@@ -43,7 +43,7 @@ export interface HttpPersonasConfig {
   /**
    * Default model a persona thinks with when `converse(...)` is called without
    * an explicit `model`. Its own turns/approvals/evaluation run in-process via
-   * the configured `aiAgentRunner`.
+   * the configured `agentRunner`.
    */
   model?: string
 }
@@ -107,8 +107,8 @@ export class HttpPersona implements ScenarioPersona {
   }
 
   async converse(options: ConverseOptions): Promise<ActorFlowVerdict> {
-    const { aiAgentRunner } = getSingletonServices()
-    if (!aiAgentRunner) {
+    const { agentRunner } = getSingletonServices()
+    if (!agentRunner) {
       throw new AIProviderNotConfiguredError()
     }
     const model = options.model ?? this.config.model
@@ -129,7 +129,7 @@ export class HttpPersona implements ScenarioPersona {
       approvals: options.approvals,
       model,
       maxTurns: options.maxTurns,
-      llm: (params) => aiAgentRunner.run(params),
+      llm: (params) => agentRunner.run(params),
       target: {
         run: (message) =>
           this.agentRun(options.agent, message, threadId, resourceId),

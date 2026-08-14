@@ -86,7 +86,7 @@ export interface WorkflowVersionsTable {
   createdAt: Generated<Date>
 }
 
-export interface AIThreadsTable {
+export interface AgentThreadsTable {
   id: string
   resourceId: string
   title: string | null
@@ -95,7 +95,7 @@ export interface AIThreadsTable {
   updatedAt: Generated<Date>
 }
 
-export interface AIMessageTable {
+export interface AgentMessageTable {
   id: string
   threadId: string
   role: 'system' | 'user' | 'assistant' | 'tool'
@@ -103,7 +103,7 @@ export interface AIMessageTable {
   createdAt: Generated<Date>
 }
 
-export interface AIToolCallTable {
+export interface AgentToolCallTable {
   id: string
   threadId: string
   messageId: string
@@ -119,14 +119,14 @@ export interface AIToolCallTable {
   createdAt: Generated<Date>
 }
 
-export interface AIWorkingMemoryTable {
+export interface AgentWorkingMemoryTable {
   id: string
   scope: string
   data: string
   updatedAt: Generated<Date>
 }
 
-export interface AIRunTable {
+export interface AgentRunTable {
   runId: Generated<string>
   agentName: string
   threadId: string
@@ -151,7 +151,7 @@ export interface AIRunTable {
   updatedAt: Generated<Date>
 }
 
-export interface AIRunScoreTable {
+export interface AgentRunScoreTable {
   id: string
   runId: string
   scorerName: string
@@ -336,12 +336,12 @@ export interface KyselyPikkuDB {
   workflowStep: WorkflowStepTable
   workflowStepHistory: WorkflowStepHistoryTable
   workflowVersions: WorkflowVersionsTable
-  aiThreads: AIThreadsTable
-  aiMessage: AIMessageTable
-  aiToolCall: AIToolCallTable
-  aiWorkingMemory: AIWorkingMemoryTable
-  aiRun: AIRunTable
-  aiRunScore: AIRunScoreTable
+  agentThreads: AgentThreadsTable
+  agentMessage: AgentMessageTable
+  agentToolCall: AgentToolCallTable
+  agentWorkingMemory: AgentWorkingMemoryTable
+  agentRun: AgentRunTable
+  agentRunScore: AgentRunScoreTable
   pikkuDeployments: PikkuDeploymentsTable
   pikkuDeploymentFunctions: PikkuDeploymentFunctionsTable
   secrets: SecretsTable

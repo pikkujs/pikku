@@ -1,6 +1,6 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
-import { voiceInput, voiceOutput } from '@pikku/core/ai-agent'
+import { voiceInput, voiceOutput } from '@pikku/core/agent'
 
 /**
  * A todo assistant you hold a spoken conversation with.
@@ -20,7 +20,7 @@ import { voiceInput, voiceOutput } from '@pikku/core/ai-agent'
  * `addTodo`/`deleteTodo` produces the prompt, and the client speaks it
  * verbatim.
  */
-export const voiceAssistantAgent = pikkuAIAgent({
+export const voiceAssistantAgent = pikkuAgent({
   name: 'voice-assistant-agent',
   description: 'Holds a spoken conversation about a todo list',
   goal: [
@@ -93,7 +93,7 @@ export const voiceAssistantAgent = pikkuAIAgent({
     // Slow on purpose: long enough that a barge-in lands mid-tool.
     ref('graph:sleep'),
   ],
-  aiMiddleware: [
+  agentMiddleware: [
     // This was Nemotron, to stop Whisper answering a pause with stock filler —
     // "Thank you.", "*sad music*" — appended to what was actually said. That
     // filler turned out to be provoked by the clip, not the model: turns were

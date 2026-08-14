@@ -50,7 +50,7 @@ const VIRTUAL_USER_FILE = /\.(virtual-user|vu)\.tsx?$/
  * are edited for opposite reasons, and a rubric buried in an agent definition
  * is one nobody reviews as a rubric.
  */
-const SCORER_DECLARATIONS = ['pikkuAIScorer', 'pikkuAIJudge'] as const
+const SCORER_DECLARATIONS = ['pikkuAgentScorer', 'pikkuAgentJudge'] as const
 
 const SCORER_FILE = /\.scorers?\.tsx?$/
 

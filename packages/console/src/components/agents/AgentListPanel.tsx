@@ -49,7 +49,7 @@ export const AgentListPanel: React.FC<AgentListPanelProps> = ({
       emptyHero={emptyHero}
       emptyTitle={m.agents_empty_title()}
       emptyDescription={m.agents_empty_description()}
-      docsHref="https://pikku.dev/docs/wiring/ai-agents"
+      docsHref="https://pikku.dev/docs/wiring/agents"
       metricSlot={metricSlot}
     />
   )

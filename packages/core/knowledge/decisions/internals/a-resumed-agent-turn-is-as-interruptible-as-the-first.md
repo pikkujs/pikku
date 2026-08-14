@@ -2,7 +2,7 @@
 type: decision
 title: A resumed turn is as interruptible as the first one
 description: It is the same person listening to the same voice, and after an approval it is where most of the reply actually gets spoken
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # A resumed turn is as interruptible as the first one

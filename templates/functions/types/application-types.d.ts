@@ -8,9 +8,9 @@ import type { EventHubService } from '@pikku/core/channel'
 import type { QueueService } from '@pikku/core/queue'
 import type { JWTService } from '@pikku/core/services'
 import type {
-  AIStorageService,
-  AIAgentRunnerService,
-  AIRunStateService,
+  AgentStorageService,
+  AgentRunnerService,
+  AgentRunStateService,
 } from '@pikku/core/services'
 import type { EventHubTopics } from './eventhub-topics.js'
 import type { TodoStore } from '../src/services/store.service.ts'
@@ -33,9 +33,9 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   eventHub?: EventHubService<EventHubTopics>
   queueService?: QueueService
   todoStore: TodoStore
-  aiStorage?: AIStorageService
-  aiAgentRunner?: AIAgentRunnerService
-  aiRunState?: AIRunStateService
+  agentStorage?: AgentStorageService
+  agentRunner?: AgentRunnerService
+  agentRunState?: AgentRunStateService
   kysely?: Kysely<KyselyPikkuDB>
   auth: () => Promise<Awaited<ReturnType<typeof auth>>>
 }

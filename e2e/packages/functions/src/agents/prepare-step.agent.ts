@@ -1,4 +1,4 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
 
 /**
@@ -6,7 +6,7 @@ import { ref } from '#pikku/pikku-types.gen.js'
  * it in place narrows what the model is offered from that step on. Here the
  * tools are withdrawn once the first step is done.
  */
-export const prepareStepAgent = pikkuAIAgent({
+export const prepareStepAgent = pikkuAgent({
   name: 'prepare-step-agent',
   description: 'Withdraws its tools after the first step',
   goal: 'You demonstrate step-driven tool narrowing.',
@@ -26,7 +26,7 @@ export const prepareStepAgent = pikkuAIAgent({
  * call. This pins the current behaviour that the run then completes silently
  * with an empty result rather than signalling that it was short-circuited.
  */
-export const prepareStopAgent = pikkuAIAgent({
+export const prepareStopAgent = pikkuAgent({
   name: 'prepare-stop-agent',
   description: 'Stops before the first step ever runs',
   goal: 'You stop before doing anything.',

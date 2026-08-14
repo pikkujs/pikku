@@ -30,7 +30,7 @@ import type {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '../types/core.types.js'
-import type { AIAgentMeta } from '../wirings/ai-agent/ai-agent.types.js'
+import type { AgentsMeta } from '../wirings/agent/agent.types.js'
 import type { GatewaysMeta } from '../wirings/gateway/gateway.types.js'
 
 export type {
@@ -39,8 +39,8 @@ export type {
   MiddlewareMetadata as MiddlewareMeta,
   PermissionMetadata as PermissionMeta,
 }
-export type AgentsMeta = AIAgentMeta
-export type AgentMeta = AIAgentMeta[string]
+export type { AgentsMeta }
+export type AgentMeta = AgentsMeta[string]
 
 export interface MCPMeta {
   resources: MCPResourceMeta

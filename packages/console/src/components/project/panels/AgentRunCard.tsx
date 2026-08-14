@@ -38,9 +38,10 @@ const relativeTime = (iso?: string): string => {
 export const AgentRunCard: React.FC<AgentRunCardProps> = ({ run }) => {
   useLocale()
   const { data: scores } = useAgentRunScores(run.runId)
-  const grades = (scores as
-    | { scorerName: string; score: number; reason?: string }[]
-    | undefined) ?? []
+  const grades =
+    (scores as
+      | { scorerName: string; score: number; reason?: string }[]
+      | undefined) ?? []
 
   return (
     <Card withBorder radius="md" padding="sm" data-run-id={run.runId}>

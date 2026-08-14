@@ -42,14 +42,14 @@ export default createCloudflareHandler(
 )
 ```
 
-| Factory | For |
-| --- | --- |
-| `createCloudflareHandler(factories, handlerTypes)` | combined `fetch`/`queue`/`scheduled` |
-| `createCloudflareWorkerHandler(factories)` | HTTP / agent / RPC / workflow-orchestrator units |
-| `createCloudflareCronHandler(factories)` | cron units |
-| `createCloudflareQueueHandler(factories)` | queue-consumer and workflow-step units |
-| `createCloudflareMCPHandler(factories)` | MCP units (same HTTP transport) |
-| `createCloudflareWebSocketHandler(factories)` | channel units, delegating to the DO |
+| Factory                                            | For                                              |
+| -------------------------------------------------- | ------------------------------------------------ |
+| `createCloudflareHandler(factories, handlerTypes)` | combined `fetch`/`queue`/`scheduled`             |
+| `createCloudflareWorkerHandler(factories)`         | HTTP / agent / RPC / workflow-orchestrator units |
+| `createCloudflareCronHandler(factories)`           | cron units                                       |
+| `createCloudflareQueueHandler(factories)`          | queue-consumer and workflow-step units           |
+| `createCloudflareMCPHandler(factories)`            | MCP units (same HTTP transport)                  |
+| `createCloudflareWebSocketHandler(factories)`      | channel units, delegating to the DO              |
 
 `factories` is `{ createConfig, createSingletonServices, createPlatformServices? }`.
 
@@ -71,7 +71,7 @@ const services = await setupServices(env, {
 **Do not hand-roll this.** Beyond building `LocalVariablesService` /
 `LocalSecretService` and caching the result, it calls `setSingletonServices()` —
 and the core runners (`fetchData`, `runQueueJob`, `runScheduled`) resolve
-services through that global slot, *not* through the value you were returned. A
+services through that global slot, _not_ through the value you were returned. A
 setup function that only returns the services leaves every request throwing
 "Singleton services not initialized" as a CF `1101`. It also stashes the env via
 `setCloudflareEnv`, which `getCloudflareEnv()` reads for bindings.

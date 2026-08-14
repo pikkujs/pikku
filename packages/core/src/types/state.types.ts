@@ -25,14 +25,11 @@ import type {
   CoreMCPPrompt,
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
+import type { CoreAgent, AgentsMeta } from '../wirings/agent/agent.types.js'
 import type {
-  CoreAIAgent,
-  AIAgentMeta,
-} from '../wirings/ai-agent/ai-agent.types.js'
-import type {
-  PikkuAIScorer,
+  PikkuAgentScorer,
   ScorerMeta,
-} from '../wirings/ai-scorer/ai-scorer.types.js'
+} from '../wirings/agent-scorer/agent-scorer.types.js'
 import type {
   CoreGateway,
   GatewaysMeta,
@@ -163,9 +160,9 @@ export interface PikkuPackageState {
     promptsMeta: MCPPromptMeta
   }
   agent: {
-    agents: Map<string, CoreAIAgent>
-    agentsMeta: AIAgentMeta
-    scorers: Map<string, PikkuAIScorer>
+    agents: Map<string, CoreAgent>
+    agentsMeta: AgentsMeta
+    scorers: Map<string, PikkuAgentScorer>
     scorersMeta: ScorerMeta
     /** Alias -> `provider/model`, from the `models` table in pikku.config.json. */
     modelAliases: Record<string, string>

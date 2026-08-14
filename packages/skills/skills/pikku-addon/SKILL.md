@@ -320,10 +320,10 @@ wireHTTPRoutes({ basePath: '/api', routes: { todos: todoRoutes } })
 ### Use in AI Agents
 
 ```typescript
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku'
 
-export const todoAgent = pikkuAIAgent({
+export const todoAgent = pikkuAgent({
   name: 'todo-agent',
   description: 'Manages a todo list',
   goal: 'You help users manage their todos.',
@@ -337,4 +337,4 @@ export const todoAgent = pikkuAIAgent({
 })
 ```
 
-See `pikku-ai-agent` — an addon function is just another `ref()` in `tools`.
+See `pikku-agent` — an addon function is just another `ref()` in `tools`.

@@ -2,12 +2,12 @@
 type: decision
 title: A wrapped agent-stream send must return the inner send's promise
 description: Middleware runs asynchronously, so dropping the returned promise turns every awaited channel.send upstream into a no-op
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # A wrapped agent-stream send must return the inner send's promise
 
-`streamAIAgent` wraps the caller's channel so every event passes through the
+`streamAgent` wraps the caller's channel so every event passes through the
 stream middleware. That wrapper's `send` returns whatever the inner `send`
 returns, and it must: the middleware chain is asynchronous, so a wrapper that
 calls the inner `send` and returns `undefined` resolves immediately while the

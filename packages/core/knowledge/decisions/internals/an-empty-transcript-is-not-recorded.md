@@ -2,7 +2,7 @@
 type: decision
 title: A transcript is recorded only when something was actually heard
 description: Recording an empty string sends a transcript event saying the user said nothing, which renders as an empty bubble rather than a pending one
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # A transcript is recorded only when something was actually heard

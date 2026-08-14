@@ -334,10 +334,10 @@ test('graph-with-agent: graph references the agent by its registered name (#910)
   // the agent is exported as `<slug>Agent` — the AgentMap key
   assert.match(
     agent,
-    new RegExp(`export const ${parsed.slug}Agent = pikkuAIAgent`)
+    new RegExp(`export const ${parsed.slug}Agent = pikkuAgent`)
   )
   // the graph node for the agent references that exported const — an agent is a
-  // native graph node (#910), not a stub rpc like "agent__aiAgent"
+  // native graph node (#910), not a stub rpc like "agent__agent"
   const agentNodeId = parsed.agentNode!.nodeId
   assert.match(graph, new RegExp(`${agentNodeId}: "${parsed.slug}Agent"`))
   assert.doesNotMatch(graph, /agent__/)
@@ -412,7 +412,7 @@ test('agent + tool workflow → agent-only, no graph', () => {
 
   const agent = files['supportAssistant/supportAssistant.agent.ts']
   assert.ok(agent, 'agent file emitted')
-  assert.match(agent, /pikkuAIAgent\(/)
+  assert.match(agent, /pikkuAgent\(/)
   assert.match(agent, /goal: "You are a helpful support assistant/)
   // the ai_tool node is a ref in tools[], not a graph node
   assert.match(agent, /ref\("httpRequestTool__lookupOrder"\)/)
@@ -632,7 +632,7 @@ test('rpcPrefix namespaces stub rpcs (tool refs + stub files) but not workflow/a
   const agent = files['supportAssistant/supportAssistant.agent.ts']
   assert.ok(agent)
   // the agent const name (a workflow/agent name) is NOT prefixed
-  assert.match(agent, /export const supportAssistantAgent = pikkuAIAgent/)
+  assert.match(agent, /export const supportAssistantAgent = pikkuAgent/)
   // the tool ref + its stub file ARE prefixed
   assert.match(agent, /ref\("w0007_httpRequestTool__lookupOrder"\)/)
   assert.ok(
@@ -1122,14 +1122,14 @@ test('collection source → single per-item consumer lowers to a graph:fanout no
   assert.doesNotMatch(graph, /ref\("read", "url"\)/)
 })
 
-test('a lone chainLlm node maps to a tools-less pikkuAIAgent (goal from prompt, model from sub-node)', () => {
+test('a lone chainLlm node maps to a tools-less pikkuAgent (goal from prompt, model from sub-node)', () => {
   const parsed = parseN8n(loadFixture('ai-chain-llm.json'))
   const { files } = generateWorkflowFromN8n(parsed)
 
   const agent = files['themeExtractor/themeExtractor.agent.ts']
   assert.ok(agent, 'agent file emitted')
 
-  assert.match(agent, /pikkuAIAgent\(\{/)
+  assert.match(agent, /pikkuAgent\(\{/)
   // goal carries the chain's prompt text
   assert.match(agent, /goal: "Extract a list of themes from this/)
   // model mapped from the connected lmChatOpenAi sub-node
@@ -1191,11 +1191,11 @@ test('multi-chain pipeline → graph wiring N distinct tools-less agents (one .a
   assert.match(graph, /draft: \{[^}]*next: "polish"/s)
 
   // each agent has its own name, prompt, and model (no collision)
-  assert.match(draft, /export const twoStepChain_draftAgent = pikkuAIAgent/)
+  assert.match(draft, /export const twoStepChain_draftAgent = pikkuAgent/)
   assert.match(draft, /name: "twoStepChain_draft"/)
   assert.match(draft, /goal: "Draft a reply to: \{\{ \$json\.msg \}\}"/)
   assert.match(draft, /model: "openai\/gpt-4o-mini"/)
-  assert.match(polish, /export const twoStepChain_polishAgent = pikkuAIAgent/)
+  assert.match(polish, /export const twoStepChain_polishAgent = pikkuAgent/)
   assert.match(polish, /model: "anthropic\/claude-3-5-sonnet"/)
 
   // no throwing chain stub
@@ -1227,14 +1227,14 @@ test('chain + real Agent → two agents; tools attributed to the Agent, none to 
   assert.match(replyAgent, /tools: \[\s*ref\("toolHttpRequest__search"\)/)
 })
 
-test('openAi chat node → agent-only pikkuAIAgent with inline model + goal', () => {
+test('openAi chat node → agent-only pikkuAgent with inline model + goal', () => {
   const parsed = parseN8n(loadFixture('openai-chat-agent.json'))
   assert.equal(parsed.shape, 'agent-only')
 
   const { files } = generateWorkflowFromN8n(parsed)
   const agent = files['summarizer/summarizer.agent.ts']
   assert.ok(agent, 'agent file emitted')
-  assert.match(agent, /pikkuAIAgent\(/)
+  assert.match(agent, /pikkuAgent\(/)
   // inline model read from the node's own `model` param (not a sub-node)
   assert.match(agent, /model: "openai\/gpt-4o"/)
   assert.match(agent, /temperature: 0\.8/)

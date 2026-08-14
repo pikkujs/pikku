@@ -1,6 +1,6 @@
 import {
-  pikkuAIScorer,
-  pikkuAIJudge,
+  pikkuAgentScorer,
+  pikkuAgentJudge,
 } from '#pikku/agent/pikku-agent-types.gen.js'
 
 /**
@@ -12,7 +12,7 @@ import {
  * about pikku. `helpfulness` below is the judge, and it is tagged `ai-live`
  * wherever a scenario reaches it.
  */
-export const brevity = pikkuAIScorer({
+export const brevity = pikkuAgentScorer({
   name: 'brevity',
   description: 'A short answer scores higher than a rambling one',
   sampleRate: 0.25,
@@ -22,7 +22,7 @@ export const brevity = pikkuAIScorer({
   }),
 })
 
-export const restraint = pikkuAIScorer({
+export const restraint = pikkuAgentScorer({
   name: 'restraint',
   description: 'Reaching for a tool the question did not need scores lower',
   score: ({ toolCalls }) => ({
@@ -36,7 +36,7 @@ export const restraint = pikkuAIScorer({
  * filters `requiresReference` scorers out, and a scenario is the only caller
  * that can supply the `reference` it needs.
  */
-export const matchesAnswerKey = pikkuAIScorer({
+export const matchesAnswerKey = pikkuAgentScorer({
   name: 'matchesAnswerKey',
   description: 'The answer is the one the scenario expected',
   requiresReference: true,
@@ -56,7 +56,7 @@ export const matchesAnswerKey = pikkuAIScorer({
  * unrelated agent's model-call count. `pikkuScenarioGradeRun` ignores the
  * sample rate, so the `ai-live` scenario that wants this judge still reaches it.
  */
-export const helpfulness = pikkuAIJudge({
+export const helpfulness = pikkuAgentJudge({
   name: 'helpfulness',
   description: 'Does the answer actually help the person who asked',
   model: 'openai/o4-mini',

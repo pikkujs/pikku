@@ -2,7 +2,7 @@
 type: decision
 title: Speech synthesis picks a voice per sentence but announces a limitation once
 description: A bilingual reply should speak the half it can, and repeating the notice for every sentence would bury the reply itself
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # Speech synthesis picks a voice per sentence, and warns once per reply

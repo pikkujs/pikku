@@ -9,5 +9,5 @@ export { RedisSecretService } from './redis-secret-service.js'
 export type {
   AgentRunService,
   AgentRunRow,
-} from '@pikku/core/ecosystem/ai-agent'
+} from '@pikku/core/ecosystem/agent'
 export { RedisSessionStore } from './redis-session-store.js'

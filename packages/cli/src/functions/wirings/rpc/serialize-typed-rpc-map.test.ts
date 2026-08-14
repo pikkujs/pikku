@@ -91,10 +91,10 @@ describe('serializeTypedRPCMap', () => {
 
     assert.match(
       result,
-      /import type \{ AIAgentInput \} from '@pikku\/core\/ecosystem\/ai-agent'/
+      /import type \{ AgentInput \} from '@pikku\/core\/ecosystem\/agent'/
     )
     // A second declaration drops every optional field the runner honours —
     // model, temperature, attachments, context — from the call site.
-    assert.doesNotMatch(result, /interface AIAgentInput/)
+    assert.doesNotMatch(result, /interface AgentInput/)
   })
 })

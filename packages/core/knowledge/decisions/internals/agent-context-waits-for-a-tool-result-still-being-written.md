@@ -2,7 +2,7 @@
 type: decision
 title: Loading agent context waits for a tool result that may still be landing
 description: An interrupted run's tool can still be writing to the thread, and in voice the next turn arrives within seconds — soon enough to load context missing what it is about to be asked about
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # Loading agent context waits for a tool result that may still be landing

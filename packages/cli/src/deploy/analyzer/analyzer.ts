@@ -242,8 +242,8 @@ export function analyzeDeployment(
 
     // Agent needs AI services
     const agentServices: ServiceRequirement[] = [
-      { capability: 'ai-model', sourceServiceName: 'aiAgentRunner' },
-      { capability: 'ai-storage', sourceServiceName: 'aiStorage' },
+      { capability: 'ai-model', sourceServiceName: 'agentRunner' },
+      { capability: 'ai-storage', sourceServiceName: 'agentStorage' },
     ]
 
     // Concrete routes for this agent via catch-all
@@ -284,7 +284,7 @@ export function analyzeDeployment(
     agents.push({
       // The registry KEY (export name, e.g. `kanbanAgent`), NOT the
       // human-facing `agentMeta.name` (e.g. `kanban-agent`). Routes,
-      // `addAIAgent(...)`, and the inspector-state name filter all key off
+      // `addAgent(...)`, and the inspector-state name filter all key off
       // this identifier — per-unit codegen passes it to `--names`, and the
       // filter matches it against the `agentsMeta` key. Using the human name
       // here makes the filter prune the agent, so its registration never gets
@@ -730,9 +730,9 @@ const SERVICE_CAPABILITY_MAP: Record<string, ServiceCapability> = {
   content: 'object-storage',
   storage: 'object-storage',
   queueService: 'queue',
-  aiAgentRunner: 'ai-model',
+  agentRunner: 'ai-model',
   ai: 'ai-model',
-  aiStorage: 'ai-storage',
+  agentStorage: 'ai-storage',
   workflowService: 'workflow-state',
   workflow: 'workflow-state',
   credentialService: 'credential-store',

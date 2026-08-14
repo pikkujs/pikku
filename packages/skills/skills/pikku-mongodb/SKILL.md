@@ -49,17 +49,17 @@ await mongo.close()
 
 ### Available Services
 
-| Service                     | Interface                             | Purpose                                        |
-| --------------------------- | ------------------------------------- | ---------------------------------------------- |
-| `MongoDBChannelStore`       | `ChannelStore`                        | WebSocket channel state persistence            |
-| `MongoDBEventHubStore`      | `EventHubStore`                       | Event hub state persistence                    |
-| `MongoDBWorkflowService`    | `PikkuWorkflowService`                | Workflow definition storage                    |
-| `MongoDBWorkflowRunService` | `WorkflowRunService`                  | Workflow execution tracking                    |
-| `MongoDBDeploymentService`  | `DeploymentService`                   | Deployment state management                    |
-| `MongoDBAIStorageService`   | `AIStorageService, AIRunStateService` | AI conversation/run storage                    |
-| `MongoDBAgentRunService`    | `AgentRunService`                     | Agent execution tracking                       |
-| `MongoDBSecretService`      | `SecretService`                       | Encrypted secret storage (envelope encryption) |
-| `MongoDBSessionStore`       | `SessionStore`                        | Persisted user sessions                        |
+| Service                      | Interface                                   | Purpose                                        |
+| ---------------------------- | ------------------------------------------- | ---------------------------------------------- |
+| `MongoDBChannelStore`        | `ChannelStore`                              | WebSocket channel state persistence            |
+| `MongoDBEventHubStore`       | `EventHubStore`                             | Event hub state persistence                    |
+| `MongoDBWorkflowService`     | `PikkuWorkflowService`                      | Workflow definition storage                    |
+| `MongoDBWorkflowRunService`  | `WorkflowRunService`                        | Workflow execution tracking                    |
+| `MongoDBDeploymentService`   | `DeploymentService`                         | Deployment state management                    |
+| `MongoDBAgentStorageService` | `AgentStorageService, AgentRunStateService` | AI conversation/run storage                    |
+| `MongoDBAgentRunService`     | `AgentRunService`                           | Agent execution tracking                       |
+| `MongoDBSecretService`       | `SecretService`                             | Encrypted secret storage (envelope encryption) |
+| `MongoDBSessionStore`        | `SessionStore`                              | Persisted user sessions                        |
 
 All services take a `Db` instance in their constructor and have an `init()` method that creates collections/indexes.
 

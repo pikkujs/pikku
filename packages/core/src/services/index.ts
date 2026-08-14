@@ -20,7 +20,7 @@ export {
 } from './queue-webhook-service.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
-export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
+export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
 export type {
   ContentService,
@@ -77,19 +77,19 @@ export type {
   DeploymentInfo,
   DeploymentServiceConfig,
 } from './deployment-service.js'
-export type { AIStorageService } from './ai-storage-service.js'
+export type { AgentStorageService } from './agent-storage-service.js'
 export type {
-  AIAgentRunnerParams,
-  AIAgentRunnerResult,
-  AIAgentStepResult,
-  AIAgentRunnerService,
-} from './ai-agent-runner-service.js'
+  AgentRunnerParams,
+  AgentRunnerResult,
+  AgentStepResult,
+  AgentRunnerService,
+} from './agent-runner-service.js'
 export type { AIEmbeddingService } from './ai-embedding-service.js'
 export type {
   CreateRunInput,
   SaveScoreInput,
-  AIRunStateService,
-} from './ai-run-state-service.js'
+  AgentRunStateService,
+} from './agent-run-state-service.js'
 export type { CredentialMeta } from './typed-secret-service.js'
 export type { CredentialService } from './credential-service.js'
 export { TypedCredentialService } from './typed-credential-service.js'

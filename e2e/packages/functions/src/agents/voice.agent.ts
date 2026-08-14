@@ -1,12 +1,12 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { voiceInput } from '@pikku/core/ai-agent'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { voiceInput } from '@pikku/core/agent'
 
-export const voiceInputAgent = pikkuAIAgent({
+export const voiceInputAgent = pikkuAgent({
   name: 'voice-input-agent',
   description: 'Transcribes spoken audio attachments before answering',
   goal: 'You answer questions the user speaks aloud.',
   model: 'openai/gpt-5-mini',
-  aiMiddleware: [
+  agentMiddleware: [
     voiceInput({
       model: 'deepinfra/nvidia/Nemotron-3.5-ASR-Streaming-Multilingual-0.6b',
     }),
@@ -15,12 +15,12 @@ export const voiceInputAgent = pikkuAIAgent({
   toolChoice: 'auto',
 })
 
-export const voiceInputNoModelAgent = pikkuAIAgent({
+export const voiceInputNoModelAgent = pikkuAgent({
   name: 'voice-input-no-model-agent',
   description: 'Configures voice input without a transcription model',
   goal: 'You answer questions the user speaks aloud.',
   model: 'openai/gpt-5-mini',
-  aiMiddleware: [voiceInput({})],
+  agentMiddleware: [voiceInput({})],
   maxSteps: 3,
   toolChoice: 'auto',
 })

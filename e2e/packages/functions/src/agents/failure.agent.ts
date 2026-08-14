@@ -1,7 +1,7 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
 
-export const failureAgent = pikkuAIAgent({
+export const failureAgent = pikkuAgent({
   name: 'failure-agent',
   description: 'Exercises failure paths: forged approvals and throwing tools',
   goal: 'You demonstrate how the agent loop handles tools that misbehave.',
@@ -15,7 +15,7 @@ export const failureAgent = pikkuAIAgent({
  * References an RPC that does not exist, so a run suspends with
  * `rpc-missing` before any model call is made.
  */
-export const missingRpcAgent = pikkuAIAgent({
+export const missingRpcAgent = pikkuAgent({
   name: 'missing-rpc-agent',
   description: 'References an unresolvable RPC so its runs suspend',
   goal: 'You never get to run, because one of your tools cannot be resolved.',
@@ -26,7 +26,7 @@ export const missingRpcAgent = pikkuAIAgent({
 })
 
 /** Exhausts its one-step budget while still emitting tool calls. */
-export const budgetAgent = pikkuAIAgent({
+export const budgetAgent = pikkuAgent({
   name: 'budget-agent',
   description: 'A one-step budget, to pin what exhaustion reports',
   goal: 'You run out of steps before you finish.',

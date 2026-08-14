@@ -1350,7 +1350,7 @@ type FlattenedAgentMap = AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 
-interface AIAgentInput {
+interface AgentInput {
   message: string
   threadId: string
   resourceId: string
@@ -1378,10 +1378,10 @@ export type TypedWorkflowStatus = (
 }>
 
 type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AIAgentInput) => Promise<any>
+  ? (name: string, input: AgentInput) => Promise<any>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
-      input: AIAgentInput
+      input: AgentInput
     ) => Promise<{
       runId: string
       result: FlattenedAgentMap[Name]['output']
@@ -1391,12 +1391,12 @@ type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
 type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
   ? (
       name: string,
-      input: AIAgentInput,
+      input: AgentInput,
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
-      input: AIAgentInput,
+      input: AgentInput,
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
 

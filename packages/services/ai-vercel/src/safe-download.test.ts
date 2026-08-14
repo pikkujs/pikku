@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { safeDownload } from './safe-download.js'
-import { VercelAIAgentRunner } from './vercel-ai-agent-runner.js'
+import { VercelAgentRunner } from './vercel-agent-runner.js'
 
 /**
  * The AI SDK downloads attachment URLs *server-side* whenever the model does not
@@ -43,10 +43,10 @@ describe('safeDownload', () => {
   })
 })
 
-describe('VercelAIAgentRunner attachment host allowlist', () => {
+describe('VercelAgentRunner attachment host allowlist', () => {
   test('withApiKey carries the allowlist onto the derived runner', () => {
     const factory = (apiKey: string) => ({ openai: { apiKey } })
-    const runner = new VercelAIAgentRunner({}, factory, ['cdn.example.com'])
+    const runner = new VercelAgentRunner({}, factory, ['cdn.example.com'])
 
     const scoped = runner.withApiKey('secret-123') as unknown as {
       allowedAttachmentHosts?: string[]

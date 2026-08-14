@@ -19,6 +19,6 @@ including middleware, permissions and session handling, rather than through an
 in-process call that skips all of it. It also lets the engine be unit-tested
 against scripted targets with no server at all.
 
-**What this rules out:** calling `runAIAgent` / `streamAIAgent` directly from the
+**What this rules out:** calling `runAgent` / `streamAgent` directly from the
 conversation engine, and widening `TargetAgentDriver` with transport details
 (headers, cookies, channels) that would tie the engine to HTTP.

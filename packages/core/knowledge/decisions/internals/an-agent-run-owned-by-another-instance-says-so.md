@@ -2,12 +2,12 @@
 type: decision
 title: An interrupt for a run owned by another instance says so, rather than returning false
 description: A bare false is indistinguishable from "already finished", which is the one deployment shape the in-process registry cannot cover
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # An interrupt for a run owned by another instance says so
 
-`interruptAIAgent` resolves a run through `aiRunState`, then tries to abort it
+`interruptAgent` resolves a run through `agentRunState`, then tries to abort it
 via the in-process registry. A run still marked `running` that this process has
 no abort handle for is executing on another instance.
 
@@ -19,7 +19,7 @@ the condition instead.
 
 **What this rules out:** collapsing the two outcomes into one boolean because
 the caller "only cares whether it stopped". The caller cares a great deal about
-the difference between *stopped* and *cannot be stopped from here*.
+the difference between _stopped_ and _cannot be stopped from here_.
 
 The fix for the underlying gap is `signalRunInterrupt`, which fans the interrupt
 out over `eventHub` so every instance tries locally.

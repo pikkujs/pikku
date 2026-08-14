@@ -380,7 +380,7 @@ check(
     ? 'user_id took its type from user.id (uuid), not the text it used to declare'
     : 'user_id took its type from user.id (text)'
 )
-for (const table of ['workflow_runs', 'ai_run', 'secrets']) {
+for (const table of ['workflow_runs', 'agent_run', 'secrets']) {
   contains(runtimeSql, table, 'runtime table')
 }
 check(

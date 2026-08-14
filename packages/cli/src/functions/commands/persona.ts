@@ -21,7 +21,7 @@ import {
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolveEnvironment } from './environment.js'
-import { createDevAIAgentRunner } from './dev-ai-runner.js'
+import { createDevAgentRunner } from './dev-agent-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
 
 const dispositionNames = Object.keys(DISPOSITIONS)
@@ -168,12 +168,12 @@ export const personaRun = pikkuSessionlessFunc<
         'No model to think with — pass --model, or set scenarios.model in pikku.config.json.'
       )
     }
-    const aiAgentRunner = await createDevAIAgentRunner({
+    const agentRunner = await createDevAgentRunner({
       logger,
       projectRoot: config.rootDir,
       variables,
     })
-    if (!aiAgentRunner) {
+    if (!agentRunner) {
       throw new Error(
         'No AI provider is configured. Set OPENAI_BASE_URL + OPENAI_API_KEY (or LITELLM_PROXY_URL + LITELLM_API_KEY).'
       )
@@ -248,7 +248,7 @@ export const personaRun = pikkuSessionlessFunc<
         model: resolvedModel,
         agents: agents.map((agent) => agent.name),
       }),
-      llm: (params) => aiAgentRunner.run(params),
+      llm: (params) => agentRunner.run(params),
       model: resolvedModel,
       seed: seed ? Number(seed) : undefined,
       allowApprovalRequired: allowApproval ?? false,

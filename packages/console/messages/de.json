@@ -325,7 +325,7 @@
   "scorers_description": "Wie abgeschlossene Agentenläufe bewertet werden",
   "scorers_search_placeholder": "Scorer durchsuchen...",
   "scorers_empty_title": "Keine Scorer deklariert",
-  "scorers_empty_description": "Deklariere einen mit pikkuAIScorer oder pikkuAIJudge und nenne ihn dann an einem Agenten, um dessen Läufe zu bewerten.",
+  "scorers_empty_description": "Deklariere einen mit pikkuAgentScorer oder pikkuAgentJudge und nenne ihn dann an einem Agenten, um dessen Läufe zu bewerten.",
   "scorers_column_scorer": "Scorer",
   "scorers_column_lane": "Spur",
   "scorers_column_sampling": "Stichprobe",

@@ -2,9 +2,9 @@
 name: pikku-ai-vercel
 description: >-
   Use when setting up AI agent execution with the Vercel AI SDK in a Pikku app. Covers
-  VercelAIAgentRunner for streaming and non-streaming AI agent steps. TRIGGER when: code uses
-  VercelAIAgentRunner, user asks about Vercel AI SDK integration, AI agent runners, or
-  @pikku/ai-vercel. DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-ai-agent) or
+  VercelAgentRunner for streaming and non-streaming AI agent steps. TRIGGER when: code uses
+  VercelAgentRunner, user asks about Vercel AI SDK integration, AI agent runners, or
+  @pikku/ai-vercel. DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-agent) or
   voice I/O (use pikku-ai-voice).
 installGroups: [core]
 ---
@@ -21,7 +21,7 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-`@pikku/ai-vercel` provides an AI agent runner backed by the [Vercel AI SDK](https://sdk.vercel.ai/). Implements `AIAgentRunnerService` from `@pikku/core`.
+`@pikku/ai-vercel` provides an AI agent runner backed by the [Vercel AI SDK](https://sdk.vercel.ai/). Implements `AgentRunnerService` from `@pikku/core`.
 
 ## Installation
 
@@ -31,12 +31,12 @@ yarn add @pikku/ai-vercel ai @ai-sdk/openai  # or any AI SDK provider
 
 ## API Reference
 
-### `VercelAIAgentRunner`
+### `VercelAgentRunner`
 
 ```typescript
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { VercelAgentRunner } from '@pikku/ai-vercel'
 
-const runner = new VercelAIAgentRunner(
+const runner = new VercelAgentRunner(
   providers: Record<string, any>,                    // provider name → AI SDK provider
   providerFactory?: (apiKey: string) => Record<string, any>,
   allowedAttachmentHosts?: string[]
@@ -45,8 +45,8 @@ const runner = new VercelAIAgentRunner(
 
 **Methods:**
 
-- `stream(params: AIAgentRunnerParams, channel: AIStreamChannel): Promise<AIAgentStepResult>` — Stream AI responses with tool calls
-- `run(params: AIAgentRunnerParams): Promise<AIAgentStepResult>` — Execute a single AI step (non-streaming)
+- `stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>` — Stream AI responses with tool calls
+- `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming)
 - `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see `pikku-ai-voice`
 - `generateImage`, `embed`, `embedMany`, `rerank` — the remaining AI SDK surfaces
 - `withApiKey(apiKey)` — returns a **new** runner built from `providerFactory`; returns `this` unchanged when no factory was supplied or the key is blank. This is the per-user-credential path
@@ -75,7 +75,7 @@ gateway-routed providers after construction.
 ### Basic Setup
 
 ```typescript
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { VercelAgentRunner } from '@pikku/ai-vercel'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 
@@ -86,19 +86,19 @@ const createSingletonServices = pikkuServices(async (config, { secrets }) => {
       apiKey: (await secrets.getSecret('OPENAI_API_KEY')).reveal(),
     })
   }
-  return { config, aiAgentRunner: new VercelAIAgentRunner(providers) }
+  return { config, agentRunner: new VercelAgentRunner(providers) }
 })
 ```
 
-The service key is **`aiAgentRunner`** — that is the name the agent wiring looks
+The service key is **`agentRunner`** — that is the name the agent wiring looks
 up. Registering it as `aiRunner` leaves every agent unable to call a model.
 
 ### With an agent
 
 ```typescript
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 
-export const assistant = pikkuAIAgent({
+export const assistant = pikkuAgent({
   name: 'assistant',
   description: 'Answers questions',
   goal: 'You are a helpful assistant.',
@@ -106,16 +106,16 @@ export const assistant = pikkuAIAgent({
 })
 ```
 
-There is no `wireAIAgent` — agents are declared with `pikkuAIAgent` from the
-generated agent types. See `pikku-ai-agent` for the full config.
+There is no `wireAgent` — agents are declared with `pikkuAgent` from the
+generated agent types. See `pikku-agent` for the full config.
 
 ### Testing without a real provider
 
-Replacing the *provider* rather than the runner keeps every code path under test
+Replacing the _provider_ rather than the runner keeps every code path under test
 real — tool loop, streaming, memory, approvals — and only scripts the replies.
 Sealing it with `'*'` means no model string, including ones added later, can
 reach a live endpoint:
 
 ```typescript
-new VercelAIAgentRunner({ '*': createMockLlmProvider() })
+new VercelAgentRunner({ '*': createMockLlmProvider() })
 ```

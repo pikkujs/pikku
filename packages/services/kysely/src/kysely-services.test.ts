@@ -13,8 +13,8 @@ import { KyselyEventHubStore } from './kysely-eventhub-store.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { KyselyDeploymentService } from './kysely-deployment-service.js'
-import { KyselyAIStorageService } from './kysely-ai-storage-service.js'
-import { KyselyAgentRunService } from './kysely-ai-agent-run-service.js'
+import { KyselyAgentStorageService } from './kysely-agent-storage-service.js'
+import { KyselyAgentRunService } from './kysely-agent-run-service.js'
 import { KyselySecretService } from './kysely-secret-service.js'
 import { KyselyCredentialService } from './kysely-credential-service.js'
 import { KyselySessionStore } from './kysely-session-store.js'
@@ -42,12 +42,12 @@ async function dropAllTables(db: Kysely<KyselyPikkuDB>): Promise<void> {
   const tables = [
     'pikku_deployment_functions',
     'pikku_deployments',
-    'ai_tool_call',
-    'ai_message',
-    'ai_run_score',
-    'ai_run',
-    'ai_working_memory',
-    'ai_threads',
+    'agent_tool_call',
+    'agent_message',
+    'agent_run_score',
+    'agent_run',
+    'agent_working_memory',
+    'agent_threads',
     'channel_subscriptions',
     'channels',
     'workflow_step_history',
@@ -97,8 +97,8 @@ function registerTests(
         await s.init()
         return s
       },
-      aiStorageService: async () => {
-        const s = new KyselyAIStorageService(getDb())
+      agentStorageService: async () => {
+        const s = new KyselyAgentStorageService(getDb())
         await s.init()
         return s
       },

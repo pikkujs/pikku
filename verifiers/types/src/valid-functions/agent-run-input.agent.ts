@@ -3,9 +3,9 @@
  * rather than the empty-map fallback that accepts `any`.
  */
 
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 
-export const typedAgent = pikkuAIAgent({
+export const typedAgent = pikkuAgent({
   name: 'typedAgent',
   description: 'Agent used by the rpc.agent.run type constraints.',
   goal: 'Answer the message.',

@@ -5,12 +5,12 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2581 observable things**: 826 exported names, plus
+**2580 observable things**: 825 exported names, plus
 1755 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 814 | 1753 |
+| stable | 48 | 813 | 1753 |
 | ecosystem | 40 | 12 | 2 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -21,7 +21,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services` | 126 | 34 | 162 |
 | `./workflow` | 76 | 20 | 109 |
 | `.` | 206 | 53 | 48 |
-| `./ai-agent` | 48 | 26 | 53 |
+| `./agent` | 48 | 26 | 53 |
 | `./scenario` | 42 | 25 | 33 |
 | `./channel` | 32 | 16 | 36 |
 | `./services/local-meta` | 22 | 3 | 46 |
@@ -44,7 +44,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel/local` | 3 | 2 | 5 |
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./mcp` | 20 | 5 | 0 |
-| `./ai-scorer` | 17 | 5 | 0 |
+| `./agent-scorer` | 17 | 5 | 0 |
 | `./schema` | 6 | 5 | 0 |
 | `./safe-fetch` | 6 | 4 | 0 |
 | `./dev` | 5 | 2 | 2 |
@@ -57,7 +57,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./node-host-resolver` | 2 | 1 | 0 |
 | `./secret` | 7 | 1 | 0 |
 | `./variable` | 6 | 1 | 0 |
-| `./ecosystem/ai-agent` | 28 | 1 | 0 |
+| `./ecosystem/agent` | 28 | 1 | 0 |
 | `./function` | 16 | 0 | 0 |
 | `./remote` | 1 | 0 | 0 |
 | `./node` | 3 | 0 | 0 |
@@ -67,7 +67,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/istanbul-coverage` | 1 | 0 | 0 |
 | `./services/local-content-request-handler` | 5 | 0 | 0 |
 | `./hmac` | 2 | 0 | 0 |
-| `./ecosystem/ai-scorer` | 12 | 0 | 0 |
+| `./ecosystem/agent-scorer` | 12 | 0 | 0 |
 | `./ecosystem/channel` | 14 | 0 | 0 |
 | `./ecosystem/channel/local` | 1 | 0 | 0 |
 | `./ecosystem/cli` | 12 | 0 | 0 |
@@ -120,16 +120,36 @@ export interface AbortScope {
 }
 addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], packageName?: string | null) => CorePermissionGroup | CorePikkuPermission[]
 addTagMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
-export interface AIAgentRunnerService {
-  stream(params: AIAgentRunnerParams, channel: AIStreamChannel): Promise<AIAgentStepResult>
-  run(params: AIAgentRunnerParams): Promise<AIAgentStepResult>
+export interface AgentRunnerService {
+  stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>
+  run(params: AgentRunnerParams): Promise<AgentStepResult>
   transcribe?(params: AITranscriptionParams): Promise<AITranscriptionResult>
   generateSpeech?(params: AIGenerateSpeechParams): Promise<AIGenerateSpeechResult>
   generateImage?(params: AIGenerateImageParams): Promise<AIGenerateImageResult>
   embed?(params: AIEmbedParams): Promise<AIEmbedResult>
   embedMany?(params: AIEmbedManyParams): Promise<AIEmbedManyResult>
   rerank?<VALUE extends string | Record<string, unknown>>(params: AIRerankParams<VALUE>): Promise<AIRerankResult<VALUE>>
-  withApiKey?(apiKey: string): AIAgentRunnerService
+  withApiKey?(apiKey: string): AgentRunnerService
+}
+export interface AgentRunStateService {
+  createRun(run: CreateRunInput): Promise<string>
+  updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
+  getRun(runId: string): Promise<AgentRunState | null>
+  getRunsByThread(threadId: string): Promise<AgentRunState[]>
+  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
+  saveScore(score: SaveScoreInput): Promise<void>
+  getScores(runId: string): Promise<AgentRunScore[]>
+}
+export interface AgentStorageService {
+  createThread(resourceId: string, options?: { threadId?: string; title?: string; metadata?: Record<string, unknown> }): Promise<AgentThread>
+  getThread(threadId: string): Promise<AgentThread>
+  getThreads(resourceId: string): Promise<AgentThread[]>
+  deleteThread(threadId: string): Promise<void>
+  getMessages(threadId: string, options?: { lastN?: number; cursor?: string }): Promise<AgentMessage[]>
+  saveMessages(threadId: string, messages: AgentMessage[]): Promise<void>
+  getWorkingMemory(id: string, scope: 'resource' | 'thread'): Promise<Record<string, unknown> | null>
+  saveWorkingMemory(id: string, scope: 'resource' | 'thread', data: Record<string, unknown>): Promise<void>
 }
 export interface AIEmbeddingService {
   readonly model: string
@@ -142,26 +162,6 @@ export class AIProviderAuthError extends PikkuError {
 }
 export class AIProviderNotConfiguredError extends PikkuError {
   constructor()
-}
-export interface AIRunStateService {
-  createRun(run: CreateRunInput): Promise<string>
-  updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
-  getRun(runId: string): Promise<AgentRunState | null>
-  getRunsByThread(threadId: string): Promise<AgentRunState[]>
-  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
-  findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
-  saveScore(score: SaveScoreInput): Promise<void>
-  getScores(runId: string): Promise<AIRunScore[]>
-}
-export interface AIStorageService {
-  createThread(resourceId: string, options?: { threadId?: string; title?: string; metadata?: Record<string, unknown> }): Promise<AIThread>
-  getThread(threadId: string): Promise<AIThread>
-  getThreads(resourceId: string): Promise<AIThread[]>
-  deleteThread(threadId: string): Promise<void>
-  getMessages(threadId: string, options?: { lastN?: number; cursor?: string }): Promise<AIMessage[]>
-  saveMessages(threadId: string, messages: AIMessage[]): Promise<void>
-  getWorkingMemory(id: string, scope: 'resource' | 'thread'): Promise<Record<string, unknown> | null>
-  saveWorkingMemory(id: string, scope: 'resource' | 'thread', data: Record<string, unknown>): Promise<void>
 }
 export type AnonymizeStrategy =
   | 'fake:email'
@@ -438,11 +438,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   eventHub?: EventHubService<Record<string, any>>
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
-  aiStorage?: AIStorageService
+  agentStorage?: AgentStorageService
   content?: ContentService
-  aiAgentRunner?: AIAgentRunnerService
+  agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
-  aiRunState?: AIRunStateService
+  agentRunState?: AgentRunStateService
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
@@ -696,15 +696,15 @@ export type PermissionMetadata = {
 export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 export type Pii<T> = T & { readonly __classification__?: 'pii' }
-pikkuAIMiddleware: <State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(hooks: PikkuAIMiddlewareHooks<State, SingletonServices>) => PikkuAIMiddlewareHooks<State, SingletonServices>
-export interface PikkuAIMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
-  modifyInput?: (services: Services, ctx: { messages: AIMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AIMessage[]; instructions: string }> | { messages: AIMessage[]; instructions: string }
-  modifyOutputStream?: (services: Services, ctx: { event: AIStreamEvent; allEvents: readonly AIStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AIStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AIStreamEvent | AIStreamEvent[] | null> | AIStreamEvent | AIStreamEvent[] | null
-  modifyOutput?: (services: Services, ctx: { text: string; messages: AIMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AIAgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }> | { text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }
+pikkuAgentMiddleware: <State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>) => PikkuAgentMiddlewareHooks<State, SingletonServices>
+export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
+  modifyInput?: (services: Services, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
+  modifyOutputStream?: (services: Services, ctx: { event: AgentStreamEvent; allEvents: readonly AgentStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AgentStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AgentStreamEvent | AgentStreamEvent[] | null> | AgentStreamEvent | AgentStreamEvent[] | null
+  modifyOutput?: (services: Services, ctx: { text: string; messages: AgentMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }> | { text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }
   beforeToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown> }) => | Promise<{ args: Record<string, unknown> } | void> | { args: Record<string, unknown> } | void
   afterToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown>; result: unknown; durationMs: number }) => Promise<{ result: unknown } | void> | { result: unknown } | void
   afterStep?: (services: Services, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
-  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AIMessage[] }) => Promise<void> | void
+  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
 }
 pikkuApprovalDescription: <In = any, Services extends CoreSecretlessSingletonServices = CoreSecretlessSingletonServices>(fn: CorePikkuApprovalDescription<In, Services>) => CorePikkuApprovalDescription<In, Services>
 pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
@@ -728,7 +728,7 @@ export interface PikkuPackageState {
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
   trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAIAgent>; agentsMeta: AIAgentMeta; scorers: Map<string, PikkuAIScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
@@ -2619,9 +2619,7 @@ export interface ActorFlowVerdict {
   reasoning: string
   transcript: string[]
 }
-export type ActorLLM = (
-  params: AIAgentRunnerParams
-) => Promise<AIAgentStepResult>
+export type ActorLLM = (params: AgentRunnerParams) => Promise<AgentStepResult>
 export interface ConverseOptions<TAgentName extends string = string> {
   agent: TAgentName
   task: string
@@ -3555,111 +3553,13 @@ wireMCPPrompt: <PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuFun
 wireMCPResource: <PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>> = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>>(mcpResource: CoreMCPResource<PikkuFunctionConfig>) => void
 ```
 
-## ./ai-agent
+## ./agent
 
 ```ts
-addAIAgent: (agentName: string, agent: CoreAIAgent<any, any>, packageName?: string | null) => void
+addAgent: (agentName: string, agent: CoreAgent<any, any>, packageName?: string | null) => void
 agent: <TAgentMap extends Record<string, { output: any; }>>(agentName: string & keyof TAgentMap) => { func: (services: any, data: any, wire: any) => Promise<any>; }
 agentApprove: <TAgentMap extends Record<string, { output: any; }>>(_agentName: string & keyof TAgentMap) => { func: (services: any, data: { runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }, wire: any) => Promise<any>; }
-agentInterrupt: () => { func: (services: any, data: { runId: string; reason?: "speech" | "user" | "timeout" | undefined; }, wire: any) => Promise<AgentInterruptResult>; }
-export class AgentInterruptedError extends Error {
-  constructor(public readonly runId: string, public readonly interruption: AgentInterruption)
-}
-export interface AgentInterruption {
-  reason: 'speech' | 'user' | 'timeout'
-}
-export interface AgentInterruptResult {
-  stopped: boolean
-  inFlightTools: string[]
-}
-agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
-export interface AgentRunRow {
-  runId: string
-  agentName: string
-  threadId: string
-  resourceId: string
-  status: string
-  errorMessage?: string
-  suspendReason?: string
-  missingRpcs?: string[]
-  usageInputTokens: number
-  usageOutputTokens: number
-  usageModel: string
-  createdAt: Date
-  updatedAt: Date
-}
-export interface AgentRunService {
-  listThreads(options?: { agentName?: string; resourceId?: string; owners?: string[]; limit?: number; offset?: number }): Promise<AIThread[]>
-  getThread(threadId: string): Promise<AIThread | null>
-  getThreadMessages(threadId: string): Promise<AIMessage[]>
-  getThreadRuns(threadId: string): Promise<AgentRunRow[]>
-  deleteThread(threadId: string): Promise<boolean>
-  getDistinctAgentNames(): Promise<string[]>
-}
-export interface AgentRunState {
-  runId: string
-  agentName: string
-  threadId: string
-  resourceId: string
-  status: 'running' | 'suspended' | 'completed' | 'failed' | 'interrupted'
-  errorMessage?: string
-  suspendReason?: 'approval' | 'credential' | 'rpc-missing'
-  missingRpcs?: string[]
-  pendingApprovals?: PendingApproval[]
-  usage: { inputTokens: number; outputTokens: number; model: string }
-  createdAt: Date
-  updatedAt: Date
-}
-agentStream: <TAgentMap extends Record<string, { output: any; }>>(agentName?: (string & keyof TAgentMap) | undefined) => { func: (services: any, data: any, wire: any) => Promise<void>; }
-export interface AIAgentInput {
-  message: string
-  threadId: string
-  resourceId: string
-  attachments?: AIAgentInputAttachment[]
-  model?: string
-  temperature?: number
-  context?: string
-}
-export type AIAgentMemoryConfig = {
-  storage?: string
-  vector?: string
-  embedder?: string
-  lastMessages?: number
-  workingMemory?: unknown
-}
-export type AIAgentMeta = Record<
-  string,
-  Omit<
-    CoreAIAgent,
-    | 'input'
-    | 'output'
-    | 'tools'
-    | 'agents'
-    | 'workflows'
-    | 'middleware'
-    | 'channelMiddleware'
-    | 'aiMiddleware'
-    | 'permissions'
-  > & {
-    tools?: string[]
-    agents?: string[]
-    workflows?: string[]
-    inputSchema: string | null
-    outputSchema: string | null
-    workingMemorySchema: string | null
-    middleware?: MiddlewareMetadata[]
-    channelMiddleware?: MiddlewareMetadata[]
-    aiMiddleware?: MiddlewareMetadata[]
-    permissions?: PermissionMetadata[]
-    sourceFile?: string
-    exportedName?: string
-  }
->
-export interface AIAgentStep {
-  usage: { inputTokens: number; outputTokens: number }
-  toolCalls?: { name: string; args: Record<string, unknown>; result: string; error?: string }[]
-}
-export type AIContentPart =
+export type AgentContentPart =
   | { type: 'text'; text: string }
   | { type: 'image'; data?: string; url?: string; mediaType?: string }
   | {
@@ -3678,19 +3578,117 @@ export type AIContentPart =
       type: 'generative-ui'
       spec: unknown
     }
-export interface AIMessage {
+export interface AgentInput {
+  message: string
+  threadId: string
+  resourceId: string
+  attachments?: AgentInputAttachment[]
+  model?: string
+  temperature?: number
+  context?: string
+}
+agentInterrupt: () => { func: (services: any, data: { runId: string; reason?: "speech" | "user" | "timeout" | undefined; }, wire: any) => Promise<AgentInterruptResult>; }
+export class AgentInterruptedError extends Error {
+  constructor(public readonly runId: string, public readonly interruption: AgentInterruption)
+}
+export interface AgentInterruption {
+  reason: 'speech' | 'user' | 'timeout'
+}
+export interface AgentInterruptResult {
+  stopped: boolean
+  inFlightTools: string[]
+}
+export type AgentMemoryConfig = {
+  storage?: string
+  vector?: string
+  embedder?: string
+  lastMessages?: number
+  workingMemory?: unknown
+}
+export interface AgentMessage {
   id: string
   role: 'system' | 'user' | 'assistant' | 'tool'
-  content?: string | AIContentPart[]
-  toolCalls?: AIToolCall[]
-  toolResults?: AIToolResult[]
+  content?: string | AgentContentPart[]
+  toolCalls?: AgentToolCall[]
+  toolResults?: AgentToolResult[]
   reasoningContent?: string
   interrupted?: boolean
   undelivered?: boolean
   createdAt: Date
 }
-export interface AIStreamChannel extends PikkuChannel<unknown, AIStreamEvent> {}
-export type AIStreamEvent =
+agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export interface AgentRunRow {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: string
+  errorMessage?: string
+  suspendReason?: string
+  missingRpcs?: string[]
+  usageInputTokens: number
+  usageOutputTokens: number
+  usageModel: string
+  createdAt: Date
+  updatedAt: Date
+}
+export interface AgentRunService {
+  listThreads(options?: { agentName?: string; resourceId?: string; owners?: string[]; limit?: number; offset?: number }): Promise<AgentThread[]>
+  getThread(threadId: string): Promise<AgentThread | null>
+  getThreadMessages(threadId: string): Promise<AgentMessage[]>
+  getThreadRuns(threadId: string): Promise<AgentRunRow[]>
+  deleteThread(threadId: string): Promise<boolean>
+  getDistinctAgentNames(): Promise<string[]>
+}
+export interface AgentRunState {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: 'running' | 'suspended' | 'completed' | 'failed' | 'interrupted'
+  errorMessage?: string
+  suspendReason?: 'approval' | 'credential' | 'rpc-missing'
+  missingRpcs?: string[]
+  pendingApprovals?: PendingApproval[]
+  usage: { inputTokens: number; outputTokens: number; model: string }
+  createdAt: Date
+  updatedAt: Date
+}
+export type AgentsMeta = Record<
+  string,
+  Omit<
+    CoreAgent,
+    | 'input'
+    | 'output'
+    | 'tools'
+    | 'agents'
+    | 'workflows'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'agentMiddleware'
+    | 'permissions'
+  > & {
+    tools?: string[]
+    agents?: string[]
+    workflows?: string[]
+    inputSchema: string | null
+    outputSchema: string | null
+    workingMemorySchema: string | null
+    middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
+    agentMiddleware?: MiddlewareMetadata[]
+    permissions?: PermissionMetadata[]
+    sourceFile?: string
+    exportedName?: string
+  }
+>
+export interface AgentStep {
+  usage: { inputTokens: number; outputTokens: number }
+  toolCalls?: { name: string; args: Record<string, unknown>; result: string; error?: string }[]
+}
+agentStream: <TAgentMap extends Record<string, { output: any; }>>(agentName?: (string & keyof TAgentMap) | undefined) => { func: (services: any, data: any, wire: any) => Promise<void>; }
+export interface AgentStreamChannel extends PikkuChannel< unknown, AgentStreamEvent > {}
+export type AgentStreamEvent =
   | { type: 'step-start'; stepNumber: number; agent?: string; session?: string }
   | { type: 'text-delta'; text: string; agent?: string; session?: string }
   | { type: 'reasoning-delta'; text: string; agent?: string; session?: string }
@@ -3795,7 +3793,7 @@ export type AIStreamEvent =
       session?: string
     }
   | { type: 'done' }
-export interface AIThread {
+export interface AgentThread {
   id: string
   resourceId: string
   title?: string
@@ -3804,7 +3802,7 @@ export interface AIThread {
   updatedAt: Date
 }
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
-export type CoreAIAgent<
+export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
   Scope extends string = string,
@@ -3825,7 +3823,7 @@ export type CoreAIAgent<
   workflows?: unknown[]
   scorers?: Scorer[]
   agentMode?: 'delegate' | 'supervise'
-  memory?: AIAgentMemoryConfig
+  memory?: AgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
   providerOptions?: AIProviderOptions
@@ -3834,20 +3832,20 @@ export type CoreAIAgent<
   tags?: string[]
   prepareStep?: (ctx: {
     stepNumber: number
-    messages: AIMessage[]
-    tools: AIAgentToolDef[]
+    messages: AgentMessage[]
+    tools: AgentToolDef[]
     toolChoice: 'auto' | 'required' | 'none'
     model: string
     stop: () => void
   }) => void | Promise<void>
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
-  aiMiddleware?: PikkuAIMiddlewareHooks<any, any>[]
+  agentMiddleware?: PikkuAgentMiddlewareHooks<any, any>[]
   auth?: boolean
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
-interruptAIAgent: (input: { runId: string; reason?: "speech" | "user" | "timeout" | undefined; }, params: RunAIAgentParams) => Promise<AgentInterruptResult>
+interruptAgent: (input: { runId: string; reason?: "speech" | "user" | "timeout" | undefined; }, params: RunAgentParams) => Promise<AgentInterruptResult>
 export interface InterruptibleRunHandle {
   readonly signal: AbortSignal
   readonly interruption: AgentInterruption | undefined
@@ -3884,20 +3882,20 @@ export type PendingApproval =
       credentialType: 'oauth2' | 'apikey'
       connectUrl?: string
     }
-export interface PikkuAIMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
-  modifyInput?: (services: Services, ctx: { messages: AIMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AIMessage[]; instructions: string }> | { messages: AIMessage[]; instructions: string }
-  modifyOutputStream?: (services: Services, ctx: { event: AIStreamEvent; allEvents: readonly AIStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AIStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AIStreamEvent | AIStreamEvent[] | null> | AIStreamEvent | AIStreamEvent[] | null
-  modifyOutput?: (services: Services, ctx: { text: string; messages: AIMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AIAgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }> | { text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }
+export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
+  modifyInput?: (services: Services, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
+  modifyOutputStream?: (services: Services, ctx: { event: AgentStreamEvent; allEvents: readonly AgentStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AgentStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AgentStreamEvent | AgentStreamEvent[] | null> | AgentStreamEvent | AgentStreamEvent[] | null
+  modifyOutput?: (services: Services, ctx: { text: string; messages: AgentMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }> | { text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }
   beforeToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown> }) => | Promise<{ args: Record<string, unknown> } | void> | { args: Record<string, unknown> } | void
   afterToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown>; result: unknown; durationMs: number }) => Promise<{ result: unknown } | void> | { result: unknown } | void
   afterStep?: (services: Services, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
-  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AIMessage[] }) => Promise<void> | void
+  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
 }
 resolveModelAlias: (model: string) => string
-resumeAIAgent: (input: { runId: string; toolCallId: string; approved: boolean; }, channel: AIStreamChannel, params: RunAIAgentParams, options?: StreamAIAgentOptions | undefined) => Promise<void>
-resumeAIAgentSync: (runId: string, approvals: { toolCallId: string; approved: boolean; }[], params: RunAIAgentParams, expectedAgentName?: string | undefined) => Promise<AIAgentOutput>
-runAIAgent: (agentName: string, input: AIAgentInput, params: RunAIAgentParams, agentSessionMap?: Map<string, string> | undefined) => Promise<AIAgentOutput>
-export type RunAIAgentParams = {
+resumeAgent: (input: { runId: string; toolCallId: string; approved: boolean; }, channel: AgentStreamChannel, params: RunAgentParams, options?: StreamAgentOptions | undefined) => Promise<void>
+resumeAgentSync: (runId: string, approvals: { toolCallId: string; approved: boolean; }[], params: RunAgentParams, expectedAgentName?: string | undefined) => Promise<AgentOutput>
+runAgent: (agentName: string, input: AgentInput, params: RunAgentParams, agentSessionMap?: Map<string, string> | undefined) => Promise<AgentOutput>
+export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
   anonymousOwnerResourceId?: string
@@ -3906,8 +3904,8 @@ signalRunInterrupt: (runId: string, interruption?: AgentInterruption) => boolean
 export type SpeakableScripts = string[] | Record<string, string>
 SPOKEN_TRANSCRIPT: "voice:transcript"
 SPOKEN_TURN: "voice:spokenTurn"
-streamAIAgent: (agentName: string, input: { message: string; threadId: string; resourceId: string; model?: string | undefined; temperature?: number | undefined; }, channel: AIStreamChannel, params: RunAIAgentParams, agentSessionMap?: Map<string, string> | undefined, options?: StreamAIAgentOptions | undefined) => Promise<string>
-export type StreamAIAgentOptions = {
+streamAgent: (agentName: string, input: { message: string; threadId: string; resourceId: string; model?: string | undefined; temperature?: number | undefined; }, channel: AgentStreamChannel, params: RunAgentParams, agentSessionMap?: Map<string, string> | undefined, options?: StreamAgentOptions | undefined) => Promise<string>
+export type StreamAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
   onRunCreated?: (runId: string) => void
 }
@@ -3933,16 +3931,16 @@ export class ToolCredentialRequired extends PikkuError {
 }
 unspeakableScripts: (text: string, speakable: SpeakableScripts) => string[]
 voiceForText: (text: string, speakable: SpeakableScripts, fallback?: string | undefined) => string | undefined
-voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAIMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
-voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAIMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
-wrapChannelWithAGUI: (inner: AIStreamChannel, options?: AGUIChannelOptions | undefined) => AIStreamChannel
+voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAgentMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAgentMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+wrapChannelWithAGUI: (inner: AgentStreamChannel, options?: AGUIChannelOptions | undefined) => AgentStreamChannel
 ```
 
-## ./ai-scorer
+## ./agent-scorer
 
 ```ts
-addAIScorer: (scorerName: string, scorer: PikkuAIScorer<any>, packageName?: string | null) => void
-export type AIRunScore = {
+addAgentScorer: (scorerName: string, scorer: PikkuAgentScorer<any>, packageName?: string | null) => void
+export type AgentRunScore = {
   runId: string
   scorerName: string
   score: number
@@ -3951,13 +3949,13 @@ export type AIRunScore = {
   createdAt: Date
 }
 enableScoreSnapshots: (maxRuns?: number) => void
-getAIScorers: () => Map<string, PikkuAIScorer>
-getAIScorersMeta: () => ScorerMeta
+getAgentScorers: () => Map<string, PikkuAgentScorer>
+getAgentScorersMeta: () => ScorerMeta
 getScoreSnapshot: (runId: string) => ScorerInput | undefined
-gradeRun: (job: ScoreJob, services: { aiAgentRunner?: unknown; aiRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
-pikkuAIJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAIScorer<Services>
-pikkuAIScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAIScorer<Services>
-export type PikkuAIScorer<Services = any> = {
+gradeRun: (job: ScoreJob, services: { agentRunner?: unknown; agentRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
+pikkuAgentJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAgentScorer<Services>
+pikkuAgentScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAgentScorer<Services>
+export type PikkuAgentScorer<Services = any> = {
   name: string
   description: string
   lane: ScorerLane
@@ -4006,7 +4004,7 @@ export interface ScorerOutput {
   reason?: string
   metadata?: Record<string, unknown>
 }
-wireAIScorerQueueWorkers: () => void
+wireAgentScorerQueueWorkers: () => void
 ```
 
 ## ./gateway
@@ -4553,14 +4551,13 @@ export class WeakKeyMaterialError extends PikkuError {
 ## ./services
 
 ```ts
-export type AgentMeta = AIAgentMeta[string]
-export type AgentsMeta = AIAgentMeta
-export type AIAgentRunnerParams = {
+export type AgentMeta = AgentsMeta[string]
+export type AgentRunnerParams = {
   model: string
   temperature?: number
   instructions: string
-  messages: AIMessage[]
-  tools: AIAgentToolDef[]
+  messages: AgentMessage[]
+  tools: AgentToolDef[]
   maxSteps: number
   toolChoice: 'auto' | 'required' | 'none'
   outputSchema?: Record<string, unknown>
@@ -4568,24 +4565,62 @@ export type AIAgentRunnerParams = {
   abortSignal?: AbortSignal
   providerOptions?: AIProviderOptions
 }
-export type AIAgentRunnerResult = {
+export type AgentRunnerResult = {
   text: string
   object?: unknown
-  steps: AIAgentStep[]
+  steps: AgentStep[]
   usage: { inputTokens: number; outputTokens: number }
 }
-export interface AIAgentRunnerService {
-  stream(params: AIAgentRunnerParams, channel: AIStreamChannel): Promise<AIAgentStepResult>
-  run(params: AIAgentRunnerParams): Promise<AIAgentStepResult>
+export interface AgentRunnerService {
+  stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>
+  run(params: AgentRunnerParams): Promise<AgentStepResult>
   transcribe?(params: AITranscriptionParams): Promise<AITranscriptionResult>
   generateSpeech?(params: AIGenerateSpeechParams): Promise<AIGenerateSpeechResult>
   generateImage?(params: AIGenerateImageParams): Promise<AIGenerateImageResult>
   embed?(params: AIEmbedParams): Promise<AIEmbedResult>
   embedMany?(params: AIEmbedManyParams): Promise<AIEmbedManyResult>
   rerank?<VALUE extends string | Record<string, unknown>>(params: AIRerankParams<VALUE>): Promise<AIRerankResult<VALUE>>
-  withApiKey?(apiKey: string): AIAgentRunnerService
+  withApiKey?(apiKey: string): AgentRunnerService
 }
-export type AIAgentStepResult = {
+export interface AgentRunStateService {
+  createRun(run: CreateRunInput): Promise<string>
+  updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
+  getRun(runId: string): Promise<AgentRunState | null>
+  getRunsByThread(threadId: string): Promise<AgentRunState[]>
+  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
+  saveScore(score: SaveScoreInput): Promise<void>
+  getScores(runId: string): Promise<AgentRunScore[]>
+}
+export type AgentsMeta = Record<
+  string,
+  Omit<
+    CoreAgent,
+    | 'input'
+    | 'output'
+    | 'tools'
+    | 'agents'
+    | 'workflows'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'agentMiddleware'
+    | 'permissions'
+  > & {
+    tools?: string[]
+    agents?: string[]
+    workflows?: string[]
+    inputSchema: string | null
+    outputSchema: string | null
+    workingMemorySchema: string | null
+    middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
+    agentMiddleware?: MiddlewareMetadata[]
+    permissions?: PermissionMetadata[]
+    sourceFile?: string
+    exportedName?: string
+  }
+>
+export type AgentStepResult = {
   text: string
   object?: unknown
   toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
@@ -4599,31 +4634,21 @@ export type AIAgentStepResult = {
   finishReason: 'stop' | 'tool-calls' | 'length' | 'error' | 'unknown'
   reasoningContent?: string
 }
+export interface AgentStorageService {
+  createThread(resourceId: string, options?: { threadId?: string; title?: string; metadata?: Record<string, unknown> }): Promise<AgentThread>
+  getThread(threadId: string): Promise<AgentThread>
+  getThreads(resourceId: string): Promise<AgentThread[]>
+  deleteThread(threadId: string): Promise<void>
+  getMessages(threadId: string, options?: { lastN?: number; cursor?: string }): Promise<AgentMessage[]>
+  saveMessages(threadId: string, messages: AgentMessage[]): Promise<void>
+  getWorkingMemory(id: string, scope: 'resource' | 'thread'): Promise<Record<string, unknown> | null>
+  saveWorkingMemory(id: string, scope: 'resource' | 'thread', data: Record<string, unknown>): Promise<void>
+}
 export interface AIEmbeddingService {
   readonly model: string
   readonly dimensions?: number
   embedDocuments(values: string[]): Promise<number[][]>
   embedQuery(value: string): Promise<number[]>
-}
-export interface AIRunStateService {
-  createRun(run: CreateRunInput): Promise<string>
-  updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
-  getRun(runId: string): Promise<AgentRunState | null>
-  getRunsByThread(threadId: string): Promise<AgentRunState[]>
-  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
-  findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
-  saveScore(score: SaveScoreInput): Promise<void>
-  getScores(runId: string): Promise<AIRunScore[]>
-}
-export interface AIStorageService {
-  createThread(resourceId: string, options?: { threadId?: string; title?: string; metadata?: Record<string, unknown> }): Promise<AIThread>
-  getThread(threadId: string): Promise<AIThread>
-  getThreads(resourceId: string): Promise<AIThread[]>
-  deleteThread(threadId: string): Promise<void>
-  getMessages(threadId: string, options?: { lastN?: number; cursor?: string }): Promise<AIMessage[]>
-  saveMessages(threadId: string, messages: AIMessage[]): Promise<void>
-  getWorkingMemory(id: string, scope: 'resource' | 'thread'): Promise<Record<string, unknown> | null>
-  saveWorkingMemory(id: string, scope: 'resource' | 'thread', data: Record<string, unknown>): Promise<void>
 }
 assertSecretAllowedForHost: (secretId: string, url: string | URL, secretDefinitions: SecretDefinitionsMeta | undefined, requireAllowedHosts?: boolean) => void
 export type AuditConfig =
@@ -4829,7 +4854,7 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
-export class InMemoryAIRunStateService implements AIRunStateService {
+export class InMemoryAgentRunStateService implements AgentRunStateService {
   async createRun(run: CreateRunInput): Promise<string>
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   async getRun(runId: string): Promise<AgentRunState | null>
@@ -4837,7 +4862,7 @@ export class InMemoryAIRunStateService implements AIRunStateService {
   async resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
   async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   async saveScore(score: SaveScoreInput): Promise<void>
-  async getScores(runId: string): Promise<AIRunScore[]>
+  async getScores(runId: string): Promise<AgentRunScore[]>
 }
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
@@ -5091,7 +5116,7 @@ export interface Role {
   declared?: boolean
 }
 export type RPCMetaRecord = Record<string, string>
-export type SaveScoreInput = Omit<AIRunScore, 'createdAt'>
+export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
 export interface ScenarioPersona< TAgentName extends string = string, TRpcMap extends ScenarioRpcMap = ScenarioRpcMap, > {
   readonly name: string
   readonly email: string
@@ -5377,8 +5402,35 @@ export interface WriteFileArgs< TBucket extends string = string, > extends Bucke
 ## ./services/local-meta
 
 ```ts
-export type AgentMeta = AIAgentMeta[string]
-export type AgentsMeta = AIAgentMeta
+export type AgentMeta = AgentsMeta[string]
+export type AgentsMeta = Record<
+  string,
+  Omit<
+    CoreAgent,
+    | 'input'
+    | 'output'
+    | 'tools'
+    | 'agents'
+    | 'workflows'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'agentMiddleware'
+    | 'permissions'
+  > & {
+    tools?: string[]
+    agents?: string[]
+    workflows?: string[]
+    inputSchema: string | null
+    outputSchema: string | null
+    workingMemorySchema: string | null
+    middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
+    agentMiddleware?: MiddlewareMetadata[]
+    permissions?: PermissionMetadata[]
+    sourceFile?: string
+    exportedName?: string
+  }
+>
 export interface EmailsMeta {
   src: string
   themeHash: string
@@ -5789,86 +5841,13 @@ runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, 
 setSingletonServices: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => void
 ```
 
-## ./ecosystem/ai-agent
+## ./ecosystem/agent
 
 ```ts
-addAIAgent: (agentName: string, agent: CoreAIAgent<any, any>, packageName?: string | null) => void
+addAgent: (agentName: string, agent: CoreAgent<any, any>, packageName?: string | null) => void
 agent: <TAgentMap extends Record<string, { output: any; }>>(agentName: string & keyof TAgentMap) => { func: (services: any, data: any, wire: any) => Promise<any>; }
 agentApprove: <TAgentMap extends Record<string, { output: any; }>>(_agentName: string & keyof TAgentMap) => { func: (services: any, data: { runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }, wire: any) => Promise<any>; }
-agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
-export interface AgentRunRow {
-  runId: string
-  agentName: string
-  threadId: string
-  resourceId: string
-  status: string
-  errorMessage?: string
-  suspendReason?: string
-  missingRpcs?: string[]
-  usageInputTokens: number
-  usageOutputTokens: number
-  usageModel: string
-  createdAt: Date
-  updatedAt: Date
-}
-export interface AgentRunService {
-  listThreads(options?: { agentName?: string; resourceId?: string; owners?: string[]; limit?: number; offset?: number }): Promise<AIThread[]>
-  getThread(threadId: string): Promise<AIThread | null>
-  getThreadMessages(threadId: string): Promise<AIMessage[]>
-  getThreadRuns(threadId: string): Promise<AgentRunRow[]>
-  deleteThread(threadId: string): Promise<boolean>
-  getDistinctAgentNames(): Promise<string[]>
-}
-agentStream: <TAgentMap extends Record<string, { output: any; }>>(agentName?: (string & keyof TAgentMap) | undefined) => { func: (services: any, data: any, wire: any) => Promise<void>; }
-export interface AIAgentInput {
-  message: string
-  threadId: string
-  resourceId: string
-  attachments?: AIAgentInputAttachment[]
-  model?: string
-  temperature?: number
-  context?: string
-}
-export type AIAgentMemoryConfig = {
-  storage?: string
-  vector?: string
-  embedder?: string
-  lastMessages?: number
-  workingMemory?: unknown
-}
-export type AIAgentMeta = Record<
-  string,
-  Omit<
-    CoreAIAgent,
-    | 'input'
-    | 'output'
-    | 'tools'
-    | 'agents'
-    | 'workflows'
-    | 'middleware'
-    | 'channelMiddleware'
-    | 'aiMiddleware'
-    | 'permissions'
-  > & {
-    tools?: string[]
-    agents?: string[]
-    workflows?: string[]
-    inputSchema: string | null
-    outputSchema: string | null
-    workingMemorySchema: string | null
-    middleware?: MiddlewareMetadata[]
-    channelMiddleware?: MiddlewareMetadata[]
-    aiMiddleware?: MiddlewareMetadata[]
-    permissions?: PermissionMetadata[]
-    sourceFile?: string
-    exportedName?: string
-  }
->
-export interface AIAgentStep {
-  usage: { inputTokens: number; outputTokens: number }
-  toolCalls?: { name: string; args: Record<string, unknown>; result: string; error?: string }[]
-}
-export type AIContentPart =
+export type AgentContentPart =
   | { type: 'text'; text: string }
   | { type: 'image'; data?: string; url?: string; mediaType?: string }
   | {
@@ -5887,8 +5866,81 @@ export type AIContentPart =
       type: 'generative-ui'
       spec: unknown
     }
+export interface AgentInput {
+  message: string
+  threadId: string
+  resourceId: string
+  attachments?: AgentInputAttachment[]
+  model?: string
+  temperature?: number
+  context?: string
+}
+export type AgentMemoryConfig = {
+  storage?: string
+  vector?: string
+  embedder?: string
+  lastMessages?: number
+  workingMemory?: unknown
+}
+agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export interface AgentRunRow {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: string
+  errorMessage?: string
+  suspendReason?: string
+  missingRpcs?: string[]
+  usageInputTokens: number
+  usageOutputTokens: number
+  usageModel: string
+  createdAt: Date
+  updatedAt: Date
+}
+export interface AgentRunService {
+  listThreads(options?: { agentName?: string; resourceId?: string; owners?: string[]; limit?: number; offset?: number }): Promise<AgentThread[]>
+  getThread(threadId: string): Promise<AgentThread | null>
+  getThreadMessages(threadId: string): Promise<AgentMessage[]>
+  getThreadRuns(threadId: string): Promise<AgentRunRow[]>
+  deleteThread(threadId: string): Promise<boolean>
+  getDistinctAgentNames(): Promise<string[]>
+}
+export type AgentsMeta = Record<
+  string,
+  Omit<
+    CoreAgent,
+    | 'input'
+    | 'output'
+    | 'tools'
+    | 'agents'
+    | 'workflows'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'agentMiddleware'
+    | 'permissions'
+  > & {
+    tools?: string[]
+    agents?: string[]
+    workflows?: string[]
+    inputSchema: string | null
+    outputSchema: string | null
+    workingMemorySchema: string | null
+    middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
+    agentMiddleware?: MiddlewareMetadata[]
+    permissions?: PermissionMetadata[]
+    sourceFile?: string
+    exportedName?: string
+  }
+>
+export interface AgentStep {
+  usage: { inputTokens: number; outputTokens: number }
+  toolCalls?: { name: string; args: Record<string, unknown>; result: string; error?: string }[]
+}
+agentStream: <TAgentMap extends Record<string, { output: any; }>>(agentName?: (string & keyof TAgentMap) | undefined) => { func: (services: any, data: any, wire: any) => Promise<void>; }
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
-export type CoreAIAgent<
+export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
   Scope extends string = string,
@@ -5909,7 +5961,7 @@ export type CoreAIAgent<
   workflows?: unknown[]
   scorers?: Scorer[]
   agentMode?: 'delegate' | 'supervise'
-  memory?: AIAgentMemoryConfig
+  memory?: AgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
   providerOptions?: AIProviderOptions
@@ -5918,15 +5970,15 @@ export type CoreAIAgent<
   tags?: string[]
   prepareStep?: (ctx: {
     stepNumber: number
-    messages: AIMessage[]
-    tools: AIAgentToolDef[]
+    messages: AgentMessage[]
+    tools: AgentToolDef[]
     toolChoice: 'auto' | 'required' | 'none'
     model: string
     stop: () => void
   }) => void | Promise<void>
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
-  aiMiddleware?: PikkuAIMiddlewareHooks<any, any>[]
+  agentMiddleware?: PikkuAgentMiddlewareHooks<any, any>[]
   auth?: boolean
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>
@@ -5943,11 +5995,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   eventHub?: EventHubService<Record<string, any>>
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
-  aiStorage?: AIStorageService
+  agentStorage?: AgentStorageService
   content?: ContentService
-  aiAgentRunner?: AIAgentRunnerService
+  agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
-  aiRunState?: AIRunStateService
+  agentRunState?: AgentRunStateService
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
@@ -5995,14 +6047,14 @@ export type PendingApproval =
       credentialType: 'oauth2' | 'apikey'
       connectUrl?: string
     }
-export interface PikkuAIMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
-  modifyInput?: (services: Services, ctx: { messages: AIMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AIMessage[]; instructions: string }> | { messages: AIMessage[]; instructions: string }
-  modifyOutputStream?: (services: Services, ctx: { event: AIStreamEvent; allEvents: readonly AIStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AIStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AIStreamEvent | AIStreamEvent[] | null> | AIStreamEvent | AIStreamEvent[] | null
-  modifyOutput?: (services: Services, ctx: { text: string; messages: AIMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AIAgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }> | { text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }
+export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
+  modifyInput?: (services: Services, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
+  modifyOutputStream?: (services: Services, ctx: { event: AgentStreamEvent; allEvents: readonly AgentStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AgentStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AgentStreamEvent | AgentStreamEvent[] | null> | AgentStreamEvent | AgentStreamEvent[] | null
+  modifyOutput?: (services: Services, ctx: { text: string; messages: AgentMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }> | { text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }
   beforeToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown> }) => | Promise<{ args: Record<string, unknown> } | void> | { args: Record<string, unknown> } | void
   afterToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown>; result: unknown; durationMs: number }) => Promise<{ result: unknown } | void> | { result: unknown } | void
   afterStep?: (services: Services, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
-  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AIMessage[] }) => Promise<void> | void
+  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
 }
 export interface PostgresConfig {
   maxPool?: number
@@ -6015,8 +6067,8 @@ export interface PostgresConfig {
 resolveModelAlias: (model: string) => string
 export type SpeakableScripts = string[] | Record<string, string>
 threadOwnerConstraint: (session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => string[]
-voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAIMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
-voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAIMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAgentMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAgentMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
 export type VoiceOutputState = {
   textBuffer?: string
   tail?: Promise<void>
@@ -6038,16 +6090,16 @@ export interface WorkflowServiceConfig {
 }
 ```
 
-## ./ecosystem/ai-scorer
+## ./ecosystem/agent-scorer
 
 ```ts
-addAIScorer: (scorerName: string, scorer: PikkuAIScorer<any>, packageName?: string | null) => void
+addAgentScorer: (scorerName: string, scorer: PikkuAgentScorer<any>, packageName?: string | null) => void
 enableScoreSnapshots: (maxRuns?: number) => void
 getScoreSnapshot: (runId: string) => ScorerInput | undefined
-gradeRun: (job: ScoreJob, services: { aiAgentRunner?: unknown; aiRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
-pikkuAIJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAIScorer<Services>
-pikkuAIScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAIScorer<Services>
-export type PikkuAIScorer<Services = any> = {
+gradeRun: (job: ScoreJob, services: { agentRunner?: unknown; agentRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
+pikkuAgentJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAgentScorer<Services>
+pikkuAgentScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAgentScorer<Services>
+export type PikkuAgentScorer<Services = any> = {
   name: string
   description: string
   lane: ScorerLane
@@ -6090,7 +6142,7 @@ export interface ScorerOutput {
   reason?: string
   metadata?: Record<string, unknown>
 }
-wireAIScorerQueueWorkers: () => void
+wireAgentScorerQueueWorkers: () => void
 ```
 
 ## ./ecosystem/channel
@@ -6385,11 +6437,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   eventHub?: EventHubService<Record<string, any>>
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
-  aiStorage?: AIStorageService
+  agentStorage?: AgentStorageService
   content?: ContentService
-  aiAgentRunner?: AIAgentRunnerService
+  agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
-  aiRunState?: AIRunStateService
+  agentRunState?: AgentRunStateService
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
@@ -6650,11 +6702,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   eventHub?: EventHubService<Record<string, any>>
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
-  aiStorage?: AIStorageService
+  agentStorage?: AgentStorageService
   content?: ContentService
-  aiAgentRunner?: AIAgentRunnerService
+  agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
-  aiRunState?: AIRunStateService
+  agentRunState?: AgentRunStateService
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
@@ -7070,11 +7122,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   eventHub?: EventHubService<Record<string, any>>
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
-  aiStorage?: AIStorageService
+  agentStorage?: AgentStorageService
   content?: ContentService
-  aiAgentRunner?: AIAgentRunnerService
+  agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
-  aiRunState?: AIRunStateService
+  agentRunState?: AgentRunStateService
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
@@ -7644,8 +7696,35 @@ validateAndBuildSecretDefinitionsMeta: (definitions: SecretDefinitions, schemaLo
 ## ./ecosystem/services
 
 ```ts
-export type AgentMeta = AIAgentMeta[string]
-export type AgentsMeta = AIAgentMeta
+export type AgentMeta = AgentsMeta[string]
+export type AgentsMeta = Record<
+  string,
+  Omit<
+    CoreAgent,
+    | 'input'
+    | 'output'
+    | 'tools'
+    | 'agents'
+    | 'workflows'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'agentMiddleware'
+    | 'permissions'
+  > & {
+    tools?: string[]
+    agents?: string[]
+    workflows?: string[]
+    inputSchema: string | null
+    outputSchema: string | null
+    workingMemorySchema: string | null
+    middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
+    agentMiddleware?: MiddlewareMetadata[]
+    permissions?: PermissionMetadata[]
+    sourceFile?: string
+    exportedName?: string
+  }
+>
 export type AuditDurability = 'best-effort' | 'transactional'
 export type AuditEvent = {
   eventId?: string
@@ -7775,7 +7854,7 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
-export class InMemoryAIRunStateService implements AIRunStateService {
+export class InMemoryAgentRunStateService implements AgentRunStateService {
   async createRun(run: CreateRunInput): Promise<string>
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   async getRun(runId: string): Promise<AgentRunState | null>
@@ -7783,7 +7862,7 @@ export class InMemoryAIRunStateService implements AIRunStateService {
   async resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
   async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   async saveScore(score: SaveScoreInput): Promise<void>
-  async getScores(runId: string): Promise<AIRunScore[]>
+  async getScores(runId: string): Promise<AgentRunScore[]>
 }
 export interface Logger {
   info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
@@ -8083,7 +8162,7 @@ export class V8CoverageService implements CoverageService {
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; aiStorageService?: () => Promise<AIStorageService & AIRunStateService>; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
 }
 ```
 
@@ -8868,7 +8947,7 @@ validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schem
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; aiStorageService?: () => Promise<AIStorageService & AIRunStateService>; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
 }
 ```
 

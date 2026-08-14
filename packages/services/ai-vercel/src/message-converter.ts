@@ -1,9 +1,9 @@
-import type { AIMessage } from '@pikku/core/ai-agent'
-import type { AIAgentStep, AIContentPart } from '@pikku/core/ecosystem/ai-agent'
+import type { AgentMessage } from '@pikku/core/agent'
+import type { AgentStep, AgentContentPart } from '@pikku/core/ecosystem/agent'
 import type { ModelMessage } from 'ai'
 
 export async function convertToSDKMessages(
-  messages: AIMessage[]
+  messages: AgentMessage[]
 ): Promise<ModelMessage[]> {
   return messages.map(convertToSDKMessage)
 }
@@ -20,7 +20,7 @@ function parseIfString<T>(value: T | string | null | undefined): T | undefined {
   return value as T
 }
 
-function convertToSDKMessage(msg: AIMessage): ModelMessage {
+function convertToSDKMessage(msg: AgentMessage): ModelMessage {
   const toolCalls = parseIfString(msg.toolCalls)
   const toolResults = parseIfString(msg.toolResults)
 
@@ -35,7 +35,7 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
       }
     case 'user':
       if (Array.isArray(msg.content)) {
-        const parts = (msg.content as AIContentPart[])
+        const parts = (msg.content as AgentContentPart[])
           .map((part) => {
             switch (part.type) {
               case 'text':
@@ -68,7 +68,7 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
           : Array.isArray(msg.content)
             ? msg.content
                 .filter(
-                  (p): p is Extract<AIContentPart, { type: 'text' }> =>
+                  (p): p is Extract<AgentContentPart, { type: 'text' }> =>
                     p.type === 'text'
                 )
                 .map((p) => p.text)
@@ -129,7 +129,7 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
   }
 }
 
-export function convertFromSDKStep(step: any): AIAgentStep {
+export function convertFromSDKStep(step: any): AgentStep {
   return {
     usage: {
       inputTokens: step.usage?.inputTokens ?? 0,
