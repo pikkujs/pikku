@@ -38,12 +38,6 @@ import type {
   WorkflowExpectServiceOptions,
 } from './dsl/workflow-dsl.types.js'
 
-/**
- * The scenario and feature surface. It is declared alongside the workflow
- * runtime it extends, but published from here rather than from
- * `@pikku/core/workflow`, which a production server imports and which must not
- * name a scenario module in its import graph.
- */
 export { addFeature, resolveFeatureScenarios } from './feature.js'
 export type * from './scenario.types.js'
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
@@ -56,18 +50,13 @@ export { createCookieJar } from './scenario-cookie-jar.js'
 export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
 export { composeStepProse, renderStepTemplate } from './scenario-prose.js'
 
-/** The guards a step body reaches for before it trusts its own arguments. */
 export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
 
-/**
- * The shape every step gets back from a call made as a persona. It is declared
- * beside the persona reader that builds it; the readers themselves live on
- * `@pikku/core/persona`.
- */
 export type {
   ScenarioHttpResponse,
   ScenarioJsonRequest,
 } from '../../services/personas-service.js'
+// The readers themselves live on `@pikku/core/persona`
 
 /**
  * A workflow service with the scenario capability attached — the two lines

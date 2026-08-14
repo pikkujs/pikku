@@ -93,6 +93,3 @@ export type {
   WorkflowStepWire,
   PikkuWorkflowWire,
 } from './workflow.types.js'
-
-// The scenario and feature surface lives on `@pikku/core/scenario`; workflow is
-// a production wiring and must not pull scenario runtime in behind it.

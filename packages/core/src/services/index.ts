@@ -38,9 +38,6 @@ export type {
   ScenarioPersonas,
 } from './personas-service.js'
 // knowledge: decisions/internals/the-persona-runtime-is-exported-from-the-persona-entry-point.md
-// `HttpPersonasConfig` and `ScenarioHttpResponse` are published from
-// `@pikku/core/persona` and `@pikku/core/scenario`, the entry points that own
-// them, rather than from a second home here.
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailService,

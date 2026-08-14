@@ -22,7 +22,6 @@ const TSCONFIG = JSON.stringify({
   compilerOptions: { outDir: 'dist', rootDir: 'src', module: 'Node16' },
 })
 
-/** Every exported name on an entry point, so order never matters to a test. */
 const namesOf = (
   entrypoints: Awaited<ReturnType<typeof collectSurface>>,
   subpath: string
@@ -269,8 +268,6 @@ describe('collectSurface', () => {
       await write(tmp, 'tsconfig.json', TSCONFIG)
       await write(tmp, 'src/parts/one.ts', 'export const one = 1\n')
       await write(tmp, 'src/parts/deep/two.ts', 'export const two = 2\n')
-      // The emitted tree the exports map actually points at, declaration files
-      // and source maps included — none of those are importable subpaths.
       await write(tmp, 'dist/parts/one.js', 'export const one = 1\n')
       await write(tmp, 'dist/parts/one.d.ts', 'export declare const one: 1\n')
       await write(tmp, 'dist/parts/one.js.map', '{}\n')
@@ -337,11 +334,6 @@ describe('collectSurface', () => {
   })
 })
 
-/**
- * A workspace package consumed only by its own repo has no build step to point
- * at, so its exports map names the TypeScript source directly. Every package in
- * the fabric repo is published this way.
- */
 describe('collectSurface on a package published straight from source', () => {
   test('resolves an exports map that points at a .ts file', async () => {
     const tmp = await makeTmp()

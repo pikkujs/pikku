@@ -15,17 +15,13 @@ export type SurfaceKind =
 export type SurfaceSymbol = {
   name: string
   kind: SurfaceKind
-  /** Package-relative path of the file that declares it. */
   declaredAt: string
   deprecated: boolean
 }
 
 export type SurfaceEntrypoint = {
-  /** The key in the exports map, e.g. `.` or `./http`. */
   subpath: string
-  /** How an importer writes it, e.g. `@pikku/core/http`. */
   specifier: string
-  /** Package-relative path of the source file the subpath resolves to. */
   entryFile: string
   symbols: SurfaceSymbol[]
 }
@@ -35,33 +31,10 @@ type PackageJson = {
   exports?: Record<string, unknown> | string
 }
 
-/** Extensions a `ts.Program` can be rooted at. */
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
 
-/**
- * Extensions a wildcard match may carry, source or emitted.
- *
- * A wildcard can point at either convention — `./src/parts/*` at source,
- * `./dist/parts/*.js` at what was built from it — so matching only source here
- * would silently publish nothing for every build-output pattern.
- */
-const MODULE_EXTENSIONS = [
-  ...SOURCE_EXTENSIONS,
-  '.js',
-  '.jsx',
-  '.mjs',
-  '.cjs',
-]
+const MODULE_EXTENSIONS = [...SOURCE_EXTENSIONS, '.js', '.jsx', '.mjs', '.cjs']
 
-/**
- * The name a wildcard `*` stands in for, or `null` when the file is not one a
- * subpath can resolve to.
- *
- * Declaration files and source maps sit beside the emitted modules in an output
- * directory and are not separately importable. `.d.ts` has to be rejected
- * before the extension search, or it reads as a `.ts` whose stem keeps a
- * trailing `.d`.
- */
 const wildcardStem = (fileName: string): string | null => {
   if (fileName.endsWith('.map')) return null
   if (/\.d\.(ts|mts|cts)$/.test(fileName)) return null
@@ -69,16 +42,6 @@ const wildcardStem = (fileName: string): string | null => {
   return extension ? fileName.slice(0, -extension.length) : null
 }
 
-/**
- * The subpath map an exports field stands for.
- *
- * The field has three legal shapes, and two of them are not maps: a bare string
- * (`"exports": "./dist/index.js"`) and a condition object for the root
- * (`{ "types": …, "import": … }`). Both publish exactly one entry point — the
- * package itself — so they are read as the map that says so. Reading them as
- * "no exports" instead would report an empty surface for a package that has
- * one, which any check built on this would then pass vacuously.
- */
 const subpathMap = (
   exports: NonNullable<PackageJson['exports']>
 ): Record<string, unknown> => {
@@ -88,27 +51,9 @@ const subpathMap = (
     : { '.': exports }
 }
 
-/**
- * Whether a subpath publishes code at all.
- *
- * An exports map is also how a package publishes a stylesheet or a JSON
- * manifest, and those subpaths carry no exported names — feeding them to the
- * compiler would only produce a program full of unresolvable roots.
- */
 const publishesCode = (target: string): boolean =>
   !/\.(css|scss|json|svg|png|woff2?|txt|md)$/.test(target)
 
-/**
- * The source file a published subpath was built from.
- *
- * Two conventions have to work. A package that ships build output points at it
- * (`./dist/index.js`, `./dist/src/index.js` — both are in this repo), and the
- * source has to be recovered by stripping the output directory. A package
- * consumed only inside its own workspace has no build step to point at and
- * names the TypeScript source directly (`./src/index.ts`), which needs no
- * recovery at all. Rather than model every layout, try the shapes each
- * convention produces and take the first that exists on disk.
- */
 const sourceForTarget = (
   packageDir: string,
   target: string,
@@ -116,11 +61,8 @@ const sourceForTarget = (
 ): string | null => {
   const withoutPrefix = target.replace(/^\.\//, '')
 
-  // A declaration file is build output that happens to end in `.ts`, so it goes
-  // through the same recovery as `.js` rather than being taken for source.
   const isDeclaration = /\.d\.(ts|mts|cts)$/.test(withoutPrefix)
 
-  // Already source: the common case outside a published package.
   if (
     !isDeclaration &&
     SOURCE_EXTENSIONS.some((extension) => withoutPrefix.endsWith(extension))
@@ -152,18 +94,6 @@ const sourceForTarget = (
   return null
 }
 
-/**
- * The concrete subpaths a wildcard pattern stands for.
- *
- * `"./parts/*": "./src/parts/*"` publishes whatever sits in that directory, so
- * the surface it declares is only knowable by looking. A package can also map
- * the same directory twice — once as `*.js` and once bare — and both patterns
- * resolve to the same files, so the caller de-duplicates by entry file.
- *
- * `*` matches across path separators, so the walk recurses: a nested file is as
- * published as a top-level one, and stopping at the first level would report
- * only the shallowest slice of the surface.
- */
 const expandWildcard = (
   packageDir: string,
   subpath: string,
@@ -195,7 +125,6 @@ const expandWildcard = (
   return expanded
 }
 
-/** The `types` / `import` / `default` condition that names a real file. */
 const targetOf = (value: unknown): string | null => {
   if (typeof value === 'string') return value
   if (!value || typeof value !== 'object') return null
@@ -215,10 +144,6 @@ const readJson = async <T>(path: string): Promise<T | null> => {
   }
 }
 
-/**
- * The compiler options a package is built with, narrowed to what resolution
- * needs: where output lands, and the path mappings an import may rely on.
- */
 const readCompilerOptions = async (
   packageDir: string
 ): Promise<{ outDir: string; paths: ts.CompilerOptions }> => {
@@ -253,14 +178,6 @@ const KIND_BY_FLAG: Array<[ts.SymbolFlags, SurfaceKind]> = [
   [ts.SymbolFlags.Namespace, 'namespace'],
 ]
 
-/**
- * What an exported name is, judged after following aliases.
- *
- * A re-exported name arrives as an alias symbol whose own flags say `Alias`
- * and nothing else, so the flags that matter belong to what it points at. An
- * arrow function assigned to a `const` is a `Variable` whose type has call
- * signatures — reported as a function, because that is what a caller sees.
- */
 const kindOf = (symbol: ts.Symbol, checker: ts.TypeChecker): SurfaceKind => {
   const target =
     symbol.flags & ts.SymbolFlags.Alias
@@ -298,14 +215,6 @@ const declarationFileOf = (
   return declaration?.getSourceFile().fileName ?? null
 }
 
-/**
- * Every name each of a package's published entry points exports.
- *
- * Resolution goes through a real `ts.Program` rather than reading export
- * statements, because a parser cannot answer what `export *` re-exports —
- * only the checker knows, and a barrel built from `export *` is otherwise
- * invisible to the whole measurement.
- */
 export const collectSurface = async (
   packageDir: string
 ): Promise<SurfaceEntrypoint[]> => {
