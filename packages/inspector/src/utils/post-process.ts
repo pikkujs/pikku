@@ -383,16 +383,28 @@ export function validateSecretOverrides(
   )
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    if (!addonDecl.secretOverrides) continue
-
     for (const [logicalName, resolvedName] of Object.entries(
-      addonDecl.secretOverrides
+      addonDecl.secretOverrides ?? {}
     )) {
       if (!secretIds.has(resolvedName)) {
         const availableSecrets = Array.from(secretIds)
         logger.critical(
           ErrorCode.INVALID_VALUE,
           `Secret override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
+        )
+      }
+    }
+
+    // A grant names the secret as the addon reads it, so it resolves through
+    // the override map before it can be looked up in the project.
+    for (const logicalName of addonDecl.secretGrants ?? []) {
+      const resolvedName =
+        addonDecl.secretOverrides?.[logicalName] ?? logicalName
+      if (!secretIds.has(resolvedName)) {
+        const availableSecrets = Array.from(secretIds)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Secret grant '${logicalName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
         )
       }
     }
@@ -411,16 +423,26 @@ export function validateCredentialOverrides(
   )
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    if (!addonDecl.credentialOverrides) continue
-
     for (const [logicalName, resolvedName] of Object.entries(
-      addonDecl.credentialOverrides
+      addonDecl.credentialOverrides ?? {}
     )) {
       if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
           `Credential override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+        )
+      }
+    }
+
+    for (const logicalName of addonDecl.credentialGrants ?? []) {
+      const resolvedName =
+        addonDecl.credentialOverrides?.[logicalName] ?? logicalName
+      if (!credentialNames.has(resolvedName)) {
+        const availableCredentials = Array.from(credentialNames)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Credential grant '${logicalName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
         )
       }
     }

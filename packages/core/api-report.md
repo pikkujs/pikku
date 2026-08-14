@@ -682,7 +682,7 @@ export class PikkuMissingMetaError extends PikkuError {}
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -1020,6 +1020,8 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  secretGrants?: string[]
+  credentialGrants?: string[]
   globalSecrets?: string
   globalCredentials?: string
 }
@@ -3439,6 +3441,8 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  secretGrants?: string[]
+  credentialGrants?: string[]
   globalSecrets?: string
   globalCredentials?: string
 }

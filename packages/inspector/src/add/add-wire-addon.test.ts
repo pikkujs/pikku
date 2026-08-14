@@ -61,9 +61,40 @@ describe('addWireAddon', () => {
       secretOverrides: undefined,
       variableOverrides: undefined,
       credentialOverrides: undefined,
+      secretGrants: undefined,
+      credentialGrants: undefined,
       globalSecrets: undefined,
       globalCredentials: undefined,
     })
+  })
+
+  test('captures the secrets and credentials the host lends an addon', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'graph',
+        package: '@pikku/addon-graph',
+        secretGrants: ['STRIPE_KEY', 'GITHUB_TOKEN'],
+        credentialGrants: ['slack'],
+      })
+    `)
+
+    assert.deepEqual(declarations.get('graph').secretGrants, [
+      'STRIPE_KEY',
+      'GITHUB_TOKEN',
+    ])
+    assert.deepEqual(declarations.get('graph').credentialGrants, ['slack'])
+  })
+
+  test('drops a grant list that is not statically knowable', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'graph',
+        package: '@pikku/addon-graph',
+        secretGrants: someRuntimeList,
+      })
+    `)
+
+    assert.equal(declarations.get('graph').secretGrants, undefined)
   })
 
   test('captures the reason an addon was exempted from credential scoping', () => {

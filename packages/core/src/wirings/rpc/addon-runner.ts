@@ -13,11 +13,31 @@ export type AddonInstance = {
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: Record<string, string>
+  /** Set by the consuming app: secrets it lends this instance, as the addon names them. */
+  secretGrants?: string[]
+  /** Set by the consuming app: credentials it lends this instance, as the addon names them. */
+  credentialGrants?: string[]
   /** Set by the consuming app to opt this instance out of secret scoping. */
   globalSecrets?: string
   /** Set by the consuming app to opt this instance out of credential scoping. */
   globalCredentials?: string
 }
+
+/**
+ * What the addon declared, plus what the host lent it. Scoping runs outside the
+ * aliaser, so every name here is the one the addon reads — which is why an
+ * override's *key* grants, and its value does not.
+ */
+const allowedNames = (
+  declared: string[] | null | undefined,
+  grants: string[] | undefined,
+  overrides: Record<string, string> | undefined
+): Set<string> =>
+  new Set([
+    ...(declared ?? []),
+    ...(grants ?? []),
+    ...Object.keys(overrides ?? {}),
+  ])
 
 const aliasSecretService = (
   secrets: SecretService,
@@ -142,7 +162,11 @@ export const getOrCreatePackageSingletonServices = async (
       ...existingServices,
       secrets: new ScopedSecretService(
         existingServices.secrets,
-        new Set(pikkuState(packageName, 'package', 'declaredSecrets') ?? [])
+        allowedNames(
+          pikkuState(packageName, 'package', 'declaredSecrets'),
+          addonInstance?.secretGrants,
+          addonInstance?.secretOverrides
+        )
       ),
     }
   }
@@ -151,10 +175,12 @@ export const getOrCreatePackageSingletonServices = async (
       ...existingServices,
       credentialService: new ScopedCredentialService(
         existingServices.credentialService,
-        new Set(
+        allowedNames(
           Object.keys(
             pikkuState(packageName, 'package', 'credentialsMeta') ?? {}
-          )
+          ),
+          addonInstance?.credentialGrants,
+          addonInstance?.credentialOverrides
         )
       ),
     }
@@ -202,6 +228,8 @@ export const addonInstanceForNamespace = (
     secretOverrides: cfg.secretOverrides,
     variableOverrides: cfg.variableOverrides,
     credentialOverrides: cfg.credentialOverrides,
+    secretGrants: cfg.secretGrants,
+    credentialGrants: cfg.credentialGrants,
     globalSecrets: cfg.globalSecrets,
     globalCredentials: cfg.globalCredentials,
   }

@@ -259,3 +259,133 @@ describe('addon credentials are scoped to what the addon declared', () => {
     assert.deepEqual(await credentials.getAllUsers(), ['user-1'])
   })
 })
+
+/**
+ * An addon whose secret names come off its input rather than its own source
+ * declares nothing, so the host lends it names it could not have derived.
+ *
+ * knowledge: decisions/security/decision-secretless-functions.md
+ */
+describe('the host grants an addon secrets it could not declare', () => {
+  beforeEach(() => {
+    resetPikkuState()
+  })
+
+  test('a granted secret is readable', async () => {
+    registerAddon([])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      secretGrants: ['STRIPE_KEY'],
+    })
+
+    const secrets = await secretsHandedToAddon('example')
+    assert.equal(await secrets.getSecret('STRIPE_KEY'), 'value-of-STRIPE_KEY')
+  })
+
+  test('a secret the host did not grant is still denied', async () => {
+    registerAddon([])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      secretGrants: ['STRIPE_KEY'],
+    })
+
+    const secrets = await secretsHandedToAddon('example')
+    await assert.rejects(() => secrets.getSecret('DATABASE_URL'), /denied/i)
+  })
+
+  test('a grant adds to what the addon declared rather than replacing it', async () => {
+    registerAddon(['ADDON_KEY'])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      secretGrants: ['STRIPE_KEY'],
+    })
+
+    const secrets = await secretsHandedToAddon('example')
+    assert.equal(await secrets.getSecret('ADDON_KEY'), 'value-of-ADDON_KEY')
+    assert.equal(await secrets.getSecret('STRIPE_KEY'), 'value-of-STRIPE_KEY')
+  })
+
+  test('an overridden secret is granted by the override itself', async () => {
+    registerAddon([])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      secretOverrides: { MAILGUN_KEY: 'PROD_EMAIL_KEY' },
+    })
+
+    const secrets = await secretsHandedToAddon('example')
+    assert.equal(
+      await secrets.getSecret('MAILGUN_KEY'),
+      'value-of-PROD_EMAIL_KEY'
+    )
+  })
+
+  test('a grant is checked before the override renames it', async () => {
+    registerAddon([])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      secretGrants: ['MAILGUN_KEY'],
+      secretOverrides: { MAILGUN_KEY: 'PROD_EMAIL_KEY' },
+    })
+
+    const secrets = await secretsHandedToAddon('example')
+    assert.equal(
+      await secrets.getSecret('MAILGUN_KEY'),
+      'value-of-PROD_EMAIL_KEY'
+    )
+    await assert.rejects(() => secrets.getSecret('PROD_EMAIL_KEY'), /denied/i)
+  })
+
+  test('a granted credential is readable', async () => {
+    registerAddon([], [])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      credentialGrants: ['stripe'],
+    })
+
+    const credentials = await credentialsHandedToAddon('example')
+    assert.equal(await credentials.get('stripe'), 'credential-of-stripe')
+    await assert.rejects(() => credentials.get('slack'), /denied/i)
+  })
+
+  test('a granted credential does not widen the rest of the service', async () => {
+    registerAddon([], [])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      credentialGrants: ['stripe'],
+    })
+
+    const credentials = await credentialsHandedToAddon('example')
+    await assert.rejects(() => credentials.getAllUsers(), /denied/i)
+  })
+
+  test('an addon without a singleton factory is granted too', async () => {
+    pikkuState(ADDON_PACKAGE, 'package', 'declaredSecrets', [])
+    wireAddon({
+      name: 'example',
+      package: ADDON_PACKAGE,
+      secretGrants: ['STRIPE_KEY'],
+    })
+
+    const services = await getOrCreatePackageSingletonServices(
+      ADDON_PACKAGE,
+      createParentServices(),
+      pikkuState(null, 'addons', 'packages').get('example') as never
+    )
+
+    assert.equal(
+      await services.secrets.getSecret('STRIPE_KEY'),
+      'value-of-STRIPE_KEY'
+    )
+    await assert.rejects(
+      () => services.secrets.getSecret('DATABASE_URL'),
+      /denied/i
+    )
+  })
+})
