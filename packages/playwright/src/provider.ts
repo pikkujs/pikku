@@ -5,7 +5,7 @@ import type { ResolvedPersona } from '@pikku/core/services'
 import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
-} from '@pikku/core/workflow'
+} from '@pikku/core/scenario'
 import { ActorSession, type CaptureContext } from './actor-session.js'
 import { compressVideosIn, type CaptureOptions } from './capture.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'

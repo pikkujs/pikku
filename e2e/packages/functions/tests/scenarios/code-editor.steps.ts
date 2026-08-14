@@ -7,7 +7,7 @@
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import type { TypedPersonas } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor, type TestIdSelector } from '@pikku/core/workflow'
+import { requireActor, type TestIdSelector } from '@pikku/core/scenario'
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 

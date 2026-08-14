@@ -169,7 +169,7 @@ export const feature = pikkuFeature({
     // which a mutable `CoreFeatureScenario[]` would reject.
     assert.deepEqual(
       typeErrors(`
-import { addFeature } from '@pikku/core/workflow'
+import { addFeature } from '@pikku/core/scenario'
 
 export const feature = pikkuFeature({
   name: 'F',

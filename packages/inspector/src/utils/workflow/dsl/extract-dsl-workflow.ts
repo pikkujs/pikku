@@ -15,13 +15,13 @@ import type {
   SwitchCaseMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
-  ScenarioStepMeta,
   InputSource,
   OutputBinding,
   Condition,
   WorkflowContext,
   ContextVariable,
 } from '@pikku/core/workflow'
+import type { ScenarioStepMeta } from '@pikku/core/scenario'
 import {
   isWorkflowDoCall,
   isWorkflowExpectEventuallyCall,

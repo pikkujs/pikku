@@ -20,7 +20,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
+import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/scenario'
 import { expect, testIdSelector } from '@pikku/playwright'
 
 /** How long a model-backed turn is given to complete. */
@@ -155,10 +155,7 @@ export const sendsAgentMessage = pikkuScenarioStep<
   },
 })
 
-export const waitsForAgentResponse = pikkuScenarioStep<
-  void,
-  { idle: true }
->({
+export const waitsForAgentResponse = pikkuScenarioStep<void, { idle: true }>({
   name: 'waitsForAgentResponse',
   description: 'waits for the agent to finish responding',
   template: 'waits for the response',
@@ -242,31 +239,30 @@ export const respondsToApproval = pikkuScenarioStep<
  * card can appear after the previous batch resumes — approving only what was on
  * screen at the start would leave the run suspended.
  */
-export const approvesAllPending = pikkuScenarioStep<
-  void,
-  { approved: number }
->({
-  name: 'approvesAllPending',
-  description: 'approves every pending request, including any that follow',
-  template: 'approves everything pending',
-  browser: async (_services, _data, { browser }) => {
-    let approved = 0
-    for (let round = 0; round < 10; round++) {
-      const buttons = browser.locate({
-        testId: 'approval-approve',
-        within: PENDING_APPROVAL,
-      })
-      const count = await buttons.count()
-      if (count === 0) break
-      for (let i = 0; i < count; i++) {
-        await buttons.first().click({ timeout: RESPONSE_TIMEOUT })
-        approved++
+export const approvesAllPending = pikkuScenarioStep<void, { approved: number }>(
+  {
+    name: 'approvesAllPending',
+    description: 'approves every pending request, including any that follow',
+    template: 'approves everything pending',
+    browser: async (_services, _data, { browser }) => {
+      let approved = 0
+      for (let round = 0; round < 10; round++) {
+        const buttons = browser.locate({
+          testId: 'approval-approve',
+          within: PENDING_APPROVAL,
+        })
+        const count = await buttons.count()
+        if (count === 0) break
+        for (let i = 0; i < count; i++) {
+          await buttons.first().click({ timeout: RESPONSE_TIMEOUT })
+          approved++
+        }
+        await waitForComposerEnabled(browser)
       }
-      await waitForComposerEnabled(browser)
-    }
-    return { approved }
-  },
-})
+      return { approved }
+    },
+  }
+)
 
 /**
  * Denies one request out of a batch and approves the others.

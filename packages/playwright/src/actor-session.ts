@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
-import { pollUntil } from '@pikku/core/workflow'
-import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/workflow'
+import { pollUntil } from '@pikku/core/scenario'
+import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/scenario'
 import type { BrowserConfig } from './config.js'
 import { locateTestId, type LocateTestIdOptions } from './testid.js'
 

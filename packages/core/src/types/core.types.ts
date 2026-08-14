@@ -17,11 +17,11 @@ import type { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import type { PikkuCLI } from '../wirings/cli/cli.types.js'
 import type {
   PikkuWorkflowWire,
-  PikkuScenarioWire,
   WorkflowService,
   WorkflowServiceConfig,
   WorkflowStepWire,
 } from '../wirings/workflow/workflow.types.js'
+import type { PikkuScenarioWire } from '../wirings/workflow/scenario.types.js'
 import type {
   PikkuBrowserWire,
   PikkuScenarioStepWire,

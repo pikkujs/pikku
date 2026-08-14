@@ -11,7 +11,7 @@
  * have no seeded account at all, so there is no actor to be. Identity is
  * therefore step *data* here, and only here.
  */
-import type { ScenarioHttpResponse } from '@pikku/core/workflow'
+import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { postScenarioJson } from '@pikku/core/persona'
 import { readSseEvents } from './support.js'
 import type { MockLlmCall } from '../../src/mock-llm/provider.js'

@@ -11,26 +11,26 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
 | stable | 48 | 813 | 1753 |
-| ecosystem | 2 | 10 | 0 |
+| ecosystem | 1 | 10 | 0 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 128 | 61 | 263 |
+| `./services` | 126 | 61 | 263 |
 | `.` | 206 | 87 | 124 |
-| `./workflow` | 108 | 46 | 147 |
+| `./workflow` | 76 | 27 | 124 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./ai-agent` | 48 | 47 | 81 |
+| `./scenario` | 42 | 42 | 85 |
 | `./channel` | 32 | 31 | 81 |
 | `./queue` | 22 | 21 | 68 |
 | `./http` | 24 | 22 | 49 |
-| `./persona` | 27 | 26 | 27 |
+| `./persona` | 27 | 27 | 34 |
 | `./services/local-meta` | 22 | 3 | 46 |
 | `./cli` | 14 | 11 | 26 |
 | `./mcp` | 20 | 17 | 17 |
-| `./scenario` | 8 | 8 | 21 |
 | `./ai-scorer` | 17 | 17 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./gateway` | 11 | 11 | 14 |
@@ -41,10 +41,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 3 | 3 | 15 |
 | `./workflow/timeline` | 8 | 3 | 14 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./workflow/types` | 59 | 3 | 11 |
+| `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./scope` | 10 | 10 | 0 |
+| `./ecosystem` | 13 | 10 | 0 |
 | `./dev` | 5 | 5 | 5 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./role` | 9 | 9 | 0 |
@@ -66,8 +67,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./oauth2` | 2 | 2 | 0 |
 | `./hmac` | 2 | 2 | 0 |
 | `./remote` | 1 | 1 | 0 |
-| `./ecosystem` | 13 | 0 | 0 |
-| `./internal` | 13 | 0 | 0 |
 
 ## .
 
@@ -1460,7 +1459,6 @@ wireChannel: <In, Channel extends string, ChannelConnect, ChannelDisconnect, Cha
 ## ./workflow
 
 ```ts
-addFeature: (featureId: string, feature: CoreFeature, packageName?: string | null) => void
 addWorkflow: (workflowName: string, workflowFunc: any, packageName?: string | null) => void
 export type ApprovalOutcome<T> =
   | {
@@ -1497,7 +1495,6 @@ export interface CancelStepMeta {
   type: 'cancel'
   reason?: string
 }
-composeStepProse: ({ phase, description, template, input, actor, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; actor?: string | undefined; keywordWidth?: number | undefined; }) => string
 export type Condition =
   | SimpleCondition
   | { type: 'and'; conditions: Condition[] }
@@ -1506,14 +1503,6 @@ export interface ContextVariable {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array'
   default?: unknown
   description?: string
-}
-export type CoreFeature = {
-  name: string
-  description?: string
-  tags?: string[]
-  scenarios: readonly CoreFeatureScenario[]
-  before?: CorePikkuFunctionHook
-  after?: CorePikkuFunctionHook
 }
 export type CoreWorkflow<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
@@ -1524,7 +1513,6 @@ export type CoreWorkflow<
   middleware?: PikkuFunctionConfig['middleware']
   tags?: string[]
 }
-createCookieJar: (apiUrl: string) => ScenarioCookieJar
 DEFAULT_STEP_RETRIES: 5
 deriveInvocationId: (runId: string, stepName: string) => string
 export interface FanoutStepMeta {
@@ -1536,24 +1524,6 @@ export interface FanoutStepMeta {
   body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta | ScenarioStepMeta>
   timeBetween?: string
 }
-export type FeatureMeta = {
-  id: string
-  name: string
-  description?: string
-  tags: string[]
-  entries: FeatureMetaEntry[]
-  unresolvedEntries: number
-  hasBefore: boolean
-  hasAfter: boolean
-}
-export type FeaturePlanEntry = {
-  featureId: string
-  featureName: string
-  scenarioName: string
-  data?: unknown
-  tags: string[]
-}
-export type FeaturesMeta = Record<string, FeatureMeta>
 export interface FilterStepMeta {
   type: 'filter'
   sourceVar: string
@@ -1583,31 +1553,6 @@ export type OutputBinding =
 export interface ParallelGroupStepMeta {
   type: 'parallel'
   children: Array<RpcStepMeta | ScenarioStepMeta>
-}
-export interface PikkuBrowserWire {
-  readonly actor: string
-  goto(url: string): Promise<void>
-  screenshot(name?: string): Promise<Uint8Array>
-}
-export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
-  name: string
-  stepName: string
-  runId: string
-  phase: ScenarioStepPhase
-  surface: ScenarioSurface
-  actor?: TActor
-  env?: ScenarioEnvironment
-}
-export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
-  context: ScenarioContext<Out>
-  expectEventually: <TOutput = any, TInput = any>(stepName: string, rpcName: string, data: TInput, predicate: (output: TOutput) => boolean, options?: WorkflowExpectEventuallyOptions) => Promise<TOutput>
-  expectError: <TInput = any>(stepName: string, rpcName: string, data: TInput, options?: WorkflowExpectErrorOptions) => Promise<string>
-  expectService: (stepName: string, serviceMethod: string, options?: WorkflowExpectServiceOptions) => Promise<void>
-  expectScore: (stepName: string, runId: string, scorerName: string, options?: WorkflowExpectScoreOptions) => Promise<{ score: number; reason?: string }>
-  given(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
-  when(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
-  then(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
-  runScheduledTask: (name: string) => Promise<unknown>
 }
 export interface PikkuWorkflow {
   start: <I>(input: I) => Promise<{ runId: string }>
@@ -1730,11 +1675,6 @@ export interface PikkuWorkflowWire {
   suspend: WorkflowWireSuspend
   approval: WorkflowWireApproval
 }
-export interface PollOptions {
-  timeoutMs?: number
-  intervalMs?: number
-}
-pollUntil: <T>(attempt: () => T | Promise<T | undefined> | undefined, { timeoutMs, intervalMs }?: PollOptions) => Promise<T | undefined>
 export interface ReconstructedRunState {
   seq: number
   at?: Date
@@ -1750,11 +1690,6 @@ export interface RefValue {
   nodeId: string
   path?: string
 }
-renderStepTemplate: (template: string, input: unknown) => string
-requireActor: <TActor>(scenarioStep: PikkuScenarioStepWire<TActor> | undefined) => TActor
-requireScenarioEnv: (scenarioStep: PikkuScenarioStepWire<unknown> | undefined) => ScenarioEnvironment
-resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
-resolveScenarioSurfaces: (phase: ScenarioStepPhase, declared: readonly ScenarioSurface[], runSurface: ScenarioSurface) => ScenarioSurfaceResolution
 export interface ReturnStepMeta {
   type: 'return'
   outputs: Record<string, OutputBinding>
@@ -1771,81 +1706,6 @@ export interface RpcStepMeta {
   expectEventually?: boolean
 }
 export type RunTimeline = RunTimelineEvent[]
-SCENARIO_SURFACES: readonly ScenarioSurface[]
-export interface ScenarioBrowserFailure {
-  actor: string
-  url?: string
-  screenshot?: string
-  consoleErrors: string[]
-  pageErrors: string[]
-  failedRequests: string[]
-  apiErrors: string[]
-}
-export interface ScenarioBrowserProvider {
-  sessionFor(actorName: string): Promise<PikkuBrowserWire>
-  reset?(): Promise<void>
-  beginScenario?(scenario: string): void
-  captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
-  close(): Promise<void>
-}
-export interface ScenarioCookieJar {
-  fetch: typeof fetch
-  clear(): void
-  readonly empty: boolean
-}
-export interface ScenarioEnvironment {
-  apiUrl: string
-  appUrl?: string
-}
-export interface ScenarioHttpResponse<T = unknown> {
-  status: number
-  ok: boolean
-  body: T
-  serialized: string
-}
-export interface ScenarioJsonRequest {
-  body?: unknown
-  headers?: Record<string, string>
-  method?: string
-  fetch?: typeof fetch
-}
-export type ScenarioStepInvocation = <TOutput = any, TInput = any>(
-  stepName: string,
-  stepFunc: string,
-  data?: TInput,
-  options?: ScenarioStepOptions
-) => Promise<TOutput>
-export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
-export interface ScenarioStepMeta {
-  type: 'scenarioStep'
-  stepName: string
-  stepFunc: string
-  phase: ScenarioStepPhase
-  outputVar?: string
-  inputs?: Record<string, InputSource> | 'passthrough'
-  options?: WorkflowStepOptions
-  actor?: string
-  surfaces?: ScenarioSurface[]
-}
-export interface ScenarioStepOptions {
-  actor?: unknown
-  description?: string
-  retries?: number
-  retryDelay?: number | string
-}
-export type ScenarioStepPhase = 'given' | 'when' | 'then'
-export type ScenarioSurface = 'browser' | 'cli' | 'default'
-export type ScenarioSurfaceResolution =
-  | {
-      kind: 'action'
-      surface: ScenarioSurface
-      fellBack: boolean
-    }
-  | {
-      kind: 'witness'
-      surfaces: ScenarioSurface[]
-      unwitnessed: boolean
-    }
 export interface SetStepMeta {
   type: 'set'
   variable: string
@@ -1905,13 +1765,6 @@ export type TemplateString = {
     expressions: Array<{ $ref: string; path?: string }>
   }
 } & { __brand: 'TemplateString' }
-export interface TestIdSelector {
-  testId: string
-  prefix?: boolean
-  where?: Record<string, string>
-  containing?: string
-  within?: TestIdSelector
-}
 uuidv5: (name: string, namespace?: string) => string
 export class WorkflowApprovalForbiddenError extends ForbiddenError {
   public payload: { reason: string; detail: string }
@@ -2135,7 +1988,48 @@ export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
 ## ./scenario
 
 ```ts
+addFeature: (featureId: string, feature: CoreFeature, packageName?: string | null) => void
+composeStepProse: ({ phase, description, template, input, actor, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; actor?: string | undefined; keywordWidth?: number | undefined; }) => string
+export type CoreFeature = {
+  name: string
+  description?: string
+  tags?: string[]
+  scenarios: readonly CoreFeatureScenario[]
+  before?: CorePikkuFunctionHook
+  after?: CorePikkuFunctionHook
+}
+export type CoreFeatureScenario =
+  | CorePikkuFunctionConfig<any, any, any>
+  | { scenario: CorePikkuFunctionConfig<any, any, any>; data: unknown }
+createCookieJar: (apiUrl: string) => ScenarioCookieJar
 createScenarioRunner: (options?: WorkflowQueueOptions) => { workflowService: InMemoryWorkflowService; scenarioService: PikkuScenarioService; }
+export type FeatureMeta = {
+  id: string
+  name: string
+  description?: string
+  tags: string[]
+  entries: FeatureMetaEntry[]
+  unresolvedEntries: number
+  hasBefore: boolean
+  hasAfter: boolean
+}
+export type FeatureMetaEntry = {
+  scenario: string
+  data?: unknown
+}
+export type FeaturePlanEntry = {
+  featureId: string
+  featureName: string
+  scenarioName: string
+  data?: unknown
+  tags: string[]
+}
+export type FeaturesMeta = Record<string, FeatureMeta>
+export interface PikkuBrowserWire {
+  readonly actor: string
+  goto(url: string): Promise<void>
+  screenshot(name?: string): Promise<Uint8Array>
+}
 export class PikkuScenarioService implements WorkflowRunExtension {
   constructor(private readonly engine: WorkflowRunEngine)
   public setRunSurface(surface: ScenarioSurface): void
@@ -2153,14 +2047,82 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public async resolvePersonas(): Promise<ScenarioPersonas | undefined>
   public decorateWorkflowWire(wire: PikkuWorkflowWire, context: { name: string; runId: string; rpcService: any; addonNamespace?: string | null }): void
 }
+export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
+  name: string
+  stepName: string
+  runId: string
+  phase: ScenarioStepPhase
+  surface: ScenarioSurface
+  actor?: TActor
+  env?: ScenarioEnvironment
+}
+export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
+  context: ScenarioContext<Out>
+  expectEventually: <TOutput = any, TInput = any>(stepName: string, rpcName: string, data: TInput, predicate: (output: TOutput) => boolean, options?: WorkflowExpectEventuallyOptions) => Promise<TOutput>
+  expectError: <TInput = any>(stepName: string, rpcName: string, data: TInput, options?: WorkflowExpectErrorOptions) => Promise<string>
+  expectService: (stepName: string, serviceMethod: string, options?: WorkflowExpectServiceOptions) => Promise<void>
+  expectScore: (stepName: string, runId: string, scorerName: string, options?: WorkflowExpectScoreOptions) => Promise<{ score: number; reason?: string }>
+  given(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
+  when(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
+  then(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
+  runScheduledTask: (name: string) => Promise<unknown>
+}
+export interface PollOptions {
+  timeoutMs?: number
+  intervalMs?: number
+}
+pollUntil: <T>(attempt: () => T | Promise<T | undefined> | undefined, { timeoutMs, intervalMs }?: PollOptions) => Promise<T | undefined>
+renderStepTemplate: (template: string, input: unknown) => string
+requireActor: <TActor>(scenarioStep: PikkuScenarioStepWire<TActor> | undefined) => TActor
+requireScenarioEnv: (scenarioStep: PikkuScenarioStepWire<unknown> | undefined) => ScenarioEnvironment
+resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
+resolveScenarioSurfaces: (phase: ScenarioStepPhase, declared: readonly ScenarioSurface[], runSurface: ScenarioSurface) => ScenarioSurfaceResolution
+SCENARIO_SURFACES: readonly ScenarioSurface[]
 export class ScenarioBrowserActorRequired extends PikkuError {
   constructor(public readonly stepFunc: string)
+}
+export interface ScenarioBrowserFailure {
+  actor: string
+  url?: string
+  screenshot?: string
+  consoleErrors: string[]
+  pageErrors: string[]
+  failedRequests: string[]
+  apiErrors: string[]
+}
+export interface ScenarioBrowserProvider {
+  sessionFor(actorName: string): Promise<PikkuBrowserWire>
+  reset?(): Promise<void>
+  beginScenario?(scenario: string): void
+  captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
+  close(): Promise<void>
 }
 export class ScenarioBrowserUnavailable extends PikkuError {
   constructor(public readonly stepFunc: string)
 }
+export interface ScenarioCookieJar {
+  fetch: typeof fetch
+  clear(): void
+  readonly empty: boolean
+}
+export interface ScenarioEnvironment {
+  apiUrl: string
+  appUrl?: string
+}
 export class ScenarioHookError extends PikkuError {
   constructor(public readonly scenarioName: string, public readonly phase: 'before' | 'after', cause: unknown)
+}
+export interface ScenarioHttpResponse<T = unknown> {
+  status: number
+  ok: boolean
+  body: T
+  serialized: string
+}
+export interface ScenarioJsonRequest {
+  body?: unknown
+  headers?: Record<string, string>
+  method?: string
+  fetch?: typeof fetch
 }
 export class ScenarioNoSurfaceBinding extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly declared: ScenarioSurface[], public readonly runSurface: ScenarioSurface)
@@ -2168,8 +2130,52 @@ export class ScenarioNoSurfaceBinding extends PikkuError {
 export class ScenarioNoWitness extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly declared: ScenarioSurface[], public readonly runSurface: ScenarioSurface)
 }
+export type ScenarioStepInvocation = <TOutput = any, TInput = any>(
+  stepName: string,
+  stepFunc: string,
+  data?: TInput,
+  options?: ScenarioStepOptions
+) => Promise<TOutput>
+export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
+export interface ScenarioStepMeta {
+  type: 'scenarioStep'
+  stepName: string
+  stepFunc: string
+  phase: ScenarioStepPhase
+  outputVar?: string
+  inputs?: Record<string, InputSource> | 'passthrough'
+  options?: WorkflowStepOptions
+  actor?: string
+  surfaces?: ScenarioSurface[]
+}
+export interface ScenarioStepOptions {
+  actor?: unknown
+  description?: string
+  retries?: number
+  retryDelay?: number | string
+}
+export type ScenarioStepPhase = 'given' | 'when' | 'then'
+export type ScenarioSurface = 'browser' | 'cli' | 'default'
+export type ScenarioSurfaceResolution =
+  | {
+      kind: 'action'
+      surface: ScenarioSurface
+      fellBack: boolean
+    }
+  | {
+      kind: 'witness'
+      surfaces: ScenarioSurface[]
+      unwitnessed: boolean
+    }
 export class ScenarioWitnessDisagreement extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly expected: { surface: ScenarioSurface; observed: unknown }, public readonly actual: { surface: ScenarioSurface; observed: unknown })
+}
+export interface TestIdSelector {
+  testId: string
+  prefix?: boolean
+  where?: Record<string, string>
+  containing?: string
+  within?: TestIdSelector
 }
 ```
 
@@ -2254,17 +2260,6 @@ export interface ContextVariable {
   default?: unknown
   description?: string
 }
-export type CoreFeature = {
-  name: string
-  description?: string
-  tags?: string[]
-  scenarios: readonly CoreFeatureScenario[]
-  before?: CorePikkuFunctionHook
-  after?: CorePikkuFunctionHook
-}
-export type CoreFeatureScenario =
-  | CorePikkuFunctionConfig<any, any, any>
-  | { scenario: CorePikkuFunctionConfig<any, any, any>; data: unknown }
 export type CoreWorkflow<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
     CorePikkuFunctionConfig<any, any, any>,
@@ -2283,28 +2278,6 @@ export interface FanoutStepMeta {
   body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta | ScenarioStepMeta>
   timeBetween?: string
 }
-export type FeatureMeta = {
-  id: string
-  name: string
-  description?: string
-  tags: string[]
-  entries: FeatureMetaEntry[]
-  unresolvedEntries: number
-  hasBefore: boolean
-  hasAfter: boolean
-}
-export type FeatureMetaEntry = {
-  scenario: string
-  data?: unknown
-}
-export type FeaturePlanEntry = {
-  featureId: string
-  featureName: string
-  scenarioName: string
-  data?: unknown
-  tags: string[]
-}
-export type FeaturesMeta = Record<string, FeatureMeta>
 export interface FilterStepMeta {
   type: 'filter'
   sourceVar: string
@@ -2333,31 +2306,6 @@ export type OutputBinding =
 export interface ParallelGroupStepMeta {
   type: 'parallel'
   children: Array<RpcStepMeta | ScenarioStepMeta>
-}
-export interface PikkuBrowserWire {
-  readonly actor: string
-  goto(url: string): Promise<void>
-  screenshot(name?: string): Promise<Uint8Array>
-}
-export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
-  name: string
-  stepName: string
-  runId: string
-  phase: ScenarioStepPhase
-  surface: ScenarioSurface
-  actor?: TActor
-  env?: ScenarioEnvironment
-}
-export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
-  context: ScenarioContext<Out>
-  expectEventually: <TOutput = any, TInput = any>(stepName: string, rpcName: string, data: TInput, predicate: (output: TOutput) => boolean, options?: WorkflowExpectEventuallyOptions) => Promise<TOutput>
-  expectError: <TInput = any>(stepName: string, rpcName: string, data: TInput, options?: WorkflowExpectErrorOptions) => Promise<string>
-  expectService: (stepName: string, serviceMethod: string, options?: WorkflowExpectServiceOptions) => Promise<void>
-  expectScore: (stepName: string, runId: string, scorerName: string, options?: WorkflowExpectScoreOptions) => Promise<{ score: number; reason?: string }>
-  given(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
-  when(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
-  then(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
-  runScheduledTask: (name: string) => Promise<unknown>
 }
 export interface PikkuWorkflow {
   start: <I>(input: I) => Promise<{ runId: string }>
@@ -2389,37 +2337,6 @@ export interface RpcStepMeta {
   actor?: string
   expectEventually?: boolean
 }
-export interface ScenarioBrowserProvider {
-  sessionFor(actorName: string): Promise<PikkuBrowserWire>
-  reset?(): Promise<void>
-  beginScenario?(scenario: string): void
-  captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
-  close(): Promise<void>
-}
-export type ScenarioStepInvocation = <TOutput = any, TInput = any>(
-  stepName: string,
-  stepFunc: string,
-  data?: TInput,
-  options?: ScenarioStepOptions
-) => Promise<TOutput>
-export interface ScenarioStepMeta {
-  type: 'scenarioStep'
-  stepName: string
-  stepFunc: string
-  phase: ScenarioStepPhase
-  outputVar?: string
-  inputs?: Record<string, InputSource> | 'passthrough'
-  options?: WorkflowStepOptions
-  actor?: string
-  surfaces?: ScenarioSurface[]
-}
-export interface ScenarioStepOptions {
-  actor?: unknown
-  description?: string
-  retries?: number
-  retryDelay?: number | string
-}
-export type ScenarioStepPhase = 'given' | 'when' | 'then'
 export interface SetStepMeta {
   type: 'set'
   variable: string
@@ -4872,15 +4789,6 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
-export interface HttpPersonasConfig {
-  apiUrl: string
-  secret: string
-  personas: Record<string, ResolvedPersona>
-  signInPath?: string
-  sessionPath?: string
-  rpcPath?: string
-  model?: string
-}
 export class InMemoryAIRunStateService implements AIRunStateService {
   async createRun(run: CreateRunInput): Promise<string>
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
@@ -5144,12 +5052,6 @@ export interface Role {
 }
 export type RPCMetaRecord = Record<string, string>
 export type SaveScoreInput = Omit<AIRunScore, 'createdAt'>
-export interface ScenarioHttpResponse<T = unknown> {
-  status: number
-  ok: boolean
-  body: T
-  serialized: string
-}
 export interface ScenarioPersona< TAgentName extends string = string, TRpcMap extends ScenarioRpcMap = ScenarioRpcMap, > {
   readonly name: string
   readonly email: string
@@ -5816,38 +5718,6 @@ timingSafeStringEqual: (a: string, b: string) => boolean
 ```
 
 ## ./ecosystem
-
-```ts
-addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any>, packageName?: string | null) => void
-addGlobalMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
-addMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
-export type CreateSingletonServices<
-  Config extends CoreConfig,
-  SingletonServices extends CoreSingletonServices,
-> = (
-  config: Config,
-  existingServices?: Partial<SingletonServices>
-) => Promise<SingletonServices>
-export type CreateWireServices<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  Services extends CoreServices<SingletonServices> =
-    CoreServices<SingletonServices>,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = (
-  services: SingletonServices,
-  wire: PikkuRawWire
-) => Promise<WireServices<Services, SingletonServices>>
-getAllPackageStates: () => Map<string, PikkuPackageState>
-getCreateWireServices: () => CreateWireServices | undefined
-getSingletonServices: () => CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>
-httpRouter: PathToRegexRouter
-pikkuState: <Type extends keyof PikkuPackageState, Content extends keyof PikkuPackageState[Type]>(packageName: string | null, type: Type, content: Content, value?: PikkuPackageState[Type][Content] | undefined) => PikkuPackageState[Type][Content]
-resetPikkuState: () => void
-runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
-setSingletonServices: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => void
-```
-
-## ./internal
 
 ```ts
 addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any>, packageName?: string | null) => void

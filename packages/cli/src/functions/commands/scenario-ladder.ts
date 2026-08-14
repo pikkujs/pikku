@@ -8,8 +8,8 @@
  * belongs to `scenario-formatter.ts`; this module only decides what each step
  * is called.
  */
-import { composeStepProse } from '@pikku/core/workflow'
-import type { ScenarioStepPhase, ScenarioSurface } from '@pikku/core/workflow'
+import { composeStepProse } from '@pikku/core/scenario'
+import type { ScenarioStepPhase, ScenarioSurface } from '@pikku/core/scenario'
 import type { WorkflowStepMeta } from '@pikku/core/workflow/types'
 import type { FunctionsMeta } from '@pikku/core'
 import { KEYWORD_WIDTH } from './scenario-formatter.js'

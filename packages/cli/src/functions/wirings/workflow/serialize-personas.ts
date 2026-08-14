@@ -15,11 +15,8 @@ export const serializePersonas = (
 ) => {
   return `/** Personas declared with definePersonas() */
 import { createHttpPersonas } from '@pikku/core/persona'
-import type {
-  HttpPersonasConfig,
-  ScenarioPersona,
-  ResolvedPersona,
-} from '@pikku/core/services'
+import type { HttpPersonasConfig } from '@pikku/core/persona'
+import type { ScenarioPersona, ResolvedPersona } from '@pikku/core/services'
 import type { AgentMap } from '${agentMapImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 

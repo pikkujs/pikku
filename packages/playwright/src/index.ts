@@ -6,10 +6,10 @@
  * actor, signed in as that actor.
  */
 import type { Page, BrowserContext, Locator } from '@playwright/test'
-import type { TestIdSelector } from '@pikku/core/workflow'
+import type { TestIdSelector } from '@pikku/core/scenario'
 import type { LocateTestIdOptions } from './testid.js'
 
-declare module '@pikku/core/workflow' {
+declare module '@pikku/core/scenario' {
   interface PikkuBrowserWire {
     /** The actor's page — the full Playwright API, not a wrapper. */
     page: Page
@@ -33,26 +33,11 @@ declare module '@pikku/core/workflow' {
 export { expect } from '@playwright/test'
 
 export { type BrowserConfig } from './config.js'
-export {
-  registered,
-  type ElementKind,
-  type ElementMap,
-} from './elements.js'
-export {
-  ActorSession,
-} from './actor-session.js'
-export {
-  slug,
-} from './capture.js'
-export {
-  type BrowserConnection,
-} from './browser-launch.js'
-export {
-  PlaywrightScenarioBrowserProvider,
-} from './provider.js'
+export { registered, type ElementKind, type ElementMap } from './elements.js'
+export { ActorSession } from './actor-session.js'
+export { slug } from './capture.js'
+export { type BrowserConnection } from './browser-launch.js'
+export { PlaywrightScenarioBrowserProvider } from './provider.js'
 export { staticRoutes, sweepAllPages } from './pages-sweep.js'
-export {
-  testIdSelector,
-  type LocateTestIdOptions,
-} from './testid.js'
+export { testIdSelector, type LocateTestIdOptions } from './testid.js'
 export * as mantine from './locators.js'

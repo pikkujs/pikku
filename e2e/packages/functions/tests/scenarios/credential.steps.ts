@@ -8,7 +8,7 @@
  * is what is under test, so an actor cannot stand in for them.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireScenarioEnv } from '@pikku/core/workflow'
+import { requireScenarioEnv } from '@pikku/core/scenario'
 import { postScenarioJson } from '@pikku/core/persona'
 
 /**

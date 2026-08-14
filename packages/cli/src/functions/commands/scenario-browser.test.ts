@@ -5,7 +5,7 @@ import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,
 } from './scenario-browser.js'
-import type { ScenarioBrowserProvider } from '@pikku/core/workflow'
+import type { ScenarioBrowserProvider } from '@pikku/core/scenario'
 
 const stubProvider = (
   overrides: Partial<ScenarioBrowserProvider> = {}

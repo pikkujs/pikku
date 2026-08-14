@@ -8,10 +8,8 @@
  * of these scenarios, so status is data the assertion steps read.
  */
 import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import {
-  requireScenarioEnv,
-  type ScenarioHttpResponse,
-} from '@pikku/core/workflow'
+import { requireScenarioEnv } from '@pikku/core/scenario'
+import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { randomUUID } from 'node:crypto'
 import {
   postAgent,

@@ -28,13 +28,9 @@ export {
   reconstructStateAt,
   reconstructFinalState,
 } from './run-timeline.js'
-export type {
-  RunTimeline,
-  ReconstructedRunState,
-} from './run-timeline.js'
+export type { RunTimeline, ReconstructedRunState } from './run-timeline.js'
 
 export { addWorkflow } from './dsl/workflow-runner.js'
-export { addFeature, resolveFeatureScenarios } from './feature.js'
 
 export { template, type TemplateString } from './graph/template.js'
 export {
@@ -63,10 +59,6 @@ export type {
   WorkflowRunService,
   WorkflowRunMirror,
   CoreWorkflow,
-  CoreFeature,
-  FeatureMeta,
-  FeaturesMeta,
-  FeaturePlanEntry,
   PikkuWorkflow,
   ContextVariable,
   WorkflowContext,
@@ -97,47 +89,7 @@ export type {
   SwitchStepMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
-  ScenarioStepInvocation,
-  ScenarioStepMeta,
   WorkflowStepMeta,
   WorkflowStepWire,
   PikkuWorkflowWire,
-  PikkuScenarioWire,
 } from './workflow.types.js'
-
-export type {
-  ScenarioStepPhase,
-  ScenarioStepKind,
-  ScenarioStepOptions,
-  PikkuScenarioStepWire,
-  ScenarioEnvironment,
-  ScenarioSurface,
-  ScenarioSurfaceResolution,
-} from './scenario-step.types.js'
-export { SCENARIO_SURFACES } from './scenario-step.types.js'
-
-// Which of a step's bindings run: one for an action, every witness for a `then`
-export { resolveScenarioSurfaces } from './scenario-surface.js'
-
-export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
-
-export { pollUntil, type PollOptions } from './scenario-poll.js'
-
-export { createCookieJar } from './scenario-cookie-jar.js'
-export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
-
-export type {
-  ScenarioHttpResponse,
-  ScenarioJsonRequest,
-} from '../../services/personas-service.js'
-// The readers themselves live on `@pikku/core/persona`; workflow is a production
-// wiring and must not pull scenario runtime in behind it.
-
-export type {
-  PikkuBrowserWire,
-  TestIdSelector,
-  ScenarioBrowserProvider,
-  ScenarioBrowserFailure,
-} from './scenario-step.types.js'
-
-export { composeStepProse, renderStepTemplate } from './scenario-prose.js'

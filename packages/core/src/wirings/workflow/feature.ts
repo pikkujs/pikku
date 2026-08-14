@@ -1,9 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
-import type {
-  CoreFeature,
-  CoreWorkflow,
-  FeaturePlanEntry,
-} from './workflow.types.js'
+import type { CoreWorkflow } from './workflow.types.js'
+import type { CoreFeature, FeaturePlanEntry } from './scenario.types.js'
 
 export const addFeature = (
   featureId: string,

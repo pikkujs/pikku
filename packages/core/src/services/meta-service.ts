@@ -13,10 +13,8 @@ import type {
   MCPToolMeta,
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
-import type {
-  FeaturesMeta,
-  WorkflowsMeta,
-} from '../wirings/workflow/workflow.types.js'
+import type { WorkflowsMeta } from '../wirings/workflow/workflow.types.js'
+import type { FeaturesMeta } from '../wirings/workflow/scenario.types.js'
 import type { ResolvedPersona } from './personas-service.js'
 import type { SystemRoleDefinitionsMeta } from '../wirings/role/role.types.js'
 import type {

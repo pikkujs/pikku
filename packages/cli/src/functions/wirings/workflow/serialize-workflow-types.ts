@@ -14,7 +14,8 @@ import {
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from '@pikku/core/workflow'
-import type { PikkuWorkflowWire, PikkuScenarioWire, WorkflowStepOptions, ScenarioStepOptions } from '@pikku/core/workflow'
+import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
+import type { PikkuScenarioWire, ScenarioStepOptions } from '@pikku/core/scenario'
 
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices } from '${functionTypesImportPath}'

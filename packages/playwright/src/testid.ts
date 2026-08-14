@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-import type { TestIdSelector } from '@pikku/core/workflow'
+import type { TestIdSelector } from '@pikku/core/scenario'
 
 /**
  * Test-id resolution — the vocabulary every app's browser steps look elements

@@ -113,10 +113,10 @@ export type FlowType =
 // Import and re-export context types from core
 import type {
   ContextVariable,
-  ScenarioStepPhase,
   WorkflowContext,
   WorkflowPlannedStep,
 } from '@pikku/core/workflow'
+import type { ScenarioStepPhase } from '@pikku/core/scenario'
 
 export type { ContextVariable, WorkflowContext }
 
