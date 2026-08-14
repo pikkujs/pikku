@@ -1,5 +1,22 @@
 # @pikku/playwright
 
+## 0.12.75
+
+### Patch Changes
+
+- 438b776: Move the scenario and feature surface off `@pikku/core/workflow` and onto
+  `@pikku/core/scenario`. Scenarios extend workflows, so the production workflow
+  wiring no longer names a scenario module in its import graph. Feature and
+  scenario types are declared in their own `scenario.types.ts` rather than in
+  `workflow.types.ts`. Import `requireActor`, `requireScenarioEnv`, `pollUntil`,
+  `createCookieJar`, `addFeature`, `ScenarioHttpResponse` and the rest from
+  `@pikku/core/scenario`; `HttpPersonasConfig` now comes from
+  `@pikku/core/persona` rather than `@pikku/core/services`.
+- Updated dependencies [02c4fe5]
+- Updated dependencies [438b776]
+- Updated dependencies [438b776]
+  - @pikku/core@0.12.83
+
 ## 0.12.74
 
 ### Patch Changes

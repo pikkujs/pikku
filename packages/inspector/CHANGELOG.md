@@ -1,3 +1,58 @@
+## 0.12.59
+
+### Patch Changes
+
+- 02c4fe5: fix(core,inspector): let a host grant an addon secrets it could not declare
+
+  Scoping an addon's `SecretService` to its `declaredSecrets` left generic addons
+  with nothing readable: `declaredSecrets` is derived from the addon package's own
+  source, but the secrets an addon like `@pikku/addon-graph` reads are named by the
+  consuming app's workflow nodes at runtime. Every authenticated `graph:httpRequest`
+  threw.
+
+  `wireAddon` now takes `secretGrants: string[]` and `credentialGrants: string[]`,
+  completing the grant family alongside `secretOverrides` (grant + rename) and
+  `globalSecrets` (grant everything, with a reason). Grants name the secret as the
+  addon reads it, since the scope check runs before the override map renames it —
+  which is also why an override's key grants and its value does not.
+
+  A grant naming a secret the project does not declare is an `INVALID_VALUE`
+  critical at codegen, resolved through the override map before lookup.
+
+- 438b776: Move the scenario and feature surface off `@pikku/core/workflow` and onto
+  `@pikku/core/scenario`. Scenarios extend workflows, so the production workflow
+  wiring no longer names a scenario module in its import graph. Feature and
+  scenario types are declared in their own `scenario.types.ts` rather than in
+  `workflow.types.ts`. Import `requireActor`, `requireScenarioEnv`, `pollUntil`,
+  `createCookieJar`, `addFeature`, `ScenarioHttpResponse` and the rest from
+  `@pikku/core/scenario`; `HttpPersonasConfig` now comes from
+  `@pikku/core/persona` rather than `@pikku/core/services`.
+- ad63f47: feat(cli): warn before codegen when a linked dependency splits a package's type identity
+
+  `pikku all` now runs the split-type-identity check as a preflight, beside the
+  existing `@pikku/core` one, and warns with `PKU719` naming each package, both
+  versions and both paths.
+
+  It has to run _before_ the work rather than after it fails. The failure it
+  explains is a V8 heap OOM, which aborts the process — `process.on('exit')`,
+  `uncaughtException` and `finally` never run, so nothing printed after the fact is
+  ever seen. By the time there is a symptom, the only thing that can help is
+  already on screen above it. Without this the user sees a codegen step that dies
+  of memory pressure with no indication that two copies of one package are the
+  reason, and the obvious next move is to raise `--max-old-space-size`, which
+  hides it further.
+
+  Warns rather than throws: a skewed linked dependency is a strong signal, not a
+  certainty, and refusing to build on a heuristic would break working setups.
+  `PIKKU_SKIP_TYPE_IDENTITY_CHECK=1` silences it, matching
+  `PIKKU_ALLOW_DUPLICATE_CORE`. It also swallows its own errors — it runs on every
+  codegen, so it must never be the reason a build stops.
+
+- Updated dependencies [02c4fe5]
+- Updated dependencies [438b776]
+- Updated dependencies [438b776]
+  - @pikku/core@0.12.83
+
 ## 0.12.58
 
 ### Patch Changes
