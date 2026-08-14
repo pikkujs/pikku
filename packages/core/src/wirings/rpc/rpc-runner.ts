@@ -284,6 +284,8 @@ export class ContextAwareRPCService {
         secretOverrides: resolved.addonConfig?.secretOverrides,
         variableOverrides: resolved.addonConfig?.variableOverrides,
         credentialOverrides: resolved.addonConfig?.credentialOverrides,
+        secretGrants: resolved.addonConfig?.secretGrants,
+        credentialGrants: resolved.addonConfig?.credentialGrants,
         globalSecrets: resolved.addonConfig?.globalSecrets,
         globalCredentials: resolved.addonConfig?.globalCredentials,
       },

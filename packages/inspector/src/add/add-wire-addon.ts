@@ -60,6 +60,8 @@ export function addWireAddon(
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
   let credentialOverrides: Record<string, string> | undefined
+  let secretGrants: string[] | undefined
+  let credentialGrants: string[] | undefined
   let globalSecrets: string | undefined
   let globalCredentials: string | undefined
 
@@ -104,6 +106,10 @@ export function addWireAddon(
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
       credentialOverrides = parseStringRecord(prop.initializer)
+    } else if (key === 'secretGrants') {
+      secretGrants = parseStringArray(prop.initializer)
+    } else if (key === 'credentialGrants') {
+      credentialGrants = parseStringArray(prop.initializer)
     } else if (key === 'globalSecrets') {
       // The grant is real at runtime whatever the reason evaluates to, so a
       // non-literal is recorded as its source text rather than dropped.
@@ -130,6 +136,8 @@ export function addWireAddon(
     secretOverrides,
     variableOverrides,
     credentialOverrides,
+    secretGrants,
+    credentialGrants,
     globalSecrets,
     globalCredentials,
   })

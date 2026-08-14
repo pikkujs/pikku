@@ -102,6 +102,10 @@ export interface PikkuPackageState {
         variableOverrides?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project credential name */
         credentialOverrides?: Record<string, string>
+        /** Secrets the host lends this instance, named as the addon reads them */
+        secretGrants?: string[]
+        /** Credentials the host lends this instance, named as the addon reads them */
+        credentialGrants?: string[]
         /** Why this instance gets the whole `SecretService` rather than one scoped to its declared secrets */
         globalSecrets?: string
         /** Why this instance gets the whole `CredentialService` rather than one scoped to its declared credentials */

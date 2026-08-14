@@ -170,6 +170,8 @@ export interface SerializableInspectorState {
           secretOverrides?: Record<string, string>
           variableOverrides?: Record<string, string>
           credentialOverrides?: Record<string, string>
+          secretGrants?: string[]
+          credentialGrants?: string[]
           globalSecrets?: string
           globalCredentials?: string
         },

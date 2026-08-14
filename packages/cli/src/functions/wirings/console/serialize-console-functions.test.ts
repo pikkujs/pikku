@@ -37,6 +37,26 @@ test('serializeConsoleFunctions describes every payload with a zod schema', () =
   )
 })
 
+test('serializeConsoleFunctions no longer generates the console secret RPCs', () => {
+  const { schemas, functions } = serializeConsoleFunctions(
+    '#pikku',
+    '#agents',
+    '/api'
+  )
+
+  for (const name of [
+    'SetSecret',
+    'pikkuConsoleSetSecret',
+    'pikkuConsoleGetSecret',
+    'pikkuConsoleHasSecret',
+  ]) {
+    assert.ok(
+      !schemas.includes(name) && !functions.includes(name),
+      `${name} was generated — the console administers secrets through the addon, not through generated functions`
+    )
+  }
+})
+
 test('serializeConsoleFunctions keeps the schemas module free of anything but zod', () => {
   const { schemas } = serializeConsoleFunctions('#pikku', '#agents', '/api')
 

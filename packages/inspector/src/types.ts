@@ -588,6 +588,10 @@ export interface InspectorState {
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
         credentialOverrides?: Record<string, string>
+        /** Secrets the app lends this instance, named as the addon reads them. */
+        secretGrants?: string[]
+        /** Credentials the app lends this instance, named as the addon reads them. */
+        credentialGrants?: string[]
         /**
          * The app's stated reason for handing this instance the whole
          * `SecretService` instead of one scoped to its declared secrets.

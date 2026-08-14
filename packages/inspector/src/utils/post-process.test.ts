@@ -59,6 +59,33 @@ const makeOverrideState = (
     },
   }) as unknown as Omit<InspectorState, 'typesLookup'>
 
+const makeGrantState = (
+  kind: 'secrets' | 'credentials',
+  declaredNames: string[],
+  decl: {
+    secretGrants?: string[]
+    credentialGrants?: string[]
+    secretOverrides?: Record<string, string>
+    credentialOverrides?: Record<string, string>
+  }
+): Omit<InspectorState, 'typesLookup'> =>
+  ({
+    rpc: {
+      wireAddonDeclarations: new Map([
+        ['slack-marketing', { package: '@addon/slack', ...decl }],
+      ]),
+    },
+    secrets: {
+      definitions:
+        kind === 'secrets' ? declaredNames.map((name) => ({ name })) : [],
+    },
+    credentials: {
+      definitions:
+        kind === 'credentials' ? declaredNames.map((name) => ({ name })) : [],
+    },
+    variables: { definitions: [] },
+  }) as unknown as Omit<InspectorState, 'typesLookup'>
+
 function makeState(
   overrides: {
     usedFunctions?: string[]
@@ -413,6 +440,46 @@ describe('override validation resolves the override target (value), not the logi
     )
     validateVariableOverrides(logger, state)
     assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides accepts a grant naming a declared secret', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', ['STRIPE_KEY'], {
+      secretGrants: ['STRIPE_KEY'],
+    })
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateSecretOverrides flags a grant naming no declared secret', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', ['STRIPE_KEY'], {
+      secretGrants: ['STIRPE_KEY'],
+    })
+    validateSecretOverrides(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!.message, /STIRPE_KEY/)
+    assert.match(criticals[0]!.message, /STRIPE_KEY/)
+  })
+
+  test('validateSecretOverrides resolves a grant through its override before looking it up', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('secrets', ['PROD_EMAIL_KEY'], {
+      secretGrants: ['MAILGUN_KEY'],
+      secretOverrides: { MAILGUN_KEY: 'PROD_EMAIL_KEY' },
+    })
+    validateSecretOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateCredentialOverrides flags a grant naming no declared credential', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('credentials', ['marketing_cred'], {
+      credentialGrants: ['ghost_cred'],
+    })
+    validateCredentialOverrides(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!.message, /ghost_cred/)
   })
 })
 
