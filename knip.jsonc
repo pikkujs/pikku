@@ -1,0 +1,39 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+
+  // Only the rules that are true-positive dense on this repo.
+  //
+  // `files` and `dependencies` are deliberately absent: pikku functions are
+  // discovered by codegen rather than imported, so every `*.function.ts` and
+  // the CLI's own `cli.wiring.ts` read as orphaned to an import-graph tool,
+  // and e2e's addons and drivers are wired at runtime. Turning those on
+  // reports ~1100 findings of which almost none are real. `exports` and
+  // `types` are covered by the surface scan behind #1233, which can see the
+  // two things knip cannot: the fabric repo as a downstream consumer, and
+  // specifiers the CLI emits inside template literals.
+  "include": ["unlisted", "binaries", "duplicates"],
+
+  "ignoreDependencies": [
+    // `cloudflare:workers` is the Workers built-in module scheme, not the
+    // `cloudflare` npm package. Installing that package would be wrong.
+    "cloudflare",
+    // Lives at `verifiers/db-schema/addon` and is deliberately outside the
+    // workspace globs — that verifier exists to prove an addon resolves when
+    // it is not a workspace, so declaring it as one would defeat the test.
+    "@pikku/verifier-db-addon",
+  ],
+
+  "ignoreBinaries": [
+    // A c8 subcommand (`npx c8 report`), not a binary on PATH.
+    "report",
+    // A workspace script (`packages/console`), invoked from the repo root.
+    "generate",
+    // `@pikku/cli`'s own bin, run through npx from a workspace that is being
+    // generated rather than one that depends on the CLI.
+    "pikku",
+  ],
+
+  // Build output and generated sources are not hand-authored, and their
+  // imports are already accounted for by the source they are generated from.
+  "ignore": ["**/dist/**", "**/.pikku/**", "**/*.gen.ts", "**/*.gen.d.ts"],
+}

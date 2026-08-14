@@ -231,8 +231,3 @@ export class SerializePlugin extends BaseSerializePlugin {
     super(serializer, deserializer, skipNodeKind)
   }
 }
-
-/**
- * @deprecated use {@link SerializePlugin} instead
- */
-export const SqliteSerializePlugin = SerializePlugin

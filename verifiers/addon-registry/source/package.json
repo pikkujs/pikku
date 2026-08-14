@@ -32,5 +32,8 @@
     "@pikku/core": "*",
     "typescript": "^6.0.3",
     "zod": "^4"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*"
   }
 }
