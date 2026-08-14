@@ -5907,6 +5907,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/bun-server@workspace:packages/runtimes/bun-server"
   dependencies:
+    "@pikku/core": "npm:^0.12.82"
     "@pikku/modelcontextprotocol": "npm:^0.12.8"
     "@types/bun": "npm:latest"
     typescript: "npm:^6.0.3"
@@ -5944,6 +5945,7 @@ __metadata:
     "@pikku/schedule": "npm:^0.12.5"
     "@pikku/skills": "npm:^0.12.9"
     "@pikku/ws": "npm:^0.12.5"
+    "@playwright/test": "npm:^1.50.0"
     "@types/cookie": "npm:^1.0.0"
     "@types/istanbul-lib-instrument": "npm:^1.7.7"
     "@types/json-schema": "npm:^7.0.15"
@@ -6324,11 +6326,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite"
   dependencies:
+    "@pikku/core": "npm:^0.12.82"
     "@pikku/kysely": "npm:^0.13.15"
     "@pikku/kysely-sqlite": "npm:^0.12.11"
     "@types/bun": "npm:latest"
     kysely: "npm:^0.29.0"
     typescript: "npm:^6.0.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.82
   languageName: unknown
   linkType: soft
 
@@ -7229,6 +7234,7 @@ __metadata:
   resolution: "@pikku/verifiers-binary@workspace:verifiers/binary"
   dependencies:
     "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^6.0.3"
   languageName: unknown
@@ -7292,6 +7298,7 @@ __metadata:
   resolution: "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"
   dependencies:
     "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^6.0.3"
   languageName: unknown
@@ -7302,6 +7309,7 @@ __metadata:
   resolution: "@pikku/verifiers-deploy-cloudflare@workspace:verifiers/deploy-cloudflare"
   dependencies:
     "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^6.0.3"
   languageName: unknown
@@ -7312,6 +7320,7 @@ __metadata:
   resolution: "@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless"
   dependencies:
     "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^6.0.3"
   languageName: unknown
@@ -7322,6 +7331,7 @@ __metadata:
   resolution: "@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone"
   dependencies:
     "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^6.0.3"
   languageName: unknown
@@ -7332,6 +7342,7 @@ __metadata:
   resolution: "@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"
   dependencies:
     "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     tsx: "npm:^4"
     typescript: "npm:^6.0.3"
