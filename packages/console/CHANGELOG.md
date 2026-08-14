@@ -1,3 +1,131 @@
+## 0.12.58
+
+### Patch Changes
+
+- b73cc02: The nav dock's zones are now declared rather than inferred from section order.
+  A `NavSection` says which zone it belongs to with `zone: 'row' | 'group'`,
+  replacing the implicit "first section wins" rule that also left the untitled
+  Changes section as a loose tile among the group tiles.
+
+  The default nav is regrouped around what each screen is: eight surfaces you work
+  on sit on the row (Overview, Functions, Workflows, Agents, Scenarios, Database,
+  Emails, Knowledge) and the rest sit behind four named groups — AI, Wiring,
+  Project and Access. Overview had no nav entry at all before this and was
+  reachable only by URL or the `/` redirect.
+
+  The dock also gains an account tile, folding appearance, metadata refresh,
+  impersonation and **sign out** into one menu — sign out previously had no
+  trigger anywhere in the shell except the not-authorized screen, which a
+  signed-in user never sees.
+
+- 3a4d50a: feat(console): one scope per console area, under `pikku:console`
+
+  The console gated itself on a single `admin` scope declared on `wireAddon`, so
+  one grant covered reading a secret, rewriting a function body and reading the
+  audit trail alike — and the secret and variable brokers, which the CLI emits
+  into the app's own scaffold rather than the addon, were not covered by the addon
+  gate at all and carried no scope of their own.
+
+  Every console function now declares the area it belongs to:
+
+  ```
+  pikku:console:secrets      read | write
+  pikku:console:variables    read | write
+  pikku:console:addons       read | install
+  pikku:console:credentials  read | manage
+  pikku:console:scopes       read | manage   (was pikku:scopes:*)
+  pikku:console:audit        read            (was pikku:audit:*)
+  pikku:console:wirings      read
+  pikku:console:security     read | run
+  pikku:console:workflows    read | manage
+  pikku:console:agents       read | manage
+  pikku:console:db           read
+  pikku:console:knowledge    read
+  pikku:console:emails       read | write
+  pikku:console:code         write
+  ```
+
+  `pikku:console` grants the lot, and `pikku` still grants that — the generated
+  `PIKKU_CONSOLE_TOKEN` session carries `['admin', 'pikku']`, so an external
+  console keeps working untouched.
+
+  **Migration.** `admin` no longer reaches the console: it is a different tree.
+  Grant `pikku:console` alongside `admin` to keep an administrator's access as it
+  was, or grant the individual areas to hand out less. The two existing console
+  scopes moved: `pikku:scopes:read` / `pikku:scopes:manage` are now
+  `pikku:console:scopes:*`, and `pikku:audit:read` is now
+  `pikku:console:audit:read`.
+
+- 9445352: The nav dock is now configurable, and its settings live in the account menu.
+
+  **Always visible.** Held open, the dock stops being a thing that appears on
+  hover and becomes furniture: it publishes the edge it occupies as
+  `--nav-dock-inset-*`, and the layout pads by it, so the page card stops where
+  the dock starts instead of running underneath it. Floating, it reserves nothing
+  and keeps sitting in the card gutter that is already there.
+
+  **Location.** The dock can sit on any of the four edges. Flyouts, tooltips and
+  the arrow key that opens a tile's menu all follow the edge it is on, so nothing
+  opens off-screen; the fit measurement is per-axis, and the decision to condense
+  the contextual zone is retaken from scratch on a move, because a row that fitted
+  along the window's width will not fit along its height.
+
+  **Language, appearance and install app** join refresh, impersonate and sign out
+  in the account tile. Each language is named in itself rather than in the
+  language you are currently reading — someone who has landed in a locale they
+  cannot read is exactly the person reaching for that menu. The chosen locale now
+  persists and applies `lang` and `dir` to the document. Install is offered where
+  the browser supports it, with the iOS route written out as the two steps Safari
+  requires, since the browser gives a page no way to perform them.
+
+  Submenus and settings are Mantine's own `Menu.Sub`, `Menu.RadioItem` and
+  `Menu.CheckboxItem`, so a setting carries the `menuitemradio` /
+  `menuitemcheckbox` role and the `aria-checked` a screen reader announces, and
+  picking one leaves the menu open.
+
+  Two fixes to the page card fall out of the same pass:
+  - A page header under `host` chrome had no hairline under it. The band that
+    draws it was only applied on the self-drawn card, so the divider every panel
+    header has was missing from every page header in the shell. That branch was
+    also silently dropping `extraBand`.
+  - The theme gives every `Container` `px: 'xl'` as a default prop, which lands as
+    an inline padding that beat `--console-body-gutter` — so the inline gutter was
+    36px whatever the chrome said, and an end-edge panel spent 72px of its 450 on
+    empty margin. `PageContainer` now states the gutter on the same prop the theme
+    does, and an edge panel carries a panel gutter rather than a page one.
+
+- 5dff3ef: Give every side surface a phone path, and the sheet a primary action.
+
+  The runs pane, the three workspace navigators (features, virtual users, notes)
+  and the email compose form were welded into the page card as a second column,
+  which a phone has no room for. They now declare themselves through
+  `PageOptionsPortal` and open from the foot bar instead, dismissing the sheet
+  from their own select handler.
+
+  `PageOptionsProvider` gained a primary-action slot: `usePageAction` registers a
+  page's main verb — "New workflow run" — and the chrome pins it above the sheet
+  body. Panels rendered outside the provider are unaffected, so a standalone
+  render harness still works.
+
+  New `ConsoleSidePanel` puts static content (a form, an inspector) on the end
+  edge as its own floating card, the mirror of `ConsoleListPanel`;
+  `ResizablePanelLayout` takes it as `sidePanel`.
+
+- d884610: A metadata refresh no longer blanks the console. `AppLayout` gated its
+  full-screen loader on `loading`, which a refresh raises just as the first load
+  does, so the dock's Refresh tile threw the user back to a spinner and then to
+  the page's initial state. It now gates on `initialLoading` — loading with
+  nothing to show yet — and a refresh keeps the page it was on, with only the
+  control that asked for it reading as busy.
+- 7d67c88: A screen's list is now a card of its own on the content column's start edge,
+  the mirror of the detail panel on the other edge, instead of a bordered column
+  welded inside the page card — so choosing what the page shows and showing it
+  are two surfaces, and the list can collapse to a rail without the page keeping
+  its width. `EdgePanel` is the shared portal-and-reserve plumbing both edges are
+  built from, `PanelInsetProvider` now tracks which edge each panel reserves, and
+  `ConsoleListPanel` is the start-edge card. `PanelHeaderBand` also gained the
+  hairline every other header row on screen already had.
+
 ## 0.12.57
 
 ### Patch Changes
@@ -1078,8 +1206,8 @@ official?, names? }` and returns `{ packages, total, nextCursor }`. Callers that
   `TypographyStylesProvider`, which v9 renamed to `Typography` — so installing it
   alongside Mantine 9 failed at bundle time with two missing exports:
 
-                                      "TypographyStylesProvider" is not exported by @pikku/mantine/core
-                                      "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
+                                        "TypographyStylesProvider" is not exported by @pikku/mantine/core
+                                        "createOptionalContext" is not exported by @mantine/core   (via @mantine/code-highlight@8)
 
   The second came from `@mantine/code-highlight`, which `@pikku/console` pinned
   to `^8.3.18` while the host resolved core to 9 — a v8 satellite calling a core
