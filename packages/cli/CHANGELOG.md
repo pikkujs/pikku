@@ -1,3 +1,206 @@
+## 0.12.105
+
+### Patch Changes
+
+- 7406bfe: Rename the agent runtime from `AI*` to `Agent*` (#596)
+
+  `AI` described the model provider, not the thing being named. Every symbol that
+  belongs to the agent runtime now says `Agent`; the symbols that genuinely wrap a
+  model provider — `AIEmbeddingService`, `AIProviderOptions`, `AIEmbedParams`,
+  `AITranscriptionParams`, `AIGenerateImageParams` and their siblings, and the
+  `@pikku/ai-vercel` / `@pikku/ai-deepinfra` / `@pikku/ai-voice` packages — keep
+  their names.
+
+  **Wiring**
+  - `pikkuAIAgent` → `pikkuAgent`, `pikkuAIScorer` → `pikkuAgentScorer`,
+    `pikkuAIJudge` → `pikkuAgentJudge`
+  - `CoreAIAgent` → `CoreAgent`, `AIAgentInput` → `AgentInput`, `AIAgentStep` →
+    `AgentStep`, `AIMessage` → `AgentMessage`, and the rest of the agent types
+  - `AIAgentRunnerService` → `AgentRunnerService`, `AIStorageService` →
+    `AgentStorageService`, `AIRunStateService` → `AgentRunStateService`
+
+  **Entry points**
+
+  `@pikku/core/agent` → `@pikku/core/agent`, `@pikku/core/agent-scorer` →
+  `@pikku/core/agent-scorer`.
+
+  **Queues**
+
+  The scorer queues are now `agent-score-fast` and `agent-score-slow`. Drain the
+  old `ai-score-fast` / `ai-score-slow` queues before deploying — jobs still
+  sitting on them when the new workers start will never be picked up.
+
+  **Scaffolds**
+
+  The agent scaffold pikku wrote for your project — `<scaffold>/agent/agent.gen.ts`
+  and its schemas file — imports `@pikku/core/ai-agent`, which no longer exists. A
+  scaffold is normally written once and then left alone, so `pikku all` would find
+  it present and leave the broken import in place. It now deletes an agent scaffold
+  importing either removed entry point and regenerates it in the same run. Anything
+  you added to that file goes with it, so move local edits out first.
+
+  **Database**
+
+  The agent tables are renamed: `ai_threads`, `ai_message`, `ai_tool_call`,
+  `ai_working_memory`, `ai_run` and `ai_run_score` become `agent_threads`,
+  `agent_message`, `agent_tool_call`, `agent_working_memory`, `agent_run` and
+  `agent_run_score`, along with their indexes and the `ai_working_memory_pk`
+  constraint. The same rename applies to the MongoDB collections.
+
+  `ensurePikkuSchema` creates tables it cannot find, so an existing database will
+  get empty `agent_*` tables and leave the old data stranded in `ai_*`. Rename
+  them before the first boot on the new version:
+
+  ```sql
+  ALTER TABLE ai_threads        RENAME TO agent_threads;
+  ALTER TABLE ai_message        RENAME TO agent_message;
+  ALTER TABLE ai_tool_call      RENAME TO agent_tool_call;
+  ALTER TABLE ai_working_memory RENAME TO agent_working_memory;
+  ALTER TABLE ai_run            RENAME TO agent_run;
+  ALTER TABLE ai_run_score      RENAME TO agent_run_score;
+  ```
+
+- 7406bfe: Declare `better-auth` as an optional peer dependency of the CLI.
+
+  `pikku db generate` resolves `better-auth` with `require.resolve` from the CLI's
+  own module so it can read the auth schema, but the CLI never declared it. Under
+  a hoisted install it happened to resolve through `@pikku/better-auth`, which
+  declares it as a peer; under a strict layout it does not resolve at all. Optional
+  so the vast majority of projects, which do not use Better Auth, still install
+  nothing extra — the same shape `@pikku/playwright` already has here.
+
+- eadea64: Keep the app's own config readable while `pikku dev` regenerates.
+
+  Codegen needs the CLI's config, so `pikku dev` overlays it onto the live
+  singleton services for the length of a regeneration. The services around it were
+  overlaid key by key, but the config was swapped wholesale — so for as long as
+  codegen ran (tens of seconds on a large project) every function reading
+  `services.config` saw the CLI's `pikku.config.json` instead of what
+  `createConfig` returned. A webhook's host allowlist would vanish mid-flight and
+  the delivery be refused as an unsafe host.
+
+  The config is now overlaid the same way: the CLI's keys win where the two name
+  the same thing, and the app's survive where they don't.
+
+- 6794681: Publish the ecosystem surface as per-area sub-barrels under `@pikku/core/ecosystem/*`, and point generated code, the CLI, the inspector and the runtime adapters at them.
+
+  348 names that only generated code, the toolchain or a runtime adapter ever imports now have a second home on `@pikku/core/ecosystem/<area>` — one sub-barrel per area, matching how core already publishes its entrypoints, so no single barrel grows without bound and a consumer only pulls in the area it uses.
+
+  This step is additive: every name is still exported from the entrypoint it was published from before, so nothing downstream breaks. Removing them from the app-facing barrels is a later change, and needs a release carrying `./ecosystem/*` first.
+
+- a7fcd2e: Declare dependencies that were imported but missing from `package.json`
+
+  `@pikku/openapi-parser` and `@pikku/better-auth` imported `zod`, `@pikku/next`
+  imported `path-to-regexp`, `@pikku/cli` imported `kysely`, and
+  `@pikku/assistant-ui` imported `rxjs`, none of which were declared. Each
+  resolved through Yarn hoisting inside the monorepo and would fail for anyone
+  installing the package on its own.
+
+  `rxjs`, `kysely` and `path-to-regexp` reach consumers through public
+  signatures — `Observable<BaseEvent>` is the return type of a published method,
+  and `createCoercionPlugin` returns a `KyselyPlugin` — so they are runtime
+  dependencies rather than build-only ones.
+
+  `@pikku/assistant-ui` pins `rxjs` to the exact `7.8.1` that `@ag-ui/client`
+  pins, rather than a caret range. The two packages exchange `Observable`s, so a
+  range that floats to a second copy gives them two incompatible `Observable`
+  types.
+
+  `@pikku/kysely` also drops `SqliteSerializePlugin`, an alias of
+  `SerializePlugin` that has been marked `@deprecated` in favour of it. Use
+  `SerializePlugin`.
+
+- e7e5319: Add `pikku semver`, which derives a release's semver from a diff against a deployed surface and writes `.pikku/changes.gen.json`
+
+  A function or client-facing wiring that disappeared is major, an addition is minor, and a surface that did not move is patch. Where the generated JSON Schemas are available the verdict goes below the id level: a removed field or a newly required input field is breaking, an added optional one is not — direction-aware, so an output field going optional counts even though the same change on an input does not. `versions.pikku.json` is consumed, so a `@v2` bump does not read as a removal while v1 is still published.
+
+  The baseline is `--against <path|url>`: another `.pikku` directory, a snapshot file, or a snapshot published by `pikku semver --emit`. `--fail-on <level>` turns the verdict into a CI gate.
+
+- 411f89a: Add `pikku update`: report which `@pikku/*` dependencies can move forward, and which peers those versions need.
+
+  Reporting only by default. `--update` writes the new ranges into every covered package.json — the project root plus every workspace it declares — and then runs an install with the package manager the project names (`--no-install` to skip). `--update-peers` additionally writes the ranges unsatisfied peers require; it is separate because a peer bump can cross a major of a third-party package.
+
+  Peers are read off the version the run lands on rather than the one installed, so an update that needs a companion bump says so before it is applied. Ranges that cannot be substituted into (`workspace:*`, `file:`, unions, x-ranges) are reported and left alone, and a package the registry could not answer for is reported as unresolved rather than current.
+
+- eadea64: fix(scenario): a scenario that cannot run on the requested surface fails the run instead of skipping it
+
+  `pikku scenario run` held back two very different things under one SKIP and exited
+  0 for both. A `skip` on the scenario is the project quarantining it on purpose and
+  should stay green. A scenario with no binding for the run surface and no `default`
+  to fall back to is nothing of the sort — it was asked for and could not run, which
+  is a misconfigured run.
+
+  Reporting both as skips made "62 held back" and "62 passed" indistinguishable at
+  the exit code. That is not hypothetical: the e2e console suite ran `--tags console`
+  without `--run browser`, so every browser scenario had no runnable binding, and the
+  job passed for months having executed four scenarios out of sixty-six.
+
+  Unrunnable scenarios now name themselves and set a non-zero exit code, pointing at
+  the two ways to resolve it — run them on the surface they are written for, or hold
+  them back explicitly with `--exclude-tags`.
+
+  `--no-browser` is gone. It was meant to be the blunt form of `--run default` for a
+  machine without a browser, but the only branch that consulted it required
+  `--run browser` to have been passed already, so it never fired in any invocation;
+  `--exclude-tags` says the same thing about what is not being run, and says it
+  explicitly.
+
+- b3c77f5: Fail validate when a workspace subpath import cannot resolve through the owning package's exports.
+
+  `exports` does not probe file extensions the way a bundler alias does, so a map
+  like `"./pikku/*": "./src/pikku/*"` resolves `pkg/pikku/client.gen` to a file
+  that was never written — the real one is `client.gen.ts`. Nothing surfaces it
+  while the consumer carries a `resolve.alias` for the same specifier: the alias
+  wins wherever that config is loaded, and the broken map only bites somewhere
+  else — another app in the repo, a different bundler, plain node, or a generated
+  vite config that never merged the app's own.
+
+  The new check pairs every workspace-internal subpath import with the owning
+  package's `exports` and reports the ones that resolve to nothing, matching
+  Node's pattern precedence (longest literal prefix, then longest suffix) and
+  following fallback arrays so a declaration-only subpath still counts as
+  resolvable. It runs once at the workspace root, where both halves are in view,
+  and reports each broken subpath once rather than once per importer.
+
+- 5e4105e: fix(ws): cap the frame size every Pikku-owned WebSocketServer accepts
+
+  `ws` defaults `maxPayload` to 100MB, and every `WebSocketServer` Pikku
+  constructed omitted the option — so each one inherited that ceiling. A single
+  unauthenticated upgrade could make the process buffer a 100MB frame, which no
+  Pikku message needs: the channel protocol carries JSON control frames, not bulk
+  payloads.
+
+  `@pikku/ws` now exports `DEFAULT_WS_MAX_PAYLOAD` (1MB), and the servers Pikku
+  owns are constructed with it — the `pikku dev` / `pikku serve` runner, the entry
+  `@pikku/deploy-standalone` emits, and the `ws` template. Refusal is already
+  defined by the protocol, so an oversized frame is closed with 1009 (message too
+  big) rather than buffered.
+
+  A server that genuinely needs to accept a larger frame now has to set
+  `maxPayload` explicitly at its construction site. `yarn check:ws-max-payload`
+  enforces that, so a new server cannot silently fall back to the 100MB default.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+- Updated dependencies [a7fcd2e]
+- Updated dependencies [e7e5319]
+- Updated dependencies [411f89a]
+- Updated dependencies [5e4105e]
+  - @pikku/core@0.12.84
+  - @pikku/deploy-cloudflare@0.12.11
+  - @pikku/inspector@0.12.60
+  - @pikku/n8n-import@0.0.6
+  - @pikku/ai-vercel@0.12.11
+  - @pikku/kysely@0.13.16
+  - @pikku/skills@0.12.10
+  - @pikku/better-auth@0.12.25
+  - @pikku/bun-server@0.12.7
+  - @pikku/node-http-server@0.12.10
+  - @pikku/playwright@0.12.77
+  - @pikku/schedule@0.12.6
+  - @pikku/ws@0.12.7
+  - @pikku/openapi-parser@0.12.19
+
 ## 0.12.104
 
 ### Patch Changes

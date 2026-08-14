@@ -1,6 +1,6 @@
 {
   "name": "@pikku/mongodb",
-  "version": "0.12.17",
+  "version": "0.12.18",
   "description": "MongoDB services for Pikku — workflow state, agent runs, secrets and channel stores",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.82"
+    "@pikku/core": "^0.12.84"
   },
   "dependencies": {
     "mongodb": "^6.12.0"

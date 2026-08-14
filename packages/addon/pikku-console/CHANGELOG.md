@@ -1,3 +1,120 @@
+## 0.12.42
+
+### Patch Changes
+
+- 17eea0d: feat(console): an addon install says what it still needs before a restart
+
+  `wireAddon` only reaches the live registry when its module is executed at boot,
+  so an addon installed into a running dev server is inert until a restart — while
+  `installAddon` returned a bare `success: true` and the Addons tab kept showing
+  the old list. The install now returns `restartRequired`, and whether the addon
+  could actually start: `ready`, `missingSecrets` and `missingVariables`, read from
+  the package's own declared secrets and variables under this instance's override
+  names. A variable whose schema carries a default is never missing.
+
+  `addonReadiness` re-runs that check for an already-installed instance, reading
+  the override names out of its `<namespace>.addon.ts`, so a caller can gate the
+  restart until the user has configured what the addon needs rather than
+  restarting into a crash loop.
+
+  The console renders that outcome instead of polling for the addon to become
+  queryable. Installing used to navigate to the package page, which polled
+  `getAddonInstalledPackage` for ~20s and then gave up with "Package not found" —
+  re-inspecting the new wiring routinely takes longer, so a successful install
+  looked like a failure. The page now shows what the install reported: the name it
+  was wired under, that a restart is required, and either that it is ready or which
+  secrets and variables are still unset.
+
+  `readAddonDeclaredNames` also now finds meta in a package that ships `.pikku`
+  only under `dist`, where it previously read as "declares nothing" and silently
+  skipped the per-instance override derivation.
+
+- 7406bfe: Rename the agent runtime from `AI*` to `Agent*` (#596)
+
+  `AI` described the model provider, not the thing being named. Every symbol that
+  belongs to the agent runtime now says `Agent`; the symbols that genuinely wrap a
+  model provider — `AIEmbeddingService`, `AIProviderOptions`, `AIEmbedParams`,
+  `AITranscriptionParams`, `AIGenerateImageParams` and their siblings, and the
+  `@pikku/ai-vercel` / `@pikku/ai-deepinfra` / `@pikku/ai-voice` packages — keep
+  their names.
+
+  **Wiring**
+  - `pikkuAIAgent` → `pikkuAgent`, `pikkuAIScorer` → `pikkuAgentScorer`,
+    `pikkuAIJudge` → `pikkuAgentJudge`
+  - `CoreAIAgent` → `CoreAgent`, `AIAgentInput` → `AgentInput`, `AIAgentStep` →
+    `AgentStep`, `AIMessage` → `AgentMessage`, and the rest of the agent types
+  - `AIAgentRunnerService` → `AgentRunnerService`, `AIStorageService` →
+    `AgentStorageService`, `AIRunStateService` → `AgentRunStateService`
+
+  **Entry points**
+
+  `@pikku/core/agent` → `@pikku/core/agent`, `@pikku/core/agent-scorer` →
+  `@pikku/core/agent-scorer`.
+
+  **Queues**
+
+  The scorer queues are now `agent-score-fast` and `agent-score-slow`. Drain the
+  old `ai-score-fast` / `ai-score-slow` queues before deploying — jobs still
+  sitting on them when the new workers start will never be picked up.
+
+  **Scaffolds**
+
+  The agent scaffold pikku wrote for your project — `<scaffold>/agent/agent.gen.ts`
+  and its schemas file — imports `@pikku/core/ai-agent`, which no longer exists. A
+  scaffold is normally written once and then left alone, so `pikku all` would find
+  it present and leave the broken import in place. It now deletes an agent scaffold
+  importing either removed entry point and regenerates it in the same run. Anything
+  you added to that file goes with it, so move local edits out first.
+
+  **Database**
+
+  The agent tables are renamed: `ai_threads`, `ai_message`, `ai_tool_call`,
+  `ai_working_memory`, `ai_run` and `ai_run_score` become `agent_threads`,
+  `agent_message`, `agent_tool_call`, `agent_working_memory`, `agent_run` and
+  `agent_run_score`, along with their indexes and the `ai_working_memory_pk`
+  constraint. The same rename applies to the MongoDB collections.
+
+  `ensurePikkuSchema` creates tables it cannot find, so an existing database will
+  get empty `agent_*` tables and leave the old data stranded in `ai_*`. Rename
+  them before the first boot on the new version:
+
+  ```sql
+  ALTER TABLE ai_threads        RENAME TO agent_threads;
+  ALTER TABLE ai_message        RENAME TO agent_message;
+  ALTER TABLE ai_tool_call      RENAME TO agent_tool_call;
+  ALTER TABLE ai_working_memory RENAME TO agent_working_memory;
+  ALTER TABLE ai_run            RENAME TO agent_run;
+  ALTER TABLE ai_run_score      RENAME TO agent_run_score;
+  ```
+
+- eadea64: Reach the whole console from ⌘K, and report a name collision as a conflict.
+
+  The command palette now lists every page in the navigation and, for anyone who
+  can impersonate, the impersonation picker — so both are reachable without the
+  chrome, which is a dock that only raises on hover at pointer widths and a closed
+  sheet on a phone. Its shortcut no longer goes dead while a text field has focus,
+  which is when reaching for the palette is most likely.
+
+  Installing an addon under a name the project already wires now reports a
+  conflict rather than a 500: the check asks the registry what is wired, so an
+  instance wired from outside the addons directory is found too.
+
+  A gherkin line in the knowledge viewer keeps a space between its keyword and the
+  sentence, so the line reads as a sentence to anything reading the DOM rather
+  than the layout.
+
+- 6794681: Publish the ecosystem surface as per-area sub-barrels under `@pikku/core/ecosystem/*`, and point generated code, the CLI, the inspector and the runtime adapters at them.
+
+  348 names that only generated code, the toolchain or a runtime adapter ever imports now have a second home on `@pikku/core/ecosystem/<area>` — one sub-barrel per area, matching how core already publishes its entrypoints, so no single barrel grows without bound and a consumer only pulls in the area it uses.
+
+  This step is additive: every name is still exported from the entrypoint it was published from before, so nothing downstream breaks. Removing them from the app-facing barrels is a later change, and needs a release carrying `./ecosystem/*` first.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+- Updated dependencies [a7fcd2e]
+  - @pikku/core@0.12.84
+  - @pikku/better-auth@0.12.25
+
 ## 0.12.41
 
 ### Patch Changes

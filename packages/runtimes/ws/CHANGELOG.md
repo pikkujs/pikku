@@ -1,3 +1,35 @@
+## 0.12.7
+
+### Patch Changes
+
+- 6794681: Publish the ecosystem surface as per-area sub-barrels under `@pikku/core/ecosystem/*`, and point generated code, the CLI, the inspector and the runtime adapters at them.
+
+  348 names that only generated code, the toolchain or a runtime adapter ever imports now have a second home on `@pikku/core/ecosystem/<area>` — one sub-barrel per area, matching how core already publishes its entrypoints, so no single barrel grows without bound and a consumer only pulls in the area it uses.
+
+  This step is additive: every name is still exported from the entrypoint it was published from before, so nothing downstream breaks. Removing them from the app-facing barrels is a later change, and needs a release carrying `./ecosystem/*` first.
+
+- 5e4105e: fix(ws): cap the frame size every Pikku-owned WebSocketServer accepts
+
+  `ws` defaults `maxPayload` to 100MB, and every `WebSocketServer` Pikku
+  constructed omitted the option — so each one inherited that ceiling. A single
+  unauthenticated upgrade could make the process buffer a 100MB frame, which no
+  Pikku message needs: the channel protocol carries JSON control frames, not bulk
+  payloads.
+
+  `@pikku/ws` now exports `DEFAULT_WS_MAX_PAYLOAD` (1MB), and the servers Pikku
+  owns are constructed with it — the `pikku dev` / `pikku serve` runner, the entry
+  `@pikku/deploy-standalone` emits, and the `ws` template. Refusal is already
+  defined by the protocol, so an oversized frame is closed with 1009 (message too
+  big) rather than buffered.
+
+  A server that genuinely needs to accept a larger frame now has to set
+  `maxPayload` explicitly at its construction site. `yarn check:ws-max-payload`
+  enforces that, so a new server cannot silently fall back to the 100MB default.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+  - @pikku/core@0.12.84
+
 ## 0.12.6
 
 ### Patch Changes

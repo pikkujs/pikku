@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ai-deepinfra",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "DeepInfra transcription and speech models for the Vercel AI SDK",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

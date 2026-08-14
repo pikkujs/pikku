@@ -1,6 +1,6 @@
 {
   "name": "@pikku/voice-agents",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Headless browser primitives for voice conversations with Pikku AI agents — persistent microphone, silence detection, speech playback and barge-in",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

@@ -1,5 +1,25 @@
 # @pikku/addon-graph
 
+## 0.12.12
+
+### Patch Changes
+
+- 6794681: Publish the ecosystem surface as per-area sub-barrels under `@pikku/core/ecosystem/*`, and point generated code, the CLI, the inspector and the runtime adapters at them.
+
+  348 names that only generated code, the toolchain or a runtime adapter ever imports now have a second home on `@pikku/core/ecosystem/<area>` — one sub-barrel per area, matching how core already publishes its entrypoints, so no single barrel grows without bound and a consumer only pulls in the area it uses.
+
+  This step is additive: every name is still exported from the entrypoint it was published from before, so nothing downstream breaks. Removing them from the app-facing barrels is a later change, and needs a release carrying `./ecosystem/*` first.
+
+- a534a50: Bound two peer ranges that were declared as `*`, and add a check that keeps peer ranges across the monorepo mutually satisfiable.
+
+  `@pikku/addon-graph` declared `@pikku/core` as `*` and `@pikku/next` declared `react-dom` as `*`. A wildcard promises compatibility with majors that do not exist yet, and because it intersects every other range nothing ever flags it. They are now `^0.12.83` (the core version addon-graph is built against) and `^18 || ^19` (matching `@pikku/react`, `@pikku/mantine` and `@pikku/assistant-ui`).
+
+  `scripts/check-peer-dependency-consistency.mjs` runs in CI and in `yarn release`. It does not require every declaration of a peer to be the same string — a range is a constraint, and intersecting constraints is the package manager's job, so `^0.12.44` and `^0.12.83` coexisting is correct and pinning them into lockstep would invent floors nobody verified. It fails only when ranges have no version in common, or when a peer another package bounds is left unbounded.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+  - @pikku/core@0.12.84
+
 ## 0.12.11
 
 ### Patch Changes

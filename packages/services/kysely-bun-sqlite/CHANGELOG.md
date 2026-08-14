@@ -1,5 +1,23 @@
 # @pikku/kysely-bun-sqlite
 
+## 0.12.5
+
+### Patch Changes
+
+- 0686513: Declare `@pikku/core` as a peer dependency, matching `@pikku/kysely-sqlite`.
+
+  The package depends on `@pikku/kysely-sqlite`, which requires `@pikku/core` as a
+  peer, but never declared that requirement itself — so an install resolved
+  without complaint and the missing peer only surfaced at runtime. It is now
+  declared the same way its sibling declares it.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+- Updated dependencies [a7fcd2e]
+  - @pikku/core@0.12.84
+  - @pikku/kysely@0.13.16
+  - @pikku/kysely-sqlite@0.12.12
+
 ## 0.12.4
 
 ### Patch Changes
