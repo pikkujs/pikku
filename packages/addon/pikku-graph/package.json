@@ -28,7 +28,7 @@
     "test": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@pikku/core": "*",
+    "@pikku/core": "^0.12.83",
     "zod": "^4"
   },
   "devDependencies": {

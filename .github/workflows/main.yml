@@ -28,6 +28,10 @@ jobs:
         run: node scripts/check-no-workspace-protocol.mjs
       - name: Check no publish-time CLI rebuild
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
+      - name: Test the semver range helpers
+        run: node --test scripts/semver-ranges.test.mjs
+      - name: Check peer dependency ranges agree across the monorepo
+        run: node scripts/check-peer-dependency-consistency.mjs
 
   lint:
     name: Lint & Format
