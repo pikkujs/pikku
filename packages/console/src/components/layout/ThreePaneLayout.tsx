@@ -1,6 +1,6 @@
 import React from 'react'
 import { ActionIcon, Box, Tooltip, UnstyledButton } from '@pikku/mantine/core'
-import type { I18nNode } from '@pikku/react'
+import type { I18nNode, I18nString } from '@pikku/react'
 import { useLocalStorage } from '@mantine/hooks'
 import {
   PanelLeftClose,
@@ -15,6 +15,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
 import { ConsoleListPanel } from '../shell/ConsoleListPanel'
+import { PageOptionsPortal } from '../shell/PageOptionsPortal'
 import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
 import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
@@ -42,9 +43,12 @@ interface ThreePaneLayoutProps {
   /** Namespaces the persisted left/right collapse state so different playgrounds
    *  (agents, workflow) remember their panes independently. */
   storageKey?: string
-  /** Noun shown on the collapsed left/right rail (e.g. "Conversations", "Runs").
-   *  Falls back to generic "List" / "Details". */
-  listLabel?: I18nNode
+  /** Noun shown on the collapsed left rail, and on the phone's tab for the sheet
+   *  the same pane moves into (e.g. "Conversations", "Runs"). A string, not a
+   *  node: a tab reads its label out as its accessible name. Falls back to the
+   *  generic "List". */
+  listLabel?: I18nString
+  /** Noun shown on the collapsed right rail. Falls back to "Details". */
   detailLabel?: I18nNode
 }
 
@@ -90,7 +94,14 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
     !hidePanel &&
     (panels.size !== 0 || (alwaysVisible && !collapseWhenEmpty))
 
-  const showLeft = hasLeft && !leftCollapsed
+  /**
+   * On a phone the pane is the bottom sheet, opened from the foot bar — there is
+   * no second column to be beside, and a 240px list in a 390px viewport leaves
+   * the surface it selects for unusable. It is never collapsed there: closing the
+   * sheet already IS the collapse.
+   */
+  const listInSheet = hasLeft && phone
+  const showLeft = hasLeft && (phone || !leftCollapsed)
   const showRight = hasRight && !rightCollapsed
 
   /**
@@ -102,7 +113,9 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
    */
   const listAsPanel = !ownsChrome && !phone
 
-  const listBody = showLeft ? (
+  const listBody = listInSheet ? (
+    runsPanel
+  ) : showLeft ? (
     // The panel renders the collapse control itself, in a row it already has —
     // see PaneCollapseContext.
     <PaneCollapseProvider collapse={() => setLeftCollapsed(true)}>
@@ -131,7 +144,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   // page card's body, so it drops the border that would read as a card in a
   // card. It keeps it wherever a docked list still sits beside it.
   const mainSurface =
-    !ownsChrome && (!hasLeft || listAsPanel)
+    !ownsChrome && (!hasLeft || listAsPanel || listInSheet)
       ? classes.listSurfaceFlush
       : classes.listSurfaceCard
 
@@ -147,7 +160,20 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           padding: 'var(--console-body-gutter)',
         }}
       >
+        {listInSheet && (
+          <PageOptionsPortal label={listLabel ?? m.pane_list()}>
+            <Box
+              className={classes.flexColumn}
+              style={{ flex: 1, minHeight: 0, width: '100%' }}
+              data-testid="pane-list-sheet"
+            >
+              {listBody}
+            </Box>
+          </PageOptionsPortal>
+        )}
+
         {hasLeft &&
+          !listInSheet &&
           (listAsPanel ? (
             <ConsoleListPanel
               width={(showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH) + CARD_GUTTERS}

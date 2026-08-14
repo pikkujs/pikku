@@ -1,4 +1,11 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { I18nString } from '@pikku/react'
 
 /**
@@ -15,6 +22,18 @@ import type { I18nString } from '@pikku/react'
  * the sheet, and MobileTabBar shows the tab only while a page has actually
  * registered one — no page-specific knowledge anywhere in the chrome.
  */
+/**
+ * The one thing the sheet's surface is FOR — starting a new run, composing a new
+ * message. On a desktop it is a button inside the panel; in a sheet that button
+ * scrolls away with the list under it, so it is lifted out and pinned to the top
+ * of the sheet where a thumb lands.
+ */
+export interface PageAction {
+  label: I18nString
+  icon?: React.ReactNode
+  onSelect: () => void
+}
+
 interface PageOptionsContextValue {
   /** Whether the page currently on screen registered an options rail. */
   hasOptions: boolean
@@ -30,6 +49,9 @@ interface PageOptionsContextValue {
   setHost: (host: HTMLElement | null) => void
   open: boolean
   setOpen: (open: boolean) => void
+  /** The surface's primary action, pinned above the sheet body. */
+  action: PageAction | null
+  setAction: (action: PageAction | null) => void
 }
 
 const PageOptionsContext = createContext<PageOptionsContextValue | null>(null)
@@ -43,6 +65,7 @@ export function PageOptionsProvider({
   const [label, setLabel] = useState<I18nString | null>(null)
   const [host, setHost] = useState<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
+  const [action, setAction] = useState<PageAction | null>(null)
 
   const value = useMemo(
     () => ({
@@ -54,8 +77,10 @@ export function PageOptionsProvider({
       setHost,
       open,
       setOpen,
+      action,
+      setAction,
     }),
-    [hasOptions, label, host, open]
+    [hasOptions, label, host, open, action]
   )
 
   return (
@@ -70,4 +95,46 @@ export function usePageOptions(): PageOptionsContextValue {
   if (!ctx)
     throw new Error('usePageOptions must be used inside PageOptionsProvider')
   return ctx
+}
+
+/**
+ * Puts the sheet away. Call it from the surface's own select handler: on a phone
+ * the thing the user just picked is UNDER the sheet they picked it in, so a sheet
+ * that stays up hides the answer to the tap.
+ *
+ * A no-op on a desktop, and outside the provider — the panels that call it also
+ * render in hosts that mount no phone chrome at all (a standalone render
+ * harness), and a hook that threw there would make the phone path a liability.
+ */
+export function usePageOptionsDismiss(): () => void {
+  const ctx = useContext(PageOptionsContext)
+  const setOpen = ctx?.setOpen
+  return useMemo(() => () => setOpen?.(false), [setOpen])
+}
+
+/**
+ * Declares the surface's primary action while this component is mounted. Same
+ * hand-off as PageOptionsPortal: the panel says what its action is, the chrome
+ * decides where an action goes.
+ *
+ * `icon` deliberately does not key the registration — it is written inline at
+ * every call site, so a new element each render would re-register forever.
+ */
+export function usePageAction(action: PageAction | null) {
+  const ctx = useContext(PageOptionsContext)
+  const setAction = ctx?.setAction
+  const label = action?.label ?? null
+  const onSelect = action?.onSelect ?? null
+  const icon = useRef(action?.icon)
+  icon.current = action?.icon
+
+  useEffect(() => {
+    if (!setAction) return
+    if (!label || !onSelect) {
+      setAction(null)
+      return
+    }
+    setAction({ label, icon: icon.current, onSelect })
+    return () => setAction(null)
+  }, [setAction, label, onSelect])
 }

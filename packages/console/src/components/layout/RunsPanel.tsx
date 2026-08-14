@@ -12,12 +12,17 @@ import {
   Button,
   UnstyledButton,
 } from '@pikku/mantine/core'
-import type { I18nNode } from '@pikku/react'
+import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Check, PanelLeftClose, Plus, X } from 'lucide-react'
 import { usePaneCollapse } from '../../context/PaneCollapseContext'
+import {
+  usePageAction,
+  usePageOptionsDismiss,
+} from '../../context/PageOptionsProvider'
+import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
 
 const statusColors: Record<string, string> = {
@@ -50,7 +55,9 @@ interface RunsPanelProps {
   title: string
   emptyMessage?: I18nNode
   onNewClick?: () => void
-  newButtonLabel?: I18nNode
+  /** A string, not a node: on a phone this same label names the sheet's primary
+   *  action, whose accessible name it becomes. */
+  newButtonLabel?: I18nString
   onStatusFilterChange?: (status: string | undefined) => void
   onDelete?: (id: string) => void
   header?: React.ReactNode
@@ -183,7 +190,23 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState('all')
   const collapsePane = usePaneCollapse()
+  const phone = usePhone()
+  const dismiss = usePageOptionsDismiss()
   useLocale()
+
+  // On a phone this pane IS the sheet, so its new-run row is lifted out and
+  // pinned at the top as the sheet's primary action rather than scrolling away
+  // above the runs. Picking either puts the sheet away: what a run opens, and
+  // what a new run opens, are both underneath it.
+  usePageAction(
+    phone && onNewClick
+      ? {
+          label: newButtonLabel ?? m.runs_panel_new(),
+          icon: <Plus size={16} />,
+          onSelect: onNewClick,
+        }
+      : null
+  )
 
   const filteredRuns = useMemo(() => {
     if (statusFilter === 'all') return runs
@@ -225,7 +248,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
       )}
 
       <ScrollArea className={classes.flexGrow}>
-        {(onNewClick || collapsePane) && (
+        {((onNewClick && !phone) || collapsePane) && (
           <Group
             gap="xs"
             wrap="nowrap"
@@ -248,7 +271,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
                 <PanelLeftClose size={16} />
               </ActionIcon>
             )}
-            {onNewClick && (
+            {onNewClick && !phone && (
               <UnstyledButton
                 py="sm"
                 px="sm"
@@ -281,7 +304,10 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
                 key={run.id}
                 run={run}
                 selected={run.id === selectedId}
-                onSelect={() => onSelect(run.id)}
+                onSelect={() => {
+                  onSelect(run.id)
+                  dismiss()
+                }}
                 onDelete={onDelete}
               />
             ))}

@@ -12,6 +12,7 @@ import { KnowledgeNoteNavigator } from './KnowledgeNoteNavigator'
 import { useKnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
 import type { KnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
 import { findingsForNote } from '../../lib/knowledge'
+import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 import classes from '../ui/console.module.css'
 
 const DOCS_HREF = 'https://pikku.dev/docs/core-features/knowledge'
@@ -35,6 +36,7 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
   // state wins when there is one, and the two share one query cache.
   const ownBrowse = useKnowledgeBrowse()
   const browse = hostBrowse ?? ownBrowse
+  const dismiss = usePageOptionsDismiss()
   const {
     groups,
     findings,
@@ -98,6 +100,7 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
     <ResizablePanelLayout
       header={header}
       hidePanel
+      leftDrawerLabel={m.pane_notes()}
       leftDrawer={
         hostBrowse ? null : (
           <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
@@ -105,7 +108,10 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
               groups={groups}
               findings={findings}
               selected={selected}
-              onSelect={setSelection}
+              onSelect={(selection) => {
+                setSelection(selection)
+                dismiss()
+              }}
             />
           </Box>
         )

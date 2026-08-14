@@ -278,6 +278,11 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
     <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
+        sidePanel={
+          hostCompose ? undefined : <EmailsComposePanel compose={compose} />
+        }
+        sidePanelWidth={300}
+        sidePanelLabel={m.emails_template_details()}
         header={
           <ListPageHeader
             title={m.emails_title()}
@@ -456,22 +461,6 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
               </Stack>
             </Box>
           </Box>
-
-          {/* Form / render panel — omitted when the host mounts it itself. */}
-          {!hostCompose && (
-            <Box
-              className={classes.listSurfaceCard}
-              style={{
-                width: 300,
-                maxWidth: 300,
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <EmailsComposePanel compose={compose} />
-            </Box>
-          )}
         </Box>
       </ResizablePanelLayout>
     </ConsoleSurface>

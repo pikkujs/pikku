@@ -7,6 +7,7 @@ import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { VirtualUserNavigator } from './VirtualUserNavigator'
 import { VirtualUserDocument } from './VirtualUserDocument'
 import { useVirtualUsers } from '../../hooks/useVirtualUsers'
+import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 
 const EXAMPLE =
   "definePersonas({ shopper: { name: 'Shopper', disposition: 'careless', goals: [...] } })"
@@ -19,6 +20,7 @@ const EXAMPLE =
  */
 export const VirtualUsersWorkspace: React.FC = () => {
   const { users, selected, setSelectedId, loading } = useVirtualUsers()
+  const dismiss = usePageOptionsDismiss()
 
   return (
     <ResizablePanelLayout
@@ -29,12 +31,16 @@ export const VirtualUsersWorkspace: React.FC = () => {
           docsHref="https://pikku.dev/docs/wiring/workflows"
         />
       }
+      leftDrawerLabel={m.pane_virtual_users()}
       leftDrawer={
         loading ? null : (
           <VirtualUserNavigator
             users={users}
             selectedId={selected?.id}
-            onSelect={setSelectedId}
+            onSelect={(id) => {
+              setSelectedId(id)
+              dismiss()
+            }}
           />
         )
       }

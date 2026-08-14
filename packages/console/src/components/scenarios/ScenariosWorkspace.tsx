@@ -12,6 +12,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { useScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
+import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 
 export interface ScenariosWorkspaceProps {
   /** Browse state owned by the host (see `useScenariosBrowse`). Supplying it
@@ -30,6 +31,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   const [stepWorkflow, setStepWorkflow] = useState<unknown>()
   const { personas } = useScenarioPersonaEntries()
   const { openWorkflowStep, openPersona } = usePanelContext()
+  const dismiss = usePageOptionsDismiss()
 
   // Always mounted so the hook order never depends on the prop; the host's
   // state wins when there is one, and the two share one query cache.
@@ -104,12 +106,16 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
             }
           />
         }
+        leftDrawerLabel={m.pane_features()}
         leftDrawer={
           loading || hostBrowse ? null : (
             <FeatureNavigator
               features={features}
               selectedId={selected?.id}
-              onSelect={setSelectedId}
+              onSelect={(id) => {
+                setSelectedId(id)
+                dismiss()
+              }}
             />
           )
         }

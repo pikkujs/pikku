@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Box, Center, Loader } from '@pikku/mantine/core'
+import { Box, Button, Center, Loader } from '@pikku/mantine/core'
 import { useLocation } from '../../router'
 import { Sidebar, type SidebarProps } from '../project/Sidebar'
 import { PikkuMetaProvider, usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -38,6 +38,7 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
     setHost: setOptionsHost,
     open: optionsOpen,
     setOpen: setOptionsOpen,
+    action,
   } = usePageOptions()
 
   // A nav tap navigates, so nothing raised over the page may survive the move.
@@ -83,6 +84,30 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
           keepMounted
           data-testid="page-options-sheet"
         >
+          {/* Pinned above the body rather than left inside it: the surface it
+              belongs to scrolls, and an action that scrolls out of a sheet is one
+              the user has to go looking for. */}
+          {action && (
+            <Box
+              p={10}
+              style={{
+                flexShrink: 0,
+                borderBottom: '1px solid var(--app-border)',
+              }}
+            >
+              <Button
+                fullWidth
+                leftSection={action.icon}
+                onClick={() => {
+                  action.onSelect()
+                  setOptionsOpen(false)
+                }}
+                data-testid="page-options-action"
+              >
+                {action.label}
+              </Button>
+            </Box>
+          )}
           <Box
             ref={setOptionsHost}
             style={{ flex: 1, minWidth: 0, display: 'flex' }}

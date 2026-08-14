@@ -56,6 +56,7 @@ export { EdgePanel } from './components/shell/EdgePanel'
 export { ConsolePanel } from './components/shell/ConsolePanel'
 export type { ConsolePanelWidth } from './components/shell/ConsolePanel'
 export { ConsoleListPanel } from './components/shell/ConsoleListPanel'
+export { ConsoleSidePanel } from './components/shell/ConsoleSidePanel'
 export { CollapsiblePanel } from './components/shell/CollapsiblePanel'
 export { PanelHeaderBand } from './components/shell/PanelHeaderBand'
 export { PanelInsetProvider, usePanelInset } from './context/PanelInsetProvider'
@@ -96,7 +97,10 @@ export { PageOptionsPortal } from './components/shell/PageOptionsPortal'
 export {
   PageOptionsProvider,
   usePageOptions,
+  usePageOptionsDismiss,
+  usePageAction,
 } from './context/PageOptionsProvider'
+export type { PageAction } from './context/PageOptionsProvider'
 export {
   SidebarModeProvider,
   useSidebarMode,
