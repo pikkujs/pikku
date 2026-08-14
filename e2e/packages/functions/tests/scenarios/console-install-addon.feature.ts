@@ -6,7 +6,7 @@
  * two scenarios are about: re-using a name that is already wired has to surface
  * as a clean inline error rather than a raw 500, and a name that is not a valid
  * namespace has to be refused before it ever reaches the server. The third
- * installs for real and is quarantined — see the note above it.
+ * installs for real and asserts the readiness the install call reported back.
  *
  * The fixture project already wires "emails" (@pikku/addon-emails), so that
  * is the name to collide with. @pikku/addon-email-send and
@@ -140,35 +140,27 @@ export const installAddonInvalidNameScenario = pikkuScenario<
   },
 })
 
-// TODO: This mutates the fixture and triggers a `pikku dev` reinspection.
-// The REMOVAL side is now fixed: `pikku dev` reconciles the in-memory addon
-// registry on delete (reconcileAddonRegistry prunes the unwired package —
-// proven live: "• Removed unwired addon "<name>""), so the After hook's
-// cleanup no longer leaves a stale in-memory addon that makes re-runs racy.
-// But the FORWARD install->setup path still fails against a persistent dev
-// server: after "Add to project" writes the wiring, PackageDetailPage polls
-// console:getAddonInstalledPackage for only ~20s (pollExpired) before
-// rendering "Package not found". Re-inspection + installed-package registry
-// population takes longer than that window here (full regen observed 6-10s+),
-// so the Setup tab never appears. Un-skip once (a) the console poll window
-// covers the actual re-inspection time / getAddonInstalledPackage returns the
-// freshly-wired addon promptly, or (b) the harness gives each mutating
-// scenario a fast fresh server. Runs green against a fresh server (CI).
+// This mutates the fixture and triggers a `pikku dev` reinspection, so what it
+// asserts is deliberately the *install response*, not the Setup tab. Both of
+// the blockers that used to quarantine it are gone: removal reconciles the
+// in-memory addon registry (reconcileAddonRegistry prunes the unwired package),
+// and the install now runs the project's own package manager rather than a
+// hardcoded `npm install`, which this yarn workspace refused with
+// EUNSUPPORTEDPROTOCOL over its `workspace:*` manifests.
 //
-// A SECOND blocker was found while migrating this off cucumber, independent of
-// the first: `console:installAddon` shells out to `npm install`, and this
-// project is a yarn workspace whose manifests use `workspace:*`, which npm
-// refuses (`EUNSUPPORTEDPROTOCOL`). So the install 500s here before the poll
-// window is ever reached. Both have to be gone before this can be un-skipped.
+// The remaining slow part is re-inspection: populating the installed-package
+// registry takes longer than a page poll can reasonably wait (full regen
+// observed 6-10s+), which is why the page renders the readiness the install
+// call returned instead of waiting for the registry to catch up. That outcome
+// is what this asserts — it is available the moment the mutation resolves.
 export const installAddonFreshNameScenario = pikkuScenario<
   void,
   { installed: string }
 >({
-  title: 'Installing an addon under a fresh name lands on its setup',
+  title: 'Installing an addon under a fresh name reports its readiness',
   description:
-    'A fresh install writes the wiring and routes to the new instance setup',
+    'A fresh install writes the wiring and reports what the new instance still needs before it can start',
   tags: ['scenario', 'console-install-addon', 'console', 'mutates-project'],
-  skip: 'installs into the fixture: needs a re-inspection a persistent dev server is too slow to finish, and npm cannot install inside this yarn workspace — see the note above',
   after: removesInstalledAddon,
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -202,9 +194,15 @@ export const installAddonFreshNameScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.then(
-      'lands on the new instance setup',
-      'landsOnAddonSetup',
-      { packageName: FRESH_ADDON },
+      'sees the new instance reported as installed',
+      'seesTestId',
+      { testId: 'addon-install-outcome', containing: FRESH_INSTANCE },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees that it needs a restart to activate',
+      'seesTestId',
+      { testId: 'addon-install-restart-required' },
       { actor: actors.admin }
     )
 

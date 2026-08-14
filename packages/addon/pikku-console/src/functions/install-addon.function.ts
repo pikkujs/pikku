@@ -21,7 +21,14 @@ export const installAddon = pikkuFunc<
     namespace: string
     version?: string
   },
-  { success: boolean; message: string }
+  {
+    success: boolean
+    message: string
+    restartRequired: boolean
+    ready: boolean
+    missingSecrets: string[]
+    missingVariables: string[]
+  }
 >({
   title: 'Install Addon',
   description:
@@ -29,7 +36,10 @@ export const installAddon = pikkuFunc<
   expose: true,
   auth: true,
   scopes: ['pikku:console:addons:install'],
-  func: async ({ metaService }, { packageName, namespace, version }) => {
+  func: async (
+    { metaService, addonReadinessService },
+    { packageName, namespace, version }
+  ) => {
     const { readFile, writeFile, mkdir, readdir } =
       await import('node:fs/promises')
     const { join, dirname } = await import('node:path')
@@ -112,9 +122,19 @@ wireAddon(${serializeWireAddon(namespace, packageName, overrides)})
 `
     await writeFile(wiringFile, wiringContent, 'utf-8')
 
+    const { ready, missingSecrets, missingVariables } =
+      await addonReadinessService.check(rootDir, packageName, overrides)
+
+    const missing = [...missingSecrets, ...missingVariables]
     return {
       success: true,
-      message: `Installed ${packageName} and created ${wiringFile}`,
+      restartRequired: true,
+      ready,
+      missingSecrets,
+      missingVariables,
+      message: ready
+        ? `Installed ${packageName} and created ${wiringFile}. Restart the server to activate it.`
+        : `Installed ${packageName} and created ${wiringFile}, but it cannot start until ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} set. Configure ${missing.length === 1 ? 'it' : 'them'}, then restart the server.`,
     }
   },
 })

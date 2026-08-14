@@ -16,6 +16,10 @@ import {
   TextInput,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import {
+  rememberInstallResult,
+  type AddonInstallResult,
+} from './installResult'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -158,9 +162,17 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
             namespace: namespace?.trim() || deriveNamespace(addon.name),
             version: addon.version,
           }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+      // installOpenapiAddon reports no readiness — only a package install does.
+      if (!isApi) {
+        rememberInstallResult(
+          queryClient,
+          addon.name,
+          result as AddonInstallResult
+        )
+      }
       onInstalled?.(addon.name)
     },
   })

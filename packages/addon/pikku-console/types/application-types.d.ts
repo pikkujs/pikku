@@ -7,6 +7,7 @@ import type {
 import type { MetaService } from '@pikku/core/ecosystem/services'
 import type { WiringService } from '../src/services/wiring.service.js'
 import type { AddonService } from '../src/services/addon.service.js'
+import type { AddonReadinessService } from '../src/services/addon-readiness.service.js'
 import type { CodeEditService } from '../src/services/code-edit.service.js'
 import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
@@ -27,6 +28,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
    */
   secretAdminService: SecretAdminService
   addonService: AddonService
+  addonReadinessService: AddonReadinessService
   codeEditService: CodeEditService | null
   stateDiffService: StateDiffService | null
   dbSchemaService: DbSchemaService | null

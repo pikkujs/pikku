@@ -21,6 +21,12 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import styles from '../components/ui/console.module.css'
 import { Markdown } from '../components/ui/Markdown'
+import { AddonInstallOutcome } from '../components/packages/AddonInstallOutcome'
+import {
+  readInstallResult,
+  rememberInstallResult,
+  type AddonInstallResult,
+} from '../components/packages/installResult'
 import {
   Package,
   Code2,
@@ -384,9 +390,14 @@ export const PackageDetailPage: React.FC<{
         namespace,
         version,
       }),
-    onSuccess: () => {
+    onSuccess: (result, { packageName }) => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+      rememberInstallResult(
+        queryClient,
+        packageName,
+        result as AddonInstallResult
+      )
     },
   })
 
@@ -461,10 +472,18 @@ export const PackageDetailPage: React.FC<{
     },
   })
 
+  // What the install itself reported, if this page was reached by installing.
+  // It is the authority on the outcome: the addon only becomes queryable once
+  // the server re-inspects the new wiring, which `pikku dev` does slowly and a
+  // production server never does — so a page that waits for the registry shows
+  // "Package not found" for an install that in fact succeeded.
+  const installResult = readInstallResult(queryClient, id)
+
   // Still within the reload window with nothing found yet — the install just
   // landed and the dev server hasn't re-inspected the wiring. Show a settling
   // state rather than a premature "not found".
-  const settling = source === 'installed' && !pkg && !pollExpired
+  const settling =
+    source === 'installed' && !pkg && !pollExpired && !installResult
 
   if (source === 'api') {
     const api = apiDetail
@@ -711,7 +730,14 @@ export const PackageDetailPage: React.FC<{
         hidePanel
       >
         <Box p="xl">
-          <Text c="dimmed">{m.package_detail_not_found()}</Text>
+          {installResult ? (
+            <AddonInstallOutcome
+              namespace={activeInstance?.namespace ?? id}
+              result={installResult}
+            />
+          ) : (
+            <Text c="dimmed">{m.package_detail_not_found()}</Text>
+          )}
         </Box>
       </ResizablePanelLayout>
     )
