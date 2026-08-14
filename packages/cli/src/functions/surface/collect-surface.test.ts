@@ -209,6 +209,116 @@ describe('collectSurface', () => {
     }
   })
 
+  test('reads a bare string exports field as the root entry point', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/string-root',
+          exports: './dist/index.js',
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/index.ts', 'export const rooted = 1\n')
+
+      const surface = await collectSurface(tmp)
+
+      assert.deepStrictEqual(namesOf(surface, '.'), ['rooted'])
+      assert.strictEqual(surface[0]?.specifier, '@scope/string-root')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('reads a condition-only exports field as the root entry point', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/condition-root',
+          exports: { types: './dist/index.d.ts', import: './dist/index.js' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/index.ts', 'export const conditioned = 1\n')
+
+      const surface = await collectSurface(tmp)
+
+      assert.deepStrictEqual(namesOf(surface, '.'), ['conditioned'])
+      assert.strictEqual(surface[0]?.specifier, '@scope/condition-root')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('expands a wildcard that points at build output, nested files included', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/wild-dist',
+          exports: { './parts/*': './dist/parts/*' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/parts/one.ts', 'export const one = 1\n')
+      await write(tmp, 'src/parts/deep/two.ts', 'export const two = 2\n')
+      // The emitted tree the exports map actually points at, declaration files
+      // and source maps included — none of those are importable subpaths.
+      await write(tmp, 'dist/parts/one.js', 'export const one = 1\n')
+      await write(tmp, 'dist/parts/one.d.ts', 'export declare const one: 1\n')
+      await write(tmp, 'dist/parts/one.js.map', '{}\n')
+      await write(tmp, 'dist/parts/deep/two.js', 'export const two = 2\n')
+
+      const surface = await collectSurface(tmp)
+
+      assert.deepStrictEqual(surface.map((e) => e.subpath).sort(), [
+        './parts/deep/two',
+        './parts/one',
+      ])
+      assert.deepStrictEqual(namesOf(surface, './parts/one'), ['one'])
+      assert.deepStrictEqual(namesOf(surface, './parts/deep/two'), ['two'])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a wildcard subpath keeps the .js an importer has to write', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/wild-suffix',
+          exports: { './parts/*.js': './dist/parts/*.js' },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, 'src/parts/one.ts', 'export const one = 1\n')
+      await write(tmp, 'dist/parts/one.js', 'export const one = 1\n')
+
+      const surface = await collectSurface(tmp)
+
+      assert.deepStrictEqual(
+        surface.map((e) => e.subpath),
+        ['./parts/one.js']
+      )
+      assert.strictEqual(
+        surface[0]?.specifier,
+        '@scope/wild-suffix/parts/one.js'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a package with no exports map has no surface', async () => {
     const tmp = await makeTmp()
     try {

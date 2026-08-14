@@ -39,6 +39,56 @@ type PackageJson = {
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
 
 /**
+ * Extensions a wildcard match may carry, source or emitted.
+ *
+ * A wildcard can point at either convention — `./src/parts/*` at source,
+ * `./dist/parts/*.js` at what was built from it — so matching only source here
+ * would silently publish nothing for every build-output pattern.
+ */
+const MODULE_EXTENSIONS = [
+  ...SOURCE_EXTENSIONS,
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+]
+
+/**
+ * The name a wildcard `*` stands in for, or `null` when the file is not one a
+ * subpath can resolve to.
+ *
+ * Declaration files and source maps sit beside the emitted modules in an output
+ * directory and are not separately importable. `.d.ts` has to be rejected
+ * before the extension search, or it reads as a `.ts` whose stem keeps a
+ * trailing `.d`.
+ */
+const wildcardStem = (fileName: string): string | null => {
+  if (fileName.endsWith('.map')) return null
+  if (/\.d\.(ts|mts|cts)$/.test(fileName)) return null
+  const extension = MODULE_EXTENSIONS.find((each) => fileName.endsWith(each))
+  return extension ? fileName.slice(0, -extension.length) : null
+}
+
+/**
+ * The subpath map an exports field stands for.
+ *
+ * The field has three legal shapes, and two of them are not maps: a bare string
+ * (`"exports": "./dist/index.js"`) and a condition object for the root
+ * (`{ "types": …, "import": … }`). Both publish exactly one entry point — the
+ * package itself — so they are read as the map that says so. Reading them as
+ * "no exports" instead would report an empty surface for a package that has
+ * one, which any check built on this would then pass vacuously.
+ */
+const subpathMap = (
+  exports: NonNullable<PackageJson['exports']>
+): Record<string, unknown> => {
+  if (typeof exports === 'string') return { '.': exports }
+  return Object.keys(exports).some((key) => key.startsWith('.'))
+    ? exports
+    : { '.': exports }
+}
+
+/**
  * Whether a subpath publishes code at all.
  *
  * An exports map is also how a package publishes a stylesheet or a JSON
@@ -66,8 +116,13 @@ const sourceForTarget = (
 ): string | null => {
   const withoutPrefix = target.replace(/^\.\//, '')
 
+  // A declaration file is build output that happens to end in `.ts`, so it goes
+  // through the same recovery as `.js` rather than being taken for source.
+  const isDeclaration = /\.d\.(ts|mts|cts)$/.test(withoutPrefix)
+
   // Already source: the common case outside a published package.
   if (
+    !isDeclaration &&
     SOURCE_EXTENSIONS.some((extension) => withoutPrefix.endsWith(extension))
   ) {
     return existsSync(join(packageDir, withoutPrefix)) ? withoutPrefix : null
@@ -76,7 +131,9 @@ const sourceForTarget = (
   const stripped = withoutPrefix.startsWith(`${outDir}/`)
     ? withoutPrefix.slice(outDir.length + 1)
     : withoutPrefix
-  const base = stripped.replace(/\.(js|mjs|cjs)$/, '')
+  const base = stripped
+    .replace(/\.d\.(ts|mts|cts)$/, '')
+    .replace(/\.(js|jsx|mjs|cjs)$/, '')
   const withoutSrc = base.startsWith('src/') ? base.slice(4) : base
 
   const candidates: string[] = []
@@ -102,6 +159,10 @@ const sourceForTarget = (
  * the surface it declares is only knowable by looking. A package can also map
  * the same directory twice — once as `*.js` and once bare — and both patterns
  * resolve to the same files, so the caller de-duplicates by entry file.
+ *
+ * `*` matches across path separators, so the walk recurses: a nested file is as
+ * published as a top-level one, and stopping at the first level would report
+ * only the shallowest slice of the surface.
  */
 const expandWildcard = (
   packageDir: string,
@@ -114,16 +175,23 @@ const expandWildcard = (
   if (!existsSync(absolute)) return []
 
   const expanded: Array<{ subpath: string; target: string }> = []
-  for (const entry of readdirSync(absolute, { withFileTypes: true })) {
-    if (!entry.isFile()) continue
-    if (suffix && !entry.name.endsWith(suffix)) continue
-    if (!SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext))) continue
-    const stem = entry.name.replace(/\.(ts|tsx|mts|cts)$/, '')
-    expanded.push({
-      subpath: subpath.replace('*', stem).replace(/\.js$/, ''),
-      target: `${targetDir}${entry.name}`,
-    })
+  const walk = (directory: string, prefix: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        walk(join(directory, entry.name), `${prefix}${entry.name}/`)
+        continue
+      }
+      if (!entry.isFile()) continue
+      if (suffix && !entry.name.endsWith(suffix)) continue
+      const stem = wildcardStem(entry.name)
+      if (stem === null) continue
+      expanded.push({
+        subpath: subpath.replace('*', `${prefix}${stem}`),
+        target: `${targetDir}${prefix}${entry.name}`,
+      })
+    }
   }
+  walk(absolute, '')
   return expanded
 }
 
@@ -243,8 +311,7 @@ export const collectSurface = async (
 ): Promise<SurfaceEntrypoint[]> => {
   const root = resolve(packageDir)
   const packageJson = await readJson<PackageJson>(join(root, 'package.json'))
-  if (!packageJson?.exports || typeof packageJson.exports === 'string')
-    return []
+  if (!packageJson?.exports) return []
 
   const { outDir, paths } = await readCompilerOptions(root)
   const packageName = packageJson.name ?? ''
@@ -257,7 +324,9 @@ export const collectSurface = async (
 
   const seenEntryFiles = new Set<string>()
 
-  for (const [subpath, value] of Object.entries(packageJson.exports)) {
+  for (const [subpath, value] of Object.entries(
+    subpathMap(packageJson.exports)
+  )) {
     if (!subpath.startsWith('.')) continue
     const target = targetOf(value)
     if (!target || !publishesCode(target)) continue
