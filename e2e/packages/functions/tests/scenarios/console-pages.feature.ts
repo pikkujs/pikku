@@ -20,7 +20,7 @@ const WEBHOOKS_PAGE = '/console/webhooks'
 export const securityEmptyStateScenario = pikkuScenario<void, { empty: true }>({
   title: 'The security page shows an empty state before any audit',
   description: 'With no audit report on disk there is no report to show',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -52,7 +52,7 @@ export const securityAuditRunScenario = pikkuScenario<void, { audited: true }>({
   title: 'Running the audit renders the report',
   description:
     'The audit runs to completion and its report replaces the empty state',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -90,7 +90,7 @@ export const changesDiffScenario = pikkuScenario<void, { diffed: true }>({
   title: 'The changes page diffs two project states',
   description:
     'A added function and its added HTTP wiring are both counted and named',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -151,7 +151,7 @@ export const webhookDeliveryScenario = pikkuScenario<void, { delivered: true }>(
     title: 'A delivered webhook shows on the console with its attempt history',
     description:
       'The delivery log names the target, reports it delivered, and keeps the attempt',
-    tags: ['scenario'],
+    tags: ['scenario', 'console'],
     func: async (_services, _data, { scenario, actors }) => {
       if (!actors?.admin) {
         throw new Error(

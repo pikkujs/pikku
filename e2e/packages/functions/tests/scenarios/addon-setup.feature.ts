@@ -51,7 +51,7 @@ export const addonRequirementsScenario = pikkuScenario<void, { setUp: true }>({
   title: 'An addon’s missing requirements are surfaced, then satisfied inline',
   description:
     'The Setup tab flags the integration and the secret as missing, and both can be satisfied without leaving it',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -142,7 +142,7 @@ export const addonInstanceOverridesScenario = pikkuScenario<
   title: 'The Setup tab resolves a secret against the selected instance',
   description:
     'Two instances of one package must not share a secret, so each resolves the addon’s logical name through its own overrides',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(

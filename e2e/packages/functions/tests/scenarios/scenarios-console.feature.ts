@@ -39,7 +39,7 @@ export const workflowsExcludeScenariosScenario = pikkuScenario<
   title: 'The workflows page leaves scenarios out',
   description:
     'A scenario is not a workflow to browse, so the workflows table omits it',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -77,7 +77,7 @@ export const featuresNavigableScenario = pikkuScenario<
   title: 'The scenarios page opens on a feature',
   description:
     'Features are the pages of the document, so the page lists them and opens one',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -119,7 +119,7 @@ export const scenarioReadsAsProseScenario = pikkuScenario<void, { read: true }>(
     title: 'A scenario reads as the prose its author wrote',
     description:
       'The steps of a scenario are its sentences, shown in the order they were declared',
-    tags: ['scenario'],
+    tags: ['scenario', 'console'],
     func: async (_services, _data, { scenario, actors }) => {
       if (!actors?.admin) {
         throw new Error(
@@ -168,7 +168,7 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
     title: 'A scenario names the personas it casts',
     description:
       'The personas a scenario is written to be run by read alongside it, not on a page of their own',
-    tags: ['scenario'],
+    tags: ['scenario', 'console'],
     func: async (_services, _data, { scenario, actors }) => {
       if (!actors?.admin) {
         throw new Error(
@@ -241,7 +241,7 @@ export const scenarioStepOpensAsStepScenario = pikkuScenario<
   title: 'A step opens as the step it is, not as a bare RPC',
   description:
     'The details of a step name the phase it runs in, the actor it runs as, and the scenario step behind the sentence',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -309,7 +309,7 @@ export const personaLinkStaysInTheDocumentScenario = pikkuScenario<
   title: 'A persona’s scenario link reads the scenario, not a graph of it',
   description:
     'Every scenario is documented as the prose it was written in, so following one from its cast lands back in the document',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -363,7 +363,7 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
   title: 'A skipped scenario says why it is skipped',
   description:
     'Documentation that hides what is not running is documentation that lies',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -405,7 +405,7 @@ export const tagFilterNarrowsScenario = pikkuScenario<void, { narrowed: true }>(
     title: 'A tag narrows the document to the slice it names',
     description:
       'The same tags `pikku scenario run --tags` selects on also navigate the document',
-    tags: ['scenario'],
+    tags: ['scenario', 'console'],
     func: async (_services, _data, { scenario, actors }) => {
       if (!actors?.admin) {
         throw new Error(

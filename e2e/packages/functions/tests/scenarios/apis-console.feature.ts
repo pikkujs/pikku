@@ -24,7 +24,7 @@ const GATEWAYS_TAB = '/console/apis?tab=gateways'
 export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
   title: 'MCP tools are listed in the console',
   description: 'An admin opens the MCP tab and finds the project’s tools',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -56,7 +56,7 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
 export const gatewayMetadataScenario = pikkuScenario<void, { listed: true }>({
   title: 'Gateway metadata is visible in the console',
   description: 'An admin opens the Gateways tab and finds the gateway’s route',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(

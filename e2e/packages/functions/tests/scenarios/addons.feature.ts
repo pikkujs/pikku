@@ -17,7 +17,7 @@ export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
   title: 'Installed addons are visible on the addons page',
   description:
     'An admin filters the addons gallery to what this project installs and finds every one of them',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -60,7 +60,7 @@ export const communityAddonsScenario = pikkuScenario<void, { listed: true }>({
   title: 'Community addons are visible on the addons page',
   description:
     'An admin browses the whole catalogue and finds a publishable addon this project has not installed',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(

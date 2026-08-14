@@ -135,7 +135,6 @@ export const scenarioRun = pikkuSessionlessFunc<
     tags?: string
     excludeTags?: string
     coverage?: boolean
-    browser?: boolean
     run?: ScenarioSurface
     strict?: boolean
     spawn?: boolean
@@ -157,7 +156,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       tags,
       excludeTags,
       coverage,
-      browser = true,
       run: runSurface = 'default',
       strict = false,
       spawn = false,
@@ -303,10 +301,6 @@ export const scenarioRun = pikkuSessionlessFunc<
         )
         .filter(([, steps]) => steps.length > 0)
     )
-    // `--no-browser` is the blunt form of `--run default`: a machine with no
-    // browser takes the server-side path rather than skipping the scenario.
-    const effectiveSurface: ScenarioSurface =
-      browser === false && runSurface === 'browser' ? 'default' : runSurface
     const unrunnableStepsByFlow = new Map<string, string[]>(
       [...scenarioNames]
         .map(
@@ -316,42 +310,42 @@ export const scenarioRun = pikkuSessionlessFunc<
               scenarioStepsWithoutBinding(
                 state.workflows?.meta?.[name],
                 functionsMeta,
-                effectiveSurface
+                runSurface
               ),
             ] as const
         )
         .filter(([, steps]) => steps.length > 0)
     )
 
-    // Two reasons a scenario is held back, both reported as SKIP rather than
-    // failed. `--no-browser` is the direct replacement for cucumber's `@console`
-    // tag, so a standard run stays green on a machine with no browser; a `skip`
-    // on the scenario itself is the project quarantining it, and the plan has
-    // already cleared that reason for anything named directly with `--flows`.
-    const skipReasonFor = (entry: {
-      scenarioName: string
-      skip?: string
-    }): string | undefined => {
-      if (entry.skip) return entry.skip
-      const unrunnable = unrunnableStepsByFlow.get(entry.scenarioName)
-      if (unrunnable?.length) {
-        return `no ${effectiveSurface} or default binding: ${unrunnable.join(', ')}`
-      }
-      return undefined
-    }
-
-    const skipped: Array<{ name: string; reason: string }> = []
+    // Two reasons a scenario is held back, and they are not the same kind of
+    // thing. A `skip` on the scenario is the project quarantining it on purpose
+    // — reported and green, and the plan has already cleared that reason for
+    // anything named directly with `--flows`. Having no binding for the run
+    // surface is nobody's decision: the scenario was asked for and cannot run,
+    // which is a misconfigured run rather than a quiet pass, so it fails below.
+    const quarantined: Array<{ name: string; reason: string }> = []
+    const unrunnable: Array<{ name: string; reason: string }> = []
     groups = groups
       .map((group) => ({
         ...group,
         entries: group.entries.filter((entry) => {
-          const reason = skipReasonFor(entry)
-          if (!reason) return true
-          skipped.push({ name: entry.scenarioName, reason })
-          return false
+          if (entry.skip) {
+            quarantined.push({ name: entry.scenarioName, reason: entry.skip })
+            return false
+          }
+          const steps = unrunnableStepsByFlow.get(entry.scenarioName)
+          if (steps?.length) {
+            unrunnable.push({
+              name: entry.scenarioName,
+              reason: `no ${runSurface} or default binding: ${steps.join(', ')}`,
+            })
+            return false
+          }
+          return true
         }),
       }))
       .filter((group) => group.entries.length > 0)
+    const skipped = [...quarantined, ...unrunnable]
 
     const workflowService = new InMemoryWorkflowService()
     const scenarioService = workflowService.setRunExtension(
@@ -361,7 +355,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       apiUrl: env.apiUrl,
       appUrl: env.appUrl,
     })
-    scenarioService.setRunSurface(effectiveSurface)
+    scenarioService.setRunSurface(runSurface)
 
     // Scenario steps run here, not on the target — everything they touch of the
     // app goes over HTTP through an actor, which is what `guardRpc` below
@@ -419,7 +413,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // browser binding takes its default path instead, so there is nothing to
     // drive and nothing to pay for.
     const needsBrowser =
-      effectiveSurface === 'browser' &&
+      runSurface === 'browser' &&
       groups.some((group) =>
         group.entries.some((entry) =>
           browserStepsByFlow.has(entry.scenarioName)
@@ -749,14 +743,14 @@ export const scenarioRun = pikkuSessionlessFunc<
       const scenario = scenarioSurfaceCoverage(
         state.workflows?.meta?.[name],
         functionsMeta,
-        effectiveSurface
+        runSurface
       )
       surfaceCoverage.onSurface += scenario.onSurface
       surfaceCoverage.total += scenario.total
       for (const step of scenario.unwitnessed) unwitnessed.add(step)
     }
-    if (effectiveSurface !== 'default' && surfaceCoverage.total > 0) {
-      const line = `${surfaceCoverage.onSurface}/${surfaceCoverage.total} steps ran on ${effectiveSurface}`
+    if (runSurface !== 'default' && surfaceCoverage.total > 0) {
+      const line = `${surfaceCoverage.onSurface}/${surfaceCoverage.total} steps ran on ${runSurface}`
       if (unwitnessed.size === 0) {
         logger.info(line)
       } else {
@@ -768,10 +762,22 @@ export const scenarioRun = pikkuSessionlessFunc<
       }
     }
 
+    // A scenario asked for but unrunnable is a broken run, not a quiet pass.
+    // Reporting it as a skip and exiting 0 makes "62 held back" and "62 passed"
+    // indistinguishable to CI, which is how an entire browser suite went
+    // unrun for as long as it did.
+    if (unrunnable.length > 0) {
+      logger.error(
+        `${unrunnable.length} scenario(s) could not run on '${runSurface}' — no binding for that surface and no default to fall back to. ` +
+          `Run them on the surface they are written for (--run browser), or hold them back explicitly with --exclude-tags.`
+      )
+    }
+
     const failed = results.filter((r) => r.status === 'failed')
     if (
       failed.length > 0 ||
       hookFailures.length > 0 ||
+      unrunnable.length > 0 ||
       (strict && unwitnessed.size > 0)
     ) {
       process.exitCode = 1

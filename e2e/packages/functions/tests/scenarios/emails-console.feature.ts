@@ -16,7 +16,7 @@ const TEMPLATE = 'hello-world'
 export const emailTemplateGridScenario = pikkuScenario<void, { listed: true }>({
   title: 'The emails page renders the template grid',
   description: 'An admin opens the emails page and finds the app’s templates',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -54,7 +54,7 @@ export const emailTemplateLocalesScenario = pikkuScenario<
   title: 'An email template card shows its locale count',
   description:
     'The hello-world template is translated twice and the card says so',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -85,7 +85,7 @@ export const emailTemplateDetailScenario = pikkuScenario<
 >({
   title: 'Clicking an email template opens its detail view',
   description: 'The detail view offers to render the template',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
