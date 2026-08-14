@@ -490,8 +490,8 @@
     "runPikkuFunc",
     "setSingletonServices"
   ],
-  "./ecosystem/ai-agent": [
-    "addAIAgent",
+  "./ecosystem/agent": [
+    "addAgent",
     "agent",
     "agentApprove",
     "agentResume",
@@ -503,14 +503,14 @@
     "voiceInput",
     "voiceOutput"
   ],
-  "./ecosystem/ai-scorer": [
-    "addAIScorer",
+  "./ecosystem/agent-scorer": [
+    "addAgentScorer",
     "enableScoreSnapshots",
     "getScoreSnapshot",
     "gradeRun",
-    "pikkuAIJudge",
-    "pikkuAIScorer",
-    "wireAIScorerQueueWorkers"
+    "pikkuAgentJudge",
+    "pikkuAgentScorer",
+    "wireAgentScorerQueueWorkers"
   ],
   "./ecosystem/channel": [
     "EventHubStore",
@@ -585,7 +585,7 @@
   ],
   "./ecosystem/secret": ["validateAndBuildSecretDefinitionsMeta"],
   "./ecosystem/services": [
-    "InMemoryAIRunStateService",
+    "InMemoryAgentRunStateService",
     "PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME",
     "PikkuSessionService",
     "TypedVariablesService",
