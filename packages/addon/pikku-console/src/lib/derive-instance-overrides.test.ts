@@ -1,6 +1,7 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import {
+  assertAddonPackageName,
   deriveInstanceOverrides,
   packageBase,
 } from './derive-instance-overrides.js'
@@ -68,4 +69,32 @@ describe('deriveInstanceOverrides', () => {
     assert.equal(packageBase('addon-slack'), 'slack')
     assert.equal(packageBase('mypkg'), 'mypkg')
   })
+})
+
+describe('assertAddonPackageName', () => {
+  for (const name of [
+    '@pikku/addon-mandrill',
+    'addon-slack',
+    'my.pkg',
+    'a-b_c',
+  ]) {
+    test(`accepts ${name}`, () => {
+      assert.doesNotThrow(() => assertAddonPackageName(name))
+    })
+  }
+
+  for (const name of [
+    '.',
+    '..',
+    '../../etc',
+    '@pikku/../evil',
+    '_private',
+    'UPPER',
+    'has space',
+    '',
+  ]) {
+    test(`rejects ${JSON.stringify(name)}`, () => {
+      assert.throws(() => assertAddonPackageName(name), /Invalid package name/)
+    })
+  }
 })
