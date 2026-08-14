@@ -65,6 +65,8 @@ export interface DockTile {
   Icon?: IconComponent
   /** The tile draws its own thing instead of a glyph (identity mark, avatar). */
   render?: 'switcher' | 'account'
+  /** The letters an `account` tile draws in its avatar. */
+  initials?: string
   /** Glyphs whose shapes close cleanly enough to carry the duotone active fill.
    *  A fill on an open path renders as a smear, so this opts in per icon. */
   fill?: boolean

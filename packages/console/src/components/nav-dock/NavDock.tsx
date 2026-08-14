@@ -421,6 +421,8 @@ function DockTileButton({
     >
       {tile.render === 'switcher' ? (
         <span className={classes.mark}>{mark}</span>
+      ) : tile.render === 'account' ? (
+        <span className={classes.avatar}>{tile.initials}</span>
       ) : Icon ? (
         <Icon />
       ) : null}

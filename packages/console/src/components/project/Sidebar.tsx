@@ -46,9 +46,11 @@ import {
   Shield,
   ScrollText,
   Webhook,
-  Play,
   SlidersHorizontal,
   Lock,
+  Sparkles,
+  Target,
+  Network,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -87,6 +89,14 @@ export interface NavSection {
    *  item's icon, which is a guess: two sections whose first items happen to
    *  share a glyph become indistinguishable. */
   icon?: React.ComponentType<{ size?: number; color?: string }>
+  /**
+   * Where the dock puts the section: `row` spreads its items along the dock as
+   * tiles of their own, `group` collapses them behind one tile whose flyout
+   * lists them. The rail draws both the same way. Defaults to `row` for an
+   * untitled section — there is no label to put on a group — and `group`
+   * otherwise.
+   */
+  zone?: 'row' | 'group'
   items: NavItem[]
 }
 
@@ -96,10 +106,16 @@ export function useDefaultNavSections(): NavSection[] {
   useLocale()
   return [
     {
-      id: 'run',
-      title: m.nav_run(),
-      icon: Play,
+      id: 'main',
+      title: asI18n(''),
+      zone: 'row',
       items: [
+        {
+          label: m.nav_overview(),
+          href: '/overview',
+          icon: Gauge,
+          matchPrefix: '/overview',
+        },
         {
           label: m.nav_functions(),
           href: '/functions',
@@ -119,22 +135,22 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/agents',
         },
         {
-          label: m.nav_scorers(),
-          href: '/scorers',
-          icon: Gauge,
-          matchPrefix: '/scorers',
-        },
-        {
           label: m.nav_scenarios(),
           href: '/scenarios',
           icon: Route,
           matchPrefix: '/scenarios',
         },
         {
-          label: m.nav_virtual_users(),
-          href: '/virtual-users',
-          icon: UserSearch,
-          matchPrefix: '/virtual-users',
+          label: m.nav_database(),
+          href: '/database',
+          icon: Database,
+          matchPrefix: '/database',
+        },
+        {
+          label: m.nav_emails(),
+          href: '/emails',
+          icon: Mail,
+          matchPrefix: '/emails',
         },
         {
           label: m.nav_knowledge(),
@@ -145,16 +161,30 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
-      id: 'data',
-      title: m.nav_data(),
-      icon: Database,
+      id: 'ai',
+      title: m.nav_ai(),
+      icon: Sparkles,
       items: [
         {
-          label: m.nav_database(),
-          href: '/database',
-          icon: Database,
-          matchPrefix: '/database',
+          label: m.nav_scorers(),
+          href: '/scorers',
+          icon: Target,
+          matchPrefix: '/scorers',
         },
+        {
+          label: m.nav_virtual_users(),
+          href: '/virtual-users',
+          icon: UserSearch,
+          matchPrefix: '/virtual-users',
+        },
+      ],
+    },
+    {
+      // How the outside reaches a function, and what a wiring composes from.
+      id: 'wiring',
+      title: m.nav_wiring(),
+      icon: Network,
+      items: [
         {
           label: m.nav_apis(),
           href: '/apis',
@@ -174,12 +204,6 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/runtime',
         },
         {
-          label: m.nav_emails(),
-          href: '/emails',
-          icon: Mail,
-          matchPrefix: '/emails',
-        },
-        {
           label: m.nav_webhooks(),
           href: '/webhooks',
           icon: Webhook,
@@ -188,8 +212,10 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
-      id: 'config',
-      title: m.nav_config(),
+      // OAuth is here rather than with Access because it declares how sign-in is
+      // configured — it reads secrets. Everything under Access is live state.
+      id: 'project',
+      title: m.nav_project(),
       icon: SlidersHorizontal,
       items: [
         {
@@ -205,6 +231,12 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/variables',
         },
         {
+          label: m.nav_oauth(),
+          href: '/auth-providers',
+          icon: Lock,
+          matchPrefix: '/auth-providers',
+        },
+        {
           label: m.nav_security(),
           href: '/security',
           icon: ShieldCheck,
@@ -216,16 +248,28 @@ export function useDefaultNavSections(): NavSection[] {
           icon: Package,
           matchPrefix: '/addons',
         },
+        {
+          label: m.nav_changes(),
+          href: '/changes',
+          icon: GitCompare,
+          matchPrefix: '/changes',
+        },
       ],
     },
     {
       // Declared people and real ones sit together: a persona is who the
       // product is for, a user is who turned up. Reading either without the
       // other is what let the two drift in the first place.
-      id: 'people',
-      title: m.nav_people(),
+      id: 'access',
+      title: m.nav_access(),
       icon: Users,
       items: [
+        {
+          label: m.nav_users(),
+          href: '/users',
+          icon: Users,
+          matchPrefix: '/users',
+        },
         {
           label: m.nav_personas(),
           href: '/personas',
@@ -233,29 +277,10 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/personas',
         },
         {
-          label: m.nav_users(),
-          href: '/users',
-          icon: Users,
-          matchPrefix: '/users',
-        },
-      ],
-    },
-    {
-      id: 'auth',
-      title: m.nav_auth(),
-      icon: Lock,
-      items: [
-        {
           label: m.nav_scopes(),
           href: '/scopes',
           icon: Shield,
           matchPrefix: '/scopes',
-        },
-        {
-          label: m.nav_oauth(),
-          href: '/auth-providers',
-          icon: KeyRound,
-          matchPrefix: '/auth-providers',
         },
         {
           label: m.nav_credentials(),
@@ -268,17 +293,6 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/audit',
           icon: ScrollText,
           matchPrefix: '/audit',
-        },
-      ],
-    },
-    {
-      title: asI18n(''),
-      items: [
-        {
-          label: m.nav_changes(),
-          href: '/changes',
-          icon: GitCompare,
-          matchPrefix: '/changes',
         },
       ],
     },

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { asI18n } from '@pikku/react'
 import { useMantineColorScheme } from '@pikku/mantine/core'
 import { spotlight } from '@mantine/spotlight'
-import { Moon, RefreshCw, Search, Sun, UserCog } from 'lucide-react'
+import { LogOut, Moon, RefreshCw, Search, Sun, UserCog } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useLocation, useNavigate } from '../../router'
@@ -35,16 +35,19 @@ import type {
  * The zone split is the one adaptation the console needs. Fabric has scopes, so
  * its contextual zone is what varies as you move between an org, a project and a
  * workspace; the console has one project and nothing varies, so the split is by
- * how often you reach for a thing instead:
- *
- *  - the first nav section's items are TILES, one click, always in the same
- *    place — the surfaces you work on,
- *  - every other section is one group tile whose flyout holds its items — the
- *    things you go and look up.
+ * how often you reach for a thing instead — a section declares which side of it
+ * it is on with `zone`, and the sections are the single source both this and the
+ * rail read, so the two can never disagree about what the console contains.
  *
  * The identity tile carries the whole nav map, so nothing is more than two
  * clicks away and the full list is reachable even condensed.
  */
+/** An untitled section has no label to hang a group off, so it stays on the row. */
+const zoneOf = (s: NavSection): 'row' | 'group' =>
+  s.zone ?? (s.title ? 'group' : 'row')
+
+const initialsOf = (label: string) => label.trim().slice(0, 2).toUpperCase()
+
 export function ConsoleNavDock({
   sections: sectionsProp,
 }: {
@@ -84,37 +87,113 @@ export function ConsoleNavDock({
     [navigate]
   )
 
-  const [primary, ...rest] = sections
-
   const pinned = useMemo<DockEntry[]>(
-    () => (primary?.items ?? []).map(tileOf),
-    [primary, tileOf]
+    () =>
+      sections
+        .filter((s) => zoneOf(s) === 'row')
+        .flatMap((s) => s.items.map(tileOf)),
+    [sections, tileOf]
   )
 
-  /* A section with no title is not a group — it is a loose leaf that belongs on
-     the row itself (Changes). Grouping it would hide one item behind a menu
-     whose label would have to be invented. */
   const contextual = useMemo<DockEntry[]>(
     () =>
-      rest.flatMap((section): DockEntry[] => {
-        if (!section.title) return section.items.map(tileOf)
-        const rows = section.items.map(rowOf)
-        return [
-          {
+      sections
+        .filter((s) => zoneOf(s) === 'group' && s.items.length > 0)
+        .map((section): DockEntry => {
+          const rows = section.items.map(rowOf)
+          return {
             id: section.id ?? section.title,
             label: section.title,
             Icon: section.icon ?? section.items[0]?.icon,
             isGroup: true,
             match: rows.flatMap((r) => r.match ?? []),
             menu: { label: section.title, sections: [{ key: 'main', rows }] },
-          },
-        ]
-      }),
-    [rest, rowOf, tileOf]
+          }
+        }),
+    [sections, rowOf]
   )
 
-  const utility = useMemo<DockTile[]>(() => {
-    const tiles: DockTile[] = [
+  /* Everything about you or your session, behind one tile: the appearance you
+     read the console in, the metadata you re-pull, who you are pretending to be
+     and the way out. Sign-out had no home in the shell at all before this — the
+     only trigger was the not-authorized screen, which you never see once you
+     are in. */
+  const account = useMemo<DockTile>(() => {
+    const user = auth?.user
+    const name = user ? asI18n(user.name || user.email) : m.nav_account()
+    const rows: FlyoutRow[] = [
+      {
+        key: 'scheme',
+        Icon: colorScheme === 'dark' ? Sun : Moon,
+        label:
+          colorScheme === 'dark'
+            ? m.sidebar_switch_to_light()
+            : m.sidebar_switch_to_dark(),
+        onSelect: () => toggleColorScheme(),
+      },
+      {
+        key: 'refresh',
+        Icon: RefreshCw,
+        label: m.sidebar_refresh_metadata(),
+        status: metaLoading ? 'busy' : undefined,
+        onSelect: () => refresh(),
+      },
+    ]
+    if (canImpersonate) {
+      rows.push({
+        key: 'impersonate',
+        Icon: UserCog,
+        label: m.impersonate_button(),
+        onSelect: () => setImpersonateOpen(true),
+      })
+    }
+    return {
+      id: 'account',
+      label: name,
+      render: user ? 'account' : undefined,
+      Icon: user ? undefined : UserCog,
+      initials: user ? initialsOf(user.name || user.email) : undefined,
+      menu: {
+        label: name,
+        head: user
+          ? {
+              mark: initialsOf(user.name || user.email),
+              title: name,
+              sub: asI18n(user.email),
+            }
+          : undefined,
+        sections: user
+          ? [
+              { key: 'session', rows },
+              {
+                key: 'out',
+                rows: [
+                  {
+                    key: 'sign-out',
+                    Icon: LogOut,
+                    label: m.auth_sign_out(),
+                    danger: true,
+                    onSelect: () => {
+                      void auth?.signOut()
+                    },
+                  },
+                ],
+              },
+            ]
+          : [{ key: 'session', rows }],
+      },
+    }
+  }, [
+    auth,
+    colorScheme,
+    toggleColorScheme,
+    metaLoading,
+    refresh,
+    canImpersonate,
+  ])
+
+  const utility = useMemo<DockTile[]>(
+    () => [
       {
         id: 'search',
         label: m.common_search(),
@@ -122,33 +201,10 @@ export function ConsoleNavDock({
         shortcut: '⌘K',
         onSelect: () => spotlight.open(),
       },
-      {
-        id: 'refresh',
-        label: m.sidebar_refresh_metadata(),
-        Icon: RefreshCw,
-        badge: metaLoading ? { kind: 'busy', tone: 'accent' } : undefined,
-        onSelect: () => refresh(),
-      },
-      {
-        id: 'scheme',
-        label:
-          colorScheme === 'dark'
-            ? m.sidebar_switch_to_light()
-            : m.sidebar_switch_to_dark(),
-        Icon: colorScheme === 'dark' ? Sun : Moon,
-        onSelect: () => toggleColorScheme(),
-      },
-    ]
-    if (canImpersonate) {
-      tiles.push({
-        id: 'impersonate',
-        label: m.impersonate_button(),
-        Icon: UserCog,
-        onSelect: () => setImpersonateOpen(true),
-      })
-    }
-    return tiles
-  }, [metaLoading, refresh, colorScheme, toggleColorScheme, canImpersonate])
+      account,
+    ],
+    [account]
+  )
 
   /* The flyout's head answers "where am I" in full, which the one-glyph tile
      cannot: the console's name, the path that produced the page you are on, and
