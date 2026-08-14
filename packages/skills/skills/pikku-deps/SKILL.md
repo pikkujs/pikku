@@ -4,8 +4,11 @@ description: >-
   Use for the Pikku dependency security audit: the `pikku audit` CLI command, the
   `.pikku/audit.json` artifact, the `SecurityAuditReport` type in @pikku/core, and the console
   Security screen (getSecurityAudit / runSecurityAudit / updateDependency + SecurityAuditView).
-  TRIGGER when: user asks about `pikku audit`, dependency vulnerabilities/advisories, outdated
-  dependencies, the Security screen/page in the console, updating a vulnerable dependency, or
+  Also covers `pikku update`, which moves the @pikku/* dependency set forward and reports the
+  peers those versions need.
+  TRIGGER when: user asks about `pikku audit` or `pikku update`, dependency
+  vulnerabilities/advisories, outdated dependencies, upgrading Pikku itself, peer dependency
+  conflicts, the Security screen/page in the console, updating a vulnerable dependency, or
   reading/rendering audit.json. DO NOT TRIGGER when: user asks about authentication/sessions/JWT
   (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use
   pikku-config).
@@ -43,10 +46,46 @@ installGroups: [core]
   `bun outdated`, normalised into one `SecurityAuditReport` with per-severity /
   per-update-level counts). Other PMs are detected but **stubbed** with a `note`
   field until their shapes are normalised — issues/updates come back empty.
-- `bun audit` exits non-zero when it *finds* advisories but still writes the
+- `bun audit` exits non-zero when it _finds_ advisories but still writes the
   payload to stdout, so a non-zero exit **with output** is data. A non-zero exit
   with **no** output — or a launch failure, timeout, or a blown 32MB buffer —
   throws, precisely so a failed run can't masquerade as "0 advisories".
+
+## The `pikku update` command
+
+Narrower than `audit --outdated`, and the only one that writes: it moves the
+**@pikku/\* set** forward and reports the peers those versions need. Use `audit`
+to learn a dependency is vulnerable; use `update` to move Pikku itself.
+
+- `pikku update` — reports only. Nothing is written without `--update`.
+- `pikku update --update` — writes the new ranges into every covered
+  package.json, then runs an install. `--no-install` writes and stops.
+- `pikku update --update-peers` — implies `--update` and additionally writes the
+  ranges unsatisfied peers require, **for peers the project already declares**.
+  A peer it does not declare is reported and never added — adding a dependency
+  is not an update. Separate from `--update` because a peer bump can cross a
+  **major** of a third-party package (`ai` 5 → 6), which is not a call to make
+  on the user's behalf.
+- `--tag <dist-tag>` (default `latest`) reads each package's own dist-tag, so
+  `--tag next` moves the whole set onto prereleases. `--registry <url>` defaults
+  to `npm_config_registry`.
+- Coverage is the nearest package.json walking up from the project root, plus
+  every workspace it declares — a monorepo updates in one pass. All four
+  dependency fields are read, `peerDependencies` included, so an addon's own
+  declared peer range moves with it.
+
+Statuses, per dependency: `outdated` (the range floor is behind latest — this is
+what `--update` writes), `stale-install` (the range already admits latest but
+node_modules is behind — an install fixes it, no edit needed), `linked` (a
+`workspace:`/`file:`/`link:`/`portal:` range — a deliberate local checkout,
+counted but never listed), `manual` (a registry range we refuse to substitute
+into: a union, an x-range, a `*`), `unresolved` (the registry had no such tag —
+this must **never** read as "current", the same rule as a failed audit).
+
+Peers are read off the version the run **lands on**, not the one installed —
+the point is what the target needs. An @pikku peer the same run already brings
+forward is not reported, and an unsatisfied _optional_ peer the project never
+declared is skipped.
 
 ## Console integration (@pikku/addon-console)
 

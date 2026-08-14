@@ -45,6 +45,8 @@ import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
+import { pikkuUpdate } from './functions/commands/update.js'
+import { renderUpdate } from './functions/commands/update-render.js'
 import { pikkuNewFunction } from './functions/commands/new-function.js'
 import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
@@ -266,6 +268,37 @@ wireCLI({
         outdated: {
           description: 'Also report available dependency updates',
           default: false,
+        },
+      },
+    }),
+    update: pikkuCLICommand({
+      func: pikkuUpdate,
+      render: renderUpdate,
+      description:
+        'Report which @pikku/* dependencies can be updated, and the peers those updates need. Reports only until --update is passed',
+      options: {
+        update: {
+          description:
+            'Write the new ranges into every package.json covered by the run. Without it, update only reports',
+          default: false,
+        },
+        updatePeers: {
+          description:
+            "Also write the ranges unsatisfied peers require (e.g. bumping 'ai' for @pikku/ai-vercel). Implies --update, and can cross a major version of a third-party package",
+          default: false,
+        },
+        install: {
+          description:
+            'After writing, run an install with the package manager the lockfile names. --no-install leaves node_modules alone',
+          default: true,
+        },
+        tag: {
+          description: "Dist-tag to update to (default: 'latest')",
+          default: 'latest',
+        },
+        registry: {
+          description:
+            'Registry to read versions from (default: npm_config_registry, else https://registry.npmjs.org)',
         },
       },
     }),
