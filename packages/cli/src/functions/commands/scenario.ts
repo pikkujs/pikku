@@ -317,12 +317,8 @@ export const scenarioRun = pikkuSessionlessFunc<
         .filter(([, steps]) => steps.length > 0)
     )
 
-    // Two reasons a scenario is held back, and they are not the same kind of
-    // thing. A `skip` on the scenario is the project quarantining it on purpose
-    // — reported and green, and the plan has already cleared that reason for
-    // anything named directly with `--flows`. Having no binding for the run
-    // surface is nobody's decision: the scenario was asked for and cannot run,
-    // which is a misconfigured run rather than a quiet pass, so it fails below.
+    // A `skip` is the project quarantining a scenario on purpose and stays
+    // green; no binding for the run surface is a misconfigured run and fails.
     const quarantined: Array<{ name: string; reason: string }> = []
     const unrunnable: Array<{ name: string; reason: string }> = []
     groups = groups
@@ -762,10 +758,8 @@ export const scenarioRun = pikkuSessionlessFunc<
       }
     }
 
-    // A scenario asked for but unrunnable is a broken run, not a quiet pass.
-    // Reporting it as a skip and exiting 0 makes "62 held back" and "62 passed"
-    // indistinguishable to CI, which is how an entire browser suite went
-    // unrun for as long as it did.
+    // Exiting 0 here makes "62 held back" and "62 passed" indistinguishable
+    // to CI, which is how a whole browser suite went unrun.
     if (unrunnable.length > 0) {
       logger.error(
         `${unrunnable.length} scenario(s) could not run on '${runSurface}' — no binding for that surface and no default to fall back to. ` +

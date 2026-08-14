@@ -77,10 +77,8 @@ export const installAddon = pikkuFunc<
     const addonDir = join(rootDir, dirname(pikkuDir), 'addons')
     await mkdir(addonDir, { recursive: true })
 
-    // Two checks, because neither sees what the other does. The registry knows
-    // every wired namespace whatever file declared it — an instance wired from
-    // `wirings/` is invisible to the addons directory — while the file catches
-    // a wiring written but not yet loaded, which the registry has not seen.
+    // The registry knows every wired namespace whatever file declared it; the
+    // file catches a wiring written but not yet loaded.
     const wiringFile = join(addonDir, `${namespace}.addon.ts`)
     const wiredNamespaces = pikkuState(null, 'addons', 'packages')
     if (wiredNamespaces.has(namespace) || existsSync(wiringFile)) {

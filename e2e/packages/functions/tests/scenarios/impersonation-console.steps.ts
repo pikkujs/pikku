@@ -64,9 +64,6 @@ export const impersonatesUser = pikkuScenarioStep<
   description: 'starts impersonating a user from the command palette',
   template: 'impersonates {email}',
   browser: async (_services, { email }, { browser }) => {
-    // The palette rather than the navigation chrome: at pointer widths the
-    // dock only raises on hover and on a phone the sidebar is a closed sheet,
-    // so ⌘K is the one route to impersonation that no layout can take away.
     await browser.page.keyboard.press('ControlOrMeta+KeyK')
     const palette = browser.page.getByPlaceholder(
       'Search functions, routes, workflows...'

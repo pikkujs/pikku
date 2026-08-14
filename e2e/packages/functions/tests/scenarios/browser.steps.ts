@@ -512,14 +512,8 @@ export const expectsTestIdText = pikkuScenarioStep<
  * survives *within* a session has to move the way a user does, through the
  * router.
  *
- * ⌘K rather than the navigation chrome, because the chrome is not one thing:
- * at pointer widths it is a dock that only raises on hover, and on a phone it
- * is a sheet that starts closed. The palette is the same on both, so a step
- * written against it does not have to know which layout it is driving.
- *
- * `page` is the palette's own query, so it is the label the user would type;
- * `href` is the route it must land on, declared in code and asserted rather
- * than trusted.
+ * The palette rather than the chrome, which is a hover-raised dock at pointer
+ * widths and a closed sheet on a phone.
  */
 export const navigatesInConsole = pikkuScenarioStep<
   { page: string; href: string },

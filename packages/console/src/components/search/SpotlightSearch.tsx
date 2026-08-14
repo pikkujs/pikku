@@ -23,7 +23,6 @@ import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import { useDefaultNavSections, type NavSection } from '../project/Sidebar'
 
 export interface SpotlightSearchProps {
-  /** Defaults to the console's own nav, matching what the dock and sidebar show. */
   sections?: NavSection[]
 }
 
@@ -58,9 +57,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
   const actions: SpotlightActionData[] = useMemo(() => {
     const items: SpotlightActionData[] = []
 
-    // The pages come first: the palette is the one way to reach any of them
-    // that does not depend on the chrome, which is a dock raised on hover at
-    // pointer widths and a closed sheet on a phone.
     sections.forEach((section) => {
       section.items.forEach((item) => {
         items.push({
@@ -211,8 +207,8 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
     return items
   }, [meta, navigate, sections, canImpersonate, impersonation])
 
-  // The empty second argument is the point: it is the list of tags whose focus
-  // suppresses the hotkey, and it defaults to INPUT, TEXTAREA and SELECT.
+  // The empty tags list is the point: it defaults to INPUT, TEXTAREA and
+  // SELECT, so ⌘K would be dead right after typing in a filter field.
   useHotkeys([['mod+K', () => spotlight.open()]], [])
 
   return (
@@ -222,11 +218,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
       searchProps={{
         placeholder: 'Search functions, routes, workflows...',
       }}
-      // The shortcut is registered above rather than through `shortcut` here:
-      // that prop's hotkey skips inputs, so ⌘K would be dead for anyone who has
-      // just typed in a search or filter field — which is exactly when reaching
-      // for the palette is most likely.
-      //
       // Cap the results list so a long action list scrolls within the dialog
       // instead of running off the bottom of the screen.
       scrollable

@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 import { pikku } from '../pikku/http'
 import { getServerUrl } from './serverUrl'
@@ -20,15 +14,8 @@ export interface ImpersonationContextValue {
   setTarget: (user: AuthUser | null) => void
   clear: () => void
   instance: PikkuInstance
-  /**
-   * Whether the user picker is open.
-   *
-   * It lives beside the target rather than in the navigation chrome because
-   * more than one surface opens the same drawer — the dock on a pointer, the
-   * sidebar sheet on a phone, and the command palette on either — and each one
-   * holding its own flag would mean the palette could not reach the drawer the
-   * dock owns.
-   */
+  /** Here rather than in the chrome because the dock, the sidebar sheet and
+   *  the palette all open the same drawer. */
   pickerOpen: boolean
   openPicker: () => void
   closePicker: () => void

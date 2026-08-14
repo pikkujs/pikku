@@ -360,8 +360,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
   const impersonation = useOptionalImpersonation()
-  // Without the provider there is no drawer to open, so the entry is not
-  // offered at all rather than rendering a control that cannot do anything.
   const canImpersonate =
     (auth?.can('admin:impersonate') ?? false) && impersonation !== null
 

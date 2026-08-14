@@ -132,13 +132,7 @@ describe('pikku scenario run', () => {
     )
   })
 
-  /**
-   * The failure mode this exists to prevent: a run that skips every scenario it
-   * was asked for and still reports success. Being held back for a `skip` is the
-   * project's decision and stays green; having no binding for the run surface is
-   * nobody's decision, so it has to fail loudly enough that nobody reads the run
-   * as coverage it never provided.
-   */
+  /** A run that skips everything it was asked for must not report success. */
   test('a scenario that cannot run on the surface fails the run', async () => {
     const { code, output } = await runScenario('codeEditorConsoleScenario')
     assert.notEqual(
@@ -242,9 +236,6 @@ describe('pikku scenario run', () => {
       'console',
       '--features',
       'addonsFeature',
-      // The surface these are written for. Without it they are held back before
-      // a provider is ever looked for, and the assertion below passes by never
-      // reaching the thing it is about.
       '--run',
       'browser',
     ])

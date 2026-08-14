@@ -16,7 +16,10 @@ import {
   InMemoryTriggerService,
   QueueWebhookService,
 } from '@pikku/core/services'
-import { spy, InMemoryAgentRunStateService } from '@pikku/core/ecosystem/services'
+import {
+  spy,
+  InMemoryAgentRunStateService,
+} from '@pikku/core/ecosystem/services'
 import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
@@ -141,11 +144,8 @@ export const dev = pikkuSessionlessFunc<
       const isHotReload =
         previousSingletonServices !== commandSingletonServices &&
         !!previousSingletonServices
-      // The config is overlaid the same way the services around it are, rather
-      // than swapped: the CLI's keys win where the two name the same thing, and
-      // the app's survive where they don't. Swapping it wholesale left the app
-      // reading the CLI's config for as long as codegen ran — a webhook's host
-      // allowlist would vanish mid-flight and the delivery be refused.
+      // Overlaid rather than swapped: swapping left the app reading the CLI's
+      // config for as long as codegen ran.
       const codegenServices = isHotReload
         ? ({
             ...previousSingletonServices,

@@ -66,12 +66,8 @@ for (const [name, installer] of installers) {
   })
 }
 
-/**
- * A throwaway project on disk, because the function reads one: it resolves the
- * root from the MetaService basePath and then looks for a wiring file. Nothing
- * here reaches the package manager — every case below is refused before the
- * install would run, which is the whole point of the check.
- */
+/** A throwaway project on disk, because the function resolves a root from the
+ *  MetaService basePath. No case below reaches the package manager. */
 const project = () => {
   const rootDir = mkdtempSync(join(tmpdir(), 'pikku-install-addon-'))
   const pikkuDir = join(rootDir, 'src', '.pikku')
@@ -95,10 +91,7 @@ const install = (services: never, namespace: string) =>
 
 test('a name the registry already wires is a conflict, not a 500', async () => {
   const { services } = project()
-  // Wired from anywhere — `wirings/` in the e2e fixture — so there is no file
-  // in the addons directory to find it by. The registry is the only thing that
-  // knows, and before it was asked this fell through to the package manager and
-  // surfaced as an unhandled 500.
+  // Wired from `wirings/`, so no file in the addons directory finds it.
   pikkuState(null, 'addons', 'packages').set('emails', {} as never)
 
   await assert.rejects(
@@ -118,8 +111,7 @@ test('a name the registry already wires is a conflict, not a 500', async () => {
 
 test('a wiring written but not yet loaded is a conflict too', async () => {
   const { rootDir, services } = project()
-  // The registry has not seen this one — the file exists and nothing has
-  // imported it — so the file check is what catches it.
+  // Written but never imported, so only the file check catches it.
   const addonDir = join(rootDir, 'src', 'addons')
   mkdirSync(addonDir, { recursive: true })
   writeFileSync(join(addonDir, 'reports.addon.ts'), '')

@@ -9,9 +9,8 @@
  * installs for real and asserts the readiness the install call reported back.
  *
  * The fixture project already wires "emails" (@pikku/addon-emails) from
- * `wirings/emails.wirings.ts`, so that is the name to collide with — and
- * deliberately not from the addons directory, so the conflict can only be found
- * by asking the registry what is wired. @pikku/addon-email-send and
+ * `wirings/emails.wirings.ts` and not the addons directory, so that name can
+ * only be found by asking the registry. @pikku/addon-email-send and
  * @pikku/addon-mandrill are in the catalogue but not wired, so their cards open
  * the install drawer.
  *
