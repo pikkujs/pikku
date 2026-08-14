@@ -50,12 +50,6 @@ describe('target discovery', () => {
   })
 })
 
-/**
- * `workspace-exports` is planned at the root of every target — its precondition
- * is the root, not a kind — so it rides along in each of these expectations. It
- * is the plan that is asserted here; whether the check finds anything is
- * workspace-exports-checks.test.ts.
- */
 describe('validation planning', () => {
   test('an addon gets the addon check and not the app checks', async () => {
     const tmp = await makeTmp()
