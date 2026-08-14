@@ -8,7 +8,7 @@ import type { EventHubService } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 import { LocalEventHubService } from '@pikku/core/channel/local'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
-import { pikkuWebsocketHandler } from '@pikku/ws'
+import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'
 import { WebSocketServer } from 'ws'
 
 import type {
@@ -28,7 +28,10 @@ export class NodeServerRunner implements DevServerRunner {
     logger: Logger,
     options: DevServerOptions = {}
   ): DevServerInstance {
-    const wss = new WebSocketServer({ noServer: true })
+    const wss = new WebSocketServer({
+      noServer: true,
+      maxPayload: DEFAULT_WS_MAX_PAYLOAD,
+    })
     const server = new PikkuNodeHTTPServer(config, logger, {
       configureServer: (httpServer) => {
         pikkuWebsocketHandler({ server: httpServer, wss, logger })

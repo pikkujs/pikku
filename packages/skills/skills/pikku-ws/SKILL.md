@@ -36,7 +36,7 @@ class. You own the `http.Server` and the `WebSocketServer`; the handler attaches
 the upgrade and message plumbing to them.
 
 ```typescript
-import { pikkuWebsocketHandler } from '@pikku/ws'
+import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'
 import { stopSingletonServices } from '@pikku/core'
 import { Server } from 'http'
 import { WebSocketServer } from 'ws'
@@ -48,7 +48,10 @@ const config = await createConfig()
 const singletonServices = await createSingletonServices(config)
 
 const server = new Server()
-const wss = new WebSocketServer({ noServer: true })
+const wss = new WebSocketServer({
+  noServer: true,
+  maxPayload: DEFAULT_WS_MAX_PAYLOAD,
+})
 
 pikkuWebsocketHandler({
   server,

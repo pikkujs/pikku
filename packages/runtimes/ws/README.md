@@ -13,11 +13,11 @@ npm install @pikku/ws ws
 
 ```typescript
 import { WebSocketServer } from 'ws'
-import { pikkuWebsocketHandler } from '@pikku/ws'
+import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'
 
 import './.pikku/pikku-bootstrap.gen.js'
 
-const wss = new WebSocketServer({ server })
+const wss = new WebSocketServer({ server, maxPayload: DEFAULT_WS_MAX_PAYLOAD })
 
 pikkuWebsocketHandler({ server, wss, logger, loadSchemas: true })
 ```
