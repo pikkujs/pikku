@@ -132,32 +132,30 @@ describe('pikku scenario run', () => {
     )
   })
 
-  test('a browser scenario is skipped, not failed, without a browser', async () => {
-    const { code, output } = await runScenario('codeEditorConsoleScenario', [
-      '--no-browser',
-    ])
-    assert.equal(
+  /** A run that skips everything it was asked for must not report success. */
+  test('a scenario that cannot run on the surface fails the run', async () => {
+    const { code, output } = await runScenario('codeEditorConsoleScenario')
+    assert.notEqual(
       code,
       0,
-      `skipping a browser scenario must not fail the run:\n${output}`
+      `a run that could not run what it was asked for must not exit zero:\n${output}`
     )
-    // `--no-browser` is the blunt form of `--run default`, so the reason names
-    // the surface that has no binding rather than the flag: these steps are
-    // browser-only, and there is nothing to fall back to.
     assert.match(
       output,
       /^SKIP codeEditorConsoleScenario \(no default or default binding: /m,
-      `expected the scenario to be reported as skipped:\n${output}`
+      `expected the scenario to name the missing surface:\n${output}`
     )
     assert.match(
       output,
-      /1 skipped/,
-      `expected the summary to count the skip:\n${output}`
+      /could not run on 'default'.*--run browser/s,
+      `expected the run to say how to run it:\n${output}`
     )
   })
 
   test('a browser step drives the console as its actor', async () => {
-    assertAllPassed(await runScenario('codeEditorConsoleScenario'))
+    assertAllPassed(
+      await runScenario('codeEditorConsoleScenario', ['--run', 'browser'])
+    )
   })
 
   /**
@@ -238,6 +236,8 @@ describe('pikku scenario run', () => {
       'console',
       '--features',
       'addonsFeature',
+      '--run',
+      'browser',
     ])
     assert.doesNotMatch(
       output,

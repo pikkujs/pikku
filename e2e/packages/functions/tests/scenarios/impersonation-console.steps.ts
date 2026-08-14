@@ -61,10 +61,15 @@ export const impersonatesUser = pikkuScenarioStep<
   { impersonating: string }
 >({
   name: 'impersonatesUser',
-  description: 'starts impersonating a user from the console sidebar',
+  description: 'starts impersonating a user from the command palette',
   template: 'impersonates {email}',
   browser: async (_services, { email }, { browser }) => {
-    await browser.locate({ testId: 'impersonate-open' }).click()
+    await browser.page.keyboard.press('ControlOrMeta+KeyK')
+    const palette = browser.page.getByPlaceholder(
+      'Search functions, routes, workflows...'
+    )
+    await palette.fill('Impersonate')
+    await palette.press('Enter')
     await browser.locate({ testId: 'impersonate-search' }).fill(email)
     await browser
       .locate({ testId: 'impersonate-user', containing: email })

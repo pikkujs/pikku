@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 import { pikku } from '../pikku/http'
 import { getServerUrl } from './serverUrl'
@@ -20,6 +14,11 @@ export interface ImpersonationContextValue {
   setTarget: (user: AuthUser | null) => void
   clear: () => void
   instance: PikkuInstance
+  /** Here rather than in the chrome because the dock, the sidebar sheet and
+   *  the palette all open the same drawer. */
+  pickerOpen: boolean
+  openPicker: () => void
+  closePicker: () => void
 }
 
 const ImpersonationContext = createContext<ImpersonationContextValue | null>(
@@ -34,6 +33,7 @@ export const ImpersonationProvider: React.FC<{
   const auth = useOptionalAuth()
   const resolvedUrl = serverUrl ?? auth?.serverUrl ?? getServerUrl()
   const [target, setTarget] = useState<AuthUser | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const instance = useMemo(
     () => pikku({ serverUrl: resolvedUrl, credentials }),
@@ -54,8 +54,11 @@ export const ImpersonationProvider: React.FC<{
       setTarget,
       clear: () => setTarget(null),
       instance,
+      pickerOpen,
+      openPicker: () => setPickerOpen(true),
+      closePicker: () => setPickerOpen(false),
     }),
-    [target, instance]
+    [target, instance, pickerOpen]
   )
 
   return (

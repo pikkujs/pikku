@@ -21,7 +21,7 @@ export const personasListedScenario = pikkuScenario<void, { listed: number }>({
   title: 'Every declared persona has a row on the personas page',
   description:
     'An admin opens the personas page and finds everyone definePersonas declares',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -86,7 +86,7 @@ export const personaRolesScenario = pikkuScenario<void, { opened: true }>({
   title: "A persona's profile names the roles they hold and what those confer",
   description:
     'Opening admin shows both their system roles, each expanded to its scopes',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -144,7 +144,7 @@ export const personaTargetScenario = pikkuScenario<void, { flagged: true }>({
   title: 'A persona who is only ever acted upon is flagged as such',
   description:
     'target is declared runnable: false, and both the row and the profile say so',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -192,7 +192,7 @@ export const personaAvatarScenario = pikkuScenario<void, { pictured: true }>({
   title: 'A declared avatar is shown, and its absence is not a broken image',
   description:
     'admin declares an avatarUrl and gets the picture; everyone else gets the generated visual',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -232,7 +232,7 @@ export const personaPersonalityScenario = pikkuScenario<
   title: 'A persona reads as a person, not a row in a permissions table',
   description:
     "Each row carries the persona's own personality line, and their disposition where they declare one",
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -280,7 +280,7 @@ export const platformSubjectScenario = pikkuScenario<void, { shown: true }>({
   title: 'The system is one of the actors, and is never mistaken for a person',
   description:
     'The platform has a row of its own behind the System filter, carrying the steps declared for it',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(

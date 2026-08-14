@@ -8,8 +8,9 @@
  * namespace has to be refused before it ever reaches the server. The third
  * installs for real and asserts the readiness the install call reported back.
  *
- * The fixture project already wires "emails" (@pikku/addon-emails), so that
- * is the name to collide with. @pikku/addon-email-send and
+ * The fixture project already wires "emails" (@pikku/addon-emails) from
+ * `wirings/emails.wirings.ts` and not the addons directory, so that name can
+ * only be found by asking the registry. @pikku/addon-email-send and
  * @pikku/addon-mandrill are in the catalogue but not wired, so their cards open
  * the install drawer.
  *

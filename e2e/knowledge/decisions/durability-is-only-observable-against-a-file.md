@@ -3,7 +3,6 @@ type: decision
 title: Durability is only observable against a file
 description: The harness stores workflow runs in memory by default, so SQLITE_PATH is what makes crash recovery testable at all
 tags: workflows, chaos
-resource: env:SQLITE_PATH, env:DB_BACKEND, service:workflowService
 ---
 
 # Durability is only observable against a file

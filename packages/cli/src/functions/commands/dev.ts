@@ -16,7 +16,10 @@ import {
   InMemoryTriggerService,
   QueueWebhookService,
 } from '@pikku/core/services'
-import { spy, InMemoryAgentRunStateService } from '@pikku/core/ecosystem/services'
+import {
+  spy,
+  InMemoryAgentRunStateService,
+} from '@pikku/core/ecosystem/services'
 import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
@@ -141,12 +144,15 @@ export const dev = pikkuSessionlessFunc<
       const isHotReload =
         previousSingletonServices !== commandSingletonServices &&
         !!previousSingletonServices
+      // Overlaid rather than swapped: swapping left the app reading the CLI's
+      // config for as long as codegen ran.
       const codegenServices = isHotReload
         ? ({
             ...previousSingletonServices,
-            config:
-              commandSingletonServices?.config ??
-              previousSingletonServices.config,
+            config: {
+              ...previousSingletonServices.config,
+              ...commandSingletonServices?.config,
+            },
           } as typeof previousSingletonServices)
         : commandSingletonServices
       pikkuState(null, 'package', 'singletonServices', codegenServices)

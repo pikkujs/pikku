@@ -18,7 +18,7 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
   title: 'Console code editor (RPC)',
   description:
     'An admin reads and edits a function and an agent through the console RPCs, then restores both',
-  tags: ['scenario', 'code-editor'],
+  tags: ['scenario', 'console', 'code-editor'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(
@@ -185,7 +185,7 @@ export const codeEditorConsoleScenario = pikkuScenario<
   title: 'Console code editor (UI)',
   description:
     'An admin opens the console and finds the edit affordance on a local function and a local agent',
-  tags: ['scenario', 'code-editor', 'console'],
+  tags: ['scenario', 'console', 'code-editor'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(

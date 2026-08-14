@@ -620,11 +620,6 @@ wireCLI({
                 'Reset/snapshot server coverage per scenario (target must run with --coverage); writes coverage/scenario-coverage.json',
               default: false,
             },
-            browser: {
-              description:
-                'Shorthand for --run default when false: takes the server-side path instead of driving a browser',
-              default: true,
-            },
             run: {
               description:
                 "Which surface every actor drives the system through: 'browser' (as a human), 'cli' (over the websocket), or 'default' (server-side, the fast path)",

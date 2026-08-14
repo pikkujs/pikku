@@ -3,6 +3,7 @@ import {
   ConflictError,
   LocalEnvironmentOnlyError,
 } from '@pikku/core/errors'
+import { pikkuState } from '@pikku/core/ecosystem'
 import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
@@ -76,8 +77,11 @@ export const installAddon = pikkuFunc<
     const addonDir = join(rootDir, dirname(pikkuDir), 'addons')
     await mkdir(addonDir, { recursive: true })
 
+    // The registry knows every wired namespace whatever file declared it; the
+    // file catches a wiring written but not yet loaded.
     const wiringFile = join(addonDir, `${namespace}.addon.ts`)
-    if (existsSync(wiringFile)) {
+    const wiredNamespaces = pikkuState(null, 'addons', 'packages')
+    if (wiredNamespaces.has(namespace) || existsSync(wiringFile)) {
       throw new ConflictError(
         `An addon is already installed under the name "${namespace}". Pick a different instance name.`
       )

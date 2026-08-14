@@ -113,7 +113,7 @@ export const knowledgeOpensASliceScenario = pikkuScenario<
     await scenario.then(
       'sees the scenario that proves the slice',
       'seesText',
-      { text: "Given 'guest' holds the report-viewer role" },
+      { text: 'Given guest holds the report-viewer role' },
       { actor: actors.admin }
     )
 

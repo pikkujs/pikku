@@ -87,7 +87,7 @@ export const impersonationConsoleScopeScenario = pikkuScenario<
     await scenario.when(
       'navigates to the workflows page',
       'navigatesInConsole',
-      { href: '/workflow', section: 'run' },
+      { page: 'Workflows', href: '/workflow' },
       { actor: actors.admin }
     )
     await scenario.when(

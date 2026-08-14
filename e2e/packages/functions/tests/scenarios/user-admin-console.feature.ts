@@ -39,7 +39,7 @@ export const userLifecycleConsoleScenario = pikkuScenario<
   title: 'The full lifecycle of a user, driven from the console',
   description:
     'Create, ban, unban, revoke, re-password and delete one user, checking after each that they can or cannot sign in',
-  tags: ['scenario'],
+  tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
       throw new Error(

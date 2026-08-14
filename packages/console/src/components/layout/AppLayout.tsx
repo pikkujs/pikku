@@ -69,7 +69,7 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
   if (phone) {
     return (
       <>
-        <SpotlightSearch />
+        <SpotlightSearch sections={sidebar?.sections} />
         <MobileSheet opened={navOpen} onClose={() => setNavOpen(false)}>
           <SidebarModeProvider mode="sheet">
             <Sidebar {...sidebar} />
@@ -145,7 +145,7 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
 
   return (
     <>
-      <SpotlightSearch />
+      <SpotlightSearch sections={sidebar?.sections} />
       <ConsoleNavDock sections={sidebar?.sections} />
       {/* Floating, the dock reserves nothing and the content starts at the
           window edge — it is over the card gutter that is already there. Held

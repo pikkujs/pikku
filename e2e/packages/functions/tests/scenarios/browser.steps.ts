@@ -505,39 +505,31 @@ export const expectsTestIdText = pikkuScenarioStep<
 })
 
 /**
- * Navigates through the sidebar rather than by URL.
+ * Navigates through the command palette rather than by URL.
  *
  * A URL navigation is a full page load, which throws away everything the SPA
  * holds in memory — impersonation among it. Anything asserting on state that
  * survives *within* a session has to move the way a user does, through the
  * router.
  *
- * The rail is an accordion with one section open at a time, so a link may need
- * its section revealed first. Both are addressed by keys declared in code — the
- * route the link points at, and the section's `id` — never by their labels,
- * which are translated.
+ * The palette rather than the chrome, which is a hover-raised dock at pointer
+ * widths and a closed sheet on a phone.
  */
 export const navigatesInConsole = pikkuScenarioStep<
-  { href: string; section?: string },
+  { page: string; href: string },
   { href: string }
 >({
   name: 'navigatesInConsole',
-  description: 'navigates through the console sidebar without reloading',
-  template: 'navigates to {href}',
-  browser: async (_services, { href, section }, { browser }) => {
-    const link = browser.locate(
-      { testId: 'nav-link', where: { 'data-href': href } },
-      { visible: false }
+  description:
+    'navigates through the console command palette without reloading',
+  template: 'navigates to {page}',
+  browser: async (_services, { page, href }, { browser }) => {
+    await browser.page.keyboard.press('ControlOrMeta+KeyK')
+    const palette = browser.page.getByPlaceholder(
+      'Search functions, routes, workflows...'
     )
-    if (section && !(await link.isVisible().catch(() => false))) {
-      await browser
-        .locate(
-          { testId: 'nav-section', where: { 'data-section': section } },
-          { visible: false }
-        )
-        .click()
-    }
-    await link.click()
+    await palette.fill(page)
+    await palette.press('Enter')
     await browser.page.waitForURL(`**${href}`)
     return { href }
   },

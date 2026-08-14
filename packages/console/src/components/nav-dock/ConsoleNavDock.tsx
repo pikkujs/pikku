@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { asI18n } from '@pikku/react'
 import { useMantineColorScheme } from '@pikku/mantine/core'
 import { spotlight } from '@mantine/spotlight'
@@ -34,6 +34,7 @@ import { DOCK_SIDES, useDockPrefs, type DockSide } from './useDockPrefs'
 import { useLocation, useNavigate } from '../../router'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
+import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import {
   useDefaultNavSections,
@@ -112,8 +113,9 @@ export function ConsoleNavDock({
     getInstallPrompt
   )
   const auth = useOptionalAuth()
-  const canImpersonate = auth?.can('admin:impersonate') ?? false
-  const [impersonateOpen, setImpersonateOpen] = useState(false)
+  const impersonation = useOptionalImpersonation()
+  const canImpersonate =
+    (auth?.can('admin:impersonate') ?? false) && impersonation !== null
 
   const defaultSections = useDefaultNavSections()
   const sections = sectionsProp ?? defaultSections
@@ -290,7 +292,7 @@ export function ConsoleNavDock({
         key: 'impersonate',
         Icon: UserCog,
         label: m.impersonate_button(),
-        onSelect: () => setImpersonateOpen(true),
+        onSelect: () => impersonation?.openPicker(),
       })
     }
     return {
@@ -343,6 +345,7 @@ export function ConsoleNavDock({
     metaLoading,
     refresh,
     canImpersonate,
+    impersonation,
   ])
 
   const utility = useMemo<DockTile[]>(
@@ -429,8 +432,8 @@ export function ConsoleNavDock({
       />
       {canImpersonate && (
         <ImpersonateDrawer
-          opened={impersonateOpen}
-          onClose={() => setImpersonateOpen(false)}
+          opened={impersonation?.pickerOpen ?? false}
+          onClose={() => impersonation?.closePicker()}
         />
       )}
     </>
