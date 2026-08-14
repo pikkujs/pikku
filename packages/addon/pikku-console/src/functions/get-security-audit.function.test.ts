@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import { getSecurityAudit } from './get-security-audit.function.js'
-import type { SecurityAuditReport } from '@pikku/core'
+import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
 
 const REPORT: SecurityAuditReport = {
   schemaVersion: 1,
@@ -21,7 +21,9 @@ const REPORT: SecurityAuditReport = {
       recommendedVersion: '4.17.21',
     },
   ],
-  updates: [{ package: 'zod', current: '3.22.0', latest: '3.23.8', level: 'minor' }],
+  updates: [
+    { package: 'zod', current: '3.22.0', latest: '3.23.8', level: 'minor' },
+  ],
   summary: {
     totalIssues: 1,
     critical: 0,

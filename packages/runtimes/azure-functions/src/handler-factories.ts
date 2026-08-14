@@ -14,7 +14,8 @@ import type { CoreSingletonServices } from '@pikku/core'
 import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
 import { runQueueJob } from '@pikku/core/queue'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
-import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask } from '@pikku/core/scheduler'
+import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
 import type {
   HttpRequest,
   HttpResponseInit,

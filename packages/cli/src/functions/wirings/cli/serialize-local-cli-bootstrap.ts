@@ -43,7 +43,7 @@ export function serializeLocalCLIBootstrap(
   )
 
   return `
-import { executeCLI, CLIError } from '@pikku/core/cli'
+import { executeCLI, CLIError } from '@pikku/core/ecosystem/cli'
 ${pikkuConfigFactory ? `import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'` : ''}
 import { ${singletonServicesFactory.variable} as createSingletonServices } from '${singletonServicesPath}'
 ${wireServicesFactory ? `import { ${wireServicesFactory.variable} as createWireServices } from '${wireServicesPath}'` : ''}

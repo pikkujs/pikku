@@ -1,35 +1,41 @@
 import type * as ts from 'typescript'
 import type { SecretUsage } from './utils/extract-secret-usage.js'
-import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
-import type { GatewaysMeta } from '@pikku/core/gateway'
-import type { HTTPWiringsMeta } from '@pikku/core/http'
-import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
-import type { QueueWorkersMeta } from '@pikku/core/queue'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type {
+  ChannelMessageMeta,
+  ChannelsMeta,
+} from '@pikku/core/ecosystem/channel'
+import type { GatewaysMeta } from '@pikku/core/ecosystem/gateway'
+import type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'
+import type { ScheduledTasksMeta } from '@pikku/core/ecosystem/scheduler'
+import type {
+  TriggerMeta,
+  TriggerSourceMeta,
+} from '@pikku/core/ecosystem/trigger'
+import type { QueueWorkersMeta } from '@pikku/core/ecosystem/queue'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 import type {
   MCPResourceMeta,
   MCPToolMeta,
   MCPPromptMeta,
-} from '@pikku/core/mcp'
-import type { AIAgentMeta } from '@pikku/core/ai-agent'
-import type { ScorerMeta } from '@pikku/core/ai-scorer'
-import type { CLIMeta } from '@pikku/core/cli'
-import type { CLICommandMeta } from '@pikku/core/cli'
-import type { NodesMeta } from '@pikku/core/node'
-import type { SecretDefinitions } from '@pikku/core/secret'
-import type { CredentialDefinitions } from '@pikku/core/credential'
-import type { ScopeDefinitions } from '@pikku/core/scope'
-import type { SystemRoleDefinitions } from '@pikku/core/role'
-import type { PersonaDefinitions } from '@pikku/core/persona'
-import type { VariableDefinitions } from '@pikku/core/variable'
+} from '@pikku/core/ecosystem/mcp'
+import type { AIAgentMeta } from '@pikku/core/ecosystem/ai-agent'
+import type { ScorerMeta } from '@pikku/core/ecosystem/ai-scorer'
+import type { CLIMeta } from '@pikku/core/ecosystem/cli'
+import type { CLICommandMeta } from '@pikku/core/ecosystem/cli'
+import type { NodesMeta } from '@pikku/core/ecosystem/node'
+import type { SecretDefinitions } from '@pikku/core/ecosystem/secret'
+import type { CredentialDefinitions } from '@pikku/core/ecosystem/credential'
+import type { ScopeDefinitions } from '@pikku/core/ecosystem/scope'
+import type { SystemRoleDefinitions } from '@pikku/core/ecosystem/role'
+import type { PersonaDefinitions } from '@pikku/core/ecosystem/persona'
+import type { VariableDefinitions } from '@pikku/core/ecosystem/variable'
 import type { TypesMap } from './types-map.js'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import type {
-  FunctionsMeta,
   FunctionServicesMeta,
   FunctionWiresMeta,
   JSONValue,
-} from '@pikku/core'
+} from '@pikku/core/ecosystem/types'
 import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 import type { ErrorCode, CodedDiagnostic } from './error-codes.js'
 import type {

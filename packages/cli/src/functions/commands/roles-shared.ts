@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 import type {
   SystemRole,
   SystemRoleDefinitionsMeta,
-} from '@pikku/core/role'
-import { flattenSystemRoleDefinitions } from '@pikku/core/role'
+} from '@pikku/core/ecosystem/role'
+import { flattenSystemRoleDefinitions } from '@pikku/core/ecosystem/role'
 import { loadDeclaredScopes, openScopeService } from './scopes-shared.js'
 import type { OpenedScopeService } from './scopes-shared.js'
 
@@ -117,8 +117,6 @@ export const reportStaleRoles = (
   logger: Logger
 ): void => {
   for (const { role, users } of stale) {
-    logger.info(
-      `  ${role.padEnd(40)} held by ${users} user(s)`
-    )
+    logger.info(`  ${role.padEnd(40)} held by ${users} user(s)`)
   }
 }

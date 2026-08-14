@@ -1,5 +1,6 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
-import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
+import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { JobOptions } from '@pikku/core/ecosystem/queue'
 
 /**
  * Configuration for SQS Queue Service

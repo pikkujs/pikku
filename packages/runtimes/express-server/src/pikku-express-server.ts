@@ -11,13 +11,13 @@ import { resolve, normalize } from 'path'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
-import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
+import { installNodeHostResolver } from '@pikku/core/ecosystem/node-host-resolver'
 import { pikkuState } from '@pikku/core/ecosystem'
 import type { JWTService, Logger } from '@pikku/core/services'
-import type { RunHTTPWiringOptions } from '@pikku/core/http'
+import type { RunHTTPWiringOptions } from '@pikku/core/ecosystem/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
-import { verifySignedContentRequest } from '@pikku/core/services/local-content-request-handler'
+import { verifySignedContentRequest } from '@pikku/core/ecosystem/services/local-content-request-handler'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.

@@ -1,11 +1,11 @@
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildRemoteHeaders } from '@pikku/core/ecosystem/remote'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-} from '@pikku/core/services'
+} from '@pikku/core/ecosystem/services'
 import type { JWTService, SecretService } from '@pikku/core/services'
-import { getAllFunctionNames } from '@pikku/core/function'
+import { getAllFunctionNames } from '@pikku/core/ecosystem/function'
 import type { Db, Collection } from 'mongodb'
 
 interface DeploymentDoc {

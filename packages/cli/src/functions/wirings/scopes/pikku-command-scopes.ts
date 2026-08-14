@@ -2,7 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeScopesTypes } from './serialize-scopes-types.js'
-import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
+import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/ecosystem/scope'
 
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {

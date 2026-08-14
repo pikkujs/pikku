@@ -1,4 +1,4 @@
-import type { PikkuWiringTypes } from '@pikku/core'
+import type { PikkuWiringTypes } from '@pikku/core/ecosystem/types'
 import { HttpWireDetailsForm } from './wire-details/HttpWireDetailsForm'
 import { QueueWireDetailsForm } from './wire-details/QueueWireDetailsForm'
 import { SchedulerWireDetailsForm } from './wire-details/SchedulerWireDetailsForm'

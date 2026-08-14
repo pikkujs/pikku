@@ -6,7 +6,8 @@ export const serializeSchedulerTypes = (functionTypesImportPath: string) => {
  * Scheduler-specific type definitions for tree-shaking optimization
  */
 
-import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
+import { wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
+import { CoreScheduledTask } from '@pikku/core/ecosystem/scheduler'
 import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 
 /**

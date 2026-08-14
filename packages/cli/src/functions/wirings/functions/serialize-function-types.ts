@@ -31,19 +31,18 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired, SecretlessServices } from '@pikku/core'
-import type { CorePikkuFunctionConfig, CorePikkuSessionlessFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
-import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
-import {
-  addTagMiddleware as addTagMiddlewareCore,
-  addGlobalMiddleware as addGlobalMiddlewareCore,
-  addGlobalPermission as addGlobalPermissionCore,
-} from '@pikku/core/middleware'
+import type { CorePikkuMiddleware, PickRequired } from '@pikku/core'
+import type { ListInput, ListOutput } from '@pikku/core/ecosystem/function'
+import type { CorePermissionGroup, PikkuWire, SecretlessServices } from '@pikku/core/ecosystem/types'
+import type { CorePikkuFunctionConfig, CorePikkuSessionlessFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/ecosystem/function'
+import { pikkuAuth as pikkuAuthCore } from '@pikku/core/ecosystem/function'
+import { addTagMiddleware as addTagMiddlewareCore, addGlobalMiddleware as addGlobalMiddlewareCore } from '@pikku/core/middleware'
+import { addGlobalPermission as addGlobalPermissionCore } from '@pikku/core/ecosystem/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/ecosystem'
-import type { NodeType } from '@pikku/core/node'
+import type { NodeType } from '@pikku/core/ecosystem/node'
 ${scopesImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
+import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/ecosystem/function'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -794,7 +793,7 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
   addGlobalPermissionCore(permissions as any, ${packageNameValue})
 }
 
-export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
-export type { WireAddonConfig, WireRemoteAddonConfig, RemoteAddonAuth } from '@pikku/core/rpc'
+export { wireAddon, wireRemoteAddon } from '@pikku/core/ecosystem/rpc'
+export type { WireAddonConfig, WireRemoteAddonConfig, RemoteAddonAuth } from '@pikku/core/ecosystem/rpc'
 `
 }

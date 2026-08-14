@@ -7,7 +7,7 @@
  * second formatter (JSON, JUnit) a matter of writing one function rather than
  * unpicking the runner.
  */
-import type { ScenarioBrowserFailure } from '@pikku/core/scenario'
+import type { ScenarioBrowserFailure } from '@pikku/core/ecosystem/scenario'
 
 /** The longest gherkin keyword ("Given"), so sentences line up under each other. */
 const KEYWORD_WIDTH = 5

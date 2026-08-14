@@ -1,7 +1,8 @@
 import { parse as parseCookie } from 'cookie'
 import type { Request as ExpressRequest } from 'express'
-import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
-import { DEFAULT_MAX_BODY_SIZE } from '@pikku/core/http'
+import type { PikkuHTTPRequest } from '@pikku/core/http'
+import type { HTTPMethod, PikkuQuery } from '@pikku/core/ecosystem/http'
+import { DEFAULT_MAX_BODY_SIZE } from '@pikku/core/ecosystem/http'
 import {
   PayloadTooLargeError,
   UnprocessableContentError,

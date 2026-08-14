@@ -11,7 +11,8 @@ export const serializeAddonTypes = (
  * Addon package types for pikkuAddonConfig and pikkuAddonServices
  */
 
-import type { CreateConfig, PikkuWire } from '@pikku/core'
+import type { CreateConfig } from '@pikku/core'
+import type { PikkuWire } from '@pikku/core/ecosystem/types'
 ${singletonServicesTypeImport}
 ${configTypeImport}
 ${requiredServicesTypeImport}

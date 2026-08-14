@@ -4,7 +4,7 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
 } from '@pikku/core'
-import type { MetaService } from '@pikku/core/services'
+import type { MetaService } from '@pikku/core/ecosystem/services'
 import type { WiringService } from '../src/services/wiring.service.js'
 import type { AddonService } from '../src/services/addon.service.js'
 import type { CodeEditService } from '../src/services/code-edit.service.js'

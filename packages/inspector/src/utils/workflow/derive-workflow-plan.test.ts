@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import type { WorkflowStepMeta } from '@pikku/core/workflow'
+import type { WorkflowStepMeta } from '@pikku/core/ecosystem/workflow'
 import { deriveWorkflowPlan } from './derive-workflow-plan.js'
 
 const rpc = (stepName: string, rpcName = 'rpc.fn'): WorkflowStepMeta =>

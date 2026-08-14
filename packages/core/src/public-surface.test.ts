@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 
@@ -17,6 +17,34 @@ const expected: Record<string, string[]> = JSON.parse(
 const subpaths = packageJson.exports as Record<string, string>
 
 /**
+ * `exports` entries, with a wildcard subpath replaced by the files it matches.
+ *
+ * `./ecosystem/*` publishes one sub-barrel per area, so pinning it as written
+ * would pin a pattern rather than a surface — and a new barrel would appear in
+ * the published API without a diff. Expanding it is what keeps each area's
+ * exports in `public-surface.json` under the same guarantee as every other
+ * entry point's.
+ */
+const entryPoints = (): [string, string][] =>
+  Object.entries(subpaths).flatMap(([subpath, dist]) => {
+    if (!subpath.includes('*')) return [[subpath, dist] as [string, string]]
+
+    const [prefix] = dist.split('*') as [string]
+    const directory = resolve(packageRoot, prefix.replace('./dist/', './src/'))
+    return readdirSync(directory, { recursive: true, encoding: 'utf-8' })
+      .filter((file) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
+      .map((file) => file.slice(0, -'.ts'.length))
+      .sort()
+      .map(
+        (area) =>
+          [subpath.replace('*', area), dist.replace('*', area)] as [
+            string,
+            string,
+          ]
+      )
+  })
+
+/**
  * Every runtime export reachable through an entry point, keyed by subpath.
  *
  * Types are absent: they are erased before this can see them, so a type-only
@@ -24,7 +52,7 @@ const subpaths = packageJson.exports as Record<string, string>
  */
 const actualSurface = async () => {
   const surface: Record<string, string[]> = {}
-  for (const [subpath, dist] of Object.entries(subpaths)) {
+  for (const [subpath, dist] of entryPoints()) {
     const src = resolve(packageRoot, dist.replace('./dist/', './src/'))
     const module = await import(pathToFileURL(src).href)
     surface[subpath] = Object.keys(module).sort()
@@ -38,7 +66,7 @@ const REGENERATE =
 
 describe('the published surface is the surface we meant to publish', () => {
   test('every export subpath resolves to a source file', () => {
-    const missing = Object.entries(subpaths).filter(([, dist]) => {
+    const missing = entryPoints().filter(([, dist]) => {
       try {
         readFileSync(
           resolve(packageRoot, dist.replace('./dist/', './src/')).replace(

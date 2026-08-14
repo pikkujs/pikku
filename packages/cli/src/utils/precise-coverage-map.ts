@@ -8,7 +8,7 @@ import type {
   FunctionCoverageEntry,
   FunctionCoverageReport,
   ScriptCoverage as ScriptCoverageInput,
-} from '@pikku/core/services'
+} from '@pikku/core/ecosystem/services'
 
 export type { ScriptCoverageInput }
 

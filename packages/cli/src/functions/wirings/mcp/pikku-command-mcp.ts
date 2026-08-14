@@ -161,7 +161,7 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
       logger,
       mcpWiringsMetaFile,
       `import { pikkuState } from '@pikku/core/ecosystem'
-import type { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
+import type { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/ecosystem/mcp'
 ${importStatement}
 pikkuState(null, 'mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)
 pikkuState(null, 'mcp', 'toolsMeta', metaData.toolsMeta as MCPToolMeta)

@@ -58,7 +58,7 @@ describe('addScope inspector', () => {
   test('extracts a flat scope', async () => {
     const { state, criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({',
         '  admin: {',
         "    displayName: 'Administration',",
@@ -81,7 +81,7 @@ describe('addScope inspector', () => {
   test('extracts a displayName at every depth', async () => {
     const { state, criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({',
         '  admin: {',
         "    displayName: 'Administration',",
@@ -109,7 +109,7 @@ describe('addScope inspector', () => {
   test('extracts a nested scope tree', async () => {
     const { state, criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({',
         '  admin: {',
         '    scopes: {',
@@ -139,7 +139,7 @@ describe('addScope inspector', () => {
   test('records the source file', async () => {
     const { state, file } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ admin: {} })',
       ].join('\n')
     )
@@ -153,7 +153,7 @@ describe('addScope inspector', () => {
   test('extracts several roots from one declaration', async () => {
     const { state, criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ admin: {}, billing: { scopes: { read: {} } } })',
       ].join('\n')
     )
@@ -169,7 +169,7 @@ describe('addScope inspector', () => {
   test('extracts several declarations', async () => {
     const { state } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ admin: {} })',
         'defineScope({ billing: {} })',
       ].join('\n')
@@ -188,11 +188,11 @@ describe('addScope inspector', () => {
   test('declarations in separate files all survive', async () => {
     const { state, criticals } = await inspectSources({
       'user-admin.gen.ts': [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ admin: {} })',
       ].join('\n'),
       'scopes.ts': [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ billing: {} })',
       ].join('\n'),
     })
@@ -202,10 +202,10 @@ describe('addScope inspector', () => {
       [],
       `expected no duplicate critical, got ${JSON.stringify(criticals)}`
     )
-    assert.deepEqual(
-      state.scopes.definitions.map((d) => d.name).sort(),
-      ['admin', 'billing']
-    )
+    assert.deepEqual(state.scopes.definitions.map((d) => d.name).sort(), [
+      'admin',
+      'billing',
+    ])
   })
 
   // The CLI scaffolds a scope tree of its own — `user-admin.gen.ts` declares the
@@ -214,11 +214,11 @@ describe('addScope inspector', () => {
   test('a generated declaration neither claims the slot nor conflicts', async () => {
     const { state, criticals } = await inspectSources({
       'user-admin.gen.ts': [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ admin: {} })',
       ].join('\n'),
       'scopes.ts': [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'defineScope({ billing: {} })',
       ].join('\n'),
     })
@@ -238,7 +238,7 @@ describe('addScope inspector', () => {
   test('is critical when a root embeds the separator', async () => {
     const { criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         "defineScope({ 'admin:users': {} })",
       ].join('\n')
     )
@@ -252,7 +252,7 @@ describe('addScope inspector', () => {
   test('is critical when a root is the wildcard', async () => {
     const { criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         "defineScope({ '*': {} })",
       ].join('\n')
     )
@@ -266,7 +266,7 @@ describe('addScope inspector', () => {
   test('is critical when a root key is not a literal', async () => {
     const { criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         'const k = String(1)',
         'defineScope({ [k]: {} } as any)',
       ].join('\n')
@@ -281,7 +281,7 @@ describe('addScope inspector', () => {
   test('is critical when a root is not an object literal', async () => {
     const { criticals } = await inspectSource(
       [
-        "import { defineScope } from '@pikku/core/scope'",
+        "import { defineScope } from '@pikku/core/ecosystem/scope'",
         "defineScope({ admin: 'nope' } as any)",
       ].join('\n')
     )
@@ -296,7 +296,7 @@ describe('addScope inspector', () => {
 describe('validateScopeReferences', () => {
   const funcSource = (scopes: string, decls: string[] = []) =>
     [
-      "import { defineScope } from '@pikku/core/scope'",
+      "import { defineScope } from '@pikku/core/ecosystem/scope'",
       "import { pikkuSessionlessFunc } from '@pikku/core'",
       ...decls,
       'export const f = pikkuSessionlessFunc({',

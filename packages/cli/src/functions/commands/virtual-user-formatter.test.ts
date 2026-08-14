@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
-import type { VirtualUserRunResult } from '@pikku/core/virtual-user'
+import type { VirtualUserRunResult } from '@pikku/core/ecosystem/virtual-user'
 
 const context = {
   persona: 'orgAdmin',
@@ -85,7 +85,10 @@ describe('the virtual user report', () => {
     const errors = lines.filter((line) => line.level === 'error')
     assert.equal(errors.length, 2)
     assert.match(errors[0]!.text, /^1 finding$/)
-    assert.match(errors[1]!.text, /server-error\s+createProject returned 500 \(step 7\)/)
+    assert.match(
+      errors[1]!.text,
+      /server-error\s+createProject returned 500 \(step 7\)/
+    )
   })
 
   test('a run with something to show tells you how to get back to it', () => {
@@ -153,6 +156,9 @@ describe('the virtual user report', () => {
     const lines = render(result({ stoppedBy: 'no-intents' }))
     const warning = lines.find((line) => line.level === 'warn')
     assert.ok(warning)
-    assert.match(warning!.text, /declare a scenario naming 'orgAdmin', or pass --goals/)
+    assert.match(
+      warning!.text,
+      /declare a scenario naming 'orgAdmin', or pass --goals/
+    )
   })
 })

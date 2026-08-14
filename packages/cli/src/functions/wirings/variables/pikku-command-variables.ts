@@ -2,7 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeVariablesTypes } from './serialize-variables-types.js'
-import { validateAndBuildVariableDefinitionsMeta } from '@pikku/core/variable'
+import { validateAndBuildVariableDefinitionsMeta } from '@pikku/core/ecosystem/variable'
 
 export const pikkuVariables = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {

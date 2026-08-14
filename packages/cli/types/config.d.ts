@@ -1,6 +1,6 @@
 import type { InspectorFilters } from '@pikku/inspector'
 import type { OpenAPISpecInfo } from '@pikku/inspector'
-import { PikkuWiringTypes } from '@pikku/core'
+import { PikkuWiringTypes } from '@pikku/core/ecosystem/types'
 
 /**
  * Whether a generated surface exists, where it is written, and whether it

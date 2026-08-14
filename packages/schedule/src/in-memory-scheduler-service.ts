@@ -1,12 +1,14 @@
 import { CronJob } from 'cron'
+import type { CoreUserSession } from '@pikku/core'
 import type {
-  CoreUserSession,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
-} from '@pikku/core'
-import { SchedulerService, parseDurationString } from '@pikku/core'
+} from '@pikku/core/ecosystem/services'
+import { SchedulerService } from '@pikku/core'
+import { parseDurationString } from '@pikku/core/ecosystem/types'
 import { pikkuState, getSingletonServices } from '@pikku/core/ecosystem'
-import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask } from '@pikku/core/scheduler'
+import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
 import { rpcService } from '@pikku/core/rpc'
 
 interface DelayedTask {

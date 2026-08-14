@@ -3,7 +3,10 @@ import type {
   DurableObjectNamespace,
 } from '@cloudflare/workers-types'
 import type { CoreSingletonServices } from '@pikku/core'
-import type { WorkflowRun, WorkflowRunWire } from '@pikku/core/workflow'
+import type {
+  WorkflowRun,
+  WorkflowRunWire,
+} from '@pikku/core/ecosystem/workflow'
 import type {
   PikkuWorkflowDoService,
   PikkuWorkflowDoEnv,

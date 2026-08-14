@@ -22,7 +22,7 @@
  *
  * Run: yarn api-report
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
@@ -32,15 +32,36 @@ const pkg = JSON.parse(
   readFileSync(resolve(packageRoot, 'package.json'), 'utf-8')
 )
 
-const entryPoints = Object.entries(pkg.exports as Record<string, string>).map(
-  ([subpath, dist]) => ({
+/**
+ * A wildcard subpath stands for as many entry points as there are files behind
+ * it, and the report is per entry point. Left as a pattern it resolves to no
+ * source file at all, so every sub-barrel it publishes goes unreported.
+ */
+const expand = ([subpath, dist]: [string, string]): [string, string][] => {
+  if (!subpath.includes('*')) return [[subpath, dist]]
+  const [prefix] = dist.split('*') as [string]
+  return readdirSync(
+    resolve(packageRoot, prefix.replace('./dist/', './src/')),
+    {
+      recursive: true,
+      encoding: 'utf-8',
+    }
+  )
+    .filter((file) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
+    .map((file) => file.slice(0, -'.ts'.length))
+    .sort()
+    .map((area) => [subpath.replace('*', area), dist.replace('*', area)])
+}
+
+const entryPoints = Object.entries(pkg.exports as Record<string, string>)
+  .flatMap(expand)
+  .map(([subpath, dist]) => ({
     subpath,
     file: resolve(
       packageRoot,
       dist.replace('./dist/', './src/').replace(/\.js$/, '.ts')
     ),
-  })
-)
+  }))
 
 const program = ts.createProgram(
   entryPoints.map((e) => e.file),
@@ -218,7 +239,10 @@ const signature = (exported: ts.Symbol): string => {
  *
  * knowledge: decisions/internals/the-ecosystem-entry-point-carries-the-adapter-surface.md
  */
-const ECOSYSTEM_SUBPATHS = new Set(['./ecosystem', './internal'])
+const isEcosystem = (subpath: string) =>
+  subpath === './ecosystem' ||
+  subpath === './internal' ||
+  subpath.startsWith('./ecosystem/')
 
 type Exported = { name: string; members: number; signature: string }
 
@@ -264,7 +288,7 @@ for (const { subpath, file } of entryPoints) {
 const tierOf = new Map<string, string>()
 const membersOf = new Map<string, number>()
 for (const [subpath, exports] of modules) {
-  const tier = ECOSYSTEM_SUBPATHS.has(subpath) ? 'ecosystem' : 'stable'
+  const tier = isEcosystem(subpath) ? 'ecosystem' : 'stable'
   for (const { name, members } of exports) {
     if (tier === 'stable' || !tierOf.has(name)) tierOf.set(name, tier)
     membersOf.set(name, Math.max(membersOf.get(name) ?? 0, members))
@@ -275,7 +299,7 @@ const tally = (tier: string) => {
   const names = [...tierOf].filter(([, t]) => t === tier).map(([n]) => n)
   return {
     entryPoints: [...modules.keys()].filter(
-      (s) => (ECOSYSTEM_SUBPATHS.has(s) ? 'ecosystem' : 'stable') === tier
+      (s) => (isEcosystem(s) ? 'ecosystem' : 'stable') === tier
     ).length,
     names: names.length,
     members: names.reduce((total, n) => total + (membersOf.get(n) ?? 0), 0),

@@ -1,4 +1,5 @@
-import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
+import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { JobOptions } from '@pikku/core/ecosystem/queue'
 
 /**
  * Cloudflare Queues implementation of QueueService.

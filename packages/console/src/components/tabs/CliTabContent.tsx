@@ -11,7 +11,7 @@ import {
 } from '@pikku/mantine/core'
 import { ChevronDown, ChevronRight, Copy, Check, Terminal } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
-import type { CLIMeta } from '@pikku/core/cli'
+import type { CLIMeta } from '@pikku/core/ecosystem/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { ConsoleSurface } from '../console/ConsoleSurface'
 import { CliHelpText } from '../cli/CliHelpText'
@@ -135,9 +135,7 @@ const CliPageInner: React.FC<{
                     gap: 6,
                     padding: '7px 12px',
                     fontSize: 11,
-                    color: isActive
-                      ? 'var(--app-text)'
-                      : 'var(--app-text)',
+                    color: isActive ? 'var(--app-text)' : 'var(--app-text)',
                     borderLeft: isActive
                       ? '2px solid rgba(6,182,212,0.4)'
                       : '2px solid transparent',
@@ -188,9 +186,7 @@ const CliPageInner: React.FC<{
                             ff="monospace"
                             fw={cmdActive ? 600 : 400}
                             c={
-                              cmdActive
-                                ? 'var(--app-text)'
-                                : 'var(--app-text)'
+                              cmdActive ? 'var(--app-text)' : 'var(--app-text)'
                             }
                             truncate
                           >
@@ -237,7 +233,8 @@ const CliPageInner: React.FC<{
           >
             <Text component="span" c="violet" ff="monospace">
               {asI18n('$')}
-            </Text>{asI18n(' ')}
+            </Text>
+            {asI18n(' ')}
             <Text component="span" c="var(--app-text)" ff="monospace">
               {asI18n(promptText.slice(2))}
             </Text>
@@ -294,7 +291,9 @@ const CliPageInner: React.FC<{
 
 type CliTabContentProps = { searchQuery: string }
 
-export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => {
+export const CliTabContent: React.FC<CliTabContentProps> = ({
+  searchQuery,
+}) => {
   const { meta } = usePikkuMeta()
   useLocale()
   const programs = meta.cliMeta || []

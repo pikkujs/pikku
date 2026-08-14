@@ -1,7 +1,10 @@
 import type { DurableObjectNamespace } from '@cloudflare/workers-types'
-import type { SerializedError } from '@pikku/core'
-import type { WorkflowService } from '@pikku/core'
-import { buildRunTimeline, reconstructStateAt } from '@pikku/core/workflow'
+import type { SerializedError } from '@pikku/core/ecosystem/types'
+import type { WorkflowService } from '@pikku/core/ecosystem/workflow'
+import {
+  buildRunTimeline,
+  reconstructStateAt,
+} from '@pikku/core/ecosystem/workflow'
 import type {
   RunTimeline,
   ReconstructedRunState,
@@ -12,7 +15,7 @@ import type {
   WorkflowRunWire,
   WorkflowStatus,
   WorkflowVersionStatus,
-} from '@pikku/core/workflow'
+} from '@pikku/core/ecosystem/workflow'
 
 interface DoStub {
   start<I>(input: {

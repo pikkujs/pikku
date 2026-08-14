@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Box } from '@pikku/mantine/core'
-import { generateCommandHelp } from '@pikku/core/cli/command-parser'
-import type { CLIMeta } from '@pikku/core/cli'
+import { generateCommandHelp } from '@pikku/core/ecosystem/cli'
+import type { CLIMeta } from '@pikku/core/ecosystem/cli'
 
 interface HelpSegment {
   text: string

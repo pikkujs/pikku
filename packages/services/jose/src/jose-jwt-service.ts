@@ -4,7 +4,7 @@
  *
  * @module JoseJWTService
  */
-import type { RelativeTimeInput } from '@pikku/core'
+import type { RelativeTimeInput } from '@pikku/core/ecosystem/types'
 import { getRelativeTimeOffsetFromNow } from '@pikku/core'
 import type { JWTService, Logger } from '@pikku/core/services'
 import * as jose from 'jose'

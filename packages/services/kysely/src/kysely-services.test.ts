@@ -5,7 +5,7 @@ import { SerializePlugin } from './serialize-plugin.js'
 import Database from 'better-sqlite3'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
-import { defineServiceTests } from '@pikku/core/testing'
+import { defineServiceTests } from '@pikku/core/ecosystem/testing'
 
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyChannelStore } from './kysely-channel-store.js'

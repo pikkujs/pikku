@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import type { AddWiring, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
-import type { ScopeNodeMeta } from '@pikku/core/scope'
+import type { ScopeNodeMeta } from '@pikku/core/ecosystem/scope'
 
 const SEPARATOR = ':'
 const WILDCARD = '*'

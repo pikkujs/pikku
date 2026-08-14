@@ -1,5 +1,5 @@
 import type { InspectorFilters, InspectorLogger } from '../types.js'
-import type { PikkuWiringTypes } from '@pikku/core'
+import type { PikkuWiringTypes } from '@pikku/core/ecosystem/types'
 
 /**
  * Match a value against a pattern with wildcard support

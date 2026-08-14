@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { spawn } from 'node:child_process'
-import type { MetaService } from '@pikku/core/services'
-import type { SecurityAuditReport } from '@pikku/core'
+import type { MetaService } from '@pikku/core/ecosystem/services'
+import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
 
 // Walk up from `searchFrom` for a `node_modules/.bin/<name>` executable,
 // falling back to the bare name (resolved via PATH) if none is found.
@@ -60,9 +60,7 @@ export function spawnProcess(
     const timer = setTimeout(() => {
       proc.kill('SIGKILL')
       reject(
-        new Error(
-          `${command} ${args.join(' ')} timed out after ${timeoutMs}ms`
-        )
+        new Error(`${command} ${args.join(' ')} timed out after ${timeoutMs}ms`)
       )
     }, timeoutMs)
     proc.on('close', (code) => {
@@ -88,5 +86,9 @@ export function spawnProcess(
 // Re-run `pikku audit --outdated` in the project, regenerating audit.json.
 export async function runPikkuAudit(projectDir: string): Promise<void> {
   const pikku = findBin('pikku', projectDir)
-  await spawnProcess(process.execPath, [pikku, 'audit', '--outdated'], projectDir)
+  await spawnProcess(
+    process.execPath,
+    [pikku, 'audit', '--outdated'],
+    projectDir
+  )
 }

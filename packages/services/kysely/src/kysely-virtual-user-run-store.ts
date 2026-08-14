@@ -1,12 +1,12 @@
 import type { Kysely, Selectable } from 'kysely'
 import { randomUUID } from 'node:crypto'
+import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
 import type {
-  VirtualUserDisposition,
   VirtualUserRunOutcome,
   VirtualUserRunRecord,
   VirtualUserRunStart,
   VirtualUserRunStore,
-} from '@pikku/core/virtual-user'
+} from '@pikku/core/ecosystem/virtual-user'
 import type { KyselyPikkuDB, VirtualUserRunTable } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 import { ensurePikkuSchema } from './schema/index.js'

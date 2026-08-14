@@ -1,6 +1,6 @@
 import { pikkuFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/ecosystem'
-import type { MetaService } from '@pikku/core/services'
+import type { MetaService } from '@pikku/core/ecosystem/services'
 
 export interface InstalledAddon {
   namespace: string

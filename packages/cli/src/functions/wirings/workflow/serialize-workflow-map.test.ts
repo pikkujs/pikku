@@ -4,9 +4,9 @@ import ts from 'typescript'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import type { TypesMap } from '@pikku/inspector'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import type { Logger } from '@pikku/core/services'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 
 const logger = {
   info: () => {},

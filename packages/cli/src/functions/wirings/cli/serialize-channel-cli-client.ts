@@ -1,4 +1,4 @@
-import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
+import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/ecosystem/cli'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { Config } from '../../../../types/application-types.js'
 import { DIRECT_EXECUTION_GUARD } from './serialize-cli-entrypoint-guard.js'
@@ -153,9 +153,9 @@ export function serializeChannelCLIClient(
     : ''
 
   return `
-import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
-import type { CorePikkuCLIClientRender } from '@pikku/core/cli/channel'
-import type { Capabilities } from '@pikku/core/channel'
+import { executeRawCLIViaChannel } from '@pikku/core/ecosystem/cli/channel'
+import type { CorePikkuCLIClientRender } from '@pikku/core/ecosystem/cli/channel'
+import type { Capabilities } from '@pikku/core/ecosystem/channel'
 import { CorePikkuWebsocket } from '@pikku/websocket'
 ${rendererImports}
 /**

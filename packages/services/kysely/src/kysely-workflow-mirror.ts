@@ -1,4 +1,4 @@
-import type { SerializedError } from '@pikku/core'
+import type { SerializedError } from '@pikku/core/ecosystem/types'
 import type {
   StepState,
   WorkflowRunMirror,
@@ -6,7 +6,7 @@ import type {
   WorkflowStatus,
   WorkflowPlannedStep,
   WorkflowVersionStatus,
-} from '@pikku/core/workflow'
+} from '@pikku/core/ecosystem/workflow'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { ensurePikkuSchema } from './schema/index.js'

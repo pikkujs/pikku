@@ -6,7 +6,8 @@ import type {
   CreateRunInput,
   SaveScoreInput,
 } from '@pikku/core/services'
-import type { AgentRunState, PendingApproval } from '@pikku/core/ai-agent'
+import type { AgentRunState } from '@pikku/core/ai-agent'
+import type { PendingApproval } from '@pikku/core/ecosystem/ai-agent'
 import type { AIRunScore } from '@pikku/core/ai-scorer'
 import { ensurePikkuSchema } from './schema/index.js'
 import { aiSchema } from './schema/ai.schema.js'

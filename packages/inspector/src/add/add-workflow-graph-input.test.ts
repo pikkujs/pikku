@@ -36,7 +36,7 @@ describe('addWorkflowGraph — node input extraction', () => {
       graphFile,
       [
         "import { pikkuWorkflowGraph } from '@pikku/core/workflow'",
-        "import { template } from '@pikku/core/workflow'",
+        "import { template } from '@pikku/core/ecosystem/workflow'",
         'export const myGraph = pikkuWorkflowGraph({',
         "  name: 'input-graph',",
         "  nodes: { edit: 'edit' },",

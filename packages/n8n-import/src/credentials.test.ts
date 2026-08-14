@@ -50,7 +50,10 @@ test('generateWorkflowFromN8n emits wireAddon instances + records per-node bindi
 
   const addons = files['dualPipedriveSync/dualPipedriveSync.addons.gen.ts']
   assert.ok(addons, 'addons wiring file emitted')
-  assert.match(addons, /import \{ wireAddon \} from '@pikku\/core\/rpc'/)
+  assert.match(
+    addons,
+    /import \{ wireAddon \} from '@pikku\/core\/ecosystem\/rpc'/
+  )
   // one wireAddon per credential instance, same package, distinct names + creds
   assert.match(addons, /name: "pipedrive-marketing"/)
   assert.match(addons, /name: "pipedrive-support"/)

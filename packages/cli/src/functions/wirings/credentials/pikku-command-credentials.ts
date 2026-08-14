@@ -2,7 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeCredentialsTypes } from './serialize-credentials-types.js'
-import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/credential'
+import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/ecosystem/credential'
 
 export const pikkuCredentials = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {

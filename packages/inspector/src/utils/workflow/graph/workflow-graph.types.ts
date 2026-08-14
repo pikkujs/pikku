@@ -115,8 +115,8 @@ import type {
   ContextVariable,
   WorkflowContext,
   WorkflowPlannedStep,
-} from '@pikku/core/workflow'
-import type { ScenarioStepPhase } from '@pikku/core/scenario'
+} from '@pikku/core/ecosystem/workflow'
+import type { ScenarioStepPhase } from '@pikku/core/ecosystem/scenario'
 
 export type { ContextVariable, WorkflowContext }
 

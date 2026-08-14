@@ -49,7 +49,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const lines: string[] = []
 
-    lines.push(`import { addAIAgent } from '@pikku/core/ai-agent'`)
+    lines.push(`import { addAIAgent } from '@pikku/core/ecosystem/ai-agent'`)
 
     const metaImportPath = getFileImportRelativePath(
       agentWiringsFile,
@@ -119,7 +119,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       logger,
       agentWiringMetaFile,
       `import { pikkuState } from '@pikku/core/ecosystem'
-import type { AIAgentMeta } from '@pikku/core/ai-agent'
+import type { AIAgentMeta } from '@pikku/core/ecosystem/ai-agent'
 ${importStatement}
 pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)`
     )

@@ -1,5 +1,8 @@
-import { parseVersionedId, formatVersionedId } from '@pikku/core'
-import type { CLICommandMeta } from '@pikku/core/cli'
+import {
+  parseVersionedId,
+  formatVersionedId,
+} from '@pikku/core/ecosystem/types'
+import type { CLICommandMeta } from '@pikku/core/ecosystem/cli'
 import type { InspectorState, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 

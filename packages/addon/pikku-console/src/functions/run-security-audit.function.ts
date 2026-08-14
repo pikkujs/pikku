@@ -1,6 +1,6 @@
 import { dirname } from 'node:path'
 import { pikkuFunc } from '#pikku'
-import type { SecurityAuditReport } from '@pikku/core'
+import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
 import { readAuditReport, runPikkuAudit } from '../lib/audit-exec.js'
 
 export const runSecurityAudit = pikkuFunc<null, SecurityAuditReport | null>({

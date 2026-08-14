@@ -5,7 +5,7 @@ import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { ExternalLink, GitBranch } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 
 type FilterValue = 'all' | 'dsl' | 'graph'
 type Workflow = WorkflowsMeta[string] & {
@@ -17,9 +17,7 @@ const COLUMNS = [
   {
     key: 'name',
     header: 'NAME',
-    render: (w: Workflow) => (
-      <Text fw={500}>{asI18n(w.name)}</Text>
-    ),
+    render: (w: Workflow) => <Text fw={500}>{asI18n(w.name)}</Text>,
   },
   {
     key: 'steps',

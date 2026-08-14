@@ -1,4 +1,4 @@
-import type { AuditEvent } from '@pikku/core'
+import type { AuditEvent } from '@pikku/core/ecosystem/services'
 import { pikkuFunc } from '#pikku'
 import {
   resolveAuditUsers,

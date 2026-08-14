@@ -10,7 +10,7 @@ import { personasSecretsFilePath } from './personas-secrets-file.js'
 import {
   personaEnvironmentErrors,
   validateAndBuildPersonasMeta,
-} from '@pikku/core/persona'
+} from '@pikku/core/ecosystem/persona'
 
 export const pikkuPersonas = pikkuSessionlessFunc<
   { bootstrap?: boolean },

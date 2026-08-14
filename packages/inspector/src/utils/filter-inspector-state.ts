@@ -3,8 +3,8 @@ import type {
   InspectorFilters,
   InspectorLogger,
 } from '../types.js'
-import type { PikkuWiringTypes } from '@pikku/core'
-import { parseVersionedId } from '@pikku/core'
+import type { PikkuWiringTypes } from '@pikku/core/ecosystem/types'
+import { parseVersionedId } from '@pikku/core/ecosystem/types'
 import { aggregateRequiredServices } from './post-process.js'
 import { resolveDeployTarget } from './resolve-deploy-target.js'
 

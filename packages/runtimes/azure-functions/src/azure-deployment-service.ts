@@ -9,10 +9,13 @@
  * JWT signed with PIKKU_REMOTE_SECRET, session encrypted in payload.
  */
 
-import type { DeploymentService, DeploymentConfig } from '@pikku/core/services'
+import type {
+  DeploymentService,
+  DeploymentConfig,
+} from '@pikku/core/ecosystem/services'
 import type { JWTService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildRemoteHeaders } from '@pikku/core/ecosystem/remote'
 
 export class AzureDeploymentService implements DeploymentService {
   private bindings: Map<string, string>

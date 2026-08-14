@@ -1,4 +1,4 @@
-import type { CLIProgramMeta } from '@pikku/core/cli'
+import type { CLIProgramMeta } from '@pikku/core/ecosystem/cli'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 type WireAddonDeclarations = Map<string, { package: string }>
@@ -108,8 +108,8 @@ export function serializeChannelCLI(
  */
 import { wireChannel } from '${channelTypesPath}'
 import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
-import { generateCommandHelp } from '@pikku/core/cli'
-import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
+import { generateCommandHelp } from '@pikku/core/ecosystem/cli'
+import { handleRawCLI, type RawCLIFrame } from '@pikku/core/ecosystem/cli/channel'
 import { pikkuState, getSingletonServices, getCreateWireServices } from '@pikku/core/ecosystem'
 ${imports}
 

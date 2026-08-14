@@ -4,13 +4,13 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import { InMemoryWorkflowService } from '@pikku/core/services'
-import { createHttpPersonas } from '@pikku/core/persona'
-import { PikkuScenarioService } from '@pikku/core/scenario'
+import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
+import { PikkuScenarioService } from '@pikku/core/ecosystem/scenario'
 import { pikkuState, getAllPackageStates } from '@pikku/core/ecosystem'
 import type { PikkuRPC } from '@pikku/core/rpc'
-import { resolveFeatureScenarios } from '@pikku/core/scenario'
-import type { CoreWorkflow } from '@pikku/core/workflow'
-import type { CoreFeature } from '@pikku/core/scenario'
+import { resolveFeatureScenarios } from '@pikku/core/ecosystem/scenario'
+import type { CoreWorkflow } from '@pikku/core/ecosystem/workflow'
+import type { CoreFeature } from '@pikku/core/ecosystem/scenario'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
@@ -21,7 +21,7 @@ import {
   scenarioStepsWithoutBinding,
   scenarioSurfaceCoverage,
 } from './scenario-ladder.js'
-import { SCENARIO_SURFACES } from '@pikku/core/scenario'
+import { SCENARIO_SURFACES } from '@pikku/core/ecosystem/scenario'
 import type { ScenarioSurface } from '@pikku/core/scenario'
 import { formatScenarioReport } from './scenario-formatter.js'
 import type {

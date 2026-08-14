@@ -1,5 +1,5 @@
-import type { FunctionMeta } from '@pikku/core'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { FunctionMeta } from '@pikku/core/ecosystem/services'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 import { toEnglishName } from '../../lib/strings'
 import type { PersonaScenarioRef } from './persona-types'
 import type { SubjectEntry, SubjectStepRef } from './subject-types'

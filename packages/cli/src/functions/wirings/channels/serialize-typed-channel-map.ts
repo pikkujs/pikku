@@ -1,9 +1,9 @@
-import type { ChannelsMeta } from '@pikku/core/channel'
+import type { ChannelsMeta } from '@pikku/core/ecosystem/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes, resolveFunctionMeta } from '@pikku/inspector'
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import type { Logger } from '@pikku/core/services'
 
 export const serializeTypedChannelsMap = (

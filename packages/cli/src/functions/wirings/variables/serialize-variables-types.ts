@@ -1,5 +1,5 @@
-import type { VariableDefinitions } from '@pikku/core/variable'
-import { validateAndBuildVariableDefinitionsMeta } from '@pikku/core/variable'
+import type { VariableDefinitions } from '@pikku/core/ecosystem/variable'
+import { validateAndBuildVariableDefinitionsMeta } from '@pikku/core/ecosystem/variable'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
@@ -59,11 +59,11 @@ export const serializeVariablesTypes = ({
   const imports: string[] = []
 
   imports.push(
-    `import { TypedVariablesService as CoreTypedVariablesService, type VariableMeta } from '@pikku/core/services'`
+    `import { TypedVariablesService as CoreTypedVariablesService, type VariableMeta } from '@pikku/core/ecosystem/services'`
   )
   imports.push(`import type { VariablesService } from '@pikku/core/services'`)
   imports.push(
-    `import type { VariableDefinitionsMeta } from '@pikku/core/variable'`
+    `import type { VariableDefinitionsMeta } from '@pikku/core/ecosystem/variable'`
   )
   imports.push(
     `import variablesMeta from './pikku-variables-meta.gen.json' with { type: 'json' }`

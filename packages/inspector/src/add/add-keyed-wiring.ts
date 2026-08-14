@@ -7,7 +7,7 @@ import {
 import type { AddWiring, InspectorState } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
-import { parseDurationString } from '@pikku/core'
+import { parseDurationString } from '@pikku/core/ecosystem/types'
 
 export interface KeyedWiringConfig {
   functionName: string

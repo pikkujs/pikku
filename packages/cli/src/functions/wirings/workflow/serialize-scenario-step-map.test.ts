@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { TypesMap } from '@pikku/inspector'
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
 
 /**
@@ -83,7 +83,10 @@ describe('serializeScenarioStepMap', () => {
   test('a platform or addon step is a name a scenario can call too', () => {
     const result = emit()
     assert.match(result, /readonly 'trialHasExpired': ScenarioStepHandler</)
-    assert.match(result, /readonly 'stripeWebhookArrives': ScenarioStepHandler</)
+    assert.match(
+      result,
+      /readonly 'stripeWebhookArrives': ScenarioStepHandler</
+    )
   })
 
   test('ordinary functions are not steps', () => {

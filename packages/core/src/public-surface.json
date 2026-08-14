@@ -173,9 +173,7 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": [
-    "runConversation"
-  ],
+  "./actor-flow": ["runConversation"],
   "./virtual-user": [
     "DISPOSITIONS",
     "IntentStack",
@@ -218,9 +216,7 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": [
-    "buildRemoteHeaders"
-  ],
+  "./remote": ["buildRemoteHeaders"],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -235,11 +231,7 @@
     "runScheduledTask",
     "wireScheduler"
   ],
-  "./trigger": [
-    "PikkuTriggerService",
-    "wireTrigger",
-    "wireTriggerSource"
-  ],
+  "./trigger": ["PikkuTriggerService", "wireTrigger", "wireTriggerSource"],
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
@@ -257,10 +249,7 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": [
-    "installNodeHostResolver",
-    "nodeHostResolver"
-  ],
+  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -328,10 +317,7 @@
     "runCLICommand",
     "wireCLI"
   ],
-  "./cli/command-parser": [
-    "generateCommandHelp",
-    "parseCLIArguments"
-  ],
+  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -368,14 +354,8 @@
     "validateAndBuildPersonasMeta",
     "verifyPersonaRoles"
   ],
-  "./secret": [
-    "defineSecret",
-    "validateAndBuildSecretDefinitionsMeta"
-  ],
-  "./variable": [
-    "defineVariable",
-    "validateAndBuildVariableDefinitionsMeta"
-  ],
+  "./secret": ["defineSecret", "validateAndBuildSecretDefinitionsMeta"],
+  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -463,19 +443,10 @@
     "spy",
     "stub"
   ],
-  "./services/local-meta": [
-    "LocalMetaService"
-  ],
-  "./services/v8-coverage": [
-    "V8CoverageService"
-  ],
-  "./services/istanbul-coverage": [
-    "IstanbulCoverageService"
-  ],
-  "./services/local-content": [
-    "LocalContent",
-    "signedContentPath"
-  ],
+  "./services/local-meta": ["LocalMetaService"],
+  "./services/v8-coverage": ["V8CoverageService"],
+  "./services/istanbul-coverage": ["IstanbulCoverageService"],
+  "./services/local-content": ["LocalContent", "signedContentPath"],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -505,10 +476,7 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": [
-    "hmacSha256Hex",
-    "timingSafeStringEqual"
-  ],
+  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
   "./ecosystem": [
     "addFunction",
     "addGlobalMiddleware",
@@ -522,6 +490,149 @@
     "runPikkuFunc",
     "setSingletonServices"
   ],
+  "./ecosystem/ai-agent": [
+    "addAIAgent",
+    "agent",
+    "agentApprove",
+    "agentResume",
+    "agentStream",
+    "canAccessThread",
+    "isOwnedByPrincipal",
+    "resolveModelAlias",
+    "threadOwnerConstraint",
+    "voiceInput",
+    "voiceOutput"
+  ],
+  "./ecosystem/ai-scorer": [
+    "addAIScorer",
+    "enableScoreSnapshots",
+    "getScoreSnapshot",
+    "gradeRun",
+    "pikkuAIJudge",
+    "pikkuAIScorer",
+    "wireAIScorerQueueWorkers"
+  ],
+  "./ecosystem/channel": [
+    "EventHubStore",
+    "PikkuAbstractChannelHandler",
+    "addChannelMiddleware",
+    "logChannels"
+  ],
+  "./ecosystem/channel/local": ["PikkuLocalChannelHandler"],
+  "./ecosystem/cli": ["CLIError", "executeCLI", "generateCommandHelp"],
+  "./ecosystem/cli/channel": ["executeRawCLIViaChannel", "handleRawCLI"],
+  "./ecosystem/credential": ["validateAndBuildCredentialDefinitionsMeta"],
+  "./ecosystem/dev": ["reconcileAddonRegistry", "reloadGeneratedMeta"],
+  "./ecosystem/function": ["getAllFunctionNames", "pikkuAuth"],
+  "./ecosystem/gateway": [],
+  "./ecosystem/hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
+  "./ecosystem/http": ["DEFAULT_MAX_BODY_SIZE", "logRoutes", "toWebRequest"],
+  "./ecosystem/mcp": [
+    "MCPEndpointRegistry",
+    "MCPError",
+    "getMCPPromptsMeta",
+    "getMCPResourcesMeta",
+    "getMCPToolsMeta"
+  ],
+  "./ecosystem/middleware": [
+    "addGlobalPermission",
+    "authAPIKey",
+    "authCookie",
+    "pikkuRemoteAuthMiddleware",
+    "runMiddleware",
+    "telemetryInner",
+    "telemetryOuter"
+  ],
+  "./ecosystem/node": [],
+  "./ecosystem/node-host-resolver": ["installNodeHostResolver"],
+  "./ecosystem/oauth2": [],
+  "./ecosystem/persona": [
+    "HttpPersona",
+    "createHttpPersonas",
+    "personaEmails",
+    "personaEnvironmentErrors",
+    "personaEnvironmentRefusal",
+    "roleMismatchMessage",
+    "validateAndBuildPersonasMeta",
+    "verifyPersonaRoles"
+  ],
+  "./ecosystem/queue": [
+    "QueueJobDiscardedError",
+    "QueueJobFailedError",
+    "registerQueueWorkers"
+  ],
+  "./ecosystem/remote": ["buildRemoteHeaders"],
+  "./ecosystem/role": [
+    "defineSystemRole",
+    "flattenSystemRoleDefinitions",
+    "validateAndBuildSystemRoleDefinitionsMeta"
+  ],
+  "./ecosystem/rpc": ["wireAddon", "wireRemoteAddon"],
+  "./ecosystem/safe-fetch": ["safeFetch"],
+  "./ecosystem/scenario": [
+    "PikkuScenarioService",
+    "SCENARIO_SURFACES",
+    "addFeature",
+    "composeStepProse",
+    "resolveFeatureScenarios"
+  ],
+  "./ecosystem/scheduler": ["getScheduledTasks"],
+  "./ecosystem/schema": ["addSchema"],
+  "./ecosystem/scope": [
+    "defineScope",
+    "flattenScopeDefinitions",
+    "validateAndBuildScopeDefinitionsMeta"
+  ],
+  "./ecosystem/secret": ["validateAndBuildSecretDefinitionsMeta"],
+  "./ecosystem/services": [
+    "InMemoryAIRunStateService",
+    "PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME",
+    "PikkuSessionService",
+    "TypedVariablesService",
+    "createMiddlewareSessionWireProps",
+    "getStubTracker",
+    "pikkuWebhookWorkerFunc",
+    "spy"
+  ],
+  "./ecosystem/services/istanbul-coverage": ["IstanbulCoverageService"],
+  "./ecosystem/services/local-content": ["signedContentPath"],
+  "./ecosystem/services/local-content-request-handler": [
+    "createLocalContentRequestHandler",
+    "verifySignedContentRequest"
+  ],
+  "./ecosystem/services/v8-coverage": ["V8CoverageService"],
+  "./ecosystem/testing": ["defineServiceTests"],
+  "./ecosystem/trigger": [],
+  "./ecosystem/types": [
+    "PikkuRequest",
+    "formatVersionedId",
+    "isExpectedError",
+    "isSerializable",
+    "isVersionedId",
+    "parseDurationString",
+    "parseVersionedId"
+  ],
+  "./ecosystem/variable": ["validateAndBuildVariableDefinitionsMeta"],
+  "./ecosystem/virtual-user": [
+    "DISPOSITIONS",
+    "PRODUCTION_DISPOSITION",
+    "catalogueClassification",
+    "dispositionProfile",
+    "intentsForPersona",
+    "isReadOnly",
+    "personaScopes",
+    "prepareVirtualUserRun",
+    "reachableCatalogue",
+    "unreachableCatalogue"
+  ],
+  "./ecosystem/workflow": [
+    "assertWorkflowRunOwner",
+    "buildRunTimeline",
+    "isRef",
+    "reconstructFinalState",
+    "reconstructStateAt",
+    "template"
+  ],
   "./schema": [
     "addSchema",
     "applyDefaultsFromSchema",
@@ -530,12 +641,6 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": [
-    "defineServiceTests"
-  ],
-  "./dev": [
-    "pikkuDevReloader",
-    "reconcileAddonRegistry",
-    "reloadGeneratedMeta"
-  ]
+  "./testing": ["defineServiceTests"],
+  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

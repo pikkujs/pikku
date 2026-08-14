@@ -1,9 +1,9 @@
-import type { MetaService } from '@pikku/core/services'
-import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
-import type { FeaturesMeta } from '@pikku/core/scenario'
-import type { ResolvedPersona } from '@pikku/core/services'
-import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import type { MetaService } from '@pikku/core/ecosystem/services'
+import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/ecosystem/channel'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
+import type { FeaturesMeta } from '@pikku/core/ecosystem/scenario'
+import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+import type { SystemRoleDefinitionsMeta } from '@pikku/core/ecosystem/role'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -22,8 +22,8 @@ import type {
   GroupMeta,
   PermissionDefinitionMeta,
   EmailsMeta,
-} from '@pikku/core/services'
-import type { GatewaysMeta } from '@pikku/core/gateway'
+} from '@pikku/core/ecosystem/services'
+import type { GatewaysMeta } from '@pikku/core/ecosystem/gateway'
 
 export type {
   FunctionsMeta,

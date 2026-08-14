@@ -44,7 +44,10 @@ test('linear set/code/integration workflow → pure graph', () => {
   assert.match(graph, /setFields: \{[\s\S]*next: "createDeal"/)
   assert.match(graph, /createDeal: \{[\s\S]*next: "score"/)
   // template import pulled in
-  assert.match(graph, /import \{ template \} from '@pikku\/core\/workflow'/)
+  assert.match(
+    graph,
+    /import \{ template \} from '@pikku\/core\/ecosystem\/workflow'/
+  )
 
   // no passthrough stub — Set nodes use @pikku/addon-graph's editFields
   assert.ok(!files['leadEnrichment/functions/n8nPassthrough.function.ts'])

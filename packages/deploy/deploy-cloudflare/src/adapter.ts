@@ -547,7 +547,9 @@ export class CloudflareProviderAdapter {
             `import { PikkuWorkflowDoClient${isWorkflowRole ? ', PikkuWorkflowDO, PikkuWorkflowDoService' : ''} } from '@pikku/cloudflare/workflow-do'`,
             `import type { DurableObjectNamespace${isWorkflowRole ? ', DurableObjectStorage' : ''} } from '@cloudflare/workers-types'`,
             ...(isWorkflowRole
-              ? [`import type { WorkflowRunWire } from '@pikku/core/workflow'`]
+              ? [
+                  `import type { WorkflowRunWire } from '@pikku/core/ecosystem/workflow'`,
+                ]
               : []),
           ]
         : []),

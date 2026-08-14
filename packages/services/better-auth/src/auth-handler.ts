@@ -1,5 +1,5 @@
-import type { CorePikkuFunctionSessionless } from '@pikku/core/function'
-import { toWebRequest } from '@pikku/core/http'
+import type { CorePikkuFunctionSessionless } from '@pikku/core/ecosystem/function'
+import { toWebRequest } from '@pikku/core/ecosystem/http'
 import type { BetterAuthInstance } from './define-auth.js'
 import {
   handleDevQuickLogin,

@@ -2,7 +2,7 @@ import path from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import type { InspectorState } from '@pikku/inspector'
-import type { FunctionMeta } from '@pikku/core'
+import type { FunctionMeta } from '@pikku/core/ecosystem/services'
 
 const printTable = (
   headers: string[],

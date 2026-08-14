@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
 import { convertDslToGraph } from './convert-dsl-to-graph.js'
-import type { WorkflowsMeta } from '@pikku/core'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 
 const scenarioMeta = (
   overrides: Partial<WorkflowsMeta[string]> = {}

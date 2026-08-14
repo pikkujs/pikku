@@ -2,7 +2,7 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import ts from 'typescript'
 import { serializeSecretsTypes } from './serialize-secrets-types.js'
-import type { SecretDefinitions } from '@pikku/core/secret'
+import type { SecretDefinitions } from '@pikku/core/ecosystem/secret'
 
 const serialize = (definitions: SecretDefinitions) =>
   serializeSecretsTypes({

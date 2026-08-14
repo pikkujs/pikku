@@ -27,7 +27,7 @@ export const serializeScenarioRegistration = (
     lines.push(`import { addWorkflow } from '@pikku/core/workflow'`)
   }
   if (hasFeatures) {
-    lines.push(`import { addFeature } from '@pikku/core/scenario'`)
+    lines.push(`import { addFeature } from '@pikku/core/ecosystem/scenario'`)
   }
   lines.push(`import '${metaImportPath}'`)
 

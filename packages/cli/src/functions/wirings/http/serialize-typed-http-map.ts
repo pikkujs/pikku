@@ -1,4 +1,4 @@
-import type { HTTPWiringsMeta } from '@pikku/core/http'
+import type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { MetaInputTypes, TypesMap } from '@pikku/inspector'

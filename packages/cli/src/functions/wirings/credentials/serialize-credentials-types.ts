@@ -1,5 +1,5 @@
-import type { CredentialDefinitions } from '@pikku/core/credential'
-import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/credential'
+import type { CredentialDefinitions } from '@pikku/core/ecosystem/credential'
+import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/ecosystem/credential'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
@@ -75,13 +75,14 @@ export const serializeCredentialsTypes = ({
   const imports: string[] = []
 
   imports.push(
-    `import { TypedCredentialService as CoreTypedCredentialService, type CredentialMetaInfo } from '@pikku/core/services'`
+    `import { TypedCredentialService as CoreTypedCredentialService } from '@pikku/core/services'
+import type { CredentialMetaInfo } from '@pikku/core/ecosystem/services'`
   )
   imports.push(`import type { CredentialService } from '@pikku/core/services'`)
 
   if (oauth2Entries.length > 0) {
     imports.push(
-      `import type { OAuth2CredentialConfig } from '@pikku/core/secret'`
+      `import type { OAuth2CredentialConfig } from '@pikku/core/ecosystem/secret'`
     )
   }
 

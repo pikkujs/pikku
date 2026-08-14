@@ -1,7 +1,7 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { serializeScopesTypes } from './serialize-scopes-types.js'
-import type { ScopeDefinitions } from '@pikku/core/scope'
+import type { ScopeDefinitions } from '@pikku/core/ecosystem/scope'
 
 describe('serializeScopesTypes', () => {
   test('emits a union of a flat scope', () => {

@@ -17,7 +17,7 @@ export interface RunTimelineEvent {
 
 export type RunTimeline = RunTimelineEvent[]
 
-type HistoryEntry = StepState & { stepName: string }
+export type HistoryEntry = StepState & { stepName: string }
 
 const LIFECYCLE_ORDER: Record<RunTimelineEvent['type'], number> = {
   pending: 0,

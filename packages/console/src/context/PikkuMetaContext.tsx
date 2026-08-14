@@ -7,8 +7,8 @@ import React, {
   useMemo,
 } from 'react'
 import { usePikkuRPC } from './PikkuRpcProvider'
-import type { ResolvedPersona } from '@pikku/core/services'
-import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+import type { SystemRoleDefinitionsMeta } from '@pikku/core/ecosystem/role'
 import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']

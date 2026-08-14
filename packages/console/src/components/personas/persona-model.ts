@@ -1,6 +1,6 @@
-import type { ResolvedPersona } from '@pikku/core/services'
-import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+import type { SystemRoleDefinitionsMeta } from '@pikku/core/ecosystem/role'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 import { scopesForRoles } from '../virtual-users/virtual-user-model'
 import { toEnglishName } from '../../lib/strings'
 import type {

@@ -1,5 +1,6 @@
 import type { PgBoss, Request as PgBossRequest } from 'pg-boss'
-import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
+import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { JobOptions } from '@pikku/core/ecosystem/queue'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuJobToPgBoss = (
@@ -33,7 +34,9 @@ export const mapPikkuJobToPgBoss = (
 
   if (options?.backoff !== undefined) {
     const type =
-      typeof options.backoff === 'string' ? options.backoff : options.backoff.type
+      typeof options.backoff === 'string'
+        ? options.backoff
+        : options.backoff.type
     const delay =
       typeof options.backoff === 'object' ? options.backoff.delay : undefined
     pgBossOptions.retryBackoff = type === 'exponential'

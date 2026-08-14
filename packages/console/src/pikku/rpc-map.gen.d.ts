@@ -76,7 +76,7 @@ import type { AgentMap as ConsoleAgentMap } from '@pikku/addon-console/.pikku/ag
 type FlattenedAgentMap = AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
 
 import type { PikkuRPC } from '@pikku/core/rpc'
-import type { AIAgentInput } from '@pikku/core/ai-agent'
+import type { AIAgentInput } from '@pikku/core/ecosystem/ai-agent'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,

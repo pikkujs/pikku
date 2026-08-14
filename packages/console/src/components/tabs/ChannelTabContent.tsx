@@ -10,7 +10,7 @@ import {
 } from '../channel/ChannelNavTree'
 import { ChannelDetailView } from '../channel/ChannelDetailView'
 import { ListDetailLayout } from '../ui/ListDetailLayout'
-import type { ChannelMeta } from '@pikku/core/channel'
+import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
@@ -57,9 +57,15 @@ const ChannelTabInner: React.FC<{
   )
 }
 
-type ChannelTabContentProps = { searchQuery: string; emptyHero?: React.ReactNode }
+type ChannelTabContentProps = {
+  searchQuery: string
+  emptyHero?: React.ReactNode
+}
 
-export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuery, emptyHero }) => {
+export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({
+  searchQuery,
+  emptyHero,
+}) => {
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()

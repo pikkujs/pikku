@@ -1,4 +1,4 @@
-import { safeFetch } from '@pikku/core/safe-fetch'
+import { safeFetch } from '@pikku/core/ecosystem/safe-fetch'
 
 /**
  * Builds the AI SDK `experimental_download` function, routed through
