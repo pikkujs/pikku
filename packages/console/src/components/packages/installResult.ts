@@ -14,6 +14,7 @@ export interface AddonInstallResult {
   ready: boolean
   missingSecrets: string[]
   missingVariables: string[]
+  namespace: string
 }
 
 export const installResultKey = (packageName: string) => [

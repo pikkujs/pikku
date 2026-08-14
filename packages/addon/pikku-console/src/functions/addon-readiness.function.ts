@@ -5,6 +5,7 @@ import { BadRequestError, LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import { readWiringOverrides } from '../lib/addon-readiness.js'
+import { assertAddonPackageName } from '../lib/derive-instance-overrides.js'
 
 export const addonReadiness = pikkuFunc<
   { packageName: string; namespace: string },
@@ -20,6 +21,7 @@ export const addonReadiness = pikkuFunc<
     { metaService, addonReadinessService },
     { packageName, namespace }
   ) => {
+    assertAddonPackageName(packageName)
     if (!/^[a-z0-9-]+$/.test(namespace)) {
       throw new BadRequestError(`Invalid namespace: ${namespace}`)
     }

@@ -1,6 +1,17 @@
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
+import { BadRequestError } from '@pikku/core/errors'
+
+/** Anchoring the first character on npm's no-leading-dot rule is what excludes
+ *  `.` and `..`; a trailing `[a-z0-9._-]+` alone matches both. */
+const VALID_PACKAGE_NAME = /^(@[a-z0-9-]+\/)?[a-z0-9-][a-z0-9._-]*$/
+
+export function assertAddonPackageName(packageName: string): void {
+  if (!VALID_PACKAGE_NAME.test(packageName)) {
+    throw new BadRequestError(`Invalid package name: ${packageName}`)
+  }
+}
 
 /**
  * Per-instance override derivation for a second-or-later `wireAddon` of the
@@ -96,7 +107,12 @@ export function addonPikkuDir(
   rootDir: string,
   packageName: string
 ): string | null {
-  const pkgDir = join(rootDir, 'node_modules', packageName)
+  assertAddonPackageName(packageName)
+  const modulesDir = resolve(rootDir, 'node_modules')
+  const pkgDir = resolve(modulesDir, packageName)
+  if (!pkgDir.startsWith(modulesDir + sep)) {
+    throw new BadRequestError(`Invalid package name: ${packageName}`)
+  }
   for (const candidate of [
     join(pkgDir, '.pikku'),
     join(pkgDir, 'dist', '.pikku'),
