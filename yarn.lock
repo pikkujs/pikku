@@ -6022,7 +6022,7 @@ __metadata:
     "@pikku/cli": "npm:^0.12.102"
     "@pikku/core": "npm:^0.12.82"
     "@pikku/fetch": "npm:^0.12.9"
-    "@pikku/mantine": "npm:^0.12.8"
+    "@pikku/mantine": "npm:^0.12.9"
     "@pikku/react": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.2"
     "@rjsf/core": "npm:^6.3.1"
@@ -6424,7 +6424,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/mantine@npm:^0.12.8, @pikku/mantine@workspace:packages/frontend/mantine":
+"@pikku/mantine@npm:^0.12.9, @pikku/mantine@workspace:packages/frontend/mantine":
   version: 0.0.0-use.local
   resolution: "@pikku/mantine@workspace:packages/frontend/mantine"
   dependencies:
