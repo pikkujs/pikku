@@ -34,7 +34,7 @@ jobs:
   lint:
     name: Lint & Format
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -46,6 +46,11 @@ jobs:
         run: yarn lint
       - name: Check no runtime i18n key resolvers
         run: node scripts/check-no-i18n-key-resolver.mjs
+      # Imports that are not declared resolve through Yarn hoisting in this
+      # repo and fail for anyone installing the package on its own, so they
+      # stay invisible until a release. See knip.jsonc for what is checked.
+      - name: Check for undeclared dependencies
+        run: yarn knip
 
   build:
     name: Build

@@ -21,7 +21,6 @@ export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
 
 export {
   SerializePlugin,
-  SqliteSerializePlugin,
   BaseSerializePlugin,
   type Serializer,
   type Deserializer,
