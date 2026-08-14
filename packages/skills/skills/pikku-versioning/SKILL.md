@@ -3,10 +3,14 @@ name: pikku-versioning
 description: >-
   Use when versioning Pikku function contracts, detecting breaking changes, or managing API
   backward compatibility. Covers the version property, versions.pikku.json manifest, contract
-  hashing, and CI integration. TRIGGER when: code uses version: on a pikkuFunc, user asks about
-  API versioning, breaking changes, contract hashes, backward compatibility, or "pikku versions"
+  hashing, and CI integration. Also covers `pikku semver`, which derives a release's semver by
+  diffing this build's surface against a deployed one and writes .pikku/changes.gen.json.
+  TRIGGER when: code uses version: on a pikkuFunc, user asks about
+  API versioning, breaking changes, contract hashes, backward compatibility, what semver a
+  release should get, comparing against production/staging, or "pikku versions" / "pikku semver"
   CLI commands. DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config)
-  or general function definitions (use pikku-concepts).
+  or general function definitions (use pikku-concepts), or about updating dependency versions
+  (use pikku-deps).
 installGroups: [core]
 ---
 
@@ -145,6 +149,84 @@ the manifest alone. Fix the contract or bump the version, then run it again.
 4. If intentional: pin the old contract as `…V1` with `version: 1`, bump the
    live function to `version: 2`, then `pikku versions update`
 
+## The `pikku semver` command
+
+`versions check` and `semver` answer different questions and share no state.
+`check` is a within-repo gate — "you changed a contract without bumping
+`version:`". `semver` is a release question — "what does this build owe the
+clients of the one already deployed?" — and needs an **external baseline**,
+which is why the answer is always relative to an environment rather than to
+the previous commit.
+
+```bash
+npx pikku semver --against https://api.acme.com/surface.json  # vs production
+npx pikku semver --against ../other-app/.pikku                # vs a checkout
+npx pikku semver --emit --out surface.json                    # publish a baseline
+npx pikku semver --against ... --fail-on major                # CI gate
+```
+
+`--against` takes three things and tells them apart itself: a directory is read
+as a `.pikku` tree, an `http(s)` URL is fetched as a published snapshot, and any
+other file is read as a snapshot. `--emit` produces the snapshot; **use `--out`**
+— plain `--emit` writes to stdout _after_ the CLI banner, so a bare `> file.json`
+captures the banner too. Publish the snapshot from CI on deploy and it becomes
+the baseline everyone else compares against.
+
+The verdict, in order:
+
+- **major** — a function or client-facing wiring was removed, or a surviving
+  one tightened its contract.
+- **minor** — anything was added, or a contract loosened compatibly.
+- **patch** — the surface did not move; the release is internal work.
+
+Below the id level it reads the generated JSON Schemas, and **direction
+decides**. An input is contravariant (the caller writes it) and an output is
+covariant (the caller reads it), so the same edit is not the same event on both:
+
+| Change                         | On an input                          | On an output |
+| ------------------------------ | ------------------------------------ | ------------ |
+| field removed                  | breaking (when the schema is closed) | breaking     |
+| required field added           | breaking                             | compatible   |
+| field became optional          | compatible                           | breaking     |
+| optional field became required | breaking                             | compatible   |
+| enum value removed             | breaking                             | compatible   |
+| enum value added               | compatible                           | breaking     |
+| type changed                   | breaking                             | breaking     |
+
+It consumes `versions.pikku.json`: published versions are immutable, so a
+function id that left the source while the manifest still records it is a `@vN`
+bump, not a removal — that is what keeps a deliberate version bump at `minor`.
+Without the manifest the same disappearance reads as `major`, which is the safe
+reading rather than a wrong one.
+
+Two things it deliberately will not guess. A named schema whose body did not
+travel with the baseline falls back to `contractHash` and, if that moved, is
+reported **breaking with the reason stated** — never quietly "unchanged". And at
+the wiring level only `auth` going from absent/false to true is classified as
+breaking; every other metadata change is reported as compatible, because there
+is no general way to tell a cosmetic wiring edit from a restricting one.
+
+Output is `.pikku/changes.gen.json` (override with `--out`), so it rides the
+same meta pipeline as `audit.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "baseline": "https://api.acme.com/surface.json",
+  "verdict": "major",
+  "summary": { "breaking": 1, "added": 1, "removed": 0, "modified": 1 },
+  "changes": [
+    {
+      "kind": "function",
+      "id": "getUser",
+      "status": "modified",
+      "breaking": true,
+      "reasons": ["input.tenant: required field added"]
+    }
+  ]
+}
+```
+
 ## CI Integration
 
 ```yaml
@@ -159,6 +241,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
       - run: npx pikku versions check
+      # Refuse to ship a breaking change to production unintentionally.
+      - run: npx pikku semver --against https://api.acme.com/surface.json --fail-on major
 ```
 
 ## Complete Example

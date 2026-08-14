@@ -29,6 +29,8 @@ import { scopesPrune } from './functions/commands/scopes-prune.js'
 import { rolesAudit } from './functions/commands/roles-audit.js'
 import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
+import { pikkuSemver } from './functions/commands/semver.js'
+import { renderSemver } from './functions/commands/semver-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
   knowledgeValidate,
@@ -299,6 +301,31 @@ wireCLI({
         registry: {
           description:
             'Registry to read versions from (default: npm_config_registry, else https://registry.npmjs.org)',
+        },
+      },
+    }),
+    semver: pikkuCLICommand({
+      func: pikkuSemver,
+      render: renderSemver,
+      description:
+        "Derive the release semver by comparing this build's surface against a deployed one; writes .pikku/changes.gen.json",
+      options: {
+        against: {
+          description:
+            'Baseline to compare against: a .pikku directory, a snapshot file, or a snapshot URL',
+        },
+        emit: {
+          description:
+            "Produce this build's surface snapshot instead of comparing — publish it to serve as a baseline. Pair with --out; without it the snapshot goes to stdout after the CLI banner",
+          default: false,
+        },
+        out: {
+          description:
+            'Where to write the output (defaults to .pikku/changes.gen.json; with --emit, stdout)',
+        },
+        failOn: {
+          description:
+            'Exit non-zero when the verdict is at or above this level: major, minor or patch',
         },
       },
     }),
