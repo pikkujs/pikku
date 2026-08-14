@@ -5,14 +5,14 @@ import { join } from 'node:path'
 import { describe, test, type TestContext } from 'node:test'
 import { parseNote, readKnowledgeNotes, resourceIds } from './notes.js'
 
-const note = (body: string) => parseNote('knowledge/slices/01-a.md', body)
+const note = (body: string) => parseNote('knowledge/milestones/01-a.md', body)
 
 describe('parseNote', () => {
   test('reads the scalars and leaves the body', () => {
     const parsed = note(
       [
         '---',
-        'type: slice',
+        'type: milestone',
         'title: The daily entry',
         'description: One buildable piece.',
         'resource: func:createEntry',
@@ -24,7 +24,7 @@ describe('parseNote', () => {
         'Body text.',
       ].join('\n')
     )
-    assert.equal(parsed.type, 'slice')
+    assert.equal(parsed.type, 'milestone')
     assert.equal(parsed.title, 'The daily entry')
     assert.equal(parsed.description, 'One buildable piece.')
     assert.equal(parsed.resource, 'func:createEntry')
@@ -33,15 +33,17 @@ describe('parseNote', () => {
   })
 
   test('lowercases type and status, because every gate compares them literally', () => {
-    // A title-cased `type: Slice` read as a different type entirely, so readiness
-    // gates saw zero slices against a file that plainly was one.
-    const parsed = note('---\ntype: Slice\nstatus: Proposed\n---\nbody')
-    assert.equal(parsed.type, 'slice')
+    // A title-cased `type: Milestone` read as a different type entirely, so readiness
+    // gates saw zero milestones against a file that plainly was one.
+    const parsed = note('---\ntype: Milestone\nstatus: Proposed\n---\nbody')
+    assert.equal(parsed.type, 'milestone')
     assert.equal(parsed.status, 'proposed')
   })
 
   test('keeps the case of every other scalar, which is prose', () => {
-    const parsed = note('---\ntype: slice\ntitle: The Daily Entry\n---\nbody')
+    const parsed = note(
+      '---\ntype: milestone\ntitle: The Daily Entry\n---\nbody'
+    )
     assert.equal(parsed.title, 'The Daily Entry')
   })
 
@@ -62,33 +64,33 @@ describe('parseNote', () => {
     // Reading only the scalar form left `entities` unset on a note that listed
     // them, and the readiness gate refused a correct file.
     const parsed = note(
-      '---\ntype: slice\nentities:\n  - entry\n  - day\n---\nx'
+      '---\ntype: milestone\nentities:\n  - entry\n  - day\n---\nx'
     )
     assert.equal(parsed.entities, 'entry, day')
   })
 
   test('strips quotes from values', () => {
-    const parsed = note('---\ntype: "slice"\ntitle: \'Quoted\'\n---\nx')
-    assert.equal(parsed.type, 'slice')
+    const parsed = note('---\ntype: "milestone"\ntitle: \'Quoted\'\n---\nx')
+    assert.equal(parsed.type, 'milestone')
     assert.equal(parsed.title, 'Quoted')
   })
 
   test('ignores an empty value rather than storing an empty string', () => {
-    assert.equal(note('---\ntype: slice\ntitle:\n---\nx').title, undefined)
+    assert.equal(note('---\ntype: milestone\ntitle:\n---\nx').title, undefined)
   })
 
   test('leaves unknown keys alone — OKF permits them and profiles add their own', () => {
     const parsed = note(
-      '---\ntype: slice\ndesign: design/a.tsx#Option B\n---\nx'
+      '---\ntype: milestone\ndesign: design/a.tsx#Option B\n---\nx'
     )
-    assert.equal(parsed.type, 'slice')
+    assert.equal(parsed.type, 'milestone')
     assert.equal((parsed as Record<string, unknown>).design, undefined)
   })
 
   test("reads a profile's own scalars when it names them", () => {
     const parsed = parseNote(
-      'knowledge/slices/01-a.md',
-      '---\ntype: slice\ndesign: design/a.tsx#Option B\nroute: /entries\n---\nx',
+      'knowledge/milestones/01-a.md',
+      '---\ntype: milestone\ndesign: design/a.tsx#Option B\nroute: /entries\n---\nx',
       ['design', 'route'] as const
     )
     assert.equal(parsed.design, 'design/a.tsx#Option B')
@@ -97,21 +99,21 @@ describe('parseNote', () => {
 
   test("a profile's scalars keep their case — only this profile's vocabularies are closed", () => {
     const parsed = parseNote(
-      'knowledge/slices/01-a.md',
-      '---\ntype: SLICE\nscreens: DailyEntry\n---\nx',
+      'knowledge/milestones/01-a.md',
+      '---\ntype: MILESTONE\nscreens: DailyEntry\n---\nx',
       ['screens'] as const
     )
-    assert.equal(parsed.type, 'slice')
+    assert.equal(parsed.type, 'milestone')
     assert.equal(parsed.screens, 'DailyEntry')
   })
 
   test('a named scalar this profile already owns is read by this profile, not overwritten', () => {
     const parsed = parseNote(
-      'knowledge/slices/01-a.md',
-      '---\ntype: SLICE\n---\nx',
+      'knowledge/milestones/01-a.md',
+      '---\ntype: MILESTONE\n---\nx',
       ['type'] as const
     )
-    assert.equal(parsed.type, 'slice')
+    assert.equal(parsed.type, 'milestone')
   })
 
   test('tolerates CRLF frontmatter', () => {
@@ -131,9 +133,15 @@ describe('parseNote', () => {
 
   test('marks the reserved filenames, case-insensitively', () => {
     assert.equal(parseNote('knowledge/index.md', 'x').reserved, 'index')
-    assert.equal(parseNote('knowledge/slices/INDEX.md', 'x').reserved, 'index')
+    assert.equal(
+      parseNote('knowledge/milestones/INDEX.md', 'x').reserved,
+      'index'
+    )
     assert.equal(parseNote('knowledge/log.md', 'x').reserved, 'log')
-    assert.equal(parseNote('knowledge/slices/01-a.md', 'x').reserved, undefined)
+    assert.equal(
+      parseNote('knowledge/milestones/01-a.md', 'x').reserved,
+      undefined
+    )
   })
 })
 
@@ -179,7 +187,7 @@ describe('readKnowledgeNotes', () => {
   test('reads nested notes, path-sorted, with paths relative to the root', async (t) => {
     const root = await bundle(t, {
       'knowledge/index.md': '---\ntype: overview\n---\nroot',
-      'knowledge/slices/01-a.md': '---\ntype: slice\n---\na',
+      'knowledge/milestones/01-a.md': '---\ntype: milestone\n---\na',
       'knowledge/decisions/why.md': '---\ntype: decision\n---\nwhy',
     })
     assert.deepEqual(
@@ -187,7 +195,7 @@ describe('readKnowledgeNotes', () => {
       [
         join('knowledge', 'decisions', 'why.md'),
         join('knowledge', 'index.md'),
-        join('knowledge', 'slices', '01-a.md'),
+        join('knowledge', 'milestones', '01-a.md'),
       ]
     )
   })

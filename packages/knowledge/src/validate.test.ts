@@ -20,9 +20,9 @@ const validate = (root: string) =>
 
 const ids = (findings: { id: string }[]) => findings.map((f) => f.id)
 
-const SLICE = [
+const MILESTONE = [
   '---',
-  'type: slice',
+  'type: milestone',
   'status: proposed',
   'entities: entry',
   '---',
@@ -37,8 +37,9 @@ const SLICE = [
 /** The smallest bundle that should produce no findings at all. */
 const CLEAN = {
   'knowledge/index.md': '---\ntype: overview\n---\nThe app.',
-  'knowledge/slices/index.md': '---\ntype: overview\n---\nBuildable pieces.',
-  'knowledge/slices/01-the-daily-entry.md': SLICE,
+  'knowledge/milestones/index.md':
+    '---\ntype: overview\n---\nBuildable pieces.',
+  'knowledge/milestones/01-the-daily-entry.md': MILESTONE,
 }
 
 describe('runKnowledgeValidate', () => {
@@ -61,8 +62,8 @@ describe('runKnowledgeValidate', () => {
   test('a bundle with no index.md has no entry point', async () => {
     const result = await validate(
       await project({
-        'knowledge/slices/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/slices/01-a.md': SLICE,
+        'knowledge/milestones/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/milestones/01-a.md': MILESTONE,
       })
     )
     assert.ok(ids(result.findings).includes('knowledge-no-index'))
@@ -73,11 +74,11 @@ describe('runKnowledgeValidate', () => {
     const result = await validate(
       await project({
         'knowledge/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/slices/01-a.md': SLICE,
+        'knowledge/milestones/01-a.md': MILESTONE,
       })
     )
     assert.deepEqual(ids(result.findings), [
-      'knowledge-section-no-index-slices',
+      'knowledge-section-no-index-milestones',
     ])
     assert.equal(result.findings[0]!.severity, 'warn')
     assert.equal(result.ok, true)
@@ -197,106 +198,110 @@ describe('runKnowledgeValidate', () => {
   })
 })
 
-describe('runKnowledgeValidate on slices', () => {
-  const withSlice = async (body: string) =>
+describe('runKnowledgeValidate on milestones', () => {
+  const withMilestone = async (body: string) =>
     validate(
       await project({
         'knowledge/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/slices/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/slices/01-a.md': body,
+        'knowledge/milestones/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/milestones/01-a.md': body,
       })
     )
 
-  test('a slice with no status cannot be gated on', async () => {
-    const result = await withSlice(SLICE.replace('status: proposed\n', ''))
+  test('a milestone with no status cannot be gated on', async () => {
+    const result = await withMilestone(
+      MILESTONE.replace('status: proposed\n', '')
+    )
     assert.ok(
       ids(result.findings).some((id) =>
-        id.startsWith('knowledge-slice-no-status-')
+        id.startsWith('knowledge-milestone-no-status-')
       )
     )
   })
 
   test('a status outside the vocabulary fails, because gates compare it literally', async () => {
-    const result = await withSlice(
-      SLICE.replace('status: proposed', 'status: in-progress')
+    const result = await withMilestone(
+      MILESTONE.replace('status: proposed', 'status: in-progress')
     )
     assert.ok(
       ids(result.findings).some((id) =>
-        id.startsWith('knowledge-slice-bad-status-')
+        id.startsWith('knowledge-milestone-bad-status-')
       )
     )
   })
 
-  test('a slice still being designed passes — it is written down, not yet buildable', async () => {
-    const result = await withSlice(
-      SLICE.replace('status: proposed', 'status: designing')
+  test('a milestone still being designed passes — it is written down, not yet buildable', async () => {
+    const result = await withMilestone(
+      MILESTONE.replace('status: proposed', 'status: designing')
     )
     assert.deepEqual(result.findings, [])
   })
 
   test('a title-cased status still passes, because the parser lowercases it', async () => {
-    const result = await withSlice(
-      SLICE.replace('status: proposed', 'status: Built')
+    const result = await withMilestone(
+      MILESTONE.replace('status: proposed', 'status: Built')
     )
     assert.deepEqual(result.findings, [])
   })
 
-  test('a slice naming no entities warns — its size cannot be judged', async () => {
-    const result = await withSlice(SLICE.replace('entities: entry\n', ''))
+  test('a milestone naming no entities warns — its size cannot be judged', async () => {
+    const result = await withMilestone(
+      MILESTONE.replace('entities: entry\n', '')
+    )
     assert.ok(
       ids(result.findings).some((id) =>
-        id.startsWith('knowledge-slice-no-entities-')
+        id.startsWith('knowledge-milestone-no-entities-')
       )
     )
     assert.equal(result.ok, true)
   })
 
-  test('a slice touching more than three entities is not one buildable piece', async () => {
-    const result = await withSlice(
-      SLICE.replace('entities: entry', 'entities: entry, day, user, grant')
+  test('a milestone touching more than three entities is not one buildable piece', async () => {
+    const result = await withMilestone(
+      MILESTONE.replace('entities: entry', 'entities: entry, day, user, grant')
     )
     assert.ok(
       ids(result.findings).some((id) =>
-        id.startsWith('knowledge-slice-too-big-')
+        id.startsWith('knowledge-milestone-too-big-')
       )
     )
     assert.equal(result.ok, false)
   })
 
-  test('a slice with no gherkin block has nothing to verify against', async () => {
-    const result = await withSlice(
-      '---\ntype: slice\nstatus: proposed\nentities: entry\n---\n\nJust prose.'
+  test('a milestone with no gherkin block has nothing to verify against', async () => {
+    const result = await withMilestone(
+      '---\ntype: milestone\nstatus: proposed\nentities: entry\n---\n\nJust prose.'
     )
     assert.ok(
       ids(result.findings).some((id) =>
-        id.startsWith('knowledge-slice-no-scenario-')
+        id.startsWith('knowledge-milestone-no-scenario-')
       )
     )
   })
 
   test('a first-person scenario hides who is acting', async () => {
-    const result = await withSlice(
-      SLICE.replace(
+    const result = await withMilestone(
+      MILESTONE.replace(
         "Given 'owner' has no entry for today",
         'Given I have no entry'
       )
     )
     assert.ok(
       ids(result.findings).some((id) =>
-        id.startsWith('knowledge-slice-first-person-')
+        id.startsWith('knowledge-milestone-first-person-')
       )
     )
     assert.equal(result.ok, false)
   })
 
   test('a quoted persona named Ida is not the pronoun I', async () => {
-    const result = await withSlice(
-      SLICE.replace("Given 'owner'", "Given 'ida'")
+    const result = await withMilestone(
+      MILESTONE.replace("Given 'owner'", "Given 'ida'")
     )
     assert.deepEqual(result.findings, [])
   })
 
-  test('only slices are held to the slice rules', async () => {
+  test('only milestones are held to the milestone rules', async () => {
     const result = await validate(
       await project({
         'knowledge/index.md': '---\ntype: overview\n---\nx',
@@ -314,7 +319,7 @@ describe('runKnowledgeValidate on resources', () => {
     const root = await project({
       ...CLEAN,
       '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
-      'knowledge/slices/02-b.md': SLICE.replace(
+      'knowledge/milestones/02-b.md': MILESTONE.replace(
         'entities: entry',
         'entities: entry\nresource: func:gone'
       ),
@@ -332,15 +337,15 @@ describe('runKnowledgeValidate on resources', () => {
     // Each note is its own thing to fix, so each needs an id something can key
     // on — an id built from the uri alone made the second finding a duplicate of
     // the first.
-    const dangling = SLICE.replace(
+    const dangling = MILESTONE.replace(
       'entities: entry',
       'entities: entry\nresource: func:gone'
     )
     const root = await project({
       ...CLEAN,
       '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
-      'knowledge/slices/02-b.md': dangling,
-      'knowledge/slices/03-c.md': dangling,
+      'knowledge/milestones/02-b.md': dangling,
+      'knowledge/milestones/03-c.md': dangling,
     })
     const resourceIds = ids((await validate(root)).findings).filter((id) =>
       id.startsWith('knowledge-resource-')
@@ -353,7 +358,7 @@ describe('runKnowledgeValidate on resources', () => {
     const root = await project({
       ...CLEAN,
       '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
-      'knowledge/slices/02-b.md': SLICE.replace(
+      'knowledge/milestones/02-b.md': MILESTONE.replace(
         'entities: entry',
         'entities: entry\nresource: func:createEntry'
       ),
@@ -443,13 +448,13 @@ describe('runKnowledgeValidate on decisions', () => {
     assert.equal(new Set(ids(result.findings)).size, 2)
   })
 
-  test('a slice may state a decision too', async () => {
+  test('a milestone may state a decision too', async () => {
     const root = await project({
       ...CLEAN,
-      'knowledge/slices/02-b.md': `${SLICE}\n\n\`\`\`decision\nchosen: One entry per day\n\`\`\``,
+      'knowledge/milestones/02-b.md': `${MILESTONE}\n\n\`\`\`decision\nchosen: One entry per day\n\`\`\``,
     })
     assert.deepEqual(ids((await validate(root)).findings), [
-      'knowledge-decision-nothing-ruled-out-knowledge/slices/02-b.md-1',
+      'knowledge-decision-nothing-ruled-out-knowledge/milestones/02-b.md-1',
     ])
   })
 })

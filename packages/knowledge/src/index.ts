@@ -2,6 +2,7 @@ export {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
   type ProfileNote,
+  MILESTONE_TYPE,
   readKnowledgeNotes,
   resourceIds,
 } from './notes.js'
@@ -13,10 +14,7 @@ export {
   parseDecisionFence,
 } from './decision-fence.js'
 
-export {
-  type ResourcePrefix,
-  type ResourceUri,
-} from './resource-uri.js'
+export { type ResourcePrefix, type ResourceUri } from './resource-uri.js'
 
 export {
   type ResourceCheck,
@@ -27,8 +25,9 @@ export {
 } from './check-resources.js'
 
 export {
-  SLICE_STATUSES,
-  type SliceStatus,
+  MILESTONE_SECTION,
+  MILESTONE_STATUSES,
+  type MilestoneStatus,
   KnowledgeValidateInput,
   KnowledgeValidateOutput,
   type KnowledgeFinding,
