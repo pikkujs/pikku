@@ -20,8 +20,8 @@ describe('outboundLinks', () => {
     assert.deepEqual(
       outboundLinks(
         note(
-          'knowledge/slices/01-a.md',
-          '---\ntype: slice\n---\nSee [why](../decisions/why.md).'
+          'knowledge/milestones/01-a.md',
+          '---\ntype: milestone\n---\nSee [why](../decisions/why.md).'
         )
       ),
       ['knowledge/decisions/why.md']
@@ -33,10 +33,10 @@ describe('outboundLinks', () => {
       outboundLinks(
         note(
           'knowledge/index.md',
-          '---\ntype: overview\n---\n[a](slices/01-a.md#top)'
+          '---\ntype: overview\n---\n[a](milestones/01-a.md#top)'
         )
       ),
-      ['knowledge/slices/01-a.md']
+      ['knowledge/milestones/01-a.md']
     )
   })
 
@@ -63,15 +63,15 @@ describe('outboundLinks', () => {
   })
 
   test('does not read links out of a fenced block', () => {
-    // A slice body is mostly gherkin, and decisions quote paths. Bracket-and-paren
+    // A milestone body is mostly gherkin, and decisions quote paths. Bracket-and-paren
     // text in there is not a link a reader can click.
     assert.deepEqual(
       outboundLinks(
         note(
-          'knowledge/slices/01-a.md',
+          'knowledge/milestones/01-a.md',
           [
             '---',
-            'type: slice',
+            'type: milestone',
             '---',
             '```gherkin',
             "Given 'owner' opens [the day](../decisions/why.md)",
@@ -89,10 +89,10 @@ describe('outboundLinks', () => {
       outboundLinks(
         note(
           'knowledge/index.md',
-          '---\ntype: overview\n---\n[a](slices/01-a.md) and [again](slices/01-a.md)'
+          '---\ntype: overview\n---\n[a](milestones/01-a.md) and [again](milestones/01-a.md)'
         )
       ),
-      ['knowledge/slices/01-a.md']
+      ['knowledge/milestones/01-a.md']
     )
   })
 })
@@ -101,14 +101,14 @@ describe('buildKnowledgeGraph', () => {
   const bundle = () => [
     note(
       'knowledge/index.md',
-      '---\ntype: overview\ntitle: Knowledge\n---\n[slices](slices/index.md)'
+      '---\ntype: overview\ntitle: Knowledge\n---\n[milestones](milestones/index.md)'
     ),
-    note('knowledge/slices/index.md', '---\ntype: overview\n---\nPieces.'),
+    note('knowledge/milestones/index.md', '---\ntype: overview\n---\nPieces.'),
     note(
-      'knowledge/slices/01-a.md',
+      'knowledge/milestones/01-a.md',
       [
         '---',
-        'type: slice',
+        'type: milestone',
         'title: The daily entry',
         'description: One piece.',
         'status: proposed',
@@ -129,11 +129,11 @@ describe('buildKnowledgeGraph', () => {
     // Inbound is the half a markdown file cannot express: a note has no way to
     // say what points at it, and that is exactly what a reader wants to know.
     const graph = buildKnowledgeGraph(bundle())
-    assert.deepEqual(find(graph, 'knowledge/slices/01-a.md').outbound, [
+    assert.deepEqual(find(graph, 'knowledge/milestones/01-a.md').outbound, [
       'knowledge/decisions/why.md',
     ])
     assert.deepEqual(find(graph, 'knowledge/decisions/why.md').inbound, [
-      'knowledge/slices/01-a.md',
+      'knowledge/milestones/01-a.md',
     ])
   })
 
@@ -141,7 +141,7 @@ describe('buildKnowledgeGraph', () => {
     // OKF permits it: a link to a note nobody has written marks something worth
     // writing. It is surfaced, not failed.
     const graph = buildKnowledgeGraph(bundle())
-    assert.deepEqual(find(graph, 'knowledge/slices/01-a.md').dangling, [
+    assert.deepEqual(find(graph, 'knowledge/milestones/01-a.md').dangling, [
       'knowledge/decisions/later.md',
     ])
     assert.equal(graph.stats.dangling, 1)
@@ -149,20 +149,20 @@ describe('buildKnowledgeGraph', () => {
   })
 
   test('splits resource: and entities so a reader gets lists, not strings', () => {
-    const slice = find(
+    const milestone = find(
       buildKnowledgeGraph(bundle()),
-      'knowledge/slices/01-a.md'
+      'knowledge/milestones/01-a.md'
     )
-    assert.deepEqual(slice.resource, ['func:createEntry', 'table:entry'])
-    assert.deepEqual(slice.entities, ['entry', 'day'])
+    assert.deepEqual(milestone.resource, ['func:createEntry', 'table:entry'])
+    assert.deepEqual(milestone.entities, ['entry', 'day'])
   })
 
   test('counts sections without counting their own index.md', () => {
     const graph = buildKnowledgeGraph(bundle())
     assert.deepEqual(graph.sections, [
       {
-        name: 'slices',
-        description: KNOWLEDGE_SECTIONS['slices'],
+        name: 'milestones',
+        description: KNOWLEDGE_SECTIONS['milestones'],
         count: 1,
       },
       {
@@ -174,28 +174,28 @@ describe('buildKnowledgeGraph', () => {
   })
 
   test('orders sections the way the profile declares them, not alphabetically', () => {
-    // Alphabetical leads with `decisions` and buries `slices` last, which is the
-    // reverse of how a base is read: the slice first, then what governs it.
+    // Alphabetical leads with `decisions` and buries `milestones` last, which is the
+    // reverse of how a base is read: the milestone first, then what governs it.
     const graph = buildKnowledgeGraph([
       note('knowledge/questions/open.md', '---\ntype: question\n---\nq'),
       note('knowledge/decisions/why.md', '---\ntype: decision\n---\nd'),
       note('knowledge/entities/entry.md', '---\ntype: entity\n---\ne'),
-      note('knowledge/slices/01-a.md', '---\ntype: slice\n---\ns'),
+      note('knowledge/milestones/01-a.md', '---\ntype: milestone\n---\ns'),
     ])
     assert.deepEqual(
       graph.sections.map((section) => section.name),
-      ['slices', 'entities', 'decisions', 'questions']
+      ['milestones', 'entities', 'decisions', 'questions']
     )
   })
 
   test('a section not in the profile sorts after the ones that are', () => {
     const graph = buildKnowledgeGraph([
       note('knowledge/archive/old.md', '---\ntype: note\n---\na'),
-      note('knowledge/slices/01-a.md', '---\ntype: slice\n---\ns'),
+      note('knowledge/milestones/01-a.md', '---\ntype: milestone\n---\ns'),
     ])
     assert.deepEqual(
       graph.sections.map((section) => section.name),
-      ['slices', 'archive']
+      ['milestones', 'archive']
     )
   })
 

@@ -33,8 +33,8 @@ describe('checkKnowledgeResources', () => {
   test('passes when every resource resolves', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\nresource: func:createEntry, func:listEntries\n---\nx',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: func:createEntry, func:listEntries\n---\nx',
     })
     const result = await check(root)
     assert.deepEqual(result.problems, [])
@@ -46,8 +46,8 @@ describe('checkKnowledgeResources', () => {
   test('reports a dangling id — the note survived a rename the code did not keep', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\nresource: func:createEntrey\n---\nx',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: func:createEntrey\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.ok, false)
@@ -73,8 +73,8 @@ describe('checkKnowledgeResources', () => {
     // to ignore the check.
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\nresource: queue:nightly-digest\n---\nx',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: queue:nightly-digest\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.ok, true)
@@ -85,8 +85,8 @@ describe('checkKnowledgeResources', () => {
   test('checks a resolvable prefix even when another in the same note is skipped', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\nresource: queue:nightly, func:gone\n---\nx',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: queue:nightly, func:gone\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.skipped, 1)
@@ -99,8 +99,8 @@ describe('checkKnowledgeResources', () => {
     const root = await project({
       ...FUNC_META,
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\nresource: func:createEntry\n---\nx',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: func:createEntry\n---\nx',
     })
     assert.equal((await check(root)).notes, 1)
   })
@@ -134,8 +134,8 @@ describe('resource URIs in the prose', () => {
   test('an inline link is checked like a resource field', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\n---\nWritten by [createEntry](func:createEntry).',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\n---\nWritten by [createEntry](func:createEntry).',
     })
     const result = await check(root)
     assert.deepEqual(result.problems, [])
@@ -145,8 +145,8 @@ describe('resource URIs in the prose', () => {
   test('an inline link to a function nobody exports is drift', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\n---\nWritten by [saveEntry](func:saveEntry).',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\n---\nWritten by [saveEntry](func:saveEntry).',
     })
     const result = await check(root)
     assert.equal(result.problems.length, 1)
@@ -157,8 +157,8 @@ describe('resource URIs in the prose', () => {
   test('a mistyped kind is reported rather than passed over', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md':
-        '---\ntype: slice\n---\nWritten by [createEntry](fun:createEntry).',
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\n---\nWritten by [createEntry](fun:createEntry).',
     })
     const result = await check(root)
     assert.equal(result.problems[0]?.reason, 'unknown-prefix')
@@ -167,9 +167,9 @@ describe('resource URIs in the prose', () => {
   test('ordinary links are left alone', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md': [
+      'knowledge/milestones/01-a.md': [
         '---',
-        'type: slice',
+        'type: milestone',
         '---',
         'See [the docs](https://pikku.dev/docs), the [decision](../decisions/why.md),',
         'the [section](#how-it-works) and [us](mailto:hi@example.com).',
@@ -182,9 +182,9 @@ describe('resource URIs in the prose', () => {
   test('an example inside code is an example, not a claim', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/slices/01-a.md': [
+      'knowledge/milestones/01-a.md': [
         '---',
-        'type: slice',
+        'type: milestone',
         '---',
         'Write it as `[label](func:someFunction)`, like this:',
         '',

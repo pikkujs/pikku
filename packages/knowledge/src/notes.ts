@@ -26,8 +26,8 @@ export const sectionOf = (path: string): string => {
  * bundle: a markdown file whose **path is its identity**, carrying YAML
  * frontmatter plus a body. Only `type` is required.
  *
- * `status`, `entities` and `statusAt` apply to `type: slice`, which is a piece of
- * work rather than a fact — so unlike every other note it has a state, a size,
+ * `status`, `entities` and `statusAt` apply to `type: milestone`, which is a piece
+ * of work rather than a fact — so unlike every other note it has a state, a size,
  * and a time its state last changed.
  */
 export const KnowledgeNoteSchema = z.object({
@@ -58,6 +58,9 @@ export type KnowledgeNote = z.infer<typeof KnowledgeNoteSchema>
  */
 export type ProfileNote<Key extends string = never> = KnowledgeNote &
   Partial<Record<Key, string>>
+
+/** The `type:` a milestone note carries. */
+export const MILESTONE_TYPE = 'milestone'
 
 /**
  * The scalars this profile reads. A caller's own keys are passed to `parseNote`
