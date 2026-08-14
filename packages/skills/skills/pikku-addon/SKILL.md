@@ -50,9 +50,13 @@ wireAddon({
   mcp?: boolean,
   tags?: string[],                 // Tags applied to all addon functions
   scopes?: string[],               // Required of every function, on top of its own
-  secretOverrides?: Record<string, string>,      // Remap secret names
+  secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
   variableOverrides?: Record<string, string>,    // Remap variable names
-  credentialOverrides?: Record<string, string>,  // Remap credential names
+  credentialOverrides?: Record<string, string>,  // Remap credential names (and grant them)
+  secretGrants?: string[],                       // Secrets the app lends this addon
+  credentialGrants?: string[],                   // Credentials the app lends this addon
+  globalSecrets?: string,                        // Reason for handing over the whole SecretService
+  globalCredentials?: string,                    // Reason for handing over the whole CredentialService
 })
 ```
 
@@ -60,6 +64,58 @@ wireAddon({
 it would weaken the wiring's own gate — so the addon-level setting can require a
 session but never waive one. The same package wired twice under two namespaces is
 governed by the union of both instances' scopes and tags.
+
+### An addon reads only the secrets it declared
+
+An addon's `SecretService` and `CredentialService` are **scoped**: it may read
+the secrets its own source declares (literal `getSecret('X')` calls and
+`wireSecret` definitions, which the CLI collects into `declaredSecrets`) and
+nothing else. Anything undeclared throws `Access denied to secret key: X` at
+runtime. The same holds for credentials, and a scoped addon can never call
+`getAllUsers()`.
+
+That works for an addon naming its own secrets. It does not work for a _generic_
+addon whose secret names arrive as data — `@pikku/addon-graph` reads
+`getSecret(auth.credential)`, where the name comes off the workflow node — so
+such an addon declares nothing and is scoped to nothing. Only the consuming app
+can widen it, with one of three fields:
+
+```typescript
+wireAddon({
+  name: 'graph',
+  package: '@pikku/addon-graph',
+
+  secretGrants: ['STRIPE_KEY'], // lend these, unrenamed
+  secretOverrides: { MAILGUN_KEY: 'PROD_EMAIL_KEY' }, // lend + rename
+  // globalSecrets: 'why no static list can cover it' // lend everything
+})
+```
+
+| field             | meaning                                 |
+| ----------------- | --------------------------------------- |
+| `secretOverrides` | grant **and** rename                    |
+| `secretGrants`    | grant as-is                             |
+| `globalSecrets`   | grant everything, with a written reason |
+
+**Grants name the secret as the addon reads it**, not as your project stores it.
+Scoping is checked _before_ the override map renames anything, so an overridden
+secret is granted by its addon-side key — which is also why an override's key
+grants and its value does not. With no rename in play the two names coincide.
+
+`globalSecrets` / `globalCredentials` take the _reason_ for the grant, not a
+boolean, because every grant is enumerated in the deploy manifest
+(`unscopedSecretAddons`, `grantedSecretAddons`). Prefer `secretGrants` — reach
+for `globalSecrets` only when no static list can exist, and never for an addon
+that performs outbound requests, where an unrestricted secret read is an
+exfiltration primitive.
+
+A grant naming a secret your project does not declare is a build error from
+`pikku all`, resolved through the override map first:
+
+```
+Secret grant 'STIRPE_KEY' in addon 'graph' (@pikku/addon-graph) targets a secret
+that does not exist. Available secrets: BETTER_AUTH_SECRET, GITHUB_OAUTH
+```
 
 ### `ref(name)`
 

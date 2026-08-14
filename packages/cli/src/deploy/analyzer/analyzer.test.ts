@@ -248,6 +248,15 @@ function stateWithWiredAddons(): InspectorState {
             globalCredentials: 'links credentials an operator names at runtime',
           },
         ],
+        [
+          'graph',
+          {
+            package: '@pikku/addon-graph',
+            secretGrants: ['STRIPE_KEY', 'GITHUB_TOKEN'],
+            credentialGrants: ['slack'],
+            secretOverrides: { MAILGUN_KEY: 'PROD_EMAIL_KEY' },
+          },
+        ],
       ]),
     },
   } as unknown as InspectorState
@@ -292,6 +301,57 @@ describe('analyzeDeployment - unscoped addon secrets', () => {
 
     assert.deepEqual(manifest.unscopedSecretAddons, [])
     assert.deepEqual(manifest.unscopedCredentialAddons, [])
+  })
+
+  // A grant is the other half of the same waiver: the app lending an addon a
+  // secret it never declared. Enumerating only `globalSecrets` would leave a
+  // deployment blind to it.
+  test('the secrets an app lends an addon are reported with their names', () => {
+    const manifest = analyzeDeployment(stateWithWiredAddons(), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(manifest.grantedSecretAddons, [
+      {
+        namespace: 'graph',
+        package: '@pikku/addon-graph',
+        granted: ['GITHUB_TOKEN', 'MAILGUN_KEY', 'STRIPE_KEY'],
+      },
+    ])
+  })
+
+  test('a lent credential is reported separately from a lent secret', () => {
+    const manifest = analyzeDeployment(stateWithWiredAddons(), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(manifest.grantedCredentialAddons, [
+      {
+        namespace: 'graph',
+        package: '@pikku/addon-graph',
+        granted: ['slack'],
+      },
+    ])
+  })
+
+  test('an addon holding the whole service is not also reported as granted', () => {
+    const manifest = analyzeDeployment(stateWithWiredAddons(), {
+      projectId: 'test',
+    })
+
+    assert.ok(
+      !manifest.grantedSecretAddons.some((a) => a.namespace === 'console'),
+      'globalSecrets already reports it, and it grants no named set'
+    )
+  })
+
+  test('a project with no grants reports none', () => {
+    const manifest = analyzeDeployment(stateWithAgent('a', 'a'), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(manifest.grantedSecretAddons, [])
+    assert.deepEqual(manifest.grantedCredentialAddons, [])
   })
 })
 
