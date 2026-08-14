@@ -32,7 +32,7 @@ declare module '@pikku/core/scenario' {
  */
 export { expect } from '@playwright/test'
 
-export { type BrowserConfig } from './config.js'
+export { browserConfigFromEnv, type BrowserConfig } from './config.js'
 export { registered, type ElementKind, type ElementMap } from './elements.js'
 export { ActorSession } from './actor-session.js'
 export { slug } from './capture.js'
