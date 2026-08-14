@@ -11,6 +11,7 @@ import {
   readTextSafe,
   runSharedProjectChecks,
 } from '../../functions/validate/shared-checks.js'
+import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -434,6 +435,8 @@ export async function runValidate(
       }
     }
   }
+
+  findings.push(...(await runTypeIdentityChecks(root)))
 
   // ── scaffold-implied dependencies ──────────────────────────────────────
   // `scaffold.console` makes codegen import

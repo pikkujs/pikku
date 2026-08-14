@@ -6,6 +6,7 @@ import {
   runAddonPackageChecks,
 } from './addon-package-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
+import { runTypeIdentityChecks } from './type-identity-checks.js'
 import type { ValidateFinding as Finding } from './persona-checks.js'
 
 export type ValidateTarget = {
@@ -102,6 +103,17 @@ export const CHECKS: ValidateCheck[] = [
     subject: 'addon',
     applies: async ({ dir }) => isAddonPackage(dir),
     run: async ({ dir }) => runAddonPackageChecks(dir),
+  },
+  {
+    id: 'type-identity',
+    subject: 'linked dependencies',
+    // Root of an installed tree only. A linked dependency is a property of the
+    // install as a whole, so running this per workspace package reports the
+    // same pair N times — and with nothing installed there is nothing to
+    // compare.
+    applies: async ({ dir, label }) =>
+      label === '.' && existsSync(join(dir, 'node_modules')),
+    run: async ({ dir }) => runTypeIdentityChecks(dir),
   },
 ]
 
