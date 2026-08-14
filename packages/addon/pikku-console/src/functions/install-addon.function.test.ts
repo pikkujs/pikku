@@ -24,17 +24,26 @@ for (const [name, installer] of installers) {
       () =>
         verifyScopes(installer.scopes, {
           userId: 'alice',
-          scopes: ['pikku:scopes:read'],
+          scopes: ['pikku:console:scopes:read'],
         }),
       MissingScopeError
     )
   })
 
-  test(`${name} admits a caller holding the console install scope`, () => {
+  test(`${name} admits a holder of the install scope`, () => {
     assert.doesNotThrow(() =>
       verifyScopes(installer.scopes, {
         userId: 'root',
         scopes: ['pikku:console:addons:install'],
+      })
+    )
+  })
+
+  test(`${name} admits a holder of the console root`, () => {
+    assert.doesNotThrow(() =>
+      verifyScopes(installer.scopes, {
+        userId: 'root',
+        scopes: ['pikku:console'],
       })
     )
   })

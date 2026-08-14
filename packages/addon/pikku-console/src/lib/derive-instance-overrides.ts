@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
@@ -88,6 +89,24 @@ export function deriveInstanceOverrides(
 }
 
 /**
+ * An addon publishes its `.pikku` meta at the package root, under `dist`, or
+ * both — resolve whichever is on disk. `null` when the package ships neither.
+ */
+export function addonPikkuDir(
+  rootDir: string,
+  packageName: string
+): string | null {
+  const pkgDir = join(rootDir, 'node_modules', packageName)
+  for (const candidate of [
+    join(pkgDir, '.pikku'),
+    join(pkgDir, 'dist', '.pikku'),
+  ]) {
+    if (existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+/**
  * Read a freshly-installed addon package's declared logical names from the
  * `.pikku` meta it ships in node_modules. Missing meta files are treated as
  * "declares none" — an addon may have no secrets/variables/credentials.
@@ -96,7 +115,10 @@ export async function readAddonDeclaredNames(
   rootDir: string,
   packageName: string
 ): Promise<AddonDeclaredNames> {
-  const pkgPikku = join(rootDir, 'node_modules', packageName, '.pikku')
+  const pkgPikku = addonPikkuDir(rootDir, packageName)
+  if (!pkgPikku) {
+    return { secrets: [], variables: [], credentials: [] }
+  }
   // Read the id the addon actually reads by (secretId/variableId for secrets and
   // variables — the string it passes to getSecret / variables.get; the meta's
   // own name for credentials), falling back to the meta key for older meta. That
