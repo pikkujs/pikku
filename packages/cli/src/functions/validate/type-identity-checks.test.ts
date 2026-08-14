@@ -3,7 +3,10 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
-import { runTypeIdentityChecks } from './type-identity-checks.js'
+import {
+  runTypeIdentityChecks,
+  warnOnSplitTypeIdentity,
+} from './type-identity-checks.js'
 import { planValidation } from './validate-registry.js'
 
 const makeTmp = () => mkdtemp(join(tmpdir(), 'pikku-type-identity-'))
@@ -186,6 +189,55 @@ describe('split type identity via a linked dependency', () => {
       )
       assert.equal(planned.length, 1)
       assert.equal(planned[0]?.target.label, '.')
+    })
+  })
+})
+
+describe('warnOnSplitTypeIdentity (codegen preflight)', () => {
+  const collect = () => {
+    const warnings: string[] = []
+    return { warnings, logger: { warn: (m: string) => warnings.push(m) } }
+  }
+
+  test('warns, naming the code and both versions', async () => {
+    await withTmpPair(async (root, external) => {
+      await linkExternal(root, external, '1.6.27')
+      const { warnings, logger } = collect()
+      await warnOnSplitTypeIdentity(root, logger)
+      assert.equal(warnings.length, 1)
+      assert.match(warnings[0]!, /PKU719/)
+      assert.match(warnings[0]!, /1\.6\.27/)
+      assert.match(warnings[0]!, /1\.6\.23/)
+    })
+  })
+
+  test('says nothing when the versions agree', async () => {
+    await withTmpPair(async (root, external) => {
+      await linkExternal(root, external, '1.6.23')
+      const { warnings, logger } = collect()
+      await warnOnSplitTypeIdentity(root, logger)
+      assert.deepEqual(warnings, [])
+    })
+  })
+
+  // It runs on every codegen, so it must never be the reason a build stops.
+  test('never throws, even on an unreadable root', async () => {
+    const { warnings, logger } = collect()
+    await warnOnSplitTypeIdentity('/definitely/not/a/path', logger)
+    assert.deepEqual(warnings, [])
+  })
+
+  test('PIKKU_SKIP_TYPE_IDENTITY_CHECK silences it', async () => {
+    await withTmpPair(async (root, external) => {
+      await linkExternal(root, external, '1.6.27')
+      const { warnings, logger } = collect()
+      process.env.PIKKU_SKIP_TYPE_IDENTITY_CHECK = '1'
+      try {
+        await warnOnSplitTypeIdentity(root, logger)
+      } finally {
+        delete process.env.PIKKU_SKIP_TYPE_IDENTITY_CHECK
+      }
+      assert.deepEqual(warnings, [])
     })
   })
 })

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { lstat, readdir, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
+import { ErrorCode } from '@pikku/inspector'
 import { readJsonSafe } from './shared-checks.js'
 import type { ValidateFinding } from './persona-checks.js'
 
@@ -205,4 +206,33 @@ export async function runTypeIdentityChecks(
     }
   }
   return findings
+}
+
+/**
+ * Preflight for codegen. Runs BEFORE the typecheck, because the failure it
+ * explains kills the process rather than failing it: a V8 heap OOM aborts, so
+ * nothing printed after the fact is ever seen. By the time the user has a
+ * symptom, the only thing that can help them is already on screen above it.
+ *
+ * Warns rather than throws. A skewed linked dependency is a strong signal, not
+ * a certainty — plenty of them are harmless, and refusing to build on one would
+ * break working setups over a heuristic.
+ */
+export async function warnOnSplitTypeIdentity(
+  rootDir: string,
+  logger: { warn: (message: string) => void }
+): Promise<void> {
+  if (process.env?.PIKKU_SKIP_TYPE_IDENTITY_CHECK) return
+  const findings = await runTypeIdentityChecks(rootDir).catch(() => [])
+  if (findings.length === 0) return
+
+  logger.warn(
+    `[${ErrorCode.SPLIT_TYPE_IDENTITY}] ${findings.length === 1 ? 'A linked dependency resolves a shared package' : 'Linked dependencies resolve shared packages'} at a different version than this project:\n` +
+      findings.map((f) => `  ${f.message}`).join('\n') +
+      `\nTypeScript treats each pair as two unrelated types and structurally compares them\n` +
+      `wherever they meet, which inside a generic inference chain can exhaust the heap —\n` +
+      `codegen then dies of memory pressure instead of reporting an error.\n\n` +
+      `Fix: align the versions so both trees resolve one copy, or drop the link and\n` +
+      `reinstall. Set PIKKU_SKIP_TYPE_IDENTITY_CHECK=1 to silence this.`
+  )
 }
