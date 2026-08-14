@@ -6,6 +6,7 @@ import {
 import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
+  assertAddonPackageName,
   deriveInstanceOverrides,
   readAddonDeclaredNames,
   type InstanceOverrides,
@@ -28,6 +29,7 @@ export const installAddon = pikkuFunc<
     ready: boolean
     missingSecrets: string[]
     missingVariables: string[]
+    namespace: string
   }
 >({
   title: 'Install Addon',
@@ -44,10 +46,7 @@ export const installAddon = pikkuFunc<
       await import('node:fs/promises')
     const { join, dirname } = await import('node:path')
     const { existsSync } = await import('node:fs')
-    const validPkg = /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/
-    if (!validPkg.test(packageName)) {
-      throw new BadRequestError(`Invalid package name: ${packageName}`)
-    }
+    assertAddonPackageName(packageName)
     if (!/^[a-z0-9-]+$/.test(namespace)) {
       throw new BadRequestError(`Invalid namespace: ${namespace}`)
     }
@@ -132,6 +131,7 @@ wireAddon(${serializeWireAddon(namespace, packageName, overrides)})
       ready,
       missingSecrets,
       missingVariables,
+      namespace,
       message: ready
         ? `Installed ${packageName} and created ${wiringFile}. Restart the server to activate it.`
         : `Installed ${packageName} and created ${wiringFile}, but it cannot start until ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} set. Configure ${missing.length === 1 ? 'it' : 'them'}, then restart the server.`,

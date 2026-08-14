@@ -732,7 +732,7 @@ export const PackageDetailPage: React.FC<{
         <Box p="xl">
           {installResult ? (
             <AddonInstallOutcome
-              namespace={activeInstance?.namespace ?? id}
+              namespace={activeInstance?.namespace ?? installResult.namespace}
               result={installResult}
             />
           ) : (

@@ -14,6 +14,12 @@ export interface AddonInstallResult {
   ready: boolean
   missingSecrets: string[]
   missingVariables: string[]
+  /**
+   * The name the addon was actually wired under. Carried back because the
+   * console cannot read it from anywhere else until the server re-inspects,
+   * and the package id is a different thing that only coincides sometimes.
+   */
+  namespace: string
 }
 
 export const installResultKey = (packageName: string) => [
