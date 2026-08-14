@@ -20,6 +20,18 @@ export interface ImpersonationContextValue {
   setTarget: (user: AuthUser | null) => void
   clear: () => void
   instance: PikkuInstance
+  /**
+   * Whether the user picker is open.
+   *
+   * It lives beside the target rather than in the navigation chrome because
+   * more than one surface opens the same drawer — the dock on a pointer, the
+   * sidebar sheet on a phone, and the command palette on either — and each one
+   * holding its own flag would mean the palette could not reach the drawer the
+   * dock owns.
+   */
+  pickerOpen: boolean
+  openPicker: () => void
+  closePicker: () => void
 }
 
 const ImpersonationContext = createContext<ImpersonationContextValue | null>(
@@ -34,6 +46,7 @@ export const ImpersonationProvider: React.FC<{
   const auth = useOptionalAuth()
   const resolvedUrl = serverUrl ?? auth?.serverUrl ?? getServerUrl()
   const [target, setTarget] = useState<AuthUser | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const instance = useMemo(
     () => pikku({ serverUrl: resolvedUrl, credentials }),
@@ -54,8 +67,11 @@ export const ImpersonationProvider: React.FC<{
       setTarget,
       clear: () => setTarget(null),
       instance,
+      pickerOpen,
+      openPicker: () => setPickerOpen(true),
+      closePicker: () => setPickerOpen(false),
     }),
-    [target, instance]
+    [target, instance, pickerOpen]
   )
 
   return (

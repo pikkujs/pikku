@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { useNavigate } from '../../router'
 import type { SpotlightActionData } from '@mantine/spotlight'
 import { Spotlight, spotlight } from '@mantine/spotlight'
+import { useHotkeys } from '@mantine/hooks'
 import {
   FunctionSquare,
   GitBranch,
@@ -13,8 +14,18 @@ import {
   ListOrdered,
   Bot,
   Network,
+  UserCog,
 } from 'lucide-react'
+import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { useOptionalAuth } from '../../context/AuthContext'
+import { useOptionalImpersonation } from '../../context/ImpersonationContext'
+import { useDefaultNavSections, type NavSection } from '../project/Sidebar'
+
+export interface SpotlightSearchProps {
+  /** Defaults to the console's own nav, matching what the dock and sidebar show. */
+  sections?: NavSection[]
+}
 
 const TYPE_CONFIG: Record<
   string,
@@ -32,12 +43,45 @@ const TYPE_CONFIG: Record<
   agent: { icon: Bot, color: 'grape', href: '/agents' },
 }
 
-export const SpotlightSearch: React.FC = () => {
+export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
+  sections: sectionsProp,
+}) => {
   const { meta } = usePikkuMeta()
   const navigate = useNavigate()
+  const auth = useOptionalAuth()
+  const impersonation = useOptionalImpersonation()
+  const defaultSections = useDefaultNavSections()
+  const sections = sectionsProp ?? defaultSections
+  const canImpersonate =
+    (auth?.can('admin:impersonate') ?? false) && impersonation !== null
 
   const actions: SpotlightActionData[] = useMemo(() => {
     const items: SpotlightActionData[] = []
+
+    // The pages come first: the palette is the one way to reach any of them
+    // that does not depend on the chrome, which is a dock raised on hover at
+    // pointer widths and a closed sheet on a phone.
+    sections.forEach((section) => {
+      section.items.forEach((item) => {
+        items.push({
+          id: `nav-${item.href}`,
+          label: item.label,
+          description: section.title || undefined,
+          leftSection: <item.icon size={16} />,
+          onClick: () => navigate(item.href),
+        })
+      })
+    })
+
+    if (canImpersonate) {
+      items.push({
+        id: 'impersonate',
+        label: m.impersonate_button(),
+        description: m.spotlight_impersonate_description(),
+        leftSection: <UserCog size={16} />,
+        onClick: () => impersonation?.openPicker(),
+      })
+    }
 
     meta.functions?.forEach((func: any) => {
       items.push({
@@ -165,7 +209,11 @@ export const SpotlightSearch: React.FC = () => {
     }
 
     return items
-  }, [meta, navigate])
+  }, [meta, navigate, sections, canImpersonate, impersonation])
+
+  // The empty second argument is the point: it is the list of tags whose focus
+  // suppresses the hotkey, and it defaults to INPUT, TEXTAREA and SELECT.
+  useHotkeys([['mod+K', () => spotlight.open()]], [])
 
   return (
     <Spotlight
@@ -174,7 +222,11 @@ export const SpotlightSearch: React.FC = () => {
       searchProps={{
         placeholder: 'Search functions, routes, workflows...',
       }}
-      shortcut={['mod + K']}
+      // The shortcut is registered above rather than through `shortcut` here:
+      // that prop's hotkey skips inputs, so ⌘K would be dead for anyone who has
+      // just typed in a search or filter field — which is exactly when reaching
+      // for the palette is most likely.
+      //
       // Cap the results list so a long action list scrolls within the dialog
       // instead of running off the bottom of the screen.
       scrollable

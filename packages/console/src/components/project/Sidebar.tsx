@@ -61,6 +61,7 @@ import {
 } from '../../lib/branding'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
+import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import { useSidebarMode } from '../../context/SidebarModeProvider'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
@@ -358,8 +359,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const collapsed = sheet ? false : railCollapsed
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
-  const canImpersonate = auth?.can('admin:impersonate') ?? false
-  const [impersonateOpen, setImpersonateOpen] = useState(false)
+  const impersonation = useOptionalImpersonation()
+  // Without the provider there is no drawer to open, so the entry is not
+  // offered at all rather than rendering a control that cannot do anything.
+  const canImpersonate =
+    (auth?.can('admin:impersonate') ?? false) && impersonation !== null
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
@@ -591,7 +595,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               disabled={!collapsed}
             >
               <UnstyledButton
-                onClick={() => setImpersonateOpen(true)}
+                onClick={() => impersonation?.openPicker()}
                 data-testid="impersonate-open"
                 px={collapsed ? 0 : 10}
                 py={8}
@@ -723,8 +727,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {canImpersonate && (
         <ImpersonateDrawer
-          opened={impersonateOpen}
-          onClose={() => setImpersonateOpen(false)}
+          opened={impersonation?.pickerOpen ?? false}
+          onClose={() => impersonation?.closePicker()}
         />
       )}
     </Box>

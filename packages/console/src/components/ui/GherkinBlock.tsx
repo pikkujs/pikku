@@ -29,7 +29,12 @@ export const GherkinBlock: React.FC<{ code: string }> = ({ code }) => {
             data-heading={line.heading || undefined}
           >
             {line.keyword && (
-              <span className={classes.gherkinKeyword}>{line.keyword}</span>
+              // The trailing space is inside the column, which is already 6ch
+              // wide to hold it, so it costs nothing visually and keeps the
+              // line's text content a sentence — without it the keyword and the
+              // first word run together for anything reading the DOM rather
+              // than the layout, a screen reader among them.
+              <span className={classes.gherkinKeyword}>{line.keyword} </span>
             )}
             <span>
               {line.tokens.map((token, position) =>

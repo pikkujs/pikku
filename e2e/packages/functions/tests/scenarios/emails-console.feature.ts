@@ -33,7 +33,7 @@ export const emailTemplateGridScenario = pikkuScenario<void, { listed: true }>({
     await scenario.then(
       'sees the page title',
       'seesText',
-      { text: 'Emails' },
+      { text: 'Email Templates' },
       { actor: actors.admin }
     )
     await scenario.then(

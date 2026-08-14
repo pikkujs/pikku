@@ -673,6 +673,7 @@
   "auth_signed_in_as": "Signed in as {email}",
   "auth_dev_quick_login": "Quick login as {email}",
   "impersonate_button": "Impersonate",
+  "spotlight_impersonate_description": "Act as another user",
   "impersonate_title": "Impersonate user",
   "impersonate_search_placeholder": "Search users by email",
   "impersonate_empty": "No users found",

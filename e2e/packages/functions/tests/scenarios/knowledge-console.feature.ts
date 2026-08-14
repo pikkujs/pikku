@@ -110,10 +110,14 @@ export const knowledgeOpensASliceScenario = pikkuScenario<
     )
     // The note's own words, from the gherkin block. It is the note's content and
     // not the console's, which is why matching text is safe here.
+    //
+    // Without the quotes the source writes around `guest`: they are the syntax
+    // that marks a persona, and the block renders what they mark as a chip, so
+    // the line a reader sees is the sentence with the persona lifted out of it.
     await scenario.then(
       'sees the scenario that proves the slice',
       'seesText',
-      { text: "Given 'guest' holds the report-viewer role" },
+      { text: 'Given guest holds the report-viewer role' },
       { actor: actors.admin }
     )
 
