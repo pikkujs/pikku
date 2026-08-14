@@ -1,6 +1,6 @@
-import { resolveFeatureScenarios } from '@pikku/core/scenario'
-import type { CoreWorkflow } from '@pikku/core/workflow'
-import type { CoreFeature } from '@pikku/core/scenario'
+import { resolveFeatureScenarios } from '@pikku/core/ecosystem/scenario'
+import type { CoreWorkflow } from '@pikku/core/ecosystem/workflow'
+import type { CoreFeature } from '@pikku/core/ecosystem/scenario'
 
 /** One scenario run: a scenario name and, for a feature's paired entry, its input. */
 export type ScenarioPlanEntry = {

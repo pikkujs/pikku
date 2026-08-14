@@ -1,5 +1,5 @@
 import { hasScopes } from '@pikku/core'
-import { threadOwnerConstraint } from '@pikku/core/ai-agent'
+import { threadOwnerConstraint } from '@pikku/core/ecosystem/ai-agent'
 import { pikkuFunc } from '#pikku'
 
 const ADMIN_SCOPE_ROOT = 'admin'

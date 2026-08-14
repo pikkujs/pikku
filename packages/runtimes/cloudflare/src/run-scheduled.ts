@@ -1,5 +1,6 @@
 import type { ScheduledController } from '@cloudflare/workers-types'
-import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask } from '@pikku/core/scheduler'
+import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
 
 export const runScheduled = async (controller: ScheduledController) => {
   const traceId = `cron-${crypto.randomUUID()}`

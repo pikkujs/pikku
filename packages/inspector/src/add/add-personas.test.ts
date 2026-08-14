@@ -57,8 +57,8 @@ const inspectSources = async (sources: Record<string, string>) => {
 /** The declared world every persona below is checked against. */
 const withRoles = (...lines: string[]) =>
   [
-    "import { defineScope } from '@pikku/core/scope'",
-    "import { defineSystemRole } from '@pikku/core/role'",
+    "import { defineScope } from '@pikku/core/ecosystem/scope'",
+    "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
     "import { definePersonas } from '@pikku/core/persona'",
     'defineScope({ catalogue: { scopes: { read: {} } }, admin: {} })',
     'defineSystemRole({',

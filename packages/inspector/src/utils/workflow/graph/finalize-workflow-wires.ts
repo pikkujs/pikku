@@ -3,7 +3,7 @@ import type {
   SerializedWorkflowGraph,
   WorkflowWires,
 } from './workflow-graph.types.js'
-import type { CLICommandMeta } from '@pikku/core/cli'
+import type { CLICommandMeta } from '@pikku/core/ecosystem/cli'
 
 function parseWorkflowFuncId(
   pikkuFuncId: string

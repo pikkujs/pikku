@@ -7,9 +7,9 @@ import {
   InMemoryQueueService,
   InMemoryWorkflowService,
   InMemoryTriggerService,
-  InMemoryAIRunStateService,
   QueueWebhookService,
 } from '@pikku/core/services'
+import { InMemoryAIRunStateService } from '@pikku/core/ecosystem/services'
 import {
   KyselyAIStorageService,
   KyselyAIRunStateService,
@@ -17,7 +17,7 @@ import {
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { wireAIScorerQueueWorkers } from '@pikku/core/ai-scorer'
+import { wireAIScorerQueueWorkers } from '@pikku/core/ecosystem/ai-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
   LocalContent,

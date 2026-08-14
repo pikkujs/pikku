@@ -1,8 +1,5 @@
-import type {
-  AIMessage,
-  AIAgentStep,
-  AIContentPart,
-} from '@pikku/core/ai-agent'
+import type { AIMessage } from '@pikku/core/ai-agent'
+import type { AIAgentStep, AIContentPart } from '@pikku/core/ecosystem/ai-agent'
 import type { ModelMessage } from 'ai'
 
 export async function convertToSDKMessages(

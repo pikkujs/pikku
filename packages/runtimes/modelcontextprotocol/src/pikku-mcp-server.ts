@@ -32,20 +32,18 @@ import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
-import type { PikkuHTTP } from '@pikku/core/http'
+import type { PikkuHTTP } from '@pikku/core/ecosystem/http'
 import { PikkuFetchHTTPRequest } from '@pikku/core/http'
 
-import type { PikkuMCP } from '@pikku/core/mcp'
+import type { PikkuMCP } from '@pikku/core/ecosystem/mcp'
+import { runMCPTool, runMCPResource, runMCPPrompt } from '@pikku/core/mcp'
 import {
   MCPEndpointRegistry,
   MCPError,
-  runMCPTool,
-  runMCPResource,
-  runMCPPrompt,
   getMCPResourcesMeta,
   getMCPToolsMeta,
   getMCPPromptsMeta,
-} from '@pikku/core/mcp'
+} from '@pikku/core/ecosystem/mcp'
 
 export interface MCPServerConfig extends CoreConfig {
   name: string

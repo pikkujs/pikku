@@ -106,7 +106,7 @@ export const pikkuCommandHTTP = pikkuSessionlessFunc<void, boolean | undefined>(
       await writeFileInDir(
         logger,
         httpWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/ecosystem'\nimport type { HTTPWiringsMeta } from '@pikku/core/http'\n${importStatement}\npikkuState(null, 'http', 'meta', metaData as HTTPWiringsMeta)`
+        `import { pikkuState } from '@pikku/core/ecosystem'\nimport type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'\n${importStatement}\npikkuState(null, 'http', 'meta', metaData as HTTPWiringsMeta)`
       )
 
       return true

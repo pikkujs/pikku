@@ -3,7 +3,7 @@ import { Box, Text, Group, Badge, Tabs } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import type { ChannelMeta } from '@pikku/core/channel'
+import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
 import { usePanelContext } from '../../context/PanelContext'
 import {
   useFunctionMeta,
@@ -187,7 +187,12 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                   fontSize: 11,
                 }}
               >
-                <Text component="span" c="var(--app-accent)" size="sm" ff="monospace">
+                <Text
+                  component="span"
+                  c="var(--app-accent)"
+                  size="sm"
+                  ff="monospace"
+                >
                   {asI18n(selected.category)}
                 </Text>
                 <Text component="span" c="dimmed" size="sm" ff="monospace">
@@ -216,7 +221,9 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                 <Group gap={4}>
                   {selectedData.meta.middleware.map((mw: any, i: number) => (
                     <Badge key={i} size="sm" variant="light" color="gray">
-                      {asI18n(typeof mw === 'string' ? mw : mw.type || 'middleware')}
+                      {asI18n(
+                        typeof mw === 'string' ? mw : mw.type || 'middleware'
+                      )}
                     </Badge>
                   ))}
                 </Group>

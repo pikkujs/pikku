@@ -2,17 +2,17 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { addFunction } from '@pikku/core/function'
 import { pikkuState } from '@pikku/core/ecosystem'
+import { isTestRun } from '@pikku/core/services'
 import {
   getStubTracker,
-  isTestRun,
   type CoverageFunctionMeta,
-} from '@pikku/core/services'
+} from '@pikku/core/ecosystem/services'
 import {
   enableScoreSnapshots,
   getScoreSnapshot,
   gradeRun as coreGradeRun,
-} from '@pikku/core/ai-scorer'
-import type { FunctionsMeta } from '@pikku/core'
+} from '@pikku/core/ecosystem/ai-scorer'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 
 /**
  * The instrumentation `pikku scenario run` calls on the server under test:

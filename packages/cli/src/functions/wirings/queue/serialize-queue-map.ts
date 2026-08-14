@@ -1,4 +1,4 @@
-import type { QueueWorkersMeta } from '@pikku/core/queue'
+import type { QueueWorkersMeta } from '@pikku/core/ecosystem/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from '@pikku/inspector'

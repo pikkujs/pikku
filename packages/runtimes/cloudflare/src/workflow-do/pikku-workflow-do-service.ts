@@ -1,17 +1,7 @@
 import type { DurableObjectStorage } from '@cloudflare/workers-types'
-import type { SerializedError } from '@pikku/core'
-import {
-  PikkuWorkflowService,
-  type StepState,
-  type StepStatus,
-  type WorkflowPlannedStep,
-  type WorkflowRun,
-  type WorkflowRunMirror,
-  type WorkflowRunWire,
-  type WorkflowStatus,
-  type WorkflowStepOptions,
-  type WorkflowVersionStatus,
-} from '@pikku/core/workflow'
+import type { SerializedError } from '@pikku/core/ecosystem/types'
+import { PikkuWorkflowService } from '@pikku/core/workflow'
+import type { StepState, StepStatus, WorkflowPlannedStep, WorkflowRun, WorkflowRunMirror, WorkflowRunWire, WorkflowStatus, WorkflowStepOptions, WorkflowVersionStatus } from '@pikku/core/ecosystem/workflow'
 import type {
   DoPendingAlarm,
   DoRunRecord,

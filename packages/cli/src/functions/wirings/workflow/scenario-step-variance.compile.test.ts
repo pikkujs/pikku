@@ -17,8 +17,8 @@ import { fileURLToPath } from 'node:url'
  * populated step map and an empty one.
  */
 const WIRE = `
-import type { PikkuWorkflowWire } from '@pikku/core/workflow'
-import type { PikkuScenarioWire, ScenarioStepOptions } from '@pikku/core/scenario'
+import type { PikkuWorkflowWire } from '@pikku/core/ecosystem/workflow'
+import type { PikkuScenarioWire, ScenarioStepOptions } from '@pikku/core/ecosystem/scenario'
 
 interface TypedWorkflow extends PikkuWorkflowWire {}
 `

@@ -1,4 +1,4 @@
-import type { FunctionMeta } from '@pikku/core'
+import type { FunctionMeta } from '@pikku/core/ecosystem/services'
 
 /**
  * Thrown when a function's explicit `deploy: 'serverless'` conflicts

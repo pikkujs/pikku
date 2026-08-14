@@ -1,4 +1,7 @@
-import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
+import type {
+  TriggerMeta,
+  TriggerSourceMeta,
+} from '@pikku/core/ecosystem/trigger'
 
 export const serializeTriggerMeta = (triggerMeta: TriggerMeta) => {
   return triggerMeta
@@ -15,7 +18,9 @@ export const serializeTriggerMetaTS = (
 
   const serializedOutput: string[] = []
   serializedOutput.push("import { pikkuState } from '@pikku/core/ecosystem'")
-  serializedOutput.push("import { TriggerMeta } from '@pikku/core/trigger'")
+  serializedOutput.push(
+    "import { TriggerMeta } from '@pikku/core/ecosystem/trigger'"
+  )
   serializedOutput.push(importStatement)
   serializedOutput.push('')
   serializedOutput.push(
@@ -48,7 +53,7 @@ export const serializeTriggerSourceMetaTS = (
   const serializedOutput: string[] = []
   serializedOutput.push("import { pikkuState } from '@pikku/core/ecosystem'")
   serializedOutput.push(
-    "import { TriggerSourceMeta } from '@pikku/core/trigger'"
+    "import { TriggerSourceMeta } from '@pikku/core/ecosystem/trigger'"
   )
   serializedOutput.push(importStatement)
   serializedOutput.push('')

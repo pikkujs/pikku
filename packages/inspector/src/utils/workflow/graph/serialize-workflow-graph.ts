@@ -1,4 +1,4 @@
-import { isRef } from '@pikku/core/workflow'
+import { isRef } from '@pikku/core/ecosystem/workflow'
 import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,

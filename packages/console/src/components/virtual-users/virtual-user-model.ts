@@ -1,7 +1,10 @@
 import {
-  catalogueClassification,
   deriveCatalogue,
   deriveIntents,
+  type VirtualUserDisposition,
+} from '@pikku/core/virtual-user'
+import {
+  catalogueClassification,
   dispositionProfile,
   intentsForPersona,
   isReadOnly,
@@ -9,12 +12,11 @@ import {
   unreachableCatalogue,
   type DispositionProfile,
   type IntentSource,
-  type VirtualUserDisposition,
-} from '@pikku/core/virtual-user'
-import type { FunctionsMeta } from '@pikku/core'
-import type { ResolvedPersona } from '@pikku/core/services'
-import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+} from '@pikku/core/ecosystem/virtual-user'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+import type { SystemRoleDefinitionsMeta } from '@pikku/core/ecosystem/role'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 
 /**
  * The reading model for a declared persona, seen as the virtual user a run

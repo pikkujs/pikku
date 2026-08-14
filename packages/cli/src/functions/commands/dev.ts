@@ -3,21 +3,20 @@ import { existsSync, readFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
+import { pikkuDevReloader } from '@pikku/core/dev'
 import {
-  pikkuDevReloader,
   reloadGeneratedMeta,
   reconcileAddonRegistry,
-} from '@pikku/core/dev'
+} from '@pikku/core/ecosystem/dev'
 import {
   ConsoleLogger,
   LocalEmailService,
-  spy,
   InMemoryQueueService,
   InMemoryWorkflowService,
   InMemoryTriggerService,
-  InMemoryAIRunStateService,
   QueueWebhookService,
 } from '@pikku/core/services'
+import { spy, InMemoryAIRunStateService } from '@pikku/core/ecosystem/services'
 import {
   KyselyAIStorageService,
   KyselyAIRunStateService,
@@ -25,7 +24,7 @@ import {
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { wireAIScorerQueueWorkers } from '@pikku/core/ai-scorer'
+import { wireAIScorerQueueWorkers } from '@pikku/core/ecosystem/ai-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
   LocalContent,

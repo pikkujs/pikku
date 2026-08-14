@@ -1,4 +1,7 @@
-import { hmacSha256Hex, timingSafeStringEqual } from '@pikku/core/hmac'
+import {
+  hmacSha256Hex,
+  timingSafeStringEqual,
+} from '@pikku/core/ecosystem/hmac'
 
 /**
  * Verify a Slack request signature.

@@ -1,5 +1,5 @@
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 
 export const serializeFunctionImports = (
   outputPath: string,

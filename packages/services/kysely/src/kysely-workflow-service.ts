@@ -1,15 +1,6 @@
-import type { SerializedError } from '@pikku/core'
-import {
-  PikkuWorkflowService,
-  type WorkflowPlannedStep,
-  type WorkflowQueueOptions,
-  type WorkflowRun,
-  type WorkflowRunWire,
-  type StepState,
-  type StepStatus,
-  type WorkflowStatus,
-  type WorkflowVersionStatus,
-} from '@pikku/core/workflow'
+import type { SerializedError } from '@pikku/core/ecosystem/types'
+import { PikkuWorkflowService } from '@pikku/core/workflow'
+import type { WorkflowPlannedStep, WorkflowQueueOptions, WorkflowRun, WorkflowRunWire, StepState, StepStatus, WorkflowStatus, WorkflowVersionStatus } from '@pikku/core/ecosystem/workflow'
 import { sql, type Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'

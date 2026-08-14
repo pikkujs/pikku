@@ -55,8 +55,8 @@ const inspectSources = async (sources: Record<string, string>) => {
 }
 
 const IMPORTS = [
-  "import { defineScope } from '@pikku/core/scope'",
-  "import { defineSystemRole } from '@pikku/core/role'",
+  "import { defineScope } from '@pikku/core/ecosystem/scope'",
+  "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
 ]
 
 const withScopes = (...lines: string[]) =>
@@ -118,10 +118,10 @@ describe('addSystemRole inspector', () => {
       )
     )
 
-    assert.deepEqual(
-      state.systemRoles.definitions.map((r) => r.name).sort(),
-      ['admin', 'buyer']
-    )
+    assert.deepEqual(state.systemRoles.definitions.map((r) => r.name).sort(), [
+      'admin',
+      'buyer',
+    ])
   })
 
   // Roles follow scopes: a project scaffolding user-admin has a generated
@@ -132,7 +132,7 @@ describe('addSystemRole inspector', () => {
         "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })"
       ),
       'more-roles.ts': [
-        "import { defineSystemRole } from '@pikku/core/role'",
+        "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
         "defineSystemRole({ admin: { scopes: ['admin'] } })",
       ].join('\n'),
     })
@@ -142,10 +142,10 @@ describe('addSystemRole inspector', () => {
       [],
       `expected no duplicate critical, got ${JSON.stringify(criticals)}`
     )
-    assert.deepEqual(
-      state.systemRoles.definitions.map((r) => r.name).sort(),
-      ['admin', 'buyer']
-    )
+    assert.deepEqual(state.systemRoles.definitions.map((r) => r.name).sort(), [
+      'admin',
+      'buyer',
+    ])
   })
 
   // A generated file is not the one place a person adds a role to, so it neither
@@ -153,7 +153,7 @@ describe('addSystemRole inspector', () => {
   test('a generated declaration neither claims the slot nor conflicts', async () => {
     const { state, criticals } = await inspectSources({
       'roles.gen.ts': [
-        "import { defineSystemRole } from '@pikku/core/role'",
+        "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
         'defineSystemRole({ admin: { scopes: [] } })',
       ].join('\n'),
       'roles.ts': withScopes(

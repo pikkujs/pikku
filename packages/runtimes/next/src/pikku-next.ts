@@ -5,7 +5,10 @@ import type {
   CoreSingletonServices,
   CreateConfig,
 } from '@pikku/core'
-import type { HTTPMethod, RunHTTPWiringOptions } from '@pikku/core/http'
+import type {
+  HTTPMethod,
+  RunHTTPWiringOptions,
+} from '@pikku/core/ecosystem/http'
 import { fetchData, fetch } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
@@ -122,9 +125,7 @@ export class PikkuNextJS<
 
     if (!this.singletonServicesPromise) {
       this.singletonServicesPromise = (async () => {
-        const config = this.createConfig
-          ? await this.createConfig()
-          : ({} as C)
+        const config = this.createConfig ? await this.createConfig() : ({} as C)
         const singletonServices = await this.createSingletonServices(config)
         this.singletonServices = singletonServices
         return singletonServices

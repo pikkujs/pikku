@@ -145,14 +145,8 @@ export const ExecuteVirtualUserRunOutput = z.object({
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuFunc, pikkuSessionlessFunc, defineScope } from '${pathToPikkuTypes}'
-import {
-  personaVirtualUserTarget,
-  prepareVirtualUserRun,
-  runVirtualUser as runVirtualUserEngine,
-  PRODUCTION_DISPOSITION,
-  type SchemaMap,
-  type VirtualUserDisposition,
-} from '@pikku/core/virtual-user'
+import { personaVirtualUserTarget, runVirtualUser as runVirtualUserEngine, type SchemaMap, type VirtualUserDisposition } from '@pikku/core/virtual-user'
+import { prepareVirtualUserRun, PRODUCTION_DISPOSITION } from '@pikku/core/ecosystem/virtual-user'
 import { createPersonas, personaConfigs } from '${pathToPersonas}'
 import {
   ExecuteVirtualUserRunInput,

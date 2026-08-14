@@ -1,9 +1,8 @@
+import type { AIThread, AIMessage } from '@pikku/core/ai-agent'
 import type {
-  AIThread,
-  AIMessage,
   AgentRunRow,
   AgentRunService,
-} from '@pikku/core/ai-agent'
+} from '@pikku/core/ecosystem/ai-agent'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'

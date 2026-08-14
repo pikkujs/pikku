@@ -11,10 +11,11 @@ export const serializeChannelTypes = (
  * Channel-specific type definitions for tree-shaking optimization
  */
 
-import { CoreChannel, CorePikkuChannelMiddleware, CorePikkuChannelMiddlewareFactory, wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore, addChannelMiddleware as addChannelMiddlewareCore } from '@pikku/core/channel'
-import { AssertHTTPWiringParams } from '@pikku/core/http'
+import { wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore } from '@pikku/core/channel'
+import { CoreChannel, CorePikkuChannelMiddleware, CorePikkuChannelMiddlewareFactory, addChannelMiddleware as addChannelMiddlewareCore } from '@pikku/core/ecosystem/channel'
+import { AssertHTTPWiringParams } from '@pikku/core/ecosystem/http'
 import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, Services } from '${functionTypesImportPath}'
-import type { CorePermissionGroup } from '@pikku/core'
+import type { CorePermissionGroup } from '@pikku/core/ecosystem/types'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**

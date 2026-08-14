@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as ts from 'typescript'
 import { extractDSLWorkflow } from './extract-dsl-workflow.js'
-import type { ApprovalStepMeta } from '@pikku/core/workflow'
+import type { ApprovalStepMeta } from '@pikku/core/ecosystem/workflow'
 
 const checker = {
   getSymbolAtLocation: () => undefined,
@@ -26,7 +26,10 @@ const approvalStepFor = (options: string): ApprovalStepMeta => {
 
   let node: ts.Node | undefined
   const visit = (n: ts.Node) => {
-    if (ts.isCallExpression(n) && n.expression.getText() === 'pikkuWorkflowFunc') {
+    if (
+      ts.isCallExpression(n) &&
+      n.expression.getText() === 'pikkuWorkflowFunc'
+    ) {
       node = n
     }
     ts.forEachChild(n, visit)

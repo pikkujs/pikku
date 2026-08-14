@@ -154,8 +154,8 @@ export const run = async () => actors.nobody.invoke('console:ping', null)
 
   test('the narrowed registry still satisfies the wire constraint', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-import type { PikkuWire } from '@pikku/core'
-import type { ScenarioPersonas } from '@pikku/core/services'
+import type { PikkuWire } from '@pikku/core/ecosystem/types'
+import type { ScenarioPersonas } from '@pikku/core/ecosystem/services'
 
 declare const actors: TypedPersonas
 export const open: ScenarioPersonas = actors
@@ -179,7 +179,7 @@ export const stepActor = (wire: Wire) => wire.scenarioStep?.actor
 
   test('HttpPersona still satisfies the default generic', () => {
     const errors = typeErrors(`
-import type { HttpPersona } from '@pikku/core/persona'
+import type { HttpPersona } from '@pikku/core/ecosystem/persona'
 import type { ScenarioPersona } from '@pikku/core/services'
 
 declare const actor: HttpPersona

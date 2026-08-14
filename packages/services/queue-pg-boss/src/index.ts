@@ -11,10 +11,9 @@ export { PgBossQueueWorkers } from './pg-boss-queue-worker.js'
 export { PgBossSchedulerService } from './pg-boss-scheduler-service.js'
 
 // Re-export core queue types for convenience
+export type { QueueService, QueueJob } from '@pikku/core/queue'
 export type {
-  QueueService,
   PikkuWorkerConfig,
   PikkuJobConfig,
-  QueueJob,
   JobOptions,
-} from '@pikku/core/queue'
+} from '@pikku/core/ecosystem/queue'

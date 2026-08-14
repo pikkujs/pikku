@@ -9,7 +9,7 @@
  */
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import type { Logger } from '@pikku/core/services'
 
 /**

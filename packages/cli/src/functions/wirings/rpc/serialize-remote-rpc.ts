@@ -26,7 +26,7 @@ export const RemoteRPCCall = z.object({
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuSessionlessFunc, wireHTTP, wireQueueWorker } from '${pathToPikkuTypes}'
-import { pikkuRemoteAuthMiddleware } from '@pikku/core/middleware'
+import { pikkuRemoteAuthMiddleware } from '@pikku/core/ecosystem/middleware'
 import { RemoteRPCCall } from './rpc-remote.schemas.gen.js'
 
 export const remoteRPCHandler = pikkuSessionlessFunc({

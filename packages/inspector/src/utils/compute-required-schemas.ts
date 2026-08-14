@@ -1,4 +1,4 @@
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import type { TypesMap } from '../types-map.js'
 import type { SchemaRef } from '../types.js'
 

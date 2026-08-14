@@ -1,10 +1,9 @@
+import type { AIThread, AIMessage } from '@pikku/core/ai-agent'
 import type {
-  AIThread,
-  AIMessage,
   AgentRunRow,
   AgentRunService,
-} from '@pikku/core/ai-agent'
-import { isOwnedByPrincipal } from '@pikku/core/ai-agent'
+} from '@pikku/core/ecosystem/ai-agent'
+import { isOwnedByPrincipal } from '@pikku/core/ecosystem/ai-agent'
 import type { Redis } from 'ioredis'
 
 export class RedisAgentRunService implements AgentRunService {

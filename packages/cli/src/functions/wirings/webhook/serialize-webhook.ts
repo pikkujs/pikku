@@ -32,7 +32,7 @@ export const WebhookDelivery = z.object({
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuSessionlessFunc, wireQueueWorker } from '${pathToPikkuTypes}'
-import { pikkuWebhookWorkerFunc } from '@pikku/core/services'
+import { pikkuWebhookWorkerFunc } from '@pikku/core/ecosystem/services'
 import { WebhookDelivery } from './webhook.schemas.gen.js'
 
 wireQueueWorker({

@@ -41,9 +41,12 @@ export {
 } from './schema/index.js'
 
 export type { KyselyPikkuDB } from './kysely-tables.js'
-export type { WorkflowRunService } from '@pikku/core/workflow'
-export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'
+export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
+export type {
+  AgentRunService,
+  AgentRunRow,
+} from '@pikku/core/ecosystem/ai-agent'
 export type {
   VirtualUserRunStore,
   VirtualUserRunRecord,
-} from '@pikku/core/virtual-user'
+} from '@pikku/core/ecosystem/virtual-user'

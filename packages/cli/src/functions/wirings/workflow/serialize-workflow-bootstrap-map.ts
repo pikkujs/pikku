@@ -1,4 +1,4 @@
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 
 /**

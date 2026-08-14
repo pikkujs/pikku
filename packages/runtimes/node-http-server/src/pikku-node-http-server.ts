@@ -16,19 +16,16 @@ import {
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
-import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
+import { installNodeHostResolver } from '@pikku/core/ecosystem/node-host-resolver'
 import { pikkuState } from '@pikku/core/ecosystem'
-import {
-  signedContentPath,
-  type LocalContentConfig,
-} from '@pikku/core/services/local-content'
+import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import { signedContentPath } from '@pikku/core/ecosystem/services/local-content'
 import type { JWTService, Logger } from '@pikku/core/services'
+import { fetchData, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import {
-  fetchData,
-  PikkuFetchHTTPResponse,
   logRoutes as logRegisterRoutes,
   type RunHTTPWiringOptions,
-} from '@pikku/core/http'
+} from '@pikku/core/ecosystem/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 import {
   runQueueJob,

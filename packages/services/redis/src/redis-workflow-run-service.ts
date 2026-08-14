@@ -3,7 +3,7 @@ import type {
   StepState,
   WorkflowStatus,
   WorkflowRunService,
-} from '@pikku/core/workflow'
+} from '@pikku/core/ecosystem/workflow'
 import type { Redis } from 'ioredis'
 
 export class RedisWorkflowRunService implements WorkflowRunService {

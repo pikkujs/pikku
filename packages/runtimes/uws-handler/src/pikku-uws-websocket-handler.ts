@@ -1,6 +1,6 @@
 import type * as uWS from 'uWebSockets.js'
-import { logChannels } from '@pikku/core/channel'
-import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
+import { logChannels } from '@pikku/core/ecosystem/channel'
+import type { PikkuLocalChannelHandler } from '@pikku/core/ecosystem/channel/local'
 import { runLocalChannel } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
 

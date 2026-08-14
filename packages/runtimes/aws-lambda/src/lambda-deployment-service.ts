@@ -10,10 +10,13 @@
  */
 
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
-import type { DeploymentService, DeploymentConfig } from '@pikku/core/services'
+import type {
+  DeploymentService,
+  DeploymentConfig,
+} from '@pikku/core/ecosystem/services'
 import type { JWTService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
-import { buildRemoteHeaders } from '@pikku/core/remote'
+import { buildRemoteHeaders } from '@pikku/core/ecosystem/remote'
 
 export class LambdaDeploymentService implements DeploymentService {
   private client: LambdaClient

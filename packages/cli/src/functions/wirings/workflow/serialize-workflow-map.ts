@@ -1,12 +1,12 @@
 /**
  * Generate workflow map type definitions for type-safe client API
  */
-import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
-import type { FunctionsMeta } from '@pikku/core'
-import { parseVersionedId } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import { parseVersionedId } from '@pikku/core/ecosystem/types'
 import type { Logger } from '@pikku/core/services'
 
 /**

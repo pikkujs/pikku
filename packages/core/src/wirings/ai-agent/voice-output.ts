@@ -2,7 +2,7 @@ import type { AIAgentRunnerService } from '../../services/ai-agent-runner-servic
 import { pikkuAIMiddleware } from '../../types/core.types.js'
 import { SPOKEN_TURN } from './voice-input.js'
 
-type VoiceOutputState = {
+export type VoiceOutputState = {
   textBuffer?: string
   /**
    * The audio emitted so far, as a chain.

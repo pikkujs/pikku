@@ -17,7 +17,7 @@ export const serializeWorkflowMeta = (
 
   if (workflowNames.length === 0) {
     return `import { pikkuState } from '@pikku/core/ecosystem'
-import type { WorkflowsRuntimeMeta } from '@pikku/core/workflow/types'
+import type { WorkflowsRuntimeMeta } from '@pikku/core/ecosystem/workflow'
 
 const workflowsMeta: WorkflowsRuntimeMeta = {}
 
@@ -49,7 +49,7 @@ pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
     .join('\n')
 
   return `import { pikkuState } from '@pikku/core/ecosystem'
-import type { WorkflowsRuntimeMeta } from '@pikku/core/workflow/types'
+import type { WorkflowsRuntimeMeta } from '@pikku/core/ecosystem/workflow'
 
 ${imports}
 

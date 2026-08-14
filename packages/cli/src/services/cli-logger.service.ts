@@ -2,7 +2,7 @@ import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
 import type { Safe } from '@pikku/core'
 import { LogLevel } from '@pikku/core/services'
-import { isExpectedError } from '@pikku/core'
+import { isExpectedError } from '@pikku/core/ecosystem/types'
 import type {
   ErrorCode,
   DiagnosticSeverity,

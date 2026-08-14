@@ -21,7 +21,7 @@ import type {
   AIAgentStepResult,
 } from '@pikku/core/services'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
-import { resolveModelAlias } from '@pikku/core/ai-agent'
+import { resolveModelAlias } from '@pikku/core/ecosystem/ai-agent'
 import { convertToSDKMessages } from './message-converter.js'
 
 type AIProviderOptions = Record<string, Record<string, unknown>>

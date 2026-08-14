@@ -805,7 +805,7 @@ function emitGraphFile(
     `import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'`,
   ]
   if (anyTemplate)
-    imports.push(`import { template } from '@pikku/core/workflow'`)
+    imports.push(`import { template } from '@pikku/core/ecosystem/workflow'`)
 
   const notesLine =
     parsed.stickyNotes.length > 0
@@ -1512,7 +1512,7 @@ function emitAddonsFile(
       ].join('\n')
     )
   return [
-    `import { wireAddon } from '@pikku/core/rpc'`,
+    `import { wireAddon } from '@pikku/core/ecosystem/rpc'`,
     ``,
     `// TODO(n8n): verify each addon package + credential key — packages are`,
     `// inferred from the n8n credential type and refined by the addon-map step.`,

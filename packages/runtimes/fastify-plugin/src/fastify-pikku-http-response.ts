@@ -1,5 +1,5 @@
 import type { FastifyReply } from 'fastify'
-import type { PikkuHTTPResponse } from '@pikku/core/http'
+import type { PikkuHTTPResponse } from '@pikku/core/ecosystem/http'
 import { serialize as serializeCookie, type SerializeOptions } from 'cookie'
 
 export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {

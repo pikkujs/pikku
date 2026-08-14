@@ -1,5 +1,5 @@
 import type { InspectorLogger, InspectorState } from '../types.js'
-import type { JSONValue } from '@pikku/core'
+import type { JSONValue } from '@pikku/core/ecosystem/types'
 import { resolveFunctionMeta } from './resolve-function-meta.js'
 
 interface MCPEndpoint {

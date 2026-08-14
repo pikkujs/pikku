@@ -6,9 +6,10 @@ export const serializeHTTPTypes = (functionTypesImportPath: string) => {
  * HTTP-specific type definitions for tree-shaking optimization
  */
 
-import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
+import { wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
+import { AssertHTTPWiringParams } from '@pikku/core/ecosystem/http'
 import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
-import type { CoreHTTPFunctionWiring, HTTPMethod, HTTPRouteBaseConfig } from '@pikku/core/http'
+import type { CoreHTTPFunctionWiring, HTTPMethod, HTTPRouteBaseConfig } from '@pikku/core/ecosystem/http'
 
 /**
  * Type definition for HTTP API wirings with type-safe path parameters.

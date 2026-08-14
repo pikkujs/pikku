@@ -1,4 +1,5 @@
-import type { AuthInstance, CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core'
+import type { AuthInstance } from '@pikku/core/ecosystem/types'
 import { pikkuState } from '@pikku/core/ecosystem'
 
 /**

@@ -1,5 +1,5 @@
 import type { Services } from '../../types/application-types.js'
-import type { PikkuWire } from '@pikku/core'
+import type { PikkuWire } from '@pikku/core/ecosystem/types'
 
 // Middleware type for CLI
 type PikkuMiddleware = (

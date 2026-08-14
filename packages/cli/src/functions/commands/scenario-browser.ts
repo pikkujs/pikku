@@ -10,8 +10,8 @@
 import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
-} from '@pikku/core/scenario'
-import type { ResolvedPersona } from '@pikku/core/services'
+} from '@pikku/core/ecosystem/scenario'
+import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
 
 /** The default driver, used when a project names no other. */
 export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'

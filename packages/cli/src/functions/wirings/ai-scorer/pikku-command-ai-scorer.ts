@@ -38,7 +38,7 @@ export const pikkuAIScorer = pikkuSessionlessFunc<void, boolean | undefined>({
     }
 
     const lines: string[] = []
-    lines.push(`import { addAIScorer } from '@pikku/core/ai-scorer'`)
+    lines.push(`import { addAIScorer } from '@pikku/core/ecosystem/ai-scorer'`)
 
     // Ahead of the registrations: addAIScorer refuses a scorer whose metadata
     // has not landed yet.
@@ -84,7 +84,7 @@ export const pikkuAIScorer = pikkuSessionlessFunc<void, boolean | undefined>({
       logger,
       scorerWiringMetaFile,
       `import { pikkuState } from '@pikku/core/ecosystem'
-import type { ScorerMeta } from '@pikku/core/ai-scorer'
+import type { ScorerMeta } from '@pikku/core/ecosystem/ai-scorer'
 ${importStatement}
 pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'scorersMeta', metaData.scorersMeta as ScorerMeta)`
     )

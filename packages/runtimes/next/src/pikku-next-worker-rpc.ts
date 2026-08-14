@@ -1,6 +1,6 @@
 import { compile } from 'path-to-regexp'
 
-import type { HTTPMethod } from '@pikku/core/http'
+import type { HTTPMethod } from '@pikku/core/ecosystem/http'
 
 export type Fetcher = { fetch(req: Request): Promise<Response> }
 

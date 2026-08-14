@@ -5,68 +5,107 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2576 observable things**: 823 exported names, plus
-1753 members on the classes and interfaces among them.
+**2581 observable things**: 826 exported names, plus
+1755 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 813 | 1753 |
-| ecosystem | 1 | 10 | 0 |
+| stable | 48 | 814 | 1753 |
+| ecosystem | 40 | 12 | 2 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 126 | 61 | 263 |
-| `.` | 206 | 87 | 124 |
-| `./workflow` | 76 | 27 | 124 |
-| `./virtual-user` | 34 | 34 | 115 |
-| `./ai-agent` | 48 | 47 | 81 |
-| `./scenario` | 42 | 42 | 85 |
-| `./channel` | 32 | 31 | 81 |
-| `./queue` | 22 | 21 | 68 |
-| `./http` | 24 | 22 | 49 |
-| `./persona` | 27 | 27 | 34 |
+| `./services` | 126 | 34 | 162 |
+| `./workflow` | 76 | 20 | 109 |
+| `.` | 206 | 53 | 48 |
+| `./ai-agent` | 48 | 26 | 53 |
+| `./scenario` | 42 | 25 | 33 |
+| `./channel` | 32 | 16 | 36 |
 | `./services/local-meta` | 22 | 3 | 46 |
-| `./cli` | 14 | 11 | 26 |
-| `./mcp` | 20 | 17 | 17 |
-| `./ai-scorer` | 17 | 17 | 12 |
+| `./virtual-user` | 34 | 10 | 33 |
+| `./http` | 24 | 10 | 25 |
+| `./queue` | 22 | 9 | 25 |
 | `./actor-flow` | 6 | 6 | 22 |
-| `./gateway` | 11 | 11 | 14 |
+| `./gateway` | 11 | 9 | 14 |
+| `./persona` | 27 | 11 | 12 |
 | `./crypto-utils` | 20 | 20 | 2 |
-| `./channel/local` | 3 | 3 | 18 |
-| `./trigger` | 8 | 8 | 12 |
 | `./rpc` | 15 | 10 | 8 |
-| `./services/local-content` | 3 | 3 | 15 |
-| `./workflow/timeline` | 8 | 3 | 14 |
-| `./services/v8-coverage` | 11 | 6 | 11 |
+| `./workflow/timeline` | 9 | 3 | 14 |
+| `./services/local-content` | 3 | 2 | 15 |
 | `./workflow/types` | 45 | 1 | 11 |
-| `./cli/channel` | 7 | 7 | 5 |
+| `./services/v8-coverage` | 11 | 5 | 6 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
-| `./scope` | 10 | 10 | 0 |
-| `./ecosystem` | 13 | 10 | 0 |
-| `./dev` | 5 | 5 | 5 |
-| `./safe-fetch` | 6 | 6 | 3 |
-| `./role` | 9 | 9 | 0 |
+| `./trigger` | 8 | 3 | 7 |
 | `./errors` | 46 | 4 | 5 |
-| `./middleware` | 12 | 7 | 0 |
+| `./ecosystem` | 13 | 8 | 0 |
+| `./channel/local` | 3 | 2 | 5 |
 | `./cli/command-parser` | 3 | 1 | 6 |
-| `./secret` | 7 | 7 | 0 |
-| `./scheduler` | 6 | 6 | 0 |
-| `./variable` | 6 | 6 | 0 |
-| `./schema` | 6 | 6 | 0 |
-| `./credential` | 5 | 5 | 0 |
-| `./services/istanbul-coverage` | 1 | 1 | 4 |
-| `./services/local-content-request-handler` | 5 | 5 | 0 |
-| `./testing` | 2 | 2 | 2 |
+| `./mcp` | 20 | 5 | 0 |
+| `./ai-scorer` | 17 | 5 | 0 |
+| `./schema` | 6 | 5 | 0 |
+| `./safe-fetch` | 6 | 4 | 0 |
+| `./dev` | 5 | 2 | 2 |
 | `./channel/serverless` | 3 | 3 | 0 |
-| `./node` | 3 | 3 | 0 |
-| `./function` | 16 | 2 | 0 |
-| `./node-host-resolver` | 2 | 2 | 0 |
-| `./oauth2` | 2 | 2 | 0 |
-| `./hmac` | 2 | 2 | 0 |
-| `./remote` | 1 | 1 | 0 |
+| `./scheduler` | 6 | 3 | 0 |
+| `./cli` | 14 | 3 | 0 |
+| `./middleware` | 12 | 2 | 0 |
+| `./cli/channel` | 7 | 2 | 0 |
+| `./credential` | 5 | 2 | 0 |
+| `./node-host-resolver` | 2 | 1 | 0 |
+| `./secret` | 7 | 1 | 0 |
+| `./variable` | 6 | 1 | 0 |
+| `./ecosystem/ai-agent` | 28 | 1 | 0 |
+| `./function` | 16 | 0 | 0 |
+| `./remote` | 1 | 0 | 0 |
+| `./node` | 3 | 0 | 0 |
+| `./scope` | 10 | 0 | 0 |
+| `./role` | 9 | 0 | 0 |
+| `./oauth2` | 2 | 0 | 0 |
+| `./services/istanbul-coverage` | 1 | 0 | 0 |
+| `./services/local-content-request-handler` | 5 | 0 | 0 |
+| `./hmac` | 2 | 0 | 0 |
+| `./ecosystem/ai-scorer` | 12 | 0 | 0 |
+| `./ecosystem/channel` | 14 | 0 | 0 |
+| `./ecosystem/channel/local` | 1 | 0 | 0 |
+| `./ecosystem/cli` | 12 | 0 | 0 |
+| `./ecosystem/cli/channel` | 15 | 0 | 0 |
+| `./ecosystem/credential` | 4 | 0 | 0 |
+| `./ecosystem/dev` | 4 | 0 | 0 |
+| `./ecosystem/function` | 19 | 0 | 0 |
+| `./ecosystem/gateway` | 2 | 0 | 0 |
+| `./ecosystem/hmac` | 2 | 0 | 0 |
+| `./ecosystem/http` | 14 | 0 | 0 |
+| `./ecosystem/mcp` | 13 | 0 | 0 |
+| `./ecosystem/middleware` | 18 | 0 | 0 |
+| `./ecosystem/node` | 3 | 0 | 0 |
+| `./ecosystem/node-host-resolver` | 1 | 0 | 0 |
+| `./ecosystem/oauth2` | 2 | 0 | 0 |
+| `./ecosystem/persona` | 17 | 0 | 0 |
+| `./ecosystem/queue` | 13 | 0 | 0 |
+| `./ecosystem/remote` | 3 | 0 | 0 |
+| `./ecosystem/role` | 9 | 0 | 0 |
+| `./ecosystem/rpc` | 5 | 0 | 0 |
+| `./ecosystem/safe-fetch` | 2 | 0 | 0 |
+| `./ecosystem/scenario` | 18 | 0 | 0 |
+| `./ecosystem/scheduler` | 3 | 0 | 0 |
+| `./ecosystem/schema` | 1 | 0 | 0 |
+| `./ecosystem/scope` | 10 | 0 | 0 |
+| `./ecosystem/secret` | 7 | 0 | 0 |
+| `./ecosystem/services` | 57 | 0 | 0 |
+| `./ecosystem/services/istanbul-coverage` | 1 | 0 | 0 |
+| `./ecosystem/services/local-content` | 1 | 0 | 0 |
+| `./ecosystem/services/local-content-request-handler` | 6 | 0 | 0 |
+| `./ecosystem/services/v8-coverage` | 1 | 0 | 0 |
+| `./ecosystem/testing` | 2 | 0 | 0 |
+| `./ecosystem/trigger` | 5 | 0 | 0 |
+| `./ecosystem/types` | 28 | 0 | 0 |
+| `./ecosystem/variable` | 6 | 0 | 0 |
+| `./ecosystem/virtual-user` | 28 | 0 | 0 |
+| `./ecosystem/workflow` | 52 | 0 | 0 |
+| `./testing` | 2 | 0 | 0 |
 
 ## .
 
@@ -2183,6 +2222,7 @@ export interface TestIdSelector {
 
 ```ts
 buildRunTimeline: (history: HistoryEntry[]) => RunTimeline
+export type HistoryEntry = StepState & { stepName: string }
 export interface ReconstructedRunState {
   seq: number
   at?: Date
@@ -5747,6 +5787,3068 @@ pikkuState: <Type extends keyof PikkuPackageState, Content extends keyof PikkuPa
 resetPikkuState: () => void
 runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
 setSingletonServices: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => void
+```
+
+## ./ecosystem/ai-agent
+
+```ts
+addAIAgent: (agentName: string, agent: CoreAIAgent<any, any>, packageName?: string | null) => void
+agent: <TAgentMap extends Record<string, { output: any; }>>(agentName: string & keyof TAgentMap) => { func: (services: any, data: any, wire: any) => Promise<any>; }
+agentApprove: <TAgentMap extends Record<string, { output: any; }>>(_agentName: string & keyof TAgentMap) => { func: (services: any, data: { runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }, wire: any) => Promise<any>; }
+agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export interface AgentRunRow {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: string
+  errorMessage?: string
+  suspendReason?: string
+  missingRpcs?: string[]
+  usageInputTokens: number
+  usageOutputTokens: number
+  usageModel: string
+  createdAt: Date
+  updatedAt: Date
+}
+export interface AgentRunService {
+  listThreads(options?: { agentName?: string; resourceId?: string; owners?: string[]; limit?: number; offset?: number }): Promise<AIThread[]>
+  getThread(threadId: string): Promise<AIThread | null>
+  getThreadMessages(threadId: string): Promise<AIMessage[]>
+  getThreadRuns(threadId: string): Promise<AgentRunRow[]>
+  deleteThread(threadId: string): Promise<boolean>
+  getDistinctAgentNames(): Promise<string[]>
+}
+agentStream: <TAgentMap extends Record<string, { output: any; }>>(agentName?: (string & keyof TAgentMap) | undefined) => { func: (services: any, data: any, wire: any) => Promise<void>; }
+export interface AIAgentInput {
+  message: string
+  threadId: string
+  resourceId: string
+  attachments?: AIAgentInputAttachment[]
+  model?: string
+  temperature?: number
+  context?: string
+}
+export type AIAgentMemoryConfig = {
+  storage?: string
+  vector?: string
+  embedder?: string
+  lastMessages?: number
+  workingMemory?: unknown
+}
+export type AIAgentMeta = Record<
+  string,
+  Omit<
+    CoreAIAgent,
+    | 'input'
+    | 'output'
+    | 'tools'
+    | 'agents'
+    | 'workflows'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'aiMiddleware'
+    | 'permissions'
+  > & {
+    tools?: string[]
+    agents?: string[]
+    workflows?: string[]
+    inputSchema: string | null
+    outputSchema: string | null
+    workingMemorySchema: string | null
+    middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
+    aiMiddleware?: MiddlewareMetadata[]
+    permissions?: PermissionMetadata[]
+    sourceFile?: string
+    exportedName?: string
+  }
+>
+export interface AIAgentStep {
+  usage: { inputTokens: number; outputTokens: number }
+  toolCalls?: { name: string; args: Record<string, unknown>; result: string; error?: string }[]
+}
+export type AIContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; data?: string; url?: string; mediaType?: string }
+  | {
+      type: 'file'
+      data?: string
+      url?: string
+      mediaType: string
+      filename?: string
+    }
+  | {
+      type: 'data'
+      name: string
+      data: unknown
+    }
+  | {
+      type: 'generative-ui'
+      spec: unknown
+    }
+canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
+export type CoreAIAgent<
+  PikkuPermission = CorePikkuPermission<any, any>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
+  Scope extends string = string,
+  Scorer extends string = string,
+> = {
+  name: string
+  description: string
+  summary?: string
+  errors?: string[]
+  role?: string
+  personality?: string
+  goal: string
+  model: string
+  temperature?: number
+  sessionScope?: SessionScope
+  tools?: unknown[]
+  agents?: unknown[]
+  workflows?: unknown[]
+  scorers?: Scorer[]
+  agentMode?: 'delegate' | 'supervise'
+  memory?: AIAgentMemoryConfig
+  maxSteps?: number
+  toolChoice?: 'auto' | 'required' | 'none'
+  providerOptions?: AIProviderOptions
+  input?: unknown
+  output?: unknown
+  tags?: string[]
+  prepareStep?: (ctx: {
+    stepNumber: number
+    messages: AIMessage[]
+    tools: AIAgentToolDef[]
+    toolChoice: 'auto' | 'required' | 'none'
+    model: string
+    stop: () => void
+  }) => void | Promise<void>
+  middleware?: PikkuMiddleware[]
+  channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
+  aiMiddleware?: PikkuAIMiddlewareHooks<any, any>[]
+  auth?: boolean
+  scopes?: Scope[]
+  permissions?: CorePermissionGroup<PikkuPermission>
+}
+export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
+  schema?: SchemaService
+  jwt?: JWTService
+  config: Config
+  logger: Logger
+  variables: VariablesService
+  secrets: SecretService
+  workflowService?: WorkflowService
+  queueService?: QueueService
+  eventHub?: EventHubService<Record<string, any>>
+  schedulerService?: SchedulerService
+  deploymentService?: DeploymentService
+  aiStorage?: AIStorageService
+  content?: ContentService
+  aiAgentRunner?: AIAgentRunnerService
+  aiEmbedding?: AIEmbeddingService
+  aiRunState?: AIRunStateService
+  agentRunService?: AgentRunService
+  workflowRunService?: WorkflowRunService
+  credentialService?: CredentialService
+  emailService?: EmailService
+  webhookService?: WebhookService
+  metaService?: MetaService
+  virtualUserRunStore?: VirtualUserRunStore
+  coverageService?: CoverageService
+  audit?: AuditService
+  auditLog?: AuditLog
+  sessionStore?: SessionStore
+  scopeService?: ScopeService
+  auth?: () => Promise<AuthInstance>
+}
+isOwnedByPrincipal: (storedResourceId: string, principal: string) => boolean
+export enum LogLevel {
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'critical',
+}
+export type PendingApproval =
+  | {
+      type: 'tool-call'
+      toolCallId: string
+      toolName: string
+      args: unknown
+    }
+  | {
+      type: 'agent-call'
+      toolCallId: string
+      agentName: string
+      agentRunId: string
+      displayToolName: string
+      displayArgs: unknown
+    }
+  | {
+      type: 'credential-request'
+      toolCallId: string
+      toolName: string
+      args: unknown
+      credentialName: string
+      credentialType: 'oauth2' | 'apikey'
+      connectUrl?: string
+    }
+export interface PikkuAIMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
+  modifyInput?: (services: Services, ctx: { messages: AIMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AIMessage[]; instructions: string }> | { messages: AIMessage[]; instructions: string }
+  modifyOutputStream?: (services: Services, ctx: { event: AIStreamEvent; allEvents: readonly AIStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AIStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AIStreamEvent | AIStreamEvent[] | null> | AIStreamEvent | AIStreamEvent[] | null
+  modifyOutput?: (services: Services, ctx: { text: string; messages: AIMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AIAgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }> | { text: string; messages: AIMessage[]; toolCalls?: NonNullable<AIAgentStep['toolCalls']> }
+  beforeToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown> }) => | Promise<{ args: Record<string, unknown> } | void> | { args: Record<string, unknown> } | void
+  afterToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown>; result: unknown; durationMs: number }) => Promise<{ result: unknown } | void> | { result: unknown } | void
+  afterStep?: (services: Services, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
+  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AIMessage[] }) => Promise<void> | void
+}
+export interface PostgresConfig {
+  maxPool?: number
+  connectTimeout?: number
+  idleTimeout?: number
+  maxLifetime?: number
+  statementTimeout?: number
+  prepare?: boolean
+}
+resolveModelAlias: (model: string) => string
+export type SpeakableScripts = string[] | Record<string, string>
+threadOwnerConstraint: (session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => string[]
+voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAIMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+voiceOutput: (config?: { model?: string | undefined; format?: string | undefined; voice?: string | undefined; instructions?: string | undefined; speed?: number | undefined; language?: string | undefined; speakableScripts?: SpeakableScripts | undefined; always?: boolean | undefined; } | undefined) => PikkuAIMiddlewareHooks<VoiceOutputState, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
+export type VoiceOutputState = {
+  textBuffer?: string
+  tail?: Promise<void>
+  reportedUnspeakable?: boolean
+}
+export interface WebhookServiceConfig {
+  retries?: number
+  retryDelay?: string | number
+  secret?: string
+  signatureHeader?: string
+  allowedHosts?: string[]
+}
+export interface WorkflowServiceConfig {
+  retries: number
+  retryDelay: number
+  orchestratorQueueName: string
+  stepWorkerQueueName: string
+  sleeperRPCName: string
+}
+```
+
+## ./ecosystem/ai-scorer
+
+```ts
+addAIScorer: (scorerName: string, scorer: PikkuAIScorer<any>, packageName?: string | null) => void
+enableScoreSnapshots: (maxRuns?: number) => void
+getScoreSnapshot: (runId: string) => ScorerInput | undefined
+gradeRun: (job: ScoreJob, services: { aiAgentRunner?: unknown; aiRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
+pikkuAIJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAIScorer<Services>
+pikkuAIScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAIScorer<Services>
+export type PikkuAIScorer<Services = any> = {
+  name: string
+  description: string
+  lane: ScorerLane
+  sampleRate: number
+  requiresReference: boolean
+  score?: (
+    input: ScorerInput,
+    services: Services
+  ) => ScorerOutput | Promise<ScorerOutput>
+  judge?: ScorerJudgeConfig
+}
+export type ScoreJob = ScorerInput & {
+  scorerName: string
+}
+export interface ScorerInput {
+  runId: string
+  agentName: string
+  threadId?: string
+  resourceId?: string
+  input: string
+  output: string
+  reference?: string
+  toolCalls: { name: string; args: unknown; result?: unknown; error?: string }[]
+  usage: { inputTokens: number; outputTokens: number; model?: string }
+}
+export type ScorerMeta = Record<
+  string,
+  {
+    name: string
+    description: string
+    lane: ScorerLane
+    sampleRate: number
+    requiresReference: boolean
+    sourceFile?: string
+    exportedName?: string
+  }
+>
+export interface ScorerOutput {
+  score: number
+  reason?: string
+  metadata?: Record<string, unknown>
+}
+wireAIScorerQueueWorkers: () => void
+```
+
+## ./ecosystem/channel
+
+```ts
+addChannelMiddleware: (tag: string, middleware: CorePikkuChannelMiddleware[], packageName?: string | null) => CorePikkuChannelMiddleware[]
+export type BinaryData = ArrayBuffer | Uint8Array
+export type Capabilities = Record<string, Capability>
+export interface ChannelMessageMeta {
+  pikkuFuncId: string
+  packageName?: string
+  summary?: string
+  description?: string
+  errors?: string[]
+  tags?: string[]
+  middleware?: MiddlewareMetadata[]
+}
+export interface ChannelMeta {
+  name: string
+  route: string
+  params?: string[]
+  query?: string[]
+  input: string | null
+  inputTypes?: HTTPFunctionMetaInputTypes
+  connect: ChannelMessageMeta | null
+  disconnect: ChannelMessageMeta | null
+  message: ChannelMessageMeta | null
+  messageWirings: Record<string, Record<string, ChannelMessageMeta>>
+  binary?: boolean | null
+  gateway?: boolean
+  summary?: string
+  description?: string
+  errors?: string[]
+  tags?: string[]
+  middleware?: MiddlewareMetadata[]
+  channelMiddleware?: MiddlewareMetadata[]
+}
+export type ChannelsMeta = Record<string, ChannelMeta>
+export type CoreChannel<
+  ChannelData,
+  Channel extends string,
+  ChannelConnect = CorePikkuFunctionConfig<
+    | CorePikkuFunction<void, unknown>
+    | CorePikkuFunctionSessionless<void, unknown>,
+    CorePikkuPermission<void>,
+    CorePikkuMiddleware
+  >,
+  ChannelDisconnect = CorePikkuFunctionConfig<
+    CorePikkuFunction<void, void> | CorePikkuFunctionSessionless<void, void>,
+    CorePikkuPermission<void>,
+    CorePikkuMiddleware
+  >,
+  ChannelFunctionMessage = CorePikkuFunctionConfig<
+    | CorePikkuFunction<unknown, unknown>
+    | CorePikkuFunctionSessionless<unknown, unknown>,
+    CorePikkuPermission<unknown>,
+    CorePikkuMiddleware
+  >,
+  PikkuPermission = CorePikkuPermission<ChannelData>,
+  PikkuMiddleware = CorePikkuMiddleware,
+> = {
+  name: string
+  route: Channel
+  onConnect?:
+    | ChannelConnect
+    | {
+        func?: ChannelConnect
+        middleware?: PikkuMiddleware[]
+      }
+  onDisconnect?:
+    | ChannelDisconnect
+    | {
+        func?: ChannelDisconnect
+        middleware?: PikkuMiddleware[]
+      }
+  onMessage?: ChannelFunctionMessage
+  onMessageWiring?: Record<
+    string,
+    Record<
+      string,
+      | ChannelFunctionMessage
+      | {
+          func: ChannelFunctionMessage
+          auth?: boolean
+          middleware?: PikkuMiddleware[]
+        }
+    >
+  >
+  middleware?: PikkuMiddleware[]
+  channelMiddleware?: Array<
+    CorePikkuChannelMiddleware | CorePikkuChannelMiddlewareFactory
+  >
+  auth?: boolean
+  binary?: boolean | null
+  onBinaryMessage?: (
+    services: any,
+    data: BinaryData,
+    channel: PikkuChannel<ChannelData, any>
+  ) => Promise<BinaryData | void> | BinaryData | void
+  tags?: string[]
+}
+export type CorePikkuChannelMiddleware<Services = any, Event = unknown> = (
+  services: Services,
+  event: Event,
+  next: (event: Event | Event[] | null) => Promise<void> | void
+) => Promise<void> | void
+export type CorePikkuChannelMiddlewareFactory<
+  In = any,
+  Services = any,
+  Event = unknown,
+> = (input: In) => CorePikkuChannelMiddleware<Services, Event>
+export abstract class EventHubStore< EventTopics extends Record<string, any> = {}, > {
+  public abstract getChannelIdsForTopic(topic: string): Promise<string[]>
+  public abstract subscribe<T extends keyof EventTopics>(topic: T, channelId: string): Promise<boolean>
+  public abstract unsubscribe<T extends keyof EventTopics>(topic: T, channelId: string): Promise<boolean>
+}
+logChannels: (logger: Logger) => void
+export interface Logger {
+  info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  warn<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  debug<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  trace?<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  setLevel(level: LogLevel): void
+  scope?(traceId: string): Logger
+}
+export abstract class PikkuAbstractChannelHandler< OpeningData = unknown, Out = unknown, > implements PikkuChannelHandler<OpeningData, Out> {
+  protected channel?: PikkuChannel<OpeningData, Out>
+  constructor(public channelId: string, public channelName: string, protected openingData: OpeningData)
+  public abstract send(message: Out, isBinary?: boolean): Promise<void> | void
+  public abstract sendBinary(data: BinaryData): Promise<void> | void
+  public getChannel(): PikkuChannel<OpeningData, Out>
+  public open(): void
+  public close(): Promise<void> | void
+}
+export type PikkuChannelHandlerFactory<OpeningData = unknown, Out = unknown> = (
+  channelId: string,
+  channelName: string,
+  openingData: OpeningData
+) => PikkuChannelHandler<OpeningData, Out>
+```
+
+## ./ecosystem/channel/local
+
+```ts
+export class PikkuLocalChannelHandler< OpeningData = unknown, Out = unknown, > extends PikkuAbstractChannelHandler<OpeningData, Out> {
+  constructor(channelId: string, channelName: string, openingData: OpeningData, logger?: Logger)
+  public registerOnOpen(callback: () => Promise<void> | void): void
+  public async open(): Promise<void>
+  public registerOnMessage(callback: (data: any) => Promise<unknown>): void
+  public async message(data: unknown): Promise<unknown>
+  public registerOnBinaryMessage(callback: (data: BinaryData) => Promise<BinaryData | void> | BinaryData | void): void
+  public async binaryMessage(data: BinaryData): Promise<BinaryData | void>
+  public registerOnClose(callback: () => Promise<void> | void): void
+  public async close(): Promise<void>
+  public registerOnSend(send: (message: Out) => void): void
+  public send(message: Out, isBinary?: boolean): void
+  public registerOnSendBinary(send: (data: BinaryData) => void): void
+  public sendBinary(data: BinaryData): void
+}
+```
+
+## ./ecosystem/cli
+
+```ts
+export interface CLICommandMeta {
+  parameters?: string
+  pikkuFuncId: string
+  packageName?: string
+  positionals: CLIPositional[]
+  options: Record<string, CLIOption>
+  renderName?: string
+  summary?: string
+  description?: string
+  errors?: string[]
+  tags?: string[]
+  subcommands?: Record<string, CLICommandMeta>
+  middleware?: MiddlewareMetadata[]
+  isDefault?: boolean
+}
+export class CLIError extends Error {
+  constructor(message: string, public exitCode: number = 1)
+}
+export interface CLIMeta {
+  programs: Record<string, CLIProgramMeta>
+  renderers: RenderersMeta
+}
+export type CLIProgramMeta = {
+  program: string
+  commands: Record<string, CLICommandMeta>
+  options: Record<string, CLIOption>
+  defaultRenderName?: string
+  auth?: boolean
+}
+export interface CoreCLI< Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, Options, PikkuMiddleware, PikkuCLIRender, > {
+  program: string
+  description?: string
+  commands: Commands
+  options?: CLIOptions<Options>
+  middleware?: PikkuMiddleware[]
+  render?: PikkuCLIRender
+  summary?: string
+  errors?: string[]
+  tags?: string[]
+  auth?: boolean
+}
+export type CoreCLICommandConfig<
+  FuncConfig,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+  PikkuCLIRender extends CorePikkuCLIRender<any, any, any> = CorePikkuCLIRender<
+    any,
+    any
+  >,
+  Params extends string = string,
+> = {
+  parameters?: ValidateParameters<Params, ExtractFunctionInput<FuncConfig>>
+  func?: FuncConfig
+  title?: string
+  description?: string
+  render?: PikkuCLIRender
+  options?: {
+    [K in keyof ExtractFunctionInput<FuncConfig>]?: {
+      description?: string
+      short?: string
+      default?: ExtractFunctionInput<FuncConfig>[K]
+    }
+  }
+  middleware?: PikkuMiddleware[]
+  subcommands?: Record<
+    string,
+    CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender, any>
+  >
+  auth?: boolean
+  permissions?: any[]
+  isDefault?: boolean
+}
+export type CorePikkuCLIRender<
+  Data,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = CorePikkuRender<Data, void, Services, Session>
+export type CreateConfig<
+  Config extends CoreConfig,
+  RemainingArgs extends any[] = unknown[],
+> = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
+export type CreateSingletonServices<
+  Config extends CoreConfig,
+  SingletonServices extends CoreSingletonServices,
+> = (
+  config: Config,
+  existingServices?: Partial<SingletonServices>
+) => Promise<SingletonServices>
+export type CreateWireServices<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  Services extends CoreServices<SingletonServices> =
+    CoreServices<SingletonServices>,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (
+  services: SingletonServices,
+  wire: PikkuRawWire
+) => Promise<WireServices<Services, SingletonServices>>
+executeCLI: ({ programName, args, createConfig, createSingletonServices, createWireServices, }: { programName: string; args?: string[] | undefined; createConfig?: CreateConfig<any, any> | undefined; createSingletonServices: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => Promise<void>
+generateCommandHelp: (programName: string, allMeta: CLIMeta, commandPath?: string[]) => string
+```
+
+## ./ecosystem/cli/channel
+
+```ts
+export type ApprovalRequester = (request: {
+  funcName: string
+  data: unknown
+  description?: string
+}) => Promise<boolean> | boolean
+export type Capabilities = Record<string, Capability>
+export type CorePikkuCLIClientRender<Data> = (
+  services: ClientCLIRenderServices,
+  data: Data,
+  session?: undefined
+) => void | Promise<void>
+export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
+  schema?: SchemaService
+  jwt?: JWTService
+  config: Config
+  logger: Logger
+  variables: VariablesService
+  secrets: SecretService
+  workflowService?: WorkflowService
+  queueService?: QueueService
+  eventHub?: EventHubService<Record<string, any>>
+  schedulerService?: SchedulerService
+  deploymentService?: DeploymentService
+  aiStorage?: AIStorageService
+  content?: ContentService
+  aiAgentRunner?: AIAgentRunnerService
+  aiEmbedding?: AIEmbeddingService
+  aiRunState?: AIRunStateService
+  agentRunService?: AgentRunService
+  workflowRunService?: WorkflowRunService
+  credentialService?: CredentialService
+  emailService?: EmailService
+  webhookService?: WebhookService
+  metaService?: MetaService
+  virtualUserRunStore?: VirtualUserRunStore
+  coverageService?: CoverageService
+  audit?: AuditService
+  auditLog?: AuditLog
+  sessionStore?: SessionStore
+  scopeService?: ScopeService
+  auth?: () => Promise<AuthInstance>
+}
+export interface CoreUserSession {
+  userId?: string
+  orgId?: string
+  actor?: boolean
+  scopes?: string[]
+  readonly?: boolean
+}
+export type CreateWireServices<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  Services extends CoreServices<SingletonServices> =
+    CoreServices<SingletonServices>,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (
+  services: SingletonServices,
+  wire: PikkuRawWire
+) => Promise<WireServices<Services, SingletonServices>>
+executeRawCLIViaChannel: ({ pikkuWS, args, renderers, defaultRenderer, capabilities, approve, }: { pikkuWS: any; args?: string[] | undefined; renderers?: Record<string, CorePikkuCLIClientRender<any>> | undefined; defaultRenderer?: CorePikkuCLIClientRender<any> | undefined; capabilities?: Capabilities | undefined; approve?: ApprovalRequester | undefined; }) => Promise<number>
+handleRawCLI: ({ programName, args, singletonServices, createWireServices, onOutput, session, transport, }: { programName: string; args: string[]; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown, commandId: string) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<RawCLIResult>
+export enum LogLevel {
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'critical',
+}
+export interface PikkuChannel< OpeningData, out Out, Remote extends (...args: any[]) => any = ChannelRemote, > {
+  channelId: string
+  openingData: OpeningData
+  send(data: Out, isBinary?: boolean): Promise<void> | void
+  sendBinary(data: BinaryData): Promise<void> | void
+  close(): Promise<void> | void
+  state: 'initial' | 'open' | 'closed'
+  setState<T>(state: T): Promise<void> | void
+  getState<T>(): Promise<T | undefined> | T | undefined
+  clearState(): Promise<void> | void
+  remote: Remote
+}
+export interface PostgresConfig {
+  maxPool?: number
+  connectTimeout?: number
+  idleTimeout?: number
+  maxLifetime?: number
+  statementTimeout?: number
+  prepare?: boolean
+}
+export type RawCLIFrame =
+  | { action: 'cli-output'; commandId?: string; data: unknown }
+  | { action: 'cli-result'; commandId?: string; result: unknown }
+  | { action: 'cli-help'; help: string }
+  | { action: 'cli-error'; error: string }
+  | { action: 'cli-control'; event: 'complete'; exitCode: number }
+export interface RawCLIResult {
+  help?: string
+  result?: unknown
+  error?: string
+  exitCode: number
+  commandId?: string
+}
+export interface WebhookServiceConfig {
+  retries?: number
+  retryDelay?: string | number
+  secret?: string
+  signatureHeader?: string
+  allowedHosts?: string[]
+}
+export interface WorkflowServiceConfig {
+  retries: number
+  retryDelay: number
+  orchestratorQueueName: string
+  stepWorkerQueueName: string
+  sleeperRPCName: string
+}
+```
+
+## ./ecosystem/credential
+
+```ts
+export type CredentialDefinitions = CredentialDefinitionMeta[]
+export type CredentialDefinitionsMeta = Record<string, CredentialDefinitionMeta>
+export interface SchemaRefLike {
+  variableName: string
+  sourceFile: string
+}
+validateAndBuildCredentialDefinitionsMeta: (definitions: CredentialDefinitions, schemaLookup: Map<string, SchemaRefLike>) => CredentialDefinitionsMeta
+```
+
+## ./ecosystem/dev
+
+```ts
+export interface Logger {
+  info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  warn<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  debug<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  trace?<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  setLevel(level: LogLevel): void
+  scope?(traceId: string): Logger
+}
+reconcileAddonRegistry: (declaredNamespaces: Iterable<string>, logger?: Logger | undefined) => void
+reloadGeneratedMeta: (options: ReloadGeneratedMetaOptions) => Promise<void>
+export interface ReloadGeneratedMetaOptions {
+  pikkuDir: string
+  logger: Logger
+  schemaService?: SchemaService
+}
+```
+
+## ./ecosystem/function
+
+```ts
+export type CorePikkuAuth<
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
+  Session extends CoreUserSession = CoreUserSession,
+> = (services: Services, session: Session) => Promise<boolean> | boolean
+export type CorePikkuAuthConfig<
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
+  Session extends CoreUserSession = CoreUserSession,
+> = {
+  func: CorePikkuAuth<Services, Session>
+  name?: string
+  description?: string
+}
+export type CorePikkuFunction<
+  In,
+  Out,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<In, Out, true, Session, PikkuRPC, null, string> =
+    PikkuWire<In, Out, true, Session>,
+> = (
+  services: Services,
+  data: In,
+  wire: Wire
+) => Wire['channel'] extends null
+  ? Promise<Safe<Out>>
+  : Promise<Safe<Out>> | Promise<void>
+export type CorePikkuFunctionConfig<
+  PikkuFunction extends
+    | CorePikkuFunction<any, any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any, any>,
+  PikkuPermission extends CorePikkuPermission<any, any, any> =
+    CorePikkuPermission<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  Scope extends string = string,
+> = {
+  title?: string
+  description?: string
+  override?: string
+  version?: number
+  tags?: string[]
+  expose?: boolean
+  permissionsInBody?: boolean
+  remote?: boolean
+  mcp?: boolean
+  readonly?: boolean
+  deploy?: 'serverless' | 'server' | 'auto'
+  approvalRequired?: boolean
+  workflowQueued?: boolean
+  workflowRetries?: number
+  workflowTimeout?: string
+  surfaces?: ScenarioSurface[]
+  audit?:
+    | boolean
+    | {
+        durability?: 'best-effort' | 'transactional'
+      }
+  approvalDescription?: any
+  func: PikkuFunction
+  before?: CorePikkuFunctionHook
+  after?: CorePikkuFunctionHook
+  skip?: string
+  auth?: boolean
+  scopes?: Scope[]
+  permissions?: CorePermissionGroup<PikkuPermission>
+  middleware?: PikkuMiddleware[]
+  input?: InputSchema
+  output?: OutputSchema
+  node?: CoreNodeConfig
+  errors?: Array<typeof PikkuError>
+}
+export type CorePikkuFunctionSessionless<
+  In,
+  Out,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<In, Out, false, Session, PikkuRPC, null, string> =
+    PikkuWire<In, Out, false, Session>,
+> = (
+  services: Services,
+  data: In,
+  wire: Wire
+) => Wire['channel'] extends null
+  ? Promise<Safe<Out>>
+  : Promise<Safe<Out>> | Promise<void>
+export type CorePikkuPermission<
+  In = any,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
+  Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
+> = (services: Services, data: In, wire: Wire) => Promise<boolean>
+export type CorePikkuSessionlessFunctionConfig<
+  PikkuFunction extends CorePikkuFunctionSessionless<any, any, any, any, any>,
+  PikkuPermission extends CorePikkuPermission<any, any, any> =
+    CorePikkuPermission<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> = Omit<
+  CorePikkuFunctionConfig<
+    PikkuFunction,
+    PikkuPermission,
+    PikkuMiddleware,
+    InputSchema,
+    OutputSchema
+  >,
+  'scopes'
+>
+export type CoreSecretlessSingletonServices<
+  Config extends CoreConfig = CoreConfig,
+> = SecretlessServices<CoreSingletonServices<Config>>
+export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
+  schema?: SchemaService
+  jwt?: JWTService
+  config: Config
+  logger: Logger
+  variables: VariablesService
+  secrets: SecretService
+  workflowService?: WorkflowService
+  queueService?: QueueService
+  eventHub?: EventHubService<Record<string, any>>
+  schedulerService?: SchedulerService
+  deploymentService?: DeploymentService
+  aiStorage?: AIStorageService
+  content?: ContentService
+  aiAgentRunner?: AIAgentRunnerService
+  aiEmbedding?: AIEmbeddingService
+  aiRunState?: AIRunStateService
+  agentRunService?: AgentRunService
+  workflowRunService?: WorkflowRunService
+  credentialService?: CredentialService
+  emailService?: EmailService
+  webhookService?: WebhookService
+  metaService?: MetaService
+  virtualUserRunStore?: VirtualUserRunStore
+  coverageService?: CoverageService
+  audit?: AuditService
+  auditLog?: AuditLog
+  sessionStore?: SessionStore
+  scopeService?: ScopeService
+  auth?: () => Promise<AuthInstance>
+}
+export interface CoreUserSession {
+  userId?: string
+  orgId?: string
+  actor?: boolean
+  scopes?: string[]
+  readonly?: boolean
+}
+getAllFunctionNames: () => string[]
+export interface ListInput< F extends Record<string, unknown> = Record<string, never>, S extends string = never, > {
+  cursor?: string
+  limit?: number
+  sort?: Array<{ column: S; direction: 'asc' | 'desc' }>
+  filter?: Filter<F>
+  search?: string
+}
+export interface ListOutput<Row> {
+  rows: Row[]
+  nextCursor: string | null
+  totalCount?: number
+}
+export enum LogLevel {
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'critical',
+}
+pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
+export interface PostgresConfig {
+  maxPool?: number
+  connectTimeout?: number
+  idleTimeout?: number
+  maxLifetime?: number
+  statementTimeout?: number
+  prepare?: boolean
+}
+export type SecretlessServices<Services> = Omit<Services, 'secrets'>
+export interface WebhookServiceConfig {
+  retries?: number
+  retryDelay?: string | number
+  secret?: string
+  signatureHeader?: string
+  allowedHosts?: string[]
+}
+export interface WorkflowServiceConfig {
+  retries: number
+  retryDelay: number
+  orchestratorQueueName: string
+  stepWorkerQueueName: string
+  sleeperRPCName: string
+}
+```
+
+## ./ecosystem/gateway
+
+```ts
+export type GatewaysMeta = Record<string, GatewayMeta>
+export type GatewayTransportType = 'webhook' | 'websocket' | 'listener'
+```
+
+## ./ecosystem/hmac
+
+```ts
+hmacSha256Hex: (secret: string, payload: string) => string
+timingSafeStringEqual: (a: string, b: string) => boolean
+```
+
+## ./ecosystem/http
+
+```ts
+export type AssertHTTPWiringParams<In, HTTPWiring extends string> =
+  ExtractHTTPWiringParams<HTTPWiring> extends keyof In
+    ? unknown
+    : [
+        'Error: HTTPWiring parameters',
+        ExtractHTTPWiringParams<HTTPWiring>,
+        'not in',
+        keyof In,
+      ]
+export type CoreHTTPFunctionWiring<
+  In,
+  Out,
+  R extends string,
+  PikkuFunction extends CorePikkuFunction<In, Out, any, any, any> =
+    CorePikkuFunction<In, Out>,
+  PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
+    In,
+    Out,
+    any,
+    any,
+    any
+  > = CorePikkuFunctionSessionless<In, Out>,
+  PikkuPermission extends CorePikkuPermission<In, any, any> =
+    CorePikkuPermission<In, any, any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+> =
+  | (CoreHTTPFunction & {
+      route: R
+      method: HTTPMethod
+      func: CorePikkuFunctionConfig<
+        PikkuFunction,
+        PikkuPermission,
+        PikkuMiddleware
+      >
+      auth?: true
+      middleware?: PikkuMiddleware[]
+      sse?: undefined
+    })
+  | (CoreHTTPFunction & {
+      route: R
+      method: HTTPMethod
+      func: CorePikkuFunctionConfig<
+        PikkuFunctionSessionless,
+        PikkuPermission,
+        PikkuMiddleware
+      >
+      auth?: false
+      middleware?: PikkuMiddleware[]
+      sse?: undefined
+    })
+  | (CoreHTTPFunction & {
+      route: R
+      method: 'get'
+      func: CorePikkuFunctionConfig<
+        PikkuFunction,
+        PikkuPermission,
+        PikkuMiddleware
+      >
+      auth?: true
+      middleware?: PikkuMiddleware[]
+      sse?: boolean
+    })
+  | (CoreHTTPFunction & {
+      route: R
+      method: 'get'
+      func: CorePikkuFunctionConfig<
+        PikkuFunctionSessionless,
+        PikkuPermission,
+        PikkuMiddleware
+      >
+      auth?: false
+      middleware?: PikkuMiddleware[]
+      sse?: boolean
+    })
+  | (CoreHTTPFunction & {
+      route: R
+      method: 'post'
+      func: CorePikkuFunctionConfig<
+        PikkuFunction,
+        PikkuPermission,
+        PikkuMiddleware
+      >
+      auth?: true
+      middleware?: PikkuMiddleware[]
+      query?: Array<keyof In>
+      sse?: undefined
+    })
+  | (CoreHTTPFunction & {
+      route: R
+      method: 'post'
+      func: CorePikkuFunctionConfig<
+        PikkuFunctionSessionless,
+        PikkuPermission,
+        PikkuMiddleware
+      >
+      auth?: false
+      middleware?: PikkuMiddleware[]
+      query?: Array<keyof In>
+      sse?: undefined
+    })
+DEFAULT_MAX_BODY_SIZE: number
+export type HTTPMethod =
+  | 'post'
+  | 'get'
+  | 'delete'
+  | 'patch'
+  | 'head'
+  | 'put'
+  | 'options'
+export type HTTPRouteBaseConfig = {
+  contentType?: 'xml' | 'json'
+  timeout?: number
+  tags?: string[]
+  headers?: HTTPHeadersSchema
+}
+export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
+export interface Logger {
+  info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  warn<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  debug<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  trace?<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  setLevel(level: LogLevel): void
+  scope?(traceId: string): Logger
+}
+logRoutes: (logger: Logger) => void
+export interface PikkuHTTP<In = unknown> {
+  request?: PikkuHTTPRequest<In>
+  response?: PikkuHTTPResponse
+}
+export interface PikkuHTTPRequest<In = unknown> {
+  method(): HTTPMethod
+  path(): string
+  data(): Promise<In>
+  json(): Promise<unknown>
+  arrayBuffer(): Promise<ArrayBuffer>
+  headers(): Record<string, string>
+  header(headerName: string): string | null
+  cookie(name?: string): string | null
+  params(): Partial<Record<string, string | string[]>>
+  setParams(params: Record<string, string | string[] | undefined>): void
+  query(): PikkuQuery
+}
+export interface PikkuHTTPResponse<Out = unknown> {
+  readonly statusCode: number
+  status(code: number): this
+  cookie(name: string, value: string | null, options: SerializeOptions): this
+  header(name: string, value: string | string[]): this
+  arrayBuffer(data: | ArrayBuffer | ArrayBufferView | Blob | string | FormData | URLSearchParams | ReadableStream): this
+  json(data: Out): this
+  send?(data: string | ArrayBuffer | ArrayBufferView): this
+  redirect(location: string, status?: number): this
+  close?: () => void
+  setMode?: (mode: 'stream') => void
+  flushHeaders?: () => void
+}
+export type PikkuQuery<T = Record<string, string | undefined>> = Record<
+  string,
+  string | T | null | Array<T | null>
+>
+export type RunHTTPWiringOptions = Partial<{
+  skipUserSession: boolean
+  respondWith404: boolean
+  logWarningsForStatusCodes: number[]
+  coerceDataFromSchema: boolean
+  bubbleErrors: boolean
+  exposeErrors: boolean
+  generateRequestId: () => string
+  traceId: string
+  maxBodySize: number
+}>
+toWebRequest: (req: PikkuHTTPRequest<unknown>, baseUrl?: string | undefined) => Request
+```
+
+## ./ecosystem/mcp
+
+```ts
+export type AssertMCPResourceURIParams<In, URI extends string> =
+  ExtractMCPURIParams<URI> extends keyof In
+    ? unknown
+    : [
+        'Error: MCP Resource URI parameters',
+        ExtractMCPURIParams<URI>,
+        'not in input type',
+        keyof In,
+      ]
+export type CoreMCPPrompt<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, MCPPromptResponse>
+  >,
+  PikkuPermission = CorePikkuPermission<any, any>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
+> = {
+  name: string
+  description: string
+  summary?: string
+  errors?: string[]
+  func: PikkuFunctionConfig
+  tags?: string[]
+  middleware?: PikkuMiddleware[]
+}
+export type CoreMCPResource<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  >,
+  PikkuPermission = CorePikkuPermission<any, any>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
+> = {
+  uri: string
+  title: string
+  description: string
+  summary?: string
+  errors?: string[]
+  mimeType?: string
+  size?: number
+  streaming?: boolean
+  func: PikkuFunctionConfig
+  tags?: string[]
+  middleware?: PikkuMiddleware[]
+}
+getMCPPromptsMeta: () => MCPPromptMeta
+getMCPResourcesMeta: () => MCPResourceMeta
+getMCPToolsMeta: () => MCPToolMeta
+export class MCPEndpointRegistry {
+  async loadFromMCPJson(mcpData: any): Promise<void>
+  setResourcesMeta(meta: MCPResourceMeta): void
+  setToolsMeta(meta: MCPToolMeta): void
+  setPromptsMeta(meta: MCPPromptMeta): void
+  getTools(): MCPToolEndpoint[]
+  getResources(): MCPResourceEndpoint[]
+  getPrompts(): MCPPromptEndpoint[]
+  getTool(name: string): MCPToolEndpoint | undefined
+  getResource(name: string): MCPResourceEndpoint | undefined
+  getPrompt(name: string): MCPPromptEndpoint | undefined
+  hasResource(name: string): boolean
+  hasTool(name: string): boolean
+  hasPrompt(name: string): boolean
+  enableTools(tools: Record<any, boolean>): boolean
+  enablePrompts(prompts: Record<any, boolean>): boolean
+  enableResources(resources: Record<any, boolean>): boolean
+}
+export class MCPError extends Error {
+  constructor(public readonly error: JsonRpcErrorResponse)
+}
+export type MCPPromptMeta = Record<
+  string,
+  Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
+    pikkuFuncId: string
+    inputSchema: string | null
+    outputSchema: string | null
+    arguments: Array<{
+      name: string
+      description: string
+      required: boolean
+    }>
+    middleware?: MiddlewareMetadata[]
+  }
+>
+export type MCPResourceMeta = Record<
+  string,
+  Omit<CoreMCPResource, 'func' | 'middleware'> & {
+    pikkuFuncId: string
+    inputSchema: string | null
+    outputSchema: string | null
+    middleware?: MiddlewareMetadata[]
+  }
+>
+export type MCPToolMeta = Record<
+  string,
+  Omit<CoreMCPTool, 'func' | 'middleware'> & {
+    pikkuFuncId: string
+    inputSchema: string | null
+    outputSchema: string | null
+    middleware?: MiddlewareMetadata[]
+  }
+>
+export type MCPToolResponse = MCPToolMessage[]
+export type PikkuMCP<Tools extends string = any> = {
+  uri?: string
+  sendResourceUpdated: (uri: string) => void
+  enableResources: (resources: Record<string, boolean>) => Promise<boolean>
+  enablePrompts: (prompts: Record<string, boolean>) => Promise<boolean>
+  enableTools: (tools: Record<Tools, boolean>) => Promise<boolean>
+}
+```
+
+## ./ecosystem/middleware
+
+```ts
+addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], packageName?: string | null) => CorePermissionGroup | CorePikkuPermission[]
+authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+authCookie: CorePikkuMiddlewareFactory<{ name: string; options: SerializeOptions; expiresIn: RelativeTimeInput; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
+  | Record<string, PikkuPermission | PikkuPermission[]>
+  | undefined
+export type CorePikkuMiddleware<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (
+  services: SingletonServices,
+  wires: PikkuWire,
+  next: () => Promise<void>
+) => Promise<void>
+export type CorePikkuMiddlewareFactory<
+  In = any,
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
+export type CorePikkuPermission<
+  In = any,
+  Services extends CoreSecretlessSingletonServices =
+    SecretlessServices<CoreServices>,
+  Wire extends PikkuWire<In, never, false, any, PikkuRPC, never, never> =
+    PikkuWire<In, never, false, any, PikkuRPC, never, never>,
+> = (services: Services, data: In, wire: Wire) => Promise<boolean>
+export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
+  schema?: SchemaService
+  jwt?: JWTService
+  config: Config
+  logger: Logger
+  variables: VariablesService
+  secrets: SecretService
+  workflowService?: WorkflowService
+  queueService?: QueueService
+  eventHub?: EventHubService<Record<string, any>>
+  schedulerService?: SchedulerService
+  deploymentService?: DeploymentService
+  aiStorage?: AIStorageService
+  content?: ContentService
+  aiAgentRunner?: AIAgentRunnerService
+  aiEmbedding?: AIEmbeddingService
+  aiRunState?: AIRunStateService
+  agentRunService?: AgentRunService
+  workflowRunService?: WorkflowRunService
+  credentialService?: CredentialService
+  emailService?: EmailService
+  webhookService?: WebhookService
+  metaService?: MetaService
+  virtualUserRunStore?: VirtualUserRunStore
+  coverageService?: CoverageService
+  audit?: AuditService
+  auditLog?: AuditLog
+  sessionStore?: SessionStore
+  scopeService?: ScopeService
+  auth?: () => Promise<AuthInstance>
+}
+export interface CoreUserSession {
+  userId?: string
+  orgId?: string
+  actor?: boolean
+  scopes?: string[]
+  readonly?: boolean
+}
+export enum LogLevel {
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'critical',
+}
+pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+export interface PostgresConfig {
+  maxPool?: number
+  connectTimeout?: number
+  idleTimeout?: number
+  maxLifetime?: number
+  statementTimeout?: number
+  prepare?: boolean
+}
+export interface RelativeTimeInput {
+  value: number
+  unit: TimeUnit
+}
+runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
+telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+export interface WebhookServiceConfig {
+  retries?: number
+  retryDelay?: string | number
+  secret?: string
+  signatureHeader?: string
+  allowedHosts?: string[]
+}
+export interface WorkflowServiceConfig {
+  retries: number
+  retryDelay: number
+  orchestratorQueueName: string
+  stepWorkerQueueName: string
+  sleeperRPCName: string
+}
+```
+
+## ./ecosystem/node
+
+```ts
+export type CoreNodeConfig = {
+  displayName: string
+  category: string
+  type: NodeType
+  errorOutput?: boolean
+}
+export type NodesMeta = Record<string, NodeMeta>
+export type NodeType = 'trigger' | 'action' | 'end'
+```
+
+## ./ecosystem/node-host-resolver
+
+```ts
+installNodeHostResolver: () => void
+```
+
+## ./ecosystem/oauth2
+
+```ts
+export type OAuth2AppCredential = {
+  clientId: string
+  clientSecret?: string
+}
+export type OAuth2Token = {
+  accessToken: string
+  refreshToken?: string
+  expiresAt?: number
+  tokenType: string
+  scope?: string
+}
+```
+
+## ./ecosystem/persona
+
+```ts
+export type CorePersona = {
+  name: string
+  jobTitle?: string
+  description?: string
+  avatarUrl?: string
+  roles?: string[]
+  personality?: string
+  goals?: string[]
+  tags?: string[]
+  disposition?: VirtualUserDisposition
+  tuning?: VirtualUserTuning
+  fixtures?: string[]
+  account?: CorePersonaAccount
+  linkedAccounts?: Record<string, CorePersonaAccount>
+  environments?: string[]
+  runnable?: boolean
+}
+createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
+export class HttpPersona implements ScenarioPersona {
+  constructor(readonly name: string, private persona: ResolvedPersona, private config: HttpPersonasConfig)
+  get email(): string
+  async invoke(rpcName: string, data: unknown): Promise<unknown>
+  async invokeRaw(rpcName: string, data: unknown, options?: ScenarioInvokeOptions): Promise<ScenarioHttpResponse>
+  async converse(options: ConverseOptions): Promise<ActorFlowVerdict>
+  async sessionRoles(): Promise<string[] | null>
+}
+export interface HttpPersonasConfig {
+  apiUrl: string
+  secret: string
+  personas: Record<string, ResolvedPersona>
+  signInPath?: string
+  sessionPath?: string
+  rpcPath?: string
+  model?: string
+}
+export type PersonaAccountMeta = {
+  provider?: string
+}
+export type PersonaDefinitions = PersonaMeta[]
+personaEmails: (personaIds: readonly string[], domain: string, runId?: string | undefined) => Record<string, string>
+export interface PersonaEnvironment {
+  production?: boolean
+}
+personaEnvironmentErrors: (id: string, persona: PersonaEnvironmentSubject, environments: Readonly<Record<string, PersonaEnvironment>>) => string[]
+personaEnvironmentRefusal: (id: string, persona: PersonaEnvironmentSubject, environmentName: string | undefined, environments: Readonly<Record<string, PersonaEnvironment>>) => string | null
+export interface PersonaEnvironmentSubject {
+  disposition?: VirtualUserDisposition
+  environments?: string[]
+}
+export type PersonasMeta = Record<string, PersonaMeta>
+roleMismatchMessage: (verification: RoleVerification) => string | null
+export interface RoleVerification {
+  persona: string
+  expected: string[]
+  actual: string[]
+  missing: string[]
+  extra: string[]
+  ok: boolean
+}
+export type ScenarioPersonas = Record<string, ScenarioPersona>
+validateAndBuildPersonasMeta: (definitions: PersonaDefinitions) => PersonasMeta
+verifyPersonaRoles: (persona: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
+```
+
+## ./ecosystem/queue
+
+```ts
+export interface ConfigValidationResult {
+  applied: Partial<PikkuWorkerConfig>
+  ignored: Partial<PikkuWorkerConfig>
+  warnings: string[]
+  fallbacks: { [key: string]: any }
+}
+export type CoreQueueWorker<
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
+    CorePikkuFunctionConfig<any, any, any>,
+> = {
+  name: string
+  func: PikkuFunctionConfig
+  config?: PikkuWorkerConfig
+  errors?: string[]
+  tags?: string[]
+  middleware?: PikkuFunctionConfig['middleware']
+}
+export interface JobOptions {
+  priority?: number
+  delay?: number
+  attempts?: number
+  backoff?: string | { type: string; delay?: number }
+  removeOnComplete?: number
+  removeOnFail?: number
+  jobId?: string
+  pikkuUserId?: string
+  group?: JobGroup
+}
+export interface Logger {
+  info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  warn<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  debug<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  trace?<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  setLevel(level: LogLevel): void
+  scope?(traceId: string): Logger
+}
+export interface PikkuJobConfig {
+  retryAttempts?: number
+  retryDelay?: number
+  retryBackoff?: 'linear' | 'exponential' | 'fixed'
+  deadLetterQueue?: string
+  messageRetention?: number
+  priority?: number
+  fifo?: boolean
+  timeout?: number
+  delay?: number
+}
+export interface PikkuWorkerConfig {
+  name?: string
+  batchSize?: number
+  prefetch?: number
+  pollInterval?: number
+  visibilityTimeout?: number
+  lockDuration?: number
+  drainDelay?: number
+  removeOnComplete?: number
+  removeOnFail?: number
+  maxStalledCount?: number
+  autorun?: boolean
+  groupConcurrency?: number | GroupConcurrencyConfig
+}
+export interface QueueConfigMapping {
+  supported: Partial< Record< keyof PikkuWorkerConfig, { queueProperty?: string; transform?: (value: any) => any; description: string } > >
+  unsupported: Partial< Record< keyof PikkuWorkerConfig, { reason: string; explanation: string } > >
+  fallbacks: Partial< Record< keyof PikkuWorkerConfig, { reason: string; explanation: string; fallbackValue: string } > >
+}
+export class QueueJobDiscardedError extends PikkuError {
+  constructor(jobId: string, reason?: string)
+}
+export class QueueJobFailedError extends PikkuError {
+  constructor(jobId: string, reason?: string)
+}
+export type QueueRegistrationCallback<T = any> = (
+  queueName: string,
+  processor: CoreQueueWorker
+) => Promise<T>
+export interface QueueWorkers {
+  name: string
+  supportsResults: boolean
+  configMappings: QueueConfigMapping
+  registerQueues(): Promise<Record<string, ConfigValidationResult[]>>
+}
+export type QueueWorkersMeta = Record<
+  string,
+  CommonWireMeta & {
+    name: string
+    config?: PikkuWorkerConfig
+  }
+>
+registerQueueWorkers: <T = any>(configMappings: QueueConfigMapping, logger: Logger, registerCallback: QueueRegistrationCallback<T>) => Promise<Record<string, ConfigValidationResult[]>>
+```
+
+## ./ecosystem/remote
+
+```ts
+buildRemoteHeaders: (jwt: JWTService | undefined, secrets: SecretService | undefined, funcName: string, session?: unknown, traceId?: string | undefined) => Promise<Record<string, string>>
+export interface JWTService {
+  encode: <T extends any>(expiresIn: RelativeTimeInput, payload: T) => Promise<string>
+  decode: <T>(hash: string, invalidHashError?: Error, debug?: boolean) => Promise<T>
+}
+export interface SecretService {
+  getSecret<T = string>(key: string): Promise<SecretValue<T>>
+  hasSecret(key: string): Promise<boolean>
+  setSecret(key: string, value: unknown): Promise<void>
+  deleteSecret(key: string): Promise<void>
+  getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
+}
+```
+
+## ./ecosystem/role
+
+```ts
+export type CoreSystemRole = {
+  displayName?: string
+  description?: string
+  scopes: string[]
+}
+export type CoreSystemRoles = Record<string, CoreSystemRole>
+defineSystemRole: (_config: CoreSystemRoles) => void
+flattenSystemRoleDefinitions: (definitions: SystemRoleDefinitions) => SystemRole[]
+export type SystemRole = {
+  name: string
+  displayName?: string
+  description?: string
+  scopes: string[]
+}
+export type SystemRoleDefinitionMeta = {
+  name: string
+  displayName?: string
+  description?: string
+  scopes: string[]
+  sourceFile?: string
+}
+export type SystemRoleDefinitions = SystemRoleDefinitionMeta[]
+export type SystemRoleDefinitionsMeta = Record<string, SystemRoleDefinitionMeta>
+validateAndBuildSystemRoleDefinitionsMeta: (definitions: SystemRoleDefinitions) => SystemRoleDefinitionsMeta
+```
+
+## ./ecosystem/rpc
+
+```ts
+export type RemoteAddonAuth =
+  | { credentialId: string }
+  | { secretId: string }
+  | {
+      resolve: (
+        services: CoreServices,
+        wire: PikkuWire
+      ) => string | Promise<string>
+    }
+wireAddon: (config: WireAddonConfig) => void
+export type WireAddonConfig = {
+  name: string
+  package: string
+  rpcEndpoint?: string
+  auth?: boolean
+  mcp?: boolean
+  tags?: string[]
+  scopes?: string[]
+  secretOverrides?: Record<string, string>
+  variableOverrides?: Record<string, string>
+  credentialOverrides?: Record<string, string>
+  secretGrants?: string[]
+  credentialGrants?: string[]
+  globalSecrets?: string
+  globalCredentials?: string
+}
+wireRemoteAddon: (config: WireRemoteAddonConfig) => void
+export type WireRemoteAddonConfig = {
+  name: string
+  package: string
+  serverUrl: string | ((services: CoreServices) => string | Promise<string>)
+  auth?: RemoteAddonAuth
+  remoteName?: (fn: string) => string
+  tags?: string[]
+}
+```
+
+## ./ecosystem/safe-fetch
+
+```ts
+safeFetch: (url: string, init?: RequestInit, options?: SafeFetchOptions) => Promise<Response>
+export interface SafeFetchOptions {
+  allowedHosts?: string[]
+  maxRedirects?: number
+  resolveHost?: HostResolver | null
+}
+```
+
+## ./ecosystem/scenario
+
+```ts
+addFeature: (featureId: string, feature: CoreFeature, packageName?: string | null) => void
+composeStepProse: ({ phase, description, template, input, actor, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; actor?: string | undefined; keywordWidth?: number | undefined; }) => string
+export type CoreFeature = {
+  name: string
+  description?: string
+  tags?: string[]
+  scenarios: readonly CoreFeatureScenario[]
+  before?: CorePikkuFunctionHook
+  after?: CorePikkuFunctionHook
+}
+export type CoreWorkflow<
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
+    CorePikkuFunctionConfig<any, any, any>,
+> = {
+  name: string
+  func: PikkuFunctionConfig
+  middleware?: PikkuFunctionConfig['middleware']
+  tags?: string[]
+}
+export type FeaturePlanEntry = {
+  featureId: string
+  featureName: string
+  scenarioName: string
+  data?: unknown
+  tags: string[]
+}
+export type FeaturesMeta = Record<string, FeatureMeta>
+export interface PikkuBrowserWire {
+  readonly actor: string
+  goto(url: string): Promise<void>
+  screenshot(name?: string): Promise<Uint8Array>
+}
+export class PikkuScenarioService implements WorkflowRunExtension {
+  constructor(private readonly engine: WorkflowRunEngine)
+  public setRunSurface(surface: ScenarioSurface): void
+  public getRunSurface(): ScenarioSurface
+  public setScenarioBrowserProvider(provider: ScenarioBrowserProvider | undefined): void
+  public getScenarioBrowserProvider(): ScenarioBrowserProvider | undefined
+  public setScenarioEnvironment(env: ScenarioEnvironment | undefined): void
+  public getScenarioEnvironment(): ScenarioEnvironment | undefined
+  public async attachRunContext(runId: string, workflowMeta: any, options?: { actors?: ScenarioPersonas }): Promise<void>
+  public detachRunContext(runId: string): void
+  public getRunContext(runId: string): Record<string, unknown> | undefined
+  public decorateRunWire(wire: PikkuRawWire, context: { runId: string; workflowMeta: any; workflowWire: PikkuWorkflowWire }): void
+  public async onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
+  public async onAfterRunFunc(context: RunLifecycleContext, outcome: 'completed' | 'failed' | 'interrupted', failure: unknown): Promise<void>
+  public async resolvePersonas(): Promise<ScenarioPersonas | undefined>
+  public decorateWorkflowWire(wire: PikkuWorkflowWire, context: { name: string; runId: string; rpcService: any; addonNamespace?: string | null }): void
+}
+export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
+  context: ScenarioContext<Out>
+  expectEventually: <TOutput = any, TInput = any>(stepName: string, rpcName: string, data: TInput, predicate: (output: TOutput) => boolean, options?: WorkflowExpectEventuallyOptions) => Promise<TOutput>
+  expectError: <TInput = any>(stepName: string, rpcName: string, data: TInput, options?: WorkflowExpectErrorOptions) => Promise<string>
+  expectService: (stepName: string, serviceMethod: string, options?: WorkflowExpectServiceOptions) => Promise<void>
+  expectScore: (stepName: string, runId: string, scorerName: string, options?: WorkflowExpectScoreOptions) => Promise<{ score: number; reason?: string }>
+  given(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
+  when(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
+  then(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
+  runScheduledTask: (name: string) => Promise<unknown>
+}
+resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
+SCENARIO_SURFACES: readonly ScenarioSurface[]
+export interface ScenarioBrowserFailure {
+  actor: string
+  url?: string
+  screenshot?: string
+  consoleErrors: string[]
+  pageErrors: string[]
+  failedRequests: string[]
+  apiErrors: string[]
+}
+export interface ScenarioBrowserProvider {
+  sessionFor(actorName: string): Promise<PikkuBrowserWire>
+  reset?(): Promise<void>
+  beginScenario?(scenario: string): void
+  captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
+  close(): Promise<void>
+}
+export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
+export interface ScenarioStepMeta {
+  type: 'scenarioStep'
+  stepName: string
+  stepFunc: string
+  phase: ScenarioStepPhase
+  outputVar?: string
+  inputs?: Record<string, InputSource> | 'passthrough'
+  options?: WorkflowStepOptions
+  actor?: string
+  surfaces?: ScenarioSurface[]
+}
+export interface ScenarioStepOptions {
+  actor?: unknown
+  description?: string
+  retries?: number
+  retryDelay?: number | string
+}
+export type ScenarioStepPhase = 'given' | 'when' | 'then'
+export type ScenarioSurface = 'browser' | 'cli' | 'default'
+```
+
+## ./ecosystem/scheduler
+
+```ts
+export type CoreScheduledTask<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<void, void>
+  >,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
+> = {
+  name: string
+  schedule: string
+  func: PikkuFunctionConfig
+  tags?: string[]
+  middleware?: PikkuMiddleware[]
+}
+getScheduledTasks: () => Map<string, CoreScheduledTask>
+export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
+  Record<
+    string,
+    CommonWireMeta & {
+      name: string
+      schedule: string
+      session?: UserSession
+    }
+  >
+```
+
+## ./ecosystem/schema
+
+```ts
+addSchema: (name: string, value: any, packageName?: string | null) => void
+```
+
+## ./ecosystem/scope
+
+```ts
+export type CoreScopeNode = {
+  displayName?: string
+  description?: string
+  scopes?: Record<string, CoreScopeNode>
+}
+export type CoreScopes = Record<string, CoreScopeNode>
+defineScope: (_config: CoreScopes) => void
+export type FlatScope = {
+  id: string
+  description?: string
+}
+flattenScopeDefinitions: (definitions: ScopeDefinitions) => FlatScope[]
+export type ScopeDefinitionMeta = {
+  name: string
+  displayName?: string
+  description?: string
+  scopes?: Record<string, ScopeNodeMeta>
+  sourceFile?: string
+}
+export type ScopeDefinitions = ScopeDefinitionMeta[]
+export type ScopeDefinitionsMeta = Record<string, ScopeDefinitionMeta>
+export type ScopeNodeMeta = {
+  displayName?: string
+  description?: string
+  scopes?: Record<string, ScopeNodeMeta>
+}
+validateAndBuildScopeDefinitionsMeta: (definitions: ScopeDefinitions) => ScopeDefinitionsMeta
+```
+
+## ./ecosystem/secret
+
+```ts
+export type CoreSecret<T = unknown> = {
+  name: string
+  displayName: string
+  description?: string
+  secretId: string
+  schema: T
+  docsUrl?: string
+  rotationPeriod?: string
+  allowedHosts?: string[]
+}
+export type OAuth2CredentialConfig = {
+  tokenSecretId: string
+  authorizationUrl: string
+  tokenUrl: string
+  scopes: string[]
+  pkce?: boolean
+  additionalParams?: Record<string, string>
+}
+export interface SchemaRefLike {
+  variableName: string
+  sourceFile: string
+}
+export type SecretDefinitionMeta = {
+  name: string
+  displayName: string
+  description?: string
+  secretId: string
+  schema?: Record<string, unknown> | string
+  docsUrl?: string
+  oauth2?: OAuth2CredentialConfig
+  rotationPeriod?: string
+  allowedHosts?: string[]
+  sourceFile?: string
+}
+export type SecretDefinitions = SecretDefinitionMeta[]
+export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
+validateAndBuildSecretDefinitionsMeta: (definitions: SecretDefinitions, schemaLookup: Map<string, SchemaRefLike>) => SecretDefinitionsMeta
+```
+
+## ./ecosystem/services
+
+```ts
+export type AgentMeta = AIAgentMeta[string]
+export type AgentsMeta = AIAgentMeta
+export type AuditDurability = 'best-effort' | 'transactional'
+export type AuditEvent = {
+  eventId?: string
+  type: string
+  source: AuditSource
+  outcome?: AuditOutcome
+  occurredAt: string
+  functionId?: string
+  wireType?: PikkuWiringTypes
+  wireId?: string
+  traceId?: string
+  transactionId?: string | null
+  queryId?: string | null
+  userIdentity?: AuditUserIdentity
+  input?: unknown
+  metadata?: Record<string, unknown>
+}
+export type AuditEventBatch = AuditEvent[]
+export interface CoreUserSession {
+  userId?: string
+  orgId?: string
+  actor?: boolean
+  scopes?: string[]
+  readonly?: boolean
+}
+export interface CoverageFunctionMeta {
+  name: string
+  sourceFile: string
+  bodySourceFile?: string
+  exportedName?: string
+  expose?: boolean
+  description?: string | null
+  bodyStart?: number
+  bodyEnd?: number
+  funcWrapper?: string
+}
+export interface CoverageService {
+  start(): Promise<void>
+  takeCoverage(): Promise<CoverageSnapshot>
+  takeReport?(functionsMeta: Record<string, CoverageFunctionMeta>): Promise<FunctionCoverageReport>
+  reset(): Promise<void>
+  stop(): Promise<void>
+}
+createMiddlewareSessionWireProps: <UserSession extends CoreUserSession>(session: SessionService<UserSession>) => { session: UserSession | undefined; setSession: (s: UserSession) => void; getSession: () => UserSession | undefined; hasSessionChanged: () => boolean; }
+export type CredentialMeta = {
+  name: string
+  displayName: string
+  oauth2?: { tokenSecretId: string }
+}
+export type CredentialMetaInfo = {
+  name: string
+  displayName: string
+  type: 'singleton' | 'wire'
+  oauth2?: boolean
+}
+export interface DeploymentConfig {
+  deploymentId: string
+  endpoint: string
+  functions?: string[]
+}
+export interface DeploymentService {
+  init(): Promise<void>
+  start(config: DeploymentConfig): Promise<void>
+  stop(): Promise<void>
+  invoke(funcName: string, data: unknown, session?: unknown, traceId?: string): Promise<unknown>
+}
+export interface DeploymentServiceConfig {
+  heartbeatInterval?: number
+  heartbeatTtl?: number
+}
+export interface EmailsMeta {
+  src: string
+  themeHash: string
+  templates: Record<string, EmailTemplateMeta>
+}
+export interface EmailTemplateMeta {
+  variables: string[]
+  hasHtml: boolean
+  hasSubject: boolean
+  hasText: boolean
+  locales: Record<string, EmailTemplateLocaleMeta>
+}
+export interface FunctionCoverageEntry {
+  name: string
+  sourceFile: string
+  exposed: boolean
+  description: string | null
+  coveredLines: number
+  totalLines: number
+  missedLines: number[]
+  ratio: number
+  status: CoverageStatus
+}
+export interface FunctionCoverageReport {
+  generatedAt: string
+  summary: { total: number; covered: number; partial: number; uncovered: number; unknown: number; overallRatio: number }
+  functions: FunctionCoverageEntry[]
+}
+export type FunctionMeta = FunctionRuntimeMeta &
+  Partial<
+    {
+      name: string
+      functionType: 'user' | 'inline' | 'helper' | 'remote'
+      funcWrapper: string
+      services: FunctionServicesMeta
+      wires: FunctionWiresMeta
+      inputs: string[] | null
+      outputs: string[] | null
+      middleware: MiddlewareMetadata[]
+      permissions: PermissionMetadata[]
+      isDirectFunction: boolean
+      sourceFile: string
+      exportedName: string
+      bodySourceFile?: string
+      bodyStart: number
+      bodyEnd: number
+    } & CommonWireMeta
+  >
+export type FunctionsMeta = Record<string, FunctionMeta>
+getStubTracker: () => StubTracker
+export interface GroupMeta {
+  exportName: string | null
+  sourceFile: string
+  position: number
+  services: { optimized: boolean; services: string[] }
+  count: number
+  instanceIds: string[]
+  isFactory: boolean
+}
+export class InMemoryAIRunStateService implements AIRunStateService {
+  async createRun(run: CreateRunInput): Promise<string>
+  async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
+  async getRun(runId: string): Promise<AgentRunState | null>
+  async getRunsByThread(threadId: string): Promise<AgentRunState[]>
+  async resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
+  async saveScore(score: SaveScoreInput): Promise<void>
+  async getScores(runId: string): Promise<AIRunScore[]>
+}
+export interface Logger {
+  info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  warn<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  error<M extends string | Record<string, any> | Error, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  debug<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  trace?<A extends unknown[]>(message: string, ...meta: { [K in keyof A]: Safe<A[K]> }): void
+  setLevel(level: LogLevel): void
+  scope?(traceId: string): Logger
+}
+export interface MCPMeta {
+  resources: MCPResourceMeta
+  tools: MCPToolMeta
+  prompts: MCPPromptMeta
+}
+export interface MetaService {
+  readonly basePath?: string
+  readFile(relativePath: string): Promise<string | null>
+  readDir(relativePath: string): Promise<string[]>
+  readProjectFile(relativePath: string): Promise<string | null>
+  readPackageFile?(packageName: string, relativePath: string): Promise<string | null>
+  readPackageDir?(packageName: string, relativePath: string): Promise<string[]>
+  getHttpMeta(): Promise<HTTPWiringsMeta>
+  getChannelsMeta(): Promise<ChannelsMeta>
+  getSchedulerMeta(): Promise<ScheduledTasksMeta>
+  getQueueMeta(): Promise<QueueWorkersMeta>
+  getCliMeta(): Promise<CLIMeta>
+  getMcpMeta(): Promise<MCPMeta>
+  getGatewayMeta(): Promise<GatewaysMeta>
+  getRpcMeta(): Promise<RPCMetaRecord>
+  getWorkflowMeta(): Promise<WorkflowsMeta>
+  getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
+  getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getFeaturesMeta(): Promise<FeaturesMeta>
+  getTriggerMeta(): Promise<TriggerMeta>
+  getTriggerSourceMeta(): Promise<TriggerSourceMeta>
+  getFunctionsMeta(): Promise<FunctionsMeta>
+  getMiddlewareGroupsMeta(): Promise<MiddlewareGroupsMeta>
+  getPermissionsGroupsMeta(): Promise<PermissionsGroupsMeta>
+  getAgentsMeta(): Promise<AgentsMeta>
+  getSecretsMeta(): Promise<SecretDefinitionsMeta>
+  getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
+  getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getEmailMeta(): Promise<EmailsMeta>
+  getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
+  getServicesMeta(): Promise<ServicesMetaRecord>
+  getSchema(schemaName: string): Promise<JSONSchema7 | null>
+  getSchemas(schemaNames: string[]): Promise<Record<string, JSONSchema7 | null>>
+  clearCache(): void
+}
+export interface MiddlewareDefinitionMeta {
+  services: { optimized: boolean; services: string[] }
+  sourceFile: string
+  position: number
+  exportedName: string | null
+  factory?: boolean
+  name?: string
+  description?: string
+  package?: string
+}
+export interface MiddlewareGroupsMeta {
+  definitions: Record<string, MiddlewareDefinitionMeta>
+  instances: Record<string, MiddlewareInstanceMeta>
+  httpGroups: Record<string, GroupMeta>
+  tagGroups: Record<string, GroupMeta>
+}
+export interface MiddlewareInstanceMeta {
+  definitionId: string
+  sourceFile: string
+  position: number
+  isFactoryCall: boolean
+}
+export type MiddlewareMetadata =
+  | {
+      type: 'http'
+      route: string
+    }
+  | {
+      type: 'tag'
+      tag: string
+    }
+  | {
+      type: 'wire'
+      name: string
+      inline?: boolean
+    }
+export interface PermissionDefinitionMeta {
+  services: { optimized: boolean; services: string[] }
+  sourceFile: string
+  position: number
+  exportedName: string | null
+  factory?: boolean
+  name?: string
+  description?: string
+}
+export type PermissionMetadata = {
+  type: 'wire'
+  name: string
+  inline?: boolean
+}
+export interface PermissionsGroupsMeta {
+  definitions: Record<string, PermissionDefinitionMeta>
+}
+PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME: "pikku-outgoing-webhooks"
+export class PikkuSessionService< UserSession extends CoreUserSession, > implements SessionService<UserSession> {
+  public sessionChanged: boolean
+  public initial: UserSession | undefined
+  protected session: UserSession | undefined
+  constructor(private sessionStore?: SessionStore<UserSession>)
+  public setPikkuUserId(id: string): void
+  public getPikkuUserId(): string | undefined
+  public setInitial(session: UserSession): void
+  public freezeInitial(): UserSession | undefined
+  public async set(session: UserSession): Promise<void>
+  public async clear(): Promise<void>
+  public get(): UserSession | undefined
+}
+pikkuWebhookWorkerFunc: (services: { logger: Logger; webhookService?: WebhookService | undefined; }, { url, body, headers, deliveryId }: WebhookJobData) => Promise<void>
+export type ResolvedPersona = PersonaMeta & { email: string }
+export interface Role {
+  name: string
+  description?: string
+  scopes: string[]
+  system?: boolean
+  declared?: boolean
+}
+export type RPCMetaRecord = Record<string, string>
+export type ScenarioPersonas = Record<string, ScenarioPersona>
+export interface ScheduledTaskInfo extends ScheduledTaskSummary {
+  data?: any
+  session?: CoreUserSession
+  status?: 'scheduled' | 'active' | 'completed' | 'failed'
+}
+export interface ScheduledTaskSummary {
+  taskId: string
+  rpcName: string
+  scheduledFor: Date
+}
+export interface ScriptCoverage {
+  scriptId: string
+  url: string
+  functions: FunctionCoverage[]
+}
+export interface SendWebhookInput {
+  url: string
+  event?: string
+  data: unknown
+  headers?: Record<string, string>
+  secret?: string
+  retries?: number
+  retryDelay?: string | number
+  organizationId?: string
+}
+export interface SendWebhookResult {
+  jobId: string
+}
+export interface ServiceMeta {
+  name: string
+  summary: string
+  description: string
+  package: string
+  path: string
+  version: string
+  interface: string
+  expandedProperties: Record<string, string>
+}
+export type ServicesMetaRecord = Record<string, ServiceMeta>
+export interface SessionService<UserSession extends CoreUserSession> {
+  sessionChanged: boolean
+  initial: UserSession | undefined
+  setInitial(session: UserSession): void
+  freezeInitial(): UserSession | undefined
+  set(session: UserSession): Promise<void> | void
+  clear(): Promise<void> | void
+  get(): UserSession | undefined
+}
+spy: <T extends object>(service: string, real: T) => T
+export class StubTracker {
+  record(service: string, method: string, args: unknown[]): void
+  getCalls(service?: string): StubCall[]
+  reset(): void
+  stub<T>(service: string): T
+  assert(service: string, method: string): void
+  assertCall(service: string, method: string, predicate: (args: unknown[]) => boolean, description: string): void
+  assertNoCalls(service: string, method?: string, predicate?: (args: unknown[]) => boolean, description?: string): void
+  verify(): void
+}
+export class TypedVariablesService< TMap = Record<string, unknown>, > implements VariablesService {
+  constructor(private variables: VariablesService, private variablesMeta: Record<string, VariableMeta>)
+  get<K extends keyof TMap & string>(name: K): Promise<TMap[K] | undefined> | TMap[K] | undefined
+  get<T = string>(name: string): Promise<T | undefined> | T | undefined
+  get(name: string): Promise<unknown> | unknown
+  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(names: (keyof T & string)[]): Promise<Partial<T>> | Partial<T>
+  getAll(): | Promise<Record<string, string | undefined>> | Record<string, string | undefined>
+  set(name: string, value: unknown): Promise<void> | void
+  has(name: string): Promise<boolean> | boolean
+  delete(name: string): Promise<void> | void
+  async getAllStatus(): Promise<VariableStatus[]>
+  async getMissing(): Promise<VariableStatus[]>
+}
+export type VariableMeta = {
+  name: string
+  displayName: string
+}
+export interface WebhookAttemptResult {
+  statusCode?: number
+  responseBody?: string
+  error?: string
+  delivered: boolean
+}
+export interface WebhookDeliveryRecord {
+  deliveryId: string
+  organizationId: string | null
+  url: string
+  event: string | null
+  status: 'pending' | 'delivered' | 'failed'
+  attempts: number
+  createdAt: Date
+  updatedAt: Date
+  deliveredAt: Date | null
+}
+export interface WebhookDeliveryWithAttempts {
+  delivery: WebhookDeliveryRecord
+  attempts: WebhookAttemptRecord[]
+}
+export interface WebhookJobData {
+  url: string
+  event?: string
+  body: string
+  headers: Record<string, string>
+  deliveryId?: string
+}
+export abstract class WebhookService {
+  abstract send<T extends SendWebhookInput>(input: Safe<T>): Promise<SendWebhookResult>
+  protected sign(secret: string, body: string): string
+  public verify(secret: string, signature: string, body: string): boolean
+  public recordAttempt(_deliveryId: string, _result: WebhookAttemptResult): Promise<void>
+  public listDeliveries(_opts?: { organizationId?: string; limit?: number }): Promise<WebhookDeliveryRecord[]>
+  public getDelivery(_deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
+}
+```
+
+## ./ecosystem/services/istanbul-coverage
+
+```ts
+export class IstanbulCoverageService implements CoverageService {
+  async start(): Promise<void>
+  async takeCoverage(): Promise<CoverageSnapshot>
+  async reset(): Promise<void>
+  async stop(): Promise<void>
+}
+```
+
+## ./ecosystem/services/local-content
+
+```ts
+signedContentPath: (urlOrPath: string) => string
+```
+
+## ./ecosystem/services/local-content-request-handler
+
+```ts
+createLocalContentRequestHandler: ({ content, logger, getJWT, }: LocalContentRequestHandlerOptions) => LocalContentRequestHandler
+export interface JWTService {
+  encode: <T extends any>(expiresIn: RelativeTimeInput, payload: T) => Promise<string>
+  decode: <T>(hash: string, invalidHashError?: Error, debug?: boolean) => Promise<T>
+}
+export type LocalContentRequestHandler = (
+  request: Request
+) => Promise<Response | null>
+export type LocalContentRequestHandlerOptions = {
+  content: LocalContentConfig
+  logger: Logger
+  getJWT: () => JWTService | undefined
+}
+export type SignedContentVerification =
+  | { ok: true }
+  | { ok: false; status: number; body: string }
+verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+```
+
+## ./ecosystem/services/v8-coverage
+
+```ts
+export class V8CoverageService implements CoverageService {
+  start(): Promise<void>
+  async takeCoverage(): Promise<CoverageSnapshot>
+  async getScriptSource(scriptId: string): Promise<string>
+  async reset(): Promise<void>
+  async stop(): Promise<void>
+}
+```
+
+## ./ecosystem/testing
+
+```ts
+defineServiceTests: (config: ServiceTestConfig) => void
+export interface ServiceTestConfig {
+  name: string
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; aiStorageService?: () => Promise<AIStorageService & AIRunStateService>; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
+}
+```
+
+## ./ecosystem/trigger
+
+```ts
+export type CorePikkuTriggerFunction<
+  TInput = unknown,
+  TOutput = unknown,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+> = (
+  services: Services,
+  input: TInput,
+  wire: { trigger: { invoke: (data: TOutput) => void } }
+) => Promise<() => void | Promise<void>>
+export type CorePikkuTriggerFunctionConfig<
+  TInput = unknown,
+  TOutput = unknown,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> = {
+  title?: string
+  description?: string
+  tags?: string[]
+  func: CorePikkuTriggerFunction<TInput, TOutput, Services>
+  input?: InputSchema
+  output?: OutputSchema
+  node?: CoreNodeConfig
+}
+export interface CoreTrigger<PikkuFunctionConfig = any> {
+  name: string
+  func: PikkuFunctionConfig
+  description?: string
+  tags?: string[]
+  graph?: true
+}
+export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
+export type TriggerSourceMeta = Record<
+  string,
+  { name: string; pikkuFuncId: string; packageName?: string }
+>
+```
+
+## ./ecosystem/types
+
+```ts
+export type AuditFacets = {
+  userIds: string[]
+  types: string[]
+}
+export type AuditQuery = {
+  userIds?: string[]
+  types?: string[]
+  orgId?: string
+  from?: string
+  to?: string
+  limit?: number
+  offset?: number
+}
+export type AuditQueryResult = {
+  events: AuditEvent[]
+  nextCursor: number | null
+  facets?: AuditFacets
+}
+export interface AuthInstance {
+  handler: (request: Request) => Promise<Response>
+  api: Record<string, any>
+  $context?: Promise<any>
+}
+export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
+  | Record<string, PikkuPermission | PikkuPermission[]>
+  | undefined
+formatVersionedId: (baseName: string, version: number) => string
+export interface FunctionServicesMeta {
+  optimized: boolean
+  services: string[]
+}
+export interface FunctionWiresMeta {
+  optimized: boolean
+  wires: string[]
+}
+isExpectedError: (error: unknown) => boolean
+isSerializable: (data: any) => boolean
+isVersionedId: (id: string) => boolean
+export type JSONValue =
+  | JSONPrimitive
+  | JSONValue[]
+  | {
+      [key: string]: JSONValue
+    }
+export type MiddlewareMetadata =
+  | {
+      type: 'http'
+      route: string
+    }
+  | {
+      type: 'tag'
+      tag: string
+    }
+  | {
+      type: 'wire'
+      name: string
+      inline?: boolean
+    }
+parseDurationString: (duration: string) => number
+parseVersionedId: (id: string) => { baseName: string; version: number | null; }
+export type PermissionMetadata = {
+  type: 'wire'
+  name: string
+  inline?: boolean
+}
+export abstract class PikkuRequest<In = any> {
+  constructor(data: In)
+  public async data(): Promise<In>
+}
+export type PikkuWire<
+  In = unknown,
+  Out = unknown,
+  HasInitialSession extends boolean = false,
+  UserSession extends CoreUserSession = CoreUserSession,
+  TypedRPC extends PikkuRPC = PikkuRPC,
+  IsChannel extends true | null = null,
+  MCPTools extends string | never = never,
+  TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
+  TriggerOutput = unknown,
+  TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
+  TypedActors extends ScenarioPersonas = ScenarioPersonas,
+> = {
+  rpc: TypedRPC
+} & Partial<{
+  wireType: PikkuWiringTypes
+  wireId: string
+  logger: Logger
+  traceId: string
+  functionId: string
+  addonNamespace: string
+  http: PikkuHTTP<In>
+  mcp: PikkuMCP<MCPTools>
+  channel: [IsChannel] extends [null]
+    ? PikkuChannel<unknown, Out, TypedRPC['remote']>
+    : PikkuChannel<unknown, Out, TypedRPC['remote']> | undefined
+  scheduledTask: PikkuScheduledTask
+  queue: PikkuQueue
+  cli: PikkuCLI<TypedRPC['remote']>
+  workflow: TypedWorkflow
+  scenario: TypedScenario
+  actors: TypedActors
+  scenarioStep: PikkuScenarioStepWire<ScenarioPersonaOf<TypedActors>>
+  browser: PikkuBrowserWire
+  workflowStep: WorkflowStepWire
+  graph: PikkuGraphWire
+  trigger: PikkuTrigger<TriggerOutput>
+  gateway: PikkuGateway
+  session: HasInitialSession extends true
+    ? UserSession
+    : UserSession | undefined
+  setSession: (session: UserSession) => Promise<void> | void
+  clearSession: () => Promise<void> | void
+  getSession: () => Promise<UserSession> | UserSession | undefined
+  hasSessionChanged: () => boolean
+  pikkuUserId: string
+  setCredential: (name: string, value: unknown) => void
+  getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
+  getCredentials: () =>
+    | Record<string, unknown>
+    | Promise<Record<string, unknown>>
+  audit: {
+    durability: AuditDurability
+  }
+  beginChanges: () => Promise<void>
+}>
+export type PikkuWiringTypes =
+  | 'http'
+  | 'scheduler'
+  | 'trigger'
+  | 'channel'
+  | 'rpc'
+  | 'queue'
+  | 'mcp'
+  | 'cli'
+  | 'workflow'
+  | 'agent'
+  | 'gateway'
+export interface PostgresConfig {
+  maxPool?: number
+  connectTimeout?: number
+  idleTimeout?: number
+  maxLifetime?: number
+  statementTimeout?: number
+  prepare?: boolean
+}
+export interface RelativeTimeInput {
+  value: number
+  unit: TimeUnit
+}
+export type SecretlessServices<Services> = Omit<Services, 'secrets'>
+export interface SecurityAuditIssue {
+  package: string
+  severity: SecuritySeverity
+  title: string
+  advisoryId: string
+  url: string
+  vulnerableVersions: string
+  cwe: string[]
+  cvssScore: number | null
+  recommendedVersion: string | null
+}
+export interface SecurityAuditReport {
+  schemaVersion: number
+  tool: string
+  generatedAt: string
+  note?: string
+  issues: SecurityAuditIssue[]
+  updates: SecurityAuditUpdate[]
+  summary: SecurityAuditSummary
+}
+export interface SecurityAuditUpdate {
+  package: string
+  current: string
+  latest: string
+  level: SecurityUpdateLevel
+}
+export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
+export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
+export interface SerializedError {
+  message: string
+  stack?: string
+  code?: string
+  expected?: boolean
+  [key: string]: any
+}
+```
+
+## ./ecosystem/variable
+
+```ts
+export type CoreVariable<T = unknown> = {
+  name: string
+  displayName: string
+  description?: string
+  variableId: string
+  schema: T
+  docsUrl?: string
+}
+export interface SchemaRefLike {
+  variableName: string
+  sourceFile: string
+}
+validateAndBuildVariableDefinitionsMeta: (definitions: VariableDefinitions, schemaLookup: Map<string, SchemaRefLike>) => VariableDefinitionsMeta
+export type VariableDefinitionMeta = {
+  name: string
+  displayName: string
+  description?: string
+  variableId: string
+  schema?: Record<string, unknown> | string
+  docsUrl?: string
+  sourceFile?: string
+}
+export type VariableDefinitions = VariableDefinitionMeta[]
+export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
+```
+
+## ./ecosystem/virtual-user
+
+```ts
+export interface AgentReachability {
+  name?: string
+  description?: string
+  scopes?: readonly string[]
+  auth?: boolean
+}
+export interface ApiCatalogueEntry {
+  name: string
+  inputKeys?: readonly string[]
+  outputKeys?: readonly string[]
+  description?: string
+  readonly?: boolean
+  approvalRequired?: boolean
+  scopes?: readonly string[]
+  tags?: readonly string[]
+  inputSchema?: Record<string, unknown>
+  outputSchema?: Record<string, unknown>
+}
+catalogueClassification: (entries: readonly ApiCatalogueEntry[]) => { total: number; annotated: number; inferred: number; }
+dispositionProfile: (disposition?: VirtualUserDisposition, tuning?: VirtualUserTuning | undefined) => DispositionProfile
+export interface DispositionProfile {
+  instructions: string
+  moves: { continue: number; suspend: number; resume: number; abandon: number }
+  temperature: number
+  repeatRate: number
+  reReadRate: number
+  emptyMemory: boolean
+  readOnly: boolean
+  invertedOracle: boolean
+}
+DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
+export type FunctionsMeta = Record<string, FunctionMeta>
+intentsForPersona: (sources: readonly IntentSource[], personaId: string) => IntentSource[]
+export interface IntentSource {
+  id: string
+  title: string
+  description?: string
+  steps?: readonly string[]
+  tags?: readonly string[]
+  personas?: readonly string[]
+}
+isReadOnly: (entry: ApiCatalogueEntry) => boolean
+personaScopes: (persona: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
+prepareVirtualUserRun: (input: { persona: { roles?: readonly string[] | undefined; }; functionsMeta: FunctionsMeta; schemas?: SchemaMap | undefined; workflowsMeta?: WorkflowsMeta | undefined; systemRoles?: SystemRoleDefinitions | SystemRoleDefinitionsMeta | undefined; agentsMeta?: Readonly<Record<string, AgentReachability>> | undefined; }) => VirtualUserPreparation
+PRODUCTION_DISPOSITION: VirtualUserDisposition
+reachableCatalogue: (entries: readonly ApiCatalogueEntry[], { readOnly, allowApprovalRequired, scopes, }?: { readOnly?: boolean | undefined; allowApprovalRequired?: boolean | undefined; scopes?: readonly string[] | undefined; }) => ApiCatalogueEntry[]
+export type SchemaMap = Record<string, Record<string, unknown> | undefined>
+export type SystemRoleDefinitions = SystemRoleDefinitionMeta[]
+export type SystemRoleDefinitionsMeta = Record<string, SystemRoleDefinitionMeta>
+unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
+export type VirtualUserDisposition =
+  | 'realistic'
+  | 'careless'
+  | 'newcomer'
+  | 'stale'
+  | 'auditor'
+  | 'adversarial'
+  | 'accountable'
+export interface VirtualUserFinding {
+  kind: VirtualUserFindingKind
+  detail: string
+  rpcName?: string
+  status?: number
+  intentId?: string
+  step: number
+}
+export interface VirtualUserPreparation {
+  catalogue: ApiCatalogueEntry[]
+  intents: IntentSource[]
+  scopes: string[]
+  agents: ReachableAgent[]
+}
+export interface VirtualUserRunOutcome {
+  findings: readonly VirtualUserFinding[]
+  tally: VirtualUserTally
+  memory: Record<string, string>
+  stoppedBy: string | null
+}
+export interface VirtualUserRunRecord {
+  runId: string
+  persona: string
+  disposition: VirtualUserDisposition
+  seed: number
+  status: 'running' | 'completed' | 'failed'
+  goals: string[]
+  memory: Record<string, string>
+  findings: VirtualUserFinding[]
+  tally: VirtualUserTally | null
+  stoppedBy: string | null
+  error: string | null
+  startedBy: string | null
+  createdAt: Date
+  finishedAt: Date | null
+}
+export interface VirtualUserRunResult {
+  seed: number
+  tally: VirtualUserTally
+  findings: VirtualUserFinding[]
+  intents: IntentRecord[]
+  steps: StepRecord[]
+  memory: Record<string, string>
+  stoppedBy: | 'no-intents' | 'budget-steps' | 'budget-mutations' | 'budget-duration' | 'stop-hook' | 'exhausted'
+}
+export interface VirtualUserRunStart {
+  persona: string
+  disposition: VirtualUserDisposition
+  seed: number
+  goals?: readonly string[]
+  memory?: Record<string, string>
+  startedBy?: string | null
+}
+export interface VirtualUserRunStore {
+  start(run: VirtualUserRunStart): Promise<string>
+  complete(runId: string, outcome: VirtualUserRunOutcome): Promise<void>
+  fail(runId: string, error: string): Promise<void>
+  get(runId: string): Promise<VirtualUserRunRecord | null>
+  list(options?: { persona?: string; limit?: number; offset?: number }): Promise<VirtualUserRunRecord[]>
+}
+export interface VirtualUserTuning {
+  moves?: Partial<DispositionProfile['moves']>
+  temperature?: number
+  repeatRate?: number
+  reReadRate?: number
+  emptyMemory?: boolean
+  readOnly?: boolean
+  invertedOracle?: boolean
+  instructions?: string
+}
+export type WorkflowsMeta = Record<
+  string,
+  CommonWireMeta & {
+    name: string
+    steps: WorkflowStepMeta[]
+    context?: WorkflowContext
+    dsl?: boolean
+    expose?: boolean
+    scenario?: boolean
+    asserts?: boolean
+    skip?: string
+    actors?: string[]
+  }
+>
+```
+
+## ./ecosystem/workflow
+
+```ts
+export interface ApprovalStepMeta {
+  type: 'approval'
+  reason: string
+  outputVar?: string
+  expiry?: string | number
+  approvers?: WorkflowApprovalApprovers
+  approverScope?: string
+}
+export interface ArrayPredicateStepMeta {
+  type: 'arrayPredicate'
+  mode: 'some' | 'every'
+  sourceVar: string
+  itemVar: string
+  condition: Condition
+  outputVar?: string
+}
+assertWorkflowRunOwner: (wire: WorkflowRunWire | undefined, session: CoreUserSession | undefined) => void
+export interface BranchStepMeta {
+  type: 'branch'
+  branches: BranchCase[]
+  elseSteps?: WorkflowStepMeta[]
+}
+buildRunTimeline: (history: HistoryEntry[]) => RunTimeline
+export interface CancelStepMeta {
+  type: 'cancel'
+  reason?: string
+}
+export type Condition =
+  | SimpleCondition
+  | { type: 'and'; conditions: Condition[] }
+  | { type: 'or'; conditions: Condition[] }
+export interface ContextVariable {
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array'
+  default?: unknown
+  description?: string
+}
+export interface CoreUserSession {
+  userId?: string
+  orgId?: string
+  actor?: boolean
+  scopes?: string[]
+  readonly?: boolean
+}
+export type CoreWorkflow<
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
+    CorePikkuFunctionConfig<any, any, any>,
+> = {
+  name: string
+  func: PikkuFunctionConfig
+  middleware?: PikkuFunctionConfig['middleware']
+  tags?: string[]
+}
+export interface FanoutStepMeta {
+  type: 'fanout'
+  stepName?: string
+  sourceVar: string
+  itemVar: string
+  mode: 'parallel' | 'sequential'
+  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta | ScenarioStepMeta>
+  timeBetween?: string
+}
+export interface FilterStepMeta {
+  type: 'filter'
+  sourceVar: string
+  itemVar: string
+  condition: Condition
+  outputVar?: string
+}
+export type HistoryEntry = StepState & { stepName: string }
+export interface InlineStepMeta {
+  type: 'inline'
+  stepName: string
+  description?: string
+  options?: WorkflowStepOptions
+}
+export type InputSource =
+  | { from: 'input'; path: string }
+  | { from: 'outputVar'; name: string; path?: string }
+  | { from: 'item'; path: string }
+  | { from: 'literal'; value: unknown }
+  | { from: 'template'; parts: string[]; expressions: InputSource[] }
+isRef: (value: unknown) => value is RefValue
+export type OutputBinding =
+  | { from: 'outputVar'; name: string; path?: string }
+  | { from: 'stateVar'; name: string; path?: string }
+  | { from: 'input'; path: string }
+  | { from: 'literal'; value: unknown }
+  | { from: 'expression'; expression: string }
+export interface ParallelGroupStepMeta {
+  type: 'parallel'
+  children: Array<RpcStepMeta | ScenarioStepMeta>
+}
+export interface PikkuWorkflowGraphConfig< FuncMap extends Record<string, string>, T, > {
+  disabled?: true
+  name?: string
+  description?: string
+  tags?: string[]
+  nodes: FuncMap
+  config?: T
+  notes?: string[]
+}
+export interface PikkuWorkflowGraphResult {
+  __type: 'pikkuWorkflowGraph'
+  name?: string
+  description?: string
+  tags?: string[]
+  notes?: string[]
+}
+export interface PikkuWorkflowWire {
+  name: string
+  runId: string
+  pikkuUserId?: string
+  getRun: () => Promise<WorkflowRun>
+  do: WorkflowWireDoRPC & WorkflowWireDoInline
+  sleep: WorkflowWireSleep
+  suspend: WorkflowWireSuspend
+  approval: WorkflowWireApproval
+}
+export interface ReconstructedRunState {
+  seq: number
+  at?: Date
+  steps: ReconstructedStep[]
+  results: Record<string, unknown>
+  path: string[]
+  phase: RunPhase
+}
+reconstructFinalState: (timeline: RunTimeline) => ReconstructedRunState
+reconstructStateAt: (timeline: RunTimeline, at: number | Date) => ReconstructedRunState
+export interface RefValue {
+  __isRef: true
+  nodeId: string
+  path?: string
+}
+export interface RpcStepMeta {
+  type: 'rpc'
+  stepName: string
+  rpcName: string
+  outputVar?: string
+  inputs?: Record<string, InputSource> | 'passthrough'
+  options?: WorkflowStepOptions
+  actor?: string
+  expectEventually?: boolean
+}
+export type RunTimeline = RunTimelineEvent[]
+export interface SetStepMeta {
+  type: 'set'
+  variable: string
+  value?: unknown
+  expression?: string
+}
+export interface SleepStepMeta {
+  type: 'sleep'
+  stepName: string
+  duration: string | number
+  expression?: string
+}
+export interface StepState {
+  stepId: string
+  status: StepStatus
+  rpcName?: string | null
+  result?: any
+  error?: SerializedError
+  attemptCount: number
+  retries?: number
+  retryDelay?: string | number
+  fromStepName?: string
+  createdAt: Date
+  updatedAt: Date
+  childRunId?: string
+  runningAt?: Date
+  scheduledAt?: Date
+  succeededAt?: Date
+  failedAt?: Date
+}
+export type StepStatus =
+  | 'pending'
+  | 'running'
+  | 'scheduled'
+  | 'succeeded'
+  | 'failed'
+  | 'suspended'
+export interface SuspendStepMeta {
+  type: 'suspend'
+  reason: string
+}
+export interface SwitchCaseMeta {
+  value?: string | number | boolean | null
+  expression?: string
+  steps: WorkflowStepMeta[]
+}
+export interface SwitchStepMeta {
+  type: 'switch'
+  expression: string
+  cases: SwitchCaseMeta[]
+  defaultSteps?: WorkflowStepMeta[]
+}
+template: (templateStr: string, refs: { $ref: string; path?: string | undefined; }[]) => TemplateString
+export type TemplateString = {
+  $template: {
+    parts: string[]
+    expressions: Array<{ $ref: string; path?: string }>
+  }
+} & { __brand: 'TemplateString' }
+export type WorkflowContext = Record<string, ContextVariable>
+export interface WorkflowPlannedStep {
+  stepName: string
+  displayName?: string
+}
+export interface WorkflowQueueOptions {
+  queueStrategy?: 'per-workflow' | 'shared-groups'
+  queueConcurrency?: number
+  queueGroupConcurrency?: number | GroupConcurrencyConfig
+}
+export interface WorkflowRun {
+  id: string
+  workflow: string
+  status: WorkflowStatus
+  input: any
+  output?: any
+  error?: SerializedError
+  inline?: boolean
+  graphHash?: string
+  deterministic?: boolean
+  plannedSteps?: WorkflowPlannedStep[]
+  wire: WorkflowRunWire
+  createdAt: Date
+  updatedAt: Date
+}
+export interface WorkflowRunMirror {
+  createRun(runId: string, workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<void>
+  updateRunStatus(id: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
+  insertStepState(runId: string, step: StepState & { stepName: string; rpcName: string | null; data: any }): Promise<void>
+  setStepRunning(stepId: string): Promise<void>
+  setStepScheduled(stepId: string): Promise<void>
+  setStepResult(stepId: string, result: any): Promise<void>
+  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  setStepError(stepId: string, error: SerializedError): Promise<void>
+  createRetryAttempt(failedStepId: string, newStep: StepState & { stepName: string }): Promise<void>
+  setBranchTaken(stepId: string, branchKey: string): Promise<void>
+  updateRunState(runId: string, name: string, value: unknown): Promise<void>
+  upsertWorkflowVersion(name: string, graphHash: string, graph: any, source: string, status?: WorkflowVersionStatus): Promise<void>
+  updateWorkflowVersionStatus(name: string, graphHash: string, status: WorkflowVersionStatus): Promise<void>
+}
+export interface WorkflowRunService {
+  listRuns(options?: { workflowName?: string; status?: string; limit?: number; offset?: number }): Promise<WorkflowRun[]>
+  getRun(id: string): Promise<WorkflowRun | null>
+  getRunSteps(runId: string): Promise< Array<StepState & { stepName: string; rpcName?: string; data?: any }> >
+  getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
+  getDistinctWorkflowNames(): Promise<string[]>
+  getWorkflowVersion(name: string, graphHash: string): Promise<{ graph: any; source: string } | null>
+  deleteRun(id: string): Promise<boolean>
+}
+export interface WorkflowRunStatus {
+  id: string
+  status: WorkflowStatus
+  startedAt: Date
+  completedAt?: Date
+  deterministic?: boolean
+  plannedSteps?: WorkflowPlannedStep[]
+  steps: Array<{ name: string; status: StepStatus; duration?: number; attempts?: number }>
+  output?: unknown
+  error?: { message: string }
+}
+export interface WorkflowRunWire {
+  type: string
+  id?: string
+  parentRunId?: string
+  parentStepId?: string
+  pikkuUserId?: string
+}
+export interface WorkflowService {
+  wireQueueWorkers?(): void
+  createRun(workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<string>
+  getRun(id: string): Promise<WorkflowRun | null>
+  getRunStatus(id: string): Promise<WorkflowRunStatus | null>
+  getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
+  getRunTimeline(id: string): Promise<RunTimeline | null>
+  reconstructRunStateAt(id: string, at?: number | Date): Promise<ReconstructedRunState | null>
+  updateRunStatus(id: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
+  withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
+  close(): Promise<void>
+  resumeWorkflow(runId: string): Promise<void>
+  approveStep(runId: string, reason: string, decision: unknown, session?: CoreUserSession): Promise<void>
+  startWorkflow<I>(name: string, input: I, wire: WorkflowRunWire, rpcService: any, options?: { inline?: boolean; startNode?: string }): Promise<{ runId: string }>
+  runToCompletion<I>(name: string, input: I, rpcService: any, options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }): Promise<unknown>
+  runWorkflowJob(runId: string, rpcService: any): Promise<void>
+  orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
+  executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>
+  insertStepState(runId: string, stepName: string, rpcName: string, data: any, stepOptions?: { retries?: number; retryDelay?: string | number }): Promise<StepState>
+  getStepState(runId: string, stepName: string): Promise<StepState>
+  setStepRunning(stepId: string): Promise<void>
+  setStepScheduled(stepId: string): Promise<void>
+  setStepResult(stepId: string, result: any): Promise<void>
+  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  setStepError(stepId: string, error: Error): Promise<void>
+  createRetryAttempt(stepId: string, status: 'pending' | 'running'): Promise<StepState>
+  executeWorkflowStep(runId: string, stepName: string, rpcName: string | null, data: any, rpcService: any): Promise<void>
+  upsertWorkflowVersion(name: string, graphHash: string, graph: any, source: string, status?: WorkflowVersionStatus): Promise<void>
+  updateWorkflowVersionStatus(name: string, graphHash: string, status: WorkflowVersionStatus): Promise<void>
+  getWorkflowVersion(name: string, graphHash: string): Promise<{ graph: any; source: string } | null>
+}
+export type WorkflowsMeta = Record<
+  string,
+  CommonWireMeta & {
+    name: string
+    steps: WorkflowStepMeta[]
+    context?: WorkflowContext
+    dsl?: boolean
+    expose?: boolean
+    scenario?: boolean
+    asserts?: boolean
+    skip?: string
+    actors?: string[]
+  }
+>
+export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
+export type WorkflowStatus =
+  | 'running'
+  | 'suspended'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+export type WorkflowStepMeta =
+  | RpcStepMeta
+  | ScenarioStepMeta
+  | BranchStepMeta
+  | ParallelGroupStepMeta
+  | FanoutStepMeta
+  | ReturnStepMeta
+  | InlineStepMeta
+  | SleepStepMeta
+  | CancelStepMeta
+  | SuspendStepMeta
+  | ApprovalStepMeta
+  | SwitchStepMeta
+  | FilterStepMeta
+  | ArrayPredicateStepMeta
+  | SetStepMeta
+export interface WorkflowStepOptions {
+  description?: string
+  retries?: number
+  retryDelay?: string | number
+  onError?: string
+  actor?: ScenarioPersona
+}
+export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
+export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
+  stepName: string,
+  rpcName: string,
+  data: TInput,
+  options?: WorkflowStepOptions
+) => Promise<TOutput>
 ```
 
 ## ./schema

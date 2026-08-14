@@ -1,10 +1,10 @@
 import type { Logger } from '@pikku/core/services'
 import { compileAllSchemas } from '@pikku/core/schema'
-import type { RunHTTPWiringOptions } from '@pikku/core/http'
+import type { RunHTTPWiringOptions } from '@pikku/core/ecosystem/http'
 import { fetchData } from '@pikku/core/http'
 import type { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
-import { logRoutes } from '@pikku/core/http'
+import { logRoutes } from '@pikku/core/ecosystem/http'
 import { FastifyPikkuHTTPRequest } from './fastify-pikku-http-request.js'
 import { FastifyPikkuHTTPResponse } from './fastify-pikku-http-response.js'
 

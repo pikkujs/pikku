@@ -4,7 +4,7 @@
 
 import { PikkuFetch } from "./pikku-fetch.gen.js"
 import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow, TypedRunWorkflow, TypedWorkflowStatus } from './rpc-map.gen.d.js'
-import type { WorkflowRunStatus } from '@pikku/core/workflow'
+import type { WorkflowRunStatus } from '@pikku/core/ecosystem/workflow'
 
 /**
  * PikkuRPC provides a type-safe client for making Remote Procedure Calls (RPC)

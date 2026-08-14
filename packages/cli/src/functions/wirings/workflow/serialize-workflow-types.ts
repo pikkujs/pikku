@@ -8,14 +8,11 @@ export const serializeWorkflowTypes = (
   scenarioActorsImportPath: string = './pikku-personas.gen.js'
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
-import { template } from '@pikku/core/workflow'
-import {
-  pikkuWorkflowGraph as corePikkuWorkflowGraph,
-  type PikkuWorkflowGraphConfig,
-  type PikkuWorkflowGraphResult,
-} from '@pikku/core/workflow'
-import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
-import type { PikkuScenarioWire, ScenarioStepOptions } from '@pikku/core/scenario'
+import { template } from '@pikku/core/ecosystem/workflow'
+import { pikkuWorkflowGraph as corePikkuWorkflowGraph } from '@pikku/core/workflow'
+import type { PikkuWorkflowGraphConfig, PikkuWorkflowGraphResult } from '@pikku/core/ecosystem/workflow'
+import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/ecosystem/workflow'
+import type { PikkuScenarioWire, ScenarioStepOptions } from '@pikku/core/ecosystem/scenario'
 
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices } from '${functionTypesImportPath}'
@@ -89,7 +86,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { InferSchemaOutput, PikkuPermission, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
 import type { ScopeId } from '${scopesImportPath}'
 import { PikkuError } from '@pikku/core/errors'
-import type { CorePermissionGroup } from '@pikku/core'
+import type { CorePermissionGroup } from '@pikku/core/ecosystem/types'
 
 export type PikkuFunctionWorkflow<
   In = unknown,

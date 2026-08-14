@@ -1,6 +1,7 @@
-import type { Role, ScopeService } from '@pikku/core/services'
-import type { FlatScope } from '@pikku/core/scope'
-import type { SystemRole } from '@pikku/core/role'
+import type { ScopeService } from '@pikku/core/services'
+import type { Role } from '@pikku/core/ecosystem/services'
+import type { FlatScope } from '@pikku/core/ecosystem/scope'
+import type { SystemRole } from '@pikku/core/ecosystem/role'
 import {
   SystemRoleImmutableError,
   SystemRoleShadowedError,
@@ -378,7 +379,9 @@ export class KyselyScopeService implements ScopeService {
    * different decisions, and the number is what makes pruning a choice rather
    * than a formality.
    */
-  async findStaleSystemRoles(): Promise<Array<{ role: string; users: number }>> {
+  async findStaleSystemRoles(): Promise<
+    Array<{ role: string; users: number }>
+  > {
     const stale = await this.db
       .selectFrom('pikkuRoles')
       .leftJoin('pikkuUserRole', 'pikkuUserRole.role', 'pikkuRoles.name')

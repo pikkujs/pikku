@@ -5,17 +5,35 @@ disagree, so widening the API is a visible diff rather than a side effect of an
 
 Types are not pinned: they are erased before the test can enumerate them.
 
+A wildcard subpath is expanded to the files it matches, so `./ecosystem/*` is
+pinned as one entry per area rather than as a pattern — otherwise a new
+sub-barrel joins the published API without a diff.
+
 Regenerate after an intentional change, from `packages/core`:
 
 ```bash
 cat > src/__gen-surface.mts <<'EOF'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const pkg = JSON.parse(readFileSync('package.json', 'utf-8'))
+const expand = ([sub, dist]: [string, string]): [string, string][] => {
+  if (!sub.includes('*')) return [[sub, dist]]
+  const [prefix] = dist.split('*') as [string]
+  return readdirSync(resolve(prefix.replace('./dist/', './src/')), {
+    recursive: true,
+    encoding: 'utf-8',
+  })
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))
+    .map((f) => f.slice(0, -'.ts'.length))
+    .sort()
+    .map((area) => [sub.replace('*', area), dist.replace('*', area)])
+}
 const surface: Record<string, string[]> = {}
-for (const [sub, dist] of Object.entries(pkg.exports as Record<string, string>)) {
+for (const [sub, dist] of Object.entries(
+  pkg.exports as Record<string, string>
+).flatMap(expand)) {
   const src = pathToFileURL(resolve(dist.replace('./dist/', './src/'))).href
   surface[sub] = Object.keys(await import(src)).sort()
 }

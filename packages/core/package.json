@@ -74,6 +74,7 @@
     "./crypto-utils": "./dist/crypto-utils.js",
     "./hmac": "./dist/utils/hmac.js",
     "./ecosystem": "./dist/ecosystem.js",
+    "./ecosystem/*": "./dist/ecosystem/*.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
     "./dev": "./dist/dev/hot-reload.js"

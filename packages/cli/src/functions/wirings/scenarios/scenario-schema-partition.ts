@@ -1,4 +1,4 @@
-import type { FunctionsMeta } from '@pikku/core'
+import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import { partitionScenarioFunctionsMeta } from './scenario-partition.js'
 
 /**

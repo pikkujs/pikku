@@ -4,23 +4,12 @@ export const serializeAIAgentTypes = (
   scopesImportPath: string,
   scorerNamesImportPath: string
 ) => {
-  return `import {
-  CoreAIAgent,
-  PikkuAIMiddlewareHooks,
-} from '@pikku/core/ai-agent'
-import {
-  agent as coreAgent,
-  agentStream as coreAgentStream,
-  agentResume as coreAgentResume,
-  agentApprove as coreAgentApprove,
-} from '@pikku/core/ai-agent'
-import {
-  pikkuAIScorer as corePikkuAIScorer,
-  pikkuAIJudge as corePikkuAIJudge,
-} from '@pikku/core/ai-scorer'
+  return `import { CoreAIAgent, PikkuAIMiddlewareHooks } from '@pikku/core/ecosystem/ai-agent'
+import { agent as coreAgent, agentStream as coreAgentStream, agentResume as coreAgentResume, agentApprove as coreAgentApprove } from '@pikku/core/ecosystem/ai-agent'
+import { pikkuAIScorer as corePikkuAIScorer, pikkuAIJudge as corePikkuAIJudge } from '@pikku/core/ecosystem/ai-scorer'
 import type { PikkuPermission, PikkuMiddleware, Services, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { AIAgentMemoryConfig, AIAgentInput } from '@pikku/core/ai-agent'
+import type { AIAgentMemoryConfig, AIAgentInput } from '@pikku/core/ecosystem/ai-agent'
 import type { AgentMap } from '${agentMapImportPath}'
 import type { ScopeId } from '${scopesImportPath}'
 import type { ScorerName } from '${scorerNamesImportPath}'

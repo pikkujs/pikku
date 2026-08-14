@@ -1,7 +1,7 @@
 import { STATUS_CODES } from 'http'
 import type { Duplex } from 'stream' // Assuming `Duplex` is from Node.js' 'stream' module
-import type { JSONValue } from '@pikku/core'
-import type { PikkuHTTPResponse } from '@pikku/core/http'
+import type { JSONValue } from '@pikku/core/ecosystem/types'
+import type { PikkuHTTPResponse } from '@pikku/core/ecosystem/http'
 import type { SerializeOptions } from 'cookie'
 
 /**

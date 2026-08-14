@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { serializeChannelCLIClient } from './serialize-channel-cli-client.js'
-import type { CLIProgramMeta } from '@pikku/core/cli'
+import type { CLIProgramMeta } from '@pikku/core/ecosystem/cli'
 import type { Config } from '../../../../types/application-types.js'
 
 const config = { packageMappings: {} } as Config

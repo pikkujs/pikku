@@ -7,15 +7,17 @@ import {
   personaEnvironmentRefusal,
   roleMismatchMessage,
   verifyPersonaRoles,
-} from '@pikku/core/persona'
+} from '@pikku/core/ecosystem/persona'
 import {
   personaVirtualUserTarget,
-  catalogueClassification,
-  DISPOSITIONS,
-  prepareVirtualUserRun,
   runVirtualUser,
   type VirtualUserDisposition,
 } from '@pikku/core/virtual-user'
+import {
+  catalogueClassification,
+  DISPOSITIONS,
+  prepareVirtualUserRun,
+} from '@pikku/core/ecosystem/virtual-user'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolveEnvironment } from './environment.js'

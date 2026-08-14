@@ -15,8 +15,8 @@ import { asI18n } from '@pikku/react'
 import {
   reconstructStateAt,
   reconstructFinalState,
-} from '@pikku/core/workflow/timeline'
-import type { StepStatus } from '@pikku/core/workflow/types'
+} from '@pikku/core/ecosystem/workflow'
+import type { StepStatus } from '@pikku/core/ecosystem/workflow'
 import {
   Clock,
   ChevronDown,

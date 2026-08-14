@@ -13,7 +13,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 import { getRelativeTimeOffsetFromNow } from '@pikku/core'
-import type { RelativeTimeInput } from '@pikku/core'
+import type { RelativeTimeInput } from '@pikku/core/ecosystem/types'
 import type { JWTService } from '@pikku/core/services'
 
 type Envelope = { exp: number; payload: unknown }

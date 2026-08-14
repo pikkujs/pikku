@@ -36,7 +36,7 @@ describe('the scenario wirings file', () => {
     assert.ok(
       output.includes(
         `import { addWorkflow } from '@pikku/core/workflow'
-import { addFeature } from '@pikku/core/scenario'`
+import { addFeature } from '@pikku/core/ecosystem/scenario'`
       )
     )
     assert.ok(
@@ -73,7 +73,7 @@ import { addFeature } from '@pikku/core/scenario'`
     )
     assert.match(
       output,
-      /^import \{ addFeature \} from '@pikku\/core\/scenario'/
+      /^import \{ addFeature \} from '@pikku\/core\/ecosystem\/scenario'/
     )
   })
 

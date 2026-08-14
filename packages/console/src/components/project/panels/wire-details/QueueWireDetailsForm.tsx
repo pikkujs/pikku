@@ -10,7 +10,7 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
-import type { PikkuWiringTypes } from '@pikku/core'
+import type { PikkuWiringTypes } from '@pikku/core/ecosystem/types'
 
 interface QueueWireDetailsFormProps {
   wireType: PikkuWiringTypes

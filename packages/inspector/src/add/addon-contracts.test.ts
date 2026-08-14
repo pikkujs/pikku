@@ -178,7 +178,7 @@ describe('addon contract metadata', () => {
     await writeFile(
       appFile,
       [
-        "import { wireAddon } from '@pikku/core/rpc'",
+        "import { wireAddon } from '@pikku/core/ecosystem/rpc'",
         "import { wireHTTPRoutes } from '@pikku/core/http'",
         "import { wireChannel } from '@pikku/core/channel'",
         "import { wireCLI } from '@pikku/core/cli'",

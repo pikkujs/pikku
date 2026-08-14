@@ -9,7 +9,8 @@
 
 import { QueueServiceClient } from '@azure/storage-queue'
 import type { QueueClient } from '@azure/storage-queue'
-import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
+import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { JobOptions } from '@pikku/core/ecosystem/queue'
 
 export class AzureQueueService implements QueueService {
   readonly supportsResults = false

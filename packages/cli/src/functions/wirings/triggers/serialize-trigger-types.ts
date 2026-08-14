@@ -9,8 +9,9 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, CoreTrigger, wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
-import type { CoreNodeConfig } from '@pikku/core/node'
+import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
+import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, CoreTrigger } from '@pikku/core/ecosystem/trigger'
+import type { CoreNodeConfig } from '@pikku/core/ecosystem/node'
 ${singletonServicesTypeImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 

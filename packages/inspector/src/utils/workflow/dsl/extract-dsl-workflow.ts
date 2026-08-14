@@ -20,8 +20,8 @@ import type {
   Condition,
   WorkflowContext,
   ContextVariable,
-} from '@pikku/core/workflow'
-import type { ScenarioStepMeta } from '@pikku/core/scenario'
+} from '@pikku/core/ecosystem/workflow'
+import type { ScenarioStepMeta } from '@pikku/core/ecosystem/scenario'
 import {
   isWorkflowDoCall,
   isWorkflowExpectEventuallyCall,

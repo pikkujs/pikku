@@ -6,7 +6,8 @@ export const serializeQueueTypes = (functionTypesImportPath: string) => {
  * Queue-specific type definitions for tree-shaking optimization
  */
 
-import { CoreQueueWorker, wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'
+import { wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'
+import { CoreQueueWorker } from '@pikku/core/ecosystem/queue'
 import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
 
 /**

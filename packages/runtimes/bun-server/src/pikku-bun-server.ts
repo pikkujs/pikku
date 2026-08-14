@@ -8,16 +8,18 @@ import type { LocalContentConfig } from '@pikku/core/services/local-content'
 import {
   createLocalContentRequestHandler,
   type LocalContentRequestHandler,
-} from '@pikku/core/services/local-content-request-handler'
+} from '@pikku/core/ecosystem/services/local-content-request-handler'
 import {
   fetchData,
   PikkuFetchHTTPRequest,
   PikkuFetchHTTPResponse,
+} from '@pikku/core/http'
+import {
   logRoutes as logRegisterRoutes,
   type RunHTTPWiringOptions,
-} from '@pikku/core/http'
-import { logChannels } from '@pikku/core/channel'
-import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
+} from '@pikku/core/ecosystem/http'
+import { logChannels } from '@pikku/core/ecosystem/channel'
+import type { PikkuLocalChannelHandler } from '@pikku/core/ecosystem/channel/local'
 import { runLocalChannel } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
 
