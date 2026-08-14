@@ -1,3 +1,36 @@
+## 0.12.83
+
+### Patch Changes
+
+- 02c4fe5: fix(core,inspector): let a host grant an addon secrets it could not declare
+
+  Scoping an addon's `SecretService` to its `declaredSecrets` left generic addons
+  with nothing readable: `declaredSecrets` is derived from the addon package's own
+  source, but the secrets an addon like `@pikku/addon-graph` reads are named by the
+  consuming app's workflow nodes at runtime. Every authenticated `graph:httpRequest`
+  threw.
+
+  `wireAddon` now takes `secretGrants: string[]` and `credentialGrants: string[]`,
+  completing the grant family alongside `secretOverrides` (grant + rename) and
+  `globalSecrets` (grant everything, with a reason). Grants name the secret as the
+  addon reads it, since the scope check runs before the override map renames it —
+  which is also why an override's key grants and its value does not.
+
+  A grant naming a secret the project does not declare is an `INVALID_VALUE`
+  critical at codegen, resolved through the override map before lookup.
+
+- 438b776: Move the scenario and feature surface off `@pikku/core/workflow` and onto
+  `@pikku/core/scenario`. Scenarios extend workflows, so the production workflow
+  wiring no longer names a scenario module in its import graph. Feature and
+  scenario types are declared in their own `scenario.types.ts` rather than in
+  `workflow.types.ts`. Import `requireActor`, `requireScenarioEnv`, `pollUntil`,
+  `createCookieJar`, `addFeature`, `ScenarioHttpResponse` and the rest from
+  `@pikku/core/scenario`; `HttpPersonasConfig` now comes from
+  `@pikku/core/persona` rather than `@pikku/core/services`.
+- 438b776: Remove the `@pikku/core/internal` entry point. It aliased the same file as
+  `@pikku/core/ecosystem`, so the two published an identical set of names under
+  two specifiers. Import from `@pikku/core/ecosystem`.
+
 ## 0.12.82
 
 ### Patch Changes

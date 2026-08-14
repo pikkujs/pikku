@@ -1,3 +1,128 @@
+## 0.12.103
+
+### Patch Changes
+
+- 02c4fe5: fix(core,inspector): let a host grant an addon secrets it could not declare
+
+  Scoping an addon's `SecretService` to its `declaredSecrets` left generic addons
+  with nothing readable: `declaredSecrets` is derived from the addon package's own
+  source, but the secrets an addon like `@pikku/addon-graph` reads are named by the
+  consuming app's workflow nodes at runtime. Every authenticated `graph:httpRequest`
+  threw.
+
+  `wireAddon` now takes `secretGrants: string[]` and `credentialGrants: string[]`,
+  completing the grant family alongside `secretOverrides` (grant + rename) and
+  `globalSecrets` (grant everything, with a reason). Grants name the secret as the
+  addon reads it, since the scope check runs before the override map renames it —
+  which is also why an override's key grants and its value does not.
+
+  A grant naming a secret the project does not declare is an `INVALID_VALUE`
+  critical at codegen, resolved through the override map before lookup.
+
+- b5fa1e5: Enumerate addon secret and credential grants in the deployment manifest.
+
+  `wireAddon`'s `secretGrants` / `credentialGrants` widen an addon's scope the same
+  way `globalSecrets` does, only narrower — but the manifest reported the exemption
+  and not the grant, so a deployment could not see the secrets an app had lent an
+  addon. `grantedSecretAddons` and `grantedCredentialAddons` now list them by name,
+  including override keys, since scoping is checked before an override renames.
+
+  The `pikku-addon` skill documents the whole grant family and the scoping rule
+  behind it, rather than the override fields alone.
+
+- 438b776: Move the scenario and feature surface off `@pikku/core/workflow` and onto
+  `@pikku/core/scenario`. Scenarios extend workflows, so the production workflow
+  wiring no longer names a scenario module in its import graph. Feature and
+  scenario types are declared in their own `scenario.types.ts` rather than in
+  `workflow.types.ts`. Import `requireActor`, `requireScenarioEnv`, `pollUntil`,
+  `createCookieJar`, `addFeature`, `ScenarioHttpResponse` and the rest from
+  `@pikku/core/scenario`; `HttpPersonasConfig` now comes from
+  `@pikku/core/persona` rather than `@pikku/core/services`.
+- ad63f47: feat(cli): warn before codegen when a linked dependency splits a package's type identity
+
+  `pikku all` now runs the split-type-identity check as a preflight, beside the
+  existing `@pikku/core` one, and warns with `PKU719` naming each package, both
+  versions and both paths.
+
+  It has to run _before_ the work rather than after it fails. The failure it
+  explains is a V8 heap OOM, which aborts the process — `process.on('exit')`,
+  `uncaughtException` and `finally` never run, so nothing printed after the fact is
+  ever seen. By the time there is a symptom, the only thing that can help is
+  already on screen above it. Without this the user sees a codegen step that dies
+  of memory pressure with no indication that two copies of one package are the
+  reason, and the obvious next move is to raise `--max-old-space-size`, which
+  hides it further.
+
+  Warns rather than throws: a skewed linked dependency is a strong signal, not a
+  certainty, and refusing to build on a heuristic would break working setups.
+  `PIKKU_SKIP_TYPE_IDENTITY_CHECK=1` silences it, matching
+  `PIKKU_ALLOW_DUPLICATE_CORE`. It also swallows its own errors — it runs on every
+  codegen, so it must never be the reason a build stops.
+
+- 4f80918: perf(cli): only resolve symlinks when scanning for external dependencies
+
+  The split-type-identity check called `realpath` on every installed package.
+  `realpath` lstats every component of the path it is given, so the scan scaled
+  with the install layout rather than with anything interesting: 143ms on a
+  hoisted tree (1781 packages at the root) against 7ms on an isolated one (35).
+
+  A path that traverses no symlink cannot leave the project, and `readdir` already
+  hands back the entry type, so ruling a package out costs nothing. Now 45ms
+  hoisted and 3.5ms isolated — cheap enough to consider running before codegen
+  rather than only in `validate`, which matters because the failure it detects
+  kills the process rather than failing it.
+
+  The two-hop case is what makes this fiddly, and it is the common one: bun links
+  `node_modules/@scope/pkg` into an in-project store and the link out of the tree
+  is the `dist` inside that target, so the first hop lands inside the project and
+  proves nothing.
+
+- 689ae0c: feat(cli): validate catches a linked dependency that splits a package's type identity
+
+  A dependency linked into the project from another checkout (`link:`, `portal:`,
+  or a hand-made `dist` symlink) resolves its own imports from that other tree's
+  `node_modules`. When both trees carry the same package at different versions,
+  TypeScript ends up with two unrelated declarations of the same interface and
+  structurally compares them wherever they meet — which inside a generic
+  inference chain compounds badly. Fabric's `api-functions` went from
+  1.3GB/13s to a typecheck that never finished (8GB and 12GB heap ceilings both
+  died, 7.7M types, single assignability checks taking eight seconds) because one
+  package's `dist` pointed at a sibling checkout carrying its own `better-auth`.
+
+  The failure mode is what makes it worth a check: it presents as "codegen is
+  slow" or an out-of-memory crash, never as a version mismatch, and no existing
+  check looked at it. Both `pikku validate` and `pikku fabric validate` now report
+  `split-type-identity-<dep>-<pkg>` for each type-identity-sensitive package
+  (`better-auth`, `@better-auth/core`, `@pikku/core`, `kysely`, `zod`) that a
+  linked dependency resolves at a different version than the project does, naming
+  both versions and both paths.
+
+  Nothing about this is fabric-specific — linking a package from a sibling checkout
+  is the normal way to develop a pikku package against a consuming app, which is
+  exactly the population that hits it — so the check lives in the shared registry
+  and runs for any project.
+
+  It runs at the workspace root only: a linked dependency is a property of the
+  install as a whole, so running it per workspace package would report the same
+  pair once per package.
+
+  This is distinct from the existing duplicate-copy check, which is about two
+  physical copies of the _same_ version splitting module state at runtime. Dependency
+  lookup probes workspace package directories as well as the root, so it also works
+  under isolated/pnpm-style installs that never hoist to the root `node_modules`.
+
+- Updated dependencies [02c4fe5]
+- Updated dependencies [b5fa1e5]
+- Updated dependencies [bba64c7]
+- Updated dependencies [438b776]
+- Updated dependencies [438b776]
+- Updated dependencies [ad63f47]
+  - @pikku/inspector@0.12.59
+  - @pikku/core@0.12.83
+  - @pikku/skills@0.12.9
+  - @pikku/knowledge@0.12.6
+  - @pikku/playwright@0.12.75
+
 ## 0.12.102
 
 ### Patch Changes

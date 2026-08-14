@@ -1,3 +1,15 @@
+## 0.12.11
+
+### Patch Changes
+
+- 438b776: Remove the `@pikku/core/internal` entry point. It aliased the same file as
+  `@pikku/core/ecosystem`, so the two published an identical set of names under
+  two specifiers. Import from `@pikku/core/ecosystem`.
+- Updated dependencies [02c4fe5]
+- Updated dependencies [438b776]
+- Updated dependencies [438b776]
+  - @pikku/core@0.12.83
+
 ## 0.12.10
 
 ### Patch Changes
