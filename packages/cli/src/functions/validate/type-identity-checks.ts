@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { readdir, realpath } from 'node:fs/promises'
+import { lstat, readdir, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { readJsonSafe } from './shared-checks.js'
 import type { ValidateFinding } from './persona-checks.js'
@@ -90,6 +90,12 @@ async function projectResolvedVersion(
  * (`node_modules/@scope/pkg/dist -> ../../../other-repo/packages/pkg/dist`),
  * which still moves type resolution to the other tree since TypeScript resolves
  * symlinks to their realpath. So each candidate subdir is probed too.
+ *
+ * Only symlinks are resolved. `realpath` lstats every component of the path, so
+ * running it over every installed package costs 20x more on a hoisted install
+ * (1781 packages at the root) than on an isolated one (35) — and a path that
+ * traverses no symlink cannot leave the project anyway. `readdir` already hands
+ * back the entry type, so ruling a package out is free.
  */
 async function externalDependencyRoots(
   root: string
@@ -105,7 +111,7 @@ async function externalDependencyRoots(
   const topLevel = await readdir(nodeModules, { withFileTypes: true }).catch(
     () => []
   )
-  const pkgDirs: string[] = []
+  const pkgDirs: Array<{ dir: string; link: boolean }> = []
   for (const entry of topLevel) {
     if (entry.name.startsWith('.')) continue
     if (entry.name.startsWith('@')) {
@@ -113,20 +119,37 @@ async function externalDependencyRoots(
         withFileTypes: true,
       }).catch(() => [])
       for (const inner of scoped) {
-        pkgDirs.push(join(nodeModules, entry.name, inner.name))
+        pkgDirs.push({
+          dir: join(nodeModules, entry.name, inner.name),
+          link: inner.isSymbolicLink(),
+        })
       }
     } else {
-      pkgDirs.push(join(nodeModules, entry.name))
+      pkgDirs.push({
+        dir: join(nodeModules, entry.name),
+        link: entry.isSymbolicLink(),
+      })
     }
   }
 
-  for (const pkgDir of pkgDirs) {
-    for (const candidate of [pkgDir, join(pkgDir, 'dist')]) {
-      if (!existsSync(candidate)) continue
-      const real = await realpath(candidate).catch(() => null)
-      if (!real) continue
-      const rel = relative(realRoot, real)
-      if (!rel.startsWith('..')) continue
+  const linkTarget = async (path: string): Promise<string | null> => {
+    const stats = await lstat(path).catch(() => null)
+    if (!stats?.isSymbolicLink()) return null
+    return realpath(path).catch(() => null)
+  }
+  const isExternal = (real: string) => relative(realRoot, real).startsWith('..')
+
+  for (const { dir: pkgDir, link } of pkgDirs) {
+    // A package linked to a path inside the project (bun's .bun store) is not
+    // external, but the build output *inside* that target still can be.
+    const target = link ? await realpath(pkgDir).catch(() => null) : null
+    if (link && !target) continue
+    const candidates: Array<string | null> = [
+      target && isExternal(target) ? target : null,
+      await linkTarget(join(target ?? pkgDir, 'dist')),
+    ]
+    for (const real of candidates) {
+      if (!real || !isExternal(real)) continue
       const name = relative(nodeModules, pkgDir)
       // `real` may point at a build output (…/pkg/dist); report the linked
       // package's own root so the message names something a reader can act on.
