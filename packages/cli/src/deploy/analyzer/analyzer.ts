@@ -38,6 +38,7 @@ import type {
   WorkflowStepDefinition,
   SecretDeclaration,
   UnscopedAddon,
+  GrantedAddon,
   VariableDeclaration,
 } from './manifest.js'
 
@@ -506,6 +507,16 @@ export function analyzeDeployment(
 
   const unscopedSecretAddons: UnscopedAddon[] = []
   const unscopedCredentialAddons: UnscopedAddon[] = []
+  const grantedSecretAddons: GrantedAddon[] = []
+  const grantedCredentialAddons: GrantedAddon[] = []
+
+  // An override's key is a grant too: scoping is checked before the rename, so
+  // the key is a name the addon may read that it never declared.
+  const grantedNames = (
+    grants: string[] | undefined,
+    overrides: Record<string, string> | undefined
+  ) => [...new Set([...(grants ?? []), ...Object.keys(overrides ?? {})])].sort()
+
   for (const [namespace, addon] of state.rpc?.wireAddonDeclarations ?? []) {
     if (addon.globalSecrets) {
       unscopedSecretAddons.push({
@@ -513,17 +524,37 @@ export function analyzeDeployment(
         package: addon.package,
         reason: addon.globalSecrets,
       })
+    } else {
+      const granted = grantedNames(addon.secretGrants, addon.secretOverrides)
+      if (granted.length > 0) {
+        grantedSecretAddons.push({ namespace, package: addon.package, granted })
+      }
     }
+
     if (addon.globalCredentials) {
       unscopedCredentialAddons.push({
         namespace,
         package: addon.package,
         reason: addon.globalCredentials,
       })
+    } else {
+      const granted = grantedNames(
+        addon.credentialGrants,
+        addon.credentialOverrides
+      )
+      if (granted.length > 0) {
+        grantedCredentialAddons.push({
+          namespace,
+          package: addon.package,
+          granted,
+        })
+      }
     }
   }
-  const byNamespace = (a: UnscopedAddon, b: UnscopedAddon) =>
-    a.namespace.localeCompare(b.namespace)
+  const byNamespace = (
+    a: UnscopedAddon | GrantedAddon,
+    b: UnscopedAddon | GrantedAddon
+  ) => a.namespace.localeCompare(b.namespace)
 
   const variables: VariableDeclaration[] = state.variables.definitions.map(
     (v) => ({
@@ -547,6 +578,8 @@ export function analyzeDeployment(
     unresolvedSecretReads: unresolvedSecretReads.sort(),
     unscopedSecretAddons: unscopedSecretAddons.sort(byNamespace),
     unscopedCredentialAddons: unscopedCredentialAddons.sort(byNamespace),
+    grantedSecretAddons: grantedSecretAddons.sort(byNamespace),
+    grantedCredentialAddons: grantedCredentialAddons.sort(byNamespace),
     variables,
   }
 }

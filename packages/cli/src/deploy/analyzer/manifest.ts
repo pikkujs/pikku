@@ -140,6 +140,17 @@ export interface UnscopedAddon {
   reason: string
 }
 
+/** A `wireAddon` instance the app lent named secrets or credentials it never declared. */
+export interface GrantedAddon {
+  namespace: string
+  package: string
+  /**
+   * The names the addon may now read, as the addon reads them — grants and
+   * override keys alike, since scoping is checked before an override renames.
+   */
+  granted: string[]
+}
+
 export interface VariableDeclaration {
   variableId: string
   displayName: string
@@ -173,5 +184,14 @@ export interface DeploymentManifest {
    * only the credentials it declared, and none can enumerate the app's users.
    */
   unscopedCredentialAddons: UnscopedAddon[]
+  /**
+   * Addon instances lent named secrets on top of the ones they declared. The
+   * other half of the same waiver as `unscopedSecretAddons` — narrower, because
+   * the app named the set — so between them a deployment sees every secret an
+   * addon can reach that it did not declare for itself.
+   */
+  grantedSecretAddons: GrantedAddon[]
+  /** Addon instances lent named credentials on top of the ones they declared. */
+  grantedCredentialAddons: GrantedAddon[]
   variables: VariableDeclaration[]
 }
