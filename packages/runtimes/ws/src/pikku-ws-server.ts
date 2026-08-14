@@ -17,6 +17,15 @@ import crypto from 'crypto'
 import { incomingMessageToRequestConvertor } from './incoming-message-to-request-convertor.js'
 
 /**
+ * Frame-size ceiling every Pikku-owned `WebSocketServer` is constructed with.
+ *
+ * `ws` defaults to 100MB, which lets one unauthenticated upgrade buffer a frame
+ * far larger than any Pikku message needs. A server that accepts a bigger frame
+ * than this should say so explicitly at its construction site.
+ */
+export const DEFAULT_WS_MAX_PAYLOAD = 1024 * 1024
+
+/**
  * Options for configuring the `pikkuHandler`.
  */
 export type PikkuWSHandlerOptions = {

@@ -2,13 +2,16 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import { connect, type Socket } from 'node:net'
 import { after, before, describe, test } from 'node:test'
-import { WebSocketServer } from 'ws'
+import { WebSocket, WebSocketServer } from 'ws'
 import {
   getSingletonServices,
   setSingletonServices,
 } from '@pikku/core/ecosystem'
 
-import { pikkuWebsocketHandler } from './pikku-ws-server.js'
+import {
+  DEFAULT_WS_MAX_PAYLOAD,
+  pikkuWebsocketHandler,
+} from './pikku-ws-server.js'
 
 const silentLogger = {
   info: () => {},
@@ -68,7 +71,10 @@ describe('pikkuWebsocketHandler upgrade', () => {
     setSingletonServices({ logger: silentLogger } as any)
 
     server = createServer()
-    wss = new WebSocketServer({ noServer: true })
+    wss = new WebSocketServer({
+      noServer: true,
+      maxPayload: DEFAULT_WS_MAX_PAYLOAD,
+    })
     pikkuWebsocketHandler({ server, wss, logger: silentLogger })
 
     // Registered after the handler's own listener, so it runs once the handler
@@ -120,5 +126,74 @@ describe('pikkuWebsocketHandler upgrade', () => {
       [],
       'the reset must be absorbed by the upgrade handler, not escalated'
     )
+  })
+})
+
+describe('DEFAULT_WS_MAX_PAYLOAD', () => {
+  let server: Server
+  let wss: WebSocketServer
+  let port: number
+
+  before(async () => {
+    server = createServer()
+    wss = new WebSocketServer({
+      noServer: true,
+      maxPayload: DEFAULT_WS_MAX_PAYLOAD,
+    })
+    server.on('upgrade', (req, socket, head) => {
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws))
+    })
+    // Refusing an oversized frame surfaces server-side as an 'error' on the
+    // socket as well as the 1009 close. Unhandled, it escalates to an
+    // uncaughtException after the test that provoked it has already passed.
+    wss.on('connection', (ws) => ws.on('error', () => {}))
+    port = await listen(server)
+  })
+
+  after(async () => {
+    await new Promise<void>((resolve) => wss.close(() => resolve()))
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  })
+
+  test('is below the ws default, so a ceiling is actually applied', () => {
+    assert.ok(
+      DEFAULT_WS_MAX_PAYLOAD < 100 * 1024 * 1024,
+      'a value at or above the ws default of 100MB applies no ceiling at all'
+    )
+  })
+
+  test('a frame over the ceiling closes the connection with 1009', async () => {
+    const client = new WebSocket(`ws://127.0.0.1:${port}`)
+    await new Promise((resolve) => client.on('open', resolve))
+
+    const closed = new Promise<number>((resolve) =>
+      client.on('close', (code) => resolve(code))
+    )
+    client.send(Buffer.alloc(DEFAULT_WS_MAX_PAYLOAD + 1))
+
+    assert.equal(
+      await closed,
+      1009,
+      'an oversized frame must be refused as too-large, not buffered'
+    )
+  })
+
+  test('a frame under the ceiling is delivered', async () => {
+    const delivered = new Promise<number>((resolve) => {
+      wss.once('connection', (ws) => {
+        ws.on('message', (data: Buffer) => resolve(data.length))
+      })
+    })
+
+    const client = new WebSocket(`ws://127.0.0.1:${port}`)
+    await new Promise((resolve) => client.on('open', resolve))
+    client.send(Buffer.alloc(1024))
+
+    assert.equal(
+      await delivered,
+      1024,
+      'a normal frame must not trip the limit'
+    )
+    client.close()
   })
 })

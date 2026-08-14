@@ -102,14 +102,17 @@ yarn add @pikku/ws
 ```
 
 ```typescript
-import { pikkuWebsocketHandler } from '@pikku/ws'
+import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'
 import { stopSingletonServices } from '@pikku/core'
 import { Server } from 'http'
 import { WebSocketServer } from 'ws'
 import './.pikku/pikku-bootstrap.gen.js'
 
 const server = new Server()
-const wss = new WebSocketServer({ noServer: true })
+const wss = new WebSocketServer({
+  noServer: true,
+  maxPayload: DEFAULT_WS_MAX_PAYLOAD,
+})
 
 pikkuWebsocketHandler({
   server,
