@@ -7,6 +7,7 @@ import {
 } from './addon-package-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
+import { runWorkspaceExportsChecks } from './workspace-exports-checks.js'
 import type { ValidateFinding as Finding } from './persona-checks.js'
 
 export type ValidateTarget = {
@@ -114,6 +115,15 @@ export const CHECKS: ValidateCheck[] = [
     applies: async ({ dir, label }) =>
       label === '.' && existsSync(join(dir, 'node_modules')),
     run: async ({ dir }) => runTypeIdentityChecks(dir),
+  },
+  {
+    id: 'workspace-exports',
+    subject: 'workspace subpath imports',
+    // Root only: the check pairs an import in one package with the exports map
+    // of another, so it needs the whole tree in view. Per-package it would see
+    // the consumer without the producer and report nothing.
+    applies: async ({ label }) => label === '.',
+    run: async ({ dir }) => runWorkspaceExportsChecks(dir),
   },
 ]
 
