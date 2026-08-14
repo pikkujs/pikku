@@ -1,6 +1,6 @@
 {
   "name": "@pikku/playwright",
-  "version": "0.12.75",
+  "version": "0.12.76",
   "description": "Playwright browser driver for Pikku scenario steps",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

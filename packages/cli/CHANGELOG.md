@@ -1,3 +1,66 @@
+## 0.12.104
+
+### Patch Changes
+
+- 3a4d50a: feat(console): one scope per console area, under `pikku:console`
+
+  The console gated itself on a single `admin` scope declared on `wireAddon`, so
+  one grant covered reading a secret, rewriting a function body and reading the
+  audit trail alike — and the secret and variable brokers, which the CLI emits
+  into the app's own scaffold rather than the addon, were not covered by the addon
+  gate at all and carried no scope of their own.
+
+  Every console function now declares the area it belongs to:
+
+  ```
+  pikku:console:secrets      read | write
+  pikku:console:variables    read | write
+  pikku:console:addons       read | install
+  pikku:console:credentials  read | manage
+  pikku:console:scopes       read | manage   (was pikku:scopes:*)
+  pikku:console:audit        read            (was pikku:audit:*)
+  pikku:console:wirings      read
+  pikku:console:security     read | run
+  pikku:console:workflows    read | manage
+  pikku:console:agents       read | manage
+  pikku:console:db           read
+  pikku:console:knowledge    read
+  pikku:console:emails       read | write
+  pikku:console:code         write
+  ```
+
+  `pikku:console` grants the lot, and `pikku` still grants that — the generated
+  `PIKKU_CONSOLE_TOKEN` session carries `['admin', 'pikku']`, so an external
+  console keeps working untouched.
+
+  **Migration.** `admin` no longer reaches the console: it is a different tree.
+  Grant `pikku:console` alongside `admin` to keep an administrator's access as it
+  was, or grant the individual areas to hand out less. The two existing console
+  scopes moved: `pikku:scopes:read` / `pikku:scopes:manage` are now
+  `pikku:console:scopes:*`, and `pikku:audit:read` is now
+  `pikku:console:audit:read`.
+
+- 3a4d50a: Five `console:scope*` descriptions and two `pikku *-prune` warnings promised a
+  grant or revoke "takes effect on their next request — no re-login". That is
+  only true when `withResolvedScopes` actually resolves, and it skips resolution
+  whenever `mapSession`/`mapKey` has already set `scopes` — which is
+  authoritative and deliberately never overridden.
+
+  So an app whose `mapSession` derives scopes from something like
+  `result.user.role` — the shape the `wire-scope` scaffold teaches — can grant a
+  scope from the console, see it stored, and have it never reach a session. The
+  revoke direction is worse: `roles prune` and `scopes prune` reported that users
+  lose the scopes on their next request when in fact they keep them.
+
+  Copy only; no behaviour change. The docblock on `withResolvedScopes` now states
+  that the propagation guarantee is conditional on resolution running at all, so
+  the next person copying that sentence into UI copy carries the caveat with it.
+
+- Updated dependencies [3a4d50a]
+- Updated dependencies [eba75ea]
+  - @pikku/better-auth@0.12.24
+  - @pikku/playwright@0.12.76
+
 ## 0.12.103
 
 ### Patch Changes

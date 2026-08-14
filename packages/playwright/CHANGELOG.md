@@ -1,5 +1,11 @@
 # @pikku/playwright
 
+## 0.12.76
+
+### Patch Changes
+
+- eba75ea: export browserConfigFromEnv from the package root so a scenario bootstrap can re-export it
+
 ## 0.12.75
 
 ### Patch Changes
