@@ -4,6 +4,7 @@ import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.
 import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
 import {
   pruneLegacyScaffoldFiles,
+  refreshScaffoldsImportingRemovedEntryPoints,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import {
@@ -73,6 +74,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await warnOnSplitTypeIdentity(config.rootDir, logger)
 
     await pruneLegacyScaffoldFiles(config)
+    await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
 
     const allImports: string[] = []

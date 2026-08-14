@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   pruneLegacyScaffoldFiles,
+  refreshScaffoldsImportingRemovedEntryPoints,
   removeLegacyScaffoldFile,
 } from './remove-legacy-scaffold-file.js'
 import type { PikkuCLIConfig } from '../../types/config.js'
@@ -76,5 +77,56 @@ describe('pruneLegacyScaffoldFiles', () => {
 
   test('tolerates a config that has no scaffolds enabled', async () => {
     await pruneLegacyScaffoldFiles({} as PikkuCLIConfig)
+  })
+})
+
+describe('refreshScaffoldsImportingRemovedEntryPoints', () => {
+  const agentConfig = async (contents: string) => {
+    const scaffold = await scaffoldDir()
+    const file = join(scaffold, 'agent', 'agent.gen.ts')
+    await mkdir(join(scaffold, 'agent'), { recursive: true })
+    await writeFile(file, contents)
+    return { file, config: { publicAgentFile: file } as PikkuCLIConfig }
+  }
+
+  test('deletes an agent scaffold left on the pre-#596 entry point', async () => {
+    // What a project carries in after upgrading: the scaffold pikku wrote for it
+    // under the old CLI, importing a path @pikku/core no longer publishes.
+    const { file, config } = await agentConfig(
+      `import { canAccessThread } from '@pikku/core/ai-agent'\n`
+    )
+
+    await refreshScaffoldsImportingRemovedEntryPoints(config)
+
+    assert.ok(
+      !existsSync(file),
+      'the scaffold has to go, or `pikku all` finds it present and leaves it'
+    )
+  })
+
+  test('deletes one left on the removed scorer entry point too', async () => {
+    const { file, config } = await agentConfig(
+      `import type { AgentRunScore } from '@pikku/core/ai-scorer'\n`
+    )
+
+    await refreshScaffoldsImportingRemovedEntryPoints(config)
+
+    assert.ok(!existsSync(file))
+  })
+
+  test('keeps a scaffold that already imports the renamed entry point', async () => {
+    // The project may have edited this file; only an import that cannot compile
+    // justifies throwing its changes away.
+    const { file, config } = await agentConfig(
+      `import { canAccessThread } from '@pikku/core/agent'\n// a local edit\n`
+    )
+
+    await refreshScaffoldsImportingRemovedEntryPoints(config)
+
+    assert.ok(existsSync(file))
+  })
+
+  test('tolerates a config with no agent scaffold', async () => {
+    await refreshScaffoldsImportingRemovedEntryPoints({} as PikkuCLIConfig)
   })
 })

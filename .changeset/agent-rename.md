@@ -50,6 +50,15 @@ The scorer queues are now `agent-score-fast` and `agent-score-slow`. Drain the
 old `ai-score-fast` / `ai-score-slow` queues before deploying — jobs still
 sitting on them when the new workers start will never be picked up.
 
+**Scaffolds**
+
+The agent scaffold pikku wrote for your project — `<scaffold>/agent/agent.gen.ts`
+and its schemas file — imports `@pikku/core/ai-agent`, which no longer exists. A
+scaffold is normally written once and then left alone, so `pikku all` would find
+it present and leave the broken import in place. It now deletes an agent scaffold
+importing either removed entry point and regenerates it in the same run. Anything
+you added to that file goes with it, so move local edits out first.
+
 **Database**
 
 The agent tables are renamed: `ai_threads`, `ai_message`, `ai_tool_call`,

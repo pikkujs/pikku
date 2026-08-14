@@ -1,5 +1,5 @@
 import { rm } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import type { PikkuCLIConfig } from '../../types/config.js'
 
@@ -57,6 +57,36 @@ export const removeRetiredScaffoldFiles = async (config: PikkuCLIConfig) => {
     config.scenariosSchemasFile,
   ]) {
     if (file && existsSync(file)) {
+      await rm(file, { force: true })
+    }
+  }
+}
+
+/**
+ * Entry points a scaffold may still import after #596 renamed them.
+ */
+const REMOVED_ENTRY_POINTS = ['@pikku/core/ai-agent', '@pikku/core/ai-scorer']
+
+/**
+ * Delete agent scaffolds that import an entry point pikku no longer publishes.
+ *
+ * A scaffold is written once, when missing, and left alone afterwards so a
+ * project can edit it. That is the right default until the import at the top
+ * stops resolving: the file then fails to compile and pikku will not replace it,
+ * because it is still there. Deleting it puts it back in the missing set, so the
+ * same `pikku all` regenerates it against the current entry point.
+ *
+ * Only the two `@pikku/core` paths #596 renamed count as stale. Anything a
+ * project added to the file is lost with it — which is why this is keyed to an
+ * import that cannot compile rather than to the file simply being out of date.
+ */
+export const refreshScaffoldsImportingRemovedEntryPoints = async (
+  config: PikkuCLIConfig
+) => {
+  for (const file of [config.publicAgentFile, config.publicAgentSchemasFile]) {
+    if (!file || !existsSync(file)) continue
+    const contents = readFileSync(file, 'utf-8')
+    if (REMOVED_ENTRY_POINTS.some((entry) => contents.includes(entry))) {
       await rm(file, { force: true })
     }
   }
