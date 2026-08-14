@@ -38,6 +38,10 @@ interface PikkuMetaContextType {
   counts: MetaCounts
   functionUsedBy: Map<string, FunctionUsedBy>
   loading: boolean
+  /** Loading with nothing to show yet — the only state that may blank the app.
+   *  A refresh keeps the meta it already has, so the page stays where it is
+   *  and only the control that asked for it reads as busy. */
+  initialLoading: boolean
   error: string | null
   refresh: () => Promise<void>
 }
@@ -114,6 +118,7 @@ export const PikkuMetaProvider: React.FC<{
     Record<string, FunctionUsedBy>
   >({})
   const [loading, setLoading] = useState(true)
+  const [everLoaded, setEverLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const loadMeta = useCallback(async () => {
@@ -161,6 +166,7 @@ export const PikkuMetaProvider: React.FC<{
       setError(e.message || 'Failed to load metadata')
     } finally {
       setLoading(false)
+      setEverLoaded(true)
     }
   }, [rpc])
 
@@ -183,6 +189,7 @@ export const PikkuMetaProvider: React.FC<{
         counts,
         functionUsedBy,
         loading,
+        initialLoading: loading && !everLoaded,
         error,
         refresh: loadMeta,
       }}

@@ -26,7 +26,7 @@ export interface AppLayoutProps {
 }
 
 const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
-  const { loading, error } = usePikkuMeta()
+  const { initialLoading, error } = usePikkuMeta()
   const { pathname } = useLocation()
   const phone = usePhone()
   const [navOpen, setNavOpen] = useState(false)
@@ -46,7 +46,10 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
     setOptionsOpen(false)
   }, [pathname, setOptionsOpen])
 
-  if (loading) {
+  // Only the first load blanks the screen. A metadata refresh from the dock
+  // keeps the page it was on: the tile carries the busy badge, and the meta
+  // swaps under the screen when it arrives.
+  if (initialLoading) {
     return (
       <Center h="100vh">
         <Loader size="lg" />
