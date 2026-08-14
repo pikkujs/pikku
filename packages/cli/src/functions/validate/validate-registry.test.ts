@@ -50,6 +50,12 @@ describe('target discovery', () => {
   })
 })
 
+/**
+ * `workspace-exports` is planned at the root of every target — its precondition
+ * is the root, not a kind — so it rides along in each of these expectations. It
+ * is the plan that is asserted here; whether the check finds anything is
+ * workspace-exports-checks.test.ts.
+ */
 describe('validation planning', () => {
   test('an addon gets the addon check and not the app checks', async () => {
     const tmp = await makeTmp()
@@ -57,6 +63,7 @@ describe('validation planning', () => {
       await writeAddon(tmp, '.')
       assert.deepStrictEqual(planned(await planValidation(tmp)), [
         'addon-package:.',
+        'workspace-exports:.',
       ])
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -71,6 +78,7 @@ describe('validation planning', () => {
       await write(tmp, 'packages/functions/package.json', '{"name":"fns"}')
       assert.deepStrictEqual(planned(await planValidation(tmp)), [
         'app-project:.',
+        'workspace-exports:.',
       ])
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -94,6 +102,7 @@ describe('validation planning', () => {
         'addon-package:p/one',
         'addon-package:p/two',
         'app-project:.',
+        'workspace-exports:.',
       ])
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -109,17 +118,21 @@ describe('validation planning', () => {
         'package.json',
         JSON.stringify({ name: 'x', private: true, files: ['dist', '.pikku'] })
       )
-      assert.deepStrictEqual(planned(await planValidation(tmp)), [])
+      assert.deepStrictEqual(planned(await planValidation(tmp)), [
+        'workspace-exports:.',
+      ])
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
   })
 
-  test('a plain package plans nothing', async () => {
+  test('a plain package plans no package checks', async () => {
     const tmp = await makeTmp()
     try {
       await write(tmp, 'package.json', '{"name":"plain"}')
-      assert.deepStrictEqual(planned(await planValidation(tmp)), [])
+      assert.deepStrictEqual(planned(await planValidation(tmp)), [
+        'workspace-exports:.',
+      ])
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

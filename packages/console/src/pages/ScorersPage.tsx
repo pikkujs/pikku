@@ -61,7 +61,11 @@ export const ScorersPage: React.FC = () => {
       header: 'SAMPLING',
       align: 'right' as const,
       render: (item: ScorerItem) => (
-        <Text size="sm" ff="monospace" c={item.requiresReference ? 'dimmed' : undefined}>
+        <Text
+          size="sm"
+          ff="monospace"
+          c={item.requiresReference ? 'dimmed' : undefined}
+        >
           {item.requiresReference
             ? m.scorers_reference_only()
             : item.sampleRate <= 0
@@ -103,7 +107,7 @@ export const ScorersPage: React.FC = () => {
       <TableListPage
         title="Scorers"
         icon={Gauge}
-        docsHref="https://pikku.dev/docs/wiring/ai-agents"
+        docsHref="https://pikku.dev/docs/wiring/agents"
         data={scorers}
         columns={columns}
         getKey={(item) => item.name}

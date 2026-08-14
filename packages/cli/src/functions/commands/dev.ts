@@ -16,15 +16,15 @@ import {
   InMemoryTriggerService,
   QueueWebhookService,
 } from '@pikku/core/services'
-import { spy, InMemoryAIRunStateService } from '@pikku/core/ecosystem/services'
+import { spy, InMemoryAgentRunStateService } from '@pikku/core/ecosystem/services'
 import {
-  KyselyAIStorageService,
-  KyselyAIRunStateService,
+  KyselyAgentStorageService,
+  KyselyAgentRunStateService,
   KyselyAgentRunService,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { wireAIScorerQueueWorkers } from '@pikku/core/ecosystem/ai-scorer'
+import { wireAgentScorerQueueWorkers } from '@pikku/core/ecosystem/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
   LocalContent,
@@ -40,7 +40,7 @@ import {
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
-import { createDevAIAgentRunner } from './dev-ai-runner.js'
+import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
@@ -273,19 +273,19 @@ export const dev = pikkuSessionlessFunc<
         : undefined
 
     const schedulerService = new InMemorySchedulerService()
-    const aiStorage = kysely
-      ? new KyselyAIStorageService(kysely as any)
+    const agentStorage = kysely
+      ? new KyselyAgentStorageService(kysely as any)
       : undefined
-    const aiRunState = kysely
-      ? new KyselyAIRunStateService(kysely as any)
-      : new InMemoryAIRunStateService()
+    const agentRunState = kysely
+      ? new KyselyAgentRunStateService(kysely as any)
+      : new InMemoryAgentRunStateService()
     const agentRunService = kysely
       ? new KyselyAgentRunService(kysely as any)
       : undefined
 
-    if (aiStorage) await aiStorage.init()
-    if ('init' in aiRunState && typeof aiRunState.init === 'function') {
-      await aiRunState.init()
+    if (agentStorage) await agentStorage.init()
+    if ('init' in agentRunState && typeof agentRunState.init === 'function') {
+      await agentRunState.init()
     }
 
     // InMemoryWorkflowService implements both the workflowService and
@@ -301,8 +301,8 @@ export const dev = pikkuSessionlessFunc<
     // Only when the project declares agents — otherwise the runner's
     // missing-SDK warning fires spuriously for projects with global AI env.
     const hasAgents = Object.keys(inspectorState.agents.agentsMeta).length > 0
-    const aiAgentRunner = hasAgents
-      ? await createDevAIAgentRunner({
+    const agentRunner = hasAgents
+      ? await createDevAgentRunner({
           logger,
           projectRoot: config.rootDir,
           variables,
@@ -315,7 +315,7 @@ export const dev = pikkuSessionlessFunc<
     const devQueueService = new InMemoryQueueService()
     const inMemoryServices = {
       logger: devLogger,
-      ...(aiAgentRunner ? { aiAgentRunner } : {}),
+      ...(agentRunner ? { agentRunner } : {}),
       emailService: test
         ? spy('emailService', new LocalEmailService())
         : new LocalEmailService(),
@@ -327,8 +327,8 @@ export const dev = pikkuSessionlessFunc<
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),
-      aiStorage,
-      aiRunState,
+      agentStorage,
+      agentRunState,
       agentRunService,
       eventHub,
       ...(kysely ? { kysely } : {}),
@@ -346,7 +346,7 @@ export const dev = pikkuSessionlessFunc<
     }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()
-    wireAIScorerQueueWorkers()
+    wireAgentScorerQueueWorkers()
 
     const { serverLifecycleFactory } = inspectorState.filesAndMethods
     const loadLifecycle = async () => {
@@ -473,7 +473,7 @@ export const dev = pikkuSessionlessFunc<
               invalidateInspectorState()
               await runAllWithCommandState()
               workflowService.wireQueueWorkers()
-              wireAIScorerQueueWorkers()
+              wireAgentScorerQueueWorkers()
               // Pull the regenerated meta + JSON schemas into the running
               // process so new/changed functions are callable without a
               // restart (the hot-reloader registers their implementations).

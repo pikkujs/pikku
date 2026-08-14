@@ -1,13 +1,13 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 
-export const agentMinimal = pikkuAIAgent({
+export const agentMinimal = pikkuAgent({
   name: 'agent-minimal',
   description: 'Agent with only required fields',
   goal: 'Help users.',
   model: 'test-provider/test-model',
 })
 
-export const agentWithPersonality = pikkuAIAgent({
+export const agentWithPersonality = pikkuAgent({
   name: 'agent-with-personality',
   description: 'Agent with personality, role, and goal',
   role: 'Technical support specialist',

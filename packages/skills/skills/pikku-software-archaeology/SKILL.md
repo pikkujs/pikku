@@ -13,6 +13,7 @@ Extract **intent over implementation**. A repository is a fossil record of produ
 **You are the parser.** Do not build or rely on regex/AST scanners — read the code with your own tools (Grep, Read, subagents). This is what makes the skill language-agnostic: an Express app, a Rails app, and a Django app all yield the same blueprint shape.
 
 **Two layers, never merged silently:**
+
 - **Facts** — behavior directly observed in code, schema, or tests. Cite them.
 - **Inferred intent** — the product reasoning you reconstruct. Mark it with `confidence` and say what evidence it rests on.
 
@@ -64,6 +65,7 @@ Work in phases. For small repos (< ~50 source files) do them inline; for larger 
 ### Phase 1 — Survey (facts only)
 
 Build an inventory before interpreting anything:
+
 - Manifests (`package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `composer.json`): dependencies are integration hints; scripts are entry points.
 - Entry points: servers, route registrations, cron/scheduler setup, queue workers, CLI binaries.
 - Data layer: migrations, schema files, model classes, raw DDL (check comments too — schemas hide in comments in migration-less repos).
@@ -75,18 +77,19 @@ Build an inventory before interpreting anything:
 
 Where intent hides, per ecosystem (read these first):
 
-| Ecosystem | Highest-yield locations |
-|---|---|
-| Rails | `config/routes.rb`, model validations + callbacks + `aasm`/state machines, `app/policies` (Pundit) / `ability.rb` (CanCan), Sidekiq/ActiveJob workers, `db/schema.rb`, specs (esp. request + model specs) |
-| Express/Node | route registration files, middleware chains (auth!), inline `if` guards in handlers, SQL/ORM models, `jobs/`+crontab refs, webhook handlers |
-| Django | `urls.py`, model `Meta`/constraints/`clean()`, DRF serializers + permissions classes, celery tasks, admin.py (reveals internal workflows) |
-| Laravel | `routes/`, FormRequests (validation), Policies/Gates, Jobs + scheduler in `Kernel.php`, migrations |
-| Go | mux/router setup, middleware, struct tags, `cmd/` binaries (each is a component) |
+| Ecosystem                 | Highest-yield locations                                                                                                                                                                                                                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rails                     | `config/routes.rb`, model validations + callbacks + `aasm`/state machines, `app/policies` (Pundit) / `ability.rb` (CanCan), Sidekiq/ActiveJob workers, `db/schema.rb`, specs (esp. request + model specs)                                                                                                                    |
+| Express/Node              | route registration files, middleware chains (auth!), inline `if` guards in handlers, SQL/ORM models, `jobs/`+crontab refs, webhook handlers                                                                                                                                                                                  |
+| Django                    | `urls.py`, model `Meta`/constraints/`clean()`, DRF serializers + permissions classes, celery tasks, admin.py (reveals internal workflows)                                                                                                                                                                                    |
+| Laravel                   | `routes/`, FormRequests (validation), Policies/Gates, Jobs + scheduler in `Kernel.php`, migrations                                                                                                                                                                                                                           |
+| Go                        | mux/router setup, middleware, struct tags, `cmd/` binaries (each is a component)                                                                                                                                                                                                                                             |
 | Frontend (React/Vue/etc.) | router config / file-based routes (pages a user reaches), the component tree, the design-system import (`@mantine/*`, `@mui/*`, Tailwind config) to judge consistency, the data layer (react-query/tRPC/fetch wrappers) to tie UI back to backend queries, charts/tables/editors (the `custom-logic` port risk), auth wiring |
 
 ### Phase 2 — Test excavation (do not skip)
 
 Tests are the closest thing to an executable product spec. For every test file:
+
 - `describe`/`context`/`it` names → **scenarios** (attach to the matching workflow in `workflows.json` under `scenarios[]`, with `fromTest` set).
 - User-flow/journey harnesses (`pikkuUserFlow` stories, cucumber `.feature` files, Playwright journeys) are the highest-grade scenario source — they already ARE given/when/outcome sequences; extract them verbatim.
 - Assertions → confirmations of policies and invariants (upgrade their `confidence` to `high`, add the test as evidence).
@@ -126,14 +129,15 @@ Run each lens over the surveyed material. Rules that counter the classic failure
 
 **Migration** — map current file clusters → future domain + concepts; list files to drop with reasons; list decisions a human must make before rebuild.
 
-**Interfaces** (`interfaces.json`, optional) — every way the product is CONSUMED, one entry per channel, not per route. A product is usually driven through several: a **web UI** (humans), a **CLI** (developers/operators), an **MCP server** (AI agents — in a Pikku app each MCP tool IS a `pikkuFunc`), an **OpenAPI/REST** surface (developers/external systems, often *generated* from the routes), a **generated SDK**, **realtime** (websocket/SSE), and **webhooks** (in/out). For each: `kind`, `audience`, `purpose`, roughly how many ops it exposes, whether it's `generated` vs hand-written, which domains it serves, and `status` (complete/partial/stub — an MCP server with two tools is `stub`). This layer answers "who can drive this, and how" — it is the map the second-opinion skill needs to explain that the app is usable by people, developers, and agents.
+**Interfaces** (`interfaces.json`, optional) — every way the product is CONSUMED, one entry per channel, not per route. A product is usually driven through several: a **web UI** (humans), a **CLI** (developers/operators), an **MCP server** (AI agents — in a Pikku app each MCP tool IS a `pikkuFunc`), an **OpenAPI/REST** surface (developers/external systems, often _generated_ from the routes), a **generated SDK**, **realtime** (websocket/SSE), and **webhooks** (in/out). For each: `kind`, `audience`, `purpose`, roughly how many ops it exposes, whether it's `generated` vs hand-written, which domains it serves, and `status` (complete/partial/stub — an MCP server with two tools is `stub`). This layer answers "who can drive this, and how" — it is the map the second-opinion skill needs to explain that the app is usable by people, developers, and agents.
 
 **Frontend** (`frontend.json` + `frontend-routes.json` + `frontend-components.json`, optional) — the web UI, which needs its own treatment because frontends vary wildly (framework, router, styling, state, data, auth) and the rebuild target is opinionated: **everything in one component system (Mantine), one data layer, one auth**.
+
 - `frontend.json` records the stack as FACTS: framework (e.g. TanStack Start), rendering (SSR/streaming/SPA), router, styling/design system, `designSystemConsistency`, state management, data layer (e.g. pikku-react-query vs REST helpers), auth (e.g. better-auth), i18n. Name the real technologies — the second-opinion skill weighs their tradeoffs, so record them precisely (do NOT editorialize here; this file is facts).
 - `frontend-routes.json` is the page tree: each route's `purpose` in product terms, `auth`, the `dataFrom` (query/command names it reads — reuse the backend concept names so the UI ties back to the domain), the `usesComponents`, and the `userFlows` it belongs to.
-- `frontend.json.designFindings` captures **broken/inconsistent design patterns** as concrete, cited observations (not taste). Actively hunt for: *interaction inconsistency* (the same job done as a modal in one place and a drawer in another; inconsistent confirm dialogs); *theming not tokenized* (hardcoded hex colors, magic spacing/font sizes, inline styles instead of theme tokens/variables — grep for `#[0-9a-f]{3,6}`, `style={{`, raw `px` values); *cross-page inconsistency* (the same element — button, page header, card — styled differently across routes); *component duplication* (three near-identical cards/tables for one purpose); *design-system bypass* (raw HTML/CSS where a library component exists). Each finding gets an example, its impact (feels unpolished / a color change means hunting every file), and a fix (standardize on one pattern / move to tokens / extract one shared component). These are almost always cheap cleanups, and they are exactly what a non-technical owner perceives as "the app looks off" without being able to say why.
+- `frontend.json.designFindings` captures **broken/inconsistent design patterns** as concrete, cited observations (not taste). Actively hunt for: _interaction inconsistency_ (the same job done as a modal in one place and a drawer in another; inconsistent confirm dialogs); _theming not tokenized_ (hardcoded hex colors, magic spacing/font sizes, inline styles instead of theme tokens/variables — grep for `#[0-9a-f]{3,6}`, `style={{`, raw `px` values); _cross-page inconsistency_ (the same element — button, page header, card — styled differently across routes); _component duplication_ (three near-identical cards/tables for one purpose); _design-system bypass_ (raw HTML/CSS where a library component exists). Each finding gets an example, its impact (feels unpolished / a color change means hunting every file), and a fix (standardize on one pattern / move to tokens / extract one shared component). These are almost always cheap cleanups, and they are exactly what a non-technical owner perceives as "the app looks off" without being able to say why.
 - `frontend-components.json` is where the frontend's real migration cost lives, in the **`rebuild`** field: `mantine-standard` (maps 1:1 to a Mantine component — trivial), `mantine-composition` (built from Mantine primitives — straightforward), `custom-style` (diverges only visually — normalize to Mantine), or **`custom-logic`** (bespoke behavior — a custom chart, a virtualized/complex table, a canvas, drag-and-drop, a rich editor — that must be **ported**, not re-skinned). A `custom-logic` component MUST fill `customLogic` explaining the behavior, and should list the `dependencies` (charting/table/editor libs) that make it a real port. This split — "trivially re-Mantine-able" vs "carries logic that must survive the port" — is the single most useful thing the frontend extraction produces.
-- **Server-rendered / non-React frontends still get all three files — do NOT skip them.** The `rebuild` enum is named for the target stack, but the distinction it draws is target-agnostic: *trivial stock element* vs *composed from primitives* vs *visual divergence only* vs **bespoke behavior that must be ported**. A Rails app (Slim/ERB + ViewComponents + Hotwire/Stimulus), a Django app (templates + HTMX), or a Laravel app (Blade + Livewire) all have that same split, and it is just as load-bearing there. Use the enum values verbatim (the validator enforces them), classify by what the thing actually *does*, and record the vocabulary mismatch in `frontend.json.notes`. Concretely: treat a template partial + its behavior controller (Stimulus/Alpine/Livewire) as ONE component and classify the pair; a server-rendered app's `custom-logic` is the same list as a SPA's (maps, charts, video players, payment elements, drag-to-reorder, rich text, QR, live-updating regions), plus anything whose behavior rides on a streaming/partial-update contract (Turbo Streams, HTMX swaps) — get that mapping wrong on rebuild and pages show stale data. Omitting these files because "it isn't a React app" hides the frontend's entire migration cost, which is the one thing this file exists to expose.
+- **Server-rendered / non-React frontends still get all three files — do NOT skip them.** The `rebuild` enum is named for the target stack, but the distinction it draws is target-agnostic: _trivial stock element_ vs _composed from primitives_ vs _visual divergence only_ vs **bespoke behavior that must be ported**. A Rails app (Slim/ERB + ViewComponents + Hotwire/Stimulus), a Django app (templates + HTMX), or a Laravel app (Blade + Livewire) all have that same split, and it is just as load-bearing there. Use the enum values verbatim (the validator enforces them), classify by what the thing actually _does_, and record the vocabulary mismatch in `frontend.json.notes`. Concretely: treat a template partial + its behavior controller (Stimulus/Alpine/Livewire) as ONE component and classify the pair; a server-rendered app's `custom-logic` is the same list as a SPA's (maps, charts, video players, payment elements, drag-to-reorder, rich text, QR, live-updating regions), plus anything whose behavior rides on a streaming/partial-update contract (Turbo Streams, HTMX swaps) — get that mapping wrong on rebuild and pages show stale data. Omitting these files because "it isn't a React app" hides the frontend's entire migration cost, which is the one thing this file exists to expose.
 - The `designFindings` grep hints above are React-flavored; the server-rendered equivalents are inline `style=` attributes in templates, hardcoded hex in the stylesheet tree, per-locale forked templates instead of i18n, and design-system bypass = raw markup where a component/partial already exists. Same findings, different needles.
 
 ### Phase 4 — Cross-check, validate, synthesize
@@ -148,7 +152,7 @@ Run each lens over the surveyed material. Rules that counter the classic failure
 - `high` — the behavior itself is in the cited code/schema/test.
 - `medium` — inferred from multiple converging signals (naming + partial code + a test name).
 - `low` — plausible reconstruction; MUST also be phrased tentatively in blueprint.md and usually deserves a `decisionsNeeded` entry.
-- Comments and docs describe *intended* behavior; code describes *actual* behavior. When they disagree, record the code's behavior as the fact and the disagreement as a gap.
+- Comments and docs describe _intended_ behavior; code describes _actual_ behavior. When they disagree, record the code's behavior as the fact and the disagreement as a gap.
 
 ## Scaling up (large repos)
 
@@ -160,18 +164,18 @@ Run each lens over the surveyed material. Rules that counter the classic failure
 
 ## Red Flags — you are about to produce a worthless blueprint
 
-| Thought | Reality |
-|---|---|
-| "I'll write it up as markdown docs" | Only `blueprint.md` is prose. The 14 JSON files ARE the deliverable; a generator consumes them. |
-| "The routes are the API contract" | Routes are evidence. Lift each to a command/query or you've documented plumbing, not product. |
-| "This is obvious, no citation needed" | Uncited claims are indistinguishable from hallucinations. Evidence on everything. |
-| "The folder structure tells me the domains" | Folders are how it grew, not what it is. Derive domains from ownership + vocabulary. |
-| "Tests are just tests, skip them" | Tests are the spec. Some rules exist ONLY in tests. Phase 2 is mandatory. |
-| "No events are emitted, so events: []" | Reconstruct implicit events from side-effect clusters; mark `explicit: false`. |
-| "Cron jobs aren't workflows" | System workflows are workflows. Include schedules, queue consumers, webhook reactions. |
-| "The frontend is just the web routes" | The web UI is ONE interface. Inventory the CLI, MCP server, OpenAPI/SDK, realtime, webhooks in `interfaces.json` too — the product is driven by people, developers, AND agents. |
-| "A component list is enough" | Without the `rebuild` split, you've hidden the frontend's real cost. Flag every `custom-logic` component (chart/table/canvas/editor) and say what the logic is — that's the port work. |
-| "I'll skip the validator, the JSON looks right" | Run it. Missing domains refs, dangling event names, and undescribed custom-logic components are exactly what it catches. |
+| Thought                                         | Reality                                                                                                                                                                                |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "I'll write it up as markdown docs"             | Only `blueprint.md` is prose. The 14 JSON files ARE the deliverable; a generator consumes them.                                                                                        |
+| "The routes are the API contract"               | Routes are evidence. Lift each to a command/query or you've documented plumbing, not product.                                                                                          |
+| "This is obvious, no citation needed"           | Uncited claims are indistinguishable from hallucinations. Evidence on everything.                                                                                                      |
+| "The folder structure tells me the domains"     | Folders are how it grew, not what it is. Derive domains from ownership + vocabulary.                                                                                                   |
+| "Tests are just tests, skip them"               | Tests are the spec. Some rules exist ONLY in tests. Phase 2 is mandatory.                                                                                                              |
+| "No events are emitted, so events: []"          | Reconstruct implicit events from side-effect clusters; mark `explicit: false`.                                                                                                         |
+| "Cron jobs aren't workflows"                    | System workflows are workflows. Include schedules, queue consumers, webhook reactions.                                                                                                 |
+| "The frontend is just the web routes"           | The web UI is ONE interface. Inventory the CLI, MCP server, OpenAPI/SDK, realtime, webhooks in `interfaces.json` too — the product is driven by people, developers, AND agents.        |
+| "A component list is enough"                    | Without the `rebuild` split, you've hidden the frontend's real cost. Flag every `custom-logic` component (chart/table/canvas/editor) and say what the logic is — that's the port work. |
+| "I'll skip the validator, the JSON looks right" | Run it. Missing domains refs, dangling event names, and undescribed custom-logic components are exactly what it catches.                                                               |
 
 ## Quick Reference
 

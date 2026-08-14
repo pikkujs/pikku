@@ -60,13 +60,13 @@ describe('pikku runtime schema', () => {
   test('declares logical names and compiles them to physical ones', () => {
     const sql = compileFor('postgres')
 
-    // The declaration says `aiThreads.resourceId`, matching how every query in
-    // the package addresses it; the plugin is what makes the table `ai_threads`.
-    assert.match(sql, /create table "ai_threads"/)
+    // The declaration says `agentThreads.resourceId`, matching how every query in
+    // the package addresses it; the plugin is what makes the table `agent_threads`.
+    assert.match(sql, /create table "agent_threads"/)
     assert.match(sql, /"resource_id" varchar\(255\) not null/)
     assert.doesNotMatch(
       sql,
-      /"aiThreads"/,
+      /"agentThreads"/,
       'a camelCase table name means the plugin was not applied'
     )
   })
@@ -74,7 +74,7 @@ describe('pikku runtime schema', () => {
   test('rewrites foreign key targets too', () => {
     assert.match(
       compileFor('postgres'),
-      /references "ai_threads" \("id"\)/,
+      /references "agent_threads" \("id"\)/,
       'an unrewritten reference target points at a table that does not exist'
     )
   })
@@ -87,7 +87,7 @@ describe('pikku runtime schema', () => {
     }
   })
 
-  test('carries the ai_run column the two old declarations disagreed on', () => {
+  test('carries the agent_run column the two old declarations disagreed on', () => {
     assert.match(compileFor('postgres'), /"pending_approvals" text/)
   })
 

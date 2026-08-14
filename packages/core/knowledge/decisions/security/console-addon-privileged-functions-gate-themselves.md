@@ -2,7 +2,7 @@
 type: decision
 title: The console addon's privileged functions gate themselves
 description: Thread listing is owner-scoped unless the caller holds admin, and addon installation requires an admin session, rather than trusting the host to register a global permission
-tags: addon, ai-agent, rpc
+tags: addon, agent, rpc
 ---
 
 # The console addon's privileged functions gate themselves
@@ -27,7 +27,7 @@ runner's, which for a `pikkuSessionlessFunc` fires only when the function itself
 sets `auth: true`.
 
 The addon's original authorization story was a single package-scoped
-`addGlobalPermission([isAdmin], '@pikku/addon-console')` that the *host*
+`addGlobalPermission([isAdmin], '@pikku/addon-console')` that the _host_
 registered, which `runPermissions` resolves in the callee's package namespace and
 applies to every function at once. Nothing generated that call — the scaffold
 emitted only a comment recommending it, and `resolveGlobalPermissions` returns an
@@ -79,5 +79,5 @@ is-this-localhost test.
 
 See [[addon-scopes-are-resolved-where-the-function-runs]],
 [[an-empty-owners-constraint-matches-nothing]],
-[[ai-agent-sessionless-deployments-have-no-thread-ownership]] and
+[[agent-sessionless-deployments-have-no-thread-ownership]] and
 [[global-permissions-and-function-permissions-are-independent-gates]].

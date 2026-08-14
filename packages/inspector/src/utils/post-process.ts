@@ -308,12 +308,12 @@ export function aggregateRequiredServices(
     }
   }
 
-  // AI agents need aiStorage + aiRunState + agentRunService + aiAgentRunner
+  // AI agents need agentStorage + agentRunState + agentRunService + agentRunner
   if (Object.keys(state.agents.agentsMeta).length > 0) {
-    requiredServices.add('aiStorage')
-    requiredServices.add('aiRunState')
+    requiredServices.add('agentStorage')
+    requiredServices.add('agentRunState')
     requiredServices.add('agentRunService')
-    requiredServices.add('aiAgentRunner')
+    requiredServices.add('agentRunner')
   }
 
   // Channels need eventHub for pub/sub
@@ -1230,7 +1230,7 @@ export function validateScopeReferences(
  *
  * The description check is separate and opt-in (`--strict-meta`), because the
  * description is what the model is told the tool does: without one, the tool is
- * offered to it under its own name (`ai-agent-prepare.ts`), which is a silent
+ * offered to it under its own name (`agent-prepare.ts`), which is a silent
  * quality loss rather than a failure. A title deliberately does not satisfy it —
  * a title labels a tool in a UI, it does not tell a model when to reach for it.
  */

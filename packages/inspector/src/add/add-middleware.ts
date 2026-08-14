@@ -698,12 +698,14 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'pikkuAIMiddleware') {
+  if (expression.text === 'pikkuAgentMiddleware') {
     const arg = args[0]
     if (!arg) return
 
     if (!ts.isObjectLiteralExpression(arg)) {
-      logger.error(`• pikkuAIMiddleware() requires an object literal argument.`)
+      logger.error(
+        `• pikkuAgentMiddleware() requires an object literal argument.`
+      )
       return
     }
 
@@ -744,13 +746,13 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
         pikkuFuncId = node.parent.name.text
       } else {
         logger.error(
-          `• pikkuAIMiddleware() must be assigned to a variable or object property. ` +
-            `Extract it to a const: const myMiddleware = pikkuAIMiddleware(...)`
+          `• pikkuAgentMiddleware() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myMiddleware = pikkuAgentMiddleware(...)`
         )
         return
       }
     }
-    state.aiMiddleware.definitions[pikkuFuncId] = {
+    state.agentMiddleware.definitions[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),

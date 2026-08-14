@@ -325,7 +325,7 @@
   "scorers_description": "已完成的智能体运行如何被评分",
   "scorers_search_placeholder": "搜索评分器...",
   "scorers_empty_title": "未声明任何评分器",
-  "scorers_empty_description": "用 pikkuAIScorer 或 pikkuAIJudge 声明一个，然后在某个智能体上指名它，以评分该智能体的运行。",
+  "scorers_empty_description": "用 pikkuAgentScorer 或 pikkuAgentJudge 声明一个，然后在某个智能体上指名它，以评分该智能体的运行。",
   "scorers_column_scorer": "评分器",
   "scorers_column_lane": "通道",
   "scorers_column_sampling": "抽样",

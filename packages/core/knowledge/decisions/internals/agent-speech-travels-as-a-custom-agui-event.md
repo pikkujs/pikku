@@ -2,7 +2,7 @@
 type: decision
 title: Agent speech travels as a CUSTOM AG-UI event rather than being dropped
 description: AG-UI has no speech event, and dropping it makes a voice agent reached over HTTP silently inaudible while the provider still bills for the audio
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # Agent speech travels as a CUSTOM AG-UI event

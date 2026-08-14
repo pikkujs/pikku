@@ -11,16 +11,16 @@ tags: core, rpc, performance
 an object literal, and that literal declared `get agent()` so the agent facade
 stayed lazy — most requests never touch it, and reading it builds five closures.
 
-The laziness is right. Declaring the accessor *on the literal* was not: a
+The laziness is right. Declaring the accessor _on the literal_ was not: a
 literal containing an accessor needs a real property descriptor per instance,
 which takes it off V8's fast object-literal construction path and slows the
 whole object, not just the accessor.
 
 Measured with `benchmarks/bench-profile-granular.ts`, three runs each:
 
-| shape | per call |
-| --- | --- |
-| object literal with `get agent()` | 1.106 / 1.433 / 1.147 µs |
+| shape                               | per call                 |
+| ----------------------------------- | ------------------------ |
+| object literal with `get agent()`   | 1.106 / 1.433 / 1.147 µs |
 | class with `agent` on the prototype | 0.523 / 0.461 / 0.525 µs |
 
 Roughly 2.4×, well outside the run-to-run variance, on a path every request
@@ -28,7 +28,7 @@ takes. On the same machine a full `fetchData` measures 12–19µs, so this was o
 the order of a tenth of a request spent constructing one object.
 
 The obvious alternative is worse. Making `agent` an eager property removes the
-accessor but builds those five closures unconditionally, and measured *slower*
+accessor but builds those five closures unconditionally, and measured _slower_
 than the original at 1.967µs. A prototype accessor is the only shape that keeps
 the laziness and the fast construction path.
 

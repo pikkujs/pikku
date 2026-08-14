@@ -4,9 +4,9 @@ export { KyselyWorkflowService } from './kysely-workflow-service.js'
 export { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 export { KyselyWorkflowMirror } from './kysely-workflow-mirror.js'
 export { KyselyDeploymentService } from './kysely-deployment-service.js'
-export { KyselyAIStorageService } from './kysely-ai-storage-service.js'
-export { KyselyAgentRunService } from './kysely-ai-agent-run-service.js'
-export { KyselyAIRunStateService } from './kysely-ai-run-state-service.js'
+export { KyselyAgentStorageService } from './kysely-agent-storage-service.js'
+export { KyselyAgentRunService } from './kysely-agent-run-service.js'
+export { KyselyAgentRunStateService } from './kysely-agent-run-state-service.js'
 export { KyselySecretService } from './kysely-secret-service.js'
 export { KyselyCredentialService } from './kysely-credential-service.js'
 export { KyselySessionStore } from './kysely-session-store.js'
@@ -44,7 +44,7 @@ export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
 export type {
   AgentRunService,
   AgentRunRow,
-} from '@pikku/core/ecosystem/ai-agent'
+} from '@pikku/core/ecosystem/agent'
 export type {
   VirtualUserRunStore,
   VirtualUserRunRecord,

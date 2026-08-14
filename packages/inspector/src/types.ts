@@ -18,8 +18,8 @@ import type {
   MCPToolMeta,
   MCPPromptMeta,
 } from '@pikku/core/ecosystem/mcp'
-import type { AIAgentMeta } from '@pikku/core/ecosystem/ai-agent'
-import type { ScorerMeta } from '@pikku/core/ecosystem/ai-scorer'
+import type { AgentsMeta } from '@pikku/core/ecosystem/agent'
+import type { ScorerMeta } from '@pikku/core/ecosystem/agent-scorer'
 import type { CLIMeta } from '@pikku/core/ecosystem/cli'
 import type { CLICommandMeta } from '@pikku/core/ecosystem/cli'
 import type { NodesMeta } from '@pikku/core/ecosystem/node'
@@ -619,7 +619,7 @@ export interface InspectorState {
     files: Set<string>
   }
   agents: {
-    agentsMeta: AIAgentMeta
+    agentsMeta: AgentsMeta
     files: Map<string, { path: string; exportedName: string }>
   }
   scorers: {
@@ -687,7 +687,7 @@ export interface InspectorState {
   }
   middleware: InspectorMiddlewareState
   channelMiddleware: InspectorChannelMiddlewareState
-  aiMiddleware: InspectorAIMiddlewareState
+  agentMiddleware: InspectorAIMiddlewareState
   permissions: InspectorPermissionState
   serviceAggregation: {
     requiredServices: Set<string>

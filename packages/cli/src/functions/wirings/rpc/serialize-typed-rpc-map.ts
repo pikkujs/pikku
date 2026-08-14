@@ -93,7 +93,7 @@ ${generateAddonAgentImports(wireAddonDeclarations)}
 ${generateMergedAgentMap(wireAddonDeclarations)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
-import type { AIAgentInput } from '@pikku/core/ecosystem/ai-agent'
+import type { AgentInput } from '@pikku/core/ecosystem/agent'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
@@ -112,17 +112,17 @@ export type TypedWorkflowStatus = (
 ) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'; output?: unknown; error?: { message?: string } }>
 
 type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AIAgentInput) => Promise<any>
+  ? (name: string, input: AgentInput) => Promise<any>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
-      input: AIAgentInput
+      input: AgentInput
     ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
 
 type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AIAgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
+  ? (name: string, input: AgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
-      input: AIAgentInput,
+      input: AgentInput,
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
 

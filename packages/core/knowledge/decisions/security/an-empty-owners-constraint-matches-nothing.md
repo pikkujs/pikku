@@ -2,13 +2,13 @@
 type: decision
 title: An empty owners constraint matches nothing
 description: owners is an authorization boundary, so every storage backend must treat [] as no rows rather than no filter
-tags: ai-agent, storage
+tags: agent, storage
 ---
 
 # An empty owners constraint matches nothing
 
 Every `AgentRunService.listThreads` implementation returns `[]` immediately when
-`owners` is present and empty — `kysely-ai-agent-run-service.ts`,
+`owners` is present and empty — `kysely-agent-run-service.ts`,
 `redis-agent-run-service.ts`, `mongodb-agent-run-service.ts`. The conformance
 suite in `packages/core/src/testing/service-tests.ts` pins it, so a new backend
 inherits the requirement instead of rediscovering it.
@@ -27,4 +27,4 @@ return; the two decisions only hold together.
 `if (owners)` path; treating `owners: []` as equivalent to `owners: undefined`
 at any layer; and adding a backend without the conformance suite.
 
-See [[ai-agent-sessionless-deployments-have-no-thread-ownership]].
+See [[agent-sessionless-deployments-have-no-thread-ownership]].

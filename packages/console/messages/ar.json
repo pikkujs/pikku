@@ -325,7 +325,7 @@
   "scorers_description": "كيف تُقيَّم تشغيلات الوكلاء المنتهية",
   "scorers_search_placeholder": "ابحث في المقيِّمات...",
   "scorers_empty_title": "لا مقيِّمات معلنة",
-  "scorers_empty_description": "أعلن واحدًا عبر pikkuAIScorer أو pikkuAIJudge، ثم سمِّه على وكيل لتقييم تشغيلاته.",
+  "scorers_empty_description": "أعلن واحدًا عبر pikkuAgentScorer أو pikkuAgentJudge، ثم سمِّه على وكيل لتقييم تشغيلاته.",
   "scorers_column_scorer": "المقيِّم",
   "scorers_column_lane": "المسار",
   "scorers_column_sampling": "المعاينة",

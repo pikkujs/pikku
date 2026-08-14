@@ -1,8 +1,8 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
-import { uppercaseMiddleware } from '../ai-middleware/uppercase.ai-middleware.js'
+import { uppercaseMiddleware } from '../agent-middleware/uppercase.agent-middleware.js'
 
-export const todoAgent = pikkuAIAgent({
+export const todoAgent = pikkuAgent({
   name: 'todo-agent',
   description: 'Manages a todo list',
   goal: 'You help users manage their todos. You can list all todos, get details of a specific todo, add new todos, and delete todos.',
@@ -15,7 +15,7 @@ export const todoAgent = pikkuAIAgent({
     ref('todos:deleteTodo'),
     ref('graph:sleep'),
   ],
-  aiMiddleware: [uppercaseMiddleware],
+  agentMiddleware: [uppercaseMiddleware],
   maxSteps: 10,
   toolChoice: 'auto',
 })

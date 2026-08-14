@@ -13,7 +13,7 @@ import { pikkuState } from '@pikku/core/ecosystem'
 import { BetterAuthCredentialService } from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { VercelAgentRunner } from '@pikku/ai-vercel'
 import { createDeepInfra } from '@pikku/ai-deepinfra'
 import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
@@ -48,7 +48,7 @@ export const createSingletonServices = pikkuServices(
     // runner, so every code path under test — tool loop, streaming, memory,
     // approvals — is the real one; only the model's replies are scripted.
     const mockLlm = process.env.PIKKU_MOCK_LLM === '1'
-    const aiAgentRunner = new VercelAIAgentRunner(
+    const agentRunner = new VercelAgentRunner(
       mockLlm
         ? {
             // '*' seals the runner: every provider name resolves to the
@@ -70,7 +70,7 @@ export const createSingletonServices = pikkuServices(
     )
 
     const backend = process.env.DB_BACKEND ?? 'sqlite'
-    let aiStorage: any
+    let agentStorage: any
     let agentRunService: any
 
     let workflowService: any
@@ -80,7 +80,7 @@ export const createSingletonServices = pikkuServices(
       const { default: Database } = await import('better-sqlite3')
       const { CamelCasePlugin, Kysely, SqliteDialect } = await import('kysely')
       const {
-        SQLiteKyselyAIStorageService,
+        SQLiteKyselyAgentStorageService,
         SQLiteKyselyAgentRunService,
         SQLiteKyselyWorkflowService,
         SQLiteKyselyWorkflowRunService,
@@ -97,8 +97,8 @@ export const createSingletonServices = pikkuServices(
         dialect: new SqliteDialect({ database: new Database(sqlitePath) }),
         plugins: [new CamelCasePlugin(), new SerializePlugin()],
       })
-      aiStorage = new SQLiteKyselyAIStorageService(db)
-      await aiStorage.init()
+      agentStorage = new SQLiteKyselyAgentStorageService(db)
+      await agentStorage.init()
       agentRunService = new SQLiteKyselyAgentRunService(db)
       workflowService = new SQLiteKyselyWorkflowService(db)
       await workflowService.init()
@@ -106,7 +106,7 @@ export const createSingletonServices = pikkuServices(
     } else if (backend === 'postgres') {
       const {
         PikkuKysely,
-        PgKyselyAIStorageService,
+        PgKyselyAgentStorageService,
         PgKyselyAgentRunService,
         PgKyselyWorkflowService,
         PgKyselyWorkflowRunService,
@@ -116,8 +116,8 @@ export const createSingletonServices = pikkuServices(
         (await variables.get('DATABASE_URL'))!
       )
       await pikkuKysely.init()
-      aiStorage = new PgKyselyAIStorageService(pikkuKysely.kysely)
-      await aiStorage.init()
+      agentStorage = new PgKyselyAgentStorageService(pikkuKysely.kysely)
+      await agentStorage.init()
       agentRunService = new PgKyselyAgentRunService(pikkuKysely.kysely)
       workflowService = new PgKyselyWorkflowService(pikkuKysely.kysely)
       await workflowService.init()
@@ -126,7 +126,7 @@ export const createSingletonServices = pikkuServices(
       const { CamelCasePlugin, Kysely, MysqlDialect } = await import('kysely')
       const { createPool } = await import('mysql2')
       const {
-        MySQLKyselyAIStorageService,
+        MySQLKyselyAgentStorageService,
         MySQLKyselyAgentRunService,
         MySQLKyselyWorkflowService,
         MySQLKyselyWorkflowRunService,
@@ -137,19 +137,19 @@ export const createSingletonServices = pikkuServices(
         }),
         plugins: [new CamelCasePlugin()],
       })
-      aiStorage = new MySQLKyselyAIStorageService(db)
-      await aiStorage.init()
+      agentStorage = new MySQLKyselyAgentStorageService(db)
+      await agentStorage.init()
       agentRunService = new MySQLKyselyAgentRunService(db)
       workflowService = new MySQLKyselyWorkflowService(db)
       await workflowService.init()
       workflowRunService = new MySQLKyselyWorkflowRunService(db)
       // } else if (backend === 'redis') {
       // const { default: Redis } = await import('ioredis')
-      // const { RedisAgentRunService, RedisAIStorageService, RedisWorkflowService, RedisWorkflowRunService } = await import('@pikku/redis')
+      // const { RedisAgentRunService, RedisAgentStorageService, RedisWorkflowService, RedisWorkflowRunService } = await import('@pikku/redis')
       // const { default: Database } = await import('better-sqlite3')
       // const redis = new Redis(process.env.REDIS_URL!)
-      // aiStorage = new RedisAIStorageService(redis)
-      // await aiStorage.init()
+      // agentStorage = new RedisAgentStorageService(redis)
+      // await agentStorage.init()
       // agentRunService = new RedisAgentRunService(redis)
       // workflowService = new RedisWorkflowService(redis)
       // await workflowService.init()
@@ -292,10 +292,10 @@ export const createSingletonServices = pikkuServices(
       schema,
       logger,
       metaService,
-      aiStorage,
-      aiRunState: aiStorage,
+      agentStorage,
+      agentRunState: agentStorage,
       agentRunService,
-      aiAgentRunner,
+      agentRunner,
       workflowService,
       workflowRunService,
       queueService,

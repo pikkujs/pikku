@@ -1,7 +1,7 @@
 import { describe, test, before } from 'node:test'
 import assert from 'node:assert/strict'
 
-import type { AgentRunService } from '../../wirings/ai-agent/ai-agent.types.js'
+import type { AgentRunService } from '../../wirings/agent/agent.types.js'
 import type { ServiceTestConfig } from '../service-tests.js'
 
 /** Conformance suite for `agentRunService`. Runs only when a backend supplies one. */
@@ -16,7 +16,7 @@ export const defineAgentRunServiceTests = (
    * only runs when a backend supplies both. Passed explicitly rather than
    * closed over, so the dependency is visible in the signature.
    */
-  aiStorageService?: ServiceTestConfig['services']['aiStorageService']
+  agentStorageService?: ServiceTestConfig['services']['agentStorageService']
 ): void => {
   const factory = agentRunService
   describe(`AgentRunService [${name}]`, () => {
@@ -31,8 +31,8 @@ export const defineAgentRunServiceTests = (
       assert.ok(Array.isArray(threads))
     })
 
-    if (aiStorageService) {
-      const storageFactory = aiStorageService
+    if (agentStorageService) {
+      const storageFactory = agentStorageService
 
       // The `owners` constraint is what keeps the generated thread-management
       // functions from leaking across tenants: a caller may only list threads

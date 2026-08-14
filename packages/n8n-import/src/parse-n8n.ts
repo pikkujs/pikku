@@ -41,7 +41,7 @@ export class UnsupportedTopologyError extends Error {
 
 /**
  * n8n LangChain *chain* nodes (as opposed to the Agent node) — a prompt + model,
- * no tools. They map onto a tools-less `pikkuAIAgent` (goal = prompt,
+ * no tools. They map onto a tools-less `pikkuAgent` (goal = prompt,
  * output = schema). `chainRetrievalQa` is excluded: it needs a vector store
  * (blocked on #902), so it stays a stub.
  */
@@ -59,7 +59,7 @@ export function isChainAgentType(typeShort: string): boolean {
 
 /**
  * The base n8n `openAi` node's text/chat/completion path — a prompt + model with
- * no tools — maps onto a tools-less `pikkuAIAgent`, exactly like a chain node.
+ * no tools — maps onto a tools-less `pikkuAgent`, exactly like a chain node.
  * Only the language resources qualify: `image`, `audio`, `assistant`, and `file`
  * are non-text capabilities (deferred) and stay integration/native stubs. An
  * absent resource is the legacy text-completion default.

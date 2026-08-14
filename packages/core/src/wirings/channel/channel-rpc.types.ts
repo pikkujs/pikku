@@ -92,7 +92,7 @@ export class ChannelRPCError extends Error {
  * Whether a callable exposed to a remote decider needs a human to agree before
  * it runs, and how to describe the invocation while asking.
  *
- * Shared with `AIAgentToolDef`: both are an allowlist of named callables
+ * Shared with `AgentToolDef`: both are an allowlist of named callables
  * invoked by something other than the code that wrote them. The runtime around
  * them is not shared — an agent suspends and resumes, a reverse call is a live
  * await.
@@ -105,7 +105,7 @@ export interface ApprovalPolicy {
 export type CapabilityHandler = (data: any) => Promise<unknown> | unknown
 
 /**
- * `needsApproval` is required here on purpose. On `AIAgentToolDef` the same
+ * `needsApproval` is required here on purpose. On `AgentToolDef` the same
  * field is optional and absence means "do not ask"; here absence means the
  * opposite, so it must not be expressible — a bare function is the
  * unclassified form.

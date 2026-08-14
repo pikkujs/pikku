@@ -1,4 +1,4 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
 import { isPermittedUser } from '../functions/adversarial.functions.js'
 
@@ -7,7 +7,7 @@ import { isPermittedUser } from '../functions/adversarial.functions.js'
  * resolves its permissions by reference, so unlike the tool-list filter it does
  * not depend on a name lookup.
  */
-export const restrictedAgent = pikkuAIAgent({
+export const restrictedAgent = pikkuAgent({
   name: 'restricted-agent',
   description: 'Refuses to run at all for a caller who fails its permission',
   goal: 'You only answer permitted callers.',
@@ -18,7 +18,7 @@ export const restrictedAgent = pikkuAIAgent({
   toolChoice: 'auto',
 })
 
-export const permissionsAgent = pikkuAIAgent({
+export const permissionsAgent = pikkuAgent({
   name: 'permissions-agent',
   description: 'Exercises permission filtering of an agent’s tool list',
   goal: 'You demonstrate which tools survive permission filtering.',
@@ -28,7 +28,7 @@ export const permissionsAgent = pikkuAIAgent({
   toolChoice: 'auto',
 })
 
-export const gatedOnlyAgent = pikkuAIAgent({
+export const gatedOnlyAgent = pikkuAgent({
   name: 'gated-only-agent',
   description: 'Every tool is gated, so an unpermitted caller is offered none',
   goal: 'You demonstrate an agent whose entire tool list can be filtered away.',

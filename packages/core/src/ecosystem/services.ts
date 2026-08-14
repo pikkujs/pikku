@@ -8,7 +8,7 @@ export type {
   DeploymentService,
   DeploymentServiceConfig,
 } from '../services/deployment-service.js'
-export { InMemoryAIRunStateService } from '../services/in-memory-ai-run-state-service.js'
+export { InMemoryAgentRunStateService } from '../services/in-memory-agent-run-state-service.js'
 export type {
   AgentMeta,
   AgentsMeta,

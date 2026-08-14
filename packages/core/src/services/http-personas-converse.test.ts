@@ -4,7 +4,7 @@ import { createServer, type Server } from 'node:http'
 
 import { createHttpPersonas } from './http-personas.js'
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
-import type { AIAgentStepResult } from './ai-agent-runner-service.js'
+import type { AgentStepResult } from './agent-runner-service.js'
 
 /**
  * Minimal target app exposing the agent HTTP surface: actor sign-in, the agent
@@ -104,7 +104,7 @@ const scriptedRunner = () => {
   return {
     run: async (params: {
       outputSchema?: unknown
-    }): Promise<AIAgentStepResult> => {
+    }): Promise<AgentStepResult> => {
       const props =
         (params.outputSchema as { properties?: Record<string, unknown> })
           ?.properties ?? {}
@@ -135,7 +135,7 @@ const wireRunner = () => {
       error: () => {},
       debug: () => {},
     },
-    aiAgentRunner: scriptedRunner(),
+    agentRunner: scriptedRunner(),
   } as any)
 }
 

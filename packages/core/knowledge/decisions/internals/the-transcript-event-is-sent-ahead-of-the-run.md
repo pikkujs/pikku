@@ -2,7 +2,7 @@
 type: decision
 title: A voice turn's transcript is sent before the run starts, on the raw channel
 description: The client does not know what it said, and an answer starts streaming within a few hundred milliseconds — a question arriving after its answer reads as the wrong question
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # A voice turn's transcript is sent ahead of the run
@@ -10,7 +10,7 @@ tags: core, ai-agent
 A voice client sends audio, so it does not know what it said. Until the
 transcript reaches it, its own message renders as a blank bubble.
 
-The event is sent *before* the run rather than alongside it because the answer
+The event is sent _before_ the run rather than alongside it because the answer
 begins streaming within a few hundred milliseconds. Sent concurrently, the
 transcript routinely lands after the first tokens of its own answer — and a
 question that appears beneath its answer reads as a question about something

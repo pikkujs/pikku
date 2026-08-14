@@ -28,7 +28,7 @@ export type {
   PermissionMetadata,
   PickOptional,
   PickRequired,
-  PikkuAIMiddlewareHooks,
+  PikkuAgentMiddlewareHooks,
   PikkuWire,
   PikkuRawWire,
   PikkuWiringTypes,
@@ -43,7 +43,7 @@ export type {
   SerializedError,
 } from './types/core.types.js'
 export {
-  pikkuAIMiddleware,
+  pikkuAgentMiddleware,
   pikkuChannelMiddleware,
   pikkuChannelMiddlewareFactory,
   pikkuMiddleware,
@@ -67,11 +67,7 @@ export {
   pikkuApprovalDescription,
 } from './function/functions.types.js'
 export { getAllFunctionNames } from './function/index.js'
-export type {
-  ListInput,
-  ListOutput,
-  Filter,
-} from './function/list.types.js'
+export type { ListInput, ListOutput, Filter } from './function/list.types.js'
 export { pikkuCLIRender } from './wirings/cli/cli-runner.js'
 export { PikkuRequest } from './pikku-request.js'
 export {
@@ -84,10 +80,7 @@ export {
   isVersionedId,
   parseVersionedId,
 } from './version.js'
-export {
-  AbandonedError,
-  type AbortScope,
-} from './function/abort-scope.js'
+export { AbandonedError, type AbortScope } from './function/abort-scope.js'
 export { fetch } from './wirings/http/http-runner.js'
 export type {
   MCPToolResponse,
@@ -192,12 +185,10 @@ export type {
   AuditUserIdentity,
   ResolvedAuditConfig,
 } from './services/audit-service.js'
-export type {
-  AIAgentRunnerService,
-} from './services/ai-agent-runner-service.js'
+export type { AgentRunnerService } from './services/agent-runner-service.js'
 export type { AIEmbeddingService } from './services/ai-embedding-service.js'
-export type { AIRunStateService } from './services/ai-run-state-service.js'
-export type { AIStorageService } from './services/ai-storage-service.js'
+export type { AgentRunStateService } from './services/agent-run-state-service.js'
+export type { AgentStorageService } from './services/agent-storage-service.js'
 export type {
   EmailsMeta,
   EmailTemplateMeta,
@@ -242,9 +233,7 @@ export type {
   HashedValue,
 } from './data-classification.js'
 
-export {
-  hashToken,
-} from './column-form.js'
+export { hashToken } from './column-form.js'
 
 export type { SecretValue, Safe } from './secret-value.js'
 export {

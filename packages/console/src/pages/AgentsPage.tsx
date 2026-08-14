@@ -43,7 +43,7 @@ export const AgentsPage: React.FC<{
           <ListPageHeader
             title={m.agents_title()}
             description={m.agents_description()}
-            docsHref="https://pikku.dev/docs/wiring/ai-agents"
+            docsHref="https://pikku.dev/docs/wiring/agents"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput

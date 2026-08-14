@@ -182,7 +182,7 @@ const NATIVE_BUILTINS = new Set(
     'stopAndError',
     'compareDatasets',
     'renameKeys',
-    // AI / LangChain cluster — absorbed into the agent path (pikkuAIAgent), not
+    // AI / LangChain cluster — absorbed into the agent path (pikkuAgent), not
     // per-service addons.
     'chainLlm',
     'toolWorkflow',

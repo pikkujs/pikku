@@ -16,10 +16,10 @@ description: >-
 Unified authentication for humans **and** machines against a Pikku + better-auth
 server. Two paths, two headers, one resolver:
 
-| Caller | Credential | Header | Obtained by |
-|---|---|---|---|
-| **Human** (CLI, dev) | better-auth session token | `Authorization: Bearer <token>` | `pikku login` (device flow) → `~/.pikku/session.json` |
-| **Machine** (agent, sandbox, worker) | scoped API key | `x-api-key: <key>` | `createApiKey` (server-side, at provision/spawn) |
+| Caller                               | Credential                | Header                          | Obtained by                                           |
+| ------------------------------------ | ------------------------- | ------------------------------- | ----------------------------------------------------- |
+| **Human** (CLI, dev)                 | better-auth session token | `Authorization: Bearer <token>` | `pikku login` (device flow) → `~/.pikku/session.json` |
+| **Machine** (agent, sandbox, worker) | scoped API key            | `x-api-key: <key>`              | `createApiKey` (server-side, at provision/spawn)      |
 
 Both resolve to a Pikku `UserSession` through one middleware:
 `betterAuthSession({ mapSession, apiKey: { mapKey } })`.
@@ -83,7 +83,7 @@ import { apiKey } from '@better-auth/api-key'
 betterAuth({
   plugins: [
     apiKey({
-      enableMetadata: true,          // REQUIRED to store scope on the key
+      enableMetadata: true, // REQUIRED to store scope on the key
       enableSessionForAPIKeys: true, // lets a key resolve via getSession too
     }),
   ],
@@ -104,10 +104,10 @@ one for a non-existent `userId` is created but will not resolve.
 // `auth` is the better-auth instance (injected service)
 const { key } = await auth.api.createApiKey({
   body: {
-    userId: sandboxRuntimeUserId,        // a stable service user
+    userId: sandboxRuntimeUserId, // a stable service user
     name: `sandbox:${sandboxId}`,
-    expiresIn: 60 * 60,                   // seconds
-    metadata: { sandboxId },             // keep only STABLE ids here
+    expiresIn: 60 * 60, // seconds
+    metadata: { sandboxId }, // keep only STABLE ids here
     permissions: { sandbox: ['read', 'write'] },
   },
 })
@@ -159,7 +159,7 @@ When the api-key header is present it is authoritative — the middleware never
 falls through to `getSession` (a bare mock session would shadow the scoped one).
 When it is absent, the human `getSession` path runs as normal. Either way the
 middleware bails out entirely if a session is already set, and it checks the
-*live* session rather than the wire's construction-time snapshot, so it can't
+_live_ session rather than the wire's construction-time snapshot, so it can't
 clobber one an earlier middleware resolved.
 
 ### Restricting a key below its owner
@@ -182,7 +182,7 @@ power — the restriction lives on the key, not on a proliferation of identities
 ### Failure handling is deliberately split
 
 A key that fails to verify is logged and treated as an ordinary "not
-authenticated" — an unusable credential is not an outage. A failure *inside*
+authenticated" — an unusable credential is not an outage. A failure _inside_
 `mapKey` (your scope store is down) propagates as a real error instead. That
 asymmetry is on purpose: a scope lookup that silently failed would serve the
 request anonymously, which is exactly the wrong direction to fail in.

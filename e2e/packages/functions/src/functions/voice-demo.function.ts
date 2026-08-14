@@ -32,7 +32,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
-import { unspeakableScripts, voiceForText } from '@pikku/core/ai-agent'
+import { unspeakableScripts, voiceForText } from '@pikku/core/agent'
 
 /**
  * The published build directory of an installed package.
@@ -197,12 +197,12 @@ export const voiceDemoTranscribe = pikkuSessionlessFunc({
   readonly: true,
   input: VoiceDemoTranscribeInput,
   output: VoiceDemoTranscribeOutput,
-  func: async ({ aiAgentRunner }, { audio }) => {
-    if (!aiAgentRunner.transcribe) {
-      throw new Error('The configured aiAgentRunner cannot transcribe')
+  func: async ({ agentRunner }, { audio }) => {
+    if (!agentRunner.transcribe) {
+      throw new Error('The configured agentRunner cannot transcribe')
     }
     const startedAt = Date.now()
-    const result = await aiAgentRunner.transcribe({
+    const result = await agentRunner.transcribe({
       model: ASR_MODEL,
       audio: Buffer.from(audio, 'base64'),
     })
@@ -232,12 +232,12 @@ export const voiceDemoCompare = pikkuSessionlessFunc({
   readonly: true,
   input: VoiceDemoCompareInput,
   output: VoiceDemoCompareOutput,
-  func: async ({ aiAgentRunner }, { audio }) => {
-    if (!aiAgentRunner.transcribe) {
-      throw new Error('The configured aiAgentRunner cannot transcribe')
+  func: async ({ agentRunner }, { audio }) => {
+    if (!agentRunner.transcribe) {
+      throw new Error('The configured agentRunner cannot transcribe')
     }
     const startedAt = Date.now()
-    const result = await aiAgentRunner.transcribe({
+    const result = await agentRunner.transcribe({
       model: COMPARISON_MODEL,
       audio: Buffer.from(audio, 'base64'),
     })
@@ -274,16 +274,16 @@ export const voiceDemoSpeak = pikkuSessionlessFunc({
   readonly: true,
   input: VoiceDemoSpeakInput,
   output: VoiceDemoSpeakOutput,
-  func: async ({ aiAgentRunner }, { text }) => {
-    if (!aiAgentRunner.generateSpeech) {
-      throw new Error('The configured aiAgentRunner cannot generate speech')
+  func: async ({ agentRunner }, { text }) => {
+    if (!agentRunner.generateSpeech) {
+      throw new Error('The configured agentRunner cannot generate speech')
     }
     // Must stay the same model the agent speaks with — see above.
     const unspeakable = unspeakableScripts(text, SPEAKABLE_SCRIPTS)
     if (unspeakable.length > 0) {
       return { audio: '', format: '', unspeakable }
     }
-    const result = await aiAgentRunner.generateSpeech({
+    const result = await agentRunner.generateSpeech({
       model: TTS_MODEL,
       text,
       voice: voiceForText(text, SPEAKABLE_SCRIPTS),

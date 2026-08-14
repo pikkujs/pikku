@@ -50,12 +50,12 @@ voice.speak({ text: sentence, audio: await response.arrayBuffer() })
 
 ## What each piece is for
 
-| Export | Purpose |
-| --- | --- |
+| Export                 | Purpose                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------- |
 | `useVoiceConversation` | The whole loop: listen, detect the end of a turn, play the reply, handle barge-in. |
-| `VoiceSession` | The microphone, framework-free. Acquired once, held across turns. |
-| `AudioPlaybackQueue` | Sequential speech playback that can be stopped mid-word and asked what was heard. |
-| `detectSilence` | Energy-based end-of-turn detection on a live `AudioNode`. |
+| `VoiceSession`         | The microphone, framework-free. Acquired once, held across turns.                  |
+| `AudioPlaybackQueue`   | Sequential speech playback that can be stopped mid-word and asked what was heard.  |
+| `detectSilence`        | Energy-based end-of-turn detection on a live `AudioNode`.                          |
 
 ## Two design decisions worth knowing
 
@@ -68,7 +68,7 @@ voice.speak({ text: sentence, audio: await response.arrayBuffer() })
 Interrupting the agent itself lives in `@pikku/core`. Wire it like any other agent control RPC:
 
 ```ts
-import { agentInterrupt } from '@pikku/core/ai-agent'
+import { agentInterrupt } from '@pikku/core/agent'
 
 wireHTTP({ method: 'post', route: '/agent/interrupt', ...agentInterrupt() })
 ```
@@ -131,7 +131,7 @@ for (const approval of run.pendingApprovals) {
 }
 ```
 
-On a screen a badly worded confirmation is still checkable against the tool name and arguments next to the button. Spoken aloud the sentence *is* the whole interface, so it has to be the one the function sanctioned — "delete the production database" and "tidy things up" get the same "yeah, go on". `spokenApproval` therefore copies the reason in untouched and only appends a fixed question; it never builds a description out of the arguments, and when a function supplied none it says so instead of guessing.
+On a screen a badly worded confirmation is still checkable against the tool name and arguments next to the button. Spoken aloud the sentence _is_ the whole interface, so it has to be the one the function sanctioned — "delete the production database" and "tidy things up" get the same "yeah, go on". `spokenApproval` therefore copies the reason in untouched and only appends a fixed question; it never builds a description out of the arguments, and when a function supplied none it says so instead of guessing.
 
 Tell the agent to stay out of it. A model that announces the delete before calling the tool has just asked for consent in wording nobody checked, and the user cannot hear the difference:
 

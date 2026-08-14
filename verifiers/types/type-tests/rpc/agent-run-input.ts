@@ -1,7 +1,7 @@
 /**
- * Type constraint: rpc.agent.run/stream take the full AIAgentInput
+ * Type constraint: rpc.agent.run/stream take the full AgentInput
  *
- * The generated map used to declare its own three-field copy of AIAgentInput, so the
+ * The generated map used to declare its own three-field copy of AgentInput, so the
  * optional fields the runner honours at runtime — model, temperature, attachments,
  * context — were type errors at every call site.
  */

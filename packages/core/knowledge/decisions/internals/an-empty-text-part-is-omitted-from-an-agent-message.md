@@ -2,7 +2,7 @@
 type: decision
 title: A message with nothing to say carries no text part at all
 description: An attachment on its own is a real turn, and providers are entitled to reject an empty text part sitting beside it
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # A message with nothing to say carries no text part

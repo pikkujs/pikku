@@ -1,6 +1,6 @@
 /** Harness shim — stands in for `.pikku/agent/pikku-agent-types.gen.ts`. */
 
-export type AIAgentConfig = {
+export type AgentConfig = {
   name: string
   description?: string
   goal: string
@@ -14,4 +14,4 @@ export type AIAgentConfig = {
   maxSteps?: number
 }
 
-export const pikkuAIAgent = (config: AIAgentConfig): AIAgentConfig => config
+export const pikkuAgent = (config: AgentConfig): AgentConfig => config

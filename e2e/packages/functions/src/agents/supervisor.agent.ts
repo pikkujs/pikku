@@ -1,7 +1,7 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { todoAgent } from './todo.agent.js'
 
-export const supervisorAgent = pikkuAIAgent({
+export const supervisorAgent = pikkuAgent({
   name: 'supervisor-agent',
   description:
     'Supervises todo operations — sub-agent results are returned to this agent, not streamed to the user',

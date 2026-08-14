@@ -5,11 +5,11 @@ import type {
   TargetPendingApproval,
 } from './actor-flow.types.js'
 import type { ResolvedPersona } from '../../services/personas-service.js'
-import type { AIMessage } from '../ai-agent/ai-agent.types.js'
+import type { AgentMessage } from '../agent/agent.types.js'
 import type {
-  AIAgentRunnerParams,
-  AIAgentStepResult,
-} from '../../services/ai-agent-runner-service.js'
+  AgentRunnerParams,
+  AgentStepResult,
+} from '../../services/agent-runner-service.js'
 
 /** One turn the actor takes: the message to send and whether it's finished. */
 const ACTOR_TURN_SCHEMA = {
@@ -56,9 +56,7 @@ const DEFAULT_MAX_TURNS = 12
 const DEFAULT_MAX_APPROVAL_ROUNDS = 16
 
 /** The LLM call the actor uses for its own turns/decisions/evaluation. */
-export type ActorLLM = (
-  params: AIAgentRunnerParams
-) => Promise<AIAgentStepResult>
+export type ActorLLM = (params: AgentRunnerParams) => Promise<AgentStepResult>
 
 export interface RunConversationParams {
   /** The person being played — name, job title, personality. */
@@ -85,7 +83,7 @@ export interface RunConversationParams {
   agentName: string
 }
 
-function msg(role: AIMessage['role'], content: string): AIMessage {
+function msg(role: AgentMessage['role'], content: string): AgentMessage {
   return {
     id: globalThis.crypto.randomUUID(),
     role,
@@ -221,7 +219,7 @@ export async function runConversation(
   // Seed a kickoff so the very first actor turn has a non-empty message list
   // (providers reject an empty prompt). It's an instruction TO the actor, so
   // it never appears in the transcript.
-  const actorMessages: AIMessage[] = [
+  const actorMessages: AgentMessage[] = [
     msg(
       'user',
       'Begin the conversation now — send your first message to the assistant to work towards your goal.'

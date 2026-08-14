@@ -1,6 +1,6 @@
 export { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 export { PgKyselyDeploymentService } from './pg-kysely-deployment-service.js'
-export { PgKyselyAIStorageService } from './pg-kysely-ai-storage-service.js'
+export { PgKyselyAgentStorageService } from './pg-kysely-agent-storage-service.js'
 export { PgKyselyAgentRunService } from './pg-kysely-agent-run-service.js'
 export { PgKyselyWorkflowRunService } from './pg-kysely-workflow-run-service.js'
 export { PgKyselyChannelStore } from './pg-kysely-channel-store.js'
@@ -15,4 +15,4 @@ export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
 export type {
   AgentRunService,
   AgentRunRow,
-} from '@pikku/core/ecosystem/ai-agent'
+} from '@pikku/core/ecosystem/agent'

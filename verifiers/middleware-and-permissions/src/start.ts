@@ -420,16 +420,16 @@ async function main(): Promise<void> {
     // follows.
     const agentStreamPassed = await testAgentStreamWiring(
       [
-        { name: 'modifyInput', type: 'ai-middleware', phase: 'before' },
-        { name: 'second-modifyInput', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyInput', type: 'agent-middleware', phase: 'before' },
+        { name: 'second-modifyInput', type: 'agent-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
       ],
       singletonServices
     )
@@ -438,9 +438,9 @@ async function main(): Promise<void> {
     // No modifyOutputStream since there's no channel in blocking mode
     const agentRunPassed = await testAgentRunWiring(
       [
-        { name: 'modifyInput', type: 'ai-middleware', phase: 'before' },
-        { name: 'second-modifyInput', type: 'ai-middleware', phase: 'before' },
-        { name: 'modifyOutput', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyInput', type: 'agent-middleware', phase: 'before' },
+        { name: 'second-modifyInput', type: 'agent-middleware', phase: 'before' },
+        { name: 'modifyOutput', type: 'agent-middleware', phase: 'before' },
       ],
       singletonServices
     )

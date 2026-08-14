@@ -1,5 +1,5 @@
 import type { PikkuRawWire } from '../../types/core.types.js'
-import type { AgentInterruptResult } from '../ai-agent/ai-agent-interrupt.js'
+import type { AgentInterruptResult } from '../agent/agent-interrupt.js'
 
 export type PikkuRPC<
   Invoke extends (...args: any[]) => any = (...args: any[]) => any,

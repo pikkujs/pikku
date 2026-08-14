@@ -19,9 +19,9 @@ npm install @pikku/ai-deepinfra
 
 ```typescript
 import { createDeepInfra } from '@pikku/ai-deepinfra'
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { VercelAgentRunner } from '@pikku/ai-vercel'
 
-const aiAgentRunner = new VercelAIAgentRunner({
+const agentRunner = new VercelAgentRunner({
   deepinfra: createDeepInfra(), // reads DEEPINFRA_API_KEY
 })
 ```
@@ -33,7 +33,7 @@ voiceInput({ model: 'deepinfra/openai/whisper-large-v3-turbo' })
 voiceOutput({ model: 'deepinfra/hexgrad/Kokoro-82M' })
 ```
 
-The runner splits on the *first* slash only, so the rest reaches DeepInfra
+The runner splits on the _first_ slash only, so the rest reaches DeepInfra
 intact. The `openai/` in that id is the org that published the weights on
 HuggingFace, not the vendor serving them — this is Whisper running on DeepInfra,
 with no OpenAI account involved.
@@ -45,10 +45,10 @@ independent.
 
 ```typescript
 createDeepInfra({
-  apiKey,   // defaults to process.env.DEEPINFRA_API_KEY
-  baseURL,  // defaults to https://api.deepinfra.com/v1/inference
-  headers,  // merged into every request
-  fetch,    // injectable, so tests need neither a key nor a network
+  apiKey, // defaults to process.env.DEEPINFRA_API_KEY
+  baseURL, // defaults to https://api.deepinfra.com/v1/inference
+  headers, // merged into every request
+  fetch, // injectable, so tests need neither a key nor a network
 })
 ```
 
@@ -71,13 +71,13 @@ await transcribe({
 Anything DeepInfra serves; the model id is opaque to this package. Current
 audio options include:
 
-| Model                                    | Kind | Price                    |
-| ---------------------------------------- | ---- | ------------------------ |
-| `openai/whisper-large-v3-turbo`          | ASR  | $0.00020/min             |
-| `openai/whisper-large-v3`                | ASR  | $0.00045/min             |
-| `Qwen/Qwen3-ASR-0.6B`                    | ASR  | $0.00020/min             |
-| `Voxtral-Mini-3B`                        | ASR  | $0.00100/min             |
-| `hexgrad/Kokoro-82M`                     | TTS  | $0.80/M chars            |
+| Model                           | Kind | Price         |
+| ------------------------------- | ---- | ------------- |
+| `openai/whisper-large-v3-turbo` | ASR  | $0.00020/min  |
+| `openai/whisper-large-v3`       | ASR  | $0.00045/min  |
+| `Qwen/Qwen3-ASR-0.6B`           | ASR  | $0.00020/min  |
+| `Voxtral-Mini-3B`               | ASR  | $0.00100/min  |
+| `hexgrad/Kokoro-82M`            | TTS  | $0.80/M chars |
 
 DeepInfra serves streaming-capable ASR models in batch mode only, so their
 streaming modes are not reachable through this API.

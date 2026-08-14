@@ -6,7 +6,7 @@ import {
   type SchemaContext,
   type SchemaRequirement,
 } from './pikku-schema.types.js'
-import { aiSchema } from './ai.schema.js'
+import { agentSchema } from './agent.schema.js'
 import { channelSchema } from './channel.schema.js'
 import { credentialSchema } from './credential.schema.js'
 import { deploymentSchema } from './deployment.schema.js'
@@ -53,7 +53,7 @@ export const pikkuSchemas: PikkuSchema[] = [
   deploymentSchema,
   webhookSchema,
   workflowSchema,
-  aiSchema,
+  agentSchema,
   scopeSchema,
 ]
 
@@ -62,8 +62,8 @@ export const pikkuSchemas: PikkuSchema[] = [
  *
  * The plugin is applied here rather than trusted to the caller. Declarations
  * name tables and columns the way the rest of the codebase queries them
- * (`aiThreads.resourceId`), and it is `CamelCasePlugin` that turns those into
- * the physical `ai_threads.resource_id`. Without it the same declaration
+ * (`agentThreads.resourceId`), and it is `CamelCasePlugin` that turns those into
+ * the physical `agent_threads.resource_id`. Without it the same declaration
  * silently creates quoted camelCase tables that nothing can read.
  */
 const bind = (db: Kysely<any>) => db.withPlugin(new CamelCasePlugin())

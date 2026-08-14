@@ -214,24 +214,24 @@ export function resolveHTTPMiddlewareFromObject(
   )
 }
 
-function getAIMiddlewareNode(
+function getAgentMiddlewareNode(
   obj: ts.ObjectLiteralExpression
 ): ts.Expression | undefined {
   const prop = obj.properties.find(
     (p) =>
       ts.isPropertyAssignment(p) &&
       ts.isIdentifier(p.name) &&
-      p.name.text === 'aiMiddleware'
+      p.name.text === 'agentMiddleware'
   ) as ts.PropertyAssignment | undefined
   return prop?.initializer
 }
 
-export function resolveAIMiddleware(
+export function resolveAgentMiddleware(
   state: InspectorState,
   obj: ts.ObjectLiteralExpression,
   checker: ts.TypeChecker
 ): MiddlewareMetadata[] | undefined {
-  const explicitNode = getAIMiddlewareNode(obj)
+  const explicitNode = getAgentMiddlewareNode(obj)
   if (!explicitNode) return undefined
 
   const names = extractMiddlewarePikkuNames(
@@ -240,7 +240,7 @@ export function resolveAIMiddleware(
     state.rootDir
   )
   const resolved: MiddlewareMetadata[] = names.map((name) => {
-    const def = state.aiMiddleware.definitions[name]
+    const def = state.agentMiddleware.definitions[name]
     return {
       type: 'wire' as const,
       name,

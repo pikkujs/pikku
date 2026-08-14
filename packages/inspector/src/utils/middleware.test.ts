@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { resolveAIMiddleware } from './middleware.js'
+import { resolveAgentMiddleware } from './middleware.js'
 import { getInitialInspectorState } from '../inspector.js'
 import * as ts from 'typescript'
 
@@ -26,39 +26,39 @@ function createMockChecker(): ts.TypeChecker {
   return {} as any
 }
 
-describe('resolveAIMiddleware', () => {
-  test('should return undefined when no aiMiddleware property exists', () => {
+describe('resolveAgentMiddleware', () => {
+  test('should return undefined when no agentMiddleware property exists', () => {
     const state = getInitialInspectorState('/test')
     const src = createSourceFile('const x = { name: "test" }')
     const obj = getObjectLiteral(src)
     const checker = createMockChecker()
 
-    const result = resolveAIMiddleware(state, obj, checker)
+    const result = resolveAgentMiddleware(state, obj, checker)
 
     assert.strictEqual(result, undefined)
   })
 
-  test('should return undefined when aiMiddleware array is empty', () => {
+  test('should return undefined when agentMiddleware array is empty', () => {
     const state = getInitialInspectorState('/test')
-    const src = createSourceFile('const x = { aiMiddleware: [] }')
+    const src = createSourceFile('const x = { agentMiddleware: [] }')
     const obj = getObjectLiteral(src)
     const checker = createMockChecker()
 
-    const result = resolveAIMiddleware(state, obj, checker)
+    const result = resolveAgentMiddleware(state, obj, checker)
 
     assert.strictEqual(result, undefined)
   })
 
-  test('should resolve aiMiddleware identifiers as wire metadata', () => {
+  test('should resolve agentMiddleware identifiers as wire metadata', () => {
     const state = getInitialInspectorState('/test')
-    state.aiMiddleware.definitions['myAIMW'] = {
+    state.agentMiddleware.definitions['myAIMW'] = {
       services: { optimized: true, services: ['logger'] },
       sourceFile: '/test/middleware.ts',
       position: 0,
       exportedName: 'myAIMW',
     }
 
-    const code = 'const x = { aiMiddleware: [myAIMW] }'
+    const code = 'const x = { agentMiddleware: [myAIMW] }'
     const program = ts.createProgram({
       rootNames: ['test.ts'],
       options: { target: ts.ScriptTarget.ESNext },
@@ -77,7 +77,7 @@ describe('resolveAIMiddleware', () => {
     const sourceFile = program.getSourceFile('test.ts')!
     const obj = getObjectLiteral(sourceFile)
 
-    const result = resolveAIMiddleware(state, obj, checker)
+    const result = resolveAgentMiddleware(state, obj, checker)
 
     assert.ok(result)
     assert.strictEqual(result.length, 1)
@@ -88,22 +88,22 @@ describe('resolveAIMiddleware', () => {
     })
   })
 
-  test('should resolve multiple aiMiddleware entries', () => {
+  test('should resolve multiple agentMiddleware entries', () => {
     const state = getInitialInspectorState('/test')
-    state.aiMiddleware.definitions['firstMW'] = {
+    state.agentMiddleware.definitions['firstMW'] = {
       services: { optimized: true, services: ['logger'] },
       sourceFile: '/test/middleware.ts',
       position: 0,
       exportedName: 'firstMW',
     }
-    state.aiMiddleware.definitions['secondMW'] = {
+    state.agentMiddleware.definitions['secondMW'] = {
       services: { optimized: true, services: [] },
       sourceFile: '/test/middleware.ts',
       position: 100,
       exportedName: 'secondMW',
     }
 
-    const code = 'const x = { aiMiddleware: [firstMW, secondMW] }'
+    const code = 'const x = { agentMiddleware: [firstMW, secondMW] }'
     const program = ts.createProgram({
       rootNames: ['test.ts'],
       options: { target: ts.ScriptTarget.ESNext },
@@ -122,7 +122,7 @@ describe('resolveAIMiddleware', () => {
     const sourceFile = program.getSourceFile('test.ts')!
     const obj = getObjectLiteral(sourceFile)
 
-    const result = resolveAIMiddleware(state, obj, checker)
+    const result = resolveAgentMiddleware(state, obj, checker)
 
     assert.ok(result)
     assert.strictEqual(result.length, 2)
@@ -132,16 +132,16 @@ describe('resolveAIMiddleware', () => {
     assert.strictEqual((result[1] as any).name, 'secondMW')
   })
 
-  test('should mark inline aiMiddleware (null exportedName)', () => {
+  test('should mark inline agentMiddleware (null exportedName)', () => {
     const state = getInitialInspectorState('/test')
-    state.aiMiddleware.definitions['inlineMW'] = {
+    state.agentMiddleware.definitions['inlineMW'] = {
       services: { optimized: true, services: [] },
       sourceFile: '/test/middleware.ts',
       position: 0,
       exportedName: null,
     }
 
-    const code = 'const x = { aiMiddleware: [inlineMW] }'
+    const code = 'const x = { agentMiddleware: [inlineMW] }'
     const program = ts.createProgram({
       rootNames: ['test.ts'],
       options: { target: ts.ScriptTarget.ESNext },
@@ -160,7 +160,7 @@ describe('resolveAIMiddleware', () => {
     const sourceFile = program.getSourceFile('test.ts')!
     const obj = getObjectLiteral(sourceFile)
 
-    const result = resolveAIMiddleware(state, obj, checker)
+    const result = resolveAgentMiddleware(state, obj, checker)
 
     assert.ok(result)
     assert.strictEqual(result.length, 1)
@@ -171,10 +171,10 @@ describe('resolveAIMiddleware', () => {
     })
   })
 
-  test('should handle aiMiddleware referencing unknown definitions', () => {
+  test('should handle agentMiddleware referencing unknown definitions', () => {
     const state = getInitialInspectorState('/test')
 
-    const code = 'const x = { aiMiddleware: [unknownMW] }'
+    const code = 'const x = { agentMiddleware: [unknownMW] }'
     const program = ts.createProgram({
       rootNames: ['test.ts'],
       options: { target: ts.ScriptTarget.ESNext },
@@ -193,7 +193,7 @@ describe('resolveAIMiddleware', () => {
     const sourceFile = program.getSourceFile('test.ts')!
     const obj = getObjectLiteral(sourceFile)
 
-    const result = resolveAIMiddleware(state, obj, checker)
+    const result = resolveAgentMiddleware(state, obj, checker)
 
     assert.ok(result)
     assert.strictEqual(result.length, 1)

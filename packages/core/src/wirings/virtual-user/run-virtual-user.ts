@@ -1,5 +1,5 @@
 import type { ResolvedPersona } from '../../services/personas-service.js'
-import type { AIMessage } from '../ai-agent/ai-agent.types.js'
+import type { AgentMessage } from '../agent/agent.types.js'
 import type { ActorLLM } from '../actor-flow/run-conversation.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
@@ -135,7 +135,7 @@ export interface RunVirtualUserParams {
   maxStepsPerIntent?: number
 }
 
-const msg = (role: AIMessage['role'], content: string): AIMessage => ({
+const msg = (role: AgentMessage['role'], content: string): AgentMessage => ({
   id: globalThis.crypto.randomUUID(),
   role,
   content,
@@ -318,7 +318,7 @@ export const runVirtualUser = async (
   const described = new Set<string>()
   const findings: VirtualUserFinding[] = []
   const steps: StepRecord[] = []
-  const history = new Map<string, AIMessage[]>()
+  const history = new Map<string, AgentMessage[]>()
 
   const tally: VirtualUserTally = {
     steps: 0,

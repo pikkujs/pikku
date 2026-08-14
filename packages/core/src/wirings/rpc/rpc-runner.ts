@@ -13,7 +13,7 @@ import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { resolveRemoteAddonToken } from './remote-addon-auth.js'
-import { createAgentRPC } from '../ai-agent/agent-rpc.js'
+import { createAgentRPC } from '../agent/agent-rpc.js'
 
 /**
  * The session for a wire: read through `getSession` when a runner attached one,
@@ -461,7 +461,7 @@ export class ContextAwareRPCService {
   /**
    * The agent facade, built on access.
    *
-   * The implementation lives in `ai-agent/agent-rpc.ts` so the agent surface is
+   * The implementation lives in `agent/agent-rpc.ts` so the agent surface is
    * one file rather than a wing of this one; a getter rather than a field so a
    * request that never touches an agent never builds it.
    */

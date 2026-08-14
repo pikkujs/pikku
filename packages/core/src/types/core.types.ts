@@ -33,19 +33,19 @@ import type { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
 import type { PikkuGateway } from '../wirings/gateway/gateway.types.js'
 import type { SchedulerService } from '../services/scheduler-service.js'
 import type { DeploymentService } from '../services/deployment-service.js'
-import type { AIStorageService } from '../services/ai-storage-service.js'
+import type { AgentStorageService } from '../services/agent-storage-service.js'
 
 import type { ContentService } from '../services/content-service.js'
 import type {
   ScenarioPersonaOf,
   ScenarioPersonas,
 } from '../services/personas-service.js'
-import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
+import type { AgentRunnerService } from '../services/agent-runner-service.js'
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
-import type { AIRunStateService } from '../services/ai-run-state-service.js'
-import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
+import type { AgentRunStateService } from '../services/agent-run-state-service.js'
+import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { VirtualUserRunStore } from '../wirings/virtual-user/virtual-user-run-store.js'
-import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
+import type { PikkuAgentMiddlewareHooks } from '../wirings/agent/agent.types.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
@@ -325,12 +325,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   eventHub?: EventHubService<Record<string, any>>
   schedulerService?: SchedulerService
   deploymentService?: DeploymentService
-  aiStorage?: AIStorageService
+  agentStorage?: AgentStorageService
 
   content?: ContentService
-  aiAgentRunner?: AIAgentRunnerService
+  agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
-  aiRunState?: AIRunStateService
+  agentRunState?: AgentRunStateService
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
@@ -547,14 +547,14 @@ export const pikkuChannelMiddlewareFactory = <In = any>(
   return factory
 }
 
-export type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
+export type { PikkuAgentMiddlewareHooks } from '../wirings/agent/agent.types.js'
 
-export const pikkuAIMiddleware = <
+export const pikkuAgentMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 >(
-  hooks: PikkuAIMiddlewareHooks<State, SingletonServices>
-): PikkuAIMiddlewareHooks<State, SingletonServices> => hooks
+  hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>
+): PikkuAgentMiddlewareHooks<State, SingletonServices> => hooks
 
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices

@@ -18,9 +18,11 @@ rewrite the stub.
      "n8nType": "n8n-nodes-base.gmailTool",
      "n8nName": "Send a message in Gmail",
      "parameters": { "sendTo": "...", "message": "...", "subject": "..." },
-     "credentials": { "gmailOAuth2": { "id": "...", "name": "Personal Gmail" } },
+     "credentials": {
+       "gmailOAuth2": { "id": "...", "name": "Personal Gmail" },
+     },
      "isAgentTool": true,
-     "agentName": "Inbox Assistant"
+     "agentName": "Inbox Assistant",
    }
    ```
 2. **Installed addons** — `@pikku/addon-*` in the project's `package.json`
@@ -35,12 +37,12 @@ rewrite the stub.
 Map `n8nType` to a package by reading its source. Common shapes (**guesses, not
 authoritative** — always verify against installed source):
 
-| n8n type prefix | typical addon candidate |
-|---|---|
-| `n8n-nodes-base.gmail` / `gmailTool` | `@pikku/addon-email-gmail` |
-| `n8n-nodes-base.slack` / `slackTool` | `@pikku/addon-chat-slack` |
-| `n8n-nodes-base.googleSheets` / `…Tool` | `@pikku/addon-sheets-google` |
-| `n8n-nodes-base.notion` / `notionTool` | `@pikku/addon-docs-notion` |
+| n8n type prefix                            | typical addon candidate      |
+| ------------------------------------------ | ---------------------------- |
+| `n8n-nodes-base.gmail` / `gmailTool`       | `@pikku/addon-email-gmail`   |
+| `n8n-nodes-base.slack` / `slackTool`       | `@pikku/addon-chat-slack`    |
+| `n8n-nodes-base.googleSheets` / `…Tool`    | `@pikku/addon-sheets-google` |
+| `n8n-nodes-base.notion` / `notionTool`     | `@pikku/addon-docs-notion`   |
 | `n8n-nodes-base.telegram` / `telegramTool` | `@pikku/addon-chat-telegram` |
 
 If no installed addon plausibly covers the n8n type, stop and report it — do not
@@ -74,6 +76,7 @@ over guessing.
 Two outcomes, by `isAgentTool`:
 
 **A) `isAgentTool: true`** — the stub is an agent tool referenced via `ref()`:
+
 1. Delete the stub file.
 2. In the agent file, replace `ref('agentGmailtool__sendAMessageInGmail')` in
    `tools: [...]` with `ref('messageSend')` (the resolved addon function).
@@ -81,13 +84,16 @@ Two outcomes, by `isAgentTool`:
    `node_modules/@pikku/addon-*`).
 
 If you can't delete safely, leave a one-line re-export instead of a stub:
+
 ```ts
 import { messageSend } from '@pikku/addon-email-gmail'
 export const agentGmailtool__sendAMessageInGmail = messageSend
 ```
+
 Default is delete + retarget; wrappers add maintenance burden.
 
 **B) `isAgentTool: false`** — the stub is a graph node:
+
 1. Open `<workflow>.graph.ts`.
 2. In `nodes: { … }` find the entry whose value is the stub rpc name.
 3. Replace it with the addon function name (`'messageSend'`).

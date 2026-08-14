@@ -4,7 +4,7 @@ import {
   convertToSDKMessages,
   convertFromSDKStep,
 } from './message-converter.js'
-import type { AIMessage } from '@pikku/core/ai-agent'
+import type { AgentMessage } from '@pikku/core/agent'
 
 /**
  * `convertToSDKMessages` is the seam between Pikku's stored message shape and the
@@ -13,7 +13,9 @@ import type { AIMessage } from '@pikku/core/ai-agent'
  * raw text, a tool result the model can no longer match to its call.
  */
 describe('convertToSDKMessages', () => {
-  const msg = (m: Partial<AIMessage> & Pick<AIMessage, 'role'>): AIMessage => ({
+  const msg = (
+    m: Partial<AgentMessage> & Pick<AgentMessage, 'role'>
+  ): AgentMessage => ({
     id: 'id',
     createdAt: new Date(),
     ...m,

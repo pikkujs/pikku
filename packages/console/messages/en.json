@@ -325,7 +325,7 @@
   "scorers_description": "How finished agent runs are graded",
   "scorers_search_placeholder": "Search scorers...",
   "scorers_empty_title": "No scorers declared",
-  "scorers_empty_description": "Declare one with pikkuAIScorer or pikkuAIJudge, then name it on an agent to grade its runs.",
+  "scorers_empty_description": "Declare one with pikkuAgentScorer or pikkuAgentJudge, then name it on an agent to grade its runs.",
   "scorers_column_scorer": "Scorer",
   "scorers_column_lane": "Lane",
   "scorers_column_sampling": "Sampling",

@@ -1,7 +1,7 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { ref } from '#pikku/pikku-types.gen.js'
 
-export const oauthApiAgent = pikkuAIAgent({
+export const oauthApiAgent = pikkuAgent({
   name: 'oauth-api-agent',
   description: 'Checks user OAuth profile using per-user credentials',
   goal: 'You help users check their OAuth profile. Use the getProfile tool to fetch their authenticated profile.',

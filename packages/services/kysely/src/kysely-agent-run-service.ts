@@ -1,0 +1,243 @@
+import type { AgentThread, AgentMessage } from '@pikku/core/agent'
+import type {
+  AgentRunRow,
+  AgentRunService,
+} from '@pikku/core/ecosystem/agent'
+import type { Kysely } from 'kysely'
+import { sql } from 'kysely'
+import type { KyselyPikkuDB } from './kysely-tables.js'
+import { parseJson } from './kysely-json.js'
+
+// Owner ids routinely contain `_` (e.g. `user_123`), which LIKE treats as a
+// single-character wildcard — so a raw prefix would match a foreign owner.
+const escapeLikePattern = (value: string) =>
+  value.replace(/[\\%_]/g, (char) => `\\${char}`)
+
+export class KyselyAgentRunService implements AgentRunService {
+  constructor(private db: Kysely<KyselyPikkuDB>) {}
+
+  async listThreads(options?: {
+    agentName?: string
+    resourceId?: string
+    owners?: string[]
+    limit?: number
+    offset?: number
+  }): Promise<AgentThread[]> {
+    const {
+      agentName,
+      resourceId,
+      owners,
+      limit = 50,
+      offset = 0,
+    } = options ?? {}
+
+    // An owners constraint is an authorization boundary, so an empty list must
+    // match nothing rather than degrade to "no filter".
+    if (owners && owners.length === 0) return []
+
+    let query = this.db
+      .selectFrom('agentThreads as t')
+      .select([
+        't.id',
+        't.resourceId',
+        't.title',
+        't.metadata',
+        't.createdAt',
+        't.updatedAt',
+      ])
+
+    if (agentName) {
+      query = query.where(
+        't.id',
+        'in',
+        this.db
+          .selectFrom('agentRun')
+          .select('threadId')
+          .where('agentName', '=', agentName)
+          .distinct()
+      )
+    }
+
+    if (resourceId) {
+      query = query.where('t.resourceId', '=', resourceId)
+    }
+
+    if (owners) {
+      query = query.where((eb) =>
+        eb.or(
+          owners.flatMap((owner) => [
+            eb('t.resourceId', '=', owner),
+            eb(
+              't.resourceId',
+              'like',
+              sql<string>`${`${escapeLikePattern(owner)}:%`} escape '\\'`
+            ),
+          ])
+        )
+      )
+    }
+
+    const result = await query
+      .orderBy('t.updatedAt', 'desc')
+      .limit(limit)
+      .offset(offset)
+      .execute()
+
+    return result.map((row) => this.mapThreadRow(row))
+  }
+
+  async getThread(threadId: string): Promise<AgentThread | null> {
+    const row = await this.db
+      .selectFrom('agentThreads')
+      .select([
+        'id',
+        'resourceId',
+        'title',
+        'metadata',
+        'createdAt',
+        'updatedAt',
+      ])
+      .where('id', '=', threadId)
+      .executeTakeFirst()
+
+    if (!row) return null
+    return this.mapThreadRow(row)
+  }
+
+  async getThreadMessages(threadId: string): Promise<AgentMessage[]> {
+    const [msgResult, tcResult] = await Promise.all([
+      this.db
+        .selectFrom('agentMessage')
+        .select(['id', 'role', 'content', 'createdAt'])
+        .where('threadId', '=', threadId)
+        .orderBy('createdAt', 'asc')
+        .execute(),
+      this.db
+        .selectFrom('agentToolCall')
+        .select(['id', 'messageId', 'toolName', 'args', 'result'])
+        .where('threadId', '=', threadId)
+        .orderBy('createdAt', 'asc')
+        .execute(),
+    ])
+
+    const tcByMessage = new Map<string, (typeof tcResult)[number][]>()
+    for (const tc of tcResult) {
+      const msgId = tc.messageId
+      if (!tcByMessage.has(msgId)) tcByMessage.set(msgId, [])
+      tcByMessage.get(msgId)!.push(tc)
+    }
+
+    const messages: AgentMessage[] = []
+    for (const row of msgResult) {
+      const msg: AgentMessage = {
+        id: row.id,
+        role: row.role as AgentMessage['role'],
+        content: row.content ?? undefined,
+        createdAt: new Date(row.createdAt as unknown as string),
+      }
+
+      const tcs = tcByMessage.get(msg.id)
+      if (tcs?.length) {
+        msg.toolCalls = tcs.map((tc) => ({
+          id: tc.id,
+          name: tc.toolName,
+          args: parseJson(tc.args) as Record<string, unknown>,
+        }))
+
+        const completed = tcs.filter((tc) => tc.result != null)
+        if (completed.length) {
+          messages.push(msg)
+          messages.push({
+            id: `tool-results-${msg.id}`,
+            role: 'tool',
+            toolResults: completed.map((tc) => ({
+              id: tc.id,
+              name: tc.toolName,
+              result: tc.result!,
+            })),
+            createdAt: msg.createdAt,
+          })
+          continue
+        }
+      }
+
+      messages.push(msg)
+    }
+
+    return messages
+  }
+
+  async getThreadRuns(threadId: string): Promise<AgentRunRow[]> {
+    const result = await this.db
+      .selectFrom('agentRun')
+      .select([
+        'runId',
+        'agentName',
+        'threadId',
+        'resourceId',
+        'status',
+        'errorMessage',
+        'suspendReason',
+        'missingRpcs',
+        'usageInputTokens',
+        'usageOutputTokens',
+        'usageModel',
+        'createdAt',
+        'updatedAt',
+      ])
+      .where('threadId', '=', threadId)
+      .orderBy('createdAt', 'desc')
+      .execute()
+
+    return result.map((row) => this.mapRunRow(row))
+  }
+
+  async deleteThread(threadId: string): Promise<boolean> {
+    const result = await this.db
+      .deleteFrom('agentThreads')
+      .where('id', '=', threadId)
+      .executeTakeFirst()
+
+    return BigInt(result.numDeletedRows) > 0n
+  }
+
+  async getDistinctAgentNames(): Promise<string[]> {
+    const result = await this.db
+      .selectFrom('agentRun')
+      .select('agentName')
+      .distinct()
+      .orderBy('agentName')
+      .execute()
+
+    return result.map((row) => row.agentName)
+  }
+
+  private mapThreadRow(row: any): AgentThread {
+    return {
+      id: row.id as string,
+      resourceId: row.resourceId as string,
+      title: (row.title as string) ?? undefined,
+      metadata: parseJson(row.metadata),
+      createdAt: new Date(row.createdAt as string),
+      updatedAt: new Date(row.updatedAt as string),
+    }
+  }
+
+  private mapRunRow(row: any): AgentRunRow {
+    return {
+      runId: row.runId as string,
+      agentName: row.agentName as string,
+      threadId: row.threadId as string,
+      resourceId: row.resourceId as string,
+      status: row.status as string,
+      errorMessage: (row.errorMessage as string) ?? undefined,
+      suspendReason: (row.suspendReason as string) ?? undefined,
+      missingRpcs: parseJson(row.missingRpcs),
+      usageInputTokens: Number(row.usageInputTokens),
+      usageOutputTokens: Number(row.usageOutputTokens),
+      usageModel: row.usageModel as string,
+      createdAt: new Date(row.createdAt as string),
+      updatedAt: new Date(row.updatedAt as string),
+    }
+  }
+}

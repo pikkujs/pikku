@@ -51,12 +51,12 @@ const SERVICE_GEN_FILE_MAP: Record<string, RegExp> = {
  * keeps their (often large) trees out of the bundle.
  *
  * The AI SDKs (@pikku/ai-vercel + @ai-sdk/* + `ai`, ~3MB) are only constructed
- * when `aiAgentRunner` is wired (agent units). Every non-agent unit stubs them.
+ * when `agentRunner` is wired (agent units). Every non-agent unit stubs them.
  * The shared services factory must guard the runner construction behind a
  * defined-check on the dynamic import so a stubbed unit simply skips it.
  */
 const SERVICE_MODULE_MAP: Record<string, RegExp[]> = {
-  aiAgentRunner: [/^@pikku\/ai-vercel/, /^@ai-sdk\//, /^ai$/],
+  agentRunner: [/^@pikku\/ai-vercel/, /^@ai-sdk\//, /^ai$/],
 }
 
 /**
@@ -243,7 +243,11 @@ export abstract class BaseBundler implements Bundler {
       exactDependencies,
       exactOptionalDependencies
     )
-    await writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf-8')
+    await writeFile(
+      packageJsonPath,
+      JSON.stringify(packageJson, null, 2),
+      'utf-8'
+    )
     await writeFile(
       exactDependenciesPath,
       JSON.stringify(

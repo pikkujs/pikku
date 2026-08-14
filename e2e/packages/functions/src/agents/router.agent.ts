@@ -1,8 +1,8 @@
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { todoAgent } from './todo.agent.js'
 import { emailAgent } from './email.agent.js'
 
-export const routerAgent = pikkuAIAgent({
+export const routerAgent = pikkuAgent({
   name: 'router-agent',
   description:
     'Main entry point — routes requests to the appropriate domain agent',

@@ -230,7 +230,7 @@ const buildSpeechModel = (modelName: string) =>
   })
 
 /**
- * A callable provider, which is what `VercelAIAgentRunner.getModel` prefers for
+ * A callable provider, which is what `VercelAgentRunner.getModel` prefers for
  * language models (`isCallable(provider) -> provider(modelName)`). Being a
  * function rather than a `MockProviderV3` lets the script be selected by model
  * name at call time — `model: 'mock/tool-then-text'` — instead of being frozen

@@ -2,7 +2,7 @@
 type: decision
 title: Only an explicit `false` silences a spoken reply
 description: The key being absent means no voice input is wired and nothing reported either way, so those callers keep the behaviour they had before the option existed
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # Only an explicit `false` silences a spoken reply

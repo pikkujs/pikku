@@ -357,7 +357,7 @@ describe('analyzeDeployment - unscoped addon secrets', () => {
 
 describe('analyzeDeployment - agent identifier', () => {
   // Regression: the manifest agent `name` must be the registry KEY (export
-  // name) — the identifier used by routes, addAIAgent(...), and the inspector
+  // name) — the identifier used by routes, addAgent(...), and the inspector
   // name filter — NOT the human-facing `agentMeta.name`. Per-unit codegen
   // feeds `agentDef.name` to `--names`; if it's the human name the filter
   // prunes the agent and its registration never gets bundled, producing a

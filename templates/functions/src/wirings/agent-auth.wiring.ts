@@ -15,7 +15,7 @@ import { authBearer } from '@pikku/core/middleware'
  * somebody copies. `run-tests.sh` exports a fresh value for the server and the
  * client together.
  *
- * knowledge: decisions/security/ai-agent-sessionless-deployments-have-no-thread-ownership.md
+ * knowledge: decisions/security/agent-sessionless-deployments-have-no-thread-ownership.md
  */
 export const agentDemoAuth = () =>
   addHTTPMiddleware('/rpc/*', [

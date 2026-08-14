@@ -2,7 +2,7 @@
 type: decision
 title: The agent `done` event goes through the middleware and is awaited
 description: `done` is the only end-of-reply signal a stream hook gets, and buffering hooks flush on it — sending it raw discards work already paid for
-tags: core, ai-agent
+tags: core, agent
 ---
 
 # The agent `done` event goes through the middleware and is awaited

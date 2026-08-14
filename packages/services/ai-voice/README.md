@@ -2,7 +2,7 @@
 
 > **Deprecated.** This package no longer exports anything.
 
-Use `@pikku/core/ai-agent` together with an `aiAgentRunner` implementation such
+Use `@pikku/core/agent` together with an `agentRunner` implementation such
 as `@pikku/ai-vercel`.
 
 ## Docs

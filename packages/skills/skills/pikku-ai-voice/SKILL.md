@@ -2,10 +2,10 @@
 name: pikku-ai-voice
 description: >-
   Use when adding voice input (speech-to-text) or voice output (text-to-speech) to AI agents in a
-  Pikku app. Covers the voiceInput/voiceOutput AI middleware from @pikku/core/ai-agent, per-script
+  Pikku app. Covers the voiceInput/voiceOutput AI middleware from @pikku/core/agent, per-script
   voices, and barge-in. TRIGGER when: code uses voiceInput, voiceOutput, or user asks about voice
   agents, speech-to-text, text-to-speech, transcription, or @pikku/ai-voice. DO NOT TRIGGER when:
-  user asks about AI agent wiring generally (use pikku-ai-agent) or the runner itself (use
+  user asks about AI agent wiring generally (use pikku-agent) or the runner itself (use
   pikku-ai-vercel).
 ---
 
@@ -27,14 +27,14 @@ The package still publishes, but its entire source is `export {}` — there are 
 `STTService`/`TTSService` interfaces and nothing to import. Do not add it as a
 dependency.
 
-Voice now lives in **`@pikku/core/ai-agent`** as two AI middlewares, and the
-speech models are reached through the `aiAgentRunner` (`transcribe` /
+Voice now lives in **`@pikku/core/agent`** as two AI middlewares, and the
+speech models are reached through the `agentRunner` (`transcribe` /
 `generateSpeech`) rather than through separate services. See `pikku-ai-vercel`.
 
 ## API Reference
 
 ```typescript
-import { voiceInput, voiceOutput } from '@pikku/core/ai-agent'
+import { voiceInput, voiceOutput } from '@pikku/core/agent'
 
 voiceInput(config?: {
   model?: string               // transcription model — required in practice
@@ -54,9 +54,9 @@ voiceOutput(config?: {
 })
 ```
 
-Both attach through the agent's **`aiMiddleware`** array, not a
-`middlewareHooks` option, and the agent is declared with `pikkuAIAgent` — there
-is no `wireAIAgent`.
+Both attach through the agent's **`agentMiddleware`** array, not a
+`middlewareHooks` option, and the agent is declared with `pikkuAgent` — there
+is no `wireAgent`.
 
 ### `voiceInput` — audio in, text in its place
 
@@ -74,7 +74,7 @@ spoken, which is why it records two shared-notes keys on the way past:
 
 Behaviours that decide how a voice loop should be written:
 
-- **It is a no-op without `aiAgentRunner.transcribe`** — no error, the audio
+- **It is a no-op without `agentRunner.transcribe`** — no error, the audio
   simply passes through untouched.
 - **`config.model` is required once audio actually arrives**, and throws then
   rather than at wiring time.
@@ -84,7 +84,7 @@ Behaviours that decide how a voice loop should be written:
   distinct from a transcription failure, which is worth reporting.
 - **Non-speech means an empty transcript, and nothing cleverer.** There was a
   per-segment confidence gate here and it was removed: Whisper is
-  subtitle-trained, so it is *confident* when it invents ("Thank you." scored
+  subtitle-trained, so it is _confident_ when it invents ("Thank you." scored
   better than the real sentence beside it). Pick an ASR that returns an empty
   string on silence rather than trying to filter one that doesn't.
 - Audio arrives either inline (base64 `data`) or as a `url` fetched through
@@ -112,7 +112,7 @@ awaits the chain, and emits `audio-done` before the `done` event.
 ### `speakableScripts` — declare what the model can pronounce
 
 Handed a script it has no voice for, a speech model typically neither fails nor
-stays quiet: Kokoro reads out the *letter names* — 24 seconds of "Arabic meem,
+stays quiet: Kokoro reads out the _letter names_ — 24 seconds of "Arabic meem,
 Arabic ra" for a one-line sentence. Declaring the range leaves anything outside
 it unspoken and reports it once per reply as a `voice-unsupported` data event.
 
@@ -133,15 +133,15 @@ fallback)` are exported if you need the same decision outside the middleware.
 ## Usage Pattern
 
 ```typescript
-import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { voiceInput, voiceOutput } from '@pikku/core/ai-agent'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
+import { voiceInput, voiceOutput } from '@pikku/core/agent'
 
-export const voiceAssistant = pikkuAIAgent({
+export const voiceAssistant = pikkuAgent({
   name: 'voice-assistant',
   description: 'Holds a spoken conversation',
   goal: 'You are a voice assistant. You are being listened to, not read.',
   model: 'openai/gpt-5-mini',
-  aiMiddleware: [
+  agentMiddleware: [
     voiceInput({ model: 'deepinfra/openai/whisper-large-v3-turbo' }),
     voiceOutput({
       model: 'deepinfra/hexgrad/Kokoro-82M',

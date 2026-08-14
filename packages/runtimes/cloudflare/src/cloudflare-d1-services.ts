@@ -14,9 +14,9 @@ import type { D1Database } from '@cloudflare/workers-types'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import {
   KyselyWorkflowService,
-  KyselyAIStorageService,
+  KyselyAgentStorageService,
   KyselyAgentRunService,
-  KyselyAIRunStateService,
+  KyselyAgentRunStateService,
 } from '@pikku/kysely'
 
 /**
@@ -45,7 +45,7 @@ export class CloudflareWorkflowService extends KyselyWorkflowService {
  * AI storage service (threads, messages, tool calls).
  * Auto-creates tables on first init().
  */
-export class CloudflareAIStorageService extends KyselyAIStorageService {
+export class CloudflareAgentStorageService extends KyselyAgentStorageService {
   constructor(kysely: Kysely<KyselyPikkuDB>) {
     super(kysely)
   }
@@ -65,7 +65,7 @@ export class CloudflareAgentRunService extends KyselyAgentRunService {
  * AI run state service (run lifecycle, approvals).
  * Auto-creates tables on first init().
  */
-export class CloudflareAIRunStateService extends KyselyAIRunStateService {
+export class CloudflareAgentRunStateService extends KyselyAgentRunStateService {
   constructor(kysely: Kysely<KyselyPikkuDB>) {
     super(kysely)
   }

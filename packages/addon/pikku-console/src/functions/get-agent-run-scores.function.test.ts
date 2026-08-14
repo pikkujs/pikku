@@ -7,22 +7,26 @@ const SCORES = [{ runId: 'run-1', scorerName: 'brevity', score: 1 }]
 
 const services = (resourceId: string | null) =>
   ({
-    aiRunState: {
+    agentRunState: {
       getRun: async () => (resourceId === null ? null : { resourceId }),
       getScores: async () => SCORES,
     },
   }) as never
 
 const read = (resourceId: string | null, session: unknown) =>
-  getAgentRunScores.func(services(resourceId), { runId: 'run-1' } as never, {
-    session,
-  } as never)
+  getAgentRunScores.func(
+    services(resourceId),
+    { runId: 'run-1' } as never,
+    {
+      session,
+    } as never
+  )
 
 test('the owner of the run reads its grades', async () => {
   assert.deepEqual(await read('alice', { userId: 'alice', scopes: [] }), SCORES)
 })
 
-test("a run belonging to someone else is absent, not forbidden", async () => {
+test('a run belonging to someone else is absent, not forbidden', async () => {
   // Reported as missing rather than refused: a refusal would confirm the id
   // exists, which is most of what an enumeration needs.
   await assert.rejects(

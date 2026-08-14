@@ -27,7 +27,7 @@ Pikku is a TypeScript framework that separates business logic from transport mec
 
 For deep-dive on each topic, see the dedicated skills:
 
-- **Wiring**: `pikku-http`, `pikku-websocket`, `pikku-rpc`, `pikku-mcp`, `pikku-queue`, `pikku-cron`, `pikku-trigger`, `pikku-cli`, `pikku-ai-agent`, `pikku-workflow`
+- **Wiring**: `pikku-http`, `pikku-websocket`, `pikku-rpc`, `pikku-mcp`, `pikku-queue`, `pikku-cron`, `pikku-trigger`, `pikku-cli`, `pikku-agent`, `pikku-workflow`
 - **Authorization**: `pikku-security` (authentication/sessions), `pikku-permissions` (permission checks, scopes), `pikku-middleware` (global/tag/route middleware)
 - **Infrastructure**: `pikku-services`, `pikku-config`
 - **Project introspection**: `pikku-info`
@@ -44,7 +44,7 @@ pikkuFunc (pure business logic)
     ├── wireMCPTool     → Model Context Protocol (AI tools)
     ├── wireCLI         → CLI commands
     ├── wireTrigger     → Event-driven (Redis pub/sub, PG LISTEN/NOTIFY)
-    ├── pikkuAIAgent    → AI agents / chatbots
+    ├── pikkuAgent    → AI agents / chatbots
     ├── pikkuWorkflow   → Multi-step durable workflows
     └── wire.rpc        → Internal function-to-function calls
 ```
@@ -122,7 +122,7 @@ pikkuFunc({
   permissionsInBody?: boolean,    // Last resort; needs allow.permissionsInBody in config
   middleware?: PikkuMiddleware[], // See pikku-middleware
 
-  // Agent tooling — see pikku-ai-agent
+  // Agent tooling — see pikku-agent
   approvalRequired?: boolean,
   approvalDescription?: (services, data) => Promise<string>,
 
@@ -144,7 +144,7 @@ reject every caller it exists to serve. Gate those with `permissions`, which
 receive the optional session and may pass anonymous.
 
 **Generics XOR `input`/`output` — never both.** A function's data and return
-types come from *one* source: either the `input`/`output` schemas (preferred —
+types come from _one_ source: either the `input`/`output` schemas (preferred —
 they double as runtime validation and OpenAPI) or type generics
 (`pikkuFunc<In, Out>({ ... })`). Passing both makes the two disagree and forces
 `as any` casts. Do not annotate the `func` return type inline either — let the
@@ -230,7 +230,7 @@ await server.start()
 
 **Lifecycle hooks do not run on this path** — only `pikku dev` and `pikku serve` invoke them. Do your startup work directly in the entrypoint instead.
 
-`pikku validate` warns when a project starts a server by hand *and* depends on no runtime adapter, since that combination means path 1 was available and unused. Silence it with `"lint": { "customServerBootstrap": "off" }` in `pikku.config.json`.
+`pikku validate` warns when a project starts a server by hand _and_ depends on no runtime adapter, since that combination means path 1 was available and unused. Silence it with `"lint": { "customServerBootstrap": "off" }` in `pikku.config.json`.
 
 ## Code Generation
 

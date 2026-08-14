@@ -30,7 +30,7 @@ Wire them to HTTP, queues, cron, channels or MCP, then run `npx pikku` to
 regenerate the bootstrap files and typed clients.
 
 Subpath exports cover the individual wiring types — `@pikku/core/http`,
-`@pikku/core/workflow`, `@pikku/core/channel`, `@pikku/core/ai-agent` and more.
+`@pikku/core/workflow`, `@pikku/core/channel`, `@pikku/core/agent` and more.
 
 ## Docs
 

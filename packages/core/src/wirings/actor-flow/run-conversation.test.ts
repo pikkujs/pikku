@@ -7,9 +7,9 @@ import type {
   TargetAgentReply,
   ActorFlowApprovalPolicy,
 } from './actor-flow.types.js'
-import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
+import type { AgentStepResult } from '../../services/agent-runner-service.js'
 
-const stepResult = (object: unknown): AIAgentStepResult => ({
+const stepResult = (object: unknown): AgentStepResult => ({
   text: '',
   object,
   toolCalls: [],

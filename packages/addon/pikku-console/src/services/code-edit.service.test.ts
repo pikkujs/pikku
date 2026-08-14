@@ -43,9 +43,9 @@ export const createTodo = pikkuFunc({
 })
 `
 
-const AGENT_SOURCE = `import { pikkuAIAgent } from '@pikku/core'
+const AGENT_SOURCE = `import { pikkuAgent } from '@pikku/core'
 
-export const todoAssistant = pikkuAIAgent({
+export const todoAssistant = pikkuAgent({
   name: 'todo-assistant',
   description: 'A helpful assistant that manages todos',
   role: 'You are a todo management specialist.',

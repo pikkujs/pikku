@@ -37,7 +37,7 @@ import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
 import { resolveEnvironment } from './environment.js'
-import { createDevAIAgentRunner } from './dev-ai-runner.js'
+import { createDevAgentRunner } from './dev-agent-runner.js'
 
 const isScenario = (wf: any) => wf?.scenario === true
 
@@ -371,9 +371,9 @@ export const scenarioRun = pikkuSessionlessFunc<
     // before it says anything. Built the same way `pikku dev` builds its own,
     // and only when the project declares agents, so a project with no agents
     // does not have to have AI env set to run scenarios.
-    const aiAgentRunner =
+    const agentRunner =
       Object.keys(state.agents?.agentsMeta ?? {}).length > 0
-        ? await createDevAIAgentRunner({
+        ? await createDevAgentRunner({
             logger,
             projectRoot: config.rootDir,
             variables,
@@ -383,7 +383,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       logger,
       workflowService,
       workflowRunService: workflowService,
-      ...(aiAgentRunner ? { aiAgentRunner } : {}),
+      ...(agentRunner ? { agentRunner } : {}),
     } as any)
     const refuseInternal = (rpcName: string): never => {
       throw new Error(

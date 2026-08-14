@@ -9,7 +9,7 @@ import { MongoDBEventHubStore } from './mongodb-eventhub-store.js'
 import { MongoDBWorkflowService } from './mongodb-workflow-service.js'
 import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
 import { MongoDBDeploymentService } from './mongodb-deployment-service.js'
-import { MongoDBAIStorageService } from './mongodb-ai-storage-service.js'
+import { MongoDBAgentStorageService } from './mongodb-agent-storage-service.js'
 import { MongoDBAgentRunService } from './mongodb-agent-run-service.js'
 import { MongoDBSecretService } from './mongodb-secret-service.js'
 import { MongoDBSessionStore } from './mongodb-session-store.js'
@@ -42,8 +42,8 @@ function registerTests(name: string, getDb: () => Db) {
         await s.init()
         return s
       },
-      aiStorageService: async () => {
-        const s = new MongoDBAIStorageService(getDb())
+      agentStorageService: async () => {
+        const s = new MongoDBAgentStorageService(getDb())
         await s.init()
         return s
       },
