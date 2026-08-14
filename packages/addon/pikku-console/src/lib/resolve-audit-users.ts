@@ -26,7 +26,7 @@ export type AuditUserDirectory = Record<string, AuditUserProfile>
  * sink, different systems entirely), so there is no query that spans both.
  *
  * Read through better-auth's own adapter as the server, not as the caller.
- * `pikku:audit:read` already grants "every recorded action, and which user took
+ * `pikku:console:audit:read` already grants "every recorded action, and which user took
  * it", so a reader who may see the id may see the name — an opaque id would be
  * the same disclosure, just unreadable. Reading the adapter directly also
  * reaches actor rows, which the admin user list deliberately hides: nobody

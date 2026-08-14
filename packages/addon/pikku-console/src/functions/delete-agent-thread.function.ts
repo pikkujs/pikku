@@ -8,6 +8,7 @@ export const deleteAgentThread = pikkuFunc<
   description:
     'Deletes an AI agent thread and all its associated messages and runs via cascade.',
   expose: true,
+  scopes: ['pikku:console:agents:manage'],
   func: async ({ agentRunService }, input) => {
     const deleted = await agentRunService.deleteThread(input.threadId)
     return { deleted }

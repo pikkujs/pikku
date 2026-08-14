@@ -19,7 +19,7 @@ export const installOpenapiAddon = pikkuFunc<
     'Generates an addon from an OpenAPI spec, installs it into the workspace, and wires it up.',
   expose: true,
   auth: true,
-  scopes: ['admin'],
+  scopes: ['pikku:console:addons:install'],
   func: async ({ metaService }, { name, swaggerUrl, credential }) => {
     const { readFile } = await import('node:fs/promises')
     const { join, dirname } = await import('node:path')

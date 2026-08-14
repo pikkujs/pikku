@@ -28,7 +28,7 @@ export const installAddon = pikkuFunc<
     'Installs a community addon package and creates the wiring file. Requires an admin session.',
   expose: true,
   auth: true,
-  scopes: ['admin'],
+  scopes: ['pikku:console:addons:install'],
   func: async ({ metaService }, { packageName, namespace, version }) => {
     const { readFile, writeFile, mkdir, readdir } =
       await import('node:fs/promises')

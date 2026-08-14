@@ -5,6 +5,7 @@ export const getAddonCategories = pikkuFunc<null, Record<string, number>>({
   description:
     'Category counts across the whole addon catalogue, for the gallery category rail. Counted by the registry — deriving them from the loaded rows would undercount everything the user has not scrolled to yet.',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async ({ addonService }) => {
     return await addonService.readAddonCategories()
   },

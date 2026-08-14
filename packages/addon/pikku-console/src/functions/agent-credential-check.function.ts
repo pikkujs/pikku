@@ -16,6 +16,7 @@ export const agentCredentialCheck = pikkuFunc<
   description:
     'Checks which OAuth credentials an agent needs and whether the authenticated user has connected them.',
   expose: true,
+  scopes: ['pikku:console:credentials:read'],
   func: async (
     { credentialService, wiringService },
     { agentName },

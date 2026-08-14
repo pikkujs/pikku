@@ -9,6 +9,7 @@ export const readAgentSource = pikkuFunc<
   description:
     'Reads the source code of a pikku AI agent definition and returns its config properties.',
   expose: true,
+  scopes: ['pikku:console:agents:read'],
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

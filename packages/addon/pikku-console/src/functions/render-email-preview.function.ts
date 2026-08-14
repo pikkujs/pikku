@@ -40,6 +40,7 @@ export const renderEmailPreview = pikkuFunc<
   description:
     'Renders an email template preview from emailTemplatesDir using a locale and variable payload.',
   expose: true,
+  scopes: ['pikku:console:emails:read'],
   func: async ({ metaService }, input) => {
     const emailsMeta = await metaService.getEmailMeta()
     const templateMeta = emailsMeta.templates[input.templateName] as

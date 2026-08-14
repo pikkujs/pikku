@@ -1,7 +1,7 @@
 /**
  * The audit trail, end to end: a function marked `audit: true` records an
  * event, the sink persists it, `console:getAudits` reads it back behind
- * `pikku:audit:read`, and the console page renders it.
+ * `pikku:console:audit:read`, and the console page renders it.
  *
  * `admin` holds `audit-reader` and nobody else does, so `staff` — an admin who
  * passes the console's own gate but holds no `pikku` scope — is the refused
@@ -27,7 +27,7 @@ export const auditReadNeedsTheScopeScenario = pikkuScenario<
   void,
   { status: 403 }
 >({
-  title: 'Reading the audit trail needs pikku:audit:read',
+  title: 'Reading the audit trail needs pikku:console:audit:read',
   description:
     'An admin who holds no audit role is refused, not shown a stranger’s actions',
   tags: ['scenario', 'audit', 'console'],
@@ -47,7 +47,7 @@ export const auditReadNeedsTheScopeScenario = pikkuScenario<
     await scenario.then(
       'sees it refused, naming the scope',
       'expectsRpcResponse',
-      { call, status: 403, contains: ['pikku:audit:read'] },
+      { call, status: 403, contains: ['pikku:console:audit:read'] },
       { actor: actors.staff }
     )
 

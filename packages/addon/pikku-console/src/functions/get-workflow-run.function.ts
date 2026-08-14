@@ -8,6 +8,7 @@ export const getWorkflowRun = pikkuFunc<
   description:
     'Given a runId, fetches a single workflow run from workflowRunService and also fetches all its steps, returning the run object merged with a steps array. Returns null if workflowRunService is not configured or the run is not found.',
   expose: true,
+  scopes: ['pikku:console:workflows:read'],
   func: async ({ workflowRunService }, input) => {
     const run = await workflowRunService.getRun(input.runId)
     if (!run) return null

@@ -13,6 +13,7 @@ export const credentialListUsers = pikkuFunc<
   description:
     'Lists all users and their credential status for each declared credential.',
   expose: true,
+  scopes: ['pikku:console:credentials:read'],
   func: async ({ credentialService, metaService }) => {
     if (!credentialService) {
       return { users: [] }

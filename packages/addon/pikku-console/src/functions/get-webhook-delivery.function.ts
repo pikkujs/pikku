@@ -9,6 +9,7 @@ export const getWebhookDelivery = pikkuFunc<
   description:
     'Returns a single webhook delivery with its full attempt history.',
   expose: true,
+  scopes: ['pikku:console:wirings:read'],
   func: async ({ webhookService }, { deliveryId }) => {
     return webhookService.getDelivery(deliveryId)
   },

@@ -27,6 +27,7 @@ export const getAddonInstances = pikkuFunc<
   description:
     'Returns the wired instances of an addon package and their per-instance overrides.',
   expose: true,
+  scopes: ['pikku:console:addons:read'],
   func: async (_services, { packageName }) => {
     const addonsMap = pikkuState(null, 'addons', 'packages')
     const instances: AddonInstance[] = []

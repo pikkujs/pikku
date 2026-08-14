@@ -61,7 +61,7 @@ export const rolesPrune = pikkuSessionlessFunc<{ yes?: boolean }, void>({
       logger.info(`roles prune: removed ${pruned.length} system role(s)`)
       if (held.length > 0) {
         logger.warn(
-          `Revoked from ${affectedUsers} user grant(s). They lose the role's scopes on their next request.`
+          `Revoked from ${affectedUsers} user grant(s). They lose the role's scopes on their next request — unless mapSession sets scopes itself, in which case it is authoritative and they keep them.`
         )
       }
     } finally {

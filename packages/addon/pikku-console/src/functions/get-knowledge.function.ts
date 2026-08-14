@@ -7,6 +7,7 @@ export const getKnowledge = pikkuFunc<null, KnowledgeBundle | null>({
   description:
     "Reads the project's knowledge/ notes and returns them as a graph — each note with its links in both directions, plus the sections, tag counts, and what `pikku knowledge validate` reports.",
   expose: true,
+  scopes: ['pikku:console:knowledge:read'],
   func: async ({ knowledgeService }) => {
     if (!knowledgeService) {
       throw new LocalEnvironmentOnlyError(
