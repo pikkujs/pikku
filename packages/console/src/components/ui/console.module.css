@@ -244,6 +244,16 @@
   outline-offset: -2px;
 }
 
+/* The same rail as a PANEL of its own (ConsoleListPanel): the card around it
+   already draws the surface, so the stub carries only the hit area — keeping its
+   own border and radius would read as a card inside a card. */
+.paneStubFlush {
+  composes: paneStub;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
 .paneStubLabel {
   writing-mode: vertical-rl;
   text-orientation: mixed;

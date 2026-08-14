@@ -44,6 +44,7 @@ export function PanelHeaderBand({
         padding: '8px 14px',
         height: 'var(--screen-header-height)',
         background: 'var(--app-panel-bg-raised)',
+        borderBottom: '1px solid var(--app-border)',
         flexShrink: 0,
       }}
     >

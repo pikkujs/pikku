@@ -5,9 +5,13 @@ import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
+import { ConsoleListPanel } from '../shell/ConsoleListPanel'
+import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
 
 const PANEL_WIDTH = 450
+/** The list panel carries the card's own gutter on both sides. */
+const CARD_GUTTERS = 16
 
 interface ResizablePanelLayoutProps {
   children: React.ReactNode
@@ -31,7 +35,11 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   // a column welded into the list — same context, same content, a card of its
   // own beside the page rather than inside it.
   const ownsChrome = useConsoleChrome() === 'self'
+  const phone = usePhone()
   const rightOpen = ownsChrome && !hidePanel && panels.size > 0
+  // And the navigator that selects what the page shows becomes a panel of its
+  // own on the start edge, for the same reason (see ConsoleListPanel).
+  const listAsPanel = !ownsChrome && !phone
 
   return (
     <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
@@ -51,18 +59,26 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
         }}
       >
         <Box style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          {leftDrawer && (
-            <Box
-              style={{
-                width: leftDrawerWidth,
-                flexShrink: 0,
-                overflow: 'hidden',
-                marginRight: 'var(--mantine-spacing-md)',
-              }}
-            >
-              {leftDrawer}
-            </Box>
-          )}
+          {leftDrawer &&
+            (listAsPanel ? (
+              <ConsoleListPanel
+                width={leftDrawerWidth + CARD_GUTTERS}
+                testId="console-list-panel"
+              >
+                {leftDrawer}
+              </ConsoleListPanel>
+            ) : (
+              <Box
+                style={{
+                  width: leftDrawerWidth,
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  marginRight: 'var(--mantine-spacing-md)',
+                }}
+              >
+                {leftDrawer}
+              </Box>
+            ))}
           <Box
             className={`${classes.flexColumn} ${classes.overflowAuto}`}
             style={{ flex: 1, minWidth: 0 }}

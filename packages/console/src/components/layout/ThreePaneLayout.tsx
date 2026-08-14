@@ -14,8 +14,16 @@ import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
+import { ConsoleListPanel } from '../shell/ConsoleListPanel'
 import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
+import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
+
+/** The list's content width, and the rail it collapses to. */
+const LIST_WIDTH = 240
+const LIST_RAIL_WIDTH = 40
+/** As a panel each also carries the card's own gutter on both sides. */
+const CARD_GUTTERS = 16
 
 interface ThreePaneLayoutProps {
   children: React.ReactNode
@@ -58,6 +66,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   useLocale()
   const { panels } = usePanelContext()
   const ownsChrome = useConsoleChrome() === 'self'
+  const phone = usePhone()
   const alwaysVisible = !showTabs
 
   const [leftCollapsed, setLeftCollapsed] = useLocalStorage({
@@ -84,9 +93,47 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   const showLeft = hasLeft && !leftCollapsed
   const showRight = hasRight && !rightCollapsed
 
+  /**
+   * Under a host's chrome the list opens as a PANEL on the content column's
+   * start edge — its own card beside the page, the mirror of the detail panel on
+   * the other edge — because choosing what the page shows is a different job
+   * from showing it. Standalone the layout draws the only card there is, and on
+   * a phone there is nothing to sit beside, so both keep the docked column.
+   */
+  const listAsPanel = !ownsChrome && !phone
+
+  const listBody = showLeft ? (
+    // The panel renders the collapse control itself, in a row it already has —
+    // see PaneCollapseContext.
+    <PaneCollapseProvider collapse={() => setLeftCollapsed(true)}>
+      {runsPanel}
+    </PaneCollapseProvider>
+  ) : (
+    <Tooltip label={m.pane_show_list()} position="right">
+      <UnstyledButton
+        className={listAsPanel ? classes.paneStubFlush : classes.paneStub}
+        aria-label={m.pane_show_list()}
+        onClick={() => setLeftCollapsed(false)}
+      >
+        <PanelLeftOpen size={16} />
+        <span className={classes.paneStubLabel}>
+          {listLabel ?? m.pane_list()}
+        </span>
+      </UnstyledButton>
+    </Tooltip>
+  )
+
   // The middle pane's header carries only its own content (selector/badges) —
   // each side pane owns the control that collapses it.
   const showPaneHeader = !!lead || !!filters
+
+  // Once the list has moved out to a panel of its own, the middle pane IS the
+  // page card's body, so it drops the border that would read as a card in a
+  // card. It keeps it wherever a docked list still sits beside it.
+  const mainSurface =
+    !ownsChrome && (!hasLeft || listAsPanel)
+      ? classes.listSurfaceFlush
+      : classes.listSurfaceCard
 
   return (
     <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
@@ -100,46 +147,39 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           padding: 'var(--console-body-gutter)',
         }}
       >
-        {hasLeft && (
-          <Box
-            className={classes.paneCollapseTransition}
-            style={{
-              width: showLeft ? 240 : 40,
-              minWidth: showLeft ? 240 : 40,
-              flexShrink: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {showLeft ? (
-              <Box
-                className={classes.listSurfaceCard}
-                style={{ height: '100%' }}
-              >
-                {/* The panel renders the collapse control itself, in a row it
-                    already has — see PaneCollapseContext. */}
-                <PaneCollapseProvider collapse={() => setLeftCollapsed(true)}>
-                  {runsPanel}
-                </PaneCollapseProvider>
-              </Box>
-            ) : (
-              <Tooltip label={m.pane_show_list()} position="right">
-                <UnstyledButton
-                  className={classes.paneStub}
-                  aria-label={m.pane_show_list()}
-                  onClick={() => setLeftCollapsed(false)}
+        {hasLeft &&
+          (listAsPanel ? (
+            <ConsoleListPanel
+              width={(showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH) + CARD_GUTTERS}
+              testId="console-list-panel"
+            >
+              {listBody}
+            </ConsoleListPanel>
+          ) : (
+            <Box
+              className={classes.paneCollapseTransition}
+              style={{
+                width: showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH,
+                minWidth: showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH,
+                flexShrink: 0,
+                overflow: 'hidden',
+              }}
+            >
+              {showLeft ? (
+                <Box
+                  className={classes.listSurfaceCard}
+                  style={{ height: '100%' }}
                 >
-                  <PanelLeftOpen size={16} />
-                  <span className={classes.paneStubLabel}>
-                    {listLabel ?? m.pane_list()}
-                  </span>
-                </UnstyledButton>
-              </Tooltip>
-            )}
-          </Box>
-        )}
+                  {listBody}
+                </Box>
+              ) : (
+                listBody
+              )}
+            </Box>
+          ))}
 
         <Box
-          className={classes.listSurfaceCard}
+          className={mainSurface}
           style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
         >
           {showPaneHeader && (

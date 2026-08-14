@@ -6,10 +6,10 @@ import {
 
 /**
  * The content column every layout puts the routed screen into: a positioned box
- * that owns the panel portal root (side panels pin themselves to its end edge)
- * and pads the screen by whatever an open panel reserves — so the page card
- * SHRINKS beside the panel instead of hiding under it. One implementation, used
- * by every layout, so panels behave identically wherever they open.
+ * that owns the panel portal root (side panels pin themselves to its edges) and
+ * pads the screen by whatever an open panel reserves — so the page card SHRINKS
+ * beside the panel instead of hiding under it. One implementation, used by every
+ * layout, so panels behave identically wherever they open.
  */
 export function ContentArea({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +35,7 @@ export function ContentArea({ children }: { children: React.ReactNode }) {
 }
 
 function PageSlot({ children }: { children: React.ReactNode }) {
-  const { inset } = usePanelInset()
+  const { start, end } = usePanelInset()
   return (
     <Box
       // The routed screen is the document's main landmark. Declared once here so
@@ -48,7 +48,7 @@ function PageSlot({ children }: { children: React.ReactNode }) {
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
-        paddingInlineEnd: inset,
+        paddingInline: `${start}px ${end}px`,
       }}
     >
       {children}
