@@ -1,10 +1,36 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { asI18n } from '@pikku/react'
 import { useMantineColorScheme } from '@pikku/mantine/core'
 import { spotlight } from '@mantine/spotlight'
-import { LogOut, Moon, RefreshCw, Search, Sun, UserCog } from 'lucide-react'
+import {
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  Download,
+  Languages,
+  LogOut,
+  Monitor,
+  Moon,
+  Palette,
+  PanelBottom,
+  Pin,
+  RefreshCw,
+  Search,
+  Share,
+  Sun,
+  UserCog,
+} from 'lucide-react'
 import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { supportedLocales, useLocale, type Locale } from '@/i18n/config'
+import {
+  getInstallPrompt,
+  isIos,
+  isStandalone,
+  promptInstall,
+  subscribeInstallPrompt,
+} from '../../lib/installPrompt'
+import { DOCK_SIDES, useDockPrefs, type DockSide } from './useDockPrefs'
 import { useLocation, useNavigate } from '../../router'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
@@ -48,16 +74,43 @@ const zoneOf = (s: NavSection): 'row' | 'group' =>
 
 const initialsOf = (label: string) => label.trim().slice(0, 2).toUpperCase()
 
+const SIDE_ICONS = {
+  bottom: ArrowDownToLine,
+  top: ArrowUpToLine,
+  left: ArrowLeftToLine,
+  right: ArrowRightToLine,
+}
+
+const sideLabel = (side: DockSide) =>
+  side === 'bottom'
+    ? m.nav_dock_bottom()
+    : side === 'top'
+      ? m.nav_dock_top()
+      : side === 'left'
+        ? m.nav_dock_left()
+        : m.nav_dock_right()
+
+/* Each language named in ITSELF, not in the language you are currently reading:
+   someone who has landed in a locale they cannot read is exactly the person
+   reaching for this menu, and "German" is no help to them. */
+const localeLabel = (code: Locale) =>
+  asI18n(new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? code)
+
 export function ConsoleNavDock({
   sections: sectionsProp,
 }: {
   sections?: NavSection[]
 }) {
-  useLocale()
+  const { locale, setLocale } = useLocale()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme()
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+  const dock = useDockPrefs()
+  const installPrompt = useSyncExternalStore(
+    subscribeInstallPrompt,
+    getInstallPrompt
+  )
   const auth = useOptionalAuth()
   const canImpersonate = auth?.can('admin:impersonate') ?? false
   const [impersonateOpen, setImpersonateOpen] = useState(false)
@@ -121,16 +174,109 @@ export function ConsoleNavDock({
   const account = useMemo<DockTile>(() => {
     const user = auth?.user
     const name = user ? asI18n(user.name || user.email) : m.nav_account()
-    const rows: FlyoutRow[] = [
+    const prefs: FlyoutRow[] = [
       {
-        key: 'scheme',
-        Icon: colorScheme === 'dark' ? Sun : Moon,
-        label:
-          colorScheme === 'dark'
-            ? m.sidebar_switch_to_light()
-            : m.sidebar_switch_to_dark(),
-        onSelect: () => toggleColorScheme(),
+        key: 'appearance',
+        Icon: Palette,
+        label: m.nav_appearance(),
+        rows: [
+          {
+            key: 'light',
+            Icon: Sun,
+            label: m.nav_theme_light(),
+            checked: colorScheme === 'light',
+            exclusive: true,
+            onSelect: () => setColorScheme('light'),
+          },
+          {
+            key: 'dark',
+            Icon: Moon,
+            label: m.nav_theme_dark(),
+            checked: colorScheme === 'dark',
+            exclusive: true,
+            onSelect: () => setColorScheme('dark'),
+          },
+          {
+            key: 'auto',
+            Icon: Monitor,
+            label: m.nav_theme_auto(),
+            checked: colorScheme === 'auto',
+            exclusive: true,
+            onSelect: () => setColorScheme('auto'),
+          },
+        ],
       },
+      {
+        key: 'language',
+        Icon: Languages,
+        label: m.nav_language(),
+        meta: localeLabel(locale),
+        rows: supportedLocales.map((code) => ({
+          key: code,
+          Icon: Languages,
+          label: localeLabel(code),
+          checked: code === locale,
+          exclusive: true,
+          onSelect: () => setLocale(code),
+        })),
+      },
+      {
+        key: 'dock',
+        Icon: PanelBottom,
+        label: m.nav_dock(),
+        meta: sideLabel(dock.side),
+        rows: [
+          {
+            key: 'always-visible',
+            Icon: Pin,
+            label: m.nav_dock_always_visible(),
+            checked: dock.alwaysVisible,
+            onSelect: () => dock.setAlwaysVisible(!dock.alwaysVisible),
+          },
+          ...DOCK_SIDES.map((side) => ({
+            key: `side-${side}`,
+            Icon: SIDE_ICONS[side],
+            label: sideLabel(side),
+            checked: dock.side === side,
+            exclusive: true,
+            onSelect: () => dock.setSide(side),
+          })),
+        ],
+      },
+    ]
+    /* Three shapes, because the platforms genuinely differ: a browser holding a
+       deferred prompt can install, iOS can only say where the control is, and a
+       console already running installed has nothing to offer. Offering an
+       install everywhere would mean a dead control on two of the three. */
+    if (!isStandalone()) {
+      if (installPrompt) {
+        prefs.push({
+          key: 'install',
+          Icon: Download,
+          label: m.nav_install_app(),
+          onSelect: () => {
+            void promptInstall().catch((err) => {
+              console.error('install prompt failed', err)
+            })
+          },
+        })
+      } else if (isIos()) {
+        prefs.push({
+          key: 'install',
+          Icon: Download,
+          label: m.nav_install_app(),
+          rows: [
+            { key: 'share', Icon: Share, label: m.nav_install_ios_share() },
+            {
+              key: 'add',
+              Icon: ArrowDownToLine,
+              label: m.nav_install_ios_add(),
+            },
+          ],
+        })
+      }
+    }
+    const rows: FlyoutRow[] = [
       {
         key: 'refresh',
         Icon: RefreshCw,
@@ -162,31 +308,38 @@ export function ConsoleNavDock({
               sub: asI18n(user.email),
             }
           : undefined,
-        sections: user
-          ? [
-              { key: 'session', rows },
-              {
-                key: 'out',
-                rows: [
-                  {
-                    key: 'sign-out',
-                    Icon: LogOut,
-                    label: m.auth_sign_out(),
-                    danger: true,
-                    onSelect: () => {
-                      void auth?.signOut()
+        sections: [
+          { key: 'prefs', rows: prefs },
+          { key: 'session', rows },
+          ...(user
+            ? [
+                {
+                  key: 'out',
+                  rows: [
+                    {
+                      key: 'sign-out',
+                      Icon: LogOut,
+                      label: m.auth_sign_out(),
+                      danger: true,
+                      onSelect: () => {
+                        void auth?.signOut()
+                      },
                     },
-                  },
-                ],
-              },
-            ]
-          : [{ key: 'session', rows }],
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
     }
   }, [
     auth,
     colorScheme,
-    toggleColorScheme,
+    setColorScheme,
+    locale,
+    setLocale,
+    dock,
+    installPrompt,
     metaLoading,
     refresh,
     canImpersonate,

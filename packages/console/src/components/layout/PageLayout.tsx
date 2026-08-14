@@ -119,6 +119,12 @@ export function PageContainer({
     <Container
       size={hasHeader || fullWidth || cards ? undefined : 'lg'}
       fluid={hasHeader || fullWidth || cards}
+      // The theme gives every Container `px: 'xl'` as a default prop, and a
+      // default prop becomes an INLINE padding-inline that beats the `padding`
+      // below — so the inline gutter was 36px whatever the chrome said, and a
+      // 450px side panel spent 72px of itself on empty margin. Say it on the
+      // same prop the theme does, from the same token the block axis uses.
+      px={noPadding ? 0 : 'var(--console-body-gutter)'}
       {...gutter}
       {...props}
       style={{
@@ -140,6 +146,11 @@ export function PageContainer({
 
   if (!hasHeader) return bodyContainer
 
+  // Hosted: the card is the shell's, but the bands inside it are still this
+  // page's. They are the same bands the self-drawn card below uses — the
+  // hairline under a page header is the one every panel header already draws,
+  // and a page that loses it in one chrome and keeps it in the other reads as
+  // two different products.
   if (!cards)
     return (
       <div
@@ -151,7 +162,8 @@ export function PageContainer({
           minHeight: 0,
         }}
       >
-        {header}
+        <div className={styles.headerBand}>{header}</div>
+        {extraBand ? <div className={styles.extraBand}>{extraBand}</div> : null}
         {bodyContainer}
       </div>
     )

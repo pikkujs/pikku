@@ -82,7 +82,9 @@
   align-items: center;
   gap: var(--pf-dock-gap);
   padding: 6px;
-  border-radius: 18px;
+  /* The same radius as every other card on the canvas. The capsule is one more
+     floating surface, not a control with a silhouette of its own. */
+  border-radius: var(--app-card-radius);
   background: var(--pf-dock-fill);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
@@ -484,7 +486,7 @@
   min-width: 264px;
   max-width: 340px;
   padding: 6px;
-  border-radius: 12px;
+  border-radius: var(--app-card-radius);
   background: var(--pf-flyout-fill);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
@@ -495,6 +497,11 @@
   max-height: 62vh;
   overflow-y: auto;
   scrollbar-width: thin;
+}
+
+.flyout[data-nested] {
+  max-height: none;
+  overflow: visible;
 }
 
 /* A menu head carries the thing the menu is about, so the first row doesn't have
@@ -811,6 +818,236 @@
   font-size: 12px;
   color: var(--app-text-faint);
   line-height: 1.4;
+}
+
+/* The tick on a setting row. Mantine renders it as the item's first child, ahead
+   of the row's own glyph, so it is a fixed column every selectable row in a menu
+   shares — checked or not, which is what keeps their labels on one line. */
+.fiTick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 14px;
+  width: 14px;
+  color: var(--app-accent);
+}
+
+.fiTick > svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* A row that is a step rather than a control: the flyout's row layout, without
+   the hover, the pointer or the button. */
+.fiNote {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 10px;
+  min-height: 34px;
+  color: var(--app-text-faint);
+  font-size: 13px;
+  text-align: start;
+}
+
+.fiNote > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: calc(2 * var(--pf-stitch-weight, 1));
+  fill: transparent;
+}
+
+/* ---------- which edge the dock sits on ---------- */
+
+/* Four sides, one geometry with the axis swapped — so what follows only
+   restates what the axis genuinely changes: which edge the strip pins to, which
+   way the capsule hides, and which way the row runs. The bottom is the base
+   above and needs no block of its own.
+ *
+ * Pinned, the capsule spans its whole edge instead of hugging its contents: at
+ * that point it is furniture rather than an object that appeared, and a floating
+ * pill that never goes away just reads as something stuck to the screen. Along
+ * the top or bottom the tiles stay centred, because the row's midpoint is where
+ * the eye comes back to; down a side they align to the top, because a column
+ * read from the middle outwards has no reading order at all.
+ */
+
+/* Held open, the capsule is one more card on the canvas, so it takes the card
+   gutter every other card takes — one, not the two it floats at. That is what
+   puts its edge level with the page card's and leaves the same 8px seam between
+   them as between the page card and the window. */
+.dockStrip[data-pinned='true'] {
+  --pf-dock-lift: var(--app-card-gutter);
+}
+
+.dockStrip[data-axis='x'][data-pinned='true'] .dock {
+  width: calc(100% - var(--app-card-gutter) * 2);
+  max-width: none;
+  justify-content: center;
+}
+
+.dockStrip[data-axis='y'][data-pinned='true'] .dock {
+  height: calc(100% - var(--app-card-gutter) * 2);
+  max-height: none;
+  justify-content: flex-start;
+}
+
+/* ----- top ----- */
+
+.dockStrip[data-side='top'] {
+  top: 0;
+  bottom: auto;
+  align-items: flex-start;
+  height: calc(var(--app-card-gutter) + var(--safe-top));
+}
+
+.dockStrip[data-side='top'] .dock {
+  margin-bottom: 0;
+  margin-top: calc(var(--pf-dock-lift) + var(--safe-top));
+  transform: translateY(calc(-100% - var(--pf-dock-lift) - 6px));
+  transform-origin: top center;
+}
+
+.dockStrip[data-side='top'][data-open='true'] .dock {
+  transform: translateY(0);
+}
+
+.dockStrip[data-side='top'] .dockTrigger {
+  top: 0;
+  bottom: auto;
+  align-items: flex-start;
+  height: calc(var(--app-card-gutter) + var(--safe-top));
+  padding-bottom: 0;
+  padding-top: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-top));
+}
+
+@media (pointer: coarse) {
+  .dockStrip[data-side='top'] .dockTrigger {
+    height: calc(24px + var(--safe-top));
+  }
+}
+
+/* ----- left and right ----- */
+
+.dockStrip[data-axis='y'] {
+  inset-inline: auto;
+  inset-block: 0;
+  height: auto;
+  align-items: center;
+}
+
+.dockStrip[data-axis='y'] .dock {
+  flex-direction: column;
+  max-width: none;
+  max-height: calc(100vh - 24px);
+  overflow-x: visible;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+
+.dockStrip[data-axis='y'] .dockZone {
+  flex-direction: column;
+}
+
+.dockStrip[data-axis='y'] .dockSep {
+  width: 1px;
+  height: calc(var(--pf-dock-gap) * 3.6);
+}
+
+.dockStrip[data-axis='y'] .dockHint {
+  width: 3px;
+  height: 44px;
+}
+
+.dockStrip[data-axis='y'] .dockTrigger {
+  inset-inline: auto;
+  inset-block: 0;
+  height: auto;
+  align-items: center;
+  padding-bottom: 0;
+}
+
+.dockStrip[data-axis='y'] .dock[data-overflow='true'] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 26px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 26px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+}
+
+.dockStrip[data-side='left'] {
+  left: 0;
+  justify-content: flex-start;
+  width: calc(var(--app-card-gutter) + var(--safe-left));
+}
+
+.dockStrip[data-side='left'][data-open='true'] {
+  width: var(--pf-dock-foot);
+}
+
+.dockStrip[data-side='left'] .dock {
+  margin-left: calc(var(--pf-dock-lift) + var(--safe-left));
+  transform: translateX(calc(-100% - var(--pf-dock-lift) - 6px));
+  transform-origin: left center;
+}
+
+.dockStrip[data-side='left'][data-open='true'] .dock {
+  transform: translateX(0);
+}
+
+.dockStrip[data-side='left'] .dockTrigger {
+  left: 0;
+  justify-content: flex-start;
+  width: calc(var(--app-card-gutter) + var(--safe-left));
+  padding-left: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-left));
+}
+
+.dockStrip[data-side='right'] {
+  right: 0;
+  justify-content: flex-end;
+  width: calc(var(--app-card-gutter) + var(--safe-right));
+}
+
+.dockStrip[data-side='right'][data-open='true'] {
+  width: var(--pf-dock-foot);
+}
+
+.dockStrip[data-side='right'] .dock {
+  margin-right: calc(var(--pf-dock-lift) + var(--safe-right));
+  transform: translateX(calc(100% + var(--pf-dock-lift) + 6px));
+  transform-origin: right center;
+}
+
+.dockStrip[data-side='right'][data-open='true'] .dock {
+  transform: translateX(0);
+}
+
+.dockStrip[data-side='right'] .dockTrigger {
+  right: 0;
+  justify-content: flex-end;
+  width: calc(var(--app-card-gutter) + var(--safe-right));
+  padding-right: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-right));
+}
+
+@media (pointer: coarse) {
+  .dockStrip[data-side='left'] .dockTrigger {
+    width: calc(24px + var(--safe-left));
+  }
+
+  .dockStrip[data-side='right'] .dockTrigger {
+    width: calc(24px + var(--safe-right));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -11,6 +11,13 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="description" content="%VITE_CONSOLE_DESCRIPTION%" />
+    <!-- Relative, because the console is served under a base path (/console/)
+         and every URL inside a manifest resolves against the manifest's own
+         location. Without this link there is no installable app at all: the
+         browser never fires `beforeinstallprompt`, so the install action in the
+         account menu can never appear. -->
+    <link rel="manifest" href="site.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <title>%VITE_CONSOLE_TITLE%</title>
     <style>
       html {

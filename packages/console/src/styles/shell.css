@@ -40,6 +40,16 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
 
+  /* What the nav dock takes off the window, per edge. Zero on all four while it
+     floats, which is most of the time — and the reason they are declared here
+     rather than only written by the dock: a layout padding by them has to
+     resolve to something whether a dock is mounted or not. The dock overwrites
+     the single edge it is being held open on.  */
+  --nav-dock-inset-top: 0px;
+  --nav-dock-inset-right: 0px;
+  --nav-dock-inset-bottom: 0px;
+  --nav-dock-inset-left: 0px;
+
   /* The phone's bottom tab bar. Layouts reserve the FOOT — the bar plus the
      inset it grows by — rather than the bar's own height, which left the last
      row of every page under the home indicator. */

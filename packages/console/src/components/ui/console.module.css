@@ -19,6 +19,16 @@
   --console-body-gutter: var(--mantine-spacing-md);
 }
 
+/* An edge panel is its OWN card, so it renders under `self` chrome — but a card
+   is not a page, and `self` also carries the page gutter. At 32px a side inside
+   a 450px column that is a seventh of the panel spent on nothing, twice over.
+   This is the gutter the panel's own header and body bar already sit on, so a
+   panel is inset by one number rather than three. */
+.chromePanel {
+  --panel-gutter: 18px;
+  --console-body-gutter: var(--panel-gutter);
+}
+
 /* ── Layout primitives ── */
 
 .flexColumn {

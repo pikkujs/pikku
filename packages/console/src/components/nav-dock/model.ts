@@ -38,11 +38,21 @@ export interface FlyoutRow {
   badge?: { text: string; tone?: 'error' | 'warn' | 'accent' }
   hint?: string
   danger?: boolean
+  /** Makes the row a setting rather than a destination: it draws a tick when the
+   *  option it applies is the one in force. Present-but-false still means "this
+   *  is a setting", so the tick column stays aligned down the menu. */
+  checked?: boolean
+  /** Whether the setting is one of a set of alternatives (a radio) or a switch
+   *  of its own (a checkbox) — which is what a screen reader announces. */
+  exclusive?: boolean
+  /** Child rows, drawn as a submenu. A row with children has no action of its
+   *  own — opening it IS the action — so `onSelect` is ignored. */
+  rows?: FlyoutRow[]
   /** Opaque tokens meaning "this row is the page you are already on". The dock
    *  never reads them itself — the `isActive` it is given decides what a token
    *  means, so one app can match on a route id and another on a path prefix. */
   match?: string[]
-  onSelect: () => void
+  onSelect?: () => void
 }
 
 export interface FlyoutSection {

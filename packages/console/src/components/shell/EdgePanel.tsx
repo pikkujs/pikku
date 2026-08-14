@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ConsoleChromeContext } from '../../context/ConsoleChromeContext'
 import { usePanelInset, type PanelSide } from '../../context/PanelInsetProvider'
 import { usePhone } from '../../lib/breakpoints'
+import classes from '../ui/console.module.css'
 
 /** One card gutter, matching --app-card-gutter in shell/card.module.css. */
 export const CARD_GUTTER = 8
@@ -56,6 +57,7 @@ export function EdgePanel({
 
   const panel = (
     <div
+      className={classes.chromePanel}
       style={{
         position: 'absolute',
         top: 0,

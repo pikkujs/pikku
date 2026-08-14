@@ -82,7 +82,7 @@ export function ConsolePanel({
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            padding: '16px 18px',
+            padding: '16px var(--panel-gutter)',
             ...bodyStyle,
           }}
         >
@@ -93,7 +93,7 @@ export function ConsolePanel({
             style={{
               flexShrink: 0,
               borderTop: '0.5px solid var(--app-border)',
-              padding: '12px 18px',
+              padding: '12px var(--panel-gutter)',
               display: 'flex',
               justifyContent: 'flex-end',
               gap: 8,

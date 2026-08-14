@@ -93,13 +93,13 @@
   border-bottom: 1px solid var(--app-border);
 }
 
-/* Panel header: ShellHeader's page gutter (spacing-xl, 32px) is too wide for a
-   side panel, whose body sits on an 18px gutter — the title and the close X
-   would float away from the content under them. Pull the bar onto the panel's
-   gutter instead (the end inset is smaller because the close ActionIcon carries
-   its own icon padding). Inline style props, hence !important. */
+/* Panel header: ShellHeader pads by --console-body-gutter, and the bar is one of
+   the few things inside a panel that resolves it BEFORE the panel retunes it
+   (its Paper carries its own inline padding). Pull it onto the same gutter as
+   the body under it — the end inset is half, because the close ActionIcon
+   carries its own icon padding. Inline style props, hence !important. */
 .panelHeader :global(.mantine-Paper-root) {
-  padding-inline: 18px 9px !important;
+  padding-inline: var(--panel-gutter) calc(var(--panel-gutter) / 2) !important;
 }
 
 /* Body: takes the rest and scrolls its own content. The card is height-bound to

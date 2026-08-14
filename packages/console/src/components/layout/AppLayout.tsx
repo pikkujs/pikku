@@ -121,10 +121,22 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
   return (
     <>
       <SpotlightSearch />
-      {/* The dock reserves no layout — it floats over the card gutter that is
-          already there — so the content area starts at the window edge. */}
       <ConsoleNavDock sections={sidebar?.sections} />
-      <Box h="100vh" style={{ display: 'flex', minWidth: 0 }}>
+      {/* Floating, the dock reserves nothing and the content starts at the
+          window edge — it is over the card gutter that is already there. Held
+          open it is furniture, so it publishes the edge it took and the screen
+          stops there instead of running underneath it. */}
+      <Box
+        h="100vh"
+        style={{
+          display: 'flex',
+          minWidth: 0,
+          paddingTop: 'var(--nav-dock-inset-top)',
+          paddingBottom: 'var(--nav-dock-inset-bottom)',
+          paddingInline:
+            'var(--nav-dock-inset-left) var(--nav-dock-inset-right)',
+        }}
+      >
         <ContentArea>
           <ConsoleScreen>{children}</ConsoleScreen>
         </ContentArea>

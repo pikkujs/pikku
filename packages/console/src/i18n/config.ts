@@ -7,7 +7,11 @@
 // `project.inlang/settings.json` `locales`, and recompile. Content is reachable
 // via the `/<lang>` URL prefix (e.g. `/fr`); the base locale (`en`) needs none.
 import { useSyncExternalStore } from 'react'
-import { locales, baseLocale, overwriteGetLocale } from '../paraglide/runtime.js'
+import {
+  locales,
+  baseLocale,
+  overwriteGetLocale,
+} from '../paraglide/runtime.js'
 
 export const supportedLocales = locales
 export const defaultLocale = baseLocale
@@ -20,12 +24,41 @@ export function localeDir(locale: string = defaultLocale): 'rtl' | 'ltr' {
   return RTL_LOCALES.has(locale.split('-')[0]) ? 'rtl' : 'ltr'
 }
 
+const LOCALE_STORAGE_KEY = 'console-locale'
+
+const isSupported = (code: string): code is Locale =>
+  (supportedLocales as readonly string[]).includes(code)
+
+// Remember the language that was picked, so a reload doesn't fall back to
+// browser detection and silently undo the choice. A display preference, not
+// account state — the server never needs it. Storage can be disabled (private
+// mode, blocked cookies), in which case the switch still holds for the session
+// and only persistence across reloads is lost.
+function storeLocale(locale: Locale): void {
+  try {
+    window.localStorage?.setItem(LOCALE_STORAGE_KEY, locale)
+  } catch {}
+}
+
+function storedLocale(): Locale | null {
+  try {
+    const saved = window.localStorage?.getItem(LOCALE_STORAGE_KEY)
+    return saved && isSupported(saved) ? saved : null
+  } catch {
+    return null
+  }
+}
+
 export function detectLocale(pathname: string): Locale {
+  // URL prefix first: an explicit /de link is a stronger signal than a past choice.
   const segment = pathname.split('/')[1]
   if (supportedLocales.includes(segment as Locale)) return segment as Locale
+  const saved = typeof window !== 'undefined' ? storedLocale() : null
+  if (saved) return saved
   if (typeof navigator !== 'undefined') {
     const browserLang = navigator.language?.split('-')[0]
-    if (supportedLocales.includes(browserLang as Locale)) return browserLang as Locale
+    if (supportedLocales.includes(browserLang as Locale))
+      return browserLang as Locale
   }
   return defaultLocale
 }
@@ -43,7 +76,27 @@ overwriteGetLocale(() => activeLocale)
 export function setActiveLocale(next: Locale): void {
   if (next === activeLocale) return
   activeLocale = next
+  applyLocaleToDocument(next)
+  storeLocale(next)
   for (const fn of listeners) fn()
+}
+
+// `lang` is what a screen reader picks its voice from and `dir` is what mirrors
+// the whole layout, so both belong to the document rather than to any component
+// that happens to render text.
+function applyLocaleToDocument(locale: Locale): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = locale
+  document.documentElement.dir = localeDir(locale)
+}
+
+// Applied on import, which is why the app entry imports this module for its side
+// effect alone: the first paint has to be in the chosen language, not in English
+// until a component gets around to asking.
+if (typeof window !== 'undefined') {
+  const initial = detectLocale(window.location.pathname)
+  activeLocale = initial
+  applyLocaleToDocument(initial)
 }
 
 function subscribe(fn: () => void): () => void {
@@ -55,8 +108,16 @@ function subscribe(fn: () => void): () => void {
 // codemod injects a bare `useLocale()` wherever `const { t } = useTranslation()`
 // used to live; it also returns the active locale + direction for components
 // that need them (e.g. the language switcher).
-export function useLocale(): { locale: Locale; dir: 'ltr' | 'rtl'; setLocale: (l: Locale) => void } {
-  const locale = useSyncExternalStore<Locale>(subscribe, () => activeLocale, () => activeLocale)
+export function useLocale(): {
+  locale: Locale
+  dir: 'ltr' | 'rtl'
+  setLocale: (l: Locale) => void
+} {
+  const locale = useSyncExternalStore<Locale>(
+    subscribe,
+    () => activeLocale,
+    () => activeLocale
+  )
   return { locale, dir: localeDir(locale), setLocale: setActiveLocale }
 }
 
@@ -66,7 +127,8 @@ export function useLocale(): { locale: Locale; dir: 'ltr' | 'rtl'; setLocale: (l
 // hardcoded/inlined string) — missing i18n at a glance. Toggle with `?i18n-debug`
 // in the URL or `localStorage['i18n-debug'] = '1'` (`I18N_DEBUG=1` for SSR).
 export function isI18nDebug(): boolean {
-  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1') return true
+  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1')
+    return true
   if (typeof window === 'undefined') return false
   const params = new URLSearchParams(window.location.search)
   if (params.has('i18n-debug')) return params.get('i18n-debug') !== '0'

@@ -8,7 +8,6 @@ import {
 } from 'react'
 import { Menu, Tooltip } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useLocalStorage } from '@mantine/hooks'
 import { Ellipsis } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { DockFlyout } from './DockFlyout'
@@ -18,6 +17,7 @@ import {
   type DockTile,
   type IconComponent,
 } from './model'
+import { isVerticalDock, useDockPrefs, type DockSide } from './useDockPrefs'
 import classes from './NavDock.module.css'
 
 /* The size band the row lives in. 34px is the floor, not 40: it clears WCAG
@@ -27,6 +27,25 @@ import classes from './NavDock.module.css'
    still there. */
 const TILE_MAX = 54
 const TILE_MIN = 34
+
+/* Which way is "off the dock" for each edge it can sit on: the direction a
+   flyout opens, a tooltip sits, and the arrow key that opens a tile's menu. A
+   flyout that opened towards the edge would be half off-screen. */
+const AWAY = {
+  bottom: { menu: 'top', tooltip: 'top', key: 'ArrowUp' },
+  top: { menu: 'bottom', tooltip: 'bottom', key: 'ArrowDown' },
+  left: { menu: 'right-start', tooltip: 'right', key: 'ArrowRight' },
+  right: { menu: 'left-start', tooltip: 'left', key: 'ArrowLeft' },
+} as const
+
+/* Hands back every edge the dock has taken. Module scope on purpose: an effect
+   that only has to run on unmount must not be keyed on a callback that changes
+   whenever the dock moves. */
+function releaseEdges() {
+  for (const edge of ['top', 'right', 'bottom', 'left']) {
+    document.documentElement.style.removeProperty(`--nav-dock-inset-${edge}`)
+  }
+}
 
 export interface NavDockProps {
   /** The tile that never moves, in position 0. Its menu is the one that answers
@@ -88,10 +107,11 @@ export function NavDock({
 }: NavDockProps) {
   /* ---------------- reveal ---------------- */
 
-  const [held, setHeld] = useLocalStorage({
-    key: 'nav-dock-pinned',
-    defaultValue: false,
-  })
+  /* Read here rather than taken as props: the menu that changes them is a tile
+     inside the dock, so an app threading them through would only get a chance
+     to disagree with the dock about where it is. */
+  const { side, alwaysVisible, setAlwaysVisible } = useDockPrefs()
+  const vertical = isVerticalDock(side)
   const [hovering, setHovering] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -119,13 +139,40 @@ export function NavDock({
     []
   )
 
-  const open = held || hovering || menuOpenId !== null
+  const open = alwaysVisible || hovering || menuOpenId !== null
 
   /* ---------------- fit ---------------- */
 
   const dockRef = useRef<HTMLDivElement>(null)
   const [condensed, setCondensed] = useState(false)
   const [overflow, setOverflow] = useState(false)
+
+  /* Left to itself the dock reserves nothing — it floats over the card gutter
+     that is already there. Held open it is no longer a thing that appears, so it
+     takes its edge for real and the content stops where it starts, rather than
+     running underneath a bar that is never going away. */
+  const reserve = useCallback(
+    (tile: number | null) => {
+      releaseEdges()
+      if (tile === null) return
+      const root = document.documentElement.style
+      // The capsule's own box (tile + 6px padding + 1px border either side) plus
+      // the one gutter it rests on. The page card's own gutter supplies the
+      // other half of the seam, so adding one here would double it.
+      root.setProperty(
+        `--nav-dock-inset-${side}`,
+        `calc(${tile + 14}px + var(--app-card-gutter) + var(--safe-${side}))`
+      )
+    },
+    [side]
+  )
+
+  /* Only on the way out, and deliberately NOT keyed on `reserve`: moving the
+     dock to another edge gives `reserve` a new identity, and a passive cleanup
+     runs AFTER the layout effect that has already written the new edge — so a
+     move released the inset it had just taken and the dock stopped taking any
+     space at all until a reload. */
+  useEffect(() => releaseEdges, [])
 
   /* Measured, not estimated: start at full size and correct against the dock's
      real scrollWidth until it fits. Estimating from tile/gap/separator counts
@@ -136,25 +183,33 @@ export function NavDock({
     // The capsule's max-width is border-box, so its usable interior is 2px less
     // than the budget — comparing against the outer number left 2px clipped at
     // exactly the width where the loop declared victory.
-    const avail = window.innerWidth - 26
+    const avail = (vertical ? window.innerHeight : window.innerWidth) - 26
+    const measure = () => (vertical ? el.scrollHeight : el.scrollWidth)
     let t = TILE_MAX
     applyTile(el, t)
     for (let i = 0; i < 5 && t > TILE_MIN; i++) {
-      const need = el.scrollWidth
+      const need = measure()
       if (need <= avail) break
       t = Math.max(TILE_MIN, Math.floor(t * (avail / need)))
       applyTile(el, t)
     }
-    const over = el.scrollWidth > el.clientWidth + 1
+    reserve(alwaysVisible ? t : null)
+    const over = measure() > (vertical ? el.clientHeight : el.clientWidth) + 1
     // Rather than shrinking tiles past the point where they can be hit, the
     // whole contextual zone collapses into one.
     if (over && contextual.length) setCondensed(true)
     setOverflow(over)
-  }, [contextual.length])
+  }, [contextual.length, vertical, alwaysVisible, reserve])
 
   useLayoutEffect(() => {
     fit()
-  }, [fit, contextual, pinned, utility, condensed])
+  }, [fit, contextual, pinned, utility, condensed, side])
+
+  /* A row that fitted along the window's width will not fit along its height, so
+     the condense decision is made again from scratch on every move. */
+  useEffect(() => {
+    setCondensed(false)
+  }, [side])
 
   useEffect(() => {
     const onResize = () => {
@@ -221,8 +276,10 @@ export function NavDock({
       e.preventDefault()
       tiles[(n + tiles.length) % tiles.length].focus()
     }
-    if (e.key === 'ArrowRight') move(i + 1)
-    else if (e.key === 'ArrowLeft') move(i - 1)
+    const next = vertical ? 'ArrowDown' : 'ArrowRight'
+    const prev = vertical ? 'ArrowUp' : 'ArrowLeft'
+    if (e.key === next) move(i + 1)
+    else if (e.key === prev) move(i - 1)
     else if (e.key === 'Home') move(0)
     else if (e.key === 'End') move(tiles.length - 1)
   }
@@ -232,6 +289,7 @@ export function NavDock({
       key={t.id}
       tile={t}
       zone={zone}
+      side={side}
       mark={brand}
       active={isActive(t)}
       menuOpen={menuOpenId === t.id}
@@ -246,7 +304,7 @@ export function NavDock({
   ) => (
     <div className={classes.dockZone} data-zone={zone}>
       {entries.map((e) =>
-        isSep(e) ? <Sep key={e.key} /> : renderTile(e, zone)
+        isSep(e) ? <Sep key={e.key} vertical={vertical} /> : renderTile(e, zone)
       )}
     </div>
   )
@@ -255,17 +313,19 @@ export function NavDock({
     <div
       className={classes.dockStrip}
       data-open={String(open)}
-      data-pinned={String(held)}
+      data-pinned={String(alwaysVisible)}
+      data-side={side}
+      data-axis={vertical ? 'y' : 'x'}
       data-testid="nav-dock"
     >
       <button
         type="button"
         className={classes.dockTrigger}
-        aria-label={held ? m.nav_dock_unpin() : m.nav_dock_show()}
+        aria-label={alwaysVisible ? m.nav_dock_unpin() : m.nav_dock_show()}
         aria-expanded={open}
         aria-controls="nav-dock-row"
         data-testid="nav-dock-trigger"
-        onClick={() => setHeld(!held)}
+        onClick={() => setAlwaysVisible(!alwaysVisible)}
         onPointerEnter={raise}
         onPointerLeave={drop}
       >
@@ -275,7 +335,7 @@ export function NavDock({
         id="nav-dock-row"
         ref={dockRef}
         role="toolbar"
-        aria-orientation="horizontal"
+        aria-orientation={vertical ? 'vertical' : 'horizontal'}
         aria-label={m.common_nav()}
         className={classes.dock}
         data-overflow={String(overflow)}
@@ -301,19 +361,19 @@ export function NavDock({
         {identity && (
           <>
             {renderTile(identity, 'id')}
-            <Sep />
+            <Sep vertical={vertical} />
           </>
         )}
         {pinned.length > 0 && renderZone(pinned, 'pinned')}
         {shownContextual.length > 0 && (
           <>
-            <Sep />
+            <Sep vertical={vertical} />
             {renderZone(shownContextual, 'ctx')}
           </>
         )}
         {(utility.length > 0 || accountSlot) && (
           <>
-            <Sep />
+            <Sep vertical={vertical} />
             <div className={classes.dockZone} data-zone="util">
               {utility.map((t) => renderTile(t, 'util'))}
               {accountSlot}
@@ -325,12 +385,12 @@ export function NavDock({
   )
 }
 
-function Sep() {
+function Sep({ vertical }: { vertical: boolean }) {
   return (
     <div
       className={classes.dockSep}
       role="separator"
-      aria-orientation="vertical"
+      aria-orientation={vertical ? 'horizontal' : 'vertical'}
     />
   )
 }
@@ -343,6 +403,7 @@ function Sep() {
 function DockTileButton({
   tile,
   zone,
+  side,
   mark,
   active,
   menuOpen,
@@ -351,6 +412,7 @@ function DockTileButton({
 }: {
   tile: DockTile
   zone: 'pinned' | 'ctx' | 'util' | 'id'
+  side: DockSide
   mark?: ReactNode
   active: boolean
   menuOpen: boolean
@@ -365,6 +427,10 @@ function DockTileButton({
      of the actions inside. A tile that draws its own thing (the identity mark,
      an avatar) is always one of these — it has no single action to fire. */
   const menuOnly = tile.isGroup || !!tile.render || !tile.onSelect
+  /* Everything a tile opens leaves by the same edge: the one facing away from
+     the side the dock is on. That is where the flyout appears, where the tooltip
+     appears, and so which arrow key opens the menu. */
+  const away = AWAY[side]
 
   const body = (
     <button
@@ -410,9 +476,9 @@ function DockTileButton({
         tile.onSelect?.()
       }}
       onKeyDown={(e) => {
-        // ArrowUp opens whatever menu the tile has. Without it a leaf's menu was
-        // reachable by Shift+F10 and nothing else.
-        if (e.key === 'ArrowUp' && hasMenu) {
+        // The arrow pointing off the dock opens whatever menu the tile has.
+        // Without it a leaf's menu was reachable by Shift+F10 and nothing else.
+        if (e.key === away.key && hasMenu) {
           e.preventDefault()
           e.stopPropagation()
           onMenuChange(true)
@@ -459,7 +525,7 @@ function DockTileButton({
           )}
         </span>
       }
-      position="top"
+      position={away.tooltip}
       openDelay={380}
       offset={10}
       withinPortal
@@ -475,7 +541,7 @@ function DockTileButton({
     <Menu
       opened={menuOpen}
       onChange={onMenuChange}
-      position="top"
+      position={away.menu}
       offset={14}
       withinPortal
       trapFocus

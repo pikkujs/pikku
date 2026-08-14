@@ -2,6 +2,12 @@ import './styles'
 // Side-effect import: detects the initial locale (localStorage → <html lang>)
 // on load. Components subscribe reactively via useLocale() from '@/i18n/config'.
 import './i18n/config'
+import { captureInstallPrompt } from './lib/installPrompt'
+
+// From the entry rather than from the account menu that offers the action: the
+// browser fires `beforeinstallprompt` once, on load, long before that menu is
+// mounted, so a listener registered any later misses it on every cold start.
+captureInstallPrompt()
 
 // Set favicon dynamically to handle non-root base paths
 const favicon =
