@@ -1,8 +1,9 @@
-import type { Logger, SchemaService } from '@pikku/core/services'
+import { UnprocessableContentError } from '@pikku/core/ecosystem/errors'
+import type { Logger } from '@pikku/core/ecosystem/services'
+import type { SchemaService } from '@pikku/core/ecosystem/schema'
 import { Ajv } from 'ajv'
 import addFormats from 'ajv-formats'
 import type { ValidateFunction } from 'ajv'
-import { UnprocessableContentError } from '@pikku/core/errors'
 
 const ajv = new Ajv({
   removeAdditional: false,

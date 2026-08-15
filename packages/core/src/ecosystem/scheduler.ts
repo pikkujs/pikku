@@ -1,3 +1,4 @@
+export { SchedulerService } from '../services/scheduler-service.js'
 export {
   getScheduledTasks,
   runScheduledTask,

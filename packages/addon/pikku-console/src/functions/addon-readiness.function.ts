@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { BadRequestError, LocalEnvironmentOnlyError } from '@pikku/core/errors'
+import {
+  BadRequestError,
+  LocalEnvironmentOnlyError,
+} from '@pikku/core/ecosystem/errors'
 import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import { readWiringOverrides } from '../lib/addon-readiness.js'

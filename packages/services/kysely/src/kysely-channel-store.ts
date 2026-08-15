@@ -1,5 +1,5 @@
-import type { Channel } from '@pikku/core/channel'
-import { ChannelStore } from '@pikku/core/channel'
+import { ChannelStore } from '@pikku/core/ecosystem/channel'
+import type { Channel } from '@pikku/core/ecosystem/channel'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'

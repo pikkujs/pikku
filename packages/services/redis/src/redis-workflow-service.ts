@@ -1,5 +1,5 @@
 import type { SerializedError } from '@pikku/core/ecosystem/types'
-import { PikkuWorkflowService } from '@pikku/core/workflow'
+import { PikkuWorkflowService } from '@pikku/core/ecosystem/workflow'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,

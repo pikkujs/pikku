@@ -15,7 +15,7 @@ import type {
   SignURLArgs,
   UploadURLResult,
   WriteFileArgs,
-} from '@pikku/core/services'
+} from '@pikku/core/ecosystem/services'
 import { readFile } from 'fs/promises'
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer'
 import type { Readable } from 'stream'

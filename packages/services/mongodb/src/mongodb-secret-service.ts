@@ -1,13 +1,14 @@
-import { createSecretValue, isSecretValue, type SecretValue } from '@pikku/core'
-import type { SecretService, SecretValues } from '@pikku/core/services'
-import type { Db, Collection } from 'mongodb'
 import {
   deriveKEK,
-  generateKEKSalt,
-  envelopeEncrypt,
   envelopeDecrypt,
+  envelopeEncrypt,
   envelopeRewrap,
-} from '@pikku/core/crypto-utils'
+  generateKEKSalt,
+} from '@pikku/core/ecosystem/crypto-utils'
+import { createSecretValue, isSecretValue } from '@pikku/core/ecosystem/types'
+import type { SecretService, SecretValues } from '@pikku/core/ecosystem/secret'
+import type { SecretValue } from '@pikku/core/ecosystem/types'
+import type { Db, Collection } from 'mongodb'
 
 export interface MongoDBSecretServiceConfig {
   key: string

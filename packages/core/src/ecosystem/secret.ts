@@ -1,3 +1,5 @@
+export { assertSecretAllowedForHost } from '../services/secret-host-binding.js'
+export type { SecretService, SecretValues } from '../services/secret-service.js'
 export type {
   CoreSecret,
   OAuth2CredentialConfig,

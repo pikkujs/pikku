@@ -9,7 +9,10 @@ export {
   pikkuAgentJudge,
   pikkuAgentScorer,
 } from '../wirings/agent-scorer/agent-scorer.js'
-export type { ScorerMeta } from '../wirings/agent-scorer/agent-scorer.types.js'
+export type {
+  AgentRunScore,
+  ScorerMeta,
+} from '../wirings/agent-scorer/agent-scorer.types.js'
 
 /**
  * Types the exports above mention but do not themselves export. Without

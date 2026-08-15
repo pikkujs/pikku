@@ -2,7 +2,7 @@ import type {
   CoreConfig,
   CoreSingletonServices,
   CreateConfig,
-} from '@pikku/core'
+} from '@pikku/core/ecosystem/types'
 import type {
   BetterAuthInstance,
   PikkuBetterAuthFactory,

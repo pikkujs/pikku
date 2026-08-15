@@ -1,4 +1,5 @@
-import { QueueWebhookService } from '@pikku/core/services'
+import { QueueWebhookService } from '@pikku/core/ecosystem/queue'
+import type { QueueService } from '@pikku/core/ecosystem/queue'
 import {
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type SendWebhookInput,
@@ -7,7 +8,6 @@ import {
   type WebhookDeliveryRecord,
   type WebhookDeliveryWithAttempts,
 } from '@pikku/core/ecosystem/services'
-import type { QueueService } from '@pikku/core/queue'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { ensurePikkuSchema } from './schema/index.js'

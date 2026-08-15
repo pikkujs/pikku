@@ -1,13 +1,14 @@
-import { createSecretValue, isSecretValue, type SecretValue } from '@pikku/core'
-import type { SecretService, SecretValues } from '@pikku/core/services'
-import { Redis, type RedisOptions } from 'ioredis'
 import {
   deriveKEK,
-  generateKEKSalt,
-  envelopeEncrypt,
   envelopeDecrypt,
+  envelopeEncrypt,
   envelopeRewrap,
-} from '@pikku/core/crypto-utils'
+  generateKEKSalt,
+} from '@pikku/core/ecosystem/crypto-utils'
+import { createSecretValue, isSecretValue } from '@pikku/core/ecosystem/types'
+import type { SecretService, SecretValues } from '@pikku/core/ecosystem/secret'
+import type { SecretValue } from '@pikku/core/ecosystem/types'
+import { Redis, type RedisOptions } from 'ioredis'
 
 export interface RedisSecretServiceConfig {
   key: string

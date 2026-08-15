@@ -1,6 +1,6 @@
 import type { Kysely, Selectable } from 'kysely'
 import { randomUUID } from 'node:crypto'
-import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
+import type { VirtualUserDisposition } from '@pikku/core/ecosystem/virtual-user'
 import type {
   VirtualUserRunOutcome,
   VirtualUserRunRecord,

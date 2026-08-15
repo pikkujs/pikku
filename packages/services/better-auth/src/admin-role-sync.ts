@@ -1,4 +1,4 @@
-import type { CoreServices } from '@pikku/core'
+import type { CoreServices } from '@pikku/core/ecosystem/types'
 import type { BetterAuthInstance } from './define-auth.js'
 import { projectedAdminRole } from './auth-scopes.js'
 

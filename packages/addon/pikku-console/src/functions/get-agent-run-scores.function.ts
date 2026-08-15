@@ -1,4 +1,5 @@
-import { hasScopes, NotFoundError } from '@pikku/core'
+import { NotFoundError } from '@pikku/core/ecosystem/errors'
+import { hasScopes } from '@pikku/core/ecosystem/scope'
 import { canAccessThread } from '@pikku/core/ecosystem/agent'
 import { pikkuFunc } from '#pikku'
 

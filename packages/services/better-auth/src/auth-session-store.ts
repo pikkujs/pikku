@@ -1,9 +1,9 @@
+import { pikkuMiddleware } from '@pikku/core/ecosystem/middleware'
 import type {
-  CoreUserSession,
   CorePikkuMiddleware,
   CoreServices,
-} from '@pikku/core'
-import { pikkuMiddleware } from '@pikku/core'
+  CoreUserSession,
+} from '@pikku/core/ecosystem/types'
 import { getSessionCookie } from 'better-auth/cookies'
 import {
   resolveImpersonatedSession,

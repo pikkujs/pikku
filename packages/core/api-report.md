@@ -11,28 +11,28 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
 | stable | 48 | 813 | 1753 |
-| ecosystem | 42 | 14 | 8 |
+| ecosystem | 43 | 14 | 8 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 126 | 32 | 149 |
-| `.` | 206 | 49 | 48 |
-| `./agent` | 48 | 26 | 53 |
+| `./services` | 126 | 23 | 118 |
+| `.` | 206 | 41 | 40 |
 | `./scenario` | 42 | 25 | 33 |
 | `./services/local-meta` | 22 | 3 | 46 |
 | `./workflow` | 76 | 19 | 29 |
+| `./agent` | 48 | 22 | 26 |
 | `./channel` | 32 | 14 | 29 |
 | `./virtual-user` | 34 | 10 | 33 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./queue` | 22 | 6 | 17 |
 | `./gateway` | 11 | 9 | 14 |
 | `./persona` | 27 | 11 | 12 |
-| `./crypto-utils` | 20 | 20 | 2 |
 | `./workflow/timeline` | 9 | 3 | 14 |
 | `./rpc` | 15 | 9 | 8 |
+| `./crypto-utils` | 20 | 14 | 0 |
 | `./workflow/types` | 45 | 1 | 11 |
 | `./services/v8-coverage` | 11 | 5 | 6 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
@@ -40,8 +40,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem` | 13 | 8 | 0 |
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./http` | 24 | 6 | 0 |
-| `./agent-scorer` | 17 | 5 | 0 |
 | `./safe-fetch` | 6 | 4 | 0 |
+| `./agent-scorer` | 17 | 4 | 0 |
 | `./ecosystem/channel/serverless` | 6 | 1 | 3 |
 | `./ecosystem/errors` | 47 | 1 | 3 |
 | `./schema` | 6 | 4 | 0 |
@@ -55,7 +55,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./node-host-resolver` | 2 | 1 | 0 |
 | `./secret` | 7 | 1 | 0 |
 | `./variable` | 6 | 1 | 0 |
-| `./ecosystem/agent` | 28 | 1 | 0 |
+| `./ecosystem/agent` | 39 | 1 | 0 |
 | `./function` | 16 | 0 | 0 |
 | `./channel/local` | 3 | 0 | 0 |
 | `./channel/serverless` | 3 | 0 | 0 |
@@ -69,42 +69,43 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 3 | 0 | 0 |
 | `./services/local-content-request-handler` | 5 | 0 | 0 |
 | `./hmac` | 2 | 0 | 0 |
-| `./ecosystem/agent-scorer` | 12 | 0 | 0 |
+| `./ecosystem/agent-scorer` | 13 | 0 | 0 |
 | `./ecosystem/channel` | 17 | 0 | 0 |
 | `./ecosystem/channel/local` | 3 | 0 | 0 |
 | `./ecosystem/cli` | 12 | 0 | 0 |
 | `./ecosystem/cli/channel` | 15 | 0 | 0 |
-| `./ecosystem/credential` | 4 | 0 | 0 |
+| `./ecosystem/credential` | 5 | 0 | 0 |
+| `./ecosystem/crypto-utils` | 7 | 0 | 0 |
 | `./ecosystem/dev` | 4 | 0 | 0 |
 | `./ecosystem/function` | 20 | 0 | 0 |
 | `./ecosystem/gateway` | 2 | 0 | 0 |
 | `./ecosystem/hmac` | 2 | 0 | 0 |
 | `./ecosystem/http` | 19 | 0 | 0 |
 | `./ecosystem/mcp` | 16 | 0 | 0 |
-| `./ecosystem/middleware` | 19 | 0 | 0 |
+| `./ecosystem/middleware` | 20 | 0 | 0 |
 | `./ecosystem/node` | 3 | 0 | 0 |
 | `./ecosystem/node-host-resolver` | 1 | 0 | 0 |
 | `./ecosystem/oauth2` | 2 | 0 | 0 |
 | `./ecosystem/persona` | 17 | 0 | 0 |
-| `./ecosystem/queue` | 17 | 0 | 0 |
+| `./ecosystem/queue` | 18 | 0 | 0 |
 | `./ecosystem/remote` | 3 | 0 | 0 |
-| `./ecosystem/role` | 9 | 0 | 0 |
+| `./ecosystem/role` | 10 | 0 | 0 |
 | `./ecosystem/rpc` | 6 | 0 | 0 |
 | `./ecosystem/safe-fetch` | 2 | 0 | 0 |
 | `./ecosystem/scenario` | 18 | 0 | 0 |
-| `./ecosystem/scheduler` | 4 | 0 | 0 |
-| `./ecosystem/schema` | 2 | 0 | 0 |
-| `./ecosystem/scope` | 10 | 0 | 0 |
-| `./ecosystem/secret` | 7 | 0 | 0 |
-| `./ecosystem/services` | 62 | 0 | 0 |
+| `./ecosystem/scheduler` | 5 | 0 | 0 |
+| `./ecosystem/schema` | 3 | 0 | 0 |
+| `./ecosystem/scope` | 13 | 0 | 0 |
+| `./ecosystem/secret` | 10 | 0 | 0 |
+| `./ecosystem/services` | 71 | 0 | 0 |
 | `./ecosystem/services/istanbul-coverage` | 1 | 0 | 0 |
 | `./ecosystem/services/local-content` | 3 | 0 | 0 |
 | `./ecosystem/services/local-content-request-handler` | 6 | 0 | 0 |
 | `./ecosystem/services/v8-coverage` | 1 | 0 | 0 |
 | `./ecosystem/testing` | 2 | 0 | 0 |
 | `./ecosystem/trigger` | 5 | 0 | 0 |
-| `./ecosystem/types` | 36 | 0 | 0 |
-| `./ecosystem/variable` | 6 | 0 | 0 |
+| `./ecosystem/types` | 40 | 0 | 0 |
+| `./ecosystem/variable` | 7 | 0 | 0 |
 | `./ecosystem/virtual-user` | 28 | 0 | 0 |
 | `./ecosystem/workflow` | 53 | 0 | 0 |
 | `./testing` | 2 | 0 | 0 |
@@ -5884,7 +5885,42 @@ export type AgentMemoryConfig = {
   lastMessages?: number
   workingMemory?: unknown
 }
+export interface AgentMessage {
+  id: string
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content?: string | AgentContentPart[]
+  toolCalls?: AgentToolCall[]
+  toolResults?: AgentToolResult[]
+  reasoningContent?: string
+  interrupted?: boolean
+  undelivered?: boolean
+  createdAt: Date
+}
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export type AgentRunnerParams = {
+  model: string
+  temperature?: number
+  instructions: string
+  messages: AgentMessage[]
+  tools: AgentToolDef[]
+  maxSteps: number
+  toolChoice: 'auto' | 'required' | 'none'
+  outputSchema?: Record<string, unknown>
+  agentId?: string
+  abortSignal?: AbortSignal
+  providerOptions?: AIProviderOptions
+}
+export interface AgentRunnerService {
+  stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>
+  run(params: AgentRunnerParams): Promise<AgentStepResult>
+  transcribe?(params: AITranscriptionParams): Promise<AITranscriptionResult>
+  generateSpeech?(params: AIGenerateSpeechParams): Promise<AIGenerateSpeechResult>
+  generateImage?(params: AIGenerateImageParams): Promise<AIGenerateImageResult>
+  embed?(params: AIEmbedParams): Promise<AIEmbedResult>
+  embedMany?(params: AIEmbedManyParams): Promise<AIEmbedManyResult>
+  rerank?<VALUE extends string | Record<string, unknown>>(params: AIRerankParams<VALUE>): Promise<AIRerankResult<VALUE>>
+  withApiKey?(apiKey: string): AgentRunnerService
+}
 export interface AgentRunRow {
   runId: string
   agentName: string
@@ -5907,6 +5943,30 @@ export interface AgentRunService {
   getThreadRuns(threadId: string): Promise<AgentRunRow[]>
   deleteThread(threadId: string): Promise<boolean>
   getDistinctAgentNames(): Promise<string[]>
+}
+export interface AgentRunState {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: 'running' | 'suspended' | 'completed' | 'failed' | 'interrupted'
+  errorMessage?: string
+  suspendReason?: 'approval' | 'credential' | 'rpc-missing'
+  missingRpcs?: string[]
+  pendingApprovals?: PendingApproval[]
+  usage: { inputTokens: number; outputTokens: number; model: string }
+  createdAt: Date
+  updatedAt: Date
+}
+export interface AgentRunStateService {
+  createRun(run: CreateRunInput): Promise<string>
+  updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
+  getRun(runId: string): Promise<AgentRunState | null>
+  getRunsByThread(threadId: string): Promise<AgentRunState[]>
+  resolveApproval(toolCallId: string, status: 'approved' | 'denied'): Promise<boolean>
+  findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
+  saveScore(score: SaveScoreInput): Promise<void>
+  getScores(runId: string): Promise<AgentRunScore[]>
 }
 export type AgentsMeta = Record<
   string,
@@ -5940,7 +6000,40 @@ export interface AgentStep {
   usage: { inputTokens: number; outputTokens: number }
   toolCalls?: { name: string; args: Record<string, unknown>; result: string; error?: string }[]
 }
+export type AgentStepResult = {
+  text: string
+  object?: unknown
+  toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
+  toolResults: {
+    toolCallId: string
+    toolName: string
+    result: unknown
+    error?: string
+  }[]
+  usage: { inputTokens: number; outputTokens: number }
+  finishReason: 'stop' | 'tool-calls' | 'length' | 'error' | 'unknown'
+  reasoningContent?: string
+}
+export interface AgentStorageService {
+  createThread(resourceId: string, options?: { threadId?: string; title?: string; metadata?: Record<string, unknown> }): Promise<AgentThread>
+  getThread(threadId: string): Promise<AgentThread>
+  getThreads(resourceId: string): Promise<AgentThread[]>
+  deleteThread(threadId: string): Promise<void>
+  getMessages(threadId: string, options?: { lastN?: number; cursor?: string }): Promise<AgentMessage[]>
+  saveMessages(threadId: string, messages: AgentMessage[]): Promise<void>
+  getWorkingMemory(id: string, scope: 'resource' | 'thread'): Promise<Record<string, unknown> | null>
+  saveWorkingMemory(id: string, scope: 'resource' | 'thread', data: Record<string, unknown>): Promise<void>
+}
 agentStream: <TAgentMap extends Record<string, { output: any; }>>(agentName?: (string & keyof TAgentMap) | undefined) => { func: (services: any, data: any, wire: any) => Promise<void>; }
+export interface AgentStreamChannel extends PikkuChannel< unknown, AgentStreamEvent > {}
+export interface AgentThread {
+  id: string
+  resourceId: string
+  title?: string
+  metadata?: Record<string, unknown>
+  createdAt: Date
+  updatedAt: Date
+}
 canAccessThread: (storedResourceId: string, session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => boolean
 export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
@@ -6016,6 +6109,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   scopeService?: ScopeService
   auth?: () => Promise<AuthInstance>
 }
+export type CreateRunInput = Omit<AgentRunState, 'runId'>
 isOwnedByPrincipal: (storedResourceId: string, principal: string) => boolean
 export enum LogLevel {
   'trace',
@@ -6067,6 +6161,7 @@ export interface PostgresConfig {
   prepare?: boolean
 }
 resolveModelAlias: (model: string) => string
+export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
 export type SpeakableScripts = string[] | Record<string, string>
 threadOwnerConstraint: (session: { userId?: string | undefined; orgId?: string | undefined; } | undefined) => string[]
 voiceInput: (config?: { language?: string | undefined; model?: string | undefined; allowedAudioHosts?: string[] | undefined; } | undefined) => PikkuAgentMiddlewareHooks<Record<string, unknown>, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>
@@ -6096,6 +6191,14 @@ export interface WorkflowServiceConfig {
 
 ```ts
 addAgentScorer: (scorerName: string, scorer: PikkuAgentScorer<any>, packageName?: string | null) => void
+export type AgentRunScore = {
+  runId: string
+  scorerName: string
+  score: number
+  reason?: string
+  metadata?: Record<string, unknown>
+  createdAt: Date
+}
 enableScoreSnapshots: (maxRuns?: number) => void
 getScoreSnapshot: (runId: string) => ScorerInput | undefined
 gradeRun: (job: ScoreJob, services: { agentRunner?: unknown; agentRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
@@ -6593,11 +6696,35 @@ export interface WorkflowServiceConfig {
 ```ts
 export type CredentialDefinitions = CredentialDefinitionMeta[]
 export type CredentialDefinitionsMeta = Record<string, CredentialDefinitionMeta>
+export interface CredentialService {
+  get<T = unknown>(name: string, userId?: string): Promise<T | null>
+  set(name: string, value: unknown, userId?: string): Promise<void>
+  delete(name: string, userId?: string): Promise<void>
+  has(name: string, userId?: string): Promise<boolean>
+  getAll(userId: string): Promise<Record<string, unknown>>
+  getUsersWithCredential(name: string): Promise<string[]>
+  getAllUsers(): Promise<string[]>
+}
 export interface SchemaRefLike {
   variableName: string
   sourceFile: string
 }
 validateAndBuildCredentialDefinitionsMeta: (definitions: CredentialDefinitions, schemaLookup: Map<string, SchemaRefLike>) => CredentialDefinitionsMeta
+```
+
+## ./ecosystem/crypto-utils
+
+```ts
+deriveKEK: (passphrase: string, salt: string) => Promise<CryptoKey>
+envelopeDecrypt: <T>(kek: CryptoKey, ciphertext: string, wrappedDEK: string) => Promise<T>
+envelopeEncrypt: (kek: CryptoKey, value: unknown) => Promise<EnvelopeEncryptResult>
+export interface EnvelopeEncryptResult {
+  ciphertext: WrappedValue
+  wrappedDEK: WrappedValue
+}
+envelopeRewrap: (oldKEK: CryptoKey, newKEK: CryptoKey, wrappedDEK: string) => Promise<WrappedValue>
+generateKEKSalt: () => string
+export type WrappedValue = string & { readonly [wrappedBrand]: true }
 ```
 
 ## ./ecosystem/dev
@@ -7326,6 +7453,7 @@ export enum LogLevel {
   'error',
   'critical',
 }
+pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
 pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 export interface PostgresConfig {
   maxPool?: number
@@ -7561,6 +7689,11 @@ export interface QueueService {
   add<T>(queueName: string, data: Safe<T>, options?: JobOptions): Promise<string>
   getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
 }
+export class QueueWebhookService extends WebhookService {
+  constructor(protected queueService: QueueService)
+  public async send(input: SendWebhookInput): Promise<SendWebhookResult>
+  protected async prepareDelivery(input: SendWebhookInput): Promise<{ jobData: WebhookJobData; options: JobOptions }>
+}
 export interface QueueWorkers {
   name: string
   supportsResults: boolean
@@ -7606,6 +7739,13 @@ export type CoreSystemRole = {
 export type CoreSystemRoles = Record<string, CoreSystemRole>
 defineSystemRole: (_config: CoreSystemRoles) => void
 flattenSystemRoleDefinitions: (definitions: SystemRoleDefinitions) => SystemRole[]
+export interface Role {
+  name: string
+  description?: string
+  scopes: string[]
+  system?: boolean
+  declared?: boolean
+}
 export type SystemRole = {
   name: string
   displayName?: string
@@ -7805,6 +7945,16 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
       session?: UserSession
     }
   >
+export abstract class SchedulerService {
+  abstract init(): Promise<void>
+  abstract scheduleRPC(delay: number | string, rpcName: string, data?: any, session?: CoreUserSession): Promise<string>
+  abstract unschedule(taskId: string): Promise<boolean>
+  abstract getTask(taskId: string): Promise<ScheduledTaskInfo | null>
+  abstract getAllTasks(): Promise<ScheduledTaskSummary[]>
+  abstract close(): Promise<void>
+  async start(): Promise<void>
+  async stop(): Promise<void>
+}
 ```
 
 ## ./ecosystem/schema
@@ -7812,6 +7962,12 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
 ```ts
 addSchema: (name: string, value: any, packageName?: string | null) => void
 compileAllSchemas: (logger: Logger, schemaService?: SchemaService | undefined) => void
+export interface SchemaService {
+  compileSchema: (name: string, value: any) => Promise<void> | void
+  validateSchema: (schema: string, data: any) => Promise<void> | void
+  getSchemaNames: () => Set<string>
+  getSchemaKeys: (schemaName: string) => string[]
+}
 ```
 
 ## ./ecosystem/scope
@@ -7829,6 +7985,7 @@ export type FlatScope = {
   description?: string
 }
 flattenScopeDefinitions: (definitions: ScopeDefinitions) => FlatScope[]
+hasScopes: (required: readonly string[] | undefined, held: Iterable<string> | undefined) => boolean
 export type ScopeDefinitionMeta = {
   name: string
   displayName?: string
@@ -7843,12 +8000,34 @@ export type ScopeNodeMeta = {
   description?: string
   scopes?: Record<string, ScopeNodeMeta>
 }
+export interface ScopeService {
+  syncScopes(scopes: FlatScope[]): Promise<void>
+  resolveScopes(userId: string): Promise<string[]>
+  listScopes(): Promise<Array<FlatScope & { declared: boolean }>>
+  syncSystemRoles(roles: SystemRole[]): Promise<void>
+  createRole(role: Role): Promise<void>
+  deleteRole(name: string): Promise<void>
+  setRoleScopes(name: string, scopes: string[]): Promise<void>
+  listRoles(): Promise<Role[]>
+  addUserToRole(userId: string, role: string, grantedBy?: string): Promise<void>
+  removeUserFromRole(userId: string, role: string): Promise<void>
+  listUserRoles(userId: string): Promise<string[]>
+  addScopeToUser(userId: string, scope: string, grantedBy?: string): Promise<void>
+  removeScopeFromUser(userId: string, scope: string): Promise<void>
+  listUserScopes(userId: string): Promise<string[]>
+  findStaleScopes(): Promise<Array<{ scope: string; roles: string[] }>>
+  pruneScopes(): Promise<string[]>
+  findStaleSystemRoles(): Promise<Array<{ role: string; users: number }>>
+  pruneSystemRoles(): Promise<string[]>
+}
 validateAndBuildScopeDefinitionsMeta: (definitions: ScopeDefinitions) => ScopeDefinitionsMeta
+verifyScopes: (required: readonly string[] | undefined, session: CoreUserSession | undefined) => void
 ```
 
 ## ./ecosystem/secret
 
 ```ts
+assertSecretAllowedForHost: (secretId: string, url: string | URL, secretDefinitions: SecretDefinitionsMeta | undefined, requireAllowedHosts?: boolean) => void
 export type CoreSecret<T = unknown> = {
   name: string
   displayName: string
@@ -7885,6 +8064,14 @@ export type SecretDefinitionMeta = {
 }
 export type SecretDefinitions = SecretDefinitionMeta[]
 export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
+export interface SecretService {
+  getSecret<T = string>(key: string): Promise<SecretValue<T>>
+  hasSecret(key: string): Promise<boolean>
+  setSecret(key: string, value: unknown): Promise<void>
+  deleteSecret(key: string): Promise<void>
+  getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
+}
+export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }
 validateAndBuildSecretDefinitionsMeta: (definitions: SecretDefinitions, schemaLookup: Map<string, SchemaRefLike>) => SecretDefinitionsMeta
 ```
 
@@ -7938,6 +8125,35 @@ export type AuditEvent = {
   metadata?: Record<string, unknown>
 }
 export type AuditEventBatch = AuditEvent[]
+export interface AuditLog {
+  readonly config: ResolvedAuditConfig | undefined
+  write<E extends AuditLogWriteInput>(event: Safe<E>): Promise<void>
+  flush(): Promise<void>
+  close(): Promise<void>
+}
+export interface AuditService {
+  audit(event: AuditEvent): Promise<void>
+  write?(batch: AuditEventBatch): Promise<void>
+  query?(query: AuditQuery): Promise<AuditQueryResult>
+  facets?(): Promise<AuditFacets>
+}
+export interface BucketKeyArgs<TBucket extends string = string> {
+  bucket: TBucket
+  key: string
+}
+export interface ContentService<TBucket extends string = string> {
+  signContentKey(args: SignContentKeyArgs<TBucket>): Promise<string>
+  signURL(args: SignURLArgs): Promise<string>
+  getUploadURL(args: GetUploadURLArgs<TBucket>): Promise<UploadURLResult>
+  deleteFile(args: BucketKeyArgs<TBucket>): Promise<boolean>
+  writeFile(args: WriteFileArgs<TBucket>): Promise<boolean>
+  copyFile(args: CopyFileArgs<TBucket>): Promise<boolean>
+  readFile(args: BucketKeyArgs<TBucket>): Promise<ReadableStream | NodeJS.ReadableStream>
+  readFileAsBuffer(args: BucketKeyArgs<TBucket>): Promise<Buffer>
+}
+export interface CopyFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
+  fromAbsolutePath: string
+}
 export interface CoreUserSession {
   userId?: string
   orgId?: string
@@ -8040,6 +8256,13 @@ export type FunctionMeta = FunctionRuntimeMeta &
   >
 export type FunctionsMeta = Record<string, FunctionMeta>
 getStubTracker: () => StubTracker
+export interface GetUploadURLArgs<TBucket extends string = string> {
+  bucket: TBucket
+  fileKey: string
+  contentType: string
+  size?: number
+  visibility?: 'private' | 'public'
+}
 export interface GroupMeta {
   exportName: string | null
   sourceFile: string
@@ -8206,13 +8429,6 @@ export class PikkuSessionService< UserSession extends CoreUserSession, > impleme
 }
 pikkuWebhookWorkerFunc: (services: { logger: Logger; webhookService?: WebhookService | undefined; }, { url, body, headers, deliveryId }: WebhookJobData) => Promise<void>
 export type ResolvedPersona = PersonaMeta & { email: string }
-export interface Role {
-  name: string
-  description?: string
-  scopes: string[]
-  system?: boolean
-  declared?: boolean
-}
 export type RPCMetaRecord = Record<string, string>
 export type ScenarioPersonas = Record<string, ScenarioPersona>
 export interface ScheduledTaskInfo extends ScheduledTaskSummary {
@@ -8229,13 +8445,6 @@ export interface ScriptCoverage {
   scriptId: string
   url: string
   functions: FunctionCoverage[]
-}
-export interface SecretService {
-  getSecret<T = string>(key: string): Promise<SecretValue<T>>
-  hasSecret(key: string): Promise<boolean>
-  setSecret(key: string, value: unknown): Promise<void>
-  deleteSecret(key: string): Promise<void>
-  getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
 export interface SendWebhookInput {
   url: string
@@ -8270,6 +8479,22 @@ export interface SessionService<UserSession extends CoreUserSession> {
   clear(): Promise<void> | void
   get(): UserSession | undefined
 }
+export interface SessionStore< UserSession extends CoreUserSession = CoreUserSession, > {
+  get(pikkuUserId: string): Promise<UserSession | undefined>
+  set(pikkuUserId: string, session: UserSession): Promise<void>
+  clear(pikkuUserId: string): Promise<void>
+}
+export interface SignContentKeyArgs<TBucket extends string = string> {
+  bucket: TBucket
+  contentKey: string
+  dateLessThan: Date
+  dateGreaterThan?: Date
+}
+export interface SignURLArgs {
+  url: string
+  dateLessThan: Date
+  dateGreaterThan?: Date
+}
 spy: <T extends object>(service: string, real: T) => T
 export class StubTracker {
   record(service: string, method: string, args: unknown[]): void
@@ -8293,6 +8518,12 @@ export class TypedVariablesService< TMap = Record<string, unknown>, > implements
   delete(name: string): Promise<void> | void
   async getAllStatus(): Promise<VariableStatus[]>
   async getMissing(): Promise<VariableStatus[]>
+}
+export interface UploadURLResult {
+  uploadUrl: string
+  assetKey: string
+  uploadHeaders?: Record<string, string>
+  uploadMethod?: 'PUT' | 'POST'
 }
 export type VariableMeta = {
   name: string
@@ -8333,6 +8564,9 @@ export abstract class WebhookService {
   public recordAttempt(_deliveryId: string, _result: WebhookAttemptResult): Promise<void>
   public listDeliveries(_opts?: { organizationId?: string; limit?: number }): Promise<WebhookDeliveryRecord[]>
   public getDelivery(_deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
+}
+export interface WriteFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
+  stream: ReadableStream | NodeJS.ReadableStream
 }
 ```
 
@@ -8503,6 +8737,8 @@ export type CorePikkuMiddleware<
   wires: PikkuWire,
   next: () => Promise<void>
 ) => Promise<void>
+export type CoreServices<SingletonServices = CoreSingletonServices> =
+  SingletonServices
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   schema?: SchemaService
   jwt?: JWTService
@@ -8555,7 +8791,9 @@ export interface FunctionWiresMeta {
   optimized: boolean
   wires: string[]
 }
+getRelativeTimeOffsetFromNow: (relativeTime: RelativeTimeInput) => Date
 isExpectedError: (error: unknown) => boolean
+isSecretValue: (value: unknown) => value is SecretValue<unknown>
 isSerializable: (data: any) => boolean
 isVersionedId: (id: string) => boolean
 export type JSONValue =
@@ -8686,6 +8924,16 @@ export type Safe<T> =
                 : T
       : never
 export type SecretlessServices<Services> = Omit<Services, 'secrets'>
+export class SecretValue<T = string> {
+  declare readonly [secretValueBrand]: true
+  readonly [SECRET_VALUE]: true
+  constructor(value: T)
+  reveal(): Secret<T>
+  toJSON(): string
+  [NODE_INSPECT](): string
+  toString(): never
+  [Symbol.toPrimitive](): never
+}
 export interface SecurityAuditIssue {
   package: string
   severity: SecuritySeverity
@@ -8751,6 +8999,14 @@ export type VariableDefinitionMeta = {
 }
 export type VariableDefinitions = VariableDefinitionMeta[]
 export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
+export interface VariablesService {
+  get<T = string>(name: string): Promise<T | undefined> | T | undefined
+  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(names: (keyof T & string)[]): Promise<Partial<T>> | Partial<T>
+  getAll: () => | Promise<Record<string, string | undefined>> | Record<string, string | undefined>
+  set: (name: string, value: unknown) => Promise<void> | void
+  has: (name: string) => Promise<boolean> | boolean
+  delete: (name: string) => Promise<void> | void
+}
 ```
 
 ## ./ecosystem/virtual-user

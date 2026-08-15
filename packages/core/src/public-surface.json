@@ -532,6 +532,13 @@
   "./ecosystem/cli": ["CLIError", "executeCLI", "generateCommandHelp"],
   "./ecosystem/cli/channel": ["executeRawCLIViaChannel", "handleRawCLI"],
   "./ecosystem/credential": ["validateAndBuildCredentialDefinitionsMeta"],
+  "./ecosystem/crypto-utils": [
+    "deriveKEK",
+    "envelopeDecrypt",
+    "envelopeEncrypt",
+    "envelopeRewrap",
+    "generateKEKSalt"
+  ],
   "./ecosystem/dev": ["reconcileAddonRegistry", "reloadGeneratedMeta"],
   "./ecosystem/errors": [
     "AIProviderAuthError",
@@ -609,6 +616,7 @@
     "addGlobalPermission",
     "authAPIKey",
     "authCookie",
+    "pikkuMiddleware",
     "pikkuRemoteAuthMiddleware",
     "runMiddleware",
     "telemetryInner",
@@ -630,6 +638,7 @@
   "./ecosystem/queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
+    "QueueWebhookService",
     "registerQueueWorkers",
     "runQueueJob"
   ],
@@ -648,14 +657,23 @@
     "composeStepProse",
     "resolveFeatureScenarios"
   ],
-  "./ecosystem/scheduler": ["getScheduledTasks", "runScheduledTask"],
+  "./ecosystem/scheduler": [
+    "SchedulerService",
+    "getScheduledTasks",
+    "runScheduledTask"
+  ],
   "./ecosystem/schema": ["addSchema", "compileAllSchemas"],
   "./ecosystem/scope": [
     "defineScope",
     "flattenScopeDefinitions",
-    "validateAndBuildScopeDefinitionsMeta"
+    "hasScopes",
+    "validateAndBuildScopeDefinitionsMeta",
+    "verifyScopes"
   ],
-  "./ecosystem/secret": ["validateAndBuildSecretDefinitionsMeta"],
+  "./ecosystem/secret": [
+    "assertSecretAllowedForHost",
+    "validateAndBuildSecretDefinitionsMeta"
+  ],
   "./ecosystem/services": [
     "InMemoryAgentRunStateService",
     "LocalSecretService",
@@ -680,9 +698,12 @@
   "./ecosystem/trigger": [],
   "./ecosystem/types": [
     "PikkuRequest",
+    "SecretValue",
     "createSecretValue",
     "formatVersionedId",
+    "getRelativeTimeOffsetFromNow",
     "isExpectedError",
+    "isSecretValue",
     "isSerializable",
     "isVersionedId",
     "parseDurationString",

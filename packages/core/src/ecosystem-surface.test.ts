@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test'
 import * as assert from 'assert'
+import ts from 'typescript'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,12 +8,16 @@ import { fileURLToPath } from 'node:url'
 /**
  * `@pikku/core` exports two doors onto the same modules: the curated
  * `ecosystem/*` facades, and the raw internal barrels (`./http` maps straight
- * to `dist/wirings/http/index.js`). Runtime adapters are the ecosystem tier —
- * they get the second door closed on them in a later breaking change, and
- * until then nothing should drift back onto it.
+ * to `dist/wirings/http/index.js`). Runtime adapters, services and addons are
+ * the ecosystem tier — they get the second door closed on them in a later
+ * breaking change, and until then nothing should drift back onto it.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
-const runtimesDir = join(repoRoot, 'packages/runtimes')
+const ecosystemTiers = [
+  'packages/runtimes',
+  'packages/services',
+  'packages/addon',
+]
 
 const walk = (dir: string, out: string[] = []): string[] => {
   for (const entry of readdirSync(dir)) {
@@ -23,39 +28,73 @@ const walk = (dir: string, out: string[] = []): string[] => {
   return out
 }
 
-const runtimeSourceFiles = () => {
+const tierSourceFiles = () => {
   const files: string[] = []
-  for (const pkg of readdirSync(runtimesDir)) {
-    const src = join(runtimesDir, pkg, 'src')
-    try {
-      if (!statSync(src).isDirectory()) continue
-    } catch {
-      continue
+  for (const tier of ecosystemTiers) {
+    const tierDir = join(repoRoot, tier)
+    for (const pkg of readdirSync(tierDir)) {
+      const src = join(tierDir, pkg, 'src')
+      try {
+        if (!statSync(src).isDirectory()) continue
+      } catch {
+        continue
+      }
+      walk(src, files)
     }
-    walk(src, files)
   }
   return files
 }
 
+/**
+ * Parsed rather than grepped: `code-edit.service.test.ts` holds function
+ * sources as template literals, and those `import … from '@pikku/core'` lines
+ * are fixture text describing a user's file, not imports this package makes.
+ */
+const coreSpecifiers = (file: string) => {
+  const source = ts.createSourceFile(
+    file,
+    readFileSync(file, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true
+  )
+  const found: { specifier: string; line: number }[] = []
+  for (const statement of source.statements) {
+    if (
+      !ts.isImportDeclaration(statement) &&
+      !ts.isExportDeclaration(statement)
+    ) {
+      continue
+    }
+    const moduleSpecifier = statement.moduleSpecifier
+    if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier)) continue
+    const specifier = moduleSpecifier.text
+    if (specifier !== '@pikku/core' && !specifier.startsWith('@pikku/core/')) {
+      continue
+    }
+    if (specifier.startsWith('@pikku/core/ecosystem')) continue
+    const { line } = source.getLineAndCharacterOfPosition(
+      statement.getStart(source)
+    )
+    found.push({ specifier, line: line + 1 })
+  }
+  return found
+}
+
 describe('ecosystem surface', () => {
-  test('runtime adapters import core only through ecosystem', () => {
+  test('the ecosystem tier imports core only through ecosystem', () => {
     const offenders: string[] = []
 
-    for (const file of runtimeSourceFiles()) {
-      const lines = readFileSync(file, 'utf8').split('\n')
-      lines.forEach((line, index) => {
-        const match = line.match(/from\s+'(@pikku\/core(?:\/[^']*)?)'/)
-        if (!match) return
-        const specifier = match[1]!
-        if (specifier.startsWith('@pikku/core/ecosystem')) return
-        offenders.push(`${relative(repoRoot, file)}:${index + 1}  ${specifier}`)
-      })
+    for (const file of tierSourceFiles()) {
+      for (const { specifier, line } of coreSpecifiers(file)) {
+        offenders.push(`${relative(repoRoot, file)}:${line}  ${specifier}`)
+      }
     }
 
     assert.deepStrictEqual(
       offenders,
       [],
-      `Runtime adapters must import core through '@pikku/core/ecosystem/*'.\n` +
+      `Runtime adapters, services and addons must import core through ` +
+        `'@pikku/core/ecosystem/*'.\n` +
         `Reaching a raw subpath pulls in an internal barrel that is scheduled ` +
         `for deletion. If the name you need is missing from a facade, add it ` +
         `there — that is the deliberate act of making it public.\n\n` +

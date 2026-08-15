@@ -1,4 +1,4 @@
-import type { AuditLog } from '@pikku/core'
+import type { AuditLog } from '@pikku/core/ecosystem/services'
 import type {
   Kysely,
   KyselyPlugin,

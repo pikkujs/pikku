@@ -1,3 +1,4 @@
+export type { CredentialService } from '../services/credential-service.js'
 export type { CredentialDefinitions } from '../wirings/credential/credential.types.js'
 export { validateAndBuildCredentialDefinitionsMeta } from '../wirings/credential/validate-credential-definitions.js'
 

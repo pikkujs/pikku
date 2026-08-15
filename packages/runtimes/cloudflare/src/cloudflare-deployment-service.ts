@@ -14,7 +14,7 @@ import type {
   DeploymentConfig,
 } from '@pikku/core/ecosystem/services'
 import type { JWTService } from '@pikku/core/ecosystem/services'
-import type { SecretService } from '@pikku/core/ecosystem/services'
+import type { SecretService } from '@pikku/core/ecosystem/secret'
 import { buildRemoteHeaders } from '@pikku/core/ecosystem/remote'
 
 export type CloudflareEnv = Record<string, unknown>

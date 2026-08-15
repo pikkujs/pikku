@@ -1,3 +1,4 @@
+export { QueueWebhookService } from '../services/queue-webhook-service.js'
 export {
   QueueJobDiscardedError,
   QueueJobFailedError,

@@ -4,9 +4,9 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { verifyScopes } from '@pikku/core'
+import { ConflictError, MissingScopeError } from '@pikku/core/ecosystem/errors'
+import { verifyScopes } from '@pikku/core/ecosystem/scope'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { ConflictError, MissingScopeError } from '@pikku/core/errors'
 
 import { installAddon } from './install-addon.function.js'
 import { installOpenapiAddon } from './install-openapi-addon.function.js'

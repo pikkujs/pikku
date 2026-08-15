@@ -1,6 +1,6 @@
 import postgres from 'postgres'
-import { LocalEventHubService } from '@pikku/core/channel/local'
-import type { EventHubService } from '@pikku/core/channel'
+import { LocalEventHubService } from '@pikku/core/ecosystem/channel/local'
+import type { EventHubService } from '@pikku/core/ecosystem/channel'
 
 const PG_CHANNEL = 'pikku_eventhub'
 const INSTANCE_ID = `${process.pid}-${Date.now()}`

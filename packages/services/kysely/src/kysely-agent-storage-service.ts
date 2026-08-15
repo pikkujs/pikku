@@ -1,15 +1,15 @@
 import type {
-  AgentStorageService,
-  AgentRunStateService,
-  CreateRunInput,
-  SaveScoreInput,
-} from '@pikku/core/services'
-import type {
-  AgentThread,
   AgentMessage,
   AgentRunState,
-} from '@pikku/core/agent'
-import type { AgentRunScore } from '@pikku/core/agent-scorer'
+  AgentThread,
+} from '@pikku/core/ecosystem/agent'
+import type { AgentRunScore } from '@pikku/core/ecosystem/agent-scorer'
+import type {
+  AgentRunStateService,
+  AgentStorageService,
+  CreateRunInput,
+  SaveScoreInput,
+} from '@pikku/core/ecosystem/agent'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'

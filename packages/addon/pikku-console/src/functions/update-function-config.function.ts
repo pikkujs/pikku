@@ -1,4 +1,4 @@
-import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
+import { LocalEnvironmentOnlyError } from '@pikku/core/ecosystem/errors'
 import { pikkuFunc } from '#pikku'
 import type { FunctionConfigChanges } from '../services/code-edit.service.js'
 

@@ -1,4 +1,4 @@
-import type { CredentialService } from '@pikku/core/services'
+import type { CredentialService } from '@pikku/core/ecosystem/credential'
 import type { BetterAuthInstance } from './define-auth.js'
 import { PLATFORM_USER_ID } from './credential-oauth.plugin.js'
 

@@ -1,4 +1,4 @@
-import { createSecretValue } from '@pikku/core'
+import { createSecretValue } from '@pikku/core/ecosystem/types'
 import type { PinoLogger } from './pino.js'
 
 // A concrete logger must not be a way around the `Logger` guard.

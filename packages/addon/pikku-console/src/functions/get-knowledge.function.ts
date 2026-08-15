@@ -1,4 +1,4 @@
-import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
+import { LocalEnvironmentOnlyError } from '@pikku/core/ecosystem/errors'
 import { pikkuFunc } from '#pikku'
 import type { KnowledgeBundle } from '../services/knowledge.service.js'
 

@@ -7,7 +7,7 @@ import type {
   QueueConfigMapping,
   ConfigValidationResult,
 } from '@pikku/core/ecosystem/queue'
-import { runQueueJob } from '@pikku/core/queue'
+import { runQueueJob } from '@pikku/core/ecosystem/queue'
 import {
   registerQueueWorkers,
   QueueJobFailedError,

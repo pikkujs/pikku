@@ -2,7 +2,19 @@ export type {
   AuditDurability,
   AuditEvent,
   AuditEventBatch,
+  AuditLog,
+  AuditService,
 } from '../services/audit-service.js'
+export type {
+  BucketKeyArgs,
+  ContentService,
+  CopyFileArgs,
+  GetUploadURLArgs,
+  SignContentKeyArgs,
+  SignURLArgs,
+  UploadURLResult,
+  WriteFileArgs,
+} from '../services/content-service.js'
 export type {
   DeploymentConfig,
   DeploymentService,
@@ -39,8 +51,7 @@ export type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
 } from '../services/scheduler-service.js'
-export type { Role } from '../services/scope-service.js'
-export type { SecretService } from '../services/secret-service.js'
+export type { SessionStore } from '../services/session-store.js'
 export { getStubTracker, spy } from '../services/stub-tracker.js'
 export type { CredentialMetaInfo } from '../services/typed-credential-service.js'
 export type { CredentialMeta } from '../services/typed-secret-service.js'
