@@ -164,11 +164,7 @@ export class AIProviderNotConfiguredError extends PikkuError {
   constructor()
 }
 export type AnonymizeStrategy =
-  | 'fake:email'
-  | 'fake:name'
-  | 'hash'
-  | 'keep'
-  | null
+  'fake:email' | 'fake:name' | 'hash' | 'keep' | null
 assertSecretAllowedForHost: (secretId: string, url: string | URL, secretDefinitions: SecretDefinitionsMeta | undefined, requireAllowedHosts?: boolean) => void
 export type AuditConfig =
   | boolean
@@ -282,8 +278,7 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   postgres?: PostgresConfig
 } & Config
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
-  | Record<string, PikkuPermission | PikkuPermission[]>
-  | undefined
+  Record<string, PikkuPermission | PikkuPermission[]> | undefined
 export type CorePikkuApprovalDescription<
   In = any,
   Services extends CoreSecretlessSingletonServices =
@@ -500,9 +495,7 @@ export interface EventHubService<Topics extends Record<string, any>> {
 export class ExpectationFailedError extends PikkuError {}
 fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<Response>
 export type Filter<F extends Record<string, unknown>> =
-  | LeafFilter<F>
-  | Filter<F>[]
-  | { [label: string]: Filter<F> }
+  LeafFilter<F> | Filter<F>[] | { [label: string]: Filter<F> }
 export class ForbiddenError extends PikkuError {}
 formatVersionedId: (baseName: string, version: number) => string
 export type FunctionMeta = FunctionRuntimeMeta &
@@ -563,13 +556,7 @@ export type HashedValue = string & { readonly [hashedBrand]: true }
 hashToken: (raw: string) => Promise<HashedValue>
 hasScopes: (required: readonly string[] | undefined, held: Iterable<string> | undefined) => boolean
 export type HTTPMethod =
-  | 'post'
-  | 'get'
-  | 'delete'
-  | 'patch'
-  | 'head'
-  | 'put'
-  | 'options'
+  'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 export class HTTPVersionNotSupportedError extends PikkuError {}
 export class InternalServerError extends PikkuError {}
 export class InvalidMiddlewareWireError extends PikkuError {}
@@ -661,11 +648,7 @@ export type MiddlewareMetadata =
       inline?: boolean
     }
 export type MiddlewarePriority =
-  | 'highest'
-  | 'high'
-  | 'medium'
-  | 'low'
-  | 'lowest'
+  'highest' | 'high' | 'medium' | 'low' | 'lowest'
 export class MissingCredentialError extends PikkuError {
   public payload: { error: 'missing_credential'; credentialName: string; credentialType: 'oauth2' | 'apikey'; connectUrl?: string }
   constructor(credentialName: string, credentialType: 'oauth2' | 'apikey', connectUrl?: string)
@@ -735,7 +718,7 @@ export interface PikkuPackageState {
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
-  package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory: | ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
+  package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
 pikkuPermission: <In = any, Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Wire extends PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session"> = PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session">>(permission: CorePikkuPermission<In, Services, Wire> | CorePikkuPermissionConfig<In, Services, Wire>) => CorePikkuPermission<In, Services, Wire>
 pikkuPermissionFactory: <In = any>(factory: CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>) => CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>
@@ -794,8 +777,7 @@ export type PikkuWire<
   setCredential: (name: string, value: unknown) => void
   getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
   getCredentials: () =>
-    | Record<string, unknown>
-    | Promise<Record<string, unknown>>
+    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -964,9 +946,7 @@ export interface SecurityAuditUpdate {
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
 export type SendEmailInput =
-  | SendTextEmailInput
-  | SendHTMLEmailInput
-  | SendTemplateEmailInput
+  SendTextEmailInput | SendHTMLEmailInput | SendTemplateEmailInput
 export interface SendEmailResult {
   messageId?: string
 }
@@ -1252,9 +1232,7 @@ export type CorePikkuSessionlessFunctionConfig<
   'scopes'
 >
 export type Filter<F extends Record<string, unknown>> =
-  | LeafFilter<F>
-  | Filter<F>[]
-  | { [label: string]: Filter<F> }
+  LeafFilter<F> | Filter<F>[] | { [label: string]: Filter<F> }
 getAllFunctionNames: () => string[]
 export interface ListInput< F extends Record<string, unknown> = Record<string, never>, S extends string = never, > {
   cursor?: string
@@ -1336,7 +1314,7 @@ export interface ChannelMeta {
   channelMiddleware?: MiddlewareMetadata[]
 }
 export class ChannelRPCError extends Error {
-  constructor(message: string, public readonly reason: | 'timeout' | 'closed' | 'remote' | 'invalid' | 'unsupported')
+  constructor(message: string, public readonly reason: 'timeout' | 'closed' | 'remote' | 'invalid' | 'unsupported')
 }
 export interface ChannelRPCPending {
   action: typeof CHANNEL_RPC_PENDING
@@ -1776,12 +1754,7 @@ export interface StepState {
   failedAt?: Date
 }
 export type StepStatus =
-  | 'pending'
-  | 'running'
-  | 'scheduled'
-  | 'succeeded'
-  | 'failed'
-  | 'suspended'
+  'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
 export interface SuspendStepMeta {
   type: 'suspend'
   reason: string
@@ -1967,11 +1940,7 @@ export type WorkflowsMeta = Record<
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
 export type WorkflowStatus =
-  | 'running'
-  | 'suspended'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
+  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
 export class WorkflowStepFunctionMismatchError extends PikkuError {
   constructor(public readonly runId: string, public readonly stepName: string)
 }
@@ -2408,12 +2377,7 @@ export interface StepState {
   failedAt?: Date
 }
 export type StepStatus =
-  | 'pending'
-  | 'running'
-  | 'scheduled'
-  | 'succeeded'
-  | 'failed'
-  | 'suspended'
+  'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
 export interface SuspendStepMeta {
   type: 'suspend'
   reason: string
@@ -2567,11 +2531,7 @@ export type WorkflowsMeta = Record<
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
 export type WorkflowStatus =
-  | 'running'
-  | 'suspended'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
+  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
 export type WorkflowStepMeta =
   | RpcStepMeta
   | ScenarioStepMeta
@@ -2975,13 +2935,7 @@ defineHTTPRoutes: { <T extends HTTPRouteMap>(routes: T): HTTPRouteContract<T>; <
 fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<Response>
 fetchData: <In, Out>(request: Request | PikkuHTTPRequest<unknown>, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, generateRequestId, traceId: externalTraceId, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
 export type HTTPMethod =
-  | 'post'
-  | 'get'
-  | 'delete'
-  | 'patch'
-  | 'head'
-  | 'put'
-  | 'options'
+  'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 export type HTTPRouteBaseConfig = {
   contentType?: 'xml' | 'json'
   timeout?: number
@@ -3181,11 +3135,7 @@ export class QueueJobFailedError extends PikkuError {
   constructor(jobId: string, reason?: string)
 }
 export type QueueJobStatus =
-  | 'waiting'
-  | 'active'
-  | 'completed'
-  | 'failed'
-  | 'delayed'
+  'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 export type QueueRegistrationCallback<T = any> = (
   queueName: string,
   processor: CoreQueueWorker
@@ -4054,8 +4004,7 @@ export type GatewaysMeta = Record<string, GatewayMeta>
 export type GatewayTransportType = 'webhook' | 'websocket' | 'listener'
 resolveGatewayAdapter: (config: CoreGateway, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => Promise<GatewayAdapter>
 export type WebhookVerificationResult =
-  | { verified: true; response: unknown }
-  | { verified: false }
+  { verified: true; response: unknown } | { verified: false }
 wireGateway: (config: CoreGateway) => void
 ```
 
@@ -4973,12 +4922,12 @@ export interface Logger {
   scope?(traceId: string): Logger
 }
 export enum LogLevel {
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'critical',
+  trace,
+  debug,
+  info,
+  warn,
+  error,
+  critical,
 }
 export interface MCPMeta {
   resources: MCPResourceMeta
@@ -5207,9 +5156,7 @@ export interface SecretService {
 }
 export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }
 export type SendEmailInput =
-  | SendTextEmailInput
-  | SendHTMLEmailInput
-  | SendTemplateEmailInput
+  SendTextEmailInput | SendHTMLEmailInput | SendTemplateEmailInput
 export interface SendEmailResult {
   messageId?: string
 }
@@ -5751,8 +5698,7 @@ export type LocalContentRequestHandlerOptions = {
   getJWT: () => JWTService | undefined
 }
 export type SignedContentVerification =
-  | { ok: true }
-  | { ok: false; status: number; body: string }
+  { ok: true } | { ok: false; status: number; body: string }
 verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
@@ -6016,12 +5962,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 }
 isOwnedByPrincipal: (storedResourceId: string, principal: string) => boolean
 export enum LogLevel {
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'critical',
+  trace,
+  debug,
+  info,
+  warn,
+  error,
+  critical,
 }
 export type PendingApproval =
   | {
@@ -6475,12 +6421,12 @@ export type CreateWireServices<
 executeRawCLIViaChannel: ({ pikkuWS, args, renderers, defaultRenderer, capabilities, approve, }: { pikkuWS: any; args?: string[] | undefined; renderers?: Record<string, CorePikkuCLIClientRender<any>> | undefined; defaultRenderer?: CorePikkuCLIClientRender<any> | undefined; capabilities?: Capabilities | undefined; approve?: ApprovalRequester | undefined; }) => Promise<number>
 handleRawCLI: ({ programName, args, singletonServices, createWireServices, onOutput, session, transport, }: { programName: string; args: string[]; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown, commandId: string) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<RawCLIResult>
 export enum LogLevel {
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'critical',
+  trace,
+  debug,
+  info,
+  warn,
+  error,
+  critical,
 }
 export interface PikkuChannel< OpeningData, out Out, Remote extends (...args: any[]) => any = ChannelRemote, > {
   channelId: string
@@ -6742,12 +6688,12 @@ export interface ListOutput<Row> {
   totalCount?: number
 }
 export enum LogLevel {
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'critical',
+  trace,
+  debug,
+  info,
+  warn,
+  error,
+  critical,
 }
 pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
 export interface PostgresConfig {
@@ -6897,13 +6843,7 @@ export type CoreHTTPFunctionWiring<
     })
 DEFAULT_MAX_BODY_SIZE: number
 export type HTTPMethod =
-  | 'post'
-  | 'get'
-  | 'delete'
-  | 'patch'
-  | 'head'
-  | 'put'
-  | 'options'
+  'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 export type HTTPRouteBaseConfig = {
   contentType?: 'xml' | 'json'
   timeout?: number
@@ -7088,8 +7028,7 @@ addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], 
 authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 authCookie: CorePikkuMiddlewareFactory<{ name: string; options: SerializeOptions; expiresIn: RelativeTimeInput; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
-  | Record<string, PikkuPermission | PikkuPermission[]>
-  | undefined
+  Record<string, PikkuPermission | PikkuPermission[]> | undefined
 export type CorePikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
@@ -7149,12 +7088,12 @@ export interface CoreUserSession {
   readonly?: boolean
 }
 export enum LogLevel {
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'critical',
+  trace,
+  debug,
+  info,
+  warn,
+  error,
+  critical,
 }
 pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 export interface PostgresConfig {
@@ -8139,8 +8078,7 @@ export type LocalContentRequestHandlerOptions = {
   getJWT: () => JWTService | undefined
 }
 export type SignedContentVerification =
-  | { ok: true }
-  | { ok: false; status: number; body: string }
+  { ok: true } | { ok: false; status: number; body: string }
 verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
@@ -8234,8 +8172,7 @@ export interface AuthInstance {
   $context?: Promise<any>
 }
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
-  | Record<string, PikkuPermission | PikkuPermission[]>
-  | undefined
+  Record<string, PikkuPermission | PikkuPermission[]> | undefined
 formatVersionedId: (baseName: string, version: number) => string
 export interface FunctionServicesMeta {
   optimized: boolean
@@ -8328,8 +8265,7 @@ export type PikkuWire<
   setCredential: (name: string, value: unknown) => void
   getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
   getCredentials: () =>
-    | Record<string, unknown>
-    | Promise<Record<string, unknown>>
+    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -8751,12 +8687,7 @@ export interface StepState {
   failedAt?: Date
 }
 export type StepStatus =
-  | 'pending'
-  | 'running'
-  | 'scheduled'
-  | 'succeeded'
-  | 'failed'
-  | 'suspended'
+  'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
 export interface SuspendStepMeta {
   type: 'suspend'
   reason: string
@@ -8893,11 +8824,7 @@ export type WorkflowsMeta = Record<
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
 export type WorkflowStatus =
-  | 'running'
-  | 'suspended'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
+  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
 export type WorkflowStepMeta =
   | RpcStepMeta
   | ScenarioStepMeta
