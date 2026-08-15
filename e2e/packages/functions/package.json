@@ -11,10 +11,10 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^3.0.15",
+    "@ai-sdk/provider": "^4.0.7",
     "@pikku/better-auth": "workspace:*",
     "@pikku/voice-agents": "workspace:*",
-    "ai": "^6.0.256",
+    "ai": "^7.0.66",
     "better-auth": "^1.6.29",
     "zod": "*"
   },
