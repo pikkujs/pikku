@@ -40,10 +40,5 @@ export const serializeWorkflowRegistration = (
     lines.push(`addWorkflow('${pikkuFuncId}', ${exportedName}${packageArg})`)
   }
 
-  if (hasWorkflows) {
-    lines.push('')
-    lines.push(`export type WorkflowNames = '${workflowNames.join("' | '")}'`)
-  }
-
   return lines.join('\n')
 }

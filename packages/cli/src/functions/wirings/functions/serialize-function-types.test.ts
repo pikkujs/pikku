@@ -3,7 +3,7 @@ import { describe, test } from 'node:test'
 import { serializeFunctionTypes } from './serialize-function-types.js'
 
 describe('serializeFunctionTypes', () => {
-  test('emits pikkuListFunc and PikkuListFunction helper types', () => {
+  test('emits pikkuListFunc without a named list-function type', () => {
     const content = serializeFunctionTypes(
       "import type { Session } from './session.js'",
       'Session',
@@ -17,7 +17,7 @@ describe('serializeFunctionTypes', () => {
     )
 
     assert.match(content, /ListInput, ListOutput/)
-    assert.match(content, /export type PikkuListFunction</)
+    assert.doesNotMatch(content, /PikkuListFunction/)
     assert.match(content, /export const pikkuListFunc = </)
     assert.match(
       content,

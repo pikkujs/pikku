@@ -59,10 +59,10 @@ ${template.variables
   .join('\n')}
 }
 
-export type EmailTemplateVariables<TName extends EmailTemplateName> =
+type EmailTemplateVariables<TName extends EmailTemplateName> =
   TemplateVariableMap[TName]
 
-export type RenderEmailInput<TName extends EmailTemplateName> = {
+type RenderEmailInput<TName extends EmailTemplateName> = {
   name: TName
   locale?: EmailLocale
   data: EmailTemplateVariables<TName>

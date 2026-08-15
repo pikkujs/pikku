@@ -20,33 +20,15 @@ const quote = (value: string) => `'${value.replace(/'/g, "\\'")}'`
  * mistake. Typed as `SystemRoleName[]`, it is a red squiggle in the editor.
  */
 export const serializePersonasTypes = ({
-  definitions,
   rolesImportPath,
   environmentNames,
 }: SerializePersonasOptions) => {
-  const ids = [...new Set(definitions.map((d) => d.id))].sort()
-
   const environmentUnion =
     environmentNames.length > 0
       ? `\n${[...environmentNames]
           .sort()
           .map((name) => `  | ${quote(name)}`)
           .join('\n')}`
-      : ' never'
-
-  const union =
-    ids.length > 0
-      ? `\n${ids.map((id) => `  | ${quote(id)}`).join('\n')}`
-      : ' never'
-
-  const runnable = definitions
-    .filter((d) => d.runnable)
-    .map((d) => d.id)
-    .sort()
-
-  const runnableUnion =
-    runnable.length > 0
-      ? `\n${runnable.map((id) => `  | ${quote(id)}`).join('\n')}`
       : ' never'
 
   return `/**
@@ -58,20 +40,8 @@ import type { CorePersona } from '@pikku/core/ecosystem/persona'
 import type { SystemRoleName } from '${rolesImportPath}'
 import definitions from './pikku-personas-meta.gen.json' with { type: 'json' }
 
-/** Every declared persona. */
-export type PersonaId =${union}
-
-/**
- * The personas a virtual user can actually be.
- *
- * Excludes anyone whose only login is a provider account — driving a consent
- * screen needs a human — and anyone declared \`runnable: false\`, who exists to
- * be acted upon rather than to act.
- */
-export type RunnablePersonaId =${runnableUnion}
-
 /** Every environment configured in pikku.config.json. */
-export type EnvironmentName =${environmentUnion}
+type EnvironmentName =${environmentUnion}
 
 /**
  * A persona whose roles are checked against \`defineSystemRole\` and whose
@@ -82,7 +52,7 @@ export type EnvironmentName =${environmentUnion}
  * \`disposition: 'accountable'\`, which the type cannot express and \`pikku\`
  * refuses at build time.
  */
-export type TypedPersona = Omit<CorePersona, 'roles' | 'environments'> & {
+type TypedPersona = Omit<CorePersona, 'roles' | 'environments'> & {
   roles?: SystemRoleName[]
   environments?: EnvironmentName[]
 }

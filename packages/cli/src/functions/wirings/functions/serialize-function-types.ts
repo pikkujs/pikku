@@ -69,7 +69,7 @@ export type WiredSingletonServices = RequiredSingletonServices & SingletonServic
 export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
 
 /** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */
-export type WiredAuthServices = SecretlessServices<WiredSingletonServices>
+type WiredAuthServices = SecretlessServices<WiredSingletonServices>
 
 /**
  * Inline node configuration for function definitions.
@@ -146,7 +146,7 @@ export const pikkuPermission = <In>(
  *
  * @template RequiredServices - The services required for this auth check
  */
-export type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuth<RequiredServices, Session>
+type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuth<RequiredServices, Session>
 
 /**
  * Configuration object for creating an auth permission with metadata
@@ -466,18 +466,6 @@ export function pikkuFunc<In, Out = unknown>(
 export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
-
-export type PikkuListFunction<
-  F extends Record<string, unknown> = {},
-  Row = unknown,
-  S extends string = never
-> =
-  | PikkuFunction<ListInput<F, S>, ListOutput<Row>, 'session' | 'rpc'>
-  | PikkuFunctionSessionless<
-      ListInput<F, S>,
-      ListOutput<Row>,
-      'session' | 'rpc'
-    >
 
 export const pikkuListFunc = <
   F extends Record<string, unknown> = {},
