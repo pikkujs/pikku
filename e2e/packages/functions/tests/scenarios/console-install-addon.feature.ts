@@ -142,18 +142,17 @@ export const installAddonInvalidNameScenario = pikkuScenario<
 })
 
 // This mutates the fixture and triggers a `pikku dev` reinspection, so what it
-// asserts is deliberately the *install response*, not the Setup tab. Both of
-// the blockers that used to quarantine it are gone: removal reconciles the
+// asserts is deliberately the *install response*, not the Setup tab. Two of the
+// three blockers that used to quarantine it are gone: removal reconciles the
 // in-memory addon registry (reconcileAddonRegistry prunes the unwired package),
 // and the install now runs the project's own package manager rather than a
 // hardcoded `npm install`, which this yarn workspace refused with
 // EUNSUPPORTEDPROTOCOL over its `workspace:*` manifests.
 //
-// The remaining slow part is re-inspection: populating the installed-package
-// registry takes longer than a page poll can reasonably wait (full regen
-// observed 6-10s+), which is why the page renders the readiness the install
-// call returned instead of waiting for the registry to catch up. That outcome
-// is what this asserts — it is available the moment the mutation resolves.
+// Re-inspection is the one that is left, and fixing the package manager is what
+// exposed how bad it is: the install proceeds for real, the reinspection that
+// follows exhausts the heap, and the dev server dies for every scenario after
+// this one. Quarantined on that until #1294 lands.
 export const installAddonFreshNameScenario = pikkuScenario<
   void,
   { installed: string }
@@ -162,6 +161,7 @@ export const installAddonFreshNameScenario = pikkuScenario<
   description:
     'A fresh install writes the wiring and reports what the new instance still needs before it can start',
   tags: ['scenario', 'console-install-addon', 'console', 'mutates-project'],
+  skip: 'installs for real, and the `pikku dev` reinspection that follows runs out of heap and takes the server down with it — see #1294',
   after: removesInstalledAddon,
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {

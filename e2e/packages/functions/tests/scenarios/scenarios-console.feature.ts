@@ -378,9 +378,9 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.when(
-      'opens the credential-agent feature',
+      'opens the install-addon feature',
       'clicksTestId',
-      { testId: 'feature-nav-credentialAgentFeature' },
+      { testId: 'feature-nav-consoleInstallAddonFeature' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -388,9 +388,9 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
       'seesTestId',
       {
         testId: 'scenario-skip',
-        containing: 'better-auth now refuses for oauth2',
+        containing: 'runs out of heap',
         within: {
-          testId: 'scenario-section-credentialConnectedShowsChatScenario',
+          testId: 'scenario-section-installAddonFreshNameScenario',
         },
       },
       { actor: actors.admin }
