@@ -104,7 +104,7 @@ export type PikkuFunctionScenario<
   Ctx = Out
 > = PikkuFunctionSessionless<In, Out, 'scenario' | 'actors', WiredServices, Ctx>
 
-export type PikkuWorkflowConfigWithSchema<
+type PikkuWorkflowConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
@@ -169,7 +169,7 @@ export function pikkuWorkflowComplexFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
-export type PikkuScenarioConfigWithSchema<
+type PikkuScenarioConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = Omit<PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>, 'func' | 'auth' | 'scopes' | 'permissions'> & {
@@ -274,7 +274,7 @@ export type PikkuFeatureEntry<Entry> = Entry extends {
     ? Entry
     : never
 
-export type PikkuFeatureConfig<Scenarios extends readonly unknown[]> = {
+type PikkuFeatureConfig<Scenarios extends readonly unknown[]> = {
   /** Human-readable name. The export identifier is the id. */
   name: string
   description?: string
@@ -336,7 +336,7 @@ export type PikkuFunctionScenarioStep<
   Surface extends 'default' ? 'scenarioStep' : 'scenarioStep' | Surface
 >
 
-export type PikkuScenarioStepConfigWithSchema<
+type PikkuScenarioStepConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
@@ -397,7 +397,7 @@ export type PikkuScenarioStepConfigWithSchema<
   >
 }
 
-export type PikkuScenarioStepConfig<In, Out> =
+type PikkuScenarioStepConfig<In, Out> =
   Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined>, 'browser' | 'cli' | 'default' | 'input' | 'output'> & {
     browser?: PikkuFunctionScenarioStep<In, Out, 'browser'>
     cli?: PikkuFunctionScenarioStep<In, Out, 'cli'>
@@ -457,7 +457,7 @@ export function pikkuScenarioStep(config: any) {
  * rule coherent — an assertion runs every witness it has and fails if they
  * disagree, and this has exactly one by construction.
  */
-export type PikkuSubjectScenarioStepConfigWithSchema<
+type PikkuSubjectScenarioStepConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = Omit<
@@ -471,7 +471,7 @@ export type PikkuSubjectScenarioStepConfigWithSchema<
   >
 }
 
-export type PikkuSubjectScenarioStepConfig<In, Out> =
+type PikkuSubjectScenarioStepConfig<In, Out> =
   Omit<PikkuScenarioStepConfig<In, Out>, 'browser' | 'cli' | 'default'> & {
     func: PikkuFunctionScenarioStep<In, Out, 'default'>
   }

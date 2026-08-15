@@ -32,7 +32,7 @@ export type PikkuTriggerFunction<
 /**
  * Configuration object for creating a trigger function with metadata
  */
-export type PikkuTriggerFunctionConfig<
+type PikkuTriggerFunctionConfig<
   TInput = unknown,
   TOutput = unknown,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -49,7 +49,7 @@ type InferSchemaOutput<T> = T extends StandardSchemaV1<any, infer Output> ? Outp
  * Use this when you want to define input/output schemas using Zod.
  * Types are automatically inferred from the schemas.
  */
-export type PikkuTriggerFunctionConfigWithSchema<
+type PikkuTriggerFunctionConfigWithSchema<
   InputSchema extends StandardSchemaV1,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
@@ -69,7 +69,7 @@ export type PikkuTriggerFunctionConfigWithSchema<
  * Type definition for trigger wirings.
  * Declares a trigger name and its target pikku function.
  */
-export type TriggerWiring = CoreTrigger
+type TriggerWiring = CoreTrigger
 
 /**
  * A trigger source with the subscription function, using project-specific services.
