@@ -688,8 +688,7 @@ export const addFunctions: AddWiring = (
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
     auth = getPropertyValue(firstArg, 'auth') as boolean | undefined
     permissionsInBody = getPropertyValue(firstArg, 'permissionsInBody') as
-      | boolean
-      | undefined
+      boolean | undefined
     if (permissionsInBody && !options.allow?.permissionsInBody) {
       logger.critical(
         ErrorCode.PERMISSIONS_IN_BODY_NOT_ALLOWED,
@@ -726,22 +725,15 @@ export const addFunctions: AddWiring = (
     }
     readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
     deploy = getPropertyValue(firstArg, 'deploy') as
-      | 'serverless'
-      | 'server'
-      | 'auto'
-      | undefined
+      'serverless' | 'server' | 'auto' | undefined
     approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
-      | boolean
-      | undefined
+      boolean | undefined
     workflowQueued = getPropertyValue(firstArg, 'workflowQueued') as
-      | boolean
-      | undefined
+      boolean | undefined
     workflowRetries = getPropertyValue(firstArg, 'workflowRetries') as
-      | number
-      | undefined
+      number | undefined
     workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as
-      | string
-      | undefined
+      string | undefined
     // A step declares one implementation per surface it supports; the binding
     // keys that are present ARE the declaration, so there is nothing to read a
     // value from — only names to collect.
@@ -772,8 +764,7 @@ export const addFunctions: AddWiring = (
       scenarioStepSurfaces = ['default']
       if (scenarioStepKind === 'addon') {
         scenarioStepAddon = getPropertyValue(firstArg, 'addon') as
-          | string
-          | undefined
+          string | undefined
         if (!scenarioStepAddon) {
           logger.error(
             `• pikkuAddonScenarioStep('${name}') needs a string literal \`addon\` naming the addon whose system acts — the same name its wireAddon declares.`
@@ -787,8 +778,7 @@ export const addFunctions: AddWiring = (
         : undefined
     }
     scenarioStepTemplate = getPropertyValue(firstArg, 'template') as
-      | string
-      | undefined
+      string | undefined
     scopes = getArrayPropertyValue(firstArg, 'scopes') ?? undefined
 
     // Extract approvalDescription identifier reference
@@ -832,13 +822,11 @@ export const addFunctions: AddWiring = (
       ) {
         const nodeObj = prop.initializer
         nodeDisplayName = getPropertyValue(nodeObj, 'displayName') as
-          | string
-          | null
+          string | null
         nodeCategory = getPropertyValue(nodeObj, 'category') as string | null
         nodeType = getPropertyValue(nodeObj, 'type') as NodeType | null
         nodeErrorOutput = getPropertyValue(nodeObj, 'errorOutput') as
-          | boolean
-          | null
+          boolean | null
 
         if (!nodeDisplayName) {
           logger.critical(

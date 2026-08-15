@@ -28,8 +28,7 @@ export type FabricAddonVerifyOutput = z.infer<
 >
 
 type JsonResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; reason: 'missing' | 'invalid' }
+  { ok: true; value: T } | { ok: false; reason: 'missing' | 'invalid' }
 
 async function readJsonSafe<T>(path: string): Promise<JsonResult<T>> {
   if (!existsSync(path)) return { ok: false, reason: 'missing' }

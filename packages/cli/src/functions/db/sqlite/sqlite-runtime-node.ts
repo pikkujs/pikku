@@ -31,7 +31,7 @@ class NodeSqliteStatement implements SyncSqliteStatement {
 
   constructor(
     private readonly stmt: NodeSqliteStatementShape,
-    sql: string,
+    sql: string
   ) {
     // node:sqlite StatementSync does not have a .reader property
     // (that's a better-sqlite3 API). Fall back to SQL inspection when absent.

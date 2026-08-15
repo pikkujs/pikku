@@ -20,7 +20,8 @@ interface DeviceTokenSuccess {
 }
 
 interface DeviceTokenPending {
-  error: 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token'
+  error:
+    'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token'
   error_description?: string
 }
 
@@ -99,8 +100,7 @@ export const deviceLogin = async (
       }),
     })
     const body = (await tokenRes.json().catch(() => ({}))) as
-      | DeviceTokenSuccess
-      | DeviceTokenPending
+      DeviceTokenSuccess | DeviceTokenPending
 
     if (tokenRes.ok && 'access_token' in body && body.access_token) {
       return finalizeSession(baseURL, authBase, body)

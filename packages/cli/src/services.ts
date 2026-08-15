@@ -212,9 +212,8 @@ export const createSingletonServices: CreateSingletonServices<
 
   // Store unfiltered state
   let unfilteredState:
-    | InspectorState
-    | Omit<InspectorState, 'typesLookup'>
-    | undefined = preloadedInspectorState
+    InspectorState | Omit<InspectorState, 'typesLookup'> | undefined =
+    preloadedInspectorState
   let unfilteredStateIsSetupOnly = false
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false

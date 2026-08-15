@@ -26,14 +26,14 @@ export const deleteBook = pikkuFunc({
     await db.deleteBook(bookId)
   },
   permissions: {
-    owner: isBookOwner,   // ← authorization here
+    owner: isBookOwner, // ← authorization here
   },
 })
 
 // WRONG — permission check inside func body
 export const deleteBook = pikkuFunc({
   func: async ({ db }, { bookId }, { session }) => {
-    if (!session) throw new UnauthorizedError()  // ← never do this
+    if (!session) throw new UnauthorizedError() // ← never do this
     await db.deleteBook(bookId)
   },
 })
@@ -71,14 +71,14 @@ function already enforces. A function that needs a signed-in user sets
 ```typescript
 // WRONG — redundant with auth: true; adds a permission that gates nothing.
 export const isSignedIn = pikkuAuth(async (_s, session) => !!session)
-pikkuFunc({ auth: true, permissions: { signedIn: isSignedIn }, /* ... */ })
+pikkuFunc({ auth: true, permissions: { signedIn: isSignedIn } /* ... */ })
 
 // RIGHT — auth: true already requires the session; permissions are for capability.
-pikkuFunc({ auth: true, /* ... */ })
+pikkuFunc({ auth: true /* ... */ })
 ```
 
-A permission answers "*may this user do this?*" (role, ownership, tier) — never
-"*is there a session?*".
+A permission answers "_may this user do this?_" (role, ownership, tier) — never
+"_is there a session?_".
 
 ### `pikkuPermission(fn)` — Data-Aware Checks
 
@@ -132,7 +132,7 @@ export const deleteBook = pikkuFunc({
 
 ### Global (`addGlobalPermission`) — App-Wide AND Gate
 
-A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever *narrow* access — it never grants access a function's own `permissions` would deny.
+A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever _narrow_ access — it never grants access a function's own `permissions` would deny.
 
 ```typescript
 import { addGlobalPermission } from '#pikku'
@@ -142,14 +142,14 @@ addGlobalPermission([isEmployee]) // every function now also requires an employe
 
 Multiple `addGlobalPermission` calls accumulate and are AND'd together.
 
-> Wire-, tag-, and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, and a `permissions` field on HTTP/channel/MCP wirings) were **removed in #972**. Permissions now live only on the function definition, plus the optional global gate. Tags are organizational only — use tag/HTTP *middleware* (`addTagMiddleware`, `addHTTPMiddleware`) for cross-cutting request handling, not authorization.
+> Wire-, tag-, and HTTP-route-level permissions (`addHTTPPermission`, `addTagPermission`, and a `permissions` field on HTTP/channel/MCP wirings) were **removed in #972**. Permissions now live only on the function definition, plus the optional global gate. Tags are organizational only — use tag/HTTP _middleware_ (`addTagMiddleware`, `addHTTPMiddleware`) for cross-cutting request handling, not authorization.
 
 ## Scopes — the AND Gate Above Permissions
 
 Scopes answer "what was this session granted?" before permissions ask "may this
 user do this to this resource?". They are AND-ed: every scope listed must be
 held. Because they are checked first and fail closed, a scope can only ever
-*narrow* access — it never grants what `permissions` would deny.
+_narrow_ access — it never grants what `permissions` would deny.
 
 Declare the scope tree once with `defineScope`. The body is a no-op that
 tree-shakes away; the CLI reads the call by AST and generates a `ScopeId` union,
@@ -222,7 +222,11 @@ export const handleStripeWebhook = pikkuSessionlessFunc({
   permissionsInBody: true,
   auth: false,
   func: async ({ stripe }, data, { http }) => {
-    stripe.webhooks.constructEvent(data.raw, http.request.header('stripe-signature'), secret)
+    stripe.webhooks.constructEvent(
+      data.raw,
+      http.request.header('stripe-signature'),
+      secret
+    )
     // ...
   },
 })

@@ -16,7 +16,7 @@ dispatcher that cannot know what it dispatches to — wrong the moment one
 legitimately public sessionless function exists. For `userAdmin` it was
 redundant: the generated functions are `pikkuFunc` with `scopes:
 ['admin:users:list']`, gated twice over already. But for `agent`, `workflow`,
-`events` and `scenarios` it was the *only* gate, because those generate real
+`events` and `scenarios` it was the _only_ gate, because those generate real
 endpoints the app never authors and has nowhere else to declare a gate for.
 A uniform collapse to boolean would have silently opened four surfaces.
 
@@ -33,7 +33,7 @@ it.
 
 The object form is also what makes the legacy strings safe to remove. An
 earlier design used `string` for the output path, under which `"no-auth"` would
-have parsed as *a file named `no-auth`* — every unmigrated config silently
+have parsed as _a file named `no-auth`_ — every unmigrated config silently
 producing nonsense instead of failing. With `boolean | object`, a string is
 never valid, so `resolveScaffoldFeature` refuses `'auth'` and `'no-auth'` by
 name and prints the replacement. Coercing them was rejected outright: the value

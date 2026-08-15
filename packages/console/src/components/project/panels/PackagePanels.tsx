@@ -1,5 +1,13 @@
 import React from 'react'
-import { Stack, Text, Box, Group, Code, Table, Accordion } from '@pikku/mantine/core'
+import {
+  Stack,
+  Text,
+  Box,
+  Group,
+  Code,
+  Table,
+  Accordion,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import {
   Package,

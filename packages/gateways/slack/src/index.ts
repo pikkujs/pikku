@@ -7,12 +7,8 @@
  *
  * @module @pikku/gateway-slack
  */
-export {
-  SlackGatewayAdapter,
-} from './slack-gateway-adapter.js'
-export {
-  SlackGatewayHelper,
-} from './slack-gateway-helper.js'
+export { SlackGatewayAdapter } from './slack-gateway-adapter.js'
+export { SlackGatewayHelper } from './slack-gateway-helper.js'
 export {
   parseSlashCommand,
   respondToSlashCommand,

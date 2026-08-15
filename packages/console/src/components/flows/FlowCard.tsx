@@ -112,7 +112,9 @@ export const FlowCard: React.FC<FlowCardProps> = ({ flow, onOpen }) => {
             </Text>
           ) : (
             <Text size="xs" ff="monospace" c="dimmed">
-              {asI18n(`${flow.stepCount} ${flow.stepCount === 1 ? 'step' : 'steps'}`)}
+              {asI18n(
+                `${flow.stepCount} ${flow.stepCount === 1 ? 'step' : 'steps'}`
+              )}
             </Text>
           )}
         </Stack>

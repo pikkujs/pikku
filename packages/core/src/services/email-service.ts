@@ -35,9 +35,7 @@ export interface SendTemplateEmailInput extends BaseSendEmailInput {
 }
 
 export type SendEmailInput =
-  | SendTextEmailInput
-  | SendHTMLEmailInput
-  | SendTemplateEmailInput
+  SendTextEmailInput | SendHTMLEmailInput | SendTemplateEmailInput
 
 export interface SendEmailResult {
   messageId?: string

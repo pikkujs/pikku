@@ -1,5 +1,14 @@
 import React from 'react'
-import { Accordion, Anchor, Badge, Box, Group, Paper, Stack, Text } from '@pikku/mantine/core'
+import {
+  Accordion,
+  Anchor,
+  Badge,
+  Box,
+  Group,
+  Paper,
+  Stack,
+  Text,
+} from '@pikku/mantine/core'
 import { Package, ShieldCheck, ExternalLink } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -67,12 +76,7 @@ export const FindingItem: React.FC<FindingItemProps> = ({
         </Accordion.Control>
         <Group gap="sm" wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
           {issue.url && (
-            <Anchor
-              href={issue.url}
-              target="_blank"
-              rel="noreferrer"
-              size="xs"
-            >
+            <Anchor href={issue.url} target="_blank" rel="noreferrer" size="xs">
               <Group gap={4} align="center" wrap="nowrap">
                 <ExternalLink size={12} />
                 {m.security_view_advisory()}
@@ -86,7 +90,11 @@ export const FindingItem: React.FC<FindingItemProps> = ({
       <Accordion.Panel>
         <Stack gap="md" px="md" pb="md" pt="xs">
           <Group gap="xs" wrap="wrap">
-            <Badge variant="default" size="sm" leftSection={<Package size={11} />}>
+            <Badge
+              variant="default"
+              size="sm"
+              leftSection={<Package size={11} />}
+            >
               {m.security_detected_by({ tool: 'bun' })}
             </Badge>
             {issue.cwe.map((c) => (
@@ -98,7 +106,12 @@ export const FindingItem: React.FC<FindingItemProps> = ({
               {CAT_LABEL[cat]()}
             </Badge>
             {issue.cvssScore != null && (
-              <Badge color={SEV_COLOR[sev]} variant="light" size="sm" ff="monospace">
+              <Badge
+                color={SEV_COLOR[sev]}
+                variant="light"
+                size="sm"
+                ff="monospace"
+              >
                 {m.security_cvss({ score: issue.cvssScore })}
               </Badge>
             )}

@@ -9,7 +9,7 @@ tags: services
 
 `pikkuWebhookWorkerFunc` (`packages/core/src/services/queue-webhook-service.ts`)
 POSTs the delivery, then — when the job carries a `deliveryId` — calls
-`webhookService.recordAttempt` with the outcome *before* throwing on a non-2xx.
+`webhookService.recordAttempt` with the outcome _before_ throwing on a non-2xx.
 The throw is what makes the queue retry, so recording first is the only way the
 console's delivery history shows every try rather than just the final one.
 

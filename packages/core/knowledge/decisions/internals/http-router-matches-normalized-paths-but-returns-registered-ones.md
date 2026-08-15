@@ -11,7 +11,7 @@ tags: http
 normalizes every route and every incoming path to a leading `/` before matching,
 so a route registered as `'todos'` still answers a request for `/todos`. The
 `route` field it stores alongside each matcher and static entry is the
-*un-normalized* original, and that is what `MatchResult.route` returns.
+_un-normalized_ original, and that is what `MatchResult.route` returns.
 
 That asymmetry is load-bearing. `getMatchingRoute` in `http-runner.ts` takes the
 returned route and uses it as a key into `pikkuState(null, 'http', 'routes')` and

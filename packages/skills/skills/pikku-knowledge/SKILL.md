@@ -193,19 +193,19 @@ It is a **summary, not the note** — the argument continues in prose underneath
 
 **Every kind resolves.** That is the whole design: a kind that cannot be checked lets notes accumulate references nothing validates, and the graph rots into fiction exactly where it looks most authoritative.
 
-| Kind        | An id is                                           | Where it resolves                                                                 |
-| ----------- | -------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `func:`     | a function id                                      | generated function meta                                                           |
-| `workflow:` | a workflow name                                    | generated workflow meta                                                           |
-| `schema:`   | a schema name                                      | generated schemas                                                                 |
-| `http:`     | a route, `method:route`, or the function behind it | generated http wirings                                                            |
-| `queue:`    | a queue name                                       | generated queue wirings                                                           |
-| `cron:`     | a scheduled task name                              | generated scheduler wirings                                                       |
-| `channel:`  | a channel name                                     | generated channel meta                                                            |
-| `table:`    | a table name                                       | the generated db schema                                                           |
-| `addon:`    | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                         |
+| Kind        | An id is                                           | Where it resolves                                                                          |
+| ----------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `func:`     | a function id                                      | generated function meta                                                                    |
+| `workflow:` | a workflow name                                    | generated workflow meta                                                                    |
+| `schema:`   | a schema name                                      | generated schemas                                                                          |
+| `http:`     | a route, `method:route`, or the function behind it | generated http wirings                                                                     |
+| `queue:`    | a queue name                                       | generated queue wirings                                                                    |
+| `cron:`     | a scheduled task name                              | generated scheduler wirings                                                                |
+| `channel:`  | a channel name                                     | generated channel meta                                                                     |
+| `table:`    | a table name                                       | the generated db schema                                                                    |
+| `addon:`    | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                                  |
 | `scope:`    | a scope name                                       | the `scopes:` a function gates itself with, plus the scopes a `defineSystemRole()` confers |
-| `persona:`  | a persona name                                     | `definePersonas()`                                                                |
+| `persona:`  | a persona name                                     | `definePersonas()`                                                                         |
 
 Ids are case-sensitive: `createEntry` is not `createentry`.
 

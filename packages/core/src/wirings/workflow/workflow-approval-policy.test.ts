@@ -166,9 +166,14 @@ describe('approval policy enforcement', () => {
     })
     await runToGate(ws, runId)
 
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'someone-else',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'someone-else',
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal((await ws.getRun(runId))?.status, 'completed')
@@ -188,15 +193,25 @@ describe('approval policy enforcement', () => {
     await runToGate(ws, runId)
 
     await assert.rejects(
-      ws.approveStep(runId, 'Release funds', { ok: true }, {
-        userId: 'initiator',
-      }),
+      ws.approveStep(
+        runId,
+        'Release funds',
+        { ok: true },
+        {
+          userId: 'initiator',
+        }
+      ),
       WorkflowApprovalForbiddenError
     )
 
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'reviewer',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'reviewer',
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal((await ws.getRun(runId))?.status, 'completed')
@@ -216,15 +231,25 @@ describe('approval policy enforcement', () => {
     await runToGate(ws, runId)
 
     await assert.rejects(
-      ws.approveStep(runId, 'Release funds', { ok: true }, {
-        userId: 'attacker',
-      }),
+      ws.approveStep(
+        runId,
+        'Release funds',
+        { ok: true },
+        {
+          userId: 'attacker',
+        }
+      ),
       WorkflowApprovalForbiddenError
     )
 
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'initiator',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'initiator',
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal((await ws.getRun(runId))?.status, 'completed')
@@ -244,17 +269,27 @@ describe('approval policy enforcement', () => {
     await runToGate(ws, runId)
 
     await assert.rejects(
-      ws.approveStep(runId, 'Release funds', { ok: true }, {
-        userId: 'reviewer',
-        scopes: ['payments:read'],
-      }),
+      ws.approveStep(
+        runId,
+        'Release funds',
+        { ok: true },
+        {
+          userId: 'reviewer',
+          scopes: ['payments:read'],
+        }
+      ),
       WorkflowApprovalForbiddenError
     )
 
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'reviewer',
-      scopes: ['payments:approve'],
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'reviewer',
+        scopes: ['payments:approve'],
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal((await ws.getRun(runId))?.status, 'completed')
@@ -280,10 +315,15 @@ describe('approval policy enforcement', () => {
     })
     await runToGate(ws, runId)
 
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'reviewer',
-      scopes: ['payments:approve'],
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'reviewer',
+        scopes: ['payments:approve'],
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     const step = await ws.getStepState(
@@ -343,9 +383,14 @@ describe('approval policy enforcement', () => {
 
     // The gate has not been reached, so no policy has been published and the
     // submission cannot be judged here — it is accepted and judged on replay.
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'initiator',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'initiator',
+      }
+    )
 
     await runToGate(ws, runId)
 
@@ -392,10 +437,15 @@ describe('approval audit trail', () => {
       pikkuUserId: 'initiator',
     })
     await runToGate(ws, runId)
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'reviewer',
-      scopes: ['payments:approve'],
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'reviewer',
+        scopes: ['payments:approve'],
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal(events.length, 1)
@@ -428,9 +478,14 @@ describe('approval audit trail', () => {
     await runToGate(ws, runId)
 
     await assert.rejects(
-      ws.approveStep(runId, 'Release funds', { ok: true }, {
-        userId: 'initiator',
-      }),
+      ws.approveStep(
+        runId,
+        'Release funds',
+        { ok: true },
+        {
+          userId: 'initiator',
+        }
+      ),
       WorkflowApprovalForbiddenError
     )
 
@@ -462,9 +517,14 @@ describe('approval audit trail', () => {
 
     // Submitted before the gate published its policy, so it is accepted here
     // and only refused on replay.
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'initiator',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'initiator',
+      }
+    )
     assert.equal(events[0].outcome, 'success')
 
     await runToGate(ws, runId)
@@ -495,9 +555,14 @@ describe('approval audit trail', () => {
       pikkuUserId: 'initiator',
     })
     await runToGate(ws, runId)
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'reviewer',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'reviewer',
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal((await ws.getRun(runId))?.status, 'completed')
@@ -513,9 +578,14 @@ describe('approval audit trail', () => {
       pikkuUserId: 'initiator',
     })
     await runToGate(ws, runId)
-    await ws.approveStep(runId, 'Release funds', { ok: true }, {
-      userId: 'reviewer',
-    })
+    await ws.approveStep(
+      runId,
+      'Release funds',
+      { ok: true },
+      {
+        userId: 'reviewer',
+      }
+    )
     await ws.runWorkflowJob(runId, {})
 
     assert.equal((await ws.getRun(runId))?.status, 'completed')

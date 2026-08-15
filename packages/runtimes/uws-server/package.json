@@ -26,8 +26,8 @@
   "dependencies": {
     "@pikku/uws-handler": "^0.12.7",
     "@types/qs": "^6",
-    "qs": "^6.15.0",
-    "uWebSockets.js": "uNetworking/uWebSockets.js#v20.68.0"
+    "qs": "^6.15.3",
+    "uWebSockets.js": "uNetworking/uWebSockets.js#v20.69.0"
   },
   "devDependencies": {
     "@pikku/core": "^0.12.84",

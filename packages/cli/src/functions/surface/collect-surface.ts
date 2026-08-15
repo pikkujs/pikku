@@ -4,13 +4,7 @@ import { join, relative, resolve } from 'node:path'
 import ts from 'typescript'
 
 export type SurfaceKind =
-  | 'function'
-  | 'class'
-  | 'interface'
-  | 'type'
-  | 'const'
-  | 'enum'
-  | 'namespace'
+  'function' | 'class' | 'interface' | 'type' | 'const' | 'enum' | 'namespace'
 
 export type SurfaceSymbol = {
   name: string

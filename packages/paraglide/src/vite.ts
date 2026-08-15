@@ -1,7 +1,11 @@
 import type { Plugin } from 'vite'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
-import { generateEnumsSource, parseDbEnums, type GenerateEnumsOptions } from './generate-enums.js'
+import {
+  generateEnumsSource,
+  parseDbEnums,
+  type GenerateEnumsOptions,
+} from './generate-enums.js'
 
 export interface ParaglideEnumsOptions extends GenerateEnumsOptions {
   /** Base-locale catalog JSON. Default `'./messages/en.json'`. */
@@ -17,7 +21,10 @@ export interface ParaglideEnumsOptions extends GenerateEnumsOptions {
 
 /** Relative ESM import specifier from `outFile` to `enumsFile`. */
 const relativeImport = (outFile: string, enumsFile: string): string => {
-  let rel = relative(dirname(resolve(outFile)), resolve(enumsFile)).replace(/\.ts$/, '.js')
+  let rel = relative(dirname(resolve(outFile)), resolve(enumsFile)).replace(
+    /\.ts$/,
+    '.js'
+  )
   if (!rel.startsWith('.')) rel = `./${rel}`
   return rel
 }
@@ -35,7 +42,10 @@ export function paraglideEnums(options: ParaglideEnumsOptions = {}): Plugin {
   const generate = (): void => {
     const catalogPath = resolve(catalog)
     if (!existsSync(catalogPath)) return
-    const data = JSON.parse(readFileSync(catalogPath, 'utf8')) as Record<string, unknown>
+    const data = JSON.parse(readFileSync(catalogPath, 'utf8')) as Record<
+      string,
+      unknown
+    >
     const keys = Object.keys(data).filter((k) => !k.startsWith('$'))
 
     const dbEnums =
@@ -43,7 +53,10 @@ export function paraglideEnums(options: ParaglideEnumsOptions = {}): Plugin {
         ? parseDbEnums(readFileSync(resolve(options.enumsFile), 'utf8'))
         : options.dbEnums
     const enumsImport =
-      options.enumsImport ?? (options.enumsFile ? relativeImport(outFile, options.enumsFile) : undefined)
+      options.enumsImport ??
+      (options.enumsFile
+        ? relativeImport(outFile, options.enumsFile)
+        : undefined)
 
     const next = generateEnumsSource(keys, {
       onWarn: (msg) => console.warn(`[@pikku/paraglide] ${msg}`),
@@ -68,7 +81,11 @@ export function paraglideEnums(options: ParaglideEnumsOptions = {}): Plugin {
       const catalogPath = resolve(catalog)
       server.watcher.add(catalogPath)
       if (options.enumsFile) server.watcher.add(resolve(options.enumsFile))
-      const watched = new Set([catalogPath, options.enumsFile && resolve(options.enumsFile)].filter(Boolean))
+      const watched = new Set(
+        [catalogPath, options.enumsFile && resolve(options.enumsFile)].filter(
+          Boolean
+        )
+      )
       const onChange = (file: string): void => {
         if (watched.has(resolve(file))) generate()
       }

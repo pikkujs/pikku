@@ -29,7 +29,7 @@ Two of workspace validate's own checks were not merely absent from fabric — th
 had never run anywhere:
 
 - the auth checks were gated on a middleware instance with `definitionId ===
-  'betterAuthSession'`, but the CLI wires `betterAuthStatelessSession` whenever
+'betterAuthSession'`, but the CLI wires `betterAuthStatelessSession` whenever
   `session.cookieCache` is on, which is the configuration Fabric asks for. So
   they skipped precisely the apps most likely to have auth.
 - they looked for migrations in `packages/functions/db/`, and for tables named

@@ -25,7 +25,7 @@ saying which phase it happened in.
 suspended or waiting and teardown would fire mid-flight. When the scenario has
 already failed for its own reason, an `after`-hook failure is attached as
 `cause` and logged rather than replacing the headline; only a teardown failure
-after a *passing* scenario fails the run.
+after a _passing_ scenario fails the run.
 
 At the feature level (`workflow.types.ts`, `CoreFeature`), hooks run once around
 the whole group — `before → a → b → c → after` — not per scenario. That is the

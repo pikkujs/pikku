@@ -136,8 +136,7 @@ const recordAndResolve = (
   callLog.push({
     userMessage: userMessageFromCall(options),
     instructions: options.prompt.find((m) => m.role === 'system')?.content as
-      | string
-      | undefined,
+      string | undefined,
     messages: options.prompt.filter((m) => m.role !== 'system'),
     toolNames: tools.map((t) => t.name),
     toolSchemas: Object.fromEntries(

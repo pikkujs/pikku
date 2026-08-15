@@ -142,7 +142,8 @@ The wrapper alternative — a module that walks the namespace and pipes each mes
 
   `packages/console` is the one place in this repo that still wraps it, in `src/i18n/messages.ts`, to keep the debug mask (`█`) it carried over from i18next. That wrapper is a leftover, not a pattern — the generated-locale approach above is how a new app gets the same masking without touching every export. Don't copy it.
 
-  The `mKey`/`mList` runtime resolvers that used to live beside it are **gone**, and must not come back. `mList` resolved indexed `prefix.0` keys that no longer exist; `mKey` took a computed string, which is exactly the type safety Paraglide exists to provide. Where a key really is dynamic, map the discriminant to a message *function* and call it — the map is type-checked, a string is not.
+  The `mKey`/`mList` runtime resolvers that used to live beside it are **gone**, and must not come back. `mList` resolved indexed `prefix.0` keys that no longer exist; `mKey` took a computed string, which is exactly the type safety Paraglide exists to provide. Where a key really is dynamic, map the discriminant to a message _function_ and call it — the map is type-checked, a string is not.
+
 - Don't re-resolve messages by string key or re-implement `{param}` interpolation. A key-string resolver turns a missing key back into silent runtime text, surrendering the type safety that is the entire reason to use Paraglide.
 - Don't reach for i18next/react-i18next or a runtime-fetch translation loader — Paraglide's compiled functions are the whole delivery mechanism.
 - Don't tokenize backend error messages or logs here — those are not frontend display strings.

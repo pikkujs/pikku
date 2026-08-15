@@ -10,7 +10,7 @@ tags: services
 `QueueWebhookService.resolveJobOptions`
 (`packages/core/src/services/queue-webhook-service.ts`) resolves retries as
 per-call `retries` → `config.webhook.retries` → `DEFAULT_WEBHOOK_RETRIES`, then
-*always* puts `attempts: retries + 1` on the job options. It mirrors the workflow
+_always_ puts `attempts: retries + 1` on the job options. It mirrors the workflow
 service's policy resolution. Backoff is exponential unless a concrete
 `retryDelay` selects a fixed one.
 

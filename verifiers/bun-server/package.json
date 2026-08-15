@@ -10,13 +10,13 @@
     "@pikku/bun-server": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "ws": "^8.19.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@types/node": "^24",
     "@types/ws": "^8",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
   "scripts": {

@@ -23,8 +23,8 @@ export interface GetMigrationsResult {
 }
 
 let cachedGetMigrations:
-  | ((config: BetterAuthOptionsLike) => Promise<GetMigrationsResult>)
-  | null = null
+  ((config: BetterAuthOptionsLike) => Promise<GetMigrationsResult>) | null =
+  null
 
 async function loadGetMigrations() {
   if (cachedGetMigrations) return cachedGetMigrations

@@ -9,7 +9,7 @@ tags: core, api
 
 `public-surface.json` records `Object.keys(module)` for every entry point. That
 is a real guard — it caught a new `./node-host-resolver` subpath and five
-renames during a rebase — but it only sees *names*.
+renames during a rebase — but it only sees _names_.
 
 It cannot see:
 

@@ -500,8 +500,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     let wireServices: Record<string, unknown> | undefined
     try {
       wireServices = (await createWireServices?.(singletonServices, wire)) as
-        | Record<string, unknown>
-        | undefined
+        Record<string, unknown> | undefined
       const services =
         wireServices && Object.keys(wireServices).length > 0
           ? { ...singletonServices, ...wireServices }

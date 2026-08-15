@@ -27,7 +27,7 @@
     "@ai-sdk/provider": "^3.0.0"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "^3.0.14",
+    "@ai-sdk/provider": "^3.0.15",
     "typescript": "^6.0.3"
   }
 }

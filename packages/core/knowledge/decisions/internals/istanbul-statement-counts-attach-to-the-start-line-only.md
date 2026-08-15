@@ -9,7 +9,7 @@ tags: services
 
 `IstanbulCoverageService` (`packages/core/src/services/istanbul-coverage-service.ts`)
 reads instrumented counters off the `__coverage__` global and, when turning
-statement maps into line hits, credits each statement's count to its *start* line
+statement maps into line hits, credits each statement's count to its _start_ line
 and no other line it spans.
 
 This is istanbul's own semantics, and the reason matters: statements nest. An

@@ -1198,8 +1198,7 @@ function chainAgentSpec(node: ParsedNode): {
     case 'textclassifier': {
       const cats = (
         (p.categories as Record<string, unknown> | undefined)?.categories as
-          | { category?: unknown }[]
-          | undefined
+          { category?: unknown }[] | undefined
       )
         ?.map((c) => (typeof c.category === 'string' ? c.category : undefined))
         .filter((c): c is string => !!c)

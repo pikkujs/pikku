@@ -55,8 +55,7 @@ export interface KnowledgeBundle {
  * presentation would hide exactly the problems nobody has written a note for.
  */
 export type KnowledgeSelection =
-  | { kind: 'findings' }
-  | { kind: 'note'; path: string }
+  { kind: 'findings' } | { kind: 'note'; path: string }
 
 /** `knowledge/decisions/why.md` → `why.md`, which is what a listing wants. */
 export const noteFileName = (path: string): string =>

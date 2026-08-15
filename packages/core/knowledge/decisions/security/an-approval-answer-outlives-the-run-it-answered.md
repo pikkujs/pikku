@@ -11,7 +11,7 @@ An approval gate is asked for so it can be answered for afterwards. "Who
 released the funds" is the entire point of four-eyes sign-off, and until this
 change none of it was kept.
 
-Run state is where a decision *waits*, not where it is kept. The record under
+Run state is where a decision _waits_, not where it is kept. The record under
 `workflowRuns.state.__approval_<hex>` is overwritten by the next write to that
 key, and cleared outright — `decidedBy: undefined` included — whenever a
 decision is refused on replay. A trail that erases exactly the events worth
@@ -31,7 +31,7 @@ shape it had before there was anything to record.
 
 `deleteRun` cascades: `workflowStep` is `onDelete('cascade')` from
 `workflowRuns`, and `workflowStepHistory` from `workflowStep`. Deleting a run
-therefore deletes the sign-off with it — and a *refused* attempt never reaches a
+therefore deletes the sign-off with it — and a _refused_ attempt never reaches a
 step at all, so it was never in that trail to begin with.
 
 Every answer — accepted, refused at submission, or cleared on replay — is
@@ -55,5 +55,5 @@ in `pikkuSchemas`.
 **What this rules out:** a dedicated `workflowApprovals` table. It would have to
 be implemented in all seven backends and would still be deleted with the run
 unless it deliberately broke the cascade — at which point it is the audit table
-with extra steps. If approvals later need to be *queried* as a first-class
+with extra steps. If approvals later need to be _queried_ as a first-class
 entity rather than read back from the trail, that is when to revisit.

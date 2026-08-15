@@ -9,7 +9,7 @@ tags: core
 
 `runPikkuFunc` in `packages/core/src/function/function-runner.ts` does not build a
 fresh wire per call. Nested invocations — an RPC from inside a function, an addon
-sibling call, a workflow step — reuse the *same* wire object the outer transport
+sibling call, a workflow step — reuse the _same_ wire object the outer transport
 created. So before it runs, the runner captures `functionId`, `audit`,
 `addonNamespace` and the property descriptor for `rpc`, overwrites them for the
 duration of this function, and restores or `delete`s them in a `finally`. Both
@@ -18,7 +18,7 @@ inner call would leave its identity on the wire and every subsequent outer step
 would be attributed to the wrong function.
 
 The same reuse is why the audit binding is re-gated inside `executeFunction`
-rather than trusted from `createWireServices`. The audit *gate* is per-function
+rather than trusted from `createWireServices`. The audit _gate_ is per-function
 but the `auditLog` wire service is created per-transport-invocation. A nested or
 exposed-RPC call would otherwise inherit an `auditLog` built while the outer
 wire's audit config was unset (the generated `rpcCaller` declares none), and
@@ -32,7 +32,7 @@ then the auth/readonly checks, then `verifyScopes` — all of which depend only 
 the session — and only then `await data()`, schema defaults, coercion, validation
 and `runPermissions`. A request denied by scope never pays to parse or validate
 its body. `rpc` is installed as a lazily-evaluating accessor that replaces itself
-with the resolved value on first read, capturing the *caller's* package name in
+with the resolved value on first read, capturing the _caller's_ package name in
 the closure so an addon's RPCs resolve in its own namespace.
 
 **What this rules out:** dropping the save/restore blocks as duplicated

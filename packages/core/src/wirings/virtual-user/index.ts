@@ -57,10 +57,7 @@ export {
   type AgentReachability,
   type ReachableAgent,
 } from './virtual-user-agents.js'
-export {
-  IntentStack,
-  intentsForPersona,
-} from './virtual-user-intents.js'
+export { IntentStack, intentsForPersona } from './virtual-user-intents.js'
 export {
   deriveCatalogue,
   deriveIntents,

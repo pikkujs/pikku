@@ -326,7 +326,10 @@ test('warns when a secret column has not said how it is held', async () => {
   const diagnostic = result.warnings.find(
     (w) => w.code === ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN
   )
-  assert.ok(diagnostic, `expected a plain-secret warning: ${JSON.stringify(result.warnings)}`)
+  assert.ok(
+    diagnostic,
+    `expected a plain-secret warning: ${JSON.stringify(result.warnings)}`
+  )
   assert.equal(diagnostic!.severity, 'warn')
   assert.match(diagnostic!.message, /host_token/)
 })

@@ -10,7 +10,7 @@ tags: cli, validate, addons
 `pikku workspace validate` was named after one of the things a repo can be.
 Adding a second — "is this addon publishable" — invited a second command,
 `pikku addon validate`, and that is where the naming falls apart: the addons
-repo is a workspace *containing* 217 publishable addons. Standing at its root,
+repo is a workspace _containing_ 217 publishable addons. Standing at its root,
 `pikku addon validate` would have to refuse or sweep every package, at which
 point it is doing the workspace thing anyway. The two nouns were never
 alternatives.
@@ -67,7 +67,7 @@ and the published packages had drifted from it with nothing watching.
 ## The check walks whichever generated directory a package ships
 
 `dist/.pikku` is the target shape (below), but the check cannot assume it: the
-shape is what this work moved addons *to*, and a package that has not moved —
+shape is what this work moved addons _to_, and a package that has not moved —
 or was published before it did — still carries `.pikku` at the root, listed in
 `files` and mapped by `exports` as `./.pikku/*`. There it is a public entry
 point rather than build input, and its imports climb one level fewer — to
@@ -100,7 +100,7 @@ workspace link and none of it resolved on install.
 ## Only a package that publishes gets the dist shape
 
 The shape describes a tarball, so it means nothing for a `private` package —
-and applying it there actively breaks: `exports` *is* enforced across a
+and applying it there actively breaks: `exports` _is_ enforced across a
 workspace link, so repointing a private fixture at `dist` makes every consumer
 demand a directory that only a build produces. The three `verifiers/db-schema`
 and `verifiers/addon-registry` fixtures have no build script at all, so `dist`

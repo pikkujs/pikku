@@ -15,7 +15,7 @@ instance namespace when known and otherwise the package's sole namespace via
 `findAddonNamespaceForPackage`.
 
 Workflows declared by an addon are registered under the addon's package scope,
-but the namespace they answer to is chosen by the *consumer* in `wireAddon`.
+but the namespace they answer to is chosen by the _consumer_ in `wireAddon`.
 Without the proxy, `runToCompletion('myWorkflow')` written inside the addon
 resolves against root meta, misses, and throws `WorkflowNotFoundError` — leaving
 the addon author no option but to hardcode the consumer-defined namespace, which

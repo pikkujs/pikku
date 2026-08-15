@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@pikku/kysely": "^0.13.16",
-    "kysely": "^0.29.0"
+    "kysely": "^0.29.5"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.84"

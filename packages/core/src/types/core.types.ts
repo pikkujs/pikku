@@ -438,8 +438,7 @@ export type PikkuWire<
   getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
   /** Get all resolved credentials — lazy-loads from CredentialService on first call, sync thereafter */
   getCredentials: () =>
-    | Record<string, unknown>
-    | Promise<Record<string, unknown>>
+    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -476,11 +475,7 @@ export type CorePikkuMiddleware<
  * runs last, closest to the function.
  */
 export type MiddlewarePriority =
-  | 'highest'
-  | 'high'
-  | 'medium'
-  | 'low'
-  | 'lowest'
+  'highest' | 'high' | 'medium' | 'low' | 'lowest'
 
 export type CorePikkuMiddlewareConfig<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,

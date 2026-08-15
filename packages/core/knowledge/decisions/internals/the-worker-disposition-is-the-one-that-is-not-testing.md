@@ -7,7 +7,7 @@ tags: core, virtual-user
 
 # The worker disposition is the only one not testing anything
 
-Every other disposition exists to probe the product. The worker exists to *use*
+Every other disposition exists to probe the product. The worker exists to _use_
 it, which changes every parameter: it abandons rarely, runs at a low temperature,
 and is instructed to stop and report rather than guess its way past an obstacle.
 

@@ -14,7 +14,7 @@
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@types/node": "^24",
-    "tsx": "^4.20.6",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
   "scripts": {

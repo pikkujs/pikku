@@ -112,13 +112,7 @@ const setHTTPFunctionMap = (func: any) => {
 const setRouteMeta = (
   route: string,
   method:
-    | 'get'
-    | 'post'
-    | 'put'
-    | 'delete'
-    | 'patch'
-    | 'head'
-    | 'options' = 'get',
+    'get' | 'post' | 'put' | 'delete' | 'patch' | 'head' | 'options' = 'get',
   overrides: Record<string, unknown> = {}
 ) => {
   const meta = pikkuState(null, 'http', 'meta')

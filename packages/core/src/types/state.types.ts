@@ -210,8 +210,7 @@ export interface PikkuPackageState {
     /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.
      *  pikkuServices reads it to build and inject the `auth` singleton. */
     authFactory:
-      | ((services: CoreSingletonServices) => unknown | Promise<unknown>)
-      | null
+      ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null
     credentialsMeta: Record<
       string,
       { name: string; displayName: string; type: string; oauth2?: boolean }

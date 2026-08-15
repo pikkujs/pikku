@@ -421,15 +421,35 @@ async function main(): Promise<void> {
     const agentStreamPassed = await testAgentStreamWiring(
       [
         { name: 'modifyInput', type: 'agent-middleware', phase: 'before' },
-        { name: 'second-modifyInput', type: 'agent-middleware', phase: 'before' },
+        {
+          name: 'second-modifyInput',
+          type: 'agent-middleware',
+          phase: 'before',
+        },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
+        {
+          name: 'modifyOutputStream',
+          type: 'agent-middleware',
+          phase: 'before',
+        },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
+        {
+          name: 'modifyOutputStream',
+          type: 'agent-middleware',
+          phase: 'before',
+        },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
+        {
+          name: 'modifyOutputStream',
+          type: 'agent-middleware',
+          phase: 'before',
+        },
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
-        { name: 'modifyOutputStream', type: 'agent-middleware', phase: 'before' },
+        {
+          name: 'modifyOutputStream',
+          type: 'agent-middleware',
+          phase: 'before',
+        },
       ],
       singletonServices
     )
@@ -439,7 +459,11 @@ async function main(): Promise<void> {
     const agentRunPassed = await testAgentRunWiring(
       [
         { name: 'modifyInput', type: 'agent-middleware', phase: 'before' },
-        { name: 'second-modifyInput', type: 'agent-middleware', phase: 'before' },
+        {
+          name: 'second-modifyInput',
+          type: 'agent-middleware',
+          phase: 'before',
+        },
         { name: 'modifyOutput', type: 'agent-middleware', phase: 'before' },
       ],
       singletonServices

@@ -45,7 +45,10 @@ export function addWireRemoteAddon(
     ) {
       hasAuth = true
       for (const authProp of prop.initializer.properties) {
-        if (!ts.isPropertyAssignment(authProp) || !ts.isIdentifier(authProp.name))
+        if (
+          !ts.isPropertyAssignment(authProp) ||
+          !ts.isIdentifier(authProp.name)
+        )
           continue
         if (
           authProp.name.text === 'credentialId' &&

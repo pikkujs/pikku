@@ -119,8 +119,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
 
             for (const rendererName of rendererNames) {
               const rendererMeta = visitState.cli.meta.renderers[rendererName]
-              const services: string[] =
-                rendererMeta?.services?.services ?? []
+              const services: string[] = rendererMeta?.services?.services ?? []
               const unavailable = services.filter((name) => name !== 'logger')
               if (unavailable.length > 0) {
                 problematicRenderers.push({

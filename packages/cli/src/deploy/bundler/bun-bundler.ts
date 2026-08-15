@@ -36,9 +36,7 @@ interface BunPlugin {
       cb: (args: {
         path: string
         importer: string
-      }) =>
-        | { path: string; namespace?: string; external?: boolean }
-        | undefined
+      }) => { path: string; namespace?: string; external?: boolean } | undefined
     ): void
     onLoad(
       opts: { filter: RegExp; namespace?: string },

@@ -18,4 +18,4 @@ costs work to reproduce a fact that already holds.
 
 **What this rules out:** "correcting" this to a topological walk because a graph
 is present. The graph describes execution; the catalogue describes what the
-scenario *says*, and those are read in declaration order.
+scenario _says_, and those are read in declaration order.

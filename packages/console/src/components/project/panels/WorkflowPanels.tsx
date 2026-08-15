@@ -1,5 +1,13 @@
 import React from 'react'
-import { Stack, Text, Group, Table, Card, Box, Anchor } from '@pikku/mantine/core'
+import {
+  Stack,
+  Text,
+  Group,
+  Table,
+  Card,
+  Box,
+  Anchor,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { GitBranch } from 'lucide-react'
 import { useLink } from '../../../router'
@@ -205,7 +213,9 @@ export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                     </Table.Td>
                     <Table.Td>
                       {node.flow && (
-                        <PikkuBadge type="label">{asI18n(node.flow)}</PikkuBadge>
+                        <PikkuBadge type="label">
+                          {asI18n(node.flow)}
+                        </PikkuBadge>
                       )}
                       {node.rpcName && (
                         <PikkuBadge type="label" color="green">
@@ -287,7 +297,9 @@ const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                     </Table.Td>
                     <Table.Td>
                       {node.flow && (
-                        <PikkuBadge type="label">{asI18n(node.flow)}</PikkuBadge>
+                        <PikkuBadge type="label">
+                          {asI18n(node.flow)}
+                        </PikkuBadge>
                       )}
                       {node.rpcName && (
                         <PikkuBadge type="label" color="green">
@@ -355,9 +367,11 @@ export const WorkflowState: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" ff="monospace" c="dimmed">
-                          {asI18n(varDef.default !== undefined
-                            ? String(varDef.default)
-                            : '\u2014')}
+                          {asI18n(
+                            varDef.default !== undefined
+                              ? String(varDef.default)
+                              : '\u2014'
+                          )}
                         </Text>
                       </Table.Td>
                     </Table.Tr>
@@ -582,13 +596,15 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
               <Text size="sm" ff="monospace" c="red">
-                {asI18n(typeof runData.error.message === 'string'
-                  ? runData.error.message
-                  : JSON.stringify(
-                      runData.error.message ?? runData.error,
-                      null,
-                      2
-                    ))}
+                {asI18n(
+                  typeof runData.error.message === 'string'
+                    ? runData.error.message
+                    : JSON.stringify(
+                        runData.error.message ?? runData.error,
+                        null,
+                        2
+                      )
+                )}
               </Text>
             </Card.Section>
           </Card>

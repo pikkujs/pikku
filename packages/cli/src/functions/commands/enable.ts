@@ -50,7 +50,9 @@ async function enableFeature(
   // The console is an admin surface — every RPC requires a session, so
   // --no-auth is ignored for it.
   const wantsPublic =
-    noAuth && feature !== 'console' && !NO_AUTH_DIMENSION.has(feature as AuthFeature)
+    noAuth &&
+    feature !== 'console' &&
+    !NO_AUTH_DIMENSION.has(feature as AuthFeature)
 
   const value: PikkuScaffoldFeature =
     feature === 'webhook' ? true : wantsPublic ? { auth: false } : true

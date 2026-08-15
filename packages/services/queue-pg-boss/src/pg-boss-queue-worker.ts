@@ -180,7 +180,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
       logger,
       async (queueName, processor) => {
         await this.pgBoss.createQueue(queueName)
-        const workerId = await this.pgBoss.work<any>(
+        const workerId = await this.pgBoss.work(
           processor.name,
           {
             ...mapPikkuWorkerToPgBoss(processor.config),

@@ -63,7 +63,7 @@ surface as behaviour changes rather than compile errors:
   underlying cause swallowed — check the schema by hand when you see it.
 
 A failed validation throws `UnprocessableContentError` (422) with the validator
-errors joined; a *missing* schema throws a bare string, `Missing validator for
+errors joined; a _missing_ schema throws a bare string, `Missing validator for
 <name>`, not an `Error`.
 
 ## Usage Patterns

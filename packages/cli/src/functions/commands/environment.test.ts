@@ -22,8 +22,7 @@ describe('resolveEnvironment', () => {
 
   test('an unknown environment with nothing configured shows what to add', () => {
     assert.throws(
-      () =>
-        resolveEnvironment({ environment: 'staging', environments: {} }),
+      () => resolveEnvironment({ environment: 'staging', environments: {} }),
       /Add environments to pikku.config.json/
     )
   })

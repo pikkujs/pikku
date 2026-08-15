@@ -15,25 +15,34 @@ const wires = {
 
 describe('filterWiresForRun', () => {
   test('keeps only the http wire the run came in on', () => {
-    assert.deepEqual(filterWiresForRun(wires, { type: 'http', id: 'get:/orders' }), {
-      http: [{ method: 'GET', route: '/orders' }],
-    })
+    assert.deepEqual(
+      filterWiresForRun(wires, { type: 'http', id: 'get:/orders' }),
+      {
+        http: [{ method: 'GET', route: '/orders' }],
+      }
+    )
   })
 
   test('defaults a missing method to get, matching how ids are minted', () => {
     assert.deepEqual(
-      filterWiresForRun({ http: [{ route: '/health' }] }, {
-        type: 'http',
-        id: 'get:/health',
-      }),
+      filterWiresForRun(
+        { http: [{ route: '/health' }] },
+        {
+          type: 'http',
+          id: 'get:/health',
+        }
+      ),
       { http: [{ route: '/health' }] }
     )
   })
 
   test('matches queues by name and clis by command', () => {
-    assert.deepEqual(filterWiresForRun(wires, { type: 'queue', id: 'invoices' }), {
-      queue: [{ name: 'invoices' }],
-    })
+    assert.deepEqual(
+      filterWiresForRun(wires, { type: 'queue', id: 'invoices' }),
+      {
+        queue: [{ name: 'invoices' }],
+      }
+    )
     assert.deepEqual(filterWiresForRun(wires, { type: 'cli', id: 'sync' }), {
       cli: [{ command: 'sync' }],
     })
@@ -44,9 +53,12 @@ describe('filterWiresForRun', () => {
       filterWiresForRun(wires, { type: 'scheduler', id: '0 * * * *' }),
       { schedule: [{ cron: '0 * * * *' }] }
     )
-    assert.deepEqual(filterWiresForRun(wires, { type: 'scheduler', id: '5m' }), {
-      schedule: [{ interval: '5m' }],
-    })
+    assert.deepEqual(
+      filterWiresForRun(wires, { type: 'scheduler', id: '5m' }),
+      {
+        schedule: [{ interval: '5m' }],
+      }
+    )
   })
 
   test('keeps every wire of the type when the run carries no id', () => {
@@ -60,7 +72,10 @@ describe('filterWiresForRun', () => {
   })
 
   test('returns nothing when the workflow has no wires of that type', () => {
-    assert.deepEqual(filterWiresForRun({ queue: [] }, { type: 'http', id: 'get:/' }), {})
+    assert.deepEqual(
+      filterWiresForRun({ queue: [] }, { type: 'http', id: 'get:/' }),
+      {}
+    )
   })
 
   // Characterises a live bug rather than the intent. `wireTypeToWiresKey` has

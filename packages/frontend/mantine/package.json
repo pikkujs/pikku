@@ -35,8 +35,8 @@
     "react-dom": "^18 || ^19"
   },
   "devDependencies": {
-    "@mantine/core": "^9.2.1",
-    "@mantine/hooks": "^9.2.1",
+    "@mantine/core": "^9.5.1",
+    "@mantine/hooks": "^9.5.1",
     "@pikku/react": "workspace:^",
     "@types/react": "^19",
     "react": "^19",

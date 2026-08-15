@@ -2,7 +2,9 @@
   "name": "@pikku/verifier-registry-consumer",
   "type": "module",
   "private": true,
-  "workspaces": ["addons/*"],
+  "workspaces": [
+    "addons/*"
+  ],
   "imports": {
     "#pikku": "./.pikku/pikku-types.gen.ts",
     "#pikku/*": "./.pikku/*"

@@ -9,9 +9,7 @@ import {
 
 type EmailPrimitive = string | number | boolean | null | undefined
 type EmailTemplateValue =
-  | EmailPrimitive
-  | Record<string, unknown>
-  | Array<unknown>
+  EmailPrimitive | Record<string, unknown> | Array<unknown>
 
 export interface RenderEmailPreviewInput {
   templateName: string
@@ -44,8 +42,7 @@ export const renderEmailPreview = pikkuFunc<
   func: async ({ metaService }, input) => {
     const emailsMeta = await metaService.getEmailMeta()
     const templateMeta = emailsMeta.templates[input.templateName] as
-      | EmailTemplateMeta
-      | undefined
+      EmailTemplateMeta | undefined
 
     if (!templateMeta) {
       throw new NotFoundError(`Unknown email template: ${input.templateName}`)

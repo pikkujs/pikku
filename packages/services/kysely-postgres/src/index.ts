@@ -12,7 +12,4 @@ export { PikkuKysely } from './pikku-kysely.js'
 export { KyselyCredentialService } from '@pikku/kysely'
 export type { KyselyPikkuDB } from '@pikku/kysely'
 export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
-export type {
-  AgentRunService,
-  AgentRunRow,
-} from '@pikku/core/ecosystem/agent'
+export type { AgentRunService, AgentRunRow } from '@pikku/core/ecosystem/agent'

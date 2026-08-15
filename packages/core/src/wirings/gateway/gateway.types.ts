@@ -31,8 +31,7 @@ export interface GatewayOutboundMessage {
 }
 
 export type WebhookVerificationResult =
-  | { verified: true; response: unknown }
-  | { verified: false }
+  { verified: true; response: unknown } | { verified: false }
 
 export interface GatewayAdapter {
   name: string

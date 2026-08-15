@@ -8,6 +8,4 @@
 import { AzureProviderAdapter } from './adapter.js'
 export { AzureProviderAdapter }
 export const createAdapter = () => new AzureProviderAdapter()
-export type {
-  AzureInfraManifest,
-} from './types.js'
+export type { AzureInfraManifest } from './types.js'

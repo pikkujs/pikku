@@ -75,8 +75,7 @@ export const addGlobalPermission = (
   packageName: string | null = null
 ): CorePermissionGroup | CorePikkuPermission[] => {
   const state = pikkuState(packageName, 'permissions', 'global') as unknown as (
-    | CorePermissionGroup
-    | CorePikkuPermission
+    CorePermissionGroup | CorePikkuPermission
   )[]
   if (Array.isArray(permissions)) {
     state.push(...(permissions as CorePikkuPermission[]))
@@ -91,8 +90,7 @@ const bucket = (
   packageName: string | null
 ): (CorePermissionGroup | CorePikkuPermission)[] =>
   (pikkuState(packageName, 'permissions', 'global') as unknown as (
-    | CorePermissionGroup
-    | CorePikkuPermission
+    CorePermissionGroup | CorePikkuPermission
   )[]) ?? []
 
 /**

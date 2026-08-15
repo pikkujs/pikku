@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { Box, Stack, TextInput, NavLink, Text, ScrollArea } from '@pikku/mantine/core'
+import {
+  Box,
+  Stack,
+  TextInput,
+  NavLink,
+  Text,
+  ScrollArea,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -89,7 +96,9 @@ const CommandNode: React.FC<CommandNodeProps> = ({
           {asI18n(command.name)}
         </Text>
       }
-      description={command.description ? asI18n(command.description) : undefined}
+      description={
+        command.description ? asI18n(command.description) : undefined
+      }
       active={isActive}
       opened={isParentOfActive || undefined}
       onClick={() => onSelect(command.path)}

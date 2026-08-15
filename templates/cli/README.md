@@ -343,9 +343,7 @@ wireCLI({
 {
   "cli": {
     "entrypoints": {
-      "my-cli": [
-        /* ... */
-      ] // Must match
+      "my-cli": [/* ... */] // Must match
     }
   }
 }

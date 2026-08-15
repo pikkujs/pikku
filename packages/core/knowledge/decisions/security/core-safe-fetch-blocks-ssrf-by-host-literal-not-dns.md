@@ -10,7 +10,7 @@ tags: core
 `packages/core/src/utils/safe-fetch.ts` guards every outbound fetch that core
 makes on a caller-supplied URL. `@pikku/core` runs in edge runtimes (Cloudflare
 Workers) that have no Node `dns` module, so the guard cannot resolve a hostname
-and inspect the resulting address. It instead rejects address *literals* that are
+and inspect the resulting address. It instead rejects address _literals_ that are
 obviously internal — loopback, `10/8`, `172.16/12`, `192.168/16`, `0.0.0.0/8`,
 link-local `169.254/16` (the cloud metadata endpoint), IPv6 `::`, `::1`,
 `fe80::/10` and `fc00::/7` — plus the alias forms that reach the same targets:

@@ -7,18 +7,9 @@ export { generateWorkflowFromN8n } from './codegen.js'
  * project without colliding. First piece of the shared core; see
  * `@pikku/make-import`.
  */
-export {
-  dedupe,
-  toCamelCase,
-  toKebabCase,
-} from './naming.js'
+export { dedupe, toCamelCase, toKebabCase } from './naming.js'
 
-export type {
-  ParsedWorkflow,
-} from './types.js'
+export type { ParsedWorkflow } from './types.js'
 export type { Topology } from './topology.js'
-export type {
-  ClassifiedExpression,
-  ExprContext,
-} from './expressions.js'
+export type { ClassifiedExpression, ExprContext } from './expressions.js'
 export type { GenerateResult } from './codegen.js'

@@ -11,6 +11,4 @@ export { ServerlessProviderAdapter }
 export const createAdapter = () => new ServerlessProviderAdapter()
 
 // Types
-export type {
-  ServerlessInfraManifest,
-} from './types.js'
+export type { ServerlessInfraManifest } from './types.js'

@@ -43,7 +43,7 @@ export type HTTPWiringHandlerOf<
   : never
 
 export type HTTPWiringsWithMethod<Method extends string> = {
-  [HTTPWiring in keyof HTTPWiringsMap]: Method extends keyof HTTPWiringsMap[HTTPWiring]
-    ? HTTPWiring
-    : never
+  [
+    HTTPWiring in keyof HTTPWiringsMap
+  ]: Method extends keyof HTTPWiringsMap[HTTPWiring] ? HTTPWiring : never
 }[keyof HTTPWiringsMap]

@@ -368,8 +368,7 @@ const _getPikkuCLIConfig = async (
       remoteRpc: 'remoteRpcWorkersFile',
     }
     const scaffoldBlock = result.scaffold as
-      | Record<string, PikkuScaffoldFeature>
-      | undefined
+      Record<string, PikkuScaffoldFeature> | undefined
     for (const [feature, outputField] of Object.entries(
       SCAFFOLD_OUTPUT_FIELDS
     )) {

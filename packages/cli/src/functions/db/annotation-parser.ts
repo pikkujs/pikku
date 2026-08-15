@@ -78,9 +78,7 @@ type RawTable = Record<string, RawEntry | null>
  */
 function isColumnEntry(value: unknown): boolean {
   if (typeof value !== 'object' || value === null) return false
-  return Object.values(value).every(
-    (v) => typeof v !== 'object' || v === null
-  )
+  return Object.values(value).every((v) => typeof v !== 'object' || v === null)
 }
 
 /**

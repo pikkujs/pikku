@@ -11,7 +11,7 @@ tags: workflow
 off the queue message and hands it to `executeWorkflowStep`. That call runs as
 the run's owner — `invokeStepRpc` copies `run.wire.pikkuUserId` onto the wire —
 and `rpcWithWire` does not apply the `expose` gate that the public `/rpc` route
-applies. So the message decided both *what* ran and *as whom*.
+applies. So the message decided both _what_ ran and _as whom_.
 
 The claim in `executeWorkflowStepInner` read the step's status and nothing else;
 there was no stored function name to compare against. `StepState` now carries

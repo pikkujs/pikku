@@ -14,7 +14,7 @@ tags: core, channel
 `channel-common.ts` and `channel-handler.ts` — assert across the gap.
 
 A factory is `(input: In) => CorePikkuChannelMiddleware`: the author is meant to
-*call* it at wiring time and put the result in the array.
+_call_ it at wiring time and put the result in the array.
 `combineChannelMiddleware` contains no factory-resolution branch, and neither
 does `combineMiddleware` for ordinary middleware — that is consistent and
 deliberate. So a bare, uncalled factory in `channelMiddleware` would be pushed

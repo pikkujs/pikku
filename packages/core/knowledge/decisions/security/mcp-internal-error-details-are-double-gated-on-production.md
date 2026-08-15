@@ -9,7 +9,7 @@ tags: mcp
 
 `RunMCPEndpointParams.exposeErrors` in
 `packages/core/src/wirings/mcp/mcp-runner.ts` defaults to `!isProduction()`, and
-`runMCPPikkuFunc` checks `exposeErrors && !isProduction()` *again* when building
+`runMCPPikkuFunc` checks `exposeErrors && !isProduction()` _again_ when building
 the `-32603` internal-error response that carries `{ message, stack }`. The
 second check looks redundant against the default — it is not. The default only
 applies when the caller omits the option; a caller that passes

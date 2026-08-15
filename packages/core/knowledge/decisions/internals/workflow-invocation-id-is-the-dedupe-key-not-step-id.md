@@ -26,7 +26,7 @@ plus the version and variant bit twiddling) rather than pulled from the `uuid`
 package, and `workflow-invocation-id.test.ts` pins it against the known
 `www.example.com`-in-DNS-namespace vector.
 
-Calling the same step name more than once in a run *is* disambiguated. Ordinals
+Calling the same step name more than once in a run _is_ disambiguated. Ordinals
 are already in: `nextStepKey` (`pikku-workflow-service.ts`) mints a physical key
 per reach — `name`, then `name#1`, `name#2` — and every step entry point routes
 through it, so `deriveInvocationId` hashes the physical key, not the logical

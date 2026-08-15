@@ -27,8 +27,7 @@ export const withResolvedScopes = async (
   services: CoreServices
 ): Promise<CoreUserSession> => {
   const scopeService = (services as any).scopeService as
-    | ScopeService
-    | undefined
+    ScopeService | undefined
 
   if (!scopeService || session.scopes || !session.userId) {
     return session

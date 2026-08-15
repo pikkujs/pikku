@@ -20,39 +20,39 @@ refactor, add error handling, or invent fields.
 3. **Apply the rubric.**
 4. **Edit only the function body.** Leave imports, schemas, JSDoc, name, description, refs untouched unless step 5 forces it.
 5. **If the schemas are wrong** (code reads `$json.userId: string` but input is `items: z.array(z.unknown())`), tighten with the smallest change. Prefer `z.unknown()` over `z.any()`. Never widen output to `z.any()`.
-6. **Add one comment** at the top of the body noting the mode: `// translated from n8n Code node, mode: runOnceForAllItems`. This is the *only* comment you may add.
+6. **Add one comment** at the top of the body noting the mode: `// translated from n8n Code node, mode: runOnceForAllItems`. This is the _only_ comment you may add.
 7. **Typecheck** (`yarn tsc` from the package root); fix errors with the smallest change.
 
 ## Rubric
 
 ### Envelope unwrapping — all-items mode
 
-| n8n | Pikku |
-|---|---|
-| `items` | `(data.items ?? []) as any[]` (or typed if known) |
-| `items[i].json.X` | `items[i].X` |
-| `items[i].json` | `items[i]` |
-| `items[i].binary` | **NOT supported** — leave a TODO and explain |
-| `items.length` | `items.length` |
-| `items.map(i => i.json.X)` | `items.map((i: any) => i.X)` |
+| n8n                        | Pikku                                             |
+| -------------------------- | ------------------------------------------------- |
+| `items`                    | `(data.items ?? []) as any[]` (or typed if known) |
+| `items[i].json.X`          | `items[i].X`                                      |
+| `items[i].json`            | `items[i]`                                        |
+| `items[i].binary`          | **NOT supported** — leave a TODO and explain      |
+| `items.length`             | `items.length`                                    |
+| `items.map(i => i.json.X)` | `items.map((i: any) => i.X)`                      |
 
 ### Envelope unwrapping — each-item mode
 
-| n8n | Pikku |
-|---|---|
-| `$json.X` / `$input.item.json.X` | `data.X` (input is the item itself) |
-| `$input.item.json` | `data` |
-| `$input.all()` | not available per-item — change to all-items mode |
+| n8n                              | Pikku                                             |
+| -------------------------------- | ------------------------------------------------- |
+| `$json.X` / `$input.item.json.X` | `data.X` (input is the item itself)               |
+| `$input.item.json`               | `data`                                            |
+| `$input.all()`                   | not available per-item — change to all-items mode |
 
 ### Return statement
 
-| n8n | Pikku |
-|---|---|
-| `return [{ json: X }]` | `return { items: [X] }` |
-| `return items.map(i => ({ json: ... }))` | `return { items: items.map(...) }` |
-| `return [{ json: X }, { json: Y }]` | `return { items: [X, Y] }` |
-| `return { json: X }` (each-item) | `return X` |
-| `return [...]` (already plain) | wrap in `{ items: [...] }` only if the output schema expects it |
+| n8n                                      | Pikku                                                           |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `return [{ json: X }]`                   | `return { items: [X] }`                                         |
+| `return items.map(i => ({ json: ... }))` | `return { items: items.map(...) }`                              |
+| `return [{ json: X }, { json: Y }]`      | `return { items: [X, Y] }`                                      |
+| `return { json: X }` (each-item)         | `return X`                                                      |
+| `return [...]` (already plain)           | wrap in `{ items: [...] }` only if the output schema expects it |
 
 ### Built-ins — do NOT auto-translate
 
@@ -80,6 +80,7 @@ the first param).
 ## Example
 
 Before (stub):
+
 ```ts
 /**
  * STUB — generated from n8n Code node "Custom Code".
@@ -90,12 +91,15 @@ export const codeStubCustomCode = pikkuSessionlessFunc({
   input: CodeStubCustomCodeInput,
   output: CodeStubCustomCodeOutput,
   func: async (_services, _data) => {
-    throw new Error('Stub: ported from n8n Code node "Custom Code" — implement me')
+    throw new Error(
+      'Stub: ported from n8n Code node "Custom Code" — implement me'
+    )
   },
 })
 ```
 
 After:
+
 ```ts
 export const codeStubCustomCode = pikkuSessionlessFunc({
   description: 'Ported from n8n Code node "Custom Code"',

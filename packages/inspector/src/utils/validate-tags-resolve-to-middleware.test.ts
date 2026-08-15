@@ -59,7 +59,10 @@ describe('validateTagsResolveToMiddleware', () => {
   })
 
   test('stays quiet when http middleware is registered for the tag', () => {
-    assert.deepEqual(run(stateWith({ console: { tags: ['admin'] } }, ['admin'])), [])
+    assert.deepEqual(
+      run(stateWith({ console: { tags: ['admin'] } }, ['admin'])),
+      []
+    )
   })
 
   test('stays quiet when only channel middleware is registered for the tag', () => {

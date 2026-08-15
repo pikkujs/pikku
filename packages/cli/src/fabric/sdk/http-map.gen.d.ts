@@ -794,10 +794,7 @@ export type ListProjectsOutput = {
     }
     activity: {
       kind:
-        | 'feature_merged'
-        | 'feature_created'
-        | 'feature_building'
-        | 'deployed'
+        'feature_merged' | 'feature_created' | 'feature_building' | 'deployed'
       title: string
       timestamp: string
     }[]
@@ -1371,7 +1368,7 @@ export type HTTPWiringHandlerOf<
   : never
 
 export type HTTPWiringsWithMethod<Method extends string> = {
-  [HTTPWiring in keyof HTTPWiringsMap]: Method extends keyof HTTPWiringsMap[HTTPWiring]
-    ? HTTPWiring
-    : never
+  [
+    HTTPWiring in keyof HTTPWiringsMap
+  ]: Method extends keyof HTTPWiringsMap[HTTPWiring] ? HTTPWiring : never
 }[keyof HTTPWiringsMap]

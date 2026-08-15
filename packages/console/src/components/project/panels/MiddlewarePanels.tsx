@@ -128,7 +128,9 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
         <>
           <Divider />
           <Box>
-            <SectionLabel>{asI18n(`Instances (${usedByInstances.length})`)}</SectionLabel>
+            <SectionLabel>
+              {asI18n(`Instances (${usedByInstances.length})`)}
+            </SectionLabel>
             <Table verticalSpacing={4} horizontalSpacing="xs">
               <Table.Thead>
                 <Table.Tr>
@@ -217,7 +219,9 @@ const GroupPanel: React.FC<{
           type="label"
           color={groupType === 'http' ? 'blue' : 'green'}
         >
-          {asI18n(groupType === 'http' ? `HTTP ${groupKey}` : `Tag: ${groupKey}`)}
+          {asI18n(
+            groupType === 'http' ? `HTTP ${groupKey}` : `Tag: ${groupKey}`
+          )}
         </PikkuBadge>
       </Box>
 
@@ -232,7 +236,9 @@ const GroupPanel: React.FC<{
 
       {resolvedDefs.length > 0 && (
         <Box>
-          <SectionLabel>{asI18n(`Middleware (${resolvedDefs.length})`)}</SectionLabel>
+          <SectionLabel>
+            {asI18n(`Middleware (${resolvedDefs.length})`)}
+          </SectionLabel>
           <Table verticalSpacing={4} horizontalSpacing="xs">
             <Table.Thead>
               <Table.Tr>

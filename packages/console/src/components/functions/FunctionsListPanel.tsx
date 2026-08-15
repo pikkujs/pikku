@@ -161,9 +161,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
             <Text
               size="sm"
               ff="monospace"
-              c={
-                count > 0 ? 'var(--app-violet)' : 'var(--app-text-dim)'
-              }
+              c={count > 0 ? 'var(--app-violet)' : 'var(--app-text-dim)'}
             >
               {asI18n(count > 0 ? String(count) : '—')}
             </Text>

@@ -23,7 +23,7 @@ satisfy an admin-only function's requirements, because the two gates are
 evaluated independently against separate inputs. An empty or absent group passes,
 so declaring no permissions means "globals only", not "deny".
 
-Globals are bucketed per package, and a function reads *both* the root bucket and
+Globals are bucketed per package, and a function reads _both_ the root bucket and
 its own package's — root first. The generated `addGlobalPermission` wrapper takes
 no package argument, so an application's rules only ever land in the root bucket;
 resolving the package bucket alone meant a host rule like "every request needs a

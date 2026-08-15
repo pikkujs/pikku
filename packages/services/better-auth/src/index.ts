@@ -50,9 +50,6 @@ export type {
 export { credentialOAuth } from './credential-oauth.plugin.js'
 export type { CredentialOAuthOptions } from './credential-oauth.plugin.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'
-export type {
-  AuthProvider,
-  AuthProviderDef,
-} from './provider-registry.js'
+export type { AuthProvider, AuthProviderDef } from './provider-registry.js'
 export { pluginDisplayName } from './plugin-registry.js'
 export type { AuthPluginDef } from './plugin-registry.js'

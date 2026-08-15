@@ -6,7 +6,5 @@
     "declaration": false,
     "declarationMap": false
   },
-  "files": [
-    "src/services/cli-logger.service.type.test.ts"
-  ]
+  "files": ["src/services/cli-logger.service.type.test.ts"]
 }

@@ -79,7 +79,10 @@ function matchSubpath(
       const suffix = key.slice(star + 1)
       if (!subpath.startsWith(prefix) || !subpath.endsWith(suffix)) return null
       if (subpath.length < prefix.length + suffix.length) return null
-      const wildcard = subpath.slice(prefix.length, subpath.length - suffix.length)
+      const wildcard = subpath.slice(
+        prefix.length,
+        subpath.length - suffix.length
+      )
       return { key, value, wildcard }
     })
     .filter((c): c is NonNullable<typeof c> => c !== null)
@@ -123,10 +126,7 @@ async function collectWorkspacePackages(
   return packages
 }
 
-async function* sourceFiles(
-  dir: string,
-  depth = 0
-): AsyncGenerator<string> {
+async function* sourceFiles(dir: string, depth = 0): AsyncGenerator<string> {
   if (depth > 8) return
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
   for (const entry of entries) {

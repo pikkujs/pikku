@@ -14,7 +14,12 @@ export const QueuesPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.queues_title()} description={m.queues_description()} />}
+        header={
+          <ListPageHeader
+            title={m.queues_title()}
+            description={m.queues_description()}
+          />
+        }
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.queues_select_item()}
       >

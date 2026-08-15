@@ -18,7 +18,7 @@ it is closed the same way: `runPikkuFunc` resolves both from the addon config.
 `auth` merges as an OR and `auth: false` is ignored. The RPC path treats it as a
 default (`addonConfig?.auth ?? options.requiresAuth`) because there the addon
 config is the only statement of intent. On a direct wiring the route already
-carries its own `auth`, so honouring `false` would let an addon *weaken* a gate
+carries its own `auth`, so honouring `false` would let an addon _weaken_ a gate
 the app wrote — the inverse of what a wiring-level declaration should be able to
 do. An addon may require a session the wiring did not; it may never waive one
 the wiring did.

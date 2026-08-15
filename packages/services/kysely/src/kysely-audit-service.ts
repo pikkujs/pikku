@@ -118,8 +118,7 @@ export class KyselyAuditService implements AuditService {
     if (!batch.length) return
     const rows = batch.map((e) => {
       const metadata = e.metadata as
-        | { tables?: unknown; changedColumns?: unknown }
-        | undefined
+        { tables?: unknown; changedColumns?: unknown } | undefined
       return {
         audit_id: e.eventId ?? e.queryId ?? fallbackId(),
         occurred_at: e.occurredAt ?? new Date().toISOString(),

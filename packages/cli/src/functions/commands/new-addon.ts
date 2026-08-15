@@ -1032,10 +1032,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
 
     // Validate credential type if provided
     const credentialType = credential as
-      | 'apikey'
-      | 'bearer'
-      | 'oauth2'
-      | undefined
+      'apikey' | 'bearer' | 'oauth2' | undefined
     if (
       credentialType &&
       !['apikey', 'bearer', 'oauth2'].includes(credentialType)

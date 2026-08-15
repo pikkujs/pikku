@@ -12,9 +12,7 @@ export {
   type DelegatedLoginConfig,
 } from './auth-config.js'
 
-export {
-  type NamedOperation,
-} from './naming.js'
+export { type NamedOperation } from './naming.js'
 
 export {
   type OpenAPISchema,

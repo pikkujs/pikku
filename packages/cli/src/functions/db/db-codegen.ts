@@ -706,8 +706,7 @@ export async function generateSchemaTypes(
     claimedBy.set(stripped, t.name)
     displayNames.set(t.name, stripped)
   }
-  const displayName = (name: string): string =>
-    displayNames.get(name) ?? name
+  const displayName = (name: string): string => displayNames.get(name) ?? name
 
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables
@@ -789,7 +788,8 @@ export async function generateSchemaTypes(
         // Keyed by the name the query is written against, since that is what
         // the runtime plugin sees on the Kysely node.
         const key = displayName(table.name)
-        if (!coercionMap[key]) coercionMap[key] = {} as Record<string, ColumnKind>
+        if (!coercionMap[key])
+          coercionMap[key] = {} as Record<string, ColumnKind>
         coercionMap[key]![col.name] = kind
       }
     }

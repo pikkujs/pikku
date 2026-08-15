@@ -166,11 +166,7 @@ export type VirtualUserAction =
 
 /** How an intent ended, or that it has not. */
 export type IntentStatus =
-  | 'open'
-  | 'suspended'
-  | 'completed'
-  | 'abandoned'
-  | 'stuck'
+  'open' | 'suspended' | 'completed' | 'abandoned' | 'stuck'
 
 /** One intent's life within a run. */
 export interface IntentRecord {

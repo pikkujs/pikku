@@ -51,7 +51,12 @@ development and a single-instance deployment, wrong for anything else.
 ### Scheduling a one-off RPC
 
 ```typescript
-const taskId = await schedulerService.scheduleRPC('5m', 'sendReminder', data, session)
+const taskId = await schedulerService.scheduleRPC(
+  '5m',
+  'sendReminder',
+  data,
+  session
+)
 await schedulerService.getTask(taskId) // { rpcName, scheduledFor, status, … } | null
 await schedulerService.getAllTasks() // pending one-offs only
 await schedulerService.unschedule(taskId) // true when it was still pending

@@ -58,8 +58,7 @@ export const streamsAgent = pikkuScenarioStep<
     )
 
     const usage = firstOfType(events, AG_UI.runFinished)?.usage as
-      | { totalTokens?: number }
-      | undefined
+      { totalTokens?: number } | undefined
 
     return {
       status,
@@ -70,11 +69,9 @@ export const streamsAgent = pikkuScenarioStep<
         .join(''),
       totalTokens: usage?.totalTokens ?? 0,
       toolCallId: firstOfType(events, AG_UI.toolCallStart)?.toolCallId as
-        | string
-        | undefined,
+        string | undefined,
       toolResultId: firstOfType(events, AG_UI.toolCallResult)?.toolCallId as
-        | string
-        | undefined,
+        string | undefined,
     }
   },
 })

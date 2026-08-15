@@ -22,9 +22,7 @@ export type RefFn<NodeIds extends string = string> = (
 ) => RefValue
 
 export type NextConfig<NodeIds extends string = string> =
-  | NodeIds
-  | NodeIds[]
-  | Record<string, NodeIds | NodeIds[]>
+  NodeIds | NodeIds[] | Record<string, NodeIds | NodeIds[]>
 
 export interface GraphNodeConfig<NodeIds extends string = string> {
   func: string

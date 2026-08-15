@@ -19,7 +19,7 @@ the conversion happens. The parser normalises every incoming `--from-plan` to
 `fromPlan` on the way in, and both `formatOptions` (help text) and the
 "Missing required option" / "Invalid value for" errors render back to kebab on
 the way out. `suggestOption` deliberately compares the typed string against
-*both* forms, so `--autoApply` and `--auto-apply` both find `autoApply`.
+_both_ forms, so `--autoApply` and `--auto-apply` both find `autoApply`.
 
 **What this rules out:** storing option keys kebab-cased anywhere in CLI state or
 metadata — the schema pluck would then match nothing and every option would be

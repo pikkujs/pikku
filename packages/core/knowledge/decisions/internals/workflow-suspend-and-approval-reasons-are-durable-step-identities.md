@@ -28,7 +28,7 @@ one key per gate means two gates resolving concurrently cannot clobber each
 other through a read-modify-write.
 
 One consequence to know about: `approveStep`'s optional `reason` argument
-addresses the *first* reach of a gate only. If a gate is reached again on a
+addresses the _first_ reach of a gate only. If a gate is reached again on a
 later loop iteration, `nextStepKey` gives that row a `#N` suffix, and there is
 currently no way for a caller to name it.
 

@@ -32,7 +32,11 @@ function runCLI(args: string[]): string {
 }
 
 let failures = 0
-const results: Array<{ name: string; status: 'passed' | 'failed'; error?: string }> = []
+const results: Array<{
+  name: string
+  status: 'passed' | 'failed'
+  error?: string
+}> = []
 
 async function check(name: string, fn: () => void | Promise<void>) {
   try {
@@ -56,25 +60,35 @@ await check('pikku binary command is registered (binary --help works)', () => {
 await check('pikku binary compiles fixture.ts to a host native binary', () => {
   runCLI(['binary'])
   if (!existsSync(exe(BINARY_OUTPUT))) {
-    throw new Error(`Expected binary at ${exe(BINARY_OUTPUT)} but it does not exist`)
+    throw new Error(
+      `Expected binary at ${exe(BINARY_OUTPUT)} but it does not exist`
+    )
   }
 })
 
-await check('compiled host binary is executable and prints expected output', () => {
-  const out = execFileSync(exe(BINARY_OUTPUT), [], { encoding: 'utf-8' })
-  if (!out.includes('hello from pikku binary')) {
-    throw new Error(`Unexpected output: ${out}`)
+await check(
+  'compiled host binary is executable and prints expected output',
+  () => {
+    const out = execFileSync(exe(BINARY_OUTPUT), [], { encoding: 'utf-8' })
+    if (!out.includes('hello from pikku binary')) {
+      throw new Error(`Unexpected output: ${out}`)
+    }
   }
-})
+)
 
-await check('pikku binary --compile-target produces a target-suffixed binary', () => {
-  const target = hostTarget()
-  runCLI(['binary', '--compile-target', target])
-  const targetBin = exe(`${BINARY_OUTPUT}-${targetSuffix(target)}`)
-  if (!existsSync(targetBin)) {
-    throw new Error(`Expected target binary at ${targetBin} but it does not exist`)
+await check(
+  'pikku binary --compile-target produces a target-suffixed binary',
+  () => {
+    const target = hostTarget()
+    runCLI(['binary', '--compile-target', target])
+    const targetBin = exe(`${BINARY_OUTPUT}-${targetSuffix(target)}`)
+    if (!existsSync(targetBin)) {
+      throw new Error(
+        `Expected target binary at ${targetBin} but it does not exist`
+      )
+    }
   }
-})
+)
 
 console.log('='.repeat(60))
 console.log(`Binary Verifier Results (${process.platform}-${process.arch})`)

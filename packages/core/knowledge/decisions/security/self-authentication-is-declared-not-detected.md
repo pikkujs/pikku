@@ -17,7 +17,7 @@ them on every build.
 The fix is a declaration — `selfAuthenticated: true` on the function config —
 not analysis of the body. Detection would have to recognise an open-ended set of
 authorization idioms, and it fails in the expensive direction: a body that
-*looks* like it checks something silences the warning for a function that
+_looks_ like it checks something silences the warning for a function that
 checks nothing. A declaration cannot be wrong by accident. Someone typed it,
 it is greppable, and it survives into meta where an audit reads it as what it
 is — a claim by a named author, not an inference.

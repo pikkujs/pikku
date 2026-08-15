@@ -37,7 +37,7 @@
   "devDependencies": {
     "@pikku/cli": "*",
     "@pikku/core": "*",
-    "kysely": "^0.29.0",
+    "kysely": "^0.29.5",
     "typescript": "^6.0.3",
     "zod": "^4"
   }

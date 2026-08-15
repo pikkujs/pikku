@@ -77,11 +77,7 @@ export class ChannelRPCError extends Error {
   constructor(
     message: string,
     public readonly reason:
-      | 'timeout'
-      | 'closed'
-      | 'remote'
-      | 'invalid'
-      | 'unsupported'
+      'timeout' | 'closed' | 'remote' | 'invalid' | 'unsupported'
   ) {
     super(message)
     this.name = 'ChannelRPCError'

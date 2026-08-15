@@ -17,9 +17,7 @@ export {
 } from './workers.js'
 
 // Queues
-export {
-  deleteConsumer,
-} from './queues.js'
+export { deleteConsumer } from './queues.js'
 
 // D1 Databases
 export {
@@ -55,9 +53,7 @@ export type {
 } from './adapter.js'
 export const createAdapter = (options: CloudflareProviderAdapterOptions = {}) =>
   new CloudflareProviderAdapter(options)
-export type {
-  CloudflareInfraManifest,
-} from './infra-manifest.js'
+export type { CloudflareInfraManifest } from './infra-manifest.js'
 
 // Types
 export type {

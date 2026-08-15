@@ -96,7 +96,11 @@ export const QueuesTab: React.FC<{
             <Text
               size="sm"
               ff="monospace"
-              c={depth?.active ? 'var(--mantine-color-green-5)' : 'var(--app-text-dim)'}
+              c={
+                depth?.active
+                  ? 'var(--mantine-color-green-5)'
+                  : 'var(--app-text-dim)'
+              }
             >
               {depth?.active ?? asI18n('—')}
             </Text>
@@ -113,7 +117,11 @@ export const QueuesTab: React.FC<{
             <Text
               size="sm"
               ff="monospace"
-              c={depth?.failed ? 'var(--mantine-color-red-5)' : 'var(--app-text-dim)'}
+              c={
+                depth?.failed
+                  ? 'var(--mantine-color-red-5)'
+                  : 'var(--app-text-dim)'
+              }
             >
               {depth?.failed ?? asI18n('—')}
             </Text>

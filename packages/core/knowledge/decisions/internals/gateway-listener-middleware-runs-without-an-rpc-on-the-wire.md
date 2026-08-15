@@ -10,8 +10,8 @@ tags: core, gateway
 `runPikkuFunc` in `packages/core/src/function/function-runner.ts` attaches `rpc`
 to the invocation wire with `Object.defineProperty`, as a lazy getter that
 replaces itself on first read — and restores the previous descriptor in its
-`finally`. `rpc` therefore exists on a wire *only for the duration of a function
-invocation*. That is why `PikkuRawWire` is `Omit<PikkuWire, 'rpc'>`: it is the
+`finally`. `rpc` therefore exists on a wire _only for the duration of a function
+invocation_. That is why `PikkuRawWire` is `Omit<PikkuWire, 'rpc'>`: it is the
 wire as a runner constructs it, before the function runner adds `rpc`.
 
 The three gateway transports reach middleware differently:
@@ -22,7 +22,7 @@ The three gateway transports reach middleware differently:
   same invocation — `wire.rpc` is live.
 - **listener** has no such wrapper. `createListenerMessageHandler` is handed
   straight to `adapter.init()` by the `GatewayService`, builds
-  `const wire: PikkuRawWire = {}` itself, and runs `config.middleware` *before*
+  `const wire: PikkuRawWire = {}` itself, and runs `config.middleware` _before_
   `invoke()` reaches `runPikkuFunc`. There is no invocation in progress, so
   `wire.rpc` is `undefined`.
 
@@ -34,7 +34,7 @@ off `CorePikkuMiddleware`, whose wire parameter is `PikkuWire`.
 **What this rules out:** treating the assertion at that call as noise to be
 deleted. It is naming a real gap. It also rules out "just widen
 `CorePikkuMiddleware` to accept `PikkuRawWire`" as a free fix — that would make
-`rpc` optional for *every* middleware in the framework, pushing the problem onto
+`rpc` optional for _every_ middleware in the framework, pushing the problem onto
 every consumer to satisfy one transport.
 
 **Still open:** whether the listener path should wrap its handler in a

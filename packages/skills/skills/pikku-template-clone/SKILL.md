@@ -26,8 +26,9 @@ commit, separate from any feature work.
 
    `create-pikku` keeps only the chosen package manager's lockfile and deletes
    the other, and for yarn it may have written an **empty** `yarn.lock` as a
-   marker. Commit the lockfile *after* the first install has filled it in —
+   marker. Commit the lockfile _after_ the first install has filled it in —
    committing the empty placeholder pins nothing.
+
 3. **Rename template identifiers.** Update `name` in the root `package.json`
    (and any `@project/*` or other placeholder names) to the real project.
 4. **Drop template-only artifacts.** Remove any `TEMPLATE.md`, demo docs, or

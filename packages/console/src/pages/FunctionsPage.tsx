@@ -69,7 +69,11 @@ export const FunctionsPage: React.FC<{
           />
         }
         emptyPanelMessage={m.functions_select_function()}
-        hidePanel={isLoading || !rawFunctions || (rawFunctions as unknown as any[]).length === 0}
+        hidePanel={
+          isLoading ||
+          !rawFunctions ||
+          (rawFunctions as unknown as any[]).length === 0
+        }
       >
         <FunctionsListPanel
           searchQuery={searchQuery}

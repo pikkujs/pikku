@@ -15,7 +15,7 @@ available to it without becoming public API on every workflow service a
 production app instantiates.
 
 The reason it is not a subclass is bundle size: a bundler drops an unused
-*module* but never an unused class member. Anything declared on
+_module_ but never an unused class member. Anything declared on
 `PikkuWorkflowService` ships in every server built on Pikku, along with
 everything it imports. `PikkuScenarioService` (`pikku-scenario-service.ts`) is
 the one implementation today — steps, actors, lifecycle hooks, the browser

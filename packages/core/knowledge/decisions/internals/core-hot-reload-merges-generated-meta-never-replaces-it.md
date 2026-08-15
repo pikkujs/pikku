@@ -22,7 +22,7 @@ workflow job fails with `Function meta not found: pikkuWorkflowOrchestrator`.
 `dev/reload-meta.test.ts` pins this. Meta maps that only codegen ever writes
 (`http`, `rpc`, `agent`) are assigned outright.
 
-Two limits are inherent rather than incidental. Routes registered by a *new*
+Two limits are inherent rather than incidental. Routes registered by a _new_
 `wireHTTP` file are not picked up here — those modules were never imported — which
 is why `hot-reload.ts` keeps a `postCodegenQueue` and exposes `reimportPending()`
 for the dev server to drain after codegen, so registrations that were skipped for
@@ -35,5 +35,5 @@ entry stranded until a restart.
 `pikkuState(null, 'function', 'meta', functionsMeta)` assignments on the grounds
 that codegen output is authoritative — it is authoritative only for what codegen
 emits. It also rules out folding `reimportPending()` back into the debounced
-reload (the whole point is that it runs *after* codegen), and dropping
+reload (the whole point is that it runs _after_ codegen), and dropping
 `reconcileAddonRegistry` as dead code.

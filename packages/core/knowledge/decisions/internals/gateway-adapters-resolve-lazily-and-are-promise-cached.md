@@ -13,7 +13,7 @@ platform adapters (WhatsApp Cloud API, Slack, …) need both, so
 `resolveGatewayAdapter` in
 `packages/core/src/wirings/gateway/gateway-runner.ts` invokes the factory on the
 first inbound request (webhook/websocket) or on gateway start (listener). The
-`resolvedAdapters` WeakMap caches the *promise*, not the resolved adapter, so
+`resolvedAdapters` WeakMap caches the _promise_, not the resolved adapter, so
 concurrent first requests share one construction instead of racing to build two
 adapters — which for a stateful adapter would mean two platform connections.
 

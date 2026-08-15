@@ -11,7 +11,10 @@ const sign = async (token: string, secret = SECRET) =>
 
 describe('session credential', () => {
   test('recovers the token from a signed value', async () => {
-    assert.equal(await verifySessionCredential(await sign(TOKEN), SECRET), TOKEN)
+    assert.equal(
+      await verifySessionCredential(await sign(TOKEN), SECRET),
+      TOKEN
+    )
   })
 
   test('rejects a value signed with another secret', async () => {

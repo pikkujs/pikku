@@ -99,8 +99,8 @@ export async function handleRawCLI({
   }
 
   let current:
-    | { pikkuFuncId?: string; subcommands?: Record<string, any> }
-    | undefined = programMeta.commands[parsed.commandPath[0]]
+    { pikkuFuncId?: string; subcommands?: Record<string, any> } | undefined =
+    programMeta.commands[parsed.commandPath[0]]
   for (let i = 1; i < parsed.commandPath.length; i++) {
     current = current?.subcommands?.[parsed.commandPath[i]]
   }

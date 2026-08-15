@@ -14,11 +14,11 @@ a directory listing which files ship and which files test.
 
 So `validate` requires the declaration to be in a file named for what it is:
 
-| declaration | file |
-| --- | --- |
-| `pikkuScenario`, `pikkuFeature` | `*.scenario.ts`, `*.scenarios.ts` |
-| `pikkuScenarioStep` and its platform/addon variants | `*.steps.ts` (or the above) |
-| `definePersonas`, `runVirtualUser` | `*.virtual-user.ts`, `*.vu.ts` |
+| declaration                                         | file                              |
+| --------------------------------------------------- | --------------------------------- |
+| `pikkuScenario`, `pikkuFeature`                     | `*.scenario.ts`, `*.scenarios.ts` |
+| `pikkuScenarioStep` and its platform/addon variants | `*.steps.ts` (or the above)       |
+| `definePersonas`, `runVirtualUser`                  | `*.virtual-user.ts`, `*.vu.ts`    |
 
 Three suffixes for scenarios rather than one, because the split that matters is
 scenarios apart from application code, not a particular spelling — `.steps.ts`

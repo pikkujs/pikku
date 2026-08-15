@@ -1,10 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { toTanStackStartAuthHandler } from '@pikku/tanstack-start'
 import { auth } from '../../../auth.js'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../../services.js'
+import { createConfig, createSingletonServices } from '../../../services.js'
 
 const authHandler = toTanStackStartAuthHandler(
   auth,

@@ -159,8 +159,7 @@ const FeatureSpread: React.FC<{
           <Box
             className={styles.spreadRest}
             style={{
-              flexGrow:
-                total - byFeature.reduce((sum, f) => sum + f.count, 0),
+              flexGrow: total - byFeature.reduce((sum, f) => sum + f.count, 0),
             }}
           />
         )}
@@ -388,7 +387,9 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
                         className={styles.intentRow}
                         data-open={open || undefined}
                         aria-expanded={open}
-                        onClick={() => setOpenIntent(open ? undefined : intent.id)}
+                        onClick={() =>
+                          setOpenIntent(open ? undefined : intent.id)
+                        }
                       >
                         <Group gap={8} wrap="nowrap" align="baseline">
                           <ChevronRight
@@ -404,7 +405,9 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
                             c="dimmed"
                             className={styles.intentFeature}
                             // The truncated name in full, for the hover.
-                            title={asI18n(user.featureByIntent[intent.id] ?? '')}
+                            title={asI18n(
+                              user.featureByIntent[intent.id] ?? ''
+                            )}
                           >
                             {asI18n(
                               user.featureByIntent[intent.id] ??
@@ -460,7 +463,12 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
                   </Text>
                 </UnstyledButton>
               )}
-              <Text size="xs" c="dimmed" fs="italic" style={{ maxWidth: '68ch' }}>
+              <Text
+                size="xs"
+                c="dimmed"
+                fs="italic"
+                style={{ maxWidth: '68ch' }}
+              >
                 {m.virtual_users_intents_note()}
               </Text>
             </Stack>
@@ -484,7 +492,9 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
               names={reach.mutationNames}
               open={openReach === 'mutations'}
               onToggle={() =>
-                setOpenReach(openReach === 'mutations' ? undefined : 'mutations')
+                setOpenReach(
+                  openReach === 'mutations' ? undefined : 'mutations'
+                )
               }
             />
           </Group>
@@ -529,7 +539,9 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
             {reach.inferred > 0 && (
               <UnstyledButton
                 onClick={() =>
-                  setOpenReach(openReach === 'inferred' ? undefined : 'inferred')
+                  setOpenReach(
+                    openReach === 'inferred' ? undefined : 'inferred'
+                  )
                 }
                 aria-expanded={openReach === 'inferred'}
                 data-testid="virtual-user-inferred"

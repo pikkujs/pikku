@@ -15,7 +15,9 @@ interface MiddlewareItem {
   data: any
 }
 
-export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({
+  searchQuery,
+}) => {
   const { meta, loading } = usePikkuMeta()
   useLocale()
   const { openMiddleware } = usePanelContext()

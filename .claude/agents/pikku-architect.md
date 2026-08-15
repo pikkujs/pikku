@@ -42,11 +42,11 @@ All provide the same service interfaces (ChannelStore, WorkflowService, SecretSe
 
 ### Auth Strategy
 
-| Option     | Package                  | Best For                                              |
-| ---------- | ------------------------ | ----------------------------------------------------- |
-| JWT (jose) | `@pikku/jose`            | Stateless auth, API tokens, microservices             |
-| Better Auth | `@pikku/better-auth`    | OAuth providers (GitHub, Google, etc.), MFA, organizations, session-based |
-| Custom     | `@pikku/core` middleware | Enterprise SSO, custom identity providers             |
+| Option      | Package                  | Best For                                                                  |
+| ----------- | ------------------------ | ------------------------------------------------------------------------- |
+| JWT (jose)  | `@pikku/jose`            | Stateless auth, API tokens, microservices                                 |
+| Better Auth | `@pikku/better-auth`     | OAuth providers (GitHub, Google, etc.), MFA, organizations, session-based |
+| Custom      | `@pikku/core` middleware | Enterprise SSO, custom identity providers                                 |
 
 ### Runtime Selection
 

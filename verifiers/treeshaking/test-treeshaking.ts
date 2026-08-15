@@ -43,10 +43,7 @@ function hasAddonBootstrap(): boolean {
 }
 
 type GeneratedFileKey =
-  | 'bootstrap'
-  | 'httpWirings'
-  | 'queueWirings'
-  | 'schedulerWirings'
+  'bootstrap' | 'httpWirings' | 'queueWirings' | 'schedulerWirings'
 
 function readGeneratedFile(file: GeneratedFileKey): string {
   const pathByFile: Record<GeneratedFileKey, string[]> = {

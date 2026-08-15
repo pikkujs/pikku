@@ -41,9 +41,7 @@ test('getColumns unescapes doubled single-quotes in CHECK enum values', async ()
   const runtime = await loadSqliteRuntime()
   const db = runtime.open(join(dir, 'test.db'))
   try {
-    db.exec(
-      `CREATE TABLE t (v TEXT CHECK (v IN ('a''b', 'plain')))`
-    )
+    db.exec(`CREATE TABLE t (v TEXT CHECK (v IN ('a''b', 'plain')))`)
     const cols = await new SqliteIntrospector(db).getColumns('t')
     assert.deepEqual(cols.find((c) => c.name === 'v')?.enumValues, [
       "a'b",

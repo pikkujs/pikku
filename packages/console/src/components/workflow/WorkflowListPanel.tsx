@@ -4,10 +4,7 @@ import { GitBranch } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { EntityCardList } from '../layout/EntityCardList'
-import type {
-  EntityCardItem,
-  EntityCardBadge,
-} from '../layout/EntityCardList'
+import type { EntityCardItem, EntityCardBadge } from '../layout/EntityCardList'
 
 export interface WorkflowListPanelProps {
   onOpen: (name: string) => void

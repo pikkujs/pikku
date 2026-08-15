@@ -7,7 +7,7 @@ tags: scenarios, knowledge
 
 # Should the harness run its personas?
 
-The older form of this question — *should the harness declare personas at all?* —
+The older form of this question — _should the harness declare personas at all?_ —
 answered itself. There used to be a choice between declaring six actors and
 declaring the kinds of person behind them; there is now one declaration, so every
 body here is a persona and `persona:` resolves against

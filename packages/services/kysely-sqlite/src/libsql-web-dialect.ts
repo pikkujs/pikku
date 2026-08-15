@@ -75,8 +75,7 @@ interface PipelineResponse {
     | {
         type: 'ok'
         response:
-          | { type: 'execute'; result: HranaStmtResult }
-          | { type: 'close' }
+          { type: 'execute'; result: HranaStmtResult } | { type: 'close' }
       }
     | { type: 'error'; error: { message: string; code?: string } }
   >

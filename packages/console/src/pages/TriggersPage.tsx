@@ -14,7 +14,12 @@ export const TriggersPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.triggers_title()} description={m.triggers_description()} />}
+        header={
+          <ListPageHeader
+            title={m.triggers_title()}
+            description={m.triggers_description()}
+          />
+        }
         hidePanel={!loading && pairs.length === 0}
         emptyPanelMessage={m.triggers_select_item()}
       >

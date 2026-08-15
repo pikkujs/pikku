@@ -17,12 +17,7 @@ import { existsSync, readFileSync } from 'node:fs'
  * locators.ts, so adoption is incremental.
  */
 export type ElementKind =
-  | 'buttons'
-  | 'fields'
-  | 'links'
-  | 'tabs'
-  | 'tables'
-  | 'menus'
+  'buttons' | 'fields' | 'links' | 'tabs' | 'tables' | 'menus'
 
 export type ElementMap = Partial<Record<ElementKind, Record<string, string>>>
 

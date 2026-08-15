@@ -15,7 +15,7 @@ throws `RPCNotFoundError`. It returns the resolving package alongside the
 `runPikkuFunc` without a second lookup.
 
 The package-first order exists because RPC meta only ever lives in root: addon
-packages register their handlers under their own package name as *function* meta,
+packages register their handlers under their own package name as _function_ meta,
 never as RPC meta. Without the package probe, a bare `rpc('doThing')` made from
 inside an addon would skip that addon's own `doThing` and either resolve to an
 unrelated root function of the same name or fail outright. The versioned retry

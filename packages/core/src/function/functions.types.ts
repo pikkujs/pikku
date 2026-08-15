@@ -149,8 +149,7 @@ export const pikkuAuth = <
   Session extends CoreUserSession = CoreUserSession,
 >(
   auth:
-    | CorePikkuAuth<Services, Session>
-    | CorePikkuAuthConfig<Services, Session>
+    CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>
 ): CorePikkuPermission<any, Services, any> => {
   const fn = typeof auth === 'function' ? auth : auth.func
   const wrapper: CorePikkuPermission<any, Services, any> & AuthBranded = async (
@@ -167,8 +166,7 @@ export const pikkuAuth = <
 }
 
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
-  | Record<string, PikkuPermission | PikkuPermission[]>
-  | undefined
+  Record<string, PikkuPermission | PikkuPermission[]> | undefined
 
 /**
  * A lifecycle hook: same call signature as the function it hangs off, return

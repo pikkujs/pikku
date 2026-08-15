@@ -7,7 +7,7 @@ tags: workflow
 
 # The workflow run timeline is a pure fold over durable history, with the row's status as the authority
 
-`run-timeline.ts` turns `getRunHistory` — one row per step *attempt*, each with
+`run-timeline.ts` turns `getRunHistory` — one row per step _attempt_, each with
 lifecycle timestamps — into a flat, chronologically ordered event stream, and
 folds that stream up to any point to recover what the run "knew" then: the same
 step cache a replay would hold, plus the walked path. Both functions are pure,

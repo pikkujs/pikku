@@ -1,7 +1,8 @@
 const STORAGE_KEY = 'pikku-server-url'
 const FALLBACK_SERVER_URL = 'http://localhost:4002'
 
-const normalizeServerUrl = (value: string): string => value.trim().replace(/\/+$/, '')
+const normalizeServerUrl = (value: string): string =>
+  value.trim().replace(/\/+$/, '')
 
 const getCurrentOrigin = (): string | null => {
   try {
