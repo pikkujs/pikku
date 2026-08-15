@@ -65,7 +65,7 @@ ${configTypeImport.includes('Config type not found') ? 'export type Config = any
  * nothing destructures it — in which case it is never created either. This is
  * why an \`if (!service)\` guard inside a function body is always dead code.
  */
-export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
+type WiredSingletonServices = RequiredSingletonServices & SingletonServices
 export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
 
 /** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */

@@ -1,17 +1,25 @@
 /**
  * Type constraint: only types a user cannot derive stay in the generated surface
  *
- * A type earns its export in exactly one case: it is reachable from an exported
- * factory's return type, so declaration emit in the user's own module needs to
- * name it. Everything else is private — users reach types through
- * `ReturnType<typeof fn>` or `typeof myValue`, which keeps the factory the
- * single entry point and keeps the documented surface small.
+ * A type earns its export in exactly one case: declaration emit in the user's
+ * own module has to name it. Everything else is private — users reach types
+ * through `ReturnType<typeof fn>` or `typeof myValue`, which keeps the factory
+ * the single entry point and keeps the documented surface small.
  *
- * That leaves three kinds of name asserted private here:
+ * "Has to name it" is narrower than "appears in a return type": for an alias to
+ * an object literal or an intersection, TypeScript writes the shape
+ * structurally into the `.d.ts` and never mentions the alias. Decide this by
+ * running `tsc --declaration --emitDeclarationOnly` and reading the output, not
+ * by reading the source — and note that `pikku --tsc` runs `--noEmit`, which
+ * cannot surface TS2883 at all.
+ *
+ * That leaves four kinds of name asserted private here:
  *   - overload-parameter shapes, which only name the `config` argument inside an
  *     overload signature (`PikkuFunctionConfigWithSchema` and friends);
  *   - generated id unions, which nothing derives and nothing consumed
  *     (`PersonaId`, `SecretId`, `VariableId`, `WorkflowNames`, …);
+ *   - raw `@pikku/core` types that rode along beside a re-exported factory
+ *     (`CoreScopes`, `CoreSystemRoles`, the `*DefinitionsMeta` shapes);
  *   - types referenced by nothing at all (`PikkuListFunction`, deleted outright).
  *
  * Each name is re-exported below so `noUnusedLocals` cannot hand the directive
@@ -36,6 +44,8 @@ import type { PikkuFunctionSessionlessConfigWithSchema } from '#pikku'
 import type { PikkuAuth } from '#pikku'
 // @ts-expect-error - WiredAuthServices only supplies a generic default, not API
 import type { WiredAuthServices } from '#pikku'
+// @ts-expect-error - WiredSingletonServices is inlined structurally, not API
+import type { WiredSingletonServices } from '#pikku'
 // @ts-expect-error - PikkuListFunction was referenced by nothing; pikkuListFunc is the API
 import type { PikkuListFunction } from '#pikku'
 // @ts-expect-error - PikkuTriggerFunctionConfigWithSchema is an overload parameter, not API
@@ -110,6 +120,7 @@ export type _SessionlessConfigWithSchema =
   PikkuFunctionSessionlessConfigWithSchema
 export type _Auth = PikkuAuth
 export type _WiredAuthServices = WiredAuthServices
+export type _WiredSingletonServices = WiredSingletonServices
 export type _ListFunction = PikkuListFunction
 export type _TriggerFunctionConfigWithSchema =
   PikkuTriggerFunctionConfigWithSchema
