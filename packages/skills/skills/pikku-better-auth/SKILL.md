@@ -333,19 +333,24 @@ plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]
 session cookie. `secret` may also be a (possibly async) function, so it can come
 off the secrets service instead of a captured value.
 
-Four properties are what make a password-free sign-in endpoint safe enough to
-ship in the same binary as production:
+**`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
+persona.** `pikku persona sync` grants declared roles to actor accounts, so an
+`admin` persona is an actor holding real admin — anyone with the secret can take
+a session as one. Keep the endpoint **off outside development and sandbox
+deployments**: leave the secret unset on any stage that should not run scenarios,
+which is the supported switch (`Actor sign-in is not configured`), rather than
+conditionally registering the plugin. Do not treat "actors only" as a licence to
+enable it in production.
+
+Within that boundary, three properties bound the damage:
 
 - **It only ever signs in actors.** The plugin adds a `user.actor` boolean
   column; an email matching a row without it is refused with `User is not an
-  actor`. The secret therefore cannot impersonate a real user — a leaked one
-  buys synthetic accounts only.
+  actor`. So the secret cannot take over a **real user's** account — the blast
+  radius is the actor accounts and whatever roles they were granted.
 - **Unknown emails are created**, flagged `actor: true`, so a scenario that
-  declares a new persona needs no seed step.
-- **An unset secret disables the endpoint** (`Actor sign-in is not configured`).
-  That is the intended way to switch the surface off per deployment: leave
-  `SCENARIO_ACTOR_SECRET` unset on a stage that should not run scenarios, rather
-  than conditionally registering the plugin.
+  declares a new persona needs no seed step. Note the flip side: the secret
+  mints accounts, it does not merely use existing ones.
 - **The comparison is constant-time and length-hiding**, so a wrong secret leaks
   neither the length nor a prefix of the right one.
 

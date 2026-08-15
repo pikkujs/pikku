@@ -323,6 +323,11 @@ own UI built on `useDevActors()` from `@pikku/react` — validate accepts either
 call site as evidence, so custom rendering passes. See **pikku-react** for the
 props and **pikku-scenario** for where the actor list comes from.
 
+An app that predates the package is **not** required to migrate: a hand-rolled
+`signInAsActor()` or a literal `POST /auth/sign-in/actor` also clears the rule.
+Reach for the shared component in new code, but do not rewrite a working switcher
+just to silence this finding — it is already silent.
+
 Do **not** satisfy it with Better Auth's `/dev/quick-login`. That is a different
 endpoint with a different purpose — one fixed admin, not the declared personas —
 and it does not clear this rule.
