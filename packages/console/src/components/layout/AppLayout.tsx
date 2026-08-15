@@ -121,7 +121,7 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
             height: '100dvh',
             display: 'flex',
             flexDirection: 'column',
-            paddingTop: 'var(--safe-top)',
+            paddingTop: 'calc(var(--safe-top) + var(--app-banner-inset-top))',
             paddingInline: 'var(--safe-left) var(--safe-right)',
             paddingBottom: 'var(--mobile-tabbar-foot)',
           }}
@@ -156,7 +156,8 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
         style={{
           display: 'flex',
           minWidth: 0,
-          paddingTop: 'var(--nav-dock-inset-top)',
+          paddingTop:
+            'calc(var(--nav-dock-inset-top) + var(--app-banner-inset-top))',
           paddingBottom: 'var(--nav-dock-inset-bottom)',
           paddingInline:
             'var(--nav-dock-inset-left) var(--nav-dock-inset-right)',

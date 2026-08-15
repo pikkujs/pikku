@@ -50,6 +50,13 @@
   --nav-dock-inset-bottom: 0px;
   --nav-dock-inset-left: 0px;
 
+  /* What a fixed banner across the top of the window takes off it. Declared
+     here for the same reason as the dock insets: layouts pad by it whether a
+     banner is mounted or not. The banner overwrites it with its measured
+     height while it is up, so content stops below it instead of running
+     underneath a bar that is painting over the page's own controls. */
+  --app-banner-inset-top: 0px;
+
   /* The phone's bottom tab bar. Layouts reserve the FOOT — the bar plus the
      inset it grows by — rather than the bar's own height, which left the last
      row of every page under the home indicator. */

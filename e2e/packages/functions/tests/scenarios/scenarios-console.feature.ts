@@ -388,7 +388,7 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
       'seesTestId',
       {
         testId: 'scenario-skip',
-        containing: 'npm cannot install inside this yarn workspace',
+        containing: 'runs out of heap',
         within: {
           testId: 'scenario-section-installAddonFreshNameScenario',
         },
