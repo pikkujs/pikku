@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
