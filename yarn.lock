@@ -1619,10 +1619,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cloudflare/workers-types@npm:^4.20260702.1":
-  version: 4.20260702.1
-  resolution: "@cloudflare/workers-types@npm:4.20260702.1"
-  checksum: 10/258949551e8edc6763fa0a3dc5e2ac8a14c7036f66005e4f693ae31d98c67238f53889d75ee8649fb074c0419bcc73eddddf64248b05836fe2869d3b8de6dc83
+"@cloudflare/workers-types@npm:^5.20260815.1":
+  version: 5.20260815.1
+  resolution: "@cloudflare/workers-types@npm:5.20260815.1"
+  checksum: 10/02d9423e29bd96a92489f35d350a5cf833790e6fd550680148401fc6391c60c27021019f86b4f8ee1ba004df6321f804e78a6903afad67eb3579e91643ce7af8
   languageName: node
   linkType: hard
 
@@ -5118,7 +5118,7 @@ __metadata:
   resolution: "@pikku/cloudflare@workspace:packages/runtimes/cloudflare"
   dependencies:
     "@cloudflare/vitest-pool-workers": "npm:^0.21.3"
-    "@cloudflare/workers-types": "npm:^4.20260702.1"
+    "@cloudflare/workers-types": "npm:^5.20260815.1"
     "@pikku/core": "npm:^0.12.84"
     "@pikku/kysely": "npm:^0.13.16"
     "@vitest/runner": "npm:^4.1.10"
@@ -5984,13 +5984,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
   dependencies:
-    "@cloudflare/workers-types": "npm:^4.20260702.1"
+    "@cloudflare/workers-types": "npm:^5.20260815.1"
     "@pikku/cloudflare": "npm:^0.12.20"
     "@pikku/core": "npm:^0.12.84"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
     typescript: "npm:^6.0.3"
-    wrangler: "npm:^4.78.0"
+    wrangler: "npm:^4.123.0"
   languageName: unknown
   linkType: soft
 
@@ -5998,12 +5998,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"
   dependencies:
-    "@cloudflare/workers-types": "npm:^4.20260702.1"
+    "@cloudflare/workers-types": "npm:^5.20260815.1"
     "@pikku/cloudflare": "npm:^0.12.20"
     "@pikku/core": "npm:^0.12.84"
     "@types/node": "npm:^24"
     typescript: "npm:^6.0.3"
-    wrangler: "npm:^4.78.0"
+    wrangler: "npm:^4.123.0"
   languageName: unknown
   linkType: soft
 
@@ -6123,7 +6123,7 @@ __metadata:
     serverless-offline-sqs: "npm:^9.0.1"
     tsx: "npm:^4.23.12"
     typescript: "npm:^6.0.3"
-    wrangler: "npm:^4.78.0"
+    wrangler: "npm:^4.123.0"
     ws: "npm:^8.21.3"
     zod: "npm:^4"
   languageName: unknown
@@ -23051,7 +23051,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wrangler@npm:4.123.0, wrangler@npm:^4.78.0":
+"wrangler@npm:4.123.0, wrangler@npm:^4.123.0":
   version: 4.123.0
   resolution: "wrangler@npm:4.123.0"
   dependencies:

@@ -40,7 +40,7 @@
     "serverless-offline-sqs": "^9.0.1",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "wrangler": "^4.78.0"
+    "wrangler": "^4.123.0"
   },
   "scripts": {
     "build": "tsc -b",
