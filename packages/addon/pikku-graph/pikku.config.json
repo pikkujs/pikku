@@ -3,11 +3,10 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "addon": true,
-  "node": {
+  "addon": {
     "displayName": "Pikku Utils",
     "description": "Data transformation and utility functions",
-    "categories": ["Transform", "Array", "Data", "Logic"],
+    "categories": ["Transform", "Array", "Data", "Logic", "Files"],
     "icon": "pikku.svg"
   }
 }

@@ -9,6 +9,7 @@
  * addons/ sits outside the consumer's tsconfig/pikku scan, so it never collides
  * with the app's own CoreConfig.
  *   1. pikku all on the source addon
+ *   1b. tsc --noEmit on the source                        (node category narrowing)
  *   2. npm pack the addon → tgz                           (publish artifact)
  *   3. copy into consumer/addons/<name> (strip 1)         (add: shadcn copy)
  *   3b. symlink node_modules/<pkg> → addons/<name>        (yarn workspace link)
@@ -54,6 +55,11 @@ function capture(file, args, cwd) {
 
 // 1. Build the source addon
 run('source: pikku all', 'node', [PIKKU, 'all'], sourceDir)
+
+// 1b. Type-check the source too. The addon declares `categories`, so this is
+// where `NodeConfig`'s narrowing is proved — type-tests/node-category.assert.ts
+// expects an undeclared category to be an error.
+run('source: tsc --noEmit', TSC, ['--noEmit', '-p', 'tsconfig.json'], sourceDir)
 
 // 2. Pack the addon — npm pack respects the `files` field (src + types + .pikku)
 console.log('\n▶ source: npm pack')

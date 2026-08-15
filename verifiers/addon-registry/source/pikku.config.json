@@ -3,8 +3,7 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "addon": true,
-  "node": {
+  "addon": {
     "displayName": "Registry Verifier Addon",
     "description": "Hermetic addon used to verify the registry pack/install round-trip",
     "categories": ["Utility"]

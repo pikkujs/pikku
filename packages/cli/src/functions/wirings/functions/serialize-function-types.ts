@@ -369,7 +369,9 @@ export type PikkuFunctionConfig<
   PikkuFunc extends PikkuFunction<In, Out, RequiredWires, any> | PikkuFunctionSessionless<In, Out, RequiredWires, any, any> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>
+> = Omit<CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>, 'node'> & {
+  node?: NodeConfig
+}
 
 /**
  * {@link PikkuFunctionConfig} for a function that runs without a session.
@@ -382,7 +384,9 @@ type PikkuFunctionSessionlessConfig<
   PikkuFunc extends PikkuFunctionSessionless<In, Out, RequiredWires, any> = PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>
+> = Omit<CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>, 'node'> & {
+  node?: NodeConfig
+}
 
 /**
  * Configuration object for Pikku functions with Zod schema validation.
@@ -412,13 +416,14 @@ type PikkuFunctionConfigWithSchema<
     undefined,
     ScopeId
   >,
-  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
+  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
   func:
     | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
     | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
   input?: InputSchema
   output?: OutputSchema
+  node?: NodeConfig
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -499,7 +504,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
   CorePikkuSessionlessFunctionConfig<
     PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
   >,
-  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
+  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
   func: PikkuFunctionSessionless<
     SchemaInferred<InputSchema>,
@@ -509,6 +514,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
   >
   input?: InputSchema
   output?: OutputSchema
+  node?: NodeConfig
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined

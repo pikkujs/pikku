@@ -2,19 +2,25 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { serializeFunctionTypes } from './serialize-function-types.js'
 
+const emit = (nodeCategories?: string[]) =>
+  serializeFunctionTypes(
+    "import type { Session } from './session.js'",
+    'Session',
+    "import type { SingletonServices } from './singleton-services.js'",
+    'SingletonServices',
+    "import type { Services } from './wire-services.js'",
+    'Services',
+    "import type { FlattenedRPCMap, TypedPikkuRPC } from './rpc-map.js'",
+    "import type { RequiredSingletonServices, RequiredWireServices } from './required-services.js'",
+    "import type { Config } from './config.js'",
+    undefined,
+    undefined,
+    nodeCategories
+  )
+
 describe('serializeFunctionTypes', () => {
   test('emits pikkuListFunc without a named list-function type', () => {
-    const content = serializeFunctionTypes(
-      "import type { Session } from './session.js'",
-      'Session',
-      "import type { SingletonServices } from './singleton-services.js'",
-      'SingletonServices',
-      "import type { Services } from './wire-services.js'",
-      'Services',
-      "import type { FlattenedRPCMap, TypedPikkuRPC } from './rpc-map.js'",
-      "import type { RequiredSingletonServices, RequiredWireServices } from './required-services.js'",
-      "import type { Config } from './config.js'"
-    )
+    const content = emit()
 
     assert.match(content, /ListInput, ListOutput/)
     assert.doesNotMatch(content, /PikkuListFunction/)
@@ -23,5 +29,43 @@ describe('serializeFunctionTypes', () => {
       content,
       /PikkuFunctionConfig<\s*ListInput<F, S>,\s*ListOutput<Row>/
     )
+  })
+
+  describe('node config', () => {
+    test('narrows category to the addon categories the project declared', () => {
+      assert.match(
+        emit(['Communication', 'Utility']),
+        /export type NodeConfig = \{\n {2}displayName: string\n {2}category: 'Communication' \| 'Utility'/
+      )
+    })
+
+    // `category: string` is what `CoreNodeConfig` already says, so a project
+    // with no declared categories gets the core shape by another name.
+    test('falls back to string when the project declares none', () => {
+      assert.match(emit(), /export type NodeConfig = \{[^}]*category: string/)
+    })
+
+    // The narrowing only means something where people actually write `node:`.
+    // Core types that field as `CoreNodeConfig`, whose category is `string`, so
+    // every config type that reaches a user has to override it — otherwise
+    // `NodeConfig` is generated for two sibling barrels and nothing else.
+    test('every user-facing config type overrides core `node`', () => {
+      const content = emit(['Communication'])
+      for (const config of [
+        'PikkuFunctionConfig',
+        'PikkuFunctionSessionlessConfig',
+        'PikkuFunctionConfigWithSchema',
+        'PikkuFunctionSessionlessConfigWithSchema',
+      ]) {
+        const body = content.slice(
+          content.indexOf(`type ${config}<`),
+          content.indexOf(`type ${config}<`) + 1400
+        )
+        assert.ok(
+          /'node'/.test(body) && /node\?: NodeConfig/.test(body),
+          `expected '${config}' to omit core's \`node\` and re-add it as NodeConfig`
+        )
+      }
+    })
   })
 })

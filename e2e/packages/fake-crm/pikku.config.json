@@ -3,8 +3,7 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "addon": true,
-  "node": {
+  "addon": {
     "displayName": "Fake CRM",
     "description": "Demo addon that needs an OAuth integration and an API-key secret",
     "categories": ["CRM"]
