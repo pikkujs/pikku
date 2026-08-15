@@ -32,7 +32,7 @@ type PikkuTriggerFunction<
 /**
  * Configuration object for creating a trigger function with metadata
  */
-export type PikkuTriggerFunctionConfig<
+type PikkuTriggerFunctionConfig<
   TInput = unknown,
   TOutput = unknown,
   InputSchema extends StandardSchemaV1 | undefined = undefined,

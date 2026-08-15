@@ -8,7 +8,6 @@ export const serializeWorkflowTypes = (
   scenarioActorsImportPath: string = './pikku-personas.gen.js'
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
-import { template } from '@pikku/core/ecosystem/workflow'
 import { pikkuWorkflowGraph as corePikkuWorkflowGraph } from '@pikku/core/workflow'
 import type { PikkuWorkflowGraphConfig, PikkuWorkflowGraphResult } from '@pikku/core/ecosystem/workflow'
 import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/ecosystem/workflow'
@@ -23,8 +22,6 @@ import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
 import type { TypedPersonas } from '${scenarioActorsImportPath}'
 
 export type { TypedPersonas }
-
-export { template }
 
 export interface TypedWorkflow extends PikkuWorkflowWire {
   do<K extends keyof FlattenedRPCMap>(

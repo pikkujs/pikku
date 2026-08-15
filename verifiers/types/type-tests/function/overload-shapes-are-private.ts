@@ -42,6 +42,17 @@ import type { PikkuListFunction } from '#pikku'
 import type { PikkuTriggerFunctionConfigWithSchema } from '#pikku'
 // @ts-expect-error - PikkuTriggerFunction is an overload parameter, not API
 import type { PikkuTriggerFunction } from '#pikku'
+/**
+ * `PikkuTriggerFunctionConfig` is the declared return type of both
+ * `pikkuTriggerFunc` overloads, which looks like it must stay exported for
+ * declaration emit. It does not: TypeScript writes an alias-to-object-literal
+ * structurally into the `.d.ts`, so a user's `export const t =
+ * pikkuTriggerFunc(...)` names no type at all and TS2883 never fires. Verified
+ * with `tsc --declaration --emitDeclarationOnly`, which is the only mode that
+ * can surface TS2883 — `--noEmit` never does.
+ */
+// @ts-expect-error - PikkuTriggerFunctionConfig is inlined structurally, not API
+import type { PikkuTriggerFunctionConfig } from '#pikku'
 // @ts-expect-error - TriggerSource is the wireTriggerSource parameter, not API
 import type { TriggerSource } from '#pikku'
 // @ts-expect-error - TriggerWiring is an overload parameter, not API
@@ -77,6 +88,19 @@ import type { SecretId } from '#pikku/secrets/pikku-secrets.gen.js'
 // @ts-expect-error - VariableId is a generated id union, not API
 import type { VariableId } from '#pikku/variables/pikku-variables.gen.js'
 
+/**
+ * `defineScope`, `defineSystemRole`, `defineSecret` and `defineVariable` all
+ * return `void`, so every type they were re-exported alongside was a parameter
+ * shape or an internal metadata shape — nothing a user names and nothing
+ * declaration emit can need.
+ */
+// @ts-expect-error - CoreSystemRoles is the defineSystemRole parameter, not API
+import type { CoreSystemRoles } from '#pikku/scopes/pikku-scope-types.gen.js'
+// @ts-expect-error - CoreScopes is the defineScope parameter, not API
+import type { CoreScopes } from '#pikku/scopes/pikku-scope-types.gen.js'
+// @ts-expect-error - SystemRoleDefinitionsMeta is console metadata, not API
+import type { SystemRoleDefinitionsMeta } from '#pikku/scopes/pikku-scope-types.gen.js'
+
 export type _PermissionConfig = PikkuPermissionConfig
 export type _AuthConfig = PikkuAuthConfig
 export type _MiddlewareConfig = PikkuMiddlewareConfig
@@ -90,6 +114,7 @@ export type _ListFunction = PikkuListFunction
 export type _TriggerFunctionConfigWithSchema =
   PikkuTriggerFunctionConfigWithSchema
 export type _TriggerFunction = PikkuTriggerFunction
+export type _TriggerFunctionConfig = PikkuTriggerFunctionConfig
 export type _TriggerSource = TriggerSource
 export type _TriggerWiring = TriggerWiring
 export type _WorkflowConfigWithSchema = PikkuWorkflowConfigWithSchema
@@ -107,6 +132,9 @@ export type _EnvironmentName = EnvironmentName
 export type _TypedPersona = TypedPersona
 export type _SecretId = SecretId
 export type _VariableId = VariableId
+export type _CoreSystemRoles = CoreSystemRoles
+export type _CoreScopes = CoreScopes
+export type _SystemRoleDefinitionsMeta = SystemRoleDefinitionsMeta
 
 /**
  * The factories the shapes belong to stay exported — this is about the argument
@@ -131,11 +159,12 @@ void pikkuMiddleware
 void pikkuTriggerFunc
 
 /**
- * `PikkuTriggerFunctionConfig` is the declared return type of both
- * `pikkuTriggerFunc` overloads, so it has to stay exported: without it a user
- * writing `export const t = pikkuTriggerFunc(...)` cannot have that inferred
- * type named in their own declaration output (TS2883).
+ * `template` was re-exported as a value, but a graph never reaches for it by
+ * name — the `input` callback is handed it as its second argument,
+ * `(ref, template) => ...`, so the barrel export was only ever a second way to
+ * get something you already have.
  */
-import type { PikkuTriggerFunctionConfig } from '#pikku'
+// @ts-expect-error - template arrives as the input callback's second argument
+import { template } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-export type _TriggerFunctionConfigStaysPublic = PikkuTriggerFunctionConfig
+void template
