@@ -18,7 +18,7 @@
     "test:agent": "yarn scenarios local --spawn --tags agent-protocol",
     "test:addons": "yarn scenarios local --spawn --run browser --features addonsFeature",
     "test:console": "yarn scenarios local --spawn --run browser --tags console --exclude-tags ai-live,test-fixture",
-    "test:ai-live": "PIKKU_MOCK_LLM=0 yarn scenarios local --spawn --tags ai-live",
+    "test:ai-live": "PIKKU_MOCK_LLM=0 yarn scenarios local --spawn --run browser --tags ai-live",
     "test:unit": "node --import tsx --test bin/*.test.ts packages/functions/tests/scenarios/*.test.ts",
     "tsc": "tsc --noEmit",
     "test:cli": "node --import tsx --test tests/cli/*.test.ts"

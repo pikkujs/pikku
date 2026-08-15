@@ -32,6 +32,12 @@ export const todoAgentAddApprovedScenario = pikkuScenario<
     'The approval card explains the call it wants, and approving it lets the run finish',
   tags: ['scenario', 'todo-agent', 'console', 'ai-live'],
   func: async (_services, _data, { scenario, actors }) => {
+    await scenario.do(
+      'the todo list is reset',
+      'todos:resetTodos',
+      {},
+      { actor: actors.admin }
+    )
     await scenario.given(
       'opens the todo agent playground',
       'opensAgentPlayground',
@@ -101,6 +107,12 @@ export const todoAgentMixedApprovalsScenario = pikkuScenario<
     'Several approval cards in a single turn are answered independently',
   tags: ['scenario', 'todo-agent', 'console', 'ai-live'],
   func: async (_services, _data, { scenario, actors }) => {
+    await scenario.do(
+      'the todo list is reset',
+      'todos:resetTodos',
+      {},
+      { actor: actors.admin }
+    )
     await scenario.given(
       'opens the todo agent playground',
       'opensAgentPlayground',
@@ -131,7 +143,7 @@ export const todoAgentMixedApprovalsScenario = pikkuScenario<
     const outcomes = await scenario.then(
       'sees two approved and one denied',
       'expectsApprovalOutcomes',
-      { approved: 2, denied: 1 },
+      { approved: 2, denied: 1, toolName: 'todos__addTodo' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -160,6 +172,12 @@ export const todoAgentDeleteReasonScenario = pikkuScenario<
     'The approval reason names the record itself, not just the operation',
   tags: ['scenario', 'todo-agent', 'console', 'ai-live'],
   func: async (_services, _data, { scenario, actors }) => {
+    await scenario.do(
+      'the todo list is reset',
+      'todos:resetTodos',
+      {},
+      { actor: actors.admin }
+    )
     await scenario.given(
       'opens the todo agent playground',
       'opensAgentPlayground',
@@ -219,6 +237,12 @@ export const todoAgentFullConversationScenario = pikkuScenario<
     'Six dependent turns in one thread, each surviving the approval-resume cycle before it',
   tags: ['scenario', 'todo-agent', 'console', 'ai-live'],
   func: async (_services, _data, { scenario, actors }) => {
+    await scenario.do(
+      'the todo list is reset',
+      'todos:resetTodos',
+      {},
+      { actor: actors.admin }
+    )
     await scenario.given(
       'opens the todo agent playground',
       'opensAgentPlayground',

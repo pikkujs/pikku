@@ -60,6 +60,20 @@ export const helpfulness = pikkuAgentJudge({
   name: 'helpfulness',
   description: 'Does the answer actually help the person who asked',
   model: 'openai/o4-mini',
-  goal: 'Grade how well the answer addresses what was asked. A correct but unusable answer scores low.',
+  /**
+   * The ends of the scale are stated because leaving them to the model does not
+   * work. Told only to "grade how well the answer addresses what was asked", it
+   * gave a full 1 to an answer it described in the same breath as giving
+   * "general tips about organizing a to-do list instead of listing the specific
+   * items on your to-do list as requested" — the reading was right and the
+   * number did not follow from it, which is what an unanchored scale gets you.
+   */
+  goal: [
+    'Grade how well the answer addresses what was asked.',
+    'Score 1 when it gives the particular information requested.',
+    'Score 0 when it does not, however fluent, polite, or on-topic it is —',
+    'discussing the subject in general is not answering the question.',
+    'A correct but unusable answer scores low.',
+  ].join(' '),
   sampleRate: 0,
 })

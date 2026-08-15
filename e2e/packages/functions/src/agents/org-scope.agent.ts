@@ -5,7 +5,7 @@ export const orgScopeAgent = pikkuAgent({
   name: 'org-scope-agent',
   description: 'Partitions its threads by organization rather than by user',
   goal: 'You answer questions on behalf of an organization.',
-  model: 'openai/gpt-5-mini',
+  model: 'openai/gpt-5.6-luna',
   sessionScope: 'org',
   tools: [ref('openTool')],
   maxSteps: 5,

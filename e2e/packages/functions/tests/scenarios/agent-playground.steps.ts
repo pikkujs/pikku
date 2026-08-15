@@ -32,12 +32,6 @@ const PENDING_APPROVAL: TestIdSelector = {
   where: { 'data-approval-state': 'pending' },
 }
 
-/** One approval card's own state, whatever it resolved to. */
-const approvalCard = (state: string): TestIdSelector => ({
-  testId: 'approval-card',
-  where: { 'data-approval-state': state },
-})
-
 /**
  * Waits for the composer to be enabled, which is the playground's signal that
  * the runtime is idle again.
@@ -172,11 +166,14 @@ export const seesApprovalRequests = pikkuScenarioStep<
   name: 'seesApprovalRequests',
   description: 'sees pending approval requests',
   template: 'sees the approval request(s)',
-  browser: async (_services, { count }, { browser }) => {
+  // `count` is optional, so a scenario that only cares that *something* was
+  // asked passes no data at all — which arrives as `undefined`, not `{}`.
+  browser: async (_services, data, { browser }) => {
     const cards = browser.locate(PENDING_APPROVAL)
     await cards.first().waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
-    if (count !== undefined) {
-      await expect(cards).toHaveCount(count, { timeout: RESPONSE_TIMEOUT })
+    const expected = data?.count
+    if (expected !== undefined) {
+      await expect(cards).toHaveCount(expected, { timeout: RESPONSE_TIMEOUT })
     }
     return { count: await cards.count() }
   },
@@ -296,34 +293,52 @@ export const deniesNthApprovesRest = pikkuScenarioStep<
 })
 
 /**
- * Counts how the answered approval cards resolved.
+ * Counts how the answered approval requests resolved.
  *
- * The state is read from the card's own data attribute rather than from the
- * badge it renders, so the assertion survives translation.
+ * Read off the settled tool call, not off the approval card. The card exists
+ * only while the request is unanswered or just answered — once the run resumes,
+ * the console re-renders that part as the tool call it always was, and every
+ * caller here has already waited for the composer to go idle. Asking for the
+ * card meant asking for an element the page had legitimately moved on from.
+ *
+ * The state is still read from a data attribute rather than from the badge, so
+ * the assertion survives translation.
+ *
+ * `toolName` narrows the count to the calls under test. Without it a thread
+ * that also ran an ungated tool would count that tool's success as an approval,
+ * so any scenario asserting `approved` should say which tool it means.
  */
 export const expectsApprovalOutcomes = pikkuScenarioStep<
-  { approved?: number; denied?: number },
+  { approved?: number; denied?: number; toolName?: string },
   { approved: number; denied: number }
 >({
   name: 'expectsApprovalOutcomes',
   description: 'expects a given number of approved and denied requests',
   template: 'expects the approvals to have resolved as asked',
-  browser: async (_services, { approved, denied }, { browser }) => {
-    const countOf = async (state: string) =>
-      browser.locate(approvalCard(state)).count()
-    if (approved !== undefined) {
-      await expect(browser.locate(approvalCard('approved'))).toHaveCount(
-        approved,
+  browser: async (_services, data, { browser }) => {
+    const settled = (status: string): TestIdSelector => ({
+      testId: 'tool-call',
+      where: {
+        'data-tool-status': status,
+        ...(data?.toolName ? { 'data-tool-name': data.toolName } : {}),
+      },
+    })
+    const countOf = async (status: string) =>
+      browser.locate(settled(status)).count()
+
+    if (data?.approved !== undefined) {
+      await expect(browser.locate(settled('completed'))).toHaveCount(
+        data.approved,
         { timeout: RESPONSE_TIMEOUT }
       )
     }
-    if (denied !== undefined) {
-      await expect(browser.locate(approvalCard('denied'))).toHaveCount(denied, {
+    if (data?.denied !== undefined) {
+      await expect(browser.locate(settled('denied'))).toHaveCount(data.denied, {
         timeout: RESPONSE_TIMEOUT,
       })
     }
     return {
-      approved: await countOf('approved'),
+      approved: await countOf('completed'),
       denied: await countOf('denied'),
     }
   },

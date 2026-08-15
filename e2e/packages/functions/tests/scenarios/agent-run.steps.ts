@@ -106,7 +106,13 @@ export const startsAgentThread = pikkuScenarioStep<void, { threadId: string }>({
 export const runsAgent = pikkuScenarioStep<
   {
     agent: string
-    script: string
+    /**
+     * Which scripted reply the mock provider should give. Omit it on the
+     * `ai-live` tier: there is no `mock` provider once `PIKKU_MOCK_LLM=0`, so
+     * naming a script there would route the run at a provider that does not
+     * exist. Without one the agent runs on the model it declares.
+     */
+    script?: string
     message: string
     threadId: string
     resourceId: string
@@ -119,7 +125,9 @@ export const runsAgent = pikkuScenarioStep<
 >({
   name: 'runsAgent',
   description: 'runs an agent',
-  template: 'runs {agent} with {script}',
+  // No "with" before the script: an omitted one renders as nothing, and a
+  // dangling "runs todoReadAgent with" is worse prose than the missing word.
+  template: 'runs {agent} {script}',
   default: async (
     _services,
     {
@@ -142,7 +150,7 @@ export const runsAgent = pikkuScenarioStep<
       message,
       threadId,
       resourceId,
-      model: `mock/${script}`,
+      ...(script === undefined ? {} : { model: `mock/${script}` }),
       ...(context === undefined ? {} : { context }),
       ...(temperature === undefined ? {} : { temperature }),
       ...(attachments === undefined ? {} : { attachments }),
