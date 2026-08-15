@@ -32,7 +32,7 @@ const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '')
 
 // Walk up from startDir to the nearest workspace root — the dir whose lockfile
 // the package manager audits. Falls back to startDir.
-function findProjectRoot(startDir: string): {
+export function findProjectRoot(startDir: string): {
   root: string
   pm: PackageManager
 } {
@@ -81,7 +81,7 @@ function normaliseSeverity(sev: unknown): Severity {
 }
 
 // bun audit --json → { "<pkg>": [ { id, url, title, severity, vulnerable_versions, cwe[], cvss:{score} } ] }
-function parseBunAudit(raw: string): SecurityAuditIssue[] {
+export function parseBunAudit(raw: string): SecurityAuditIssue[] {
   const issues: SecurityAuditIssue[] = []
   let obj: Record<string, any>
   try {
@@ -118,7 +118,7 @@ function parseBunAudit(raw: string): SecurityAuditIssue[] {
   return issues
 }
 
-function semverLevel(
+export function semverLevel(
   current: string,
   latest: string
 ): SecurityAuditUpdate['level'] {
@@ -131,14 +131,24 @@ function semverLevel(
     .split('.')
     .map((n) => parseInt(n, 10))
   if (Number.isNaN(c[0]) || Number.isNaN(l[0])) return 'unknown'
-  if (l[0] > c[0]) return 'major'
-  if ((l[1] || 0) > (c[1] || 0)) return 'minor'
-  if ((l[2] || 0) > (c[2] || 0)) return 'patch'
+  // Compare component by component, stopping at the first that differs. Testing
+  // each component independently would read 2.0.0 → 1.9.9 as a "minor" bump,
+  // and the console offers `patch`/`minor` as the safe one-click update.
+  const pairs: Array<[number, SecurityAuditUpdate['level']]> = [
+    [0, 'major'],
+    [1, 'minor'],
+    [2, 'patch'],
+  ]
+  for (const [i, level] of pairs) {
+    const from = c[i] || 0
+    const to = l[i] || 0
+    if (to !== from) return to > from ? level : 'unknown'
+  }
   return 'unknown'
 }
 
 // bun outdated has no --json; it prints a table: | Package | Current | Update | Latest |
-function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
+export function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
   const updates: SecurityAuditUpdate[] = []
   const seen = new Set<string>()
   for (const line of stripAnsi(raw).split('\n')) {
@@ -148,8 +158,12 @@ function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
       .map((c) => c.trim())
       .filter((c) => c.length > 0)
     if (cells.length !== 4) continue
-    const [pkg, current, , latest] = cells
-    if (pkg === 'Package' || /^-+$/.test(pkg)) continue
+    const [cell, current, , latest] = cells
+    if (cell === 'Package' || /^-+$/.test(cell)) continue
+    // bun annotates the section a dependency comes from — `lodash (dev)`. The
+    // name is the key everything downstream joins on (package.json bumps, the
+    // advisory → update join), so the annotation cannot travel with it.
+    const pkg = cell.replace(/\s+\((?:dev|peer|optional)\)$/, '')
     if (!/^\d/.test(current) || !/^\d/.test(latest)) continue
     if (seen.has(pkg)) continue
     seen.add(pkg)
@@ -163,7 +177,7 @@ function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
   return updates
 }
 
-function summarise(
+export function summarise(
   tool: PackageManager,
   issues: SecurityAuditIssue[],
   updates: SecurityAuditUpdate[],

@@ -81,6 +81,23 @@ export const securityAuditRunScenario = pikkuScenario<void, { audited: true }>({
       { testId: 'security-audit' },
       { actor: actors.admin }
     )
+    // This repository is a yarn workspace, and only bun's audit output is
+    // normalised, so the run here cannot produce advisories. What it must still
+    // do is say so — both in the artefact and on screen — rather than render
+    // the clean state, which would tell the reader they have no vulnerabilities
+    // when nothing was ever checked.
+    await scenario.then(
+      'the report says which tool audited it',
+      'expectsAuditReport',
+      { tool: 'yarn', couldNotRun: true },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees that the audit could not run',
+      'seesTestId',
+      { testId: 'security-not-run' },
+      { actor: actors.admin }
+    )
 
     return { audited: true }
   },
