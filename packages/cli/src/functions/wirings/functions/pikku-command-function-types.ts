@@ -1,4 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku'
+import { rm } from 'fs/promises'
+import { join } from 'path'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -21,7 +23,6 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
       queueTypesFile,
       mcpTypesFile,
       cliTypesFile,
-      nodeTypesFile,
       secretTypesFile,
       scopeTypesFile,
       addonTypesFile,
@@ -33,7 +34,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
         ? null
         : getFileImportRelativePath(typesFile, file, packageMappings)
 
-    // Node and trigger types are included for addon packages
+    // Trigger, secret and scope types are included for addon packages
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
 
@@ -71,7 +72,6 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
       getImportPath(queueTypesFile),
       getImportPath(mcpTypesFile),
       getImportPath(cliTypesFile),
-      getAlwaysImportPath(nodeTypesFile),
       getAlwaysImportPath(secretTypesFile),
       config.addon ? getAlwaysImportPath(addonTypesFile) : null,
       authTypesImportPath,
@@ -79,6 +79,14 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
     )
 
     await writeFileInDir(logger, typesFile, content)
+
+    // `console/pikku-node-types.gen.ts` held only `NodeCategory` and
+    // `NodeRPCName`, which nothing derived from. A project generated before it
+    // was dropped still has the file, and tsc compiles every file in the output
+    // tree whether the hub re-exports it or not.
+    await rm(join(config.outDir, 'console', 'pikku-node-types.gen.ts'), {
+      force: true,
+    })
   },
   middleware: [
     logCommandInfoAndTime({

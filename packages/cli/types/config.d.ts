@@ -212,9 +212,6 @@ export interface PikkuCLICoreOutputFiles {
   // Addon types (pikkuAddonConfig, pikkuAddonServices, etc.)
   addonTypesFile: string
 
-  // Node
-  nodeTypesFile: string
-
   // Secrets
   secretTypesFile: string
 
