@@ -36,7 +36,11 @@ export const parseDevActors = (raw: unknown): DevActor[] => {
         !!actor &&
         typeof actor === 'object' &&
         typeof actor.key === 'string' &&
-        typeof actor.email === 'string'
+        typeof actor.email === 'string' &&
+        // `name` and `jobTitle` are what the switcher DRAWS, so an entry missing
+        // either is not a usable actor — it is a menu row reading "undefined".
+        typeof actor.name === 'string' &&
+        typeof actor.jobTitle === 'string'
     )
   } catch {
     return []

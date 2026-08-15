@@ -50,6 +50,20 @@ test('parseDevActors drops entries missing the fields the switcher needs', () =>
     { key: 'ok', email: 'ok@actors.example', name: 'Ok', jobTitle: '' },
     { key: 'no-email', name: 'Broken' },
     { email: 'no-key@actors.example' },
+    // Both are drawn in the menu, so an entry without them is a row reading
+    // "undefined" rather than an actor.
+    { key: 'no-name', email: 'no-name@actors.example', jobTitle: 'Runs it' },
+    {
+      key: 'no-title',
+      email: 'no-title@actors.example',
+      name: 'No Title',
+    },
+    {
+      key: 'wrong-types',
+      email: 'wrong-types@actors.example',
+      name: 42,
+      jobTitle: null,
+    },
     null,
   ])
   assert.deepEqual(

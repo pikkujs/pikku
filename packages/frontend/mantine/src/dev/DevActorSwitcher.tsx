@@ -1,5 +1,10 @@
 import type { FC, CSSProperties } from 'react'
-import { asI18n, useDevActors, type DevActor } from '@pikku/react'
+import {
+  asI18n,
+  useDevActors,
+  type DevActor,
+  type I18nString,
+} from '@pikku/react'
 import { Button, Menu, Text } from '../core/index.js'
 
 export type DevActorSwitcherProps = {
@@ -15,8 +20,12 @@ export type DevActorSwitcherProps = {
    * callback rather than depending on a router.
    */
   onSignedIn?: () => void | Promise<void>
-  /** Menu trigger label. Defaults to "Sign in as …". */
-  label?: string
+  /**
+   * Menu trigger label. Defaults to "Sign in as …" — branded so an app that has
+   * a catalogue can hand over `m.dev_actors__cta()` rather than being forced
+   * back through `asI18n`.
+   */
+  label?: I18nString
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
 }
 
@@ -49,7 +58,7 @@ export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
   secret,
   apiUrl,
   onSignedIn,
-  label = 'Sign in as …',
+  label = asI18n('Sign in as …'),
   position = 'bottom-right',
 }) => {
   const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
@@ -69,7 +78,7 @@ export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
           variant="light"
           style={{ position: 'fixed', zIndex: 1000, ...CORNERS[position] }}
         >
-          {asI18n(label)}
+          {label}
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
