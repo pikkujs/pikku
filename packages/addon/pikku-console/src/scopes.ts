@@ -131,6 +131,16 @@ defineScope({
               manage: { description: 'Delete workflow runs' },
             },
           },
+          scenarios: {
+            description: 'Scenario runs and what they recorded',
+            scopes: {
+              read: {
+                description:
+                  'Read past scenario runs, their steps, and their screenshots and video',
+              },
+              manage: { description: 'Delete scenario runs and their artifacts' },
+            },
+          },
           agents: {
             description: 'AI agents and their threads',
             scopes: {

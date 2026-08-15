@@ -1,68 +1,21 @@
 /**
- * The scenario run report, and how it is rendered.
+ * How a scenario run is rendered to a terminal.
  *
  * Everything a run prints goes through here, so the shape of the output is one
  * file rather than log calls scattered through the command. The report itself
- * is plain serialisable data — no Maps, no meta handles — which is what makes a
- * second formatter (JSON, JUnit) a matter of writing one function rather than
- * unpicking the runner.
+ * is plain serialisable data — no Maps, no meta handles — declared in
+ * `@pikku/core` because the same shapes are what a run is stored as and what
+ * the console reads back, which is also what makes a second formatter (JSON,
+ * JUnit) a matter of writing one function rather than unpicking the runner.
  */
-import type { ScenarioBrowserFailure } from '@pikku/core/ecosystem/scenario'
+import type {
+  ScenarioFailureDetail,
+  ScenarioRunReport,
+  ScenarioStepRow,
+} from '@pikku/core/ecosystem/scenario'
 
 /** The longest gherkin keyword ("Given"), so sentences line up under each other. */
 const KEYWORD_WIDTH = 5
-
-/** One step of a run, already joined to the prose that declared it. */
-export interface ScenarioStepRow {
-  sentence: string
-  status: string
-  durationMs?: number
-  error?: string
-}
-
-/** Everything known about why one scenario failed. */
-export interface ScenarioFailureDetail {
-  /** The rendered sentence of the failing step; absent if no step failed. */
-  sentence?: string
-  message: string
-  stack?: string
-  /**
-   * True when the failure was a deliberate one (a PikkuError). Its message is
-   * the whole story, so the stack is noise.
-   */
-  expected?: boolean
-  browser?: ScenarioBrowserFailure[]
-}
-
-export interface ScenarioResult {
-  name: string
-  status: 'passed' | 'failed'
-  durationMs: number
-  output?: unknown
-  error?: string
-  steps?: ScenarioStepRow[]
-  failure?: ScenarioFailureDetail
-}
-
-/** One scenario that was not run, and why. */
-export interface ScenarioSkip {
-  name: string
-  reason: string
-}
-
-export interface ScenarioRunReport {
-  environment: string
-  results: ScenarioResult[]
-  /**
-   * Scenarios not run at all, each carrying why. A skip is only useful if the
-   * reader can tell a browser scenario held back by `--no-browser` from one the
-   * project itself quarantined, so the reason travels with the name rather than
-   * being assumed by the formatter.
-   */
-  skipped: ScenarioSkip[]
-  /** Feature-level hook failures, which belong to no single scenario. */
-  hookFailures: string[]
-}
 
 export interface ScenarioReportLine {
   level: 'info' | 'error'

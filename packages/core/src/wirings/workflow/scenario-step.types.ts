@@ -1,4 +1,5 @@
 import type { ScenarioPersona } from '../../services/personas-service.js'
+import type { ScenarioArtifact } from './scenario-run.types.js'
 
 /**
  * Scenario steps: named, typed units of scenario behaviour.
@@ -238,10 +239,27 @@ export interface ScenarioBrowserProvider {
    */
   beginScenario?(scenario: string): void
   /**
+   * Report how the scenario that just ran finished.
+   *
+   * Called after each scenario, and separate from `reset()` because artifacts
+   * that only exist once a window closes — a video — are produced by the NEXT
+   * scenario's reset, long after the outcome that decides whether to keep them.
+   */
+  endScenario?(outcome: 'passed' | 'failed'): void
+  /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must
    * not replace the failure being captured.
    */
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
+  /**
+   * Everything the run filed, each entry naming the scenario it belongs to.
+   *
+   * Reported by the driver rather than discovered by scanning the directory:
+   * only the driver knows which window produced a file and under what caption,
+   * and a video's final name is not settled until the run closes. Read after
+   * `close()`, which is the first moment the answer is complete.
+   */
+  artifacts?(): ScenarioArtifact[]
   close(): Promise<void>
 }

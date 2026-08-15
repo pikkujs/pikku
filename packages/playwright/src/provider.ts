@@ -1,15 +1,24 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { BrowserContext } from '@playwright/test'
+import type { BrowserContext, Video } from '@playwright/test'
 import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
 import type {
+  ScenarioArtifact,
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
 } from '@pikku/core/ecosystem/scenario'
 import { ActorSession, type CaptureContext } from './actor-session.js'
-import { compressVideosIn, type CaptureOptions } from './capture.js'
+import { compressVideos, slug, type CaptureOptions } from './capture.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'
 import { browserConfigFromEnv, type BrowserConfig } from './config.js'
+
+/**
+ * Where Playwright drops its own recordings before retention files them.
+ *
+ * Its filenames are generated and carry no actor or scenario, so nothing is
+ * meant to read this directory — it is emptied as the run ends.
+ */
+const VIDEO_STAGING_DIR = '.video-raw'
 
 /** What the actor sign-in endpoint is posted, for one actor. */
 export interface ActorSignInRequest {
@@ -43,12 +52,11 @@ export interface PlaywrightScenarioBrowserProviderOptions {
   actors: Record<string, ResolvedPersona>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
   signInPath?: string
-  /** Where `captureFailure` writes screenshots. Without it, none are taken. */
-  failureDir?: string
   /**
-   * Artifacts for this run — screenshots taken by name, and optionally a video
-   * per scenario. Absent means a step's `screenshot()` still returns bytes and
-   * writes nothing, so scenarios do not have to know whether the flag is on.
+   * Artifacts for this run — screenshots taken by name, and a video per
+   * scenario kept according to `video`. Absent, or with `screenshots` off, a
+   * step's `screenshot()` still returns bytes and writes nothing, so scenarios
+   * do not have to know whether the flag is on.
    */
   capture?: CaptureOptions
   connectBrowser?: () => Promise<BrowserConnection>
@@ -73,11 +81,32 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * rather than copied per actor.
    */
   private captureContext?: CaptureContext
+  /**
+   * How the scenario currently running ended.
+   *
+   * Held rather than acted on immediately because a video only exists once its
+   * context closes, and contexts are closed by the NEXT scenario's reset — so
+   * the outcome has to outlive the scenario that produced it.
+   */
+  private outcome?: 'passed' | 'failed'
 
   constructor(
     private readonly options: PlaywrightScenarioBrowserProviderOptions
   ) {
     this.config = options.config ?? browserConfigFromEnv()
+    if (options.capture) {
+      // Built once and handed to every session by reference, so the scenario
+      // name, the capture count and the ledger are shared rather than copied
+      // per actor — a two-actor scenario numbers its images in the order they
+      // were taken, not once per window.
+      this.captureContext = {
+        dir: options.capture.dir,
+        runId: options.capture.runId,
+        screenshots: options.capture.screenshots === true,
+        taken: 0,
+        filed: [],
+      }
+    }
   }
 
   /**
@@ -88,16 +117,24 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * worse to read and never wrong.
    */
   beginScenario(scenario: string): void {
-    const capture = this.options.capture
-    if (!capture) {
+    if (!this.captureContext) {
       return
     }
     // Mutated in place rather than replaced, so sessions opened by the previous
     // scenario — which hold this object by reference — follow the new name and
     // count instead of going on writing under the old one.
-    this.captureContext ??= { dir: capture.dir, runId: capture.runId, taken: 0 }
     this.captureContext.scenario = scenario
     this.captureContext.taken = 0
+    this.outcome = undefined
+  }
+
+  /**
+   * How the scenario that just ran finished, which is what decides whether its
+   * recording is worth keeping. A scenario the runner never reports on is
+   * treated as failed: an unexplained run is exactly the one to keep footage of.
+   */
+  endScenario(outcome: 'passed' | 'failed'): void {
+    this.outcome = outcome
   }
 
   async sessionFor(actorName: string): Promise<ActorSession> {
@@ -129,9 +166,71 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   async reset(): Promise<void> {
     const sessions = [...this.sessions.values()]
     this.sessions.clear()
+    const scenario = this.captureContext?.scenario
+    const keep = this.keepsVideo()
     for (const session of sessions) {
-      await session.then((s) => s.close()).catch(() => {})
+      const resolved = await session.catch(() => undefined)
+      if (!resolved) {
+        continue
+      }
+      // Read before closing: the handle hangs off the page, which the close is
+      // about to take away — even though the file it names only exists after.
+      const video = resolved.video()
+      await resolved.close().catch(() => {})
+      await this.retainVideo(video, resolved.actor, scenario, keep)
     }
+  }
+
+  /**
+   * File this window's recording under the scenario that produced it, or throw
+   * it away.
+   *
+   * Filing happens here rather than at record time because Playwright names
+   * the file itself and only finalises it on close, so a recording is
+   * attributable to an actor and a scenario for exactly this one moment.
+   */
+  private async retainVideo(
+    video: Video | undefined,
+    actor: string,
+    scenario: string | undefined,
+    keep: boolean
+  ): Promise<void> {
+    const capture = this.options.capture
+    if (!video || !capture) {
+      return
+    }
+    try {
+      if (keep) {
+        // The same slug the screenshots use, so a scenario's video and its
+        // images land in one folder rather than two near-identical ones.
+        const label = scenario ?? 'scenario'
+        const path = `${slug(label)}/${slug(actor)}.webm`
+        await mkdir(join(capture.dir, capture.runId, slug(label)), {
+          recursive: true,
+        })
+        await video.saveAs(join(capture.dir, capture.runId, path))
+        this.captureContext?.filed.push({
+          scenario: label,
+          kind: 'video',
+          path,
+          actor,
+        })
+      }
+      // Either way the staged recording goes: it has been copied where it
+      // belongs, or it is footage of a scenario that passed.
+      await video.delete()
+    } catch {}
+  }
+
+  /** Is the scenario that just ran one whose footage is worth keeping? */
+  private keepsVideo(): boolean {
+    const retention = this.options.capture?.video ?? 'off'
+    if (retention === 'all') {
+      return true
+    }
+    // A scenario the runner never reported on counts as failed — an
+    // unexplained run is exactly the one somebody will want to watch.
+    return retention === 'failed' && this.outcome !== 'passed'
   }
 
   async captureFailure(label: string): Promise<ScenarioBrowserFailure[]> {
@@ -151,15 +250,25 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       try {
         failure.url = session.page.url()
       } catch {}
-      if (this.options.failureDir) {
+      const capture = this.options.capture
+      if (capture) {
         try {
-          const file = join(
-            this.options.failureDir,
-            `${slugify(label)}-${slugify(actorName)}.png`
-          )
-          await mkdir(this.options.failureDir, { recursive: true })
+          // The failing scenario's own folder, beside its screenshots and its
+          // video: one run is one directory, and one scenario within it is
+          // everything that scenario produced.
+          const path = `${slug(label)}/failure-${slug(actorName)}.png`
+          const file = join(capture.dir, capture.runId, path)
+          await mkdir(join(capture.dir, capture.runId, slug(label)), {
+            recursive: true,
+          })
           await session.writeScreenshot(file)
           failure.screenshot = file
+          this.captureContext?.filed.push({
+            scenario: label,
+            kind: 'failure',
+            path,
+            actor: actorName,
+          })
         } catch {}
       }
       failures.push(failure)
@@ -167,21 +276,58 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     return failures
   }
 
+  /**
+   * Everything this run filed. Complete only once `close()` has compressed the
+   * recordings, because compressing changes their names.
+   */
+  artifacts(): ScenarioArtifact[] {
+    return this.captureContext?.filed ?? []
+  }
+
   async close(): Promise<void> {
     await this.reset()
     // Only after reset(): Playwright finalises a video when its context closes,
     // so compressing before this point would re-encode files still being written.
+    // Encoding runs over what survived retention, which is why a green run pays
+    // for no encoding at all.
     const capture = this.options.capture
-    if (capture?.video && capture.compress !== false) {
-      await compressVideosIn(join(capture.dir, capture.runId, 'video')).catch(
-        () => 0
-      )
+    if (capture) {
+      const runDir = join(capture.dir, capture.runId)
+      if (capture.video !== 'off' && capture.compress !== false) {
+        await this.compressKeptVideos(runDir)
+      }
+      await rm(join(runDir, VIDEO_STAGING_DIR), {
+        recursive: true,
+        force: true,
+      }).catch(() => {})
     }
     const connection = this.connection
     this.connection = undefined
     if (connection) {
       const { release } = await connection
       await release?.()
+    }
+  }
+
+  /**
+   * Re-encode the recordings that survived retention, and follow them to their
+   * new names in the ledger — the container changes with the codec, so a path
+   * left un-rewritten points at a file that no longer exists.
+   */
+  private async compressKeptVideos(runDir: string): Promise<void> {
+    const videos = this.artifacts().filter(
+      (artifact) => artifact.kind === 'video'
+    )
+    const absolute = (artifact: ScenarioArtifact) =>
+      join(runDir, ...artifact.path.split('/'))
+    const renamed = await compressVideos(videos.map(absolute)).catch(
+      () => new Map<string, string>()
+    )
+    for (const artifact of videos) {
+      const to = renamed.get(absolute(artifact))
+      if (to) {
+        artifact.path = artifact.path.replace(/\.webm$/, '.mp4')
+      }
     }
   }
 
@@ -194,14 +340,11 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     const capture = this.options.capture
     await session.open(
       browser,
-      capture?.video ? join(capture.dir, capture.runId, 'video') : undefined
+      capture && capture.video !== 'off'
+        ? join(capture.dir, capture.runId, VIDEO_STAGING_DIR)
+        : undefined
     )
-    if (capture) {
-      this.captureContext ??= {
-        dir: capture.dir,
-        runId: capture.runId,
-        taken: 0,
-      }
+    if (this.captureContext) {
       session.capture = this.captureContext
     }
     const signIn = this.options.signIn ?? defaultActorSignIn
@@ -235,13 +378,6 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     return this.connection
   }
 }
-
-/** A scenario label ("code editor › edits") as a usable filename. */
-const slugify = (value: string) =>
-  value
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase() || 'scenario'
 
 /**
  * Sign in via the Better Auth actor plugin and land its Set-Cookie headers in

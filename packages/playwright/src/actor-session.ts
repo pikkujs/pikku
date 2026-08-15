@@ -1,10 +1,20 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
+import type {
+  Browser,
+  BrowserContext,
+  Locator,
+  Page,
+  Video,
+} from '@playwright/test'
 import { pollUntil } from '@pikku/core/scenario'
 import type { TestIdSelector } from '@pikku/core/scenario'
-import type { PikkuBrowserWire } from '@pikku/core/ecosystem/scenario'
+import type {
+  PikkuBrowserWire,
+  ScenarioArtifact,
+} from '@pikku/core/ecosystem/scenario'
 import type { BrowserConfig } from './config.js'
+import { slug } from './capture.js'
 import { locateTestId, type LocateTestIdOptions } from './testid.js'
 
 /**
@@ -22,6 +32,13 @@ export interface CaptureContext {
   /** The scenario currently executing, set by the provider as each one starts. */
   scenario?: string
   /**
+   * Write the screenshots a scenario asks for by name.
+   *
+   * Separate from the context existing at all: recording video needs a capture
+   * context on every run, and that must not silently turn `--screenshots` on.
+   */
+  screenshots: boolean
+  /**
    * Captures taken so far in the current scenario, across every actor.
    *
    * One object is shared by reference between the actors' sessions rather than
@@ -31,6 +48,14 @@ export interface CaptureContext {
    * occurred.
    */
   taken: number
+  /**
+   * Everything this run has filed, in the order it was filed.
+   *
+   * The ledger the runner reads back, shared by reference with the provider:
+   * an image is only findable later if something recorded which scenario and
+   * which actor produced it, and a directory listing cannot say.
+   */
+  filed: ScenarioArtifact[]
 }
 
 /** Runtime problems collected for one page navigation. */
@@ -128,6 +153,17 @@ export class ActorSession implements PikkuBrowserWire {
     this.page.on('requestfailed', settleReq)
   }
 
+  /**
+   * This window's recording, if it is being recorded.
+   *
+   * Must be read BEFORE the context closes — the handle is reachable through
+   * the page, and the page is gone afterwards — even though the file itself
+   * only exists once the context has closed.
+   */
+  video(): Video | undefined {
+    return this.page?.video() ?? undefined
+  }
+
   async close() {
     await this.context?.close()
   }
@@ -164,32 +200,35 @@ export class ActorSession implements PikkuBrowserWire {
    * moment that mattered. `description` is what you would tell a colleague to
    * look for — it becomes the filename and the caption.
    *
-   * Writes into the run's capture directory when one is configured, so every
-   * image is stamped with the run and scenario that produced it. Without a
-   * capture context — a plain `pikku scenario run` with no `--screenshots` —
-   * this still returns the bytes and writes nothing, so a scenario that calls
-   * it is not broken by the flag being off.
+   * Writes into the run's capture directory when `--screenshots` is on, so
+   * every image is stamped with the run and scenario that produced it. Without
+   * the flag this still returns the bytes and writes nothing, so a scenario
+   * that calls it is not broken by the flag being off.
    */
   async screenshot(description?: string): Promise<Uint8Array> {
     const bytes = await this.page.screenshot()
-    if (!this.capture || !description) {
+    if (!this.capture?.screenshots || !description) {
       return bytes
     }
 
-    const dir = join(
-      this.capture.dir,
-      this.capture.runId,
-      slug(this.capture.scenario ?? 'scenario')
-    )
+    const scenario = this.capture.scenario ?? 'scenario'
+    const dir = join(this.capture.dir, this.capture.runId, slug(scenario))
     mkdirSync(dir, { recursive: true })
 
     // The index leads so a directory listing reads in the order the run
     // happened, which is the order somebody reviewing it wants.
     const index = String(++this.capture.taken).padStart(2, '0')
-    writeFileSync(
-      join(dir, `${index}-${slug(description)}-${slug(this.actor)}.png`),
-      bytes
-    )
+    const name = `${index}-${slug(description)}-${slug(this.actor)}.png`
+    writeFileSync(join(dir, name), bytes)
+    this.capture.filed.push({
+      scenario,
+      kind: 'screenshot',
+      // Always forward slashes: this is a content key the console resolves
+      // against a directory locally and a bucket when hosted.
+      path: `${slug(scenario)}/${name}`,
+      actor: this.actor,
+      name: description,
+    })
     return bytes
   }
 
@@ -322,6 +361,7 @@ export class ActorSession implements PikkuBrowserWire {
   }
 }
 
+
 function blankIssues(): PageIssues {
   return {
     consoleErrors: [],
@@ -338,11 +378,3 @@ function isApiPath(url: string): boolean {
     return false
   }
 }
-
-/** Filename-safe, readable, and stable for the same description. */
-const slug = (value: string): string =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 60) || 'capture'

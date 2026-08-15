@@ -13,6 +13,7 @@ import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
+import type { ScenarioRunStore } from '@pikku/core/ecosystem/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
 
 export interface Config extends CoreConfig {}
@@ -33,6 +34,13 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   stateDiffService: StateDiffService | null
   dbSchemaService: DbSchemaService | null
   knowledgeService: KnowledgeService | null
+  /**
+   * Past scenario runs and what they recorded. Declared as the interface rather
+   * than the on-disk implementation: a hosted console keeps the same runs in a
+   * database and its artifacts in object storage, and the functions that read
+   * them should not have to know which one they are talking to.
+   */
+  scenarioRunStore: ScenarioRunStore | null
   /**
    * The host's resolved better-auth instance, wired by `pikkuBetterAuth`. The
    * console never constructs it — it is declared here only so the functions

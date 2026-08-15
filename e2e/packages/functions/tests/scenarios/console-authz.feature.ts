@@ -18,6 +18,7 @@ import {
 const CREDENTIAL_GET = 'console:credentialGet'
 const FUNCTIONS_META = 'console:getFunctionsMeta'
 const DIRECTORY = 'pikkuAdminListUsers'
+const SCENARIO_RUNS = 'console:listScenarioRuns'
 
 /** The sharp edge: credential read returns a resolved access token. */
 export const consoleAuthzNonAdminCredentialReadScenario = pikkuScenario<
@@ -202,6 +203,60 @@ export const consoleAuthzAdminDirectoryScenario = pikkuScenario<
   },
 })
 
+/**
+ * A run store holds screenshots and footage of the application being used, so
+ * the runs the console reads back are behind the same gate as everything else
+ * it exposes — not a public archive because it happens to be test output.
+ */
+export const consoleAuthzNonAdminScenarioRunsScenario = pikkuScenario<
+  void,
+  { status: 403 }
+>({
+  title: 'A non-admin is refused the record of past scenario runs',
+  description:
+    'pikku:console:scenarios:read is not implied by being signed in',
+  tags: ['scenario', 'console-authz'],
+  func: async (_services, _data, { scenario, actors }) => {
+    const call = await scenario.when(
+      'the guest lists past runs',
+      'invokesRpcRaw',
+      { rpcName: SCENARIO_RUNS, data: { limit: 5 } },
+      { actor: actors.guest }
+    )
+    await scenario.then(
+      'sees it forbidden',
+      'expectsRpcResponse',
+      { call, status: 403 },
+      { actor: actors.guest }
+    )
+    return { status: 403 }
+  },
+})
+
+export const consoleAuthzAdminScenarioRunsScenario = pikkuScenario<
+  void,
+  { allowed: true }
+>({
+  title: 'An admin may read the record of past scenario runs',
+  description: 'The umbrella admin scope covers pikku:console:scenarios:read',
+  tags: ['scenario', 'console-authz'],
+  func: async (_services, _data, { scenario, actors }) => {
+    const call = await scenario.when(
+      'the admin lists past runs',
+      'invokesRpcRaw',
+      { rpcName: SCENARIO_RUNS, data: { limit: 5 } },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the call allowed',
+      'expectsRpcAllowed',
+      { call },
+      { actor: actors.admin }
+    )
+    return { allowed: true }
+  },
+})
+
 export const consoleAuthzFeature = pikkuFeature({
   name: "The console addon's privileged RPCs require an admin session",
   description:
@@ -215,5 +270,7 @@ export const consoleAuthzFeature = pikkuFeature({
     consoleAuthzAdminMetadataScenario,
     consoleAuthzNonAdminDirectoryScenario,
     consoleAuthzAdminDirectoryScenario,
+    consoleAuthzNonAdminScenarioRunsScenario,
+    consoleAuthzAdminScenarioRunsScenario,
   ],
 })

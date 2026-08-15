@@ -136,7 +136,11 @@ describe('resolveScenarioBrowserProvider', () => {
     appUrl: 'http://localhost:4077/console',
     secret: 'top-secret',
     actors: { admin: { email: 'admin@test' } },
-    failureDir: '/project/.pikku/scenario-failures',
+    capture: {
+      dir: '/project/.pikku/scenario-runs',
+      runId: 'run-1',
+      video: 'failed' as const,
+    },
     browserScenarios: ['codeEditorScenario'],
     ...overrides,
   })
@@ -296,7 +300,7 @@ describe('resolveScenarioBrowserProvider', () => {
     )
   })
 
-  test('the driver is built with the failure directory and the run’s own actors', async () => {
+  test('the driver is built with the run’s capture options and its own actors', async () => {
     const { built, importDriver } = driver()
 
     await resolveScenarioBrowserProvider({
@@ -305,7 +309,11 @@ describe('resolveScenarioBrowserProvider', () => {
     } as any)
 
     assert.equal(built.length, 1)
-    assert.equal(built[0].failureDir, '/project/.pikku/scenario-failures')
+    assert.deepEqual(built[0].capture, {
+      dir: '/project/.pikku/scenario-runs',
+      runId: 'run-1',
+      video: 'failed',
+    })
     assert.equal(built[0].secret, 'top-secret')
     assert.deepEqual(built[0].actors, { admin: { email: 'admin@test' } })
     assert.equal(built[0].config.appUrl, 'http://localhost:4077/console')

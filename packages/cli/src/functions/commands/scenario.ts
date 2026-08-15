@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
+import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
 import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
 import {
   PikkuScenarioService,
@@ -30,8 +31,8 @@ import {
 import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
-  ScenarioStepRow,
-} from './scenario-formatter.js'
+  ScenarioResult,
+} from '@pikku/core/ecosystem/scenario'
 import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,
@@ -145,7 +146,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     keepAlive?: boolean
     trace?: boolean
     screenshots?: boolean
-    video?: boolean
+    video?: 'off' | 'failed' | 'all'
     apiUrl?: string
     appUrl?: string
   },
@@ -166,7 +167,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       keepAlive = false,
       trace = false,
       screenshots = false,
-      video = false,
+      video = 'failed',
       apiUrl,
       appUrl,
     }
@@ -419,13 +420,8 @@ export const scenarioRun = pikkuSessionlessFunc<
           browserStepsByFlow.has(entry.scenarioName)
         )
       )
-    const failureDir = join(
-      resolve(config.rootDir, config.outDir),
-      'scenario-failures'
-    )
     // Artifacts are filed under the run, not the scenario, so one run's output
-    // is one folder to open, keep or delete. `--video` implies capture is on:
-    // recording without somewhere to put it is not a thing anyone wants.
+    // is one folder to open, keep or delete.
     const captureDir = join(
       resolve(config.rootDir, config.outDir),
       'scenario-runs'
@@ -434,10 +430,13 @@ export const scenarioRun = pikkuSessionlessFunc<
     // reviewing artifacts means opening what `pikku scenario run` just produced,
     // not hunting for one scenario's folder among many.
     const captureRunId = randomUUID()
-    const capture =
-      screenshots || video
-        ? { dir: captureDir, runId: captureRunId, video, compress: true }
-        : undefined
+    const capture = {
+      dir: captureDir,
+      runId: captureRunId,
+      screenshots,
+      video,
+      compress: true,
+    }
     const browserLifecycle = scenarioBrowserLifecycle(
       needsBrowser
         ? await (async () => {
@@ -448,7 +447,6 @@ export const scenarioRun = pikkuSessionlessFunc<
               secret,
               actors: scenarioActors,
               signInPath: env.signInPath,
-              failureDir,
               capture,
               browserScenarios: [...browserStepsByFlow.keys()],
               driver: config.scenarios?.browserDriver,
@@ -459,15 +457,23 @@ export const scenarioRun = pikkuSessionlessFunc<
         : undefined
     )
 
-    const results: Array<{
-      name: string
-      status: 'passed' | 'failed'
-      durationMs: number
-      output?: unknown
-      error?: string
-      steps?: ScenarioStepRow[]
-      failure?: ScenarioFailureDetail
-    }> = []
+    const results: ScenarioResult[] = []
+
+    // Opened before the first scenario and written to as each one finishes, so
+    // a suite that dies on its fortieth still leaves the thirty-nine behind —
+    // and the console can show a run while it is still going.
+    const runStore = new FileScenarioRunStore({ dir: captureDir })
+    const startedAtIso = new Date().toISOString()
+    await runStore.start({
+      runId: captureRunId,
+      environment,
+      surface: runSurface,
+      status: 'running',
+      startedAt: startedAtIso,
+      results: [],
+      skipped,
+      hookFailures: [],
+    })
 
     /**
      * The step ladder is read back off the recorded run, so it needs no live
@@ -547,10 +553,33 @@ export const scenarioRun = pikkuSessionlessFunc<
 
     const hookFailures: string[] = []
 
+    /**
+     * What a result carries beyond its own outcome: which registration ran,
+     * which feature grouped it, and the tags it was selected by. Snapshotted
+     * into the record because a run read back next week is describing a suite
+     * whose source has moved on.
+     */
+    const identify = (
+      result: ScenarioResult,
+      scenarioName: string,
+      feature?: string
+    ): ScenarioResult => {
+      const tags = state.workflows?.meta?.[scenarioName]?.tags as
+        | string[]
+        | undefined
+      return {
+        ...result,
+        scenarioName,
+        ...(feature ? { feature } : {}),
+        ...(tags?.length ? { tags } : {}),
+      }
+    }
+
     const runEntry = async (
       label: string,
       scenarioName: string,
-      data: unknown
+      data: unknown,
+      feature?: string
     ) => {
       const startedAt = Date.now()
       // Before the scenario, not after it: the last scenario's window is left
@@ -629,6 +658,11 @@ export const scenarioRun = pikkuSessionlessFunc<
           browser: await browserLifecycle.captureFailure(label),
         }
       }
+      // Told here, acted on at the next scenario's reset — that is what closes
+      // these windows and finalises the video this outcome decides the fate of.
+      browserLifecycle.endScenario(result.status)
+      Object.assign(result, identify(result, scenarioName, feature))
+      await runStore.recordScenario(captureRunId, result)
       if (coverageActive) {
         const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
         if (report) {
@@ -668,16 +702,27 @@ export const scenarioRun = pikkuSessionlessFunc<
           // Setup failed, so nothing in the group ran. Reporting them as failed
           // rather than skipped is the honest reading: they did not pass.
           for (const entry of group.entries) {
-            results.push({
-              name: label(entry),
-              status: 'failed',
-              durationMs: 0,
-              error: `feature '${groupName}' before hook failed: ${beforeError?.message ?? beforeError}`,
-            })
+            const result = identify(
+              {
+                name: label(entry),
+                status: 'failed',
+                durationMs: 0,
+                error: `feature '${groupName}' before hook failed: ${beforeError?.message ?? beforeError}`,
+              },
+              entry.scenarioName,
+              groupName
+            )
+            results.push(result)
+            await runStore.recordScenario(captureRunId, result)
           }
         } else {
           for (const entry of group.entries) {
-            await runEntry(label(entry), entry.scenarioName, entry.data)
+            await runEntry(
+              label(entry),
+              entry.scenarioName,
+              entry.data,
+              groupName
+            )
           }
         }
       } finally {
@@ -695,10 +740,25 @@ export const scenarioRun = pikkuSessionlessFunc<
 
     await browserLifecycle.close()
 
-    // Reported after the browser has closed, because video is only finalised
-    // when its context is. A capture nobody can find is a capture nobody
-    // looks at, and looking at them is the entire point of the flags.
-    if (capture) {
+    // Collected after the browser has closed, because a video is only finalised
+    // when its context is — and renamed again by the encode that close() runs.
+    // This is the first moment the answer is complete.
+    const artifacts = browserLifecycle.artifacts()
+    await runStore.attachArtifacts(captureRunId, artifacts)
+
+    const failed = results.filter((r) => r.status === 'failed')
+    await runStore.finish(captureRunId, {
+      status: failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
+      finishedAt: new Date().toISOString(),
+      skipped,
+      hookFailures,
+    })
+
+    // A capture nobody can find is a capture nobody looks at, and looking at
+    // them is the entire point of the flags. Announced only when the run
+    // actually filed something: every run leaves a record behind, and most of
+    // them have no images or footage to go with it.
+    if (artifacts.length > 0) {
       logger.info(`Captures → ${join(capture.dir, capture.runId)}`)
     }
 
@@ -771,7 +831,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       )
     }
 
-    const failed = results.filter((r) => r.status === 'failed')
     if (
       failed.length > 0 ||
       hookFailures.length > 0 ||
