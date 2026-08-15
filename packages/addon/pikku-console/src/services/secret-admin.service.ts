@@ -1,4 +1,4 @@
-import type { SecretService } from '@pikku/core/services'
+import type { SecretService } from '@pikku/core/ecosystem/secret'
 
 /**
  * Secret administration for the console.

@@ -3,8 +3,7 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "addon": true,
-  "node": {
+  "addon": {
     "displayName": "HMAC Signer",
     "description": "HMAC signing service using wire credentials",
     "categories": ["Security"]

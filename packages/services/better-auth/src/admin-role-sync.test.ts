@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import type { CoreServices } from '@pikku/core'
+import type { CoreServices } from '@pikku/core/ecosystem/types'
 import { ADMIN_SCOPES, ADMIN_SCOPE_ROOT } from './auth-scopes.js'
 import { syncProjectedAdminRole } from './admin-role-sync.js'
 

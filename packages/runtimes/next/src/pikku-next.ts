@@ -4,12 +4,12 @@ import type {
   CoreConfig,
   CoreSingletonServices,
   CreateConfig,
-} from '@pikku/core'
+} from '@pikku/core/ecosystem/types'
 import type {
   HTTPMethod,
   RunHTTPWiringOptions,
 } from '@pikku/core/ecosystem/http'
-import { fetchData, fetch } from '@pikku/core/http'
+import { fetchData, fetch } from '@pikku/core/ecosystem/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 

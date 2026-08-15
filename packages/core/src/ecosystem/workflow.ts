@@ -1,3 +1,4 @@
+export { InMemoryWorkflowService } from '../services/in-memory-workflow-service.js'
 export type { WorkflowService } from '../services/workflow-service.js'
 export type {
   ApprovalStepMeta,
@@ -28,6 +29,7 @@ export type {
   PikkuWorkflowGraphResult,
 } from '../wirings/workflow/graph/wire-workflow-graph.js'
 export { isRef } from '../wirings/workflow/graph/workflow-graph.types.js'
+export { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 export {
   buildRunTimeline,
   reconstructFinalState,

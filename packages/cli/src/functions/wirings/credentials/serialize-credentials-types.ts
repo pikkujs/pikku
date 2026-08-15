@@ -121,8 +121,6 @@ export interface CredentialsMap {
 ${mapEntries.join('\n')}
 }
 
-export type CredentialName = keyof CredentialsMap
-
 const CREDENTIALS_META: Record<string, CredentialMetaInfo> = {
 ${metaEntries.join(',\n')}
 }

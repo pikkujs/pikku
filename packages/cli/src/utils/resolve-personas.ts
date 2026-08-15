@@ -2,8 +2,11 @@ import {
   personaEmails,
   validateAndBuildPersonasMeta,
 } from '@pikku/core/ecosystem/persona'
-import type { PersonaMeta, PersonasMeta } from '@pikku/core/persona'
-import type { PersonaDefinitions } from '@pikku/core/ecosystem/persona'
+import type {
+  PersonaMeta,
+  PersonasMeta,
+  PersonaDefinitions,
+} from '@pikku/core/ecosystem/persona'
 import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
 
 /**

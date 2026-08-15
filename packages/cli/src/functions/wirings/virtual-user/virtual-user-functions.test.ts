@@ -16,7 +16,7 @@ const services = (
       virtualUserSchemasFile:
         '/app/src/scaffold/virtual-user/virtual-user.schemas.gen.ts',
       typesDeclarationFile: '/app/.pikku/pikku-types.gen.ts',
-      personasWiringFile: '/app/.pikku/workflow/pikku-personas.gen.ts',
+      personasWiringFile: '/app/.pikku/scenarios/pikku-personas.gen.ts',
       packageMappings: {},
     },
     getInspectorState: async () => ({ personas: { definitions: personas } }),

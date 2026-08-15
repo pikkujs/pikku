@@ -1,4 +1,8 @@
-export { CLIError, executeCLI } from '../wirings/cli/cli-runner.js'
+export {
+  CLIError,
+  executeCLI,
+  pikkuCLIRender,
+} from '../wirings/cli/cli-runner.js'
 export type {
   CLICommandMeta,
   CLIMeta,

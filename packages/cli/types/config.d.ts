@@ -140,10 +140,12 @@ export interface PikkuCLICoreOutputFiles {
   scenarioStepMapDeclarationFile: string
   workflowTypesFile: string
   workflowMetaDir: string
-  personasWiringFile: string
 
   // Scenarios — kept out of the app bootstrap so a deployed server never
   // imports a step body (and whatever a step imports).
+  scenarioTypesFile: string
+  /** The actors a scenario drives — distinct from `scopes/pikku-personas.gen.ts`, which declares them. */
+  personasWiringFile: string
   scenarioStepsFile: string
   scenarioStepsMetaFile: string
   scenarioStepsMetaJsonFile: string
@@ -209,9 +211,6 @@ export interface PikkuCLICoreOutputFiles {
 
   // Addon types (pikkuAddonConfig, pikkuAddonServices, etc.)
   addonTypesFile: string
-
-  // Node
-  nodeTypesFile: string
 
   // Secrets
   secretTypesFile: string

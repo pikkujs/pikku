@@ -1,6 +1,6 @@
 import type { DurableObjectState, WebSocket } from '@cloudflare/workers-types'
-import type { EventHubService } from '@pikku/core/channel'
-import type { Logger } from '@pikku/core/services'
+import type { EventHubService } from '@pikku/core/ecosystem/channel'
+import type { Logger } from '@pikku/core/ecosystem/services'
 
 export class CloudflareEventHubService<
   EventTopics extends Record<string, unknown> = {},

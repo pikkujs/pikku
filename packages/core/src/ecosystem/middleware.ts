@@ -1,9 +1,10 @@
-export { runMiddleware } from '../middleware-runner.js'
+export { addGlobalMiddleware, runMiddleware } from '../middleware-runner.js'
 export { authAPIKey } from '../middleware/auth-apikey.js'
 export { authCookie } from '../middleware/auth-cookie.js'
 export { pikkuRemoteAuthMiddleware } from '../middleware/remote-auth.js'
 export { telemetryInner, telemetryOuter } from '../middleware/telemetry.js'
 export { addGlobalPermission } from '../permissions.js'
+export { pikkuMiddleware } from '../types/core.types.js'
 
 /**
  * Types the exports above mention but do not themselves export. Without

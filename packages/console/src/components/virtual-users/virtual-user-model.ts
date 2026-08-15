@@ -2,8 +2,6 @@ import {
   deriveCatalogue,
   deriveIntents,
   type VirtualUserDisposition,
-} from '@pikku/core/virtual-user'
-import {
   catalogueClassification,
   dispositionProfile,
   intentsForPersona,
@@ -13,8 +11,10 @@ import {
   type DispositionProfile,
   type IntentSource,
 } from '@pikku/core/ecosystem/virtual-user'
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
-import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+import type {
+  FunctionsMeta,
+  ResolvedPersona,
+} from '@pikku/core/ecosystem/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/ecosystem/role'
 import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
 

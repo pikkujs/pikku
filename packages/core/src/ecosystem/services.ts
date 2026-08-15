@@ -1,14 +1,33 @@
+export { NoopAuditService } from '../services/audit-service.js'
 export type {
   AuditDurability,
   AuditEvent,
   AuditEventBatch,
+  AuditLog,
+  AuditService,
 } from '../services/audit-service.js'
+export type {
+  BucketKeyArgs,
+  ContentService,
+  CopyFileArgs,
+  GetUploadURLArgs,
+  SignContentKeyArgs,
+  SignURLArgs,
+  UploadURLResult,
+  WriteFileArgs,
+} from '../services/content-service.js'
 export type {
   DeploymentConfig,
   DeploymentService,
   DeploymentServiceConfig,
 } from '../services/deployment-service.js'
 export { InMemoryAgentRunStateService } from '../services/in-memory-agent-run-state-service.js'
+export type { JWTService } from '../services/jwt-service.js'
+export { LocalEmailService } from '../services/local-email-service.js'
+export { LocalSecretService } from '../services/local-secrets.js'
+export { LocalVariablesService } from '../services/local-variables.js'
+export { ConsoleLogger } from '../services/logger-console.js'
+export { LogLevel } from '../services/logger.js'
 export type {
   AgentMeta,
   AgentsMeta,
@@ -35,8 +54,8 @@ export type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
 } from '../services/scheduler-service.js'
-export type { Role } from '../services/scope-service.js'
-export { getStubTracker, spy } from '../services/stub-tracker.js'
+export type { SessionStore } from '../services/session-store.js'
+export { getStubTracker, isTestRun, spy } from '../services/stub-tracker.js'
 export type { CredentialMetaInfo } from '../services/typed-credential-service.js'
 export type { CredentialMeta } from '../services/typed-secret-service.js'
 export { TypedVariablesService } from '../services/typed-variables-service.js'

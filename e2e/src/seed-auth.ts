@@ -6,7 +6,7 @@ import {
   TARGET_USER,
   type SeedUser,
 } from './auth-fixtures.js'
-import { personaConfigs } from '#pikku/workflow/pikku-personas.gen.js'
+import { personaConfigs } from '#pikku/scenarios/pikku-personas.gen.js'
 
 const signUp = async (baseUrl: string, user: SeedUser) => {
   const res = await fetch(`${baseUrl}/api/auth/sign-up/email`, {

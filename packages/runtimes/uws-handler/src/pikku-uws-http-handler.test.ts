@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, before, describe, test } from 'node:test'
 import { setSingletonServices } from '@pikku/core/ecosystem'
 import { resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
 
 import { pikkuHTTPHandler } from './pikku-uws-http-handler.js'
 

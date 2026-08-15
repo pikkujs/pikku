@@ -1,3 +1,4 @@
+export { InMemoryTriggerService } from '../services/in-memory-trigger-service.js'
 export type {
   CorePikkuTriggerFunction,
   CorePikkuTriggerFunctionConfig,

@@ -12,7 +12,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const SECURITY_PAGE = '/console/security'
 const WEBHOOKS_PAGE = '/console/webhooks'

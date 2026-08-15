@@ -7,8 +7,8 @@
  * the transport holds.
  */
 
-import type { EventHubService } from '@pikku/core'
-import type { Logger } from '@pikku/core/services'
+import type { EventHubService } from '@pikku/core/ecosystem/channel'
+import type { Logger } from '@pikku/core/ecosystem/services'
 import type { BunEventHubService } from '@pikku/bun-server'
 import type * as BunServer from '@pikku/bun-server'
 

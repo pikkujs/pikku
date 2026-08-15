@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar from 'chokidar'
-import { pikkuDevReloader } from '@pikku/core/dev'
+import { pikkuDevReloader } from '@pikku/core/ecosystem/dev'
 
 export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
   remote: true,

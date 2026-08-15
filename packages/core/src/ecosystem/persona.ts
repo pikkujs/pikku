@@ -9,8 +9,10 @@ export type {
   CorePersona,
   PersonaAccountMeta,
   PersonaDefinitions,
+  PersonaMeta,
 } from '../wirings/persona/persona.types.js'
 export {
+  isRunnablePersona,
   roleMismatchMessage,
   validateAndBuildPersonasMeta,
   verifyPersonaRoles,

@@ -11,7 +11,7 @@ export { BullQueueWorkers } from './bull-queue-worker.js'
 export { BullSchedulerService } from './bull-scheduler-service.js'
 
 // Re-export core queue types for convenience
-export type { QueueService, QueueJob } from '@pikku/core/queue'
+export type { QueueJob, QueueService } from '@pikku/core/ecosystem/queue'
 export type {
   PikkuWorkerConfig,
   PikkuJobConfig,

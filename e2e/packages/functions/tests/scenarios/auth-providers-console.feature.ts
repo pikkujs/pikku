@@ -12,7 +12,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const AUTH_PROVIDERS_PAGE = '/console/auth-providers'
 const PROVIDERS_READY = { testId: 'auth-provider-row' }

@@ -1,4 +1,5 @@
-import type { Logger, ScopeService } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
+import type { ScopeService } from '@pikku/core/ecosystem/scope'
 import type { BetterAuthInstance } from './define-auth.js'
 import { ADMIN_SCOPE_ROOT } from './auth-scopes.js'
 

@@ -24,7 +24,7 @@ ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = 
  * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type produced when trigger fires
  */
-export type PikkuTriggerFunction<
+type PikkuTriggerFunction<
   TInput = unknown,
   TOutput = unknown
 > = CorePikkuTriggerFunction<TInput, TOutput, SingletonServices>
@@ -77,7 +77,7 @@ type TriggerWiring = CoreTrigger
  * @template TInput - Input type passed to the trigger function
  * @template TOutput - Output type produced when trigger fires
  */
-export type TriggerSource<
+type TriggerSource<
   TInput = unknown,
   TOutput = unknown
 > = {

@@ -1,5 +1,7 @@
-import { NotFoundError } from '@pikku/core'
-import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
+import {
+  LocalEnvironmentOnlyError,
+  NotFoundError,
+} from '@pikku/core/ecosystem/errors'
 import { pikkuFunc } from '#pikku'
 
 export const updateEmailTemplate = pikkuFunc<

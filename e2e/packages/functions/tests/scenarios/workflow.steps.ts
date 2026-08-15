@@ -10,7 +10,7 @@
  * A refusal or a failure is data here, never a throw: several scenarios assert
  * that a workflow failed or was cancelled.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { pollUntil, requireScenarioEnv } from '@pikku/core/scenario'
 import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { postScenarioJson, readScenarioHttpResponse } from '@pikku/core/persona'

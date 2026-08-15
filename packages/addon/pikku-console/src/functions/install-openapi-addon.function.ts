@@ -1,4 +1,4 @@
-import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
+import { LocalEnvironmentOnlyError } from '@pikku/core/ecosystem/errors'
 import { pikkuFunc } from '#pikku'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {

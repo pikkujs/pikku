@@ -11,7 +11,7 @@
  * declared because the console reads declared steps — this is what the platform
  * subject on the personas page is showing.
  */
-import { pikkuPlatformScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuPlatformScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 export const shipsTheOrder = pikkuPlatformScenarioStep<
   { orderId: string; recipient?: string },

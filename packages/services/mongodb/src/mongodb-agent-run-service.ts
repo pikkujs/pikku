@@ -1,5 +1,9 @@
-import type { AgentThread, AgentMessage } from '@pikku/core/agent'
-import type { AgentRunRow, AgentRunService } from '@pikku/core/ecosystem/agent'
+import type {
+  AgentThread,
+  AgentMessage,
+  AgentRunRow,
+  AgentRunService,
+} from '@pikku/core/ecosystem/agent'
 import type { Db, Collection } from 'mongodb'
 
 // Owner ids are untrusted input to the regex, so metacharacters must not be

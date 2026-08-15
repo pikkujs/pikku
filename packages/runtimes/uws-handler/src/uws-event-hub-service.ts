@@ -1,4 +1,4 @@
-import type { EventHubService } from '@pikku/core/channel'
+import type { EventHubService } from '@pikku/core/ecosystem/channel'
 import type * as uWS from 'uWebSockets.js'
 
 export class UWSEventHubService<

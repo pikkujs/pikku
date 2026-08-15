@@ -1,5 +1,5 @@
-import type { CoreServices, CoreUserSession } from '@pikku/core'
-import type { ScopeService } from '@pikku/core/services'
+import type { ScopeService } from '@pikku/core/ecosystem/scope'
+import type { CoreServices, CoreUserSession } from '@pikku/core/ecosystem/types'
 
 /**
  * Resolve the session user's scopes from the registered {@link ScopeService}.

@@ -140,7 +140,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
         workflow.do('Bootstrap AI agent types', 'pikkuAgentTypes', null),
       ])
-      await workflow.do('Bootstrap Node types', 'pikkuNodeTypes', null)
       await workflow.do(
         'Bootstrap Secret definition types',
         'pikkuSecretDefinitionTypes',
@@ -197,7 +196,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
     await Promise.all(typeGenerators)
-    await workflow.do('Node types', 'pikkuNodeTypes', null)
     if (!config.addon) {
       await workflow.do('CLI types', 'pikkuCLITypes', null)
     }

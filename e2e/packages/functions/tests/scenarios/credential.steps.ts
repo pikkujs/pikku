@@ -7,7 +7,7 @@
  * no user row at all, which is the point: the header shim in `src/middleware.ts`
  * is what is under test, so an actor cannot stand in for them.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { requireScenarioEnv } from '@pikku/core/scenario'
 import { postScenarioJson } from '@pikku/core/persona'
 

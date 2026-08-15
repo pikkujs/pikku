@@ -13,9 +13,9 @@ import {
   pikkuConfig,
   pikkuServices,
   pikkuWireServices,
-} from '../.pikku/pikku-types.gen.js'
+} from '#pikku/pikku-types.gen.js'
 import { TodoStore } from './services/store.service.js'
-import { requiredSingletonServices } from '../.pikku/pikku-services.gen.js'
+import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {
@@ -40,7 +40,7 @@ export const createSingletonServices = pikkuServices(
     if (requiredSingletonServices.metaService) {
       if (!metaService) {
         const { PikkuMetaService } =
-          await import('../.pikku/pikku-meta-service.gen.js')
+          await import('#pikku/services/pikku-meta-service.gen.js')
         metaService = new PikkuMetaService()
       }
     }

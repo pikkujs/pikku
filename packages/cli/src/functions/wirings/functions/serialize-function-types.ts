@@ -22,7 +22,8 @@ export const serializeFunctionTypes = (
     : 'string'
   const workflowImport =
     workflowTypesImport ||
-    `import type { TypedWorkflow, TypedScenario, TypedPersonas } from '../workflow/pikku-workflow-types.gen.js'`
+    `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'
+import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-types.gen.js'`
   // Falls back to `string` when a project has no scopes codegen, so that
   // `scopes` stays usable rather than resolving to an unbound type name.
   const scopesImport = scopesTypeImport || `type ScopeId = string`
@@ -65,11 +66,11 @@ ${configTypeImport.includes('Config type not found') ? 'export type Config = any
  * nothing destructures it — in which case it is never created either. This is
  * why an \`if (!service)\` guard inside a function body is always dead code.
  */
-export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
+type WiredSingletonServices = RequiredSingletonServices & SingletonServices
 export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
 
 /** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */
-export type WiredAuthServices = SecretlessServices<WiredSingletonServices>
+type WiredAuthServices = SecretlessServices<WiredSingletonServices>
 
 /**
  * Inline node configuration for function definitions.
@@ -146,7 +147,7 @@ export const pikkuPermission = <In>(
  *
  * @template RequiredServices - The services required for this auth check
  */
-export type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuth<RequiredServices, Session>
+type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuth<RequiredServices, Session>
 
 /**
  * Configuration object for creating an auth permission with metadata
@@ -368,7 +369,9 @@ export type PikkuFunctionConfig<
   PikkuFunc extends PikkuFunction<In, Out, RequiredWires, any> | PikkuFunctionSessionless<In, Out, RequiredWires, any, any> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>
+> = Omit<CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>, 'node'> & {
+  node?: NodeConfig
+}
 
 /**
  * {@link PikkuFunctionConfig} for a function that runs without a session.
@@ -381,7 +384,9 @@ type PikkuFunctionSessionlessConfig<
   PikkuFunc extends PikkuFunctionSessionless<In, Out, RequiredWires, any> = PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>
+> = Omit<CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>, 'node'> & {
+  node?: NodeConfig
+}
 
 /**
  * Configuration object for Pikku functions with Zod schema validation.
@@ -411,13 +416,14 @@ type PikkuFunctionConfigWithSchema<
     undefined,
     ScopeId
   >,
-  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
+  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
   func:
     | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
     | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
   input?: InputSchema
   output?: OutputSchema
+  node?: NodeConfig
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -467,18 +473,6 @@ export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
-export type PikkuListFunction<
-  F extends Record<string, unknown> = {},
-  Row = unknown,
-  S extends string = never
-> =
-  | PikkuFunction<ListInput<F, S>, ListOutput<Row>, 'session' | 'rpc'>
-  | PikkuFunctionSessionless<
-      ListInput<F, S>,
-      ListOutput<Row>,
-      'session' | 'rpc'
-    >
-
 export const pikkuListFunc = <
   F extends Record<string, unknown> = {},
   Row = unknown,
@@ -510,7 +504,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
   CorePikkuSessionlessFunctionConfig<
     PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires, RequiredServices>
   >,
-  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
+  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {
   func: PikkuFunctionSessionless<
     SchemaInferred<InputSchema>,
@@ -520,6 +514,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
   >
   input?: InputSchema
   output?: OutputSchema
+  node?: NodeConfig
   permissions?: InputSchema extends StandardSchemaV1
     ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
     : undefined
@@ -794,6 +789,5 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
 }
 
 export { wireAddon, wireRemoteAddon } from '@pikku/core/ecosystem/rpc'
-export type { WireAddonConfig, WireRemoteAddonConfig, RemoteAddonAuth } from '@pikku/core/ecosystem/rpc'
 `
 }

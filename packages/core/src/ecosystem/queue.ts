@@ -1,6 +1,9 @@
+export { InMemoryQueueService } from '../services/in-memory-queue-service.js'
+export { QueueWebhookService } from '../services/queue-webhook-service.js'
 export {
   QueueJobDiscardedError,
   QueueJobFailedError,
+  runQueueJob,
 } from '../wirings/queue/queue-runner.js'
 export type {
   ConfigValidationResult,
@@ -8,6 +11,9 @@ export type {
   JobOptions,
   PikkuJobConfig,
   PikkuWorkerConfig,
+  QueueJob,
+  QueueJobStatus,
+  QueueService,
   QueueWorkers,
   QueueWorkersMeta,
 } from '../wirings/queue/queue.types.js'

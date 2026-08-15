@@ -1,13 +1,13 @@
 import type { PgBoss } from 'pg-boss'
-import type { CoreUserSession } from '@pikku/core'
+import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
+import { SchedulerService } from '@pikku/core/ecosystem/scheduler'
+import type { CoreUserSession } from '@pikku/core/ecosystem/types'
 import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
 } from '@pikku/core/ecosystem/services'
-import { SchedulerService } from '@pikku/core'
 import { parseDurationString } from '@pikku/core/ecosystem/types'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { runScheduledTask } from '@pikku/core/scheduler'
 import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
 
 /**

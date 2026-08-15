@@ -1,5 +1,5 @@
-import type { CoreUserSession } from '@pikku/core'
-import type { ChannelStore } from '@pikku/core/channel'
+import type { CoreUserSession } from '@pikku/core/ecosystem/types'
+import type { ChannelStore } from '@pikku/core/ecosystem/channel'
 import type {
   BinaryData,
   PikkuChannelHandlerFactory,
@@ -7,7 +7,7 @@ import type {
 import { PikkuAbstractChannelHandler } from '@pikku/core/ecosystem/channel'
 import { sendMessage } from './utils.js'
 import type { ApiGatewayManagementApiClient } from '@aws-sdk/client-apigatewaymanagementapi'
-import type { Logger } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
 
 class LambdaChannelHandler<
   UserSession extends CoreUserSession = CoreUserSession,

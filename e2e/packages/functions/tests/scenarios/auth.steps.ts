@@ -12,7 +12,7 @@
  * JSON, and nothing downstream needs the session: what is being proven is that
  * the credentials were accepted or refused.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { requireScenarioEnv } from '@pikku/core/scenario'
 import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { postScenarioJson } from '@pikku/core/persona'

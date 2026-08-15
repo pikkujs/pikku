@@ -1,10 +1,10 @@
 import type { Server as BunServer, ServerWebSocket } from 'bun'
 
-import type { CoreConfig } from '@pikku/core'
-import { stopSingletonServices } from '@pikku/core'
-import type { JWTService, Logger } from '@pikku/core/services'
+import type { CoreConfig } from '@pikku/core/ecosystem/types'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
+import type { JWTService, Logger } from '@pikku/core/ecosystem/services'
 import { pikkuState } from '@pikku/core/ecosystem'
-import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import type { LocalContentConfig } from '@pikku/core/ecosystem/services/local-content'
 import {
   createLocalContentRequestHandler,
   type LocalContentRequestHandler,
@@ -13,15 +13,15 @@ import {
   fetchData,
   PikkuFetchHTTPRequest,
   PikkuFetchHTTPResponse,
-} from '@pikku/core/http'
+} from '@pikku/core/ecosystem/http'
 import {
   logRoutes as logRegisterRoutes,
   type RunHTTPWiringOptions,
 } from '@pikku/core/ecosystem/http'
 import { logChannels } from '@pikku/core/ecosystem/channel'
 import type { PikkuLocalChannelHandler } from '@pikku/core/ecosystem/channel/local'
-import { runLocalChannel } from '@pikku/core/channel/local'
-import { compileAllSchemas } from '@pikku/core/schema'
+import { runLocalChannel } from '@pikku/core/ecosystem/channel/local'
+import { compileAllSchemas } from '@pikku/core/ecosystem/schema'
 
 import { resolve } from 'node:path'
 

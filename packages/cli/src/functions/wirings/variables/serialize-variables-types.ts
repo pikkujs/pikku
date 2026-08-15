@@ -100,8 +100,6 @@ export interface VariablesMap {
 ${mapEntries.join('\n')}
 }
 
-export type VariableId = keyof VariablesMap
-
 const TYPED_VARIABLES_META: Record<string, VariableMeta> = {
 ${metaEntries.join(',\n')}
 }

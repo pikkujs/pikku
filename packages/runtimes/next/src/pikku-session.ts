@@ -3,12 +3,12 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '@pikku/core/ecosystem/services'
-import { PikkuFetchHTTPRequest } from '@pikku/core/http'
+import { PikkuFetchHTTPRequest } from '@pikku/core/ecosystem/http'
 import type {
   CoreSingletonServices,
   CoreUserSession,
   CorePikkuMiddleware,
-} from '@pikku/core'
+} from '@pikku/core/ecosystem/types'
 import type { PikkuWire } from '@pikku/core/ecosystem/types'
 
 /**

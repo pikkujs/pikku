@@ -2,7 +2,8 @@ import * as z from 'zod'
 import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
-import type { Logger, ScopeService } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
+import type { ScopeService } from '@pikku/core/ecosystem/scope'
 
 /** providerId of the account row that keys a delegated identity to its upstream. */
 export const DELEGATED_PROVIDER_ID = 'delegated'

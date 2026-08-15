@@ -119,8 +119,6 @@ export interface CredentialsMap {
 ${mapEntries.join('\n')}
 }
 
-export type SecretId = keyof CredentialsMap
-
 const CREDENTIALS_META: Record<string, CredentialMeta> = {
 ${metaEntries.join(',\n')}
 }

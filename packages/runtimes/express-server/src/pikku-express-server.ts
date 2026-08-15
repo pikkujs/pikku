@@ -9,14 +9,14 @@ import contentType from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
 import { resolve, normalize } from 'path'
 
-import type { CoreConfig } from '@pikku/core'
-import { stopSingletonServices } from '@pikku/core'
+import type { CoreConfig } from '@pikku/core/ecosystem/types'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
 import { installNodeHostResolver } from '@pikku/core/ecosystem/node-host-resolver'
 import { pikkuState } from '@pikku/core/ecosystem'
-import type { JWTService, Logger } from '@pikku/core/services'
+import type { JWTService, Logger } from '@pikku/core/ecosystem/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/ecosystem/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
-import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import type { LocalContentConfig } from '@pikku/core/ecosystem/services/local-content'
 import { verifySignedContentRequest } from '@pikku/core/ecosystem/services/local-content-request-handler'
 
 /**

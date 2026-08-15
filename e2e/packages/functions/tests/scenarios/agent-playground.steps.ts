@@ -19,7 +19,7 @@
  * and are held out of the default console run.
  */
 import { randomUUID } from 'node:crypto'
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import type { PikkuBrowserWire, TestIdSelector } from '@pikku/core/scenario'
 import { expect, testIdSelector } from '@pikku/playwright'
 

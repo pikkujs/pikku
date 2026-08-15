@@ -2,7 +2,7 @@ import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { setSingletonServices } from '@pikku/core/ecosystem'
 import { resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
 import { PikkuBunServer } from './pikku-bun-server.js'
 
 const PORT = 47817

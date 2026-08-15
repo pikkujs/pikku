@@ -1,4 +1,4 @@
-import { hasScopes } from '@pikku/core'
+import { hasScopes } from '@pikku/core/ecosystem/scope'
 import { threadOwnerConstraint } from '@pikku/core/ecosystem/agent'
 import { pikkuFunc } from '#pikku'
 

@@ -4,9 +4,9 @@
  * (close ws then the http server) is encapsulated in the returned instance.
  */
 
-import type { EventHubService } from '@pikku/core'
-import type { Logger } from '@pikku/core/services'
-import { LocalEventHubService } from '@pikku/core/channel/local'
+import type { EventHubService } from '@pikku/core/ecosystem/channel'
+import type { Logger } from '@pikku/core/ecosystem/services'
+import { LocalEventHubService } from '@pikku/core/ecosystem/channel/local'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'
 import { WebSocketServer } from 'ws'

@@ -34,7 +34,7 @@ export const createSingletonServices = pikkuAddonServices(
   ) => {
     if (!existingMetaService) {
       throw new Error(
-        'metaService is required for the console addon. Set it in your createSingletonServices using PikkuMetaService from #pikku/pikku-meta-service.gen.js'
+        'metaService is required for the console addon. Set it in your createSingletonServices using PikkuMetaService from #pikku/services/pikku-meta-service.gen.js'
       )
     }
     const metaService = existingMetaService

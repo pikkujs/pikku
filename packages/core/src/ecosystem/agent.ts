@@ -1,3 +1,14 @@
+export type {
+  AgentRunStateService,
+  CreateRunInput,
+  SaveScoreInput,
+} from '../services/agent-run-state-service.js'
+export type {
+  AgentRunnerParams,
+  AgentRunnerService,
+  AgentStepResult,
+} from '../services/agent-runner-service.js'
+export type { AgentStorageService } from '../services/agent-storage-service.js'
 export {
   agent,
   agentApprove,
@@ -14,11 +25,15 @@ export { addAgent } from '../wirings/agent/agent-registry.js'
 export type {
   AgentInput,
   AgentMemoryConfig,
+  AgentMessage,
   AgentsMeta,
   AgentStep,
   AgentContentPart,
   AgentRunRow,
   AgentRunService,
+  AgentRunState,
+  AgentStreamChannel,
+  AgentThread,
   CoreAgent,
   PendingApproval,
   PikkuAgentMiddlewareHooks,

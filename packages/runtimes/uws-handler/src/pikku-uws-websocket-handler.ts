@@ -1,13 +1,16 @@
 import type * as uWS from 'uWebSockets.js'
 import { logChannels } from '@pikku/core/ecosystem/channel'
 import type { PikkuLocalChannelHandler } from '@pikku/core/ecosystem/channel/local'
-import { runLocalChannel } from '@pikku/core/channel/local'
-import { compileAllSchemas } from '@pikku/core/schema'
+import { runLocalChannel } from '@pikku/core/ecosystem/channel/local'
+import { compileAllSchemas } from '@pikku/core/ecosystem/schema'
 
 import { uwsToRequest } from './uws-request-convertor.js'
 import type { PikkuuWSHandlerOptions } from './pikku-uws-http-handler.js'
 import { UWSEventHubService } from './uws-event-hub-service.js'
-import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
+import {
+  PikkuFetchHTTPRequest,
+  PikkuFetchHTTPResponse,
+} from '@pikku/core/ecosystem/http'
 
 const isSerializable = (data: any): boolean => {
   return !(

@@ -1,8 +1,9 @@
 import { createRequire } from 'module'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
-import type { Logger, VariablesService } from '@pikku/core/services'
-import type { AgentRunnerService } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
+import type { VariablesService } from '@pikku/core/ecosystem/variable'
+import type { AgentRunnerService } from '@pikku/core/ecosystem/agent'
 
 /**
  * Build the AI agent runner for `pikku dev` from env.

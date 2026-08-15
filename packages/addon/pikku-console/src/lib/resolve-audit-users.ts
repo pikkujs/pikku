@@ -1,5 +1,5 @@
 import type { BetterAuthInstance } from '@pikku/better-auth'
-import type { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
 
 /** Who a user id belongs to. */
 export type AuditUserProfile = {

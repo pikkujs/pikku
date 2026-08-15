@@ -29,7 +29,7 @@ const FIXTURE_ROOT = join(HERE, '../../../..')
  */
 const featureTypes = (): string => {
   const source = readFileSync(
-    join(HERE, 'serialize-workflow-types.ts'),
+    join(HERE, 'serialize-scenario-types.ts'),
     'utf-8'
   )
   const start = source.indexOf('/**\n * A scenario as a feature references it.')

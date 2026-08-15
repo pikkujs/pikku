@@ -3,8 +3,7 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "addon": true,
-  "node": {
+  "addon": {
     "displayName": "Emails",
     "description": "Email management for Pikku",
     "categories": ["General"]

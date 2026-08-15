@@ -4,7 +4,8 @@ import type {
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/ecosystem/services'
-import type { JWTService, SecretService } from '@pikku/core/services'
+import type { JWTService } from '@pikku/core/ecosystem/services'
+import type { SecretService } from '@pikku/core/ecosystem/secret'
 import { getAllFunctionNames } from '@pikku/core/ecosystem/function'
 import { Redis, type RedisOptions } from 'ioredis'
 

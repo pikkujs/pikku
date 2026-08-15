@@ -21,7 +21,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const USERS_PAGE = '/console/users'
 const EMAIL = 'lifecycle@e2e.test'

@@ -8,12 +8,15 @@ import {
   runChannelConnect,
   runChannelDisconnect,
   runChannelMessage,
-} from '@pikku/core/channel/serverless'
+} from '@pikku/core/ecosystem/channel/serverless'
 import { CloudflareWebsocketStore } from './cloudflare-channel-store.js'
 import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-handler-factory.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
-import type { CoreSingletonServices } from '@pikku/core'
-import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
+import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
+import {
+  PikkuFetchHTTPRequest,
+  PikkuFetchHTTPResponse,
+} from '@pikku/core/ecosystem/http'
 import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,

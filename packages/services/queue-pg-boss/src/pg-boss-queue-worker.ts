@@ -5,14 +5,14 @@ import type {
   QueueConfigMapping,
   ConfigValidationResult,
 } from '@pikku/core/ecosystem/queue'
-import { runQueueJob } from '@pikku/core/queue'
+import { runQueueJob } from '@pikku/core/ecosystem/queue'
+import type { Logger } from '@pikku/core/ecosystem/services'
 import {
   registerQueueWorkers,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/ecosystem/queue'
 import { pikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/services'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToPgBoss = (

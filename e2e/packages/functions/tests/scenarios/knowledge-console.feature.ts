@@ -16,7 +16,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const KNOWLEDGE_PAGE = '/console/knowledge'
 const NAVIGATOR_READY = { testId: 'knowledge-navigator' }

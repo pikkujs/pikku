@@ -683,12 +683,22 @@ const _getPikkuCLIConfig = async (
     if (!result.workflowMetaDir) {
       result.workflowMetaDir = join(workflowDir, 'meta')
     }
-    if (!result.personasWiringFile) {
-      result.personasWiringFile = join(workflowDir, 'pikku-personas.gen.ts')
-    }
 
     // Scenarios
     const scenarioDir = join(result.outDir, 'scenarios')
+    if (!result.scenarioTypesFile) {
+      result.scenarioTypesFile = join(
+        scenarioDir,
+        'pikku-scenario-types.gen.ts'
+      )
+    }
+    // The actors a scenario drives. Sat under `workflow/` beside a different
+    // file of the same name — `scopes/pikku-personas.gen.ts` declares personas,
+    // this one types them at runtime — which made the pair impossible to tell
+    // apart by import path.
+    if (!result.personasWiringFile) {
+      result.personasWiringFile = join(scenarioDir, 'pikku-personas.gen.ts')
+    }
     if (!result.scenarioStepsFile) {
       result.scenarioStepsFile = join(
         scenarioDir,
@@ -876,9 +886,6 @@ const _getPikkuCLIConfig = async (
     const consoleDir = join(result.outDir, 'console')
     if (!result.addonMetaJsonFile) {
       result.addonMetaJsonFile = join(consoleDir, 'pikku-addon-meta.gen.json')
-    }
-    if (!result.nodeTypesFile) {
-      result.nodeTypesFile = join(consoleDir, 'pikku-node-types.gen.ts')
     }
 
     const addonDir = join(result.outDir, 'addon')

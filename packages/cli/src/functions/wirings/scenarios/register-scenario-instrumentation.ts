@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { addFunction } from '@pikku/core/function'
+import { addFunction } from '@pikku/core/ecosystem/function'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { isTestRun } from '@pikku/core/services'
 import {
+  isTestRun,
   getStubTracker,
   type CoverageFunctionMeta,
 } from '@pikku/core/ecosystem/services'

@@ -1,14 +1,14 @@
 import { sql } from 'kysely'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
+import type { AgentRunState } from '@pikku/core/ecosystem/agent'
+import type { AgentRunScore } from '@pikku/core/ecosystem/agent-scorer'
 import type {
   AgentRunStateService,
   CreateRunInput,
   SaveScoreInput,
-} from '@pikku/core/services'
-import type { AgentRunState } from '@pikku/core/agent'
+} from '@pikku/core/ecosystem/agent'
 import type { PendingApproval } from '@pikku/core/ecosystem/agent'
-import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import { ensurePikkuSchema } from './schema/index.js'
 import { agentSchema } from './schema/agent.schema.js'
 import { getRunScores, saveRunScore } from './kysely-agent-run-scores.js'

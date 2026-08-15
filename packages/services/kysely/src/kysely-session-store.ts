@@ -1,5 +1,5 @@
-import type { CoreUserSession } from '@pikku/core'
-import type { SessionStore } from '@pikku/core/services'
+import type { SessionStore } from '@pikku/core/ecosystem/services'
+import type { CoreUserSession } from '@pikku/core/ecosystem/types'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'

@@ -1,6 +1,6 @@
 import type { InvocationContext } from '@azure/functions'
-import type { Logger, LogLevel } from '@pikku/core/services'
-import type { Safe } from '@pikku/core'
+import type { Logger, LogLevel } from '@pikku/core/ecosystem/services'
+import type { Safe } from '@pikku/core/ecosystem/types'
 
 export class AzInvocationLogger implements Logger {
   // private logLevel: LogLevel = LogLevel.info

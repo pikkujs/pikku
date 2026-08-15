@@ -1,5 +1,5 @@
-import type { CoreUserSession } from '@pikku/core'
-import type { SessionStore } from '@pikku/core/services'
+import type { SessionStore } from '@pikku/core/ecosystem/services'
+import type { CoreUserSession } from '@pikku/core/ecosystem/types'
 import { Redis, type RedisOptions } from 'ioredis'
 
 export class RedisSessionStore implements SessionStore {

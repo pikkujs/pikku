@@ -1,4 +1,4 @@
-import type { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
 import type { PikkuDoStepDispatch } from './pikku-workflow-do-service.js'
 import type { DurableObjectNamespace } from '@cloudflare/workers-types'
 

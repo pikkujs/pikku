@@ -1,3 +1,4 @@
+export { pikkuDevReloader } from '../dev/hot-reload.js'
 export {
   reconcileAddonRegistry,
   reloadGeneratedMeta,

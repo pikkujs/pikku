@@ -1,4 +1,4 @@
-import type { AuditService } from '@pikku/core'
+import type { AuditService } from '@pikku/core/ecosystem/services'
 import type {
   AuditEvent,
   AuditEventBatch,

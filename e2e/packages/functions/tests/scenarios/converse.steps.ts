@@ -6,7 +6,7 @@
  * judging the task against the standard it was given. The steps here are thin
  * because the interesting machinery lives on the actor, not in the test.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { requireActor } from '@pikku/core/scenario'
 
 /**

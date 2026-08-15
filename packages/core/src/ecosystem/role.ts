@@ -1,3 +1,4 @@
+export type { Role } from '../services/scope-service.js'
 export { defineSystemRole } from '../wirings/role/define-system-role.js'
 export type {
   CoreSystemRole,

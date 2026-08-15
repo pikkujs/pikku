@@ -1,6 +1,7 @@
-import { hasScopes } from '@pikku/core'
-import type { CoreServices } from '@pikku/core'
-import type { Logger, ScopeService } from '@pikku/core/services'
+import { hasScopes } from '@pikku/core/ecosystem/scope'
+import type { Logger } from '@pikku/core/ecosystem/services'
+import type { ScopeService } from '@pikku/core/ecosystem/scope'
+import type { CoreServices } from '@pikku/core/ecosystem/types'
 
 /**
  * The scope ids this package's own gates check.

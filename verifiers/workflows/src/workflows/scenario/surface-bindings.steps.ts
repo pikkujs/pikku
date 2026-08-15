@@ -1,5 +1,4 @@
-import { pikkuScenarioStep } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
-
+import { pikkuScenarioStep } from '../../../.pikku/scenarios/pikku-scenario-types.gen.js'
 /**
  * Every binding writes the surface it ran on into this log, so a test can assert
  * which implementation the runner actually chose rather than inferring it from
