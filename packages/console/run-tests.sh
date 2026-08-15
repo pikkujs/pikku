@@ -35,6 +35,16 @@ if [ ! -f "src/paraglide/messages.js" ]; then
   npx paraglide-js compile --project ./project.inlang --outdir ./src/paraglide
 fi
 
+# The typed client under src/pikku is generated from backend/ the same way, and
+# is gitignored for the same reason — so src/pikku/http.ts imports a module that
+# is simply absent on a fresh checkout, and every test reaching it dies on
+# ERR_MODULE_NOT_FOUND. `pikku all` is pure codegen: no network, no database, no
+# server, a few seconds cold and skipped once the file is there.
+if [ ! -f "src/pikku/pikku-fetch.gen.ts" ]; then
+  echo "Generating the console client (src/pikku/*.gen.ts is generated and gitignored)"
+  (cd backend && npx pikku all)
+fi
+
 # Define the pattern to match your test files
 pattern="src/*.test.ts"
 
@@ -67,7 +77,7 @@ if [ "$coverage_mode" = true ]; then
   # second reporter, a coverage-mode failure sends everything to lcov.info and
   # leaves stdout empty, so CI shows only a non-zero exit with no test name —
   # an invisible failure. The paired reporters keep coverage while naming what broke.
-  node_cmd+=(--test-coverage-include="src/**/*.{ts,tsx}" --test-coverage-exclude="**/dist/**" --test-coverage-exclude="src/paraglide/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test-reporter=spec --test-reporter-destination=stdout)
+  node_cmd+=(--test-coverage-include="src/**/*.{ts,tsx}" --test-coverage-exclude="**/dist/**" --test-coverage-exclude="src/paraglide/**" --test-coverage-exclude="src/pikku/*.gen.ts" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test-reporter=spec --test-reporter-destination=stdout)
 fi
 
 # THEME_CONTRACT_ROOTS tells the shared contract test which sources to scan.
