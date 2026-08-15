@@ -2,27 +2,29 @@ import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import {
+  InMemoryQueueService,
+  QueueWebhookService,
+} from '@pikku/core/ecosystem/queue'
+import {
   ConsoleLogger,
   LocalEmailService,
-  InMemoryQueueService,
-  InMemoryWorkflowService,
-  InMemoryTriggerService,
-  QueueWebhookService,
-} from '@pikku/core/services'
-import { InMemoryAgentRunStateService } from '@pikku/core/ecosystem/services'
+  InMemoryAgentRunStateService,
+} from '@pikku/core/ecosystem/services'
+import { InMemoryTriggerService } from '@pikku/core/ecosystem/trigger'
+import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
 import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
   KyselyAgentRunService,
 } from '@pikku/kysely'
-import { stopSingletonServices } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
 import { pikkuState } from '@pikku/core/ecosystem'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/ecosystem/agent-scorer'
-import { LocalMetaService } from '@pikku/core/services/local-meta'
+import { LocalMetaService } from '@pikku/core/ecosystem/services/local-meta'
 import {
   LocalContent,
   type LocalContentConfig,
-} from '@pikku/core/services/local-content'
+} from '@pikku/core/ecosystem/services/local-content'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import {
   resolveDb,

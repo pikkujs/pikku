@@ -1,3 +1,4 @@
+export { InMemoryQueueService } from '../services/in-memory-queue-service.js'
 export { QueueWebhookService } from '../services/queue-webhook-service.js'
 export {
   QueueJobDiscardedError,

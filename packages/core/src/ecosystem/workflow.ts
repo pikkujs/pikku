@@ -1,3 +1,4 @@
+export { InMemoryWorkflowService } from '../services/in-memory-workflow-service.js'
 export type { WorkflowService } from '../services/workflow-service.js'
 export type {
   ApprovalStepMeta,

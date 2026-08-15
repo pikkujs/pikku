@@ -529,7 +529,12 @@
     "runChannelDisconnect",
     "runChannelMessage"
   ],
-  "./ecosystem/cli": ["CLIError", "executeCLI", "generateCommandHelp"],
+  "./ecosystem/cli": [
+    "CLIError",
+    "executeCLI",
+    "generateCommandHelp",
+    "pikkuCLIRender"
+  ],
   "./ecosystem/cli/channel": ["executeRawCLIViaChannel", "handleRawCLI"],
   "./ecosystem/credential": ["validateAndBuildCredentialDefinitionsMeta"],
   "./ecosystem/crypto-utils": [
@@ -539,7 +544,11 @@
     "envelopeRewrap",
     "generateKEKSalt"
   ],
-  "./ecosystem/dev": ["reconcileAddonRegistry", "reloadGeneratedMeta"],
+  "./ecosystem/dev": [
+    "pikkuDevReloader",
+    "reconcileAddonRegistry",
+    "reloadGeneratedMeta"
+  ],
   "./ecosystem/errors": [
     "AIProviderAuthError",
     "AIProviderNotConfiguredError",
@@ -628,6 +637,7 @@
   "./ecosystem/persona": [
     "HttpPersona",
     "createHttpPersonas",
+    "isRunnablePersona",
     "personaEmails",
     "personaEnvironmentErrors",
     "personaEnvironmentRefusal",
@@ -636,6 +646,7 @@
     "verifyPersonaRoles"
   ],
   "./ecosystem/queue": [
+    "InMemoryQueueService",
     "QueueJobDiscardedError",
     "QueueJobFailedError",
     "QueueWebhookService",
@@ -662,7 +673,7 @@
     "getScheduledTasks",
     "runScheduledTask"
   ],
-  "./ecosystem/schema": ["addSchema", "compileAllSchemas"],
+  "./ecosystem/schema": ["addSchema", "compileAllSchemas", "getSchema"],
   "./ecosystem/scope": [
     "defineScope",
     "flattenScopeDefinitions",
@@ -675,15 +686,19 @@
     "validateAndBuildSecretDefinitionsMeta"
   ],
   "./ecosystem/services": [
+    "ConsoleLogger",
     "InMemoryAgentRunStateService",
+    "LocalEmailService",
     "LocalSecretService",
     "LocalVariablesService",
     "LogLevel",
+    "NoopAuditService",
     "PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME",
     "PikkuSessionService",
     "TypedVariablesService",
     "createMiddlewareSessionWireProps",
     "getStubTracker",
+    "isTestRun",
     "pikkuWebhookWorkerFunc",
     "spy"
   ],
@@ -693,9 +708,10 @@
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
   ],
+  "./ecosystem/services/local-meta": ["LocalMetaService"],
   "./ecosystem/services/v8-coverage": ["V8CoverageService"],
   "./ecosystem/testing": ["defineServiceTests"],
-  "./ecosystem/trigger": [],
+  "./ecosystem/trigger": ["InMemoryTriggerService"],
   "./ecosystem/types": [
     "PikkuRequest",
     "SecretValue",
@@ -715,15 +731,20 @@
     "DISPOSITIONS",
     "PRODUCTION_DISPOSITION",
     "catalogueClassification",
+    "deriveCatalogue",
+    "deriveIntents",
     "dispositionProfile",
     "intentsForPersona",
     "isReadOnly",
     "personaScopes",
+    "personaVirtualUserTarget",
     "prepareVirtualUserRun",
     "reachableCatalogue",
+    "runVirtualUser",
     "unreachableCatalogue"
   ],
   "./ecosystem/workflow": [
+    "InMemoryWorkflowService",
     "PikkuWorkflowService",
     "assertWorkflowRunOwner",
     "buildRunTimeline",

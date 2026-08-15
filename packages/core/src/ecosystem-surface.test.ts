@@ -8,9 +8,11 @@ import { fileURLToPath } from 'node:url'
 /**
  * `@pikku/core` exports two doors onto the same modules: the curated
  * `ecosystem/*` facades, and the raw internal barrels (`./http` maps straight
- * to `dist/wirings/http/index.js`). Runtime adapters, services and addons are
- * the ecosystem tier — they get the second door closed on them in a later
- * breaking change, and until then nothing should drift back onto it.
+ * to `dist/wirings/http/index.js`). Everything that extends Pikku rather than
+ * builds on it — runtime adapters, services, addons, the CLI, the inspector
+ * and the console — is the ecosystem tier. It gets the second door closed on
+ * it in a later breaking change, and until then nothing should drift back onto
+ * it.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 const ecosystemTiers = [
@@ -18,31 +20,48 @@ const ecosystemTiers = [
   'packages/services',
   'packages/addon',
 ]
+const ecosystemPackages = [
+  'packages/cli',
+  'packages/console',
+  'packages/inspector',
+]
 
 const walk = (dir: string, out: string[] = []): string[] => {
   for (const entry of readdirSync(dir)) {
     const path = join(dir, entry)
     if (statSync(path).isDirectory()) walk(path, out)
-    else if (path.endsWith('.ts')) out.push(path)
+    else if (path.endsWith('.ts') || path.endsWith('.tsx')) out.push(path)
   }
   return out
 }
 
+/**
+ * `.gen.*` and `.d.ts` files under these trees are CLI output, not hand-written
+ * source: what they import is decided by the codegen templates, which serve the
+ * app tier and are migrating to the `#pikku` alias separately.
+ */
+const isGenerated = (path: string) =>
+  path.includes('.gen.') || path.endsWith('.d.ts')
+
 const tierSourceFiles = () => {
   const files: string[] = []
+  const srcDirs: string[] = []
   for (const tier of ecosystemTiers) {
     const tierDir = join(repoRoot, tier)
     for (const pkg of readdirSync(tierDir)) {
-      const src = join(tierDir, pkg, 'src')
-      try {
-        if (!statSync(src).isDirectory()) continue
-      } catch {
-        continue
-      }
-      walk(src, files)
+      srcDirs.push(join(tierDir, pkg, 'src'))
     }
   }
-  return files
+  for (const pkg of ecosystemPackages) srcDirs.push(join(repoRoot, pkg, 'src'))
+  for (const src of srcDirs) {
+    try {
+      if (!statSync(src).isDirectory()) continue
+    } catch {
+      continue
+    }
+    walk(src, files)
+  }
+  return files.filter((file) => !isGenerated(file))
 }
 
 /**
@@ -93,7 +112,7 @@ describe('ecosystem surface', () => {
     assert.deepStrictEqual(
       offenders,
       [],
-      `Runtime adapters, services and addons must import core through ` +
+      `Everything that extends Pikku must import core through ` +
         `'@pikku/core/ecosystem/*'.\n` +
         `Reaching a raw subpath pulls in an internal barrel that is scheduled ` +
         `for deletion. If the name you need is missing from a facade, add it ` +

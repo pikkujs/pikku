@@ -1,8 +1,10 @@
 import * as ts from 'typescript'
 import { DISPOSITIONS } from '@pikku/core/ecosystem/virtual-user'
-import { isRunnablePersona } from '@pikku/core/persona'
-import type { PersonaMeta } from '@pikku/core/persona'
-import type { PersonaAccountMeta } from '@pikku/core/ecosystem/persona'
+import { isRunnablePersona } from '@pikku/core/ecosystem/persona'
+import type {
+  PersonaMeta,
+  PersonaAccountMeta,
+} from '@pikku/core/ecosystem/persona'
 import { ErrorCode } from '../error-codes.js'
 import { claimSingleDeclaration } from '../utils/single-declaration.js'
 import type { AddWiring, InspectorLogger } from '../types.js'

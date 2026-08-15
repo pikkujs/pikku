@@ -2,12 +2,17 @@ export {
   personaScopes,
   prepareVirtualUserRun,
 } from '../wirings/virtual-user/prepare-virtual-user-run.js'
+export { runVirtualUser } from '../wirings/virtual-user/run-virtual-user.js'
 export {
   catalogueClassification,
   isReadOnly,
   reachableCatalogue,
   unreachableCatalogue,
 } from '../wirings/virtual-user/virtual-user-catalogue.js'
+export {
+  deriveCatalogue,
+  deriveIntents,
+} from '../wirings/virtual-user/virtual-user-derive.js'
 export {
   DISPOSITIONS,
   dispositionProfile,
@@ -20,6 +25,7 @@ export type {
   VirtualUserRunStart,
   VirtualUserRunStore,
 } from '../wirings/virtual-user/virtual-user-run-store.js'
+export { personaVirtualUserTarget } from '../wirings/virtual-user/virtual-user-target.js'
 export { PRODUCTION_DISPOSITION } from '../wirings/virtual-user/virtual-user.types.js'
 export type {
   IntentSource,

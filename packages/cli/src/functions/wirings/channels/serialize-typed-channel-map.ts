@@ -3,8 +3,7 @@ import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes, resolveFunctionMeta } from '@pikku/inspector'
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
-import type { Logger } from '@pikku/core/services'
+import type { FunctionsMeta, Logger } from '@pikku/core/ecosystem/services'
 
 export const serializeTypedChannelsMap = (
   logger: Logger,

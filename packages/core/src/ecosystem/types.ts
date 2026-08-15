@@ -1,3 +1,4 @@
+export type { ClassificationManifest } from '../data-classification.js'
 export { isExpectedError } from '../errors/error-handler.js'
 export type { CorePermissionGroup } from '../function/functions.types.js'
 export { PikkuRequest } from '../pikku-request.js'

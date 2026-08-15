@@ -9,8 +9,10 @@
  * is called.
  */
 import { composeStepProse } from '@pikku/core/ecosystem/scenario'
-import type { ScenarioSurface } from '@pikku/core/scenario'
-import type { ScenarioStepPhase } from '@pikku/core/ecosystem/scenario'
+import type {
+  ScenarioSurface,
+  ScenarioStepPhase,
+} from '@pikku/core/ecosystem/scenario'
 import type { WorkflowStepMeta } from '@pikku/core/ecosystem/workflow'
 import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
 import { KEYWORD_WIDTH } from './scenario-formatter.js'

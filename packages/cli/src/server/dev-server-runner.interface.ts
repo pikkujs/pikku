@@ -9,8 +9,8 @@
  * `services.ts` and injected — no `typeof Bun` checks in the dev command.
  */
 
-import type { EventHubService } from '@pikku/core'
-import type { JWTService, Logger } from '@pikku/core/services'
+import type { EventHubService } from '@pikku/core/ecosystem/channel'
+import type { JWTService, Logger } from '@pikku/core/ecosystem/services'
 import type { NodeHTTPServerConfig } from '@pikku/node-http-server'
 
 export interface DevServerInstance {

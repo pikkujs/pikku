@@ -4,19 +4,19 @@ import type {
   SingletonServices,
   UserSession,
 } from '../types/application-types.js'
-import type { CreateConfig } from '@pikku/core'
+import type { CreateConfig } from '@pikku/core/ecosystem/types'
 import type {
   CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core/ecosystem'
-import { pikkuCLIRender } from '@pikku/core/cli'
+import { pikkuCLIRender } from '@pikku/core/ecosystem/cli'
 import {
   LocalVariablesService,
   LocalSecretService,
   LogLevel,
-  InMemoryWorkflowService,
-} from '@pikku/core/services'
-import { NoopAuditService } from '@pikku/core'
+  NoopAuditService,
+} from '@pikku/core/ecosystem/services'
+import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'

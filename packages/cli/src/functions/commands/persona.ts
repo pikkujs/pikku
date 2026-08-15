@@ -12,8 +12,6 @@ import {
   personaVirtualUserTarget,
   runVirtualUser,
   type VirtualUserDisposition,
-} from '@pikku/core/virtual-user'
-import {
   catalogueClassification,
   DISPOSITIONS,
   prepareVirtualUserRun,
