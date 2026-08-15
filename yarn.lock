@@ -5371,7 +5371,6 @@ __metadata:
   resolution: "@pikku/express@workspace:packages/runtimes/express-server"
   dependencies:
     "@pikku/express-middleware": "npm:^0.12.7"
-    "@types/content-type": "npm:^2.0.0"
     "@types/cookie-parser": "npm:^1.4.10"
     "@types/cors": "npm:^2.8.19"
     "@types/express": "npm:^5"
@@ -9183,15 +9182,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/content-type@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "@types/content-type@npm:2.0.0"
-  dependencies:
-    content-type: "npm:*"
-  checksum: 10/ccc33b5abc5fe87dac47096e70fd0ed10d3657b9a2d6d0be46a5aa8631b07ca9d3ac6fb9cc76fb6513354e0030869c418fcf75bad45542ed936215bb072e907f
-  languageName: node
-  linkType: hard
-
 "@types/cookie-parser@npm:^1.4.10":
   version: 1.4.10
   resolution: "@types/cookie-parser@npm:1.4.10"
@@ -11913,17 +11903,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"content-type@npm:*, content-type@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "content-type@npm:2.1.0"
-  checksum: 10/8aac907922538f430d8bfab1d8fe2fbdc1eb890a0fa7a619f712db4bfefe24be951ba464f972007df64840c775bf2db284ca8223547ac5317ad9ab2ee8e6501b
-  languageName: node
-  linkType: hard
-
 "content-type@npm:^1.0.5":
   version: 1.0.5
   resolution: "content-type@npm:1.0.5"
   checksum: 10/585847d98dc7fb8035c02ae2cb76c7a9bd7b25f84c447e5ed55c45c2175e83617c8813871b4ee22f368126af6b2b167df655829007b21aa10302873ea9c62662
+  languageName: node
+  linkType: hard
+
+"content-type@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "content-type@npm:2.1.0"
+  checksum: 10/8aac907922538f430d8bfab1d8fe2fbdc1eb890a0fa7a619f712db4bfefe24be951ba464f972007df64840c775bf2db284ca8223547ac5317ad9ab2ee8e6501b
   languageName: node
   linkType: hard
 

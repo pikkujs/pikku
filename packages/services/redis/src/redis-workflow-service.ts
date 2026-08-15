@@ -436,7 +436,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       const historyKey = this.stepHistoryKey(stepId)
 
       // Get all history entries for this step (sorted by attemptCount)
-      const historyEntries = await this.redis.zrange(historyKey, 0, -1)
+      const historyEntries = await this.redis.zrange(historyKey, 0, '-1')
 
       for (const entryStr of historyEntries) {
         const entry = JSON.parse(entryStr)
