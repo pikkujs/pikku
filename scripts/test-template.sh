@@ -251,8 +251,14 @@ Object.entries(all)
         fi
     done
 
+    # --ignore-scripts: the @pikku/* packages go in as `file:` deps above, and a
+    # file: dependency brings its devDependencies with it — so @pikku/kysely's
+    # dev-only better-sqlite3 lands in the test app and gets compiled from source
+    # through a `bunx node-gyp@latest` whose extraction races itself, failing on a
+    # different half-written file every run. No template imports better-sqlite3,
+    # none of them declare a postinstall, and codegen is re-run explicitly below.
     log_info "Installing dependencies..."
-    if ! "$PACKAGE_MANAGER" install; then
+    if ! "$PACKAGE_MANAGER" install --ignore-scripts; then
         log_error "Failed to install dependencies"
         exit 1
     fi
