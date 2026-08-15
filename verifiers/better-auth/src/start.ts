@@ -5,7 +5,7 @@ import '../.pikku/pikku-bootstrap.gen.js'
 import './auth.wiring.js'
 import './me.http.js'
 
-import { fetch } from '@pikku/core'
+import { fetch } from '@pikku/core/ecosystem/http'
 import { betterAuthStatelessSession } from '@pikku/better-auth'
 import { VERIFIER_OAUTH_PROVIDERS } from './providers.js'
 

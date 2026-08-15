@@ -1,4 +1,4 @@
-import { fetch } from '@pikku/core'
+import { fetch } from '@pikku/core/ecosystem/http'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 

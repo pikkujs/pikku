@@ -1,4 +1,4 @@
-import { runCLICommand } from '@pikku/core/cli'
+import { runCLICommand } from '@pikku/core/ecosystem/cli'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 

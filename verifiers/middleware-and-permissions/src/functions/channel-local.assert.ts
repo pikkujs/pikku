@@ -1,4 +1,4 @@
-import { runLocalChannel } from '@pikku/core/channel/local'
+import { runLocalChannel } from '@pikku/core/ecosystem/channel/local'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'

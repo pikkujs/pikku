@@ -22,7 +22,7 @@
  */
 
 import { DEFAULT_STEP_RETRIES } from '@pikku/core/workflow'
-import type { PikkuWorkflowService } from '@pikku/core/workflow'
+import type { PikkuWorkflowService } from '@pikku/core/ecosystem/workflow'
 
 import { createConfig, createSingletonServices } from '../services.js'
 import { tracker, type StepExecution } from './retry-idempotency-tracker.js'

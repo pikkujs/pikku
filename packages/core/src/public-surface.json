@@ -533,7 +533,8 @@
     "CLIError",
     "executeCLI",
     "generateCommandHelp",
-    "pikkuCLIRender"
+    "pikkuCLIRender",
+    "runCLICommand"
   ],
   "./ecosystem/cli/channel": ["executeRawCLIViaChannel", "handleRawCLI"],
   "./ecosystem/credential": ["validateAndBuildCredentialDefinitionsMeta"],
@@ -724,6 +725,7 @@
     "isVersionedId",
     "parseDurationString",
     "parseVersionedId",
+    "pikkuServerLifecycle",
     "stopSingletonServices"
   ],
   "./ecosystem/variable": ["validateAndBuildVariableDefinitionsMeta"],

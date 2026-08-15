@@ -1,4 +1,4 @@
-import { runQueueJob } from '@pikku/core/queue'
+import { runQueueJob } from '@pikku/core/ecosystem/queue'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 

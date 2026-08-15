@@ -1,5 +1,5 @@
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { stopSingletonServices } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
 import {
   createConfig,
   createSingletonServices,

@@ -2,7 +2,7 @@ import {
   runChannelConnect,
   runChannelMessage,
   runChannelDisconnect,
-} from '@pikku/core/channel/serverless'
+} from '@pikku/core/ecosystem/channel/serverless'
 import {
   ChannelStore,
   unsupportedChannelRemote,

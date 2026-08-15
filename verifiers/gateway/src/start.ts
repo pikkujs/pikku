@@ -2,9 +2,9 @@ import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
 import { wireGateway } from '#pikku/gateway'
-import { fetch } from '@pikku/core'
+import { fetch } from '@pikku/core/ecosystem/http'
 import { LocalGatewayService } from '@pikku/core/services'
-import { runLocalChannel } from '@pikku/core/channel/local'
+import { runLocalChannel } from '@pikku/core/ecosystem/channel/local'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { MockGatewayAdapter } from './mock-adapter.js'
 

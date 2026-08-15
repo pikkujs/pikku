@@ -1,4 +1,4 @@
-import { pikkuServerLifecycle } from '@pikku/core'
+import { pikkuServerLifecycle } from '@pikku/core/ecosystem/types'
 import type { SingletonServices } from '../types/application-types.js'
 
 /**

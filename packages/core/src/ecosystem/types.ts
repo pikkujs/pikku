@@ -42,7 +42,11 @@ export type {
   SecurityUpdateLevel,
   SerializedError,
 } from '../types/core.types.js'
-export { isSerializable, stopSingletonServices } from '../utils.js'
+export {
+  isSerializable,
+  pikkuServerLifecycle,
+  stopSingletonServices,
+} from '../utils.js'
 export {
   formatVersionedId,
   isVersionedId,

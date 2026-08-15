@@ -17,8 +17,8 @@
  *   yarn test:cyclic-graph:redis   # bullmq + Redis (RedisWorkflowService)
  */
 
-import type { PikkuWorkflowService } from '@pikku/core/workflow'
-import { rpcService } from '@pikku/core/rpc'
+import type { PikkuWorkflowService } from '@pikku/core/ecosystem/workflow'
+import { rpcService } from '@pikku/core/ecosystem/rpc'
 
 import { createConfig, createSingletonServices } from '../services.js'
 

@@ -2,6 +2,7 @@ export {
   CLIError,
   executeCLI,
   pikkuCLIRender,
+  runCLICommand,
 } from '../wirings/cli/cli-runner.js'
 export type {
   CLICommandMeta,

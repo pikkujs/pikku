@@ -1,5 +1,5 @@
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { stopSingletonServices } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
 import {
   createConfig,
   createSingletonServices,

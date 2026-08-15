@@ -76,7 +76,7 @@ const coreSpecifiers = (file: string) => {
     ts.ScriptTarget.Latest,
     true
   )
-  const found: { specifier: string; line: number }[] = []
+  const found: { specifier: string; line: number; names: string[] }[] = []
   for (const statement of source.statements) {
     if (
       !ts.isImportDeclaration(statement) &&
@@ -94,9 +94,71 @@ const coreSpecifiers = (file: string) => {
     const { line } = source.getLineAndCharacterOfPosition(
       statement.getStart(source)
     )
-    found.push({ specifier, line: line + 1 })
+    const clause = ts.isImportDeclaration(statement)
+      ? statement.importClause?.namedBindings
+      : statement.exportClause
+    const names =
+      clause && (ts.isNamedImports(clause) || ts.isNamedExports(clause))
+        ? clause.elements.map((element) => element.name.text)
+        : []
+    found.push({ specifier, line: line + 1, names })
   }
   return found
+}
+
+/**
+ * The names that drive the runner rather than describe it: a wire's dispatch
+ * entry point, the state it dispatches against, and the lifecycle around it.
+ * An app reaches for these only in bootstrap code — `start.ts`, `server.ts`,
+ * a Lambda handler — and there the app is standing in for a runtime adapter,
+ * which is the ecosystem tier. Everything else an app writes goes through the
+ * generated `#pikku` alias instead.
+ */
+const dispatchEntryPoints = new Set([
+  'PikkuWorkflowService',
+  'fetch',
+  'fetchData',
+  'pikkuServerLifecycle',
+  'pikkuState',
+  'rpcService',
+  'runCLICommand',
+  'runChannelConnect',
+  'runChannelDisconnect',
+  'runChannelMessage',
+  'runLocalChannel',
+  'runMCPPrompt',
+  'runMCPResource',
+  'runMCPTool',
+  'runPikkuFunc',
+  'runQueueJob',
+  'runScheduledTask',
+  'stopSingletonServices',
+])
+
+/**
+ * `templates`, `e2e` and `verifiers` are apps, not packages, so they have no
+ * `src` convention to walk — the bootstrap files sit wherever the runtime
+ * wants them. Walking the tree root means skipping what an app accumulates:
+ * installed dependencies, build output, and its own generated `.pikku`.
+ */
+const skipped = new Set(['node_modules', 'dist', '.pikku', '.next', 'build'])
+
+const walkApp = (dir: string, out: string[] = []): string[] => {
+  for (const entry of readdirSync(dir)) {
+    if (skipped.has(entry)) continue
+    const path = join(dir, entry)
+    if (statSync(path).isDirectory()) walkApp(path, out)
+    else if (path.endsWith('.ts') || path.endsWith('.tsx')) out.push(path)
+  }
+  return out
+}
+
+const appTierSourceFiles = () => {
+  const files: string[] = []
+  for (const tree of ['templates', 'e2e', 'verifiers']) {
+    walkApp(join(repoRoot, tree), files)
+  }
+  return files.filter((file) => !isGenerated(file))
 }
 
 describe('ecosystem surface', () => {
@@ -117,6 +179,30 @@ describe('ecosystem surface', () => {
         `Reaching a raw subpath pulls in an internal barrel that is scheduled ` +
         `for deletion. If the name you need is missing from a facade, add it ` +
         `there — that is the deliberate act of making it public.\n\n` +
+        offenders.join('\n')
+    )
+  })
+
+  test('app bootstrap reaches dispatch entry points through ecosystem', () => {
+    const offenders: string[] = []
+
+    for (const file of appTierSourceFiles()) {
+      for (const { specifier, line, names } of coreSpecifiers(file)) {
+        const dispatch = names.filter((name) => dispatchEntryPoints.has(name))
+        if (dispatch.length === 0) continue
+        offenders.push(
+          `${relative(repoRoot, file)}:${line}  ${dispatch.join(', ')}  from '${specifier}'`
+        )
+      }
+    }
+
+    assert.deepStrictEqual(
+      offenders,
+      [],
+      `Bootstrap code that drives the runner is standing in for a runtime ` +
+        `adapter, so it takes the same door: '@pikku/core/ecosystem/*'.\n` +
+        `These raw subpaths are scheduled for deletion, and the name is ` +
+        `already on the facade for its wire.\n\n` +
         offenders.join('\n')
     )
   })

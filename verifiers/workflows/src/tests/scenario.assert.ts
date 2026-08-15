@@ -7,7 +7,7 @@ import { test, describe } from 'node:test'
 import { createScenarioRunner } from '@pikku/core/scenario'
 import type { ScenarioPersona } from '@pikku/core/services'
 import type { ScenarioSurface } from '@pikku/core/scenario'
-import { rpcService } from '@pikku/core/rpc'
+import { rpcService } from '@pikku/core/ecosystem/rpc'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
 // Scenarios are not in the main bootstrap by design — a server must never
