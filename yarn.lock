@@ -5397,7 +5397,7 @@ __metadata:
   peerDependencies:
     "@pikku/core": ^0.12.84
     fastify: ^5.8.2
-    fastify-plugin: ^5.1.0
+    fastify-plugin: ^6.0.0
   languageName: unknown
   linkType: soft
 
@@ -5732,7 +5732,7 @@ __metadata:
     typescript: "npm:^6.0.3"
     vite: "npm:^8"
   peerDependencies:
-    vite: ^5 || ^6 || ^7
+    vite: ^5 || ^6 || ^7 || ^8
   peerDependenciesMeta:
     vite:
       optional: true

@@ -20,7 +20,7 @@
   "peerDependencies": {
     "@pikku/core": "^0.12.84",
     "fastify": "^5.8.2",
-    "fastify-plugin": "^5.1.0"
+    "fastify-plugin": "^6.0.0"
   },
   "devDependencies": {
     "fastify": "^5.12.0",
