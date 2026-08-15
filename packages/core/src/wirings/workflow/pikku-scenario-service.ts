@@ -36,7 +36,27 @@ import type {
   WorkflowExpectErrorOptions,
   WorkflowExpectScoreOptions,
   WorkflowExpectServiceOptions,
+  WorkflowStepOptions,
 } from './dsl/workflow-dsl.types.js'
+
+/**
+ * The retry default for the `expect*` family: none, the same as `given`,
+ * `when` and `then` take, and for the same reason — a failed assertion is a
+ * result, not a transient fault.
+ *
+ * Left to the workflow-wide `DEFAULT_STEP_RETRIES` they get six attempts each,
+ * which re-runs the RPC behind a failing `expectError`, restarts a whole
+ * `expectEventually` poll after it has already spent its own deadline, and
+ * lets a live judge re-roll a grade until one lands inside the band. The last
+ * of those is how it was found: a judge scored a deliberately useless answer
+ * 1, and the scenario went green anyway on the next attempt.
+ *
+ * A caller that genuinely wants attempts still asks for them.
+ */
+const assertionStep = <T extends WorkflowStepOptions>(
+  options?: T
+): T & { retries: number } =>
+  ({ ...options, retries: options?.retries ?? 0 }) as T & { retries: number }
 
 export { addFeature, resolveFeatureScenarios } from './feature.js'
 export type * from './scenario.types.js'
@@ -602,7 +622,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               await new Promise((resolve) => setTimeout(resolve, interval))
             }
           },
-          options
+          assertionStep(options)
         )
       },
 
@@ -645,7 +665,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               `[workflow] expectError '${stepName}' ('${resolvedRpcName}') expected an error but the call succeeded: ${JSON.stringify(result)?.slice(0, 300)}`
             )
           },
-          options
+          assertionStep(options)
         )
       },
 
@@ -700,7 +720,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               )
             }
           },
-          options
+          assertionStep(options)
         )
       },
 
@@ -745,7 +765,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             }
             return grade
           },
-          options
+          assertionStep(options)
         )
       },
 

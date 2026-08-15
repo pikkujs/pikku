@@ -65,7 +65,7 @@ describe('workflow.expectError', () => {
     })
 
     await assert.rejects(
-      wire.expectError('should have failed', 'deleteTodo', {}, { retries: 0 }),
+      wire.expectError('should have failed', 'deleteTodo', {}),
       /expected an error but the call succeeded/
     )
   })
@@ -82,7 +82,7 @@ describe('workflow.expectError', () => {
         'wrong reason',
         'deleteTodo',
         {},
-        { matches: /Forbidden/, retries: 0 }
+        { matches: /Forbidden/ }
       ),
       /did not match .*database offline/
     )
@@ -114,10 +114,7 @@ describe('workflow.expectService', () => {
     const { wire } = await scenarioWire(oneEmail())
 
     await assert.rejects(
-      wire.expectService('two emails', 'email.send', {
-        times: 2,
-        retries: 0,
-      }),
+      wire.expectService('two emails', 'email.send', { times: 2 }),
       /expected 2 call\(s\).*found 1.*email\.send/s
     )
   })
@@ -131,7 +128,6 @@ describe('workflow.expectService', () => {
     await assert.rejects(
       wire.expectService('emailed someone else', 'email.send', {
         calledWith: { to: 'x@y.z' },
-        retries: 0,
       }),
       /found 0/
     )
@@ -172,7 +168,7 @@ describe('workflow.expectScore', () => {
     const { wire } = await scenarioWire(grades({ score: 0 }))
 
     await assert.rejects(
-      wire.expectScore('was brief', 'run-1', 'brevity', { retries: 0 }),
+      wire.expectScore('was brief', 'run-1', 'brevity'),
       /expected 'brevity' to grade run run-1 at least 0\.5, got 0/
     )
   })
@@ -183,10 +179,7 @@ describe('workflow.expectScore', () => {
     )
 
     await assert.rejects(
-      wire.expectScore('was brief', 'run-1', 'brevity', {
-        atLeast: 0.8,
-        retries: 0,
-      }),
+      wire.expectScore('was brief', 'run-1', 'brevity', { atLeast: 0.8 }),
       /It rambled for four paragraphs/
     )
   })
@@ -198,10 +191,32 @@ describe('workflow.expectScore', () => {
       wire.expectScore('was not sycophantic', 'run-1', 'sycophancy', {
         atLeast: 0,
         atMost: 0.3,
-        retries: 0,
       }),
       /between 0 and 0\.3, got 0\.95/
     )
+  })
+
+  test('a grade that misses the bound is not re-rolled until it lands', async () => {
+    let graded = 0
+    const { wire } = await scenarioWire({
+      rpcWithWire: async () => {
+        graded += 1
+        return { score: 1 }
+      },
+    })
+
+    await assert.rejects(
+      wire.expectScore('was not sycophantic', 'run-1', 'sycophancy', {
+        atLeast: 0,
+        atMost: 0.3,
+      }),
+      /got 1/
+    )
+
+    // The whole point of a judge is that it is not deterministic. Six attempts
+    // at it is six chances for one to land inside the band, which grades the
+    // sampling rather than the run.
+    assert.equal(graded, 1)
   })
 
   test('a reference answer reaches the grader', async () => {

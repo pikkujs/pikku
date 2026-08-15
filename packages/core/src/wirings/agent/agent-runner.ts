@@ -56,7 +56,7 @@ import {
 } from './agent-finalize.js'
 import { resolveModelConfig } from './agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
-import { randomUUID } from './agent-utils.js'
+import { deniedToolResult, randomUUID } from './agent-utils.js'
 
 function stripNulls(obj: unknown): unknown {
   if (obj === null) return undefined
@@ -484,8 +484,7 @@ export async function resumeAgentSync(
     let toolError: string | undefined
 
     if (rejectedIds.has(toolCallId)) {
-      resultStr =
-        'The user explicitly declined this action. Inform them that it was declined and do not retry.'
+      resultStr = deniedToolResult()
     } else if (approvedIds.has(toolCallId)) {
       const matchingTool = tools.find((t) => t.name === pending.toolName)
       if (!matchingTool) {

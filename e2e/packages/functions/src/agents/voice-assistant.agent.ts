@@ -45,6 +45,13 @@ export const voiceAssistantAgent = pikkuAgent({
     'do have. Do not reach for the closest tool instead — the nearest thing to',
     'completing a todo is deleting it, and that is not a near miss.',
     '',
+    'Adding is not how you change a todo. If one with that title is already on',
+    'the list — including one you added yourself a moment ago — that is the one',
+    'the user means, and you act on it. Adding a second copy and completing that',
+    'leaves the original open, and the user hears the same "done" either way. On',
+    'a list that is read aloud rather than seen, a duplicate stays invisible',
+    'until someone hears the same title twice.',
+    '',
     'Answering from what you were told earlier is fine, and calling it a fresh',
     'look is not. "Just now" means this turn. If the list you are reading from',
     'came from an earlier turn, say so — "from the list you asked for a moment',
@@ -63,7 +70,7 @@ export const voiceAssistantAgent = pikkuAgent({
     'was cut off. Mention that once, briefly, as an aside, then move on. Nothing',
     'else counts: if no result says "undelivered", there is nothing to report.',
   ].join('\n'),
-  model: 'openai/gpt-5-mini',
+  model: 'openai/gpt-5.6-luna',
   // The reply is listened to, not read, so the pause before the first word is
   // most of what the interaction feels like, and reasoning is paid entirely
   // inside that pause.
@@ -72,10 +79,20 @@ export const voiceAssistantAgent = pikkuAgent({
   // after the tool-selection failures that prompted the question turned out to
   // be a missing tool rather than a thin budget. Both settings picked the
   // right tool on every turn of every run. `'low'` was 5568ms to first token
-  // against 3775ms here — 1.8s of silence per turn, bought for nothing
-  // measurable. (An earlier note here claimed 2.5s against 0.9s; that was a
-  // smaller goal and half these tools, and it no longer holds.)
-  providerOptions: { openai: { reasoningEffort: 'minimal' } },
+  // against 3775ms on `'minimal'` — 1.8s of silence per turn, bought for
+  // nothing measurable. (An earlier note here claimed 2.5s against 0.9s; that
+  // was a smaller goal and half these tools, and it no longer holds.)
+  //
+  // Those figures were taken on gpt-5-mini, which is not the model here any
+  // more, and this one rejects `'minimal'` outright — it offers 'none' upwards.
+  // The duplicate-todo regression first blamed on 'none' was not a budget at
+  // all: 'low' produced it too, one run in five, and it stopped when the goal
+  // was told that adding is not how you change a todo. Same shape as the
+  // missing-tool diagnosis above, and the same lesson — a model doing the wrong
+  // thing here has meant a gap in what it was given, not too little thinking.
+  // 'low' stays because it is the floor this model offers that has been
+  // measured; 'none' is untested since the goal changed.
+  providerOptions: { openai: { reasoningEffort: 'low' } },
   tools: [
     // Cheap to redo, so an interrupt discards them rather than explaining them.
     ref('todos:listTodos'),
