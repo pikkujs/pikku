@@ -1,4 +1,5 @@
 import type {
+  JudgeToolCallDisclosure,
   PikkuAgentScorer,
   ScorerInput,
   ScorerOutput,
@@ -61,6 +62,12 @@ export const pikkuAgentJudge = <Services = any>(config: {
   requiresReference?: boolean
   model: string
   goal: string
+  /**
+   * How much of the run's trajectory to disclose to the judge. Defaults to
+   * `names`: enough to tell a tool-backed answer from an invented one, without
+   * sending a third-party model the rows the tools returned.
+   */
+  toolCalls?: JudgeToolCallDisclosure
   prompt?: (input: ScorerInput) => string
 }): PikkuAgentScorer<Services> => ({
   name: config.name,
@@ -71,6 +78,7 @@ export const pikkuAgentJudge = <Services = any>(config: {
   judge: {
     model: config.model,
     goal: config.goal,
+    toolCalls: config.toolCalls ?? 'names',
     ...(config.prompt ? { prompt: config.prompt } : {}),
   },
 })

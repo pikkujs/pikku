@@ -12,6 +12,7 @@ export {
 export { wireAgentScorerQueueWorkers } from './agent-scorer-worker.js'
 export type {
   AgentRunScore,
+  JudgeToolCallDisclosure,
   PikkuAgentScorer,
   ScoreJob,
   ScorerInput,

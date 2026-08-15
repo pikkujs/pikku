@@ -55,6 +55,151 @@ describe('buildJudgePrompt', () => {
     assert.match(prompt, /Grade helpfulness\./)
   })
 
+  test('shows which tools ran, so an answer is distinguishable from a guess', () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+    })
+
+    const prompt = buildJudgePrompt(
+      scorer.judge!,
+      input({
+        toolCalls: [
+          { name: 'listTodos', args: {}, result: { todos: ['Buy groceries'] } },
+        ],
+      })
+    )
+
+    assert.match(prompt, /Tools the assistant ran:\n- listTodos/)
+  })
+
+  test('the default disclosure sends the judge no arguments and no results', () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+    })
+
+    const prompt = buildJudgePrompt(
+      scorer.judge!,
+      input({
+        toolCalls: [
+          {
+            name: 'lookupCustomer',
+            args: { email: 'ada@example.com' },
+            result: { address: '12 Mill Lane' },
+          },
+        ],
+      })
+    )
+
+    assert.doesNotMatch(prompt, /ada@example\.com/)
+    assert.doesNotMatch(prompt, /Mill Lane/)
+  })
+
+  test('a run that called nothing gets no tool section rather than an empty one', () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+    })
+
+    assert.doesNotMatch(buildJudgePrompt(scorer.judge!, input()), /Tools the/)
+  })
+
+  test('a failed call is shown as failed, which is not the same as no call', () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+    })
+
+    const prompt = buildJudgePrompt(
+      scorer.judge!,
+      input({
+        toolCalls: [
+          {
+            name: 'listTodos',
+            args: {},
+            error: 'no such user ada@example.com',
+          },
+        ],
+      })
+    )
+
+    assert.match(prompt, /- listTodos \(failed\)/)
+    assert.doesNotMatch(prompt, /ada@example\.com/)
+  })
+
+  test("'full' shows the arguments and results, for a judge that grades against them", () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+      toolCalls: 'full',
+    })
+
+    const prompt = buildJudgePrompt(
+      scorer.judge!,
+      input({
+        toolCalls: [
+          { name: 'listTodos', args: {}, result: { todos: ['Buy groceries'] } },
+          { name: 'save', args: {}, error: 'store unreachable' },
+        ],
+      })
+    )
+
+    assert.match(
+      prompt,
+      /listTodos\(\{\}\) returned \{"todos":\["Buy groceries"\]\}/
+    )
+    assert.match(prompt, /save\(\{\}\) failed: store unreachable/)
+  })
+
+  test("'off' withholds the trajectory entirely, even from a run that used tools", () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+      toolCalls: 'off',
+    })
+
+    const prompt = buildJudgePrompt(
+      scorer.judge!,
+      input({ toolCalls: [{ name: 'listTodos', args: {}, result: {} }] })
+    )
+
+    assert.doesNotMatch(prompt, /Tools the/)
+    assert.doesNotMatch(prompt, /listTodos/)
+  })
+
+  test('a large tool result is truncated rather than crowding out the answer', () => {
+    const scorer = pikkuAgentJudge({
+      name: 'helpfulness',
+      description: 'Is the answer useful',
+      model: 'claude-opus-5',
+      goal: 'Grade helpfulness.',
+      toolCalls: 'full',
+    })
+
+    const prompt = buildJudgePrompt(
+      scorer.judge!,
+      input({
+        toolCalls: [{ name: 'search', args: {}, result: 'x'.repeat(5000) }],
+      })
+    )
+
+    assert.match(prompt, /… \(truncated\)/)
+    assert.ok(prompt.length < 1500, `prompt was ${prompt.length} characters`)
+  })
+
   test('a scorer that supplies its own prompt replaces the framing entirely', () => {
     const scorer = pikkuAgentJudge({
       name: 'custom',

@@ -5,12 +5,12 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2580 observable things**: 825 exported names, plus
+**2581 observable things**: 826 exported names, plus
 1755 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 813 | 1753 |
+| stable | 48 | 814 | 1753 |
 | ecosystem | 40 | 12 | 2 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -43,8 +43,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem` | 13 | 8 | 0 |
 | `./channel/local` | 3 | 2 | 5 |
 | `./cli/command-parser` | 3 | 1 | 6 |
+| `./agent-scorer` | 18 | 6 | 0 |
 | `./mcp` | 20 | 5 | 0 |
-| `./agent-scorer` | 17 | 5 | 0 |
 | `./schema` | 6 | 5 | 0 |
 | `./safe-fetch` | 6 | 4 | 0 |
 | `./dev` | 5 | 2 | 2 |
@@ -3953,7 +3953,8 @@ getAgentScorers: () => Map<string, PikkuAgentScorer>
 getAgentScorersMeta: () => ScorerMeta
 getScoreSnapshot: (runId: string) => ScorerInput | undefined
 gradeRun: (job: ScoreJob, services: { agentRunner?: unknown; agentRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
-pikkuAgentJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAgentScorer<Services>
+export type JudgeToolCallDisclosure = 'off' | 'names' | 'full'
+pikkuAgentJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; toolCalls?: JudgeToolCallDisclosure | undefined; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAgentScorer<Services>
 pikkuAgentScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAgentScorer<Services>
 export type PikkuAgentScorer<Services = any> = {
   name: string
@@ -3984,6 +3985,7 @@ export interface ScorerInput {
 export type ScorerJudgeConfig = {
   model: string
   goal: string
+  toolCalls: JudgeToolCallDisclosure
   prompt?: (input: ScorerInput) => string
 }
 export type ScorerLane = 'fast' | 'slow'
@@ -6097,7 +6099,7 @@ addAgentScorer: (scorerName: string, scorer: PikkuAgentScorer<any>, packageName?
 enableScoreSnapshots: (maxRuns?: number) => void
 getScoreSnapshot: (runId: string) => ScorerInput | undefined
 gradeRun: (job: ScoreJob, services: { agentRunner?: unknown; agentRunState?: { saveScore: (score: { runId: string; scorerName: string; score: number; reason?: string | undefined; metadata?: Record<string, unknown> | undefined; }) => Promise<void>; } | undefined; }, options: { persist: boolean; }) => Promise<ScorerOutput>
-pikkuAgentJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAgentScorer<Services>
+pikkuAgentJudge: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; model: string; goal: string; toolCalls?: JudgeToolCallDisclosure | undefined; prompt?: ((input: ScorerInput) => string) | undefined; }) => PikkuAgentScorer<Services>
 pikkuAgentScorer: <Services = any>(config: { name: string; description: string; sampleRate?: number | undefined; requiresReference?: boolean | undefined; score: (input: ScorerInput, services: Services) => ScorerOutput | Promise<ScorerOutput>; }) => PikkuAgentScorer<Services>
 export type PikkuAgentScorer<Services = any> = {
   name: string
