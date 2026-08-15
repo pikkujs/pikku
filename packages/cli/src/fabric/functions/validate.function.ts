@@ -149,11 +149,17 @@ const LOGIN_FILE_PATTERN =
 // these means the app actually wires actor sign-in — the component's own
 // definition is excluded, since defining it without rendering it locks the
 // reviewer out just as thoroughly.
-// Canonical implementation: starter-template's DevActorSwitcher, rendered from
-// LoginPage and backed by signInAsActor() → POST /auth/sign-in/actor.
+//
+// Canonical implementation is now `<DevActorSwitcher>` from `@pikku/mantine/dev`
+// (built on `useDevActors` from `@pikku/react`), rendered from the login screen.
+// The hand-rolled shape the templates used to copy — a local component backed by
+// `signInAsActor()` → POST /auth/sign-in/actor — still passes: apps that predate
+// the package keep working, and the useDevActors call site is matched for apps
+// that want their own UI on the shared logic.
 const ACTOR_QUICK_LOGIN_PATTERNS = [
   /<\s*DevActorSwitcher\b/,
   /(?<!function\s)\bsignInAsActor\s*\(/,
+  /(?<!function\s)\buseDevActors\s*\(/,
   /\/auth\/sign-in\/actor/,
 ]
 
@@ -1441,15 +1447,20 @@ export async function runValidate(
             `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario persona without a password`,
             join(appPath, loginFiles[0]!),
             lines(
-              'Add the dev-only "Sign in as …" switcher and render it from the login screen:',
-              '1. lib/auth: devActors() reading the DEV_ACTORS env var, and',
-              '   signInAsActor(email) → POST `${apiUrl()}/auth/sign-in/actor`',
-              '   with { email, secret } and credentials: "include".',
-              '2. components/DevActorSwitcher.tsx: a Menu of the declared actors,',
-              '   each Menu.Item signing in as that persona. Render null when',
-              '   devActors() is empty, so it disappears in production.',
-              `3. Render <DevActorSwitcher /> from ${loginFiles[0]}.`,
-              'Reference: templates/starter-template/apps/app/src/components/DevActorSwitcher.tsx.'
+              'Render the dev-only "Sign in as …" switcher from the login screen.',
+              `In ${loginFiles[0]}:`,
+              "  import { DevActorSwitcher } from '@pikku/mantine/dev'",
+              '  <DevActorSwitcher',
+              '    actors={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined}',
+              '    secret={import.meta.env.DEV ? import.meta.env.VITE_SCENARIO_ACTOR_SECRET : undefined}',
+              '    apiUrl={apiUrl()}',
+              "    onSignedIn={() => navigate({ to: '/' })}",
+              '  />',
+              'The sandbox dev server bakes both env vars from your declared personas;',
+              'neither is set in production, so the control renders null there.',
+              'Gate the reads on import.meta.env.DEV as above so the secret never',
+              'reaches a production bundle. Next.js apps read the NEXT_PUBLIC_* pair.',
+              'For custom UI, build on useDevActors() from @pikku/react instead.'
             )
           )
         }

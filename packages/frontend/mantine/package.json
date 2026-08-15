@@ -13,6 +13,10 @@
     "./theme": {
       "import": "./dist/esm/theme/index.js",
       "require": "./dist/cjs/theme/index.js"
+    },
+    "./dev": {
+      "import": "./dist/esm/dev/index.js",
+      "require": "./dist/cjs/dev/index.js"
     }
   },
   "scripts": {

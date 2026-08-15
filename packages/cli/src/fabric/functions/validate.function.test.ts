@@ -1428,6 +1428,31 @@ describe('pikku fabric validate', () => {
       }
     })
 
+    test('custom UI built on useDevActors() → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          // An app that wants its own control rather than @pikku/mantine/dev's
+          // still satisfies the rule, as long as it drives the shared hook.
+          'src/pages/LoginPage.tsx':
+            "import { useDevActors } from '@pikku/react'\n" +
+            'export const LoginPage = () => {\n' +
+            '  const { actors, signInAs } = useDevActors({ actors: undefined, secret: undefined, apiUrl: "/api" })\n' +
+            '  return <>{actors.map((a) => <button key={a.key} onClick={() => signInAs(a.email)} />)}</>\n}\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'useDevActors() is a valid quick-login fingerprint'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
     test('a DevActorSwitcher that is defined but never rendered still errors', async () => {
       const tmp = await makeTmp()
       try {
@@ -2168,4 +2193,3 @@ describe('declared frontends + type-check (live validate.function)', () => {
     }
   })
 })
-
