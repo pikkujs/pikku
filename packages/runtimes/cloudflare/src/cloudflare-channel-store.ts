@@ -1,6 +1,6 @@
 import type { DurableObjectState, WebSocket } from '@cloudflare/workers-types'
-import type { Channel } from '@pikku/core/channel'
-import { ChannelStore } from '@pikku/core/channel'
+import type { Channel } from '@pikku/core/ecosystem/channel'
+import { ChannelStore } from '@pikku/core/ecosystem/channel'
 
 interface ChannelAttachment {
   channelName: string

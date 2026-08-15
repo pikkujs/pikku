@@ -9,12 +9,15 @@
  * Services are cached across invocations within the same function app instance.
  */
 
-import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
-import type { CoreSingletonServices } from '@pikku/core'
-import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
-import { runQueueJob } from '@pikku/core/queue'
-import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
-import { runScheduledTask } from '@pikku/core/scheduler'
+import {
+  LocalVariablesService,
+  LocalSecretService,
+} from '@pikku/core/ecosystem/services'
+import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
+import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/ecosystem/http'
+import { runQueueJob } from '@pikku/core/ecosystem/queue'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/ecosystem/queue'
+import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
 import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
 import type {
   HttpRequest,

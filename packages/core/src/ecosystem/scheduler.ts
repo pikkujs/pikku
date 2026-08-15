@@ -1,4 +1,7 @@
-export { getScheduledTasks } from '../wirings/scheduler/scheduler-runner.js'
+export {
+  getScheduledTasks,
+  runScheduledTask,
+} from '../wirings/scheduler/scheduler-runner.js'
 export type {
   CoreScheduledTask,
   ScheduledTasksMeta,

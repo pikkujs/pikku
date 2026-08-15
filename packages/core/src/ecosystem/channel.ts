@@ -1,5 +1,7 @@
 export { addChannelMiddleware } from '../wirings/channel/channel-middleware-runner.js'
 export type { Capabilities } from '../wirings/channel/channel-rpc.types.js'
+export { ChannelStore } from '../wirings/channel/channel-store.js'
+export type { Channel } from '../wirings/channel/channel-store.js'
 export type {
   BinaryData,
   ChannelMessageMeta,
@@ -10,6 +12,7 @@ export type {
   CorePikkuChannelMiddlewareFactory,
   PikkuChannelHandlerFactory,
 } from '../wirings/channel/channel.types.js'
+export type { EventHubService } from '../wirings/channel/eventhub-service.js'
 export { EventHubStore } from '../wirings/channel/eventhub-store.js'
 export { logChannels } from '../wirings/channel/log-channels.js'
 export { PikkuAbstractChannelHandler } from '../wirings/channel/pikku-abstract-channel-handler.js'

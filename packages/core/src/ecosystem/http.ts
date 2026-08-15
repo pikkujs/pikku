@@ -1,3 +1,4 @@
+export { fetch, fetchData, wireHTTP } from '../wirings/http/http-runner.js'
 export type {
   AssertHTTPWiringParams,
   CoreHTTPFunctionWiring,
@@ -10,7 +11,11 @@ export type {
   RunHTTPWiringOptions,
 } from '../wirings/http/http.types.js'
 export { logRoutes } from '../wirings/http/log-http-routes.js'
-export { DEFAULT_MAX_BODY_SIZE } from '../wirings/http/pikku-fetch-http-request.js'
+export {
+  DEFAULT_MAX_BODY_SIZE,
+  PikkuFetchHTTPRequest,
+} from '../wirings/http/pikku-fetch-http-request.js'
+export { PikkuFetchHTTPResponse } from '../wirings/http/pikku-fetch-http-response.js'
 export { toWebRequest } from '../wirings/http/web-request.js'
 
 /**

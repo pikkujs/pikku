@@ -1,1 +1,1 @@
-export { addSchema } from '../schema.js'
+export { addSchema, compileAllSchemas } from '../schema.js'

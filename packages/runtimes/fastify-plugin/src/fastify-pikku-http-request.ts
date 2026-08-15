@@ -1,12 +1,12 @@
 import { parse as parseCookie } from 'cookie'
 import type { FastifyRequest } from 'fastify'
-import type { PikkuHTTPRequest } from '@pikku/core/http'
+import type { PikkuHTTPRequest } from '@pikku/core/ecosystem/http'
 import type { HTTPMethod, PikkuQuery } from '@pikku/core/ecosystem/http'
 import { DEFAULT_MAX_BODY_SIZE } from '@pikku/core/ecosystem/http'
 import {
   PayloadTooLargeError,
   UnprocessableContentError,
-} from '@pikku/core/errors'
+} from '@pikku/core/ecosystem/errors'
 
 export type FastifyPikkuHTTPRequestOptions = Partial<{
   /** Maximum request body size in bytes. Defaults to `DEFAULT_MAX_BODY_SIZE`. */

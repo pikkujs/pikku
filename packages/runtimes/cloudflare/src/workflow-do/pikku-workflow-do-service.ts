@@ -1,6 +1,6 @@
 import type { DurableObjectStorage } from '@cloudflare/workers-types'
 import type { SerializedError } from '@pikku/core/ecosystem/types'
-import { PikkuWorkflowService } from '@pikku/core/workflow'
+import { PikkuWorkflowService } from '@pikku/core/ecosystem/workflow'
 import type {
   StepState,
   StepStatus,
@@ -505,7 +505,8 @@ export class PikkuWorkflowDoService<
   protected async getStepStub(rpcName: string): Promise<PikkuStepStub | null> {
     const key = toStepBindingName(rpcName)
     const stub = (this.env as Record<string, unknown>)[key] as
-      PikkuStepStub | undefined
+      | PikkuStepStub
+      | undefined
     return stub ?? null
   }
 

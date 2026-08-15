@@ -1,6 +1,8 @@
 export { isExpectedError } from '../errors/error-handler.js'
 export type { CorePermissionGroup } from '../function/functions.types.js'
 export { PikkuRequest } from '../pikku-request.js'
+export { createSecretValue } from '../secret-value.js'
+export type { Safe } from '../secret-value.js'
 export type {
   AuditFacets,
   AuditQuery,
@@ -10,6 +12,11 @@ export { parseDurationString } from '../time-utils.js'
 export type { RelativeTimeInput } from '../time-utils.js'
 export type {
   AuthInstance,
+  CoreConfig,
+  CorePikkuMiddleware,
+  CoreSingletonServices,
+  CoreUserSession,
+  CreateConfig,
   FunctionServicesMeta,
   FunctionWiresMeta,
   JSONValue,
@@ -26,7 +33,7 @@ export type {
   SecurityUpdateLevel,
   SerializedError,
 } from '../types/core.types.js'
-export { isSerializable } from '../utils.js'
+export { isSerializable, stopSingletonServices } from '../utils.js'
 export {
   formatVersionedId,
   isVersionedId,

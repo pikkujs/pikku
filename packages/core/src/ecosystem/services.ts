@@ -9,6 +9,10 @@ export type {
   DeploymentServiceConfig,
 } from '../services/deployment-service.js'
 export { InMemoryAgentRunStateService } from '../services/in-memory-agent-run-state-service.js'
+export type { JWTService } from '../services/jwt-service.js'
+export { LocalSecretService } from '../services/local-secrets.js'
+export { LocalVariablesService } from '../services/local-variables.js'
+export { LogLevel } from '../services/logger.js'
 export type {
   AgentMeta,
   AgentsMeta,
@@ -36,6 +40,7 @@ export type {
   ScheduledTaskSummary,
 } from '../services/scheduler-service.js'
 export type { Role } from '../services/scope-service.js'
+export type { SecretService } from '../services/secret-service.js'
 export { getStubTracker, spy } from '../services/stub-tracker.js'
 export type { CredentialMetaInfo } from '../services/typed-credential-service.js'
 export type { CredentialMeta } from '../services/typed-secret-service.js'

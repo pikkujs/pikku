@@ -1,4 +1,4 @@
-export { runMiddleware } from '../middleware-runner.js'
+export { addGlobalMiddleware, runMiddleware } from '../middleware-runner.js'
 export { authAPIKey } from '../middleware/auth-apikey.js'
 export { authCookie } from '../middleware/auth-cookie.js'
 export { pikkuRemoteAuthMiddleware } from '../middleware/remote-auth.js'

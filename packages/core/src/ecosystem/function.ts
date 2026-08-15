@@ -1,4 +1,7 @@
-export { getAllFunctionNames } from '../function/function-runner.js'
+export {
+  addFunction,
+  getAllFunctionNames,
+} from '../function/function-runner.js'
 export { pikkuAuth } from '../function/functions.types.js'
 export type {
   CorePikkuAuth,

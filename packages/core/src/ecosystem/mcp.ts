@@ -4,6 +4,9 @@ export {
   getMCPPromptsMeta,
   getMCPResourcesMeta,
   getMCPToolsMeta,
+  runMCPPrompt,
+  runMCPResource,
+  runMCPTool,
 } from '../wirings/mcp/mcp-runner.js'
 export type {
   AssertMCPResourceURIParams,

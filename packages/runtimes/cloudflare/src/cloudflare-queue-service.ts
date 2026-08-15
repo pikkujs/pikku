@@ -1,4 +1,4 @@
-import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { QueueService, QueueJob } from '@pikku/core/ecosystem/queue'
 import type { JobOptions } from '@pikku/core/ecosystem/queue'
 
 /**

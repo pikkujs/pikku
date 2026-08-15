@@ -28,15 +28,19 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import type { CoreConfig } from '@pikku/core'
-import { stopSingletonServices } from '@pikku/core'
-import type { Logger } from '@pikku/core/services'
+import type { CoreConfig } from '@pikku/core/ecosystem/types'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
+import type { Logger } from '@pikku/core/ecosystem/services'
 
 import type { PikkuHTTP } from '@pikku/core/ecosystem/http'
-import { PikkuFetchHTTPRequest } from '@pikku/core/http'
+import { PikkuFetchHTTPRequest } from '@pikku/core/ecosystem/http'
 
 import type { PikkuMCP } from '@pikku/core/ecosystem/mcp'
-import { runMCPTool, runMCPResource, runMCPPrompt } from '@pikku/core/mcp'
+import {
+  runMCPTool,
+  runMCPResource,
+  runMCPPrompt,
+} from '@pikku/core/ecosystem/mcp'
 import {
   MCPEndpointRegistry,
   MCPError,

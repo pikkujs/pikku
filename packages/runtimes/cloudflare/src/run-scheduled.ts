@@ -1,5 +1,5 @@
 import type { ScheduledController } from '@cloudflare/workers-types'
-import { runScheduledTask } from '@pikku/core/scheduler'
+import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
 import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
 
 export const runScheduled = async (controller: ScheduledController) => {

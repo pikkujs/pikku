@@ -1,6 +1,7 @@
 export {
   QueueJobDiscardedError,
   QueueJobFailedError,
+  runQueueJob,
 } from '../wirings/queue/queue-runner.js'
 export type {
   ConfigValidationResult,
@@ -8,6 +9,9 @@ export type {
   JobOptions,
   PikkuJobConfig,
   PikkuWorkerConfig,
+  QueueJob,
+  QueueJobStatus,
+  QueueService,
   QueueWorkers,
   QueueWorkersMeta,
 } from '../wirings/queue/queue.types.js'

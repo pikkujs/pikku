@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
 
 import { pikkuState, resetPikkuState } from '@pikku/core/ecosystem'
-import { addFunction } from '@pikku/core/function'
-import { addGlobalMiddleware } from '@pikku/core/middleware'
+import { addFunction } from '@pikku/core/ecosystem/function'
+import { addGlobalMiddleware } from '@pikku/core/ecosystem/middleware'
 
 import { PikkuMCPServer } from './index.js'
 

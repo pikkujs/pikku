@@ -14,25 +14,25 @@ import {
   timingSafeEqual,
 } from 'node:crypto'
 
-import type { CoreConfig } from '@pikku/core'
-import { stopSingletonServices } from '@pikku/core'
+import type { CoreConfig } from '@pikku/core/ecosystem/types'
+import { stopSingletonServices } from '@pikku/core/ecosystem/types'
 import { installNodeHostResolver } from '@pikku/core/ecosystem/node-host-resolver'
 import { pikkuState } from '@pikku/core/ecosystem'
-import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import type { LocalContentConfig } from '@pikku/core/ecosystem/services/local-content'
 import { signedContentPath } from '@pikku/core/ecosystem/services/local-content'
-import type { JWTService, Logger } from '@pikku/core/services'
-import { fetchData, PikkuFetchHTTPResponse } from '@pikku/core/http'
+import type { JWTService, Logger } from '@pikku/core/ecosystem/services'
+import { fetchData, PikkuFetchHTTPResponse } from '@pikku/core/ecosystem/http'
 import {
   logRoutes as logRegisterRoutes,
   type RunHTTPWiringOptions,
 } from '@pikku/core/ecosystem/http'
-import { compileAllSchemas } from '@pikku/core/schema'
+import { compileAllSchemas } from '@pikku/core/ecosystem/schema'
 import {
   runQueueJob,
   type QueueJob,
   type QueueJobStatus,
-} from '@pikku/core/queue'
-import { runScheduledTask } from '@pikku/core/scheduler'
+} from '@pikku/core/ecosystem/queue'
+import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
 
 import { incomingMessageToRequest } from './request-converter.js'
 import { writeResponse } from './response-writer.js'

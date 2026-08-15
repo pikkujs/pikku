@@ -1,15 +1,18 @@
-import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
-import type { CoreSingletonServices } from '@pikku/core'
+import {
+  LocalVariablesService,
+  LocalSecretService,
+} from '@pikku/core/ecosystem/services'
+import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
 import { setSingletonServices } from '@pikku/core/ecosystem'
 import type { ScheduledController } from '@cloudflare/workers-types'
 import { WorkerEntrypoint } from 'cloudflare:workers'
 import { runFetch } from './run-fetch.js'
 import { runScheduled } from './run-scheduled.js'
-import { runQueueJob } from '@pikku/core/queue'
-import { runScheduledTask } from '@pikku/core/scheduler'
-import { rpcService } from '@pikku/core/rpc'
+import { runQueueJob } from '@pikku/core/ecosystem/queue'
+import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
+import { rpcService } from '@pikku/core/ecosystem/rpc'
 import { pikkuState } from '@pikku/core/ecosystem'
-import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/ecosystem/queue'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
 import {

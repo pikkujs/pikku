@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setSingletonServices, resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/ecosystem/services'
 
 import { PikkuExpressServer } from './pikku-express-server.js'
 

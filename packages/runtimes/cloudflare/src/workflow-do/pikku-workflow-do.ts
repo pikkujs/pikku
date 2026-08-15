@@ -2,7 +2,7 @@ import type {
   DurableObjectState,
   DurableObjectNamespace,
 } from '@cloudflare/workers-types'
-import type { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
 import type {
   WorkflowRun,
   WorkflowRunWire,
