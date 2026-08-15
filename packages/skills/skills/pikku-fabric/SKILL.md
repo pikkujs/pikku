@@ -323,10 +323,13 @@ own UI built on `useDevActors()` from `@pikku/react` — validate accepts either
 call site as evidence, so custom rendering passes. See **pikku-react** for the
 props and **pikku-scenario** for where the actor list comes from.
 
-An app that predates the package is **not** required to migrate: a hand-rolled
-`signInAsActor()` or a literal `POST /auth/sign-in/actor` also clears the rule.
-Reach for the shared component in new code, but do not rewrite a working switcher
-just to silence this finding — it is already silent.
+The validator also accepts the shapes that predate the package — a hand-rolled
+`signInAsActor()` or a literal `POST /auth/sign-in/actor` — so an older app does
+not fail the build. **Treat that as a grace period, not the target: migrate those
+to `<DevActorSwitcher />`.** The hand-copied version is exactly the duplication
+the package exists to remove, and the copies drift — the ones that prompted this
+had already diverged on the `import.meta.env.DEV` gate that keeps the shared
+secret out of production bundles.
 
 Do **not** satisfy it with Better Auth's `/dev/quick-login`. That is a different
 endpoint with a different purpose — one fixed admin, not the declared personas —
