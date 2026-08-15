@@ -66,6 +66,7 @@
     "start:mcp:http": "npx tsx scripts/start-mcp-http.ts"
   },
   "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*"
   }
 }
