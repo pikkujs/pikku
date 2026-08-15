@@ -14,7 +14,7 @@ import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware } from './agent-turn.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
-import { randomUUID } from './agent-utils.js'
+import { deniedToolResult, randomUUID } from './agent-utils.js'
 import { SPOKEN_TRANSCRIPT } from './voice-input.js'
 import {
   combineChannelMiddleware,
@@ -1099,8 +1099,7 @@ export async function resumeAgent(
       await agentRunState.updateRun(pending.agentRunId, { status: 'failed' })
     }
 
-    const denialResult =
-      'The user explicitly declined this action. Inform them that it was declined and do not retry.'
+    const denialResult = deniedToolResult()
 
     if (storage) {
       await storage.saveMessages(run.threadId, [
