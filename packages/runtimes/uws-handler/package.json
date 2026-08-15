@@ -25,7 +25,7 @@
     "uWebSockets.js": "*"
   },
   "dependencies": {
-    "cookie": "^1.1.1",
+    "cookie": "^2.0.1",
     "picoquery": "^2.5.0"
   },
   "devDependencies": {

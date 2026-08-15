@@ -99,7 +99,7 @@
     "uWebSockets.js": "uNetworking/uWebSockets.js#v20.69.0"
   },
   "dependencies": {
-    "@changesets/cli": "^2.31.1",
+    "@changesets/cli": "^3.0.0",
     "typescript": "^6.0.3"
   },
   "resolutions": {

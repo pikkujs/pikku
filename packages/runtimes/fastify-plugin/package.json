@@ -28,7 +28,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "cookie": "^1.1.1"
+    "cookie": "^2.0.1"
   },
   "engines": {
     "node": ">=24"

@@ -12,7 +12,7 @@
     "@pikku/schema-cfworker": "^0.12.5",
     "@pikku/templates-function-addon": "workspace:*",
     "better-auth": "^1.6.29",
-    "eventsource": "^4.1.1",
+    "eventsource": "^5.1.0",
     "kysely": "^0.29.5",
     "ws": "^8.21.3",
     "zod": "^4"
@@ -37,7 +37,7 @@
     "concurrently": "^10.0.5",
     "serverless": "^4.41.0",
     "serverless-offline": "^14.8.0",
-    "serverless-offline-sqs": "^8.0.0",
+    "serverless-offline-sqs": "^9.0.1",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "wrangler": "^4.78.0"
