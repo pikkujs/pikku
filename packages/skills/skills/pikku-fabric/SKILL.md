@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build and convert apps for the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, and the pikku-verify workflow. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, or asking about Fabric deployment, database, or project conventions. DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy-cloudflare, pikku-deploy-fastify, etc. instead.'
+description: 'Build and convert apps for the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, and the pikku-verify workflow. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, or asking about Fabric deployment, database, or project conventions. TRIGGER when: user asks about a `pikku fabric validate` finding, including app-missing-actor-quick-login. DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy-cloudflare, pikku-deploy-fastify, etc. instead.'
 installGroups: [fabric]
 ---
 
@@ -310,6 +310,30 @@ Always call the `pikku-verify` tool after modifying functions, wirings, or schem
 2. `tsc --noEmit` — validates TypeScript types
 
 The output card shows whether any breaking changes were detected.
+
+### `app-missing-actor-quick-login-<app>`
+
+The `fabric validate` finding people most often misread. It fires when an app has
+a **login screen** but no dev actor switcher, and it is not a style nit: a sandbox
+reviewer has no seed password, so without the control they are locked out of the
+app they were asked to look at.
+
+Satisfy it with `<DevActorSwitcher />` from `@pikku/mantine/dev`, or with your
+own UI built on `useDevActors()` from `@pikku/react` — validate accepts either
+call site as evidence, so custom rendering passes. See **pikku-react** for the
+props and **pikku-scenario** for where the actor list comes from.
+
+The validator also accepts the shapes that predate the package — a hand-rolled
+`signInAsActor()` or a literal `POST /auth/sign-in/actor` — so an older app does
+not fail the build. **Treat that as a grace period, not the target: migrate those
+to `<DevActorSwitcher />`.** The hand-copied version is exactly the duplication
+the package exists to remove, and the copies drift — the ones that prompted this
+had already diverged on the `import.meta.env.DEV` gate that keeps the shared
+secret out of production bundles.
+
+Do **not** satisfy it with Better Auth's `/dev/quick-login`. That is a different
+endpoint with a different purpose — one fixed admin, not the declared personas —
+and it does not clear this rule.
 
 ## Hard rules
 

@@ -34,6 +34,37 @@ yarn add @pikku/mantine @pikku/react
 # peers: @mantine/core@^8 || ^9, react
 ```
 
+## `@pikku/mantine/dev`
+
+A second entry point for development-only controls. It is deliberately separate
+from `/core`: that one's contract is "drop-in alias for `@mantine/core`", so it
+must not export components Mantine has no counterpart for.
+
+`<DevActorSwitcher />` is the one-click "Sign in as …" control — it signs in as
+any declared scenario persona with no password, so an app can be reviewed as each
+kind of user. `pikku fabric validate` requires any frontend with a login screen
+to ship one, since without it a reviewer is locked out of their own sandbox.
+
+```tsx
+import { DevActorSwitcher } from '@pikku/mantine/dev'
+;<DevActorSwitcher
+  actors={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined}
+  secret={
+    import.meta.env.DEV ? import.meta.env.VITE_SCENARIO_ACTOR_SECRET : undefined
+  }
+  apiUrl={apiUrl()}
+  onSignedIn={() => navigate({ to: '/' })}
+/>
+```
+
+The sandbox dev server bakes both env vars from your declared personas; neither
+is set in production, so the control renders `null` there. Gate the reads on your
+bundler's dev flag as above so the secret never reaches a production bundle.
+
+It takes `onSignedIn` rather than depending on a router — every app lands
+somewhere different. For custom UI, build on `useDevActors()` from
+[`@pikku/react`](../react) instead; this component is only its default rendering.
+
 ## How it works
 
 The package re-exports the real Mantine component _values_ and only re-casts their

@@ -16,3 +16,14 @@ export type { CreatePikkuOptions } from './create-pikku.js'
 // `@/i18n` Paraglide scaffold); `@pikku/react` only owns the brand.
 export type { I18nString, I18nNode } from './i18n-types.js'
 export { asI18n } from './i18n-types.js'
+
+// Dev-only scenario actor sign-in — the logic half of the "Sign in as …"
+// switcher. UI-free, so `@pikku/mantine/dev` (which peer-depends on this
+// package) can build the rendered control on top of it.
+export { parseDevActors, signInAsActor, useDevActors } from './dev-actors.js'
+export type {
+  DevActor,
+  SignInAsActorOptions,
+  UseDevActorsOptions,
+  UseDevActorsResult,
+} from './dev-actors.js'
