@@ -101,7 +101,7 @@ export type PikkuMiddleware<RequiredServices extends SingletonServices = WiredSi
 /**
  * Configuration object for creating a permission with metadata
  */
-export type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = {
+type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = {
   /** The permission function */
   func: PikkuPermission<In, RequiredServices>
   /** Optional human-readable name for the permission */
@@ -151,7 +151,7 @@ export type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServi
 /**
  * Configuration object for creating an auth permission with metadata
  */
-export type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuthConfig<RequiredServices, Session>
+type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuthConfig<RequiredServices, Session>
 
 /**
  * Factory function for creating auth-only permissions with tree-shaking support.
@@ -182,7 +182,7 @@ export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonS
 /**
  * Configuration object for creating middleware with metadata
  */
-export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSingletonServices> = {
+type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSingletonServices> = {
   /** The middleware function */
   func: PikkuMiddleware<RequiredServices>
   /** Optional human-readable name for the middleware */
@@ -374,7 +374,7 @@ export type PikkuFunctionConfig<
  * {@link PikkuFunctionConfig} for a function that runs without a session.
  * Has no \`scopes\`: an anonymous caller holds none, so none can ever be met.
  */
-export type PikkuFunctionSessionlessConfig<
+type PikkuFunctionSessionlessConfig<
   In = unknown,
   Out = unknown,
   RequiredWires extends keyof PikkuWire = never,
@@ -396,7 +396,7 @@ type SchemaInferred<S, Fallback = unknown> = S extends StandardSchemaV1
  * Schema-overload variant for pikkuFunc. Derived from CorePikkuFunctionConfig
  * so adding a field on the core type automatically propagates here.
  */
-export type PikkuFunctionConfigWithSchema<
+type PikkuFunctionConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never,
@@ -501,7 +501,7 @@ export const pikkuListFunc = <
  * CorePikkuSessionlessFunctionConfig to stay in sync with the generic-typed
  * config — so it has no \`scopes\` either.
  */
-export type PikkuFunctionSessionlessConfigWithSchema<
+type PikkuFunctionSessionlessConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never,
@@ -588,7 +588,7 @@ export const pikkuVoidFunc = (
   func:
     | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
     | PikkuFunctionSessionlessConfig<void, void, 'session' | 'rpc'>
-) => {
+): PikkuFunctionConfig<void, void, 'session' | 'rpc'> => {
   return typeof func === 'function' ? { func } : func
 }
 
