@@ -378,9 +378,9 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.when(
-      'opens the install-addon feature',
+      'opens the credential-agent feature',
       'clicksTestId',
-      { testId: 'feature-nav-consoleInstallAddonFeature' },
+      { testId: 'feature-nav-credentialAgentFeature' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -388,9 +388,9 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
       'seesTestId',
       {
         testId: 'scenario-skip',
-        containing: 'npm cannot install inside this yarn workspace',
+        containing: 'better-auth now refuses for oauth2',
         within: {
-          testId: 'scenario-section-installAddonFreshNameScenario',
+          testId: 'scenario-section-credentialConnectedShowsChatScenario',
         },
       },
       { actor: actors.admin }
