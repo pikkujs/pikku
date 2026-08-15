@@ -6,10 +6,14 @@
  * inspector tags the resulting wirings with the originating packageName.
  */
 
-import { wireHTTPRoutes } from '@pikku/core/http'
-import { wireChannel } from '@pikku/core/channel'
-import { wireCLI } from '@pikku/core/cli'
-import { refHTTP, refChannel, refCLI } from '#pikku'
+import {
+  refHTTP,
+  refChannel,
+  refCLI,
+  wireHTTPRoutes,
+  wireChannel,
+  wireCLI,
+} from '#pikku'
 
 wireHTTPRoutes({
   basePath: '/api',

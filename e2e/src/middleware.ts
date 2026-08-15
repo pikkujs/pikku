@@ -1,17 +1,12 @@
-import { cors } from '@pikku/core/middleware'
-import { addHTTPMiddleware } from '@pikku/core/http'
-import { pikkuMiddleware } from '@pikku/core'
-import type { CoreSingletonServices, CorePikkuMiddleware } from '@pikku/core'
+import { addHTTPMiddleware, cors, pikkuMiddleware } from '#pikku'
+import type { PikkuMiddleware } from '#pikku'
+import type { SingletonServices } from './application-types.js'
 import { betterAuthSession } from '@pikku/better-auth'
 // Registers the console addon's admin gate (a global permission). Imported here
 // so it runs at bootstrap alongside the global middleware registrations.
 import './console-authz.js'
 
-const setSessionFromHeader: CorePikkuMiddleware = async (
-  _services,
-  wire,
-  next
-) => {
+const setSessionFromHeader: PikkuMiddleware = async (_services, wire, next) => {
   const userId = wire.http?.request?.header('x-user-id')
   // `x-org-id` makes org-scoped agents reachable: nothing else in this harness
   // populates `session.orgId`, and an agent declaring `sessionScope: 'org'`
@@ -26,9 +21,8 @@ const setSessionFromHeader: CorePikkuMiddleware = async (
   await next()
 }
 
-const loadCredentials: CorePikkuMiddleware = async (services, wire, next) => {
-  const credentialService = (services as CoreSingletonServices)
-    .credentialService
+const loadCredentials: PikkuMiddleware = async (services, wire, next) => {
+  const { credentialService } = services
   if (credentialService) {
     const userId = wire.http?.request?.header('x-user-id')
     const credentialNames = wire.http?.request?.header('x-credentials')
@@ -66,7 +60,7 @@ const impersonationSession = pikkuMiddleware({
   func: betterAuthSession({
     impersonation: {
       loadUser: (userId, services) =>
-        (services as CoreSingletonServices & { kysely: any }).kysely
+        (services as SingletonServices & { kysely: any }).kysely
           .selectFrom('user')
           .where('id', '=', userId)
           .select(['id'])

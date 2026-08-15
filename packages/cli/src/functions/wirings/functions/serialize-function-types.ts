@@ -38,7 +38,8 @@ import type { CorePermissionGroup, PikkuWire, SecretlessServices } from '@pikku/
 import type { CorePikkuFunctionConfig, CorePikkuSessionlessFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/ecosystem/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/ecosystem/function'
 import { addTagMiddleware as addTagMiddlewareCore, addGlobalMiddleware as addGlobalMiddlewareCore } from '@pikku/core/middleware'
-import { addGlobalPermission as addGlobalPermissionCore } from '@pikku/core/ecosystem/middleware'
+import { addGlobalPermission as addGlobalPermissionCore, pikkuMiddleware as pikkuMiddlewareCore } from '@pikku/core/ecosystem/middleware'
+import type { MiddlewarePriority } from '@pikku/core/ecosystem/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/ecosystem'
 import type { NodeType } from '@pikku/core/ecosystem/node'
 ${scopesImport}
@@ -190,7 +191,11 @@ type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSin
   name?: string
   /** Optional description of what the middleware does */
   description?: string
+  /** Execution priority. Lower runs first (outermost). Defaults to 'medium'. */
+  priority?: MiddlewarePriority
 }
+
+export type { MiddlewarePriority }
 
 /**
  * Factory function for creating middleware with tree-shaking support.
@@ -218,7 +223,7 @@ type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSin
 export const pikkuMiddleware = <RequiredServices extends SingletonServices = WiredSingletonServices>(
   middleware: PikkuMiddleware<RequiredServices> | PikkuMiddlewareConfig<RequiredServices>
 ): PikkuMiddleware<RequiredServices> => {
-  return typeof middleware === 'function' ? middleware : middleware.func
+  return pikkuMiddlewareCore(middleware as any) as any
 }
 
 /**
@@ -787,6 +792,9 @@ export const addGlobalMiddleware = (middleware: PikkuMiddleware[]) => {
 export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
   addGlobalPermissionCore(permissions as any, ${packageNameValue})
 }
+
+export { cors } from '@pikku/core/ecosystem/middleware'
+export { InvalidOriginError } from '@pikku/core/ecosystem/errors'
 
 export { wireAddon, wireRemoteAddon } from '@pikku/core/ecosystem/rpc'
 `

@@ -1,38 +1,52 @@
+export interface PikkuTypesHubPaths {
+  functionTypesImportPath: string
+  httpTypesImportPath: string | null
+  channelTypesImportPath: string | null
+  triggerTypesImportPath: string | null
+  schedulerTypesImportPath: string | null
+  queueTypesImportPath: string | null
+  mcpTypesImportPath: string | null
+  cliTypesImportPath: string | null
+  nodeTypesImportPath: string | null
+  secretTypesImportPath: string | null
+  credentialTypesImportPath: string | null
+  variableTypesImportPath: string | null
+  scopeTypesImportPath: string | null
+  addonTypesImportPath: string | null
+  authTypesImportPath: string | null
+}
+
 /**
  * Generates the main pikku-types.gen.ts file as a re-export hub
  */
-export const serializePikkuTypesHub = (
-  functionTypesImportPath: string,
-  httpTypesImportPath: string | null,
-  channelTypesImportPath: string | null,
-  triggerTypesImportPath: string | null,
-  schedulerTypesImportPath: string | null,
-  queueTypesImportPath: string | null,
-  mcpTypesImportPath: string | null,
-  cliTypesImportPath: string | null,
-  secretTypesImportPath: string | null,
-  addonTypesImportPath: string | null,
-  authTypesImportPath: string | null = null,
-  scopeTypesImportPath: string | null = null
-) => {
+export const serializePikkuTypesHub = (paths: PikkuTypesHubPaths) => {
   const exports = [
     {
       comment: 'Core function, middleware, and permission types',
-      path: functionTypesImportPath,
+      path: paths.functionTypesImportPath,
     },
-    { comment: 'HTTP wiring types', path: httpTypesImportPath },
-    { comment: 'Channel wiring types', path: channelTypesImportPath },
-    { comment: 'Trigger wiring types', path: triggerTypesImportPath },
-    { comment: 'Scheduler wiring types', path: schedulerTypesImportPath },
-    { comment: 'Queue wiring types', path: queueTypesImportPath },
-    { comment: 'MCP wiring types', path: mcpTypesImportPath },
-    { comment: 'CLI wiring types', path: cliTypesImportPath },
-    { comment: 'Secret definition types', path: secretTypesImportPath },
-    { comment: 'Scope definition types', path: scopeTypesImportPath },
-    { comment: 'Addon types', path: addonTypesImportPath },
+    { comment: 'HTTP wiring types', path: paths.httpTypesImportPath },
+    { comment: 'Channel wiring types', path: paths.channelTypesImportPath },
+    { comment: 'Trigger wiring types', path: paths.triggerTypesImportPath },
+    { comment: 'Scheduler wiring types', path: paths.schedulerTypesImportPath },
+    { comment: 'Queue wiring types', path: paths.queueTypesImportPath },
+    { comment: 'MCP wiring types', path: paths.mcpTypesImportPath },
+    { comment: 'CLI wiring types', path: paths.cliTypesImportPath },
+    { comment: 'Node wiring types', path: paths.nodeTypesImportPath },
+    { comment: 'Secret definition types', path: paths.secretTypesImportPath },
+    {
+      comment: 'Credential definition types',
+      path: paths.credentialTypesImportPath,
+    },
+    {
+      comment: 'Variable definition types',
+      path: paths.variableTypesImportPath,
+    },
+    { comment: 'Scope definition types', path: paths.scopeTypesImportPath },
+    { comment: 'Addon types', path: paths.addonTypesImportPath },
     {
       comment: 'Auth types (typed pikkuBetterAuth re-export)',
-      path: authTypesImportPath,
+      path: paths.authTypesImportPath,
     },
   ]
 

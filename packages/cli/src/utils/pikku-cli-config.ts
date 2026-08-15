@@ -912,6 +912,12 @@ const _getPikkuCLIConfig = async (
 
     // Credentials (typed wrapper for CredentialService)
     const credentialsDir = join(result.outDir, 'credentials')
+    if (!result.credentialTypesFile) {
+      result.credentialTypesFile = join(
+        credentialsDir,
+        'pikku-credential-types.gen.ts'
+      )
+    }
     if (!result.credentialsFile) {
       result.credentialsFile = join(credentialsDir, 'pikku-credentials.gen.ts')
     }

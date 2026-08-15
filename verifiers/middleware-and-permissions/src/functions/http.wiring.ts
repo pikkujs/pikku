@@ -6,10 +6,11 @@ import { noOpFunction } from './no-op.function.js'
 import {
   addHTTPMiddleware,
   addTagMiddleware,
+  defineHTTPRoutes,
   pikkuMiddleware,
   wireHTTP,
+  wireHTTPRoutes,
 } from '#pikku'
-import { wireHTTPRoutes, defineHTTPRoutes } from '@pikku/core/http'
 import {
   httpGlobalMiddleware,
   httpRouteMiddleware,

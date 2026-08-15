@@ -1,5 +1,6 @@
 export type { VariablesService } from '../services/variables-service.js'
 export { validateAndBuildVariableDefinitionsMeta } from '../wirings/variable/validate-variable-definitions.js'
+export { defineVariable } from '../wirings/variable/variable.types.js'
 export type {
   CoreVariable,
   VariableDefinitionMeta,

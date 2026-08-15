@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineVariable } from '@pikku/core/variable'
+import { defineVariable } from '#pikku'
 
 export const serverConfigSchema = z.object({
   host: z.string().describe('Server hostname'),

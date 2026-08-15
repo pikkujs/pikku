@@ -536,7 +536,10 @@
     "pikkuCLIRender"
   ],
   "./ecosystem/cli/channel": ["executeRawCLIViaChannel", "handleRawCLI"],
-  "./ecosystem/credential": ["validateAndBuildCredentialDefinitionsMeta"],
+  "./ecosystem/credential": [
+    "defineCredential",
+    "validateAndBuildCredentialDefinitionsMeta"
+  ],
   "./ecosystem/crypto-utils": [
     "deriveKEK",
     "envelopeDecrypt",
@@ -625,6 +628,7 @@
     "addGlobalPermission",
     "authAPIKey",
     "authCookie",
+    "cors",
     "pikkuMiddleware",
     "pikkuRemoteAuthMiddleware",
     "runMiddleware",
@@ -726,7 +730,10 @@
     "parseVersionedId",
     "stopSingletonServices"
   ],
-  "./ecosystem/variable": ["validateAndBuildVariableDefinitionsMeta"],
+  "./ecosystem/variable": [
+    "defineVariable",
+    "validateAndBuildVariableDefinitionsMeta"
+  ],
   "./ecosystem/virtual-user": [
     "DISPOSITIONS",
     "PRODUCTION_DISPOSITION",

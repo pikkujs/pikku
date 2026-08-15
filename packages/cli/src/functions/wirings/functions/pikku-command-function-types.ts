@@ -24,6 +24,8 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
       mcpTypesFile,
       cliTypesFile,
       secretTypesFile,
+      credentialTypesFile,
+      variableTypesFile,
       scopeTypesFile,
       addonTypesFile,
       authTypesFile,
@@ -63,20 +65,29 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
         ? getFileImportRelativePath(typesFile, authTypesFile, packageMappings)
         : null
 
-    const content = serializePikkuTypesHub(
-      getFileImportRelativePath(typesFile, functionTypesFile, packageMappings),
-      getImportPath(httpTypesFile),
-      getImportPath(channelsTypesFile),
-      getAlwaysImportPath(triggersTypesFile),
-      getImportPath(schedulersTypesFile),
-      getImportPath(queueTypesFile),
-      getImportPath(mcpTypesFile),
-      getImportPath(cliTypesFile),
-      getAlwaysImportPath(secretTypesFile),
-      config.addon ? getAlwaysImportPath(addonTypesFile) : null,
+    const content = serializePikkuTypesHub({
+      functionTypesImportPath: getFileImportRelativePath(
+        typesFile,
+        functionTypesFile,
+        packageMappings
+      ),
+      httpTypesImportPath: getImportPath(httpTypesFile),
+      channelTypesImportPath: getImportPath(channelsTypesFile),
+      triggerTypesImportPath: getAlwaysImportPath(triggersTypesFile),
+      schedulerTypesImportPath: getImportPath(schedulersTypesFile),
+      queueTypesImportPath: getImportPath(queueTypesFile),
+      mcpTypesImportPath: getImportPath(mcpTypesFile),
+      cliTypesImportPath: getImportPath(cliTypesFile),
+      nodeTypesImportPath: getAlwaysImportPath(nodeTypesFile),
+      secretTypesImportPath: getAlwaysImportPath(secretTypesFile),
+      credentialTypesImportPath: getAlwaysImportPath(credentialTypesFile),
+      variableTypesImportPath: getAlwaysImportPath(variableTypesFile),
+      scopeTypesImportPath: getAlwaysImportPath(scopeTypesFile),
+      addonTypesImportPath: config.addon
+        ? getAlwaysImportPath(addonTypesFile)
+        : null,
       authTypesImportPath,
-      getAlwaysImportPath(scopeTypesFile)
-    )
+    })
 
     await writeFileInDir(logger, typesFile, content)
 

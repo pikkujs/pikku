@@ -5,6 +5,10 @@ export const bootstrap = pikkuVoidFunc({
   func: async ({ logger, getInspectorState }, _data, { rpc }) => {
     await getInspectorState(false, true, true)
 
+    // Before function types: pikku-types.gen.ts re-exports every definer file,
+    // so an `import '#pikku'` between here and there resolves to nothing.
+    await rpc.invoke('pikkuCredentialDefinitionTypes')
+    await rpc.invoke('pikkuVariableDefinitionTypes')
     // Before function types: they import ScopeId from the scopes codegen.
     await rpc.invoke('pikkuScopes', { bootstrap: true })
     // Before function types too: personas import SystemRoleName.

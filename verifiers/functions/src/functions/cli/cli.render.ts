@@ -1,4 +1,4 @@
-import { pikkuCLIRender } from '@pikku/core'
+import { pikkuCLIRender } from '#pikku'
 
 // Render functions for different command outputs
 export const jsonRenderer = pikkuCLIRender((_services, output: any) => {

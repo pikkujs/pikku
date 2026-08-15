@@ -80,8 +80,16 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     const allImports: string[] = []
     let typesDeclarationFileExists = true
 
-    if (!existsSync(config.outDir)) {
-      logger.debug(`• .pikku directory not found, running bootstrap first...`)
+    // A `.pikku` written by an older CLI has a types hub that predates one of
+    // the definition files below, and the hub is only rewritten well after the
+    // first inspection — which needs it. Bootstrapping rebuilds both in order.
+    const needsBootstrap =
+      !existsSync(config.outDir) ||
+      !existsSync(config.credentialTypesFile) ||
+      !existsSync(config.variableTypesFile)
+
+    if (needsBootstrap) {
+      logger.debug(`• .pikku directory incomplete, running bootstrap first...`)
       // Every `getInspectorState` step below discards its result on purpose. A
       // step's return value is stored as the step result and stays reachable for
       // the life of the run, and an InspectorState holds a whole ts.Program — so
@@ -100,6 +108,16 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do(
         'Bootstrap scope definition types',
         'pikkuScopeDefinitionTypes',
+        null
+      )
+      await workflow.do(
+        'Bootstrap credential definition types',
+        'pikkuCredentialDefinitionTypes',
+        null
+      )
+      await workflow.do(
+        'Bootstrap variable definition types',
+        'pikkuVariableDefinitionTypes',
         null
       )
       await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
@@ -262,6 +280,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Scopes', 'pikkuScopes', {}),
       workflow.do('Roles', 'pikkuRoles', {}),
       workflow.do('Personas', 'pikkuPersonas', {}),
+      workflow.do(
+        'Credential definition types',
+        'pikkuCredentialDefinitionTypes',
+        null
+      ),
       workflow.do(
         'Variable definition types',
         'pikkuVariableDefinitionTypes',
