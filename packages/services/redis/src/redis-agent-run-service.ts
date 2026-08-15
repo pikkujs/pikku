@@ -1,8 +1,5 @@
 import type { AgentThread, AgentMessage } from '@pikku/core/agent'
-import type {
-  AgentRunRow,
-  AgentRunService,
-} from '@pikku/core/ecosystem/agent'
+import type { AgentRunRow, AgentRunService } from '@pikku/core/ecosystem/agent'
 import { isOwnedByPrincipal } from '@pikku/core/ecosystem/agent'
 import type { Redis } from 'ioredis'
 

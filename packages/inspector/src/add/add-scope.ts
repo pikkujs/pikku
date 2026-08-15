@@ -88,14 +88,12 @@ const extractScopeNodes = (
 
     const node: ScopeNodeMeta = {}
     const displayName = getPropertyValue(prop.initializer, 'displayName') as
-      | string
-      | null
+      string | null
     if (displayName) {
       node.displayName = displayName
     }
     const description = getPropertyValue(prop.initializer, 'description') as
-      | string
-      | null
+      string | null
     if (description) {
       node.description = description
     }
@@ -192,11 +190,9 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
 
     const root = prop.initializer
     const displayNameValue = getPropertyValue(root, 'displayName') as
-      | string
-      | null
+      string | null
     const descriptionValue = getPropertyValue(root, 'description') as
-      | string
-      | null
+      string | null
 
     let scopes: Record<string, ScopeNodeMeta> | undefined
     const scopesProp = root.properties.find(

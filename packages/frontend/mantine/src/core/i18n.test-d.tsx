@@ -171,7 +171,7 @@ const _bad_button = <Button>Save</Button>
 const _bad_button2 = <Button>{'Save'}</Button>
 // prettier-ignore
 // @ts-expect-error — raw string child on polymorphic usage
-const _bad_poly = <Button component="a" href="/x">Go</Button>;
+const _bad_poly = <Button component="a" href="/x">Go</Button>
 // @ts-expect-error — raw string aria-label on a children component
 const _bad_button_aria = <Button aria-label="save">{t('save')}</Button>
 // @ts-expect-error — raw string title on a children component

@@ -233,8 +233,7 @@ describe('voiceOutput', () => {
 
     assert.deepEqual(asked, [], 'nothing should have been sent for synthesis')
     const notice = stream.out.find((event) => event.type === 'data') as
-      | { name: string; data: { scripts: string[] } }
-      | undefined
+      { name: string; data: { scripts: string[] } } | undefined
     assert.equal(notice?.name, 'voice-unsupported')
     assert.deepEqual(notice?.data.scripts, ['arabic'])
   })
@@ -424,8 +423,7 @@ describe('voiceOutput', () => {
 
     assert.deepEqual(asked, [])
     const notice = stream.out.find((event) => event.type === 'data') as
-      | { name: string; data: { scripts: string[] } }
-      | undefined
+      { name: string; data: { scripts: string[] } } | undefined
     assert.deepEqual(notice?.data.scripts, ['arabic'])
   })
 

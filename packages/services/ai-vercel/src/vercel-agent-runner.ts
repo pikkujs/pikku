@@ -232,12 +232,7 @@ function extractStructuredUI(output: unknown): unknown | null {
 }
 
 type ModelKind =
-  | 'language'
-  | 'embedding'
-  | 'image'
-  | 'transcription'
-  | 'speech'
-  | 'reranking'
+  'language' | 'embedding' | 'image' | 'transcription' | 'speech' | 'reranking'
 
 const MODEL_METHODS: Record<ModelKind, string[]> = {
   language: ['languageModel'],

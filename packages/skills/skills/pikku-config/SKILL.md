@@ -75,7 +75,9 @@ greppable. Call it at the point the value reaches the thing that needs it:
 ```typescript
 // services.ts — allowed
 const createSingletonServices = pikkuServices(async (config, { secrets }) => ({
-  stripe: new StripeService((await secrets.getSecret('STRIPE_CONFIG')).reveal()),
+  stripe: new StripeService(
+    (await secrets.getSecret('STRIPE_CONFIG')).reveal()
+  ),
 }))
 
 // functions/*.ts — ask the service, never the secret store
@@ -162,7 +164,7 @@ defineCredential({
 
 ### Usage
 
-```typescript
+````typescript
 // Per-user API key — no oauth2 block
 defineCredential({
   name: 'stripe',
@@ -208,7 +210,7 @@ export const createWireServices = pikkuWireServices(async (_services, wire) => {
 export const postMessage = pikkuFunc({
   func: async ({ slack }, { channel, text }) => slack.postMessage(channel, text),
 })
-```
+````
 
 A `wire` credential resolves per user, so an unconnected user hits
 `MissingCredentialError` rather than silently acting as someone else; a

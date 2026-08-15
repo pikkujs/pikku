@@ -1,12 +1,12 @@
 import type { Safe } from '../secret-value.js'
 
 export enum LogLevel {
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'critical',
+  trace,
+  debug,
+  info,
+  warn,
+  error,
+  critical,
 }
 
 /**

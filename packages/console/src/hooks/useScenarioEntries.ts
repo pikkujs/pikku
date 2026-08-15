@@ -34,21 +34,19 @@ export function useScenarioFlowEntries(): ScenarioFlowEntries {
     return (Object.values(meta.workflows ?? {}) as any[])
       .filter((w) => w.source === 'scenario' || w.scenario === true)
       .filter((w) => !(w.tags ?? []).includes('test-fixture'))
-      .map(
-        (w): FlowEntry => ({
-          name: w.name,
-          displayName: toEnglishName(w.name),
-          description: w.description ?? w.summary,
-          stepCount: w.nodes
-            ? Object.keys(w.nodes).length
-            : (w.steps?.length ?? 0),
-          cast: (w.actors ?? []).map((key: string) => ({
-            key,
-            name: (actors as any)[key]?.name,
-            jobTitle: (actors as any)[key]?.jobTitle,
-          })),
-        })
-      )
+      .map((w): FlowEntry => ({
+        name: w.name,
+        displayName: toEnglishName(w.name),
+        description: w.description ?? w.summary,
+        stepCount: w.nodes
+          ? Object.keys(w.nodes).length
+          : (w.steps?.length ?? 0),
+        cast: (w.actors ?? []).map((key: string) => ({
+          key,
+          name: (actors as any)[key]?.name,
+          jobTitle: (actors as any)[key]?.jobTitle,
+        })),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [meta.workflows, meta.personas])
 

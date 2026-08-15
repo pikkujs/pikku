@@ -139,8 +139,7 @@ test('subscribeToSSE delivers scenario-start event with correct fields', async (
     '/workflow-run/w1/stream'
   )
   const start = received.find((e) => e.type === 'scenario-start') as
-    | Extract<TestStreamEvent, { type: 'scenario-start' }>
-    | undefined
+    Extract<TestStreamEvent, { type: 'scenario-start' }> | undefined
   assert.ok(start, 'expected a scenario-start event')
   assert.equal(start.id, 'tcs1')
   assert.equal(start.name, 'Create a todo')
@@ -169,8 +168,7 @@ test('subscribeToSSE delivers scenario-done with final status', async () => {
     '/workflow-run/w1/stream'
   )
   const done = received.find((e) => e.type === 'scenario-done') as
-    | Extract<TestStreamEvent, { type: 'scenario-done' }>
-    | undefined
+    Extract<TestStreamEvent, { type: 'scenario-done' }> | undefined
   assert.ok(done, 'expected a scenario-done event')
   assert.equal(done.name, 'Create a todo')
   assert.equal(done.status, 'PASSED')
@@ -182,8 +180,7 @@ test('subscribeToSSE delivers done event and stops', async () => {
     '/workflow-run/w1/stream'
   )
   const finish = received.find((e) => e.type === 'done') as
-    | Extract<TestStreamEvent, { type: 'done' }>
-    | undefined
+    Extract<TestStreamEvent, { type: 'done' }> | undefined
   assert.ok(finish, 'expected a done event')
   assert.equal(finish.coverage, null)
 

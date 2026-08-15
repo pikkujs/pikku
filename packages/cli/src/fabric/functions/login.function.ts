@@ -46,7 +46,9 @@ function openBrowser(url: string): void {
       shell: process.platform === 'win32',
     })
     child.on('error', (err) =>
-      console.warn(`[fabric] could not open a browser (${err.message}) — open the URL above.`)
+      console.warn(
+        `[fabric] could not open a browser (${err.message}) — open the URL above.`
+      )
     )
     child.unref()
   } catch (err) {

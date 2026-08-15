@@ -12,7 +12,12 @@ export const ServicesPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.services_title()} description={m.services_description()} />}
+        header={
+          <ListPageHeader
+            title={m.services_title()}
+            description={m.services_description()}
+          />
+        }
         hidePanel
       >
         <ServicesListPanel />

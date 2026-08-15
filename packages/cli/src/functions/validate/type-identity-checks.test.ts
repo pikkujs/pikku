@@ -97,10 +97,13 @@ describe('split type identity via a linked dependency', () => {
   // project and proves nothing.
   test('finds the link through an in-project store symlink', async () => {
     await withTmpPair(async (root, external) => {
-      await writeJson(join(root, 'node_modules', 'better-auth', 'package.json'), {
-        name: 'better-auth',
-        version: '1.6.23',
-      })
+      await writeJson(
+        join(root, 'node_modules', 'better-auth', 'package.json'),
+        {
+          name: 'better-auth',
+          version: '1.6.23',
+        }
+      )
       await writeJson(
         join(external, 'node_modules', 'better-auth', 'package.json'),
         { name: 'better-auth', version: '1.6.27' }
@@ -121,7 +124,11 @@ describe('split type identity via a linked dependency', () => {
       await symlink(externalDist, join(store, 'dist'), 'dir')
 
       await mkdir(join(root, 'node_modules', '@scope'), { recursive: true })
-      await symlink(store, join(root, 'node_modules', '@scope', 'linked'), 'dir')
+      await symlink(
+        store,
+        join(root, 'node_modules', '@scope', 'linked'),
+        'dir'
+      )
 
       const findings = await runTypeIdentityChecks(root)
       assert.ok(

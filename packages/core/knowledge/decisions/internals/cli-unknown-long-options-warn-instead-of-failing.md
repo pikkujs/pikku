@@ -18,7 +18,7 @@ The reason is forward compatibility: a script or wrapper written against a newer
 command version may pass options an older installed binary does not know, and
 failing hard there turns a harmless extra flag into a broken pipeline.
 `RESERVED_OPTIONS` exempts flags the runner handles itself (`help`) from the
-warning. Unknown *short* flags are treated differently — they go to
+warning. Unknown _short_ flags are treated differently — they go to
 `result.errors` and do fail — because a bundled short-flag cluster like `-abc`
 cannot be reliably attributed, and a typo'd short flag is far more likely than a
 version skew.

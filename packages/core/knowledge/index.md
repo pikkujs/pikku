@@ -6,7 +6,7 @@ description: Why @pikku/core is built the way it is — the reasoning that used 
 
 # Knowledge
 
-Pikku's source says *what* it does. These notes say *why*, for the handful of
+Pikku's source says _what_ it does. These notes say _why_, for the handful of
 choices where the code alone reads as arbitrary or, worse, reads as a mistake.
 
 The rule that produced this directory: **reasoning never lives in code.** A
@@ -19,6 +19,8 @@ meta files, the export surface. A note that repeats them is a copy that will
 drift.
 
 <!-- pikku:knowledge-index -->
+
 - [decisions](decisions/index.md) — a rule that was chosen, and what it rules out
 - [questions](questions/index.md) — something asked and not yet answered
+
 <!-- /pikku:knowledge-index -->

@@ -58,7 +58,11 @@ export const resolveScaffoldFeature = (
  */
 const legacyValueMessage = (feature: string, value: string): string => {
   const migrated =
-    value === 'no-auth' ? '{ "auth": false }' : LEGACY_VALUES.has(value) ? 'true' : null
+    value === 'no-auth'
+      ? '{ "auth": false }'
+      : LEGACY_VALUES.has(value)
+        ? 'true'
+        : null
 
   if (!migrated) {
     return (

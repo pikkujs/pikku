@@ -97,7 +97,9 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
         gateway.type?.toLowerCase().includes(q) ||
         gateway.platform?.toLowerCase().includes(q) ||
         gateway.route?.toLowerCase().includes(q) ||
-        (gateway.tags ?? []).some((tag: string) => tag.toLowerCase().includes(q))
+        (gateway.tags ?? []).some((tag: string) =>
+          tag.toLowerCase().includes(q)
+        )
       }
       emptyMessage={m.gateways_empty_message()}
       emptyHero={emptyHero}

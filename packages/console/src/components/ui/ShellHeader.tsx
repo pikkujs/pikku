@@ -262,7 +262,8 @@ export const ShellHeader = <T extends string = string>({
         style={{
           display: 'flex',
           alignItems: 'center',
-          paddingInline: 'var(--console-body-gutter, var(--mantine-spacing-xl))',
+          paddingInline:
+            'var(--console-body-gutter, var(--mantine-spacing-xl))',
         }}
       >
         <Group
@@ -367,7 +368,8 @@ export const ShellHeader = <T extends string = string>({
           py="xs"
           style={{
             borderBottom: '1px solid var(--mantine-color-default-border)',
-            paddingInline: 'var(--console-body-gutter, var(--mantine-spacing-xl))',
+            paddingInline:
+              'var(--console-body-gutter, var(--mantine-spacing-xl))',
           }}
         >
           <Group wrap="wrap" gap="sm" align="center">

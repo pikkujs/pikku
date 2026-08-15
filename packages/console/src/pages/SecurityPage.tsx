@@ -6,7 +6,10 @@ import { useLocale } from '@/i18n/config'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { SecurityReportPanel } from '../components/security/SecurityReportPanel'
 import type { SecurityLens } from '../components/security/SecurityAuditView'
-import { useSecurityAudit, useRunSecurityAudit } from '../hooks/useSecurityAudit'
+import {
+  useSecurityAudit,
+  useRunSecurityAudit,
+} from '../hooks/useSecurityAudit'
 
 export const SecurityPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
   emptyHero,

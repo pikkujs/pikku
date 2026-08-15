@@ -428,4 +428,3 @@ describe('KyselyWorkflowService — a transition that addresses no history row',
     assert.equal(history[0]!.status, 'succeeded')
   })
 })
-

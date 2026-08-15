@@ -41,7 +41,9 @@ function EntityCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? 'var(--mantine-color-default-hover)' : 'var(--app-surface, var(--mantine-color-body))',
+        background: hovered
+          ? 'var(--mantine-color-default-hover)'
+          : 'var(--app-surface, var(--mantine-color-body))',
         border: '1px solid var(--mantine-color-default-border)',
         borderRadius: 12,
         cursor: 'pointer',
@@ -56,36 +58,105 @@ function EntityCard({
       <Stack gap={4} style={{ minWidth: 0 }}>
         <Group gap={8} wrap="nowrap" align="center">
           <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
-            <Text size="sm" fw={600} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Text
+              size="sm"
+              fw={600}
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {asI18n(item.displayName ?? toEnglishName(item.name))}
             </Text>
-            <Text size="xs" ff="monospace" c="dimmed" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Text
+              size="xs"
+              ff="monospace"
+              c="dimmed"
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {asI18n(item.name)}
             </Text>
           </Stack>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {item.meta?.map((m) => (
-              <Box key={m} component="span" style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'var(--mantine-color-default)', color: 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)', whiteSpace: 'nowrap' }}>
+              <Box
+                key={m}
+                component="span"
+                style={{
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  borderRadius: 20,
+                  background: 'var(--mantine-color-default)',
+                  color: 'var(--mantine-color-dimmed)',
+                  border: '1px solid var(--mantine-color-default-border)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {m}
               </Box>
             ))}
             {item.badges?.map((b) => (
-              <Box key={b.label} component="span" style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, letterSpacing: '0.05em', textTransform: 'uppercase', background: b.tone === 'accent' ? 'var(--mantine-color-blue-light)' : 'var(--mantine-color-default)', color: b.tone === 'accent' ? 'var(--mantine-color-blue-light-color)' : 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)' }}>
+              <Box
+                key={b.label}
+                component="span"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: 20,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  background:
+                    b.tone === 'accent'
+                      ? 'var(--mantine-color-blue-light)'
+                      : 'var(--mantine-color-default)',
+                  color:
+                    b.tone === 'accent'
+                      ? 'var(--mantine-color-blue-light-color)'
+                      : 'var(--mantine-color-dimmed)',
+                  border: '1px solid var(--mantine-color-default-border)',
+                }}
+              >
                 {b.label}
               </Box>
             ))}
             {item.tags?.map((t) => (
-              <Box key={t} component="span" style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--mantine-color-default)', color: 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)' }}>
+              <Box
+                key={t}
+                component="span"
+                style={{
+                  fontSize: 10,
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                  background: 'var(--mantine-color-default)',
+                  color: 'var(--mantine-color-dimmed)',
+                  border: '1px solid var(--mantine-color-default-border)',
+                }}
+              >
                 {t}
               </Box>
             ))}
           </Group>
         </Group>
-        <Text size="xs" c={item.description ? 'dimmed' : 'var(--mantine-color-placeholder)'} lineClamp={2} fs={item.description ? undefined : 'italic'}>
-          {item.description ? asI18n(item.description) : m.entity_card_no_description()}
+        <Text
+          size="xs"
+          c={item.description ? 'dimmed' : 'var(--mantine-color-placeholder)'}
+          lineClamp={2}
+          fs={item.description ? undefined : 'italic'}
+        >
+          {item.description
+            ? asI18n(item.description)
+            : m.entity_card_no_description()}
         </Text>
       </Stack>
-      {metricSlot && <Box style={{ flexShrink: 0 }}>{metricSlot(item.name)}</Box>}
+      {metricSlot && (
+        <Box style={{ flexShrink: 0 }}>{metricSlot(item.name)}</Box>
+      )}
     </Box>
   )
 }
@@ -140,7 +211,12 @@ export const EntityCardList: React.FC<EntityCardListProps> = ({
   return (
     <Stack gap={10}>
       {items.map((item) => (
-        <EntityCard key={item.name} item={item} onOpen={onOpen} metricSlot={metricSlot} />
+        <EntityCard
+          key={item.name}
+          item={item}
+          onOpen={onOpen}
+          metricSlot={metricSlot}
+        />
       ))}
     </Stack>
   )

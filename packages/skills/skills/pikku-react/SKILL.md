@@ -58,8 +58,8 @@ export function apiUrl(): string {
 ```
 
 **Never fall back to `http://localhost:3000`.** `import.meta.env.VITE_API_URL`
-is substituted by Vite at *build* time, so any deploy that supplies the URL as
-a *runtime* env var or platform binding leaves it `undefined` in the shipped
+is substituted by Vite at _build_ time, so any deploy that supplies the URL as
+a _runtime_ env var or platform binding leaves it `undefined` in the shipped
 bundle — the fallback is then the only branch that ever runs in the browser. A
 localhost fallback means every request from a deployed app goes to the user's
 own machine. `origin + '/api'` is same-origin, needs no build-time knowledge of
@@ -173,17 +173,17 @@ helpers live in **pikku-realtime**.
 
 ## When to reach for what
 
-| Need                                | Use                                           |
-| ----------------------------------- | --------------------------------------------- |
-| Render data, dedupe + cache         | **usePikkuQuery** (react-query)               |
-| Trigger a write, wait for result    | **usePikkuMutation** (react-query)            |
-| Paginate                            | **usePikkuInfiniteQuery** (react-query)       |
-| One-off call from an event handler  | `usePikkuRPC()` direct                        |
-| Hit a REST endpoint (not RPC)       | `usePikkuFetch()`                             |
+| Need                                | Use                                                |
+| ----------------------------------- | -------------------------------------------------- |
+| Render data, dedupe + cache         | **usePikkuQuery** (react-query)                    |
+| Trigger a write, wait for result    | **usePikkuMutation** (react-query)                 |
+| Paginate                            | **usePikkuInfiniteQuery** (react-query)            |
+| One-off call from an event handler  | `usePikkuRPC()` direct                             |
+| Hit a REST endpoint (not RPC)       | `usePikkuFetch()`                                  |
 | Run one named workflow              | `usePikkuWorkflow('name')` → `.start/.run/.status` |
 | Talk to one named AI agent          | `usePikkuAgent('name')` → `.run/.stream/.approve`  |
-| Longer-running workflow UX          | **pikku-workflows-client**                    |
-| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-realtime**) |
+| Longer-running workflow UX          | **pikku-workflows-client**                         |
+| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-realtime**)      |
 
 The first three live in your generated `api.gen.ts` (see the
 **pikku-react-query** skill). This skill covers the rest.
@@ -203,7 +203,7 @@ const state = await workflow.status(runId)
 ## Authentication
 
 Auth is handled at the `PikkuFetch` layer, and `createPikku`'s options object
-*is* `CorePikkuFetchOptions` plus `serverUrl` — flat, not nested under a
+_is_ `CorePikkuFetchOptions` plus `serverUrl` — flat, not nested under a
 `fetchOptions` key:
 
 ```tsx

@@ -70,8 +70,7 @@ function bootstrapLintSeverity(
   pikkuConfig: { lint?: unknown } | null
 ): LintSeverity {
   const lint = pikkuConfig?.lint as
-    | { customServerBootstrap?: unknown }
-    | undefined
+    { customServerBootstrap?: unknown } | undefined
   const configured = lint?.customServerBootstrap
   return configured === 'off' || configured === 'error' || configured === 'warn'
     ? configured

@@ -87,7 +87,7 @@ without it, even though the flag reads as optional.
 pikku fabric status     # active + in-flight deployment, per stage, with gitSha
 ```
 
-Check this *before* deep-diving. A stage still serving an older `gitSha`, or a
+Check this _before_ deep-diving. A stage still serving an older `gitSha`, or a
 deploy stuck in flight, explains a whole class of "my fix did nothing".
 
 ## Known gaps — do not misread these as bugs in your app

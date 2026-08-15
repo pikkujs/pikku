@@ -206,8 +206,7 @@ const createWebhookPostHandler = (config: CoreGateway) => {
     }
 
     const gatewayMiddleware = userMiddleware as
-      | CorePikkuMiddleware[]
-      | undefined
+      CorePikkuMiddleware[] | undefined
     const result: any = gatewayMiddleware?.length
       ? await runMiddleware(services, wire, gatewayMiddleware, invoke)
       : await invoke()
@@ -334,8 +333,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
       }
 
       const gatewayMiddleware = userMiddleware as
-        | CorePikkuMiddleware[]
-        | undefined
+        CorePikkuMiddleware[] | undefined
       const result: any = gatewayMiddleware?.length
         ? await runMiddleware(services, wire, gatewayMiddleware, invoke)
         : await invoke()

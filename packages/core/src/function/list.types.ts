@@ -66,6 +66,4 @@ export type LeafFilter<F extends Record<string, unknown>> = {
  * evaluation time; a single-key object is a leaf predicate.
  */
 export type Filter<F extends Record<string, unknown>> =
-  | LeafFilter<F>
-  | Filter<F>[]
-  | { [label: string]: Filter<F> }
+  LeafFilter<F> | Filter<F>[] | { [label: string]: Filter<F> }

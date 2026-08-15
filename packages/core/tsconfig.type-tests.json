@@ -6,7 +6,5 @@
     "declaration": false,
     "declarationMap": false
   },
-  "files": [
-    "src/secret-value.test.ts"
-  ]
+  "files": ["src/secret-value.test.ts"]
 }

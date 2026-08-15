@@ -5,11 +5,7 @@ export type Secret<T> = T & { readonly __classification__?: 'secret' }
 
 export type Classification = 'public' | 'private' | 'pii' | 'secret'
 export type AnonymizeStrategy =
-  | 'fake:email'
-  | 'fake:name'
-  | 'hash'
-  | 'keep'
-  | null
+  'fake:email' | 'fake:name' | 'hash' | 'keep' | null
 
 // knowledge: decisions/internals/core-column-form-is-an-axis-of-its-own.md
 

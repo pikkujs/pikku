@@ -62,21 +62,12 @@ export interface WorkflowPlannedStep {
 }
 
 export type WorkflowStatus =
-  | 'running'
-  | 'suspended'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
+  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
 
 export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
 
 export type StepStatus =
-  | 'pending'
-  | 'running'
-  | 'scheduled'
-  | 'succeeded'
-  | 'failed'
-  | 'suspended'
+  'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
 
 export interface WorkflowRun {
   id: string

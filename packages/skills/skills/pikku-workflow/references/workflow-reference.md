@@ -6,15 +6,15 @@ Whether a step runs **inline** (same process/session, no queue round-trip) or is
 
 - **Steps default to inline.** Most steps don't need their own worker; running them inline avoids a queue round-trip per step, so a normally-started workflow executes its whole chain in one orchestrator pass.
 - **`workflowQueued: true` opts a function out.** Set it on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits. `workflowRetries` and `workflowTimeout` sit alongside it.
-- **Run-level `inline` is separate** and only controls whether the *whole run* executes in-process without queue infrastructure (set automatically when there is no `queueService`, or via `startWorkflow(..., { inline: true })`). It governs sleep handling, not per-step dispatch.
+- **Run-level `inline` is separate** and only controls whether the _whole run_ executes in-process without queue infrastructure (set automatically when there is no `queueService`, or via `startWorkflow(..., { inline: true })`). It governs sleep handling, not per-step dispatch.
 
 The rule (`dispatchStep`):
 
-| Function `workflowQueued` | `queueService` present? | Result |
-|---|---|---|
-| default / `false` | any | **inline** |
-| `true` | yes | **queued** (own worker) |
-| `true` | no | **throws** |
+| Function `workflowQueued` | `queueService` present? | Result                  |
+| ------------------------- | ----------------------- | ----------------------- |
+| default / `false`         | any                     | **inline**              |
+| `true`                    | yes                     | **queued** (own worker) |
+| `true`                    | no                      | **throws**              |
 
 ```typescript
 // Push this one expensive step onto the queue; every other step stays inline:
@@ -24,7 +24,9 @@ export const renderLargeReport = pikkuSessionlessFunc({
   workflowTimeout: '5m',
   input: ReportInput,
   output: ReportOutput,
-  func: async (services, data) => { /* ... */ },
+  func: async (services, data) => {
+    /* ... */
+  },
 })
 ```
 
@@ -39,13 +41,25 @@ Usually auto-scaffolded via `scaffold.workflow`. To wire by hand:
 
 ```typescript
 // Start a workflow
-wireHTTP({ method: 'post', route: '/onboard', func: workflowStart('onboardUser') })
+wireHTTP({
+  method: 'post',
+  route: '/onboard',
+  func: workflowStart('onboardUser'),
+})
 
 // Execute workflow steps (called by the orchestrator)
-wireHTTP({ method: 'post', route: '/onboard/run', func: workflow('onboardUser') })
+wireHTTP({
+  method: 'post',
+  route: '/onboard/run',
+  func: workflow('onboardUser'),
+})
 
 // Check workflow status
-wireHTTP({ method: 'get', route: '/onboard/status/:runId', func: workflowStatus('onboardUser') })
+wireHTTP({
+  method: 'get',
+  route: '/onboard/status/:runId',
+  func: workflowStatus('onboardUser'),
+})
 ```
 
 ## Suspend / resume example

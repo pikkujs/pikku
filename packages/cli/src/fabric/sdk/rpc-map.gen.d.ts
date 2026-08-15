@@ -754,10 +754,7 @@ export type ListProjectsOutput = {
     }
     activity: {
       kind:
-        | 'feature_merged'
-        | 'feature_created'
-        | 'feature_building'
-        | 'deployed'
+        'feature_merged' | 'feature_created' | 'feature_building' | 'deployed'
       title: string
       timestamp: string
     }[]

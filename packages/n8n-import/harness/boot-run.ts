@@ -151,11 +151,7 @@ const PIKKU_BIN =
   join(repoRoot, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 
 type Outcome =
-  | 'booted'
-  | 'tsc-failed'
-  | 'boot-failed'
-  | 'parse-error'
-  | 'codegen-error'
+  'booted' | 'tsc-failed' | 'boot-failed' | 'parse-error' | 'codegen-error'
 
 interface Result {
   file: string

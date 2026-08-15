@@ -13,8 +13,8 @@ requested. `LocalContent` requires a `JWTService` and throws without one; a
 verifier with no key available rejects with 403 rather than allowing the
 request, logging once per process so an attacker-triggerable path cannot flood.
 
-A signature over `{signedAt, expiresAt, notBefore}` alone proves only *when* a
-URL was issued, never *what* it was issued for. Any valid token was a skeleton
+A signature over `{signedAt, expiresAt, notBefore}` alone proves only _when_ a
+URL was issued, never _what_ it was issued for. Any valid token was a skeleton
 key: swap the pathname from a public thumbnail to a private document and the
 signature still verifies. Timestamps bound the window; only the path binds the
 asset.

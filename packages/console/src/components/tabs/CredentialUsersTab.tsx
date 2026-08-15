@@ -31,7 +31,9 @@ interface UserRow {
   isComplete: boolean
 }
 
-export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
+export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
+  searchQuery = '',
+}) => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
   useLocale()

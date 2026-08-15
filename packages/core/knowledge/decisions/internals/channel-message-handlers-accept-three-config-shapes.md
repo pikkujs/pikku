@@ -14,7 +14,7 @@ things a caller may put on `onMessage` or inside `onMessageWiring`:
 - a direct function config, where `onMessage.func` is a plain `Function`;
 - a wrapper, where `onMessage.func` is itself a `CorePikkuFunctionConfig` and so
   has its own nested `.func`;
-- a simple wrapper, which carries a plain `Function` under `func` *and* a
+- a simple wrapper, which carries a plain `Function` under `func` _and_ a
   sibling `middleware` array.
 
 The `isWrapper` check tests exactly that: an object with `func`, where either

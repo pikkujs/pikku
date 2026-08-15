@@ -180,9 +180,7 @@ const isPublic = (member: ts.ClassElement | ts.TypeElement): boolean =>
  */
 const membered = (
   declaration:
-    | ts.ClassDeclaration
-    | ts.InterfaceDeclaration
-    | ts.EnumDeclaration,
+    ts.ClassDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration,
   members: ts.NodeArray<ts.ClassElement | ts.TypeElement | ts.EnumMember>
 ): string => {
   if (members.length === 0) return oneLine(declaration.getText())

@@ -9,7 +9,7 @@ tags: services
 
 `InMemoryWorkflowService` (`packages/core/src/services/in-memory-workflow-service.ts`)
 stores each step twice: in `steps`, keyed `${runId}:${stepName}`, and appended to
-`stepHistory` for the run. Both hold the *same object*. `createStepImpl` and
+`stepHistory` for the run. Both hold the _same object_. `createStepImpl` and
 `createRetryAttemptImpl` push the reference they just put into `steps`, not a
 copy.
 

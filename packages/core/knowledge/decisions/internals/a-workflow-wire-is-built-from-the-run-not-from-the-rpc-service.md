@@ -18,7 +18,7 @@ pikkuUserId: rpcService.wire?.pikkuUserId,
 ```
 
 `PikkuRPC` has no `wire`. Neither does the object `getContextRPCService`
-actually returns — `ContextAwareRPCService` holds its wire *privately* and
+actually returns — `ContextAwareRPCService` holds its wire _privately_ and
 exposes `invoke`, `remote`, `exposed`, `startWorkflow`, `agent` and
 `rpcWithWire`, and nothing else. Every one of those reads was `undefined`, and
 the `rpcService: any` parameter type is what kept the compiler quiet about it.

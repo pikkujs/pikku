@@ -35,9 +35,8 @@ function loadEnvFile(): void {
       return
     }
     for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
-      const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(
-        line
-      )
+      const match =
+        /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line)
       if (!match) continue
       const value = match[2].trim().replace(/^(['"])(.*)\1$/s, '$2')
       process.env[match[1]] ??= value

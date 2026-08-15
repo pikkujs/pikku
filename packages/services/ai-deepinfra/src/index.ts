@@ -6,9 +6,7 @@ import {
 import { DeepInfraSpeechModel } from './speech-model.js'
 import { DeepInfraTranscriptionModel } from './transcription-model.js'
 
-export type {
-  DeepInfraProviderSettings,
-} from './deepinfra-config.js'
+export type { DeepInfraProviderSettings } from './deepinfra-config.js'
 export { DeepInfraSpeechModel } from './speech-model.js'
 export { DeepInfraTranscriptionModel } from './transcription-model.js'
 

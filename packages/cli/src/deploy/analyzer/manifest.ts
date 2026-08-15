@@ -8,12 +8,7 @@
 
 /** What kind of deployment entry */
 export type DeploymentUnitRole =
-  | 'function'
-  | 'mcp'
-  | 'agent'
-  | 'channel'
-  | 'workflow'
-  | 'workflow-step'
+  'function' | 'mcp' | 'agent' | 'channel' | 'workflow' | 'workflow-step'
 
 /** What handlers a unit needs to export */
 export type DeploymentHandler =

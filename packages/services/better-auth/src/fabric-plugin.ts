@@ -213,8 +213,7 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
           const existing =
             await ctx.context.internalAdapter.findUserByEmail(email)
           let user: FabricUser | undefined = existing?.user as
-            | FabricUser
-            | undefined
+            FabricUser | undefined
           if (user && !user.fabric) {
             // Namespaced email should make this impossible, but never let a
             // fabric token mint a session for a real user row.

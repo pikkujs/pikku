@@ -4,19 +4,19 @@
 
 Wire a single function to an HTTP endpoint. Import from `#pikku`.
 
-| Option | Type | Notes |
-| --- | --- | --- |
-| `method` | `'get' \| 'post' \| 'put' \| 'patch' \| 'delete' \| 'head' \| 'options'` | HTTP verb |
-| `route` | `string` | e.g. `/books/:bookId` — `:params` become `data` fields |
-| `func` | `PikkuFunc` | The function to call |
-| `auth?` | `boolean` | Override default auth (`true` = require session) |
-| `tags?` | `string[]` | For grouping, middleware targeting |
-| `middleware?` | `PikkuMiddleware[]` | Per-route middleware |
-| `sse?` | `boolean` | Enable Server-Sent Events — **`method: 'get'` only** |
-| `query?` | `Array<keyof In>` | **`method: 'post'` only** — input fields also read from the query string |
-| `contentType?` | `'xml' \| 'json'` | Response content type |
-| `timeout?` | `number` | Request timeout in ms |
-| `headers?` | `HTTPHeadersSchema` | Expected headers schema |
+| Option         | Type                                                                     | Notes                                                                    |
+| -------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `method`       | `'get' \| 'post' \| 'put' \| 'patch' \| 'delete' \| 'head' \| 'options'` | HTTP verb                                                                |
+| `route`        | `string`                                                                 | e.g. `/books/:bookId` — `:params` become `data` fields                   |
+| `func`         | `PikkuFunc`                                                              | The function to call                                                     |
+| `auth?`        | `boolean`                                                                | Override default auth (`true` = require session)                         |
+| `tags?`        | `string[]`                                                               | For grouping, middleware targeting                                       |
+| `middleware?`  | `PikkuMiddleware[]`                                                      | Per-route middleware                                                     |
+| `sse?`         | `boolean`                                                                | Enable Server-Sent Events — **`method: 'get'` only**                     |
+| `query?`       | `Array<keyof In>`                                                        | **`method: 'post'` only** — input fields also read from the query string |
+| `contentType?` | `'xml' \| 'json'`                                                        | Response content type                                                    |
+| `timeout?`     | `number`                                                                 | Request timeout in ms                                                    |
+| `headers?`     | `HTTPHeadersSchema`                                                      | Expected headers schema                                                  |
 
 `sse` and `query` are constrained by the config union rather than by a runtime
 check, so a `sse: true` on a `post` fails to typecheck rather than silently

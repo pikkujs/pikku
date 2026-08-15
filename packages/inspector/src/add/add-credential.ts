@@ -39,11 +39,9 @@ export const addCredential: AddWiring = (
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const displayNameValue = getPropertyValue(obj, 'displayName') as
-      | string
-      | null
+      string | null
     const descriptionValue = getPropertyValue(obj, 'description') as
-      | string
-      | null
+      string | null
     const typeValue = getPropertyValue(obj, 'type') as string | null
     const docsUrlValue = getPropertyValue(obj, 'docsUrl') as string | null
 
@@ -126,8 +124,7 @@ export const addCredential: AddWiring = (
         'appCredentialSecretId'
       ) as string | null
       const tokenSecretId = getPropertyValue(oauth2Obj, 'tokenSecretId') as
-        | string
-        | null
+        string | null
       const authorizationUrl = getPropertyValue(
         oauth2Obj,
         'authorizationUrl'

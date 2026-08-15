@@ -14,7 +14,7 @@ deadline. A duplicate, late, or entirely dropped timer therefore all produce the
 same answer, and losing the wake costs liveness — the run sits until something
 else resumes it — never correctness.
 
-`scheduleRunWake` deliberately enqueues a delayed *orchestrator* pass rather
+`scheduleRunWake` deliberately enqueues a delayed _orchestrator_ pass rather
 than reusing `scheduleSleep`. `scheduleSleep` resolves the step it is given,
 which for an approval would resolve the gate itself; the wake only nudges the
 run to replay and re-evaluate, leaving the gate the sole judge of its own

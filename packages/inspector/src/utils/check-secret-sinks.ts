@@ -53,7 +53,10 @@ export function findRevealedSecretSinks(
   const violations: SecretSinkViolation[] = []
 
   const visit = (node: ts.Node): void => {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
       const sink = describeSink(checker, node.expression)
       if (sink) {
         for (const arg of node.arguments) {

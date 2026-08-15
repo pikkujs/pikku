@@ -40,16 +40,23 @@ export const EmailTemplateListPanel: React.FC<EmailTemplateListPanelProps> = ({
   )
   const resolvedNames = templateNames ?? metaTemplateNames
 
-  const allItems = useMemo((): EntityCardItem[] =>
-    resolvedNames.map((name): EntityCardItem => {
-      const t = resolvedTemplates[name]
-      const varCount = (t.variables ?? []).length
-      const localeCount = Object.keys(t.locales ?? {}).length
-      const metaTags: string[] = []
-      if (varCount > 0) metaTags.push(`${varCount} ${varCount === 1 ? 'variable' : 'variables'}`)
-      if (localeCount > 0) metaTags.push(`${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`)
-      return { name, meta: metaTags }
-    }),
+  const allItems = useMemo(
+    (): EntityCardItem[] =>
+      resolvedNames.map((name): EntityCardItem => {
+        const t = resolvedTemplates[name]
+        const varCount = (t.variables ?? []).length
+        const localeCount = Object.keys(t.locales ?? {}).length
+        const metaTags: string[] = []
+        if (varCount > 0)
+          metaTags.push(
+            `${varCount} ${varCount === 1 ? 'variable' : 'variables'}`
+          )
+        if (localeCount > 0)
+          metaTags.push(
+            `${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`
+          )
+        return { name, meta: metaTags }
+      }),
     [resolvedNames, resolvedTemplates]
   )
 

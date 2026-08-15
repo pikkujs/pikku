@@ -126,12 +126,9 @@ export const defaultRetryRecoverWorkflow = pikkuWorkflowFunc<
   { ok: boolean }
 >({
   func: async (_services, data, { workflow }) => {
-    await workflow.do(
-      'default recover step',
-      'flakyStep',
-      data,
-      { retryDelay: 0 }
-    )
+    await workflow.do('default recover step', 'flakyStep', data, {
+      retryDelay: 0,
+    })
     return { ok: true }
   },
   tags: ['test', 'retry'],

@@ -30,7 +30,9 @@ export const ServicesListPanel: React.FC<ServicesListPanelProps> = ({
       {
         key: 'name',
         header: 'NAME',
-        render: (item: ServiceItem) => <Text fw={500}>{asI18n(item.name)}</Text>,
+        render: (item: ServiceItem) => (
+          <Text fw={500}>{asI18n(item.name)}</Text>
+        ),
       },
       {
         key: 'functions',

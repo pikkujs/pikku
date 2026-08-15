@@ -64,12 +64,12 @@ provision an S3 bucket per logical bucket — the config takes only one.
 
 ### Behaviours worth knowing before you rely on them
 
-- **`signURL` fails open.** A signing error is logged and the *unsigned* URL is
+- **`signURL` fails open.** A signing error is logged and the _unsigned_ URL is
   returned rather than thrown. If your CloudFront distribution is private the
   client then gets a 403; if it isn't, you have just handed out an unrestricted
   link. Check that `signConfig` is a valid CloudFront key pair at boot.
 - **`signContentKey` builds `https://<bucketName>/<bucket>/<contentKey>`** — it
-  uses `bucketName` as the *host*. For signed content the value must therefore be
+  uses `bucketName` as the _host_. For signed content the value must therefore be
   your CloudFront domain, not a plain bucket name, which also means the same
   config field is doing two jobs.
 - **Presigned upload URLs expire after a fixed 3600s.** It is not configurable

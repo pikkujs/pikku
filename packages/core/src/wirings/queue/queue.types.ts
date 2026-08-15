@@ -63,11 +63,7 @@ export interface ConfigValidationResult {
 }
 
 export type QueueJobStatus =
-  | 'waiting'
-  | 'active'
-  | 'completed'
-  | 'failed'
-  | 'delayed'
+  'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 
 export type QueueJobMetadata = {
   progress?: number | string | object | undefined | boolean

@@ -6,7 +6,5 @@
     "declaration": false,
     "declarationMap": false
   },
-  "files": [
-    "src/pino.type.test.ts"
-  ]
+  "files": ["src/pino.type.test.ts"]
 }

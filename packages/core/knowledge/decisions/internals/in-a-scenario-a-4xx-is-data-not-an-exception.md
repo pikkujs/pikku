@@ -12,7 +12,7 @@ tags: services
 `invoke` throws, and it throws with a truncated body — which is why a scenario
 asserting on a refusal must use `invokeRaw`.
 
-A permissions or scopes scenario *expects* the 403. The status is the assertion,
+A permissions or scopes scenario _expects_ the 403. The status is the assertion,
 and the body usually names the scope that was missing, so both have to survive as
 data rather than being reduced to a thrown `Error`. These helpers also exist
 because every scenario reaching past an actor was hand-writing the same

@@ -34,7 +34,9 @@ export const inMemorySessionStore = (
       entries.set(key, {
         value,
         expiresAt:
-          ttlSeconds === undefined ? null : now() + Math.max(0, ttlSeconds) * 1000,
+          ttlSeconds === undefined
+            ? null
+            : now() + Math.max(0, ttlSeconds) * 1000,
       })
     },
     async delete(key) {

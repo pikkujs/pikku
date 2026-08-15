@@ -37,11 +37,11 @@ comments — not semantic mismatches with a project's real generated types.
 
 ## Result — Zie619/n8n-workflows (2,061 workflows)
 
-| Outcome | Count | % |
-| --- | ---: | ---: |
-| clean | 0 | 0.0% |
-| partial | 2061 | 100.0% |
-| failed | 0 | 0.0% |
+| Outcome | Count |      % |
+| ------- | ----: | -----: |
+| clean   |     0 |   0.0% |
+| partial |  2061 | 100.0% |
+| failed  |     0 |   0.0% |
 
 **100% of the corpus imports and type-checks.** Every workflow produces a
 compiling Pikku scaffold; none fail to parse, generate, or compile. All land in
@@ -54,23 +54,23 @@ sub-nodes: models, memory, output parsers).
 
 ### Top node types by corpus frequency
 
-| node type | count | status |
-| --- | ---: | --- |
-| noOp | 4380 | stubbed |
-| set | 2536 | supported |
-| httpRequest | 2128 | stubbed |
-| stopAndError | 1103 | stubbed |
-| if | 1096 | stubbed |
-| code | 1005 | stubbed |
-| manualTrigger | 927 | skipped |
-| googleSheets | 597 | stubbed |
-| merge | 487 | stubbed |
-| splitOut | 405 | stubbed |
-| telegram | 390 | stubbed |
-| webhook | 351 | skipped |
-| scheduleTrigger | 330 | skipped |
-| switch | 300 | stubbed |
-| googleDrive | 290 | stubbed |
+| node type       | count | status    |
+| --------------- | ----: | --------- |
+| noOp            |  4380 | stubbed   |
+| set             |  2536 | supported |
+| httpRequest     |  2128 | stubbed   |
+| stopAndError    |  1103 | stubbed   |
+| if              |  1096 | stubbed   |
+| code            |  1005 | stubbed   |
+| manualTrigger   |   927 | skipped   |
+| googleSheets    |   597 | stubbed   |
+| merge           |   487 | stubbed   |
+| splitOut        |   405 | stubbed   |
+| telegram        |   390 | stubbed   |
+| webhook         |   351 | skipped   |
+| scheduleTrigger |   330 | skipped   |
+| switch          |   300 | stubbed   |
+| googleDrive     |   290 | stubbed   |
 
 The long tail is real: 415 distinct types, but a handful (noOp, httpRequest,
 Code, Google Sheets, the IF/Switch/Merge control family) dominate. That ranking

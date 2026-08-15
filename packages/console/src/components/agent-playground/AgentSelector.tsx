@@ -28,7 +28,9 @@ export const AgentSelector: React.FC = () => {
     if (!search) return agentItems
     const q = search.toLowerCase()
     return agentItems.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        i.description?.toLowerCase().includes(q)
     )
   }, [agentItems, search])
 
@@ -60,7 +62,16 @@ export const AgentSelector: React.FC = () => {
           }}
           onClick={() => setSelectorOpen((o) => !o)}
         >
-          <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Text
+            size="sm"
+            fw={600}
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {asI18n(agentId)}
           </Text>
           <ChevronDown size={14} style={{ flexShrink: 0 }} />

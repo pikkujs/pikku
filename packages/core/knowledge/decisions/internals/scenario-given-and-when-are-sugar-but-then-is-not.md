@@ -12,8 +12,8 @@ All three run a named `pikkuScenarioStep` as one durable step. `given` and
 identically either way.
 
 `then` is a different operation. The phase is what decides how a step's surface
-bindings are treated: for an action, the bindings are *alternatives* and one is
-chosen; for an assertion, they are *witnesses* and every applicable one runs and
+bindings are treated: for an action, the bindings are _alternatives_ and one is
+chosen; for an assertion, they are _witnesses_ and every applicable one runs and
 must agree. So the same step function invoked as `when` and as `then` executes a
 different number of times against a different number of surfaces.
 

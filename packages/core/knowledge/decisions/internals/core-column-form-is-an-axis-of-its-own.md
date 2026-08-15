@@ -15,13 +15,13 @@ value leave the process?".
 The two axes were one field before this, with `security: 'encrypted'` sitting
 alongside `secret` as though they were alternatives. They are not, and the
 conflation made the field unanswerable: a token hash and a live bearer token are
-both `secret`, one must never be encrypted — the digest *is* the lookup key —
+both `secret`, one must never be encrypted — the digest _is_ the lookup key —
 and the other must always be. Nothing in a single enum could tell them apart, so
 nothing could check either.
 
 ## Why `wrapped` and `sealed` rather than `encrypted`
 
-Sealed values *are* encrypted, so an `encrypted` member sitting beside `sealed`
+Sealed values _are_ encrypted, so an `encrypted` member sitting beside `sealed`
 would be a supertype posing as a sibling, and every new column would be an
 even-odds guess. What actually separates them is who can read the value back:
 `wrapped` is symmetric and the application holds the key; `sealed` is asymmetric
@@ -64,7 +64,7 @@ it would buy nothing — feeding in the wrong string already fails at the AEAD t
 — while forcing a cast into every path that reads ciphertext out of a row or off
 the wire, which is where casts are least reviewable.
 
-The brand proves *provenance*, not correctness. It cannot know a value was
+The brand proves _provenance_, not correctness. It cannot know a value was
 wrapped under the right key, and making it know would mean phantom-typing key
 ids per scope, which the multi-recipient path would fight constantly.
 
@@ -75,7 +75,7 @@ error. Every project predating the axis has such columns, and failing their next
 `db migrate` would be a breaking change for a diagnosis they have not had a
 chance to act on. `pikku db --fail-on-warn` is how a project opts into the
 ratchet. An explicit `form: 'plain'` silences it — that is the acknowledgement
-that reading the row is *meant* to yield a usable credential.
+that reading the row is _meant_ to yield a usable credential.
 
 **What this rules out:** collapsing `wrapped` and `sealed` back into one
 `encrypted`; making the form brands optional (they would enforce nothing);

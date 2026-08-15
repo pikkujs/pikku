@@ -26,11 +26,11 @@ they divide into two kinds, and the difference is what can actually be
 prevented rather than merely reported:
 
 - **Prevention.** uWebSockets drives `res.onData` itself, so it counts bytes and
-  *drops* chunks past the limit rather than concatenating, replying 413 before
+  _drops_ chunks past the limit rather than concatenating, replying 413 before
   routing — the only point at which the buffering can be stopped, which is why
   it deviates from the fetch adapter's 404-an-unmatched-route order. Fastify
   delegates to native `bodyLimit`, set only when `maxBodySize` is configured so
-  the default never *loosens* fastify's stricter 1 MB. `PikkuExpressServer`
+  the default never _loosens_ fastify's stricter 1 MB. `PikkuExpressServer`
   feeds the limit into `express.json`/`text`/`urlencoded`.
 - **Rejection only.** `express-middleware` is handed an already-parsed body, so
   its guard makes the rejection uniform but cannot reclaim the memory; a

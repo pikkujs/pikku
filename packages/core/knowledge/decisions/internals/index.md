@@ -10,6 +10,7 @@ A rule about how core behaves: what runs where, in what order, and what a
 caller is entitled to assume.
 
 <!-- pikku:knowledge-index -->
+
 - [A non-streaming agent run registers with aiRunState on the same terms as a streaming one](a-non-streaming-agent-run-registers-with-airunstate-too.md) — Otherwise interruptAIAgent finds the run, passes the ownership check, then cannot stop it — and reports that as if the run were on another host
 - [A resumed turn is as interruptible as the first one](a-resumed-agent-turn-is-as-interruptible-as-the-first.md) — It is the same person listening to the same voice, and after an approval it is where most of the reply actually gets spoken
 - [A scenario step's prose template is offered to a virtual user unfilled](a-scenario-step-template-is-offered-unfilled.md) — A reporter fills placeholders from a run that happened; there is no run yet, and the filled form would answer the question the user is there to answer
@@ -57,7 +58,7 @@ caller is entitled to assume.
 - [CLI stdout is reserved for machine-readable output](cli-stdout-is-reserved-for-machine-readable-output.md) — The default renderer emits single-line NDJSON, diagnostics go to stderr, and --json only hijacks rendering for commands that declared a renderer
 - [CLI unknown long options warn instead of failing](cli-unknown-long-options-warn-instead-of-failing.md) — Unrecognised --long options are accepted, warned about and dropped so older binaries tolerate newer invocations, while unknown short flags stay hard errors
 - [A column's at-rest form is an axis of its own](core-column-form-is-an-axis-of-its-own.md) — How a value is stored is independent of how sensitive it is, so form carries a required nominal brand on writes while classification stays optional on reads
-- [The data-classification brand is an optional property](core-data-classification-brand-is-an-optional-property.md) — Making __classification__ required would break ordinary Kysely operands, so the brand only constrains values flowing out
+- [The data-classification brand is an optional property](core-data-classification-brand-is-an-optional-property.md) — Making **classification** required would break ordinary Kysely operands, so the brand only constrains values flowing out
 - [The function runner restores the wire fields it overwrites](core-function-runner-restores-the-wire-fields-it-overwrites.md) — One wire object is reused across nested calls, so functionId, audit, addonNamespace and rpc are saved and put back in a finally
 - [Hot reload merges generated meta and never replaces it](core-hot-reload-merges-generated-meta-never-replaces-it.md) — Reloading codegen output must preserve runtime-registered meta, which no generated JSON contains
 - [Hot reload owns its module registry instead of re-importing](core-hot-reload-owns-its-module-registry.md) — Dev reload transpiles to CJS and runs modules through vm.compileFunction, because the native ESM loader map cannot be evicted
@@ -153,4 +154,5 @@ caller is entitled to assume.
 - [A workflow step's recorded `rpcName` is provenance only — nothing dispatches off it](workflow-step-rpc-name-is-provenance-only.md) — It exists so a reader can join a runtime step row back to the declaration that produced it, especially when the durable name was built in a loop
 - [A suspend or approval `reason` is the step's durable identity, not just a message](workflow-suspend-and-approval-reasons-are-durable-step-identities.md) — The reason is namespaced and used raw as the step key, so it must be derived deterministically across replays
 - [A suspended workflow run keeps its in-process context; only terminal runs release it](workflow-suspended-runs-keep-their-in-process-context.md) — `suspended` is absent from the terminal set on purpose, and a context is dropped only when nothing is holding it open
+
 <!-- /pikku:knowledge-index -->

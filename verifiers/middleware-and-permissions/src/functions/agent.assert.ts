@@ -9,7 +9,11 @@ import type {
   SaveScoreInput,
   AgentStorageService,
 } from '@pikku/core/services'
-import type { AgentRunState, AgentThread, AgentMessage } from '@pikku/core/agent'
+import type {
+  AgentRunState,
+  AgentThread,
+  AgentMessage,
+} from '@pikku/core/agent'
 import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import {
   assertMiddlewareAndPermissions,

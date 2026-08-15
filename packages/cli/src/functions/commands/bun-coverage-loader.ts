@@ -61,7 +61,10 @@ export async function registerBunCoverageLoader({
         const source = await readFile(args.path, 'utf-8')
         const loader = args.path.endsWith('.tsx') ? 'tsx' : 'ts'
         if (!shouldInstrument(args.path)) return { contents: source, loader }
-        return { contents: instrumenter.instrumentSync(source, args.path), loader }
+        return {
+          contents: instrumenter.instrumentSync(source, args.path),
+          loader,
+        }
       })
     },
   })

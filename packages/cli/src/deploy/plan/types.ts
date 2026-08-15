@@ -1,11 +1,7 @@
 export type ChangeAction = 'create' | 'update' | 'delete' | 'drain'
 
 export type ResourceType =
-  | 'unit'
-  | 'queue'
-  | 'scheduled-task'
-  | 'secret'
-  | 'variable'
+  'unit' | 'queue' | 'scheduled-task' | 'secret' | 'variable'
 
 export interface PlanChange {
   action: ChangeAction

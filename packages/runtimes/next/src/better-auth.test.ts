@@ -47,7 +47,10 @@ describe('toNextJsAuthHandler', () => {
       new Request('https://example.com/api/auth/sign-in', { method: 'POST' })
     )
 
-    assert.equal(await first.text(), 'GET:https://example.com/api/auth/get-session')
+    assert.equal(
+      await first.text(),
+      'GET:https://example.com/api/auth/get-session'
+    )
     assert.equal(
       await second.text(),
       'POST:https://example.com/api/auth/sign-in'
@@ -66,7 +69,7 @@ describe('toNextJsAuthHandler', () => {
               handler: async () => new Response('ok'),
               api: {},
             }) as any,
-          async () => ({} as any)
+          async () => ({}) as any
         ),
       /createSingletonServices is required/
     )

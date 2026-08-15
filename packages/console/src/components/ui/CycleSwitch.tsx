@@ -15,7 +15,7 @@ export const CycleSwitch = <T extends string>({
   const { options, value, onChange, ariaLabel } = selection
   const idx = Math.max(
     0,
-    options.findIndex((o) => o.value === value),
+    options.findIndex((o) => o.value === value)
   )
   const cur = options[idx]
   if (!cur) return null
@@ -26,7 +26,9 @@ export const CycleSwitch = <T extends string>({
       leftSection={cur.icon}
       onClick={() => onChange(options[(idx + 1) % options.length]!.value)}
       aria-label={m.shell_header_cycle_aria({ ariaLabel, label: cur.label })}
-      styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H } }}
+      styles={{
+        root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H },
+      }}
     >
       {cur.label}
     </Button>

@@ -31,17 +31,23 @@ export function getServiceRPC(baseUrl: string, token: string): RPCInvoke {
 ## Session-Setting Middleware
 
 ```typescript
-const apiKeyAuth = pikkuMiddleware(async ({ kysely }, { http, setSession, session }, next) => {
-  if (session) return next()  // already authenticated
+const apiKeyAuth = pikkuMiddleware(
+  async ({ kysely }, { http, setSession, session }, next) => {
+    if (session) return next() // already authenticated
 
-  const header = http?.request?.header?.('x-api-key')
-  if (!header) return next()
+    const header = http?.request?.header?.('x-api-key')
+    if (!header) return next()
 
-  const row = await kysely.selectFrom('apiKey').select('userId').where('key', '=', header).executeTakeFirst()
-  if (row) setSession?.({ userId: row.userId })
+    const row = await kysely
+      .selectFrom('apiKey')
+      .select('userId')
+      .where('key', '=', header)
+      .executeTakeFirst()
+    if (row) setSession?.({ userId: row.userId })
 
-  return next()
-})
+    return next()
+  }
+)
 
 addTagMiddleware('api-key-auth', [apiKeyAuth])
 ```

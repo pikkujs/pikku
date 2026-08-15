@@ -13,11 +13,11 @@ per secret turns a 10ms operation into a 4-second one.
 
 It guarded it with `assert.ok(elapsed < 50)`. Measured on this machine:
 
-| | |
-| --- | --- |
-| one `deriveKEK` | ~86ms |
-| 50 `envelopeDecrypt` | 10.8ms |
-| the old 50ms threshold | 4.6x headroom |
+|                               |                                 |
+| ----------------------------- | ------------------------------- |
+| one `deriveKEK`               | ~86ms                           |
+| 50 `envelopeDecrypt`          | 10.8ms                          |
+| the old 50ms threshold        | 4.6x headroom                   |
 | the failure it guards against | ~4281ms — a **396x** separation |
 
 So the assertion had 4.6x of margin to detect a 396x regression. Everything
@@ -37,7 +37,7 @@ suite grows or CI moves to a noisier runner. Any assertion of the form
 ratio against something measured alongside it.
 
 Worth knowing: `envelopeDecrypt(kek: CryptoKey, …)` takes the derived key as a
-parameter, so it *cannot* derive one — the property is already enforced by the
+parameter, so it _cannot_ derive one — the property is already enforced by the
 signature, and [[the-api-report-pins-members-not-just-names]] would catch a
 change to it. The test is defence in depth, which is a reason to make it cheap
 and quiet rather than to delete it.

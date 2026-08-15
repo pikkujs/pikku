@@ -42,8 +42,7 @@ function optimisticUserRoles<V extends { userId: string }>(
       _error: unknown,
       _variables: V,
       context:
-        | { key: string[]; previous: UserRolesData | undefined }
-        | undefined
+        { key: string[]; previous: UserRolesData | undefined } | undefined
     ) => {
       if (context?.previous) {
         queryClient.setQueryData(context.key, context.previous)

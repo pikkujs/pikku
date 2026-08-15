@@ -122,10 +122,10 @@ const renderer = pikkuCLIRender<OutputType>((services, data) => {
 ### Wire object (`wire.cli`)
 
 ```typescript
-wire.cli.program   // program name
-wire.cli.command   // string[] — the resolved command path
-wire.cli.data      // all positionals and options, merged
-wire.cli.channel   // the channel when served remotely (see below)
+wire.cli.program // program name
+wire.cli.command // string[] — the resolved command path
+wire.cli.data // all positionals and options, merged
+wire.cli.channel // the channel when served remotely (see below)
 ```
 
 ## Usage Patterns

@@ -18,7 +18,7 @@ mistake (show the help text) or a value mistake (print the errors) by
 This is why the parser pushes `Missing subcommand: <path>` for a group command
 that has subcommands but no `pikkuFuncId` of its own, rather than simply
 returning the command meta and letting the runner discover it is unrunnable. The
-message *is* the routing signal. Rewording any of those three strings, or
+message _is_ the routing signal. Rewording any of those three strings, or
 localising them, silently turns "show me the subcommands" into a raw error dump.
 
 **What this rules out:** editing those error message prefixes without updating

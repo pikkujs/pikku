@@ -47,7 +47,11 @@ const ValueInline: React.FC<{ value: unknown }> = ({ value }) => {
       </Text>
     )
   }
-  return <Text size="sm" ff="monospace">{asI18n(String(value))}</Text>
+  return (
+    <Text size="sm" ff="monospace">
+      {asI18n(String(value))}
+    </Text>
+  )
 }
 
 const DataRow: React.FC<{ name: string; value: unknown; depth: number }> = ({

@@ -15,7 +15,7 @@ handlers run on the host at `serverUrl`. `pikku verify` enforces the
 devDependency placement.
 
 `ContextAwareRPCService.invokeAddonFunction` in `rpc-runner.ts` therefore checks
-`resolved.addonConfig?.remote` *before* it looks for local function meta, and
+`resolved.addonConfig?.remote` _before_ it looks for local function meta, and
 routes to `invokeRemoteAddonFunction`. That method POSTs the addon's own function
 name — the bare name, not the namespaced `ns:fn` form, optionally remapped by
 `remoteName` — to `${serverUrl}/remote/rpc/:rpcName`, authenticating as a client

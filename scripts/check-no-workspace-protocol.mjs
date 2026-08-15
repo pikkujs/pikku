@@ -26,7 +26,8 @@ const PUBLISHED_FIELDS = [
 /** Recursively collect every package.json under packages/, skipping node_modules/dist. */
 function findPackageJsons(dir, out = []) {
   for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry === 'dist' || entry === '.deploy') continue
+    if (entry === 'node_modules' || entry === 'dist' || entry === '.deploy')
+      continue
     const full = join(dir, entry)
     const st = statSync(full)
     if (st.isDirectory()) findPackageJsons(full, out)
@@ -50,7 +51,7 @@ for (const file of findPackageJsons(join(ROOT, 'packages'))) {
     for (const [name, range] of Object.entries(deps)) {
       if (typeof range === 'string' && range.startsWith('workspace:')) {
         violations.push(
-          `${file.replace(ROOT + '/', '')} → ${field}["${name}"] = "${range}"`,
+          `${file.replace(ROOT + '/', '')} → ${field}["${name}"] = "${range}"`
         )
       }
     }
@@ -59,13 +60,13 @@ for (const file of findPackageJsons(join(ROOT, 'packages'))) {
 
 if (violations.length > 0) {
   console.error(
-    '\n✖ workspace: protocol found in published dependency fields:\n',
+    '\n✖ workspace: protocol found in published dependency fields:\n'
   )
   for (const v of violations) console.error(`  ${v}`)
   console.error(
     '\nReplace each with a literal version range (e.g. "^0.12.6"). The publish' +
       '\nstep does not rewrite workspace: ranges, so they leak to npm and break' +
-      '\nconsumer installs. (devDependencies are exempt — they are not published.)\n',
+      '\nconsumer installs. (devDependencies are exempt — they are not published.)\n'
   )
   process.exit(1)
 }

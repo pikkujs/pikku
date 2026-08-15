@@ -14,7 +14,7 @@ A reporter fills those placeholders from a run that already happened. There is
 no run yet at derivation time, so there is nothing to fill them from. More
 importantly, filling them would answer the wrong question: "invites {email}"
 tells the user to choose someone, where "invites ada@example.com" tells it whom
-— and *whom* is the scenario author's answer, not something the virtual user
+— and _whom_ is the scenario author's answer, not something the virtual user
 worked out.
 
 **What this rules out:** substituting example or fixture values to make the

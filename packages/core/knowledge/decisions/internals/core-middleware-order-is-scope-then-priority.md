@@ -19,7 +19,7 @@ finally passed through `freezeDedupe` and cached in `middlewareCache` keyed by
 wire type and wire id.
 
 Two properties fall out of that and both are load-bearing. Because the sort is
-stable, priority is a coarse band and registration order breaks ties *within* a
+stable, priority is a coarse band and registration order breaks ties _within_ a
 band, so declaration order still means something. And because the result is
 deduped by function identity, a middleware reachable through both a tag group and
 a direct wire registration runs exactly once — a fact several tests assert

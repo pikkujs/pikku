@@ -33,8 +33,7 @@ export interface AzureServiceFactories {
     existingServices?: Partial<Record<string, unknown>>
   ) => Promise<CoreSingletonServices>
   createPlatformServices?: () =>
-    | Record<string, unknown>
-    | Promise<Record<string, unknown>>
+    Record<string, unknown> | Promise<Record<string, unknown>>
 }
 
 let cachedServices: CoreSingletonServices | null = null

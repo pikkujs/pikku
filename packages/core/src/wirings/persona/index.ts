@@ -15,10 +15,7 @@ export type {
   PersonaEnvironment,
   PersonaEnvironmentSubject,
 } from './persona-environments.js'
-export {
-  personaEmail,
-  personaEmails,
-} from './persona-email.js'
+export { personaEmail, personaEmails } from './persona-email.js'
 export type {
   MailboxAllowlist,
   PersonaMailbox,

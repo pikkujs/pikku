@@ -14,12 +14,7 @@ export type DependencyField =
   | 'optionalDependencies'
 
 export type UpdateStatus =
-  | 'current'
-  | 'outdated'
-  | 'stale-install'
-  | 'linked'
-  | 'manual'
-  | 'unresolved'
+  'current' | 'outdated' | 'stale-install' | 'linked' | 'manual' | 'unresolved'
 
 export type UpdateEntry = {
   package: string

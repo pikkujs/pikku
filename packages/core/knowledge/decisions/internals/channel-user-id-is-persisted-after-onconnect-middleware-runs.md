@@ -10,7 +10,7 @@ tags: channel
 `runChannelConnect` in
 `packages/core/src/wirings/channel/serverless/serverless-channel-runner.ts`
 reads `userSession.getPikkuUserId()` and calls `channelStore.setPikkuUserId`
-*after* `runChannelLifecycleWithMiddleware` has executed the `onConnect`
+_after_ `runChannelLifecycleWithMiddleware` has executed the `onConnect`
 lifecycle, not before.
 
 Auth middleware runs as part of that lifecycle — it is what inspects the upgrade

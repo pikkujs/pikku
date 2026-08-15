@@ -20,7 +20,7 @@ driver written against an earlier version keeps compiling; the runner treats a
 driver without them as one offering no isolation and no diagnostics.
 `captureFailure` must never throw — a failure to capture must not replace the
 failure being captured — and exists because a browser step fails with a selector
-timeout that says nothing about *why* the page never rendered; the answer is
+timeout that says nothing about _why_ the page never rendered; the answer is
 almost always in the page's own console and request errors, which the driver has
 been collecting all along.
 

@@ -395,14 +395,12 @@ export const addAgent: AddWiring = (logger, node, checker, state, options) => {
 
     const roleValue = getPropertyValue(obj, 'role') as string | null
     const personalityValue = getPropertyValue(obj, 'personality') as
-      | string
-      | null
+      string | null
     const goalValue = getPropertyValue(obj, 'goal') as string | null
 
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
     const temperatureValue = getPropertyValue(obj, 'temperature') as
-      | number
-      | null
+      number | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
     const scorersValue = resolveScorerNames(obj, nameValue || '', logger)
     const toolsValue = resolveToolReferences(

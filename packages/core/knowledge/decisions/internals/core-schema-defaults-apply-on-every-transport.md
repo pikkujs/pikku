@@ -21,7 +21,7 @@ generated TypeScript type declares as present — the worst shape a mismatch can
 take: validation permits the omission, the type promises the value, the body
 reads `undefined`.
 
-It is deliberately *not* gated on the `coerceDataFromSchema` flag that guards
+It is deliberately _not_ gated on the `coerceDataFromSchema` flag that guards
 `coerceTopLevelDataFromSchema`. That flag is about decoding transport-encoded
 values — a query string's `"1,2"` into an array, an ISO string into a `Date` —
 and is set only by transports that need it. Defaults are a property of the

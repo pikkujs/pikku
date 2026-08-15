@@ -35,11 +35,17 @@ describe('getNestedValue', () => {
 
 describe('applyTemplate', () => {
   test('replaces simple placeholder', () => {
-    assert.equal(applyTemplate('Hello {{ name }}!', { name: 'Bob' }), 'Hello Bob!')
+    assert.equal(
+      applyTemplate('Hello {{ name }}!', { name: 'Bob' }),
+      'Hello Bob!'
+    )
   })
 
   test('replaces {{content}} with context.content string', () => {
-    assert.equal(applyTemplate('Body: {{ content }}', { content: '<p>Hi</p>' }), 'Body: <p>Hi</p>')
+    assert.equal(
+      applyTemplate('Body: {{ content }}', { content: '<p>Hi</p>' }),
+      'Body: <p>Hi</p>'
+    )
   })
 
   test('replaces {{content}} with empty string when not a string', () => {
@@ -55,7 +61,10 @@ describe('applyTemplate', () => {
   })
 
   test('resolves dot-path placeholders', () => {
-    assert.equal(applyTemplate('{{ user.name }}', { user: { name: 'Carol' } }), 'Carol')
+    assert.equal(
+      applyTemplate('{{ user.name }}', { user: { name: 'Carol' } }),
+      'Carol'
+    )
   })
 })
 
@@ -77,7 +86,10 @@ describe('renderTemplate', () => {
 describe('renderPartial', () => {
   test('renders a known partial with context', () => {
     const partials = { header: '<h1>{{ title }}</h1>' }
-    assert.equal(renderPartial('header', partials, { title: 'Welcome' }), '<h1>Welcome</h1>')
+    assert.equal(
+      renderPartial('header', partials, { title: 'Welcome' }),
+      '<h1>Welcome</h1>'
+    )
   })
 
   test('returns empty string for unknown partial', () => {

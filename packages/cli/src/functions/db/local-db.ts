@@ -165,7 +165,8 @@ export function resolveDb(
   }
 
   const pgliteExtensions =
-    (typeof dbConfig === 'string' ? undefined : dbConfig?.pgliteExtensions) ?? []
+    (typeof dbConfig === 'string' ? undefined : dbConfig?.pgliteExtensions) ??
+    []
 
   if (userConfig.postgresUrl) {
     return {

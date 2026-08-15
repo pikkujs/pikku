@@ -6,18 +6,10 @@
     "outDir": "dist",
     "target": "esnext",
     "declaration": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "**/*.test.ts",
-    "node_modules",
-    "dist"
-  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules", "dist"],
   "references": [
     {
       "path": "../core/tsconfig.json"

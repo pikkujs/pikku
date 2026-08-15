@@ -2,7 +2,11 @@ import { pikkuAgentMiddleware } from '#pikku/agent/pikku-agent-types.gen.js'
 
 export const testAgentMiddleware = pikkuAgentMiddleware<{ count: number }>({
   modifyInput: async ({ logger }, { messages, instructions }) => {
-    logger.info({ type: 'agent-middleware', name: 'modifyInput', phase: 'before' })
+    logger.info({
+      type: 'agent-middleware',
+      name: 'modifyInput',
+      phase: 'before',
+    })
     return { messages, instructions }
   },
   modifyOutputStream: async ({ logger }, { allEvents, event, state }) => {

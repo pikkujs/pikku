@@ -146,11 +146,9 @@ export const addSystemRole: AddWiring = (
     }
 
     const displayName = getPropertyValue(prop.initializer, 'displayName') as
-      | string
-      | null
+      string | null
     const description = getPropertyValue(prop.initializer, 'description') as
-      | string
-      | null
+      string | null
 
     state.systemRoles.files.add(sourceFile)
     state.systemRoles.definitions.push({

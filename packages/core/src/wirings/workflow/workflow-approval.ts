@@ -202,7 +202,8 @@ export const evaluateApprovalStep = async (
   }
 
   const stateKey = approvalStateKey(approvalStepName)
-  let record = ((await store.getRunState(runId))[stateKey] ?? {}) as ApprovalRecord
+  let record = ((await store.getRunState(runId))[stateKey] ??
+    {}) as ApprovalRecord
 
   const policy: WorkflowApprovalPolicy = {
     approvers: options.approvers,

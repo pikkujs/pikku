@@ -108,8 +108,8 @@
   with no personas in it.
 
   A new ```decision fence states what a decision note owes: `chosen`, `rules-out`,
-`because`. The middle one is the half that gets dropped, so `pikku knowledge
-  validate` now warns when a fence says what was chosen and never says what it
+  `because`. The middle one is the half that gets dropped, so `pikku knowledge
+validate` now warns when a fence says what was chosen and never says what it
   closes off. The fence is optional and a decision argued in prose is still a
   decision — validate checks the fences that exist rather than asking every note
   to be reformatted.

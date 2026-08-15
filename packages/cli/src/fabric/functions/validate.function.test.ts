@@ -2168,4 +2168,3 @@ describe('declared frontends + type-check (live validate.function)', () => {
     }
   })
 })
-

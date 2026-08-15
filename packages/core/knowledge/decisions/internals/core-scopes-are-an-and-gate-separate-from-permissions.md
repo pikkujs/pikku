@@ -14,8 +14,8 @@ closed: a session without a `scopes` field, or no session at all, satisfies
 nothing. An empty `required` is the only thing anything satisfies.
 
 This is deliberately the opposite composition from `permissions`, whose groups OR
-together. Because permissions OR, adding a permission group can only *widen*
-access; because scopes AND, adding a scope can only *narrow* it. That is the
+together. Because permissions OR, adding a permission group can only _widen_
+access; because scopes AND, adding a scope can only _narrow_ it. That is the
 whole reason the two are separate mechanisms and separate code paths rather than
 one merged authorization step, and it is why a passing global or function
 permission must never be allowed to satisfy a scope.
@@ -24,7 +24,7 @@ Satisfaction itself is hierarchical, computed by `satisfyingGrants`: a grant
 matches when it is the scope itself, a plain ancestor (`admin` covers
 `admin:invoices:create`), a wildcard at or above it (`admin:*`, or the bare `*`),
 or a wildcard directly beneath it. Narrower never satisfies broader —
-`admin:invoices` does not grant `admin`. Core only ever *reads*
+`admin:invoices` does not grant `admin`. Core only ever _reads_
 `session.scopes`; whoever builds the session populates it (better-auth's
 `mapSession` resolving through a `ScopeService`, for instance), and the runner
 never fetches. `hasScopes` is the non-throwing counterpart of `verifyScopes`, for

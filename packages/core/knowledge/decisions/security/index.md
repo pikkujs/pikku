@@ -9,6 +9,7 @@ description: Who may do what in core — gates, defaults, and the failures they 
 A rule about who may do what, and which way it fails when it is unsure.
 
 <!-- pikku:knowledge-index -->
+
 - [A dropped audit write is always logged](a-dropped-audit-write-is-always-logged.md) — The no-op audit service falls back to the singleton logger when the wire carries none, so an unconfigured audit call is never silent
 - [A function never receives the secret service](a-function-never-receives-the-secret-service.md) — Every function-, permission- and auth-facing services type is bounded by SecretlessServices, so reaching for `secrets` in a function body is a type error rather than a lint
 - [A graph run starts at an entry node the graph declared](a-graph-run-starts-at-an-entry-node-the-graph-declared.md) — startNode may only name a node in meta.entryNodeIds, and no generated route offers it, because otherwise a caller picks which half of the graph to skip
@@ -60,4 +61,5 @@ A rule about who may do what, and which way it fails when it is unsure.
 - [A queued workflow step rehydrates its session from the persisted run wire](workflow-queued-steps-rehydrate-their-session-from-the-run-wire.md) — The queue job payload is just `{ runId }`, so without threading `pikkuUserId` an authed step sees no session and throws
 - [Scenario sessions are isolated per actor and reset between scenarios](workflow-scenario-sessions-are-isolated-per-actor-and-per-scenario.md) — One jar per actor keeps two personas from sharing a session; a browser reset keeps one scenario from leaving the next signed in as somebody else
 - [A scenario step is never registered as a callable RPC and never dispatched on the queue](workflow-scenario-steps-are-never-network-invocable.md) — A step drives a browser and holds an actor's session, so exposing it as an RPC would put that reach on the network
+
 <!-- /pikku:knowledge-index -->

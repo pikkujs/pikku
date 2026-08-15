@@ -56,10 +56,9 @@ describe('testIdSelector', () => {
 describe('locateTestId', () => {
   test('resolves visible matches by default', () => {
     const scope = fakeScope()
-    const target = locateTestId(
-      scope as unknown as Page,
-      { testId: 'entity-card' }
-    ) as unknown as FakeLocator
+    const target = locateTestId(scope as unknown as Page, {
+      testId: 'entity-card',
+    }) as unknown as FakeLocator
     assert.equal(target.selector, '[data-testid="entity-card"]:visible')
   })
 
@@ -111,8 +110,6 @@ describe('locateTestId', () => {
     })
     // The scope is filtered before the target is looked up inside it, so the
     // action resolves within the one row rather than every row.
-    assert.deepEqual(scopes[0]?.filters, [
-      { hasText: 'shopper@actors.local' },
-    ])
+    assert.deepEqual(scopes[0]?.filters, [{ hasText: 'shopper@actors.local' }])
   })
 })

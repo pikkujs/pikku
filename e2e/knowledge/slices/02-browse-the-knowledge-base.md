@@ -33,13 +33,13 @@ flowchart LR
 
 What the document view draws, and where each part comes from:
 
-| On the page | Comes from        | Rendered as                        |
-| ----------- | ----------------- | ---------------------------------- |
-| Title       | `title:`          | The document heading               |
-| Kind        | `type:`           | An icon and a badge                |
-| Resources   | `resource:`       | Chips linking into the console     |
-| Links       | markdown links    | A move to the note, within the page |
-| Findings    | `pikku knowledge validate` | A line per problem, on the note |
+| On the page | Comes from                 | Rendered as                         |
+| ----------- | -------------------------- | ----------------------------------- |
+| Title       | `title:`                   | The document heading                |
+| Kind        | `type:`                    | An icon and a badge                 |
+| Resources   | `resource:`                | Chips linking into the console      |
+| Links       | markdown links             | A move to the note, within the page |
+| Findings    | `pikku knowledge validate` | A line per problem, on the note     |
 
 ```gherkin
 Scenario: An operator finds a note and reads it

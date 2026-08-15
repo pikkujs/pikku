@@ -14,7 +14,11 @@ export const HttpPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.http_title()} description={m.http_description()} />
+        header={
+          <ListPageHeader
+            title={m.http_title()}
+            description={m.http_description()}
+          />
         }
         hidePanel={!loading && routes.length === 0}
         emptyPanelMessage={m.http_select_route()}

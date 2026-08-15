@@ -74,8 +74,7 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
           const existing =
             await ctx.context.internalAdapter.findUserByEmail(email)
           let user: ActorUser | undefined = existing?.user as
-            | ActorUser
-            | undefined
+            ActorUser | undefined
           if (user && !user.actor) {
             // Real user row — the secret must never impersonate real users
             throw new APIError('UNAUTHORIZED', {

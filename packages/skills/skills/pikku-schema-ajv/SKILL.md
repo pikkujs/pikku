@@ -52,7 +52,7 @@ called `schema` in the source, which reads backwards.
 
 - **Registration is name-keyed and never re-compiles.** A second
   `compileSchema('X', …)` with a different schema is a no-op; the first one wins
-  for the process lifetime. `@pikku/schema-cfworker` *does* recompile on a
+  for the process lifetime. `@pikku/schema-cfworker` _does_ recompile on a
   changed value, so a dev hot-reload after codegen picks up a changed schema
   there but not here — restart the process instead.
 - **AJV is a module-level singleton**, shared by every `AjvSchemaService` you
@@ -62,7 +62,7 @@ called `schema` in the source, which reads backwards.
   become `1` — the wiring layer is what coerces, not this service.
 - `ajv-formats` is registered, so `format` keywords (`email`, `uuid`, `date-time`)
   are enforced.
-- A failed validation throws `UnprocessableContentError` (a 422). A *missing*
+- A failed validation throws `UnprocessableContentError` (a 422). A _missing_
   schema throws a bare string, `Missing validator for <name>` — not an `Error`,
   so `catch (e) { e.message }` reads `undefined`. That normally means codegen
   didn't run.

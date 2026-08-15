@@ -592,9 +592,7 @@ The run resets coverage before each scenario and snapshots after, writing **`<ou
   "generatedAt": "…",
   "environment": "local",
   "scenarios": {
-    "<name>": {
-      /* FunctionCoverageReport */
-    },
+    "<name>": {/* FunctionCoverageReport */},
   },
 }
 ```

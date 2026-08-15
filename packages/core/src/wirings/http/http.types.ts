@@ -43,13 +43,7 @@ export type RunHTTPWiringOptions = Partial<{
 }>
 
 export type HTTPMethod =
-  | 'post'
-  | 'get'
-  | 'delete'
-  | 'patch'
-  | 'head'
-  | 'put'
-  | 'options'
+  'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 
 export type HTTPHeadersSchema = StandardSchemaV1<
   Record<string, string | string[] | undefined>

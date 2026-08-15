@@ -24,8 +24,7 @@ export function setAssignments(
   parameters: Record<string, unknown>
 ): { field: string; value: unknown }[] {
   const container = parameters.assignments as
-    | { assignments?: unknown }
-    | undefined
+    { assignments?: unknown } | undefined
   if (container && Array.isArray(container.assignments)) {
     return container.assignments
       .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')

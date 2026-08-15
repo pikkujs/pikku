@@ -18,10 +18,7 @@ afterEach(() => {
 
 function writeSidecar(value: unknown): void {
   mkdirSync(join(root, 'db'), { recursive: true })
-  writeFileSync(
-    join(root, 'db', 'annotations.gen.json'),
-    JSON.stringify(value)
-  )
+  writeFileSync(join(root, 'db', 'annotations.gen.json'), JSON.stringify(value))
 }
 
 // ── loadAnnotations: db/annotations.gen.json sidecar ─────────────────────────
@@ -214,7 +211,9 @@ test('reading a schema-qualified map flat would lose every annotation', () => {
   // project silently falls back to the default level. A column authored
   // `secret` generating as `private` is exactly the failure that hides an
   // unencrypted credential.
-  writeSidecar({ app: { stage: { host_token_secret: { security: 'secret' } } } })
+  writeSidecar({
+    app: { stage: { host_token_secret: { security: 'secret' } } },
+  })
   const loaded = loadAnnotations(root)
   assert.equal(loaded['app'], undefined)
   assert.equal(loaded['stage']?.['host_token_secret']?.classification, 'secret')

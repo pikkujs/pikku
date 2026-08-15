@@ -73,14 +73,14 @@ Two consequences:
   older build fails the call it answered, rather than the command failing later
   somewhere that had no reason to expect a bad shape.
 - **What the server sends is also checked**, against the input schema — but
-  that is *not* a boundary. It catches version drift. A caller that meant harm
+  that is _not_ a boundary. It catches version drift. A caller that meant harm
   would send arguments that pass. The peer runs the code and must validate what
   it is handed.
 
 ## Approval: consent, not validation
 
-The capability map says what *can* run. Approval says whether a particular call
-*should*. Validation cannot substitute: a compromised server sends perfectly
+The capability map says what _can_ run. Approval says whether a particular call
+_should_. Validation cannot substitute: a compromised server sends perfectly
 valid arguments.
 
 ```ts
@@ -93,7 +93,7 @@ valid arguments.
 
 **A bare function is unclassified, and unclassified means approval is
 required.** The annotation nobody got round to writing is the one most likely
-to matter, so it fails closed. `needsApproval` is *required* on the object form
+to matter, so it fails closed. `needsApproval` is _required_ on the object form
 so that "unclassified" is unrepresentable there.
 
 This is the opposite default from `AIAgentToolDef`, where absence means "do not
@@ -128,12 +128,12 @@ the only thing between a remote caller and the machine.
 server** — what may run on this machine is this machine's decision, and a flag
 the server can see is one the server could act on.
 
-| mode | behaviour |
-| --- | --- |
-| interactive | `y` / `n` / `a` per call; `a` is remembered for that one capability, for that run, never on disk |
-| `--auto-approve` | runs the classified-safe set, refuses the rest without asking |
-| `--dangerously-auto-approve` | runs everything, says so once on stderr |
-| no TTY, no flag | refuses — CI is exactly where an unattended `git push` would otherwise happen |
+| mode                         | behaviour                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| interactive                  | `y` / `n` / `a` per call; `a` is remembered for that one capability, for that run, never on disk |
+| `--auto-approve`             | runs the classified-safe set, refuses the rest without asking                                    |
+| `--dangerously-auto-approve` | runs everything, says so once on stderr                                                          |
+| no TTY, no flag              | refuses — CI is exactly where an unattended `git push` would otherwise happen                    |
 
 Auto tiers are meaningful here in a way they would not be for an agent: the
 caller is a deterministic program whose source can be read, so "these calls are

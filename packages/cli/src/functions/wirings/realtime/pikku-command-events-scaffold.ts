@@ -20,7 +20,10 @@ export const pikkuEventsScaffold = pikkuSessionlessFunc<void, boolean>({
       })
       return false
     }
-    const authRequired = resolveScaffoldFeature('events', config.scaffold.events).auth
+    const authRequired = resolveScaffoldFeature(
+      'events',
+      config.scaffold.events
+    ).auth
     const pikkuTypesImportPath = getFileImportRelativePath(
       config.eventsChannelFile,
       config.typesDeclarationFile,

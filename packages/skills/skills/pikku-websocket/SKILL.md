@@ -94,8 +94,9 @@ wireChannel({
   name: 'todos',
   route: '/todos',
   onMessageWiring: {
-    action: {                                  // ← the field to route on
-      create: { func: createTodo },            // ← its possible values
+    action: {
+      // ← the field to route on
+      create: { func: createTodo }, // ← its possible values
       list: { func: listTodos, auth: false },
     },
   },
@@ -129,7 +130,7 @@ wireChannel({
   onMessageWiring: {
     action: {
       authenticate: { func: authenticate, auth: false }, // No session required
-      subscribe: { func: subscribeTodos },               // Session required
+      subscribe: { func: subscribeTodos }, // Session required
       create: { func: createTodo },
     },
   },

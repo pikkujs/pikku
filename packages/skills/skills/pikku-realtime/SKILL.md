@@ -97,19 +97,38 @@ a one-word change, not a different import:
 
 ```ts
 export class PikkuRealtime {
-  constructor(options?: { reconnect?: boolean; reconnectDelayMs?: number; reconnectMaxDelayMs?: number })
-  setPikkuFetch(fetch: PikkuFetch): void   // server URL + auth come from here, not the constructor
+  constructor(options?: {
+    reconnect?: boolean
+    reconnectDelayMs?: number
+    reconnectMaxDelayMs?: number
+  })
+  setPikkuFetch(fetch: PikkuFetch): void // server URL + auth come from here, not the constructor
 
   // WebSocket at /events — many topics on one connection
-  subscribe<K extends keyof EventHubTopics>(topic: K, handler: (data: EventHubTopics[K]) => void): () => void
-  unsubscribe<K extends keyof EventHubTopics>(topic: K, handler?: (data: EventHubTopics[K]) => void): void
+  subscribe<K extends keyof EventHubTopics>(
+    topic: K,
+    handler: (data: EventHubTopics[K]) => void
+  ): () => void
+  unsubscribe<K extends keyof EventHubTopics>(
+    topic: K,
+    handler?: (data: EventHubTopics[K]) => void
+  ): void
 
   // SSE at GET /events/:topic — one EventSource per topic
-  subscribeToTopic<K extends keyof EventHubTopics>(topic: K, handler: (data: EventHubTopics[K]) => void): { close: () => void }
+  subscribeToTopic<K extends keyof EventHubTopics>(
+    topic: K,
+    handler: (data: EventHubTopics[K]) => void
+  ): { close: () => void }
 
   // generic escape hatches — see references/other-routes.md
-  subscribeToSSE<T>(path: string, handler: (data: T) => void): { close: () => void }
-  connectToChannel(channelRoute: string, protocols?: string | string[]): WebSocket
+  subscribeToSSE<T>(
+    path: string,
+    handler: (data: T) => void
+  ): { close: () => void }
+  connectToChannel(
+    channelRoute: string,
+    protocols?: string | string[]
+  ): WebSocket
 
   close(): void
 }
@@ -144,7 +163,9 @@ export const createTodo = pikkuFunc({
   output: CreateTodoOutput,
   func: async ({ kysely, eventHub }, data) => {
     const todo = await kysely
-      .insertInto('todos').values(data).returningAll()
+      .insertInto('todos')
+      .values(data)
+      .returningAll()
       .executeTakeFirstOrThrow()
 
     await eventHub.publish('todo-created', null, {
@@ -160,7 +181,9 @@ A thin helper removes the duplication:
 
 ```ts
 async function publishEvent<K extends keyof EventHubTopics>(
-  hub: EventHubService<EventHubTopics>, topic: K, data: EventHubTopics[K]
+  hub: EventHubService<EventHubTopics>,
+  topic: K,
+  data: EventHubTopics[K]
 ) {
   return hub.publish(topic, null, { topic, data })
 }
@@ -187,7 +210,9 @@ const pikku = createPikku(
 // pikku.fetch / pikku.rpc / pikku.realtime — all share the same fetch.
 
 createRoot(document.getElementById('root')!).render(
-  <PikkuProvider pikku={pikku}><App /></PikkuProvider>
+  <PikkuProvider pikku={pikku}>
+    <App />
+  </PikkuProvider>
 )
 ```
 
@@ -214,7 +239,8 @@ function TodoList() {
   useEffect(() => {
     // WebSocket multi-topic:
     const off = realtime.subscribe('todo-created', ({ todo }) =>
-      setTodos((prev) => [...prev, todo]))
+      setTodos((prev) => [...prev, todo])
+    )
     return off
 
     // Single-topic SSE (auto-cleanup on close) instead:
@@ -223,7 +249,13 @@ function TodoList() {
     // return () => sub.close()
   }, [realtime])
 
-  return <ul>{todos.map((t) => <li key={t.id}>{t.title}</li>)}</ul>
+  return (
+    <ul>
+      {todos.map((t) => (
+        <li key={t.id}>{t.title}</li>
+      ))}
+    </ul>
+  )
 }
 ```
 
@@ -235,12 +267,12 @@ sockets (`subscribeToSSE`, `connectToChannel`). See
 
 ## When to pick which transport
 
-| Need                                       | Use                           |
-| ------------------------------------------ | ----------------------------- |
-| Many topics in one connection              | `realtime.subscribe`          |
-| Single live stream, simple cleanup         | `realtime.subscribeToTopic`   |
-| Bidirectional (client also sends messages) | `realtime.subscribe`          |
-| WebSockets blocked by infra                | `realtime.subscribeToTopic`   |
+| Need                                       | Use                         |
+| ------------------------------------------ | --------------------------- |
+| Many topics in one connection              | `realtime.subscribe`        |
+| Single live stream, simple cleanup         | `realtime.subscribeToTopic` |
+| Bidirectional (client also sends messages) | `realtime.subscribe`        |
+| WebSockets blocked by infra                | `realtime.subscribeToTopic` |
 
 Both auto-clean on the server (the eventHub's `onChannelClosed` hook unsubscribes
 all topics for the dead channel id). Don't write manual cleanup unless you're

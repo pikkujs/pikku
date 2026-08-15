@@ -29,7 +29,7 @@ Use the `pikku info` CLI commands to inspect this Pikku project. Run the command
 
 There are exactly four subcommands — `functions`, `tags`, `middleware`,
 `permissions`. Routes, channels, schedulers and queues are not separate
-subcommands; they show up as the *transport* column of `info functions --verbose`.
+subcommands; they show up as the _transport_ column of `info functions --verbose`.
 
 ## Available Commands
 

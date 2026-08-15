@@ -24,7 +24,8 @@ export const delegateModeParentAnswersDirectlyScenario = pikkuScenario<
   void,
   { delegated: false }
 >({
-  title: 'Delegate mode: the parent answers directly when nothing needs handing off',
+  title:
+    'Delegate mode: the parent answers directly when nothing needs handing off',
   description:
     'A request that needs no sub-agent is answered by the parent itself',
   tags: ['scenario', 'agent-modes', 'console', 'ai-live'],

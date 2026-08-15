@@ -56,7 +56,12 @@ async function createProject(
   await writeFile(
     join(tmpDir, 'tsconfig.json'),
     JSON.stringify({
-      compilerOptions: { target: 'ES2022', module: 'Node16', moduleResolution: 'Node16', strict: true },
+      compilerOptions: {
+        target: 'ES2022',
+        module: 'Node16',
+        moduleResolution: 'Node16',
+        strict: true,
+      },
       include: ['src'],
     })
   )
@@ -96,13 +101,29 @@ describe('DB audit command', () => {
     assert.equal(migrate.exitCode, 0, `migrate failed: ${migrate.stdout}`)
 
     const audit = runPikku(dir, ['db', 'audit'])
-    assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
+    assert.equal(
+      audit.exitCode,
+      0,
+      `audit failed: ${audit.stdout}\n${audit.stderr}`
+    )
 
     const combined = audit.stdout + audit.stderr
     assert.match(combined, /users/, 'output must mention the table name')
-    assert.match(combined, /public/, 'output must mention public classification')
-    assert.match(combined, /private/, 'output must mention private classification')
-    assert.match(combined, /secret/, 'output must mention secret classification')
+    assert.match(
+      combined,
+      /public/,
+      'output must mention public classification'
+    )
+    assert.match(
+      combined,
+      /private/,
+      'output must mention private classification'
+    )
+    assert.match(
+      combined,
+      /secret/,
+      'output must mention secret classification'
+    )
   })
 
   test('prints column counts in summary line', async (t) => {
@@ -125,13 +146,25 @@ describe('DB audit command', () => {
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate1 = runPikku(dir, ['db', 'migrate'])
-    assert.equal(migrate1.exitCode, 0, `migrate failed: ${migrate1.stdout}\n${migrate1.stderr}`)
+    assert.equal(
+      migrate1.exitCode,
+      0,
+      `migrate failed: ${migrate1.stdout}\n${migrate1.stderr}`
+    )
     const audit = runPikku(dir, ['db', 'audit'])
-    assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
+    assert.equal(
+      audit.exitCode,
+      0,
+      `audit failed: ${audit.stdout}\n${audit.stderr}`
+    )
 
     const combined = audit.stdout + audit.stderr
     // Summary line: "3 columns total — 1 public, 1 private, 1 secret"
-    assert.match(combined, /3 columns total/, 'should report total column count')
+    assert.match(
+      combined,
+      /3 columns total/,
+      'should report total column count'
+    )
     assert.match(combined, /1 public/, 'should report 1 public column')
     assert.match(combined, /1 private/, 'should report 1 private column')
     assert.match(combined, /1 secret/, 'should report 1 secret column')
@@ -155,9 +188,17 @@ describe('DB audit command', () => {
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate2 = runPikku(dir, ['db', 'migrate'])
-    assert.equal(migrate2.exitCode, 0, `migrate failed: ${migrate2.stdout}\n${migrate2.stderr}`)
+    assert.equal(
+      migrate2.exitCode,
+      0,
+      `migrate failed: ${migrate2.stdout}\n${migrate2.stderr}`
+    )
     const audit = runPikku(dir, ['db', 'audit'])
-    assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
+    assert.equal(
+      audit.exitCode,
+      0,
+      `audit failed: ${audit.stdout}\n${audit.stderr}`
+    )
 
     const combined = audit.stdout + audit.stderr
     assert.match(
@@ -165,7 +206,11 @@ describe('DB audit command', () => {
       /no anonymize strategy|will be NULL|NULLed/i,
       'should warn about columns with no strategy'
     )
-    assert.match(combined, /items\.name/, 'should name the table.column with no strategy')
+    assert.match(
+      combined,
+      /items\.name/,
+      'should name the table.column with no strategy'
+    )
   })
 
   test('does not warn when all private columns have explicit strategies', async (t) => {
@@ -188,9 +233,17 @@ describe('DB audit command', () => {
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate3 = runPikku(dir, ['db', 'migrate'])
-    assert.equal(migrate3.exitCode, 0, `migrate failed: ${migrate3.stdout}\n${migrate3.stderr}`)
+    assert.equal(
+      migrate3.exitCode,
+      0,
+      `migrate failed: ${migrate3.stdout}\n${migrate3.stderr}`
+    )
     const audit = runPikku(dir, ['db', 'audit'])
-    assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
+    assert.equal(
+      audit.exitCode,
+      0,
+      `audit failed: ${audit.stdout}\n${audit.stderr}`
+    )
 
     const combined = audit.stdout + audit.stderr
     // The warning-bearing line includes "have no anonymize strategy"

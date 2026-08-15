@@ -9,7 +9,7 @@ tags: core, services
 
 `HttpPersona`, `createHttpPersonas`, `readScenarioHttpResponse` and
 `postScenarioJson` are exported from `@pikku/core/persona`, not from
-`@pikku/core/services`. Their *types* are re-exported freely — TypeScript erases
+`@pikku/core/services`. Their _types_ are re-exported freely — TypeScript erases
 those and they cost a bundle nothing.
 
 The values are different. They reach `http-personas`, which reaches the

@@ -35,11 +35,15 @@ function runPikkuAll(
   dir: string,
   extraArgs: string[] = []
 ): { exitCode: number; output: string } {
-  const res = spawnSync('node', [PIKKU_BIN, 'all', '--security', ...extraArgs], {
-    cwd: dir,
-    timeout: 60_000,
-    encoding: 'utf8',
-  })
+  const res = spawnSync(
+    'node',
+    [PIKKU_BIN, 'all', '--security', ...extraArgs],
+    {
+      cwd: dir,
+      timeout: 60_000,
+      encoding: 'utf8',
+    }
+  )
   return {
     exitCode: res.status ?? 1,
     output: (res.stdout ?? '') + (res.stderr ?? ''),

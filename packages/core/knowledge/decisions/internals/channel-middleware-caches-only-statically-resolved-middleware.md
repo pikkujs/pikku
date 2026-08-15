@@ -19,7 +19,7 @@ user's stream and growing memory run over run. It is therefore appended fresh on
 every call, after the cached inherited slice.
 
 The `uid` matters as much as the cache split. `processMessageHandlers` in
-`channel-handler.ts` builds it from the channel name *plus* the routing property
+`channel-handler.ts` builds it from the channel name _plus_ the routing property
 and router value (`${name}:${routingProperty}:${routerValue}`, or
 `${name}:default`), because several message routes on one channel may point at
 the same function — a key based on the function alone would serve one route's

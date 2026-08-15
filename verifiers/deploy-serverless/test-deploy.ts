@@ -311,14 +311,20 @@ check('every unit has entry.ts', () => {
 function bundledModules(unitName: string): string[] {
   const metafilePath = join(getUnitPath(unitName), 'metafile.json')
   if (!existsSync(metafilePath))
-    throw new Error(`${unitName}: missing metafile.json (run with --debug-artifacts)`)
+    throw new Error(
+      `${unitName}: missing metafile.json (run with --debug-artifacts)`
+    )
   const meta = readJSON(metafilePath) as {
-    outputs?: Record<string, { inputs?: Record<string, { bytesInOutput?: number }> }>
+    outputs?: Record<
+      string,
+      { inputs?: Record<string, { bytesInOutput?: number }> }
+    >
   }
   const bundleKey = Object.keys(meta.outputs ?? {}).find(
     (k) => k.endsWith('bundle.js') && !k.endsWith('.map')
   )
-  if (!bundleKey) throw new Error(`${unitName}: no bundle.js output in metafile`)
+  if (!bundleKey)
+    throw new Error(`${unitName}: no bundle.js output in metafile`)
   const inputs = meta.outputs![bundleKey]!.inputs ?? {}
   return Object.entries(inputs)
     .filter(([, v]) => (v.bytesInOutput ?? 0) > 0)
@@ -363,17 +369,20 @@ check(`${LEAN_UNIT}: still carries the stateless session verifier`, () => {
     throw new Error('stateless session middleware missing from non-auth unit')
 })
 
-check(`${AUTH_UNIT}: bundles the full better-auth server (markers valid)`, () => {
-  // Anti-tautology: prove the server markers actually match real modules
-  // somewhere, so the LEAN_UNIT "zero server code" check can't pass trivially.
-  if (!unitDirs.includes(AUTH_UNIT))
-    throw new Error(`${AUTH_UNIT} unit not found`)
-  const hits = bundledModules(AUTH_UNIT).filter((m) =>
-    BETTER_AUTH_SERVER_RE.test(m)
-  )
-  if (hits.length === 0)
-    throw new Error('auth handler unexpectedly has no server modules')
-})
+check(
+  `${AUTH_UNIT}: bundles the full better-auth server (markers valid)`,
+  () => {
+    // Anti-tautology: prove the server markers actually match real modules
+    // somewhere, so the LEAN_UNIT "zero server code" check can't pass trivially.
+    if (!unitDirs.includes(AUTH_UNIT))
+      throw new Error(`${AUTH_UNIT} unit not found`)
+    const hits = bundledModules(AUTH_UNIT).filter((m) =>
+      BETTER_AUTH_SERVER_RE.test(m)
+    )
+    if (hits.length === 0)
+      throw new Error('auth handler unexpectedly has no server modules')
+  }
+)
 
 // --- Results ---
 console.log('='.repeat(60))

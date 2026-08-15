@@ -4,9 +4,15 @@ import { pikkuDevReloader } from '@pikku/core/dev'
 
 export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
   remote: true,
-  func: async ({ logger, config, invalidateInspectorState }, { hmr }, { rpc }) => {
+  func: async (
+    { logger, config, invalidateInspectorState },
+    { hmr },
+    { rpc }
+  ) => {
     const watchDirectories = [
-      ...new Set([config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)),
+      ...new Set(
+        [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
+      ),
     ] as string[]
 
     if (hmr) {
@@ -26,7 +32,9 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
     const generatorWatcher = () => {
       watcher.close()
 
-      logger.info(`• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`)
+      logger.info(
+        `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
+      )
       watcher = chokidar.watch(watchDirectories, {
         ignoreInitial: true,
         ignored: /.*\.gen\.ts/,

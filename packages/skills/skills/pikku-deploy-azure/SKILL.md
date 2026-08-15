@@ -59,10 +59,11 @@ import { createAzureHandler } from '@pikku/azure-functions'
 import { createConfig, createSingletonServices } from './services.js'
 import './.pikku/pikku-bootstrap.gen.js'
 
-const handlers = createAzureHandler(
-  { createConfig, createSingletonServices },
-  ['fetch', 'queue', 'scheduled']
-)
+const handlers = createAzureHandler({ createConfig, createSingletonServices }, [
+  'fetch',
+  'queue',
+  'scheduled',
+])
 
 app.http('api', {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],

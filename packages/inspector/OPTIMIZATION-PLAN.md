@@ -44,25 +44,25 @@ node --import tsx src/benchmark.ts <target-dir> <iterations>
 
 **Dispatch map for `visitRoutes`** (all handlers expect CallExpression + Identifier):
 
-| Identifier             | Handler               |
-| ---------------------- | --------------------- |
-| `wireHTTP`             | `addHTTPRoute`        |
-| `wireHTTPRoutes`       | `addHTTPRoutes`       |
-| `wireScheduler`        | `addSchedule`         |
-| `wireTrigger`          | `addTrigger`          |
-| `wireTriggerSource`    | `addTrigger`          |
-| `wireQueueWorker`      | `addQueueWorker`      |
-| `wireChannel`          | `addChannel`          |
-| `wireCLI`              | `addCLI`              |
-| `pikkuCLIRender`       | `addCLIRenderers`     |
-| `wireMCPResource`      | `addMCPResource`      |
-| `wireMCPTool`          | `addMCPTool`          |
-| `wireMCPPrompt`        | `addMCPPrompt`        |
-| `wireWorkflowGraph`    | `addWorkflowGraph`    |
-| `defineSecret`         | `addSecret`           |
-| `defineCredential`     | `addCredential`       |
-| `defineScope`          | `addScope`            |
-| `defineVariable`       | `addVariable`         |
+| Identifier          | Handler            |
+| ------------------- | ------------------ |
+| `wireHTTP`          | `addHTTPRoute`     |
+| `wireHTTPRoutes`    | `addHTTPRoutes`    |
+| `wireScheduler`     | `addSchedule`      |
+| `wireTrigger`       | `addTrigger`       |
+| `wireTriggerSource` | `addTrigger`       |
+| `wireQueueWorker`   | `addQueueWorker`   |
+| `wireChannel`       | `addChannel`       |
+| `wireCLI`           | `addCLI`           |
+| `pikkuCLIRender`    | `addCLIRenderers`  |
+| `wireMCPResource`   | `addMCPResource`   |
+| `wireMCPTool`       | `addMCPTool`       |
+| `wireMCPPrompt`     | `addMCPPrompt`     |
+| `wireWorkflowGraph` | `addWorkflowGraph` |
+| `defineSecret`      | `addSecret`        |
+| `defineCredential`  | `addCredential`    |
+| `defineScope`       | `addScope`         |
+| `defineVariable`    | `addVariable`      |
 
 `addAuth` stays outside the map: it matches several identifiers
 (`betterAuthStatelessSession`, `betterAuthSession`) and gates them on

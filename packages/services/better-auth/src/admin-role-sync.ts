@@ -18,8 +18,7 @@ const adminPluginDefaultRole = (
   auth: BetterAuthInstance
 ): string | undefined => {
   const plugins = (auth as any).options?.plugins as
-    | Array<{ id?: string }>
-    | undefined
+    Array<{ id?: string }> | undefined
   const plugin = plugins?.find((p) => p?.id === 'admin')
   if (!plugin) {
     return undefined

@@ -16,7 +16,7 @@ output at `unknown`, because one map has to hold every trigger in the app.
 
 Handing `CoreTriggerSource<TInput, TOutput>` to a slot typed
 `CoreTriggerSource<unknown, unknown>` is not an upcast. `func` takes its input
-as a *parameter*, and parameters are contravariant: a function that accepts
+as a _parameter_, and parameters are contravariant: a function that accepts
 `TInput` cannot stand in for one that accepts `unknown`, since `unknown` admits
 values `TInput` does not. TypeScript is right to reject it, and no variance
 annotation makes it go away — the registry genuinely holds functions whose input

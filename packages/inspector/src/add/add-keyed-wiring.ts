@@ -49,14 +49,11 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
 
       const nameValue = getPropertyValue(obj, 'name') as string | null
       const displayNameValue = getPropertyValue(obj, 'displayName') as
-        | string
-        | null
+        string | null
       const descriptionValue = getPropertyValue(obj, 'description') as
-        | string
-        | null
+        string | null
       const rotationPeriodValue = getPropertyValue(obj, 'rotationPeriod') as
-        | string
-        | null
+        string | null
       const docsUrlValue = getPropertyValue(obj, 'docsUrl') as string | null
       const allowedHostsValue = getArrayPropertyValue(obj, 'allowedHosts')
       const idValue = getPropertyValue(obj, config.idField) as string | null

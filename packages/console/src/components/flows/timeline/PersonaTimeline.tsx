@@ -1,5 +1,12 @@
 import React, { useMemo } from 'react'
-import { Box, ScrollArea, Center, Stack, Text, ThemeIcon } from '@pikku/mantine/core'
+import {
+  Box,
+  ScrollArea,
+  Center,
+  Stack,
+  Text,
+  ThemeIcon,
+} from '@pikku/mantine/core'
 import { Route } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'

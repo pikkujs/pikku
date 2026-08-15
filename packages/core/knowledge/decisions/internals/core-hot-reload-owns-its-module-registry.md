@@ -23,7 +23,7 @@ edits, and eventually OOMs a long editing session. `dev/module-runner.test.ts`
 asserts both the single-slot guarantee and bounded heap growth.
 
 Two details keep the mechanism honest. `import`s inside the user file are
-delegated to `createRequire`, whose resolution matches the native loader *and*
+delegated to `createRequire`, whose resolution matches the native loader _and_
 returns the same live singletons (Node and Bun share the require/import cache) —
 that is what lets a reloaded file's top-level `wireHTTP` side effects mutate the
 services the running server is already using. And esbuild is invoked with no
@@ -37,6 +37,6 @@ code.
 import(url + '?t=' + Date.now())` or any fresh-URL variant, and turning
 sourcemaps back on for nicer stack traces (`filename` already anchors traces to
 the user file). It also rules out swapping `createRequire` for a fresh `import()`
-inside the compiled module — resolution would produce a *distinct* copy of every
+inside the compiled module — resolution would produce a _distinct_ copy of every
 dependency, and the reloaded file would then wire itself into services nobody is
 serving from.

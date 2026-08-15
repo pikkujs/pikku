@@ -11,11 +11,10 @@ tags: core, virtual-user
 platform and addon steps, from what a virtual user may call.
 
 For scenario bodies the argument is only efficiency: they are held out of every
-deployed unit and are not network-callable, so offering one wastes a turn on a
-404.
+deployed unit and are not network-callable, so offering one wastes a turn on a 404.
 
 For a platform or addon step the argument is the oracle itself. A virtual user's
-findings are worth something *because* it cannot manufacture the outcomes it is
+findings are worth something _because_ it cannot manufacture the outcomes it is
 meant to discover. A user that could invoke "Stripe's webhook arrives" forges its
 own payment success, and every finding downstream of that forgery is worthless —
 not merely unreliable, but actively misleading, because it looks like evidence.

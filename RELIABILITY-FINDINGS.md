@@ -15,14 +15,14 @@ recommendation but deliberately not applied, for reasons given below.
 
 ## What was built
 
-| File | Purpose |
-|---|---|
-| `e2e/packages/functions/src/functions/chaos-ledger.ts` | File-backed side-effect ledger (survives a crash, unlike a module-level map) |
+| File                                                      | Purpose                                                                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `e2e/packages/functions/src/functions/chaos-ledger.ts`    | File-backed side-effect ledger (survives a crash, unlike a module-level map)                |
 | `e2e/packages/functions/src/functions/chaos.functions.ts` | `chaosStep` / `chaosCompensate` / `chaosReadLedger` — delay and failure injected from input |
-| `.../workflows/chaos-order-saga.workflow.ts` | Order fulfilment saga: retries + `onError` compensation |
-| `.../workflows/chaos-onboarding.workflow.ts` | `sleep` + `suspend` + `approval` + branch + compensation |
-| `.../workflows/chaos-fanout.workflow.ts` | Concurrent shards with a poisoned sibling |
-| `.../workflows/chaos-restart.workflow.ts` | Three phases separated by timers, shaped to be killed |
+| `.../workflows/chaos-order-saga.workflow.ts`              | Order fulfilment saga: retries + `onError` compensation                                     |
+| `.../workflows/chaos-onboarding.workflow.ts`              | `sleep` + `suspend` + `approval` + branch + compensation                                    |
+| `.../workflows/chaos-fanout.workflow.ts`                  | Concurrent shards with a poisoned sibling                                                   |
+| `.../workflows/chaos-restart.workflow.ts`                 | Three phases separated by timers, shaped to be killed                                       |
 
 Failure is injectable two ways on purpose. `failAttemptsBelow` reads the durable
 `attemptCount`, so a replay reaches the same verdict — deterministic flakiness.
@@ -32,11 +32,11 @@ succeed for a reason the workflow did not already know.
 
 ## Scenario results (after fixes)
 
-| Suite | Result |
-|---|---|
-| Saga: happy path, flaky-then-recovers, fatal-then-compensates | **9/9** |
-| Combinations: fan-out ×2, approval approved/rejected, explicit suspend | **13/13** |
-| Crash + restart | **4/9** — see finding 6 |
+| Suite                                                                  | Result                  |
+| ---------------------------------------------------------------------- | ----------------------- |
+| Saga: happy path, flaky-then-recovers, fatal-then-compensates          | **9/9**                 |
+| Combinations: fan-out ×2, approval approved/rejected, explicit suspend | **13/13**               |
+| Crash + restart                                                        | **4/9** — see finding 6 |
 
 Confirmed working: retries with a stable `invocationId` across attempts;
 compensation firing exactly once rather than per attempt; healthy siblings of a
@@ -54,7 +54,7 @@ grant and compensating.
 The requested module '@pikku/core' does not provide an export named 'createSecretValue'
 ```
 
-The CLI bootstraps itself with a *published* CLI in a throwaway npm tree,
+The CLI bootstraps itself with a _published_ CLI in a throwaway npm tree,
 pinning `@pikku/cli`, `@pikku/inspector`, `@pikku/better-auth` and
 `@pikku/core` — but not `@pikku/kysely`, which arrives transitively at a
 floating `^0.13.7`. `@pikku/kysely@0.13.10` imports `createSecretValue` at
@@ -80,7 +80,7 @@ surfaces only on the first call, in production:
 MissingSchemaError: Schema 'ChaosInput' not found. Ensure schema generation has been run.
 ```
 
-Cause: `generateCustomTypes` builds a virtual TS file that *imports* each named
+Cause: `generateCustomTypes` builds a virtual TS file that _imports_ each named
 contract type for `ts-json-schema-generator`. An import of a non-exported type
 resolves to nothing, so no schema is produced, and nothing checks afterwards.
 
@@ -108,7 +108,7 @@ This detonates on the most ordinary thing a DSL workflow does:
 
 ```ts
 await workflow.do('Charge payment', 'chargeRPC', {
-  retries: data.maybeRetries,   // undefined whenever the caller omits it
+  retries: data.maybeRetries, // undefined whenever the caller omits it
 })
 ```
 
@@ -116,7 +116,7 @@ await workflow.do('Charge payment', 'chargeRPC', {
 `validateSchema`. Recursive, copies nothing unless an `undefined` is found, and
 deliberately not a JSON round-trip — `coerceTopLevelDataFromSchema` puts real
 `Date` instances on the data first and stringifying would flatten them. An
-explicitly-undefined *required* field now reports as the missing property it is.
+explicitly-undefined _required_ field now reports as the missing property it is.
 
 ## 4. Async workflows containing `sleep` never finished — FIXED (most severe)
 
@@ -153,7 +153,7 @@ odd one out.
 **Fix:** invoke the RPC with its data via `rpcService.getContextRPCService`,
 matching the other schedulers. Regression test added and verified to fail
 against the old implementation. The pre-existing test only asserted that
-scheduling *returned an id* — never that the RPC ran, which is how this
+scheduling _returned an id_ — never that the RPC ran, which is how this
 survived.
 
 ## 5. e2e stored workflow runs in memory — FIXED
@@ -210,8 +210,8 @@ in-memory scheduler — which is what `pikku serve` uses by default.
 
 A step's `onError` handler is invoked with `{ error: { message } }` and nothing
 else — not the failed step's input. The DSL type comment calls this
-"compensation", but a compensation cannot release *which* inventory reservation
-or refund *which* payment when it is not told which order failed. A handler that
+"compensation", but a compensation cannot release _which_ inventory reservation
+or refund _which_ payment when it is not told which order failed. A handler that
 declares a required identifying field fails validation instead:
 
 ```
@@ -226,7 +226,7 @@ graph paths in `graph-runner.ts`).
 **Why not applied:** it would be a breaking change, not an additive one.
 Generated schemas set `additionalProperties: false` — 154 of them in the e2e
 project alone — so an existing handler typed `{ error: {...} }` would start
-*failing validation* the moment an extra `input` property arrived. It needs
+_failing validation_ the moment an extra `input` property arrived. It needs
 either an opt-in step option or a deliberate major-version change. Worked around
 in the harness by making `key` optional and falling back to the run id.
 
@@ -249,8 +249,8 @@ It is the only one of the 17 scaffolded routes affected, and the difference is
 what its handler is:
 
 ```ts
-func: ref('console:streamWorkflowRun')   // dropped — addon-namespaced ref
-func: workflowStatusStream               // fine  — local symbol
+func: ref('console:streamWorkflowRun') // dropped — addon-namespaced ref
+func: workflowStatusStream // fine  — local symbol
 ```
 
 An addon ref can only be resolved into HTTP meta if the addon's generated meta
@@ -288,7 +288,7 @@ collision in step bookkeeping.
 ## Smaller observations
 
 - `e2e/package.json` declares `"start": "tsx bin/start.ts"` and `"main":
-  "bin/start.ts"`, but `bin/` contains only `backend-harness.ts`. The working
+"bin/start.ts"`, but `bin/` contains only `backend-harness.ts`. The working
   path is `pikku serve`.
 - Without `SCENARIO_ACTOR_SECRET`, `seedScenarioActors` logs a skip and returns,
   then `seedScopes` throws `no user for admin@actors.local` from `afterStart`

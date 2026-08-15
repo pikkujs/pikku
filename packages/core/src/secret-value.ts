@@ -70,12 +70,7 @@ export const isSecretValue = (value: unknown): value is SecretValue<unknown> =>
 type IsAny<T> = 0 extends 1 & T ? true : false
 
 type Passthrough =
-  | Function
-  | Date
-  | RegExp
-  | Error
-  | ArrayBuffer
-  | ArrayBufferView
+  Function | Date | RegExp | Error | ArrayBuffer | ArrayBufferView
 
 /**
  * Rejects a `SecretValue` anywhere in `T`, however deeply nested, by collapsing

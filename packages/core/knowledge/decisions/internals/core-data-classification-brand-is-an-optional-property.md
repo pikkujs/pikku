@@ -16,7 +16,7 @@ A required property would make a plain value unassignable to a branded column: a
 `string` could no longer be passed where `Private<string>` is expected, which
 breaks every ordinary Kysely query operand — `where('email', '=', someString)`,
 inserts, and `.set(...)`. Making it optional keeps the brand structurally present
-so static analysis still sees it, while letting plain values flow *in*. The
+so static analysis still sees it, while letting plain values flow _in_. The
 asymmetry is the point: the brand constrains what comes out of a query, not what
 goes into one.
 

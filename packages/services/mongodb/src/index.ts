@@ -10,8 +10,5 @@ export { MongoDBAgentRunService } from './mongodb-agent-run-service.js'
 export { MongoDBSecretService } from './mongodb-secret-service.js'
 
 export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
-export type {
-  AgentRunService,
-  AgentRunRow,
-} from '@pikku/core/ecosystem/agent'
+export type { AgentRunService, AgentRunRow } from '@pikku/core/ecosystem/agent'
 export { MongoDBSessionStore } from './mongodb-session-store.js'

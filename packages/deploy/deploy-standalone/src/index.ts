@@ -16,9 +16,7 @@ import {
 } from './adapter.js'
 
 export { StandaloneProviderAdapter }
-export type {
-  StandaloneProviderAdapterOptions,
-} from './adapter.js'
+export type { StandaloneProviderAdapterOptions } from './adapter.js'
 
 export const createAdapter = (options?: StandaloneProviderAdapterOptions) =>
   new StandaloneProviderAdapter(options)

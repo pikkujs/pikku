@@ -1,10 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getAuthSession } from '@pikku/better-auth'
 import { auth } from '../../auth.js'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../services.js'
+import { createConfig, createSingletonServices } from '../../services.js'
 
 export const Route = createFileRoute('/api/me')({
   server: {

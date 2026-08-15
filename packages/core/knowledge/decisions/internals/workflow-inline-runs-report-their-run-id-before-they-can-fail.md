@@ -18,7 +18,7 @@ The failure path is equally deliberate. `WorkflowAsyncException`,
 `WorkflowCancelledException`, `WorkflowSuspendedException` and
 `WorkflowDispatchException` are all excluded from the "mark the run failed"
 branch: the first three already recorded their own status, and the fourth is
-transient. When a run does fail, an *expected* error (a `PikkuError`, e.g. a
+transient. When a run does fail, an _expected_ error (a `PikkuError`, e.g. a
 build gate tripping) logs only its message — the message is the whole story, and
 the `expected` flag survives the step-boundary rehydration that strips the
 class. Anything else is logged in full so the trace is there to debug.

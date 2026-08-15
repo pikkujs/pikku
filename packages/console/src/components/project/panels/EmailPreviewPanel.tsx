@@ -21,7 +21,12 @@ export const EmailPreviewPanel: React.FC<{
     return metadata?.defaultLocale || locales?.[0] || undefined
   }, [metadata])
 
-  const preview = useRenderEmailPreview(templateName, locale, {}, !!templateName)
+  const preview = useRenderEmailPreview(
+    templateName,
+    locale,
+    {},
+    !!templateName
+  )
 
   return (
     <Box>

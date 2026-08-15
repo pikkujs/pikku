@@ -18,7 +18,7 @@ followed by `httpRouter.reset()` because the router caches its match table.
 The wrapper functions and routes created here look like they are missing their
 metadata. They are not: the inspector projects a `wireGateway` call into the
 generated HTTP and function meta at build time, so only the handler
-*implementations* register at runtime — the same split every other wire uses.
+_implementations_ register at runtime — the same split every other wire uses.
 This is why `wireWebhookGateway` writes route entries but no `CommonWireMeta`,
 and why the websocket path sets `channels.set(name, …)` with empty
 `onConnect`/`onMessage` stubs while the real handlers live under the

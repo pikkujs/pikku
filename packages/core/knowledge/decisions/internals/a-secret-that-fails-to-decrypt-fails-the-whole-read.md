@@ -37,7 +37,7 @@ that turn that into a one-line fix, and they are known at the catch site and
 nowhere after it.
 
 This matters most at exactly the moment it is least convenient: a change to
-`deriveKEK` makes *every* previously stored secret undecryptable at once. Loud
+`deriveKEK` makes _every_ previously stored secret undecryptable at once. Loud
 failure names the first one; silence produces an empty map and a support ticket.
 
 **What this rules out:** a `getSecrets` that skips unreadable rows; returning

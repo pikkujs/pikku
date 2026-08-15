@@ -8,7 +8,7 @@ tags: core, actor-flow
 # The actor's instructions say the word "json"
 
 Every call the actor makes wants a schema'd object back. A gateway that cannot
-accept a JSON *schema* degrades to OpenAI's `json_object` response mode, and
+accept a JSON _schema_ degrades to OpenAI's `json_object` response mode, and
 that mode refuses the request outright — a hard API error, not a bad answer —
 unless the literal word "json" appears somewhere in the prompt.
 

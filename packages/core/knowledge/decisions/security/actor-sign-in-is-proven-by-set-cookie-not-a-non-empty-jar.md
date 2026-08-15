@@ -15,7 +15,7 @@ header even though the response was a 2xx.
 A cookie jar cannot answer "did sign-in happen". A target app may set a cookie on
 any request — a CSRF token, an anonymous session, a locale — so a non-empty jar
 after a failed or skipped sign-in looks exactly like a successful one. What
-actually proves a session was established is *this* response setting a cookie. A
+actually proves a session was established is _this_ response setting a cookie. A
 2xx alone is not enough either: an endpoint that returns 200 while quietly
 declining to issue a session would leave the actor running every subsequent
 request unauthenticated, and the scenario would report the resulting refusals as

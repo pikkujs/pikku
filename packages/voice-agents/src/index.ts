@@ -12,10 +12,7 @@ export { VoiceSession } from './voice-session.js'
 
 export { AudioPlaybackQueue } from './audio-playback-queue.js'
 
-export {
-  spokenApproval,
-  interpretConsent,
-} from './spoken-approval.js'
+export { spokenApproval, interpretConsent } from './spoken-approval.js'
 export type {
   Consent,
   PendingApproval,

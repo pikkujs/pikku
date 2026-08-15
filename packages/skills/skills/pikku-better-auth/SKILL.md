@@ -196,7 +196,7 @@ that is a configuration bug rather than a permissions decision. Pass your own
 The last five capabilities in the table are implemented by better-auth's own
 `admin()` endpoints, which authorize against `user.role` — a column pikku
 otherwise ignores. Rather than making you maintain two grant systems,
-`syncProjectedAdminRole` keeps that column as a *projection* of the scope set:
+`syncProjectedAdminRole` keeps that column as a _projection_ of the scope set:
 at the session boundary it writes `role = 'admin'` when the user holds any of
 `admin:users:{create,ban,remove,sessions,password}`, and the plugin's
 `defaultRole` otherwise. `projectedAdminRole(scopes, defaultRole)` computes the
@@ -311,7 +311,7 @@ The session cookie is `better-auth.session_token` (dev) / `__Secure-better-auth.
 
 Set `PIKKU_DEV_QUICK_LOGIN=true` and `${basePath}/dev/quick-login` signs in a
 fixed dev admin (`admin@pikku.dev`), creating the user idempotently and granting
-it the bare `admin` scope. It is guarded twice — the env var *and* a localhost
+it the bare `admin` scope. It is guarded twice — the env var _and_ a localhost
 hostname check — because a one-request path to an admin session is exactly the
 thing that must not survive a deploy. An app that has not declared the `admin`
 scope still gets a session, with a warning, since a scopeless dev user is useful.

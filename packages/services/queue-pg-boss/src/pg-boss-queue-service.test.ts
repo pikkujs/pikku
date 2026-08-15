@@ -60,8 +60,10 @@ describe('mapPikkuJobToPgBoss — retry mapping', () => {
 
 describe('mapPikkuJobToPgBoss — group mapping', () => {
   test('group id is forwarded so the worker can enforce a per-group limit', () => {
-    assert.deepEqual(mapPikkuJobToPgBoss({ group: { id: 'deployWorkflow' } })
-      .group, { id: 'deployWorkflow' })
+    assert.deepEqual(
+      mapPikkuJobToPgBoss({ group: { id: 'deployWorkflow' } }).group,
+      { id: 'deployWorkflow' }
+    )
   })
 
   test('tier is only set when provided', () => {
@@ -69,7 +71,10 @@ describe('mapPikkuJobToPgBoss — group mapping', () => {
       group: { id: 'deployWorkflow', tier: 'slow' },
     })
     assert.deepEqual(opts.group, { id: 'deployWorkflow', tier: 'slow' })
-    assert.equal('tier' in mapPikkuJobToPgBoss({ group: { id: 'a' } }).group!, false)
+    assert.equal(
+      'tier' in mapPikkuJobToPgBoss({ group: { id: 'a' } }).group!,
+      false
+    )
   })
 
   test('no group → no group field', () => {

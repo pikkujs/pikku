@@ -110,7 +110,14 @@ async function main(): Promise<void> {
 
   const frontend = spawn(
     path.join(BIN_DIR, 'vite'),
-    ['dev', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'],
+    [
+      'dev',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      String(frontendPort),
+      '--strictPort',
+    ],
     {
       cwd: process.cwd(),
       stdio: 'pipe',
@@ -167,10 +174,7 @@ async function main(): Promise<void> {
   } finally {
     frontend.kill('SIGTERM')
     backend.kill('SIGTERM')
-    await Promise.all([
-      waitForExit(frontend),
-      waitForExit(backend),
-    ])
+    await Promise.all([waitForExit(frontend), waitForExit(backend)])
     rmSync(DB_FILE, { force: true })
   }
 }

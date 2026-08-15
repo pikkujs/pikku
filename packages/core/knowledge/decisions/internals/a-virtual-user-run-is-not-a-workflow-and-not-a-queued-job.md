@@ -18,9 +18,9 @@ Both of the alternatives are the obvious ones, and both are wrong for this.
 resumed at the step it died on, and that the same input reaches the same step.
 A virtual user is the opposite by construction — it is an LLM deciding what to
 try next, so no two attempts take the same steps, and there is no step to resume
-*to*. Recording a run as a workflow puts entries in the workflow store that can
+_to_. Recording a run as a workflow puts entries in the workflow store that can
 never be replayed, and gives every operator reading that store a row that lies
-about what it is. The seed makes a run *reproducible* — run it again and it
+about what it is. The seed makes a run _reproducible_ — run it again and it
 explores the same way — which is a different property from resumable, and one
 the record already carries.
 

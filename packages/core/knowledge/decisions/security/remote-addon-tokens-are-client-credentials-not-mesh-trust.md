@@ -23,7 +23,7 @@ logged or traced. Binding a `credentialId` without a wire that supports
 credentials throws rather than falling back to a shared secret.
 
 Resolution fails closed. `null` is returned only when no auth is bound at all,
-which is the addon declaring its remote surface public. Once auth *is* bound, a
+which is the addon declaring its remote surface public. Once auth _is_ bound, a
 resolved value of `null`, `undefined` or `''` raises `RemoteAddonAuthError` (401)
 instead of dispatching an unauthenticated request that the host might accept as
 anonymous.

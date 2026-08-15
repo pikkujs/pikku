@@ -78,8 +78,7 @@ const text = (status: number, body: string) =>
   })
 
 export type SignedContentVerification =
-  | { ok: true }
-  | { ok: false; status: number; body: string }
+  { ok: true } | { ok: false; status: number; body: string }
 
 /**
  * Verifies a signed content URL — the one function that decides whether a

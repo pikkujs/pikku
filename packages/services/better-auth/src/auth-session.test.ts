@@ -80,7 +80,11 @@ async function run(opts: {
 describe('betterAuthSession impersonation', () => {
   test('admin with no header runs as the admin', async () => {
     const { session } = await run({ caller: USERS.u_admin })
-    assert.deepEqual(session, { userId: 'u_admin', memberRoles: ['admin'], scopes: ['admin'] })
+    assert.deepEqual(session, {
+      userId: 'u_admin',
+      memberRoles: ['admin'],
+      scopes: ['admin'],
+    })
   })
 
   test('admin with the header runs as the target user', async () => {
@@ -88,7 +92,11 @@ describe('betterAuthSession impersonation', () => {
       caller: USERS.u_admin,
       impersonateHeader: 'u_guest',
     })
-    assert.deepEqual(session, { userId: 'u_guest', memberRoles: [], scopes: [] })
+    assert.deepEqual(session, {
+      userId: 'u_guest',
+      memberRoles: [],
+      scopes: [],
+    })
   })
 
   test('non-admin cannot escalate via a forged header', async () => {
@@ -96,7 +104,11 @@ describe('betterAuthSession impersonation', () => {
       caller: USERS.u_guest,
       impersonateHeader: 'u_admin',
     })
-    assert.deepEqual(session, { userId: 'u_guest', memberRoles: [], scopes: [] })
+    assert.deepEqual(session, {
+      userId: 'u_guest',
+      memberRoles: [],
+      scopes: [],
+    })
   })
 
   test('an unknown target falls back to the real caller and warns', async () => {
@@ -104,7 +116,11 @@ describe('betterAuthSession impersonation', () => {
       caller: USERS.u_admin,
       impersonateHeader: 'does_not_exist',
     })
-    assert.deepEqual(session, { userId: 'u_admin', memberRoles: ['admin'], scopes: ['admin'] })
+    assert.deepEqual(session, {
+      userId: 'u_admin',
+      memberRoles: ['admin'],
+      scopes: ['admin'],
+    })
     assert.equal(warned, true)
   })
 
@@ -113,7 +129,11 @@ describe('betterAuthSession impersonation', () => {
       caller: USERS.u_admin,
       impersonateHeader: 'u_admin',
     })
-    assert.deepEqual(session, { userId: 'u_admin', memberRoles: ['admin'], scopes: ['admin'] })
+    assert.deepEqual(session, {
+      userId: 'u_admin',
+      memberRoles: ['admin'],
+      scopes: ['admin'],
+    })
   })
 
   test('the header is inert when impersonation is not configured', async () => {
@@ -122,7 +142,11 @@ describe('betterAuthSession impersonation', () => {
       impersonateHeader: 'u_guest',
       withImpersonation: false,
     })
-    assert.deepEqual(session, { userId: 'u_admin', memberRoles: ['admin'], scopes: ['admin'] })
+    assert.deepEqual(session, {
+      userId: 'u_admin',
+      memberRoles: ['admin'],
+      scopes: ['admin'],
+    })
   })
 
   test('a custom canImpersonate gate is honored', async () => {

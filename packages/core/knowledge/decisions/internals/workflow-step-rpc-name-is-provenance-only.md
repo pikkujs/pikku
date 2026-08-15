@@ -15,7 +15,7 @@ ran it.
 
 It earns its keep when the durable step name was built at runtime. A scenario
 step called in a loop reaches the run as, say, `sees @pikku/addon-todos` while
-it was declared as ``sees ${packageName}``; the recorded step-function name is
+it was declared as `sees ${packageName}`; the recorded step-function name is
 then the only way to join that row back to its declaration. `inlineStep` also
 records the `data` the step was called with for the same reason: a reporter
 renders each step's prose from it, so two calls to one step stay
@@ -23,7 +23,7 @@ distinguishable by what they were asked to check.
 
 Step lineage is recorded alongside it. `fromStepName` is the predecessor that
 scheduled a step — the walked transition — captured by `rpcStep`/`inlineStep`
-*before* `nextStepKey` advances the lineage, and surfaced to a step as
+_before_ `nextStepKey` advances the lineage, and surfaced to a step as
 `fromInvocationId`. In a cyclic graph `a → b → a → c`, the second `a` therefore
 carries `b`'s id, which is what lets the walked path be reconstructed from the
 chain alone.

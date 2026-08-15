@@ -6,7 +6,5 @@
     "declaration": false,
     "declarationMap": false
   },
-  "files": [
-    "src/pikku-az-functions-logger.type.test.ts"
-  ]
+  "files": ["src/pikku-az-functions-logger.type.test.ts"]
 }

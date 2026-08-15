@@ -1,9 +1,5 @@
 export type FlowTimelineKind =
-  | 'rpc'
-  | 'eventual'
-  | 'parallel'
-  | 'fanout'
-  | 'other'
+  'rpc' | 'eventual' | 'parallel' | 'fanout' | 'other'
 
 export interface FlowTimelineNode {
   nodeId: string

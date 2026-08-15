@@ -27,10 +27,17 @@ function exportsOf(file, seen = new Set()) {
   const src = readFileSync(file, 'utf8')
   const out = new Set()
   if (/export\s+default/.test(src)) out.add('__default__')
-  for (const m of src.matchAll(/export\s+(?:declare\s+)?(?:abstract\s+)?(?:class|const|function|interface|type|enum)\s+(\w+)/g)) out.add(m[1])
+  for (const m of src.matchAll(
+    /export\s+(?:declare\s+)?(?:abstract\s+)?(?:class|const|function|interface|type|enum)\s+(\w+)/g
+  ))
+    out.add(m[1])
   for (const m of src.matchAll(/export\s+(?:type\s+)?\{([^}]+)\}/g))
     for (const s of m[1].split(',')) {
-      const t = s.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()
+      const t = s
+        .trim()
+        .replace(/^type\s+/, '')
+        .split(/\s+as\s+/)
+        .pop()
       if (t) out.add(t.trim())
     }
   for (const m of src.matchAll(/export\s+\*\s+from\s+'(\.[^']+)'/g)) {
@@ -50,33 +57,55 @@ function entryFor(spec) {
       if (!exp) return null
       const target = typeof exp === 'string' ? exp : (exp.import ?? exp.default)
       if (!target) return null
-      return join(dir, target.replace(/^\.\/dist\//, '').replace(/\.js$/, '.ts'))
+      return join(
+        dir,
+        target.replace(/^\.\/dist\//, '').replace(/\.js$/, '.ts')
+      )
     }
   }
   return null
 }
 
-let bad = 0, checked = 0
+let bad = 0,
+  checked = 0
 for (const [name, { dir }] of byName) {
   const rp = join(dir, 'README.md')
   if (!existsSync(rp)) continue
   const md = readFileSync(rp, 'utf8')
-  for (const m of md.matchAll(/import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+'(@pikku\/[^']+)'/g)) {
+  for (const m of md.matchAll(
+    /import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+'(@pikku\/[^']+)'/g
+  )) {
     const entry = entryFor(m[2])
-    if (!entry) { console.log(`✖ ${name}: README imports unresolvable '${m[2]}'`); bad++; continue }
+    if (!entry) {
+      console.log(`✖ ${name}: README imports unresolvable '${m[2]}'`)
+      bad++
+      continue
+    }
     if (!existsSync(entry)) continue
     const ex = exportsOf(entry)
     if (ex.size === 0) continue
-    for (const sym of m[1].split(',').map(s => s.trim().replace(/^type\s+/, '')).filter(Boolean)) {
+    for (const sym of m[1]
+      .split(',')
+      .map((s) => s.trim().replace(/^type\s+/, ''))
+      .filter(Boolean)) {
       checked++
-      if (!ex.has(sym)) { console.log(`✖ ${name}: '${sym}' not exported by ${m[2]}`); bad++ }
+      if (!ex.has(sym)) {
+        console.log(`✖ ${name}: '${sym}' not exported by ${m[2]}`)
+        bad++
+      }
     }
   }
   for (const m of md.matchAll(/import\s+(\w+)\s+from\s+'(@pikku\/[^']+)'/g)) {
-    const entry = entryFor(m[2]); if (!entry || !existsSync(entry)) continue
+    const entry = entryFor(m[2])
+    if (!entry || !existsSync(entry)) continue
     checked++
-    if (!exportsOf(entry).has('__default__')) { console.log(`✖ ${name}: default import from ${m[2]}, no default export`); bad++ }
+    if (!exportsOf(entry).has('__default__')) {
+      console.log(`✖ ${name}: default import from ${m[2]}, no default export`)
+      bad++
+    }
   }
 }
-console.log(bad === 0 ? `✓ ${checked} README imports resolve` : `\n${bad} broken`)
+console.log(
+  bad === 0 ? `✓ ${checked} README imports resolve` : `\n${bad} broken`
+)
 process.exit(bad ? 1 : 0)

@@ -33,7 +33,9 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
       {
         key: 'name',
         header: 'NAME',
-        render: (pair: TriggerPair) => <Text fw={500}>{asI18n(pair.name)}</Text>,
+        render: (pair: TriggerPair) => (
+          <Text fw={500}>{asI18n(pair.name)}</Text>
+        ),
       },
       {
         key: 'source',
@@ -52,7 +54,9 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
               }
             }}
           >
-            {asI18n(pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing')}
+            {asI18n(
+              pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing'
+            )}
           </PikkuBadge>
         ),
       },
@@ -74,7 +78,9 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
               }
             }}
           >
-            {asI18n(pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing')}
+            {asI18n(
+              pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing'
+            )}
           </PikkuBadge>
         ),
       },

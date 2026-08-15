@@ -16,10 +16,7 @@ import {
   TextInput,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import {
-  rememberInstallResult,
-  type AddonInstallResult,
-} from './installResult'
+import { rememberInstallResult, type AddonInstallResult } from './installResult'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

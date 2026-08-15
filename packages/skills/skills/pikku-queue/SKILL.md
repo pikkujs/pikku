@@ -63,7 +63,7 @@ Not every adapter supports every option. Each adapter declares a
 silently ignored — so check the startup logs if a setting appears to have no
 effect.
 
-`groupConcurrency` limits how many jobs run concurrently *per group* (jobs
+`groupConcurrency` limits how many jobs run concurrently _per group_ (jobs
 carrying a `JobGroup` with an `id` and optional `tier`), so one noisy tenant
 cannot consume the whole worker:
 

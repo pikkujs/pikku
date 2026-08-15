@@ -542,8 +542,7 @@ export async function buildToolDefs(
         (approvalPolicy === 'explicit' && fnMeta?.approvalRequired)
 
       let approvalDescriptionFn:
-        | ((input: unknown) => Promise<string>)
-        | undefined
+        ((input: unknown) => Promise<string>) | undefined
       if (needsApproval && pikkuFuncId) {
         const funcConfig = pikkuState(resolvedPkg, 'function', 'functions').get(
           pikkuFuncId

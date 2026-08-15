@@ -20,7 +20,10 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
       searchPlaceholder: m.credentials_search_credentials(),
       hidePanel: true,
       render: (searchQuery) => (
-        <CredentialsOverviewTab searchQuery={searchQuery} emptyHero={emptyHero} />
+        <CredentialsOverviewTab
+          searchQuery={searchQuery}
+          emptyHero={emptyHero}
+        />
       ),
     },
     {

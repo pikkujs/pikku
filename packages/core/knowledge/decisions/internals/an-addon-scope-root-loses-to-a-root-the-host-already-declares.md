@@ -24,7 +24,7 @@ permissions bug rather than a merge that dropped.
 This is a different rule from
 [scope roots may be co-declared by an addon and its host
 app](scope-roots-may-be-co-declared-by-an-addon-and-its-host-app.md): that one
-is about `flattenScopeDefinitions` deduping ids *within* a build where both
+is about `flattenScopeDefinitions` deduping ids _within_ a build where both
 declarations are present and identical. This one is about the addon's copy never
 arriving. The consequence for addon authors is the same either way — own a root
 outright, named for the package or vendor, and nest everything under it. It is

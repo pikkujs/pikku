@@ -77,10 +77,9 @@ describe('sleep with a duration that is not a literal', () => {
 
   test('a literal duration still round-trips as a value', async () => {
     const { graph, diags } = await run(
-      [
-        "  await workflow.sleep('Wait', '5s')",
-        '  return { sent: true }',
-      ].join('\n')
+      ["  await workflow.sleep('Wait', '5s')", '  return { sent: true }'].join(
+        '\n'
+      )
     )
 
     assert.deepEqual(diags, [])

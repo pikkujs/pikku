@@ -61,9 +61,7 @@ export const addFileWithFactory = (
           if (state && callExpression.arguments.length > 0) {
             const firstArg = callExpression.arguments[0]
             let functionNode:
-              | ts.ArrowFunction
-              | ts.FunctionExpression
-              | undefined
+              ts.ArrowFunction | ts.FunctionExpression | undefined
 
             if (ts.isArrowFunction(firstArg)) {
               functionNode = firstArg
@@ -179,9 +177,7 @@ export const addFileWithFactory = (
             node.initializer
           ) {
             let functionNode:
-              | ts.ArrowFunction
-              | ts.FunctionExpression
-              | undefined
+              ts.ArrowFunction | ts.FunctionExpression | undefined
             if (ts.isArrowFunction(node.initializer)) {
               functionNode = node.initializer
             } else if (ts.isFunctionExpression(node.initializer)) {
