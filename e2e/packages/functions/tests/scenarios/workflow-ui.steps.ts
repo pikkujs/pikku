@@ -6,7 +6,7 @@
  * version fetched "the latest run for this workflow", which quietly followed
  * whichever run a concurrently-running scenario had left behind.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 export const opensWorkflowRun = pikkuScenarioStep<
   { workflowName: string; runId?: string },

@@ -15,7 +15,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 export const captureScenario = pikkuScenario<void, { captures: number }>({
   title: 'A run captures screenshots of the console',

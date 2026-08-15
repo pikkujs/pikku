@@ -15,7 +15,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const RESOURCE_ID = 'agent-security'
 const PLAIN_TEXT_REPLY = 'The mock model replied with plain text.'

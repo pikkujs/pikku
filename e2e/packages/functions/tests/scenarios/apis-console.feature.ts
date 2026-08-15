@@ -16,7 +16,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const MCP_TAB = '/console/apis?tab=mcp'
 const GATEWAYS_TAB = '/console/apis?tab=gateways'

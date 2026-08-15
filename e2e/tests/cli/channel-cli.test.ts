@@ -14,7 +14,7 @@ import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
 import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
-import { personaConfigs } from '../../.pikku/workflow/pikku-personas.gen.js'
+import { personaConfigs } from '../../.pikku/scenarios/pikku-personas.gen.js'
 
 let server: Awaited<ReturnType<typeof startBackend>>
 let apiUrl: string

@@ -1,7 +1,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const ORIGINAL_DESCRIPTION =
   'A function used for e2e testing of the code editor'

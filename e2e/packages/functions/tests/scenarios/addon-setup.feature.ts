@@ -17,7 +17,7 @@ import {
   pikkuFeature,
   pikkuScenario,
   pikkuScenarioHook,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const FAKE_CRM_SETUP =
   '/console/addons?id=%40pikku%2Faddon-fake-crm&source=installed'

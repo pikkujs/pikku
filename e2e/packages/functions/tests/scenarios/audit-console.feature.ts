@@ -12,7 +12,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const AUDIT_PAGE = '/console/audit'
 const GET_AUDITS = 'console:getAudits'

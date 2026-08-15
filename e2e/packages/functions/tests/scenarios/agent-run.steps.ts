@@ -7,7 +7,7 @@
  * None of them throws on a non-2xx. A refusal is the expected outcome in twelve
  * of these scenarios, so status is data the assertion steps read.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { requireScenarioEnv } from '@pikku/core/scenario'
 import type { ScenarioHttpResponse } from '@pikku/core/scenario'
 import { randomUUID } from 'node:crypto'

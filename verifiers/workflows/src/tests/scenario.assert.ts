@@ -98,7 +98,7 @@ describe('pikkuScenario verification', () => {
   })
 
   test('codegen: definePersonas generates the typed registry, addresses and all', async () => {
-    const gen = await import('../../.pikku/workflow/pikku-personas.gen.js')
+    const gen = await import('../../.pikku/scenarios/pikku-personas.gen.js')
     assert.deepEqual(Object.keys(gen.personaConfigs).sort(), [
       'customer',
       'ops',

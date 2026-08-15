@@ -17,7 +17,7 @@
  * blind to anything the page sends by another route, and a negative assertion
  * that cannot see a request passes for the wrong reason.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import type { PikkuBrowserWire } from '@pikku/core/scenario'
 import { expect } from '@pikku/playwright'
 

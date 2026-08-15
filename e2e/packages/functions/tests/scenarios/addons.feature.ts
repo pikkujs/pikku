@@ -11,7 +11,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
   title: 'Installed addons are visible on the addons page',

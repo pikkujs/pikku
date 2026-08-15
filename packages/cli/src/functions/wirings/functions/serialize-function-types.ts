@@ -22,7 +22,8 @@ export const serializeFunctionTypes = (
     : 'string'
   const workflowImport =
     workflowTypesImport ||
-    `import type { TypedWorkflow, TypedScenario, TypedPersonas } from '../workflow/pikku-workflow-types.gen.js'`
+    `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'
+import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-types.gen.js'`
   // Falls back to `string` when a project has no scopes codegen, so that
   // `scopes` stays usable rather than resolving to an unbound type name.
   const scopesImport = scopesTypeImport || `type ScopeId = string`
@@ -782,6 +783,5 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
 }
 
 export { wireAddon, wireRemoteAddon } from '@pikku/core/ecosystem/rpc'
-export type { WireAddonConfig, WireRemoteAddonConfig, RemoteAddonAuth } from '@pikku/core/ecosystem/rpc'
 `
 }

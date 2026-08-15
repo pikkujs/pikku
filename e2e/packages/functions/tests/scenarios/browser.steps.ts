@@ -14,7 +14,7 @@
  *   Prefer a role, a testid or a stable attribute; take text only when the text
  *   is the subject of the assertion.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import type { TestIdSelector } from '@pikku/core/scenario'
 import { expect } from '@pikku/playwright'
 

@@ -17,7 +17,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const SCOPES_PAGE = '/console/scopes'
 const ROLES_READY = { testId: 'role-row' }

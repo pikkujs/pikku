@@ -19,7 +19,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { TARGET_USER } from '../../../../src/auth-fixtures.js'
 
 const BAN = 'pikkuAdminSetUserBanned'

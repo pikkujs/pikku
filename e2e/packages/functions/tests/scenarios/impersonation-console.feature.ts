@@ -15,7 +15,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 const USERS_PAGE = '/console/users'
 const IMPERSONATED = 'guest@e2e.test'

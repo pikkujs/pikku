@@ -3,6 +3,7 @@ import { ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
+import { serializeScenarioTypes } from './serialize-scenario-types.js'
 import { serializePersonas } from './serialize-personas.js'
 import { resolvePersonas } from '../../../utils/resolve-personas.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
@@ -19,7 +20,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { rm } from 'fs/promises'
 
 type WorkflowCommandInput = {
@@ -225,16 +226,6 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       config.scopesFile,
       packageMappings
     )
-    const scenarioStepMapImportPath = getFileImportRelativePath(
-      workflowTypesFile,
-      config.scenarioStepMapDeclarationFile,
-      packageMappings
-    )
-    const personasImportPath = getFileImportRelativePath(
-      workflowTypesFile,
-      config.personasWiringFile,
-      packageMappings
-    )
 
     await writeFileInDir(
       logger,
@@ -244,9 +235,37 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         rpcMapImportPath,
         workflowMapImportPath,
         agentMapImportPath,
-        scopesImportPath,
-        scenarioStepMapImportPath,
-        personasImportPath
+        scopesImportPath
+      )
+    )
+
+    // Scenarios get their own barrel: a scenario is a testing primitive, and
+    // mixing it into the workflow barrel meant every project that only ships
+    // workflows still imported the whole scenario surface.
+    await writeFileInDir(
+      logger,
+      config.scenarioTypesFile,
+      serializeScenarioTypes(
+        getFileImportRelativePath(
+          config.scenarioTypesFile,
+          functionTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          config.scenarioTypesFile,
+          workflowTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          config.scenarioTypesFile,
+          config.scenarioStepMapDeclarationFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          config.scenarioTypesFile,
+          config.personasWiringFile,
+          packageMappings
+        )
       )
     )
 
@@ -286,6 +305,12 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         config.personasWiringFile,
         serializePersonas(personas, agentMapImportPath, exposedRpcMapImportPath)
       )
+      // Same reason as the scenario meta above: a project generated before this
+      // moved to `scenarios/` still has a copy under `workflow/`, and tsc
+      // compiles every file in the output tree whether anything imports it.
+      await rm(join(dirname(workflowTypesFile), 'pikku-personas.gen.ts'), {
+        force: true,
+      })
       // Fixed path getPersonasMeta() reads; kept out of workflow/meta, which
       // getWorkflowMeta() globs as workflows.
       await writeFileInDir(

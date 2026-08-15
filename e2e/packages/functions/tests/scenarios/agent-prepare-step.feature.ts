@@ -6,7 +6,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 export const agentPrepareStepNarrowsToolsScenario = pikkuScenario<
   void,

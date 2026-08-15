@@ -9,7 +9,7 @@
 import {
   pikkuFeature,
   pikkuScenario,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
 export const authSignUpSucceedsScenario = pikkuScenario<void, { ok: true }>({
   title: 'User signs up successfully',

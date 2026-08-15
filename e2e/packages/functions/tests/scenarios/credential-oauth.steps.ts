@@ -10,7 +10,7 @@
  * not a workaround: it is also what proves the link is durable server-side
  * rather than living in one session.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { createAuthClient } from 'better-auth/client'
 import { createCookieJar, requireScenarioEnv } from '@pikku/core/scenario'
 

@@ -7,7 +7,7 @@
  * concatenated text, the finished-run usage and the two correlated tool call ids
  * — and the ordering helpers become module-local functions here.
  */
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 import { requireScenarioEnv } from '@pikku/core/scenario'
 import {
   AG_UI,
