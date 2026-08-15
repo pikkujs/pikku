@@ -3,7 +3,7 @@ import type {
   GatewayInboundMessage,
   GatewayOutboundMessage,
   WebhookVerificationResult,
-} from '@pikku/core/gateway'
+} from '#pikku/gateway'
 
 /**
  * Mock gateway adapter for testing all three transport types.

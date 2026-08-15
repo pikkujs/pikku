@@ -1,7 +1,7 @@
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
-import { wireGateway } from '@pikku/core/gateway'
+import { wireGateway } from '#pikku/gateway'
 import { fetch } from '@pikku/core'
 import { LocalGatewayService } from '@pikku/core/services'
 import { runLocalChannel } from '@pikku/core/channel/local'

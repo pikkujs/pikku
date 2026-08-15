@@ -111,6 +111,7 @@ export interface PikkuCLICoreOutputFiles {
   eventsSchemasFile?: string
 
   // Triggers
+  gatewaysTypesFile: string
   triggersTypesFile: string
   triggersWiringFile: string
   triggersWiringMetaFile: string

@@ -4,6 +4,7 @@
   "private": true,
   "imports": {
     "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/gateway": "./.pikku/gateway/pikku-gateway-types.gen.ts",
     "#pikku/*": "./.pikku/*"
   },
   "scripts": {
