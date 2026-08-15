@@ -134,6 +134,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('Bootstrap Trigger types', 'pikkuTriggerTypes', {
           bootstrap: true,
         }),
+        workflow.do('Bootstrap gateway types', 'pikkuGatewayTypes', {
+          bootstrap: true,
+        }),
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
         workflow.do('Bootstrap AI agent types', 'pikkuAgentTypes', null),
       ])
@@ -187,6 +190,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       typeGenerators.push(
         workflow.do('HTTP types', 'pikkuHTTPTypes', null),
         workflow.do('Channel types', 'pikkuChannelTypes', null),
+        workflow.do('Gateway types', 'pikkuGatewayTypes', {}),
         workflow.do('Scheduler types', 'pikkuSchedulerTypes', null),
         workflow.do('Queue types', 'pikkuQueueTypes', null),
         workflow.do('MCP types', 'pikkuMCPTypes', null)

@@ -241,6 +241,9 @@ const _getPikkuCLIConfig = async (
 
     // Gateways
     const gatewayDir = join(result.outDir, 'gateway')
+    if (!result.gatewaysTypesFile) {
+      result.gatewaysTypesFile = join(gatewayDir, 'pikku-gateway-types.gen.ts')
+    }
     if (!result.gatewaysWiringFile) {
       result.gatewaysWiringFile = join(
         gatewayDir,
