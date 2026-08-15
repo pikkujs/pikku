@@ -40,9 +40,15 @@ fi
 # is simply absent on a fresh checkout, and every test reaching it dies on
 # ERR_MODULE_NOT_FOUND. `pikku all` is pure codegen: no network, no database, no
 # server, a few seconds cold and skipped once the file is there.
+#
+# The CLI is invoked by path rather than through `npx`, because backend/ holds a
+# pikku.config.json but no package.json: npx picks its own working directory
+# from the nearest package root, so under CI's corepack shim it started the CLI
+# somewhere above backend/ and the run died on `Config file pikku.config.json
+# not found`. Running node directly keeps the cd we just did.
 if [ ! -f "src/pikku/pikku-fetch.gen.ts" ]; then
   echo "Generating the console client (src/pikku/*.gen.ts is generated and gitignored)"
-  (cd backend && npx pikku all)
+  (cd backend && node ../../cli/dist/bin/pikku.js all)
 fi
 
 # Define the pattern to match your test files
