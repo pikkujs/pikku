@@ -75,6 +75,16 @@ export { NavDock } from './components/nav-dock/NavDock'
 export type { NavDockProps } from './components/nav-dock/NavDock'
 export { ConsoleNavDock } from './components/nav-dock/ConsoleNavDock'
 export { DockFlyout } from './components/nav-dock/DockFlyout'
+// The dock's own preferences, so an embedding app can offer the menu that moves
+// it from ITS account tile — the console's lives inside `ConsoleNavDock`, which
+// such an app replaces wholesale. Without this the app's only way to reach them
+// is to restate the storage keys and hope they never change.
+export {
+  DOCK_SIDES,
+  isVerticalDock,
+  useDockPrefs,
+} from './components/nav-dock/useDockPrefs'
+export type { DockSide } from './components/nav-dock/useDockPrefs'
 export { isSep } from './components/nav-dock/model'
 export type {
   DockBadge,
