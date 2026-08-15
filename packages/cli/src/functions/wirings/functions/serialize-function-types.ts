@@ -794,7 +794,7 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
 }
 
 export { cors } from '@pikku/core/ecosystem/middleware'
-export { InvalidOriginError } from '@pikku/core/ecosystem/errors'
+export { InvalidOriginError } from '@pikku/core/errors'
 
 export { wireAddon, wireRemoteAddon } from '@pikku/core/ecosystem/rpc'
 `
