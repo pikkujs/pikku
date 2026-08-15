@@ -1,6 +1,6 @@
 {
   "name": "@pikku/azure-functions",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "description": "Azure Functions runtime for Pikku — HTTP, timer and storage-queue handlers",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.76"
+    "@pikku/core": "^0.12.84"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

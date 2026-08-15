@@ -12,8 +12,8 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.83",
-    "@pikku/fastify": "^0.12.6",
+    "@pikku/core": "^0.12.84",
+    "@pikku/fastify": "^0.12.7",
     "fastify": "^5.8.2",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",

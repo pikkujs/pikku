@@ -1,3 +1,17 @@
+## 0.12.7
+
+### Patch Changes
+
+- 6794681: Publish the ecosystem surface as per-area sub-barrels under `@pikku/core/ecosystem/*`, and point generated code, the CLI, the inspector and the runtime adapters at them.
+
+  348 names that only generated code, the toolchain or a runtime adapter ever imports now have a second home on `@pikku/core/ecosystem/<area>` — one sub-barrel per area, matching how core already publishes its entrypoints, so no single barrel grows without bound and a consumer only pulls in the area it uses.
+
+  This step is additive: every name is still exported from the entrypoint it was published from before, so nothing downstream breaks. Removing them from the app-facing barrels is a later change, and needs a release carrying `./ecosystem/*` first.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+  - @pikku/core@0.12.84
+
 ## 0.12.6
 
 ### Patch Changes

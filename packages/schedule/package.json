@@ -1,6 +1,6 @@
 {
   "name": "@pikku/schedule",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "description": "In-memory scheduler service for Pikku cron wirings",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -19,7 +19,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.80"
+    "@pikku/core": "^0.12.84"
   },
   "devDependencies": {
     "@types/node": "^24.11.0",

@@ -1,3 +1,47 @@
+## 0.12.9
+
+### Patch Changes
+
+- 6794681: Publish the ecosystem surface as per-area sub-barrels under `@pikku/core/ecosystem/*`, and point generated code, the CLI, the inspector and the runtime adapters at them.
+
+  348 names that only generated code, the toolchain or a runtime adapter ever imports now have a second home on `@pikku/core/ecosystem/<area>` — one sub-barrel per area, matching how core already publishes its entrypoints, so no single barrel grows without bound and a consumer only pulls in the area it uses.
+
+  This step is additive: every name is still exported from the entrypoint it was published from before, so nothing downstream breaks. Removing them from the app-facing barrels is a later change, and needs a release carrying `./ecosystem/*` first.
+
+- a7fcd2e: Declare dependencies that were imported but missing from `package.json`
+
+  `@pikku/openapi-parser` and `@pikku/better-auth` imported `zod`, `@pikku/next`
+  imported `path-to-regexp`, `@pikku/cli` imported `kysely`, and
+  `@pikku/assistant-ui` imported `rxjs`, none of which were declared. Each
+  resolved through Yarn hoisting inside the monorepo and would fail for anyone
+  installing the package on its own.
+
+  `rxjs`, `kysely` and `path-to-regexp` reach consumers through public
+  signatures — `Observable<BaseEvent>` is the return type of a published method,
+  and `createCoercionPlugin` returns a `KyselyPlugin` — so they are runtime
+  dependencies rather than build-only ones.
+
+  `@pikku/assistant-ui` pins `rxjs` to the exact `7.8.1` that `@ag-ui/client`
+  pins, rather than a caret range. The two packages exchange `Observable`s, so a
+  range that floats to a second copy gives them two incompatible `Observable`
+  types.
+
+  `@pikku/kysely` also drops `SqliteSerializePlugin`, an alias of
+  `SerializePlugin` that has been marked `@deprecated` in favour of it. Use
+  `SerializePlugin`.
+
+- a534a50: Bound two peer ranges that were declared as `*`, and add a check that keeps peer ranges across the monorepo mutually satisfiable.
+
+  `@pikku/addon-graph` declared `@pikku/core` as `*` and `@pikku/next` declared `react-dom` as `*`. A wildcard promises compatibility with majors that do not exist yet, and because it intersects every other range nothing ever flags it. They are now `^0.12.83` (the core version addon-graph is built against) and `^18 || ^19` (matching `@pikku/react`, `@pikku/mantine` and `@pikku/assistant-ui`).
+
+  `scripts/check-peer-dependency-consistency.mjs` runs in CI and in `yarn release`. It does not require every declaration of a peer to be the same string — a range is a constraint, and intersecting constraints is the package manager's job, so `^0.12.44` and `^0.12.83` coexisting is correct and pinning them into lockstep would invent floors nobody verified. It fails only when ranges have no version in common, or when a peer another package bounds is left unbounded.
+
+- Updated dependencies [7406bfe]
+- Updated dependencies [6794681]
+- Updated dependencies [a7fcd2e]
+  - @pikku/core@0.12.84
+  - @pikku/better-auth@0.12.25
+
 ## 0.12.8
 
 ### Patch Changes

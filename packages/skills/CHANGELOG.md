@@ -1,5 +1,79 @@
 # @pikku/skills
 
+## 0.12.10
+
+### Patch Changes
+
+- 7406bfe: Rename the agent runtime from `AI*` to `Agent*` (#596)
+
+  `AI` described the model provider, not the thing being named. Every symbol that
+  belongs to the agent runtime now says `Agent`; the symbols that genuinely wrap a
+  model provider — `AIEmbeddingService`, `AIProviderOptions`, `AIEmbedParams`,
+  `AITranscriptionParams`, `AIGenerateImageParams` and their siblings, and the
+  `@pikku/ai-vercel` / `@pikku/ai-deepinfra` / `@pikku/ai-voice` packages — keep
+  their names.
+
+  **Wiring**
+  - `pikkuAIAgent` → `pikkuAgent`, `pikkuAIScorer` → `pikkuAgentScorer`,
+    `pikkuAIJudge` → `pikkuAgentJudge`
+  - `CoreAIAgent` → `CoreAgent`, `AIAgentInput` → `AgentInput`, `AIAgentStep` →
+    `AgentStep`, `AIMessage` → `AgentMessage`, and the rest of the agent types
+  - `AIAgentRunnerService` → `AgentRunnerService`, `AIStorageService` →
+    `AgentStorageService`, `AIRunStateService` → `AgentRunStateService`
+
+  **Entry points**
+
+  `@pikku/core/agent` → `@pikku/core/agent`, `@pikku/core/agent-scorer` →
+  `@pikku/core/agent-scorer`.
+
+  **Queues**
+
+  The scorer queues are now `agent-score-fast` and `agent-score-slow`. Drain the
+  old `ai-score-fast` / `ai-score-slow` queues before deploying — jobs still
+  sitting on them when the new workers start will never be picked up.
+
+  **Scaffolds**
+
+  The agent scaffold pikku wrote for your project — `<scaffold>/agent/agent.gen.ts`
+  and its schemas file — imports `@pikku/core/ai-agent`, which no longer exists. A
+  scaffold is normally written once and then left alone, so `pikku all` would find
+  it present and leave the broken import in place. It now deletes an agent scaffold
+  importing either removed entry point and regenerates it in the same run. Anything
+  you added to that file goes with it, so move local edits out first.
+
+  **Database**
+
+  The agent tables are renamed: `ai_threads`, `ai_message`, `ai_tool_call`,
+  `ai_working_memory`, `ai_run` and `ai_run_score` become `agent_threads`,
+  `agent_message`, `agent_tool_call`, `agent_working_memory`, `agent_run` and
+  `agent_run_score`, along with their indexes and the `ai_working_memory_pk`
+  constraint. The same rename applies to the MongoDB collections.
+
+  `ensurePikkuSchema` creates tables it cannot find, so an existing database will
+  get empty `agent_*` tables and leave the old data stranded in `ai_*`. Rename
+  them before the first boot on the new version:
+
+  ```sql
+  ALTER TABLE ai_threads        RENAME TO agent_threads;
+  ALTER TABLE ai_message        RENAME TO agent_message;
+  ALTER TABLE ai_tool_call      RENAME TO agent_tool_call;
+  ALTER TABLE ai_working_memory RENAME TO agent_working_memory;
+  ALTER TABLE ai_run            RENAME TO agent_run;
+  ALTER TABLE ai_run_score      RENAME TO agent_run_score;
+  ```
+
+- e7e5319: Add `pikku semver`, which derives a release's semver from a diff against a deployed surface and writes `.pikku/changes.gen.json`
+
+  A function or client-facing wiring that disappeared is major, an addition is minor, and a surface that did not move is patch. Where the generated JSON Schemas are available the verdict goes below the id level: a removed field or a newly required input field is breaking, an added optional one is not — direction-aware, so an output field going optional counts even though the same change on an input does not. `versions.pikku.json` is consumed, so a `@v2` bump does not read as a removal while v1 is still published.
+
+  The baseline is `--against <path|url>`: another `.pikku` directory, a snapshot file, or a snapshot published by `pikku semver --emit`. `--fail-on <level>` turns the verdict into a CI gate.
+
+- 411f89a: Add `pikku update`: report which `@pikku/*` dependencies can move forward, and which peers those versions need.
+
+  Reporting only by default. `--update` writes the new ranges into every covered package.json — the project root plus every workspace it declares — and then runs an install with the package manager the project names (`--no-install` to skip). `--update-peers` additionally writes the ranges unsatisfied peers require; it is separate because a peer bump can cross a major of a third-party package.
+
+  Peers are read off the version the run lands on rather than the one installed, so an update that needs a companion bump says so before it is applied. Ranges that cannot be substituted into (`workspace:*`, `file:`, unions, x-ranges) are reported and left alone, and a package the registry could not answer for is reported as unresolved rather than current.
+
 ## 0.12.9
 
 ### Patch Changes

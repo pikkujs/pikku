@@ -1,6 +1,6 @@
 {
   "name": "@pikku/skills",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "The Pikku agent skills — the instruction set coding agents read to build, wire and deploy Pikku projects",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
