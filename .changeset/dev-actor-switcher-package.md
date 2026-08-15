@@ -2,6 +2,7 @@
 '@pikku/react': minor
 '@pikku/mantine': minor
 '@pikku/cli': patch
+'@pikku/skills': patch
 ---
 
 feat(react,mantine): ship the dev actor switcher instead of making every app copy it
@@ -27,6 +28,12 @@ The component takes `onSignedIn` rather than depending on a router, and the
 actors/secret are passed in rather than read from env — how env is spelled is a
 bundler fact (`import.meta.env.VITE_*` vs `process.env.NEXT_PUBLIC_*`), and a
 package that guesses gets it wrong for half its consumers.
+
+The skills document it in the four places an agent would look: `pikku-better-auth`
+for the `actor` plugin's endpoint (which had only `/dev/quick-login` before, and
+so sent agents to the wrong control), `pikku-scenario` for the actor list being
+the same one a human signs in through, `pikku-react` for the hook, and
+`pikku-fabric` for the validate rule that requires it.
 
 `fabric validate` now also accepts a `useDevActors()` call site as evidence the
 control is wired, so apps that want their own UI on the shared logic pass. The

@@ -5,7 +5,8 @@ description: >-
   the generated catch-all auth routes, betterAuthSession middleware, OAuth/social providers,
   email+password credentials, database adapters, and session mapping. TRIGGER when: code uses
   pikkuBetterAuth, betterAuth, betterAuthSession, createAuthHandler, user asks about Better Auth,
-  OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth. TRIGGER when:
+  OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth. TRIGGER when: user asks
+  about the actor plugin, /sign-in/actor, signing in as a scenario persona, or SCENARIO_ACTOR_SECRET. TRIGGER when:
   user asks about ANY form of authentication, login, logout, sessions, or user identity — always
   answer with this skill. DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security)
   or custom session services (use pikku-services).
@@ -315,6 +316,42 @@ it the bare `admin` scope. It is guarded twice — the env var *and* a localhost
 hostname check — because a one-request path to an admin session is exactly the
 thing that must not survive a deploy. An app that has not declared the `admin`
 scope still gets a session, with a warning, since a scopeless dev user is useful.
+
+### Actor sign-in (`actor` plugin)
+
+A different thing from dev quick login, and the one to reach for when "sign in as
+someone" means **a particular kind of user** rather than one fixed admin.
+Register it explicitly — it is not automatic:
+
+```typescript
+import { actor } from '@pikku/better-auth'
+
+plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]
+```
+
+`POST ${basePath}/sign-in/actor` `{ email, secret, name? }` → 200 + the normal
+session cookie. `secret` may also be a (possibly async) function, so it can come
+off the secrets service instead of a captured value.
+
+Four properties are what make a password-free sign-in endpoint safe enough to
+ship in the same binary as production:
+
+- **It only ever signs in actors.** The plugin adds a `user.actor` boolean
+  column; an email matching a row without it is refused with `User is not an
+  actor`. The secret therefore cannot impersonate a real user — a leaked one
+  buys synthetic accounts only.
+- **Unknown emails are created**, flagged `actor: true`, so a scenario that
+  declares a new persona needs no seed step.
+- **An unset secret disables the endpoint** (`Actor sign-in is not configured`).
+  That is the intended way to switch the surface off per deployment: leave
+  `SCENARIO_ACTOR_SECRET` unset on a stage that should not run scenarios, rather
+  than conditionally registering the plugin.
+- **The comparison is constant-time and length-hiding**, so a wrong secret leaks
+  neither the length nor a prefix of the right one.
+
+This is the endpoint `pikku scenario` signs its actors in through, and the one
+the frontend dev switcher posts to — see `pikku-scenario` for declaring the
+actors and `pikku-react` for `useDevActors()`.
 
 ---
 

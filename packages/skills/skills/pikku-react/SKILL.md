@@ -1,6 +1,6 @@
 ---
 name: pikku-react
-description: 'Set up @pikku/react in a React app: PikkuProvider context, createPikku factory, and the usePikkuRPC / usePikkuFetch hooks for direct (non-React-Query) calls. TRIGGER when: the user is bootstrapping a React frontend that talks to a Pikku backend, asks how to wire `PikkuProvider`, or needs to make one-off RPC calls outside of useQuery/useMutation. DO NOT TRIGGER when: the user is asking about useQuery/useMutation hooks (use pikku-react-query) or about workflows (use pikku-workflows-client).'
+description: 'Set up @pikku/react in a React app: PikkuProvider context, createPikku factory, and the usePikkuRPC / usePikkuFetch hooks for direct (non-React-Query) calls. TRIGGER when: the user is bootstrapping a React frontend that talks to a Pikku backend, asks how to wire `PikkuProvider`, or needs to make one-off RPC calls outside of useQuery/useMutation. TRIGGER when: user asks about the dev actor switcher, "sign in as" / quick-login UI, useDevActors, VITE_DEV_ACTORS, or the app-missing-actor-quick-login validate finding. DO NOT TRIGGER when: the user is asking about useQuery/useMutation hooks (use pikku-react-query) or about workflows (use pikku-workflows-client).'
 installGroups: [core]
 ---
 
@@ -227,6 +227,46 @@ pikku.fetch.setHeader('x-tenant', tenantId)
 
 `authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
 becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
+
+### Dev actor sign-in (`useDevActors`)
+
+The dev-only "Sign in as …" control: one click signs in as a declared scenario
+persona with no password, so the app can be reviewed as each kind of user.
+`pikku fabric validate` **requires** any frontend with a login screen to ship one
+(`app-missing-actor-quick-login-<app>`) — without it a reviewer is locked out of
+their own sandbox.
+
+```tsx
+import { useDevActors } from '@pikku/react'
+
+const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
+  // Gate both reads on the bundler's dev flag so the secret cannot reach a
+  // production bundle. The sandbox dev server bakes them from your personas.
+  actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
+  secret: import.meta.env.DEV
+    ? import.meta.env.VITE_SCENARIO_ACTOR_SECRET
+    : undefined,
+  apiUrl: apiUrl(),
+  onSignedIn: () => navigate({ to: '/' }),
+})
+```
+
+- **It is UI-free**, so render it however you like. For the default rendering use
+  `<DevActorSwitcher />` from `@pikku/mantine/dev` — a separate entry point from
+  `@pikku/mantine/core`, whose contract is "drop-in alias for `@mantine/core`"
+  and so must not export components Mantine has no counterpart for.
+- **`actors` is empty unless the host supplied both a list and a secret**, so a
+  production build renders nothing without you testing for it.
+- **It takes `onSignedIn` rather than a router**, and takes the env values rather
+  than reading them, because how env is spelled is a bundler fact
+  (`import.meta.env.VITE_*` vs `process.env.NEXT_PUBLIC_*`).
+- The underlying `signInAsActor()` and `parseDevActors()` are exported too, for a
+  non-React caller. The endpoint only accepts rows flagged `actor: true`, so it
+  can never impersonate a real user — see **pikku-better-auth**.
+
+Do not hand-write the `devActors()` / `signInAsActor()` pair per app; that
+copy-paste, including the `import.meta.env.DEV` gate, is exactly what this
+replaced.
 
 ## What NOT to do
 
