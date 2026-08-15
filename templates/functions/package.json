@@ -64,5 +64,8 @@
     "test:agent-sse": "npx tsx client/agent-sse.ts",
     "test:runtime": "npx tsx scripts/test-runtime.ts",
     "start:mcp:http": "npx tsx scripts/start-mcp-http.ts"
+  },
+  "imports": {
+    "#pikku/*": "./.pikku/*"
   }
 }

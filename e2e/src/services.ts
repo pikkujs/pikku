@@ -20,7 +20,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { KyselyScopeService } from '@pikku/kysely'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
-import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
+import { PikkuMetaService } from '#pikku/services/pikku-meta-service.gen.js'
 
 export const createSingletonServices = pikkuServices(
   async (config, { variables, secrets, metaService, emailService }) => {

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
@@ -58,7 +59,11 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     )
 
     const outDir = dirname(config.bootstrapFile)
-    const metaServiceFile = join(outDir, 'pikku-meta-service.gen.ts')
+    const metaServiceFile = join(
+      outDir,
+      'services',
+      'pikku-meta-service.gen.ts'
+    )
     const escapedOutDir = outDir.replace(/\\/g, '/').replace(/'/g, "\\'")
     const metaServiceContent = [
       `import { LocalMetaService } from '@pikku/core/services/local-meta'`,
@@ -71,6 +76,11 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       ``,
     ].join('\n')
     await writeFileInDir(logger, metaServiceFile, metaServiceContent)
+
+    // The meta service used to sit loose at the root of the output dir. A
+    // project generated before it moved under `services/` still has that file,
+    // and tsc compiles every file in the output tree.
+    await rm(join(outDir, 'pikku-meta-service.gen.ts'), { force: true })
 
     const allBootstrapImports = [
       ...localImports,
