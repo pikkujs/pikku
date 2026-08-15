@@ -16,7 +16,7 @@ import {
   requireScenarioEnv,
 } from '@pikku/core/scenario'
 import type {} from '@pikku/playwright'
-import { rmSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -36,6 +36,54 @@ export const resetsSecurityAudit = pikkuScenarioStep<void, { reset: true }>({
   default: async () => {
     rmSync(resolve(E2E_ROOT, '.pikku', 'audit.json'), { force: true })
     return { reset: true }
+  },
+})
+
+/**
+ * Asserts the artefact the console rendered its report from.
+ *
+ * The page assertions can only say a report is on screen; this says what is in
+ * it. It reads the same `.pikku/audit.json` the RPC serves, so a run that wrote
+ * a report the UI happens to render as an empty state still fails here.
+ */
+export const expectsAuditReport = pikkuScenarioStep<
+  { tool?: string; couldNotRun?: boolean },
+  { tool: string; totalIssues: number; note: string | null }
+>({
+  name: 'expectsAuditReport',
+  description: 'asserts the contents of the audit report on disk',
+  template: 'the report is from {tool}',
+  default: async (_services, expected) => {
+    const path = resolve(E2E_ROOT, '.pikku', 'audit.json')
+    if (!existsSync(path)) {
+      throw new Error(`the audit wrote no report to ${path}`)
+    }
+    const report = JSON.parse(readFileSync(path, 'utf-8'))
+
+    if (report.schemaVersion !== 1) {
+      throw new Error(`unexpected audit schema version ${report.schemaVersion}`)
+    }
+    if (expected.tool && report.tool !== expected.tool) {
+      throw new Error(
+        `expected the audit to run under ${expected.tool}, got ${report.tool}`
+      )
+    }
+    // An audit that could not run has to say so. Reporting zero advisories with
+    // no note would read as "you are clean" when nothing was ever checked.
+    if (expected.couldNotRun === true && !report.note) {
+      throw new Error(
+        'the audit reported no advisories and no note — a run that did not happen is being presented as a clean bill of health'
+      )
+    }
+    if (expected.couldNotRun === false && report.note) {
+      throw new Error(`the audit did not run: ${report.note}`)
+    }
+
+    return {
+      tool: report.tool,
+      totalIssues: report.summary.totalIssues,
+      note: report.note ?? null,
+    }
   },
 })
 
