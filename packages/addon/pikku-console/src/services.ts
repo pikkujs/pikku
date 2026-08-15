@@ -9,7 +9,7 @@ import { KnowledgeService } from './services/knowledge.service.js'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { join } from 'node:path'
-import { FileScenarioRunStore } from '@pikku/core/services'
+import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
 
 export const createSingletonServices = pikkuAddonServices(
   async (

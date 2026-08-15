@@ -5,22 +5,13 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-<<<<<<< HEAD
 **2673 observable things**: 843 exported names, plus
 1830 members on the classes and interfaces among them.
-=======
-**2665 observable things**: 841 exported names, plus
-1824 members on the classes and interfaces among them.
->>>>>>> cd9fc1042 (chore(core): regenerate the api report after the rebase)
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
 | stable | 48 | 818 | 1767 |
-<<<<<<< HEAD
 | ecosystem | 44 | 25 | 63 |
-=======
-| ecosystem | 40 | 23 | 57 |
->>>>>>> cd9fc1042 (chore(core): regenerate the api report after the rebase)
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -49,14 +40,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./trigger` | 8 | 3 | 7 |
 | `./ecosystem` | 13 | 8 | 0 |
 | `./cli/command-parser` | 3 | 1 | 6 |
-<<<<<<< HEAD
 | `./http` | 24 | 6 | 0 |
 | `./agent-scorer` | 18 | 5 | 0 |
-=======
-| `./agent-scorer` | 18 | 6 | 0 |
-| `./mcp` | 20 | 5 | 0 |
-| `./schema` | 6 | 5 | 0 |
->>>>>>> cd9fc1042 (chore(core): regenerate the api report after the rebase)
 | `./safe-fetch` | 6 | 4 | 0 |
 | `./ecosystem/channel/serverless` | 6 | 1 | 3 |
 | `./ecosystem/errors` | 47 | 1 | 3 |
@@ -8927,7 +8912,6 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
 } & Config
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   Record<string, PikkuPermission | PikkuPermission[]> | undefined
-<<<<<<< HEAD
 export type CorePikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
@@ -8981,8 +8965,6 @@ export type CreateConfig<
   RemainingArgs extends any[] = unknown[],
 > = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
 createSecretValue: <T>(value: T) => SecretValue<T>
-=======
->>>>>>> cd9fc1042 (chore(core): regenerate the api report after the rebase)
 formatVersionedId: (baseName: string, version: number) => string
 export interface FunctionServicesMeta {
   optimized: boolean
