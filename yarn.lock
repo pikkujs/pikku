@@ -5374,7 +5374,7 @@ __metadata:
   dependencies:
     cookie: "npm:^2.0.1"
     fastify: "npm:^5.12.0"
-    fastify-plugin: "npm:^5.1.0"
+    fastify-plugin: "npm:^6.0.0"
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@pikku/core": ^0.12.84
@@ -6051,7 +6051,7 @@ __metadata:
     "@pikku/schedule": "npm:^0.12.6"
     "@types/node": "npm:^24"
     fastify: "npm:^5.12.0"
-    fastify-plugin: "npm:^5.1.0"
+    fastify-plugin: "npm:^6.0.0"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.23.12"
     typescript: "npm:^6.0.3"
@@ -14102,10 +14102,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify-plugin@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "fastify-plugin@npm:5.1.0"
-  checksum: 10/4532fa1f980f1e76f0e0bf1514945fdd9eb1379108235be3db78e07e76761bdc4218c4cc978d382de77aa298c9b49b1723e60c4628e052402d1134af01aa384c
+"fastify-plugin@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "fastify-plugin@npm:6.0.0"
+  checksum: 10/ec41a929dbccc3af4fdaef1faee14aab824420bb11dc2daf06cfa1d6182d37c6d6da2add601f907d6ef27131901165ddb59d5e1d80a05ba70bf28d8e7ff3d60d
   languageName: node
   linkType: hard
 
