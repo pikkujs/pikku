@@ -75,7 +75,7 @@
   "devDependencies": {
     "@pikku/core": "^0.12.84",
     "@pikku/playwright": "^0.12.77",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.50.0",
     "@types/istanbul-lib-instrument": "^1.7.8",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.21.0",
