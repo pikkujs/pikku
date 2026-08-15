@@ -19,7 +19,7 @@
     "@pikku/core": "^0.12.84"
   },
   "dependencies": {
-    "@slack/web-api": "^7.19.0"
+    "@slack/web-api": "^8.0.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3"
