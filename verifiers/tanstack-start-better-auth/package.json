@@ -16,11 +16,11 @@
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/tanstack-start": "workspace:*",
     "@pikku/uws": "workspace:*",
-    "@tanstack/react-router": "^1.132.0",
-    "@tanstack/react-start": "^1.132.0",
-    "better-auth": "^1.6.19",
-    "better-sqlite3": "^12.10.0",
-    "kysely": "^0.29.0",
+    "@tanstack/react-router": "^1.170.29",
+    "@tanstack/react-start": "^1.168.46",
+    "better-auth": "^1.6.29",
+    "better-sqlite3": "^12.11.1",
+    "kysely": "^0.29.5",
     "react": "^19",
     "react-dom": "^19"
   },
@@ -31,9 +31,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vite": "^8.0.11"
+    "vite": "^8.2.1"
   },
   "scripts": {
     "pikku": "pikku",

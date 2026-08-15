@@ -18,7 +18,7 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "yaml": "^2.7.1",
+    "yaml": "^2.9.0",
     "zod": "^4"
   },
   "devDependencies": {

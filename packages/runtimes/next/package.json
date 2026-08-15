@@ -32,14 +32,14 @@
   "dependencies": {
     "cookie": "^1.1.1",
     "eventemitter3": "^5.0.4",
-    "path-to-regexp": "^8.3.0"
+    "path-to-regexp": "^8.4.2"
   },
   "devDependencies": {
     "@pikku/better-auth": "^0.12.25",
     "@pikku/core": "^0.12.84",
     "@types/react": "^19",
-    "better-auth": "^1.6.19",
-    "next": "15.5.12",
+    "better-auth": "^1.6.29",
+    "next": "15.5.23",
     "react": "^19",
     "react-dom": "^19",
     "typescript": "^6.0.3"

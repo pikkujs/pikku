@@ -13,19 +13,19 @@
     "test": "bash ../functions/run-tests.sh --agent"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.50",
-    "@ai-sdk/openai": "^3.0.37",
+    "@ai-sdk/anthropic": "^3.0.111",
+    "@ai-sdk/openai": "^3.0.97",
     "@pikku/ai-vercel": "^0.12.11",
     "@pikku/core": "^0.12.84",
     "@pikku/express": "^0.12.12",
     "@pikku/kysely-postgres": "^0.12.18",
     "@pikku/schema-cfworker": "^0.12.5",
-    "kysely": "^0.29.0",
+    "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
-    "postgres": "^3.4.8",
-    "tsx": "^4.21.0",
+    "postgres": "^3.4.9",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24"

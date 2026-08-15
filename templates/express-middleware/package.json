@@ -15,9 +15,9 @@
     "@pikku/cli": "^0.12.105",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
-    "@types/express-serve-static-core": "^5.1.1",
+    "@types/express-serve-static-core": "^5.1.3",
     "@types/node": "^24",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
   "scripts": {

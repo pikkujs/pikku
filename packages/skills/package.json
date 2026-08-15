@@ -26,9 +26,9 @@
     "skills"
   ],
   "devDependencies": {
-    "@types/node": "^24.11.0",
+    "@types/node": "^24.13.3",
     "typescript": "^6.0.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.9.0"
   },
   "engines": {
     "node": ">=24"
