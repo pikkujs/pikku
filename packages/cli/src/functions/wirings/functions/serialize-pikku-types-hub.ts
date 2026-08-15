@@ -7,7 +7,6 @@ export interface PikkuTypesHubPaths {
   queueTypesImportPath: string | null
   mcpTypesImportPath: string | null
   cliTypesImportPath: string | null
-  nodeTypesImportPath: string | null
   secretTypesImportPath: string | null
   credentialTypesImportPath: string | null
   variableTypesImportPath: string | null
@@ -32,7 +31,6 @@ export const serializePikkuTypesHub = (paths: PikkuTypesHubPaths) => {
     { comment: 'Queue wiring types', path: paths.queueTypesImportPath },
     { comment: 'MCP wiring types', path: paths.mcpTypesImportPath },
     { comment: 'CLI wiring types', path: paths.cliTypesImportPath },
-    { comment: 'Node wiring types', path: paths.nodeTypesImportPath },
     { comment: 'Secret definition types', path: paths.secretTypesImportPath },
     {
       comment: 'Credential definition types',

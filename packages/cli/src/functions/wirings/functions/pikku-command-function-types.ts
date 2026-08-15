@@ -78,7 +78,6 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
       queueTypesImportPath: getImportPath(queueTypesFile),
       mcpTypesImportPath: getImportPath(mcpTypesFile),
       cliTypesImportPath: getImportPath(cliTypesFile),
-      nodeTypesImportPath: getAlwaysImportPath(nodeTypesFile),
       secretTypesImportPath: getAlwaysImportPath(secretTypesFile),
       credentialTypesImportPath: getAlwaysImportPath(credentialTypesFile),
       variableTypesImportPath: getAlwaysImportPath(variableTypesFile),
