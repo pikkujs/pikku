@@ -107,9 +107,6 @@
     "@playwright/test": "1.58.2",
     "playwright-core": "1.58.2",
     "pikkufabric": "portal:/Users/yasser/git/pikku/fabric",
-    "@assistant-ui/core": "0.2.23",
-    "assistant-stream": "0.3.28",
-    "@assistant-ui/tap": "0.9.6",
     "zustand": "5.0.14"
   },
   "engines": {

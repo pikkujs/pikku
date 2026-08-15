@@ -17,7 +17,8 @@ import {
   ThreadPrimitive,
   MessagePrimitive,
   ComposerPrimitive,
-  useComposerRuntime,
+  useAui,
+  useAuiState,
   type ToolCallMessagePartComponent,
 } from '@assistant-ui/react'
 import {
@@ -754,13 +755,13 @@ const AssistantMessage: FunctionComponent = () => {
 }
 
 const ComposerPrefill: FunctionComponent<{ text?: string }> = ({ text }) => {
-  const composer = useComposerRuntime()
+  const aui = useAui()
   const filled = useRef(false)
   useEffect(() => {
     if (filled.current || !text) return
     filled.current = true
-    if (composer.getState().text === '') composer.setText(text)
-  }, [text, composer])
+    if (aui.composer.getState().text === '') aui.composer.setText(text)
+  }, [text, aui])
   return null
 }
 
@@ -1083,18 +1084,10 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
 }) => {
   const colors = useContext(ColorsContext)
   const voice = useContext(VoiceContext)
-  const composer = useComposerRuntime()
-  const [empty, setEmpty] = useState(true)
-
   // Which of the two buttons is the primary one follows what is in the box:
   // with something typed the send arrow is the obvious next action, and with
   // nothing typed it does nothing at all, so the microphone takes the slot.
-  useEffect(() => {
-    setEmpty(composer.getState().text.trim() === '')
-    return composer.subscribe(() =>
-      setEmpty(composer.getState().text.trim() === '')
-    )
-  }, [composer])
+  const empty = useAuiState((s) => s.composer.text.trim() === '')
 
   return (
     <div style={{ padding: '8px 0 16px' }}>

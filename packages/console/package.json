@@ -33,7 +33,7 @@
     "prepublishOnly": "echo 'Source-only package — no build needed'"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.14.24",
+    "@assistant-ui/react": "^0.15.14",
     "@codemirror/lang-html": "^6.4.12",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/language": "^6.12.4",
