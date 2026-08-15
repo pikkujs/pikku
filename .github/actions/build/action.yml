@@ -11,12 +11,22 @@ runs:
         # dist it only recompiles projects whose inputs changed. Key on all
         # package sources + tsconfigs + the lockfile so any change busts it, with
         # a prefix restore-key so unrelated changes still reuse the newest cache.
+        #
+        # node_modules is excluded because `packages/**/dist` otherwise also
+        # matches a dependency's own dist — e.g. packages/console/node_modules/
+        # tinyglobby/dist. Restore happens after `yarn install`, so once a run
+        # where Yarn nested that dependency is cached, every later run whose
+        # hoisting differs gets the directory re-created without its
+        # package.json, and Node resolves the shadowed folder instead of the
+        # hoisted package. The prefix is versioned so entries poisoned that way
+        # are never reached through restore-keys.
         path: |
           packages/**/tsconfig.tsbuildinfo
           packages/**/dist
-        key: ts-build-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'yarn.lock') }}
+          !packages/**/node_modules/**
+        key: ts-build-v2-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'yarn.lock') }}
         restore-keys: |
-          ts-build-
+          ts-build-v2-
     - name: Build packages
       shell: bash
       run: |
@@ -64,6 +74,8 @@ runs:
       uses: actions/upload-artifact@v7
       with:
         name: build-output
+        # Same node_modules exclusion as the cache above: these globs otherwise
+        # sweep up every dependency's own dist and .pikku alongside our own.
         path: |
           packages/**/dist/**
           packages/**/bin/**
@@ -71,5 +83,7 @@ runs:
           packages/cli/console-app/**
           templates/**/.pikku/**
           templates/**/dist/**
+          !packages/**/node_modules/**
+          !templates/**/node_modules/**
         include-hidden-files: true
         retention-days: 1
