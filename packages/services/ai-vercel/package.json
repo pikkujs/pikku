@@ -21,7 +21,7 @@
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.84",
-    "ai": "^6.0.0"
+    "ai": "^7.0.0"
   },
   "devDependencies": {
     "@ai-sdk/provider": "^4.0.7",

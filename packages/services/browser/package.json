@@ -20,7 +20,7 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "puppeteer-core": "22.13.1"
+    "puppeteer-core": "25.7.0"
   },
   "peerDependenciesMeta": {
     "puppeteer-core": {
