@@ -1,5 +1,6 @@
 export const serializeSecretDefinitionTypes = () => {
   return `export { defineSecret } from '@pikku/core/secret'
+export type { CoreSecret, SecretDefinitionMeta, SecretDefinitionsMeta } from '@pikku/core/secret'
 `
 }
 
