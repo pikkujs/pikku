@@ -45,9 +45,11 @@ Breaking for anyone calling these RPCs by name or granting their scopes:
   administering roles; a role that means to exclude those must spell out the
   leaves it wants.
 - `scaffold.console` gates the console addon on `pikku:console` rather than
-  `admin`, since `admin` is now the other addon's tree. Grant `pikku:console`
-  to whoever should reach the console — the two are separate decisions, and a
-  host may hand someone the console without handing them the user directory.
+  `admin`, since `admin` is now the other addon's tree, and `@pikku/console`'s
+  own `AuthGate` requires the same root (`isAdmin` on the auth context is now
+  `canUseConsole`). Grant `pikku:console` to whoever should reach the console —
+  the two are separate decisions, and a host may hand someone the console
+  without handing them the user directory.
 
 `credentialListUsers` now reports the credentials each user actually holds
 rather than a matrix against the declared set, which is what removed its last
