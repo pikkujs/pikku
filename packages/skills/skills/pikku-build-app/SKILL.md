@@ -39,7 +39,9 @@ project shaped so `pikku fabric init` later adopts it with zero rework.
 
 ## 0. Bootstrap, before anything else
 
-    bunx --bun pikku bootstrap
+```sh
+bunx --bun pikku bootstrap
+```
 
 One command, run once, now — not later when you start building. It wires the
 `#pikku` import alias the generated code depends on. On a fresh scaffold `.pikku/`
@@ -131,8 +133,10 @@ and none is discoverable from code:
 
 Then keep it honest — both must pass, and `validate` is a real gate:
 
-    bunx --bun pikku knowledge index
-    bunx --bun pikku knowledge validate
+```sh
+bunx --bun pikku knowledge index
+bunx --bun pikku knowledge validate
+```
 
 ---
 
@@ -316,8 +320,13 @@ or not the note says `built`.
 1. **Migration.** SQL in `db/sqlite/` at the project root, numbered on from the
    ones already there. Apply with `bunx --bun pikku db migrate`, which also
    regenerates the Kysely types your functions import.
-2. **Seed.** Demo rows in `db/sqlite-dev-seed.sql`, applied with
-   `bunx --bun pikku db seed`, `ON CONFLICT DO NOTHING` so it stays idempotent.
+2. **Seed.** Demo rows in `db/sqlite-dev-seed.sql`. **There is no seed command** —
+   `bunx --bun pikku db reset` is the only thing that applies the file, and it
+   wipes, migrates and seeds in one go (`--no-seed` stops after the migration,
+   for working on an empty state the test data would hide). Because reset always
+   arrives at a database it just wiped, **the seed file is plain `INSERT`s** — no
+   `ON CONFLICT DO NOTHING`, no `INSERT OR IGNORE`. Nothing ever applies it
+   twice, so it never has to defend itself.
    Do this generously and do it now: an empty app demos badly and critiques
    badly, and you cannot judge a screen's hierarchy, overflow, or truncation
    against zero rows. Seed rows each persona sees differently — with an ownership
@@ -378,7 +387,9 @@ Rules that are not optional:
 
 Then run it:
 
-    bun run prebuild && bun run dev
+```sh
+bun run prebuild && bun run dev
+```
 
 That starts the API on :3000 and every frontend in `pikkufabric.config.json`. A
 frontend running against a dead API looks exactly like an app bug, so if every
@@ -453,9 +464,11 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 
 Run them:
 
-    bunx --bun pikku scenario run local --spawn                       # server-side, the fast path
-    bunx --bun pikku scenario run local --spawn --run browser         # the same journeys, driven as a human
-    bunx --bun pikku scenario run local-admin --spawn --run browser   # the second app
+```sh
+bunx --bun pikku scenario run local --spawn                       # server-side, the fast path
+bunx --bun pikku scenario run local --spawn --run browser         # the same journeys, driven as a human
+bunx --bun pikku scenario run local-admin --spawn --run browser   # the second app
+```
 
 `--spawn` starts and stops the server for the run; drop it if `bun run dev` is
 already up. The browser pass needs the environment's `appUrl` and a browser
@@ -467,8 +480,10 @@ Green scenarios tell you the journeys you wrote still work. They say nothing
 about the code you never wrote a journey for, and that gap is invisible without
 measuring it:
 
-    bunx --bun pikku dev --coverage                        # server, instrumented
-    bunx --bun pikku scenario run local --coverage         # against that server
+```sh
+bunx --bun pikku dev --coverage                        # server, instrumented
+bunx --bun pikku scenario run local --coverage         # against that server
+```
 
 That writes `coverage/scenario-coverage.json` — which functions each journey
 exercised. **A function no scenario touches has never been run by anything but
@@ -553,7 +568,9 @@ llms.txt and use the real component.
 
 Then critique it. Free, and works across coding agents:
 
-    npx impeccable install     # needs Node 22.12+
+```sh
+npx impeccable install     # current releases need Node 22.18+
+```
 
 Impeccable scores a screen against interaction heuristics and names what is
 wrong: hierarchy, spacing, type registers, states you forgot. Run it on **every**

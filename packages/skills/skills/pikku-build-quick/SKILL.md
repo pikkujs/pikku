@@ -59,20 +59,41 @@ defaults are the point.
 kind of person, plus **a second one of the primary kind** — that is what makes
 "you see yours, not theirs" observable when you click around.
 
+**One kind of person** — no `defineSystemRole` at all. Ownership is the only
+rule, and it lives in each function's `permissions`, not in a role:
+
+```typescript
+import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+
+definePersonas({
+  visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
+  amina: { name: 'Amina', jobTitle: 'Gardener', account: {} },
+  bilal: { name: 'Bilal', jobTitle: 'Gardener', account: {} },
+})
+```
+
+**Several kinds** — one role each, and only for the kinds the user actually
+named:
+
 ```typescript
 import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
 import { defineSystemRole } from '#pikku'
 
 defineSystemRole({
   owner: { displayName: 'Owner', description: 'Sees only their own rows', scopes: [] },
+  tenant: { displayName: 'Tenant', description: 'Sees only their own tenancy', scopes: [] },
 })
 
 definePersonas({
   visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
   amina: { name: 'Amina', jobTitle: 'Owner', roles: ['owner'], account: {} },
   bilal: { name: 'Bilal', jobTitle: 'Owner', roles: ['owner'], account: {} },
+  chidi: { name: 'Chidi', jobTitle: 'Tenant', roles: ['tenant'], account: {} },
 })
 ```
+
+Two owners in both examples, deliberately: one owner cannot demonstrate that
+owners are separated from each other.
 
 - **Keep `visitor`.** The shipped scenarios name `actors.visitor`; removing it
   fails `pikku all` and nothing you write after that registers.
@@ -92,10 +113,12 @@ Then, in this order — it is the order codegen depends on:
 
 1. **Migration** — SQL in `db/sqlite/`, numbered on from what is there. Apply
    with `bunx --bun pikku db migrate`, which regenerates the Kysely types.
-2. **Seed** — rows in `db/sqlite-dev-seed.sql`, `ON CONFLICT DO NOTHING`, applied
-   with `bunx --bun pikku db seed`. **Be generous, and seed rows for both
-   personas.** An empty app demos badly, and you cannot see a layout break
-   against zero rows.
+2. **Seed** — rows in `db/sqlite-dev-seed.sql`. There is no seed command:
+   `bunx --bun pikku db reset` wipes, migrates and seeds in one go, and is the
+   only thing that applies the file. It always starts from a wiped database, so
+   the file is plain `INSERT`s — no `ON CONFLICT DO NOTHING`. **Be generous, and
+   seed rows for both personas.** An empty app demos badly, and you cannot see a
+   layout break against zero rows.
 3. **Functions** — one `pikkuFunc` per `*.function.ts`, `expose: true`. Pikku
    generates the typed RPC client and React Query hooks; you do NOT write HTTP
    routes. `wireHTTP` only for a real REST shape (a third-party webhook).
@@ -134,7 +157,9 @@ than they save:
 
 Then run it:
 
-    bun run prebuild && bun run dev
+```sh
+bun run prebuild && bun run dev
+```
 
 API on :3000, app on the port vite prints. A frontend against a dead API looks
 exactly like an app bug, so if every request fails, check both came up.
@@ -150,7 +175,7 @@ headlessly and assert on rendered text.
 phone — an overflowing table, a row of buttons wrapped into a pile, a modal
 taller than the viewport. It is the most likely width your demo gets opened at.
 
-If you have five spare minutes, `npx impeccable install` (Node 22.12+) scores
+If you have five spare minutes, `npx impeccable install` (Node 22.18+) scores
 each screen against interaction heuristics and names what is wrong. Feed it
 screenshots, not source. It will polish the default look; it will not give the
 app a look — that is `pikku-build-app` §8a.
@@ -186,7 +211,9 @@ export const ownerCreatesAndSeesItScenario = pikkuScenario<void, { id: string }>
 
 Keep the three shipped scenarios in `packages/functions/test/scenarios/` green.
 
-    bunx --bun pikku scenario run local --spawn
+```sh
+bunx --bun pikku scenario run local --spawn
+```
 
 ## 6. Hand it over honestly
 
