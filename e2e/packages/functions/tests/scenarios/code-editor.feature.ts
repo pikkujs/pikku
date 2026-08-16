@@ -1,7 +1,4 @@
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const ORIGINAL_DESCRIPTION =
   'A function used for e2e testing of the code editor'

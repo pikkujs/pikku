@@ -10,9 +10,8 @@
  * not a workaround: it is also what proves the link is durable server-side
  * rather than living in one session.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { createCookieJar, pikkuScenarioStep, requireScenarioEnv } from '#pikku/scenario'
 import { createAuthClient } from 'better-auth/client'
-import { createCookieJar, requireScenarioEnv } from '@pikku/core/scenario'
 
 export interface LinkUser {
   name: string

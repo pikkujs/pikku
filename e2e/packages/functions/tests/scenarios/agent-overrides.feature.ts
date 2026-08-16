@@ -4,10 +4,7 @@
  * request log, so they prove the override travelled all the way to the provider
  * rather than merely being accepted by the HTTP surface.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoReadAgent'
 const RESOURCE_ID = 'agent-overrides'

@@ -3,10 +3,7 @@
  * the model for a structured object and surfaces it as the run result
  * (`result.object ?? result.text`), rather than the plain assistant text.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const agentSchemasStructuredResultScenario = pikkuScenario<
   void,

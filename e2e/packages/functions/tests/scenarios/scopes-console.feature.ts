@@ -14,10 +14,7 @@
  * runner has no state reset between scenarios: the role created here is deleted
  * again, and the directly-granted scope revoked.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const SCOPES_PAGE = '/console/scopes'
 const ROLES_READY = { testId: 'role-row' }

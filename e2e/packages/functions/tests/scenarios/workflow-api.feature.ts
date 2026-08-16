@@ -5,10 +5,7 @@
  * A failed or cancelled run is an expected outcome here, not an error, so every
  * scenario reads the outcome off the run result rather than relying on a throw.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const SEQUENTIAL = 'dslSequentialWorkflow'
 

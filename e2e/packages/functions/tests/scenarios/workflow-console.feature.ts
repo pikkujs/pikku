@@ -7,10 +7,7 @@
  * runner is serial with no state reset and a shared run would make one
  * scenario's deletion another's flake.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const SEQUENTIAL = 'dslSequentialWorkflow'
 

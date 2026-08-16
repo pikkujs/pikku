@@ -3,10 +3,7 @@
  * step. Mutating the array narrows what the model is offered from that step on,
  * which is asserted against the scripted model's request log.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const agentPrepareStepNarrowsToolsScenario = pikkuScenario<
   void,

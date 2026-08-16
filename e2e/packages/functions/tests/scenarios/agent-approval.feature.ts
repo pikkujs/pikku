@@ -8,10 +8,7 @@
  * These deterministic protocol checks replace the browser-driven console
  * approval scenarios (todo list/deny/batch/delete-reason).
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoAgent'
 const RESOURCE_ID = 'agent-approval'

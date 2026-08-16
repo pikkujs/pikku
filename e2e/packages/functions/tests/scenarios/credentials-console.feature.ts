@@ -8,10 +8,7 @@
  * asserted twice on purpose, because a UI that renders the page and then fails
  * every request would pass the API-level check alone.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const CREDENTIALS_PAGE = '/console/credentials'
 

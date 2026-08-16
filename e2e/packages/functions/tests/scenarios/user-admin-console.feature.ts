@@ -18,10 +18,7 @@
  * never reaches the page to be observed. That separation is covered where it
  * is observable, over RPC, in `user-admin.feature.ts`.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const USERS_PAGE = '/console/users'
 const EMAIL = 'lifecycle@e2e.test'

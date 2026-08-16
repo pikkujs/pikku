@@ -8,8 +8,17 @@ export {
   addFeature,
   resolveFeatureScenarios,
 } from '../wirings/workflow/feature.js'
-export { PikkuScenarioService } from '../wirings/workflow/pikku-scenario-service.js'
+export {
+  PikkuScenarioService,
+  createScenarioRunner,
+} from '../wirings/workflow/pikku-scenario-service.js'
+export { createCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
+export { pollUntil } from '../wirings/workflow/scenario-poll.js'
 export { composeStepProse } from '../wirings/workflow/scenario-prose.js'
+export {
+  requireActor,
+  requireScenarioEnv,
+} from '../wirings/workflow/scenario-step-guards.js'
 export { SCENARIO_SURFACES } from '../wirings/workflow/scenario-step.types.js'
 export type {
   PikkuBrowserWire,
@@ -18,6 +27,7 @@ export type {
   ScenarioStepKind,
   ScenarioStepOptions,
   ScenarioStepPhase,
+  TestIdSelector,
 } from '../wirings/workflow/scenario-step.types.js'
 export type {
   CoreFeature,

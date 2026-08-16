@@ -12,10 +12,7 @@
  * the reason is where the chosen tool explains itself, so it is how routing is
  * observable at all from the console.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const ROUTER_AGENT = 'routerAgent'
 

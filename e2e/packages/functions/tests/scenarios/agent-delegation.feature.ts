@@ -9,10 +9,7 @@
  * is streamed. These protocol checks replace the browser-driven router/supervise
  * console scenarios.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const RESOURCE_ID = 'agent-delegation'
 const SCRIPT = 'delegate-then-text'

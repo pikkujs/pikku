@@ -12,10 +12,7 @@
  * which is the key the engine records step state under, so the canvas and the
  * run history are being read through the same identity.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const node = (id: string, status: string) => ({
   testId: 'workflow-node',

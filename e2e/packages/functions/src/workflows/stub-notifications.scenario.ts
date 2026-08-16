@@ -1,4 +1,4 @@
-import { pikkuScenario } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuScenario } from '#pikku/scenario'
 
 export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
   title: 'Notification stubs (scenario)',

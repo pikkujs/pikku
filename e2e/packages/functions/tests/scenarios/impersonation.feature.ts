@@ -8,10 +8,7 @@
  * `whoAmI` echoes the session the request actually ran under, which is what
  * makes the difference observable without a browser.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
 const SCOPE = 'admin:impersonate'

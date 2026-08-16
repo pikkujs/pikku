@@ -9,10 +9,7 @@
  * The mock provider these link against is started by the server's own
  * `afterStart` lifecycle, so no scenario has to arrange for it.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const PROVIDER = 'user-oauth'
 const SINGLETON = 'mock-oauth'

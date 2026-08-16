@@ -6,10 +6,7 @@
  * reset, so every scenario signs up its own user under a unique email — the
  * names are the gherkin's and stay distinct on purpose.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const authSignUpSucceedsScenario = pikkuScenario<void, { ok: true }>({
   title: 'User signs up successfully',

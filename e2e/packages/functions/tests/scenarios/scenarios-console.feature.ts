@@ -19,10 +19,7 @@
  *   Personas are still first-class, but they read inline as a scenario's cast
  *   rather than as a separate view.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const WORKFLOWS_PAGE = '/console/workflow'
 const SCENARIOS_PAGE = '/console/scenarios'

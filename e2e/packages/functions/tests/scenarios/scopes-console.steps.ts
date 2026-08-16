@@ -3,7 +3,7 @@
  * roles drawer is opened from the Users page, so reaching it is a page-specific
  * navigation rather than a click on the surface under test.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenario'
 import type {} from '@pikku/playwright'
 
 export const opensUserRolesDrawer = pikkuScenarioStep<

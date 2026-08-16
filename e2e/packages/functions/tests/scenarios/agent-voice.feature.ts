@@ -4,10 +4,7 @@
  * The scripted transcription model returns a fixed transcript, so a scenario can
  * assert the spoken words reached the model without controlling the audio bytes.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const RESOURCE_ID = 'agent-voice'
 

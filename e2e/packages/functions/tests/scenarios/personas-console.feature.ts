@@ -10,10 +10,7 @@
  * the page's own labels go through the `m` namespace and would break the moment
  * the console is translated.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const PERSONAS_PAGE = '/console/personas'
 

@@ -16,10 +16,7 @@
  * The uppercase replies are the project's own AI middleware, not a quirk of the
  * model, so they are safe to assert on exactly.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const TODO_AGENT = 'todoAgent'
 

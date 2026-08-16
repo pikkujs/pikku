@@ -14,9 +14,7 @@
  * The step target is a static literal and the RPC name it dispatches is
  * ordinary step data, which is what keeps it PKU678-clean.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
-import { requireActor } from '@pikku/core/scenario'
-import type { ScenarioHttpResponse } from '@pikku/core/scenario'
+import { pikkuScenarioStep, requireActor, type ScenarioHttpResponse } from '#pikku/scenario'
 import { describeValue } from './support.js'
 
 export const invokesRpcRaw = pikkuScenarioStep<

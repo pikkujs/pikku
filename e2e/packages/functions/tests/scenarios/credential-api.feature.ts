@@ -6,10 +6,7 @@
  * Every scenario opens by resetting the credentials — the runner is serial with
  * no state reset, and these scenarios reuse credential names on purpose.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const HMAC = 'hmac-key'
 const PROVIDER = 'user-oauth'

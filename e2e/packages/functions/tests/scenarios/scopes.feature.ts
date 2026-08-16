@@ -9,10 +9,7 @@
  * the umbrella `admin` scope to the `admin` actor — so the admin is the
  * authenticated-but-unscoped caller for the reports gate.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const REPORT = 'getReport'
 const SCOPE = 'reports:read'

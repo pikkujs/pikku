@@ -4,10 +4,7 @@
  * runs are persisted so the owner can read them back. These assertions are about
  * storage and replay — the merge/trim semantics are unit-tested separately.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoReadAgent'
 const RESOURCE_ID = 'agent-memory'

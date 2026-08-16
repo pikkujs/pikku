@@ -9,12 +9,7 @@
  * location rather than from a working directory that a remote run would not
  * share.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
-import {
-  pollUntil,
-  requireActor,
-  requireScenarioEnv,
-} from '@pikku/core/scenario'
+import { pikkuScenarioStep, pollUntil, requireActor, requireScenarioEnv } from '#pikku/scenario'
 import type {} from '@pikku/playwright'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'

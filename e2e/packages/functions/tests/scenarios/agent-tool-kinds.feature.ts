@@ -4,10 +4,7 @@
  * prepare time and offered to the model under its sanitised name (`:` becomes
  * `__`), and each carries an input schema.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const agentToolKindsAllOfferedScenario = pikkuScenario<
   void,

@@ -9,10 +9,7 @@
  * that matters here: an audit trail readable by anyone signed in would be worse
  * than none, because it reads as governed when it is not.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AUDIT_PAGE = '/console/audit'
 const GET_AUDITS = 'console:getAudits'

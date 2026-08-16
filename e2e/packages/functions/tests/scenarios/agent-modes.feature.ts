@@ -12,10 +12,7 @@
  * claim is that the parent genuinely summarised what the sub-agent returned —
  * a scripted reply would be the mock asserting against itself. Tagged `ai-live`.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const ROUTER_AGENT = 'routerAgent'
 const SUPERVISOR_AGENT = 'supervisorAgent'

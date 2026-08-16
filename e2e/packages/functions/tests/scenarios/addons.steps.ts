@@ -8,7 +8,7 @@
  * internals. The page itself is reached with the shared `opensConsolePage`
  * step, so everything here acts on a surface that page already rendered.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenario'
 import { expect } from '@pikku/playwright'
 
 export const searchesAddons = pikkuScenarioStep<

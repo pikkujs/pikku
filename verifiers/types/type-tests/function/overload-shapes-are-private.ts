@@ -71,17 +71,17 @@ import type { TriggerWiring } from '#pikku'
 // @ts-expect-error - PikkuWorkflowConfigWithSchema is an overload parameter, not API
 import type { PikkuWorkflowConfigWithSchema } from '#pikku/workflow/pikku-workflow-types.gen.js'
 // @ts-expect-error - PikkuScenarioConfigWithSchema is an overload parameter, not API
-import type { PikkuScenarioConfigWithSchema } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import type { PikkuScenarioConfigWithSchema } from '#pikku/scenario'
 // @ts-expect-error - PikkuFeatureConfig is an overload parameter, not API
-import type { PikkuFeatureConfig } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import type { PikkuFeatureConfig } from '#pikku/scenario'
 // @ts-expect-error - PikkuScenarioStepConfig is an overload parameter, not API
-import type { PikkuScenarioStepConfig } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import type { PikkuScenarioStepConfig } from '#pikku/scenario'
 // @ts-expect-error - PikkuScenarioStepConfigWithSchema is an overload parameter, not API
-import type { PikkuScenarioStepConfigWithSchema } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import type { PikkuScenarioStepConfigWithSchema } from '#pikku/scenario'
 // @ts-expect-error - PikkuSubjectScenarioStepConfig is an overload parameter, not API
-import type { PikkuSubjectScenarioStepConfig } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import type { PikkuSubjectScenarioStepConfig } from '#pikku/scenario'
 // @ts-expect-error - PikkuSubjectScenarioStepConfigWithSchema is an overload parameter, not API
-import type { PikkuSubjectScenarioStepConfigWithSchema } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import type { PikkuSubjectScenarioStepConfigWithSchema } from '#pikku/scenario'
 // @ts-expect-error - WorkflowNames is a generated id union, not API
 import type { WorkflowNames } from '#pikku/workflow/pikku-workflow-wirings.gen.js'
 
