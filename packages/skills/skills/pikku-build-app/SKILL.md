@@ -308,8 +308,10 @@ reorder — after §6 the migrations are numbered and the order is concrete.
 ## 6. Implement milestones, one at a time
 
 **Per milestone** — set its note to `status: dispatched`, do the six steps,
-set it to `built`. Do not start the next one until §7 is green for this one. A
-stack of half-milestones cannot be reviewed and cannot be handed over.
+set it to `built`. Do not start the next one until §7 is green for this one *and
+§7a shows its functions covered*. A stack of half-milestones cannot be reviewed
+and cannot be handed over, and an uncovered function is a half-milestone whether
+or not the note says `built`.
 
 1. **Migration.** SQL in `db/sqlite/` at the project root, numbered on from the
    ones already there. Apply with `bunx --bun pikku db migrate`, which also
@@ -459,6 +461,41 @@ Run them:
 already up. The browser pass needs the environment's `appUrl` and a browser
 driver installed — without them the run fails fast rather than half-running.
 
+### 7a. Coverage — which functions have actually been run
+
+Green scenarios tell you the journeys you wrote still work. They say nothing
+about the code you never wrote a journey for, and that gap is invisible without
+measuring it:
+
+    bunx --bun pikku dev --coverage                        # server, instrumented
+    bunx --bun pikku scenario run local --coverage         # against that server
+
+That writes `coverage/scenario-coverage.json` — which functions each journey
+exercised. **A function no scenario touches has never been run by anything but
+you, by hand, once.** It compiles, it typechecks, `pikku all` is happy, and
+nobody has proven it does what it says.
+
+Run it **as each milestone closes**, not once at the end. Coverage read per
+milestone is a short list you can act on — the milestone you just built either
+covered its own functions or it did not. Read for the first time after ten
+milestones it is a wall of red that nobody triages, and the honest response to a
+wall of red is to ignore it.
+
+Every gap is one of three things, and naming which is the point of looking:
+
+- **A missing scenario** — the function matters and no journey reaches it. Write
+  the journey. Refusal paths dominate this category, because it is the case you
+  are least likely to have clicked through by hand.
+- **A function that should not exist** — nothing reaches it because nothing needs
+  it. Delete it. An unused exposed function is also reachable over
+  `POST /rpc/:rpcName`, so this is a security finding, not only dead weight.
+- **Genuinely deferred** — real, not yet reachable from the UI. Say so in the
+  milestone note that will cover it, so the gap is a decision rather than a
+  hole.
+
+Report the number when you hand the milestone over. A number nobody says out
+loud is a number nobody acts on.
+
 ## 8. Make it look like someone designed it
 
 Two separate jobs, and conflating them is why open-source builds come out looking
@@ -562,6 +599,6 @@ cheaper to honour than to retrofit:
 - `references/theming.md` — authoring the theme (§8a)
 - `references/ship.md` — deploying, and the Fabric-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-permissions` (§3),
-  `pikku-scenario` (§7), `pikku-deploy-cloudflare` and `pikku-fabric` (§9)
+  `pikku-scenario` (§7, §7a), `pikku-deploy-cloudflare` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
 - Doing less than this: `pikku-build-quick`. Doing more: `pikku-build-platform`.

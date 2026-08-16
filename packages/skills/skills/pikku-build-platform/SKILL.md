@@ -162,20 +162,24 @@ comparing this build's surface against a deployed one.
 `pikku new addon` scaffolds a publishable addon package. Worth one milestone if
 the domain has a piece that genuinely belongs to no single app.
 
-## Coverage — the number that makes it a showcase
+## Coverage — where the bar is higher than the base workflow
 
-Run the server with coverage on, then the scenarios against it:
+`pikku-build-app` §7a already has the mechanics and the per-milestone habit:
+run the server instrumented, run the scenarios against it, read
+`coverage/scenario-coverage.json`, and triage every gap as a missing scenario, a
+function that should not exist, or a documented deferral. Do all of that here.
 
-    bunx --bun pikku dev --coverage
-    bunx --bun pikku scenario run local --coverage
+Two things change in a showcase:
 
-This writes `coverage/scenario-coverage.json` — how many functions each journey
-actually exercised. **A function no scenario touches is a function nobody has
-ever run**, and in a showcase that is the difference between "the platform does
-workflows" and "there is a workflow file in this repo".
-
-Report the number. Chase the gaps: an uncovered function is either missing a
-scenario or should not exist.
+- **Every surface you enabled has to appear in the coverage, not just every
+  function.** A workflow, a schedule, a queue worker and an agent each run on
+  their own path; a green scenario suite that never advances the workflow past
+  step one is the difference between "the platform does workflows" and "there is
+  a workflow file in this repo". Check the surfaces by name, because a coverage
+  percentage in the nineties hides an entire unexercised surface comfortably.
+- **The number is part of the deliverable.** A showcase is read as evidence, so
+  publish the figure alongside it. An unreported number invites the reader to
+  assume the worst, and in a demo repo they are usually right to.
 
 ## The full gate
 

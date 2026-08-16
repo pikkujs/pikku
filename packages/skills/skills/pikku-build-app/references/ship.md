@@ -32,7 +32,12 @@ Before shipping, run the full gate:
     bunx --bun pikku all --tsc-summary --fail-on-warn
     bunx --bun pikku validate
     bunx --bun pikku knowledge validate
-    bunx --bun pikku scenario run local --spawn
+    bunx --bun pikku scenario run local --spawn --coverage
+
+Keep `--coverage` on the release run even though you have been reading it per
+milestone (§7a). Each of those readings only covered the functions that
+milestone added; this is the first time the whole surface is measured at once,
+and it is where a function orphaned by a later refactor shows up.
 
 `pikku all --security --fail-on-error` additionally runs the data-classification
 lint over function return types, catching a `Pii`/`Secret` field that leaks
