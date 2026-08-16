@@ -92,6 +92,17 @@ describe('serializeEventsScaffold', () => {
       out,
       /import \{[^}]*wireChannel[^}]*defineChannelRoutes[^}]*\} from '\.\/channel\/index\.js'/
     )
+    // `pikkuChannelFunc` is declared by the channel wiring, not the function
+    // one — asking the function leaf for it is a name the leaf never exports.
+    assert.match(
+      out,
+      /import \{[^}]*pikkuChannelFunc[^}]*\} from '\.\/channel\/index\.js'/
+    )
+    assert.ok(
+      !/import \{[^}]*pikkuChannelFunc[^}]*\} from '\.\/function\/index\.js'/.test(
+        out
+      )
+    )
     assert.match(
       out,
       /import \{[^}]*wireHTTP[^}]*\} from '\.\/http\/index\.js'/

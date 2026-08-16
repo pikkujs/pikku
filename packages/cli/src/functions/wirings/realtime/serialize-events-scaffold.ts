@@ -37,8 +37,8 @@ import { z } from 'zod'
 export const TopicRef = z.object({ topic: z.string() })
 `
 
-  const functions = `import { pikkuChannelFunc, pikkuSessionlessFunc } from '${leaf('function')}'
-import { wireChannel, defineChannelRoutes } from '${leaf('channel')}'
+  const functions = `import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuChannelFunc, wireChannel, defineChannelRoutes } from '${leaf('channel')}'
 import { wireHTTP } from '${leaf('http')}'
 import { TopicRef } from './events.schemas.gen.js'
 
