@@ -263,7 +263,8 @@ export function getAddonFiles(
         forceConsistentCasingInFileNames: true,
         resolveJsonModule: true,
         paths: {
-          '#pikku': ['./.pikku/pikku-types.gen.ts'],
+          '#pikku/*.js': ['./.pikku/*.ts'],
+          '#pikku/*': ['./.pikku/*/index.ts'],
         },
       },
       include: ['src/**/*', 'types/**/*', '.pikku/**/*.ts'],
@@ -742,7 +743,7 @@ defineVariable({
   return files
 }
 
-function getTestFiles(vars: AddonVars): Record<string, string> {
+export function getTestFiles(vars: AddonVars): Record<string, string> {
   const { name, camelName, pascalName, screamingName, addonDepProtocol } = vars
   const files: Record<string, string> = {}
 
@@ -803,7 +804,8 @@ function getTestFiles(vars: AddonVars): Record<string, string> {
         resolveJsonModule: true,
         types: ['node'],
         paths: {
-          '#pikku': ['./.pikku/pikku-types.gen.ts'],
+          '#pikku/*.js': ['./.pikku/*.ts'],
+          '#pikku/*': ['./.pikku/*/index.ts'],
         },
       },
       include: ['src/*', '.pikku/**/*', 'types/**/*'],

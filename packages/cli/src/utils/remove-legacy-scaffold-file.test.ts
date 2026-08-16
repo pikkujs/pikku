@@ -114,6 +114,28 @@ describe('refreshScaffoldsImportingRemovedEntryPoints', () => {
     assert.ok(!existsSync(file))
   })
 
+  test('deletes an agent scaffold left on the deleted ecosystem tier', async () => {
+    const { file, config } = await agentConfig(
+      `import { canAccessThread } from '@pikku/core/ecosystem/agent'\n`
+    )
+
+    await refreshScaffoldsImportingRemovedEntryPoints(config)
+
+    assert.ok(!existsSync(file))
+  })
+
+  test('deletes an agent scaffold left on the deleted #pikku hub', async () => {
+    // The hub is the project's own file, so the scaffold names it by a relative
+    // path rather than by package — it is gone all the same.
+    const { file, config } = await agentConfig(
+      `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'\n`
+    )
+
+    await refreshScaffoldsImportingRemovedEntryPoints(config)
+
+    assert.ok(!existsSync(file))
+  })
+
   test('keeps a scaffold that already imports the renamed entry point', async () => {
     // The project may have edited this file; only an import that cannot compile
     // justifies throwing its changes away.

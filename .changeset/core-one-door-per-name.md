@@ -80,3 +80,16 @@ serializer that drifts back is exactly what is worth catching), the other parses
 imports and rejects a bare `@pikku/core` (several tests hold a user's file as a
 template literal, where `import … from '@pikku/core'` is fixture text rather
 than an import this repo makes).
+
+An agent scaffold a project generated under an older CLI is refreshed rather
+than left to fail: `pikku all` already deleted one importing an entry point
+`@pikku/core` no longer publishes, and the ecosystem tier and the `#pikku` hub
+join that list. Without it a project that scaffolds the agent endpoint but
+declares no agents keeps the old file forever — the generator that would rewrite
+it only runs when agents exist, and the file being present is what stops it
+being regenerated as missing.
+
+`pikku new addon` also wrote a tsconfig `paths` map naming only the deleted hub.
+An addon's `imports` map points into `dist`, so `paths` is what resolves
+`#pikku/<leaf>` for the addon's own source build — it now names the two leaf
+patterns, in both the addon and its test harness.
