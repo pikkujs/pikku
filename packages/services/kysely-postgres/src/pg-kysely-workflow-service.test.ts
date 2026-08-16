@@ -349,4 +349,54 @@ describe('advisory locks', () => {
     const result = await service.withStepLock('run-1', 'step-1', async () => 42)
     assert.equal(result, 42)
   })
+
+  /**
+   * The one connection PGlite hands out stands in for a saturated pool: a run
+   * lock taken on the query connection makes every other query wait for the
+   * whole workflow body, which is how concurrent runs wedged a real server.
+   */
+  test('a run lock on the query pool blocks unrelated queries', async () => {
+    let queryFinished = false
+    let releaseBody!: () => void
+    const body = new Promise<void>((resolve) => {
+      releaseBody = resolve
+    })
+
+    const held = service.withRunLock('run-1', () => body)
+    const query = sql`select 1`.execute(db).then(() => {
+      queryFinished = true
+    })
+
+    await new Promise((r) => setTimeout(r, 20))
+    assert.equal(queryFinished, false)
+
+    releaseBody()
+    await Promise.all([held, query])
+    assert.equal(queryFinished, true)
+  })
+
+  test('a run lock on lockDb leaves the query pool free', async () => {
+    const lockDb = createDb()
+    const isolated = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      lockDb,
+    } as any)
+    await isolated.init()
+
+    let releaseBody!: () => void
+    const body = new Promise<void>((resolve) => {
+      releaseBody = resolve
+    })
+
+    const held = isolated.withRunLock('run-1', () => body)
+    await new Promise((r) => setTimeout(r, 20))
+
+    const rows = await sql<{
+      one: number
+    }>`select 1 as one`.execute(db)
+    assert.equal(rows.rows[0]!.one, 1)
+
+    releaseBody()
+    await held
+  })
 })
