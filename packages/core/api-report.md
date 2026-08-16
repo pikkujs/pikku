@@ -5,13 +5,13 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2673 observable things**: 843 exported names, plus
+**2674 observable things**: 844 exported names, plus
 1830 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
 | stable | 48 | 818 | 1767 |
-| ecosystem | 44 | 25 | 63 |
+| ecosystem | 44 | 26 | 63 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -19,7 +19,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 130 | 19 | 70 |
-| `.` | 206 | 40 | 40 |
+| `.` | 206 | 38 | 40 |
 | `./ecosystem/scenario` | 31 | 11 | 55 |
 | `./scenario` | 42 | 25 | 33 |
 | `./workflow` | 76 | 19 | 29 |
@@ -48,22 +48,23 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli` | 14 | 3 | 0 |
 | `./schema` | 6 | 3 | 0 |
 | `./dev` | 5 | 1 | 2 |
-| `./middleware` | 12 | 2 | 0 |
 | `./scheduler` | 6 | 2 | 0 |
 | `./mcp` | 20 | 2 | 0 |
 | `./cli/channel` | 7 | 2 | 0 |
-| `./credential` | 5 | 2 | 0 |
+| `./middleware` | 12 | 1 | 0 |
 | `./node-host-resolver` | 2 | 1 | 0 |
 | `./secret` | 7 | 1 | 0 |
-| `./variable` | 6 | 1 | 0 |
 | `./ecosystem/agent` | 39 | 1 | 0 |
+| `./ecosystem/credential` | 8 | 1 | 0 |
 | `./function` | 16 | 0 | 0 |
 | `./channel/local` | 3 | 0 | 0 |
 | `./channel/serverless` | 3 | 0 | 0 |
 | `./remote` | 1 | 0 | 0 |
 | `./node` | 3 | 0 | 0 |
+| `./credential` | 5 | 0 | 0 |
 | `./scope` | 10 | 0 | 0 |
 | `./role` | 9 | 0 | 0 |
+| `./variable` | 6 | 0 | 0 |
 | `./oauth2` | 2 | 0 | 0 |
 | `./errors` | 46 | 0 | 0 |
 | `./services/istanbul-coverage` | 1 | 0 | 0 |
@@ -75,7 +76,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/channel/local` | 3 | 0 | 0 |
 | `./ecosystem/cli` | 13 | 0 | 0 |
 | `./ecosystem/cli/channel` | 15 | 0 | 0 |
-| `./ecosystem/credential` | 5 | 0 | 0 |
 | `./ecosystem/crypto-utils` | 7 | 0 | 0 |
 | `./ecosystem/dev` | 5 | 0 | 0 |
 | `./ecosystem/function` | 20 | 0 | 0 |
@@ -83,7 +83,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/hmac` | 2 | 0 | 0 |
 | `./ecosystem/http` | 19 | 0 | 0 |
 | `./ecosystem/mcp` | 16 | 0 | 0 |
-| `./ecosystem/middleware` | 20 | 0 | 0 |
+| `./ecosystem/middleware` | 23 | 0 | 0 |
 | `./ecosystem/node` | 3 | 0 | 0 |
 | `./ecosystem/node-host-resolver` | 1 | 0 | 0 |
 | `./ecosystem/oauth2` | 2 | 0 | 0 |
@@ -106,7 +106,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/testing` | 2 | 0 | 0 |
 | `./ecosystem/trigger` | 6 | 0 | 0 |
 | `./ecosystem/types` | 41 | 0 | 0 |
-| `./ecosystem/variable` | 7 | 0 | 0 |
+| `./ecosystem/variable` | 8 | 0 | 0 |
 | `./ecosystem/virtual-user` | 32 | 0 | 0 |
 | `./ecosystem/workflow` | 54 | 0 | 0 |
 | `./testing` | 2 | 0 | 0 |
@@ -6666,6 +6666,29 @@ export interface WorkflowServiceConfig {
 ## ./ecosystem/credential
 
 ```ts
+export type CoreCredential<T = unknown> = {
+  name: string
+  displayName: string
+  description?: string
+  type: 'singleton' | 'wire'
+  schema: T
+  docsUrl?: string
+  oauth2?: OAuth2CredentialConfig & {
+    appCredentialSecretId: string
+  }
+}
+export type CredentialDefinitionMeta = {
+  name: string
+  displayName: string
+  description?: string
+  type: 'singleton' | 'wire'
+  schema?: Record<string, unknown> | string
+  docsUrl?: string
+  oauth2?: OAuth2CredentialConfig & {
+    appCredentialSecretId: string
+  }
+  sourceFile?: string
+}
 export type CredentialDefinitions = CredentialDefinitionMeta[]
 export type CredentialDefinitionsMeta = Record<string, CredentialDefinitionMeta>
 export interface CredentialService {
@@ -6677,6 +6700,7 @@ export interface CredentialService {
   getUsersWithCredential(name: string): Promise<string[]>
   getAllUsers(): Promise<string[]>
 }
+defineCredential: <T>(_config: CoreCredential<T>) => void
 export interface SchemaRefLike {
   variableName: string
   sourceFile: string
@@ -7361,6 +7385,15 @@ export type CorePikkuMiddleware<
   wires: PikkuWire,
   next: () => Promise<void>
 ) => Promise<void>
+export type CorePikkuMiddlewareConfig<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = {
+  func: CorePikkuMiddleware<SingletonServices, UserSession>
+  name?: string
+  description?: string
+  priority?: MiddlewarePriority
+}
 export type CorePikkuMiddlewareFactory<
   In = any,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
@@ -7411,6 +7444,7 @@ export interface CoreUserSession {
   scopes?: string[]
   readonly?: boolean
 }
+cors: CorePikkuMiddlewareFactory<{ origin?: string | true | string[] | undefined; methods?: string[] | undefined; headers?: string[] | undefined; exposeHeaders?: string[] | undefined; credentials?: boolean | undefined; maxAge?: number | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 export enum LogLevel {
   trace,
   debug,
@@ -7419,6 +7453,8 @@ export enum LogLevel {
   error,
   critical,
 }
+export type MiddlewarePriority =
+  'highest' | 'high' | 'medium' | 'low' | 'lowest'
 pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
 pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 export interface PostgresConfig {
@@ -9165,6 +9201,7 @@ export type CoreVariable<T = unknown> = {
   schema: T
   docsUrl?: string
 }
+defineVariable: <T>(_config: CoreVariable<T>) => void
 export interface SchemaRefLike {
   variableName: string
   sourceFile: string
