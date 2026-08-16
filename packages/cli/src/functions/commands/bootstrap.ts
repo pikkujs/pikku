@@ -24,6 +24,8 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuMCPTypes')
     await rpc.invoke('pikkuAgentTypes')
     await rpc.invoke('pikkuSecretDefinitionTypes')
+    await rpc.invoke('pikkuCredentialDefinitionTypes')
+    await rpc.invoke('pikkuVariableDefinitionTypes')
     await rpc.invoke('pikkuScopeDefinitionTypes')
     await rpc.invoke('pikkuCLITypes', { bootstrap: true })
     await rpc.invoke('pikkuLeafIndexes')

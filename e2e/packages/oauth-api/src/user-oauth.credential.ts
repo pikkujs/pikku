@@ -1,4 +1,4 @@
-import { defineCredential } from '@pikku/core/credential'
+import { defineCredential } from '#pikku/credentials'
 import { z } from 'zod'
 
 export const UserOAuthSchema = z.object({

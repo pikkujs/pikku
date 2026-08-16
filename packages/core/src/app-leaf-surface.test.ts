@@ -116,7 +116,81 @@ const barrelSpecifiers = (file: string) => {
   return found
 }
 
+/**
+ * Names a leaf carries, mapped to the leaf that carries them. An app reaching
+ * `@pikku/core` for one of these is the smell that says the generator is not
+ * emitting something it should — the definer is already generated into the
+ * project's own `.pikku`, so naming core instead couples the app to a package
+ * it otherwise never imports.
+ */
+const namesOwnedByALeaf = new Map<string, string>([
+  ['defineCredential', '#pikku/credentials'],
+  ['defineSecret', '#pikku/secrets'],
+  ['defineVariable', '#pikku/variables'],
+  ['defineScope', '#pikku/scopes'],
+  ['defineSystemRole', '#pikku/scopes'],
+  ['cors', '#pikku/http'],
+  ['InvalidOriginError', '#pikku/error'],
+])
+
+const coreNamesThatHaveALeaf = (file: string) => {
+  const source = ts.createSourceFile(
+    file,
+    readFileSync(file, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true
+  )
+  const found: { name: string; leaf: string; line: number }[] = []
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement)) continue
+    const moduleSpecifier = statement.moduleSpecifier
+    if (!ts.isStringLiteral(moduleSpecifier)) continue
+    if (!/^@pikku\/core(\/|$)/.test(moduleSpecifier.text)) continue
+
+    const bindings = statement.importClause?.namedBindings
+    if (!bindings || !ts.isNamedImports(bindings)) continue
+    for (const element of bindings.elements) {
+      const name = (element.propertyName ?? element.name).text
+      const leaf = namesOwnedByALeaf.get(name)
+      if (!leaf) continue
+      const { line } = source.getLineAndCharacterOfPosition(
+        element.getStart(source)
+      )
+      found.push({ name, leaf, line: line + 1 })
+    }
+  }
+  return found
+}
+
 describe('app leaf surface', () => {
+  test('no Pikku project reaches past a leaf for a name the leaf carries', () => {
+    const projects = findProjects(repoRoot)
+    assert.ok(projects.length > 0, 'expected to discover Pikku projects')
+
+    // A project nested inside another (an addon under `e2e/packages`) is
+    // discovered on its own account and again as its parent's source, so the
+    // same offence is reached twice.
+    const offenders = new Set<string>()
+    for (const project of projects) {
+      for (const file of projectSourceFiles(project)) {
+        for (const { name, leaf, line } of coreNamesThatHaveALeaf(file)) {
+          offenders.add(
+            `${relative(repoRoot, file)}:${line}  ${name} — import it from '${leaf}'`
+          )
+        }
+      }
+    }
+
+    assert.deepStrictEqual(
+      [...offenders].sort(),
+      [],
+      `An app developer imports from '#pikku/<leaf>'. Reaching past it to ` +
+        `'@pikku/core' for a name the leaf already carries is the smell that ` +
+        `says the generator is not emitting something it should.\n\n` +
+        [...offenders].sort().join('\n')
+    )
+  })
+
   test('no Pikku project reaches the app tier through a barrel', () => {
     const projects = findProjects(repoRoot)
     assert.ok(projects.length > 0, 'expected to discover Pikku projects')

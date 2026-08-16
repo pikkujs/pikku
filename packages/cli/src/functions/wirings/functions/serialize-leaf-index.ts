@@ -6,12 +6,25 @@
  * overridable in `pikku.config.json`, so no single `#pikku/*` pattern can reach
  * them by name. One generated re-export per leaf gives every wiring a stable
  * specifier while leaving the entry file wherever the project put it.
+ *
+ * A leaf may have more than one entry. `credentials` splits its definer
+ * (`defineCredential`) from its map (`CredentialsMap`, `TypedCredentialService`)
+ * across two generated files, as `secrets` and `variables` do, and both halves
+ * are the app's to import — so the index re-exports each of them rather than
+ * picking one and leaving the other reachable only by a relative path into
+ * `.pikku`.
  */
-export const serializeLeafIndex = (leaf: string, entryImportPath: string) => {
+export const serializeLeafIndex = (
+  leaf: string,
+  entryImportPaths: string[]
+) => {
+  const exports = entryImportPaths
+    .map((path) => `export * from '${path}'`)
+    .join('\n')
   return `/**
  * Subpath entry — \`#pikku/${leaf}\` resolves here.
  */
 
-export * from '${entryImportPath}'
+${exports}
 `
 }
