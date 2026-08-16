@@ -66,7 +66,7 @@ Frontmatter fields:
 
 | Field         | Meaning                                                                                                                 |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `type`        | **The only required field.** `slice`, `entity`, `decision`, `note`, `overview`. Lowercase — gates compare it literally. |
+| `type`        | **The only required field.** `slice` — or `milestone`, when the project's own `knowledge/index.md` names the section that way; `validate` accepts both, so follow the scaffold rather than this list. Then `entity`, `decision`, `note`, `overview`. Lowercase — gates compare it literally. |
 | `title`       | What to call the note in a listing. Falls back to the first heading, then the filename.                                 |
 | `description` | One line, used as the note's subtitle in a section index.                                                               |
 | `resource`    | Comma-separated `<kind>:<id>` URIs — the code this note is about. See below.                                            |
