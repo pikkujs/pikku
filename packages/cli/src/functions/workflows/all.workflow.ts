@@ -78,7 +78,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await removeRetiredScaffoldFiles(config)
 
     const allImports: string[] = []
-    let typesDeclarationFileExists = true
+    let functionTypesFileExists = true
 
     if (!existsSync(config.outDir)) {
       logger.debug(`• .pikku directory not found, running bootstrap first...`)
@@ -93,15 +93,16 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap inspect', async () => {
         await getInspectorState(false, true, true)
       })
-      // Both before function types: pikku-types.gen.ts re-exports the scope
-      // definition types and imports ScopeId from the scopes codegen, so any
-      // later import of '#pikku' — the inspector reading a project's zod
-      // schemas, for one — fails until these two files exist.
+      // Both before the function types: the function leaf imports ScopeId from
+      // the scopes codegen, so any later import of '#pikku/function' — the
+      // inspector reading a project's zod schemas, for one — fails until these
+      // two files exist.
       await workflow.do(
         'Bootstrap scope definition types',
         'pikkuScopeDefinitionTypes',
         null
       )
+      await workflow.do('Bootstrap error types', 'pikkuErrorTypes', null)
       await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
       await workflow.do('Bootstrap roles', 'pikkuRoles', { bootstrap: true })
       await workflow.do('Bootstrap personas', 'pikkuPersonas', {
@@ -115,9 +116,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       // Pre-write a stub auth.types.ts (if the project uses better-auth) so the
       // pikkuBetterAuth re-export resolves before any user file is imported.
       await workflow.do('Bootstrap auth types', 'pikkuAuth', {
-        bootstrap: true,
-      })
-      await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', {
         bootstrap: true,
       })
       await workflow.do('Bootstrap addon types', 'pikkuAddonTypes', {
@@ -150,13 +148,22 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           bootstrap: true,
         })
       }
+      // Before the re-inspect, not after: the inspector builds its own TS
+      // program, and every user file reaches the wirings through
+      // `#pikku/<leaf>`. Without the indexes those specifiers do not resolve,
+      // and an unresolved factory leaves the function's input silently `any`.
+      await workflow.do(
+        'Bootstrap leaf subpath entries',
+        'pikkuLeafIndexes',
+        null
+      )
       await workflow.do('Bootstrap re-inspect', async () => {
         await getInspectorState(true, true)
       })
     }
 
-    if (!existsSync(config.typesDeclarationFile)) {
-      typesDeclarationFileExists = false
+    if (!existsSync(config.functionTypesFile)) {
+      functionTypesFileExists = false
     }
 
     const missingScaffolds = scaffoldFiles(config).filter(
@@ -168,9 +175,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
-    await workflow.do('Generate function types', 'pikkuFunctionTypes', {})
+    await workflow.do('Function types split', 'pikkuFunctionTypesSplit', {})
+    await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
 
-    if (!typesDeclarationFileExists || missingScaffolds.length > 0) {
+    if (!functionTypesFileExists || missingScaffolds.length > 0) {
       logger.debug(
         `• Type file or scaffolds first created, inspecting again...`
       )
@@ -181,7 +189,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     // Type generators are independent of each other
     const typeGenerators: Promise<any>[] = [
-      workflow.do('Function types split', 'pikkuFunctionTypesSplit', {}),
       workflow.do('Trigger types', 'pikkuTriggerTypes', {}),
       workflow.do('AI agent types', 'pikkuAgentTypes', null),
     ]
@@ -250,6 +257,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),
+      workflow.do('Error types', 'pikkuErrorTypes', null),
       workflow.do(
         'Secret definition types',
         'pikkuSecretDefinitionTypes',
@@ -497,6 +505,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     }
 
     await workflow.do('Versions update', 'pikkuVersionsUpdate', null)
+
+    // Last, because a leaf index only exists for an entry file that was
+    // actually generated — that absence is what makes `#pikku/http` fail to
+    // resolve in an addon rather than resolve to a module missing the export.
+    await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
 
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })
     await workflow.do('Summary', 'pikkuSummary', null)

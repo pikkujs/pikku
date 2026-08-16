@@ -321,7 +321,7 @@ In local dev, omit `delegate` and `GeneratedTemplateEmailService` will fall back
 ## Sending a templated email from a function
 
 ```typescript
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const registerUser = pikkuFunc({
   func: async ({ email }, { userId, userEmail, locale }) => {

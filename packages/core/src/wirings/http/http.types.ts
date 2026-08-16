@@ -1,9 +1,7 @@
 import type { SerializeOptions } from 'cookie'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type {
-  CorePikkuMiddleware,
-  CommonWireMeta,
-} from '../../types/core.types.js'
+import type { CommonWireMeta } from '../../types/core.types.js'
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,

@@ -1,5 +1,5 @@
 import type { InvocationContext } from '@azure/functions'
-import { PikkuRequest } from '@pikku/core/ecosystem/types'
+import { PikkuRequest } from '@pikku/core/function'
 
 export class PikkuAZTimerRequest<In = any> extends PikkuRequest<In> {
   constructor(_context: InvocationContext, data: In) {

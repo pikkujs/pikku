@@ -3,11 +3,7 @@ import {
   LocalSecretService,
   LocalVariablesService,
 } from '@pikku/core/services'
-import {
-  pikkuConfig,
-  pikkuServices,
-  pikkuWireServices,
-} from '#pikku/pikku-types.gen.js'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/function'
 
 export const createConfig = pikkuConfig(async () => {
   return {}

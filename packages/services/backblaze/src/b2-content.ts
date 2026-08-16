@@ -8,7 +8,7 @@ import type {
   SignURLArgs,
   UploadURLResult,
   WriteFileArgs,
-} from '@pikku/core/ecosystem/services'
+} from '@pikku/core/services'
 import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 

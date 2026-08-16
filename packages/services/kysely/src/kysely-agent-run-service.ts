@@ -3,7 +3,7 @@ import type {
   AgentMessage,
   AgentRunRow,
   AgentRunService,
-} from '@pikku/core/ecosystem/agent'
+} from '@pikku/core/agent'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'

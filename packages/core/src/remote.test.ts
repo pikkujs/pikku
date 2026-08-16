@@ -4,7 +4,7 @@ import { buildRemoteHeaders } from './remote.js'
 import { pikkuRemoteAuthMiddleware } from './middleware/remote-auth.js'
 import { resetPikkuState } from './pikku-state.js'
 import { WeakKeyMaterialError } from './errors/errors.js'
-import { createSecretValue } from './secret-value.js'
+import { createSecretValue } from './classification/secret-value.js'
 
 beforeEach(() => {
   resetPikkuState()

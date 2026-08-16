@@ -12,7 +12,7 @@ import {
   SecretHostNotAllowedError,
   assertSecretAllowedForHost,
   withoutSecrets,
-} from '@pikku/core'
+} from '@pikku/core/services'
 import type { SecretDefinitionsMeta } from '@pikku/core/secret'
 
 const services = {

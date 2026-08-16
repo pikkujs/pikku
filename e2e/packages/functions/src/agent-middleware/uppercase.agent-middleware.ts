@@ -1,5 +1,4 @@
-import { pikkuAgentMiddleware } from '@pikku/core'
-
+import { pikkuAgentMiddleware } from '@pikku/core/middleware'
 export const uppercaseMiddleware = pikkuAgentMiddleware({
   modifyOutputStream: (_services, { event }) => {
     if (event.type === 'text-delta') {

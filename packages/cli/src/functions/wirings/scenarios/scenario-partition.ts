@@ -1,4 +1,4 @@
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta } from '@pikku/core/services'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 
 export type WiringFileMap = Map<string, { path: string; exportedName: string }>

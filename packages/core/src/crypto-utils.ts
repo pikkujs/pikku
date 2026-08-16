@@ -1,4 +1,4 @@
-import type { WrappedValue } from './data-classification.js'
+import type { WrappedValue } from './classification/data-classification.js'
 import { WeakKeyMaterialError } from './errors/errors.js'
 
 const encoder = new TextEncoder()

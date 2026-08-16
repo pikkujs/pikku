@@ -1,5 +1,7 @@
-import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
-
+import {
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware-factories.js'
 /**
  * Sets CORS headers on every response and short-circuits OPTIONS preflight
  * with a 204. `origin: true` reflects the request origin; an array reflects a

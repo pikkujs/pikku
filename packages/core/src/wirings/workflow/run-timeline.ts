@@ -1,4 +1,4 @@
-import type { SerializedError } from '../../types/core.types.js'
+import type { SerializedError } from '../../errors/serialized-error.js'
 import type { StepState, StepStatus } from './workflow.types.js'
 
 export interface RunTimelineEvent {

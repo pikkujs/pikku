@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 /**
  * Every scope below is declared in scopes.ts, so these compile.

@@ -236,7 +236,9 @@ await server.start()
 
 Run `npx pikku all` to generate:
 
-- `pikku-types.gen.ts` — Typed function factories and wiring functions
+- one directory per wiring (`function/`, `http/`, `workflow/`, …), each with an
+  `index.ts` reached as `#pikku/<name>` — typed function factories and wiring
+  functions, split so an app pulls in only the wirings it uses
 - `pikku-fetch.gen.ts` — Type-safe HTTP client
 - `pikku-websocket.gen.ts` — Type-safe WebSocket client
 - `pikku-bootstrap.gen.ts` — Runtime initialization (auto-imports all wirings)
@@ -271,7 +273,8 @@ src/
 ├── middleware.ts         # Middleware definitions (see pikku-security)
 ├── permissions.ts       # Permission definitions (see pikku-security)
 └── .pikku/              # Generated (gitignored)
-    ├── pikku-types.gen.ts
+    ├── function/        # #pikku/function
+    ├── http/            # #pikku/http
     ├── pikku-fetch.gen.ts
     └── pikku-bootstrap.gen.ts
 ```

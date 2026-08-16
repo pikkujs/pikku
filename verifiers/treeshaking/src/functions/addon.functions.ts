@@ -2,7 +2,7 @@
  * Tests for addon RPC invocations with treeshaking
  */
 
-import { pikkuSessionlessFunc, wireAddon } from '#pikku'
+import { pikkuSessionlessFunc, wireAddon } from '#pikku/function'
 
 wireAddon({ name: 'ext', package: '@pikku/templates-function-addon' })
 

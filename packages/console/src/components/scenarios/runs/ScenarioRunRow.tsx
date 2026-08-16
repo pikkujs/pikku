@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, Group, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import type { ScenarioRunSummary } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioRunSummary } from '@pikku/core/scenario'
 import { ScenarioRunStatusBadge } from './ScenarioRunStatusBadge'
 import { runRelativeTime } from './scenario-run-format'
 

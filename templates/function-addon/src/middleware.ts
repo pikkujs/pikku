@@ -1,7 +1,4 @@
-import {
-  pikkuMiddlewareFactory,
-  addTagMiddleware,
-} from '../.pikku/pikku-types.gen.js'
+import { addTagMiddleware, pikkuMiddlewareFactory } from '#pikku/function'
 
 /**
  * Addon package middleware that logs when addon functions are called

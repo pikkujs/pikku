@@ -10,7 +10,7 @@ import {
   extractContractsFromMeta,
 } from './contract-hashes.js'
 import type { ContractEntry, VersionManifest } from './contract-hashes.js'
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta } from '@pikku/core/services'
 import { ErrorCode } from '../error-codes.js'
 
 function makeContracts(

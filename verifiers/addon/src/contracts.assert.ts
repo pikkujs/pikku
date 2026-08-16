@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { refHTTP, refChannel, refCLI } from '#pikku'
+import { refCLI, refChannel, refHTTP } from '#pikku/function'
 
 const ADDON_PACKAGE = '@pikku/templates-function-addon'
 

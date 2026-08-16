@@ -1,4 +1,4 @@
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuVoidFunc } from '#pikku/function'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -68,7 +68,7 @@ export const pikkuChannels = pikkuVoidFunc({
       await writeFileInDir(
         logger,
         channelsWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/ecosystem'\nimport { ChannelsMeta } from '@pikku/core/ecosystem/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+        `import { pikkuState } from '@pikku/core/state'\nimport { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
       )
     }
   },

@@ -1,5 +1,5 @@
 import open from 'open'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { deviceLogin } from '../../utils/device-auth.js'
 import {
   saveSession,

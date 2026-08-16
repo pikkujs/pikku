@@ -1,5 +1,5 @@
 import { UnauthorizedError } from '../errors/errors.js'
-import { pikkuMiddleware } from '../types/core.types.js'
+import { pikkuMiddleware } from './middleware-factories.js'
 import {
   assertStrongKeyMaterial,
   decryptWithKeyMaterial,

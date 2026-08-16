@@ -1,5 +1,5 @@
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type { PostgresConfig } from '@pikku/core/ecosystem/types'
+import type { Logger } from '@pikku/core/services'
+import type { PostgresConfig } from '@pikku/core/types'
 import { CamelCasePlugin, Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'

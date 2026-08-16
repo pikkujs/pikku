@@ -13,8 +13,7 @@ import type {
 } from '../../http/http.types.js'
 import type { SerializeOptions } from 'cookie'
 import { httpRouter } from '../../http/routers/http-router.js'
-import { pikkuMiddleware } from '../../../types/core.types.js'
-
+import { pikkuMiddleware } from '../../../middleware/middleware-factories.js'
 const mockLogger = {
   info: () => {},
   error: () => {},

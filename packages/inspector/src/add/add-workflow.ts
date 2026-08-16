@@ -3,10 +3,7 @@ import type { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { ErrorCode } from '../error-codes.js'
-import type {
-  WorkflowStepMeta,
-  WorkflowContext,
-} from '@pikku/core/ecosystem/workflow'
+import type { WorkflowStepMeta, WorkflowContext } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
   isStringLike,

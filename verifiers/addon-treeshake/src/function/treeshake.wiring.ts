@@ -1,4 +1,5 @@
-import { wireHTTP, wireAddon, ref } from '#pikku'
+import { ref, wireAddon } from '#pikku/function'
+import { wireHTTP } from '#pikku/http'
 import { testAddonHello } from './test-addon-hello.function.js'
 import { testAddonGoodbye } from './test-addon-goodbye.function.js'
 import { noAddonPing } from './no-addon-ping.function.js'

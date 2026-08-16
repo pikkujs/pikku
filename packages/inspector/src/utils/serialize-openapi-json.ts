@@ -1,5 +1,5 @@
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
-import type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'
+import type { FunctionsMeta } from '@pikku/core/services'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { InspectorLogger } from '../types.js'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
 const convertSchema =

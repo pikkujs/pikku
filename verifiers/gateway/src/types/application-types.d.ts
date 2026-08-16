@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { CustomLogger } from '../services/custom-logger.service.js'
 
 export interface Config extends CoreConfig {}

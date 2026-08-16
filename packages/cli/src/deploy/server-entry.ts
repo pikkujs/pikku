@@ -17,7 +17,7 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
   const lines: string[] = [
     `// Generated server entry for "${ctx.unit.name}" (${ctx.unit.role})`,
     `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
-    `import { pikkuState } from '@pikku/core/ecosystem'`,
+    `import { pikkuState } from '@pikku/core/state'`,
     ctx.configImport,
     ctx.servicesImport,
     ctx.mcpImport,

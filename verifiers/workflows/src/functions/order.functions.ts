@@ -3,7 +3,7 @@
  * Mock implementations for e-commerce order processing
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // Order CRUD
 export const orderCreate = pikkuSessionlessFunc<

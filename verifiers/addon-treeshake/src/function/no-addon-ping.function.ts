@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const noAddonPing = pikkuSessionlessFunc<void, { pong: boolean }>({
   func: async ({ logger }) => {

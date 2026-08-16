@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -62,7 +62,7 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         rpcInternalWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/ecosystem'\n${importStatement}\npikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
+        `import { pikkuState } from '@pikku/core/state'\n${importStatement}\npikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
       )
       return true
     }

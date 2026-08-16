@@ -32,18 +32,32 @@ import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-t
  * Core function, middleware, and permission types for all wirings
  */
 
-import type { CorePikkuMiddleware, PickRequired } from '@pikku/core'
-import type { ListInput, ListOutput } from '@pikku/core/ecosystem/function'
-import type { CorePermissionGroup, PikkuWire, SecretlessServices } from '@pikku/core/ecosystem/types'
-import type { CorePikkuFunctionConfig, CorePikkuSessionlessFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/ecosystem/function'
-import { pikkuAuth as pikkuAuthCore } from '@pikku/core/ecosystem/function'
+import type { CorePikkuMiddleware } from '@pikku/core/middleware'
+import type { PickRequired } from '@pikku/core/utils'
+import type { ListInput, ListOutput } from '@pikku/core/function'
+import type { CorePermissionGroup } from '@pikku/core/function'
+import type { PikkuWire, SecretlessServices } from '@pikku/core/types'
+import type {
+  CorePikkuFunctionConfig,
+  CorePikkuSessionlessFunctionConfig,
+  CorePikkuAuth,
+  CorePikkuAuthConfig,
+  CorePikkuPermission,
+} from '@pikku/core/function'
+import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import { addTagMiddleware as addTagMiddlewareCore, addGlobalMiddleware as addGlobalMiddlewareCore } from '@pikku/core/middleware'
-import { addGlobalPermission as addGlobalPermissionCore } from '@pikku/core/ecosystem/middleware'
-import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/ecosystem'
-import type { NodeType } from '@pikku/core/ecosystem/node'
+import {
+  addGlobalPermission as addGlobalPermissionCore,
+} from '@pikku/core/middleware'
+import { pikkuState as __pikkuState } from '@pikku/core/state'
+import { CreateWireServices } from '@pikku/core/types'
+import type { NodeType } from '@pikku/core/node'
 ${scopesImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/ecosystem/function'
+import {
+  CorePikkuFunction,
+  CorePikkuFunctionSessionless,
+} from '@pikku/core/function'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -788,6 +802,6 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
   addGlobalPermissionCore(permissions as any, ${packageNameValue})
 }
 
-export { wireAddon, wireRemoteAddon } from '@pikku/core/ecosystem/rpc'
+export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
 `
 }

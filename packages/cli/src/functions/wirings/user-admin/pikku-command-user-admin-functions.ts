@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeUserAdminFunctions } from './serialize-user-admin-functions.js'
@@ -46,13 +46,10 @@ export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
       )
     }
 
-    const pathToPikkuTypes = getFileImportRelativePath(
-      config.userAdminFunctionsFile,
-      config.typesDeclarationFile,
-      config.packageMappings
-    )
+    const leaf = (name: string) =>
+      getLeafImportPath(config.userAdminFunctionsFile!, name, config)
     const { schemas, functions } = serializeUserAdminFunctions(
-      pathToPikkuTypes,
+      leaf,
       resolveScaffoldFeature('userAdmin', config.scaffold.userAdmin).auth
     )
     await writeFileInDir(logger, config.userAdminSchemasFile, schemas)

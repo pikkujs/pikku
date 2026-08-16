@@ -59,7 +59,7 @@ import type {
   CreateConfig,
   CreateSingletonServices,
   CreateWireServices,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import {
   ConsoleLogger,
   LocalVariablesService,

@@ -4,7 +4,7 @@ import type {
   PikkuWiringTypes,
 } from '../types/core.types.js'
 import type { Logger } from './logger.js'
-import type { Safe } from '../secret-value.js'
+import type { Safe } from '../classification/secret-value.js'
 
 export type AuditDurability = 'best-effort' | 'transactional'
 export type AuditOutcome = 'success' | 'failed' | 'denied'

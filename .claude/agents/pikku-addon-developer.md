@@ -85,7 +85,7 @@ I't```
 ### Singleton Services — `pikkuAddonServices()`
 
 ```typescript
-import { pikkuAddonServices } from '#pikku'
+import { pikkuAddonServices } from '#pikku/addon'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, parentServices) => {
@@ -107,7 +107,7 @@ Key differences from main app services:
 ### Wire Services — `pikkuAddonWireServices()` (optional)
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonWireServices } from '#pikku/addon'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -120,7 +120,7 @@ export const createWireServices = pikkuAddonWireServices(
 ### Config — `pikkuAddonConfig()` (optional)
 
 ```typescript
-import { pikkuAddonConfig } from '#pikku'
+import { pikkuAddonConfig } from '#pikku/addon'
 
 export const createConfig = pikkuAddonConfig(async (services) => {
   const baseUrl = await services.variables.get('API_BASE_URL')
@@ -133,7 +133,7 @@ export const createConfig = pikkuAddonConfig(async (services) => {
 Functions use `pikkuSessionlessFunc` or `pikkuFunc` from `#pikku`:
 
 ```typescript
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { z } from 'zod'
 
 const Input = z.object({ title: z.string() })
@@ -178,7 +178,7 @@ This parses the spec and generates: functions for each endpoint, a typed API ser
 ### Registration
 
 ```typescript
-import { wireAddon } from '#pikku'
+import { wireAddon } from '#pikku/function'
 
 wireAddon({
   name: 'todos',

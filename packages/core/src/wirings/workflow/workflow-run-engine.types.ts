@@ -1,4 +1,5 @@
-import type { PikkuRawWire, SerializedError } from '../../types/core.types.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
+import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   CoreWorkflow,
   PikkuWorkflowWire,

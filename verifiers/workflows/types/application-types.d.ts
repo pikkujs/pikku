@@ -1,13 +1,12 @@
+import type { EventHubService } from '@pikku/core/channel'
+import type { QueueService } from '@pikku/core/queue'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import type {
   CoreConfig,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  EventHubService,
-  JWTService,
-  QueueService,
-  SecretService,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { EventHubTopics } from './eventhub-topics.js'
 
 export interface Config extends CoreConfig {}

@@ -1,13 +1,10 @@
-import type { AuditService } from '@pikku/core/ecosystem/services'
-import type {
-  AuditEvent,
-  AuditEventBatch,
-} from '@pikku/core/ecosystem/services'
+import type { AuditService } from '@pikku/core/services'
+import type { AuditEvent, AuditEventBatch } from '@pikku/core/services'
 import type {
   AuditFacets,
   AuditQuery,
   AuditQueryResult,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import { ensurePikkuSchema } from './schema/index.js'
 import { auditSchema } from './schema/audit.schema.js'

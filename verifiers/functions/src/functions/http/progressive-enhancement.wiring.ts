@@ -1,4 +1,5 @@
-import { wireChannel, wireHTTP } from '#pikku'
+import { wireChannel } from '#pikku/channel'
+import { wireHTTP } from '#pikku/http'
 import { progressiveEnhancementExample } from './progressive-enhancement.functions.js'
 
 wireHTTP({

@@ -2,9 +2,11 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { serializeWorkflowRoutes } from './serialize-workflow-routes.js'
 
+const leaf = (name: string) => `#pikku/${name}`
+
 describe('serializeWorkflowRoutes', () => {
   test('generates deterministic init event for both stream variants', () => {
-    const { functions: result } = serializeWorkflowRoutes('#pikku', true)
+    const { functions: result } = serializeWorkflowRoutes(leaf, true)
 
     const initMatches = result.match(/type: 'init'/g) ?? []
     assert.equal(initMatches.length, 2)
@@ -17,7 +19,7 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('keeps update and done events in both streams', () => {
-    const { functions: result } = serializeWorkflowRoutes('#pikku', true)
+    const { functions: result } = serializeWorkflowRoutes(leaf, true)
 
     const updateMatches = result.match(/type: 'update'/g) ?? []
     const doneMatches = result.match(/type: 'done'/g) ?? []
@@ -27,15 +29,15 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('renders auth flag correctly', () => {
-    const { functions: authEnabled } = serializeWorkflowRoutes('#pikku', true)
-    const { functions: authDisabled } = serializeWorkflowRoutes('#pikku', false)
+    const { functions: authEnabled } = serializeWorkflowRoutes(leaf, true)
+    const { functions: authDisabled } = serializeWorkflowRoutes(leaf, false)
 
     assert.match(authEnabled, /auth: true/)
     assert.match(authDisabled, /auth: false/)
   })
 
   test('emits an approve route wired to approveStep', () => {
-    const { functions: result } = serializeWorkflowRoutes('#pikku', true)
+    const { functions: result } = serializeWorkflowRoutes(leaf, true)
 
     assert.match(result, /route: '\/workflow\/:workflowName\/approve\/:runId'/)
     assert.match(result, /func: workflowApprover/)
@@ -46,11 +48,11 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('every run entrypoint is gated on run ownership', () => {
-    const { functions: result } = serializeWorkflowRoutes('#pikku', true)
+    const { functions: result } = serializeWorkflowRoutes(leaf, true)
 
     assert.match(
       result,
-      /import \{ assertWorkflowRunOwner \} from '@pikku\/core\/ecosystem\/workflow'/
+      /import \{ assertWorkflowRunOwner \} from '@pikku\/core\/workflow'/
     )
     const ownershipChecks =
       result.match(/assertWorkflowRunOwner\(run\.wire, session\)/g) ?? []
@@ -62,7 +64,7 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('no route lets a caller pick the graph entry node', () => {
-    const { schemas, functions } = serializeWorkflowRoutes('#pikku', true)
+    const { schemas, functions } = serializeWorkflowRoutes(leaf, true)
 
     assert.ok(
       !functions.includes('startNode'),
@@ -73,7 +75,7 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('the approver destructures workflowService so the analyzer grants workflow-state', () => {
-    const { functions: result } = serializeWorkflowRoutes('#pikku', true)
+    const { functions: result } = serializeWorkflowRoutes(leaf, true)
 
     // Mirrors workflowStarter: the analyzer infers the workflow-state
     // capability from this destructure, so losing it silently strips the
@@ -85,7 +87,7 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('takes every payload from the sibling zod module, never a generic', () => {
-    const { schemas, functions } = serializeWorkflowRoutes('#pikku', true)
+    const { schemas, functions } = serializeWorkflowRoutes(leaf, true)
 
     assert.match(schemas, /import \{ z \} from 'zod'/)
     assert.match(schemas, /export const WorkflowStart = z\.object\(\{/)
@@ -98,7 +100,7 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('leaves the run status to the handler rather than re-declaring a core type', () => {
-    const { schemas, functions } = serializeWorkflowRoutes('#pikku', true)
+    const { schemas, functions } = serializeWorkflowRoutes(leaf, true)
 
     assert.ok(
       !schemas.includes('WorkflowRunStatus'),
@@ -111,9 +113,9 @@ describe('serializeWorkflowRoutes', () => {
   })
 
   test('keeps the schemas module free of anything but zod', () => {
-    const { schemas } = serializeWorkflowRoutes('#pikku', true)
+    const { schemas } = serializeWorkflowRoutes(leaf, true)
 
-    assert.ok(!schemas.includes('#pikku'))
+    assert.ok(!schemas.includes(leaf))
     assert.ok(!schemas.includes('@pikku/core'))
   })
 })

@@ -2,9 +2,9 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager'
-import { createSecretValue } from '@pikku/core/ecosystem/types'
-import type { SecretService, SecretValues } from '@pikku/core/ecosystem/secret'
-import type { SecretValue } from '@pikku/core/ecosystem/types'
+import { createSecretValue } from '@pikku/core/classification'
+import type { SecretService, SecretValues } from '@pikku/core/services'
+import type { SecretValue } from '@pikku/core/classification'
 
 import type { AWSConfig } from './aws-config.js'
 

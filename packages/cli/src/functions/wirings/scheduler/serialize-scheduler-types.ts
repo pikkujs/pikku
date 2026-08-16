@@ -7,7 +7,7 @@ export const serializeSchedulerTypes = (functionTypesImportPath: string) => {
  */
 
 import { wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
-import { CoreScheduledTask } from '@pikku/core/ecosystem/scheduler'
+import { CoreScheduledTask } from '@pikku/core/scheduler'
 import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 
 /**

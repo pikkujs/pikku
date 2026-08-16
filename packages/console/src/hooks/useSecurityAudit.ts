@@ -9,8 +9,8 @@ export type {
   SecurityAuditUpdate,
   SecuritySeverity,
   SecurityUpdateLevel,
-} from '@pikku/core/ecosystem/types'
-import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
+import type { SecurityAuditReport } from '@pikku/core/types'
 
 export function useSecurityAudit(): {
   report: SecurityAuditReport | null

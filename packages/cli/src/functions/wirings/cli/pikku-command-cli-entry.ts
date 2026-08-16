@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'

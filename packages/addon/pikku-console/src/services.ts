@@ -1,4 +1,4 @@
-import { pikkuAddonServices } from '#pikku'
+import { pikkuAddonServices } from '#pikku/addon'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { AddonReadinessService } from './services/addon-readiness.service.js'
@@ -9,7 +9,7 @@ import { KnowledgeService } from './services/knowledge.service.js'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { join } from 'node:path'
-import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
+import { FileScenarioRunStore } from '@pikku/core/services'
 
 export const createSingletonServices = pikkuAddonServices(
   async (

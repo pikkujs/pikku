@@ -1,4 +1,4 @@
-import type { Safe } from '../secret-value.js'
+import type { Safe } from '../classification/secret-value.js'
 
 export interface EmailTemplateReference {
   name: string

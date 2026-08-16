@@ -1,4 +1,4 @@
-import type { MetaService } from '@pikku/core/ecosystem/services'
+import type { MetaService } from '@pikku/core/services'
 
 export type Classification = 'public' | 'private' | 'pii' | 'secret'
 

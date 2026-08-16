@@ -1,13 +1,13 @@
 import {
   personaEmails,
   validateAndBuildPersonasMeta,
-} from '@pikku/core/ecosystem/persona'
+} from '@pikku/core/persona'
 import type {
   PersonaMeta,
   PersonasMeta,
   PersonaDefinitions,
-} from '@pikku/core/ecosystem/persona'
-import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+} from '@pikku/core/persona'
+import type { ResolvedPersona } from '@pikku/core/services'
 
 /**
  * Where a persona's mail lands when the project has not said.
@@ -49,4 +49,4 @@ export const resolvePersonas = (
  * needs the same expansion at runtime, so it lives in core beside
  * `prepareVirtualUserRun` and this keeps the CLI's existing import sites.
  */
-export { personaScopes } from '@pikku/core/ecosystem/virtual-user'
+export { personaScopes } from '@pikku/core/virtual-user'

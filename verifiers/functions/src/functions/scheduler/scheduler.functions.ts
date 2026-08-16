@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const myScheduledTask = pikkuSessionlessFunc<void, void>(
   async ({ logger }) => {

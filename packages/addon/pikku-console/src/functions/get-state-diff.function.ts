@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import type { StateDiff } from '../services/state-diff.service.js'
 
 export const getStateDiff = pikkuFunc<

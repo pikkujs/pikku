@@ -215,7 +215,7 @@ function heavyFunctionFile(n: number): string {
   // ts-json-schema-generator path via TS generics over the Kysely + deep-generic
   // closure; odd n exercises the zod path with a 30+ field inferred object.
   if (n % 2 === 0) {
-    return `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+    return `import { pikkuSessionlessFunc } from '../../.pikku/function/index.js'
 import type { Row, New, DB } from '../../types/db-schema.js'
 import type { Endpoints, Resolved, DeepPartial, Paths } from '../../types/deep-generic.js'
 
@@ -259,7 +259,7 @@ export const ${name} = pikkuSessionlessFunc<${name}In, ${name}Out>({
     return `    f${i}: ${vals[i % vals.length]},`
   }).join('\n')
 
-  return `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+  return `import { pikkuSessionlessFunc } from '../../.pikku/function/index.js'
 import { z } from 'zod'
 
 export const ${name}Input = z.object({
@@ -282,7 +282,7 @@ ${wideReturn}
 function functionFile(n: number): string {
   if (WEIGHT === 'heavy') return heavyFunctionFile(n)
   const name = `testFunc${String(n).padStart(4, '0')}`
-  return `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+  return `import { pikkuSessionlessFunc } from '../../.pikku/function/index.js'
 import { z } from 'zod'
 
 export const ${name}Input = z.object({
@@ -469,7 +469,7 @@ function httpWiringFile(count: number): string {
   })
 
   return [
-    `import { wireHTTPRoutes, defineHTTPRoutes } from '../../.pikku/pikku-types.gen.js'`,
+    `import { wireHTTPRoutes, defineHTTPRoutes } from '../../.pikku/http/index.js'`,
     ...imports,
     ``,
     `wireHTTPRoutes([`,
@@ -495,7 +495,7 @@ function queueWiringFile(count: number): string {
   })
 
   return [
-    `import { wireQueueWorker } from '../../.pikku/pikku-types.gen.js'`,
+    `import { wireQueueWorker } from '../../.pikku/queue/index.js'`,
     ...imports,
     ``,
     ...wires,
@@ -516,7 +516,7 @@ function schedulerWiringFile(count: number): string {
   })
 
   return [
-    `import { wireScheduler } from '../../.pikku/pikku-types.gen.js'`,
+    `import { wireScheduler } from '../../.pikku/scheduler/index.js'`,
     ...imports,
     ``,
     ...wires,

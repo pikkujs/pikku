@@ -1,6 +1,6 @@
-import { MissingServiceError } from '@pikku/core/ecosystem/errors'
+import { MissingServiceError } from '#pikku/error'
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const JwtSignInput = z.object({
   payload: z.any().describe('The payload to encode into the JWT'),

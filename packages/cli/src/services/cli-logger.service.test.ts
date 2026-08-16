@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { LogLevel } from '@pikku/core/ecosystem/services'
+import { LogLevel } from '@pikku/core/services'
 import { CLILogger } from './cli-logger.service.js'
 
 function captureStream(stream: NodeJS.WriteStream, run: () => void): string[] {

@@ -121,7 +121,7 @@ in-app features don't.
   queue-dispatched.
 - **Auth checks belong on the function or wiring**, not in function bodies.
   Use the `permissions` field with a `pikkuPermission` factory.
-- **Throw typed errors** from `@pikku/core/errors` — `NotFoundError`,
+- **Throw typed errors** from `#pikku/error` — `NotFoundError`,
   `ConflictError`, `BadRequestError`. Never bare `Error`.
 - **Migrations are inline SQL files** in the project's migrations dir
   (typically `sql/`). Use a numbered prefix matching existing files.
@@ -141,8 +141,9 @@ Some patterns vary by project; **read a neighbour file before writing**:
   `CreateTodoOutput`) passed to `input`/`output` on the func config — vs
   generic-typed config. Schema name **must match codegen expectations** (the
   exported const name = the schema name in generated `.gen.json`).
-- **Imports**: usually `'#pikku'` for `pikkuFunc` / `pikkuSessionlessFunc`
-  etc. Copy what neighbours do.
+- **Imports**: `#pikku` is a namespace, not a module — one subpath per wiring.
+  `pikkuFunc` / `pikkuSessionlessFunc` come from `'#pikku/function'`, `wireHTTP`
+  from `'#pikku/http'`. Copy what neighbours do.
 - **Service usage**: e.g. `kysely`, `redis`. Look at how an existing function
   destructures services from its first arg. **Check `application-types.d.ts`**
   to see whether services like `kysely` are typed (`Kysely<DB>`) or untyped

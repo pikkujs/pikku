@@ -1,5 +1,5 @@
-import { pikkuFunc } from '#pikku'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuFunc } from '#pikku/function'
+import { pikkuState } from '@pikku/core/state'
 
 export interface ScorerListEntry {
   name: string

@@ -1,4 +1,4 @@
-import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/ecosystem/http'
+import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyStructuredResultV2,

@@ -1,5 +1,5 @@
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
-import { pikkuAgentMiddleware } from '../../types/core.types.js'
+import { pikkuAgentMiddleware } from '../../middleware/middleware-factories.js'
 import { SPOKEN_TURN } from './voice-input.js'
 
 export type VoiceOutputState = {

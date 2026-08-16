@@ -14,12 +14,14 @@ import type {
 } from '../../function/functions.types.js'
 import type {
   CoreUserSession,
-  CorePikkuMiddleware,
-  CorePikkuMiddlewareGroup,
   PikkuRawWire,
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
+import type {
+  CorePikkuMiddleware,
+  CorePikkuMiddlewareGroup,
+} from '../../middleware/middleware.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import { createWeakUID, isSerializable } from '../../utils.js'
 import {

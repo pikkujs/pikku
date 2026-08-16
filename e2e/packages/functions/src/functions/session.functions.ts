@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuFunc } from '#pikku/function'
 
 /**
  * Echoes the resolved session back to the caller. The impersonation suite uses

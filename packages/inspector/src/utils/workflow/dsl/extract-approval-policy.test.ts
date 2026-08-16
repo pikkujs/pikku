@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as ts from 'typescript'
 import { extractDSLWorkflow } from './extract-dsl-workflow.js'
-import type { ApprovalStepMeta } from '@pikku/core/ecosystem/workflow'
+import type { ApprovalStepMeta } from '@pikku/core/workflow'
 
 const checker = {
   getSymbolAtLocation: () => undefined,

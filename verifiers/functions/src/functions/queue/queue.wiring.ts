@@ -1,4 +1,4 @@
-import { wireQueueWorker } from '#pikku'
+import { wireQueueWorker } from '#pikku/queue'
 import { queueWorker } from './queue.functions.js'
 
 wireQueueWorker({

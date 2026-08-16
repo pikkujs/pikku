@@ -1,5 +1,5 @@
-import { pikkuAddonWireServices } from '#pikku'
-import { ForbiddenError } from '@pikku/core/errors'
+import { pikkuAddonWireServices } from '#pikku/addon'
+import { ForbiddenError } from '#pikku/error'
 import { HmacSignerService } from './hmac-signer.service.js'
 
 export const createWireServices = pikkuAddonWireServices(

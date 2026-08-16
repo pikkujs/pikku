@@ -1,6 +1,6 @@
-import { hasScopes } from '@pikku/core/ecosystem/scope'
-import { canAccessThread } from '@pikku/core/ecosystem/agent'
-import { pikkuFunc } from '#pikku'
+import { hasScopes } from '@pikku/core/scope'
+import { canAccessThread } from '@pikku/core/agent'
+import { pikkuFunc } from '#pikku/function'
 
 const ADMIN_SCOPE_ROOT = 'admin'
 

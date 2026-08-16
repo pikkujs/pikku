@@ -1,5 +1,5 @@
-import { LocalEnvironmentOnlyError } from '@pikku/core/ecosystem/errors'
-import { pikkuFunc } from '#pikku'
+import { LocalEnvironmentOnlyError } from '#pikku/error'
+import { pikkuFunc } from '#pikku/function'
 
 export const readAgentSource = pikkuFunc<
   { sourceFile: string; exportedName: string },

@@ -41,7 +41,7 @@ All three factories come from `#pikku` (the generated types re-export
 loses your project's service and middleware types.
 
 ```typescript
-import { wireCLI } from '#pikku'
+import { wireCLI } from '#pikku/cli'
 
 wireCLI({
   program: string,              // Program name (e.g. 'todos')
@@ -65,7 +65,7 @@ wireCLI({
 ### `pikkuCLICommand(config)`
 
 ```typescript
-import { pikkuCLICommand } from '#pikku'
+import { pikkuCLICommand } from '#pikku/cli'
 
 pikkuCLICommand({
   parameters?: string,          // Positional args (e.g. '<text>', '<username> <email>')
@@ -111,7 +111,7 @@ How the parser reads them, which is worth knowing before you name one:
 ### `pikkuCLIRender(fn)`
 
 ```typescript
-import { pikkuCLIRender } from '#pikku'
+import { pikkuCLIRender } from '#pikku/cli'
 
 const renderer = pikkuCLIRender<OutputType>((services, data) => {
   // Format and print output to terminal

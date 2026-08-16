@@ -1,6 +1,7 @@
 import { setupBenchmarkRoutes } from './bench-shared.js'
 import { fetchData } from '@pikku/core/http'
-import { pikkuState, httpRouter } from '@pikku/core/ecosystem'
+import { httpRouter } from '@pikku/core/http'
+import { pikkuState } from '@pikku/core/state'
 import { UWSPikkuHTTPRequest } from '../packages/runtimes/uws-handler/src/uws-pikku-http-request.js'
 import { UWSPikkuHTTPResponse } from '../packages/runtimes/uws-handler/src/uws-pikku-http-response.js'
 

@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState } from '@pikku/core/state'
 import { addFunction } from '@pikku/core/function'
 
 import { InMemorySchedulerService } from './in-memory-scheduler-service.js'

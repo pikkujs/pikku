@@ -1,4 +1,4 @@
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuVoidFunc } from '#pikku/function'
 import { computeMetaDiff, readMetaSnapshot } from '../../utils/meta-diff.js'
 
 export const all = pikkuVoidFunc({

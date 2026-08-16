@@ -1,6 +1,6 @@
-import { pikkuFunc } from '#pikku'
-import { NotFoundError } from '@pikku/core/ecosystem/errors'
-import type { EmailTemplateMeta } from '@pikku/core/ecosystem/services'
+import { pikkuFunc } from '#pikku/function'
+import { NotFoundError } from '#pikku/error'
+import type { EmailTemplateMeta } from '@pikku/core/services'
 import {
   getNestedValue,
   renderTemplate,

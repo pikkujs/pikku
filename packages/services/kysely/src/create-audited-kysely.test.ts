@@ -7,7 +7,7 @@ import {
   NoopAuditService,
   type AuditEvent,
   type AuditService,
-} from '../../../core/src/index.js'
+} from '@pikku/core/services'
 
 import { createAuditedKysely } from './create-audited-kysely.js'
 

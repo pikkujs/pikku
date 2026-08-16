@@ -1,10 +1,12 @@
 import type {
-  CorePikkuMiddleware,
   CoreSingletonServices,
   CoreUserSession,
   CoreServices,
-  MiddlewareMetadata,
 } from '../../types/core.types.js'
+import type {
+  CorePikkuMiddleware,
+  MiddlewareMetadata,
+} from '../../middleware/middleware.types.js'
 import type {
   CorePikkuFunctionConfig,
   CorePikkuPermission,

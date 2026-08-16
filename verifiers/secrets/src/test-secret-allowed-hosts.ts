@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { assertSecretAllowedForHost } from '@pikku/core'
+import { assertSecretAllowedForHost } from '@pikku/core/services'
 import type { SecretDefinitionsMeta } from '@pikku/core/secret'
 
 const metaPath = join(

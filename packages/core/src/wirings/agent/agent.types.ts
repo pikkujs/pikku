@@ -5,8 +5,8 @@ import type {
 import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
-  PermissionMetadata,
-} from '../../types/core.types.js'
+} from '../../middleware/middleware.types.js'
+import type { PermissionMetadata } from '../../function/function-meta.types.js'
 import type { AIProviderOptions } from '../../services/agent-runner-service.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
@@ -423,7 +423,7 @@ export type CoreAgent<
    * which OR together, a scope can only narrow access.
    *
    * Narrowed to the generated `ScopeId` union in a project's own
-   * `pikku-types.gen.ts`, so an undeclared scope is a compile error.
+   * `#pikku/scopes`, so an undeclared scope is a compile error.
    */
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>

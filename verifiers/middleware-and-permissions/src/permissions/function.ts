@@ -1,4 +1,4 @@
-import { pikkuPermission } from '#pikku'
+import { pikkuPermission } from '#pikku/function'
 
 export const functionPermission = pikkuPermission(
   async ({ logger }, _data, { session }) => {

@@ -1,5 +1,5 @@
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
-import { pikkuAgentMiddleware } from '../../types/core.types.js'
+import { pikkuAgentMiddleware } from '../../middleware/middleware-factories.js'
 import { safeFetch } from '../../utils/safe-fetch.js'
 import type { AgentContentPart } from './agent.types.js'
 

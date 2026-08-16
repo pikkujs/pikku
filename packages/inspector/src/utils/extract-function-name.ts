@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { createHash } from 'crypto'
 import { relative } from 'path'
-import { formatVersionedId } from '@pikku/core/ecosystem/types'
+import { formatVersionedId } from '@pikku/core/utils'
 
 /**
  * Deterministic placeholder id for an anonymous/unnamed pikku function or

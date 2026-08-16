@@ -1,12 +1,12 @@
+import type { EventHubService } from '@pikku/core/channel'
+import type { QueueService } from '@pikku/core/queue'
+import type { JWTService } from '@pikku/core/services'
 import type {
   CoreConfig,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  EventHubService,
-  JWTService,
-  QueueService,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { EventHubTopics } from './eventhub-topics.js'
 import type { CustomLogger } from '../src/services/custom-logger.service.js'
 

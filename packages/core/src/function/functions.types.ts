@@ -2,17 +2,17 @@ import type {
   CoreServices,
   CoreSecretlessSingletonServices,
   CoreUserSession,
-  CorePikkuMiddleware,
   PikkuWire,
-  PickRequired,
   SecretlessServices,
 } from '../types/core.types.js'
+import type { CorePikkuMiddleware } from '../middleware/middleware.types.js'
+import type { PickRequired } from '../utils.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
-import type { Safe } from '../secret-value.js'
+import type { Safe } from '../classification/secret-value.js'
 
 export type CorePikkuFunction<
   In,

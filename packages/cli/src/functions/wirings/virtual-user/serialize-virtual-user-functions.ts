@@ -27,7 +27,7 @@ export interface VirtualUserGenOutput {
  * zod sidesteps that entirely.
  */
 export const serializeVirtualUserFunctions = (
-  pathToPikkuTypes: string,
+  leaf: (name: string) => string,
   pathToPersonas: string,
   requireAuth: boolean = true
 ): VirtualUserGenOutput => {
@@ -144,9 +144,13 @@ export const ExecuteVirtualUserRunOutput = z.object({
  * Auto-generated virtual user functions
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuFunc, pikkuSessionlessFunc, defineScope } from '${pathToPikkuTypes}'
+import { pikkuFunc, pikkuSessionlessFunc } from '${leaf('function')}'
+import { defineScope } from '${leaf('scopes')}'
 import { personaVirtualUserTarget, runVirtualUser as runVirtualUserEngine, type SchemaMap, type VirtualUserDisposition } from '@pikku/core/virtual-user'
-import { prepareVirtualUserRun, PRODUCTION_DISPOSITION } from '@pikku/core/ecosystem/virtual-user'
+import {
+  prepareVirtualUserRun,
+  PRODUCTION_DISPOSITION,
+} from '@pikku/core/virtual-user'
 import { createPersonas, personaConfigs } from '${pathToPersonas}'
 import {
   ExecuteVirtualUserRunInput,

@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert'
-import type { CredentialService } from '@pikku/core/ecosystem/credential'
+import type { CredentialService } from '@pikku/core/services'
 import { BetterAuthCredentialService } from './better-auth-credential.service.js'
 
 class FakeFallback implements CredentialService {

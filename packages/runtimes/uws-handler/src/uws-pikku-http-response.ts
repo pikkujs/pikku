@@ -1,5 +1,5 @@
 import type { HttpResponse } from 'uWebSockets.js'
-import type { PikkuHTTPResponse } from '@pikku/core/ecosystem/http'
+import type { PikkuHTTPResponse } from '@pikku/core/http'
 import { stringifySetCookie, type SerializeOptions } from 'cookie'
 
 export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {

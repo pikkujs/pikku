@@ -12,7 +12,7 @@ import {
 import { addGlobalMiddleware } from '../../middleware-runner.js'
 import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
-import { pikkuMiddleware } from '../../types/core.types.js'
+import { pikkuMiddleware } from '../../middleware/middleware-factories.js'
 import { addTagMiddleware } from '../../middleware-runner.js'
 
 const logger = {

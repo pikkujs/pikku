@@ -1,5 +1,5 @@
-import type { Safe } from '@pikku/core'
-import { runPikkuFunc } from '@pikku/core/ecosystem'
+import type { Safe } from '@pikku/core/classification'
+import { runPikkuFunc } from '@pikku/core/function'
 import {
   createConfig,
   createSingletonServices,

@@ -1,5 +1,6 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { projectDeclaresBetterAuth } from '../../../utils/detect-better-auth.js'
@@ -33,18 +34,15 @@ export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
         )
       }
 
-      const pathToPikkuTypes = getFileImportRelativePath(
-        config.consoleFunctionsFile,
-        config.typesDeclarationFile,
-        config.packageMappings
-      )
+      const leaf = (name: string) =>
+        getLeafImportPath(config.consoleFunctionsFile, name, config)
       const pathToAgentTypes = getFileImportRelativePath(
         config.consoleFunctionsFile,
         config.agentTypesFile,
         config.packageMappings
       )
       const { schemas, functions } = serializeConsoleFunctions(
-        pathToPikkuTypes,
+        leaf,
         pathToAgentTypes,
         config.globalHTTPPrefix || ''
       )

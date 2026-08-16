@@ -1,5 +1,5 @@
-import type { SecretDefinitions } from '@pikku/core/ecosystem/secret'
-import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/ecosystem/secret'
+import type { SecretDefinitions } from '@pikku/core/secret'
+import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
@@ -72,7 +72,7 @@ export const serializeSecretsTypes = ({
 
   imports.push(
     `import { TypedSecretService as CoreTypedSecretService } from '@pikku/core/services'
-import type { CredentialMeta } from '@pikku/core/ecosystem/services'`
+import type { CredentialMeta } from '@pikku/core/services'`
   )
   imports.push(`import type { SecretService } from '@pikku/core/services'`)
   imports.push(
@@ -88,7 +88,7 @@ import type { CredentialMeta } from '@pikku/core/ecosystem/services'`
 
   if (needsOAuth2Types) {
     imports.push(
-      `import type { OAuth2AppCredential, OAuth2Token } from '@pikku/core/ecosystem/oauth2'`
+      `import type { OAuth2AppCredential, OAuth2Token } from '@pikku/core/oauth2'`
     )
   }
 

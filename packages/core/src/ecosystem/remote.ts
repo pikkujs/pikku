@@ -1,9 +1,0 @@
-export { buildRemoteHeaders } from '../remote.js'
-
-/**
- * Types the exports above mention but do not themselves export. Without
- * them a consumer's declaration emit has no name for the type it infers,
- * and fails with TS2883 rather than reaching for the original entry point.
- */
-export type { JWTService } from '../services/jwt-service.js'
-export type { SecretService } from '../services/secret-service.js'

@@ -4,8 +4,8 @@
   "private": true,
   "description": "Drives `pikku db generate/migrate/check/baseline` end to end against a real Better Auth config with schema-adding plugins and a real addon that ships a table",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
     "@pikku/better-auth": "workspace:*",

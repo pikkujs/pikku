@@ -1,4 +1,4 @@
-import { wireCLI, pikkuCLICommand } from '#pikku'
+import { pikkuCLICommand, wireCLI } from '#pikku/cli'
 import {
   greetUser,
   addNumbers,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const ListContactsOutput = z.object({
   contacts: z.array(z.object({ id: z.string(), name: z.string() })),

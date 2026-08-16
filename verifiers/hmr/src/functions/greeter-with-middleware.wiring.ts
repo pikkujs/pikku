@@ -1,4 +1,4 @@
-import { wireHTTP } from '#pikku'
+import { wireHTTP } from '#pikku/http'
 import { greeterWithMiddleware } from './greeter-with-middleware.function.js'
 
 wireHTTP({

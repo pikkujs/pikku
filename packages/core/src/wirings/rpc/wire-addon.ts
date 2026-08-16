@@ -1,7 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
 import { getTagGroups } from '../../utils.js'
-import type { CorePikkuMiddleware } from '../../types/core.types.js'
-
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 export type WireAddonConfig = {
   name: string
   package: string

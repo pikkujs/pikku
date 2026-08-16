@@ -1,5 +1,5 @@
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { ref } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/function'
 
 /** Used purely as a sub-agent tool of {@link toolKindsAgent}. */
 export const toolKindsHelperAgent = pikkuAgent({

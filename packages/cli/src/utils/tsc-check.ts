@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { dirname, isAbsolute, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
-import { PikkuError } from '@pikku/core/ecosystem/errors'
+import { PikkuError } from '@pikku/core/errors'
 
 // Type-check with the PROJECT's own TypeScript when it has one — the CLI's
 // bundled compiler can be a different major (e.g. TS 6 vs a project on TS 5)

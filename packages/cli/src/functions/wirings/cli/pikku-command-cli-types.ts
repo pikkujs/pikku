@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -15,7 +15,7 @@ export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
     const bootstrap = input?.bootstrap === true
     // In bootstrap mode we only need filesAndMethods (userSession/singleton
     // services types) — skip schema generation. Full mode would dynamic-import
-    // pikku-types.gen.ts, which re-exports the not-yet-written cli-types file.
+    // the not-yet-written cli-types file through '#pikku/cli'.
     const visitState = bootstrap
       ? await getInspectorState(false, true, true)
       : await getInspectorState()

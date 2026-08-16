@@ -5,7 +5,8 @@ import {
   type Scenario,
 } from './bench-shared.js'
 import { PikkuFetchHTTPRequest } from '@pikku/core/http'
-import { pikkuState, httpRouter } from '@pikku/core/ecosystem'
+import { httpRouter } from '@pikku/core/http'
+import { pikkuState } from '@pikku/core/state'
 
 const ITERATIONS = 50_000
 

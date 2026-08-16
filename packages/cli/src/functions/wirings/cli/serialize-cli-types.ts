@@ -14,7 +14,11 @@ export const serializeCLITypes = (
  */
 
 import { wireCLI as wireCLICore, defineCLICommands as defineCLICommandsCore } from '@pikku/core/cli'
-import { CoreCLI, CorePikkuCLIRender, CoreCLICommandConfig } from '@pikku/core/ecosystem/cli'
+import {
+  CoreCLI,
+  CorePikkuCLIRender,
+  CoreCLICommandConfig,
+} from '@pikku/core/cli'
 import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}

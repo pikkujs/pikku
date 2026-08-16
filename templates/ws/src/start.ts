@@ -1,5 +1,5 @@
 import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'
-import { stopSingletonServices } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core/utils'
 
 import { Server } from 'http'
 import { WebSocketServer } from 'ws'

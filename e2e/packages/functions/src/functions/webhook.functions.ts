@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 /**
  * Enqueues an outgoing webhook to a caller-provided URL. The e2e test points

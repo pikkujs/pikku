@@ -14,7 +14,7 @@ import { InMemoryQueueService } from './in-memory-queue-service.js'
 import { wireQueueWorker } from '../wirings/queue/queue-runner.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { JobOptions } from '../wirings/queue/queue.types.js'
-import { createSecretValue } from '../secret-value.js'
+import { createSecretValue } from '../classification/secret-value.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 

@@ -1,4 +1,4 @@
-import { wireCLI, pikkuCLICommand } from '../../.pikku/pikku-types.gen.js'
+import { pikkuCLICommand, wireCLI } from '#pikku/cli'
 import {
   listTodos,
   getTodo,

@@ -1,7 +1,7 @@
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState } from '@pikku/core/state'
 import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
 

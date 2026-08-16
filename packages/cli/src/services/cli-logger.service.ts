@@ -1,8 +1,8 @@
 import chalk from 'chalk'
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type { Safe } from '@pikku/core/ecosystem/types'
-import { LogLevel } from '@pikku/core/ecosystem/services'
-import { isExpectedError } from '@pikku/core/ecosystem/types'
+import type { Logger } from '@pikku/core/services'
+import type { Safe } from '@pikku/core/classification'
+import { LogLevel } from '@pikku/core/services'
+import { isExpectedError } from '@pikku/core/errors'
 import type {
   ErrorCode,
   DiagnosticSeverity,

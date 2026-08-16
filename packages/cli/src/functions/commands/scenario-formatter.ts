@@ -12,7 +12,7 @@ import type {
   ScenarioFailureDetail,
   ScenarioRunReport,
   ScenarioStepRow,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
 
 /** The longest gherkin keyword ("Given"), so sentences line up under each other. */
 const KEYWORD_WIDTH = 5

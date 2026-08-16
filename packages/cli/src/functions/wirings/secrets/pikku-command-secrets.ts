@@ -1,8 +1,8 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeSecretsTypes } from './serialize-secrets-types.js'
-import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/ecosystem/secret'
+import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 
 export const pikkuSecrets = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {

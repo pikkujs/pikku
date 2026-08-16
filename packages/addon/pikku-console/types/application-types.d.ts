@@ -3,8 +3,8 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
-import type { MetaService } from '@pikku/core/ecosystem/services'
+} from '@pikku/core/types'
+import type { MetaService } from '@pikku/core/services'
 import type { WiringService } from '../src/services/wiring.service.js'
 import type { AddonService } from '../src/services/addon.service.js'
 import type { AddonReadinessService } from '../src/services/addon-readiness.service.js'
@@ -13,7 +13,7 @@ import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
-import type { ScenarioRunStore } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioRunStore } from '@pikku/core/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
 
 export interface Config extends CoreConfig {}

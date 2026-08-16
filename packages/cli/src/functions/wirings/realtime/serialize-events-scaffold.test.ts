@@ -6,7 +6,7 @@ describe('serializeEventsScaffold', () => {
   test('emits auth: true when authRequired is true', () => {
     const { functions: out } = serializeEventsScaffold(
       true,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(out, /name: 'events',\s*route: '\/events',\s*auth: true,/)
     assert.match(
@@ -18,7 +18,7 @@ describe('serializeEventsScaffold', () => {
   test('emits auth: false when authRequired is false', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(out, /name: 'events',\s*route: '\/events',\s*auth: false,/)
     assert.match(
@@ -30,7 +30,7 @@ describe('serializeEventsScaffold', () => {
   test('wires both transports against eventHub', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     // WebSocket channel
     assert.match(out, /wireChannel\(\{/)
@@ -44,7 +44,7 @@ describe('serializeEventsScaffold', () => {
   test('defines subscribe/unsubscribe via defineChannelRoutes', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(
       out,
@@ -55,7 +55,7 @@ describe('serializeEventsScaffold', () => {
   test('subscribe/unsubscribe handlers fail loudly if eventHub is missing', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(out, /eventHub\?\.subscribe\(topic, channel\.channelId\)/)
     assert.match(out, /eventHub\?\.unsubscribe\(topic, channel\.channelId\)/)
@@ -64,7 +64,7 @@ describe('serializeEventsScaffold', () => {
   test('SSE handler subscribes and lets eventHub fan out', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(out, /eventHub\?\.subscribe\(topic, channel\.channelId\)/)
     assert.match(out, /Realtime SSE handler invoked without a channel/)
@@ -73,28 +73,46 @@ describe('serializeEventsScaffold', () => {
   test('tags include realtime and sse on the right routes', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(out, /tags: \['pikku:realtime'\]/)
     assert.match(out, /tags: \['pikku:realtime', 'sse'\]/)
   })
 
-  test('imports the generated pikku-types entrypoint', () => {
+  test('imports each name from the leaf it belongs to', () => {
     const { functions: out } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
-    assert.match(out, /from '\.\.\/\.\.\/\.pikku\/pikku-types\.gen\.js'/)
-    assert.match(out, /import \{[^}]*pikkuSessionlessFunc[^}]*\}/)
-    assert.match(out, /import \{[^}]*wireChannel[^}]*\}/)
-    assert.match(out, /import \{[^}]*wireHTTP[^}]*\}/)
-    assert.match(out, /import \{[^}]*defineChannelRoutes[^}]*\}/)
+    assert.match(
+      out,
+      /import \{[^}]*pikkuSessionlessFunc[^}]*\} from '\.\/function\/index\.js'/
+    )
+    assert.match(
+      out,
+      /import \{[^}]*wireChannel[^}]*defineChannelRoutes[^}]*\} from '\.\/channel\/index\.js'/
+    )
+    // `pikkuChannelFunc` is declared by the channel wiring, not the function
+    // one — asking the function leaf for it is a name the leaf never exports.
+    assert.match(
+      out,
+      /import \{[^}]*pikkuChannelFunc[^}]*\} from '\.\/channel\/index\.js'/
+    )
+    assert.ok(
+      !/import \{[^}]*pikkuChannelFunc[^}]*\} from '\.\/function\/index\.js'/.test(
+        out
+      )
+    )
+    assert.match(
+      out,
+      /import \{[^}]*wireHTTP[^}]*\} from '\.\/http\/index\.js'/
+    )
   })
 
   test('shares one zod TopicRef across every handler', () => {
     const { schemas, functions } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.match(schemas, /import \{ z \} from 'zod'/)
     assert.match(
@@ -113,7 +131,7 @@ describe('serializeEventsScaffold', () => {
   test('keeps the schemas module free of anything but zod', () => {
     const { schemas } = serializeEventsScaffold(
       false,
-      '../../.pikku/pikku-types.gen.js'
+      (name: string) => `./${name}/index.js`
     )
     assert.ok(
       !schemas.includes('pikku-types.gen.js'),

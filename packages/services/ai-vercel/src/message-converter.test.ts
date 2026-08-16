@@ -4,7 +4,7 @@ import {
   convertToSDKMessages,
   convertFromSDKStep,
 } from './message-converter.js'
-import type { AgentMessage } from '@pikku/core/ecosystem/agent'
+import type { AgentMessage } from '@pikku/core/agent'
 
 /**
  * `convertToSDKMessages` is the seam between Pikku's stored message shape and the

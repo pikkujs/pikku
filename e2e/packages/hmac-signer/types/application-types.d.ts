@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { HmacSignerService } from '../src/hmac-signer.service.js'
 
 export interface Config extends CoreConfig {}

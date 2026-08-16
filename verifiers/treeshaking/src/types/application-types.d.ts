@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { EmailService } from '../services/email.service.js'
 import type { SMSService } from '../services/sms.service.js'
 import type { PaymentService } from '../services/payment.service.js'

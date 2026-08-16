@@ -2,7 +2,7 @@ import {
   pikkuWorkflowComplexFunc,
   pikkuWorkflowFunc,
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // Pikku function to create a user profile
 export const createUserProfile = pikkuSessionlessFunc<

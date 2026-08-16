@@ -3,7 +3,7 @@ import { Box, Text, Group, Badge, Tabs } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
+import type { ChannelMeta } from '@pikku/core/channel'
 import { usePanelContext } from '../../context/PanelContext'
 import {
   useFunctionMeta,

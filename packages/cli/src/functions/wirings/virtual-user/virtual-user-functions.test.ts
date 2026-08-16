@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { serializeVirtualUserFunctions } from './serialize-virtual-user-functions.js'
 import { pikkuVirtualUserFunctions } from './pikku-command-virtual-user-functions.js'
 
+const leaf = (name: string) => `#pikku/${name}`
+
 const services = (
   personas: unknown,
   scaffold: unknown = { virtualUser: true }
@@ -15,7 +17,7 @@ const services = (
         '/app/src/scaffold/virtual-user/virtual-user.gen.ts',
       virtualUserSchemasFile:
         '/app/src/scaffold/virtual-user/virtual-user.schemas.gen.ts',
-      typesDeclarationFile: '/app/.pikku/pikku-types.gen.ts',
+      outDir: '/app/.pikku',
       personasWiringFile: '/app/.pikku/scenarios/pikku-personas.gen.ts',
       packageMappings: {},
     },
@@ -24,7 +26,7 @@ const services = (
 
 describe('serializeVirtualUserFunctions', () => {
   const { functions: out, schemas } = serializeVirtualUserFunctions(
-    '#pikku',
+    leaf,
     '../../../.pikku/workflow/pikku-personas.gen.js'
   )
 

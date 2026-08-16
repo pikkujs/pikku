@@ -17,7 +17,7 @@ import {
   pikkuWorkflowFunc,
   WorkflowCancelledException,
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // RPC function to create organization
 export const createOrg = pikkuSessionlessFunc<

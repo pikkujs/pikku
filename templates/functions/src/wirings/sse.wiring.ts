@@ -1,4 +1,4 @@
-import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
+import { wireHTTP } from '#pikku/http'
 import { processTodosProgress, todoStream } from '../functions/sse.functions.js'
 
 wireHTTP({

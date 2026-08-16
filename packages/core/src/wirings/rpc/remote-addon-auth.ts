@@ -1,6 +1,9 @@
 import type { CoreServices, PikkuRawWire } from '../../types/core.types.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
-import { isSecretValue, type SecretValue } from '../../secret-value.js'
+import {
+  isSecretValue,
+  type SecretValue,
+} from '../../classification/secret-value.js'
 
 export type RemoteAddonAuthBinding =
   | { credentialId: string }

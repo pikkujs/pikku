@@ -210,8 +210,7 @@ export const consoleAuthzNonAdminScenarioRunsScenario = pikkuScenario<
   { status: 403 }
 >({
   title: 'A non-admin is refused the record of past scenario runs',
-  description:
-    'pikku:console:scenarios:read is not implied by being signed in',
+  description: 'pikku:console:scenarios:read is not implied by being signed in',
   tags: ['scenario', 'console-authz'],
   func: async (_services, _data, { scenario, actors }) => {
     const call = await scenario.when(

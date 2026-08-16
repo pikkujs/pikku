@@ -1,7 +1,4 @@
-import {
-  pikkuSessionlessFunc,
-  pikkuListFunc,
-} from '../../.pikku/pikku-types.gen.js'
+import { pikkuListFunc, pikkuSessionlessFunc } from '#pikku/function'
 import {
   ListTodosWithUserInputSchema,
   CreateTodoWithUserInputSchema,

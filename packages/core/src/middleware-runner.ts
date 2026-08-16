@@ -1,10 +1,10 @@
+import type { PikkuWiringTypes } from './types/core.types.js'
 import type {
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
-  PikkuWiringTypes,
   MiddlewareMetadata,
   MiddlewarePriority,
-} from './types/core.types.js'
+} from './middleware/middleware.types.js'
 import { pikkuState } from './pikku-state.js'
 import { freezeDedupe, getTagGroups } from './utils.js'
 

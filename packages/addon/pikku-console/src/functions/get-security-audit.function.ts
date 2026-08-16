@@ -1,5 +1,5 @@
-import { pikkuFunc } from '#pikku'
-import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
+import { pikkuFunc } from '#pikku/function'
+import type { SecurityAuditReport } from '@pikku/core/types'
 import { readAuditReport } from '../lib/audit-exec.js'
 
 export const getSecurityAudit = pikkuFunc<null, SecurityAuditReport | null>({

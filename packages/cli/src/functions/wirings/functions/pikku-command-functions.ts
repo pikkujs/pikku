@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeFunctionImports } from './serialize-function-imports.js'
@@ -70,7 +70,7 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       functionsMetaFile,
-      `import { pikkuState } from '@pikku/core/ecosystem'\nimport type { FunctionsMeta } from '@pikku/core/ecosystem/services'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
+      `import { pikkuState } from '@pikku/core/state'\nimport type { FunctionsMeta } from '@pikku/core/services'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
     )
 
     // For addon packages, register ALL functions (they'll be invoked by consumers)

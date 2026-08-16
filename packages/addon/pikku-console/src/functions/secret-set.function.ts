@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const secretSet = pikkuFunc<
   { secretId: string; value: unknown },

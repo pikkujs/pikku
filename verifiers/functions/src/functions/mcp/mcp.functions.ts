@@ -1,9 +1,9 @@
-import { NotFoundError } from '@pikku/core'
+import { NotFoundError } from '#pikku/error'
 import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,
   pikkuMCPToolFunc,
-} from '#pikku'
+} from '#pikku/mcp'
 
 export const sayHello = pikkuMCPToolFunc<{ name?: string }>({
   description: 'Greet someone with a friendly hello message',

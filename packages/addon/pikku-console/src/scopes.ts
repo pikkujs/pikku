@@ -1,4 +1,4 @@
-import { defineScope } from '#pikku'
+import { defineScope } from '#pikku/scopes'
 
 /**
  * Scopes the console's own authorization management requires, plus the `admin`
@@ -138,7 +138,9 @@ defineScope({
                 description:
                   'Read past scenario runs, their steps, and their screenshots and video',
               },
-              manage: { description: 'Delete scenario runs and their artifacts' },
+              manage: {
+                description: 'Delete scenario runs and their artifacts',
+              },
             },
           },
           agents: {

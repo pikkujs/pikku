@@ -7,10 +7,15 @@ export const serializeMCPTypes = (functionTypesImportPath: string) => {
  */
 
 import { wireMCPResource as wireMCPResourceCore, wireMCPPrompt as wireMCPPromptCore, MCPResourceResponse, MCPPromptResponse } from '@pikku/core/mcp'
-import { CoreMCPResource, CoreMCPPrompt, MCPToolResponse, AssertMCPResourceURIParams } from '@pikku/core/ecosystem/mcp'
+import {
+  CoreMCPResource,
+  CoreMCPPrompt,
+  MCPToolResponse,
+  AssertMCPResourceURIParams,
+} from '@pikku/core/mcp'
 
 import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuMiddleware, PikkuPermission, InferSchemaOutput } from '${functionTypesImportPath}'
-import type { CorePermissionGroup } from '@pikku/core/ecosystem/types'
+import type { CorePermissionGroup } from '@pikku/core/function'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**

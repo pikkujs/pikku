@@ -6,12 +6,12 @@ import {
 import { noOpFunction } from './no-op.function.js'
 import { channelSendFunction } from './channel-send.function.js'
 import {
-  pikkuMiddleware,
+  addChannelMiddleware,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
-  addChannelMiddleware,
   wireChannel,
-} from '#pikku'
+} from '#pikku/channel'
+import { pikkuMiddleware } from '#pikku/function'
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {

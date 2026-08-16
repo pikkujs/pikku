@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import type { MiddlewareMetadata } from '@pikku/core/ecosystem/types'
+import type { MiddlewareMetadata } from '@pikku/core/middleware'
 import { extractFunctionName } from './extract-function-name.js'
 import type { InspectorState } from '../types.js'
 

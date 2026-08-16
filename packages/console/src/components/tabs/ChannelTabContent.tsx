@@ -10,7 +10,7 @@ import {
 } from '../channel/ChannelNavTree'
 import { ChannelDetailView } from '../channel/ChannelDetailView'
 import { ListDetailLayout } from '../ui/ListDetailLayout'
-import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
+import type { ChannelMeta } from '@pikku/core/channel'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 

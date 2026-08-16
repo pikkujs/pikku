@@ -29,29 +29,29 @@
  */
 
 // @ts-expect-error - PikkuPermissionConfig is an overload parameter, not API
-import type { PikkuPermissionConfig } from '#pikku'
+import type { PikkuPermissionConfig } from '#pikku/function'
 // @ts-expect-error - PikkuAuthConfig is an overload parameter, not API
-import type { PikkuAuthConfig } from '#pikku'
+import type { PikkuAuthConfig } from '#pikku/function'
 // @ts-expect-error - PikkuMiddlewareConfig is an overload parameter, not API
-import type { PikkuMiddlewareConfig } from '#pikku'
+import type { PikkuMiddlewareConfig } from '#pikku/function'
 // @ts-expect-error - PikkuFunctionSessionlessConfig is an overload parameter, not API
-import type { PikkuFunctionSessionlessConfig } from '#pikku'
+import type { PikkuFunctionSessionlessConfig } from '#pikku/function'
 // @ts-expect-error - PikkuFunctionConfigWithSchema is an overload parameter, not API
-import type { PikkuFunctionConfigWithSchema } from '#pikku'
+import type { PikkuFunctionConfigWithSchema } from '#pikku/function'
 // @ts-expect-error - PikkuFunctionSessionlessConfigWithSchema is an overload parameter, not API
-import type { PikkuFunctionSessionlessConfigWithSchema } from '#pikku'
+import type { PikkuFunctionSessionlessConfigWithSchema } from '#pikku/function'
 // @ts-expect-error - PikkuAuth is an overload parameter, not API
-import type { PikkuAuth } from '#pikku'
+import type { PikkuAuth } from '#pikku/function'
 // @ts-expect-error - WiredAuthServices only supplies a generic default, not API
-import type { WiredAuthServices } from '#pikku'
+import type { WiredAuthServices } from '#pikku/function'
 // @ts-expect-error - WiredSingletonServices is inlined structurally, not API
-import type { WiredSingletonServices } from '#pikku'
+import type { WiredSingletonServices } from '#pikku/function'
 // @ts-expect-error - PikkuListFunction was referenced by nothing; pikkuListFunc is the API
-import type { PikkuListFunction } from '#pikku'
+import type { PikkuListFunction } from '#pikku/function'
 // @ts-expect-error - PikkuTriggerFunctionConfigWithSchema is an overload parameter, not API
-import type { PikkuTriggerFunctionConfigWithSchema } from '#pikku'
+import type { PikkuTriggerFunctionConfigWithSchema } from '#pikku/trigger'
 // @ts-expect-error - PikkuTriggerFunction is an overload parameter, not API
-import type { PikkuTriggerFunction } from '#pikku'
+import type { PikkuTriggerFunction } from '#pikku/trigger'
 /**
  * `PikkuTriggerFunctionConfig` is the declared return type of both
  * `pikkuTriggerFunc` overloads, which looks like it must stay exported for
@@ -62,11 +62,11 @@ import type { PikkuTriggerFunction } from '#pikku'
  * can surface TS2883 — `--noEmit` never does.
  */
 // @ts-expect-error - PikkuTriggerFunctionConfig is inlined structurally, not API
-import type { PikkuTriggerFunctionConfig } from '#pikku'
+import type { PikkuTriggerFunctionConfig } from '#pikku/trigger'
 // @ts-expect-error - TriggerSource is the wireTriggerSource parameter, not API
-import type { TriggerSource } from '#pikku'
+import type { TriggerSource } from '#pikku/trigger'
 // @ts-expect-error - TriggerWiring is an overload parameter, not API
-import type { TriggerWiring } from '#pikku'
+import type { TriggerWiring } from '#pikku/trigger'
 
 // @ts-expect-error - PikkuWorkflowConfigWithSchema is an overload parameter, not API
 import type { PikkuWorkflowConfigWithSchema } from '#pikku/workflow/pikku-workflow-types.gen.js'
@@ -153,13 +153,13 @@ export type _SystemRoleDefinitionsMeta = SystemRoleDefinitionsMeta
  */
 import {
   pikkuFunc,
+  pikkuListFunc,
+  pikkuMiddleware,
+  pikkuPermission,
   pikkuSessionlessFunc,
   pikkuVoidFunc,
-  pikkuListFunc,
-  pikkuPermission,
-  pikkuMiddleware,
-  pikkuTriggerFunc,
-} from '#pikku'
+} from '#pikku/function'
+import { pikkuTriggerFunc } from '#pikku/trigger'
 
 void pikkuFunc
 void pikkuSessionlessFunc

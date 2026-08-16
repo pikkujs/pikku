@@ -3,7 +3,7 @@ import type {
   WorkflowStatus,
   StepStatus,
   WorkflowVersionStatus,
-} from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/workflow'
 
 export interface ChannelsTable {
   channelId: string

@@ -1,4 +1,4 @@
-import { fetch } from '@pikku/core/ecosystem/http'
+import { fetch } from '@pikku/core/http'
 import type { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 
 export interface RunFetchOptions {

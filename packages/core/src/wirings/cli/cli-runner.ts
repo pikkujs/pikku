@@ -2,10 +2,8 @@ import { NotFoundError } from '../../errors/errors.js'
 import { isExpectedError } from '../../errors/error-handler.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
-import type {
-  CorePikkuMiddleware,
-  CoreUserSession,
-} from '../../types/core.types.js'
+import type { CoreUserSession } from '../../types/core.types.js'
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type {
   CoreCLI,
   CLICommandMeta,

@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -104,7 +104,7 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       cliWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/ecosystem'\nimport { CLIMeta } from '@pikku/core/ecosystem/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
+      `import { pikkuState } from '@pikku/core/state'\nimport { CLIMeta } from '@pikku/core/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
     )
 
     return true

@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { hasScopes } from '@pikku/core/ecosystem/scope'
+import { hasScopes } from '@pikku/core/scope'
 import {
   createConsoleAuthClient,
   type ConsoleAuthClient,

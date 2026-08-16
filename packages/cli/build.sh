@@ -60,23 +60,22 @@ echo "Bootstrapping with published @pikku/cli..."
 # @pikku/schedule is the fourth to arrive this way, and it is worth naming what
 # these four have in common: a package the CLI reaches transitively, on a range,
 # that is free to land on a *later* release wave than the one this pin describes.
-# Unpinned it floats on the CLI's `^0.12.4`. Then 0.12.5 moved to
-# `@pikku/core/ecosystem` — the subpath the adapter surface moved to — and core
-# 0.12.80 is the first release to define it. Landing beside the pinned 0.12.79 it
-# does not fail on a missing *symbol* but on a missing *subpath*, which node
-# reports before any of this file's patch passes get to run:
+# Unpinned it floats on the CLI's `^0.12.4`. Then 0.12.5 moved the adapter names
+# it imports onto a subpath that #1308 has since deleted, so no core this
+# bootstrap can resolve defines it. Landing beside the pinned core it does not
+# fail on a missing *symbol* but on a missing *subpath*, which node reports
+# before any of this file's patch passes get to run:
 #
-#   Package subpath './ecosystem' is not defined by "exports" in
+#   Package subpath '...' is not defined by "exports" in
 #   @pikku/core/package.json imported from @pikku/schedule/dist/...
 #
-# Held at the 0.12.79 wave's own version. Moving the wave forward means moving
-# this with it.
+# Held at 0.12.4, which predates the move. The pin lifts when a published
+# schedule imports the subpath that replaced it, `@pikku/core/state`.
 : "${PIKKU_SCHEDULE_VERSION:=0.12.4}"
-# @pikku/ws is the fifth, and it failed the same way one wave later: 0.12.6
-# moved to `@pikku/core/ecosystem` too, so an unpinned ws landing beside the
-# pinned core 0.12.79 reproduces the missing-subpath error verbatim, this time
-# through pikku-ws-server.js. 0.12.5 is the 0.12.79 wave's own version and peers
-# on core ^0.12.73.
+# @pikku/ws is the fifth, and it failed the same way one wave later: 0.12.6 made
+# the same move, so an unpinned ws reproduces the missing-subpath error verbatim,
+# this time through pikku-ws-server.js. 0.12.5 predates the move and peers on
+# core ^0.12.73.
 : "${PIKKU_WS_VERSION:=0.12.5}"
 # The other peer that has to be named: @pikku/better-auth peers on the upstream
 # `better-auth` library and imports it at module load, so without it the
@@ -157,9 +156,25 @@ while IFS= read -r -d '' f; do
       -e 's|wireSecret|defineSecret|g' \
       -e 's|wireVariable|defineVariable|g' \
       -e 's|wireCredential|defineCredential|g' \
-      -e "s|@pikku/core/internal|@pikku/core/ecosystem|g" \
+      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
+      -e "s|@pikku/core/internal|@pikku/core/state|g" \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
+# Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
+# resolves to `.pikku/<leaf>/index.ts`, and this source tree imports through
+# those specifiers — so without them neither the pinned CLI's own schema pass
+# (which runtime-imports this source tree) nor the first tsc below can resolve a
+# single command file, and the local CLI that would generate them properly never
+# gets built. Drop this once PIKKU_CLI_VERSION emits leaf indexes itself.
+write_leaf_indexes() {
+  for leaf_dir in .pikku/*/; do
+    entry=$(find "$leaf_dir" -maxdepth 1 \( -name '*-types.gen.ts' -o -name 'pikku-credentials.gen.ts' -o -name 'auth.types.ts' \) | head -1)
+    [ -n "$entry" ] || continue
+    printf 'export * from %s\n' "'./$(basename "${entry%.ts}").js'" > "$leaf_dir/index.ts"
+  done
+}
+
+write_leaf_indexes
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
@@ -170,6 +185,8 @@ if [ -f .pikku/pikku-types.gen.ts ]; then
   sed "s|./forge/pikku-forge-types.gen.js|./node/pikku-node-types.gen.js|g" .pikku/pikku-types.gen.ts > "$tmp" && mv "$tmp" .pikku/pikku-types.gen.ts
 fi
 mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
+
+write_leaf_indexes
 
 # Patch legacy field names and stale imports in bootstrapped files.
 #
@@ -183,12 +200,13 @@ while IFS= read -r -d '' f; do
   tmp=$(mktemp)
   sed -e 's/pikkuFuncName/pikkuFuncId/g' \
       -e 's/queueName:/name:/g' \
-      -e "s|import { pikkuState, FunctionsMeta } from '@pikku/core'|import { pikkuState } from '@pikku/core/ecosystem'\nimport type { FunctionsMeta } from '@pikku/core'|g" \
-      -e "s|import { pikkuState } from '@pikku/core'|import { pikkuState } from '@pikku/core/ecosystem'|g" \
-      -e "s|import { pikkuState as __pikkuState } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/ecosystem'|g" \
-      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core'|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/ecosystem'|g" \
-      -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/ecosystem'|g" \
-      -e "s|@pikku/core/internal|@pikku/core/ecosystem|g" \
+      -e "s|import { pikkuState, FunctionsMeta } from '@pikku/core'|import { pikkuState } from '@pikku/core/state'\nimport type { FunctionsMeta } from '@pikku/core/types'|g" \
+      -e "s|import { pikkuState } from '@pikku/core'|import { pikkuState } from '@pikku/core/state'|g" \
+      -e "s|import { pikkuState as __pikkuState } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/state'|g" \
+      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
+      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
+      -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/state'|g" \
+      -e "s|@pikku/core/internal|@pikku/core/state|g" \
       -e "s|addPackageServiceFactories('\([^']*\)', {|pikkuState('\1', 'package', 'factories', {|g" \
       -e 's|addMiddleware as addMiddlewareCore|addTagMiddleware as addTagMiddlewareCore|g' \
       -e 's|addMiddlewareCore(|addTagMiddlewareCore(|g' \

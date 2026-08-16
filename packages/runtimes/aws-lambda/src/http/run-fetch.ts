@@ -1,4 +1,4 @@
-import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/ecosystem/http'
+import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
 import type { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { responseToLambdaResult } from '../response-converter.js'
 import { lambdaEventToRequest } from '../request-converter.js'

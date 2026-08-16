@@ -1,4 +1,4 @@
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuVoidFunc } from '#pikku/function'
 
 export const bootstrap = pikkuVoidFunc({
   remote: true,
@@ -14,7 +14,6 @@ export const bootstrap = pikkuVoidFunc({
     // Stub auth.types.ts (if better-auth is used) so the pikkuBetterAuth
     // re-export resolves before any user file is imported.
     await rpc.invoke('pikkuAuth', { bootstrap: true })
-    await rpc.invoke('pikkuFunctionTypes', { bootstrap: true })
     await rpc.invoke('pikkuHTTPTypes')
     await rpc.invoke('pikkuChannelTypes')
     await rpc.invoke('pikkuSchedulerTypes')
@@ -27,6 +26,7 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuSecretDefinitionTypes')
     await rpc.invoke('pikkuScopeDefinitionTypes')
     await rpc.invoke('pikkuCLITypes', { bootstrap: true })
+    await rpc.invoke('pikkuLeafIndexes')
 
     if (logger.hasCriticalErrors()) {
       process.exit(1)

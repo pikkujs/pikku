@@ -5,12 +5,9 @@
  * (fetch, queue, scheduled). Services are cached across warm invocations.
  */
 
-import {
-  LocalVariablesService,
-  LocalSecretService,
-} from '@pikku/core/ecosystem/services'
-import type { CoreSingletonServices } from '@pikku/core/ecosystem/types'
-import type { ChannelStore } from '@pikku/core/ecosystem/channel'
+import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
+import type { CoreSingletonServices } from '@pikku/core/types'
+import type { ChannelStore } from '@pikku/core/channel'
 import { runFetchV2 } from './http/run-fetch-v2.js'
 import { runSQSQueueWorker } from './queue/sqs-worker.js'
 import { runLambdaScheduled } from './scheduled/run-scheduled.js'

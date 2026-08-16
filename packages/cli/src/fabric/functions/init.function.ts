@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import {
   findProjectConfig,
   isLinkedProjectId,

@@ -14,11 +14,15 @@ const thisFile = fileURLToPath(import.meta.url)
  * They survived as throwing stubs only so the pinned bootstrap CLI could
  * resolve the import; `@pikku/cli@0.12.96` emits none of them, so the stubs
  * went too.
+ *
+ * `ZodLike` sat on the package root, which is now `bootstrap-compat/root.ts` —
+ * what `.` resolves to for the pinned CLI's sake, and the only place a name
+ * could return to the root from.
  */
 const REMOVED = [
   { name: 'addTagPermission', entry: './middleware/index.js' },
   { name: 'addHTTPPermission', entry: './wirings/http/index.js' },
-  { name: 'ZodLike', entry: './index.js' },
+  { name: 'ZodLike', entry: './bootstrap-compat/root.js' },
 ]
 
 const collectSourceFiles = (directory: string): string[] =>

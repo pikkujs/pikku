@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import Database from 'better-sqlite3'
 import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
-import type { AuditEvent } from '../../../core/src/index.js'
+import type { AuditEvent } from '@pikku/core/services'
 
 import { KyselyAuditService } from './kysely-audit-service.js'
 

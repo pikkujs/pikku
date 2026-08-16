@@ -1,7 +1,9 @@
 import { InvalidSessionError } from '../errors/errors.js'
 import type { CoreUserSession } from '../types/core.types.js'
-import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
-
+import {
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware-factories.js'
 const constantTimeEqual = (a: string, b: string): boolean => {
   if (a.length !== b.length) return false
   let result = 0

@@ -3,7 +3,7 @@
  * Mock implementations for project CRUD and member management
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // Project CRUD
 export const projectCreate = pikkuSessionlessFunc<

@@ -1,4 +1,4 @@
-import { defineScope } from '#pikku'
+import { defineScope } from '#pikku/scopes'
 
 defineScope({
   admin: {

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const PickInput = z.object({
   item: z.record(z.string(), z.unknown()).describe('The input object'),

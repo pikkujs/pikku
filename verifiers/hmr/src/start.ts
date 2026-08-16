@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
-import { fetch } from '@pikku/core'
+import { fetch } from '@pikku/core/http'
 import { runQueueJob } from '@pikku/core/queue'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { pikkuDevReloader } from '@pikku/core/dev'
@@ -76,7 +76,7 @@ const cleanupJsFile = (jsFile: string) => {
 const GREETING_TS = resolve('src/functions/greeting.function.ts')
 const GREETING_JS = resolve('src/functions/greeting.function.js')
 
-const GREETING_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku'
+const GREETING_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const greeting = pikkuSessionlessFunc<
   { name: string },
@@ -106,7 +106,7 @@ const restoreGreeting = async () => {
 const MW_FUNC_TS = resolve('src/functions/greeter-with-middleware.function.ts')
 const MW_FUNC_JS = resolve('src/functions/greeter-with-middleware.function.js')
 
-const MW_FUNC_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku'
+const MW_FUNC_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku/function'
 import { loggingMiddleware } from './middleware.js'
 
 export const greeterWithMiddleware = pikkuSessionlessFunc<
@@ -138,7 +138,7 @@ const restoreMwFunc = async () => {
 const SCHED_TS = resolve('src/functions/scheduled.function.ts')
 const SCHED_JS = resolve('src/functions/scheduled.function.js')
 
-const SCHED_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku'
+const SCHED_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const myScheduledTask = pikkuSessionlessFunc<void, void>({
   auth: false,
@@ -160,7 +160,7 @@ const restoreScheduled = async () => {
 const QUEUE_TS = resolve('src/functions/queue.function.ts')
 const QUEUE_JS = resolve('src/functions/queue.function.js')
 
-const QUEUE_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku'
+const QUEUE_ORIGINAL = `import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const myQueueWorker = pikkuSessionlessFunc<
   { item: string },

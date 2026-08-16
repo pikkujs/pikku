@@ -1,6 +1,5 @@
-import { pikkuMiddleware } from '@pikku/core'
-import type { MiddlewarePriority } from '@pikku/core'
-
+import { pikkuMiddleware } from '@pikku/core/middleware'
+import type { MiddlewarePriority } from '@pikku/core/middleware'
 export const priorityMiddleware = (
   name: string,
   priority: MiddlewarePriority

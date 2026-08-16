@@ -3,7 +3,7 @@ import { Badge } from '@pikku/mantine/core'
 import { Check, Loader, X } from 'lucide-react'
 import type { I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import type { ScenarioRunStatus } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioRunStatus } from '@pikku/core/scenario'
 
 /**
  * The status vocabulary, mapped to message *functions* rather than keys: a

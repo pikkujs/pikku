@@ -9,9 +9,8 @@ import { pikkuState, resetPikkuState } from './pikku-state.js'
 import type {
   CorePikkuMiddleware,
   MiddlewarePriority,
-} from './types/core.types.js'
-import { pikkuMiddleware } from './types/core.types.js'
-
+} from './middleware/middleware.types.js'
+import { pikkuMiddleware } from './middleware/middleware-factories.js'
 const withPriority = (
   name: string,
   priority: MiddlewarePriority,

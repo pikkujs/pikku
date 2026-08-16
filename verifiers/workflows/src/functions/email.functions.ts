@@ -3,7 +3,7 @@
  * Mock implementations for email sending and verification
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const emailSend = pikkuSessionlessFunc<
   { to: string; subject: string; body: string; from?: string },

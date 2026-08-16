@@ -1,8 +1,8 @@
 import type {
   CoreSingletonServices,
-  MiddlewareMetadata,
   PikkuRawWire,
 } from '../../types/core.types.js'
+import type { MiddlewareMetadata } from '../../middleware/middleware.types.js'
 import type { CorePikkuChannelMiddleware } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { freezeDedupe, getTagGroups } from '../../utils.js'

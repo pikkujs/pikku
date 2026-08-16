@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { getSchema } from '@pikku/core/ecosystem/schema'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getSchema } from '@pikku/core/schema'
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value))

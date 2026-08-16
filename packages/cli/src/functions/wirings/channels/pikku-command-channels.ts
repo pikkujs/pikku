@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -107,7 +107,7 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/ecosystem'\nimport type { ChannelsMeta } from '@pikku/core/ecosystem/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+      `import { pikkuState } from '@pikku/core/state'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
     )
 
     return true

@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { runKnowledgeIndex } from '@pikku/knowledge'
 import { renderKnowledgeIndex } from '../knowledge/render.js'
 import {

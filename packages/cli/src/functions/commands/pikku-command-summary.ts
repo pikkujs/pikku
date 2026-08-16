@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { PikkuError } from '@pikku/core/ecosystem/errors'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { PikkuError } from '@pikku/core/errors'
 import { CommandSummary } from '../../utils/command-summary.js'
 
 // A blocking-diagnostics failure is expected (the gate did its job) — throw a

@@ -3,7 +3,7 @@ import type {
   CoreSingletonServices,
   CoreConfig,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 
 export interface UserSession extends CoreUserSession {}
 

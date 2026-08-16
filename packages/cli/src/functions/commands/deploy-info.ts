@@ -1,7 +1,7 @@
 import { basename, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuVoidFunc } from '#pikku/function'
 import { analyzeDeployment } from '../../deploy/analyzer/index.js'
 
 const ANSI = {

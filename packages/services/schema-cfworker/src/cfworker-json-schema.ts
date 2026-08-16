@@ -1,6 +1,6 @@
-import { UnprocessableContentError } from '@pikku/core/ecosystem/errors'
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type { SchemaService } from '@pikku/core/ecosystem/schema'
+import { UnprocessableContentError } from '@pikku/core/errors'
+import type { Logger } from '@pikku/core/services'
+import type { SchemaService } from '@pikku/core/services'
 import { Validator } from '@cfworker/json-schema'
 
 export class CFWorkerSchemaService implements SchemaService {

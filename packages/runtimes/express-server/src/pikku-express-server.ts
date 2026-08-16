@@ -9,15 +9,17 @@ import contentType from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
 import { resolve, normalize } from 'path'
 
-import type { CoreConfig } from '@pikku/core/ecosystem/types'
-import { stopSingletonServices } from '@pikku/core/ecosystem/types'
-import { installNodeHostResolver } from '@pikku/core/ecosystem/node-host-resolver'
-import { pikkuState } from '@pikku/core/ecosystem'
-import type { JWTService, Logger } from '@pikku/core/ecosystem/services'
-import type { RunHTTPWiringOptions } from '@pikku/core/ecosystem/http'
+import type { CoreConfig } from '@pikku/core/types'
+import { stopSingletonServices } from '@pikku/core/utils'
+import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
+import { pikkuState } from '@pikku/core/state'
+import type { JWTService, Logger } from '@pikku/core/services'
+import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
-import type { LocalContentConfig } from '@pikku/core/ecosystem/services/local-content'
-import { verifySignedContentRequest } from '@pikku/core/ecosystem/services/local-content-request-handler'
+import type { LocalContentConfig } from '@pikku/core/services/local-content'
+import {
+  verifySignedContentRequest,
+} from '@pikku/core/services/local-content-request-handler'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.

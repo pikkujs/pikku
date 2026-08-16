@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { added, changed, removed, dim } from '../lib/output.js'
 import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
 import {
@@ -716,48 +716,53 @@ export async function runValidate(
     const fnPkgPath = join(fnDir, 'package.json')
     const fnPkg = await readJsonSafe<FnPkg>(fnPkgPath)
     if (fnPkg) {
-      // #pikku bare import — required by the injected fabric-telemetry.wiring.ts
-      if (!fnPkg.imports?.['#pikku']) {
+      // Both patterns are required, and both are load-bearing: the `.js`-suffixed
+      // key resolves a deep generated file, the bare wildcard resolves a leaf
+      // name at that leaf's index. Node picks the longer suffix, so declaring
+      // only one silently loses half the surface.
+      const PIKKU_IMPORTS =
+        'Add to "imports": { "#pikku/*.js": "./.pikku/*.ts", "#pikku/*": "./.pikku/*/index.ts" }'
+      if (!fnPkg.imports?.['#pikku/*.js']) {
         e(
           'functions-pkg-missing-pikku-import',
-          'packages/functions/package.json is missing a bare "#pikku" entry in "imports" — the Fabric-injected telemetry middleware imports from "#pikku" and will fail to bundle without it',
+          'packages/functions/package.json is missing "#pikku/*.js" in "imports" — wiring files that import e.g. "#pikku/pikku-fetch.gen.js" fail at runtime with "Cannot find module"',
           fnPkgPath,
-          'Add to "imports": { "#pikku": "./.pikku/pikku-types.gen.ts", "#pikku/*": "./.pikku/*" }'
+          PIKKU_IMPORTS
         )
       }
       if (!fnPkg.imports?.['#pikku/*']) {
         e(
           'functions-pkg-missing-pikku-wildcard-import',
-          'packages/functions/package.json is missing "#pikku/*" in "imports" — wiring files that import e.g. "#pikku/pikku-types.gen.js" fail at runtime with "Cannot find module"',
+          'packages/functions/package.json is missing "#pikku/*" in "imports" — files that import a leaf such as "#pikku/function" fail at runtime with "Cannot find module"',
           fnPkgPath,
-          'Add to "imports": { "#pikku": "./.pikku/pikku-types.gen.ts", "#pikku/*": "./.pikku/*" }'
+          PIKKU_IMPORTS
         )
       }
 
-      // .pikku/pikku-types.gen.js wrapper — the sandbox runs `pikku dev` via
-      // bare Node.js (no tsx), which cannot load .ts files. Every .gen.ts in
-      // .pikku/ needs a matching .gen.js wrapper. The sandbox entrypoint creates
+      // .pikku leaf index .js wrapper — the sandbox runs `pikku dev` via
+      // bare Node.js (no tsx), which cannot load .ts files. Every .ts in
+      // .pikku/ needs a matching .js wrapper. The sandbox entrypoint creates
       // these during provisioning but NOT on subsequent restarts after agent
       // edits — so after any restart pikku dev crashes with
-      // "Cannot find module '#pikku/pikku-types.gen.js'". Run `pikku fabric smoke`
+      // "Cannot find module '#pikku/function'". Run `pikku fabric smoke`
       // to test locally; the smoke command recreates the wrappers automatically.
       {
-        const pikkuGenDir = join(fnDir, '.pikku')
-        const typesGenTs = join(pikkuGenDir, 'pikku-types.gen.ts')
-        const typesGenJs = join(pikkuGenDir, 'pikku-types.gen.js')
+        const leafDir = join(fnDir, '.pikku', 'function')
+        const indexTs = join(leafDir, 'index.ts')
+        const indexJs = join(leafDir, 'index.js')
         // A warning, not an error: the wrapper is gitignored and recreated by
         // the sandbox entrypoint and `fabric smoke`, so a freshly cloned or
         // freshly scaffolded project never has it. As an error, "validate must
         // pass clean" was unachievable from a clean checkout.
-        if (existsSync(typesGenTs) && !existsSync(typesGenJs)) {
+        if (existsSync(indexTs) && !existsSync(indexJs)) {
           w(
             'pikku-types-js-wrapper-missing',
-            'packages/functions/.pikku/pikku-types.gen.js is missing — the sandbox runs pikku dev via bare Node.js, which cannot load .ts files; without the .js wrapper it crashes with "Cannot find module \'#pikku/pikku-types.gen.js\'" on every restart',
-            typesGenTs,
+            'packages/functions/.pikku/function/index.js is missing — the sandbox runs pikku dev via bare Node.js, which cannot load .ts files; without the .js wrapper it crashes with "Cannot find module \'#pikku/function\'" on every restart',
+            indexTs,
             lines(
-              'Create packages/functions/.pikku/pikku-types.gen.js:',
-              "  import './pikku-types.gen.ts';",
-              "  export * from './pikku-types.gen.ts';",
+              'Create packages/functions/.pikku/function/index.js:',
+              "  import './index.ts';",
+              "  export * from './index.ts';",
               'Or run `pikku fabric smoke` to test the full boot locally (it creates the wrappers).',
               'This file is gitignored — it must be recreated after every `pikku all` run.'
             )

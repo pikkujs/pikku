@@ -10,7 +10,7 @@ export interface WebhookGenOutput {
  * only be indirection.
  */
 export const serializeWebhook = (
-  pathToPikkuTypes: string
+  leaf: (name: string) => string
 ): WebhookGenOutput => {
   const schemas = `/**
  * Auto-generated outgoing webhook delivery schemas
@@ -31,8 +31,9 @@ export const WebhookDelivery = z.object({
  * Auto-generated outgoing webhook delivery queue worker
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, wireQueueWorker } from '${pathToPikkuTypes}'
-import { pikkuWebhookWorkerFunc } from '@pikku/core/ecosystem/services'
+import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { wireQueueWorker } from '${leaf('queue')}'
+import { pikkuWebhookWorkerFunc } from '@pikku/core/services'
 import { WebhookDelivery } from './webhook.schemas.gen.js'
 
 wireQueueWorker({

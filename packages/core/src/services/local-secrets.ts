@@ -2,7 +2,7 @@ import {
   createSecretValue,
   isSecretValue,
   type SecretValue,
-} from '../secret-value.js'
+} from '../classification/secret-value.js'
 import { LocalVariablesService } from './local-variables.js'
 import type { SecretService, SecretValues } from './secret-service.js'
 import type { VariablesService } from './variables-service.js'

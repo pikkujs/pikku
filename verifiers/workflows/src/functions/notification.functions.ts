@@ -3,7 +3,7 @@
  * Mock implementations for multi-channel notifications
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const notifyEmail = pikkuSessionlessFunc<
   { userId: string; subject: string; body: string },

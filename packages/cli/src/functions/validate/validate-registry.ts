@@ -5,6 +5,7 @@ import {
   isAddonPackage,
   runAddonPackageChecks,
 } from './addon-package-checks.js'
+import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
 import { runWorkspaceExportsChecks } from './workspace-exports-checks.js'
@@ -98,6 +99,15 @@ export const CHECKS: ValidateCheck[] = [
       existsSync(join(dir, 'pikku.config.json')) &&
       !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
+  },
+  {
+    id: 'pikku-barrel',
+    subject: 'app tier imports',
+    // Every Pikku project, addon included: an addon never generates the wiring
+    // leaves, so a barrel import there is the one that used to compile against
+    // a hub whose re-exports had quietly been dropped.
+    applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
+    run: async ({ dir }) => runPikkuBarrelChecks(dir),
   },
   {
     id: 'addon-package',

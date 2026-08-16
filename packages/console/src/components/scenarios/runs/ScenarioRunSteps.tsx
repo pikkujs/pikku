@@ -3,7 +3,7 @@ import { Box, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Check, Minus, X } from 'lucide-react'
 import { m } from '@/i18n/messages'
-import type { ScenarioStepRow } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioStepRow } from '@pikku/core/scenario'
 import { runDuration } from './scenario-run-format'
 
 const STEP_ICON = {

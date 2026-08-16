@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -40,7 +40,7 @@ export const pikkuAgentScorer = pikkuSessionlessFunc<void, boolean | undefined>(
 
       const lines: string[] = []
       lines.push(
-        `import { addAgentScorer } from '@pikku/core/ecosystem/agent-scorer'`
+        `import { addAgentScorer } from '@pikku/core/agent-scorer'`
       )
 
       // Ahead of the registrations: addAgentScorer refuses a scorer whose metadata
@@ -88,8 +88,8 @@ export const pikkuAgentScorer = pikkuSessionlessFunc<void, boolean | undefined>(
       await writeFileInDir(
         logger,
         scorerWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/ecosystem'
-import type { ScorerMeta } from '@pikku/core/ecosystem/agent-scorer'
+        `import { pikkuState } from '@pikku/core/state'
+import type { ScorerMeta } from '@pikku/core/agent-scorer'
 ${importStatement}
 pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'scorersMeta', metaData.scorersMeta as ScorerMeta)`
       )

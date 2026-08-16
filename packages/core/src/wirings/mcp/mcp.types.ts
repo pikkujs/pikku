@@ -6,8 +6,7 @@ import type {
 import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
-} from '../../types/core.types.js'
-
+} from '../../middleware/middleware.types.js'
 /** "user/{userId}/post/{postId}" => "userId" | "postId" */
 type ExtractMCPURIParams<S extends string> =
   S extends `${string}{${infer Param}}/${infer Rest}`

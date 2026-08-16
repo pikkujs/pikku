@@ -11,7 +11,7 @@ import {
 } from '@pikku/mantine/core'
 import { ChevronDown, ChevronRight, Copy, Check, Terminal } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
-import type { CLIMeta } from '@pikku/core/ecosystem/cli'
+import type { CLIMeta } from '@pikku/core/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { ConsoleSurface } from '../console/ConsoleSurface'
 import { CliHelpText } from '../cli/CliHelpText'

@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const welcomeToPikku = pikkuSessionlessFunc<void>(async () => {
   return 'Welcome to Pikku! This is a simple HTTP function that serves as a starting point for your Pikku application.'

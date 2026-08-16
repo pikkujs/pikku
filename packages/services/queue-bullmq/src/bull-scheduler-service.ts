@@ -1,15 +1,15 @@
 import type { ConnectionOptions } from 'bullmq'
 import { Queue, Worker } from 'bullmq'
-import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
-import { SchedulerService } from '@pikku/core/ecosystem/scheduler'
-import type { CoreUserSession } from '@pikku/core/ecosystem/types'
+import { runScheduledTask } from '@pikku/core/scheduler'
+import { SchedulerService } from '@pikku/core/services'
+import type { CoreUserSession } from '@pikku/core/types'
 import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
-} from '@pikku/core/ecosystem/services'
-import { parseDurationString } from '@pikku/core/ecosystem/types'
-import { pikkuState } from '@pikku/core/ecosystem'
-import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
+} from '@pikku/core/services'
+import { parseDurationString } from '@pikku/core/utils'
+import { pikkuState } from '@pikku/core/state'
+import { getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job

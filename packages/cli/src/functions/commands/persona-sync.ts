@@ -1,9 +1,9 @@
 import type { Kysely } from 'kysely'
 
-import { pikkuSessionlessFunc } from '#pikku'
-import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
-import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
-import { personaEnvironmentRefusal } from '@pikku/core/ecosystem/persona'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { createHttpPersonas } from '@pikku/core/persona'
+import type { ResolvedPersona } from '@pikku/core/services'
+import { personaEnvironmentRefusal } from '@pikku/core/persona'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolveEnvironment } from './environment.js'

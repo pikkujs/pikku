@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { EventHubService } from '@pikku/core/channel'
 import type { QueueService } from '@pikku/core/queue'
 import type { JWTService } from '@pikku/core/services'

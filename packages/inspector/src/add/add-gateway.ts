@@ -13,7 +13,7 @@ import { ensureInlineWiringFunction } from '../utils/ensure-function-metadata.js
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
-import type { GatewayTransportType } from '@pikku/core/ecosystem/gateway'
+import type { GatewayTransportType } from '@pikku/core/gateway'
 
 import { ErrorCode } from '../error-codes.js'
 

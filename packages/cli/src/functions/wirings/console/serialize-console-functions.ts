@@ -4,7 +4,7 @@ export interface ConsoleGenOutput {
 }
 
 export const serializeConsoleFunctions = (
-  pathToPikkuTypes: string,
+  leaf: (name: string) => string,
   _pathToAgentTypes: string,
   globalHTTPPrefix: string = ''
 ): ConsoleGenOutput => {
@@ -29,7 +29,8 @@ export const ValueResult = z.object({
 export const Success = z.object({ success: z.boolean() })
 `
 
-  const functions = `import { pikkuFunc, defineHTTPRoutes, wireHTTPRoutes, ref, wireAddon } from '${pathToPikkuTypes}'
+  const functions = `import { pikkuFunc, ref, wireAddon } from '${leaf('function')}'
+import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
   VariableRef,
   SetVariable,

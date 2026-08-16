@@ -12,3 +12,4 @@ export type {
   ScopeDefinitions,
   ScopeNodeMeta,
 } from './scope.types.js'
+export { hasScopes, verifyScopes } from '../../scopes.js'

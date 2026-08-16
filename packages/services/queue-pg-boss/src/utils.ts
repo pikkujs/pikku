@@ -1,4 +1,4 @@
-import type { QueueJob, QueueJobStatus } from '@pikku/core/ecosystem/queue'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import type { PgBoss, JobWithMetadata } from 'pg-boss'
 
 /**

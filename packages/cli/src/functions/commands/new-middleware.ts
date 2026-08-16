@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
 import { dirname } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { scaffoldFilePath } from '../../utils/file-writer.js'
 
 export const pikkuNewMiddleware = pikkuSessionlessFunc<
@@ -26,7 +26,7 @@ export const pikkuNewMiddleware = pikkuSessionlessFunc<
 
     switch (type) {
       case 'factory':
-        content = `import { pikkuMiddlewareFactory } from '#pikku'
+        content = `import { pikkuMiddlewareFactory } from '#pikku/function'
 
 export const ${name} = pikkuMiddlewareFactory(
   (param: string) =>
@@ -42,7 +42,7 @@ export const ${name} = pikkuMiddlewareFactory(
 
       case 'simple':
       default:
-        content = `import { pikkuMiddleware } from '#pikku'
+        content = `import { pikkuMiddleware } from '#pikku/function'
 
 export const ${name} = pikkuMiddleware(
   async ({ logger }, _data, next) => {

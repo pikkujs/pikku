@@ -1,6 +1,6 @@
-import type { Logger } from '@pikku/core/ecosystem/services'
-import { LogLevel } from '@pikku/core/ecosystem/services'
-import type { PikkuChannel } from '@pikku/core/ecosystem/cli/channel'
+import type { Logger } from '@pikku/core/services'
+import { LogLevel } from '@pikku/core/services'
+import type { PikkuChannel } from '@pikku/core/channel'
 import type {
   ErrorCode,
   CodedDiagnostic,

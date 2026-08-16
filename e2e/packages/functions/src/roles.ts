@@ -1,4 +1,4 @@
-import { defineSystemRole } from '#pikku/pikku-types.gen.js'
+import { defineSystemRole } from '#pikku/scopes'
 
 /**
  * The roles that ship with the e2e app.

@@ -341,7 +341,7 @@ These apply in every Fabric app:
 
 - **No `process.env`** — use `variables.get('NAME')` and `secrets.getSecret('NAME')`. Declare with `defineVariable` / `defineSecret`.
 - **No `as any`** — fix types properly.
-- **No generic `Error`** — throw `NotFoundError`, `ConflictError`, `BadRequestError`, `UnauthorizedError` from `@pikku/core/errors`.
+- **No generic `Error`** — throw `NotFoundError`, `ConflictError`, `BadRequestError`, `UnauthorizedError` from `#pikku/error`.
 - **No auth checks in function bodies** — use `permissions:` field on the function config with a `pikkuPermission` factory.
 - **No hand-editing `.pikku/db/schema.gen.ts`** — write a migration and re-run `pikku db migrate`.
 - **One runtime unit per file** — never define multiple functions/workflows in a single source file.

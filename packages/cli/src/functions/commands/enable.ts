@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuVoidFunc } from '#pikku/function'
 import type { PikkuScaffoldFeature } from '../../../types/config.js'
 
 /** Features that scaffold a surface, and so have an auth dimension. */

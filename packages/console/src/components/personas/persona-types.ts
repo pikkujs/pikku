@@ -1,4 +1,4 @@
-import type { VirtualUserDisposition } from '@pikku/core/ecosystem/virtual-user'
+import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
 
 export interface PersonaScenarioRef {
   name: string

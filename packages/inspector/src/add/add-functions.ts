@@ -8,16 +8,10 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
-import type { AuditDurability } from '@pikku/core/ecosystem/services'
-import type { FunctionServicesMeta } from '@pikku/core/ecosystem/types'
-import type {
-  ScenarioSurface,
-  ScenarioStepKind,
-} from '@pikku/core/ecosystem/scenario'
-import {
-  formatVersionedId,
-  parseVersionedId,
-} from '@pikku/core/ecosystem/types'
+import type { AuditDurability } from '@pikku/core/services'
+import type { FunctionServicesMeta } from '@pikku/core/function'
+import type { ScenarioSurface, ScenarioStepKind } from '@pikku/core/scenario'
+import { formatVersionedId, parseVersionedId } from '@pikku/core/utils'
 
 /** Binding keys a `pikkuScenarioStep` may declare, in report order. */
 const SCENARIO_SURFACE_KEYS: readonly ScenarioSurface[] = [
@@ -51,7 +45,7 @@ import { ErrorCode } from '../error-codes.js'
 import { findPiiPaths } from '../utils/check-pii-output.js'
 import { findRevealedSecretSinks } from '../utils/check-secret-sinks.js'
 import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
-import type { NodeType } from '@pikku/core/ecosystem/node'
+import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/

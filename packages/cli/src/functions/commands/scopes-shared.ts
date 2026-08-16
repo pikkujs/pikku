@@ -1,10 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import type { Kysely } from 'kysely'
-import type {
-  FlatScope,
-  ScopeDefinitionsMeta,
-} from '@pikku/core/ecosystem/scope'
-import { flattenScopeDefinitions } from '@pikku/core/ecosystem/scope'
+import type { FlatScope, ScopeDefinitionsMeta } from '@pikku/core/scope'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { KyselyScopeService } from '@pikku/kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { createKysely, resolveDb } from '../db/local-db.js'

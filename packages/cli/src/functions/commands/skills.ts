@@ -2,7 +2,7 @@ import { readdir, mkdir, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { dirname, join, sep } from 'path'
 import { listSkillFiles, listSkillNames, readSkillFile } from '@pikku/skills'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 /**
  * Write one skill's files out to `dest`, reading through @pikku/skills rather

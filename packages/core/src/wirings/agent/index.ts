@@ -20,6 +20,7 @@ export {
   unspeakableScripts,
   voiceForText,
   type SpeakableScripts,
+  type VoiceOutputState,
 } from './voice-output.js'
 export { AgentInterruptedError, signalRunInterrupt } from './agent-interrupt.js'
 export type {

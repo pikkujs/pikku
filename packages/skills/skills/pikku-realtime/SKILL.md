@@ -156,7 +156,7 @@ Envelope the payload as `{ topic, data }`: the generated client dispatches on th
 `topic` field, so a bare payload arrives but no handler fires.
 
 ```ts
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const createTodo = pikkuFunc({
   input: CreateTodoInput,

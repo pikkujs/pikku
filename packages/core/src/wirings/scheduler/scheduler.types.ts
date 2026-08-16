@@ -1,8 +1,5 @@
-import type {
-  CoreUserSession,
-  CorePikkuMiddleware,
-  CommonWireMeta,
-} from '../../types/core.types.js'
+import type { CoreUserSession, CommonWireMeta } from '../../types/core.types.js'
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,

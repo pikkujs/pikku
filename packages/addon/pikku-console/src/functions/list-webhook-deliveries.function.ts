@@ -1,5 +1,5 @@
-import type { WebhookDeliveryRecord } from '@pikku/core/ecosystem/services'
-import { pikkuFunc } from '#pikku'
+import type { WebhookDeliveryRecord } from '@pikku/core/services'
+import { pikkuFunc } from '#pikku/function'
 
 export const listWebhookDeliveries = pikkuFunc<
   { organizationId?: string; limit?: number },

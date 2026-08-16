@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
 import { basename, isAbsolute, join, resolve } from 'path'
 import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { parseN8n, generateWorkflowFromN8n } from '@pikku/n8n-import'
 
 async function writeFiles(

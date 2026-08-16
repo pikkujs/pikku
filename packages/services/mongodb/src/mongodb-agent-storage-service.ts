@@ -2,14 +2,14 @@ import type {
   AgentMessage,
   AgentRunState,
   AgentThread,
-} from '@pikku/core/ecosystem/agent'
-import type { AgentRunScore } from '@pikku/core/ecosystem/agent-scorer'
+} from '@pikku/core/agent'
+import type { AgentRunScore } from '@pikku/core/agent-scorer'
 import type {
   AgentRunStateService,
   AgentStorageService,
   CreateRunInput,
   SaveScoreInput,
-} from '@pikku/core/ecosystem/agent'
+} from '@pikku/core/services'
 import type { Db, Collection } from 'mongodb'
 
 interface AgentThreadDoc {

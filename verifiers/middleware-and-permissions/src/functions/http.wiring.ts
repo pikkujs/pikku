@@ -3,12 +3,8 @@ import '../../.pikku/http/pikku-http-wirings-meta.gen.js'
 
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
-import {
-  addHTTPMiddleware,
-  addTagMiddleware,
-  pikkuMiddleware,
-  wireHTTP,
-} from '#pikku'
+import { addTagMiddleware, pikkuMiddleware } from '#pikku/function'
+import { addHTTPMiddleware, wireHTTP } from '#pikku/http'
 import { wireHTTPRoutes, defineHTTPRoutes } from '@pikku/core/http'
 import {
   httpGlobalMiddleware,

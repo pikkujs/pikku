@@ -9,10 +9,7 @@ import type {
 } from '@playwright/test'
 import { pollUntil } from '@pikku/core/scenario'
 import type { TestIdSelector } from '@pikku/core/scenario'
-import type {
-  PikkuBrowserWire,
-  ScenarioArtifact,
-} from '@pikku/core/ecosystem/scenario'
+import type { PikkuBrowserWire, ScenarioArtifact } from '@pikku/core/scenario'
 import type { BrowserConfig } from './config.js'
 import { slug } from './capture.js'
 import { locateTestId, type LocateTestIdOptions } from './testid.js'

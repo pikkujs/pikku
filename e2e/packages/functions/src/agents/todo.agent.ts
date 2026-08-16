@@ -1,5 +1,5 @@
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { ref } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/function'
 import { uppercaseMiddleware } from '../agent-middleware/uppercase.agent-middleware.js'
 
 export const todoAgent = pikkuAgent({

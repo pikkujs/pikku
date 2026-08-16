@@ -1,4 +1,4 @@
-import { fetch } from '@pikku/core'
+import { fetch } from '@pikku/core/http'
 
 interface LogEvent {
   type: string

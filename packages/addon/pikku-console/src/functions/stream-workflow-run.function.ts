@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
   title: 'Stream Workflow Run',

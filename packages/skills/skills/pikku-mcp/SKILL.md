@@ -74,7 +74,7 @@ returns MCP content blocks (`{ type: 'text', text }` or `{ type: 'image', data }
 with base64), so the assistant reads prose rather than raw JSON:
 
 ```typescript
-import { pikkuMCPToolFunc } from '#pikku'
+import { pikkuMCPToolFunc } from '#pikku/mcp'
 
 export const createTodoTool = pikkuMCPToolFunc({
   description: 'Create a todo item with title, priority, due date and tags',
@@ -96,7 +96,7 @@ presentation layer over logic that is already tested and reachable over HTTP.
 ### Resources
 
 ```typescript
-import { pikkuMCPResourceFunc } from '#pikku'
+import { pikkuMCPResourceFunc } from '#pikku/mcp'
 
 export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
   async (_services, { id }, { rpc, mcp }) => {
@@ -117,7 +117,7 @@ it is text only, with no blob variant. `mcp.uri` is the concrete URI the client
 asked for, which is why each entry echoes it back.
 
 ```typescript
-import { wireMCPResource } from '#pikku'
+import { wireMCPResource } from '#pikku/mcp'
 
 wireMCPResource({
   uri: 'todos/{id}', // URI template
@@ -136,7 +136,7 @@ than handing the function an `undefined`.
 ### Prompts
 
 ```typescript
-import { pikkuMCPPromptFunc, wireMCPPrompt } from '#pikku'
+import { pikkuMCPPromptFunc, wireMCPPrompt } from '#pikku/mcp'
 
 export const planDayPrompt = pikkuMCPPromptFunc({
   input: UserIdInputSchema,

@@ -2,8 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { serializeConsoleFunctions } from './serialize-console-functions.js'
 
+const leaf = (name: string) => `#pikku/${name}`
+
 test('serializeConsoleFunctions includes console HTTP route wiring', () => {
-  const { functions } = serializeConsoleFunctions('#pikku', '#agents', '/api')
+  const { functions } = serializeConsoleFunctions(leaf, '#agents', '/api')
 
   assert.match(functions, /wireHTTPRoutes\(\{/)
   assert.match(functions, /route: '\/workflow-run\/:runId\/stream'/)
@@ -11,7 +13,7 @@ test('serializeConsoleFunctions includes console HTTP route wiring', () => {
 })
 
 test('serializeConsoleFunctions gates the console addon behind the admin scope', () => {
-  const { functions } = serializeConsoleFunctions('#pikku', '#agents', '/api')
+  const { functions } = serializeConsoleFunctions(leaf, '#agents', '/api')
 
   assert.match(functions, /wireAddon\(\{[^}]*scopes: \['admin'\][^}]*\}\)/)
   assert.ok(
@@ -22,7 +24,7 @@ test('serializeConsoleFunctions gates the console addon behind the admin scope',
 
 test('serializeConsoleFunctions describes every payload with a zod schema', () => {
   const { schemas, functions } = serializeConsoleFunctions(
-    '#pikku',
+    leaf,
     '#agents',
     '/api'
   )
@@ -39,7 +41,7 @@ test('serializeConsoleFunctions describes every payload with a zod schema', () =
 
 test('serializeConsoleFunctions no longer generates the console secret RPCs', () => {
   const { schemas, functions } = serializeConsoleFunctions(
-    '#pikku',
+    leaf,
     '#agents',
     '/api'
   )
@@ -58,10 +60,10 @@ test('serializeConsoleFunctions no longer generates the console secret RPCs', ()
 })
 
 test('serializeConsoleFunctions keeps the schemas module free of anything but zod', () => {
-  const { schemas } = serializeConsoleFunctions('#pikku', '#agents', '/api')
+  const { schemas } = serializeConsoleFunctions(leaf, '#agents', '/api')
 
   assert.ok(
-    !schemas.includes('#pikku'),
+    !schemas.includes(leaf),
     'the inspector imports this module directly, so it must not reach for a path deploy codegen rewrites'
   )
   assert.ok(!schemas.includes('@pikku/core'))

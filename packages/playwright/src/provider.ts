@@ -1,12 +1,12 @@
 import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
-import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
+import type { ResolvedPersona } from '@pikku/core/services'
 import type {
   ScenarioArtifact,
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
 import { ActorSession, type CaptureContext } from './actor-session.js'
 import { compressVideos, slug, type CaptureOptions } from './capture.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'

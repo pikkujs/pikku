@@ -1,12 +1,12 @@
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
-import type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'
-import type { ChannelsMeta } from '@pikku/core/ecosystem/channel'
-import type { CLIProgramMeta } from '@pikku/core/ecosystem/cli'
+import type { FunctionsMeta } from '@pikku/core/services'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
+import type { ChannelsMeta } from '@pikku/core/channel'
+import type { CLIProgramMeta } from '@pikku/core/cli'
 import type {
   MCPToolMeta,
   MCPResourceMeta,
   MCPPromptMeta,
-} from '@pikku/core/ecosystem/mcp'
+} from '@pikku/core/mcp'
 
 export interface McpMeta {
   toolsMeta: MCPToolMeta

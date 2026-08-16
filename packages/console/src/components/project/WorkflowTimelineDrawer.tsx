@@ -12,11 +12,8 @@ import {
   UnstyledButton,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import {
-  reconstructStateAt,
-  reconstructFinalState,
-} from '@pikku/core/ecosystem/workflow'
-import type { StepStatus } from '@pikku/core/ecosystem/workflow'
+import { reconstructStateAt, reconstructFinalState } from '@pikku/core/workflow'
+import type { StepStatus } from '@pikku/core/workflow'
 import {
   Clock,
   ChevronDown,

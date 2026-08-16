@@ -2,7 +2,7 @@ import type {
   CoreConfig,
   CoreSingletonServices,
   CreateConfig,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
 import {
   createResolvedAuthGetter,
   type BetterAuthInstance,

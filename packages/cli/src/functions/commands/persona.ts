@@ -1,13 +1,13 @@
 import { resolve, dirname } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   createHttpPersonas,
   personaEnvironmentRefusal,
   roleMismatchMessage,
   verifyPersonaRoles,
-} from '@pikku/core/ecosystem/persona'
+} from '@pikku/core/persona'
 import {
   personaVirtualUserTarget,
   runVirtualUser,
@@ -15,7 +15,7 @@ import {
   catalogueClassification,
   DISPOSITIONS,
   prepareVirtualUserRun,
-} from '@pikku/core/ecosystem/virtual-user'
+} from '@pikku/core/virtual-user'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolveEnvironment } from './environment.js'

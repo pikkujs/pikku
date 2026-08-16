@@ -1,11 +1,13 @@
 import type { CorePikkuChannelMiddleware } from './channel.types.js'
 import type {
   CoreSingletonServices,
-  CorePikkuMiddleware,
   PikkuRawWire,
   PikkuWire,
-  MiddlewareMetadata,
 } from '../../types/core.types.js'
+import type {
+  CorePikkuMiddleware,
+  MiddlewareMetadata,
+} from '../../middleware/middleware.types.js'
 import type { CoreChannel, ChannelMessageMeta } from './channel.types.js'
 import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 import { runPikkuFunc } from '../../function/function-runner.js'

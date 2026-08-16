@@ -1,4 +1,4 @@
-import { pikkuMiddleware } from '#pikku'
+import { pikkuMiddleware } from '#pikku/function'
 
 export const httpGlobalMiddleware = pikkuMiddleware(
   async ({ logger }, _data, next) => {

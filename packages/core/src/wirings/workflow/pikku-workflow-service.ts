@@ -5,11 +5,8 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import type {
-  CoreUserSession,
-  PikkuRawWire,
-  SerializedError,
-} from '../../types/core.types.js'
+import type { CoreUserSession, PikkuRawWire } from '../../types/core.types.js'
+import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   GroupConcurrencyConfig,
   JobGroup,

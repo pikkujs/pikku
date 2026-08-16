@@ -1,5 +1,7 @@
-import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
-
+import {
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware-factories.js'
 /** Outermost telemetry: total duration, including every middleware. */
 export const telemetryOuter = pikkuMiddlewareFactory<{
   environmentId?: string

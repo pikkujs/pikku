@@ -1,4 +1,4 @@
-import { pikkuAuth } from '#pikku'
+import { pikkuAuth } from '#pikku/function'
 
 export const isAuthenticated = pikkuAuth(async ({ logger }, session) => {
   logger.info({ type: 'auth-check' })

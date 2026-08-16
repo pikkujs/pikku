@@ -23,7 +23,7 @@ export interface UserAdminGenOutput {
  * zod sidesteps that entirely.
  */
 export const serializeUserAdminFunctions = (
-  pathToPikkuTypes: string,
+  leaf: (name: string) => string,
   requireAuth: boolean = true
 ): UserAdminGenOutput => {
   const authFlag = requireAuth ? 'true' : 'false'
@@ -96,7 +96,8 @@ export const Success = z.object({
  * Auto-generated user management functions
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuFunc, defineScope } from '${pathToPikkuTypes}'
+import { pikkuFunc } from '${leaf('function')}'
+import { defineScope } from '${leaf('scopes')}'
 import { callAdminApi } from '@pikku/better-auth'
 import {
   CreateUserInput,

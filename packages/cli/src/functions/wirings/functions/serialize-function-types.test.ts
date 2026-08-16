@@ -31,6 +31,27 @@ describe('serializeFunctionTypes', () => {
     )
   })
 
+  // Generated code is read by people and resolved by bundlers, so each name has
+  // to arrive from the subpath that declares it rather than from whichever
+  // barrel happened to re-export it.
+  test('imports each type from the subpath that owns it', () => {
+    const content = emit()
+
+    for (const [name, subpath] of [
+      ['CorePikkuMiddleware', 'middleware'],
+      ['PickRequired', 'utils'],
+      ['ListInput, ListOutput', 'function'],
+      ['CorePermissionGroup', 'function'],
+      ['PikkuWire, SecretlessServices', 'types'],
+    ] as const) {
+      assert.match(
+        content,
+        new RegExp(`import type \\{ ${name} \\} from '@pikku/core/${subpath}'`),
+        `expected '${name}' to come from '@pikku/core/${subpath}'`
+      )
+    }
+  })
+
   describe('node config', () => {
     test('narrows category to the addon categories the project declared', () => {
       assert.match(

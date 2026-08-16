@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -51,7 +51,7 @@ export const pikkuHTTP = pikkuSessionlessFunc<void, boolean>({
     await writeFileInDir(
       logger,
       httpWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/ecosystem'\nimport type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'\n${importStatement}\npikkuState(null, 'http', 'meta', metaData as HTTPWiringsMeta)`
+      `import { pikkuState } from '@pikku/core/state'\nimport type { HTTPWiringsMeta } from '@pikku/core/http'\n${importStatement}\npikkuState(null, 'http', 'meta', metaData as HTTPWiringsMeta)`
     )
 
     return true

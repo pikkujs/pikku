@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { ErrorCode } from '@pikku/inspector'
 import { saveManifest } from '../../utils/contract-versions.js'
 

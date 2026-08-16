@@ -1,4 +1,4 @@
-import { pikkuCLIRender } from '../../.pikku/pikku-types.gen.js'
+import { pikkuCLIRender } from '#pikku/cli'
 import type { Todo } from '../schemas.js'
 
 /**

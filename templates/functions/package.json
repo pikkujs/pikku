@@ -67,6 +67,6 @@
   },
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku/*": "./.pikku/*/index.ts"
   }
 }

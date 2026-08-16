@@ -1,4 +1,4 @@
-import type { CoreServices, CoreUserSession } from '@pikku/core/ecosystem/types'
+import type { CoreServices, CoreUserSession } from '@pikku/core/types'
 import { ADMIN_SCOPES, userHoldsScopes } from './auth-scopes.js'
 
 /** The `{ user, session }` shape both session paths resolve before mapping. */

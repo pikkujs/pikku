@@ -15,13 +15,13 @@ import {
 } from 'ai'
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider'
 import { safeDownload } from './safe-download.js'
-import type { AgentStreamChannel } from '@pikku/core/ecosystem/agent'
+import type { AgentStreamChannel } from '@pikku/core/agent'
 import type {
   AgentRunnerParams,
   AgentRunnerService,
   AgentStepResult,
-} from '@pikku/core/ecosystem/agent'
-import { resolveModelAlias } from '@pikku/core/ecosystem/agent'
+} from '@pikku/core/services'
+import { resolveModelAlias } from '@pikku/core/agent'
 import { convertToSDKMessages } from './message-converter.js'
 
 type AIProviderOptions = Record<string, Record<string, unknown>>

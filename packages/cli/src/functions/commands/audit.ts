@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import type {
   SecurityAuditIssue,
   SecurityAuditReport,
   SecurityAuditUpdate,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
 
 // `pikku audit` — dependency security audit. Security advisories are always
 // reported; `--outdated` additionally reports available dependency updates.

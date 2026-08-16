@@ -1,4 +1,4 @@
-import type { PersonaDefinitions } from '@pikku/core/ecosystem/persona'
+import type { PersonaDefinitions } from '@pikku/core/persona'
 
 export interface SerializePersonasOptions {
   definitions: PersonaDefinitions
@@ -36,7 +36,7 @@ export const serializePersonasTypes = ({
  */
 import { definePersonas as definePersonasCore } from '@pikku/core/persona'
 import type { PersonaMeta, PersonasMeta } from '@pikku/core/persona'
-import type { CorePersona } from '@pikku/core/ecosystem/persona'
+import type { CorePersona } from '@pikku/core/persona'
 import type { SystemRoleName } from '${rolesImportPath}'
 import definitions from './pikku-personas-meta.gen.json' with { type: 'json' }
 

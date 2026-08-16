@@ -4,7 +4,9 @@ import { serializeRemoteRPC } from './serialize-remote-rpc.js'
 
 describe('serializeRemoteRPC', () => {
   test('generates the remote RPC handler with an HTTP endpoint', () => {
-    const { functions } = serializeRemoteRPC('./pikku-types.gen.js')
+    const { functions } = serializeRemoteRPC(
+      (name: string) => `./${name}/index.js`
+    )
     assert.ok(functions.includes('remoteRPCHandler'))
     assert.ok(functions.includes('wireHTTP'))
     assert.ok(functions.includes('/remote/rpc/:rpcName'))
@@ -12,7 +14,9 @@ describe('serializeRemoteRPC', () => {
   })
 
   test('wires the pikku-remote-internal-rpc queue worker consumed by scheduleRPC', () => {
-    const { functions } = serializeRemoteRPC('./pikku-types.gen.js')
+    const { functions } = serializeRemoteRPC(
+      (name: string) => `./${name}/index.js`
+    )
     assert.ok(
       functions.includes('wireQueueWorker'),
       'expected wireQueueWorker to be imported and called'
@@ -28,7 +32,9 @@ describe('serializeRemoteRPC', () => {
   })
 
   test('describes the call with a zod schema from the sibling module', () => {
-    const { schemas, functions } = serializeRemoteRPC('./pikku-types.gen.js')
+    const { schemas, functions } = serializeRemoteRPC(
+      (name: string) => `./${name}/index.js`
+    )
     assert.ok(schemas.includes("import { z } from 'zod'"))
     assert.ok(schemas.includes('export const RemoteRPCCall = z.object({'))
     assert.ok(functions.includes('input: RemoteRPCCall'))
@@ -40,7 +46,9 @@ describe('serializeRemoteRPC', () => {
   })
 
   test('keeps the schemas module free of anything but zod', () => {
-    const { schemas } = serializeRemoteRPC('./pikku-types.gen.js')
+    const { schemas } = serializeRemoteRPC(
+      (name: string) => `./${name}/index.js`
+    )
     assert.ok(
       !schemas.includes('pikku-types.gen.js'),
       'the inspector imports this module directly, so it must not reach for a path deploy codegen rewrites'

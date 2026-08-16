@@ -4,8 +4,6 @@
   "description": "The Pikku runtime — functions, wirings, services, middleware and types",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
-  "module": "dist/index.js",
-  "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "tsc": "tsc && tsc -p tsconfig.type-tests.json",
@@ -28,7 +26,8 @@
     "./dist/wirings/workflow/pikku-scenario-service.js"
   ],
   "exports": {
-    ".": "./dist/index.js",
+    ".": "./dist/bootstrap-compat/root.js",
+    "./types": "./dist/types/index.js",
     "./middleware": "./dist/middleware/index.js",
     "./function": "./dist/function/index.js",
     "./channel": "./dist/wirings/channel/index.js",
@@ -73,8 +72,9 @@
     "./services/temporary-file-service": "./dist/services/temporary-file-service.js",
     "./crypto-utils": "./dist/crypto-utils.js",
     "./hmac": "./dist/utils/hmac.js",
-    "./ecosystem": "./dist/ecosystem.js",
-    "./ecosystem/*": "./dist/ecosystem/*.js",
+    "./state": "./dist/pikku-state.js",
+    "./classification": "./dist/classification/index.js",
+    "./utils": "./dist/utils.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
     "./dev": "./dist/dev/hot-reload.js"

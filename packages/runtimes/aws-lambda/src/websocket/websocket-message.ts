@@ -1,5 +1,5 @@
-import { PikkuFetchHTTPResponse } from '@pikku/core/ecosystem/http'
-import { runChannelMessage } from '@pikku/core/ecosystem/channel/serverless'
+import { PikkuFetchHTTPResponse } from '@pikku/core/http'
+import { runChannelMessage } from '@pikku/core/channel/serverless'
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { getServerlessDependencies } from './utils.js'
 import type { WebsocketParams } from './websocket-types.js'

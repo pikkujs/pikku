@@ -1,4 +1,5 @@
-import { wireQueueWorker, addTagMiddleware } from '#pikku'
+import { addTagMiddleware } from '#pikku/function'
+import { wireQueueWorker } from '#pikku/queue'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
 import { tagMiddleware } from '../middleware/tag.js'

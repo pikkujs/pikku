@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { NotFoundError } from '@pikku/core/ecosystem/errors'
+import { NotFoundError } from '#pikku/error'
 
 import { renderEmailPreview } from './render-email-preview.function.js'
 import type { RenderEmailPreviewOutput } from './render-email-preview.function.js'

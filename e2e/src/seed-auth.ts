@@ -1,4 +1,4 @@
-import type { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core/types'
 import {
   ADMIN_USER,
   GUEST_USER,

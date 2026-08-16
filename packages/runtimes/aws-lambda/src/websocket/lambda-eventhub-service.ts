@@ -1,11 +1,8 @@
 import type { ApiGatewayManagementApiClient } from '@aws-sdk/client-apigatewaymanagementapi'
-import type {
-  ChannelStore,
-  EventHubService,
-} from '@pikku/core/ecosystem/channel'
-import type { EventHubStore } from '@pikku/core/ecosystem/channel'
+import type { ChannelStore, EventHubService } from '@pikku/core/channel'
+import type { EventHubStore } from '@pikku/core/channel'
 import { getApiGatewayManagementApiClient, sendMessages } from './utils.js'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import type { Logger } from '@pikku/core/services'
 import type { APIGatewayEvent } from 'aws-lambda'
 
 export class LambdaEventHubService<

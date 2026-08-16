@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const notifyShopper = pikkuSessionlessFunc<
   { orderId: string; recipient?: string },

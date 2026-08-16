@@ -1,4 +1,6 @@
-import { pikkuAuth, addGlobalPermission, hasScopes } from '@pikku/core'
+import { pikkuAuth } from '@pikku/core/function'
+import { addGlobalPermission } from '@pikku/core/middleware'
+import { hasScopes } from '@pikku/core/scope'
 import { ADMIN_SCOPE_ROOT } from '@pikku/better-auth'
 import type { UserSession } from './application-types.js'
 

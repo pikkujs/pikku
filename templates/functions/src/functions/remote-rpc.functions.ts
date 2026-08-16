@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const greet = pikkuSessionlessFunc<
   { name: string; greeting?: string },

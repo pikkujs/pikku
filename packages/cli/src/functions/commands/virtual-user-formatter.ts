@@ -13,7 +13,7 @@
 import type {
   VirtualUserFinding,
   VirtualUserRunResult,
-} from '@pikku/core/ecosystem/virtual-user'
+} from '@pikku/core/virtual-user'
 
 export interface VirtualUserReportContext {
   persona: string

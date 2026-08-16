@@ -3,8 +3,8 @@ import type {
   AgentMessage,
   AgentRunRow,
   AgentRunService,
-} from '@pikku/core/ecosystem/agent'
-import { isOwnedByPrincipal } from '@pikku/core/ecosystem/agent'
+} from '@pikku/core/agent'
+import { isOwnedByPrincipal } from '@pikku/core/agent'
 import type { Redis } from 'ioredis'
 
 export class RedisAgentRunService implements AgentRunService {

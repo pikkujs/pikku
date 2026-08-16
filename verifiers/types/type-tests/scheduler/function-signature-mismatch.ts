@@ -5,7 +5,8 @@
  * so they must be typed as void -> void.
  */
 
-import { wireScheduler, pikkuSessionlessFunc, pikkuFunc } from '#pikku'
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
+import { wireScheduler } from '#pikku/scheduler'
 
 // Valid: Scheduler with void -> void function
 wireScheduler({

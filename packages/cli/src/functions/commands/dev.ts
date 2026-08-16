@@ -1,38 +1,35 @@
 import { join, resolve } from 'path'
 import { existsSync, readFileSync } from 'node:fs'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import chokidar, { type FSWatcher } from 'chokidar'
 import {
   pikkuDevReloader,
   reloadGeneratedMeta,
   reconcileAddonRegistry,
-} from '@pikku/core/ecosystem/dev'
-import {
-  InMemoryQueueService,
-  QueueWebhookService,
-} from '@pikku/core/ecosystem/queue'
+} from '@pikku/core/dev'
+import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
 import {
   ConsoleLogger,
   LocalEmailService,
   spy,
   InMemoryAgentRunStateService,
-} from '@pikku/core/ecosystem/services'
-import { InMemoryTriggerService } from '@pikku/core/ecosystem/trigger'
-import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services'
 import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
   KyselyAgentRunService,
 } from '@pikku/kysely'
-import { stopSingletonServices } from '@pikku/core/ecosystem/types'
-import { pikkuState } from '@pikku/core/ecosystem'
-import { wireAgentScorerQueueWorkers } from '@pikku/core/ecosystem/agent-scorer'
-import { LocalMetaService } from '@pikku/core/ecosystem/services/local-meta'
+import { stopSingletonServices } from '@pikku/core/utils'
+import { pikkuState } from '@pikku/core/state'
+import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
+import { LocalMetaService } from '@pikku/core/services/local-meta'
 import {
   LocalContent,
   type LocalContentConfig,
-} from '@pikku/core/ecosystem/services/local-content'
+} from '@pikku/core/services/local-content'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import {
   resolveDb,

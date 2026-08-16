@@ -60,6 +60,7 @@ const assertionStep = <T extends WorkflowStepOptions>(
 
 export { addFeature, resolveFeatureScenarios } from './feature.js'
 export type * from './scenario.types.js'
+export type * from './scenario-run.types.js'
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
 
 // Which of a step's bindings run: one for an action, every witness for a `then`

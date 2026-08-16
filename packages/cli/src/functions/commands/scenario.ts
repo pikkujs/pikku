@@ -2,22 +2,19 @@ import { randomUUID } from 'node:crypto'
 import { resolve, join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
-import { pikkuSessionlessFunc } from '#pikku'
-import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
-import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
-import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { InMemoryWorkflowService } from '@pikku/core/services'
+import { FileScenarioRunStore } from '@pikku/core/services'
+import { createHttpPersonas } from '@pikku/core/persona'
 import {
   PikkuScenarioService,
   resolveFeatureScenarios,
   SCENARIO_SURFACES,
-} from '@pikku/core/ecosystem/scenario'
-import { pikkuState, getAllPackageStates } from '@pikku/core/ecosystem'
-import type { PikkuRPC } from '@pikku/core/ecosystem/rpc'
-import type { CoreWorkflow } from '@pikku/core/ecosystem/workflow'
-import type {
-  CoreFeature,
-  ScenarioSurface,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
+import { pikkuState, getAllPackageStates } from '@pikku/core/state'
+import type { PikkuRPC } from '@pikku/core/rpc'
+import type { CoreWorkflow } from '@pikku/core/workflow'
+import type { CoreFeature, ScenarioSurface } from '@pikku/core/scenario'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
@@ -32,7 +29,7 @@ import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
   ScenarioResult,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
 import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,
@@ -565,8 +562,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       feature?: string
     ): ScenarioResult => {
       const tags = state.workflows?.meta?.[scenarioName]?.tags as
-        | string[]
-        | undefined
+        string[] | undefined
       return {
         ...result,
         scenarioName,
@@ -748,7 +744,8 @@ export const scenarioRun = pikkuSessionlessFunc<
 
     const failed = results.filter((r) => r.status === 'failed')
     await runStore.finish(captureRunId, {
-      status: failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
+      status:
+        failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
       finishedAt: new Date().toISOString(),
       skipped,
       hookFailures,

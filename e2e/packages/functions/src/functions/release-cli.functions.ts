@@ -3,7 +3,7 @@ import {
   pikkuFunc,
   pikkuRemoteChannelFunc,
   pikkuSessionlessFunc,
-} from '#pikku/pikku-types.gen.js'
+} from '#pikku/function'
 
 /**
  * The commands behind the `release` CLI, which is served over a websocket

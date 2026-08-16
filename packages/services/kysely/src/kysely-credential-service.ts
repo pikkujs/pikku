@@ -4,8 +4,8 @@ import {
   envelopeEncrypt,
   envelopeRewrap,
   generateKEKSalt,
-} from '@pikku/core/ecosystem/crypto-utils'
-import type { CredentialService } from '@pikku/core/ecosystem/credential'
+} from '@pikku/core/crypto-utils'
+import type { CredentialService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { ensurePikkuSchema } from './schema/index.js'

@@ -35,7 +35,8 @@ Four kinds of name lose their export:
   `CoreSystemRoles`, `SystemRole`, `CoreSecret`, `CoreVariable` and the
   `*DefinitionMeta` / `*DefinitionsMeta` metadata shapes were only ever
   parameter types or console internals. The generated files that genuinely need
-  them already import them straight from `@pikku/core/ecosystem/*`.
+  them already import them straight from the `@pikku/core` subpath that owns
+  them.
 - **Names with no reader at all** — `PikkuListFunction`, referenced by nothing,
   not even `pikkuListFunc`; and `template`, which a graph never reaches for by
   name because the `input` callback is handed it as its second argument,

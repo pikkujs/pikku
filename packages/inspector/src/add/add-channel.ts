@@ -10,10 +10,7 @@ import {
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import type {
-  ChannelMessageMeta,
-  ChannelMeta,
-} from '@pikku/core/ecosystem/channel'
+import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
 import {
   resolveMiddleware,

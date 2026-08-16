@@ -1,5 +1,5 @@
-import { pikkuFunc } from '#pikku'
-import type { MetaService } from '@pikku/core/ecosystem/services'
+import { pikkuFunc } from '#pikku/function'
+import type { MetaService } from '@pikku/core/services'
 
 export interface AuthProviderEntry {
   id: string

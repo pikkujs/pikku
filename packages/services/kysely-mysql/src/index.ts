@@ -8,5 +8,5 @@ export { MySQLKyselyEventHubStore } from './mysql-kysely-eventhub-store.js'
 export { MySQLKyselySecretService } from './mysql-kysely-secret-service.js'
 
 export type { KyselyPikkuDB } from '@pikku/kysely'
-export type { WorkflowRunService } from '@pikku/core/ecosystem/workflow'
-export type { AgentRunService, AgentRunRow } from '@pikku/core/ecosystem/agent'
+export type { WorkflowRunService } from '@pikku/core/workflow'
+export type { AgentRunService, AgentRunRow } from '@pikku/core/agent'

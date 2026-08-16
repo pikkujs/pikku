@@ -1,7 +1,7 @@
 /**
  * HTTP wirings for Zod-based functions
  */
-import { wireHTTP } from '#pikku'
+import { wireHTTP } from '#pikku/http'
 import {
   greetWithZod,
   calculateWithZod,

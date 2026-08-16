@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const getOpenapis = pikkuFunc<
   { limit: number; offset: number; search?: string; category?: string },

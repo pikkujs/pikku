@@ -2,8 +2,8 @@ import * as z from 'zod'
 import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type { ScopeService } from '@pikku/core/ecosystem/scope'
+import type { Logger } from '@pikku/core/services'
+import type { ScopeService } from '@pikku/core/services'
 import { ADMIN_SCOPE_ROOT } from './auth-scopes.js'
 
 export interface FabricPluginOptions {

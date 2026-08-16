@@ -1,4 +1,4 @@
-import { isSecretValue } from '../secret-value.js'
+import { isSecretValue } from '../classification/secret-value.js'
 import type { CredentialService } from './credential-service.js'
 import { defaultPikkuUserIdResolver } from './pikku-user-id.js'
 import type { PikkuRawWire } from '../types/core.types.js'

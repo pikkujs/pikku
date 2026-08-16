@@ -1,4 +1,4 @@
-import { pikkuServerLifecycle } from '@pikku/core'
+import { pikkuServerLifecycle } from '@pikku/core/utils'
 import type { SingletonServices } from './application-types.js'
 import { seedAuthUsers, seedScenarioActors } from './seed-auth.js'
 import { seedScopes } from './seed-scopes.js'

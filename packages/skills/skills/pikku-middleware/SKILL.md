@@ -23,7 +23,7 @@ installGroups: [core]
 ## The `pikkuMiddleware` Factory
 
 ```typescript
-import { pikkuMiddleware } from '#pikku'
+import { pikkuMiddleware } from '#pikku/function'
 
 // Simple: just a function
 const myMiddleware = pikkuMiddleware(async (services, wire, next) => {
@@ -54,7 +54,7 @@ The `wire` object gives you:
 - `wire.getSession()` — read the current session
 - `wire.session` — the session set so far (may be undefined)
 
-Throw a typed error to abort: `UnauthorizedError`, `ForbiddenError`, etc. from `@pikku/core/errors`.
+Throw a typed error to abort: `UnauthorizedError`, `ForbiddenError`, etc. from `#pikku/error`.
 
 ## Scoping: Five Levels
 
@@ -139,7 +139,7 @@ Tags from the function definition and the wire object are merged — middleware 
 ### Registering Tag Middleware
 
 ```typescript
-import { addTagMiddleware } from '#pikku'
+import { addTagMiddleware } from '#pikku/function'
 
 addTagMiddleware('machine-agent', [machineAgentBearerAuth])
 ```
@@ -202,8 +202,8 @@ export const getToken = () => _token
 ```typescript
 // wirings/http.wiring.ts
 import { timingSafeEqual } from 'node:crypto'
-import { addTagMiddleware, pikkuMiddleware } from '#pikku'
-import { UnauthorizedError } from '@pikku/core/errors'
+import { addTagMiddleware, pikkuMiddleware } from '#pikku/function'
+import { UnauthorizedError } from '#pikku/error'
 import { getToken } from '../lib/host-token.js'
 
 const bearerAuth = pikkuMiddleware(async (_services, { http }, next) => {

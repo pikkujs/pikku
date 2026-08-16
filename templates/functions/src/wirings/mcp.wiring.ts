@@ -1,4 +1,4 @@
-import { wireMCPResource, wireMCPPrompt } from '../../.pikku/pikku-types.gen.js'
+import { wireMCPPrompt, wireMCPResource } from '#pikku/mcp'
 import {
   getTodoResource,
   planDayPrompt,

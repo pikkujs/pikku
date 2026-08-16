@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
@@ -13,12 +13,9 @@ export const pikkuWebhook = pikkuSessionlessFunc<void, boolean>({
     }
 
     if (config.webhookWorkersFile && config.webhookSchemasFile) {
-      const pathToPikkuTypes = getFileImportRelativePath(
-        config.webhookWorkersFile,
-        config.typesDeclarationFile,
-        config.packageMappings
-      )
-      const { schemas, functions } = serializeWebhook(pathToPikkuTypes)
+      const leaf = (name: string) =>
+        getLeafImportPath(config.webhookWorkersFile!, name, config)
+      const { schemas, functions } = serializeWebhook(leaf)
       await writeFileInDir(logger, config.webhookSchemasFile, schemas)
       await writeFileInDir(logger, config.webhookWorkersFile, functions)
       await removeLegacyScaffoldFile(config.webhookWorkersFile)

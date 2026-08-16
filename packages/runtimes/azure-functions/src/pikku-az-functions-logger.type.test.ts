@@ -1,4 +1,4 @@
-import { createSecretValue } from '@pikku/core/ecosystem/types'
+import { createSecretValue } from '@pikku/core/classification'
 import type { AzInvocationLogger } from './pikku-az-functions-logger.js'
 
 // A concrete logger must not be a way around the `Logger` guard.

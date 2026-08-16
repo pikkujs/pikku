@@ -8,7 +8,7 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
+import type { ChannelMeta } from '@pikku/core/channel'
 import styles from '../ui/console.module.css'
 
 export type ChannelSelection =

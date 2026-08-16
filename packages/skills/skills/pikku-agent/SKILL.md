@@ -41,7 +41,7 @@ Import it from the generated agent types file — `#pikku` does not re-export it
 
 ```typescript
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { ref } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/function'
 
 pikkuAgent({
   name: string,                  // Unique agent identifier
@@ -179,7 +179,7 @@ than folding it into the parent's transcript.
 
 ```typescript
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { ref } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/function'
 
 export const todoAgent = pikkuAgent({
   name: 'todo-agent',
@@ -283,7 +283,7 @@ export const completeTodo = pikkuFunc({
 
 // agents/todo-assistant.agent.ts
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { ref } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/function'
 
 export const todoAssistant = pikkuAgent({
   name: 'todo-assistant',

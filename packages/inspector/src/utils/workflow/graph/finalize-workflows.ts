@@ -1,9 +1,9 @@
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta } from '@pikku/core/services'
 import {
   isVersionedId,
   formatVersionedId,
   parseVersionedId,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/utils'
 import type { SerializedWorkflowGraph } from './workflow-graph.types.js'
 import { canonicalJSON, hashString } from '../../hash.js'
 import { convertDslToGraph } from './convert-dsl-to-graph.js'

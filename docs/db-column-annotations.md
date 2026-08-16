@@ -157,6 +157,6 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
 - **`ColumnKind` is shared** between typing and runtime coercion. A kind that
   needs no coercion (like `uuid`) must be excluded from the coercion map in
   `db-codegen` _and_ handled defensively in `fromDb()`.
-- **Keep `@pikku/core`'s `data-classification.ts` in lockstep** with the brand
+- **Keep `@pikku/core`'s `classification/data-classification.ts` in lockstep** with the brand
   aliases emitted in the `schema.gen.d.ts` header (`Private`/`Pii`/`Secret` use an
   optional `__classification__?` marker so plain values stay assignable).

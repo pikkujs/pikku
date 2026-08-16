@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { serializeChannelCLI } from './serialize-channel-cli.js'
-import type { CLIProgramMeta } from '@pikku/core/ecosystem/cli'
+import type { CLIProgramMeta } from '@pikku/core/cli'
 
 const programMeta = (auth?: boolean): CLIProgramMeta =>
   ({

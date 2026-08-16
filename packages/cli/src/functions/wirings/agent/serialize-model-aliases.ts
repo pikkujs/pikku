@@ -8,7 +8,7 @@ export const serializeModelAliases = (
 ): string => {
   const packageArg = addonName ? `'${addonName}'` : 'null'
   const table = JSON.stringify(models ?? {}, null, 2)
-  return `import { pikkuState } from '@pikku/core/ecosystem'
+  return `import { pikkuState } from '@pikku/core/state'
 
 pikkuState(${packageArg}, 'agent', 'modelAliases', ${table})
 `

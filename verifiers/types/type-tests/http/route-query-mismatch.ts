@@ -5,7 +5,8 @@
  * must include those query parameters.
  */
 
-import { wireHTTP, pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireHTTP } from '#pikku/http'
 
 // Valid: Query params match function input type
 wireHTTP({

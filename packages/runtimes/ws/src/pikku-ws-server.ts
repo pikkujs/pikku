@@ -1,16 +1,16 @@
 import type { Server } from 'http'
 import type { WebSocket, WebSocketServer } from 'ws'
-import { getSingletonServices } from '@pikku/core/ecosystem'
-import { logChannels } from '@pikku/core/ecosystem/channel'
-import type { PikkuLocalChannelHandler } from '@pikku/core/ecosystem/channel/local'
+import { getSingletonServices } from '@pikku/core/state'
+import { logChannels } from '@pikku/core/channel'
+import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
 import {
   LocalEventHubService,
   runLocalChannel,
-} from '@pikku/core/ecosystem/channel/local'
-import { compileAllSchemas } from '@pikku/core/ecosystem/schema'
-import type { RunHTTPWiringOptions } from '@pikku/core/ecosystem/http'
-import { PikkuFetchHTTPRequest } from '@pikku/core/ecosystem/http'
-import type { Logger } from '@pikku/core/ecosystem/services'
+} from '@pikku/core/channel/local'
+import { compileAllSchemas } from '@pikku/core/schema'
+import type { RunHTTPWiringOptions } from '@pikku/core/http'
+import { PikkuFetchHTTPRequest } from '@pikku/core/http'
+import type { Logger } from '@pikku/core/services'
 
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
 import crypto from 'crypto'

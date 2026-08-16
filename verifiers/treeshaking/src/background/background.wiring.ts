@@ -1,4 +1,5 @@
-import { wireQueueWorker, wireScheduler } from '#pikku'
+import { wireQueueWorker } from '#pikku/queue'
+import { wireScheduler } from '#pikku/scheduler'
 import {
   processNotificationQueue,
   runNotificationSweep,

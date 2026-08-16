@@ -1,11 +1,11 @@
-import type { ScopeService } from '@pikku/core/ecosystem/scope'
-import type { Role } from '@pikku/core/ecosystem/role'
-import type { FlatScope } from '@pikku/core/ecosystem/scope'
-import type { SystemRole } from '@pikku/core/ecosystem/role'
+import type { ScopeService } from '@pikku/core/services'
+import type { Role } from '@pikku/core/services'
+import type { FlatScope } from '@pikku/core/scope'
+import type { SystemRole } from '@pikku/core/role'
 import {
   SystemRoleImmutableError,
   SystemRoleShadowedError,
-} from '@pikku/core/ecosystem/errors'
+} from '@pikku/core/errors'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { ensurePikkuSchema } from './schema/index.js'

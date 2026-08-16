@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, test } from 'node:test'
 import Fastify from 'fastify'
-import { setSingletonServices } from '@pikku/core/ecosystem'
-import { resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import { setSingletonServices } from '@pikku/core/state'
+import { resetPikkuState } from '@pikku/core/state'
+import type { Logger } from '@pikku/core/services'
 
 import pikkuFastifyPlugin from './index.js'
 

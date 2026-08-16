@@ -13,9 +13,9 @@ import {
   type SerializedWorkflowGraph,
 } from '@pikku/inspector'
 import { relative } from 'node:path'
-import type { FunctionMeta } from '@pikku/core/ecosystem/services'
-import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
-import type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'
+import type { FunctionMeta } from '@pikku/core/services'
+import type { ChannelMeta } from '@pikku/core/channel'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
 import {
   isScenarioFunction,
   withoutScenarios,

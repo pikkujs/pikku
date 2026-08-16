@@ -6,6 +6,7 @@ import { describe, test, afterEach } from 'node:test'
 import ts from 'typescript'
 import {
   getAddonFiles,
+  getTestFiles,
   resolveAddonDepProtocol,
   type AddonVars,
 } from './new-addon.js'
@@ -156,6 +157,38 @@ describe('getAddonFiles', () => {
       ),
       []
     )
+  })
+
+  /**
+   * The addon's package.json `imports` map points into `dist`, which is empty
+   * until the addon has been built once — so its own source build resolves
+   * `#pikku/<leaf>` through tsconfig `paths` instead. A `paths` map naming only
+   * the hub leaves every leaf unresolvable, and the addon does not compile.
+   */
+  test('the tsconfig paths resolve the leaves, not the hub', () => {
+    const addonPaths = JSON.parse(
+      getAddonFiles(vars('Acme CRM', 'desc'), {
+        secret: false,
+        variable: false,
+        oauth: false,
+      })['tsconfig.json']!
+    ).compilerOptions.paths
+
+    assert.deepEqual(addonPaths, {
+      '#pikku/*.js': ['./.pikku/*.ts'],
+      '#pikku/*': ['./.pikku/*/index.ts'],
+    })
+  })
+
+  test('the test harness tsconfig resolves the leaves too', () => {
+    const testPaths = JSON.parse(
+      getTestFiles(vars('Acme CRM', 'desc'))['tsconfig.json']!
+    ).compilerOptions.paths
+
+    assert.deepEqual(testPaths, {
+      '#pikku/*.js': ['./.pikku/*.ts'],
+      '#pikku/*': ['./.pikku/*/index.ts'],
+    })
   })
 
   test('keeps composed prose in a single string literal', () => {
