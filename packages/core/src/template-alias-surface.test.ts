@@ -77,11 +77,22 @@ const generatedImports = (file: string) => {
   return found
 }
 
+/**
+ * Bun resolves a '#'-prefixed specifier as a Node subpath import and does not
+ * apply tsconfig `paths` to it, so neither half of the alias reaches the
+ * functions template next door: Node rejects the '../' imports target, and
+ * `paths` is never consulted. Until the bun template takes a workspace
+ * dependency on the functions template — which makes a bare specifier a legal
+ * imports target — it has no alias mechanism and keeps the relative path.
+ */
+const withoutAlias = new Set(['bun'])
+
 describe('templates ship the #pikku alias', () => {
   test('no template reaches generated output through a relative path', () => {
     const offenders: string[] = []
 
     for (const template of templateNames()) {
+      if (withoutAlias.has(template)) continue
       for (const file of templateSourceFiles(template)) {
         for (const { specifier, line } of generatedImports(file)) {
           offenders.push(`${relative(repoRoot, file)}:${line}  ${specifier}`)
@@ -101,12 +112,13 @@ describe('templates ship the #pikku alias', () => {
   })
 
   /**
-   * Two-sided by necessity: `imports` serves Node, tsx and `tsc`, while the
-   * inspector builds its own program and reads only `paths`. A template that
-   * declares one and not the other type-checks but generates nothing, or
-   * generates but will not run.
+   * `paths` is what actually resolves the alias in a runtime template: it
+   * points at the functions template next door, and tsx, tsc and the
+   * inspector all consult it. The inspector in particular builds its own
+   * program and inherits only baseUrl, paths, rootDirs and pathsBasePath —
+   * it never sees an imports map.
    */
-  test('every template declaring #pikku declares it on both sides', () => {
+  test('every template using #pikku declares it in tsconfig paths', () => {
     const offenders: string[] = []
 
     for (const template of templateNames()) {
@@ -114,13 +126,6 @@ describe('templates ship the #pikku alias', () => {
         /['"]#pikku\//.test(readFileSync(file, 'utf8'))
       )
       if (!usesAlias) continue
-
-      const pkg = JSON.parse(
-        readFileSync(join(templatesDir, template, 'package.json'), 'utf8')
-      )
-      if (!pkg.imports?.['#pikku/*']) {
-        offenders.push(`templates/${template}/package.json  missing imports`)
-      }
 
       const tsconfigPath = join(templatesDir, template, 'tsconfig.json')
       if (!existsSync(tsconfigPath)) {
@@ -136,11 +141,41 @@ describe('templates ship the #pikku alias', () => {
     assert.deepStrictEqual(
       offenders,
       [],
-      `A '#pikku' alias has to be declared in package.json 'imports' and in ` +
-        `tsconfig 'paths'.\n` +
-        `The inspector inherits only baseUrl, paths, rootDirs and ` +
-        `pathsBasePath from the project tsconfig — it never sees the imports ` +
-        `map.\n\n` +
+      `A template that imports '#pikku/…' has to declare it in tsconfig ` +
+        `'paths', which is what resolves it.\n\n` +
+        offenders.join('\n')
+    )
+  })
+
+  /**
+   * Node rejects an internal-imports target that is not './'-relative or a
+   * bare package specifier, so a '../' target throws ERR_INVALID_PACKAGE_TARGET
+   * rather than resolving. A runtime template reaching the functions template
+   * next door cannot express that as an imports map at all — it resolves
+   * through `paths`, and declaring the map anyway only looks like it works,
+   * because `paths` answers first.
+   */
+  test('no template declares an imports target Node will reject', () => {
+    const offenders: string[] = []
+
+    for (const template of templateNames()) {
+      const pkg = JSON.parse(
+        readFileSync(join(templatesDir, template, 'package.json'), 'utf8')
+      )
+      for (const [specifier, target] of Object.entries(pkg.imports ?? {})) {
+        if (typeof target === 'string' && target.startsWith('../')) {
+          offenders.push(
+            `templates/${template}/package.json  ${specifier} -> ${target}`
+          )
+        }
+      }
+    }
+
+    assert.deepStrictEqual(
+      offenders,
+      [],
+      `An 'imports' target must start with './' or be a bare package ` +
+        `specifier; '../' throws ERR_INVALID_PACKAGE_TARGET.\n\n` +
         offenders.join('\n')
     )
   })

@@ -21,9 +21,5 @@
     "@types/ws": "^8",
     "typescript": "^6.0.3",
     "wrangler": "^4.123.0"
-  },
-  "imports": {
-    "#pikku/*.js": "../functions/.pikku/*.ts",
-    "#pikku/*": "../functions/.pikku/*/index.ts"
   }
 }

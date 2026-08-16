@@ -21,9 +21,5 @@
   },
   "devDependencies": {
     "@types/bun": "latest"
-  },
-  "imports": {
-    "#pikku/*.js": "../functions/.pikku/*.ts",
-    "#pikku/*": "../functions/.pikku/*/index.ts"
   }
 }

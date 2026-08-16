@@ -11,9 +11,18 @@ runtime template, `../../.pikku/…` inside the functions template — which tau
 the wrong habit and broke as soon as `create-pikku` relocated the directory,
 as it does for StackBlitz.
 
-All 63 of those specifiers now go through `#pikku/…`, and each template
-declares the alias on both sides: `imports` for Node, tsx and `tsc`, and
-tsconfig `paths` for the inspector, which builds its own program and never sees
-the imports map. A runtime template points at the functions template next door;
-the merge and rewrite `create-pikku` already performed retargets both onto
-`./.pikku` — or `./pikku-gen` on StackBlitz — when the two become one project.
+Those specifiers now go through `#pikku/…`, resolved by tsconfig `paths`. A
+runtime template points at the functions template next door, and `paths` is the
+only mechanism that reaches it: Node rejects an internal-imports target that is
+not `./`-relative or a bare package specifier, so a `../` target throws
+`ERR_INVALID_PACKAGE_TARGET` rather than resolving. Only `functions` and
+`function-addon`, which own the `.pikku` they point at, carry an `imports` map.
+
+`templates/bun` keeps its relative path. Bun treats a `#`-prefixed specifier as
+a Node subpath import and does not apply `paths` to it, so neither half of the
+alias reaches next door; it needs a workspace dependency on the functions
+template to make a bare specifier a legal target, which is a separate change.
+
+Two guards in `template-alias-surface.test.ts` hold the shape: no template
+reaches generated output through a relative path, and no template declares an
+`imports` target Node will reject.

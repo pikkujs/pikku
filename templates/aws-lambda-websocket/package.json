@@ -42,9 +42,5 @@
   },
   "exports": {
     ".": "./dist/index.mjs"
-  },
-  "imports": {
-    "#pikku/*.js": "../functions/.pikku/*.ts",
-    "#pikku/*": "../functions/.pikku/*/index.ts"
   }
 }
