@@ -63,7 +63,7 @@ hand-wires `wireAddon({ name: 'console', package: '@pikku/addon-console' })`
 still cannot reach `execFileSync` unauthenticated.
 
 The scopes are spelled as literals here because they are scope ids in the
-addon's own `wireScope` tree — the same tree the `pikku:console:scopes:*` gates
+addon's own `wireScope` tree — the same tree the `admin:scopes:*` gates
 on the scope-admin functions come from. The generated secret and variable
 brokers live in the app's own scaffold rather than the addon, so the addon
 boundary never covered them; they carry `pikku:console:secrets:*` and

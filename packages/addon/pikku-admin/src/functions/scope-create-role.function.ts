@@ -7,7 +7,7 @@ export const scopeCreateRole = pikkuFunc<
   title: 'Create Role',
   description: 'Creates a role granting the given scopes.',
   expose: true,
-  scopes: ['pikku:console:scopes:manage'],
+  scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { name, description, scopes }) => {
     // An undeclared scope is rejected by the pikku_scopes foreign key, so the
     // database is the one enforcing the vocabulary — not this function.

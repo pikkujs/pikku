@@ -224,7 +224,7 @@
   "audit_empty_title": "No audit events yet",
   "audit_empty_description": "Only functions declaring audit: true record anything. Mark one, run it, and its events appear here.",
   "audit_forbidden_title": "You cannot read the audit trail",
-  "audit_forbidden_body": "Reading the audit trail needs the pikku:console:audit:read scope. Ask an administrator to grant it through a role.",
+  "audit_forbidden_body": "Reading the audit trail needs the admin:audit:read scope. Ask an administrator to grant it through a role.",
   "audit_load_error": "Could not load the audit trail",
   "audit_unreadable_title": "Audit trail is not readable here",
   "audit_unreadable_description": "Events are being recorded, but the configured audit sink cannot be read back. Wire a sink that supports reading — KyselyAuditService, for example — to browse the trail here.",

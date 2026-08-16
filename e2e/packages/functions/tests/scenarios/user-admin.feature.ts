@@ -274,7 +274,7 @@ export const userAdminListScopeDoesNotConferBanScenario = pikkuScenario<
 
     await scenario.do(
       'grants admin:users:list to the guest',
-      'console:scopeAddScopeToUser',
+      'admin:scopeAddScopeToUser',
       { userId: guest.userId, scope: 'admin:users:list' },
       { actor: actors.admin }
     )
@@ -292,7 +292,7 @@ export const userAdminListScopeDoesNotConferBanScenario = pikkuScenario<
     )
     await scenario.do(
       'revokes the scope',
-      'console:scopeRemoveScopeFromUser',
+      'admin:scopeRemoveScopeFromUser',
       { userId: guest.userId, scope: 'admin:users:list' },
       { actor: actors.admin }
     )

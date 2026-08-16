@@ -7,7 +7,7 @@ export const credentialUsers = pikkuFunc<
   title: 'Credential Users',
   description: 'Lists all user IDs that have a specific credential configured.',
   expose: true,
-  scopes: ['pikku:console:credentials:read'],
+  scopes: ['admin:credentials:read'],
   func: async ({ credentialService }, { name }) => {
     const userIds = await credentialService.getUsersWithCredential(name)
     return { userIds }

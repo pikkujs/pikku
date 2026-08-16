@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "outDir": "./.pikku",
+  "packageMappings": {
+    "core/dist/types/core.types.d.ts": "@pikku/core",
+    "core/dist/services/audit-service.d.ts": "@pikku/core/services",
+    "core/dist/services/scope-service.d.ts": "@pikku/core/services"
+  },
+  "addon": {
+    "displayName": "Pikku Admin",
+    "description": "Users, roles and scopes, credentials, and the audit trail",
+    "categories": ["General"],
+    "icon": "./pikku-admin.svg"
+  }
+}

@@ -1,7 +1,7 @@
 import type { FlattenedRPCMap } from '../../pikku/rpc-map.gen.d'
 
-/** A page of the trail exactly as `console:getAudits` returns it. */
-export type AuditPage = FlattenedRPCMap['console:getAudits']['output']
+/** A page of the trail exactly as `admin:getAudits` returns it. */
+export type AuditPage = FlattenedRPCMap['admin:getAudits']['output']
 
 /**
  * One row of the audit trail.
@@ -18,7 +18,7 @@ export type AuditUserDirectory = AuditPage['users']
 
 /** One entry of the user filter's vocabulary. */
 export type AuditFilterUser =
-  FlattenedRPCMap['console:getAuditFilters']['output']['users'][number]
+  FlattenedRPCMap['admin:getAuditFilters']['output']['users'][number]
 
 /**
  * What to call a user.

@@ -19,7 +19,7 @@ export const scopeListDeclared = pikkuFunc<
   description:
     'Lists the scope vocabulary a role can be composed from, flagging any that are no longer declared in code.',
   expose: true,
-  scopes: ['pikku:console:scopes:read'],
+  scopes: ['admin:scopes:read'],
   func: async ({ scopeService }) => {
     if (!scopeService) {
       return { scopes: [] }

@@ -8,7 +8,7 @@ export const scopeAddScopeToUser = pikkuFunc<
   description:
     'Grants a scope directly to a user, outside of any role. Takes effect on their next request, with no re-login — unless mapSession sets scopes itself, which is authoritative, and then this grant never applies.',
   expose: true,
-  scopes: ['pikku:console:scopes:manage'],
+  scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { userId, scope }, { session }) => {
     await scopeService.addScopeToUser(userId, scope, session?.userId)
     return { success: true }

@@ -10,7 +10,7 @@ export const CONSOLE_ADMIN_ROLE = 'console-admin'
 export const REPORT_VIEWER_ROLE = 'report-viewer'
 /** Role granting the umbrella `admin` scope and everything beneath it. */
 export const PLATFORM_ADMIN_ROLE = 'platform-admin'
-/** Role granting `pikku:console:audit:read`, used by the audit console suite. */
+/** Role granting `admin:audit:read`, used by the audit console suite. */
 export const AUDIT_READER_ROLE = 'audit-reader'
 
 const userIdByEmail = async (
@@ -44,7 +44,7 @@ const userIdByEmail = async (
  * - `guest@e2e.test` gets `report-viewer` so the scope-gate suite can show a 200
  *   for a scoped caller against the admin's 403.
  * - `admin@e2e.test` also gets `audit-reader`, the only grant of
- *   `pikku:console:audit:read`. That leaves `staff@e2e.test` — an admin holding
+ *   `admin:audit:read`. That leaves `staff@e2e.test` — an admin holding
  *   no audit scope — as the audit console suite's refused case.
  * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is the
  *   umbrella `admin` scope plus every console area except scope administration and

@@ -8,7 +8,7 @@ export const scopeRemoveScopeFromUser = pikkuFunc<
   description:
     'Revokes a directly-granted scope from a user. Takes effect on their next request, with no re-login — unless mapSession sets scopes itself, which is authoritative, and then this revoke never applies.',
   expose: true,
-  scopes: ['pikku:console:scopes:manage'],
+  scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { userId, scope }) => {
     await scopeService.removeScopeFromUser(userId, scope)
     return { success: true }

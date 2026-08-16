@@ -1,0 +1,47 @@
+{
+  "name": "@pikku/addon-admin",
+  "version": "0.12.0",
+  "description": "Admin addon for Pikku \u2014 the user directory, roles and scopes, credentials and the audit trail, as ordinary RPCs",
+  "type": "module",
+  "imports": {
+    "#pikku/*.js": "./dist/.pikku/*.js",
+    "#pikku/*": "./dist/.pikku/*/index.js"
+  },
+  "exports": {
+    ".": "./dist/.pikku/pikku-bootstrap.gen.js",
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
+    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "pikku all && tsc && (cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null || true) && (cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true) && (cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/function && cp .pikku/function/*-verbose.gen.json dist/.pikku/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/)",
+    "pikku": "pikku all",
+    "ncu": "npx npm-check-updates",
+    "pretest": "pikku all",
+    "test": "tsc --noEmit && bash run-tests.sh",
+    "test:coverage": "bash run-tests.sh --coverage"
+  },
+  "peerDependencies": {
+    "@pikku/better-auth": "^0.12.25",
+    "@pikku/core": "^0.12.84",
+    "zod": "^4"
+  },
+  "peerDependenciesMeta": {
+    "@pikku/better-auth": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@pikku/better-auth": "^0.12.25",
+    "@pikku/cli": "^0.12.105",
+    "@pikku/core": "*",
+    "typescript": "^6.0.3",
+    "zod": "^4"
+  },
+  "license": "MIT"
+}

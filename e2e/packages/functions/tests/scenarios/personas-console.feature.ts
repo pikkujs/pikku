@@ -129,7 +129,7 @@ export const personaRolesScenario = pikkuScenario<void, { opened: true }>({
     await scenario.then(
       'sees a scope the role grants',
       'seesText',
-      { text: 'pikku:console:scopes:manage' },
+      { text: 'admin:scopes:manage' },
       { actor: actors.admin }
     )
 

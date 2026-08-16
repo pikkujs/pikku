@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.1"
+     xmlns="http://www.w3.org/2000/svg"
+     width="300pt" height="300pt"
+     viewBox="0 0 300 300"
+     preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="adminGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c5cff"/>
+      <stop offset="100%" stop-color="#00c2a8"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#adminGradient)"
+        d="M150 24 258 66 258 150 C258 208 214 254 150 276 86 254 42 208 42 150 L42 66 Z"/>
+  <circle cx="150" cy="128" r="30" fill="#ffffff"/>
+  <path fill="#ffffff"
+        d="M150 168 C114 168 92 190 92 216 L92 224 208 224 208 216 C208 190 186 168 150 168 Z"/>
+</svg>

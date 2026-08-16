@@ -7,10 +7,11 @@ export interface UserAdminGenOutput {
  * Generate the user-management functions into the project scaffold: the
  * directory read plus the writes that wrap better-auth's `admin()` endpoints.
  *
- * Scaffolded rather than shipped in an addon because managing users is ordinary
- * application behaviour: an app should not have to install the console — which
- * exists to be served alongside a running dev server — just to list or ban its
- * own users. The console UI calls these same functions when it is present.
+ * Superseded by `@pikku/addon-admin`, which ships these same functions plus
+ * roles, credentials and the audit trail, and which an app can wire without
+ * installing the console. Kept for hosts still on the scaffold; the scope tree
+ * below must stay byte-identical to the addon's, or an app with both fails
+ * codegen on conflicting declarations.
  *
  * Each function is gated on its own `admin:users:*` scope. The writes are only
  * meaningful where `admin()` is wired, which is why this file is generated only
@@ -113,7 +114,7 @@ import {
 // pikku requires every declaration of a shared scope root to be identical, so
 // this is the whole \`admin\` tree — not just the leaves gated below. It must stay
 // byte-identical to ADMIN_SCOPE_TREE in @pikku/better-auth and to the copy in
-// @pikku/addon-console, or codegen fails with conflicting declarations.
+// @pikku/addon-admin, or codegen fails with conflicting declarations.
 defineScope({
   admin: {
     displayName: 'Administration',
@@ -124,6 +125,8 @@ defineScope({
         description: 'Application-wide credentials',
         scopes: {
           link: { description: 'Bind a shared credential for every user' },
+          read: { description: 'Read credential values and who holds them' },
+          manage: { description: 'Set and delete credentials' },
         },
       },
       users: {
@@ -135,6 +138,27 @@ defineScope({
           remove: { description: 'Delete users and all their data' },
           sessions: { description: "Revoke a user's sessions" },
           password: { description: "Set a user's password" },
+        },
+      },
+      scopes: {
+        description: 'Authorization management',
+        scopes: {
+          read: {
+            description: 'View declared scopes, roles, and who holds them',
+          },
+          manage: {
+            description:
+              'Create and delete roles, change their scopes, and grant roles to users',
+          },
+        },
+      },
+      audit: {
+        description: 'The audit trail',
+        scopes: {
+          read: {
+            description:
+              'Read the audit trail — every recorded action, and which user took it',
+          },
         },
       },
     },

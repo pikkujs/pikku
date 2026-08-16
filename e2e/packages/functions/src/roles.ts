@@ -11,25 +11,32 @@ import { defineSystemRole } from '#pikku/scopes'
  */
 defineSystemRole({
   /**
-   * The umbrella `admin` grant, plus every console area except scope
-   * administration and the audit trail.
+   * Every administrative area except scope administration and the audit trail.
    *
    * Held by both `admin` and `staff`, which is what makes the scopes-console
    * suite's central case expressible: `staff` reaches the console and is still
    * refused by the scope-admin RPCs and the audit trail, because those two
-   * areas are granted by `console-admin` and `audit-reader` alone. The console
-   * areas are spelled out rather than granted as the `pikku:console` parent
-   * precisely so those two stay out.
+   * areas are granted by `console-admin` and `audit-reader` alone. Both the
+   * `admin` and `pikku:console` areas are spelled out leaf by leaf rather than
+   * granted as their parent precisely so those two stay out — a bare `admin`
+   * would cover `admin:scopes:*` and `admin:audit:read` and collapse the seam.
    */
   'platform-admin': {
     displayName: 'Platform administrator',
     description: 'Every capability that acts on the application as a whole',
     scopes: [
-      'admin',
+      'admin:impersonate',
+      'admin:users:list',
+      'admin:users:create',
+      'admin:users:ban',
+      'admin:users:remove',
+      'admin:users:sessions',
+      'admin:users:password',
+      'admin:credentials:link',
       'pikku:console:addons:read',
       'pikku:console:addons:install',
-      'pikku:console:credentials:read',
-      'pikku:console:credentials:manage',
+      'admin:credentials:read',
+      'admin:credentials:manage',
       'pikku:console:secrets:read',
       'pikku:console:secrets:write',
       'pikku:console:variables:read',
@@ -58,13 +65,13 @@ defineSystemRole({
   'console-admin': {
     displayName: 'Console administrator',
     description: 'Manage roles and scopes in the console',
-    scopes: ['pikku:console:scopes:read', 'pikku:console:scopes:manage'],
+    scopes: ['admin:scopes:read', 'admin:scopes:manage'],
   },
   /**
    * Read the audit trail and nothing else.
    *
-   * Separate from `console-admin` on purpose: `pikku:console:audit:read` is not under
-   * `pikku:console:scopes`, so holding the console's scope administration says nothing
+   * Separate from `console-admin` on purpose: `admin:audit:read` is not under
+   * `admin:scopes`, so holding the console's scope administration says nothing
    * about being allowed to read who did what. Granted to `admin` alone, which
    * leaves `staff` — an admin holding no `pikku` scope — as the audit page's
    * refused case, the same seam the scopes console suite draws.
@@ -72,7 +79,7 @@ defineSystemRole({
   'audit-reader': {
     displayName: 'Audit reader',
     description: 'Read the audit trail',
-    scopes: ['pikku:console:audit:read'],
+    scopes: ['admin:audit:read'],
   },
   /** Read reports and nothing else — the positive case for a scope gate. */
   'report-viewer': {

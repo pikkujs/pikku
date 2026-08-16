@@ -7,7 +7,7 @@ export const credentialGet = pikkuFunc<
   title: 'Get Credential',
   description: 'Retrieves a credential value, optionally scoped to a user.',
   expose: true,
-  scopes: ['pikku:console:credentials:read'],
+  scopes: ['admin:credentials:read'],
   func: async ({ credentialService }, { name, userId }) => {
     const value = await credentialService.get(name, userId)
     return { value }

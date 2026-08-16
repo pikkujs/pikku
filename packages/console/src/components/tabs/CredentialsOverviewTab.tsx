@@ -109,7 +109,7 @@ export const CredentialsOverviewTab: React.FC<{
       const singletons = allCredentials.filter((c) => c.type === 'singleton')
       if (singletons.length === 0) return {}
       try {
-        const result = await rpc.invoke('console:credentialStatus', {
+        const result = await rpc.invoke('admin:credentialStatus', {
           names: singletons.map((c) => c.name),
         })
         return (result.statuses ?? {}) as Record<string, boolean>
@@ -212,11 +212,11 @@ const CredentialRowActions: React.FC<{
   })
 
   // Disconnecting a platform credential goes through credentialService.delete
-  // (console:credentialDelete) — the only seam that can revoke a token owned by
+  // (admin:credentialDelete) — the only seam that can revoke a token owned by
   // the platform user rather than the current session.
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await rpc.invoke('console:credentialDelete', { name: credential.name })
+      await rpc.invoke('admin:credentialDelete', { name: credential.name })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credential-global-status'] })

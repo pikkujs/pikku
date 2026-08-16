@@ -60,7 +60,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ['credential-list-users'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:credentialListUsers')
+      const result = await rpc.invoke('admin:credentialListUsers')
       return (result.users ?? []) as UserEntry[]
     },
     enabled: perUserCredentials.length > 0,

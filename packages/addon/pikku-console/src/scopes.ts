@@ -1,46 +1,17 @@
 import { defineScope } from '#pikku/scopes'
 
 /**
- * Scopes the console's own authorization management requires, plus the `admin`
- * tree the framework's own gates check.
+ * Scopes the console's own surface requires.
  *
- * Self-hosting: the functions that grant scopes are themselves scoped, so
- * handing someone the console does not hand them the ability to grant
- * themselves anything. These flow into the host's ScopeId union and declared
- * set when the addon is wired, so a host role can grant them.
+ * Everything that administers the *application* rather than the console —
+ * users, roles and scopes, credentials, the audit trail — lives in
+ * `@pikku/addon-admin` under the `admin` tree, so an app can expose it without
+ * installing a console it will never serve.
  *
- * The `admin` tree mirrors `ADMIN_SCOPE_TREE` in `@pikku/better-auth` — it is
- * spelled out inline because `defineScope` is extracted by AST, so an imported
- * constant cannot be spread here. Keep the two in sync: pikku requires every
- * declaration of a shared scope root to be byte-identical, so this must match
- * the `scaffold.userAdmin` output too, including the leaves whose capabilities
- * only exist once better-auth's admin() plugin is wired.
+ * These flow into the host's ScopeId union and declared set when the addon is
+ * wired, so a host role can grant them.
  */
 defineScope({
-  admin: {
-    displayName: 'Administration',
-    description: 'Capabilities that act on the application as a whole',
-    scopes: {
-      impersonate: { description: 'Act as another user' },
-      credentials: {
-        description: 'Application-wide credentials',
-        scopes: {
-          link: { description: 'Bind a shared credential for every user' },
-        },
-      },
-      users: {
-        description: 'The user directory',
-        scopes: {
-          list: { description: 'List and search users' },
-          create: { description: 'Create users out of band' },
-          ban: { description: 'Ban and unban users' },
-          remove: { description: 'Delete users and all their data' },
-          sessions: { description: "Revoke a user's sessions" },
-          password: { description: "Set a user's password" },
-        },
-      },
-    },
-  },
   pikku: {
     displayName: 'Pikku Console',
     description: "The console's own administrative capabilities",
@@ -79,32 +50,10 @@ defineScope({
             },
           },
           credentials: {
-            description: 'Per-user and shared credentials',
+            description: 'Per-user credentials an agent needs connected',
             scopes: {
               read: {
-                description: 'Read credential values and who holds them',
-              },
-              manage: { description: 'Set and delete credentials' },
-            },
-          },
-          scopes: {
-            description: 'Authorization management',
-            scopes: {
-              read: {
-                description: 'View declared scopes, roles, and who holds them',
-              },
-              manage: {
-                description:
-                  'Create and delete roles, change their scopes, and grant roles to users',
-              },
-            },
-          },
-          audit: {
-            description: 'The audit trail',
-            scopes: {
-              read: {
-                description:
-                  'Read the audit trail — every recorded action, and which user took it',
+                description: 'Check which credentials the caller has connected',
               },
             },
           },

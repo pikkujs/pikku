@@ -105,7 +105,7 @@ wireAddon({
   globalSecrets:
     'the console administers secrets an operator names at runtime, so no static declaration can cover them',
   globalCredentials:
-    'the console lists and links credentials across every user, so it cannot be scoped to a declared set',
+    'the console reports whether the caller has connected the OAuth credentials an agent needs, which are declared by other addons',
 })
 wireHTTPRoutes({ basePath: '${globalHTTPPrefix}', routes: { console: consoleRoutes } })
 `

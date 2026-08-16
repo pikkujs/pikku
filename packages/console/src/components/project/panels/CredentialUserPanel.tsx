@@ -37,7 +37,7 @@ export const CredentialUserPanel: React.FC<{
 
   const revokeMutation = useMutation({
     mutationFn: async (credName: string) => {
-      await rpc.invoke('console:credentialDelete', {
+      await rpc.invoke('admin:credentialDelete', {
         name: credName,
         userId,
       })

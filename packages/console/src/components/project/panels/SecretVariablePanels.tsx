@@ -130,7 +130,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
 // A `type: 'singleton'` OAuth2 credential is the platform's, so its connection
 // is managed here through the admin-gated /credential-oauth/link flow (which
 // links it to the reserved platform user) and revoked through
-// console:credentialDelete — the seam that can drop a platform-owned token.
+// admin:credentialDelete — the seam that can drop a platform-owned token.
 // Per-user OAuth2 credentials are instead self-connected from the Credentials
 // "Connections" tab, where the linking user's own session owns the account.
 const OAuthConnectionSection: React.FC<{
@@ -144,7 +144,7 @@ const OAuthConnectionSection: React.FC<{
   const { data: connected, isLoading: statusLoading } = useQuery({
     queryKey: ['credential-status', credentialName],
     queryFn: async () => {
-      const result = await rpc.invoke('console:credentialStatus', {
+      const result = await rpc.invoke('admin:credentialStatus', {
         names: [credentialName],
       })
       return result.statuses?.[credentialName] === true
@@ -177,7 +177,7 @@ const OAuthConnectionSection: React.FC<{
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await rpc.invoke('console:credentialDelete', { name: credentialName })
+      await rpc.invoke('admin:credentialDelete', { name: credentialName })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

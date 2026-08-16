@@ -77,6 +77,12 @@ wireAddon({
   globalSecrets:
     'the console administers secrets an operator names at runtime, so no static declaration can cover them',
   globalCredentials:
-    'the console lists and links credentials across every user, so it cannot be scoped to a declared set',
+    'the console reports whether the caller has connected the OAuth credentials an agent needs, which are declared by other addons',
+})
+wireAddon({
+  name: 'admin',
+  package: '@pikku/addon-admin',
+  globalCredentials:
+    'administering credentials means setting and clearing any of them, for any user, so it cannot be scoped to a declared set',
 })
 wireHTTPRoutes({ basePath: '', routes: { console: consoleRoutes } })
